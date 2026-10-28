@@ -25,6 +25,12 @@ orientations without a proof.
 
 ## 2. Complete predefined models
 
+Selected update: predefined methods skip method entry and exit rules. They
+create no analyzer or boundary observer. Call-site rules remain active. The
+current [implementation proposal](bidirectional-demand-storage-predefined-summaries-implementation-20261028.md)
+implements this decision. The counterexample below records the intentional
+boundary-observation difference; it is no longer an unresolved choice.
+
 Select the new contract explicitly:
 
 ```text
@@ -69,15 +75,13 @@ S.__spring_registry__.* / FLOW -> S.__spring_registry__.* / FLOW
 Applying only these rows preserves returned facts but emits no `cleanup-exit`
 observation. The report changes even though the transfer relation is complete.
 
-There are two explicit contracts available. A model can include boundary-rule
-effects, evaluated at the modeled call without analyzing its CFG. Or registered
-predefined methods can intentionally exclude ordinary method-boundary rules.
-The latter is a rule-semantics change. A pure edge list does not select between
-these contracts. Keeping no method analyzer is compatible with either choice.
+Two contracts were considered: evaluate boundary effects at the modeled call,
+or exclude method-boundary rules for predefined methods. The user selected
+the second contract. It is an explicit rule-semantics change. There is no
+event-aware boundary adapter in the selected design.
 
-The previous proposal preserved these observations with a tiny ZERO actor.
-That implementation choice is superseded by the new no-analysis decision.
-Preservation now needs an event-aware model adapter; it cannot rely on that actor.
+The previous ZERO-actor proposal is superseded. Transfer completeness still
+needs proof, but old cleanup method-boundary reports are not preserved.
 
 ## 3. Early stopping
 

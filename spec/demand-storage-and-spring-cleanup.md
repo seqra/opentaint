@@ -39,12 +39,19 @@ a speedup before implementation.
 | Restricted summary publication | Actor obtains paired candidates and applies AP restriction | Demand storage applies the same paired restriction and returns the result | Original AP C5; no relaxation |
 | Skipped run-1 statics | Both lookups can walk full paired closure | Entry-only traversal for C2; paired traversal for C5; skip virtual lookup when endpoint indexes prove it irrelevant | Same virtual demand relation |
 | Lookup order and C2 search | A lookup can start shared traversal before all local results are known | Check direct local rows, then local composition, then visible callee rows. For a FLOW reader, use bidirectional compatible-mark existence search | Same exact C2/C5 results; complete result coverage can stop search |
+| Predefined method boundary | Ordinary body analysis can evaluate method entry/exit rules | A predefined model is complete; analyze no body and skip its method entry/exit rules | Explicit user-selected semantic change; call-site rules remain |
 | Run transition | Persist native records; build the next demand snapshot | Keep that order. Fill and seal the new storage during the transition | Existing behavior |
 
 The Spring model is a selected semantic boundary. It must not be hidden in
 a cache or a demand index. The intended concrete effect is unchanged, but
 the model can remove artificial intermediate DEMAND edges and diagnostic
 callbacks from the generated block. Do not claim equal internal edge counts.
+
+Predefined methods also skip configured method entry and exit rules. This is
+an explicit selected behavior, not an optimization-equivalence claim. A generic
+exit sink on cleanup can therefore stop reporting there. Keep call-site rules
+and all controller rules. Do not retain a ZERO-only analyzer or add a boundary
+observer for a predefined method.
 
 Keep the following mechanisms unchanged:
 
@@ -166,24 +173,26 @@ generated method identity, not an arbitrary method with the same name.
 The following types are proposal pseudocode:
 
 ```kotlin
-data class DefinedMethodSummary(
-    val normalControlReturn: Boolean,
-    val staticReturns: List<FlowSummarySchema>,
-    val staticRelationIsComplete: Boolean,
+class CompleteMethodSummary(
+    val normal: List<SummarySchema>,
+    val exceptional: List<SummarySchema>,
+    val touched: Set<AccessPathBase>,
 )
 
-fun springSummary(method: CommonMethod): DefinedMethodSummary? =
-    if (method == springContext.generatedCleanupMethod)
-        DefinedMethodSummary(
-            normalControlReturn = true,
-            staticReturns = listOf(identitySchema(STATIC, registryClassPath)),
-            staticRelationIsComplete = true,
+fun springSummary(method: CommonMethod): CompleteMethodSummary? =
+    if (method === springContext.generatedCleanupMethod)
+        CompleteMethodSummary(
+            normal = listOf(ZeroIdentity, prefixFlowIdentity(STATIC, registryClassPath)),
+            exceptional = emptyList(),
+            touched = setOf(STATIC),
         )
     else null
 ```
 
-`staticRelationIsComplete` is essential. A missing matching static schema
-means no static result. It must not mean unresolved, unknown or identity.
+The provider recognizes the actual registered method identity. Descriptor
+presence means that the body model is always complete. There is no completeness
+flag or partial-model mode. A missing matching static schema means no static
+result. It must not mean unresolved, unknown or identity.
 Disable broad static defaults and static unchanged bypasses for this call.
 The prescan and call planner must know this static effect even though the
 generated body now contains no static assignments or cleaner rule.
@@ -200,12 +209,11 @@ Keep ordinary inferred summaries under C5. Keep the resulting caller edge
 under ordinary caller restriction. The exact catalog-to-publication adapter
 must be proved before implementation.
 
-One implementation seam is a defined static stage beside the existing
-control stage:
+Use a predefined stage instead of the callee-body stage:
 
 ```kotlin
-DefinedStatic(registryIdentity, complete = true) // actual STATIC input only
-Callees(cleanupKey, inputPolicy = ZERO_ONLY)    // existing boundary/control lane
+Predefined(ADDED, RETURNED, cleanupMethod, completeCleanupModel)
+// No Callees stage, method analyzer, subscription or boundary-rule lane for this target.
 ```
 
 Use a transient prefix identity or a proved pure subtree selector on actual
@@ -214,20 +222,21 @@ through the known-summary result lane, not a statement micro-edge callback
 that drops a non-write run-1 static result. Keep STATIC in the call's touched
 bases in both directions, so an ordinary pass-over lane cannot undo the kill.
 
-Keep the cleanup call and its tiny return-only ZERO actor for the existing
-boundary and exit rules. In the current new core, the blanket call cleaner
-removes all actual static input before that actor; saved registry facts stay
-in caller locals. Thus this model must not start sending actual registry
-facts into that actor and create new exit-rule observations. Apply the
-registry identity in the caller's defined-summary lane. Retain the original
-ZERO/pool-driven exit evaluation, including its complete ND guard handling.
-Prove the old no-nonzero-cleanup-entry invariant and preserve its replay/order
-behavior as an adapter acceptance gate. Do not bypass the actor and drop
-generic exit sinks, or silently evaluate new nonzero exit cases.
+Keep the cleanup call. Create no cleanup method analyzer, including a ZERO-only
+analyzer. Apply control and registry identity in the caller's defined-summary
+lane. Skip the modeled method's entry/exit source and sink rules. Keep the
+common call-site rule stages around the model and the ordinary caller's own
+exit rules. This replaces the earlier ZERO-actor proposal. Generic cleanup
+boundary observations are deliberately removed; no equivalence proof for
+those observations is required or claimed.
 
 ZERO satisfies only the control relation here. The run-1 rule that activates
 static reader summaries from ZERO must not fabricate a registry fact from
 this identity schema. This model is not a static read operation.
+For a complete predefined model without a ZERO return row, the call's fast
+unchanged lane and internal source-stage ZERO identities cannot fabricate
+return control. Keep the existing conservative control policy for ordinary
+analyzed/unresolved targets. Cleanup has an explicit ZERO row.
 
 Do not publish the registry identity to every transitive caller in run-1.
 It is used at the cleanup call. The shared run-1-to-run-2 static-carry demand
@@ -247,6 +256,13 @@ The existing `options.common.ifdsBidirectional` choice is available before
 Spring generation; it can select these two generation paths. This does not
 need a new measurement flag. Keep the model descriptor outside existing
 method/rule equality and hashing keys.
+
+Prescan also skips the modeled body and its method-boundary rule relevance.
+Record its resolved target in metadata without a summary subscription.
+Preserve the existing prescan control/type-information propagation so lambda
+resolution and the exported call graph do not shrink accidentally. This is
+not a broad static taint summary. The implementation proposal specifies the
+separate graph-export adapter.
 
 For K registry fields and D generated cleanup sites, the new generation
 removes exactly `2*K*D` save/restore assignment instructions. It also removes
@@ -668,8 +684,9 @@ to make a proof pass.
 | [LookupStrategies.lean](lean/proposals/demand-storage-next/LookupStrategies.lean) | 25 | Tighter local/transitive guards under primitive coverage; mapped-terminal locality; FLOW-actual shortcuts and edge cases | [Checks](lean/proposals/demand-storage-next/lookup-strategies-checks.json) |
 | [StagedDemandLookup.lean](lean/proposals/demand-storage-next/StagedDemandLookup.lean) | 25 | Local-first/full-path equivalence; exact output-bound stopping; positive witness and exhausted negative; mixed local/remote cases | [Checks](lean/proposals/demand-storage-next/staged-demand-lookup-checks.json) |
 | [BidirectionalDemandExists.lean](lean/proposals/demand-storage-next/BidirectionalDemandExists.lean) | 20 | Directed meeting witnesses, typed-frontier exhaustion, overlap and late inherited-join cases | [Checks](lean/proposals/demand-storage-next/bidirectional-demand-exists-checks.json) |
+| [PredefinedSummaryDispatch.lean](lean/proposals/demand-storage-next/PredefinedSummaryDispatch.lean) | 14 | Complete dispatch without body/default/unresolved/boundary rules; external call-site reports; identity-key catalog; intentional boundary observation difference | [Checks](lean/proposals/demand-storage-next/predefined-summary-dispatch-checks.json) |
 
-All 112 audits in these five models pass without axioms. They import or use the earlier
+All 126 audits in these six models pass without axioms. They import or use the earlier
 constructive entry-projection kernel where stated. They do not execute the
 analyzer or establish a measured saving.
 
@@ -695,6 +712,11 @@ The two new graph models establish 45 of these audits. They do not prove
 that a production BFS implements the declared adjacency, coverage bound or
 fair scheduling. Verify those adapters before enabling the optimized lookup.
 
+The complete-dispatch model adds 14 audits for the selected predefined-model
+boundary. It does not prove JVM prescan, AP schema lowering or call-plan
+integration. Skipping predefined boundary rules is the intended difference;
+ordinary external call-site observations remain in the common call path.
+
 ## 10. Implementation order and checks
 
 1. Add the predefined-summary seam and the complete cleanup model. Prove and
@@ -710,6 +732,9 @@ fair scheduling. Verify those adapters before enabling the optimized lookup.
    remote joins between old frontiers and alternating local/remote paths.
 5. Commit selected runtime changes before the fixed project campaign. Reuse
    the saved baseline; do not add another analyzer configuration.
+
+See the detailed [implementation proposal](../docs/design/bidirectional-demand-storage-predefined-summaries-implementation-20261028.md)
+for code seams, schemas, indexes, staged queries, removal list and test gates.
 
 Required cases include registry/nonregistry mixed inputs; nested paths; FULL
 and GROUP; NORMAL/DEMAND; E and mx; exact class markers; no actual T; T-to-U
