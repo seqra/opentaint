@@ -1,0 +1,28 @@
+{
+  "scope": "Proposal only; no runtime edits",
+  "date": "2026-10-28",
+  "source_commit": "83ed76738c0b209d13f6bb37ad74903f2a106e75",
+  "lean_command": "LEAN_PATH=.lake/build/lib/lean lean -j1 -M512 proposals/demand-storage-next/SpringCleanup.lean",
+  "lean_workdir": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean",
+  "lean_exit_code": 0,
+  "theorems_audited": 11,
+  "all_theorems_axiom_free": true,
+  "lean_output": "'DemandStorageNext.SpringCleanup.value_transfer_equal' does not depend on any axioms\n'DemandStorageNext.SpringCleanup.backward_relation_equal' does not depend on any axioms\n'DemandStorageNext.SpringCleanup.registry_payload_unchanged' does not depend on any axioms\n'DemandStorageNext.SpringCleanup.external_static_killed' does not depend on any axioms\n'DemandStorageNext.SpringCleanup.zero_does_not_create_registry' does not depend on any axioms\n'DemandStorageNext.SpringCleanup.zero_control_preserved' does not depend on any axioms\n'DemandStorageNext.SpringCleanup.caller_local_preserved' does not depend on any axioms\n'DemandStorageNext.SpringCleanup.incoming_demand_preserved' does not depend on any axioms\n'DemandStorageNext.SpringCleanup.later_normal_stays_normal' does not depend on any axioms\n'DemandStorageNext.SpringCleanup.run1_static_stays_demand' does not depend on any axioms\n'DemandStorageNext.SpringCleanup.generated_instruction_saving' does not depend on any axioms\n",
+  "sources": {
+    "core/src/main/kotlin/org/opentaint/jvm/sast/project/spring/SpringWebProject.kt": "c9db062197c95071ca394e555fcce0e4f24e34462b152dabf5d43f4fb04379cc",
+    "core/src/main/kotlin/org/opentaint/jvm/sast/project/spring/SpringRuleProvider.kt": "dafc046ba8e2a6c7137737e438f8ae1c793e97efb75677febdd55b0a292b538a",
+    "core/src/main/kotlin/org/opentaint/jvm/sast/project/spring/SpringGeneratedMethod.kt": "2d6db0148bcc0802126e5bac3ecf9540a995a9bbdac616e4fb77043285f61719",
+    "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRCallPlanBuilder.kt": "d40274e6f306c1eab9e55e80a6ebab05e4ed6f0416df4659584a845573f6c1f7",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodCallServices.kt": "323ab6f81692bb70d8fa775045cf813b7c9265afd1f0abc2d04d29e4636dc8a2",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/CallPlan.kt": "01b9869c73f6e496af414a3200d18abc010b18c8347b3440f0dd498ca07f47fa",
+    "spec/lean/proposals/demand-storage-next/SpringCleanup.lean": "e53c72072cde3b17cc1cd986e50be7fe26856de0f9068170c63482ba2ba57057"
+  },
+  "design_path": "/drive-testcomp/opentaint-go-rules/restricted-demand-20261028/preparation/spring-cleanup/design.md",
+  "design_sha256": "899feab047ecce72233bdf04db5d626139cfc73fe8f3718de3af0063be97d61d",
+  "scope_limits": [
+    "Value transfer and converse only; no bit-identical abstract AP edge claim",
+    "Actual AP prefix projection, prescan completeness, boundary-entry invariant and rule/ND observation equivalence remain production adapter gates",
+    "Legacy generation retained by core-specific mode",
+    "No runtime, Gradle, analyzer, or MAT execution"
+  ]
+}

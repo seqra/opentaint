@@ -1,0 +1,117 @@
+{
+  "status": "DESIGN_LOCAL_QUERY_MODEL_AUDIT_PASS",
+  "runtime_changed": false,
+  "source": "spec/lean/proposals/demand-storage-next/DemandQueries.lean",
+  "source_sha256": "2dcdadab390c33273c23919af71baa7325550a62e09877801e030bca048aff27",
+  "dependency": {
+    "source": "spec/lean/proposals/restricted-demand-next/EntryProjection.lean",
+    "source_sha256": "94205c551ad58a8d77924854b5901002c9ec7937cc573a4b90fca8200a2edc53",
+    "purpose": "Reuse frozen finite symbolic full closure, target projection and FULL/GROUP label contracts."
+  },
+  "lean_version": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+  "configured_memory_limit_mib": 1024,
+  "parallel_workers": 1,
+  "steps": [
+    {
+      "command": [
+        "lean",
+        "-j",
+        "1",
+        "-M",
+        "1024",
+        "-o",
+        ".lake/build/lib/lean/proposals/restricted-demand-next/EntryProjection.olean",
+        "proposals/restricted-demand-next/EntryProjection.lean"
+      ],
+      "working_directory": "spec/lean",
+      "environment": {},
+      "exit_code": 0,
+      "seconds": 0.7509729415178299,
+      "output": "'RestrictedDemandNext.EntryProjection.transportGeneral' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.transportFlow' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.fullToEntry' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.entryToFull' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.targetToEntry' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.target_projection_equivalent' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.projectAdmission' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.expandAdmission' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.admission_equivalent' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.visibleTarget' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.invisible_seeds_give_no_entry' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.originGeneral' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.colorOrigin' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.full_group_entry_contract' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.same_group_distinct_full_not_compatible' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.full_group_middle_compatible' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.fullColoredReturn' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.projectedColoredReturn' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.bare_primitive_targets_miss_colored_return' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.flow_seed_has_no_concrete_enumeration' does not depend on any axioms\n"
+    },
+    {
+      "command": [
+        "lean",
+        "-j",
+        "1",
+        "-M",
+        "1024",
+        "proposals/demand-storage-next/DemandQueries.lean"
+      ],
+      "working_directory": "spec/lean",
+      "environment": {
+        "LEAN_PATH": ".lake/build/lib/lean"
+      },
+      "exit_code": 0,
+      "seconds": 0.6401531398296356,
+      "output": "'DemandStorageNext.DemandQueries.transferOutput' does not depend on any axioms\n'DemandStorageNext.DemandQueries.transferInput' does not depend on any axioms\n'DemandStorageNext.DemandQueries.lastSeed' does not depend on any axioms\n'DemandStorageNext.DemandQueries.firstSeed' does not depend on any axioms\n'DemandStorageNext.DemandQueries.any_member' does not depend on any axioms\n'DemandStorageNext.DemandQueries.visible_of_member' does not depend on any axioms\n'DemandStorageNext.DemandQueries.output_potential_sound' does not depend on any axioms\n'DemandStorageNext.DemandQueries.input_potential_sound' does not depend on any axioms\n'DemandStorageNext.DemandQueries.entry_guard_sound' does not depend on any axioms\n'DemandStorageNext.DemandQueries.source_guard_sound' does not depend on any axioms\n'DemandStorageNext.DemandQueries.entryToBack' does not depend on any axioms\n'DemandStorageNext.DemandQueries.backToEntry' does not depend on any axioms\n'DemandStorageNext.DemandQueries.targeted_projection_equivalent' does not depend on any axioms\n'DemandStorageNext.DemandQueries.targetGuard' does not depend on any axioms\n'DemandStorageNext.DemandQueries.initialToLazy' does not depend on any axioms\n'DemandStorageNext.DemandQueries.initialToExplicit' does not depend on any axioms\n'DemandStorageNext.DemandQueries.initial_query_equivalent' does not depend on any axioms\n'DemandStorageNext.DemandQueries.falseGuardInitialIsOrdinary' does not depend on any axioms\n'DemandStorageNext.DemandQueries.summary_guard_sound' does not depend on any axioms\n'DemandStorageNext.DemandQueries.summaryToLazy' does not depend on any axioms\n'DemandStorageNext.DemandQueries.summaryToExplicit' does not depend on any axioms\n'DemandStorageNext.DemandQueries.summary_query_equivalent' does not depend on any axioms\n'DemandStorageNext.DemandQueries.falseGuardSummaryIsOrdinary' does not depend on any axioms\n'DemandStorageNext.DemandQueries.forward_zero_does_not_bypass' does not depend on any axioms\n'DemandStorageNext.DemandQueries.only_genuine_backward_zero_bypasses' does not depend on any axioms\n'DemandStorageNext.DemandQueries.colored_suffix_needs_FLOW_TOP_guard' does not depend on any axioms\n'DemandStorageNext.DemandQueries.targetedColoredReturn' does not depend on any axioms\n'DemandStorageNext.DemandQueries.mask_merge_commutative' does not depend on any axioms\n'DemandStorageNext.DemandQueries.mask_merge_associative' does not depend on any axioms\n'DemandStorageNext.DemandQueries.mask_merge_idempotent' does not depend on any axioms\n'DemandStorageNext.DemandQueries.mask_merge_keeps_late_protection' does not depend on any axioms\n"
+    }
+  ],
+  "audited_declarations": 31,
+  "expected_audit_declarations": 31,
+  "declarations": [
+    "DemandStorageNext.DemandQueries.transferOutput",
+    "DemandStorageNext.DemandQueries.transferInput",
+    "DemandStorageNext.DemandQueries.lastSeed",
+    "DemandStorageNext.DemandQueries.firstSeed",
+    "DemandStorageNext.DemandQueries.any_member",
+    "DemandStorageNext.DemandQueries.visible_of_member",
+    "DemandStorageNext.DemandQueries.output_potential_sound",
+    "DemandStorageNext.DemandQueries.input_potential_sound",
+    "DemandStorageNext.DemandQueries.entry_guard_sound",
+    "DemandStorageNext.DemandQueries.source_guard_sound",
+    "DemandStorageNext.DemandQueries.entryToBack",
+    "DemandStorageNext.DemandQueries.backToEntry",
+    "DemandStorageNext.DemandQueries.targeted_projection_equivalent",
+    "DemandStorageNext.DemandQueries.targetGuard",
+    "DemandStorageNext.DemandQueries.initialToLazy",
+    "DemandStorageNext.DemandQueries.initialToExplicit",
+    "DemandStorageNext.DemandQueries.initial_query_equivalent",
+    "DemandStorageNext.DemandQueries.falseGuardInitialIsOrdinary",
+    "DemandStorageNext.DemandQueries.summary_guard_sound",
+    "DemandStorageNext.DemandQueries.summaryToLazy",
+    "DemandStorageNext.DemandQueries.summaryToExplicit",
+    "DemandStorageNext.DemandQueries.summary_query_equivalent",
+    "DemandStorageNext.DemandQueries.falseGuardSummaryIsOrdinary",
+    "DemandStorageNext.DemandQueries.forward_zero_does_not_bypass",
+    "DemandStorageNext.DemandQueries.only_genuine_backward_zero_bypasses",
+    "DemandStorageNext.DemandQueries.colored_suffix_needs_FLOW_TOP_guard",
+    "DemandStorageNext.DemandQueries.targetedColoredReturn",
+    "DemandStorageNext.DemandQueries.mask_merge_commutative",
+    "DemandStorageNext.DemandQueries.mask_merge_associative",
+    "DemandStorageNext.DemandQueries.mask_merge_idempotent",
+    "DemandStorageNext.DemandQueries.mask_merge_keeps_late_protection"
+  ],
+  "observed_axioms": [],
+  "forbidden_source_matches": [],
+  "proved_scope": [
+    "Primitive outer-endpoint and label-bound witnesses for every finite symbolic closure path.",
+    "Sound broad target and source envelopes, with FLOW treated as TOP only in boolean guards.",
+    "Target-oriented mapped-stop / backward FLOW-prefix derivations equal the prior entry projection.",
+    "Explicit-versus-lazy initial-result sets under the same bounded AP emitter and its locality contract.",
+    "Explicit-versus-lazy paired summary-result sets under the same C5 reducer and its distinct entry/exit locality gates.",
+    "False static guard preserves ordinary demand plus existing ZERO/carry adapter outputs.",
+    "Genuine backward-ZERO bypass is dispatched before paired restriction; no forward-ZERO bypass.",
+    "A colored writer followed by FLOW requires a guard that can accept a transported output color.",
+    "Pointwise protection-mask OR is commutative, associative, idempotent and retains a late protected membership for equal payload keys."
+  ],
+  "not_proved": [
+    "AP geometry/overlap/index adapter completeness, all-run E/mx/tail/field-limit/protection transport.",
+    "Whole ND premise matching and packed-summary merge policy.",
+    "Prescan owner-visibility construction or private ZERO/carry AP adapters.",
+    "Transition capture coverage, native-record persistence ownership, lookup-cache lifetime or absence of production mutation.",
+    "A production scheduler termination/complexity bound or exact finite visited-state key.",
+    "Spring cleanup semantics, whole JVM observations or measured time/memory savings.",
+    "The four OR laws do not establish exact production payload keys, mask-tree shape or canonical result accumulation; those remain adapter obligations."
+  ],
+  "new_runtime_edits": 0,
+  "new_runtime_tests": 0,
+  "new_project_runs": 0,
+  "measured_context": {
+    "runtime_revision": "53991b7483b062b0287152130cbbbfc87623093b",
+    "thingsboard_latest_reached": "run-2",
+    "thingsboard_latest_complete": "run-1",
+    "thingsboard_latest_accepted_forward_report": "run-1",
+    "limit": "Campaign context only; not a performance result for this design."
+  }
+}
