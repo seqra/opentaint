@@ -1,0 +1,12 @@
+{
+  "status": "proposal-only counterexample; no runtime changes",
+  "date": "2026-10-28",
+  "command": "LEAN_PATH=.lake/build/lib/lean lean -j1 -M512 proposals/demand-storage-next/SpringCleanupObservationGap.lean",
+  "workdir": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean",
+  "exit_code": 0,
+  "audited_theorems": 4,
+  "all_axiom_free": true,
+  "output": "'DemandStorageNext.SpringCleanupObservationGap.equal_transfer' does not depend on any axioms\n'DemandStorageNext.SpringCleanupObservationGap.different_observations' does not depend on any axioms\n'DemandStorageNext.SpringCleanupObservationGap.not_observably_equal' does not depend on any axioms\n'DemandStorageNext.SpringCleanupObservationGap.explicit_event_model_preserves_example' does not depend on any axioms\n",
+  "lean_sha256": "f67f66a88d18c3e5ced30e4b8652bd2c5d5298c259c956672d857a81186912ce",
+  "design_sha256": "3f5a8763fd84e78ab6fe53fa67172a1172db30c218119caa731993b1db30d231"
+}

@@ -1,0 +1,65 @@
+{
+  "status": "PROPOSAL_DIRECTIONAL_COMPOSITION_COUNTEREXAMPLE_AUDIT_PASS",
+  "runtime_changed": false,
+  "source": "spec/lean/proposals/demand-storage-next/DirectionalCompositionCheck.lean",
+  "source_sha256": "e5ba91393b6d39562d3e7c2bd2a251f67f41c2a3f2b70867fe4394c0f2645068",
+  "lean_version": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+  "configured_memory_limit_mib": 1024,
+  "parallel_workers": 1,
+  "command": [
+    "lean",
+    "-j",
+    "1",
+    "-M",
+    "1024",
+    "proposals/demand-storage-next/DirectionalCompositionCheck.lean"
+  ],
+  "working_directory": "spec/lean",
+  "exit_code": 0,
+  "seconds": 0.34629368782043457,
+  "output": "'DemandStorageNext.DirectionalCompositionCheck.noMappedThenFlow' does not depend on any axioms\n'DemandStorageNext.DirectionalCompositionCheck.flowThenMapped' does not depend on any axioms\n'DemandStorageNext.DirectionalCompositionCheck.flowMappedFlowNoLeft' does not depend on any axioms\n'DemandStorageNext.DirectionalCompositionCheck.flowMappedFlowNoRight' does not depend on any axioms\n'DemandStorageNext.DirectionalCompositionCheck.mappedFlowMappedRight' does not depend on any axioms\n'DemandStorageNext.DirectionalCompositionCheck.mappedFlowMappedNoLeft' does not depend on any axioms\n'DemandStorageNext.DirectionalCompositionCheck.proposedJoinIsNotAssociative' does not depend on any axioms\n'DemandStorageNext.DirectionalCompositionCheck.noConcreteRuleFromFlow' does not depend on any axioms\n'DemandStorageNext.DirectionalCompositionCheck.flowEntryForgetsActualU' does not depend on any axioms\n'DemandStorageNext.DirectionalCompositionCheck.markedWrapperWitness' does not depend on any axioms\n'DemandStorageNext.DirectionalCompositionCheck.noSharedFlowWrapperWitness' does not depend on any axioms\n'DemandStorageNext.DirectionalCompositionCheck.onlyFlowReturnDemandMissesWrapper' does not depend on any axioms\n'DemandStorageNext.DirectionalCompositionCheck.plainGetterPreservesCallerU' does not depend on any axioms\n'DemandStorageNext.DirectionalCompositionCheck.carryDoesNotRepairUnknown' does not depend on any axioms\n",
+  "audited_declarations": 14,
+  "declarations": [
+    "DemandStorageNext.DirectionalCompositionCheck.noMappedThenFlow",
+    "DemandStorageNext.DirectionalCompositionCheck.flowThenMapped",
+    "DemandStorageNext.DirectionalCompositionCheck.flowMappedFlowNoLeft",
+    "DemandStorageNext.DirectionalCompositionCheck.flowMappedFlowNoRight",
+    "DemandStorageNext.DirectionalCompositionCheck.mappedFlowMappedRight",
+    "DemandStorageNext.DirectionalCompositionCheck.mappedFlowMappedNoLeft",
+    "DemandStorageNext.DirectionalCompositionCheck.proposedJoinIsNotAssociative",
+    "DemandStorageNext.DirectionalCompositionCheck.noConcreteRuleFromFlow",
+    "DemandStorageNext.DirectionalCompositionCheck.flowEntryForgetsActualU",
+    "DemandStorageNext.DirectionalCompositionCheck.markedWrapperWitness",
+    "DemandStorageNext.DirectionalCompositionCheck.noSharedFlowWrapperWitness",
+    "DemandStorageNext.DirectionalCompositionCheck.onlyFlowReturnDemandMissesWrapper",
+    "DemandStorageNext.DirectionalCompositionCheck.plainGetterPreservesCallerU",
+    "DemandStorageNext.DirectionalCompositionCheck.carryDoesNotRepairUnknown"
+  ],
+  "observed_axioms": [],
+  "forbidden_source_matches": [],
+  "proved_scope": [
+    "For the proposed concrete directional composition, mapped;FLOW has no result, while FLOW;mapped is allowed.",
+    "FLOW;mapped(T,U);FLOW has no result under either parenthesization.",
+    "mapped(T,U);FLOW;mapped(U,V) succeeds right-associated and fails left-associated: the proposed join is non-associative.",
+    "The explicit AP mark-gate abstraction rejects every mapped reverse-rule application to unknown FLOW.",
+    "With only shared FLOW return admission, a wrapper containing a FLOW read, an internal U-to-T reverse converter and a FLOW write has no backward witness.",
+    "A concrete-U return start constructively traverses that wrapper to concrete T; a plain getter can preserve U through its complete FLOW summary at the caller.",
+    "Same-slot FLOW carry cannot repair the missing concrete U inside the wrapper."
+  ],
+  "not_proved": [
+    "The full JVM/source-provider/point-resume/capture adapter generates exactly the supplied frozen W/B/R inventory for the code schema; source inspection supports the inventory but no runtime replay was run.",
+    "Production AP geometry/tails/E/mx/layers/limits/ND or full C5 restriction.",
+    "The complete engine ZERO/carry protocol or FULL/GROUP composition beyond the concrete full-mark subset represented here.",
+    "Whole-program false-negative reproduction; this is a constructive local failure mechanism and a concrete program candidate for a required focused regression."
+  ],
+  "new_runtime_edits": 0,
+  "new_runtime_tests": 0,
+  "new_project_runs": 0,
+  "measured_context": {
+    "runtime_revision": "53991b7483b062b0287152130cbbbfc87623093b",
+    "thingsboard_latest_reached": "run-2",
+    "thingsboard_latest_complete": "run-1",
+    "thingsboard_latest_accepted_forward_report": "run-1",
+    "limit": "Prior fixed campaign only; no measurement for the new decisions."
+  }
+}
