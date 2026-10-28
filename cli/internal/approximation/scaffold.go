@@ -4,20 +4,17 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
-	"go/version"
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
-	"strings"
 
 	"github.com/seqra/opentaint/internal/testproject"
-	"github.com/seqra/opentaint/internal/utils"
-	"golang.org/x/mod/modfile"
-	"golang.org/x/mod/module"
 )
 
-const gradleProjectName = "approximation-models"
+const (
+	gradleProjectName = "approximation-models"
+	goModelModulePath = "opentaint"
+)
 
 // Scaffold creates a Gradle project for dataflow models.
 func Scaffold(projectDir string, dependencies []string, analyzerJarPath string) error {
@@ -38,51 +35,15 @@ func Scaffold(projectDir string, dependencies []string, analyzerJarPath string) 
 
 // ScaffoldGo creates a Go module for dataflow models.
 func ScaffoldGo(projectDir string, dependencies []string) error {
-	content, err := goModule(dependencies, currentGoVersion())
-	if err != nil {
-		return err
-	}
-	return utils.WriteFiles(map[string][]byte{
-		filepath.Join(projectDir, goModuleFile): content,
-	})
+	return testproject.BootstrapGo(projectDir, goModelModulePath, dependencies)
 }
 
 func currentGoVersion() string {
-	goVersion := runtime.Version()
-	if !version.IsValid(goVersion) {
-		goVersion = "go1.25.0"
-	}
-	return strings.TrimPrefix(goVersion, "go")
+	return testproject.GoVersion()
 }
 
 func goModule(dependencies []string, goVersion string) ([]byte, error) {
-	file := new(modfile.File)
-	if err := file.AddModuleStmt("opentaint"); err != nil {
-		return nil, fmt.Errorf("set Go model module path: %w", err)
-	}
-	if err := file.AddGoStmt(goVersion); err != nil {
-		return nil, fmt.Errorf("set Go model language version: %w", err)
-	}
-
-	for _, dependency := range dependencies {
-		path, dependencyVersion, ok := strings.Cut(dependency, "@")
-		if !ok || path == "" || dependencyVersion == "" || strings.Contains(dependencyVersion, "@") {
-			return nil, fmt.Errorf("invalid Go dependency %q: use module@version", dependency)
-		}
-		if err := module.Check(path, dependencyVersion); err != nil {
-			return nil, fmt.Errorf("invalid Go dependency %q: %w", dependency, err)
-		}
-		if err := file.AddRequire(path, dependencyVersion); err != nil {
-			return nil, fmt.Errorf("add Go dependency %q: %w", dependency, err)
-		}
-	}
-
-	file.SortBlocks()
-	content, err := file.Format()
-	if err != nil {
-		return nil, fmt.Errorf("format Go model module: %w", err)
-	}
-	return content, nil
+	return testproject.GoModule(goModelModulePath, dependencies, goVersion)
 }
 
 // ExtractApiJar reads the approximation API jar from the analyzer jar.

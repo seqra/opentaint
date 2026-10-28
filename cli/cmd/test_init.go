@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/seqra/opentaint/internal/testapprox"
 	"github.com/seqra/opentaint/internal/testproject"
@@ -14,23 +15,34 @@ var initRuleProjectDeps []string
 var initApproxProjectDeps []string
 var initRuleSinksOnly bool
 var initRuleSourcesOnly bool
+var initRuleLanguage string
+var initApproxLanguage string
+
+// testProjectModulePath is the module path of a Go test project, so samples are named test.<Function>.
+const testProjectModulePath = "test"
 
 var testRuleInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
 	Short: "Create rule test projects with source and sink harnesses",
-	Long: `Create one or two Gradle test projects under <output-dir>. The sinks
-project tests sink rules against a generic Taint source; the sources project
-tests source rules against a generic Taint sink. Use --sinks-only or
+	Long: `Create one or two test projects under <output-dir>. The sinks
+project tests sink rules against a generic taint source; the sources project
+tests source rules against a generic taint sink. Use --sinks-only or
 --sources-only when only one project is needed.
 
-Each project includes:
+Use --language java to create Gradle projects. Each project includes:
   - build.gradle.kts with compile-only dependencies, settings.gradle.kts
   - src/main/java/test/ with Taint.java (the generic source()/sink()) for test sample sources
   - test-rules/java/lib/test/generic-{source,sink}.yaml marker rules for test-only joins
 
+Use --language go to create Go modules with module path "test". Each project includes:
+  - go.mod with the required dependencies
+  - taint/taint.go (the generic Source()/Sink()) for test sample sources
+  - test-rules/go/lib/test/generic-{source,sink}.yaml marker rules for test-only joins
+
 Positive and negative samples are specified via rule-test.yaml.
 
-Use --dependency to add compile-only Maven dependencies for the samples.`,
+Use --dependency to add each library the samples use. For Java, use Maven coordinates. For
+Go, use module@version. Use the versions from the target application.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if initRuleSinksOnly && initRuleSourcesOnly {
@@ -42,15 +54,29 @@ Use --dependency to add compile-only Maven dependencies for the samples.`,
 		} else if initRuleSourcesOnly {
 			kinds = []string{"sources"}
 		}
+		language := testProjectLanguage(initRuleLanguage)
 		for _, kind := range kinds {
 			dir := filepath.Join(args[0], kind)
-			if err := testproject.Bootstrap(dir, "opentaint-rule-test-"+kind, initRuleProjectDeps); err != nil {
-				out.Fatalf("Failed to bootstrap test project: %s", err)
-			}
-			if err := testrule.Scaffold(dir); err != nil {
-				out.Fatalf("Failed to scaffold rule test project: %s", err)
+			switch language {
+			case "java":
+				if err := testproject.Bootstrap(dir, "opentaint-rule-test-"+kind, initRuleProjectDeps); err != nil {
+					out.Fatalf("Failed to bootstrap test project: %s", err)
+				}
+				if err := testrule.Scaffold(dir); err != nil {
+					out.Fatalf("Failed to scaffold rule test project: %s", err)
+				}
+			case "go":
+				if err := testproject.BootstrapGo(dir, testProjectModulePath, initRuleProjectDeps); err != nil {
+					out.Fatalf("Failed to bootstrap test project: %s", err)
+				}
+				if err := testrule.ScaffoldGo(dir); err != nil {
+					out.Fatalf("Failed to scaffold rule test project: %s", err)
+				}
 			}
 			fmt.Printf("Rule test project (%s) initialized at %s\n", kind, dir)
+		}
+		if language == "go" {
+			suggest("After writing the samples, resolve their dependencies in each project with", "go mod tidy")
 		}
 	},
 }
@@ -58,36 +84,66 @@ Use --dependency to add compile-only Maven dependencies for the samples.`,
 var testApproximationInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
 	Short: "Create a dataflow approximation test project",
-	Long: `Create a minimal Gradle project for testing OpenTaint dataflow approximations.
+	Long: `Create a minimal project for testing OpenTaint dataflow approximations.
 
-The project includes:
+Use --language java to create a Gradle project. The project includes:
   - build.gradle.kts with compile-only dependencies
   - settings.gradle.kts
   - approximation-rule.yaml, the fixed source-to-sink rule the samples are checked against
   - src/main/java/test/ with Taint.java (the fixed source() and sink()) for test sample sources
 
+Use --language go to create a Go module with module path "test". The module includes:
+  - go.mod with the required dependencies
+  - approximation-rule.yaml, the fixed source-to-sink rule the samples are checked against
+  - taint/taint.go (the fixed Source() and Sink()) for test sample sources
+
 Positive and negative samples are specified via rule-test.yaml.
 
 The approximation under test is supplied separately at test time with
---dataflow-approximations.
+--dataflow-approximations for Java or --go-models for Go.
 
-Use --dependency to add compile-only Maven dependencies for the samples.`,
+Use --dependency to add each library the samples use. For Java, use Maven coordinates. For
+Go, use module@version. Use the versions from the target application.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := testproject.Bootstrap(args[0], "approximation-test-project", initApproxProjectDeps); err != nil {
-			out.Fatalf("Failed to bootstrap test project: %s", err)
+		switch testProjectLanguage(initApproxLanguage) {
+		case "java":
+			if err := testproject.Bootstrap(args[0], "approximation-test-project", initApproxProjectDeps); err != nil {
+				out.Fatalf("Failed to bootstrap test project: %s", err)
+			}
+			if err := testapprox.Scaffold(args[0]); err != nil {
+				out.Fatalf("Failed to scaffold approximation project: %s", err)
+			}
+			fmt.Printf("Approximation test project initialized at %s\n", args[0])
+		case "go":
+			if err := testproject.BootstrapGo(args[0], testProjectModulePath, initApproxProjectDeps); err != nil {
+				out.Fatalf("Failed to bootstrap test project: %s", err)
+			}
+			if err := testapprox.ScaffoldGo(args[0]); err != nil {
+				out.Fatalf("Failed to scaffold approximation project: %s", err)
+			}
+			fmt.Printf("Approximation test project initialized at %s\n", args[0])
+			suggest("After writing the samples, resolve their dependencies with", "go mod tidy")
 		}
-		if err := testapprox.Scaffold(args[0]); err != nil {
-			out.Fatalf("Failed to scaffold approximation project: %s", err)
-		}
-		fmt.Printf("Approximation test project initialized at %s\n", args[0])
 	},
+}
+
+// testProjectLanguage normalizes a --language value to java or go.
+func testProjectLanguage(value string) string {
+	language := strings.ToLower(strings.TrimSpace(value))
+	if language != "java" && language != "go" {
+		out.Fatalf("Unsupported test project language %q. Use java or go", value)
+	}
+	return language
 }
 
 func init() {
 	testRuleCmd.AddCommand(testRuleInitCmd)
 	testRuleInitCmd.Flags().StringArrayVar(&initRuleProjectDeps, "dependency", nil,
-		"Compile-only Maven dependency coordinates for generated samples (repeatable)")
+		"Maven coordinate for Java or module@version for Go (repeatable)")
+	testRuleInitCmd.Flags().StringVar(&initRuleLanguage, "language", "",
+		"Test project language: java or go")
+	_ = testRuleInitCmd.MarkFlagRequired("language")
 	testRuleInitCmd.Flags().BoolVar(&initRuleSinksOnly, "sinks-only", false,
 		"Create only the sinks test project")
 	testRuleInitCmd.Flags().BoolVar(&initRuleSourcesOnly, "sources-only", false,
@@ -95,5 +151,8 @@ func init() {
 
 	testApproximationCmd.AddCommand(testApproximationInitCmd)
 	testApproximationInitCmd.Flags().StringArrayVar(&initApproxProjectDeps, "dependency", nil,
-		"Compile-only Maven dependency coordinates for generated samples (repeatable)")
+		"Maven coordinate for Java or module@version for Go (repeatable)")
+	testApproximationInitCmd.Flags().StringVar(&initApproxLanguage, "language", "",
+		"Test project language: java or go")
+	_ = testApproximationInitCmd.MarkFlagRequired("language")
 }

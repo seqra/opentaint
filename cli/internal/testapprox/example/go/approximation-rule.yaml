@@ -1,0 +1,20 @@
+rules:
+  - id: approximation-rule
+    severity: ERROR
+    message: Tainted value from taint.Source() reached taint.Sink() through an approximated function
+    metadata:
+      short-description: Approximation test source-to-sink flow
+    languages:
+      - go
+    mode: taint
+    pattern-sources:
+      - pattern: |
+          import "test/taint"
+          taint.Source()
+    pattern-sinks:
+      - patterns:
+          - pattern-inside: |
+              import "test/taint"
+              ...
+          - pattern: taint.Sink($VALUE)
+          - focus-metavariable: $VALUE
