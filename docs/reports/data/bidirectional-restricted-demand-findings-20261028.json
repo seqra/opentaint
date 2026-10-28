@@ -1,0 +1,101 @@
+{
+  "revision": "53991b7483b062b0287152130cbbbfc87623093b",
+  "baseline_revision": "f945f92c5ae554ff4f5fc7696ee5a269210478bb",
+  "all_fixed_inputs_match": true,
+  "projects": [
+    {
+      "project": "OWASP",
+      "assessment": "INCOMPLETE_OR_INVALID_INPUT_COMPARISON",
+      "counts": {
+        "main_unique": 4112,
+        "bidi_unique": 4112,
+        "unchanged_unique": 4112,
+        "removed_unique": 0,
+        "added_unique": 0,
+        "main_occurrences": 4112,
+        "bidi_occurrences": 9179,
+        "unchanged_occurrences": 4112,
+        "removed_occurrences": 0,
+        "added_occurrences": 5067
+      },
+      "input_differences": [],
+      "latest_bidi_iteration": "run-12",
+      "latest_complete_bidi_iteration": "run-11",
+      "latest_accepted_forward_report": "run-11",
+      "status": "TIMEOUT",
+      "comparison_file": "OWASP-comparison.json",
+      "source_review_file": "OWASP-review.md"
+    },
+    {
+      "project": "conductor",
+      "assessment": "INCOMPLETE_OR_INVALID_INPUT_COMPARISON",
+      "counts": {
+        "main_unique": 7,
+        "bidi_unique": 10,
+        "unchanged_unique": 7,
+        "removed_unique": 0,
+        "added_unique": 3,
+        "main_occurrences": 7,
+        "bidi_occurrences": 10,
+        "unchanged_occurrences": 7,
+        "removed_occurrences": 0,
+        "added_occurrences": 3
+      },
+      "input_differences": [],
+      "latest_bidi_iteration": "run-4",
+      "latest_complete_bidi_iteration": "run-3",
+      "latest_accepted_forward_report": "run-3",
+      "status": "OOM",
+      "comparison_file": "conductor-comparison.json",
+      "source_review_file": "conductor-review.md"
+    },
+    {
+      "project": "thingsboard",
+      "assessment": "INCOMPLETE_OR_INVALID_INPUT_COMPARISON",
+      "counts": {
+        "main_unique": 14,
+        "bidi_unique": 5089,
+        "unchanged_unique": 14,
+        "removed_unique": 0,
+        "added_unique": 5075,
+        "main_occurrences": 14,
+        "bidi_occurrences": 92016,
+        "unchanged_occurrences": 14,
+        "removed_occurrences": 0,
+        "added_occurrences": 92002
+      },
+      "input_differences": [],
+      "latest_bidi_iteration": "run-2",
+      "latest_complete_bidi_iteration": "run-1",
+      "latest_accepted_forward_report": "run-1",
+      "status": "TIMEOUT",
+      "comparison_file": "thingsboard-comparison.json",
+      "source_review_file": "thingsboard-review.md"
+    },
+    {
+      "project": "Stirling-PDF",
+      "assessment": "INCOMPLETE_OR_INVALID_INPUT_COMPARISON",
+      "counts": {
+        "main_unique": 17,
+        "bidi_unique": 39,
+        "unchanged_unique": 14,
+        "removed_unique": 3,
+        "added_unique": 25,
+        "main_occurrences": 17,
+        "bidi_occurrences": 95,
+        "unchanged_occurrences": 14,
+        "removed_occurrences": 3,
+        "added_occurrences": 81
+      },
+      "input_differences": [],
+      "latest_bidi_iteration": "run-5",
+      "latest_complete_bidi_iteration": "run-4",
+      "latest_accepted_forward_report": "run-3",
+      "status": "OOM",
+      "comparison_file": "Stirling-PDF-comparison.json",
+      "source_review_file": "Stirling-PDF-review.md"
+    }
+  ],
+  "strict_baseline_gate": "not passed: Stirling-PDF has three missing sink identities; all four analyses ended with timeout or OOM",
+  "classification_limits": "No added candidate is automatically a false positive. Two Stirling missing identities have proved last-return export differences but unproved original path survival; command flow has specified D23 local loss mechanism, without a current exclusive first-loss trace."
+}

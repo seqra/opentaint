@@ -1,0 +1,2405 @@
+{
+  "current_revision": "53991b7483b062b0287152130cbbbfc87623093b",
+  "baseline_revision": "f945f92c5ae554ff4f5fc7696ee5a269210478bb",
+  "status": "OOM",
+  "latest_reached": "run-5",
+  "latest_complete": "run-4",
+  "latest_accepted_forward_report": "run-3",
+  "strict_removed_unique": 3,
+  "classification": {
+    "xss": "two strict reporting-location regressions; underlying baseline path survival unproved",
+    "command": "missing-flow candidate; current specified D23 has a local loss mechanism; current complete first-loss attribution unavailable"
+  },
+  "baseline_removed_results_with_code_flows": [
+    {
+      "codeFlows": [
+        {
+          "threadFlows": [
+            {
+              "locations": [
+                {
+                  "executionOrder": 0,
+                  "kinds": [
+                    "taint"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertWebsiteToPDF#urlToPdf(stirling.software.SPDF.model.api.converters.UrlToPdfRequest):0:(URL = request.getUrlInput())",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertWebsiteToPDF#urlToPdf"
+                      }
+                    ],
+                    "message": {
+                      "text": "Method entry marks \"request\" as $UNTRUSTED"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertWebsiteToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 79,
+                        "endLine": 51,
+                        "startColumn": 12,
+                        "startLine": 51
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 1,
+                  "kinds": [
+                    "call"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertWebsiteToPDF#urlToPdf(stirling.software.SPDF.model.api.converters.UrlToPdfRequest):0:(URL = request.getUrlInput())",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertWebsiteToPDF#urlToPdf"
+                      }
+                    ],
+                    "message": {
+                      "text": "Calling \"getUrlInput\" with $UNTRUSTED data at \"request\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertWebsiteToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 43,
+                        "endLine": 53,
+                        "startColumn": 9,
+                        "startLine": 53
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 2,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.model.api.converters.UrlToPdfRequest#getUrlInput():1:(return %0)",
+                        "fullyQualifiedName": "stirling.software.SPDF.model.api.converters.UrlToPdfRequest#getUrlInput"
+                      }
+                    ],
+                    "message": {
+                      "text": "The returning value is assigned marked data from \"this.urlInput\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/model/api/converters/UrlToPdfRequest.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 29,
+                        "endLine": 15,
+                        "startColumn": 13,
+                        "startLine": 15
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 3,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.model.api.converters.UrlToPdfRequest#getUrlInput():1:(return %0)",
+                        "fullyQualifiedName": "stirling.software.SPDF.model.api.converters.UrlToPdfRequest#getUrlInput"
+                      }
+                    ],
+                    "message": {
+                      "text": "Exiting \"getUrlInput\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/model/api/converters/UrlToPdfRequest.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 29,
+                        "endLine": 15,
+                        "startColumn": 13,
+                        "startLine": 15
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 4,
+                  "kinds": [
+                    "return"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertWebsiteToPDF#urlToPdf(stirling.software.SPDF.model.api.converters.UrlToPdfRequest):0:(URL = request.getUrlInput())",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertWebsiteToPDF#urlToPdf"
+                      }
+                    ],
+                    "message": {
+                      "text": "Method \"getUrlInput\" propagates $UNTRUSTED data from \"request\" to \"URL\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertWebsiteToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 43,
+                        "endLine": 53,
+                        "startColumn": 9,
+                        "startLine": 53
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 5,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertWebsiteToPDF#urlToPdf(stirling.software.SPDF.model.api.converters.UrlToPdfRequest):55:(%41 = command.add(URL))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertWebsiteToPDF#urlToPdf"
+                      }
+                    ],
+                    "message": {
+                      "text": "Method \"add\" starts with $UNTRUSTED at \"URL\", then puts $ARGS data to \"command\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertWebsiteToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 29,
+                        "endLine": 100,
+                        "startColumn": 13,
+                        "startLine": 100
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 6,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertWebsiteToPDF#urlToPdf(stirling.software.SPDF.model.api.converters.UrlToPdfRequest):61:(%47 = %46.runCommandWithOutputHandling(command))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertWebsiteToPDF#urlToPdf"
+                      }
+                    ],
+                    "message": {
+                      "text": "Calling \"runCommandWithOutputHandling\" with $ARGS data at \"command\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertWebsiteToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 59,
+                        "endLine": 105,
+                        "startColumn": 22,
+                        "startLine": 105
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 7,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling(java.util.List):0:(%0 = this.runCommandWithOutputHandling(command, null))",
+                        "fullyQualifiedName": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling"
+                      }
+                    ],
+                    "message": {
+                      "text": "Entering \"runCommandWithOutputHandling\" with $ARGS data at \"command\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "stirling/software/common/util/ProcessExecutor",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 172
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 8,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling(java.util.List):0:(%0 = this.runCommandWithOutputHandling(command, null))",
+                        "fullyQualifiedName": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling"
+                      }
+                    ],
+                    "message": {
+                      "text": "Calling \"runCommandWithOutputHandling\" with $ARGS data at \"command\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "stirling/software/common/util/ProcessExecutor",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 172
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 9,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling(java.util.List, java.io.File):0:(messages = \"\")",
+                        "fullyQualifiedName": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling"
+                      }
+                    ],
+                    "message": {
+                      "text": "Entering \"runCommandWithOutputHandling\" with $ARGS data at \"command\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "stirling/software/common/util/ProcessExecutor",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 177
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 10,
+                  "kinds": [
+                    "taint"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling(java.util.List, java.io.File):8:(processBuilder.<init>(command))",
+                        "fullyQualifiedName": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling"
+                      }
+                    ],
+                    "message": {
+                      "text": "OS command injection: command line depends on a user provided value"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "stirling/software/common/util/ProcessExecutor",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 183
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "level": "error",
+      "locations": [
+        {
+          "logicalLocations": [
+            {
+              "decoratedName": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling(java.util.List, java.io.File):8:(processBuilder.<init>(command))",
+              "fullyQualifiedName": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling"
+            }
+          ],
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "stirling/software/common/util/ProcessExecutor",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "startLine": 183
+            }
+          }
+        }
+      ],
+      "message": {
+        "text": "OS command injection: command line depends on a user provided value"
+      },
+      "partialFingerprints": {
+        "vulnerabilitySinkHash/v1": "wY2lI7b1TEw2RC154xc+UyLWgRr7oi07c8cEICJI+QM=",
+        "vulnerabilityWithTraceHash/v1": "FCa6XVV+8EMD+6mMnFLRY89lxMPwFwiZOFFdytslEAQ=",
+        "vulnerabilitySourceSinkHash/v1": "UzeD9IxMW0sEXji1fB5zbiYlsZURjAPcgSvehYrZRuk="
+      },
+      "relatedLocations": [
+        {
+          "logicalLocations": [
+            {
+              "fullyQualifiedName": "POST /api/v1/convert/url/pdf",
+              "index": 0,
+              "kind": "function",
+              "name": "stirling.software.SPDF.controller.api.converters.ConvertWebsiteToPDF#urlToPdf",
+              "properties": {
+                "tags": [
+                  "query: urlInput"
+                ]
+              }
+            }
+          ],
+          "message": {
+            "text": "Related Spring controller"
+          },
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertWebsiteToPDF.java",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "startLine": 53
+            }
+          }
+        }
+      ],
+      "ruleId": "java.security.os-command-injection"
+    },
+    {
+      "codeFlows": [
+        {
+          "threadFlows": [
+            {
+              "locations": [
+                {
+                  "executionOrder": 0,
+                  "kinds": [
+                    "taint"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):0:(inputFile = request.getFileInput())",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+                      }
+                    ],
+                    "message": {
+                      "text": "Potential $UNTRUSTED data at \"request\" at the method entry"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 91,
+                        "endLine": 49,
+                        "startColumn": 12,
+                        "startLine": 49
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 1,
+                  "kinds": [
+                    "call"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):0:(inputFile = request.getFileInput())",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+                      }
+                    ],
+                    "message": {
+                      "text": "Calling \"getFileInput\" with $UNTRUSTED data at \"request\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 57,
+                        "endLine": 51,
+                        "startColumn": 9,
+                        "startLine": 51
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 2,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.common.model.api.PDFFile#getFileInput():0:(%0 = this.fileInput)",
+                        "fullyQualifiedName": "stirling.software.common.model.api.PDFFile#getFileInput"
+                      }
+                    ],
+                    "message": {
+                      "text": "Entering \"getFileInput\" with marked data at a static field, marked data at the calling object"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "stirling/software/common/model/api/PDFFile",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 24
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 3,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.common.model.api.PDFFile#getFileInput():1:(return %0)",
+                        "fullyQualifiedName": "stirling.software.common.model.api.PDFFile#getFileInput"
+                      }
+                    ],
+                    "message": {
+                      "text": "The returning value is assigned a value with marked data"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "stirling/software/common/model/api/PDFFile",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 24
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 4,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.common.model.api.PDFFile#getFileInput():1:(return %0)",
+                        "fullyQualifiedName": "stirling.software.common.model.api.PDFFile#getFileInput"
+                      }
+                    ],
+                    "message": {
+                      "text": "Exiting \"getFileInput\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "stirling/software/common/model/api/PDFFile",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 24
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 5,
+                  "kinds": [
+                    "return"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):0:(inputFile = request.getFileInput())",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+                      }
+                    ],
+                    "message": {
+                      "text": "Method \"getFileInput\" propagates $UNTRUSTED data from \"request\" to \"inputFile\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 57,
+                        "endLine": 51,
+                        "startColumn": 9,
+                        "startLine": 51
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 6,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):1:(originalFilename = inputFile.getOriginalFilename())",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+                      }
+                    ],
+                    "message": {
+                      "text": "Method \"getOriginalFilename\" propagates $UNTRUSTED data from \"inputFile\" to \"originalFilename\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 66,
+                        "endLine": 52,
+                        "startColumn": 9,
+                        "startLine": 52
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 7,
+                  "kinds": [
+                    "call"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):91:(errorMessage = stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF.buildErrorMessage(e, originalFilename))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+                      }
+                    ],
+                    "message": {
+                      "text": "Calling \"buildErrorMessage\" with $UNTRUSTED data at \"originalFilename\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 77,
+                        "endLine": 127,
+                        "startColumn": 17,
+                        "startLine": 127
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 8,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#buildErrorMessage(java.lang.Exception, java.lang.String):0:(%0 = e.getMessage())",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#buildErrorMessage"
+                      }
+                    ],
+                    "message": {
+                      "text": "Entering \"buildErrorMessage\" with marked data at \"originalFilename\", marked data at a static field"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 91,
+                        "endLine": 153,
+                        "startColumn": 29,
+                        "startLine": 153
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 9,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#buildErrorMessage(java.lang.Exception, java.lang.String):22:(errorMessage = %str)",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#buildErrorMessage"
+                      }
+                    ],
+                    "message": {
+                      "text": "\"errorMessage\" is assigned a value with marked data"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 35,
+                        "endLine": 160,
+                        "startColumn": 13,
+                        "startLine": 156
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 10,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#buildErrorMessage(java.lang.Exception, java.lang.String):19:(return %13)",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#buildErrorMessage"
+                      }
+                    ],
+                    "message": {
+                      "text": "The returning value is assigned a value with marked data"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 28,
+                        "endLine": 169,
+                        "startColumn": 9,
+                        "startLine": 169
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 11,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#buildErrorMessage(java.lang.Exception, java.lang.String):19:(return %13)",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#buildErrorMessage"
+                      }
+                    ],
+                    "message": {
+                      "text": "Exiting \"buildErrorMessage\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 6,
+                        "endLine": 170,
+                        "startColumn": 5,
+                        "startLine": 170
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 12,
+                  "kinds": [
+                    "return"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):91:(errorMessage = stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF.buildErrorMessage(e, originalFilename))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+                      }
+                    ],
+                    "message": {
+                      "text": "Method \"buildErrorMessage\" propagates $UNTRUSTED data from \"originalFilename\" to \"errorMessage\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 77,
+                        "endLine": 127,
+                        "startColumn": 17,
+                        "startLine": 127
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 13,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):99:(%51 = org.springframework.http.ResponseEntity.status(%50))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+                      }
+                    ],
+                    "message": {
+                      "text": "Method \"status\" puts $X data to a local variable"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 79,
+                        "endLine": 133,
+                        "startColumn": 24,
+                        "startLine": 133
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 14,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):102:(%54 = %51.body(%53))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+                      }
+                    ],
+                    "message": {
+                      "text": "Takes $UNTRUSTED data at \"errorMessage\" and ends up with marked data at a local variable"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 77,
+                        "endLine": 134,
+                        "startColumn": 26,
+                        "startLine": 134
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 15,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):103:(return %54)",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+                      }
+                    ],
+                    "message": {
+                      "text": "The returning value is assigned a value with marked data"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 77,
+                        "endLine": 134,
+                        "startColumn": 17,
+                        "startLine": 133
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 16,
+                  "kinds": [
+                    "taint"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):103:(return %54)",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+                      }
+                    ],
+                    "message": {
+                      "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 77,
+                        "endLine": 134,
+                        "startColumn": 17,
+                        "startLine": 133
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "level": "error",
+      "locations": [
+        {
+          "logicalLocations": [
+            {
+              "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):103:(return %54)",
+              "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+            }
+          ],
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "endColumn": 77,
+              "endLine": 134,
+              "startColumn": 17,
+              "startLine": 133
+            }
+          }
+        }
+      ],
+      "message": {
+        "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+      },
+      "partialFingerprints": {
+        "vulnerabilitySinkHash/v1": "PQLoBIezs1hooJgNROGqqMItTCrK3e4M30qb7Nc47I8=",
+        "vulnerabilityWithTraceHash/v1": "grIKj26OnPY+GxxvzFwZhPP0ruTbo2w/BzhpWgUX4bA=",
+        "vulnerabilitySourceSinkHash/v1": "lseGFSkMQoU5H9x3TGPoODmdc9RU9TYA4VWG3wp1tak="
+      },
+      "relatedLocations": [
+        {
+          "logicalLocations": [
+            {
+              "fullyQualifiedName": "POST /api/v1/convert/eml/pdf",
+              "index": 0,
+              "kind": "function",
+              "name": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf",
+              "properties": {
+                "tags": [
+                  "query: fileInput"
+                ]
+              }
+            }
+          ],
+          "message": {
+            "text": "Related Spring controller"
+          },
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "startLine": 51
+            }
+          }
+        }
+      ],
+      "ruleId": "java.security.xss#sink#1"
+    },
+    {
+      "codeFlows": [
+        {
+          "threadFlows": [
+            {
+              "locations": [
+                {
+                  "executionOrder": 0,
+                  "kinds": [
+                    "taint"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):0:(files = request.getFileInput())",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+                      }
+                    ],
+                    "message": {
+                      "text": "Potential $UNTRUSTED data at \"request\" at the method entry"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 88,
+                        "endLine": 56,
+                        "startColumn": 12,
+                        "startLine": 56
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 1,
+                  "kinds": [
+                    "call"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):0:(files = request.getFileInput())",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+                      }
+                    ],
+                    "message": {
+                      "text": "Calling \"getFileInput\" with $UNTRUSTED data at \"request\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 55,
+                        "endLine": 58,
+                        "startColumn": 9,
+                        "startLine": 58
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 2,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.model.api.HandleDataRequest#getFileInput():1:(return %0)",
+                        "fullyQualifiedName": "stirling.software.SPDF.model.api.HandleDataRequest#getFileInput"
+                      }
+                    ],
+                    "message": {
+                      "text": "The returning value is assigned marked data from \"this.fileInput\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/model/api/HandleDataRequest.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 39,
+                        "endLine": 15,
+                        "startColumn": 13,
+                        "startLine": 15
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 3,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.model.api.HandleDataRequest#getFileInput():1:(return %0)",
+                        "fullyQualifiedName": "stirling.software.SPDF.model.api.HandleDataRequest#getFileInput"
+                      }
+                    ],
+                    "message": {
+                      "text": "Exiting \"getFileInput\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/model/api/HandleDataRequest.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 39,
+                        "endLine": 15,
+                        "startColumn": 13,
+                        "startLine": 15
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 4,
+                  "kinds": [
+                    "return"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):0:(files = request.getFileInput())",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+                      }
+                    ],
+                    "message": {
+                      "text": "Method \"getFileInput\" propagates $UNTRUSTED data from \"request\" to \"files\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 55,
+                        "endLine": 58,
+                        "startColumn": 9,
+                        "startLine": 58
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 5,
+                  "kinds": [
+                    "call"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):26:(inputFiles = %25.generateInputFiles(files))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+                      }
+                    ],
+                    "message": {
+                      "text": "Calling \"generateInputFiles\" with $UNTRUSTED data at \"files\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 76,
+                        "endLine": 76,
+                        "startColumn": 13,
+                        "startLine": 76
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 6,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#generateInputFiles(org.springframework.web.multipart.MultipartFile[]):0:(if (files == null))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#generateInputFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "Entering \"generateInputFiles\" with marked data at \"files\", marked data at a static field"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineProcessor.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 61,
+                        "endLine": 361,
+                        "startColumn": 5,
+                        "startLine": 361
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 7,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#generateInputFiles(org.springframework.web.multipart.MultipartFile[]):15:(file = %3[%12])",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#generateInputFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "\"file\" is assigned a value with marked data"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineProcessor.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 40,
+                        "endLine": 367,
+                        "startColumn": 14,
+                        "startLine": 367
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 8,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#generateInputFiles(org.springframework.web.multipart.MultipartFile[]):17:(%17 = file.getBytes())",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#generateInputFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "Method \"getBytes\" propagates marked data from a static field, \"file\" to a local variable"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineProcessor.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 58,
+                        "endLine": 369,
+                        "startColumn": 43,
+                        "startLine": 369
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 9,
+                  "kinds": [
+                    "call"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#generateInputFiles(org.springframework.web.multipart.MultipartFile[]):18:(fileResource.<init>(%7, %17, file))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#generateInputFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "Calling \"PipelineProcessor.3\" initializer with marked data at a local variable, marked data at a static field"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineProcessor.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 59,
+                        "endLine": 369,
+                        "startColumn": 42,
+                        "startLine": 369
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 10,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor$3#<init>(stirling.software.SPDF.controller.api.pipeline.PipelineProcessor, byte[], org.springframework.web.multipart.MultipartFile):0:(this.this$0 = this$0)",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor$3#<init>"
+                      }
+                    ],
+                    "message": {
+                      "text": "Entering \"PipelineProcessor.3\" initializer with marked data at \"byteArray\", marked data at a static field"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineProcessor.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 59,
+                        "endLine": 369,
+                        "startColumn": 42,
+                        "startLine": 369
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 11,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor$3#<init>(stirling.software.SPDF.controller.api.pipeline.PipelineProcessor, byte[], org.springframework.web.multipart.MultipartFile):3:(return)",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor$3#<init>"
+                      }
+                    ],
+                    "message": {
+                      "text": "Exiting \"PipelineProcessor.3\" initializer"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineProcessor.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 59,
+                        "endLine": 369,
+                        "startColumn": 42,
+                        "startLine": 369
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 12,
+                  "kinds": [
+                    "return"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#generateInputFiles(org.springframework.web.multipart.MultipartFile[]):18:(fileResource.<init>(%7, %17, file))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#generateInputFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "\"PipelineProcessor.3\" initializer propagates marked data from a local variable, a static field to \"fileResource\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineProcessor.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 59,
+                        "endLine": 369,
+                        "startColumn": 42,
+                        "startLine": 369
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 13,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#generateInputFiles(org.springframework.web.multipart.MultipartFile[]):25:(return outputFiles)",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#generateInputFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "The returning value is assigned a value with marked data"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineProcessor.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 27,
+                        "endLine": 379,
+                        "startColumn": 9,
+                        "startLine": 379
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 14,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#generateInputFiles(org.springframework.web.multipart.MultipartFile[]):25:(return outputFiles)",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#generateInputFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "Exiting \"generateInputFiles\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineProcessor.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 6,
+                        "endLine": 380,
+                        "startColumn": 5,
+                        "startLine": 380
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 15,
+                  "kinds": [
+                    "return"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):26:(inputFiles = %25.generateInputFiles(files))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+                      }
+                    ],
+                    "message": {
+                      "text": "Method \"generateInputFiles\" propagates $UNTRUSTED data from \"files\" to \"inputFiles\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 76,
+                        "endLine": 76,
+                        "startColumn": 13,
+                        "startLine": 76
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 16,
+                  "kinds": [
+                    "call"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):32:(result = %29.runPipelineAgainstFiles(inputFiles, config))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+                      }
+                    ],
+                    "message": {
+                      "text": "Calling \"runPipelineAgainstFiles\" with $UNTRUSTED data at \"inputFiles\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 90,
+                        "endLine": 80,
+                        "startColumn": 13,
+                        "startLine": 80
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 17,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#runPipelineAgainstFiles(java.util.List, stirling.software.SPDF.model.PipelineConfig):0:(result = new stirling.software.SPDF.model.PipelineResult)",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#runPipelineAgainstFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "Entering \"runPipelineAgainstFiles\" with marked data at \"outputFiles\", marked data at a static field"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineProcessor.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 94,
+                        "endLine": 90,
+                        "startColumn": 5,
+                        "startLine": 90
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 18,
+                  "kinds": [
+                    "call"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#runPipelineAgainstFiles(java.util.List, stirling.software.SPDF.model.PipelineConfig):650:(%14.setOutputFiles(%12))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#runPipelineAgainstFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "Calling \"setOutputFiles\" with marked data at \"outputFiles\", marked data at a static field"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineProcessor.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 43,
+                        "endLine": 259,
+                        "startColumn": 9,
+                        "startLine": 259
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 19,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.model.PipelineResult#setOutputFiles(java.util.List):0:(this.outputFiles = outputFiles)",
+                        "fullyQualifiedName": "stirling.software.SPDF.model.PipelineResult#setOutputFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "Entering \"setOutputFiles\" with marked data at \"outputFiles\", marked data at a static field"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/model/PipelineResult.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 6,
+                        "endLine": 9,
+                        "startColumn": 1,
+                        "startLine": 9
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 20,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.model.PipelineResult#setOutputFiles(java.util.List):0:(this.outputFiles = outputFiles)",
+                        "fullyQualifiedName": "stirling.software.SPDF.model.PipelineResult#setOutputFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "\"this.outputFiles\" is assigned a value with marked data"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/model/PipelineResult.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 6,
+                        "endLine": 9,
+                        "startColumn": 1,
+                        "startLine": 9
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 21,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.model.PipelineResult#setOutputFiles(java.util.List):1:(return)",
+                        "fullyQualifiedName": "stirling.software.SPDF.model.PipelineResult#setOutputFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "Exiting \"setOutputFiles\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/model/PipelineResult.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 6,
+                        "endLine": 9,
+                        "startColumn": 1,
+                        "startLine": 9
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 22,
+                  "kinds": [
+                    "return"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#runPipelineAgainstFiles(java.util.List, stirling.software.SPDF.model.PipelineConfig):650:(%14.setOutputFiles(%12))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#runPipelineAgainstFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "Method \"setOutputFiles\" propagates marked data from \"outputFiles\", a static field to \"result\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineProcessor.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 43,
+                        "endLine": 259,
+                        "startColumn": 9,
+                        "startLine": 259
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 23,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#runPipelineAgainstFiles(java.util.List, stirling.software.SPDF.model.PipelineConfig):651:(return %14)",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#runPipelineAgainstFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "The returning value is assigned a value with marked data"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineProcessor.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 22,
+                        "endLine": 260,
+                        "startColumn": 9,
+                        "startLine": 260
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 24,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#runPipelineAgainstFiles(java.util.List, stirling.software.SPDF.model.PipelineConfig):651:(return %14)",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineProcessor#runPipelineAgainstFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "Exiting \"runPipelineAgainstFiles\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineProcessor.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 6,
+                        "endLine": 261,
+                        "startColumn": 5,
+                        "startLine": 261
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 25,
+                  "kinds": [
+                    "return"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):32:(result = %29.runPipelineAgainstFiles(inputFiles, config))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+                      }
+                    ],
+                    "message": {
+                      "text": "Method \"runPipelineAgainstFiles\" propagates $UNTRUSTED data from \"inputFiles\" to \"result\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 90,
+                        "endLine": 80,
+                        "startColumn": 13,
+                        "startLine": 80
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 26,
+                  "kinds": [
+                    "call"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):33:(outputFiles = result.getOutputFiles())",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+                      }
+                    ],
+                    "message": {
+                      "text": "Calling \"getOutputFiles\" with $UNTRUSTED data at \"result\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 65,
+                        "endLine": 81,
+                        "startColumn": 13,
+                        "startLine": 81
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 27,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.model.PipelineResult#getOutputFiles():1:(return %0)",
+                        "fullyQualifiedName": "stirling.software.SPDF.model.PipelineResult#getOutputFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "The returning value is assigned marked data from \"this.outputFiles\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/model/PipelineResult.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 40,
+                        "endLine": 11,
+                        "startColumn": 5,
+                        "startLine": 11
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 28,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.model.PipelineResult#getOutputFiles():1:(return %0)",
+                        "fullyQualifiedName": "stirling.software.SPDF.model.PipelineResult#getOutputFiles"
+                      }
+                    ],
+                    "message": {
+                      "text": "Exiting \"getOutputFiles\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/model/PipelineResult.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 40,
+                        "endLine": 11,
+                        "startColumn": 5,
+                        "startLine": 11
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 29,
+                  "kinds": [
+                    "return"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):33:(outputFiles = result.getOutputFiles())",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+                      }
+                    ],
+                    "message": {
+                      "text": "Method \"getOutputFiles\" propagates $UNTRUSTED data from \"result\" to \"outputFiles\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 65,
+                        "endLine": 81,
+                        "startColumn": 13,
+                        "startLine": 81
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 30,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):38:(singleFile = (org.springframework.core.io.Resource) %91)",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+                      }
+                    ],
+                    "message": {
+                      "text": "\"singleFile\" is assigned a value with $UNTRUSTED data"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 57,
+                        "endLine": 84,
+                        "startColumn": 17,
+                        "startLine": 84
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 31,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):39:(is = singleFile.getInputStream())",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+                      }
+                    ],
+                    "message": {
+                      "text": "Method \"getInputStream\" propagates $UNTRUSTED data from \"singleFile\" to \"is\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 61,
+                        "endLine": 85,
+                        "startColumn": 17,
+                        "startLine": 85
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 32,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):43:(%100 = is.read(bytes))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+                      }
+                    ],
+                    "message": {
+                      "text": "Method \"read\" propagates $UNTRUSTED data from \"is\" to \"bytes\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 31,
+                        "endLine": 87,
+                        "startColumn": 17,
+                        "startLine": 87
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 33,
+                  "kinds": [
+                    "call"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):49:(%104 = stirling.software.common.util.WebResponseUtils.bytesToWebResponse(bytes, %102, %103))",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+                      }
+                    ],
+                    "message": {
+                      "text": "Calling \"bytesToWebResponse\" with $UNTRUSTED data at \"bytes\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 93,
+                        "endLine": 91,
+                        "startColumn": 41,
+                        "startLine": 90
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 34,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse(byte[], java.lang.String, org.springframework.http.MediaType):0:(headers = new org.springframework.http.HttpHeaders)",
+                        "fullyQualifiedName": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse"
+                      }
+                    ],
+                    "message": {
+                      "text": "Entering \"bytesToWebResponse\" with $UNTRUSTED data at \"bytes\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "stirling/software/common/util/WebResponseUtils",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 49
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 35,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse(byte[], java.lang.String, org.springframework.http.MediaType):1:(headers.<init>())",
+                        "fullyQualifiedName": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse"
+                      }
+                    ],
+                    "message": {
+                      "text": "\"HttpHeaders\" initializer puts $H data to \"headers\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "stirling/software/common/util/WebResponseUtils",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 49
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 36,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse(byte[], java.lang.String, org.springframework.http.MediaType):15:(%11.<init>(bytes, headers, %12))",
+                        "fullyQualifiedName": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse"
+                      }
+                    ],
+                    "message": {
+                      "text": "\"ResponseEntity\" initializer starts with $H at \"headers\"; $UNTRUSTED at \"bytes\", then puts marked data to a local variable"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "stirling/software/common/util/WebResponseUtils",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 58
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 37,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse(byte[], java.lang.String, org.springframework.http.MediaType):16:(return %11)",
+                        "fullyQualifiedName": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse"
+                      }
+                    ],
+                    "message": {
+                      "text": "The returning value is assigned a value with marked data"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "stirling/software/common/util/WebResponseUtils",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 58
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 38,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse(byte[], java.lang.String, org.springframework.http.MediaType):16:(return %11)",
+                        "fullyQualifiedName": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse"
+                      }
+                    ],
+                    "message": {
+                      "text": "Exiting \"bytesToWebResponse\""
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "stirling/software/common/util/WebResponseUtils",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 58
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 39,
+                  "kinds": [
+                    "unknown"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):50:(return %104)",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+                      }
+                    ],
+                    "message": {
+                      "text": "The returning value is assigned marked data from \"bytesToWebResponse\" call"
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 93,
+                        "endLine": 91,
+                        "startColumn": 17,
+                        "startLine": 90
+                      }
+                    }
+                  }
+                },
+                {
+                  "executionOrder": 40,
+                  "kinds": [
+                    "taint"
+                  ],
+                  "location": {
+                    "logicalLocations": [
+                      {
+                        "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):50:(return %104)",
+                        "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+                      }
+                    ],
+                    "message": {
+                      "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+                    },
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "endColumn": 93,
+                        "endLine": 91,
+                        "startColumn": 17,
+                        "startLine": 90
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "level": "error",
+      "locations": [
+        {
+          "logicalLocations": [
+            {
+              "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):50:(return %104)",
+              "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+            }
+          ],
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "endColumn": 93,
+              "endLine": 91,
+              "startColumn": 17,
+              "startLine": 90
+            }
+          }
+        }
+      ],
+      "message": {
+        "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+      },
+      "partialFingerprints": {
+        "vulnerabilitySinkHash/v1": "06ygLUfQlHncy8dVaxT/0Sr5FENRUrFXg+b9LTuYQTE=",
+        "vulnerabilityWithTraceHash/v1": "L8shxEzjCv0228I93BGPeqcOM8/uqndRmSLNuGUASdU=",
+        "vulnerabilitySourceSinkHash/v1": "+6PoN1c+oYt5lA7F2v/XF3L+vjVS4FbZPvgqZIU+W64="
+      },
+      "relatedLocations": [
+        {
+          "logicalLocations": [
+            {
+              "fullyQualifiedName": "POST /api/v1/pipeline/handleData",
+              "index": 0,
+              "kind": "function",
+              "name": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData",
+              "properties": {
+                "tags": [
+                  "query: fileInput"
+                ]
+              }
+            }
+          ],
+          "message": {
+            "text": "Related Spring controller"
+          },
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "startLine": 58
+            }
+          }
+        }
+      ],
+      "ruleId": "java.security.xss#sink#1"
+    }
+  ],
+  "current_results_in_same_full_methods": [
+    {
+      "codeFlows": [],
+      "level": "error",
+      "locations": [
+        {
+          "logicalLocations": [
+            {
+              "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):109:(return null)",
+              "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+            }
+          ],
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "endColumn": 24,
+              "endLine": 130,
+              "startColumn": 13,
+              "startLine": 130
+            }
+          }
+        }
+      ],
+      "message": {
+        "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+      },
+      "partialFingerprints": {
+        "vulnerabilitySinkHash/v1": "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q=",
+        "vulnerabilityWithTraceHash/v1": "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q=",
+        "vulnerabilitySourceSinkHash/v1": "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q="
+      },
+      "relatedLocations": [
+        {
+          "logicalLocations": [
+            {
+              "fullyQualifiedName": "POST /api/v1/pipeline/handleData",
+              "index": 0,
+              "kind": "function",
+              "name": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+            }
+          ],
+          "message": {
+            "text": "Related Spring controller"
+          },
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "startLine": 58
+            }
+          }
+        }
+      ],
+      "ruleId": "java.security.xss#sink#1"
+    },
+    {
+      "codeFlows": [],
+      "level": "error",
+      "locations": [
+        {
+          "logicalLocations": [
+            {
+              "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):126:(return %89)",
+              "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+            }
+          ],
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "endColumn": 84,
+              "endLine": 149,
+              "startColumn": 13,
+              "startLine": 148
+            }
+          }
+        }
+      ],
+      "message": {
+        "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+      },
+      "partialFingerprints": {
+        "vulnerabilitySinkHash/v1": "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE=",
+        "vulnerabilityWithTraceHash/v1": "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE=",
+        "vulnerabilitySourceSinkHash/v1": "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE="
+      },
+      "relatedLocations": [
+        {
+          "logicalLocations": [
+            {
+              "fullyQualifiedName": "POST /api/v1/convert/eml/pdf",
+              "index": 0,
+              "kind": "function",
+              "name": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+            }
+          ],
+          "message": {
+            "text": "Related Spring controller"
+          },
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "startLine": 51
+            }
+          }
+        }
+      ],
+      "ruleId": "java.security.xss#sink#1"
+    },
+    {
+      "codeFlows": [],
+      "level": "error",
+      "locations": [
+        {
+          "logicalLocations": [
+            {
+              "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):126:(return %89)",
+              "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+            }
+          ],
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "endColumn": 84,
+              "endLine": 149,
+              "startColumn": 13,
+              "startLine": 148
+            }
+          }
+        }
+      ],
+      "message": {
+        "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+      },
+      "partialFingerprints": {
+        "vulnerabilitySinkHash/v1": "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE=",
+        "vulnerabilityWithTraceHash/v1": "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE=",
+        "vulnerabilitySourceSinkHash/v1": "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE="
+      },
+      "relatedLocations": [
+        {
+          "logicalLocations": [
+            {
+              "fullyQualifiedName": "POST /api/v1/convert/eml/pdf",
+              "index": 0,
+              "kind": "function",
+              "name": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+            }
+          ],
+          "message": {
+            "text": "Related Spring controller"
+          },
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "startLine": 51
+            }
+          }
+        }
+      ],
+      "ruleId": "java.security.xss#sink#1"
+    }
+  ],
+  "source_hashes": [
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/e2e-root/model-Stirling-PDF/sources/app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+      "sha256": "e17848e840895bb7cba78774a7b004bf54d9abe39da282483d7be972e9dcdc27"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/e2e-root/model-Stirling-PDF/sources/app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+      "sha256": "a78ccc6c311c4ade3274c4e66b592b6278e60505b7cf7a67d874f1389b4fd2ca"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/e2e-root/model-Stirling-PDF/sources/app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertWebsiteToPDF.java",
+      "sha256": "30e8d899bf5886d117d36b5a960840b471c7a3bb9bb6c97d4f1f29dcb0d2d0de"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/e2e-root/model-Stirling-PDF/sources/app/common/src/main/java/stirling/software/common/util/ProcessExecutor.java",
+      "sha256": "2d5263756b242bd3b8e8bdb36fe7f51c9c68f763a0a13ed97641c6563bc23f7a"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/main/kotlin/org/opentaint/jvm/sast/sarif/TraceMessageBuilder.kt",
+      "sha256": "31686b569c00895013f9bfe4bb96b5ef490ce889de28b8ed55eb434684e21c32"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/JIRBidiAnalysis.kt",
+      "sha256": "3caaa5de0ffb3d8bf284e66248f2aa6a65c243eda0c739817aee62971471e219"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRCallPlanBuilder.kt",
+      "sha256": "d40274e6f306c1eab9e55e80a6ebab05e4ed6f0416df4659584a845573f6c1f7"
+    }
+  ]
+}

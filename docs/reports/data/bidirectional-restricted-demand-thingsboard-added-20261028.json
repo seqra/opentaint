@@ -1,0 +1,722 @@
+{
+  "project": "thingsboard",
+  "source": "streamed current SARIF results and compare_bidi_projects.extract_findings",
+  "source_result_occurrences": 92016,
+  "latest_reached": "run-2",
+  "latest_complete": "run-1",
+  "latest_accepted_forward_report": "run-1",
+  "status": "TIMEOUT",
+  "added_unique": 5075,
+  "added_occurrences": 91996,
+  "rules": [
+    {
+      "rule_id": "java.security.xss#sink#1",
+      "added_unique": 5060,
+      "added_occurrences": 91981,
+      "samples": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.xss#sink#1",
+            "9kzFB7NXE08T4Fr/+6n/5hSE5b9EhySUcu3TqyWR14I=",
+            "org.thingsboard.server.dao.cf.BaseCalculatedFieldService#findCalculatedFieldsByEntityId(org.thingsboard.server.common.data.id.TenantId, org.thingsboard.server.common.data.id.EntityId)"
+          ],
+          "rule_id": "java.security.xss#sink#1",
+          "path": "dao/src/main/java/org/thingsboard/server/dao/cf/BaseCalculatedFieldService.java",
+          "region": {
+            "endColumn": 70,
+            "endLine": 131,
+            "startColumn": 9,
+            "startLine": 131
+          },
+          "method_signature": "org.thingsboard.server.dao.cf.BaseCalculatedFieldService#findCalculatedFieldsByEntityId(org.thingsboard.server.common.data.id.TenantId, org.thingsboard.server.common.data.id.EntityId)",
+          "instruction_index": 3,
+          "instruction": "goto JIRInstRef(index=8)",
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "9kzFB7NXE08T4Fr/+6n/5hSE5b9EhySUcu3TqyWR14I=",
+            "vulnerabilityWithTraceHash/v1": "9kzFB7NXE08T4Fr/+6n/5hSE5b9EhySUcu3TqyWR14I=",
+            "vulnerabilitySourceSinkHash/v1": "9kzFB7NXE08T4Fr/+6n/5hSE5b9EhySUcu3TqyWR14I="
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.server.dao.cf.BaseCalculatedFieldService#findCalculatedFieldsByEntityId(org.thingsboard.server.common.data.id.TenantId, org.thingsboard.server.common.data.id.EntityId):3:(goto JIRInstRef(index=8))",
+                "fullyQualifiedName": "org.thingsboard.server.dao.cf.BaseCalculatedFieldService#findCalculatedFieldsByEntityId"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "dao/src/main/java/org/thingsboard/server/dao/cf/BaseCalculatedFieldService.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 70,
+                "endLine": 131,
+                "startColumn": 9,
+                "startLine": 131
+              }
+            }
+          }
+        },
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.xss#sink#1",
+            "MWmNV/LMY6Ny6Crnfrhqt6wMk2qFD14QzIBizdOTap0=",
+            "org.thingsboard.server.common.data.cf.configuration.AlarmCalculatedFieldConfiguration#getClearRule()"
+          ],
+          "rule_id": "java.security.xss#sink#1",
+          "path": "common/data/src/main/java/org/thingsboard/server/common/data/cf/configuration/AlarmCalculatedFieldConfiguration.java",
+          "region": {
+            "endColumn": 33,
+            "endLine": 46,
+            "startColumn": 13,
+            "startLine": 46
+          },
+          "method_signature": "org.thingsboard.server.common.data.cf.configuration.AlarmCalculatedFieldConfiguration#getClearRule()",
+          "instruction_index": 1,
+          "instruction": "return %0",
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "MWmNV/LMY6Ny6Crnfrhqt6wMk2qFD14QzIBizdOTap0=",
+            "vulnerabilityWithTraceHash/v1": "MWmNV/LMY6Ny6Crnfrhqt6wMk2qFD14QzIBizdOTap0=",
+            "vulnerabilitySourceSinkHash/v1": "MWmNV/LMY6Ny6Crnfrhqt6wMk2qFD14QzIBizdOTap0="
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.server.common.data.cf.configuration.AlarmCalculatedFieldConfiguration#getClearRule():1:(return %0)",
+                "fullyQualifiedName": "org.thingsboard.server.common.data.cf.configuration.AlarmCalculatedFieldConfiguration#getClearRule"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "common/data/src/main/java/org/thingsboard/server/common/data/cf/configuration/AlarmCalculatedFieldConfiguration.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 33,
+                "endLine": 46,
+                "startColumn": 13,
+                "startLine": 46
+              }
+            }
+          }
+        },
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.xss#sink#1",
+            "0Mo6gzU/2dGsKT+kRQOG3DrRwM/01TJ2zJjsGM5gQYA=",
+            "org.thingsboard.client.tools.migrator.DictionaryParser#getKeyByKeyId(java.lang.String)"
+          ],
+          "rule_id": "java.security.xss#sink#1",
+          "path": "tools/src/main/java/org/thingsboard/client/tools/migrator/DictionaryParser.java",
+          "region": {
+            "endColumn": 43,
+            "endLine": 35,
+            "startColumn": 9,
+            "startLine": 35
+          },
+          "method_signature": "org.thingsboard.client.tools.migrator.DictionaryParser#getKeyByKeyId(java.lang.String)",
+          "instruction_index": 3,
+          "instruction": "return %2",
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "0Mo6gzU/2dGsKT+kRQOG3DrRwM/01TJ2zJjsGM5gQYA=",
+            "vulnerabilityWithTraceHash/v1": "0Mo6gzU/2dGsKT+kRQOG3DrRwM/01TJ2zJjsGM5gQYA=",
+            "vulnerabilitySourceSinkHash/v1": "0Mo6gzU/2dGsKT+kRQOG3DrRwM/01TJ2zJjsGM5gQYA="
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.client.tools.migrator.DictionaryParser#getKeyByKeyId(java.lang.String):3:(return %2)",
+                "fullyQualifiedName": "org.thingsboard.client.tools.migrator.DictionaryParser#getKeyByKeyId"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "tools/src/main/java/org/thingsboard/client/tools/migrator/DictionaryParser.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 43,
+                "endLine": 35,
+                "startColumn": 9,
+                "startLine": 35
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "rule_id": "java.security.path-traversal",
+      "added_unique": 6,
+      "added_occurrences": 6,
+      "samples": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.path-traversal",
+            "575awCt0ggYpUs9u3LDQ0kGWX09ca+p90QSqNJbab9Y=",
+            "org.thingsboard.common.util.AzureIotHubUtil#getDefaultCaCert()"
+          ],
+          "rule_id": "java.security.path-traversal",
+          "path": "common/util/src/main/java/org/thingsboard/common/util/AzureIotHubUtil.java",
+          "region": {
+            "endColumn": 62,
+            "endLine": 105,
+            "startColumn": 21,
+            "startLine": 105
+          },
+          "method_signature": "org.thingsboard.common.util.AzureIotHubUtil#getDefaultCaCert()",
+          "instruction_index": 23,
+          "instruction": "fileBytes = java.nio.file.Files.readAllBytes(firstFile)",
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "575awCt0ggYpUs9u3LDQ0kGWX09ca+p90QSqNJbab9Y=",
+            "vulnerabilityWithTraceHash/v1": "575awCt0ggYpUs9u3LDQ0kGWX09ca+p90QSqNJbab9Y=",
+            "vulnerabilitySourceSinkHash/v1": "575awCt0ggYpUs9u3LDQ0kGWX09ca+p90QSqNJbab9Y="
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.common.util.AzureIotHubUtil#getDefaultCaCert():23:(fileBytes = java.nio.file.Files.readAllBytes(firstFile))",
+                "fullyQualifiedName": "org.thingsboard.common.util.AzureIotHubUtil#getDefaultCaCert"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "common/util/src/main/java/org/thingsboard/common/util/AzureIotHubUtil.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 62,
+                "endLine": 105,
+                "startColumn": 21,
+                "startLine": 105
+              }
+            }
+          }
+        },
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.path-traversal",
+            "Fv6oVDCb1K+SdsckbXH/ATtX3M6JM8QiHgkUrhyWL4M=",
+            "org.thingsboard.server.service.sync.vc.DefaultGitRepositoryService#clearRepository(org.thingsboard.server.common.data.id.TenantId)"
+          ],
+          "rule_id": "java.security.path-traversal",
+          "path": "common/version-control/src/main/java/org/thingsboard/server/service/sync/vc/DefaultGitRepositoryService.java",
+          "region": {
+            "endColumn": 75,
+            "endLine": 259,
+            "startColumn": 13,
+            "startLine": 259
+          },
+          "method_signature": "org.thingsboard.server.service.sync.vc.DefaultGitRepositoryService#clearRepository(org.thingsboard.server.common.data.id.TenantId)",
+          "instruction_index": 9,
+          "instruction": "org.apache.commons.io.FileUtils.deleteDirectory(%5)",
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "Fv6oVDCb1K+SdsckbXH/ATtX3M6JM8QiHgkUrhyWL4M=",
+            "vulnerabilityWithTraceHash/v1": "Fv6oVDCb1K+SdsckbXH/ATtX3M6JM8QiHgkUrhyWL4M=",
+            "vulnerabilitySourceSinkHash/v1": "Fv6oVDCb1K+SdsckbXH/ATtX3M6JM8QiHgkUrhyWL4M="
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.server.service.sync.vc.DefaultGitRepositoryService#clearRepository(org.thingsboard.server.common.data.id.TenantId):9:(org.apache.commons.io.FileUtils.deleteDirectory(%5))",
+                "fullyQualifiedName": "org.thingsboard.server.service.sync.vc.DefaultGitRepositoryService#clearRepository"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "common/version-control/src/main/java/org/thingsboard/server/service/sync/vc/DefaultGitRepositoryService.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 75,
+                "endLine": 259,
+                "startColumn": 13,
+                "startLine": 259
+              }
+            }
+          }
+        },
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.path-traversal",
+            "jpvGrJwbkFLCAIRb7U+3pEA9N/SHP6CkrvC8bYKnipk=",
+            "org.thingsboard.server.service.install.InstallScripts#lambda$loadSystemLwm2mResources$16(java.nio.file.Path)"
+          ],
+          "rule_id": "java.security.path-traversal",
+          "path": "application/src/main/java/org/thingsboard/server/service/install/InstallScripts.java",
+          "region": {
+            "endColumn": 67,
+            "endLine": 482,
+            "startColumn": 29,
+            "startLine": 482
+          },
+          "method_signature": "org.thingsboard.server.service.install.InstallScripts#lambda$loadSystemLwm2mResources$16(java.nio.file.Path)",
+          "instruction_index": 0,
+          "instruction": "data = java.nio.file.Files.readAllBytes(path)",
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "jpvGrJwbkFLCAIRb7U+3pEA9N/SHP6CkrvC8bYKnipk=",
+            "vulnerabilityWithTraceHash/v1": "jpvGrJwbkFLCAIRb7U+3pEA9N/SHP6CkrvC8bYKnipk=",
+            "vulnerabilitySourceSinkHash/v1": "jpvGrJwbkFLCAIRb7U+3pEA9N/SHP6CkrvC8bYKnipk="
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.server.service.install.InstallScripts#lambda$loadSystemLwm2mResources$16(java.nio.file.Path):0:(data = java.nio.file.Files.readAllBytes(path))",
+                "fullyQualifiedName": "org.thingsboard.server.service.install.InstallScripts#lambda$loadSystemLwm2mResources$16"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "application/src/main/java/org/thingsboard/server/service/install/InstallScripts.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 67,
+                "endLine": 482,
+                "startColumn": 29,
+                "startLine": 482
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "rule_id": "java.security.sql-injection",
+      "added_unique": 3,
+      "added_occurrences": 3,
+      "samples": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.sql-injection",
+            "+gfjTp2wwv9BJG9ebUKkeHtyUJzL6yuiIk5sMEfzO9A=",
+            "org.thingsboard.server.service.install.migrate.CassandraToSqlTable#batchInsert(java.util.List, java.sql.Connection)"
+          ],
+          "rule_id": "java.security.sql-injection",
+          "path": "application/src/main/java/org/thingsboard/server/service/install/migrate/CassandraToSqlTable.java",
+          "region": {
+            "endColumn": 56,
+            "endLine": 158,
+            "startColumn": 17,
+            "startLine": 158
+          },
+          "method_signature": "org.thingsboard.server.service.install.migrate.CassandraToSqlTable#batchInsert(java.util.List, java.sql.Connection)",
+          "instruction_index": 35,
+          "instruction": "%24 = %23.executeUpdate()",
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "+gfjTp2wwv9BJG9ebUKkeHtyUJzL6yuiIk5sMEfzO9A=",
+            "vulnerabilityWithTraceHash/v1": "+gfjTp2wwv9BJG9ebUKkeHtyUJzL6yuiIk5sMEfzO9A=",
+            "vulnerabilitySourceSinkHash/v1": "+gfjTp2wwv9BJG9ebUKkeHtyUJzL6yuiIk5sMEfzO9A="
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.server.service.install.migrate.CassandraToSqlTable#batchInsert(java.util.List, java.sql.Connection):35:(%24 = %23.executeUpdate())",
+                "fullyQualifiedName": "org.thingsboard.server.service.install.migrate.CassandraToSqlTable#batchInsert"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "application/src/main/java/org/thingsboard/server/service/install/migrate/CassandraToSqlTable.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 56,
+                "endLine": 158,
+                "startColumn": 17,
+                "startLine": 158
+              }
+            }
+          }
+        },
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.sql-injection",
+            "+MyR+A5g/sv/0RVA4WAY/ARoXGZvdTUspgbyhAhOzO0=",
+            "org.thingsboard.server.cache.VersionedRedisTbCache#doPut(byte[], java.io.Serializable, java.lang.Long, org.springframework.data.redis.core.types.Expiration, org.springframework.data.redis.connection.RedisConnection)"
+          ],
+          "rule_id": "java.security.sql-injection",
+          "path": "common/cache/src/main/java/org/thingsboard/server/cache/VersionedRedisTbCache.java",
+          "region": {
+            "endColumn": 157,
+            "endLine": 116,
+            "startColumn": 9,
+            "startLine": 116
+          },
+          "method_signature": "org.thingsboard.server.cache.VersionedRedisTbCache#doPut(byte[], java.io.Serializable, java.lang.Long, org.springframework.data.redis.core.types.Expiration, org.springframework.data.redis.connection.RedisConnection)",
+          "instruction_index": 16,
+          "instruction": "this.executeScript(connection, %11, %12, %13, 1, %14)",
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "+MyR+A5g/sv/0RVA4WAY/ARoXGZvdTUspgbyhAhOzO0=",
+            "vulnerabilityWithTraceHash/v1": "+MyR+A5g/sv/0RVA4WAY/ARoXGZvdTUspgbyhAhOzO0=",
+            "vulnerabilitySourceSinkHash/v1": "+MyR+A5g/sv/0RVA4WAY/ARoXGZvdTUspgbyhAhOzO0="
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.server.cache.VersionedRedisTbCache#doPut(byte[], java.io.Serializable, java.lang.Long, org.springframework.data.redis.core.types.Expiration, org.springframework.data.redis.connection.RedisConnection):16:(this.executeScript(connection, %11, %12, %13, 1, %14))",
+                "fullyQualifiedName": "org.thingsboard.server.cache.VersionedRedisTbCache#doPut"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "common/cache/src/main/java/org/thingsboard/server/cache/VersionedRedisTbCache.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 157,
+                "endLine": 116,
+                "startColumn": 9,
+                "startLine": 116
+              }
+            }
+          }
+        },
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.sql-injection",
+            "6IVGg5lmp2yELxr2UxfC2N2X7jTcprt+/3avO3tYaUY=",
+            "org.thingsboard.server.dao.sql.device.AbstractNativeRepository#find(java.lang.String, java.lang.String, org.springframework.data.domain.Pageable, java.util.function.Function)"
+          ],
+          "rule_id": "java.security.sql-injection",
+          "path": "dao/src/main/java/org/thingsboard/server/dao/sql/device/AbstractNativeRepository.java",
+          "region": {
+            "endColumn": 11,
+            "endLine": 52,
+            "startColumn": 36,
+            "startLine": 41
+          },
+          "method_signature": "org.thingsboard.server.dao.sql.device.AbstractNativeRepository#find(java.lang.String, java.lang.String, org.springframework.data.domain.Pageable, java.util.function.Function)",
+          "instruction_index": 2,
+          "instruction": "%2 = %0.execute(%1)",
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "6IVGg5lmp2yELxr2UxfC2N2X7jTcprt+/3avO3tYaUY=",
+            "vulnerabilityWithTraceHash/v1": "6IVGg5lmp2yELxr2UxfC2N2X7jTcprt+/3avO3tYaUY=",
+            "vulnerabilitySourceSinkHash/v1": "6IVGg5lmp2yELxr2UxfC2N2X7jTcprt+/3avO3tYaUY="
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.server.dao.sql.device.AbstractNativeRepository#find(java.lang.String, java.lang.String, org.springframework.data.domain.Pageable, java.util.function.Function):2:(%2 = %0.execute(%1))",
+                "fullyQualifiedName": "org.thingsboard.server.dao.sql.device.AbstractNativeRepository#find"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "dao/src/main/java/org/thingsboard/server/dao/sql/device/AbstractNativeRepository.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 11,
+                "endLine": 52,
+                "startColumn": 36,
+                "startLine": 41
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "rule_id": "java.security.ssrf",
+      "added_unique": 2,
+      "added_occurrences": 2,
+      "samples": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.ssrf",
+            "yGhI+xeGwO1Jg//mMV+mURnvqzgq+ef1EbSxhHcbGJQ=",
+            "org.thingsboard.monitoring.service.transport.impl.HttpTransportHealthChecker#sendTestPayload(java.lang.String)"
+          ],
+          "rule_id": "java.security.ssrf",
+          "path": "monitoring/src/main/java/org/thingsboard/monitoring/service/transport/impl/HttpTransportHealthChecker.java",
+          "region": {
+            "endColumn": 121,
+            "endLine": 56,
+            "startColumn": 9,
+            "startLine": 56
+          },
+          "method_signature": "org.thingsboard.monitoring.service.transport.impl.HttpTransportHealthChecker#sendTestPayload(java.lang.String)",
+          "instruction_index": 12,
+          "instruction": "%13 = %6.postForObject(%10, payload, %11, %12)",
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "yGhI+xeGwO1Jg//mMV+mURnvqzgq+ef1EbSxhHcbGJQ=",
+            "vulnerabilityWithTraceHash/v1": "yGhI+xeGwO1Jg//mMV+mURnvqzgq+ef1EbSxhHcbGJQ=",
+            "vulnerabilitySourceSinkHash/v1": "yGhI+xeGwO1Jg//mMV+mURnvqzgq+ef1EbSxhHcbGJQ="
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.monitoring.service.transport.impl.HttpTransportHealthChecker#sendTestPayload(java.lang.String):12:(%13 = %6.postForObject(%10, payload, %11, %12))",
+                "fullyQualifiedName": "org.thingsboard.monitoring.service.transport.impl.HttpTransportHealthChecker#sendTestPayload"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "monitoring/src/main/java/org/thingsboard/monitoring/service/transport/impl/HttpTransportHealthChecker.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 121,
+                "endLine": 56,
+                "startColumn": 9,
+                "startLine": 56
+              }
+            }
+          }
+        },
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.ssrf",
+            "z1vJ71T/8as8t9/IaGWfPGNZebvVpgnAC1aCt0nC/6A=",
+            "org.thingsboard.rest.client.RestClient#findEntityDataByQuery(org.thingsboard.server.common.data.query.EntityDataQuery)"
+          ],
+          "rule_id": "java.security.ssrf",
+          "path": "rest-client/src/main/java/org/thingsboard/rest/client/RestClient.java",
+          "region": {
+            "endColumn": 19,
+            "endLine": 1836,
+            "startColumn": 29,
+            "startLine": 1832
+          },
+          "method_signature": "org.thingsboard.rest.client.RestClient#findEntityDataByQuery(org.thingsboard.server.common.data.query.EntityDataQuery)",
+          "instruction_index": 9,
+          "instruction": "%7 = %0.exchange(%2, %3, %4, %5, %6)",
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "z1vJ71T/8as8t9/IaGWfPGNZebvVpgnAC1aCt0nC/6A=",
+            "vulnerabilityWithTraceHash/v1": "z1vJ71T/8as8t9/IaGWfPGNZebvVpgnAC1aCt0nC/6A=",
+            "vulnerabilitySourceSinkHash/v1": "z1vJ71T/8as8t9/IaGWfPGNZebvVpgnAC1aCt0nC/6A="
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.rest.client.RestClient#findEntityDataByQuery(org.thingsboard.server.common.data.query.EntityDataQuery):9:(%7 = %0.exchange(%2, %3, %4, %5, %6))",
+                "fullyQualifiedName": "org.thingsboard.rest.client.RestClient#findEntityDataByQuery"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "rest-client/src/main/java/org/thingsboard/rest/client/RestClient.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 19,
+                "endLine": 1836,
+                "startColumn": 29,
+                "startLine": 1832
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "rule_id": "java.security.unsafe-reflection",
+      "added_unique": 2,
+      "added_occurrences": 2,
+      "samples": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.unsafe-reflection",
+            "NOb5n2KHVyfO24/DJavqGsrLOS2xOgWysesBN0d429U=",
+            "org.thingsboard.server.service.component.AnnotationComponentDiscoveryService#init()"
+          ],
+          "rule_id": "java.security.unsafe-reflection",
+          "path": "application/src/main/java/org/thingsboard/server/service/component/AnnotationComponentDiscoveryService.java",
+          "region": {
+            "endColumn": 53,
+            "endLine": 89,
+            "startColumn": 29,
+            "startLine": 89
+          },
+          "method_signature": "org.thingsboard.server.service.component.AnnotationComponentDiscoveryService#init()",
+          "instruction_index": 10,
+          "instruction": "clazz = java.lang.Class.forName(clazzName)",
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "NOb5n2KHVyfO24/DJavqGsrLOS2xOgWysesBN0d429U=",
+            "vulnerabilityWithTraceHash/v1": "NOb5n2KHVyfO24/DJavqGsrLOS2xOgWysesBN0d429U=",
+            "vulnerabilitySourceSinkHash/v1": "NOb5n2KHVyfO24/DJavqGsrLOS2xOgWysesBN0d429U="
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.server.service.component.AnnotationComponentDiscoveryService#init():10:(clazz = java.lang.Class.forName(clazzName))",
+                "fullyQualifiedName": "org.thingsboard.server.service.component.AnnotationComponentDiscoveryService#init"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "application/src/main/java/org/thingsboard/server/service/component/AnnotationComponentDiscoveryService.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 53,
+                "endLine": 89,
+                "startColumn": 29,
+                "startLine": 89
+              }
+            }
+          }
+        },
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.unsafe-reflection",
+            "18trmCeB5XKmWBKNYr/M0An7HzF7CMPxmbqKNZRT2Nk=",
+            "org.thingsboard.server.actors.ruleChain.RuleNodeActorMessageProcessor#initComponent(org.thingsboard.server.common.data.rule.RuleNode)"
+          ],
+          "rule_id": "java.security.unsafe-reflection",
+          "path": "application/src/main/java/org/thingsboard/server/actors/ruleChain/RuleNodeActorMessageProcessor.java",
+          "region": {
+            "endColumn": 72,
+            "endLine": 180,
+            "startColumn": 13,
+            "startLine": 180
+          },
+          "method_signature": "org.thingsboard.server.actors.ruleChain.RuleNodeActorMessageProcessor#initComponent(org.thingsboard.server.common.data.rule.RuleNode)",
+          "instruction_index": 3,
+          "instruction": "componentClazz = java.lang.Class.forName(%1)",
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "18trmCeB5XKmWBKNYr/M0An7HzF7CMPxmbqKNZRT2Nk=",
+            "vulnerabilityWithTraceHash/v1": "18trmCeB5XKmWBKNYr/M0An7HzF7CMPxmbqKNZRT2Nk=",
+            "vulnerabilitySourceSinkHash/v1": "18trmCeB5XKmWBKNYr/M0An7HzF7CMPxmbqKNZRT2Nk="
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.server.actors.ruleChain.RuleNodeActorMessageProcessor#initComponent(org.thingsboard.server.common.data.rule.RuleNode):3:(componentClazz = java.lang.Class.forName(%1))",
+                "fullyQualifiedName": "org.thingsboard.server.actors.ruleChain.RuleNodeActorMessageProcessor#initComponent"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "application/src/main/java/org/thingsboard/server/actors/ruleChain/RuleNodeActorMessageProcessor.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 72,
+                "endLine": 180,
+                "startColumn": 13,
+                "startLine": 180
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "rule_id": "java.security.script-engine-injection",
+      "added_unique": 1,
+      "added_occurrences": 1,
+      "samples": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.script-engine-injection",
+            "VGVhDuHpfxLLmAiMEikzfAB/jkrYZO5NlH6lHasn9+E=",
+            "org.thingsboard.script.api.js.NashornJsInvokeService#doRelease(java.util.UUID, org.thingsboard.script.api.js.JsScriptInfo)"
+          ],
+          "rule_id": "java.security.script-engine-injection",
+          "path": "common/script/script-api/src/main/java/org/thingsboard/script/api/js/NashornJsInvokeService.java",
+          "region": {
+            "endColumn": 72,
+            "endLine": 188,
+            "startColumn": 13,
+            "startLine": 188
+          },
+          "method_signature": "org.thingsboard.script.api.js.NashornJsInvokeService#doRelease(java.util.UUID, org.thingsboard.script.api.js.JsScriptInfo)",
+          "instruction_index": 10,
+          "instruction": "%4 = %1.eval(%3)",
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "VGVhDuHpfxLLmAiMEikzfAB/jkrYZO5NlH6lHasn9+E=",
+            "vulnerabilityWithTraceHash/v1": "VGVhDuHpfxLLmAiMEikzfAB/jkrYZO5NlH6lHasn9+E=",
+            "vulnerabilitySourceSinkHash/v1": "VGVhDuHpfxLLmAiMEikzfAB/jkrYZO5NlH6lHasn9+E="
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.script.api.js.NashornJsInvokeService#doRelease(java.util.UUID, org.thingsboard.script.api.js.JsScriptInfo):10:(%4 = %1.eval(%3))",
+                "fullyQualifiedName": "org.thingsboard.script.api.js.NashornJsInvokeService#doRelease"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "common/script/script-api/src/main/java/org/thingsboard/script/api/js/NashornJsInvokeService.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 72,
+                "endLine": 188,
+                "startColumn": 13,
+                "startLine": 188
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "rule_id": "java.security.unsafe-object-mapper",
+      "added_unique": 1,
+      "added_occurrences": 1,
+      "samples": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.unsafe-object-mapper",
+            "489GMMUw8j3ZQ78kCJFft35aajUhl7/IG+hKqCOBmZE=",
+            "org.thingsboard.server.common.data.JavaSerDesUtil#decode(byte[])"
+          ],
+          "rule_id": "java.security.unsafe-object-mapper",
+          "path": "common/data/src/main/java/org/thingsboard/server/common/data/JavaSerDesUtil.java",
+          "region": {
+            "endColumn": 63,
+            "endLine": 36,
+            "startColumn": 14,
+            "startLine": 36
+          },
+          "method_signature": "org.thingsboard.server.common.data.JavaSerDesUtil#decode(byte[])",
+          "instruction_index": 7,
+          "instruction": "ois.<init>(is)",
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "489GMMUw8j3ZQ78kCJFft35aajUhl7/IG+hKqCOBmZE=",
+            "vulnerabilityWithTraceHash/v1": "489GMMUw8j3ZQ78kCJFft35aajUhl7/IG+hKqCOBmZE=",
+            "vulnerabilitySourceSinkHash/v1": "489GMMUw8j3ZQ78kCJFft35aajUhl7/IG+hKqCOBmZE="
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.server.common.data.JavaSerDesUtil#decode(byte[]):7:(ois.<init>(is))",
+                "fullyQualifiedName": "org.thingsboard.server.common.data.JavaSerDesUtil#decode"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "common/data/src/main/java/org/thingsboard/server/common/data/JavaSerDesUtil.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 63,
+                "endLine": 36,
+                "startColumn": 14,
+                "startLine": 36
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
