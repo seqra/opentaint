@@ -1,0 +1,69 @@
+{
+  "status": "PROPOSAL_COMPLETE_PREDEFINED_DISPATCH_AUDIT_PASS",
+  "runtime_changed": false,
+  "source": "spec/lean/proposals/demand-storage-next/PredefinedSummaryDispatch.lean",
+  "source_sha256": "2cada4a5cace20de9d1645cbbd9cb6ea36ddf64b0546cbfec443e83584e89db0",
+  "lean_version": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+  "configured_memory_limit_mib": 1024,
+  "parallel_workers": 1,
+  "command": [
+    "lean",
+    "-j",
+    "1",
+    "-M",
+    "1024",
+    "proposals/demand-storage-next/PredefinedSummaryDispatch.lean"
+  ],
+  "working_directory": "spec/lean",
+  "exit_code": 0,
+  "seconds": 0.39244453608989716,
+  "output": "'DemandStorageNext.PredefinedSummaryDispatch.completeHasExactlyModelOutcomes' does not depend on any axioms\n'DemandStorageNext.PredefinedSummaryDispatch.completeIgnoresAnalyzer' does not depend on any axioms\n'DemandStorageNext.PredefinedSummaryDispatch.completeHasNoFallbackOrBoundary' does not depend on any axioms\n'DemandStorageNext.PredefinedSummaryDispatch.emptyDataIsKillNotFallback' does not depend on any axioms\n'DemandStorageNext.PredefinedSummaryDispatch.analyzeKeepsExistingPath' does not depend on any axioms\n'DemandStorageNext.PredefinedSummaryDispatch.completePreservesExternalReports' does not depend on any axioms\n'DemandStorageNext.PredefinedSummaryDispatch.registeredIdentitySelectsModel' does not depend on any axioms\n'DemandStorageNext.PredefinedSummaryDispatch.sameSpellingDoesNotCapture' does not depend on any axioms\n'DemandStorageNext.PredefinedSummaryDispatch.cleanupPreservesRegistry' does not depend on any axioms\n'DemandStorageNext.PredefinedSummaryDispatch.cleanupKillsOtherStatics' does not depend on any axioms\n'DemandStorageNext.PredefinedSummaryDispatch.identityKernelMember' does not depend on any axioms\n'DemandStorageNext.PredefinedSummaryDispatch.reverseIdentityKernel' does not depend on any axioms\n'DemandStorageNext.PredefinedSummaryDispatch.schemaMetadataOutsideSemanticKey' does not depend on any axioms\n'DemandStorageNext.PredefinedSummaryDispatch.skippingBoundaryIsIntentionalDifference' does not depend on any axioms\n",
+  "audited_declarations": 14,
+  "expected_audit_declarations": 14,
+  "declarations": [
+    "DemandStorageNext.PredefinedSummaryDispatch.completeHasExactlyModelOutcomes",
+    "DemandStorageNext.PredefinedSummaryDispatch.completeIgnoresAnalyzer",
+    "DemandStorageNext.PredefinedSummaryDispatch.completeHasNoFallbackOrBoundary",
+    "DemandStorageNext.PredefinedSummaryDispatch.emptyDataIsKillNotFallback",
+    "DemandStorageNext.PredefinedSummaryDispatch.analyzeKeepsExistingPath",
+    "DemandStorageNext.PredefinedSummaryDispatch.completePreservesExternalReports",
+    "DemandStorageNext.PredefinedSummaryDispatch.registeredIdentitySelectsModel",
+    "DemandStorageNext.PredefinedSummaryDispatch.sameSpellingDoesNotCapture",
+    "DemandStorageNext.PredefinedSummaryDispatch.cleanupPreservesRegistry",
+    "DemandStorageNext.PredefinedSummaryDispatch.cleanupKillsOtherStatics",
+    "DemandStorageNext.PredefinedSummaryDispatch.identityKernelMember",
+    "DemandStorageNext.PredefinedSummaryDispatch.reverseIdentityKernel",
+    "DemandStorageNext.PredefinedSummaryDispatch.schemaMetadataOutsideSemanticKey",
+    "DemandStorageNext.PredefinedSummaryDispatch.skippingBoundaryIsIntentionalDifference"
+  ],
+  "observed_axioms": [],
+  "forbidden_source_matches": [],
+  "proved_scope": [
+    "Tagged Analyze versus Complete(model) dispatch: complete returns exactly the control and actual-input data outcomes; analyzer function is irrelevant in that branch.",
+    "Complete dispatch invokes no analyzer/default/unresolved lane or body-boundary rule lane. This includes an input for which data outcome is empty.",
+    "External call-site report list remains on the common invocation path and is preserved in complete dispatch.",
+    "Exact registered method identity selects the model; an equal method spelling with a different identity does not.",
+    "Finite registry identity kernel retains registry/caller payloads, rejects other static data and is its own backward identity-filter relation.",
+    "Schema metadata does not participate in the abstract semantic outcome key/hash.",
+    "Explicit observation-difference witness: complete dispatch preserves cleanup values but omits a baseline body-boundary sink, as newly selected by the user."
+  ],
+  "not_proved": [
+    "Production AP schema application/projection, E/mx/layer/protection/primitive/alias behavior, control/exception shape completeness, catalog matching or frontend call-stage integration.",
+    "External call-site rule timing, guards/ND bindings, report identity/callback counts or all real predefined models.",
+    "A runtime lazy Sequence/iterator implementation or finite query scheduler; valuesFor is a pure actual-input function in this kernel.",
+    "Equality of baseline body-boundary observations: the complete branch intentionally skips them.",
+    "Demand snapshot/native-record separation or production semantic equality/hashing; those require their own adapters.",
+    "Whole-JVM equivalence, runtime implementation or measured savings."
+  ],
+  "selected_semantic_change": "Predefined methods skip their body-boundary rules as explicitly directed; ordinary external call-site rules remain. No event-aware boundary owner is added.",
+  "new_runtime_edits": 0,
+  "new_runtime_tests": 0,
+  "new_project_runs": 0,
+  "measured_context": {
+    "runtime_revision": "53991b7483b062b0287152130cbbbfc87623093b",
+    "thingsboard_latest_reached": "run-2",
+    "thingsboard_latest_complete": "run-1",
+    "thingsboard_latest_accepted_forward_report": "run-1",
+    "limit": "Prior campaign only; no measurements for this proposal."
+  }
+}
