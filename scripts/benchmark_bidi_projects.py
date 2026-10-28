@@ -32,6 +32,7 @@ def analyzer_jvm_args(args, directory, side, memory):
                    '-XX:+HeapDumpOnOutOfMemoryError', f'-XX:HeapDumpPath={directory}/jvm-oom.hprof']
     if side == 'bidi':
         values += [f'-Dopentaint.bidi.run1MarkMode={args.run1_mark_mode}',
+                   '-Dopentaint.bidi.fieldLimitSchedule=' + getattr(args, 'field_limit_schedule', 'REPEAT_RUN1'),
                    '-Dopentaint.bidi.disableRun1Statics=false']
         if args.form_statistics:
             values.append('-Dorg.opentaint.bidi.formStatistics=true')
@@ -164,6 +165,7 @@ def run(args, project, side, config):
                 'form_statistics': form_statistics,
                 'optimization_statistics': optimization_statistics,
                 'run1_mark_mode': args.run1_mark_mode if side == 'bidi' else None,
+                'field_limit_schedule': getattr(args, 'field_limit_schedule', 'REPEAT_RUN1') if side == 'bidi' else None,
                 'analyzer_jvm_args': jvm_args,
                 'started_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}
     (directory / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
@@ -329,6 +331,8 @@ def main():
                         help='Record bounded N1/N2 counters with run, direction and limit attribution')
     parser.add_argument('--run1-mark-mode', choices=['GROUP', 'FULL'], default='FULL',
                         help='Select run-1 mark precision in the analyzer JVM; later runs remain FULL')
+    parser.add_argument('--field-limit-schedule', choices=['REPEAT_RUN1', 'RUN_INDEX'], default='REPEAT_RUN1',
+                        help='Use limits 1,1,2,... (default) or the experiment 1,2,3,...')
     args = parser.parse_args()
     for name in ('main', 'current', 'test', 'output'):
         setattr(args, name, getattr(args, name).resolve())

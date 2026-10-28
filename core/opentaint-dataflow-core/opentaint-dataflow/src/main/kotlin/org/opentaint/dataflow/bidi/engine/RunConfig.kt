@@ -5,6 +5,7 @@ import org.opentaint.dataflow.bidi.ap.Direction
 import org.opentaint.dataflow.bidi.ap.MethodKey
 import org.opentaint.dataflow.bidi.ap.MarkMode
 import org.opentaint.dataflow.bidi.driver.SeedIndex
+import org.opentaint.dataflow.bidi.driver.FieldLimitSchedule
 import org.opentaint.dataflow.bidi.store.DemandStore
 import org.opentaint.dataflow.bidi.store.RecordStore
 import java.util.Collections
@@ -19,11 +20,12 @@ class RunConfig(
     roots: List<MethodKey>,
     disableRun1Statics: Boolean = java.lang.Boolean.getBoolean("opentaint.bidi.disableRun1Statics"),
     val run1MarkMode: MarkMode = readRun1MarkMode(),
+    val fieldLimitSchedule: FieldLimitSchedule = FieldLimitSchedule.REPEAT_RUN1,
 ) {
     init {
         require(index >= 1) { "The run index must be positive" }
-        require(fieldLimit == maxOf(1, index - 1)) {
-            "The selected schedule requires limits 1, 1, 2, 3, ..."
+        require(fieldLimit == fieldLimitSchedule.fieldLimit(index)) {
+            "Field limit $fieldLimit does not match $fieldLimitSchedule at run-$index"
         }
         require((index == 1) == (demand == null)) { "Only run 1 has no demand snapshot" }
     }
