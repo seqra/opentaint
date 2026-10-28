@@ -2,8 +2,9 @@
 
 Date: 28 October 2026. The implementation follows the
 [selected proposal](../design/bidirectional-demand-storage-predefined-summaries-implementation-20261028.md).
-The project campaign is pending. This document is a local validation record,
-not a performance result.
+The [committed-source project campaign](bidirectional-demand-storage-predefined-performance-20261028.md)
+is complete. This document records local validation; the linked report records
+project performance and the remaining strict finding differences.
 
 ## Implemented scope
 
@@ -89,5 +90,6 @@ checks and final application check.
 
 Logs, JUnit XML, source hashes and proof outputs are stored under
 `/drive-testcomp/opentaint-go-rules/demand-storage-predefined-20261028/local-validation`.
-The project campaign must use the committed implementation and the four
-fixed configurations in `task.md`, with the saved `f945f92` baseline.
+The project campaign used the committed implementation and the four fixed
+configurations in `task.md`, with the saved `f945f92` baseline. It did not rerun
+the baseline.
