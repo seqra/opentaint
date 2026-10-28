@@ -1,6 +1,6 @@
 # Restricted-run demand, static handoff closure and run-1 exit routing
 
-Date: 27 October 2026. Status: **selected design; implementation unchanged**.
+Date: 27 October 2026. Status: **selected design; implementation in progress**.
 This is the complete contract for the three selected changes. It replaces
 the earlier partial description in this file. The original reference is
 [AP](ap.md), sections 6.3, 6.4, 8.5–8.7 and 9.2. The required behavior is
@@ -8,6 +8,16 @@ restated below, so the reader does not need the preceding design discussion.
 The [earlier investigation](../docs/design/bidirectional-restricted-fact-management-20261027.md)
 is supporting evidence, not an additional policy. Follow
 [proof-guide.md](proof-guide.md).
+
+The [implementation checks](../docs/reports/bidirectional-restricted-demand-validation-20261027.md)
+found three open correctness cases. The abstract STAR/nonempty-E producer
+guard is false. A concrete static STAR start can reach a validator which
+rejects it. An exit-killed static writer can still be required to guide a
+returned flow. The user decisions for these cases are pending. Do not
+treat their implementation or the full iteration proof as complete.
+The [candidate repair design](../docs/design/bidirectional-restricted-demand-open-contracts-20261027.md)
+states the proposed behavior, implementation routes, local proofs and
+remaining proof obligations. It does not select those repairs.
 
 The reviewed checkout is `e908c95899f98ef5ad60b24710aff72225021d18`;
 its runtime core is `57ca8d4940e8fb52e7eed6151928d4025c7d7ad9`.
@@ -714,6 +724,85 @@ The shortcut replaces only the producer paths which currently insert or
 promote a static summary. Do not revive passive unchanged static copies
 discarded by the current read/operation path.
 
+#### Concrete producer dependencies with a nonstatic original
+
+A concrete write with a nonstatic original needs an actual caller binding
+before it can supply the global pool. Do not wait for its post-exit W
+summary to obtain that binding. An exit rule can kill the outgoing static
+value after an earlier local read has used the write.
+
+```java
+main() { setAndRead(sourceT()); }
+setAndRead(p) {
+    C.f = p;
+    v = C.f;
+    sinkT(v);
+    // NormalExit rule removes the outgoing C.f value.
+}
+```
+
+The local write must still make T available to the read. The existing
+`computedGroups` reducer handles ZERO and static originals. For a concrete
+nonstatic original, use a separate producer dependency index in the
+method's `SummaryStorage`. It holds the pre-exit relation and uses the
+existing caller subscriptions for its actual inputs. It retains no new
+caller input history and adds no global non-FLOW writer directory.
+
+```kotlin
+fun offerProducer(original: InitialAp, value: Facts) {
+    if (value is TaintTree && !original.isZero && original.base != STATIC) {
+        summaryStorage(method).publishProducers(Publication(original, value))
+    } else {
+        staticEffects.computedSupply(original, value)
+    }
+}
+
+fun bindProducer(subscription: Subscription, producer: Publication) {
+    val matched = ops.satisfying(subscription.added, producer.premise, mode)
+        ?: return
+    ops.applySummary(matched, producer.premise, producer.conclusion, mode) { value ->
+        // Static positions keep their coordinates at a call.
+        offerProducer(subscription.ref.premise, existingBound(value))
+    }
+}
+```
+
+Only concrete singleton nonstatic-to-static dependencies enter this index.
+The ordinary `Publication` value and AP equality remain unchanged. A
+separate delivery kind selects the producer index and callback. It is
+control metadata, not a new fact property. The callback supplies or relays
+only the producer effect. It does not execute the call suffix, a CFG
+instruction, exit rules, or common summary emission. It creates no record
+and no selected demand row. Local FLOW writer requests remain unchanged.
+
+The method index uses exact existing publication admission. A repeated
+relay adds no delta. A new caller subscription replays this index, so both
+input-first and producer-first orders use the same AP predicate. Retain
+unresolved dependency rows for the run; later actual inputs can still
+need them. Release the index with its existing run-owned SummaryStorage.
+The actor's ordinary outgoing W relation still goes through NormalExit.
+
+This route implements the producer visibility requirement above. It does
+not change field transfer or add GroundingSupport. Relative to the old
+early-W pool route, the actual input, premise satisfaction, mark mapping,
+field bound and caller original are the same at each relay. Only the
+consumer is different: the producer channel updates the pool and cannot
+publish a method summary.
+
+[StaticProducer.lean](lean/proposals/restricted-demand/StaticProducer.lean)
+checks the local route argument. Constructive recursion converts each
+finite old early-W actual-binding derivation to the producer derivation,
+and conversely. The base cases use the same existing ZERO/static reducer;
+the induction steps use the same AP binding. It also checks that the
+producer channel has no summary, record or CFG output, and that an exit
+kill does not cancel an already derived supply. Its seven audits use no
+axioms. The AP predicate, queued delivery fairness and bounded finite
+relation universe remain implementation obligations. This local model is
+not a whole-engine proof.
+
+Optional N2 counters report producer packet offers, fresh packet deltas and
+matched applications. They retain no per-input or per-event history.
+
 ### 5.3 Common exit processing
 
 ```kotlin
@@ -755,7 +844,8 @@ Keep the producer's global write effect distinct from this outgoing relation.
 
 | Store | Contents and lifetime |
 |---|---|
-| Existing raw/selected summary stores | W, R and ordinary relations, owned by each run-1 method actor |
+| Existing raw/selected summary stores | W, R and ordinary post-exit relations, owned by each run-1 method actor |
+| SummaryStorage producer dependency index | Concrete pre-exit nonstatic-to-static effects for actual caller joins; run-1 only; never a summary, record, handoff seed or global writer directory |
 | StaticGuidanceSeedStore | Post-exit B relation patterns and exact mark relation; run-1 only, frozen for handoff |
 | Detached caller graph | Method adjacency from successful prescan, without old runners, callbacks or fact stores |
 | Frozen completion graph | Shared seed IDs, owner memberships, caller reachability/SCC directory and method-local W/R attachments; incoming run-2 only |

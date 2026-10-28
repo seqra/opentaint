@@ -1,6 +1,11 @@
 # Restricted demand and static closure
 
-Proposal only. The analyzer implementation is unchanged. The selected repair
+Implementation is in progress. Three behavior decisions remain open in the
+[implementation checks](../../../../docs/reports/bidirectional-restricted-demand-validation-20261027.md).
+The [candidate repair design](../../../../docs/design/bidirectional-restricted-demand-open-contracts-20261027.md)
+makes these choices concrete. It does not select their behavior. The
+candidate proof files below are not runtime implementation authority.
+The selected repair
 is [restricted-run demand, static handoff closure and run-1 exit routing](../../../restricted-demand-static-closure.md).
 That specification is self-contained: it states original, current and
 proposed behavior, the complete pipeline, proofs and the removal ledger.
@@ -47,11 +52,54 @@ LEAN_PATH=.lake/build/lib/lean lean -j 1 -M 512 proposals/restricted-demand/Rest
 Only `propext` and `Quot.sound` occur in the combined axiom audits. There is no
 classical choice, new axiom or unproved placeholder.
 
-The second review adds `MarkBoundaryReview.lean` (18 audited declarations)
-and `EmissionRestrictionProbe.kt` (current scalar AP behavior only).
+The historical second review adds `MarkBoundaryReview.lean` (18 audited
+declarations) and `EmissionRestrictionProbe.kt`. The probe describes runtime
+core `57ca8d4940e8fb52e7eed6151928d4025c7d7ad9`, before this implementation.
 `boundary-review-checks.json` records the complete outputs. The probe
 passes 14 original mark/STAR behavior checks and confirms two required
 corrections: ancestor E rebasing for concrete STAR, and the current
 MUST-input/STAR-demand adapter rejection. It does not apply those fixes.
+Do not run its expected-defect assertions as tests of the repaired runtime.
 The original handoff keeps STAR/E; the selected proposal now removes the
 later STAR-to-ANY widening and updates the demand-adapter contract.
+
+`RestrictedProtection.lean` checks the metadata transport used by paired
+summary restriction. A protected input leaf uses the same partial restriction
+as the ordinary leaf. Four constructive lemmas show that every surviving
+protected result keeps its flag, every flag has an input witness, and flagged
+results remain a subset of ordinary results. This is a local list model;
+the typed adapter is also checked by `RestrictionTest` with mixed marks and
+changed paths and tails. It does not prove the complete analyzer.
+
+`StaticProducer.lean` checks the separate pre-exit producer binding route.
+Its seven constructive audits use no axioms. The model relates each finite
+old early-W actual-binding derivation to the producer route with the same
+bindings. It also checks that producer delivery cannot emit an ordinary
+summary, record or CFG result. It assumes the existing actual AP binding
+contract; it does not prove the complete JVM interpreter or scheduler.
+
+`ExcludedFlowCandidate.lean` has six constructive audits for the pending
+excluded-STAR repair. It keeps a satisfied shared FLOW initial. For the
+remaining same-path STAR case, it unions the field exclusions. It reuses
+the original AP algebra. MUST projection, packed equivalence and complete
+iteration behavior remain separate obligations. The full local audit is
+in `excluded-flow-candidate-checks.json`.
+
+`StaticInputGrammar.lean` has 15 constructive audits for the pending
+named-field STAR input-domain repair. It proves the local grammar
+extension and bounded STAR relay. Two laws reuse the correlated AP model
+for actual identity and field-limit operations. Caller supply, accessor
+tags and identity static projection are explicit assumptions. The full
+local audit is in `static-input-grammar-candidate-checks.json`. The first
+512 MiB proof attempt ran out of memory; the successful audit used 2 GiB.
+These proof-tool limits are not project-analysis configurations.
+
+`PreExitGuidanceCandidate.lean` has nine constructive audits for the
+pending pre-exit guidance repair. It transports finite routes when all
+required primitive keys are captured. Actual caller bindings are explicit
+input to the model. It constructs local, two-wrapper and genuine ZERO
+witnesses, and checks relational call factorization. The key-coverage and
+origin-factorization premises still need their production adapter proofs.
+The local model does not establish those premises, scheduling fairness,
+or whole-iteration completeness. The complete audit output is in
+`pre-exit-guidance-candidate-checks.json`.
