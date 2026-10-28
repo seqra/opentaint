@@ -34,6 +34,10 @@ func addPassthroughApproximations(b *AnalyzerBuilder, paths []string) {
 
 func addGoModels(b *AnalyzerBuilder, paths []string) {
 	for _, modelPath := range paths {
-		b.AddGoModel(log.AbsPathOrExit(modelPath, "go-models"))
+		absPath := log.AbsPathOrExit(modelPath, "go-models")
+		if err := approximation.ValidateGoModel(absPath); err != nil {
+			out.Fatalf("Failed to apply Go models: %s", err)
+		}
+		b.AddGoModel(absPath)
 	}
 }

@@ -11,10 +11,7 @@ import (
 	"github.com/seqra/opentaint/internal/testproject"
 )
 
-const (
-	gradleProjectName = "approximation-models"
-	goModelModulePath = "opentaint"
-)
+const gradleProjectName = "approximation-models"
 
 // Scaffold creates a Gradle project for dataflow models.
 func Scaffold(projectDir string, dependencies []string, analyzerJarPath string) error {
