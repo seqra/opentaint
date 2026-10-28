@@ -1,0 +1,119 @@
+{
+  "status": "REPORT_AND_PROPOSAL_VALIDATED",
+  "runtime_revision": "53991b7483b062b0287152130cbbbfc87623093b",
+  "baseline_revision": "f945f92c5ae554ff4f5fc7696ee5a269210478bb",
+  "baseline_rerun": false,
+  "runtime_edits_after_campaign": false,
+  "acceptance": "FAILED: all projects stop early; three strict Stirling missing sink identities; many Thingsboard run-1 candidates; eight known local exact-precision failures",
+  "proposal_implemented": false,
+  "latest_iterations": {
+    "OWASP": {
+      "reached": "run-12",
+      "completed": "run-11",
+      "accepted_forward": "run-11"
+    },
+    "conductor": {
+      "reached": "run-4",
+      "completed": "run-3",
+      "accepted_forward": "run-3"
+    },
+    "thingsboard": {
+      "reached": "run-2",
+      "completed": "run-1",
+      "accepted_forward": "run-1"
+    },
+    "Stirling-PDF": {
+      "reached": "run-5",
+      "completed": "run-4",
+      "accepted_forward": "run-3"
+    }
+  },
+  "checks": {
+    "json": "PASS",
+    "local_markdown_links": "PASS",
+    "runtime_and_rules_unchanged": "PASS",
+    "proposal_proof_hashes": "PASS"
+  },
+  "artifacts": [
+    {
+      "path": "docs/reports/bidirectional-restricted-demand-performance-20261028.md",
+      "bytes": 22957,
+      "sha256": "0251a5fc89e127d963ad8d790cc75175db94b41148aad5aadbdf7eab322c6569"
+    },
+    {
+      "path": "docs/design/bidirectional-restricted-demand-next-20261028.md",
+      "bytes": 21779,
+      "sha256": "50a1132917b892454dfe7b31e760d64aab646567af0440d15f160e216ac815f1"
+    },
+    {
+      "path": "docs/reports/data/bidirectional-restricted-demand-cleaner-precision-20261028.json",
+      "bytes": 8027,
+      "sha256": "c3472c462f6722a055834120db4937c785f5aaf0d0afb8243dae1b5557786bdf"
+    },
+    {
+      "path": "docs/reports/data/bidirectional-restricted-demand-conductor-heap-20261028.json",
+      "bytes": 242464,
+      "sha256": "ca98aaadfdbdf2d93adc9cfebe592c51282a3e9b9bf732852847312847281d3e"
+    },
+    {
+      "path": "docs/reports/data/bidirectional-restricted-demand-cpu-20261028.json",
+      "bytes": 284860,
+      "sha256": "96bbd8aedb6224b0a135d3cf5e776e6d345349d667a656406ac734ba82b5e229"
+    },
+    {
+      "path": "docs/reports/data/bidirectional-restricted-demand-findings-20261028.json",
+      "bytes": 3593,
+      "sha256": "1d665be57548faad1cecc5c065c838c3de7e6957a99d27d76f69d489f290c635"
+    },
+    {
+      "path": "docs/reports/data/bidirectional-restricted-demand-performance-20261028.json",
+      "bytes": 229585,
+      "sha256": "fcec9a7337f5b0848e1e03ee4dfeb400bcb94856094a60067a952326c81e7098"
+    },
+    {
+      "path": "docs/reports/data/bidirectional-restricted-demand-stirling-heap-20261028.json",
+      "bytes": 326923,
+      "sha256": "a0e1d3ebbd629db14ca67253c16c99ae0e4911361d6e46c80fa991158c8ab9f0"
+    },
+    {
+      "path": "docs/reports/data/bidirectional-restricted-demand-stirling-missing-20261028.json",
+      "bytes": 106466,
+      "sha256": "982e38a1816a27801c65b63eb40379faff12621988fc24b267cc562cbd5d8dad"
+    },
+    {
+      "path": "docs/reports/data/bidirectional-restricted-demand-stirling-shapes-20261028.json",
+      "bytes": 33452,
+      "sha256": "0f3bafe6c907b804670e1483c77a7f8582b253989578950290d5d0c377c9203e"
+    },
+    {
+      "path": "docs/reports/data/bidirectional-restricted-demand-thingsboard-added-20261028.json",
+      "bytes": 32824,
+      "sha256": "ce75d84e39998de929b0fc3b663077e0b88024af2d5c132780d8e6aebc4961e3"
+    },
+    {
+      "path": "docs/reports/data/bidirectional-restricted-demand-thingsboard-exit-rules-20261028.json",
+      "bytes": 3928,
+      "sha256": "3d2b9661c6735c3783d8e19f02cece5b5494669b922f02dce1d224706044c855"
+    },
+    {
+      "path": "spec/lean/proposals/restricted-demand-next/EntryProjection.lean",
+      "bytes": 15099,
+      "sha256": "94205c551ad58a8d77924854b5901002c9ec7937cc573a4b90fca8200a2edc53"
+    },
+    {
+      "path": "spec/lean/proposals/restricted-demand-next/WriterReplay.lean",
+      "bytes": 11418,
+      "sha256": "21a0ee529cfbac364d4e732af4ef9d34d5e571ce51e22f8109fa0f622f9324dd"
+    },
+    {
+      "path": "spec/lean/proposals/restricted-demand-next/entry-projection-checks.json",
+      "bytes": 4793,
+      "sha256": "7a866bbad740bb54492364bfa7fdd9f17cc5f33c0788ab6440078420ddef2680"
+    },
+    {
+      "path": "spec/lean/proposals/restricted-demand-next/writer-replay-checks.json",
+      "bytes": 4449,
+      "sha256": "524b7f658960307946dee9cd29592d2bde0f5b4e827e4c65d69fe274a2de79d1"
+    }
+  ]
+}
