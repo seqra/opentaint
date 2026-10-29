@@ -114,7 +114,7 @@ class GroupedMarkViewsTest {
         ops.clean(input, initial, Cleaner(x, null, CleanReach.EXACT, u), group, selected)
         assertEquals(listOf(input), selected.results)
         val all = CollectingOut()
-        ops.clean(input, initial, Cleaner(x, null, CleanReach.EXACT, null), group, all)
+        ops.clean(input, initial, Cleaner(x, null, CleanReach.AT_AND_BELOW, null), group, all)
         assertTrue(all.results.isEmpty())
     }
 

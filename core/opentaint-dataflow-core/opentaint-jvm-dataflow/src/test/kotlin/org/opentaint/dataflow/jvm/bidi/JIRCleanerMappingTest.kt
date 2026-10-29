@@ -67,16 +67,17 @@ class JIRCleanerMappingTest : BasicTestUtils() {
         }
     }
 
-    @Test fun `all mark actions map root element and named fields to at and below or below`(): Unit {
+    @Test fun `all mark actions admit only whole root element and named field positions`(): Unit {
         val f = idx("f")
         val rows = listOf(
             Argument(0) to emptyList(),
             PositionWithAccess(Argument(0), PositionAccessor.ElementAccessor) to p(m.accessors.index(ElementAccessor)),
             at(Argument(0), "f") to p(f),
         )
-        for ((position, path) in rows) for (trailingAny in listOf(false, true)) {
-            val step = lower(cleaner(listOf(RemoveAllMarks(if (trailingAny) any(position) else position)))).single()
-            assertMapped(step, x, path, if (trailingAny) CleanReach.BELOW else CleanReach.AT_AND_BELOW, null)
+        for ((position, path) in rows) {
+            val step = lower(cleaner(listOf(RemoveAllMarks(position)))).single()
+            assertMapped(step, x, path, CleanReach.AT_AND_BELOW, null)
+            assertFalse(forms.valid(cleaner(listOf(RemoveAllMarks(any(position))))))
         }
     }
 

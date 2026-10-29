@@ -40,7 +40,7 @@ class BidirectionalEntryLookupTest {
         }
         val store = DemandStore.Builder(f.ap).apply { withCompletion(guarded) }.build()
         val actual = f.ap.factsOf(f.p(AccessPathBase.Return, f.t).fact, ExclusionSet.Empty, Layer.DEMAND)
-        assertEquals(setOf(f.ap.initial(f.ret), f.ap.initial(f.p(AccessPathBase.Return, f.t))),
+        assertEquals(setOf(f.ap.initial(f.ret.copy(fact=f.ret.fact.copy(tail=Tail.EXACT))), f.ap.initial(f.p(AccessPathBase.Return, f.t).let { it.copy(fact=it.fact.copy(tail=Tail.EXACT)) })),
             store.initials(f.f.a, actual))
     }
 
@@ -63,6 +63,6 @@ class BidirectionalEntryLookupTest {
             withCompletion(guarded)
         }.build()
         val actual = f.ap.factsOf(tRet.fact, ExclusionSet.Empty, Layer.DEMAND)
-        assertEquals(setOf(f.ap.initial(f.ret), f.ap.initial(tRet)), store.initials(f.f.a, actual))
+        assertEquals(setOf(f.ap.initial(f.ret.copy(fact=f.ret.fact.copy(tail=Tail.EXACT))), f.ap.initial(tRet.copy(fact=tRet.fact.copy(tail=Tail.EXACT)))), store.initials(f.f.a, actual))
     }
 }

@@ -5,7 +5,8 @@ import org.opentaint.dataflow.bidi.ap.*
 
 /** C5 retains the correlated source and target for every labelled path. */
 internal class StaticPairLookup(private val ap: ApManager, private val completion: FrozenCompletion,
-                                private val stats: DemandQueryStatistics?) {
+                                private val stats: DemandQueryStatistics?,
+                                @Suppress("unused") private val canStoreInitial: (Pattern, InitialAp) -> Boolean) {
     fun walk(method: MethodKey, original: PremiseKey, outputs: List<Pattern>, visible: Boolean,
              offer: (InitialAp, DemandPattern) -> Unit, covered: () -> Boolean) {
         if (visible) stats?.add(11)

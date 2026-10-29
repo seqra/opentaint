@@ -101,7 +101,7 @@ class ReferenceSelectorsTest {
                 marks.getValue(j.fact.mark).containsAll(marks.getValue(a.fact.mark))
             val canonicalFlow = j.fact.tail == Tail.STAR && j.exclusion == ExclusionSet.Empty && j.fact.mark == MarkSlot.STAR
             val expectedRestricted = if (canonicalFlow) spatial.getValue(j).any { it in spatial.getValue(a) }
-                else expectedInside || (j.fact.mark == MarkSlot.STAR && expectedApplicable)
+                else expectedInside || ((j.fact.mark == MarkSlot.STAR || j.fact.tail == Tail.STAR) && expectedApplicable)
             assertEquals(expectedApplicable || expectedInside, satisfies(j, a, restricted = false), "run1: j=$j a=$a")
             assertEquals(expectedRestricted, satisfies(j, a, restricted = true), "restricted: j=$j a=$a")
         }
@@ -159,7 +159,7 @@ class ReferenceSelectorsTest {
     }
 
     @Test
-    fun `concrete STAR E native reader matches admitted exact or may requirements with full guards`() {
+    fun `concrete STAR E summaries and native readers match admitted covered requirements with full guards`() {
         // F76 read premise data, not generic reversed-record or callee-demand selection data.
         val reader = p(listOf(f), Tail.STAR, MarkSlot.Concrete(t), ExclusionSet.of(g))
         val exact = p(listOf(f, freshField), Tail.EXACT, MarkSlot.Concrete(t))
@@ -168,11 +168,11 @@ class ReferenceSelectorsTest {
         assertTrue(applicable(reader, exact))
         assertTrue(applicable(reader, may))
         assertFalse(inside(reader, exact))
-        assertFalse(satisfies(reader, exact, restricted = true))
+        assertTrue(satisfies(reader, exact, restricted = true))
         assertFalse(applicable(reader, excluded))
         assertFalse(overlap(reader, excluded))
         assertFalse(applicable(reader, exact.copy(fact = exact.fact.copy(mark = MarkSlot.Concrete(u)))))
-        // Native reader admission uses inside OR applicable, not concrete restricted-summary satisfaction.
+        // Concrete STAR now uses coverage in ordinary restricted summary delivery as well.
         assertTrue(inside(reader, exact) || applicable(reader, exact))
         assertTrue(inside(reader, may) || applicable(reader, may))
     }
@@ -218,7 +218,7 @@ class ReferenceSelectorsTest {
                 deepUniverse.markedValues(j.fact.mark).containsAll(deepUniverse.markedValues(a.fact.mark))
             val canonicalFlow = j.fact.tail == Tail.STAR && j.exclusion == ExclusionSet.Empty && j.fact.mark == MarkSlot.STAR
             val expectedRestricted = if (canonicalFlow) expectedOverlap
-                else expectedInside || (j.fact.mark == MarkSlot.STAR && expectedApplicable)
+                else expectedInside || ((j.fact.mark == MarkSlot.STAR || j.fact.tail == Tail.STAR) && expectedApplicable)
             val label = "nested j=$j a=$a"
             assertEquals(expectedCover, covers(j, a), "covers: $label")
             assertEquals(expectedOverlap, overlap(j, a), "overlap: $label")

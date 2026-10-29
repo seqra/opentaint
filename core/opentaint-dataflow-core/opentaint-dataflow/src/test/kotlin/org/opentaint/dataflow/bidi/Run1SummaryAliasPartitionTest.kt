@@ -80,6 +80,12 @@ class Run1SummaryAliasPartitionTest {
         val premise = manager.initial(x, manager.path(listOf(f)), Tail.STAR, ExclusionSet.Empty, MarkSlot.STAR)
         val root = FlowAlgebra.node(FlowLeaf.NONE, intArrayOf(f, g), arrayOf(FlowAlgebra.LEAF_NODE, FlowAlgebra.LEAF_NODE))
         for (layer in Layer.entries) for (tail in listOf(Tail.STAR, Tail.ANY)) {
+            if (layer == Layer.NORMAL && tail == Tail.ANY) {
+                assertFailsWith<IllegalStateException> {
+                    manager.flowTree(x, layer, ExclusionSet.Empty, manager.markSetOf(group), root, tail)
+                }
+                continue
+            }
             val packed = manager.flowTree(x, layer, ExclusionSet.Empty, manager.markSetOf(group), root, tail)
             val parts = manager.run1SummaryParts(premise, packed)
             assertEquals(leaves(packed).toSet(), parts.flatMap { leaves(it.first) }.toSet())

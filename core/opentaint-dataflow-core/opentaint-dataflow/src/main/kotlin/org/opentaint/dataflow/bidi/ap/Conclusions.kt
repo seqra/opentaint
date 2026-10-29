@@ -30,7 +30,7 @@ class FlowTree internal constructor(
     init {
         check(base != AccessPathBase.Zero) { "Only REACH represents zero" }
         check(!root.isEmpty) { "A conclusion tree must be nonempty" }
-        check(tail == Tail.STAR || tail == Tail.ANY) { "A FLOW leaf is STAR or ANY" }
+        check(tail != Tail.ANY || layer == Layer.DEMAND) { "An ANY FLOW leaf is DEMAND" }
         check(tail != Tail.ANY || exclusion == ExclusionSet.Empty) { "An ANY leaf has Empty E" }
     }
     internal fun withRoot(root: FlowNode) = FlowTree(base, layer, exclusion, markExclusion, root, tail)

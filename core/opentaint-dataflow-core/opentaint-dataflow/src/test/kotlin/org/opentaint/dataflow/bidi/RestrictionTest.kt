@@ -121,16 +121,14 @@ class RestrictionTest {
         assertEquals(expected, reference.toSet())
         assertEquals(expected.size, reference.size)
         assertTrue(reference.all { it.demand == (summary.layer == Layer.DEMAND) })
-        if (expected.any { !representable(it) }) {
-            assertFails { ops.restrict(initial, summary, demand) }
-        } else {
-            val packed = ops.restrict(initial, summary, demand)
-            assertEquals(expected, packed.flatMap { decode(it) }.toSet())
-            val groups = packed.associateBy { it.groupKey }
-            assertEquals(packed.size, groups.size)
-            assertEquals(expected.groupBy(::key).mapValues { it.value.toSet() }, groups.mapValues { decode(it.value) })
-            assertTrue(packed.all { it.layer == summary.layer })
-        }
+        val canonical = expected.map(::normalizeFlowSummaryConclusion).toSet()
+        val packed = ops.restrict(initial, summary, demand)
+        assertEquals(canonical, packed.flatMap { decode(it) }.toSet())
+        val groups = packed.associateBy { it.groupKey }
+        assertEquals(packed.size, groups.size)
+        assertEquals(canonical.groupBy(::key).mapValues { it.value.toSet() }, groups.mapValues { decode(it.value) })
+        assertTrue(packed.all { it.layer == summary.layer })
+
         return reference
     }
 
@@ -216,13 +214,11 @@ class RestrictionTest {
             p(emptyList(), Tail.ANY, MarkSlot.Concrete(u)),
             p(emptyList(), Tail.ANY, MarkSlot.Star(marks(t.id)))))
             assertTrue(check(must, conclusion, DemandPattern(entry, exit)).isEmpty())
-        for (entry in listOf(p(emptyList(), Tail.STAR), p(emptyList(), Tail.STAR, exclusion = ex(g)),
-            p(emptyList(), Tail.ANY, MarkSlot.Concrete(t)),
-            p(emptyList(), Tail.ANY, MarkSlot.Star(marks(u.id)))))
-            assertEquals(decode(conclusion), check(must, conclusion, DemandPattern(entry, exit)).toSet())
+        // MUST is an ANY-demand output template. A STAR demand emits EXACT instead.
+        val precise = DemandPattern(p(emptyList(), Tail.ANY, MarkSlot.Concrete(t)), exit)
+        assertEquals(decode(conclusion), check(must, conclusion, precise).toSet())
         val moreExcluded = manager.initial(p(emptyList(), Tail.ANY_TAINT, MarkSlot.Concrete(t), ex(f, g)))
-        assertEquals(decode(conclusion),
-            check(moreExcluded, conclusion, DemandPattern(p(emptyList(), Tail.STAR, exclusion = ex(g)), exit)).toSet())
+        assertEquals(decode(conclusion), check(moreExcluded, conclusion, precise).toSet())
         assertTrue(check(root, conclusion, DemandPattern(p(emptyList(), Tail.ANY, MarkSlot.Concrete(t)), exit)).isEmpty())
         val underField = manager.initial(p(listOf(f), Tail.ANY_TAINT, MarkSlot.Concrete(t)))
         assertTrue(check(underField, conclusion, DemandPattern(p(emptyList(), Tail.STAR, MarkSlot.Concrete(t), exclusion = ex(f)), exit)).isEmpty())
@@ -231,7 +227,7 @@ class RestrictionTest {
     @Test
     fun `must exits distinguish at above below and keep raw normal E until the specified meet`() {
         val initial = manager.initial(p(emptyList(), Tail.EXACT, MarkSlot.Concrete(t)))
-        val entry = p(emptyList(), Tail.ANY)
+        val entry = p(emptyList(), Tail.ANY, MarkSlot.Concrete(t))
         val input = taint(c(emptyList(), Tail.ANY_TAINT), c(listOf(f), Tail.ANY_TAINT),
             c(listOf(f, g), Tail.ANY_TAINT), c(listOf(g), Tail.ANY_TAINT), exclusion = ex(g))
         val star = DemandPattern(entry, p(listOf(f), Tail.STAR, MarkSlot.Concrete(t), exclusion = ex(h), base = y))
@@ -263,13 +259,14 @@ class RestrictionTest {
     }
 
     @Test
-    fun `generic abstract exact reduction is retained and typed packing rejects it`() {
+    fun `generic abstract exact reduction is normalized at typed summary packing`() {
         val initial = manager.initial(p(emptyList(), Tail.STAR))
         val may = flow(emptyList(), listOf(f), mx = marks(u.id), layer = Layer.DEMAND)
         val demand = DemandPattern(p(emptyList(), Tail.ANY), p(listOf(f), Tail.EXACT, MarkSlot.Concrete(t), base = y))
         val expected = Conclusion(PathFact(y, listOf(f), Tail.EXACT, MarkSlot.Star(marks(u.id))), empty, true)
         assertEquals(listOf(expected), ops.restrictReference(initial, may, demand))
-        assertFails { ops.restrict(initial, may, demand) }
+        assertEquals(listOf(expected.copy(fact = expected.fact.copy(tail = Tail.STAR))),
+            ops.restrict(initial, may, demand).flatMap(::decode))
     }
 
     @Test
@@ -278,7 +275,7 @@ class RestrictionTest {
         val input = taint(c(emptyList(), Tail.ANY_TAINT), c(listOf(f), Tail.ANY_TAINT),
             c(listOf(f), Tail.EXACT), c(listOf(f), Tail.EXACT, u), exclusion = ex(g))
         // Concrete Dp retains E. The extra U leaf checks its unchanged concrete mark gate.
-        val demand = DemandPattern(p(emptyList(), Tail.ANY),
+        val demand = DemandPattern(p(emptyList(), Tail.ANY, MarkSlot.Concrete(t)),
             p(listOf(f), Tail.STAR, MarkSlot.Concrete(t), exclusion = ex(h), base = y))
         val raw = check(initial, input, demand)
         val packed = ops.restrict(initial, input, demand)
@@ -288,7 +285,8 @@ class RestrictionTest {
         assertTrue(packed.flatMap { ops.leaves(it).toList() }.all { it.fact.mark == MarkSlot.Concrete(t) })
         val transfer = flow(emptyList(), listOf(f), exclusion = ex(g), mx = marks(u.id))
         val transferInitial = manager.initial(p(emptyList(), Tail.STAR))
-        val exactExit = demand.copy(exit = p(listOf(f), Tail.EXACT, MarkSlot.Concrete(t), base = y))
+        val exactExit = DemandPattern(p(emptyList(), Tail.ANY),
+            p(listOf(f), Tail.EXACT, MarkSlot.Concrete(t), base = y))
         val kept = ops.restrict(transferInitial, transfer, exactExit).single() as FlowTree
         assertEquals(setOf(emptyList(), listOf(f)), decode(kept).map { it.fact.path }.toSet())
         assertEquals(transfer.groupKey, kept.groupKey)
@@ -298,7 +296,7 @@ class RestrictionTest {
     fun `duplicate moved and at-path conclusions are packed once with exact E cleared`() {
         val initial = manager.initial(p(emptyList(), Tail.EXACT, MarkSlot.Concrete(t)))
         val input = taint(c(emptyList(), Tail.ANY_TAINT), c(listOf(f), Tail.ANY_TAINT), exclusion = ex(g))
-        val demand = DemandPattern(p(emptyList(), Tail.ANY), p(listOf(f), Tail.EXACT, MarkSlot.Concrete(t), base = y))
+        val demand = DemandPattern(p(emptyList(), Tail.ANY, MarkSlot.Concrete(t)), p(listOf(f), Tail.EXACT, MarkSlot.Concrete(t), base = y))
         assertEquals(listOf(c(listOf(f), Tail.EXACT)), ops.restrictReference(initial, input, demand))
         val packed = ops.restrict(initial, input, demand).single() as TaintTree
         assertEquals(empty, packed.exclusion)
@@ -316,7 +314,7 @@ class RestrictionTest {
         root = manager.taintAlg.node(manager.taintLeaves(MarkSet.EMPTY, manager.markSetOf(t)), root.accessors, root.children)
         val input = manager.taintTree(y, Layer.NORMAL, root, ex(g))
         val initial = manager.initial(p(emptyList(), Tail.EXACT, MarkSlot.Concrete(t)))
-        val demand = DemandPattern(p(emptyList(), Tail.ANY), p(path, Tail.EXACT, MarkSlot.Concrete(t), base = y))
+        val demand = DemandPattern(p(emptyList(), Tail.ANY, MarkSlot.Concrete(t)), p(path, Tail.EXACT, MarkSlot.Concrete(t), base = y))
         assertEquals(listOf(c(path, Tail.EXACT)), ops.restrictReference(initial, input, demand))
         val packed = ops.restrict(initial, input, demand).single() as TaintTree
         assertEquals(Layer.NORMAL, packed.layer)

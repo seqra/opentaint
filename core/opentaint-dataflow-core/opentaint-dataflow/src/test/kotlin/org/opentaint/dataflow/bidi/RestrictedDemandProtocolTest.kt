@@ -34,7 +34,7 @@ class RestrictedDemandProtocolTest {
             repeat(3) { for (name in listOf("T", "U"))
                 arrive(f, actor, f.fact(tail = Tail.ANY, mark = MarkSlot.Concrete(f.mark(name)), layer = Layer.DEMAND)) }
             assertEquals(1, actor.initials.all().size)
-            assertTrue(actor.initials.all().contains(f.manager.initial(entry.copy(fact = entry.fact.copy(tail = Tail.STAR)))))
+            assertTrue(actor.initials.all().contains(f.manager.initial(entry)))
         }
     }
 

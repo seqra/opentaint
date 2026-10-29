@@ -58,7 +58,7 @@ class AbstractDemandExclusionTest {
     @Test
     fun `abstract excluded demand shares one empty-E FLOW start across actual marks tails and E`() {
         val entry = p(exclusion = e(f))
-        val expected = p()
+        val expected = p(tail = Tail.EXACT)
         val marks = listOf(t, u, MarkSlot.STAR, MarkSlot.Star(m.markSetOf(u.mark)))
         val inputs = buildList {
             for (mark in marks) {
@@ -74,8 +74,6 @@ class AbstractDemandExclusionTest {
         }
         for (actual in inputs) {
             assertEquals(expected, emit(entry, actual, m.marks), "actual=$actual")
-            // Generic abstract EXACT values are not typed Facts.
-            if (actual.fact.tail == Tail.EXACT && actual.fact.mark is MarkSlot.Star) continue
             val packed = pack(actual)
             val started = ops.emit(DemandPattern(entry, null), packed)
             assertEquals(listOf(expected), started.map { it.toPattern() })
@@ -88,7 +86,7 @@ class AbstractDemandExclusionTest {
     @Test
     fun `actual field E still blocks strict descent for STAR FLOW and concrete MUST`() {
         val entry = p(listOf(g), exclusion = e(h))
-        val expected = p(listOf(g))
+        val expected = p(listOf(g), tail = Tail.EXACT)
         for (tail in listOf(Tail.STAR, Tail.ANY_TAINT)) for (mark in listOf(t, u, MarkSlot.STAR)) {
             if (tail == Tail.ANY_TAINT && mark is MarkSlot.Star) continue
             val blocked = p(tail = tail, mark = mark, exclusion = e(g))
@@ -133,7 +131,7 @@ class AbstractDemandExclusionTest {
     fun `concrete STAR demand still meets both field exclusions and cannot specialize FLOW`() {
         val entry = p(mark = t, exclusion = e(f))
         val actual = p(tail = Tail.ANY_TAINT, mark = t, exclusion = e(g))
-        val expected = p(tail = Tail.ANY_TAINT, mark = t, exclusion = e(f, g))
+        val expected = p(tail = Tail.EXACT, mark = t)
         assertEquals(expected, emit(entry, actual, m.marks))
         assertEquals(listOf(expected), ops.emit(DemandPattern(entry, null), pack(actual)).map { it.toPattern() })
         assertNull(emit(entry, p(), m.marks))
@@ -165,25 +163,8 @@ class AbstractDemandExclusionTest {
     }
 
     @Test
-    fun `real partial cleaner producer is accepted without an empty-E admission requirement`() {
-        val original = p()
-        val initial = m.initial(original)
-        val mode = ApMode(false, Direction.FORWARD, 2)
-        val written = CollectingOut()
-        ops.applyEdge(ops.startFact(initial), initial, PathEdge(original.fact, original.fact, e(f)), true, mode, written)
-        val cleaned = CollectingOut()
-        ops.clean(written.results.single(), initial, Cleaner(x, null, CleanReach.BELOW, null), mode, cleaned)
-        val returned = CollectingOut()
-        ops.applyEdge(cleaned.results.single(), initial,
-            PathEdge(original.fact, original.fact.copy(base = ret), empty), true, mode, returned)
-        val produced = ops.leaves(returned.results.single()).single()
-        assertEquals(p(exclusion = e(f), base = ret), produced)
-        assertEquals(Layer.DEMAND, returned.results.single().layer)
-        val builder = DemandStore.Builder(m)
-        assertTrue(builder.add(fixture.method, DemandPattern(produced, original)))
-        val guide = builder.build().near(fixture.method, p(base = ret)).single()
-        assertEquals(p(base = ret), guide.entry)
-        assertEquals(listOf(p(base = ret)), ops.emit(guide, pack(p(listOf(f), Tail.EXACT, t, base = ret)))
-            .map { it.toPattern() })
+    fun `below-only RemoveAll cannot create an excluded STAR FLOW demand`() {
+        assertFails { Cleaner(x, null, CleanReach.BELOW, null) }
     }
+
 }

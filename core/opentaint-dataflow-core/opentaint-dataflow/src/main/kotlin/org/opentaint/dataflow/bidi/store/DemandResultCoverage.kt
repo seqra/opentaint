@@ -5,11 +5,22 @@ import java.util.concurrent.atomic.AtomicLongArray
 
 /** Counters only. A query never retains its path trace in the frozen snapshot. */
 internal class DemandQueryStatistics {
-    private val values = AtomicLongArray(12)
+    private val values = AtomicLongArray(18)
+    private val admissions = AtomicLongArray(16 * 5)
     fun add(kind: Int, amount: Long = 1) { values.addAndGet(kind, amount) }
+    fun admission(entry: Pattern, actual: Pattern, emitted: Pattern?) {
+        val cell = (entry.fact.tail.ordinal * 4 + actual.fact.tail.ordinal) * 5
+        admissions.incrementAndGet(cell + if (emitted == null) 4 else emitted.fact.tail.ordinal)
+    }
     override fun toString(): String = listOf("c2Direct", "c2Local", "c2Visible", "c2Covered", "c2Roots",
-        "c2States", "c2Joins", "c5Candidates", "c5States", "c5Restrict", "c5Covered", "c5Visible")
-        .mapIndexed { i, name -> "$name=${values[i]}" }.joinToString(" ")
+        "c2States", "c2Joins", "c5Candidates", "c5States", "c5Restrict", "c5Covered", "c5Visible",
+        "c5FixedReject", "c5Duplicate", "c5Popped", "c5Expand", "c5ComposeAttempts", "c5ComposeAccepted")
+        .mapIndexed { i, name -> "$name=${values[i]}" }.joinToString(" ") + buildString {
+            for (d in Tail.entries) for (a in Tail.entries) for (result in 0..4) {
+                val count = admissions[(d.ordinal * 4 + a.ordinal) * 5 + result]
+                if (count != 0L) append(" c2_${d}_${a}_${if (result == 4) "REJECT" else Tail.entries[result]}=$count")
+            }
+        }
 }
 
 /** Facts equality omits protection. Join only that annotation for exactly equal ordinary payloads. */
@@ -61,7 +72,8 @@ internal class ExactDemandResults(private val ap: ApManager, private val ops: Ap
 }
 
 /** Compare structural keys from the scalar emitter. This check never interns hypothetical APs. */
-internal class InitialDemandResults(private val ap: ApManager) {
+internal class InitialDemandResults(private val ap: ApManager, private val policy: RestrictedInitialPolicy,
+                                    private val statistics: DemandQueryStatistics? = null) {
     val initials = LinkedHashSet<InitialAp>()
     private val keys = HashSet<Pattern>()
     private val offered = HashSet<Pair<Pattern, Pattern>>()
@@ -71,18 +83,20 @@ internal class InitialDemandResults(private val ap: ApManager) {
     fun offer(entry: Pattern, actual: Pattern) {
         ap.cancellation.checkpoint()
         if (!offered.add(entry to actual)) return
-        val emitted = emit(entry, actual, ap.marks) ?: return
+        val emitted = policy.emit(entry, actual)
+        statistics?.admission(entry, actual, emitted)
+        if (emitted == null) return
         if (keys.add(emitted)) initials += ap.initial(emitted)
         missing.remove(emitted)
     }
     fun has(entry: Pattern, actual: Pattern): Boolean {
         ap.cancellation.checkpoint()
-        val emitted = emit(entry, actual, ap.marks) ?: return true
+        val emitted = policy.emit(entry, actual) ?: return true
         return emitted in keys
     }
     fun requireFamily(target: Pattern, flow: Boolean, actual: Pattern) {
         fun require(entry: Pattern) {
-            val potential = emit(entry, actual, ap.marks) ?: return
+            val potential = policy.emit(entry, actual) ?: return
             if (potential !in keys) missing += potential
         }
         require(target)

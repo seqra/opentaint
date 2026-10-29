@@ -28,11 +28,12 @@ class NdJoinAdapterTest {
                      key: MethodKey = f.key): RunMethodAnalyzer =
         f.core(index = index, L = limit, key = key,
             demand = DemandStore.Builder(f.manager).apply {
-                // This FULL adapter fixture has no caller query admission. Its
-                // explicit guides retain every result of the tested bindings.
-                for (argument in 0..3) add(key, DemandPattern(
-                    f.pattern(AccessPathBase.Argument(argument), tail = Tail.ANY, mark = MarkSlot.STAR),
-                    f.pattern(AccessPathBase.Return, tail = Tail.STAR, mark = MarkSlot.STAR)))
+                // Admission-image C5 cannot select a concrete query from a FLOW guide.
+                // These explicit concrete guides retain the FULL bindings tested below.
+                for (argument in 0..3) for (input in listOf("T", "U", "V", "W"))
+                    for (output in listOf("T", "U", "V", "W")) add(key, DemandPattern(
+                        f.pattern(AccessPathBase.Argument(argument), tail = Tail.ANY, mark = MarkSlot.Concrete(f.mark(input))),
+                        f.pattern(AccessPathBase.Return, tail = Tail.STAR, mark = MarkSlot.Concrete(f.mark(output)))))
             }.build(),
             localFactory = MethodLocalServicesFactory(::RunMethodLocalServices),
             callFactory = MethodCallServicesFactory(::RunMethodCallServices))

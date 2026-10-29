@@ -121,12 +121,13 @@ class PersistentRecordStore(private val m: ApManager) : RecordStore {
 }
 
 private fun checkNativeRecord(direction: Direction, premise: InitialAp, conclusion: Facts) {
+    assertCanonicalFlowSummary(premise, conclusion)
     check(conclusion.base !is AccessPathBase.CleanerTemporary) { "A field-action temporary cannot enter a native record" }
     check(conclusion.layer == Layer.NORMAL) { "R1: a native record must be normal" }
     check((conclusion is FlowTree) == premise.isFlow) { "K6: the conclusion kind follows the native premise" }
     check(premise.isZero || when (premise.mark) {
         is MarkSlot.Concrete -> premise.tail != Tail.STAR
-        is MarkSlot.Star -> premise.tail == Tail.STAR
+        is MarkSlot.Star -> premise.tail == Tail.STAR || premise.tail == Tail.ANY_TAINT
     }) { "A native record needs a zero, concrete exact/any or abstract STAR initial" }
     if (direction == Direction.BACKWARD) {
         check(!premise.isZero) { "R1: a backward zero-premise edge is not a native record" }

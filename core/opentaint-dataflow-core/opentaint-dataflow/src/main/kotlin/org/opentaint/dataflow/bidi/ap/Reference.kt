@@ -3,17 +3,15 @@ package org.opentaint.dataflow.bidi.ap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 
-/** Raw reference geometry also admits abstract exact values outside typed Facts. */
+/** Scalar reference geometry for ordinary and FLOW query tails. */
 data class PathFact(val base: AccessPathBase, val path: List<AccessorIdx>, val tail: Tail, val mark: MarkSlot)
 data class Pattern(val fact: PathFact, val exclusion: ExclusionSet)
 
 data class Conclusion(val fact: PathFact, val exclusion: ExclusionSet, val demand: Boolean) {
     init {
         check(fact.tail != Tail.ANY || demand) { "W6: a may conclusion must be DEMAND" }
-        check(fact.tail != Tail.ANY_TAINT || fact.mark is MarkSlot.Concrete) {
-            "A must conclusion needs a concrete mark"
-        }
-        check(exclusion == ExclusionSet.Empty || (fact.tail == Tail.STAR || fact.tail == Tail.ANY_TAINT)) {
+        check(exclusion == ExclusionSet.Empty || fact.tail == Tail.STAR || fact.tail == Tail.ANY_TAINT ||
+            (fact.tail == Tail.EXACT && fact.mark is MarkSlot.Star)) {
             "Only a STAR or must conclusion can exclude fields"
         }
     }
@@ -90,9 +88,14 @@ fun summaryEdge(j: Pattern, g: Conclusion): PathEdge {
         toExclusion = if (gOwn) g.exclusion else ExclusionSet.Empty)
 }
 
-/** The native forward must shapes accepted by CurrentMustReverse. Keep the guards separate from the two
- *  side conversions: a must conclusion becomes a STAR/E read premise; a must input becomes an ANY demand result. */
+/** Concrete native must views retain their existing policy. New FLOW must views always return an ANY demand. */
 private fun mustRecordReadView(p: Pattern, g: Conclusion): RecordLeafView? {
+    if (!g.demand && p.fact.mark is MarkSlot.Star && g.fact.mark is MarkSlot.Star &&
+        ((p.fact.tail == Tail.ANY_TAINT && g.fact.tail in setOf(Tail.STAR, Tail.ANY_TAINT)) ||
+            (p.fact.tail == Tail.STAR && g.fact.tail == Tail.ANY_TAINT))) {
+        return RecordLeafView(Pattern(g.fact.copy(tail = Tail.STAR, mark = p.fact.mark), g.exclusion),
+            Conclusion(p.fact.copy(tail = Tail.ANY, mark = g.fact.mark), ExclusionSet.Empty, demand = true))
+    }
     val concrete = p.fact.mark is MarkSlot.Concrete && g.fact.mark is MarkSlot.Concrete
     val accepted = !g.demand && concrete && when (p.fact.tail) {
         Tail.EXACT -> p.exclusion == ExclusionSet.Empty && g.fact.tail == Tail.ANY_TAINT
@@ -147,12 +150,9 @@ fun normalizeDemandFieldExclusion(pattern: Pattern): Pattern =
         pattern.exclusion != ExclusionSet.Empty) pattern.copy(exclusion = ExclusionSet.Empty)
     else pattern
 
-fun emit(d: Pattern, a: Pattern, catalog: MarkTable? = null): Pattern? {
-    val entry = normalizeDemandFieldExclusion(d)
-    if (entry.fact.mark == MarkSlot.STAR)
-        return if (overlap(entry, a)) flowForm(entry) else null
-    return commonPart(entry, a, catalog)
-}
+/** Scalar table view, including forward uniform templates. The engine passes its run policy explicitly. */
+fun emit(d: Pattern, a: Pattern, catalog: MarkTable? = null): Pattern? =
+    RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = catalog).emit(d, a)
 
 fun flowForm(d: Pattern): Pattern {
     val star = MarkSlot.Star(MarkSet.EMPTY)
@@ -185,12 +185,15 @@ fun commonPart(d: Pattern, a: Pattern, catalog: MarkTable? = null): Pattern? {
     }
 }
 
-fun satisfies(j: Pattern, a: Pattern, restricted: Boolean): Boolean =
-    if (!restricted) applicable(j, a) || inside(j, a)
+fun satisfies(j: Pattern, a: Pattern, restricted: Boolean): Boolean {
+    if (j.fact.tail == Tail.ANY_TAINT && j.fact.mark is MarkSlot.Star)
+        return a.fact.tail == Tail.ANY_TAINT && markSub(j.fact.mark, a.fact.mark) &&
+            covers(a.copy(fact = a.fact.copy(mark = MarkSlot.STAR)), j.copy(fact = j.fact.copy(mark = MarkSlot.STAR)))
+    return if (!restricted) applicable(j, a) || inside(j, a)
     else if (j.fact.tail == Tail.STAR && j.exclusion == ExclusionSet.Empty && j.fact.mark == MarkSlot.STAR)
-        overlap(j, a)                      // canonical FLOW only; reads the exclusion of the added fact
-    else inside(j, a) ||                   // concrete/must premise: inside; noncanonical FLOW retains both tests
-        (j.fact.mark == MarkSlot.STAR && applicable(j, a))
+        overlap(j, a)
+    else inside(j, a) || ((j.fact.mark == MarkSlot.STAR || j.fact.tail == Tail.STAR) && applicable(j, a))
+}
 
 fun recordDemand(j: Pattern, a: Pattern, resultDemand: Boolean): Boolean =
     resultDemand || (j.fact.tail == Tail.ANY_TAINT && !inside(j, a))
@@ -213,15 +216,20 @@ fun marksMeet(dp: MarkSlot, c: MarkSlot, catalog: MarkTable? = null): Boolean = 
 
 fun meetConclusion(sc: Conclusion, dp: Pattern): Conclusion = when {
     !sc.fact.tail.isAny -> sc                                     // `$`; `*` stays whole (a FLOW conclusion, F72)
-    dp.fact.tail == Tail.EXACT -> sc.copy(fact = sc.fact.copy(tail = Tail.EXACT), exclusion = ExclusionSet.Empty)
+    dp.fact.tail == Tail.EXACT -> sc.copy(fact = sc.fact.copy(tail = Tail.EXACT),
+        exclusion = if (sc.fact.mark is MarkSlot.Star && sc.fact.tail == Tail.ANY_TAINT) sc.exclusion else ExclusionSet.Empty)
     sc.fact.tail == Tail.ANY_TAINT && dp.fact.tail == Tail.STAR -> sc.copy(exclusion = sc.exclusion.union(dp.exclusion))
     else -> sc                                                    // `[any] ∩ STAR/E2` (the exception), `∩ [any]`
 }
 
-fun restrict(sp: Pattern, sc: Conclusion, d: DemandPattern, catalog: MarkTable? = null): Conclusion? {
-    val dp = normalizeDemandFieldExclusion(d.exit ?: return null) // the demand does not reach the exit
-    if (!insideDemand(sp, d.entry, catalog)) return null              // the premise lies inside D-c: locations (reads Ej, §3.4)
-                                                             // and marks
+fun restrict(sp: Pattern, sc: Conclusion, d: DemandPattern, catalog: MarkTable? = null,
+             policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = catalog)): Conclusion? {
+    if (!policy.canStoreInitial(d.entry, sp)) return null
+    return restrictConclusionOnly(sc, d.exit, catalog)
+}
+
+fun restrictConclusionOnly(sc: Conclusion, exit: Pattern?, catalog: MarkTable? = null): Conclusion? {
+    val dp = normalizeDemandFieldExclusion(exit ?: return null)
     if (!marksMeet(dp.fact.mark, sc.fact.mark, catalog)) return null  // the mark of the conclusion meets the mark of D-p
     if (sc.fact.base != dp.fact.base) return null
     val p = dp.fact.path
@@ -265,7 +273,8 @@ private fun below(c: Conclusion, edge: PathEdge, r: List<AccessorIdx>): Shape? {
     return when (to.tail) {
         Tail.STAR -> when {
             r.isNotEmpty() -> Shape(to.path + r, c.fact.tail, c.exclusion, demand = false)   // keeps Ec (W8)
-            c.fact.tail == Tail.EXACT -> Shape(to.path, Tail.EXACT, ExclusionSet.Empty, false)
+            c.fact.tail == Tail.EXACT -> Shape(to.path, Tail.EXACT,
+                if (c.fact.mark is MarkSlot.Star) c.exclusion.union(edge.exclusion) else ExclusionSet.Empty, false)
             c.fact.tail == Tail.ANY -> Shape(to.path, Tail.ANY, ExclusionSet.Empty, demand = true)   // W6
             else -> Shape(to.path, c.fact.tail, c.exclusion.union(edge.exclusion), false)  // `STAR/Ec`, or the exclusion
         }                                                                                 // edge on `[any-taint]/Ec` (W8)
@@ -276,18 +285,28 @@ private fun below(c: Conclusion, edge: PathEdge, r: List<AccessorIdx>): Shape? {
     }
 }
 
+private fun PathEdge.isExcludedIdentityKeep(): Boolean =
+    from.base == to.base && from.path == to.path && from.tail == Tail.STAR &&
+        to.tail == Tail.STAR && exclusion != ExclusionSet.Empty
+
 private fun above(c: Conclusion, edge: PathEdge, r: List<AccessorIdx>): Shape? {
     val admitted = when (c.fact.tail) {
         Tail.STAR, Tail.ANY_TAINT -> c.exclusion.admits(r); Tail.ANY -> true; Tail.EXACT -> false
     }
-    if (!admitted) return null                     // no common location: no result and no request
+    if (!admitted) {
+        // An excluded identity keep is the existing field-write effect, not a read.
+        if (c.fact.tail == Tail.EXACT && c.fact.mark is MarkSlot.Star && edge.isExcludedIdentityKeep() && c.exclusion.admits(r))
+            return Shape(edge.to.path, Tail.ANY, ExclusionSet.Empty, demand = true)
+        return null
+    }
     val to = edge.to
     if (c.fact.tail != Tail.ANY_TAINT) {           // a `*` fact loses its correlation; an `[any]` fact is demand (W6)
         val tail = if (to.tail == Tail.EXACT) Tail.EXACT else Tail.ANY
         return Shape(to.path, tail, ExclusionSet.Empty, demand = true)
     }
     return when (to.tail) {                        // every admitted location of c carries its mark: nothing is lost
-        Tail.EXACT -> Shape(to.path, Tail.EXACT, ExclusionSet.Empty, demand = false)
+        Tail.EXACT -> Shape(to.path, Tail.EXACT,
+            if (c.fact.mark is MarkSlot.Star && r.isEmpty()) c.exclusion else ExclusionSet.Empty, demand = false)
         Tail.ANY_TAINT -> Shape(to.path, Tail.ANY_TAINT, edge.toExclusion, demand = false)    // Et
         Tail.ANY -> Shape(to.path, Tail.ANY, ExclusionSet.Empty, demand = true)               // W6: a may
         Tail.STAR -> Shape(to.path, Tail.ANY_TAINT, edge.exclusion, demand = false)          // the edge exclusion (W8)
@@ -308,11 +327,8 @@ fun concat(c: Conclusion, edge: PathEdge, edgeDemand: Boolean = false,
     val from = edge.from
     check(from.mark !is MarkSlot.Star || from.mark.excluded.isEmpty)          // S7
     check(edge.to.mark !is MarkSlot.Concrete || from.mark is MarkSlot.Concrete)          // S7
-    check(from.tail != Tail.EXACT || from.mark is MarkSlot.Concrete)                    // S8
-    check(from.tail != Tail.EXACT || edge.to.tail != Tail.STAR)                         // S8
-    check(edge.to.tail != Tail.EXACT || from.mark is MarkSlot.Concrete)                 // S8 (ExactTargetConc)
-    check(edge.to.tail != Tail.ANY_TAINT || edge.to.mark is MarkSlot.Concrete)          // W8, S15
-    check(from.tail != Tail.ANY_TAINT || from.mark is MarkSlot.Concrete)                // W8
+    check(from.tail != Tail.EXACT || edge.to.tail != Tail.STAR || from.mark is MarkSlot.Star)
+    check(edge.to.tail != Tail.ANY_TAINT || edge.to.mark is MarkSlot.Concrete || from.mark is MarkSlot.Star)
     if (c.fact.base != from.base) return EdgeOutcome.None
     val p = from.path
     val q = c.fact.path
@@ -352,12 +368,13 @@ fun compose(to: MarkSlot, c: MarkSlot): MarkSlot? = when (to) {
 }
 
 fun normalize(f: PathFact, exclusion: ExclusionSet, demand: Boolean): Conclusion = when {
+    demand && f.mark is MarkSlot.Star && (f.tail == Tail.EXACT || f.tail == Tail.ANY_TAINT) ->
+        Conclusion(f.copy(tail = Tail.ANY), ExclusionSet.Empty, demand = true)
     f.tail == Tail.ANY -> Conclusion(f, ExclusionSet.Empty, demand = true)                                  // W6
     f.tail == Tail.ANY_TAINT -> {
-        check(f.mark is MarkSlot.Concrete)                                                                  // W8 (a)
         Conclusion(f, exclusion, demand)
     }
-    else -> Conclusion(f, if (f.tail == Tail.EXACT) ExclusionSet.Empty else exclusion, demand)
+    else -> Conclusion(f, if (f.tail == Tail.EXACT && f.mark is MarkSlot.Concrete) ExclusionSet.Empty else exclusion, demand)
 }
 
 /** ap.md §6.5 (Lean startFact; a must-premise: AnyTaint.startT, with the exclusion AnyTaintEx.startX). No direction
@@ -424,6 +441,9 @@ private fun cleanResRaw(cl: Cleaner, c: Conclusion): CleanOut {
     if (abstractMark != null && selected != null)
         return CleanOut(listOf(c.copy(fact = c.fact.copy(mark = MarkSlot.Star(abstractMark.excluded + selected)))), selected)
         // The caller records this request only in run 1. Do not test the path or T ∈ X first.
+    if (abstractMark != null && selected == null) {
+        return CleanOut(wholeFlowClean(cl, c), null)
+    }
     val pos = cleanPos(cl, c.fact, c.exclusion)
     if (pos == Pos.DISJOINT) return CleanOut(listOf(c), null)
     return when (val mk = c.fact.mark) {
@@ -436,6 +456,25 @@ private fun cleanResRaw(cl: Cleaner, c: Conclusion): CleanOut {
             CleanOut(if (pos == Pos.INSIDE) emptyList() else listOf(normalize(c.fact, c.exclusion, demand = true)), null)
         }
     }
+}
+
+/** Whole-position FLOW kill. Retain one uncertain inner residual, which covers deeper ones. */
+internal fun wholeFlowClean(cl: Cleaner, c: Conclusion): List<Conclusion> {
+    val path = cl.path?.toList().orEmpty()
+    val q = c.fact.path
+    if (q.startsWith(path)) return emptyList()
+    if (!path.startsWith(q) || !c.exclusion.admits(path.drop(q.size))) return listOf(c)
+    if (c.fact.tail == Tail.ANY) return listOf(c)
+    val result = ArrayList<Conclusion>()
+    result += c.copy(exclusion = c.exclusion.union(ExclusionSet.of(path[q.size])))
+    if (q.size + 1 < path.size) {
+        if (c.fact.tail == Tail.ANY_TAINT) {
+            for (depth in q.size + 1 until path.size)
+                result += c.copy(fact = c.fact.copy(path = path.take(depth)), exclusion = ExclusionSet.of(path[depth]))
+        } else result += c.copy(fact = c.fact.copy(path = path.take(q.size + 1), tail = Tail.ANY),
+            exclusion = ExclusionSet.Empty, demand = true)
+    }
+    return result
 }
 
 /** ap.md §4.7 (Lean concPart; with the exclusion AnyTaintEx.partX): a normal `[any-taint]/E` fact at x.p and a cleaner ONE

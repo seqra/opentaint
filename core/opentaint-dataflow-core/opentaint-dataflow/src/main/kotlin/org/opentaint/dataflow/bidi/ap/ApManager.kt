@@ -160,7 +160,7 @@ class ApManager(val cancellation: Cancellation, refManager: RefManager = RefMana
     fun taintLeaves(exact: MarkSet, any: MarkSet): TaintLeaves = taintAlg.leaves(exact, any)
     fun newInterners(): StoreInterners = StoreInterners(softRefs, cancellation)
 
-    /** Build one normalized typed leaf. Raw abstract exact values remain in the reference only. */
+    /** Build one normalized typed leaf, including exact and uniform FLOW query shapes. */
     fun factsOf(f: PathFact, exclusion: ExclusionSet, layer: Layer): Facts {
         if (f.base == AccessPathBase.Zero) {
             check(f.path.isEmpty() && f.tail == Tail.EXACT && exclusion == ExclusionSet.Empty &&
@@ -172,7 +172,6 @@ class ApManager(val cancellation: Cancellation, refManager: RefManager = RefMana
         val resultPath = path(c.fact.path)
         return when (val mark = c.fact.mark) {
             is MarkSlot.Star -> {
-                check(c.fact.tail != Tail.EXACT) { "S8: a typed exact leaf needs a concrete mark" }
                 flowTree(f.base, resultLayer, c.exclusion, mark.excluded,
                     FlowAlgebra.prepend(this, resultPath, FlowAlgebra.LEAF_NODE), c.fact.tail)
             }

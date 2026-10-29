@@ -19,6 +19,7 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
         val out = ArrayList<Publication>()
         for (pub in pubs) {
             ap.cancellation.checkpoint()
+            assertCanonicalFlowSummary(pub.premise, pub.conclusion)
             check(pub.conclusion.base !is AccessPathBase.CleanerTemporary) {
                 "A field-action temporary cannot enter a publication"
             }
@@ -73,7 +74,7 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
                     members += byMember.lookupExtensions(leaf.fact.base, path)
                     for (member in byMember.lookupPrefixes(leaf.fact.base, path)) {
                         ap.cancellation.checkpoint()
-                        if (member.premise.member(member.index).mark is MarkSlot.Star) members += member
+                        if (member.premise.member(member.index).let { it.mark is MarkSlot.Star || it.tail == Tail.STAR }) members += member
                     }
                 }
             }

@@ -39,8 +39,8 @@ class RestrictedDemandBoundaryTest {
         for (actualMark in listOf(t, u, MarkSlot.STAR, flowExcludingU)) {
             val actual = p(listOf(f), Tail.ANY, actualMark)
             assertEquals(if (actualMark == t) setOf(actual) else emptySet(), emit(concreteEntry, actual))
-            assertEquals(setOf(flowEntry), emit(flowEntry, actual))
-            assertEquals(setOf(flowEntry), emit(p(listOf(f), Tail.ANY, MarkSlot.STAR), actual))
+            assertEquals(setOf(flowEntry.copy(fact = flowEntry.fact.copy(tail = Tail.EXACT))), emit(flowEntry, actual))
+            assertEquals(setOf(p(listOf(f), Tail.ANY, MarkSlot.STAR)), emit(p(listOf(f), Tail.ANY, MarkSlot.STAR), actual))
         }
     }
 
@@ -51,22 +51,21 @@ class RestrictedDemandBoundaryTest {
         assertTrue(builder.add(fixture.method, DemandPattern(entry, p(base = ret))))
         for (tail in listOf(Tail.STAR, Tail.ANY_TAINT)) {
             val actual = p(listOf(f), tail, e = ExclusionSet.of(g))
-            assertEquals(setOf(p(listOf(f), tail, e = ExclusionSet.of(intArrayOf(g, h)))), emit(entry, actual))
+            assertEquals(setOf(p(listOf(f), Tail.EXACT)), emit(entry, actual))
         }
         assertEquals(setOf(p(listOf(f), Tail.EXACT)), emit(entry, p(listOf(f), Tail.EXACT)))
-        assertEquals(setOf(entry), emit(entry, p(listOf(f))))
+        assertEquals(setOf(p(listOf(f), Tail.EXACT)), emit(entry, p(listOf(f))))
     }
 
     @Test
-    fun `descent forgets only ancestor exclusion and retains demand exclusion at new path`() {
+    fun `broader uniform input admits ANY and STAR demand uses a point query`() {
         for (tail in listOf(Tail.STAR, Tail.ANY_TAINT)) {
             val actual = p(tail = tail, e = ExclusionSet.of(f))
             assertEquals(emptySet(), emit(p(listOf(f)), actual))
-            assertEquals(setOf(p(listOf(g), tail)), emit(p(listOf(g)), actual))
-            val result = emit(p(listOf(g), Tail.STAR, e = ExclusionSet.of(h)), actual).single()
-            assertEquals(p(listOf(g), tail, e = ExclusionSet.of(h)), result)
-            assertTrue(covers(result, p(listOf(g, f), Tail.EXACT)))
-            assertFalse(covers(result, p(listOf(g, h), Tail.EXACT)))
+            assertEquals(if (tail == Tail.ANY_TAINT) setOf(p(listOf(g), tail)) else emptySet(),
+                emit(p(listOf(g)), actual))
+            assertEquals(setOf(p(listOf(g), Tail.EXACT)),
+                emit(p(listOf(g), Tail.STAR, e = ExclusionSet.of(h)), actual))
             assertEquals(ExclusionSet.of(f), actual.exclusion)
         }
     }
@@ -91,54 +90,25 @@ class RestrictedDemandBoundaryTest {
                 for (entry in entries) for (actual in actuals) {
                     val emitted = emit(entry, actual)
                     for (initial in emitted) {
-                        if (entry.fact.mark is MarkSlot.Star) assertEquals(ExclusionSet.Empty, initial.exclusion)
+                        if (entry.fact.mark is MarkSlot.Star && initial.fact.tail != Tail.ANY_TAINT)
+                            assertEquals(ExclusionSet.Empty, initial.exclusion)
                         assertTrue(insideDemand(initial, entry), "$initial must be contained by $entry")
                         assertTrue(satisfies(initial, actual, restricted = true), "$actual must satisfy $initial")
                     }
-                    val eligible = entry.fact.mark is MarkSlot.Star || actual.fact.mark is MarkSlot.Concrete &&
-                        markSub(entry.fact.mark, actual.fact.mark, m.marks)
-                    if (!eligible) {
-                        assertTrue(emitted.isEmpty(), "Concrete demand cannot specialize FLOW or another mark")
-                        continue
-                    }
-                    for (path in locations) for (mark in listOf(t, u)) {
-                        val location = p(path, Tail.EXACT, mark)
-                        if (covers(entry, location, m.marks) && covers(actual, location, m.marks))
-                            assertTrue(emitted.any { covers(it, location, m.marks) },
-                                "Missing $location in emitted=$emitted; entry=$entry, actual=$actual")
-                    }
+                    val policy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = m.marks)
+                    for (initial in emitted)
+                        assertTrue(policy.canEmitInitial(entry, initial), "Emitted initial must have a submitted witness")
+                    if (entry.fact.tail == Tail.ANY && actual.fact.tail == Tail.STAR &&
+                        entry.fact.path == actual.fact.path)
+                        assertTrue(emitted.isEmpty(), "Unrefined ANY cannot be answered with STAR")
                 }
             }
         }
     }
 
     @Test
-    fun `strong update then partial all-mark cleaning can produce excluded STAR FLOW demand`() {
-        val initialPattern = p(tail = Tail.STAR, mark = MarkSlot.STAR)
-        val initial = m.initial(initialPattern)
-        val mode = ApMode(false, Direction.FORWARD, 2)
-        val write = PathEdge(initialPattern.fact, initialPattern.fact, ExclusionSet.of(f))
-        val written = CollectingOut()
-        ops.applyEdge(ops.startFact(initial), initial, write, statementEdge = true, mode, written)
-        val afterWrite = written.results.single()
-        assertEquals(setOf(p(tail = Tail.STAR, mark = MarkSlot.STAR, e = ExclusionSet.of(f))),
-            ops.leaves(afterWrite).toSet())
-        assertEquals(Layer.NORMAL, afterWrite.layer)
-        val cleaned = CollectingOut()
-        ops.clean(afterWrite, initial, Cleaner(x, null, CleanReach.BELOW, null), mode, cleaned)
-        val afterClean = cleaned.results.single()
-        assertEquals(Layer.DEMAND, afterClean.layer)
-        val expected = p(tail = Tail.STAR, mark = MarkSlot.STAR, e = ExclusionSet.of(f))
-        assertEquals(setOf(expected), ops.leaves(afterClean).toSet())
-        // This is an actual producer, not a malformed caller-supplied demand value.
-        val returned = CollectingOut()
-        ops.applyEdge(afterClean, initial, PathEdge(initialPattern.fact,
-            initialPattern.fact.copy(base = ret), ExclusionSet.Empty), true, mode, returned)
-        val exit = ops.leaves(returned.results.single()).single()
-        assertEquals(expected.copy(fact = expected.fact.copy(base = ret)), exit)
-        val builder = DemandStore.Builder(m)
-        assertTrue(builder.add(fixture.method, DemandPattern(exit, initialPattern)))
-        assertEquals(ExclusionSet.Empty, builder.build().near(fixture.method, exit).single().entry.exclusion)
+    fun `below-only RemoveAll cannot create an excluded STAR FLOW demand`() {
+        assertFails { Cleaner(x, null, CleanReach.BELOW, null) }
     }
 
     @Test

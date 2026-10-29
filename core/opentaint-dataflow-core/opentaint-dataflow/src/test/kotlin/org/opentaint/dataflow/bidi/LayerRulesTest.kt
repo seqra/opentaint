@@ -9,6 +9,7 @@ import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.util.Cancellation
 import kotlin.test.Test
+import kotlin.test.assertFails
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -133,10 +134,7 @@ class LayerRulesTest {
             assertEquals(if (demand) Layer.DEMAND else Layer.NORMAL, holds.facts.layer)
             assertEquals(setOf(expected), decoded(listOf(holds.facts)))
         }
-        val original = value(p(f), Tail.STAR, MarkSlot.STAR, exclusion = ex(h))
-        val cl = Cleaner(x, manager.path(p(f)), CleanReach.BELOW, null)
-        val clean = cleaned(facts(original), cl)
-        assertEquals(setOf(value(p(f), Tail.STAR, MarkSlot.STAR, demand = true)), decoded(clean.results))
+        assertFails { Cleaner(x, manager.path(p(f)), CleanReach.BELOW, null) }
     }
 
     @Test

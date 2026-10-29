@@ -334,7 +334,15 @@ class PredicateClosureTest {
             assertEquals(RunStatus.COMPLETE, report.end.status)
             assertEquals(3, report.end.run)
             assertEquals(Direction.FORWARD, report.end.direction)
-            assertEquals(EndReason.NO_DEMAND_EDGE, report.end.reason)
+            assertEquals(EndReason.POLICY, report.end.reason)
+            assertTrue(f.results.last().demandLayerEdges > 0L)
+            assertTrue(retained(f.results.last(), f.ops).selectedDemand.isEmpty())
+            val oneField = f.program.pattern(y, p.fields.take(1), Tail.STAR,
+                MarkSlot.Concrete(p.marks[1]))
+            assertTrue(f.processed.any { it.run == 3 && it.method == p.callee &&
+                oneField in it.delta.premise.members.map { initial -> initial.toPattern() } &&
+                it.delta.facts.layer == Layer.DEMAND },
+                "The two-field U source starts the selected first-field concrete STAR demand")
             val states = report.entries.associate { HistoricalFinding(it.key.rule, it.key.statement) to
                 if (it.state == ReportState.CONFIRMED) HistoricalState.CONFIRMED else HistoricalState.DEMAND }
             assertEquals(reference.findings, states)

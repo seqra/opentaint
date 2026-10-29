@@ -4,6 +4,7 @@ import org.opentaint.dataflow.bidi.ap.ApMode
 import org.opentaint.dataflow.bidi.ap.Direction
 import org.opentaint.dataflow.bidi.ap.MethodKey
 import org.opentaint.dataflow.bidi.ap.MarkMode
+import org.opentaint.dataflow.bidi.ap.RestrictedInitialPolicy
 import org.opentaint.dataflow.bidi.driver.SeedIndex
 import org.opentaint.dataflow.bidi.driver.FieldLimitSchedule
 import org.opentaint.dataflow.bidi.store.DemandStore
@@ -28,6 +29,7 @@ class RunConfig(
             "Field limit $fieldLimit does not match $fieldLimitSchedule at run-$index"
         }
         require((index == 1) == (demand == null)) { "Only run 1 has no demand snapshot" }
+        demand?.validateIncoming(index)
     }
 
     /** DIAGNOSTIC ONLY: this unsound ablation can miss flows through static fields.
@@ -41,6 +43,7 @@ class RunConfig(
     val restricted: Boolean get() = index > 1
     val mode: ApMode = ApMode(run1, direction, fieldLimit,
         markMode = if (run1) run1MarkMode else MarkMode.FULL)
+    val admissionPolicy: RestrictedInitialPolicy = demand?.admissionPolicy(index, fieldLimit, direction) ?: RestrictedInitialPolicy()
     val seededSources: Boolean get() = restricted && direction == Direction.FORWARD
 }
 

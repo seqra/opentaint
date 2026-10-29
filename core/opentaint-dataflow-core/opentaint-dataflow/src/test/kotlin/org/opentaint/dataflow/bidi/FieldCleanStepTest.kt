@@ -119,7 +119,7 @@ class FieldCleanStepTest {
 
     @Test
     fun `field action rejects static empty and nonfield target shapes but admits a full path ending in a field`(): Unit {
-        for (reach in CleanReach.entries) for (mark in listOf<TaintMark?>(null, t)) {
+        for (reach in CleanReach.entries) for (mark in if (reach == CleanReach.AT_AND_BELOW) listOf<TaintMark?>(null, t) else listOf(t)) {
             assertFails { fieldCleanStep(AccessPathBase.ClassStatic, listOf(cls, f), reach, mark) }
             for (path in listOf(emptyList(), listOf(ELEMENT_ACCESSOR_IDX), listOf(cls), listOf(f, ELEMENT_ACCESSOR_IDX)))
                 assertFails { fieldCleanStep(x, path, reach, mark) }
@@ -140,7 +140,7 @@ class FieldCleanStepTest {
         for (path in listOf(listOf(f, g), listOf(ELEMENT_ACCESSOR_IDX, f, g))) {
             val locations = listOf(emptyList(), path.take(1), path.dropLast(1), path,
                 path + h, path + listOf(ELEMENT_ACCESSOR_IDX, h), path.dropLast(1) + sibling, listOf(sibling, g)).distinct()
-            for (reach in CleanReach.entries) for (selected in listOf<TaintMark?>(null, t, u))
+            for (reach in CleanReach.entries) for (selected in if (reach == CleanReach.AT_AND_BELOW) listOf<TaintMark?>(null, t, u) else listOf(t, u))
                 for (mark in listOf(mt, mu)) for (demand in listOf(false, true)) for (location in locations) {
                     val step = fieldCleanStep(x, path, reach, selected,
                         aliasPaths = listOf(alias to aliasPrefix, x to listOf(h)))
@@ -166,7 +166,7 @@ class FieldCleanStepTest {
                     cases++
                 }
         }
-        assertTrue(cases >= 500)
+        assertTrue(cases >= 400)
     }
 
     @Test
@@ -202,7 +202,7 @@ class FieldCleanStepTest {
     fun `must and may field facts apply the root cleaner reach table before write back`(): Unit {
         val path = listOf(f, g, h)
         for (tail in listOf(Tail.ANY_TAINT, Tail.ANY)) for (reach in CleanReach.entries)
-            for (selected in listOf<TaintMark?>(null, t, u)) {
+            for (selected in if (reach == CleanReach.AT_AND_BELOW) listOf<TaintMark?>(null, t, u) else listOf(t, u)) {
                 val demand = tail == Tail.ANY
                 val exclusion = if (demand) ExclusionSet.Empty else ExclusionSet.of(sibling)
                 val input = fact(path = path, tail = tail, exclusion = exclusion, demand = demand)

@@ -8,7 +8,10 @@ enum class CleanReach { EXACT, BELOW, AT_AND_BELOW }
 
 /** A cleaner targets one program value, optionally for one mark. */
 class Cleaner(val base: AccessPathBase, val path: PathNode?, val reach: CleanReach, val mark: TaintMark?) {
-    init { check(base != AccessPathBase.Zero) { "S11: a cleaner cannot target zero" } }
+    init {
+        check(base != AccessPathBase.Zero) { "S11: a cleaner cannot target zero" }
+        require(mark != null || reach == CleanReach.AT_AND_BELOW) { "RemoveAll requires the whole position" }
+    }
     @JvmField internal val pathArray: IntArray = path?.toIntArray() ?: EMPTY_PATH
 }
 

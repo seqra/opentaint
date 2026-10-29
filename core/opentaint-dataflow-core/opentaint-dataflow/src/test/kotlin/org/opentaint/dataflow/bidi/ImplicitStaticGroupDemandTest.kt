@@ -48,8 +48,8 @@ class ImplicitStaticGroupDemandTest {
                 val actual = pattern(mark, tail = tail)
                 val input = m.factsOf(actual.fact, actual.exclusion, Layer.DEMAND)
                 val starts = store.near(method, actual).flatMap { ops.emit(it, input) }
-                assertEquals(setOf(m.initial(if (mark is MarkSlot.Star) flowForm(actual) else actual)), starts.toSet())
-                assertTrue(starts.none { it.tail == Tail.EXACT })
+                assertEquals(setOf(m.initial(if (tail == Tail.STAR) actual.copy(fact=actual.fact.copy(tail=Tail.EXACT)) else actual)), starts.toSet())
+                assertEquals(tail == Tail.STAR, starts.single().tail == Tail.EXACT)
             }
         }
     }

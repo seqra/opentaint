@@ -40,7 +40,7 @@ class ReturnFullCleanupTest {
         val barriers = listOf<CleanStep>(CleanStep.Kill(StatementSummary.EMPTY),
             CleanStep.Field(temp, StatementSummary.EMPTY, cleaner(base = temp), StatementSummary.EMPTY),
             CleanStep.Clean(cleaner(m.marks.group(m.marks.groupOf(t)))),
-            CleanStep.Clean(cleaner(null)), CleanStep.Clean(cleaner(path = p)),
+            CleanStep.Clean(cleaner(null, reach = CleanReach.AT_AND_BELOW)), CleanStep.Clean(cleaner(path = p)),
             CleanStep.Clean(cleaner(reach = CleanReach.BELOW)),
             CleanStep.Clean(cleaner(base = STATIC)),
             CleanStep.Clean(cleaner(base = AccessPathBase.CleanerTemporary())))

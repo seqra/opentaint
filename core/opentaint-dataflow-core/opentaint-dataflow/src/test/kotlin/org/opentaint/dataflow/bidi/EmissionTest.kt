@@ -153,7 +153,7 @@ class EmissionTest {
     }
 
     @Test
-    fun `abstract ANY entry shares one normal FLOW premise across marks added layers and exits`() {
+    fun `abstract ANY entry shares each selected refinement across marks layers and exits`() {
         val input = pack(buildList {
             for (mark in listOf(mt, mu)) {
                 add(value(p(f), Tail.EXACT, mark))
@@ -167,19 +167,22 @@ class EmissionTest {
         })
         val abstractAdded = flow(listOf(p(), p(f), p(f, h)), mx = marks(t.id, u.id), exclusion = ex(g))
         val entry = pattern(p(f), Tail.ANY, star)
-        val expected = pattern(p(f), Tail.STAR, star)
         val exits = listOf(null, pattern(p(), Tail.ANY, mt, base = y),
-            pattern(p(h), Tail.ANY, mu, base = y), pattern(p(f, h), Tail.ANY, star, base = y))
-        var shared: InitialAp? = null
-        for (added in listOf(input, demandInput, abstractAdded)) for (exit in exits) {
-            val initial = check(added, DemandPattern(entry, exit)).single()
-            assertEquals(expected, initial.toPattern())
-            if (shared == null) shared = initial else assertSame(shared, initial)
-            val start = assertIs<FlowTree>(ops.startFact(initial))
-            assertEquals(Layer.NORMAL, start.layer)
-            assertEquals(ExclusionSet.Empty, start.exclusion)
-            assertEquals(MarkExclusions.EMPTY, start.markExclusion)
-            assertEquals(setOf(value(p(f), Tail.STAR, star)), decoded(start))
+            pattern(p(h), Tail.ANY, mu, base = y), pattern(p(f,h), Tail.ANY, star, base = y))
+        val expected = listOf(
+            setOf(pattern(p(f),Tail.EXACT,star),pattern(p(f),Tail.ANY_TAINT,star,ex(g)),
+                pattern(p(f,h),Tail.STAR,star)),
+            setOf(pattern(p(f),Tail.EXACT,star),pattern(p(f),Tail.ANY,star),pattern(p(f,h),Tail.STAR,star)),
+            setOf(pattern(p(f,h),Tail.STAR,star)))
+        val shared = linkedMapOf<Pattern,InitialAp>()
+        for ((index,added) in listOf(input,demandInput,abstractAdded).withIndex()) for (exit in exits) {
+            val initials=check(added,DemandPattern(entry,exit))
+            assertEquals(expected[index],initials.map { it.toPattern() }.toSet())
+            for (initial in initials) {
+                val old=shared.putIfAbsent(initial.toPattern(),initial)
+                if (old != null) assertSame(old,initial)
+                assertEquals(setOf(startFact(initial.toPattern())),decoded(ops.startFact(initial)))
+            }
         }
     }
 
@@ -192,7 +195,7 @@ class EmissionTest {
         val demand = DemandPattern(pattern(p(f), Tail.ANY), pattern(p(), Tail.EXACT, mu, base = y))
         val initial = check(input, demand)
         val expected = setOf(pattern(p(f), Tail.ANY_TAINT), pattern(p(f), Tail.ANY_TAINT, exclusion = ex(g)),
-            pattern(p(f), Tail.EXACT), pattern(p(f, h), Tail.ANY_TAINT, exclusion = ex(g)),
+            pattern(p(f), Tail.EXACT), pattern(p(f, h), Tail.STAR),
             pattern(p(f, h), Tail.EXACT), pattern(p(f, g), Tail.EXACT))
         assertEquals(expected, initial.map { it.toPattern() }.toSet())
         val byPattern = initial.associateBy { it.toPattern() }
@@ -234,7 +237,7 @@ class EmissionTest {
             pattern(p(f, h), Tail.EXACT) to setOf(pattern(p(f, h), Tail.EXACT)),
             pattern(p(f, g, h), Tail.ANY) to emptySet(),
             pattern(p(f, h, g), Tail.ANY) to setOf(pattern(p(f, h, g), Tail.ANY_TAINT)),
-            pattern(p(), Tail.ANY) to setOf(pattern(p(f), Tail.ANY_TAINT, exclusion = ex(g))),
+            pattern(p(), Tail.ANY) to setOf(pattern(p(f), Tail.STAR)),
         )
         for ((entry, expected) in cases) assertEquals(expected,
             check(input, DemandPattern(entry, null)).map { it.toPattern() }.toSet())
@@ -255,17 +258,17 @@ class EmissionTest {
     }
 
     @Test
-    fun `invalid must entry and unrepresentable generic abstract exact result fail without widening`() {
+    fun `invalid must entry is rejected while abstract exact starts without widening`() {
         val input = pack(listOf(value(p(f), Tail.EXACT)))
         for (base in listOf(x, y)) assertFails {
             ops.emit(DemandPattern(pattern(p(f), Tail.ANY_TAINT, exclusion = ex(g), base = base), null), input.facts)
         }
         val abstractExact = pattern(p(f), Tail.EXACT, star)
         assertEquals(abstractExact, emit(abstractExact, Pattern(input.leaves.single().fact, ExclusionSet.Empty)))
-        assertFails { ops.emit(DemandPattern(abstractExact, null), input.facts) }
+        assertEquals(setOf(abstractExact),ops.emit(DemandPattern(abstractExact, null), input.facts).map { it.toPattern() }.toSet())
         val must = pack(listOf(value(p(f), Tail.ANY_TAINT, exclusion = ex(g))))
         val concreteStar = DemandPattern(pattern(p(f), Tail.STAR), null)
-        assertEquals(setOf(pattern(p(f), Tail.ANY_TAINT, exclusion = ex(g))),
+        assertEquals(setOf(pattern(p(f), Tail.EXACT)),
             ops.emit(concreteStar, must.facts).map { it.toPattern() }.toSet())
         assertTrue(ops.emit(DemandPattern(pattern(p(f, g), Tail.STAR), null), must.facts).isEmpty())
     }
@@ -283,11 +286,15 @@ class EmissionTest {
         for (path in listOf(p(), p(c), p(c, f))) {
             val input = pack(listOf(value(path, Tail.EXACT, base = static)))
             val demand = DemandPattern(pattern(p(c), Tail.ANY, star, base = static), null)
-            val expected = if (path.isEmpty()) emptySet() else setOf(pattern(p(c), Tail.STAR, star, base = static))
+            val expected = when (path) {
+                p(c) -> setOf(pattern(p(c),Tail.EXACT,star,base=static))
+                p(c,f) -> setOf(pattern(p(c,f),Tail.STAR,star,base=static))
+                else -> emptySet()
+            }
             assertEquals(expected, check(input, demand).map { it.toPattern() }.toSet())
             assertTrue(check(input, DemandPattern(pattern(path, Tail.ANY, star), null)).isEmpty())
         }
-        assertFails { ops.emit(DemandPattern(zeroPattern.copy(fact = zeroPattern.fact.copy(tail = Tail.ANY, mark = star)), null), ops.zero(Layer.NORMAL)) }
+        assertTrue(ops.emit(DemandPattern(zeroPattern.copy(fact = zeroPattern.fact.copy(tail = Tail.ANY, mark = star)), null), ops.zero(Layer.NORMAL)).isEmpty())
     }
 
     @Test

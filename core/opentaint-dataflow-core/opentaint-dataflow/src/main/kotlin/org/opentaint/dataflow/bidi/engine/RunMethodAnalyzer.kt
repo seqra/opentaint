@@ -136,7 +136,7 @@ class RunMethodAnalyzer(
                         ap.cancellation.checkpoint()
                         if (checkRun2StaticAnchors) validateRun2StaticFullInput(ap, leaf, limit)
                     }
-                    for (initial in checkNotNull(config.demand).initials(key, f)) {
+                    for (initial in checkNotNull(config.demand).initials(key, f, config.admissionPolicy)) {
                         ap.cancellation.checkpoint()
                         context.shared.abstractionStatistics?.intersection()
                         addInitial(initial)
@@ -749,7 +749,15 @@ class RunMethodAnalyzer(
         }
     }
 
-    private fun retainSummary(premise: PremiseKey, facts: Facts) {
+    private fun retainSummary(rawPremise: PremiseKey, rawFacts: Facts) {
+        val normalized = normalizeFlowSummary(ap, rawPremise, rawFacts)
+        val premise = normalized.premise
+        val facts = normalized.facts
+        assertCanonicalFlowSummary(premise, facts)
+        if (!config.run1 && facts is FlowTree && facts.layer == Layer.DEMAND)
+            check(facts.tail == Tail.ANY && facts.exclusion == ExclusionSet.Empty) {
+                "Restricted FLOW DEMAND must have an uncertain ANY tail"
+            }
         checkKinds(premise, facts)
         if (!context.shared.interpreter.isSummaryBase(facts.base)) return
         // Existing computed summary supplies are independent of local write
@@ -784,7 +792,7 @@ class RunMethodAnalyzer(
 
     private fun published(premise: PremiseKey, facts: Facts): Collection<Facts> = when {
         config.run1 || (!forward && premise.isZero) -> listOf(facts)
-        else -> checkNotNull(config.demand).intersect(key, premise, facts)
+        else -> checkNotNull(config.demand).intersect(key, premise, facts, config.admissionPolicy)
     }
 
     private fun flushPublications() {

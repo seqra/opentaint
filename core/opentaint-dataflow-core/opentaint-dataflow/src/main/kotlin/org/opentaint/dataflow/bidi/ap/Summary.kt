@@ -9,8 +9,16 @@ private class SummaryTails<P : TrieLeaf>(
     val select: (P, star: Boolean, any: Boolean, exact: Boolean) -> P,
 )
 
-private fun flowTails(a: FlowTree) = SummaryTails<FlowLeaf>(a.exclusion) { p, star, any, _ ->
-    if (if (a.tail == Tail.STAR) star else any) p else FlowLeaf.NONE
+private fun flowTails(a: FlowTree) = SummaryTails<FlowLeaf>(
+    if (a.tail == Tail.STAR) a.exclusion else ExclusionSet.Empty,
+    if (a.tail == Tail.ANY_TAINT) a.exclusion else ExclusionSet.Empty,
+) { p, star, any, exact ->
+    val selected = when (a.tail) {
+        Tail.STAR -> star
+        Tail.EXACT -> exact
+        Tail.ANY, Tail.ANY_TAINT -> any
+    }
+    if (selected) p else FlowLeaf.NONE
 }
 
 private fun taintTails(m: ApManager, a: TaintTree) =
@@ -27,8 +35,19 @@ internal fun satisfyingPart(m: ApManager, a: Facts, j: Pattern, mode: ApMode, re
     check(j.fact.tail != Tail.ANY_TAINT || (mode.restricted && mode.direction == Direction.FORWARD)) {
         "W8 (c): a must-premise is forward restricted"
     }
-    val below = record || mode.run1 || (mode.restricted && j.fact.mark is MarkSlot.Star)
+    val below = record || mode.run1 || (mode.restricted && (j.fact.mark is MarkSlot.Star || j.fact.tail == Tail.STAR))
     val inside = record || mode.restricted || mode.run1
+    if (j.fact.tail == Tail.ANY_TAINT && j.fact.mark is MarkSlot.Star) return when (a) {
+        is Reach -> null
+        is FlowTree -> if (j.fact.mark !is MarkSlot.Star || a.tail != Tail.ANY_TAINT) null
+            else definiteMustPart(m, a.root, FlowAlgebra, a.exclusion, j) { it }
+                ?.let { m.flowTree(a.base, a.layer, a.exclusion, a.markExclusion, it, a.tail) }
+        is TaintTree -> if (a.anyTail != Tail.ANY_TAINT) null
+            else definiteMustPart(m, a.root, m.taintAlg, a.exclusion, j) {
+                m.taintLeaves(MarkSet.EMPTY, it.any)
+            }?.let { markSubPart(m, it, j, mode) }
+                ?.let { m.taintTree(a.base, a.layer, it, a.exclusion, a.anyTail) }
+    }
     return when (a) {
         is Reach -> a.takeIf { j.fact.base == AccessPathBase.Zero }
         is FlowTree -> if (j.fact.mark !is MarkSlot.Star) null
@@ -38,6 +57,21 @@ internal fun satisfyingPart(m: ApManager, a: Facts, j: Pattern, mode: ApMode, re
             ?.let { markSubPart(m, it, j, mode) }
             ?.let { m.taintTree(a.base, if (mode.markMode == MarkMode.GROUP) Layer.DEMAND else a.layer, it, a.exclusion, a.anyTail) }
     }
+}
+
+/** A uniform query requires an actual uniform scope that covers the entire query. */
+private fun <P : TrieLeaf> definiteMustPart(
+    m: ApManager, root: TrieNode<P>, alg: LeafAlgebra<P>, exclusion: ExclusionSet,
+    j: Pattern, onlyMust: (P) -> P,
+): TrieNode<P>? {
+    val path = j.fact.path.toIntArray()
+    val spine = ArrayList<P>()
+    val at = root.walk(path) { depth, node ->
+        m.cancellation.checkpoint()
+        spine += if (exclusion.admits(path[depth])) onlyMust(node.leaf) else alg.empty
+    }
+    if (at != null) spine += if (exclusion.isSubsetOf(j.exclusion)) onlyMust(at.leaf) else alg.empty
+    return alg.chain(m, path, spine)
 }
 
 private fun markSubPart(m: ApManager, n: TaintNode, j: Pattern, mode: ApMode): TaintNode? {
@@ -153,14 +187,11 @@ private fun leafKinds(m: ApManager, g: Facts, j: InitialAp): List<SummaryLeafKin
             m.intern(if (jOwn) j.exclusion else ExclusionSet.Empty), m.intern(toExclusion))
     return when (g) {
         is Reach -> listOf(SummaryLeafKind(edge(Tail.EXACT, MarkSlot.Concrete(TaintMark.ZERO), ExclusionSet.Empty)) { it })
-        is FlowTree -> listOf(
-            if (g.tail == Tail.STAR)
-                SummaryLeafKind(edge(Tail.STAR, MarkSlot.Star(g.markExclusion), inputShared.union(g.exclusion))) {
-                    graftSummary(m, g.root, { p -> p == FlowLeaf.LEAF }, it)
-                }
-            else SummaryLeafKind(edge(Tail.ANY, MarkSlot.Star(g.markExclusion), inputShared)) {
-                graftSummary(m, g.root, { p -> p == FlowLeaf.LEAF }, it)
-            })
+        is FlowTree -> listOf(SummaryLeafKind(edge(g.tail, MarkSlot.Star(g.markExclusion),
+            if (g.tail == Tail.STAR || g.tail == Tail.EXACT) inputShared.union(g.exclusion) else inputShared,
+            if (g.tail == Tail.ANY_TAINT) g.exclusion else ExclusionSet.Empty)) {
+            graftSummary(m, g.root, { p -> p == FlowLeaf.LEAF }, it)
+        })
         is TaintTree -> {
             val all = m.taintAlg.foldAll(g.root, m.cancellation)
             val anyTail = g.anyTail

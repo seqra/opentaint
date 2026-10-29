@@ -129,19 +129,15 @@ class Run1RequestMatchingTest {
         // Public JVM pass rules reject this class endpoint; no class request slot is invented.
     }
 
-    @Test fun `restricted abstract ANY demand emission starts NORMAL FLOW through STAR canonicalization`() {
+    @Test fun `restricted abstract ANY demand does not reopen an unrefined STAR`() {
         val f = StoreFixtures(); val m = f.manager
         val cls = m.accessors.index(ClassStaticAccessor("Box")); val field = f.field("f")
         for (path in listOf(emptyList(),listOf(cls),listOf(cls,field))) {
             val demand = DemandPattern(f.pattern(STATIC,path,Tail.ANY,MarkSlot.STAR),null)
-            val supplied = f.fact(STATIC,path,Tail.STAR,MarkSlot.STAR)
-            val initial = f.ops.emit(demand,supplied).single()
-            assertEquals(Tail.STAR,initial.tail)
-            assertEquals(ExclusionSet.Empty,initial.exclusion)
-            assertEquals(Layer.NORMAL,assertIs<FlowTree>(f.ops.startFact(initial)).layer)
+            assertTrue(f.ops.emit(demand,f.fact(STATIC,path,Tail.STAR,MarkSlot.STAR)).isEmpty())
+            val initial=f.ops.emit(demand,f.fact(STATIC,path,Tail.ANY,MarkSlot.STAR,layer=Layer.DEMAND)).single()
+            assertEquals(Tail.ANY,initial.tail)
+            assertEquals(Layer.DEMAND,f.ops.startFact(initial).layer)
         }
-        // The generic ANY factory remains wider than the selected emit route.
-        val generic = m.initial(STATIC,null,Tail.ANY,ExclusionSet.Empty,MarkSlot.STAR)
-        assertEquals(Layer.DEMAND,assertIs<FlowTree>(f.ops.startFact(generic)).layer)
     }
 }

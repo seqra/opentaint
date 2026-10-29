@@ -311,7 +311,8 @@ class ScheduleFuzzerTest {
                 Seed.Source(consumer, consumerMethod.inst(0), sourceSignal))
             val config = f.config(index = 3, roots = listOf(producer, consumer), demand = demand, seeds = seeds)
             compareSeed(f, config, listOf(a, b), listOf(t.mark, u.mark, v.mark, d.mark), seed) { actual ->
-                val members = setOf(literals[0], f.pattern(y, if (mixed) listOf(a, b) else listOf(a), if (mixed) Tail.ANY else Tail.EXACT, u))
+                // First-field refinement changes the query member, not the submitted link below.
+                val members = setOf(literals[0], f.pattern(y, if (mixed) listOf(a, b) else listOf(a), if (mixed) Tail.STAR else Tail.EXACT, u))
                 val joined = ObservedEdge(callee, members, Conclusion(target, ExclusionSet.Empty, mixed))
                 assertContains(actual.rawSummaries, joined)
                 assertContains(actual.publications, joined)

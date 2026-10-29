@@ -9,7 +9,10 @@ import java.util.Collections
 
 /** Raw scalar data for ordinary actual-call binding. This is not an executable summary. */
 data class StaticWriteKey(val original: InitialAp, val result: Pattern) {
-    fun guidance(): StaticGuidanceEdge = StaticGuidanceEdge.of(original.toPattern(), result)
+    fun guidance(): StaticGuidanceEdge {
+        val (from, to) = normalizeFlowSummaryPatterns(original.toPattern(), result)
+        return StaticGuidanceEdge.of(from, to)
+    }
 }
 
 private data class StaticWriteGeometry(val original: Pattern, val result: Pattern)
@@ -129,10 +132,15 @@ class KilledStaticWriteStore(
             if (result.base != STATIC) continue
             for (leaf in ops.leaves(result)) {
                 ap.cancellation.checkpoint()
-                survivors += StaticGuidanceEdge.of(original.toPattern(), leaf)
+                val (from, to) = normalizeFlowSummaryPatterns(original.toPattern(), leaf)
+                survivors += StaticGuidanceEdge.of(from, to)
             }
         }
-        for (row in privateB) { ap.cancellation.checkpoint(); survivors += row }
+        for (row in privateB) {
+            ap.cancellation.checkpoint()
+            val (from, to) = normalizeFlowSummaryPatterns(row.from, row.to)
+            survivors += StaticGuidanceEdge.of(from, to)
+        }
         val observed = checkNotNull(candidates).toIntArray()
         val lost = IntArrayList()
         for (id in observed) {

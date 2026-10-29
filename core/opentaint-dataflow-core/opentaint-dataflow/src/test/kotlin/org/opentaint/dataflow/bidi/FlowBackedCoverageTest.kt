@@ -56,8 +56,7 @@ class FlowBackedCoverageTest {
         assertTrue(flowCoversAny(m, flow(listOf(listOf(f)), excluded = MarkSet.of(u)),
             output, path, t, Layer.DEMAND))
         assertFalse(flowCoversAny(m, flow(listOf(listOf(f))), output, path, t, Layer.NORMAL))
-        assertTrue(flowCoversAny(m, flow(listOf(listOf(f)), layer = Layer.NORMAL),
-            output, path, t, Layer.DEMAND))
+        assertFails { flow(listOf(listOf(f)), layer = Layer.NORMAL) }
         assertFalse(flowCoversAny(m, flow(listOf(listOf(f)), base = input), output, path, t, Layer.DEMAND))
         assertFalse(flowCoversAny(m, flow(listOf(listOf(f)), tail = Tail.STAR), output, path, t, Layer.DEMAND))
     }
@@ -95,7 +94,7 @@ class FlowBackedCoverageTest {
         assertNull(removeFlowCoveredAny(m, initial(), taint(listOf(f, h)), listOf(flow(listOf(listOf(f))))))
         val must = taint(listOf(f), tail = Tail.ANY_TAINT, layer = Layer.NORMAL)
         assertSame(must, removeFlowCoveredAny(m, initial(), must,
-            listOf(flow(listOf(listOf(f)), layer = Layer.NORMAL))))
+            listOf(flow(listOf(listOf(f)), layer = Layer.NORMAL, tail = Tail.STAR))))
     }
 
     @Test

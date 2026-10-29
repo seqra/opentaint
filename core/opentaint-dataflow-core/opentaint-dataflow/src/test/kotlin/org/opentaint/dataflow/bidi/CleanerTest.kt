@@ -123,7 +123,7 @@ class CleanerTest {
                 flow(listOf(path), mx = marks(u.id), exclusion = ex(g)),
                 flow(listOf(path), demand = true, mx = marks(u.id)),
             )
-            for (reach in CleanReach.entries) for (mark in listOf(t, u, null)) for (mode in modes) {
+            for (reach in CleanReach.entries) for (mark in listOf(t, u) + if (reach == CleanReach.AT_AND_BELOW) listOf(null) else emptyList()) for (mode in modes) {
                 val cl = cleaner(p(f, g), reach, mark)
                 for ((index, input) in inputs.withIndex())
                     check(input, cl, mode, "$path input $index $reach mark=$mark run1=${mode.run1} ${mode.direction}")
@@ -157,7 +157,7 @@ class CleanerTest {
             val input = pack(listOf(original))
             val kept = original.copy(exclusion = exclusion.union(ex(g)))
             val endpoint = value(p(f, g), Tail.EXACT)
-            for (mark in listOf(t, null)) for (mode in modes) {
+            for (mark in listOf(t)) for (mode in modes) {
                 assertEquals(setOf(policy(kept, mode)), decoded(check(input, cleaner(p(f, g), CleanReach.AT_AND_BELOW, mark), mode).results))
                 assertEquals(setOf(policy(kept, mode), endpoint), decoded(check(input, cleaner(p(f, g), CleanReach.BELOW, mark), mode).results))
                 val demoted = policy(original.copy(demand = true), mode)
@@ -174,7 +174,7 @@ class CleanerTest {
     fun `must at below becomes exact while other partial rows demote with Empty E`() {
         val original = value(p(f, g), Tail.ANY_TAINT, exclusion = ex(h))
         val input = pack(listOf(original))
-        for (mode in modes) for (mark in listOf(t, null)) {
+        for (mode in modes) for (mark in listOf(t)) {
             assertEquals(setOf(value(p(f, g), Tail.EXACT)), decoded(check(input, cleaner(p(f, g), CleanReach.BELOW, mark), mode).results))
             assertEquals(setOf(policy(original.copy(demand = true), mode)), decoded(check(input, cleaner(p(f, g), CleanReach.EXACT, mark), mode).results))
             assertTrue(check(input, cleaner(p(f, g), CleanReach.AT_AND_BELOW, mark), mode).results.isEmpty())
@@ -188,7 +188,7 @@ class CleanerTest {
     fun `first accessor alone decides whether an above must fact is disjoint`() {
         val original = value(p(f), Tail.ANY_TAINT, exclusion = ex(h))
         val input = pack(listOf(original))
-        for (reach in CleanReach.entries) for (mark in listOf(t, null)) for (mode in modes) {
+        for (reach in CleanReach.entries) for (mark in if (reach == CleanReach.AT_AND_BELOW) listOf(t, null) else listOf(t)) for (mode in modes) {
             assertEquals(setOf(policy(original, mode)), decoded(check(input, cleaner(p(f, h, g), reach, mark), mode).results))
             assertEquals(setOf(policy(original.copy(demand = true), mode)),
                 decoded(check(input, cleaner(p(f, g, h), reach, mark), mode).results))
@@ -210,7 +210,7 @@ class CleanerTest {
             value(leaf.fact.path, if (leaf.fact.tail == Tail.ANY_TAINT) Tail.ANY else Tail.EXACT,
                 leaf.fact.mark, demand = true)
         })
-        for (input in listOf(normal, demand)) for (reach in CleanReach.entries) for (mark in listOf(t, null)) for (mode in modes)
+        for (input in listOf(normal, demand)) for (reach in CleanReach.entries) for (mark in if (reach == CleanReach.AT_AND_BELOW) listOf(t, null) else listOf(t)) for (mode in modes)
             check(input, cleaner(p(f, g), reach, mark), mode)
         val original = assertIs<TaintTree>(normal.facts)
         val out = check(normal, cleaner(p(f, g), CleanReach.AT_AND_BELOW))
@@ -222,7 +222,7 @@ class CleanerTest {
         for (demandLayer in listOf(false, true)) {
             val abstract = flow(listOf(p(), p(f), p(f, g), p(f, g, k), p(f, h), p(k)), demandLayer,
                 marks(u.id), if (demandLayer) ExclusionSet.Empty else ex(g))
-            for (reach in CleanReach.entries) for (mode in modes) check(abstract, cleaner(p(f, g), reach, null), mode)
+            for (mode in modes) check(abstract, cleaner(p(f, g), CleanReach.AT_AND_BELOW, null), mode)
         }
     }
 
@@ -232,7 +232,7 @@ class CleanerTest {
             flow(listOf(p(), p(f, g)), demand = true), pack(listOf(value(p(f), Tail.ANY_TAINT, exclusion = ex(g)))),
             pack(listOf(value(p(), Tail.EXACT, MarkSlot.Concrete(TaintMark.ZERO), base = AccessPathBase.Zero))),
             pack(listOf(value(p(), Tail.EXACT, MarkSlot.Concrete(TaintMark.ZERO), demand = true, base = AccessPathBase.Zero))))
-        for (input in inputs) for (reach in CleanReach.entries) for (mark in listOf(t, null)) for (mode in modes) {
+        for (input in inputs) for (reach in CleanReach.entries) for (mark in if (reach == CleanReach.AT_AND_BELOW) listOf(t, null) else listOf(t)) for (mode in modes) {
             val out = check(input, cleaner(p(), reach, mark, y), mode)
             if (!mode.run1 || input.leaves.all { it.exclusion == ExclusionSet.Empty }) assertSame(input.facts, out.results.single())
             else assertEquals(input.leaves.map { policy(it, mode) }.toSet(), decoded(out.results))
@@ -240,7 +240,7 @@ class CleanerTest {
         for (path in listOf(p(), p(c), p(c, f))) {
             val abstract = flow(listOf(path), mx = marks(u.id), exclusion = ex(g), base = static)
             val concrete = pack(listOf(value(path, Tail.ANY_TAINT, exclusion = ex(g), base = static)))
-            for (input in listOf(abstract, concrete)) for (reach in CleanReach.entries) for (mark in listOf(t, null)) for (mode in modes)
+            for (input in listOf(abstract, concrete)) for (reach in CleanReach.entries) for (mark in if (reach == CleanReach.AT_AND_BELOW) listOf(t, null) else listOf(t)) for (mode in modes)
                 check(input, cleaner(p(c, f), reach, mark, static), mode)
         }
         assertFails { cleaner(p(), CleanReach.EXACT, base = AccessPathBase.Zero) }
@@ -272,7 +272,7 @@ class CleanerTest {
             pack(listOf(value(path, Tail.ANY_TAINT, exclusion = ex(g)))),
             pack(listOf(value(path, Tail.ANY, demand = true))),
             flow(listOf(path), mx = marks(u.id), exclusion = ex(g)))
-        for (input in inputs) for (reach in CleanReach.entries) for (mark in listOf(t, null)) {
+        for (input in inputs) for (reach in CleanReach.entries) for (mark in if (reach == CleanReach.AT_AND_BELOW) listOf(t, null) else listOf(t)) {
             check(input, cleaner(path, reach, mark))
             check(input, cleaner(path + h, reach, mark))
         }

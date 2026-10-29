@@ -24,7 +24,7 @@ internal fun nearLeafViews(m: ApManager, f: Facts, p: IntArray): Sequence<Patter
         is FlowTree -> buildList {
             val u = f.root.walk(p) { d, n ->
                 m.cancellation.checkpoint()
-                if (!n.leaf.isEmpty && f.exclusion.admits(p[d])) add(flowPattern(f, p.copyOf(d)))
+                if (f.tail != Tail.EXACT && !n.leaf.isEmpty && f.exclusion.admits(p[d])) add(flowPattern(f, p.copyOf(d)))
             }
             u?.let { FlowAlgebra.forEachLeaf(it, p, m.cancellation) { path, _ -> add(flowPattern(f, path)) } }
         }.asSequence()

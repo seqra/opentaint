@@ -83,7 +83,7 @@ class FieldLimitScheduleAdmissionTest {
 
             actor.addLink(CallerRef(f.key, f.manager.zero, actual.layer, f.inst(1)), actual.layer, actual)
 
-            val expected = f.pattern(AccessPathBase.Argument(0), path, Tail.STAR, MarkSlot.STAR)
+            val expected = f.pattern(AccessPathBase.Argument(0), path + f.field("nested"), Tail.STAR, MarkSlot.STAR)
             assertEquals(setOf(f.manager.initial(expected)), actor.initials.all().toSet())
         }
     }

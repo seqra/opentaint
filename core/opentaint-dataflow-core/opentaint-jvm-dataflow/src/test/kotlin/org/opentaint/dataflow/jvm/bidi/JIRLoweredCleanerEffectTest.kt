@@ -122,7 +122,7 @@ class JIRLoweredCleanerEffectTest : BasicTestUtils() {
         check(steps(listOf(selected(position, reach = TaintCleanReach.ExactAndAnyField))), inputs,
             setOf(sibling, unrelatedMark))
         check(steps(listOf(RemoveAllMarks(position))), inputs, setOf(sibling))
-        check(steps(listOf(RemoveAllMarks(any(position)))), inputs, setOf(atField, sibling, unrelatedMark))
+        assertFails { steps(listOf(RemoveAllMarks(any(position)))) }
     }
 
     @Test fun `nested different owner resolves final temporary type without filtering root by the inner owner`(): Unit {

@@ -226,7 +226,7 @@ class AnyTaintIterationTest {
         VulnerabilityKey(rule, key.method, f.program.inst(key, node))
 
     @Test
-    fun `G getter shares backward FLOW and reuses its reversed native record`(): Unit {
+    fun `G getter retains same-prefix backward ANY then refines to forward uniform FLOW`(): Unit {
         DriverFixtures().use { f ->
             val root = f.program.method("G root", listOf(listOf(1), listOf(2), emptyList()), 2).key()
             val get = f.program.method("G get", listOf(listOf(1), listOf(2), emptyList()), 2).key()
@@ -248,19 +248,22 @@ class AnyTaintIterationTest {
                 conclusions(runs.barriers[0].observation.rawSummaries, get, result))
             assertEquals(setOf(DemandPattern(demandResult, j)), runs.barriers[0].demand.getValue(get)
                 .filterNot { it.entry.fact.base == AccessPathBase.Zero }.toSet())
-            val backward = f.program.pattern(result, tail = Tail.STAR, mark = MarkSlot.STAR)
+            // Same-prefix ANY remains ANY; it is not a NORMAL STAR query.
+            val backward = f.program.pattern(result, tail = Tail.ANY, mark = MarkSlot.STAR)
             assertEquals(setOf(zero(f), backward), initialRows(runs.barriers[1], get))
-            val readBack = f.program.pattern(argument, listOf(name), Tail.STAR, MarkSlot.STAR)
-            assertEquals(setOf(Conclusion(readBack.fact, ExclusionSet.Empty, false)),
+            val readBack = f.program.pattern(argument, listOf(name), Tail.ANY, MarkSlot.STAR)
+            assertEquals(setOf(Conclusion(readBack.fact, ExclusionSet.Empty, true)),
                 conclusions(runs.barriers[1].observation.rawSummaries, get, argument))
             val selectedGetter = runs.barriers[1].observation.selectedDemand.filter { it.method == get }.toSet()
             assertEquals(setOf(ObservedEdge(get, setOf(ZERO_PATTERN),
-                Conclusion(ZERO_FACT, ExclusionSet.Empty, false))), selectedGetter)
-            assertContains(runs.barriers[1].records, Native(get, Direction.BACKWARD, backward,
-                Conclusion(readBack.fact, ExclusionSet.Empty, false)))
-            assertEquals(setOf(DemandPattern(zero(f), null)), runs.barriers[1].demand.getValue(get))
-            assertEquals(setOf(zero(f)), initialRows(runs.barriers[2], get),
-                "The normal backward FLOW record handles the marked source without a new body entry")
+                Conclusion(ZERO_FACT, ExclusionSet.Empty, false)),
+                ObservedEdge(get, setOf(backward), Conclusion(readBack.fact, ExclusionSet.Empty, true))), selectedGetter)
+            assertTrue(runs.barriers[1].records.none { it.method == get && it.direction == Direction.BACKWARD })
+            assertEquals(setOf(DemandPattern(zero(f), null), DemandPattern(readBack, backward)),
+                runs.barriers[1].demand.getValue(get))
+            // The actual uniform source refines the named demand in the next forward run.
+            val refined = f.program.pattern(argument, listOf(name), Tail.ANY_TAINT, MarkSlot.STAR)
+            assertEquals(setOf(zero(f), refined), initialRows(runs.barriers[2], get))
             assertEquals(setOf(Conclusion(PathFact(result, emptyList(), Tail.ANY_TAINT, t), ExclusionSet.Empty, false)),
                 conclusions(runs.barriers[2].observation.rawSummaries, root, result))
             assertEquals(setOf(Seed.Source(root, root.statement, src)), runs.barriers[1].seeds)
@@ -268,12 +271,11 @@ class AnyTaintIterationTest {
             assertEquals(listOf(1, 1, 1), frontiers.map { it.seeds })
             assertContains(frontiers[0].analysed, get)
             assertContains(frontiers[1].analysed, get)
-            assertTrue(get !in frontiers[2].analysed)
+            assertContains(frontiers[2].analysed, get)
             assertContains(runs.barriers[0].records, Native(get, Direction.FORWARD, j,
                 Conclusion(j.fact, ExclusionSet.Empty, false)))
-            assertTrue(frontiers[2].recordCrossings > 0L, "Eligible NORMAL FLOW records remain reusable")
-            assertContains(runs.barriers[2].records, Native(get, Direction.BACKWARD, backward,
-                Conclusion(readBack.fact, ExclusionSet.Empty, false)))
+            assertContains(runs.barriers[2].records, Native(get, Direction.FORWARD, refined,
+                Conclusion(PathFact(result, emptyList(), Tail.ANY_TAINT, MarkSlot.STAR), ExclusionSet.Empty, false)))
             assertEquals(ReportState.DEMAND, report.entries.single { it.key == finding(f, rule, root, 2) }.state)
             assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE,
                 run1MarkMode = MarkMode.GROUP), report.end)
