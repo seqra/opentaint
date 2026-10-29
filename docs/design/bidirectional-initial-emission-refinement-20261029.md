@@ -12,10 +12,11 @@ The current emission rule does exactly that. It replaces an abstract ANY
 demand with STAR/FLOW. It uses the submitted fact only for the overlap test.
 The Lean model reproduces the resulting cycle.
 
-There are also edge cases. An unchanged ANY initial can be required to reach
-a source in a backward run or an internal sink in a forward run. Thus a general
-rule that drops every unchanged ANY intersection needs a complete observation
-contract. Section 7 gives the measured examples. This decision is still open.
+Clarification: refinement here means an input-supported intersection. It does
+not require strict progress. `[any]` can refine to `[any]`. The earlier
+strict-progress candidate is too narrow and must not be the admission rule.
+The source and sink examples in section 7 are valid unchanged intersections.
+They do not require special exceptions under this definition.
 
 ## 1. Scope and latest iterations
 
@@ -53,11 +54,11 @@ semantic policy, not an accidental storage choice. It is explicit in
 | Part | Original concrete design | Current F72 behavior | Direction under review |
 |---|---|---|---|
 | Initial under abstract demand | Intersect actual input and demand; keep actual mark | Test overlap; emit demand FLOW form | Keep actual-supported refinement; do not restart broad FLOW |
-| ANY demand | Meet with actual tail and path | Replace entry ANY with STAR | Resolve uncertainty from actual evidence |
+| ANY demand | Meet with actual tail and path | Replace entry ANY with STAR | Retain the intersection, including an unchanged ANY |
 | Whole-object T input | Retain concrete MUST information | Can replace it with FLOW | Retain MUST when the meet permits it |
 | Persisted NORMAL records | Reuse at calls | Reuse at calls | Keep this path |
 | Previously seen initial | No general completion certificate | Per-run deduplication only | Do not add a new completion cache |
-| Unchanged ANY | Can reach sources and internal observations | Can reach sources and internal observations | Observation coverage decision remains open |
+| Unchanged ANY | Can reach sources and internal observations | Can reach sources and internal observations | Keep the valid intersection; no strict-progress gate |
 
 The relevant production paths are
 [Reference.emit](../../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt#L150),
@@ -153,28 +154,106 @@ does not define that policy. The earlier F56 review also removed a closed
 initial shortcut because it lost internal sink checks. Do not restore that
 shortcut as a cache optimization.
 
-## 5. What must count as refinement
+## 5. Valid ANY intersections
 
-ANY refinement must concern uncertainty, not just the tail name or record
-count. The following cases need separate treatment:
+The user clarification permits `.f`, `$`, `[any]`, and `[any-taint]` as
+refinements of `[any]`. Equality is permitted. The relation is not a strict
+progress order. Do not use `strictAnyRefinement` from the earlier candidate
+model to filter admission.
 
-| Demand entry | Actual evidence | Result to consider |
+For demand `x.p.[any]/M`, retain the common part supported by the submitted
+fact. The tables below first describe that common part. They do not bypass
+the initial grammar or authorize a synthetic FLOW analysis.
+
+### 5.1 Same prefix or a known descendant
+
+Assume the base is `x`, the demand admits mark T, and exclusions are empty.
+`.f` is part of the known path, not a tail kind.
+
+| Demand | Submitted fact | Intersection |
 |---|---|---|
-| `p.[any]/FLOW` | `p.H.$/T` | Known field and exact location |
-| `p.[any]/FLOW` | `p.MUST/T, N` | Definite whole-object mark; same path, stronger evidence |
-| `p.[any]/FLOW` | `p.H.[any]/T, D` | Longer known prefix, but uncertainty remains below H |
-| `p.[any]/T` | `p.[any]/T, D` | No field refinement; source discovery or sink observation can still be new |
-| `p.[any]/FLOW` | `p.[any]/T, D` | Mark is known; field uncertainty is unchanged |
-| `p.H.[any]/T` | `p.H.K.$/T` at a larger limit | Field-limit refinement can reveal a real path |
+| `x.p.[any]/M` | `x.p.$/T` | `x.p.$/T` |
+| `x.p.[any]/M` | `x.p.[any]/T` | `x.p.[any]/T` |
+| `x.p.[any]/M` | `x.p.[any-taint]/T` | `x.p.[any-taint]/T` |
+| `x.p.[any]/M` | `x.p.f.$/T` | `x.p.f.$/T` |
+| `x.p.[any]/M` | `x.p.f.[any]/T` | `x.p.f.[any]/T` |
+| `x.p.[any]/M` | `x.p.f.[any-taint]/T` | `x.p.f.[any-taint]/T` |
+| `x.p.[any]/M` | `x.p.f.*/T` | `x.p.f.*/T` in the current scalar meet |
+| `x.p.[any]/M` | `x.p.*/T` | `x.p.*/T` in the current scalar meet |
 
-Replacing ANY with STAR at the same path is not, by itself, a refinement.
-STAR and ANY can cover equal sets of locations but give different summary
-relations. STAR correlates the input and output suffix. ANY permits loss
-of that correlation. Lean gives an executable witness for this difference.
+All three concrete tails in the user list are valid at the same prefix.
+A supplied descendant also gives a common part. An unchanged ANY result is
+valid even though its field uncertainty does not decrease.
+
+The last two rows are supplied STAR cases. They differ from creating STAR
+after seeing only overlap. Current `commonPart` retains a supplied STAR and
+its mark. A supplied same-prefix STAR/FLOW can still repeat the old abstract
+analysis. The scalar meet alone does not prove that repeating it is useful.
+The complete policy for that abstract input is not selected here. Do not
+silently reject concrete STAR, which the current correlated grammar permits.
+
+### 5.2 The submitted fact is above the demand prefix
+
+Let the demand be `x.p.f.[any]/M` and the submitted fact be at `x.p`.
+
+| Submitted fact | Current scalar intersection |
+|---|---|
+| `x.p.$/T` | None: the exact location does not contain `.f` |
+| `x.p.[any]/T` | `x.p.f.[any]/T` |
+| `x.p.[any-taint]/T` | `x.p.f.[any-taint]/T` |
+| `x.p.*/T` | `x.p.f.*/T` |
+
+The ANY row is a conditional query. It does not assert that every field in
+the submitted fact actually has T. The MUST row preserves its stronger
+meaning. For a MUST or STAR input with field exclusions, the exclusion must
+admit the descent to `.f`. Otherwise, there is no intersection. After that
+descent, the input's exclusion at `p` does not apply at `p.f`.
+
+The old Lean `emitM` uses the demand tail for an input above the demand.
+It returns ANY in the last STAR row, while current `commonPart` returns STAR.
+That submitted concrete STAR case was outside the original concrete
+restricted grammar.
+Do not claim that restoring the old emitter leaves that newer row unchanged.
+
+### 5.3 When no initial is justified
+
+No intersection exists for a different base, apart field paths, an exact
+input above the requested descendant, or a field exclusion that blocks the
+required descent. A concrete T demand also needs a supplied T. Another
+concrete mark or an abstract mark cannot supply T.
+
+These are failed matching cases. They differ from a valid intersection
+whose result equals its input, such as ANY with ANY.
+
+The result must also fit the initial grammar. An abstract EXACT or MUST
+initial is illegal. An initial cannot contain mark exclusions. Thus a raw
+intersection that retains `FLOW` with mark exclusions is not directly
+constructible as an `InitialAp`. The concrete T table avoids this issue.
+A complete policy for abstract actual inputs must specify it separately;
+do not erase those exclusions as an unnoticed implementation change.
+
+### 5.4 Initial start and caller layer
+
+EXACT/T starts NORMAL. MAY ANY/T starts DEMAND. MUST/T starts NORMAL as a
+conditional initial. Concrete STAR/T starts DEMAND under the current start
+rule. The submitted link can itself be DEMAND, including for a MUST tail.
+Starting a conditional MUST analysis does not make that caller link NORMAL;
+ordinary summary application retains its layer contribution.
 
 Do not infer MUST from MAY. A heap with T only at `p.K` satisfies a MAY
 root but does not establish T at `p.H`. A whole-object source does establish
 T at H. The model checks both statements constructively.
+
+The OWASP error is therefore specific:
+
+```text
+demand:    p.[any]/FLOW
+submitted: p.MUST/T
+current:   p.*/FLOW       // replaces the supplied mark and tail
+meet:      p.MUST/T       // retains the supplied evidence
+```
+
+There is no need to demand strict field progress or to reject ANY identity.
 
 ## 6. Checked candidate for the named-storage cycle
 
@@ -209,7 +288,7 @@ again differ by mark and by actual geometry. This is a major semantic and
 workload change. It must be explicit in a future implementation spec.
 It must not be hidden in a cache, equality rule, or field transfer helper.
 
-## 7. Counterexample to an unconditional no-refinement gate
+## 7. Counterexamples to a strict-progress gate
 
 ```java
 main() { sink(helper()); }
@@ -280,16 +359,15 @@ This diagnostic also leaves the skip policy unimplemented. It checks the
 current entry and observation path. The Lean model separately checks that
 the same non-refining MAY fact triggers the sink predicate.
 
-### 7.2 The remaining behavior decision
+### 7.2 Effect of the clarification
 
-The no-refinement goal needs an observation contract. Retain unchanged ANY
-starts for unresolved source discovery and internal observations, or provide
-another complete path for those obligations before skipping the starts.
-The backward source-discovery question is pending with the user. The forward
-sink example shows that a direction test alone is insufficient.
+Both examples have a valid ANY-with-ANY intersection. Under the clarified
+meaning of refinement, admit that intersection. No source-discovery exception
+or sink replay mechanism is required for these examples. The earlier question
+about dropping them was based on strict progress and is superseded.
 
-Do not apply a blanket gate to either direction before proving this coverage.
-The proof must account for observations, not only returned summary pairs.
+The examples remain counterexamples to a strict-progress gate. They are not
+counterexamples to admission by an input-supported intersection.
 
 ## 8. Formal model and verification
 
@@ -307,11 +385,20 @@ the complete helper candidate, illegal abstract initials, MAY/MUST witnesses,
 and field-limit and relation counterexamples.
 
 [AdmissionHistory.lean](../../spec/lean/proposals/initial-emission/AdmissionHistory.lean)
-checks three candidate forms of ANY refinement, the difference between a
+checks three candidate forms of strict progress, the difference between a
 handled initial and completed relations, and both local observation
 counterexamples. Its history object is proof data, not a runtime cache
-proposal. Its refinement predicate is a scoped test, not the selected
-complete admission policy.
+proposal. Its strict predicate is a negative candidate, not the selected
+admission policy.
+
+[RefinementCases.lean](../../spec/lean/proposals/initial-emission/RefinementCases.lean)
+checks the clarified intersection model. Its 17 cases include valid ANY
+identity, EXACT, MUST, named descendants, impossible matches, and supplied
+STAR. Every successful listed concrete case passes satisfaction, demand
+containment, and initial representation checks. MUST is an explicit flag,
+independent of the caller link layer. The model states the difference between
+the old above-prefix emitter and the current scalar meet. Its field and mark
+exclusion scope is empty; section 5's nonempty-E cases are source-level checks.
 
 The existing Lean library has a historical concrete-STAR start row that
 differs from current Kotlin. Cycle.lean states the current row explicitly.
@@ -326,14 +413,15 @@ lake build ApSpec.AnyTaintExDefs ApSpec.AbsDefs
 lake env lean proposals/initial-emission/Cycle.lean
 lake env lean proposals/initial-emission/Policies.lean
 lake env lean proposals/initial-emission/AdmissionHistory.lean
+lake env lean proposals/initial-emission/RefinementCases.lean
 ```
 
-Lean version is `4.33.1`. All three files compile. The executable cycle check is
+Lean version is `4.33.1`. All four files compile. The executable cycle check is
 `true`. Axiom audits show only Lean's `propext` and `Quot.sound`; there is no
 `Classical.choice`, `sorryAx`, or user axiom. Existence proofs give executable
 witnesses.
 
-There are 80 checked theorem declarations across the three files. The
+There are 88 checked theorem declarations across the four files. The
 named-storage trace runs both existing tests. Each additional diagnostic
 runs those tests plus its one temporary example. Every batch passes.
 The Kotlin test is restored byte for byte after each diagnostic. The
@@ -341,9 +429,10 @@ evidence file contains the temporary test sources and JUnit output.
 
 ## 9. Required work before an implementation
 
-Specify a refinement relation for MAY, MUST, exact paths, concrete STAR,
-and marks. Keep submitted-input evidence separate from a backward requirement.
-Then prove that skipped starts lose no unresolved relation, source hit, sink
+Use intersection, not strict progress, for MAY, MUST and exact paths. Pin the
+remaining abstract-input and supplied-STAR policy and all mark/exclusion cells.
+Keep submitted-input evidence separate from a backward requirement.
+Then prove that any skipped starts lose no unresolved relation, source hit, sink
 observation, or rule action. Include ZERO, source subtrees, cleaners, mark
 changes, ND rules, static demand, exclusions, and records.
 
