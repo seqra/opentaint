@@ -7,7 +7,8 @@ Use FULL marks by default and the selected `1,1,2,3,...` field-limit schedule.
 The [implementation draft](bidirectional-summary-demand-workload-implementation-20261029.md)
 defines the code boundaries, pure filtering API, packed-row control flow,
 private eligibility memo, and additional formal contracts. It keeps the
-uncovered EXACT replay decision explicit; no runtime change is included.
+selected FLOW summary normalization, write exclusions and whole-position
+RemoveAll explicit. No runtime change is included.
 
 The iteration has three ordered parts. First implement the selected
 [one-step demand refinement and entry intersection](bidirectional-one-step-initial-refinement-20261029.md).
@@ -68,17 +69,19 @@ p.ANY/T    + p.f.g.EXACT/T -> p.f.STAR/T, DEMAND
 p.ANY/T    + p.f.EXACT/T   -> p.f.EXACT/T
 concrete demand U + supplied T, U != T -> no initial
 
-EntryIntersection(Dc, A) nonempty -> Emit(Dc, a) = A for some supplied a
+EntryIntersection(Dc, J) nonempty
+    -> Emit(Dc, a) = I and NormalizeSummaryInitial(I) = J for some supplied a
 ```
 
 Concrete STAR starts and stays DEMAND. Coverage matching does not promote
 its result to NORMAL. Entry intersection retains A; it does not project a
 summary under a different initial.
 
-The rewrite still needs complete abstract EXACT/MUST transfer, application,
-record, and emission-image completeness proofs. In particular, removing S8
-alone admits an incorrect NORMAL exact-FLOW application. This proposal does
-not resolve that gap by changing field transfer or adding grounding labels.
+The rewrite still needs complete abstract EXACT/MUST point-transfer and
+adapter proofs. The selected summary normalization stores STAR rather than
+EXACT/FLOW records, preserves write E, and uses the normalized C5 image.
+Abstract MUST native views still need their selected input/matching proofs.
+Do not remove S8 without the new point-domain and boundary contracts.
 Finish the selected semantic contract before using it as the performance
 reference.
 
@@ -143,7 +146,7 @@ fun mayKeep(member: InitialAp, right: Pattern, marks: GuidanceMarks): Boolean {
         GuidanceMarks.Flow -> true
         is GuidanceMarks.Mapped -> {
             val fixedEntry = endpointWithExistingOutput(right, marks.output)
-            demandPolicy.canEmitInitial(fixedEntry, member)
+            canStoreInitial(fixedEntry, member)
         }
     }
 }

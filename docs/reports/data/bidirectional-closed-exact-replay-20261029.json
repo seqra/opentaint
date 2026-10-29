@@ -1,6 +1,6 @@
 {
   "schema": "code-only-exact-replay-v2-checked",
-  "status": "Finite reasoning/model evidence for the proposed abstract EXACT domain. Not an execution of the current JVM analyzer.",
+  "status": "HISTORICAL regression before selected FLOW summary normalization; not the current proposed boundary behavior or a JVM failure.",
   "latestModeledRun": 3,
   "direction": "FORWARD",
   "fieldLimitSchedule": [
@@ -2770,11 +2770,11 @@
       "scope": "Java syntax/type compilation only; source/sink rules and proposed AP domain are checked separately."
     },
     "command": "cd spec/lean && lake env lean proposals/initial-emission/RestrictedInitialPolicy.lean",
-    "pendingDecision": "Application of an uncovered exact FLOW record to broad STAR FLOW input remains unselected. The certificate tests the unchanged scalar cell, not a repair."
+    "pendingDecision": "Resolved by summary tail normalization plus write-effect exclusions. Partial all-mark cleaners are prohibited; named whole-position cleaners are valid."
   },
   "sourceSHA256": {
     "spec/lean/proposals/initial-emission/RestrictedInitialPolicy.lean": "d05400801fe135e02c3ec81a80bd565ef018405a0acb4a3cbd951d11d58e8545",
-    "docs/design/bidirectional-exact-flow-replay-trace-20261029.md": "3e674f64d0f6750e9880b38ce0fb4ad19dc9b1b0101a75d04290ec88f8d647d3",
+    "docs/design/bidirectional-exact-flow-replay-trace-20261029.md": "9095b09a9936ab37721b308eed863702c23e4945a861a942593d01415c9e66eb",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/MicroEdgeBuilder.kt": "557f90c24c2b1aa0182afffa2039344b4b5c3e9b75a3bbf1d148b09b798c2963",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/MicroEdge.kt": "4a1523f257fafa2c51ce6fb227fa3f5b001d6c921dc925e04c6d83afc3d687a3",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": "b0452a5b3d356a20d7f042cd6486976b7c96db28d2cefa663e0c66e76d7ec593",
@@ -2841,5 +2841,16 @@
       ],
       "summaryLocationCheck": "PASS: all four method inventories per run occur immediately after their closing braces."
     }
+  },
+  "selectedNormalization": {
+    "spec": "docs/design/bidirectional-flow-summary-normalization-20261029.md",
+    "evidence": "docs/reports/data/bidirectional-flow-summary-normalization-20261029.json",
+    "runRows": "The saved run rows show the rejected pre-normalization storage/replay. Point queries remain EXACT; selected storage/replay is canonical STAR with write E retained.",
+    "run2HelperStored": "ret.STAR/FLOW -> p.f.STAR/FLOW, NORMAL",
+    "run2WrapperStored": "ret.a.STAR/FLOW -> q.f.STAR/FLOW, NORMAL",
+    "run3HelperOutput": "ret.STAR/FLOW at the wrapper FLOW point; concrete caller suffix h is retained.",
+    "run3MainOutput": "r.a.h.MUST/T, NORMAL, via the normalized wrapper native record; no T at A root from this relation.",
+    "run3WrapperRawA": "q.f.STAR/FLOW -> ret.a.STAR/FLOW, NORMAL; valid; C5 still publishes only B.",
+    "initialAdmissionChanges": false
   }
 }

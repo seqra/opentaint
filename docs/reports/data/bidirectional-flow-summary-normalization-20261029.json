@@ -1,0 +1,123 @@
+{
+  "schema": "flow-summary-normalization-design-v1",
+  "date": "2026-10-29",
+  "sourceRevision": "57092ce8232bc06a29625a2f68fb47c0840786b1",
+  "status": "SELECTED DESIGN; no runtime change; full new-domain integration proofs remain required",
+  "latestModeledIteration": "run-3",
+  "newProjectRuns": false,
+  "runtimeChanged": false,
+  "selectedDecisions": [
+    "Keep original raw initial emission; the temporary entry-STAR alternative was revoked.",
+    "Normalize each pure FLOW summary EXACT endpoint to STAR before storage; retain both paths/bases, marks, layer, E, and mark exclusions.",
+    "Record ordinary field-write E on derived EXACT/FLOW conclusions and preserve it through moves and returns; raw EXACT initial query E remains empty.",
+    "Keep run1 exclusion update -> DEMAND/EmptyE; persist later NORMAL E.",
+    "RemoveAll clears the selected whole position and descendants. Named p.f is valid; below-only/exact-only variants are prohibited.",
+    "Reject terminal-AnyField RemoveAll configuration rather than silently interpreting it as a whole-parent removal; low-level null-mark reach must be AT_AND_BELOW. Selected RemoveMark is unchanged."
+  ],
+  "canonicalC5": "CanStoreFrom(Dc,J) iff there exists raw I and submitted a with Emit(Dc,a)=I and NormalizeInitial(I)=J. Check only J and its EXACT twin as candidate raw preimages; retain raw containment on each candidate.",
+  "representation": "Write E uses existing immutable exclusion fields. No new support/protection/origin flag, no analysis-history store, no fact/rule identity metadata.",
+  "normalizerScope": "FLOW singleton premise and FLOW conclusion only. Concrete TAINT, ND and ZERO unchanged. Stored pure FLOW contains no EXACT. Intraproc query and facts retain EXACT/read barrier.",
+  "removedPlannedWork": [
+    "Native abstract-EXACT record representation/replay",
+    "Separate covered-EXACT replay planner"
+  ],
+  "retainedPlannedWork": [
+    "Abstract MUST representation and definite-MUST matching",
+    "P1 canonical-image C5 pruning",
+    "P2 query-local owner eligibility memo"
+  ],
+  "formalValidation": {
+    "file": "spec/lean/proposals/initial-emission/FlowSummaryNormalization.lean",
+    "sha256": "7ab98054295ce8d3a339ee40b3bf15662649673a1ceac6cdcd1913e475470f87",
+    "command": "cd spec/lean && lake env lean proposals/initial-emission/FlowSummaryNormalization.lean",
+    "theorems": [
+      "FlowSummaryNormalization.endpoint_fields_unchanged",
+      "FlowSummaryNormalization.endpoint_normalization_idempotent",
+      "FlowSummaryNormalization.summary_normalization_idempotent",
+      "FlowSummaryNormalization.summary_layer_and_endpoint_data_unchanged",
+      "FlowSummaryNormalization.normalization_preimage_cases",
+      "FlowSummaryNormalization.image_witness_sound",
+      "FlowSummaryNormalization.image_witness_complete",
+      "FlowSummaryNormalization.normalized_c5_image_is_exact",
+      "FlowSummaryNormalization.raw_inside_is_not_the_normalized_image_guard",
+      "FlowSummaryNormalization.normalized_helper_replay_is_correlated",
+      "FlowSummaryNormalization.mixed_demand_keeps_any_and_layer",
+      "FlowSummaryNormalization.current_exact_survives_child_overwrite_normal",
+      "FlowSummaryNormalization.write_normalization_adds_a_false_normal_pair",
+      "FlowSummaryNormalization.annotation_is_new_and_survives_return",
+      "FlowSummaryNormalization.move_keeps_new_annotation",
+      "FlowSummaryNormalization.later_publication_keeps_normal_exclusion_but_run1_demotes",
+      "FlowSummaryNormalization.annotated_normalization_rejects_overwritten_field",
+      "FlowSummaryNormalization.annotated_normalization_keeps_disjoint_field",
+      "FlowSummaryNormalization.annotated_write_cell_has_exact_survivor_relation",
+      "FlowSummaryNormalization.raw_initial_exact_has_empty_E",
+      "FlowSummaryNormalization.literal_exact_cleaner_is_disjoint_but_effect_geometry_is_partial",
+      "FlowSummaryNormalization.guarded_all_below_retains_read_tail_and_demotes",
+      "FlowSummaryNormalization.cleaner_geometry_does_not_change_concrete",
+      "FlowSummaryNormalization.concrete_cleaner_cell_is_unchanged",
+      "FlowSummaryNormalization.remove_all_admission_is_independent_of_named_path",
+      "FlowSummaryNormalization.selected_mark_reach_is_not_restricted",
+      "FlowSummaryNormalization.rejected_below_cleaner_cannot_create_MUST_root_survivor",
+      "FlowSummaryNormalization.whole_position_root_cleaner_kills_FLOW_MUST_and_concrete",
+      "FlowSummaryNormalization.whole_position_named_field_is_admitted_and_cleans_its_subtree",
+      "FlowSummaryNormalization.direct_ancestor_field_effect_does_not_create_NORMAL_EmptyE",
+      "FlowSummaryNormalization.checked"
+    ],
+    "count": 31,
+    "exitCode": 0,
+    "executableTrueCount": 1,
+    "forbiddenAxioms": false,
+    "auditMethod": "Compile complete source followed by #print axioms for every theorem. Complete output follows.",
+    "auditOutput": "true\n'FlowSummaryNormalization.endpoint_fields_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.endpoint_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_layer_and_endpoint_data_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.normalization_preimage_cases' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_sound' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_complete' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_c5_image_is_exact' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_inside_is_not_the_normalized_image_guard' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_helper_replay_is_correlated' depends on axioms: [propext]\n'FlowSummaryNormalization.mixed_demand_keeps_any_and_layer' depends on axioms: [propext]\n'FlowSummaryNormalization.current_exact_survives_child_overwrite_normal' depends on axioms: [propext]\n'FlowSummaryNormalization.write_normalization_adds_a_false_normal_pair' depends on axioms: [propext]\n'FlowSummaryNormalization.annotation_is_new_and_survives_return' depends on axioms: [propext]\n'FlowSummaryNormalization.move_keeps_new_annotation' does not depend on any axioms\n'FlowSummaryNormalization.later_publication_keeps_normal_exclusion_but_run1_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_rejects_overwritten_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_keeps_disjoint_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_write_cell_has_exact_survivor_relation' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_initial_exact_has_empty_E' does not depend on any axioms\n'FlowSummaryNormalization.literal_exact_cleaner_is_disjoint_but_effect_geometry_is_partial' depends on axioms: [propext]\n'FlowSummaryNormalization.guarded_all_below_retains_read_tail_and_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.cleaner_geometry_does_not_change_concrete' depends on axioms: [propext, Quot.sound]\n'FlowSummaryNormalization.concrete_cleaner_cell_is_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.remove_all_admission_is_independent_of_named_path' does not depend on any axioms\n'FlowSummaryNormalization.selected_mark_reach_is_not_restricted' does not depend on any axioms\n'FlowSummaryNormalization.rejected_below_cleaner_cannot_create_MUST_root_survivor' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_root_cleaner_kills_FLOW_MUST_and_concrete' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_named_field_is_admitted_and_cleans_its_subtree' depends on axioms: [propext]\n'FlowSummaryNormalization.direct_ancestor_field_effect_does_not_create_NORMAL_EmptyE' depends on axioms: [propext]\n'FlowSummaryNormalization.checked' depends on axioms: [propext]\n'FlowSummaryNormalization.endpoint_fields_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.endpoint_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_layer_and_endpoint_data_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.normalization_preimage_cases' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_sound' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_complete' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_c5_image_is_exact' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_inside_is_not_the_normalized_image_guard' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_helper_replay_is_correlated' depends on axioms: [propext]\n'FlowSummaryNormalization.mixed_demand_keeps_any_and_layer' depends on axioms: [propext]\n'FlowSummaryNormalization.current_exact_survives_child_overwrite_normal' depends on axioms: [propext]\n'FlowSummaryNormalization.write_normalization_adds_a_false_normal_pair' depends on axioms: [propext]\n'FlowSummaryNormalization.annotation_is_new_and_survives_return' depends on axioms: [propext]\n'FlowSummaryNormalization.move_keeps_new_annotation' does not depend on any axioms\n'FlowSummaryNormalization.later_publication_keeps_normal_exclusion_but_run1_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_rejects_overwritten_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_keeps_disjoint_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_write_cell_has_exact_survivor_relation' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_initial_exact_has_empty_E' does not depend on any axioms\n'FlowSummaryNormalization.literal_exact_cleaner_is_disjoint_but_effect_geometry_is_partial' depends on axioms: [propext]\n'FlowSummaryNormalization.guarded_all_below_retains_read_tail_and_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.cleaner_geometry_does_not_change_concrete' depends on axioms: [propext, Quot.sound]\n'FlowSummaryNormalization.concrete_cleaner_cell_is_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.remove_all_admission_is_independent_of_named_path' does not depend on any axioms\n'FlowSummaryNormalization.selected_mark_reach_is_not_restricted' does not depend on any axioms\n'FlowSummaryNormalization.rejected_below_cleaner_cannot_create_MUST_root_survivor' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_root_cleaner_kills_FLOW_MUST_and_concrete' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_named_field_is_admitted_and_cleans_its_subtree' depends on axioms: [propext]\n'FlowSummaryNormalization.direct_ancestor_field_effect_does_not_create_NORMAL_EmptyE' depends on axioms: [propext]\n'FlowSummaryNormalization.checked' depends on axioms: [propext]\n"
+  },
+  "normalizerFixtures": {
+    "helper": {
+      "raw": "ret.EXACT/FLOW -> p.f.EXACT/FLOW, NORMAL",
+      "stored": "ret.STAR/FLOW -> p.f.STAR/FLOW, NORMAL",
+      "actual": "p.f.h.EXACT/T",
+      "replay": "ret.h.EXACT/T, NORMAL"
+    },
+    "write": {
+      "rawPoint": "p.EXACT/FLOW, E={} -> p.EXACT/FLOW, E={f} -> ret.EXACT/FLOW, E={f}",
+      "stored": "p.STAR/FLOW -> ret.STAR/FLOW, output E={f}, NORMAL",
+      "run1": "p.STAR/FLOW -> ret.STAR/FLOW, E={}, DEMAND",
+      "relationProof": "annotated_write_cell_has_exact_survivor_relation"
+    },
+    "wholePositionCleaner": {
+      "allowed": [
+        "RemoveAll(p)",
+        "RemoveAll(p.f)"
+      ],
+      "prohibited": [
+        "RemoveAll below-only",
+        "RemoveAll exact-only"
+      ],
+      "fieldEffect": "Kill p.f and p.f.h; preserve p.g",
+      "predicate": "mark != null || reach == AT_AND_BELOW"
+    }
+  },
+  "proofScope": "31 constructive scalar theorems; no claim of a full JVM/driver/alias/all-transfer/termination proof. Historical unnormalized and partial-cleaner controls remain in the file but do not define admitted runtime behavior.",
+  "remainingProofs": [
+    "All nested-write and field-cleaner lowering branches under new EXACT/FLOW E",
+    "All new-tail transfer, C2 adapter and MUST-view laws",
+    "C5 canonical-image integration and returned-piece normalization",
+    "Global observation coverage for rejected admissions; alias closure; full Kotlin differential tests"
+  ],
+  "historicalRegressionTrace": {
+    "path": "docs/reports/data/bidirectional-closed-exact-replay-20261029.json",
+    "sha256": "5a754f1d9f44260caa16188b1b7b39c54915fb5b5f5eda3cb9ac7ae04d178278"
+  },
+  "sourceSHA256": {
+    "docs/design/bidirectional-flow-summary-normalization-20261029.md": "85e3031a805cd9b781e729b186366868d48990509f89daa135402329c28f32ab",
+    "docs/design/bidirectional-summary-demand-workload-implementation-20261029.md": "211679756ade2e0c803b41117e9bfc6e4f108f416946893edc8ac0cf15a7f252",
+    "spec/lean/proposals/initial-emission/FlowSummaryNormalization.lean": "7ab98054295ce8d3a339ee40b3bf15662649673a1ceac6cdcd1913e475470f87",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": "b0452a5b3d356a20d7f042cd6486976b7c96db28d2cefa663e0c66e76d7ec593",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Conclusions.kt": "6071579427c80badc35990e8fc0fcbbdcaeaaed8e504e58096b7916dee67b5fd",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Primitives.kt": "f9a5e4bf3f888c4e0997d765a260af2b22899b3384ebd406ff7e48548bced368",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/EdgeApplication.kt": "7c3bbdb0ea444fe50c971213907661da1280a18682f16a1db0dd23ee29bcf792",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RunSummaries.kt": "2d1f644ec723c3ef9326ffaeb8b31a49a7c8c27758ce6ed2dcfcfe31e0bbc4d0",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt": "9bef227f4e2fbc7bcca7d44aed889f6398782b15f24eb1531f25dfa37c5ae0cc",
+    "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRRuleForms.kt": "7370b426ba4edb241f6b0c39bf27854214a91f4a5ee81f254dde5862d7faf285"
+  },
+  "finalUserClarification": "RemoveAll(p.f) is explicitly permitted: remove marks at f and its descendants, preserve parent and disjoint siblings. Only partial reach is prohibited."
+}

@@ -11,7 +11,11 @@ projection proof permits self-emission as an image test within that scope.
 The partial model below remains historical evidence. The
 [closed exact-replay trace](bidirectional-exact-flow-replay-trace-20261029.md)
 replaces the standalone application example as the reachable gap witness.
-No uncovered EXACT replay behavior is selected yet.
+Later decision: [FLOW summary normalization](bidirectional-flow-summary-normalization-20261029.md)
+keeps EXACT point queries, records field-write E, and stores STAR summaries.
+This supersedes the uncovered-EXACT replay choice below. The older model and
+counterexample remain historical evidence. RemoveAll now clears the whole
+selected position; partial all-mark cleaners are prohibited.
 
 The earlier scalar intersection matrix is a comparison with current code.
 It is not the selected emission policy. The new policy stops after one new
@@ -217,6 +221,13 @@ OWASP measurement reaches **run-12**, completes **run-11**, and accepts the
 run-11 forward report. These measurements predate the proposed changes.
 
 ## 8. Entry intersection must agree with initial emission
+
+Later boundary update: the invariant below describes raw analysis initials.
+For a canonical stored FLOW premise J, use the
+[normalized-image rule](bidirectional-flow-summary-normalization-20261029.md#4-c5-the-normalized-emitter-image):
+there is an emitted raw initial I whose summary normal form is J. A stored
+STAR can therefore have a raw EXACT witness. The raw policy and its proofs
+below remain unchanged.
 
 Yes: update the demand-entry intersection used to restrict a summary
 `A -> B`. Ordinary location overlap or containment is insufficient.
