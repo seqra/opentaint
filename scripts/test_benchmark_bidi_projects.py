@@ -19,13 +19,13 @@ class AnalyzerConfigurationTest(unittest.TestCase):
         def capture(parser):
             args = parse(parser, ['--main', '/tmp/main', '--current', '/tmp/current',
                                   '--test', '/tmp/test', '--output', '/tmp/output'])
-            selected.append((args.run1_mark_mode, args.field_limit_schedule))
+            selected.append((args.run1_mark_mode, args.field_limit_schedule, args.heap_memory))
             raise Parsed()
 
         with patch.object(argparse.ArgumentParser, 'parse_args', new=capture):
             with self.assertRaises(Parsed):
                 benchmark_bidi_projects.main()
-        self.assertEqual([('FULL', 'REPEAT_RUN1')], selected)
+        self.assertEqual([('FULL', 'REPEAT_RUN1', None)], selected)
 
     def options(self, mode):
         return SimpleNamespace(run1_mark_mode=mode, heap_snapshots=True,
@@ -59,6 +59,47 @@ class AnalyzerConfigurationTest(unittest.TestCase):
                          [x for x in experiment if 'fieldLimitSchedule=' not in x])
         self.assertIn('-Dopentaint.bidi.fieldLimitSchedule=REPEAT_RUN1', current)
         self.assertIn('-Dopentaint.bidi.fieldLimitSchedule=RUN_INDEX', experiment)
+
+    def configurations(self, *extra):
+        parse = argparse.ArgumentParser.parse_args
+        configs = {}
+
+        def selected(parser):
+            return parse(parser, ['--main', '/tmp/main', '--current', '/tmp/current',
+                                  '--test', '/tmp/test', '--output', '/tmp/output',
+                                  '--sides', 'bidi', *extra])
+
+        def capture(args, project, side, config):
+            self.assertEqual('bidi', side)
+            self.assertEqual('REPEAT_RUN1', args.field_limit_schedule)
+            configs[project] = dict(config)
+
+        with patch.object(argparse.ArgumentParser, 'parse_args', new=selected), \
+                patch.object(benchmark_bidi_projects, 'run', new=capture):
+            benchmark_bidi_projects.main()
+        return configs
+
+    def test_16g_override_keeps_models_timeouts_and_original_defaults(self):
+        defaults = self.configurations()
+        large = self.configurations('--heap-memory', '16g')
+        self.assertEqual({'OWASP', 'conductor', 'thingsboard', 'Stirling-PDF'}, set(large))
+        self.assertEqual({'OWASP': '8g', 'conductor': '8g', 'thingsboard': '12g', 'Stirling-PDF': '8g'},
+                         {key: value['memory'] for key, value in defaults.items()})
+        for name, config in large.items():
+            self.assertEqual('16g', config['memory'])
+            self.assertEqual({key: value for key, value in defaults[name].items() if key != 'memory'},
+                             {key: value for key, value in config.items() if key != 'memory'})
+        before = analyzer_jvm_args(self.options('FULL'), Path('/tmp/heap'), 'bidi', '8g')
+        after = analyzer_jvm_args(self.options('FULL'), Path('/tmp/heap'), 'bidi', '16g')
+        self.assertEqual([x for x in before if not x.startswith('-Xmx')],
+                         [x for x in after if not x.startswith('-Xmx')])
+        self.assertIn('-Xmx16g', after)
+
+    def test_invalid_heap_sizes_fail_before_starting_analysis(self):
+        for value in ['0g', '-1g', '16', '16gb', '1.5g', '16g -Xmx32g']:
+            with self.assertRaises(argparse.ArgumentTypeError):
+                benchmark_bidi_projects.heap_memory(value)
+        self.assertEqual('16g', benchmark_bidi_projects.heap_memory('16G'))
 
 
 if __name__ == '__main__':
