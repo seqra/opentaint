@@ -6,7 +6,7 @@ Our current goal: implement optimization and repeat major testing on real projec
 Always cleanup memory snapshot/profiles from the previous runs.
 
 # Optimization:
-Implement optimization wrt the [bidirectional-demand-storage-predefined-summaries-implementation-20261028.md](docs/design/bidirectional-demand-storage-predefined-summaries-implementation-20261028.md)
+Implement optimization wrt the [bidirectional-summary-demand-workload-implementation-20261029.md](docs/design/bidirectional-summary-demand-workload-implementation-20261029.md)
 Commit after implementation.  
 Avoid changes in the analyzer core, that were not proposed and designed.
 If you have an optimization idea, write a proposal. Then we will include it into the next iteration.
