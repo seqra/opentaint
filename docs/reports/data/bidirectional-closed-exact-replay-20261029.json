@@ -1,171 +1,887 @@
 {
-  "schema": "closed-exact-replay-reasoned-trace-v3",
-  "status": "Proposed-domain constructive trace; not a JVM measurement or current-domain bug",
+  "schema": "code-only-exact-replay-v2-checked",
+  "status": "Finite reasoning/model evidence for the proposed abstract EXACT domain. Not an execution of the current JVM analyzer.",
   "latestModeledRun": 3,
-  "schedule": [
+  "direction": "FORWARD",
+  "fieldLimitSchedule": [
     1,
     1,
     2
   ],
-  "program": "// FULL marks. Ordinary scalar AP model. E = {}, mark exclusions = {}.\n// L1 = 1, L2 = 1, L3 = 2. All instructions keep ZERO.\nmain() {\n    q.f.h = sourceAllT();           // source: ZERO -> q.f.h.MUST/T\n    sinkAnyT(q.f.h);                // independent backward source seed\n    sinkExactT(helper(q));          // independent concrete helper return requirement\n    pair = wrapper(q);\n    sinkExactT(pair.a);\n    sinkAnyT(pair.b);\n}\nwrapper(q) {\n    a = helper(q);                 // pass the whole q, not q.f\n    b = opaqueMay(q);\n    makePair(a, b);\n}\nhelper(p) { return p.f; }           // ordinary analyzed method, no predefined model\n\n// Declared FLOW micro-edges (and ZERO_KEEP at each statement):\n// helper read: p.f.STAR -> ret.STAR, with ordinary p argument preservation.\n// opaqueMay: q.STAR -> b.ANY (a legal explicit MAY-target pass rule).\n// makePair: a.STAR -> ret.a.STAR; b.STAR -> ret.b.STAR.\n// makePair is a model transfer, not strong ret.a/ret.b writes.\n// All call bind-ins/out are ordinary STAR->STAR moves.\n",
-  "assumptions": [
-    "Admit abstract EXACT and start it EXACT/NORMAL without widening.",
-    "Use ordinary analyzed helper and normal call bindings; no predefined summaries.",
-    "Extend shape representation/record admission as required by proposed abstract EXACT; preserve existing record inside matching and existing scalar target-EXACT transfer cell. The trace shows that this last combination is unsound.",
-    "All marks FULL, E empty, no mark exclusions, no aliases, no type filters, no statics, no ND, no selected cleaners, no conditional sources.",
-    "makePair is the two stated pass micro-edges, not field-overwrite instructions.",
-    "No production guard normalization or repair is silently selected.",
-    "Register the ordinary caller subscription before/independent of callee C2; an input with no new initial can still use a later live summary or an earlier native record. The direct helper exact probe constructs the needed live/native exact relation from a concrete input."
+  "currentProductionAcceptsThisDomain": false,
+  "program": "final class ExactReplayExample {\n    static final class Root { Inner f; }\n    static final class Inner { Leaf h; }\n    static final class Leaf { }\n    static final class Box { Root value; }\n    static final class Pair { Inner a; Box b; }\n\n    static void source(Root q) { }\n    static void sinkExact(Object x) { }\n    static void sinkAny(Object x) { }\n\n    static Inner helper(Root p) {\n        return p.f;\n    }\n\n    static Box box(Root p) {\n        Box z = new Box();\n        z.value = p;\n        return z;\n    }\n\n    static Pair wrapper(Root q) {\n        Pair r = new Pair();\n        Inner a = helper(q);\n        r.a = a;\n        Box b = box(q);\n        r.b = b;\n        return r;\n    }\n\n    public static void main(String[] ignored) {\n        Root q = new Root();\n        q.f = new Inner();\n        q.f.h = new Leaf();\n        source(q);\n        sinkAny(q.f.h);           // Keep the source selected for run-3.\n        Pair r = wrapper(q);\n        sinkExact(r.a);\n        sinkAny(r.b);\n    }\n}",
+  "rules": {
+    "source": {
+      "method": "source(Root)",
+      "condition": "true",
+      "action": "AssignMark(T, any(field(field(Argument(0), Root.f), Inner.h)))",
+      "target": {
+        "base": "arg0",
+        "path": [
+          "Root.f",
+          "Inner.h"
+        ],
+        "tail": "ANY_TAINT",
+        "mark": "T",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "premise": {
+        "base": "ZERO",
+        "path": [],
+        "tail": "EXACT",
+        "mark": "ZERO",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "placement": "ordinary configured source action after source(q) call; source method body is empty"
+    },
+    "sinkExact": {
+      "method": "sinkExact(Object)",
+      "condition": "ContainsMark(arg0.$, T)",
+      "pattern": {
+        "base": "arg0",
+        "path": [],
+        "tail": "EXACT",
+        "mark": "T",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "endActions": []
+    },
+    "sinkAny": {
+      "method": "sinkAny(Object)",
+      "condition": "ContainsMark(arg0.[any], T)",
+      "pattern": {
+        "base": "arg0",
+        "path": [],
+        "tail": "ANY",
+        "mark": "T",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "endActions": []
+    }
+  },
+  "prohibitions": {
+    "predefinedSummaries": false,
+    "customPassRules": false,
+    "opaqueMethods": false,
+    "declaredAnyTargetFlowEdges": false,
+    "declaredDemandMicroEdges": false,
+    "directHelperProbe": false,
+    "extraHelperCallsites": false
+  },
+  "ruleLoweringVerified": {
+    "position": "JIRRuleForms.pos:115-133 accepts a field chain ending in exactly one AnyField.",
+    "mustTail": "JIRRuleForms.RulePos.sourceFact:105-109 maps final AnyField to ANY_TAINT.",
+    "assignMark": "JIRRuleForms.validate:388 validates AssignMark position; markTarget:462-463 uses sourceFact.",
+    "unconditionalGEN": "JIRRuleForms.source:478-481 emits sourceEdge ZERO -> target for true condition.",
+    "binding": "Rule forms use callee coordinates; normal call bind-back maps source arg0.f.h to caller q.f.h. No alias back-projection is needed to place the source."
+  },
+  "instructionMicroEdges": [
+    {
+      "method": "helper",
+      "code": "t = p.f",
+      "role": "value transfer",
+      "from": {
+        "base": "p",
+        "path": [
+          "Root.f"
+        ],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "t",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "helper",
+      "code": "t = p.f",
+      "role": "read source preservation",
+      "from": {
+        "base": "p",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "p",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "helper",
+      "code": "return t",
+      "role": "value transfer",
+      "from": {
+        "base": "t",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "ret",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "box",
+      "code": "z.value = p",
+      "role": "value transfer",
+      "from": {
+        "base": "p",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "z",
+        "path": [
+          "Box.value"
+        ],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "box",
+      "code": "z.value = p",
+      "role": "value source preservation",
+      "from": {
+        "base": "p",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "p",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "box",
+      "code": "z.value = p",
+      "role": "strong destination frame",
+      "from": {
+        "base": "z",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "z",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [
+        "Box.value"
+      ],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "box",
+      "code": "return z",
+      "role": "value transfer",
+      "from": {
+        "base": "z",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "ret",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "wrapper",
+      "code": "r.a = a",
+      "role": "value transfer",
+      "from": {
+        "base": "a",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "r",
+        "path": [
+          "Pair.a"
+        ],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "wrapper",
+      "code": "r.a = a",
+      "role": "value source preservation",
+      "from": {
+        "base": "a",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "a",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "wrapper",
+      "code": "r.a = a",
+      "role": "strong destination frame",
+      "from": {
+        "base": "r",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "r",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [
+        "Pair.a"
+      ],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "wrapper",
+      "code": "r.b = b",
+      "role": "value transfer",
+      "from": {
+        "base": "b",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "r",
+        "path": [
+          "Pair.b"
+        ],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "wrapper",
+      "code": "r.b = b",
+      "role": "value source preservation",
+      "from": {
+        "base": "b",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "b",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "wrapper",
+      "code": "r.b = b",
+      "role": "strong destination frame",
+      "from": {
+        "base": "r",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "r",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [
+        "Pair.b"
+      ],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "wrapper",
+      "code": "return r",
+      "role": "value transfer",
+      "from": {
+        "base": "r",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "ret",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "wrapper -> helper",
+      "code": "argument binding",
+      "role": "ordinary bind-in",
+      "from": {
+        "base": "caller q",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "callee arg0",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "wrapper -> helper",
+      "code": "result binding",
+      "role": "ordinary bind-back",
+      "from": {
+        "base": "callee ret",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "caller result",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "wrapper -> box",
+      "code": "argument binding",
+      "role": "ordinary bind-in",
+      "from": {
+        "base": "caller q",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "callee arg0",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [],
+      "intrinsicallyDemand": false
+    },
+    {
+      "method": "wrapper -> box",
+      "code": "result binding",
+      "role": "ordinary bind-back",
+      "from": {
+        "base": "callee ret",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "to": {
+        "base": "caller result",
+        "path": [],
+        "tail": "STAR",
+        "mark": "FLOW",
+        "fieldExclusion": [],
+        "markExclusion": []
+      },
+      "sharedFieldExclusion": [],
+      "intrinsicallyDemand": false
+    }
   ],
-  "phases": [
+  "controlAndAllocations": {
+    "zero": "Every statement has ordinary ZERO_KEEP/control reachability. No ZERO row gives a nonzero marked relation except the single source GEN.",
+    "new": "new Box/new Pair initializes a fresh destination without T; source rules occur only after Root/Inner/Leaf construction. Empty/default constructors retain ordinary control and argument identities.",
+    "argumentFrames": "Reads retain their source, writes retain value sources, and calls preserve the usual unaffected coordinates.",
+    "aliases": "Fresh Pair/Box allocations cannot alias Root input because of freshness/types. Real links r.a=q.f and r.b.value=q preserve suffixes, not parent-root taint."
+  },
+  "scopeAndNecessaryNewDomainChoices": [
+    "FULL marks; all displayed fact E and mark exclusions empty; no cleaners, statics, ND, conditional sources, or custom pass models.",
+    "Proposed one-step policy is total over FLOW metadata: FLOW demands accept FLOW inputs, retaining same-prefix EXACT. Current abstract-demand mark eligibility is preserved.",
+    "The same unique wrapper->helper callsite gives the same full MethodKey across runs; no shared-context assumption between different callers is needed.",
+    "Admit and start abstract EXACT/NORMAL and persist its normal singleton summaries as selected for the new domain.",
+    "Use unchanged current record inside matching and unchanged scalar target-EXACT application. This combination is the behavior being refuted; no application repair is assumed.",
+    "All ordinary field instruction micro-edges are NORMAL STAR->STAR; DEMAND comes only from run1 source policy, ancestor application, input-layer propagation, or field limiting."
+  ],
+  "runs": [
     {
       "run": 1,
       "direction": "FORWARD",
-      "fieldLimit": 1,
-      "rootFacts": [
+      "limit": 1,
+      "sourceStages": [
         {
-          "node": "source before limit",
-          "fact": {
-            "base": "q",
-            "path": [
-              "f",
-              "h"
-            ],
-            "tail": "ANY_TAINT",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
+          "stage": "configured GEN before field limit",
+          "edge": {
+            "initial": {
+              "base": "ZERO",
+              "path": [],
+              "tail": "EXACT",
+              "mark": "ZERO",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "conclusion": {
+              "base": "q",
+              "path": [
+                "Root.f",
+                "Inner.h"
+              ],
+              "tail": "ANY_TAINT",
+              "mark": "T",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "layer": "DEMAND"
           },
-          "layer": "DEMAND",
-          "why": "Current run1 policy demotes concrete source result; field geometry is still MUST."
+          "cause": "run1 concrete-source demotion; MUST tail is not changed by demotion"
         },
         {
-          "node": "source after limit and wrapper input",
-          "fact": {
-            "base": "q",
-            "path": [
-              "f"
-            ],
-            "tail": "ANY",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
+          "stage": "after field limit",
+          "edge": {
+            "initial": {
+              "base": "ZERO",
+              "path": [],
+              "tail": "EXACT",
+              "mark": "ZERO",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "conclusion": {
+              "base": "q",
+              "path": [
+                "Root.f"
+              ],
+              "tail": "ANY",
+              "mark": "T",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "layer": "DEMAND"
           },
-          "layer": "DEMAND",
-          "why": "Second counted field h is cut at limit 1."
+          "cause": "Inner.h is second counted field; L1 cuts at q.f and changes to MAY"
         }
       ],
-      "wrapperInitial": {
-        "initial": {
-          "base": "q",
-          "path": [],
-          "tail": "STAR",
-          "mark": "FLOW",
-          "E": [],
-          "markExclusions": []
-        },
-        "conclusion": {
-          "base": "q",
-          "path": [],
-          "tail": "STAR",
-          "mark": "FLOW",
-          "E": [],
-          "markExclusions": []
-        },
-        "layer": "NORMAL"
-      },
-      "wrapperCallStages": [
-        {
-          "stage": "helper bind-in",
-          "fact": {
-            "base": "p",
+      "initials": {
+        "wrapper": [
+          {
+            "base": "ZERO",
+            "path": [],
+            "tail": "EXACT",
+            "mark": "ZERO",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          {
+            "base": "arg0",
             "path": [],
             "tail": "STAR",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
+          }
+        ],
+        "helper": [
+          {
+            "base": "ZERO",
+            "path": [],
+            "tail": "EXACT",
+            "mark": "ZERO",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          {
+            "base": "arg0",
+            "path": [],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          }
+        ],
+        "box": [
+          {
+            "base": "ZERO",
+            "path": [],
+            "tail": "EXACT",
+            "mark": "ZERO",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          {
+            "base": "arg0",
+            "path": [],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          }
+        ]
+      },
+      "helperStages": [
+        {
+          "initial": {
+            "base": "arg0",
+            "path": [],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "t",
+            "path": [],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "DEMAND",
+          "cause": "p.STAR is above read p.f.STAR; ordinary above-case loses correlation"
+        },
+        {
+          "initial": {
+            "base": "arg0",
+            "path": [],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "ret",
+            "path": [],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "DEMAND",
+          "cause": "ordinary return keeps the existing ANY/DEMAND"
+        }
+      ],
+      "boxStages": [
+        {
+          "initial": {
+            "base": "arg0",
+            "path": [],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "z",
+            "path": [
+              "Box.value"
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "NORMAL",
+          "cause": "normal write of p into fresh z.value"
+        },
+        {
+          "initial": {
+            "base": "arg0",
+            "path": [],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "ret",
+            "path": [
+              "Box.value"
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "layer": "NORMAL"
-        },
+        }
+      ],
+      "wrapperAStages": [
         {
-          "stage": "helper C2 run1 abstraction",
           "initial": {
-            "base": "p",
+            "base": "arg0",
             "path": [],
             "tail": "STAR",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          }
-        },
-        {
-          "stage": "helper field read",
-          "edge": {
-            "initial": {
-              "base": "p",
-              "path": [],
-              "tail": "STAR",
-              "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
-            },
-            "conclusion": {
-              "base": "ret",
-              "path": [],
-              "tail": "ANY",
-              "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
-            },
-            "layer": "DEMAND"
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "why": "Root p.STAR is above p.f read; correlation loss produces ANY."
+          "conclusion": {
+            "base": "a",
+            "path": [],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "DEMAND",
+          "cause": "ordinary helper summary application and result binding"
         },
         {
-          "stage": "helper bind-back into a",
-          "edge": {
-            "initial": {
-              "base": "q",
-              "path": [],
-              "tail": "STAR",
-              "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
-            },
-            "conclusion": {
-              "base": "a",
-              "path": [],
-              "tail": "ANY",
-              "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
-            },
-            "layer": "DEMAND"
-          }
+          "initial": {
+            "base": "arg0",
+            "path": [],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "r",
+            "path": [
+              "Pair.a"
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "DEMAND",
+          "cause": "normal field write propagates existing demand input"
         },
         {
-          "stage": "opaqueMay into b",
-          "edge": {
-            "initial": {
-              "base": "q",
-              "path": [],
-              "tail": "STAR",
-              "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
-            },
-            "conclusion": {
-              "base": "b",
-              "path": [],
-              "tail": "ANY",
-              "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
-            },
-            "layer": "DEMAND"
-          }
+          "initial": {
+            "base": "arg0",
+            "path": [],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "ret",
+            "path": [
+              "Pair.a"
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "DEMAND",
+          "cause": "normal return"
         }
       ],
+      "wrapperBStages": [
+        {
+          "initial": {
+            "base": "arg0",
+            "path": [],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "b",
+            "path": [
+              "Box.value"
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "NORMAL",
+          "cause": "ordinary Box normal summary and result binding"
+        },
+        {
+          "initial": {
+            "base": "arg0",
+            "path": [],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "r",
+            "path": [
+              "Pair.b",
+              "Box.value"
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "NORMAL",
+          "cause": "normal r.b=b write before limiting"
+        },
+        {
+          "initial": {
+            "base": "arg0",
+            "path": [],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "r",
+            "path": [
+              "Pair.b"
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "DEMAND",
+          "cause": "two counted fields exceed L1; no ANY target micro-edge"
+        },
+        {
+          "initial": {
+            "base": "arg0",
+            "path": [],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "ret",
+            "path": [
+              "Pair.b"
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "DEMAND",
+          "cause": "normal return preserves existing demand"
+        }
+      ],
+      "strongFrameAudit": "r.a is preserved when r.b is written: Pair.a != Pair.b; the field frame admits the known a suffix and does not add E or demote a NORMAL exact A fact later.",
       "rawSummaryStores": {
         "helper": [
           {
@@ -174,56 +890,117 @@
               "path": [],
               "tail": "EXACT",
               "mark": "ZERO",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
               "base": "ZERO",
               "path": [],
               "tail": "EXACT",
               "mark": "ZERO",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL"
           },
           {
             "initial": {
-              "base": "p",
+              "base": "arg0",
               "path": [],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
-              "base": "p",
+              "base": "arg0",
               "path": [],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL"
           },
           {
             "initial": {
-              "base": "p",
+              "base": "arg0",
               "path": [],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
               "base": "ret",
               "path": [],
               "tail": "ANY",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "DEMAND"
+          }
+        ],
+        "box": [
+          {
+            "initial": {
+              "base": "ZERO",
+              "path": [],
+              "tail": "EXACT",
+              "mark": "ZERO",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "conclusion": {
+              "base": "ZERO",
+              "path": [],
+              "tail": "EXACT",
+              "mark": "ZERO",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "layer": "NORMAL"
+          },
+          {
+            "initial": {
+              "base": "arg0",
+              "path": [],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "conclusion": {
+              "base": "arg0",
+              "path": [],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "layer": "NORMAL"
+          },
+          {
+            "initial": {
+              "base": "arg0",
+              "path": [],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "conclusion": {
+              "base": "ret",
+              "path": [
+                "Box.value"
+              ],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "layer": "NORMAL"
           }
         ],
         "wrapper": [
@@ -233,100 +1010,144 @@
               "path": [],
               "tail": "EXACT",
               "mark": "ZERO",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
               "base": "ZERO",
               "path": [],
               "tail": "EXACT",
               "mark": "ZERO",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL"
           },
           {
             "initial": {
-              "base": "q",
+              "base": "arg0",
               "path": [],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
-              "base": "q",
+              "base": "arg0",
               "path": [],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL"
           },
           {
             "initial": {
-              "base": "q",
+              "base": "arg0",
               "path": [],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
               "base": "ret",
               "path": [
-                "a"
+                "Pair.a"
               ],
               "tail": "ANY",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "DEMAND"
           },
           {
             "initial": {
-              "base": "q",
+              "base": "arg0",
               "path": [],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
               "base": "ret",
               "path": [
-                "b"
+                "Pair.b"
               ],
               "tail": "ANY",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "DEMAND"
           }
         ]
       },
-      "persistentNonzeroRecordsAdded": {
+      "nativeNonzeroRecordsAdded": {
         "helper": [
           {
             "initial": {
-              "base": "p",
+              "base": "arg0",
               "path": [],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
-              "base": "p",
+              "base": "arg0",
               "path": [],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "layer": "NORMAL",
+            "direction": "FORWARD"
+          }
+        ],
+        "box": [
+          {
+            "initial": {
+              "base": "arg0",
+              "path": [],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "conclusion": {
+              "base": "arg0",
+              "path": [],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "layer": "NORMAL",
+            "direction": "FORWARD"
+          },
+          {
+            "initial": {
+              "base": "arg0",
+              "path": [],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "conclusion": {
+              "base": "ret",
+              "path": [
+                "Box.value"
+              ],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL",
             "direction": "FORWARD"
@@ -335,27 +1156,27 @@
         "wrapper": [
           {
             "initial": {
-              "base": "q",
+              "base": "arg0",
               "path": [],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
-              "base": "q",
+              "base": "arg0",
               "path": [],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL",
             "direction": "FORWARD"
           }
         ]
       },
-      "selectedDemandsForRun2": {
+      "run2Demands": {
         "helper": [
           {
             "entry": {
@@ -363,478 +1184,386 @@
               "path": [],
               "tail": "ANY",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "exit": {
-              "base": "p",
+              "base": "arg0",
               "path": [],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             }
           }
         ],
+        "box": [],
         "wrapper": [
           {
             "entry": {
               "base": "ret",
               "path": [
-                "a"
+                "Pair.a"
               ],
               "tail": "ANY",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "exit": {
-              "base": "q",
+              "base": "arg0",
               "path": [],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             }
           },
           {
             "entry": {
               "base": "ret",
               "path": [
-                "b"
+                "Pair.b"
               ],
               "tail": "ANY",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "exit": {
-              "base": "q",
+              "base": "arg0",
               "path": [],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             }
           }
         ]
       },
-      "rootSinkObservations": [
-        {
-          "sink": "direct source seed",
-          "fact": {
-            "base": "q",
-            "path": [
-              "f"
-            ],
-            "tail": "ANY",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "DEMAND"
-        },
-        {
-          "sink": "independent helper exact return probe",
-          "provided": {
-            "base": "probe",
-            "path": [],
-            "tail": "ANY",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "DEMAND"
-        },
-        {
-          "sink": "pair.a EXACT/T",
-          "provided": {
-            "base": "pair",
-            "path": [
-              "a"
-            ],
-            "tail": "ANY",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "DEMAND"
-        },
-        {
-          "sink": "pair.b ANY/T",
-          "provided": {
-            "base": "pair",
-            "path": [
-              "b"
-            ],
-            "tail": "ANY",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "DEMAND"
-        }
-      ]
+      "mainObservations": "Main applies inferred FLOW summaries to its concrete T input and obtains DEMAND candidates at both A and B sinks. The independent direct q.f.h sink keeps a concrete source seed. No concrete helper initial is needed in run1."
     },
     {
       "run": 2,
       "direction": "BACKWARD",
-      "fieldLimit": 1,
-      "wrapperArrivals": [
-        {
-          "fact": {
-            "base": "ret",
-            "path": [
-              "a"
-            ],
-            "tail": "EXACT",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "DEMAND",
-          "origin": "main exact sink A"
+      "limit": 1,
+      "sourceBootstrap": {
+        "sink": "sinkAny(q.f.h)",
+        "boundedConcreteRequirement": {
+          "base": "q",
+          "path": [
+            "Root.f"
+          ],
+          "tail": "ANY",
+          "mark": "T",
+          "fieldExclusion": [],
+          "markExclusion": []
         },
+        "layer": "DEMAND",
+        "effect": "Reversing the direct local field reads and source GEN reaches the configured source action and records a concrete source hit; it grants the run3 source permission."
+      },
+      "wrapperAAdmission": {
+        "actual": {
+          "base": "ret",
+          "path": [
+            "Pair.a"
+          ],
+          "tail": "EXACT",
+          "mark": "T",
+          "fieldExclusion": [],
+          "markExclusion": []
+        },
+        "demandEntry": {
+          "base": "ret",
+          "path": [
+            "Pair.a"
+          ],
+          "tail": "ANY",
+          "mark": "FLOW",
+          "fieldExclusion": [],
+          "markExclusion": []
+        },
+        "initial": {
+          "base": "ret",
+          "path": [
+            "Pair.a"
+          ],
+          "tail": "EXACT",
+          "mark": "FLOW",
+          "fieldExclusion": [],
+          "markExclusion": []
+        },
+        "startLayer": "NORMAL"
+      },
+      "AStages": [
         {
+          "stage": "reverse return r",
           "fact": {
-            "base": "ret",
+            "base": "r",
             "path": [
-              "b"
-            ],
-            "tail": "ANY",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "DEMAND",
-          "origin": "main ANY sink B"
-        }
-      ],
-      "wrapperInitials": [
-        {
-          "initial": {
-            "base": "ret",
-            "path": [
-              "a"
+              "Pair.a"
             ],
             "tail": "EXACT",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "conclusion": {
-            "base": "ret",
-            "path": [
-              "a"
-            ],
-            "tail": "EXACT",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "layer": "NORMAL"
         },
         {
-          "initial": {
-            "base": "ret",
-            "path": [
-              "b"
-            ],
-            "tail": "ANY",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "conclusion": {
-            "base": "ret",
-            "path": [
-              "b"
-            ],
-            "tail": "ANY",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "DEMAND"
-        }
-      ],
-      "exactPath": [
-        {
-          "stage": "wrapper C2 from main exact A sink",
-          "actual": {
-            "base": "ret",
-            "path": [
-              "a"
-            ],
-            "tail": "EXACT",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "demandEntry": {
-            "base": "ret",
-            "path": [
-              "a"
-            ],
-            "tail": "ANY",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "initial": {
-            "base": "ret",
-            "path": [
-              "a"
-            ],
-            "tail": "EXACT",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "NORMAL"
-        },
-        {
-          "stage": "reverse pair A transfer",
+          "stage": "reverse r.b frame preserves r.a, reverse r.a value transfer",
           "fact": {
             "base": "a",
             "path": [],
             "tail": "EXACT",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "layer": "NORMAL"
         },
         {
-          "stage": "reverse helper bind-back and register standing subscription",
-          "fact": {
-            "base": "ret",
-            "path": [],
-            "tail": "EXACT",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "NORMAL"
-        },
-        {
-          "stage": "wrapper helper-call C2 on abstract exact input",
+          "stage": "reverse helper result binding",
           "actual": {
             "base": "ret",
             "path": [],
             "tail": "EXACT",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "newInitialRequired": false,
-          "why": "Keep the subscription even if C2 returns no additional initial."
+          "layer": "NORMAL"
         },
         {
-          "stage": "independent main direct helper probe",
-          "actual": {
-            "base": "ret",
-            "path": [],
-            "tail": "EXACT",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
+          "stage": "helper C2",
           "demandEntry": {
             "base": "ret",
             "path": [],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "selectedInitial": {
+          "actual": {
             "base": "ret",
             "path": [],
             "tail": "EXACT",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "layer": "NORMAL",
-          "why": "Concrete input, explicitly selected same-prefix ANY rule."
+          "initial": {
+            "base": "ret",
+            "path": [],
+            "tail": "EXACT",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "startLayer": "NORMAL",
+          "cause": "same-prefix ANY/FLOW + EXACT/FLOW; total selected policy preserves current FLOW-input eligibility"
         },
         {
-          "stage": "helper reversed read ret.STAR -> p.f.STAR",
+          "stage": "reverse helper return/read",
           "edge": {
             "initial": {
               "base": "ret",
               "path": [],
               "tail": "EXACT",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
-              "base": "p",
+              "base": "arg0",
               "path": [
-                "f"
+                "Root.f"
               ],
               "tail": "EXACT",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL"
           }
         },
         {
-          "stage": "helper C5 publishes live NORMAL relation",
-          "summary": {
-            "initial": {
-              "base": "ret",
-              "path": [],
-              "tail": "EXACT",
-              "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
-            },
-            "conclusion": {
-              "base": "p",
-              "path": [
-                "f"
-              ],
-              "tail": "EXACT",
-              "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
-            },
-            "layer": "NORMAL"
-          },
-          "canEmit": true,
-          "inside": true,
-          "outputRestriction": "p.f.EXACT lies below demanded p.STAR; retain EXACT/NORMAL"
-        },
-        {
-          "stage": "live helper summary delivered to wrapper standing exact-input subscription",
-          "input": {
-            "base": "ret",
-            "path": [],
-            "tail": "EXACT",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "summary": {
-            "initial": {
-              "base": "ret",
-              "path": [],
-              "tail": "EXACT",
-              "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
-            },
-            "conclusion": {
-              "base": "p",
-              "path": [
-                "f"
-              ],
-              "tail": "EXACT",
-              "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
-            },
-            "layer": "NORMAL"
-          },
-          "result": {
-            "base": "p",
-            "path": [
-              "f"
-            ],
-            "tail": "EXACT",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "NORMAL",
-          "why": "Exact input matches exact premise, empty suffix; this precise application is correct."
-        },
-        {
-          "stage": "reverse whole-q bind-in",
+          "stage": "bind helper p back to wrapper q",
           "edge": {
             "initial": {
               "base": "ret",
               "path": [
-                "a"
+                "Pair.a"
               ],
               "tail": "EXACT",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
-              "base": "q",
+              "base": "arg0",
               "path": [
-                "f"
+                "Root.f"
               ],
               "tail": "EXACT",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL"
           }
         }
       ],
-      "mayPath": [
+      "wrapperBAdmission": {
+        "actual": {
+          "base": "ret",
+          "path": [
+            "Pair.b"
+          ],
+          "tail": "ANY",
+          "mark": "T",
+          "fieldExclusion": [],
+          "markExclusion": []
+        },
+        "demandEntry": {
+          "base": "ret",
+          "path": [
+            "Pair.b"
+          ],
+          "tail": "ANY",
+          "mark": "FLOW",
+          "fieldExclusion": [],
+          "markExclusion": []
+        },
+        "initial": {
+          "base": "ret",
+          "path": [
+            "Pair.b"
+          ],
+          "tail": "ANY",
+          "mark": "FLOW",
+          "fieldExclusion": [],
+          "markExclusion": []
+        },
+        "startLayer": "DEMAND"
+      },
+      "BStages": [
         {
-          "stage": "reverse pair B transfer",
+          "stage": "reverse return r",
+          "fact": {
+            "base": "r",
+            "path": [
+              "Pair.b"
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "DEMAND"
+        },
+        {
+          "stage": "reverse ordinary r.b=b value edge",
           "fact": {
             "base": "b",
             "path": [],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "layer": "DEMAND"
         },
         {
-          "stage": "reverse opaqueMay ANY -> ANY",
+          "stage": "reverse Box result binding",
           "fact": {
-            "base": "q",
+            "base": "ret",
             "path": [],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "layer": "DEMAND"
         },
         {
-          "stage": "through earlier helper call",
-          "fact": {
-            "base": "q",
+          "stage": "reverse native Box normal record",
+          "native": {
+            "initial": {
+              "base": "arg0",
+              "path": [],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "conclusion": {
+              "base": "ret",
+              "path": [
+                "Box.value"
+              ],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "layer": "NORMAL"
+          },
+          "readView": {
+            "initial": {
+              "base": "ret",
+              "path": [
+                "Box.value"
+              ],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "conclusion": {
+              "base": "arg0",
+              "path": [],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "layer": "NORMAL"
+          },
+          "actual": {
+            "base": "ret",
             "path": [],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "layer": "DEMAND",
-          "why": "Existing q/p argument identity frames preserve this requirement."
+          "actualLayer": "DEMAND",
+          "newBoxInitialRequired": false,
+          "result": {
+            "base": "arg0",
+            "path": [],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "resultLayer": "DEMAND",
+          "cause": "actual root ANY lies above ret.value; ordinary above-case gives root ANY and DEMAND"
+        },
+        {
+          "stage": "bind Box arg back to q; pass earlier helper through argument identity",
+          "result": {
+            "base": "arg0",
+            "path": [],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "DEMAND"
         }
       ],
-      "sourceSeed": {
-        "origin": "independent main sinkAnyT(q.f.h)",
-        "boundedSeed": {
-          "base": "q",
-          "path": [
-            "f"
-          ],
-          "tail": "ANY",
-          "mark": "T",
-          "E": [],
-          "markExclusions": []
-        },
-        "layer": "DEMAND",
-        "effect": "Reverse source transfer is reached in main; sourceAllT occurrence is selected for run3. No callee abstraction is needed."
-      },
       "rawSummaryStores": {
         "helper": [
           {
@@ -843,16 +1572,16 @@
               "path": [],
               "tail": "EXACT",
               "mark": "ZERO",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
               "base": "ZERO",
               "path": [],
               "tail": "EXACT",
               "mark": "ZERO",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL"
           },
@@ -862,22 +1591,23 @@
               "path": [],
               "tail": "EXACT",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
-              "base": "p",
+              "base": "arg0",
               "path": [
-                "f"
+                "Root.f"
               ],
               "tail": "EXACT",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL"
           }
         ],
+        "box": "No new nonzero analysis is required; native run1 records answer in wrapper. Ordinary ZERO/control work is irrelevant to the nonzero route.",
         "wrapper": [
           {
             "initial": {
@@ -885,16 +1615,16 @@
               "path": [],
               "tail": "EXACT",
               "mark": "ZERO",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
               "base": "ZERO",
               "path": [],
               "tail": "EXACT",
               "mark": "ZERO",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL"
           },
@@ -902,22 +1632,22 @@
             "initial": {
               "base": "ret",
               "path": [
-                "a"
+                "Pair.a"
               ],
               "tail": "EXACT",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
-              "base": "q",
+              "base": "arg0",
               "path": [
-                "f"
+                "Root.f"
               ],
               "tail": "EXACT",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL"
           },
@@ -925,157 +1655,157 @@
             "initial": {
               "base": "ret",
               "path": [
-                "b"
+                "Pair.b"
               ],
               "tail": "ANY",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
-              "base": "q",
+              "base": "arg0",
               "path": [],
               "tail": "ANY",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "DEMAND"
           }
         ]
       },
-      "C5Checks": [
+      "C5": [
         {
-          "method": "helper",
+          "row": "helper A",
           "initial": {
             "base": "ret",
             "path": [],
             "tail": "EXACT",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "demandEntry": {
+          "entry": {
             "base": "ret",
             "path": [],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "canEmit": true,
           "inside": true,
           "exit": {
-            "base": "p",
+            "base": "arg0",
             "path": [],
             "tail": "STAR",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "conclusion": {
-            "base": "p",
+          "raw": {
+            "base": "arg0",
             "path": [
-              "f"
+              "Root.f"
             ],
             "tail": "EXACT",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "published": true,
-          "resultLayer": "NORMAL"
+          "layer": "NORMAL"
         },
         {
-          "method": "wrapper A",
+          "row": "wrapper A",
           "initial": {
             "base": "ret",
             "path": [
-              "a"
+              "Pair.a"
             ],
             "tail": "EXACT",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "demandEntry": {
+          "entry": {
             "base": "ret",
             "path": [
-              "a"
+              "Pair.a"
             ],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "canEmit": true,
           "inside": true,
           "exit": {
-            "base": "q",
+            "base": "arg0",
             "path": [],
             "tail": "STAR",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "conclusion": {
-            "base": "q",
+          "raw": {
+            "base": "arg0",
             "path": [
-              "f"
+              "Root.f"
             ],
             "tail": "EXACT",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "published": true,
-          "resultLayer": "NORMAL"
+          "layer": "NORMAL"
         },
         {
-          "method": "wrapper B",
+          "row": "wrapper B",
           "initial": {
             "base": "ret",
             "path": [
-              "b"
+              "Pair.b"
             ],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "demandEntry": {
+          "entry": {
             "base": "ret",
             "path": [
-              "b"
+              "Pair.b"
             ],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "canEmit": true,
           "inside": true,
           "exit": {
-            "base": "q",
+            "base": "arg0",
             "path": [],
             "tail": "STAR",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "conclusion": {
-            "base": "q",
+          "raw": {
+            "base": "arg0",
             "path": [],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "published": true,
-          "resultLayer": "DEMAND"
+          "layer": "DEMAND"
         }
       ],
-      "persistentNonzeroRecordsAdded": {
+      "nativeNonzeroRecordsAdded": {
         "helper": [
           {
             "initial": {
@@ -1083,18 +1813,18 @@
               "path": [],
               "tail": "EXACT",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
-              "base": "p",
+              "base": "arg0",
               "path": [
-                "f"
+                "Root.f"
               ],
               "tail": "EXACT",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL",
             "direction": "BACKWARD"
@@ -1105,406 +1835,471 @@
             "initial": {
               "base": "ret",
               "path": [
-                "a"
+                "Pair.a"
               ],
               "tail": "EXACT",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
-              "base": "q",
+              "base": "arg0",
               "path": [
-                "f"
+                "Root.f"
               ],
               "tail": "EXACT",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL",
             "direction": "BACKWARD"
           }
         ]
       },
-      "selectedDemandsForRun3": {
+      "run3Demands": {
         "helper": [],
+        "box": [],
         "wrapper": [
           {
             "entry": {
-              "base": "q",
+              "base": "arg0",
               "path": [],
               "tail": "ANY",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "exit": {
               "base": "ret",
               "path": [
-                "b"
+                "Pair.b"
               ],
               "tail": "ANY",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             }
           }
         ]
-      },
-      "whyNoAEntryDemand": "Both exact A summaries are NORMAL nonzero singleton relations, so R1 retains them as records and selection omits them from next demand.",
-      "helperArrivals": [
-        {
-          "fact": {
-            "base": "ret",
-            "path": [],
-            "tail": "EXACT",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "DEMAND",
-          "origin": "independent main sinkExactT(helper(q)); no abstract-actual emission needed for this arm"
-        },
-        {
-          "fact": {
-            "base": "ret",
-            "path": [],
-            "tail": "EXACT",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "NORMAL",
-          "origin": "wrapper exact FLOW hypothesis; its standing subscription can use the independently generated live summary; C2 may add no initial and the proof does not depend on it"
-        }
-      ],
-      "independentHelperEmission": {
-        "entry": {
-          "base": "ret",
-          "path": [],
-          "tail": "ANY",
-          "mark": "FLOW",
-          "E": [],
-          "markExclusions": []
-        },
-        "actual": {
-          "base": "ret",
-          "path": [],
-          "tail": "EXACT",
-          "mark": "T",
-          "E": [],
-          "markExclusions": []
-        },
-        "initial": {
-          "base": "ret",
-          "path": [],
-          "tail": "EXACT",
-          "mark": "FLOW",
-          "E": [],
-          "markExclusions": []
-        },
-        "startLayer": "NORMAL",
-        "why": "Explicit selected same-prefix ANY/FLOW plus concrete EXACT/T cell; creates native helper record even if the second abstract-metadata arm were absent."
       }
     },
     {
       "run": 3,
       "direction": "FORWARD",
-      "fieldLimit": 2,
-      "rootFacts": [
-        {
-          "fact": {
-            "base": "q",
-            "path": [
-              "f",
-              "h"
-            ],
-            "tail": "ANY_TAINT",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "NORMAL",
-          "why": "Independent backward source hit selected this source; both f and h fit limit 2."
-        }
-      ],
-      "wrapperDemand": {
-        "entry": {
-          "base": "q",
-          "path": [],
-          "tail": "ANY",
-          "mark": "FLOW",
-          "E": [],
-          "markExclusions": []
-        },
-        "exit": {
-          "base": "ret",
-          "path": [
-            "b"
-          ],
-          "tail": "ANY",
-          "mark": "FLOW",
-          "E": [],
-          "markExclusions": []
-        }
-      },
-      "wrapperEmission": {
-        "submitted": {
+      "limit": 2,
+      "actualWrapperInput": {
+        "fact": {
           "base": "q",
           "path": [
-            "f",
-            "h"
+            "Root.f",
+            "Inner.h"
           ],
           "tail": "ANY_TAINT",
           "mark": "T",
-          "E": [],
-          "markExclusions": []
-        },
-        "initial": {
-          "base": "q",
-          "path": [
-            "f"
-          ],
-          "tail": "STAR",
-          "mark": "FLOW",
-          "E": [],
-          "markExclusions": []
+          "fieldExclusion": [],
+          "markExclusion": []
         },
         "layer": "NORMAL",
-        "why": "ANY/FLOW resolves first new field f; h remains represented by STAR correlation."
+        "cause": "direct backward source hit enables GEN; f,h both fit L2"
       },
-      "helperCall": {
-        "bindIn": {
-          "base": "p",
+      "wrapperAdmission": {
+        "entry": {
+          "base": "arg0",
+          "path": [],
+          "tail": "ANY",
+          "mark": "FLOW",
+          "fieldExclusion": [],
+          "markExclusion": []
+        },
+        "initial": {
+          "base": "arg0",
           "path": [
-            "f"
+            "Root.f"
           ],
           "tail": "STAR",
           "mark": "FLOW",
-          "E": [],
-          "markExclusions": []
+          "fieldExclusion": [],
+          "markExclusion": []
+        },
+        "startLayer": "NORMAL",
+        "cause": "one counted field f resolves current ANY; preserve unconsumed h via STAR correlation"
+      },
+      "helperCallInput": {
+        "fact": {
+          "base": "arg0",
+          "path": [
+            "Root.f"
+          ],
+          "tail": "STAR",
+          "mark": "FLOW",
+          "fieldExclusion": [],
+          "markExclusion": []
         },
         "layer": "NORMAL",
         "calleeEntryDemand": [],
-        "newNonzeroCalleeInitials": [],
-        "why": "Record replay at caller is independent of C2; no helper re-analysis is needed."
+        "newNonzeroInitials": [],
+        "whyRecordsStillApply": "caller record replay is independent of callee C2; same MethodKey as inferred helper record"
       },
-      "availableRecordsBeforeCall": [
-        {
-          "initial": {
-            "base": "p",
-            "path": [],
-            "tail": "STAR",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+      "availableNonzeroRecordsBeforeCall": {
+        "helper": [
+          {
+            "initial": {
+              "base": "arg0",
+              "path": [],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "conclusion": {
+              "base": "arg0",
+              "path": [],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "layer": "NORMAL",
+            "direction": "FORWARD"
           },
-          "conclusion": {
-            "base": "p",
-            "path": [],
-            "tail": "STAR",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+          {
+            "initial": {
+              "base": "ret",
+              "path": [],
+              "tail": "EXACT",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "conclusion": {
+              "base": "arg0",
+              "path": [
+                "Root.f"
+              ],
+              "tail": "EXACT",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "layer": "NORMAL",
+            "direction": "BACKWARD"
+          }
+        ],
+        "box": [
+          {
+            "initial": {
+              "base": "arg0",
+              "path": [],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "conclusion": {
+              "base": "arg0",
+              "path": [],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "layer": "NORMAL",
+            "direction": "FORWARD"
           },
-          "layer": "NORMAL",
-          "direction": "FORWARD",
-          "method": "helper"
-        },
-        {
-          "initial": {
-            "base": "q",
-            "path": [],
-            "tail": "STAR",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+          {
+            "initial": {
+              "base": "arg0",
+              "path": [],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "conclusion": {
+              "base": "ret",
+              "path": [
+                "Box.value"
+              ],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "layer": "NORMAL",
+            "direction": "FORWARD"
+          }
+        ],
+        "wrapper": [
+          {
+            "initial": {
+              "base": "arg0",
+              "path": [],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "conclusion": {
+              "base": "arg0",
+              "path": [],
+              "tail": "STAR",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "layer": "NORMAL",
+            "direction": "FORWARD"
           },
-          "conclusion": {
-            "base": "q",
-            "path": [],
-            "tail": "STAR",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "NORMAL",
-          "direction": "FORWARD",
-          "method": "wrapper"
-        },
-        {
-          "initial": {
-            "base": "ret",
-            "path": [],
-            "tail": "EXACT",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "conclusion": {
-            "base": "p",
-            "path": [
-              "f"
-            ],
-            "tail": "EXACT",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "NORMAL",
-          "direction": "BACKWARD",
-          "method": "helper"
-        },
-        {
-          "initial": {
-            "base": "ret",
-            "path": [
-              "a"
-            ],
-            "tail": "EXACT",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "conclusion": {
-            "base": "q",
-            "path": [
-              "f"
-            ],
-            "tail": "EXACT",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "NORMAL",
-          "direction": "BACKWARD",
-          "method": "wrapper"
-        }
-      ],
+          {
+            "initial": {
+              "base": "ret",
+              "path": [
+                "Pair.a"
+              ],
+              "tail": "EXACT",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "conclusion": {
+              "base": "arg0",
+              "path": [
+                "Root.f"
+              ],
+              "tail": "EXACT",
+              "mark": "FLOW",
+              "fieldExclusion": [],
+              "markExclusion": []
+            },
+            "layer": "NORMAL",
+            "direction": "BACKWARD"
+          }
+        ]
+      },
       "helperReplay": {
-        "native": {
+        "readView": {
           "initial": {
-            "base": "ret",
-            "path": [],
+            "base": "arg0",
+            "path": [
+              "Root.f"
+            ],
             "tail": "EXACT",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "conclusion": {
-            "base": "p",
-            "path": [
-              "f"
-            ],
-            "tail": "EXACT",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "NORMAL"
-        },
-        "reversedView": {
-          "premise": {
-            "base": "p",
-            "path": [
-              "f"
-            ],
-            "tail": "EXACT",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "result": {
             "base": "ret",
             "path": [],
             "tail": "EXACT",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "layer": "NORMAL"
         },
-        "provided": {
-          "base": "p",
+        "actual": {
+          "base": "arg0",
           "path": [
-            "f"
+            "Root.f"
           ],
           "tail": "STAR",
           "mark": "FLOW",
-          "E": [],
-          "markExclusions": []
+          "fieldExclusion": [],
+          "markExclusion": []
         },
-        "providedLayer": "NORMAL",
+        "actualLayer": "NORMAL",
         "applicable": false,
         "inside": true,
-        "exactTargetUnchangedScalarCell": {
-          "samePath": true,
-          "suffix": [],
-          "result": {
-            "base": "ret",
-            "path": [],
-            "tail": "EXACT",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "NORMAL"
-        },
-        "callerOriginal": {
-          "base": "q",
-          "path": [
-            "f"
-          ],
-          "tail": "STAR",
+        "targetExactCurrentScalarCell": "same path, suffix empty: target EXACT, shape.demand=false; input and record layers NORMAL",
+        "result": {
+          "base": "ret",
+          "path": [],
+          "tail": "EXACT",
           "mark": "FLOW",
-          "E": [],
-          "markExclusions": []
+          "fieldExclusion": [],
+          "markExclusion": []
         },
-        "bindBackIntoA": {
+        "resultLayer": "NORMAL"
+      },
+      "wrongAStages": [
+        {
           "initial": {
-            "base": "q",
+            "base": "arg0",
             "path": [
-              "f"
+              "Root.f"
             ],
             "tail": "STAR",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "conclusion": {
             "base": "a",
             "path": [],
             "tail": "EXACT",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "layer": "NORMAL"
+        },
+        {
+          "initial": {
+            "base": "arg0",
+            "path": [
+              "Root.f"
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "r",
+            "path": [
+              "Pair.a"
+            ],
+            "tail": "EXACT",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "NORMAL",
+          "cause": "ordinary STAR fieldwrite preserves incoming exact tail"
+        },
+        {
+          "initial": {
+            "base": "arg0",
+            "path": [
+              "Root.f"
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "ret",
+            "path": [
+              "Pair.a"
+            ],
+            "tail": "EXACT",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "NORMAL",
+          "sound": false
         }
-      },
+      ],
+      "BStages": [
+        {
+          "initial": {
+            "base": "arg0",
+            "path": [
+              "Root.f"
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "b",
+            "path": [
+              "Box.value",
+              "Root.f"
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "NORMAL",
+          "cause": "Box normal record plus result binding; two fields fit L2"
+        },
+        {
+          "initial": {
+            "base": "arg0",
+            "path": [
+              "Root.f"
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "r",
+            "path": [
+              "Pair.b",
+              "Box.value",
+              "Root.f"
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "NORMAL",
+          "cause": "normal r.b=b value transfer before limiting"
+        },
+        {
+          "initial": {
+            "base": "arg0",
+            "path": [
+              "Root.f"
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "r",
+            "path": [
+              "Pair.b",
+              "Box.value"
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "DEMAND",
+          "cause": "three fields exceed L2; cut at second known field"
+        },
+        {
+          "initial": {
+            "base": "arg0",
+            "path": [
+              "Root.f"
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "conclusion": {
+            "base": "ret",
+            "path": [
+              "Pair.b",
+              "Box.value"
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "fieldExclusion": [],
+            "markExclusion": []
+          },
+          "layer": "DEMAND",
+          "cause": "ordinary return"
+        }
+      ],
       "rawSummaryStores": {
-        "helper": [
-          {
-            "initial": {
-              "base": "ZERO",
-              "path": [],
-              "tail": "EXACT",
-              "mark": "ZERO",
-              "E": [],
-              "markExclusions": []
-            },
-            "conclusion": {
-              "base": "ZERO",
-              "path": [],
-              "tail": "EXACT",
-              "mark": "ZERO",
-              "E": [],
-              "markExclusions": []
-            },
-            "layer": "NORMAL"
-          }
-        ],
+        "helper": "No new nonzero initial; ordinary ZERO only.",
+        "box": "No new nonzero initial; ordinary ZERO only.",
         "wrapper": [
           {
             "initial": {
@@ -1512,274 +2307,277 @@
               "path": [],
               "tail": "EXACT",
               "mark": "ZERO",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
               "base": "ZERO",
               "path": [],
               "tail": "EXACT",
               "mark": "ZERO",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL"
           },
           {
             "initial": {
-              "base": "q",
+              "base": "arg0",
               "path": [
-                "f"
+                "Root.f"
               ],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
-              "base": "q",
+              "base": "arg0",
               "path": [
-                "f"
+                "Root.f"
               ],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL"
           },
           {
             "initial": {
-              "base": "q",
+              "base": "arg0",
               "path": [
-                "f"
+                "Root.f"
               ],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
               "base": "ret",
               "path": [
-                "a"
+                "Pair.a"
               ],
               "tail": "EXACT",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL",
             "sound": false
           },
           {
             "initial": {
-              "base": "q",
+              "base": "arg0",
               "path": [
-                "f"
+                "Root.f"
               ],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
               "base": "ret",
               "path": [
-                "b"
+                "Pair.b",
+                "Box.value"
               ],
               "tail": "ANY",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "DEMAND"
           }
         ]
       },
-      "C5Checks": [
+      "C5": [
         {
-          "row": "wrong A",
+          "row": "A",
           "initial": {
-            "base": "q",
+            "base": "arg0",
             "path": [
-              "f"
+              "Root.f"
             ],
             "tail": "STAR",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "demandEntry": {
-            "base": "q",
+          "entry": {
+            "base": "arg0",
             "path": [],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "canEmit": true,
           "inside": true,
-          "demandExit": {
+          "exit": {
             "base": "ret",
             "path": [
-              "b"
+              "Pair.b"
             ],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "conclusion": {
+          "raw": {
             "base": "ret",
             "path": [
-              "a"
+              "Pair.a"
             ],
             "tail": "EXACT",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "published": false,
-          "why": "a and b are distinct first accessors."
+          "cause": "Pair.a and Pair.b are apart"
         },
         {
           "row": "B",
           "initial": {
-            "base": "q",
+            "base": "arg0",
             "path": [
-              "f"
+              "Root.f"
             ],
             "tail": "STAR",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "demandEntry": {
-            "base": "q",
+          "entry": {
+            "base": "arg0",
             "path": [],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "canEmit": true,
           "inside": true,
-          "demandExit": {
+          "exit": {
             "base": "ret",
             "path": [
-              "b"
+              "Pair.b"
             ],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "conclusion": {
+          "raw": {
             "base": "ret",
             "path": [
-              "b"
+              "Pair.b",
+              "Box.value"
             ],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "published": true,
-          "resultLayer": "DEMAND"
+          "layer": "DEMAND",
+          "cause": "descendant of demanded ret.b.ANY"
         },
         {
-          "row": "q frame",
+          "row": "argument frame",
           "initial": {
-            "base": "q",
+            "base": "arg0",
             "path": [
-              "f"
+              "Root.f"
             ],
             "tail": "STAR",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "demandEntry": {
-            "base": "q",
+          "entry": {
+            "base": "arg0",
             "path": [],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "canEmit": true,
           "inside": true,
-          "demandExit": {
+          "exit": {
             "base": "ret",
             "path": [
-              "b"
+              "Pair.b"
             ],
             "tail": "ANY",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
-          "conclusion": {
-            "base": "q",
+          "raw": {
+            "base": "arg0",
             "path": [
-              "f"
+              "Root.f"
             ],
             "tail": "STAR",
             "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
+            "fieldExclusion": [],
+            "markExclusion": []
           },
           "published": false,
-          "why": "Argument q and Return are different bases."
+          "cause": "argument/return bases differ"
         }
       ],
-      "persistentNonzeroRecordsAdded": {
+      "nativeNonzeroRecordsAdded": {
         "wrapper": [
           {
             "initial": {
-              "base": "q",
+              "base": "arg0",
               "path": [
-                "f"
+                "Root.f"
               ],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
-              "base": "q",
+              "base": "arg0",
               "path": [
-                "f"
+                "Root.f"
               ],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL",
             "direction": "FORWARD"
           },
           {
             "initial": {
-              "base": "q",
+              "base": "arg0",
               "path": [
-                "f"
+                "Root.f"
               ],
               "tail": "STAR",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "conclusion": {
               "base": "ret",
               "path": [
-                "a"
+                "Pair.a"
               ],
               "tail": "EXACT",
               "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
+              "fieldExclusion": [],
+              "markExclusion": []
             },
             "layer": "NORMAL",
             "sound": false,
@@ -1787,166 +2585,125 @@
           }
         ]
       },
-      "properWrapperRecordDoesNotAnswerRealInput": {
-        "record": {
-          "initial": {
-            "base": "ret",
-            "path": [
-              "a"
-            ],
-            "tail": "EXACT",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "conclusion": {
-            "base": "q",
-            "path": [
-              "f"
-            ],
-            "tail": "EXACT",
-            "mark": "FLOW",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "NORMAL"
-        },
-        "reversedPremise": {
-          "base": "q",
+      "properWrapperRecordCheck": {
+        "viewPremise": {
+          "base": "arg0",
           "path": [
-            "f"
+            "Root.f"
           ],
           "tail": "EXACT",
           "mark": "FLOW",
-          "E": [],
-          "markExclusions": []
+          "fieldExclusion": [],
+          "markExclusion": []
         },
         "actual": {
           "base": "q",
           "path": [
-            "f",
-            "h"
+            "Root.f",
+            "Inner.h"
           ],
           "tail": "ANY_TAINT",
           "mark": "T",
-          "E": [],
-          "markExclusions": []
+          "fieldExclusion": [],
+          "markExclusion": []
         },
         "applicable": false,
         "inside": false,
-        "why": "EXACT at q.f does not cover q.f.h, and MUST at q.f.h does not contain ancestor q.f."
+        "cause": "Exact q.f does not cover descendant q.f.h; MUST at q.f.h does not contain ancestor q.f"
       },
-      "selectedDemandsForRun4": {
-        "wrapper": [
-          {
-            "entry": {
-              "base": "ret",
-              "path": [
-                "b"
-              ],
-              "tail": "ANY",
-              "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
-            },
-            "exit": {
-              "base": "q",
-              "path": [
-                "f"
-              ],
-              "tail": "STAR",
-              "mark": "FLOW",
-              "E": [],
-              "markExclusions": []
-            }
-          }
-        ]
+      "run4DemandFromB": {
+        "entry": {
+          "base": "ret",
+          "path": [
+            "Pair.b",
+            "Box.value"
+          ],
+          "tail": "ANY",
+          "mark": "FLOW",
+          "fieldExclusion": [],
+          "markExclusion": []
+        },
+        "exit": {
+          "base": "arg0",
+          "path": [
+            "Root.f"
+          ],
+          "tail": "STAR",
+          "mark": "FLOW",
+          "fieldExclusion": [],
+          "markExclusion": []
+        }
       }
     }
   ],
-  "falseNormalWitness": {
+  "falseNormalPair": {
     "input": {
-      "base": "q",
+      "base": "wrapper arg0",
       "path": [
-        "f",
-        "h"
+        "Root.f",
+        "Inner.h"
       ],
       "mark": "T"
     },
     "claimedOutput": {
-      "base": "ret",
+      "base": "wrapper ret",
       "path": [
-        "a"
+        "Pair.a"
       ],
       "mark": "T"
     },
-    "rawFalseSummary": {
-      "initial": {
-        "base": "q",
-        "path": [
-          "f"
-        ],
-        "tail": "STAR",
-        "mark": "FLOW",
-        "E": [],
-        "markExclusions": []
-      },
-      "conclusion": {
-        "base": "ret",
-        "path": [
-          "a"
-        ],
-        "tail": "EXACT",
-        "mark": "FLOW",
-        "E": [],
-        "markExclusions": []
-      },
-      "layer": "NORMAL",
-      "sound": false
-    },
-    "actualAOutputs": {
+    "realAOutput": {
       "prefix": [
-        "a",
-        "h"
+        "Pair.a",
+        "Inner.h"
       ],
       "tail": "ANY_TAINT",
       "mark": "T"
     },
-    "actualBOutputs": {
+    "realBOutput": {
       "prefix": [
-        "b"
+        "Pair.b",
+        "Box.value",
+        "Root.f",
+        "Inner.h"
       ],
-      "tail": "ANY",
+      "tail": "ANY_TAINT",
       "mark": "T"
     },
-    "whyFalse": "helper reads f, so source at f.h reaches helper ret.h, then pair ret.a.h. It does not mark ret.a root. The independent MAY route reaches ret.b only; a != b.",
-    "laterExposure": "If kept, the false F3 native forward wrapper record applies to the actual q.f.h.MUST/T in run5 by STAR coverage and old EXACT-target suffix dropping; it can emit pair.a.EXACT/T NORMAL without C5 restriction. This continuation is reasoned, not a measured run."
+    "notTrue": "No ordinary statement or configured rule marks Pair.a root. The B route goes through Pair.b, distinct from a. Correct helper field-read flow preserves h."
   },
+  "allRowsInventoryQualification": {
+    "normalFramesIncluded": true,
+    "zeroRowsIncluded": "ZERO_KEEP and ZERO raw identities are included symbolically; empty constructors/source/sink bodies have only ordinary argument/control identities and no extra marked return relation.",
+    "concreteInitials": "Run1Abstraction emits concrete T initials only for requested marks. No CM/cleaner exists inside helper, box, or wrapper, and main sinks already receive concrete T facts. No concrete T initial is required/emitted on this minimal causal route.",
+    "noMissingCover": "The only helper NORMAL return-related record is the new exact backward row. F1 helper return is DEMAND; normal p argument identities do not cover a return relation. Box normal return is another method and Box.value endpoint. No normal p.f.STAR -> helperRet.STAR cover exists."
+  },
+  "proofBoundary": "This is a complete finite causal operator trace for ordinary code under the proposed domain. It is not a JVM execution or a proof of all alias analysis/interpreter optimizations. The counterexample is conditional only on retaining the current scalar target-EXACT cell and inside matching when new abstract EXACT support is enabled.",
   "sourceReferences": {
-    "current abstract-input eligibility": "Reference.kt:150-155 accepts any mark under an abstract demand after overlap; new RestrictedInitialPolicy.acceptsMark(flow,_) is true.",
-    "new selected emitter": "spec/lean/proposals/initial-emission/RestrictedInitialPolicy.lean:acceptsMark/rawTemplate/emit (same-prefix exact, root ANY, and first-field childStar).",
-    "record matching": "Reference.kt:75-79; Summary.kt:24-39 and insidePart:84-102.",
-    "hazard cell": "Reference.kt:261-275: below case target EXACT returns target EXACT and demand=false. S8 currently makes abstract use unreachable.",
-    "raw before C5": "RunMethodAnalyzer.kt:752-787 adds summaries.add before queuePublications and demand.intersect.",
-    "normal persistence": "IterationDriver.kt:135; RecordStore.kt:105-118 reads store.all and skips only DEMAND/noneligible premise kinds.",
-    "normal omitted from demand": "Demand.kt:90-96; HandOff.kt:34-44.",
-    "source seed": "HandOff.kt:135-154 takes backward SourceHitStore occurrences."
+    "ordinaryReadsWrites": "JIRStatementForms.kt:83-107; MicroEdgeBuilder.kt:58-83",
+    "ordinaryReturn": "JIRStatementForms.kt:55; MicroEdgeBuilder.move:51-55",
+    "sourceRule": "JIRRuleForms.kt:105-133,388,462-481",
+    "fieldCut": "Limit.kt:7-29,46-87",
+    "normalRecords": "RecordStore.kt:105-118; IterationDriver.kt:135",
+    "recordReplay": "SubscriptionManager.kt:232-260; Reference.kt:75-79",
+    "unrepairedExactCell": "Reference.kt:261-275 (guarded off for abstract EXACT in current production)",
+    "rawBeforePublication": "RunMethodAnalyzer.kt:752-787",
+    "emission": "proposals/initial-emission/RestrictedInitialPolicy.lean acceptsMark/rawTemplate/render/emit"
   },
-  "sourceSHA256": {
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": "b0452a5b3d356a20d7f042cd6486976b7c96db28d2cefa663e0c66e76d7ec593",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt": "9bef227f4e2fbc7bcca7d44aed889f6398782b15f24eb1531f25dfa37c5ae0cc",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RecordStore.kt": "aa6c6a89915d52d049b4e946cf0271ea1a55fa00fab14f162196bc4635f715d2",
-    "spec/lean/proposals/initial-emission/RestrictedInitialPolicy.lean": "077b0e4277b491eba8da35eb635a153dbd9e182bf49e614c49743a48c62444f6"
-  },
+  "wrapperStatementOrder": [
+    "r = new Pair()",
+    "a = helper(q)",
+    "r.a = a",
+    "b = box(q)",
+    "r.b = b",
+    "return r"
+  ],
+  "sourceRevision": "f99ed7c1afa53f4eff03850a844de180bc02ba6d",
+  "supersedes": "Declared opaqueMay/makePair operator trace from f99ed7c1a; that historical certificate remains in Lean. The active example uses ordinary code plus source/sink rules only.",
   "validation": {
-    "result": "PASS: finite closed Lean operator certificate; not a current JVM reproduction",
-    "latestModeledRun": "run-3",
-    "command": "cd spec/lean && lake env lean proposals/initial-emission/RestrictedInitialPolicy.lean",
-    "closedTraceNamespace": "RestrictedInitialPolicy.ClosedExactReplay",
-    "closedTraceTheoremCount": 11,
-    "fullModelAudit": {
+    "formal": {
       "file": "spec/lean/proposals/initial-emission/RestrictedInitialPolicy.lean",
-      "sha256": "077b0e4277b491eba8da35eb635a153dbd9e182bf49e614c49743a48c62444f6",
+      "sha256": "d05400801fe135e02c3ec81a80bd565ef018405a0acb4a3cbd951d11d58e8545",
       "theorems": [
         "RestrictedInitialPolicy.mark_accepts_itself",
         "RestrictedInitialPolicy.template_is_its_own_emission",
@@ -1976,203 +2733,53 @@
         "RestrictedInitialPolicy.ClosedExactReplay.persisted_normal_has_a_false_pair",
         "RestrictedInitialPolicy.ClosedExactReplay.other_wrapper_paths_do_not_supply_false_a",
         "RestrictedInitialPolicy.ClosedExactReplay.false_normal_pair_is_absent_from_declared_wrapper_relation",
-        "RestrictedInitialPolicy.ClosedExactReplay.checked"
+        "RestrictedInitialPolicy.ClosedExactReplay.checked",
+        "RestrictedInitialPolicy.CodeOnlyExactReplay.every_code_data_edge_is_star_to_star",
+        "RestrictedInitialPolicy.CodeOnlyExactReplay.code_generated_box_record_and_run1_cut",
+        "RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_box_replay_builds_the_coarse_b_demand",
+        "RestrictedInitialPolicy.CodeOnlyExactReplay.helper_inventory_has_no_hidden_cover",
+        "RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_argument_frames_support_the_backward_pass",
+        "RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_zero_frames_generate_no_extra_data",
+        "RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_writes_have_only_the_certified_frames",
+        "RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_normal_is_persisted",
+        "RestrictedInitialPolicy.CodeOnlyExactReplay.concrete_code_keeps_h",
+        "RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_pair",
+        "RestrictedInitialPolicy.CodeOnlyExactReplay.checked"
       ],
-      "count": 29,
+      "count": 40,
       "exitCode": 0,
-      "executableTrueCount": 2,
+      "executableTrueCount": 3,
       "forbiddenAxioms": false,
-      "auditLogSha256": "1982b5384ff08cc6068374cd6aa33bf3be267f438fa55a8c4f737c29cd0d0964",
-      "auditOutput": "true\n'RestrictedInitialPolicy.template_is_its_own_emission' depends on axioms: [propext]\n'RestrictedInitialPolicy.emission_is_idempotent' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_canonical_template' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_classifier_sound_and_complete' depends on axioms: [propext]\n'RestrictedInitialPolicy.entry_intersection_exactly_matches_emitter_image' depends on axioms: [propext]\n'RestrictedInitialPolicy.different_full_marks_never_emit' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.emitted_mark_is_demand_mark' depends on axioms: [propext]\n'RestrictedInitialPolicy.concrete_star_uses_current_demand_start' depends on axioms: [propext]\ntrue\n'RestrictedInitialPolicy.ClosedExactReplay.source_and_helper_record_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.wrapper_backward_and_run3_input_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.no_covering_helper_relation_is_assumed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_row_is_raw_and_persisted_but_not_published' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.persisted_normal_has_a_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_pair_is_absent_from_declared_wrapper_relation' depends on axioms: [propext]\n'RestrictedInitialPolicy.mark_accepts_itself' depends on axioms: [propext]\n'RestrictedInitialPolicy.template_is_its_own_emission' depends on axioms: [propext]\n'RestrictedInitialPolicy.selected_template_is_valid' depends on axioms: [propext]\n'RestrictedInitialPolicy.emission_is_idempotent' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_canonical_template' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_self_projection' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_classifier_sound_and_complete' depends on axioms: [propext]\n'RestrictedInitialPolicy.entry_intersection_exactly_matches_emitter_image' depends on axioms: [propext]\n'RestrictedInitialPolicy.emitted_mark_is_demand_mark' depends on axioms: [propext]\n'RestrictedInitialPolicy.emitted_input_has_valid_must_flag' depends on axioms: [propext]\n'RestrictedInitialPolicy.different_full_marks_never_emit' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.user_pinned_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.any_demand_one_step_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.same_prefix_and_ancestor_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_false_positives_are_rejected' depends on axioms: [propext]\n'RestrictedInitialPolicy.failed_matches_do_not_emit' depends on axioms: [propext]\n'RestrictedInitialPolicy.concrete_star_uses_current_demand_start' depends on axioms: [propext]\n'RestrictedInitialPolicy.checked' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.zero_frames_do_not_add_a_hidden_return_cover' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.run1_reports_and_frontiers_are_derived' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.source_and_helper_record_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.wrapper_backward_and_run3_input_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.no_covering_helper_relation_is_assumed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_row_is_raw_and_persisted_but_not_published' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.concrete_program_keeps_the_suffix' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.persisted_normal_has_a_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.other_wrapper_paths_do_not_supply_false_a' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_pair_is_absent_from_declared_wrapper_relation' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.checked' depends on axioms: [propext]\n"
+      "auditLogSha256": "e23b40b4ac7cc770c98c785a871109210dbdf4f4ad9bc954f4a8dd7c31fa3864",
+      "auditOutput": "true\n'RestrictedInitialPolicy.template_is_its_own_emission' depends on axioms: [propext]\n'RestrictedInitialPolicy.emission_is_idempotent' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_canonical_template' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_classifier_sound_and_complete' depends on axioms: [propext]\n'RestrictedInitialPolicy.entry_intersection_exactly_matches_emitter_image' depends on axioms: [propext]\n'RestrictedInitialPolicy.different_full_marks_never_emit' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.emitted_mark_is_demand_mark' depends on axioms: [propext]\n'RestrictedInitialPolicy.concrete_star_uses_current_demand_start' depends on axioms: [propext]\ntrue\n'RestrictedInitialPolicy.ClosedExactReplay.source_and_helper_record_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.wrapper_backward_and_run3_input_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.no_covering_helper_relation_is_assumed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_row_is_raw_and_persisted_but_not_published' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.persisted_normal_has_a_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_pair_is_absent_from_declared_wrapper_relation' depends on axioms: [propext]\ntrue\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_generated_box_record_and_run1_cut' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.every_code_data_edge_is_star_to_star' does not depend on any axioms\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_box_replay_builds_the_coarse_b_demand' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_writes_have_only_the_certified_frames' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.helper_inventory_has_no_hidden_cover' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_argument_frames_support_the_backward_pass' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_zero_frames_generate_no_extra_data' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_normal_is_persisted' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.mark_accepts_itself' depends on axioms: [propext]\n'RestrictedInitialPolicy.template_is_its_own_emission' depends on axioms: [propext]\n'RestrictedInitialPolicy.selected_template_is_valid' depends on axioms: [propext]\n'RestrictedInitialPolicy.emission_is_idempotent' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_canonical_template' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_self_projection' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_classifier_sound_and_complete' depends on axioms: [propext]\n'RestrictedInitialPolicy.entry_intersection_exactly_matches_emitter_image' depends on axioms: [propext]\n'RestrictedInitialPolicy.emitted_mark_is_demand_mark' depends on axioms: [propext]\n'RestrictedInitialPolicy.emitted_input_has_valid_must_flag' depends on axioms: [propext]\n'RestrictedInitialPolicy.different_full_marks_never_emit' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.user_pinned_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.any_demand_one_step_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.same_prefix_and_ancestor_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_false_positives_are_rejected' depends on axioms: [propext]\n'RestrictedInitialPolicy.failed_matches_do_not_emit' depends on axioms: [propext]\n'RestrictedInitialPolicy.concrete_star_uses_current_demand_start' depends on axioms: [propext]\n'RestrictedInitialPolicy.checked' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.zero_frames_do_not_add_a_hidden_return_cover' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.run1_reports_and_frontiers_are_derived' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.source_and_helper_record_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.wrapper_backward_and_run3_input_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.no_covering_helper_relation_is_assumed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_row_is_raw_and_persisted_but_not_published' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.concrete_program_keeps_the_suffix' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.persisted_normal_has_a_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.other_wrapper_paths_do_not_supply_false_a' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_pair_is_absent_from_declared_wrapper_relation' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.checked' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.every_code_data_edge_is_star_to_star' does not depend on any axioms\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_generated_box_record_and_run1_cut' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_box_replay_builds_the_coarse_b_demand' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.helper_inventory_has_no_hidden_cover' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_argument_frames_support_the_backward_pass' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_zero_frames_generate_no_extra_data' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_writes_have_only_the_certified_frames' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_normal_is_persisted' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.concrete_code_keeps_h' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.checked' depends on axioms: [propext]\n"
     },
-    "scope": "Explicit FULL/Empty-E nonstatic program and schedule 1,1,2. Generic AP binding, limiting, C5, handoff plus explicit prospective current Kotlin target-EXACT cell. Source MUST certainty is supplied as an explicit admission flag. No whole-driver or JVM integration proof.",
-    "pending": "Select uncovered exact FLOW record application to a broad STAR FLOW input. No repair is assumed."
+    "activeNamespace": "RestrictedInitialPolicy.CodeOnlyExactReplay",
+    "activeTheoremCount": 11,
+    "latestModeledIteration": "run-3",
+    "schedule": [
+      1,
+      1,
+      2
+    ],
+    "java": {
+      "command": "javac -d /tmp/code-only-exact-replay-java /tmp/code-only-exact-replay-java/ExactReplayExample.java",
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": "",
+      "javaSHA256": "6708c945fb30d803d3fd6f23095b1701ee38dc96a08d3b8c9cdff36f9ebfcf9e",
+      "scope": "Java syntax/type compilation only; source/sink rules and proposed AP domain are checked separately."
+    },
+    "command": "cd spec/lean && lake env lean proposals/initial-emission/RestrictedInitialPolicy.lean",
+    "pendingDecision": "Application of an uncovered exact FLOW record to broad STAR FLOW input remains unselected. The certificate tests the unchanged scalar cell, not a repair."
   },
-  "abstractEligibilityBridge": {
-    "currentSource": "Reference.emit:150-155 accepts any actual mark under abstract demand after overlap; RestrictedInitialPolicy.acceptsMark FLOW _ = true.",
-    "selectedMeaning": "Current abstract-input eligibility remains. New shape choice keeps same-path EXACT; this changes admitted shape, not the mark eligibility gate.",
-    "independentArm": "The direct helper exact probe sends concrete ret.EXACT/T. It creates helper ret.EXACT/FLOW initial, live summary and native record. Wrapper already has the standing exact FLOW input subscription. If that nested abstract input creates no initial, the live summary still applies. No new abstract-input emission rule is required by this counterexample.",
-    "requiredForCounterexample": false
-  },
-  "initialInventoryScope": {
-    "completeForStatedNoRequestModel": true,
-    "run1Initials": {
-      "main": [
-        "ZERO"
-      ],
-      "helper": [
-        "ZERO",
-        "p.STAR/FLOW"
-      ],
-      "wrapper": [
-        "ZERO",
-        "q.STAR/FLOW"
-      ]
-    },
-    "noAutomaticFullMarkInitial": "Run1Abstraction.emit always answers policy(input) FLOW, then answers concrete initials only for borrowRequests(input) rows (Run1Abstraction.kt:31-41). No helper/wrapper mark checks or cleaners exist here. The main sinks consume already-concrete T facts. Thus no local T request is required in this stated case.",
-    "ordinaryFrames": "ZERO_KEEP at all statements and argument identities are explicit; they do not create marked return relations."
-  },
-  "additionalRequestedTFamilyRobustness": {
-    "status": "Side-case audit if a richer variant also registers T requests; not falsely claimed as unconditional emission in this no-request program.",
-    "run1AdditionalRawRows": {
-      "helper": [
-        {
-          "initial": {
-            "base": "p",
-            "path": [],
-            "tail": "STAR",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "conclusion": {
-            "base": "p",
-            "path": [],
-            "tail": "STAR",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "DEMAND"
-        },
-        {
-          "initial": {
-            "base": "p",
-            "path": [],
-            "tail": "STAR",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "conclusion": {
-            "base": "ret",
-            "path": [],
-            "tail": "ANY",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "DEMAND"
-        }
-      ],
-      "wrapper": [
-        {
-          "initial": {
-            "base": "q",
-            "path": [],
-            "tail": "STAR",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "conclusion": {
-            "base": "q",
-            "path": [],
-            "tail": "STAR",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "DEMAND"
-        },
-        {
-          "initial": {
-            "base": "q",
-            "path": [],
-            "tail": "STAR",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "conclusion": {
-            "base": "ret",
-            "path": [
-              "a"
-            ],
-            "tail": "ANY",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "DEMAND"
-        },
-        {
-          "initial": {
-            "base": "q",
-            "path": [],
-            "tail": "STAR",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "conclusion": {
-            "base": "ret",
-            "path": [
-              "b"
-            ],
-            "tail": "ANY",
-            "mark": "T",
-            "E": [],
-            "markExclusions": []
-          },
-          "layer": "DEMAND"
-        }
-      ]
-    },
-    "normalPersistenceRun1": "These concrete STAR/T initials start DEMAND; no such native NORMAL records are persisted. Existing FLOW argument identity records remain available.",
-    "possibleRun2DemandEntries": {
-      "helper": [
-        {
-          "base": "p",
-          "path": [],
-          "tail": "STAR",
-          "mark": "T",
-          "E": [],
-          "markExclusions": []
-        },
-        {
-          "base": "ret",
-          "path": [],
-          "tail": "ANY",
-          "mark": "T",
-          "E": [],
-          "markExclusions": []
-        }
-      ],
-      "wrapper": [
-        {
-          "base": "q",
-          "path": [],
-          "tail": "STAR",
-          "mark": "T",
-          "E": [],
-          "markExclusions": []
-        },
-        {
-          "base": "ret",
-          "path": [
-            "a"
-          ],
-          "tail": "ANY",
-          "mark": "T",
-          "E": [],
-          "markExclusions": []
-        },
-        {
-          "base": "ret",
-          "path": [
-            "b"
-          ],
-          "tail": "ANY",
-          "mark": "T",
-          "E": [],
-          "markExclusions": []
-        }
-      ]
-    },
-    "argumentEntryConsequence": "A same-root ANY/T arrival under precise STAR/T entry may emit arg.EXACT/T NORMAL. Backward processing gives only arg.EXACT/T -> arg.EXACT/T NORMAL argument identity; it does not make a return-premise read record. Such a root argument exact record cannot match actual q.f.h.MUST/T.",
-    "returnEntryConsequence": "Concrete ret.EXACT/T input under ret.ANY/T can produce ret.EXACT/T -> p.f.EXACT/T NORMAL. This is the concrete analogue of the correct point relation. A concrete STAR/T broad initial remains DEMAND on application, so it does not justify the false NORMAL FLOW result.",
-    "whyDoesNotRepairFault": "Concrete T rows cannot subsume an abstract FLOW relation (concrete mark is not a superset of FLOW). Their exact premises do not cover actual q.f.h.MUST. No argument identity supplies ret.a root. Extra T demands may cause additional DEMAND work but do not remove the independently generated NORMAL FLOW record.",
-    "storageNote": "Current FLOW-backed summary storage may already remove some unprotected diagonal T rows. The counterexample does not require those rows to survive."
+  "sourceSHA256": {
+    "spec/lean/proposals/initial-emission/RestrictedInitialPolicy.lean": "d05400801fe135e02c3ec81a80bd565ef018405a0acb4a3cbd951d11d58e8545",
+    "docs/design/bidirectional-exact-flow-replay-trace-20261029.md": "334bd36292fd97270a55ac59de8bb8d83b0497d55978d7fb8decd6726fef13c6",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/MicroEdgeBuilder.kt": "557f90c24c2b1aa0182afffa2039344b4b5c3e9b75a3bbf1d148b09b798c2963",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/MicroEdge.kt": "4a1523f257fafa2c51ce6fb227fa3f5b001d6c921dc925e04c6d83afc3d687a3",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": "b0452a5b3d356a20d7f042cd6486976b7c96db28d2cefa663e0c66e76d7ec593",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt": "9bef227f4e2fbc7bcca7d44aed889f6398782b15f24eb1531f25dfa37c5ae0cc",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RecordStore.kt": "aa6c6a89915d52d049b4e946cf0271ea1a55fa00fab14f162196bc4635f715d2",
+    "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRRuleForms.kt": "7370b426ba4edb241f6b0c39bf27854214a91f4a5ee81f254dde5862d7faf285"
   }
 }
