@@ -3,6 +3,12 @@
 Date: 29 October 2026. Analyzed revision: `557450fecb3e7432a60ecd1547ccf0acc0470e3e`.
 This is an investigation and a formal model. It does not change the analyzer.
 
+The [one-step refinement update](bidirectional-one-step-initial-refinement-20261029.md)
+supersedes plain intersection as the emission proposal. After a new field is
+known, emit STAR at that field. It also adds abstract EXACT and MUST shapes
+and the selected concrete-STAR DEMAND coverage rule. Section 5 below remains
+a diagnostic of scalar intersection, not the complete selected emitter.
+
 The selected goal is to refine the previous demand from the submitted fact.
 A restricted forward run must not start the same broad FLOW analysis again.
 In particular, run-3 must not emit `p.* / FLOW` only because its demand entry
