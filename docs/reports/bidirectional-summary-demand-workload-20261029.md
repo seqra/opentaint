@@ -441,6 +441,11 @@ integration proof remain for the next design step.
 
 ## 8. Next design targets
 
+The [implementation draft](../design/bidirectional-summary-demand-workload-implementation-20261029.md)
+specifies the selected first two targets and their demand-rewrite dependency.
+Its new formal checks are not new project measurements. A closed EXACT
+application case still needs a behavior decision.
+
 The [next-iteration proposal](../design/bidirectional-next-demand-work-20261029.md)
 now specifies the first two directions. It places them after the selected
 one-step demand rewrite: prune impossible fixed-entry C5 branches, then reuse

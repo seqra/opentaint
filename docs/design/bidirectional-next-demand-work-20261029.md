@@ -4,6 +4,11 @@ Date: 29 October 2026. Reviewed source: `71156f061`.
 Status: proposal only. Production code is unchanged.
 Use FULL marks by default and the selected `1,1,2,3,...` field-limit schedule.
 
+The [implementation draft](bidirectional-summary-demand-workload-implementation-20261029.md)
+defines the code boundaries, pure filtering API, packed-row control flow,
+private eligibility memo, and additional formal contracts. It keeps the
+uncovered EXACT replay decision explicit; no runtime change is included.
+
 The iteration has three ordered parts. First implement the selected
 [one-step demand refinement and entry intersection](bidirectional-one-step-initial-refinement-20261029.md).
 Then remove impossible C5 static branches. Then remove repeated owner
