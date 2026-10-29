@@ -1,6 +1,6 @@
 # One-step initial refinement
 
-Date: 29 October 2026. Source revision: `f6f544ab5`.
+Date: 29 October 2026. Source revision: `1a40d9008`.
 This note records the selected changes and the remaining proof gaps.
 It does not change production code.
 
@@ -186,7 +186,7 @@ still needs all ancestor, equal-prefix, field-exclusion, and mark-mode cells.
 The model pins the exception boundary: `p.f.$/T` stays exact, but every exact
 path with at least two new fields stops at `p.f.*/T` in DEMAND.
 
-The new file has 35 checked theorem declarations. It proves that the current
+The new file has 41 checked theorem declarations. It proves that the current
 concrete STAR start retains STAR and enters DEMAND; its computed transfers
 remain DEMAND; and application of a DEMAND summary cannot produce a NORMAL
 result. The NORMAL abstract-EXACT counterexample is a different case.
@@ -206,3 +206,122 @@ No new project measurement was run. The latest saved local cycle completes
 **run-9** at its test cap; its control stops at **run-3**. The latest full
 OWASP measurement reaches **run-12**, completes **run-11**, and accepts the
 run-11 forward report. These measurements predate the proposed changes.
+
+## 8. Entry intersection must agree with initial emission
+
+Yes: update the demand-entry intersection used to restrict a summary
+`A -> B`. Ordinary location overlap or containment is insufficient.
+
+Define the directed condition:
+
+```text
+CanEmit(D_c, A) :=
+    there is a valid submitted fact a for which Emit(D_c, a) produces A
+
+EntryIntersection(D_c, A) :=
+    A      if CanEmit(D_c, A)
+    empty  otherwise
+```
+
+The supplied witness `a` need not equal A. For example, a supplied
+`p.f.[any]/T` can produce initial `p.f.*/T`. Passing the STAR initial back
+to the emitter is not the definition of `CanEmit`.
+
+Compare complete initial descriptors: base, field path, tail, field exclusion,
+mark, and the distinction between MAY and MUST. Normalize demand annotations
+only where the selected policy already requires it. Do not erase the initial's
+exclusions or alter its mark to make it pass.
+
+For the selected ANY rules with empty exclusions:
+
+| `D_c` | Existing initial A | Entry intersection |
+|---|---|---|
+| `p.[any]/T` | `p.f.*/T` | A; witness `p.f.[any]/T` |
+| `p.[any]/T` | `p.f.$/T` | A; exact-input exception |
+| `p.[any]/T` | `p.f.g.$/T` | Empty; emission stops at `p.f.*/T` |
+| `p.[any]/FLOW` | `p.$/FLOW` | A; witness `p.$/T` |
+| `p.[any]/FLOW` | `p.f.*/FLOW` | A; witness `p.f.[any]/T` |
+| `p.[any]/FLOW` | `p.f.$/FLOW` | Empty; emission stops at `p.f.*/FLOW` |
+| `p.[any]/FLOW` | `p.$/T` | Empty; the emitted mark would be FLOW |
+| `p.[any]/M` | `p.*/M` | Empty in the selected ANY table |
+| `p.[any]/U`, U differs from T | Any initial with T | Empty |
+
+The current `insideDemand` check accepts several empty rows above. It checks
+location and mark containment, not whether the new emitter can produce the
+initial. The new guard is therefore a semantic tightening of C5.
+
+### 8.1 Restrict the edge without changing its premise
+
+For a paired demand with entry `D_c` and exit `D_p`:
+
+```kotlin
+fun restrict(edge: Edge, demand: Demand): Edge? {
+    if (!canEmitInitial(demand.entry, edge.initial)) return null
+    if (!insideDemand(edge.initial, demand.entry)) return null
+    val exit = demand.exit ?: return null
+    val result = restrictConclusion(edge.result, exit) ?: return null
+    return edge.copy(result = result)
+}
+```
+
+This is specification pseudocode. It preserves the existing conclusion-side
+restriction, including its mark and layer rules. It also keeps the existing
+entry-containment condition. The new condition rejects entries outside the
+emitter's possible outputs.
+
+Do not project `p.f.g.$/T -> B` into `p.f.*/T -> B`. Those are different
+initials. The broader analysis must actually run to produce its own summary.
+Entry intersection either keeps A or rejects the edge. It preserves DEMAND;
+in particular, an accepted concrete STAR summary never becomes NORMAL.
+
+### 8.2 Implementation scope
+
+Use one canonical emission policy for C2 admission and the C5 entry guard.
+Implement the possible-output test directly from its shape rules. Do not
+enumerate actual inputs, marks, or initial combinations. The formal model's
+executable witness is proof data, not a proposed runtime object or store.
+
+Place the final guard at the entry check in `Reference.restrict`. All ordinary
+local, static-carry, primitive-completion, and transitive-completion candidates
+already reach that boundary through `DemandStore.intersect`. Rejected rows
+must not contribute to its fully-covered test.
+
+Candidate indexes may remain conservative. Do not reject intermediate static
+search states using this final edge filter without a separate completeness
+proof. A later composition can produce a different demand entry.
+
+Keep generic `overlap`, `covers`, call matching, raw summary storage, normal
+record persistence, and native record replay separate from this C5 update.
+For an ND summary, apply the guard to the selected complete member and retain
+the whole premise set, as the existing restriction does. Run-1 publication
+and the current backward-ZERO publication bypass are unchanged; the C5 theorem
+applies when ordinary demand intersection is performed.
+
+### 8.3 Required proof contract
+
+The required invariant is:
+
+```text
+EntryIntersection(D_c, A) is nonempty
+    implies CanEmit(D_c, A)
+```
+
+The extended Lean model proves this implication for every successful query
+in its scalar model. Each success contains a computed supplied-fact witness
+and a proof that the selected emitter produces the unchanged A. Principal
+accepted and rejected cells are checked, including the case where A cannot
+emit itself.
+
+Before implementation, also prove that the executable possible-output test
+accepts every output of the complete emitter. Otherwise, a sound entry guard
+could still reject needed work. The current model checks the principal shape
+matrix; it does not claim this full generic completeness theorem or support
+all nonempty-exclusion and demand-tail cases.
+
+The old C5 coverage theorem assumes only `insideDemand`. It must gain the
+`CanEmit` hypothesis. Its conclusion-side no-added-pair and layer properties
+can be reused because the new entry guard only removes candidates.
+Whole-run no-loss needs the matching C2-to-C5 and witness-routing proofs.
+In particular, marked rule observations rejected under a FLOW entry need an
+independent compatible concrete-demand or record route. The entry invariant
+alone does not prove that route. This update adds no grounding mechanism.
