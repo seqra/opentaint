@@ -12,6 +12,7 @@ import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.common.CommonMethod
 import java.util.Collections
 
+
 /** Virtual demand only. A lookup neither starts a query nor changes publication permission. */
 interface FrozenCompletion {
     fun statistics(): String = "unavailable"
@@ -79,14 +80,12 @@ data class StaticGuidanceEdge(val from: Pattern, val to: Pattern, val marks: Gui
 
 /** A geometry key has no runtime mark. Raw EXACT/FLOW patterns here are metadata only. */
 private data class GuidanceGeometry(val from: Pattern, val to: Pattern) {
-    fun edge(label: Long): StaticGuidanceEdge {
-        val marks = unpackBridgeMarks(label)
-        return when (marks) {
-            GuidanceMarks.Flow -> StaticGuidanceEdge(from, to, marks)
-            is GuidanceMarks.Mapped -> StaticGuidanceEdge(
-                from.copy(fact = from.fact.copy(mark = MarkSlot.Concrete(checkNotNull(marks.input)))),
-                to.copy(fact = to.fact.copy(mark = MarkSlot.Concrete(checkNotNull(marks.output)))), marks)
-        }
+    fun edge(label: Long): StaticGuidanceEdge = edge(unpackBridgeMarks(label))
+    fun edge(marks: GuidanceMarks): StaticGuidanceEdge = when (marks) {
+        GuidanceMarks.Flow -> StaticGuidanceEdge(from, to, marks)
+        is GuidanceMarks.Mapped -> StaticGuidanceEdge(
+            from.copy(fact = from.fact.copy(mark = MarkSlot.Concrete(checkNotNull(marks.input)))),
+            to.copy(fact = to.fact.copy(mark = MarkSlot.Concrete(checkNotNull(marks.output)))), marks)
     }
     companion object {
         fun of(edge: StaticGuidanceEdge) = GuidanceGeometry(
@@ -322,7 +321,7 @@ class FrozenStaticCompletion private constructor(
         }
     }
 
-    private inner class View(private val method: MethodKey, private val inherited: Boolean) : StaticDemandView {
+    private inner class View(private val method: MethodKey, private val inherited: Boolean) : C5StaticDemandView {
         private val reach by lazy { graph.scratch(method.method, ap.cancellation) }
         private val ownId = graph.id(method.method)
         private val local = locals[method]
@@ -331,14 +330,22 @@ class FrozenStaticCompletion private constructor(
             method.method in owners.outsideGraph || reach.reachesAny(owners.graphIds)
         else method.method in owners.outsideGraph || (ownId != null && owners.graphIds.binarySearch(ownId) >= 0)
 
-        private fun rows(id: Int, flowOnly: Boolean = false): Sequence<StaticGuidanceEdge> = sequence {
-            val rows = bridges[id]
-            for (i in rows.labels.indices) {
+        private fun rows(id: Int, flowOnly: Boolean = false,
+                         keep: StaticCandidateFilter? = null): Sequence<StaticGuidanceEdge> = sequence {
+            val row = bridges[id]
+            for (i in row.labels.indices) {
                 ap.cancellation.checkpoint()
-                val allowed = if (inherited) eligible(rows.owners[i])
+                val label = row.labels[i]
+                val marks = if (keep == null) null else unpackBridgeMarks(label)
+                if (keep != null) {
+                    if (flowOnly && label != 0L) continue
+                    if (!keep.keep(row.geometry.from, row.geometry.to, checkNotNull(marks))) continue
+                }
+                val allowed = if (inherited) eligible(row.owners[i])
                     else ownRows.binarySearch((id.toLong() shl 32) or i.toLong()) >= 0
-                if ((!flowOnly || rows.labels[i] == 0L) && allowed)
-                    yield(rows.geometry.edge(rows.labels[i]))
+                // The unfiltered C2 path retains owner-before-flowOnly ordering.
+                if ((!flowOnly || label == 0L) && allowed)
+                    yield(if (marks == null) row.geometry.edge(label) else row.geometry.edge(marks))
             }
         }
         private fun candidates(index: PathTrie<Int>, pattern: Pattern, prefixes: Boolean): List<Int> =
@@ -356,14 +363,24 @@ class FrozenStaticCompletion private constructor(
             }
         }
 
-        override fun targets(actual: Pattern, prefixesOnly: Boolean): Sequence<StaticGuidanceEdge> = sequence {
+        override fun targets(actual: Pattern, prefixesOnly: Boolean): Sequence<StaticGuidanceEdge> =
+            targetsImpl(actual, prefixesOnly, null)
+        override fun c5Targets(actual: Pattern, prefixesOnly: Boolean, keep: StaticCandidateFilter) =
+            targetsImpl(actual, prefixesOnly, keep)
+        private fun targetsImpl(actual: Pattern, prefixesOnly: Boolean,
+                                keep: StaticCandidateFilter?): Sequence<StaticGuidanceEdge> = sequence {
             ap.cancellation.checkpoint()
             if (local != null) {
                 val index = if (actual.fact.base == STATIC) local.writers else local.readers
                 val rows = if (actual.fact.base == STATIC) local.writerRows else local.readerRows
-                for (id in candidates(index, actual, prefixesOnly)) { ap.cancellation.checkpoint(); yield(rows[id]) }
+                for (id in candidates(index, actual, prefixesOnly)) {
+                    ap.cancellation.checkpoint()
+                    val row = rows[id]
+                    if (keep == null || keep.keep(row.from, row.to, row.marks)) yield(row)
+                }
             }
-            if (actual.fact.base == STATIC) for (id in candidates(bridgeEnds, actual, prefixesOnly)) yieldAll(rows(id))
+            if (actual.fact.base == STATIC) for (id in candidates(bridgeEnds, actual, prefixesOnly))
+                yieldAll(rows(id, keep = keep))
         }
 
         override fun flowTargets(actual: Pattern): Sequence<StaticGuidanceEdge> = sequence {
@@ -401,13 +418,20 @@ class FrozenStaticCompletion private constructor(
             }
         }
 
-        override fun incoming(input: Pattern, flowOnly: Boolean): Sequence<StaticGuidanceEdge> = sequence {
+        override fun incoming(input: Pattern, flowOnly: Boolean): Sequence<StaticGuidanceEdge> =
+            incomingImpl(input, flowOnly, null)
+        override fun c5Incoming(input: Pattern, flowOnly: Boolean, keep: StaticCandidateFilter) =
+            incomingImpl(input, flowOnly, keep)
+        private fun incomingImpl(input: Pattern, flowOnly: Boolean,
+                                 keep: StaticCandidateFilter?): Sequence<StaticGuidanceEdge> = sequence {
             ap.cancellation.checkpoint()
             if (input.fact.base != STATIC) return@sequence
             val index = if (flowOnly) flowEnds else bridgeEnds
-            for (id in candidates(index, input, false)) yieldAll(rows(id, flowOnly))
+            for (id in candidates(index, input, false)) yieldAll(rows(id, flowOnly, keep))
             if (!flowOnly && local != null) for (id in candidates(local.writers, input, false)) {
-                ap.cancellation.checkpoint(); yield(local.writerRows[id])
+                ap.cancellation.checkpoint()
+                val row = local.writerRows[id]
+                if (keep == null || keep.keep(row.from, row.to, row.marks)) yield(row)
             }
         }
 
@@ -434,12 +458,21 @@ class FrozenStaticCompletion private constructor(
         override fun estimatedMarkedOutputs(mark: TaintMark): Long =
             (local?.coloredOutputs?.estimate(mark) ?: 0) + coloredBridgeOutputs.estimate(mark)
 
-        override fun hasComposedEndpoints(initial: InitialAp, outputs: List<Pattern>): Boolean {
+        override fun hasComposedEndpoints(initial: InitialAp, outputs: List<Pattern>): Boolean =
+            hasComposedEndpointsImpl(initial, outputs, null)
+        override fun c5HasComposedEndpoints(initial: InitialAp, outputs: List<Pattern>,
+                                            keepTarget: StaticCandidateFilter): Boolean =
+            hasComposedEndpointsImpl(initial, outputs, keepTarget)
+        private fun hasComposedEndpointsImpl(initial: InitialAp, outputs: List<Pattern>,
+                                             keepTarget: StaticCandidateFilter?): Boolean {
             ap.cancellation.checkpoint()
             val path = initial.path?.toIntArray() ?: EMPTY_PATH
             val target = if (initial.base == STATIC)
-                bridgeEnds.lookupPrefixes(STATIC, path).any { rows(it).iterator().hasNext() }
-            else local?.readers?.lookupPrefixes(initial.base, path)?.isNotEmpty() == true
+                bridgeEnds.lookupPrefixes(STATIC, path).any { rows(it, keep = keepTarget).iterator().hasNext() }
+            else local?.readers?.lookupPrefixes(initial.base, path)?.any { id ->
+                val row = local.readerRows[id]
+                keepTarget == null || keepTarget.keep(row.from, row.to, row.marks)
+            } == true
             if (!target) return false
             for (leaf in outputs) {
                 ap.cancellation.checkpoint()
