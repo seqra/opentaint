@@ -641,3 +641,286 @@ theorem checked : check = true := by decide
 #print axioms false_normal_pair_is_absent_from_declared_wrapper_relation
 
 end RestrictedInitialPolicy.ClosedExactReplay
+
+/-
+  Code-only replacement for the historical opaqueMay/returnPair trace above.
+
+  source(q); sinkAny(q.f.h); pair=wrapper(q);
+  sinkExact(pair.a); sinkAny(pair.b);
+
+  helper(p) { return p.f; }
+  box(q) { Box z=new Box(); z.value=q; return z; }
+  wrapper(q) { Pair r=new Pair(); r.a=helper(q); r.b=box(q); return r; }
+
+  Source rule only: source(q) has empty body and assigns T to q.f.h and all
+  its descendants. Sink rules check the declared argument position. No pass
+  rule supplies ANY. All code-generated data micro-edges have STAR tails.
+  A field-limit cut supplies the run-1 B-route ANY. The source and local sink
+  select run-3 source replay. No direct helper probe or shared-callsite
+  assumption is needed: helper is called at one wrapper statement.
+
+  Each instruction, call binding and summary application has its field cut.
+  Field-write frames use cleanResX only on fresh/specific-field targets;
+  no broad lhs fact occurs. The overwritten field is killed and a different
+  known field survives. No claim about the old cleaner's broad-lhs row is
+  used. This is a proposed-domain scalar certificate, not current JVM output.
+  Latest modeled iteration: run-3, limits 1, 1, 2. No production mutation.
+-/
+namespace RestrictedInitialPolicy.CodeOnlyExactReplay
+open ApSpec ApSpec.AnyTaintEx ApSpec.Handoff ApSpec.Abs
+open RestrictedInitialPolicy.ClosedExactReplay
+  (Row flow marked xf move step limitAt asInput asDemand start initials analyze
+   applyRows normalNonzero nextDemand c5 publish admitted reverseRow zeroRow
+   mq pair wq wa wr hp hr F H A B atom sourceAll source1 source3 sourceSelected
+   sourceHits2 sinkSource sinkA sinkB observed backwardSeed wBind whBind hBack wBack
+   currentExactReplay realInput falseOutput)
+
+def r : Base := 24
+def boxed : Base := 25
+def boxArg : Base := 40
+def boxLocal : Base := 41
+def boxRet : Base := 42
+def hLocal : Base := 32
+def value : Acc := 11
+
+def cut (L : Nat) (xs : List XFact) : List XFact := (limitAt L xs).eraseDups
+def withoutBase (base : Base) (xs : List XFact) : List XFact :=
+  xs.filter fun x => !(Nat.beq x.af.fact.base base)
+def newObject (L base : Nat) (xs : List XFact) : List XFact := cut L (withoutBase base xs)
+def assign (L : Nat) (src dst : Base) (fromPath toPath : List Acc)
+    (xs : List XFact) : List XFact :=
+  cut L (withoutBase dst xs ++ step (move src dst fromPath toPath) xs)
+def reverseAssign (L : Nat) (src dst : Base) (fromPath toPath : List Acc)
+    (xs : List XFact) : List XFact :=
+  cut L (withoutBase dst xs ++ step (revEdge (move src dst fromPath toPath).1
+    (move src dst fromPath toPath).2) xs)
+
+def writeFrame (obj : Base) (field : Acc) (xs : List XFact) : List XFact :=
+  xs.flatMap fun x => (cleanResX ⟨obj, [field], .atAndBelow, none⟩ x).facts
+def writeField (L : Nat) (obj : Base) (field : Acc) (rhs : Base)
+    (xs : List XFact) : List XFact :=
+  cut L (writeFrame obj field xs ++ step (move rhs obj [] [field]) xs)
+def reverseWrite (L : Nat) (obj : Base) (field : Acc) (rhs : Base)
+    (xs : List XFact) : List XFact :=
+  cut L (writeFrame obj field xs ++
+    step (revEdge (move rhs obj [] [field]).1 (move rhs obj [] [field]).2) xs)
+def knownWriteDomain (obj : Base) (xs : List XFact) : Bool :=
+  xs.all fun x => !(Nat.beq x.af.fact.base obj) || !x.af.fact.path.isEmpty
+def exports (arg ret : Base) (xs : List XFact) : List XFact :=
+  xs.filter fun x => Nat.beq x.af.fact.base arg || Nat.beq x.af.fact.base ret ||
+    Nat.beq x.af.fact.base zeroBase
+
+def helperForward (L : Nat) (xs : List XFact) : List XFact :=
+  exports hp hr (assign L hLocal hr [] [] (assign L hp hLocal [F] [] xs))
+def helperBackward (L : Nat) (xs : List XFact) : List XFact :=
+  exports hp hr (reverseAssign L hp hLocal [F] [] (reverseAssign L hLocal hr [] [] xs))
+def boxBeforeWrite (L : Nat) (xs : List XFact) : List XFact := newObject L boxLocal xs
+def boxForward (L : Nat) (xs : List XFact) : List XFact :=
+  exports boxArg boxRet (assign L boxLocal boxRet [] []
+    (writeField L boxLocal value boxArg (boxBeforeWrite L xs)))
+
+def declaredCodeEdges : List MicroEdge := [
+  move hp hLocal [F] [], move hLocal hr [] [],
+  move boxArg boxLocal [] [value], move boxLocal boxRet [] [],
+  move wq hp [] [], move hr wa [] [], move wq boxArg [] [],
+  move boxRet boxed [] [], move wa r [] [A], move boxed r [] [B], move r wr [] []]
+
+theorem every_code_data_edge_is_star_to_star :
+    (declaredCodeEdges.all fun edge => edge.1.kind == .star Excl.empty &&
+      edge.2.kind == .star Excl.empty) = true := by decide
+
+def supplied (L : Nat) (arg target : Base) (xs : List XFact) : List XFact :=
+  cut L (step (move arg target [] []) xs)
+def callForward (L : Nat) (arg target ret lhs : Base) (rows : List Row)
+    (xs : List XFact) : List XFact :=
+  let joined := cut L (applyRows rows (supplied L arg target xs))
+  cut L (withoutBase lhs xs ++ step (move ret lhs [] []) joined)
+def callBackward (L : Nat) (arg target ret lhs : Base) (rows : List Row)
+    (xs : List XFact) : List XFact :=
+  let joined := cut L (applyRows rows (supplied L lhs ret xs))
+  cut L (withoutBase lhs xs ++ step (move target arg [] []) joined)
+
+def w1Initials : List XFact :=
+  ClosedExactReplay.run1States (supplied 1 mq wq source1)
+def h1Initials : List XFact :=
+  ClosedExactReplay.run1States (supplied 1 wq hp (newObject 1 r w1Initials))
+def h1Rows : List Row := [zeroRow] ++ analyze h1Initials (helperForward 1)
+def w1AfterA : List XFact := writeField 1 r A wa
+  (callForward 1 wq hp hr wa h1Rows (newObject 1 r w1Initials))
+def box1Initials : List XFact :=
+  ClosedExactReplay.run1States (supplied 1 wq boxArg w1AfterA)
+def box1Rows : List Row := [zeroRow] ++ analyze box1Initials (boxForward 1)
+def box1Records : List Row := normalNonzero box1Rows
+def boxBackwardRows : List Row := box1Records.map reverseRow
+def finishWrapper (L : Nat) (xs : List XFact) : List XFact :=
+  exports wq wr (assign L r wr [] [] xs)
+def w1AfterBox : List XFact := callForward 1 wq boxArg boxRet boxed box1Rows w1AfterA
+def w1Body (xs : List XFact) : List XFact :=
+  let afterA := writeField 1 r A wa
+    (callForward 1 wq hp hr wa h1Rows (newObject 1 r xs))
+  let afterBox := callForward 1 wq boxArg boxRet boxed box1Rows afterA
+  finishWrapper 1 (writeField 1 r B boxed afterBox)
+def w1Rows : List Row := [zeroRow] ++ analyze w1Initials w1Body
+def mainPair1 : List XFact := cut 1 (step wBack (applyRows w1Rows (supplied 1 mq wq source1)))
+def h2Demands : List DemandEdge := nextDemand h1Rows
+def w2Demands : List DemandEdge := nextDemand w1Rows
+
+theorem code_generated_box_record_and_run1_cut :
+    box1Rows = [zeroRow, (flow boxArg, xf (flow boxArg)),
+      (flow boxArg, xf (flow boxRet [value]))] ∧
+    nextDemand box1Rows = [] ∧
+    w1Rows = [zeroRow, (flow wq, xf (flow wq)),
+      (flow wq, xf (flow wr [A] .any) true),
+      (flow wq, xf (flow wr [B] .any) true)] ∧
+    observed source1 sinkSource = true ∧
+    observed mainPair1 sinkA = true ∧ observed mainPair1 sinkB = true := by decide
+
+def wActualA2 : List XFact := cut 1 (step (revEdge wBack.1 wBack.2) (backwardSeed sinkA))
+def wActualB2 : List XFact := cut 1 (step (revEdge wBack.1 wBack.2) (backwardSeed sinkB))
+def wAInitial2 : List XFact := admitted w2Demands wActualA2
+def wBInitial2 : List XFact := admitted w2Demands wActualB2
+def backwardBeforeHelper (xs : List XFact) : List XFact :=
+  let beforeReturn := reverseAssign 1 r wr [] [] xs
+  let beforeBoxWrite := reverseWrite 1 r B boxed beforeReturn
+  let beforeBoxCall := callBackward 1 wq boxArg boxRet boxed boxBackwardRows beforeBoxWrite
+  reverseWrite 1 r A wa beforeBoxCall
+def helperInput2 : List XFact := supplied 1 wa hr (backwardBeforeHelper wAInitial2)
+def h2Initials : List XFact := admitted h2Demands helperInput2
+def h2Raw : List Row := analyze h2Initials (helperBackward 1)
+def h2Published : List Row := publish h2Demands h2Raw
+def h2Records : List Row := normalNonzero h2Raw
+def wBackward (xs : List XFact) : List XFact :=
+  exports wq wr (callBackward 1 wq hp hr wa h2Published (backwardBeforeHelper xs))
+def w2Raw : List Row := analyze wAInitial2 wBackward ++ analyze wBInitial2 wBackward
+def w2Published : List Row := publish w2Demands w2Raw
+def w3Demands : List DemandEdge := nextDemand w2Published
+def h3Demands : List DemandEdge := nextDemand h2Published
+def w3Initials : List XFact := admitted w3Demands (supplied 2 mq wq source3) true
+def h3Added : List XFact := supplied 2 wq hp w3Initials
+def h3Initials : List XFact := admitted h3Demands h3Added
+
+theorem ordinary_box_replay_builds_the_coarse_b_demand :
+    boxBackwardRows = [(flow boxArg, xf (flow boxArg)),
+      (flow boxRet [value], xf (flow boxArg))] ∧
+    backwardBeforeHelper wBInitial2 = [xf (flow wq [] .any) true] ∧
+    helperInput2 = [xf (flow hr [] .exact)] ∧
+    h2Initials = [xf (flow hr [] .exact)] ∧
+    h2Raw = [(flow hr [] .exact, xf (flow hp [F] .exact))] ∧
+    h2Published = h2Raw ∧ h2Records = h2Raw ∧
+    w2Raw = [(flow wr [A] .exact, xf (flow wq [F] .exact)),
+      (flow wr [B] .any, xf (flow wq [] .any) true)] ∧
+    w2Published = w2Raw ∧
+    w3Demands = [⟨flow wq [] .any, some (flow wr [B] .any)⟩] ∧
+    h3Demands = [] ∧ w3Initials = [xf (flow wq [F])] ∧
+    h3Added = [xf (flow hp [F])] ∧ h3Initials = [] := by decide
+
+def h3Views : List Row := h2Records.map reverseRow
+def availableHelperRows3 : List Row := normalNonzero h1Rows ++ h3Views
+
+theorem helper_inventory_has_no_hidden_cover :
+    h1Rows = [zeroRow, (flow hp, xf (flow hp)),
+      (flow hp, xf (flow hr [] .any) true)] ∧
+    h3Views = [(flow hp [F] .exact, xf (flow hr [] .exact))] ∧
+    availableHelperRows3 = [(flow hp, xf (flow hp)),
+      (flow hp [F] .exact, xf (flow hr [] .exact))] ∧
+    availableHelperRows3.any ClosedExactReplay.normalStarReturnCover = false := by decide
+
+def replayArgumentIdentity (target : Base) (xs : List XFact) : List XFact :=
+  let provided := supplied 1 wq target xs
+  let native := (flow target, xf (flow target))
+  supplied 1 target wq (cut 1 (applyRows [reverseRow native] provided))
+
+/-- The call frame for q is an ordinary analyzed argument identity, not an
+    unknown-effect pass rule. Adding its replay to pass-over gives no new fact. -/
+theorem ordinary_argument_frames_support_the_backward_pass :
+    (flow hp, xf (flow hp)) ∈ normalNonzero h1Rows ∧
+    (flow boxArg, xf (flow boxArg)) ∈ box1Records ∧
+    replayArgumentIdentity hp [xf (flow wq [] .any) true] =
+      [xf (flow wq [] .any) true] ∧
+    replayArgumentIdentity boxArg [xf (flow wq [] .any) true] =
+      [xf (flow wq [] .any) true] := by decide
+
+def callHelper3 (xs : List XFact) : List XFact :=
+  let answers := (supplied 2 wq hp xs).flatMap fun actual => h3Views.flatMap fun record =>
+    if satW record.1 actual.af.fact then currentExactReplay actual record else []
+  cut 2 (withoutBase wa xs ++ step hBack (cut 2 answers))
+def w3AfterA : List XFact := writeField 2 r A wa (callHelper3 (newObject 2 r w3Initials))
+def w3AfterBox : List XFact := callForward 2 wq boxArg boxRet boxed box1Records w3AfterA
+def w3BeforeReturn : List XFact := writeField 2 r B boxed w3AfterBox
+def w3Body (xs : List XFact) : List XFact :=
+  let afterA := writeField 2 r A wa (callHelper3 (newObject 2 r xs))
+  let afterBox := callForward 2 wq boxArg boxRet boxed box1Records afterA
+  finishWrapper 2 (writeField 2 r B boxed afterBox)
+def w3Raw : List Row := analyze w3Initials w3Body
+def w3Published : List Row := publish w3Demands w3Raw
+def wrongRow : Row := (flow wq [F], xf (flow wr [A] .exact))
+
+theorem code_only_zero_frames_generate_no_extra_data :
+    helperForward 1 [xf zeroFact] = [xf zeroFact] ∧
+    boxForward 1 [xf zeroFact] = [xf zeroFact] ∧
+    w1Body [xf zeroFact] = [xf zeroFact] ∧
+    w3Body [xf zeroFact] = [xf zeroFact] := by decide
+
+theorem ordinary_writes_have_only_the_certified_frames :
+    knownWriteDomain boxLocal (boxBeforeWrite 1 box1Initials) = true ∧
+    knownWriteDomain r (callForward 1 wq hp hr wa h1Rows (newObject 1 r w1Initials)) = true ∧
+    knownWriteDomain r w1AfterBox = true ∧
+    knownWriteDomain r (callHelper3 (newObject 2 r w3Initials)) = true ∧
+    knownWriteDomain r w3AfterBox = true ∧
+    writeFrame r B [xf (flow r [A] .exact)] = [xf (flow r [A] .exact)] ∧
+    writeFrame r B [xf (flow r [B] .exact)] = [] := by decide
+
+theorem code_only_false_normal_is_persisted :
+    w3Raw = [(flow wq [F], xf (flow wq [F])), wrongRow,
+      (flow wq [F], xf (flow wr [B, value] .any) true)] ∧
+    w3Published = [(flow wq [F], xf (flow wr [B, value] .any) true)] ∧
+    wrongRow ∈ normalNonzero w3Raw ∧ wrongRow ∉ w3Published ∧
+    (normalNonzero h1Rows ++ h3Views).any ClosedExactReplay.normalStarReturnCover = false := by decide
+
+/-- With ordinary code, the helper/pair-A route still preserves H. Box can
+    reach B.value only, so it cannot explain the false A-root pair. -/
+def concreteHelperPath : List XFact :=
+  let caller := newObject 2 r [xf (marked wq [F, H] .exact)]
+  let actual := supplied 2 wq hp caller
+  let returned := cut 2 (helperForward 2 actual)
+  let afterCall := cut 2 (withoutBase wa caller ++ step hBack returned)
+  assign 2 r wr [] [] (writeField 2 r A wa afterCall)
+
+theorem concrete_code_keeps_h :
+    (exports wq wr concreteHelperPath) =
+      [xf (marked wq [F, H] .exact), xf (marked wr [A, H] .exact)] := by decide
+
+theorem code_only_false_pair :
+    den wrongRow.1 wrongRow.2.af.fact realInput falseOutput ∧
+    ¬ den wrongRow.1 (flow wr [A]) realInput falseOutput ∧
+    ¬ den wrongRow.1 (flow wr [B, value] .any) realInput falseOutput := by
+  refine ⟨?_, ?_, ?_⟩
+  · exact ⟨rfl, rfl, True.intro, rfl, True.intro, [H], [], rfl, rfl, rfl, rfl⟩
+  · rintro ⟨_, _, _, _, _, suffix, outSuffix, hs, ht, _, hc⟩
+    have hs' : suffix = [H] := by simpa [wrongRow, flow, ClosedExactReplay.realInput] using hs.symm
+    have ht' : outSuffix = [] := by simpa [flow, ClosedExactReplay.falseOutput] using ht.symm
+    have same : outSuffix = suffix := hc.1
+    rw [hs', ht'] at same
+    cases same
+  · rintro ⟨_, _, _, _, _, _, _, _, ht, _, _⟩
+    simp [flow, ClosedExactReplay.falseOutput, A, B] at ht
+
+def check : Bool :=
+  sourceSelected && observed mainPair1 sinkA && observed mainPair1 sinkB &&
+  (h3Initials == []) && w3Raw.contains wrongRow &&
+  (normalNonzero w3Raw).contains wrongRow && !w3Published.contains wrongRow
+
+theorem checked : check = true := by decide
+
+#eval check
+#print axioms code_generated_box_record_and_run1_cut
+#print axioms every_code_data_edge_is_star_to_star
+#print axioms ordinary_box_replay_builds_the_coarse_b_demand
+#print axioms ordinary_writes_have_only_the_certified_frames
+#print axioms helper_inventory_has_no_hidden_cover
+#print axioms ordinary_argument_frames_support_the_backward_pass
+#print axioms code_only_zero_frames_generate_no_extra_data
+#print axioms code_only_false_normal_is_persisted
+#print axioms code_only_false_pair
+
+end RestrictedInitialPolicy.CodeOnlyExactReplay

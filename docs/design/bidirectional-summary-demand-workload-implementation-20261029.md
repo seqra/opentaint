@@ -183,8 +183,11 @@ The user requested a complete trace before selecting an uncovered exact
 application rule. The
 [closed trace](bidirectional-exact-flow-replay-trace-20261029.md) derives the
 exact record, the broad caller input and raw persistence through modeled
-runs 1–3. It uses an ordinary field-read helper and two distinct wrapper
-outputs. It does not rely on the earlier local cleaner example alone.
+runs 1–3. It uses ordinary field reads, writes and returns, plus source/sink
+rules. An inferred Box summary and a real field-limit cut keep the B demand.
+It has no predefined summaries or custom pass models. The wrapper A sink
+constructs the exact helper record at its single helper callsite; a separate
+direct helper probe is not required.
 The application rule for this uncovered case remains pending. Do not silently
 choose demotion, rejection, or a new correlation representation.
 
@@ -695,7 +698,7 @@ only final counts.
 | Concrete STAR starts/stays DEMAND | `OneStepRefinement.current_concrete_star_starts_demand` and layer lemmas | Initial start, transfer and summary application |
 | An actual NORMAL STAR cover subsumes its exact relation | `AbstractTailContracts.normal_star_identity_geometry_covers_exact`, `dropping_exact_preserves_union_when_cover_is_present` | Same-method summary subsumption |
 | New abstract MUST needs definite MUST input | `AbstractTailContracts.only_definite_must_is_admitted`, `layer_does_not_create_must` | New abstract MUST premise matching |
-| A closed exact replay can produce an invalid NORMAL raw record | `RestrictedInitialPolicy.ClosedExactReplay.false_normal_pair_is_absent_from_declared_wrapper_relation` | Pending EXACT application rule; regression certificate |
+| Ordinary code can produce the disputed NORMAL raw record under the unchanged new-domain replay cell | `RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_normal_is_persisted`, `code_only_false_pair` | Pending EXACT application rule; regression certificate |
 | Fixed right endpoint cannot be repaired by prepend | `DemandWorkPruning.prepend_preserves_fixed_right` | `composeMarks`, immutable right geometry |
 | Pruning preserves accepted finite-walk outputs | `DemandWorkPruning.c5_fixed_right_pruning_keeps_outputs` | Per-member queue and seen set |
 | Early pure filtering preserves row order and output | `DemandImplementationContracts.early_filter_preserves_rows`, `early_filter_preserves_decoded_outputs` | Packed rows and local candidates |
@@ -704,9 +707,12 @@ only final counts.
 | IDs preserve payload and identify distinct families | `DemandImplementationContracts.owner_id_injective`, `owner_payload_unchanged` | Freeze factory |
 | Memo size is bounded | `DemandWorkPruning.memo_defined_cells_bound_by_distinct_families` | F-byte array and query lifetime |
 
-The three new files contain 47 checked theorems: 29 in the scalar policy and
-closed trace, seven in abstract-tail contracts, and 11 in implementation
-contracts. The scalar policy is total within its stated scope: FULL marks,
+The three support files contain 58 checked theorems: 40 in the scalar policy
+and two trace certificates, seven in abstract-tail contracts, and 11 in
+implementation contracts. The active code-only trace has 11 theorems. The
+earlier declared-transfer trace stays in the model as historical evidence;
+the active trace uses ordinary code and source/sink rules only.
+The scalar policy is total within its stated scope: FULL marks,
 ordinary nonstatic bases, counted fields, and empty exclusions. Static
 anchors, ZERO, GROUP adapters, exclusions, complete new-tail application,
 and global no-loss discharge remain separate obligations. The EXACT
@@ -721,7 +727,7 @@ lake env lean proposals/demand-work/ImplementationContracts.lean
 lake env lean proposals/demand-work/DemandWorkPruning.lean
 ```
 
-All three new files compile. Their four executable checks return `true`.
+All three support files compile. Their five executable checks return `true`.
 All-theorem axiom audits contain only `propext` and `Quot.sound`; they contain
 no classical choice, unproved axiom, or `sorry`. Commands, hashes, theorem
 names and complete audit output are in the

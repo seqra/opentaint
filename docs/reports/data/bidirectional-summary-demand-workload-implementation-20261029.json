@@ -1,7 +1,7 @@
 {
   "schema": "summary-demand-workload-implementation-proposal-v1",
   "date": "2026-10-29",
-  "sourceRevision": "7b0a3eed550965a8029b730dceef0b77fd8257a0",
+  "sourceRevision": "f99ed7c1afa53f4eff03850a844de180bc02ba6d",
   "status": "REVIEW DRAFT: runtime unchanged; uncovered EXACT application decision and listed integration/no-loss proofs remain open",
   "scope": [
     "Selected demand rewrite dependency",
@@ -49,7 +49,7 @@
   "inferredPolicyCell": "Ancestor STAR under ANY demand rejects; stated inferred extension, not a separate explicit user decision.",
   "pendingDecision": "How must an uncovered exact FLOW record apply to a broad STAR FLOW input? The closed trace is the reachable witness. No DEMAND demotion, exact-only guard, or new relation payload is silently selected.",
   "proofValidation": {
-    "totalNewTheorems": 47,
+    "totalNewTheorems": 58,
     "method": "For each file, compile its complete source with lake env lean, then compile a temporary source copy with #print axioms for every theorem. Complete output is embedded below.",
     "allowedAxioms": [
       "propext",
@@ -59,7 +59,7 @@
     "models": [
       {
         "file": "spec/lean/proposals/initial-emission/RestrictedInitialPolicy.lean",
-        "sha256": "077b0e4277b491eba8da35eb635a153dbd9e182bf49e614c49743a48c62444f6",
+        "sha256": "d05400801fe135e02c3ec81a80bd565ef018405a0acb4a3cbd951d11d58e8545",
         "theorems": [
           "RestrictedInitialPolicy.mark_accepts_itself",
           "RestrictedInitialPolicy.template_is_its_own_emission",
@@ -89,14 +89,25 @@
           "RestrictedInitialPolicy.ClosedExactReplay.persisted_normal_has_a_false_pair",
           "RestrictedInitialPolicy.ClosedExactReplay.other_wrapper_paths_do_not_supply_false_a",
           "RestrictedInitialPolicy.ClosedExactReplay.false_normal_pair_is_absent_from_declared_wrapper_relation",
-          "RestrictedInitialPolicy.ClosedExactReplay.checked"
+          "RestrictedInitialPolicy.ClosedExactReplay.checked",
+          "RestrictedInitialPolicy.CodeOnlyExactReplay.every_code_data_edge_is_star_to_star",
+          "RestrictedInitialPolicy.CodeOnlyExactReplay.code_generated_box_record_and_run1_cut",
+          "RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_box_replay_builds_the_coarse_b_demand",
+          "RestrictedInitialPolicy.CodeOnlyExactReplay.helper_inventory_has_no_hidden_cover",
+          "RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_argument_frames_support_the_backward_pass",
+          "RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_zero_frames_generate_no_extra_data",
+          "RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_writes_have_only_the_certified_frames",
+          "RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_normal_is_persisted",
+          "RestrictedInitialPolicy.CodeOnlyExactReplay.concrete_code_keeps_h",
+          "RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_pair",
+          "RestrictedInitialPolicy.CodeOnlyExactReplay.checked"
         ],
-        "count": 29,
+        "count": 40,
         "exitCode": 0,
-        "executableTrueCount": 2,
+        "executableTrueCount": 3,
         "forbiddenAxioms": false,
-        "auditLogSha256": "1982b5384ff08cc6068374cd6aa33bf3be267f438fa55a8c4f737c29cd0d0964",
-        "auditOutput": "true\n'RestrictedInitialPolicy.template_is_its_own_emission' depends on axioms: [propext]\n'RestrictedInitialPolicy.emission_is_idempotent' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_canonical_template' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_classifier_sound_and_complete' depends on axioms: [propext]\n'RestrictedInitialPolicy.entry_intersection_exactly_matches_emitter_image' depends on axioms: [propext]\n'RestrictedInitialPolicy.different_full_marks_never_emit' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.emitted_mark_is_demand_mark' depends on axioms: [propext]\n'RestrictedInitialPolicy.concrete_star_uses_current_demand_start' depends on axioms: [propext]\ntrue\n'RestrictedInitialPolicy.ClosedExactReplay.source_and_helper_record_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.wrapper_backward_and_run3_input_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.no_covering_helper_relation_is_assumed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_row_is_raw_and_persisted_but_not_published' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.persisted_normal_has_a_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_pair_is_absent_from_declared_wrapper_relation' depends on axioms: [propext]\n'RestrictedInitialPolicy.mark_accepts_itself' depends on axioms: [propext]\n'RestrictedInitialPolicy.template_is_its_own_emission' depends on axioms: [propext]\n'RestrictedInitialPolicy.selected_template_is_valid' depends on axioms: [propext]\n'RestrictedInitialPolicy.emission_is_idempotent' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_canonical_template' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_self_projection' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_classifier_sound_and_complete' depends on axioms: [propext]\n'RestrictedInitialPolicy.entry_intersection_exactly_matches_emitter_image' depends on axioms: [propext]\n'RestrictedInitialPolicy.emitted_mark_is_demand_mark' depends on axioms: [propext]\n'RestrictedInitialPolicy.emitted_input_has_valid_must_flag' depends on axioms: [propext]\n'RestrictedInitialPolicy.different_full_marks_never_emit' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.user_pinned_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.any_demand_one_step_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.same_prefix_and_ancestor_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_false_positives_are_rejected' depends on axioms: [propext]\n'RestrictedInitialPolicy.failed_matches_do_not_emit' depends on axioms: [propext]\n'RestrictedInitialPolicy.concrete_star_uses_current_demand_start' depends on axioms: [propext]\n'RestrictedInitialPolicy.checked' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.zero_frames_do_not_add_a_hidden_return_cover' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.run1_reports_and_frontiers_are_derived' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.source_and_helper_record_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.wrapper_backward_and_run3_input_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.no_covering_helper_relation_is_assumed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_row_is_raw_and_persisted_but_not_published' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.concrete_program_keeps_the_suffix' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.persisted_normal_has_a_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.other_wrapper_paths_do_not_supply_false_a' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_pair_is_absent_from_declared_wrapper_relation' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.checked' depends on axioms: [propext]\n"
+        "auditLogSha256": "e23b40b4ac7cc770c98c785a871109210dbdf4f4ad9bc954f4a8dd7c31fa3864",
+        "auditOutput": "true\n'RestrictedInitialPolicy.template_is_its_own_emission' depends on axioms: [propext]\n'RestrictedInitialPolicy.emission_is_idempotent' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_canonical_template' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_classifier_sound_and_complete' depends on axioms: [propext]\n'RestrictedInitialPolicy.entry_intersection_exactly_matches_emitter_image' depends on axioms: [propext]\n'RestrictedInitialPolicy.different_full_marks_never_emit' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.emitted_mark_is_demand_mark' depends on axioms: [propext]\n'RestrictedInitialPolicy.concrete_star_uses_current_demand_start' depends on axioms: [propext]\ntrue\n'RestrictedInitialPolicy.ClosedExactReplay.source_and_helper_record_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.wrapper_backward_and_run3_input_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.no_covering_helper_relation_is_assumed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_row_is_raw_and_persisted_but_not_published' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.persisted_normal_has_a_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_pair_is_absent_from_declared_wrapper_relation' depends on axioms: [propext]\ntrue\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_generated_box_record_and_run1_cut' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.every_code_data_edge_is_star_to_star' does not depend on any axioms\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_box_replay_builds_the_coarse_b_demand' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_writes_have_only_the_certified_frames' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.helper_inventory_has_no_hidden_cover' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_argument_frames_support_the_backward_pass' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_zero_frames_generate_no_extra_data' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_normal_is_persisted' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.mark_accepts_itself' depends on axioms: [propext]\n'RestrictedInitialPolicy.template_is_its_own_emission' depends on axioms: [propext]\n'RestrictedInitialPolicy.selected_template_is_valid' depends on axioms: [propext]\n'RestrictedInitialPolicy.emission_is_idempotent' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_canonical_template' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_self_projection' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_classifier_sound_and_complete' depends on axioms: [propext]\n'RestrictedInitialPolicy.entry_intersection_exactly_matches_emitter_image' depends on axioms: [propext]\n'RestrictedInitialPolicy.emitted_mark_is_demand_mark' depends on axioms: [propext]\n'RestrictedInitialPolicy.emitted_input_has_valid_must_flag' depends on axioms: [propext]\n'RestrictedInitialPolicy.different_full_marks_never_emit' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.user_pinned_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.any_demand_one_step_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.same_prefix_and_ancestor_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_false_positives_are_rejected' depends on axioms: [propext]\n'RestrictedInitialPolicy.failed_matches_do_not_emit' depends on axioms: [propext]\n'RestrictedInitialPolicy.concrete_star_uses_current_demand_start' depends on axioms: [propext]\n'RestrictedInitialPolicy.checked' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.zero_frames_do_not_add_a_hidden_return_cover' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.run1_reports_and_frontiers_are_derived' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.source_and_helper_record_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.wrapper_backward_and_run3_input_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.no_covering_helper_relation_is_assumed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_row_is_raw_and_persisted_but_not_published' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.concrete_program_keeps_the_suffix' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.persisted_normal_has_a_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.other_wrapper_paths_do_not_supply_false_a' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_pair_is_absent_from_declared_wrapper_relation' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.checked' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.every_code_data_edge_is_star_to_star' does not depend on any axioms\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_generated_box_record_and_run1_cut' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_box_replay_builds_the_coarse_b_demand' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.helper_inventory_has_no_hidden_cover' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_argument_frames_support_the_backward_pass' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_zero_frames_generate_no_extra_data' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_writes_have_only_the_certified_frames' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_normal_is_persisted' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.concrete_code_keeps_h' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.checked' depends on axioms: [propext]\n"
       },
       {
         "file": "spec/lean/proposals/initial-emission/AbstractTailContracts.lean",
@@ -150,11 +161,17 @@
   ],
   "closedTrace": {
     "path": "docs/reports/data/bidirectional-closed-exact-replay-20261029.json",
-    "sha256": "c0fa0f08bf3a6a8d483e83fb068095fe7e88a81f7610e1d5d5b68c1900767a5e"
+    "sha256": "80b25b1d8d880fea62116121f1fba657d37ccee1455becc5bed8ca3db4753733",
+    "activeNamespace": "RestrictedInitialPolicy.CodeOnlyExactReplay",
+    "latestModeledRun": "run-3",
+    "activeTheoremCount": 11,
+    "ordinaryCodeOnly": true,
+    "predefinedSummaryCount": 0,
+    "customPassRuleCount": 0
   },
   "sourceSHA256": {
-    "docs/design/bidirectional-summary-demand-workload-implementation-20261029.md": "9c5ebf99ad3f8127e80fcc0a1123e928dc7c7ac4502aaef770e9676f909399e5",
-    "docs/design/bidirectional-exact-flow-replay-trace-20261029.md": "02b5296b4eefffa8ec9ddac6ba1c30c102d006adf47d852e178d828b5c88b6e3",
+    "docs/design/bidirectional-summary-demand-workload-implementation-20261029.md": "69fa1790db9e5d5a04f64b379bd63a52ac5ad82fd9007d93491b72fc0630242c",
+    "docs/design/bidirectional-exact-flow-replay-trace-20261029.md": "334bd36292fd97270a55ac59de8bb8d83b0497d55978d7fb8decd6726fef13c6",
     "docs/design/bidirectional-one-step-initial-refinement-20261029.md": "537fb250a9e32fe4d587ce42250f0c7d4d755cbb615254bd46c96c8eb16fb20e",
     "docs/design/bidirectional-next-demand-work-20261029.md": "95b869da61ba812a90485fd6552917a8bdeeb01875e7105e9c29075d124b4d88",
     "spec/impl-proposal-guide.md": "0068a5ea23d3215cab580fc341bbcbfaf64d504920d35d8bf041b166c73ea17a",
@@ -167,7 +184,7 @@
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandResultCoverage.kt": "34242d856b65aa1b11b731c50f693b1f427c85d7c840d00b1bcd2e2c3f546c6b",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RecordStore.kt": "aa6c6a89915d52d049b4e946cf0271ea1a55fa00fab14f162196bc4635f715d2"
   },
-  "validationScope": "47 checked new theorem declarations and four executable true checks. No runtime implementation, whole-analyzer proof or performance improvement is claimed.",
+  "validationScope": "58 checked theorem declarations in the three support files; five executable true checks. The code-only trace has 11 theorems and its Java listing compiles. No runtime implementation, whole-analyzer proof or performance improvement is claimed.",
   "peerReview": {
     "result": "Source-bound corrections applied: canonical Reference.emit plus offer/has/requireFamily; whole-walk coverage return; private GuidanceGeometry member overloads; Groups.kt path; pre-replay cross-premise coverage planning; scalar image vs global no-loss scope; invalid MUST demand/actual guards. No runtime changes."
   },
@@ -175,5 +192,6 @@
     "command": "cd spec/lean && lake env lean proposals/demand-work/DemandWorkPruning.lean",
     "exitCode": 0,
     "executableCheck": true
-  }
+  },
+  "traceCorrection": "Separate NORMAL instruction micro-edges from derived result layers. Replace arbitrary ANY-target pass and Pair pass model with real allocation/write/return code. Box summary is inferred, run1 B MAY comes from field limiting, run2 B MAY comes from ancestor native-record replay; no direct helper probe or cross-caller context assumption."
 }
