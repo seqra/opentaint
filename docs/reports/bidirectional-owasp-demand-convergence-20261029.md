@@ -341,3 +341,70 @@ Full raw trace logs remain outside Git under:
 ```text
 /drive-testcomp/opentaint-go-rules/repeat-run1-16g-20261029/convergence-investigation
 ```
+
+## 9. Small executable reproducer
+
+[OwaspDemandCycleTest](../../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/OwaspDemandCycleTest.kt)
+now reproduces the cycle with two methods and one model field. The helper
+has one argument; the request argument from OWASP is not needed.
+
+```java
+main() {
+    sink(helper(sourceAll()));
+}
+
+helper(p) {
+    bytes = getBytes(p);
+    return newString(bytes);
+}
+```
+
+The test supplies the relevant library transfers directly. Base64 root
+copies are omitted. `H` represents the named String storage field.
+
+```text
+getBytes:
+    p.*       -> bytes.*
+    p.H.*     -> bytes.*
+newString:
+    bytes.*   -> out.*
+    bytes.*   -> out.H.*
+return:
+    out.*     -> ret.*
+```
+
+All these helper transfers have STAR tails and at most one field. There is
+no supplied ANY target. `sourceAll` is an ordinary whole-object source with
+a full mark `T`; the sink checks `T`. The real AP operations create the
+abstract ANY/DEMAND relation.
+
+```text
+Forward:
+    p.* / FLOW, N -> bytes.[any] / FLOW, D -> ret.[any] / FLOW, D
+Backward:
+    ret.* / FLOW, N -> bytes.[any] / FLOW, D -> p.[any] / FLOW, D
+Next C2 admission:
+    p.[any] / FLOW demand -> p.* / FLOW initial
+```
+
+The test uses the production driver, engine, reversal, handoff, demand
+store and record store. A test policy delegates the production schedule and
+continuation decision, then adds a safety cap after run-9. Both production
+stop checks must allow continuation before this policy is called.
+
+| Test | Latest reached / complete / accepted | Result |
+|---|---|---|
+| Named storage routes | run-9 / run-9 / run-9 | Only the test POLICY cap stops the driver |
+| Root copies only | run-3 / run-3 / run-3 | Production NO_DEMAND_EDGE stops the driver |
+
+The first test checks exact selected demand equality at runs 5, 7 and 9,
+actual handoff equality after runs 5 and 7, root abstract admission in each
+later forward run, and processed FLOW/ANY DEMAND points. It also checks that
+a precise NORMAL backward `ret.* -> p.H.*` record exists beside the coarse
+demand. The control keeps the same source and sink and removes only the
+named storage routes. Its last stop counter is zero.
+
+This bounded test reproduces continued refinement after a repeated frontier.
+It does not run an unbounded test or install a convergence fix. Both tests
+pass. See the [summary and demand workload investigation](bidirectional-summary-demand-workload-20261029.md)
+for the test command, receipts and related operation-count probes.
