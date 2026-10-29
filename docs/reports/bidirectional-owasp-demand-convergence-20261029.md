@@ -408,3 +408,24 @@ This bounded test reproduces continued refinement after a repeated frontier.
 It does not run an unbounded test or install a convergence fix. Both tests
 pass. See the [summary and demand workload investigation](bidirectional-summary-demand-workload-20261029.md)
 for the test command, receipts and related operation-count probes.
+
+## 10. Lean model and initial-emission follow-up
+
+The [initial-emission investigation](../design/bidirectional-initial-emission-refinement-20261029.md)
+now models the small cycle in Lean and captures its actual call inputs.
+The test still completes through **run-9** and stops at the test cap.
+The latest project run remains **run-12 reached / run-11 complete**.
+
+In run-3, the helper receives a NORMAL concrete MUST-T fact. Current C2
+replaces it with `p.*/FLOW`, the same abstraction analyzed in run-1. The
+Lean model proves the local alternating demand repeats for any positive
+field-limit schedule. A concrete MUST initial instead preserves NORMAL
+results through this helper and passes its demand gates.
+
+This does not justify dropping every unchanged ANY initial. Two new
+diagnostics show required backward source discovery and forward internal
+sink observation under unchanged ANY initials. Both complete run-3; the
+source case stops with `NO_DEMAND_EDGE`, and the sink case uses a POLICY cap.
+Their full traces, test source and validation receipts are
+[embedded](data/bidirectional-initial-emission-refinement-20261029.json).
+No production admission rule or stop rule has changed.
