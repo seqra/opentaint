@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "createdUTC": "2026-10-29T15:10:26.678340+00:00",
+  "sourceRevision": "71156f061",
+  "proposalOnly": true,
+  "productionCodeChanged": false,
+  "newProjectRuns": false,
+  "measuredRuntime": "a7eb02bf1744dd0b1a4c9a4864866c4073a8e169",
+  "primaryProgress": [
+    {
+      "project": "OWASP",
+      "reached": "run-12",
+      "complete": "run-11",
+      "accepted": "run-11",
+      "status": "TIMEOUT"
+    },
+    {
+      "project": "conductor",
+      "reached": "run-4",
+      "complete": "run-3",
+      "accepted": "run-3",
+      "status": "TIMEOUT"
+    },
+    {
+      "project": "thingsboard",
+      "reached": "run-2",
+      "complete": "run-1",
+      "accepted": "run-1",
+      "status": "TIMEOUT"
+    },
+    {
+      "project": "Stirling-PDF",
+      "reached": "run-6",
+      "complete": "run-5",
+      "accepted": "run-5",
+      "status": "TIMEOUT"
+    }
+  ],
+  "counterProgress": {
+    "project": "thingsboard",
+    "reached": "run-2",
+    "complete": "run-1",
+    "accepted": "run-1",
+    "status": "TIMEOUT",
+    "heap": "16g",
+    "fieldLimits": "1,1,2,3,...",
+    "scope": "Historical interrupted diagnostic; not a new or matched post-rewrite result"
+  },
+  "evidenceSource": {
+    "path": "docs/reports/data/bidirectional-summary-demand-workload-20261029.json",
+    "sha256": "a29c11c2ca00711f61d9de32e397801d15319e0305516db985145e5e369f8afc"
+  },
+  "selectedCounterValues": {
+    "C5_QUERIES": 145284,
+    "C5_RAW_LEAVES": 146689,
+    "C5_BFS_STATES_POPPED": 3992093,
+    "C5_BFS_FIXED_MAPPED_OUTPUT_MARK_BAD": 3741361,
+    "C5_BFS_STATIC_BRIDGES": 3089063,
+    "C5_BFS_BRIDGES_AFTER_FIXED_ENTRY_REJECT": 2893937,
+    "C5_BFS_OUTPUT_MISMATCH_STATIC_BRIDGES": 194725,
+    "C5_BFS_COMPOSE_ATTEMPTS": 930415459
+  },
+  "eligibilityBound": {
+    "bridge_label_Owners": 14449,
+    "projected_entry_Owners": 1965,
+    "Owners_objects_upper_bound_F": 16414,
+    "C5_scratch_contexts_S": 20621,
+    "C5_reachesAny_calls_Q": 1697456250,
+    "distinct_View_Owners_pairs_upper_bound_S_times_F": 338473094,
+    "repeated_View_Owners_calls_at_least": 1358983156,
+    "repeated_fraction_at_least": 0.8005998128081357,
+    "repeated_percent_at_least": 80.05998128081357
+  },
+  "crossViewBoundsForLaterRemeasurement": {
+    "graph_vertices": 51953,
+    "graph_edges": 117581,
+    "queried_graph_root_ids": 1910,
+    "owner_families_upper_bound": 16414,
+    "root_vertex_pairs_upper_bound": 99230230,
+    "repeated_vertex_visits_at_least": 806727331,
+    "repeated_vertex_visit_fraction_at_least": 0.8904692291651397,
+    "root_edge_pairs_upper_bound": 224579710,
+    "repeated_edge_visits_at_least": 1825867362,
+    "repeated_edge_visit_fraction_at_least": 0.890472808068659,
+    "root_family_pairs_upper_bound": 31350740,
+    "repeated_reachability_questions_at_least": 1720815329,
+    "repeated_reachability_question_fraction_at_least": 0.9821074380136281,
+    "scope": "One fixed completion graph; no unknown roots; finite upper bounds. A repeated root/family question is pure, but cross-view reuse needs separate memory/ownership design."
+  },
+  "sourceFiles": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticPairLookup.kt": "3aaa0cb07caf84757f8c589441df96eea708374527650948f1da079a70539f2c",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticGuidance.kt": "3e87b5f3df57c55f3ffdfc15dd326985a63175939de3cc3d6acaaab45f9dd30a",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandStore.kt": "940fe1a55ebdc6cbd692ad9f68710772f40497384a881ecd34e70fa2d2e36cbf",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": "b0452a5b3d356a20d7f042cd6486976b7c96db28d2cefa663e0c66e76d7ec593"
+  },
+  "proposalOrder": [
+    "Selected one-step demand rewrite and emitter-image entry intersection",
+    "Fixed-entry C5 subtree pruning",
+    "Per-visible-view owner-family eligibility answers"
+  ],
+  "deferred": [
+    "Cross-query root reachability cache",
+    "Summary replay grouping",
+    "Admitted-delta-only callee input emission"
+  ],
+  "validation": {
+    "file": "spec/lean/proposals/demand-work/DemandWorkPruning.lean",
+    "sha256": "e774523ff94857bea0f63b710bd632cf8217457c55390374180077bae88d7640",
+    "theorems": 29,
+    "command": [
+      "lake",
+      "env",
+      "lean",
+      "proposals/demand-work/DemandWorkPruning.lean"
+    ],
+    "workingDirectory": "spec/lean",
+    "leanVersion": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+    "exitCode": 0,
+    "stdout": "'DemandWorkPruning.pruning_preserves_accepted_outputs' does not depend on any axioms\n'DemandWorkPruning.prepend_preserves_fixed_right' depends on axioms: [propext]\n'DemandWorkPruning.c5_fixed_right_pruning_keeps_outputs' depends on axioms: [propext]\ntrue\n'DemandWorkPruning.repeated_family_is_state_identity' does not depend on any axioms\n'DemandWorkPruning.identity_survives_other_family' does not depend on any axioms\n'DemandWorkPruning.memo_execution_preserves_results_and_scratch' depends on axioms: [propext, Quot.sound]\n'DemandWorkPruning.memo_defined_cells_bound_by_distinct_families' depends on axioms: [propext, Quot.sound]\n'DemandWorkPruning.nodup_length_le_subset' depends on axioms: [propext]\n'DemandWorkPruning.dense_memo_domain_bound' depends on axioms: [propext]\n'DemandWorkPruning.finite_interleaved_control' depends on axioms: [propext]\n",
+    "stderr": "",
+    "allTheoremAxiomAudit": {
+      "exitCode": 0,
+      "stdout": "'DemandWorkPruning.pruning_preserves_accepted_outputs' does not depend on any axioms\n'DemandWorkPruning.prepend_preserves_fixed_right' depends on axioms: [propext]\n'DemandWorkPruning.c5_fixed_right_pruning_keeps_outputs' depends on axioms: [propext]\ntrue\n'DemandWorkPruning.repeated_family_is_state_identity' does not depend on any axioms\n'DemandWorkPruning.identity_survives_other_family' does not depend on any axioms\n'DemandWorkPruning.memo_execution_preserves_results_and_scratch' depends on axioms: [propext, Quot.sound]\n'DemandWorkPruning.memo_defined_cells_bound_by_distinct_families' depends on axioms: [propext, Quot.sound]\n'DemandWorkPruning.nodup_length_le_subset' depends on axioms: [propext]\n'DemandWorkPruning.dense_memo_domain_bound' depends on axioms: [propext]\n'DemandWorkPruning.finite_interleaved_control' depends on axioms: [propext]\n'DemandWorkPruning.bad_persists_on_walk' does not depend on any axioms\n'DemandWorkPruning.good_endpoint_has_good_start' does not depend on any axioms\n'DemandWorkPruning.good_walk_survives' does not depend on any axioms\n'DemandWorkPruning.kept_walk_is_original' does not depend on any axioms\n'DemandWorkPruning.pruning_preserves_accepted_outputs' does not depend on any axioms\n'DemandWorkPruning.mapped_output_does_not_change' depends on axioms: [propext]\n'DemandWorkPruning.prepend_preserves_fixed_right' depends on axioms: [propext]\n'DemandWorkPruning.fixed_right_rejection_is_downward_closed' depends on axioms: [propext]\n'DemandWorkPruning.c5_fixed_right_pruning_keeps_outputs' depends on axioms: [propext]\n'DemandWorkPruning.fixed_bad_output_stays_bad' does not depend on any axioms\n'DemandWorkPruning.left_mismatch_is_not_downward_closed' does not depend on any axioms\n'DemandWorkPruning.unresolved_flow_can_become_compatible_mapped' does not depend on any axioms\n'DemandWorkPruning.repeated_family_is_state_identity' does not depend on any axioms\n'DemandWorkPruning.identity_survives_other_family' does not depend on any axioms\n'DemandWorkPruning.empty_memo_valid' does not depend on any axioms\n'DemandWorkPruning.memo_hit_changes_no_state' depends on axioms: [propext]\n'DemandWorkPruning.memo_step_preserves_result_and_scratch' depends on axioms: [propext, Quot.sound]\n'DemandWorkPruning.memo_execution_preserves_results_and_scratch' depends on axioms: [propext, Quot.sound]\n'DemandWorkPruning.empty_memo_execution_is_equivalent' depends on axioms: [propext, Quot.sound]\n'DemandWorkPruning.memo_step_defined_support' depends on axioms: [propext]\n'DemandWorkPruning.memo_execution_defined_support' depends on axioms: [propext]\n'DemandWorkPruning.empty_memo_defines_only_queried_families' depends on axioms: [propext]\n'DemandWorkPruning.unequal_member_survives_remove' depends on axioms: [propext]\n'DemandWorkPruning.remove_first_length' depends on axioms: [propext]\n'DemandWorkPruning.nodup_length_le_subset' depends on axioms: [propext]\n'DemandWorkPruning.dense_memo_domain_bound' depends on axioms: [propext]\n'DemandWorkPruning.memo_defined_cells_bound_by_distinct_families' depends on axioms: [propext, Quot.sound]\n'DemandWorkPruning.finite_interleaved_control' depends on axioms: [propext]\n'DemandWorkPruning.checked' depends on axioms: [propext]\n",
+      "stderr": ""
+    },
+    "scope": "Generic fixed-right prepend and accepted-output preservation; query-local memo sequence and storage proofs under fixed incremental graph laws. Not a full JVM/AP integration proof."
+  },
+  "limits": [
+    "Historical rejection percentages cannot predict post-rewrite wall time",
+    "C5 pruning and eligibility reuse overlap; do not add their operation bounds",
+    "Query-local memo does not remove the first graph tour for each view",
+    "No cross-query mutable cache or new fact/provenance store is included"
+  ]
+}

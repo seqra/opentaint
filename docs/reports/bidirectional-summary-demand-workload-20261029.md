@@ -441,6 +441,15 @@ integration proof remain for the next design step.
 
 ## 8. Next design targets
 
+The [next-iteration proposal](../design/bidirectional-next-demand-work-20261029.md)
+now specifies the first two directions. It places them after the selected
+one-step demand rewrite: prune impossible fixed-entry C5 branches, then reuse
+query-local owner-family eligibility. Cross-query root reuse remains a later
+design step. No production optimization or new project run is included.
+The latest thingsboard measurement still reaches **run-2**, completes and
+accepts **run-1**. The proposal includes constructive Lean models and a
+staged comparison with the future post-rewrite reference.
+
 | Priority and scope | Current work | Candidate behavior | Required preservation |
 |---|---|---|---|
 | First: thingsboard run-2 C5 | Expand states after a fixed mapped-output-mark rejection | Reject incompatible fixed endpoints before owner lookup, composition and queue insertion | Preserve FLOW prefixes and required left-endpoint bridges; use full mark-group compatibility |
