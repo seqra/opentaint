@@ -11,7 +11,10 @@ import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.common.CommonMethod
 import java.util.Collections
+import java.util.concurrent.atomic.AtomicLongArray
 
+private const val ELIGIBLE_NO: Byte = 1
+private const val ELIGIBLE_YES: Byte = 2
 
 /** Virtual demand only. A lookup neither starts a query nor changes publication permission. */
 interface FrozenCompletion {
@@ -238,17 +241,22 @@ class FrozenStaticCompletion private constructor(
     private val bridgeEntryRows: List<EntryRows>,
     private val bridgeEntries: PathTrie<Int>,
     private val locals: Map<MethodKey, Attachments>,
+    private val ownerFamilyCount: Int,
     val seedMemberships: Long,
     val writerAttachments: Long,
     val readerAttachments: Long,
 ) : FrozenCompletion {
+    // Opt-in totals only; answers remain local to one View.
+    private val ownerStatistics = if (java.lang.Boolean.getBoolean("org.opentaint.bidi.optimizationStatistics"))
+        AtomicLongArray(4) else null
     val seedKeys: Int get() = bridges.sumOf { it.labels.size }
     val seedGeometries: Int get() = bridges.size
     override fun statistics(): String = "seedKeys=$seedKeys seedEntryKeys=${bridgeEntryRows.size} seedGeometries=$seedGeometries ownerMemberships=$seedMemberships " +
         "writerAttachments=$writerAttachments readerAttachments=$readerAttachments " +
         "callMethods=${graph.methodCount} callEdges=${graph.edgeCount} " +
-        "ownBridgeMemberships=${ownBridges.values.sumOf { it.size.toLong() }}"
-    private class Owners(val graphIds: IntArray, val outsideGraph: Set<CommonMethod>)
+        "ownBridgeMemberships=${ownBridges.values.sumOf { it.size.toLong() }} ownerFamilies=$ownerFamilyCount" +
+        (ownerStatistics?.let { " ownerEvaluations=${it[0]} ownerHits=${it[1]} ownerMemoViews=${it[2]} ownerMemoAllocatedBytes=${it[3]}" } ?: "")
+    private class Owners(val familyId: Int, val graphIds: IntArray, val outsideGraph: Set<CommonMethod>)
     private class BridgeRows(val geometry: GuidanceGeometry, val labels: LongArray, val owners: List<Owners>)
     private class EntryRows(val entry: Pattern, val owners: Owners)
     private class Attachments(
@@ -326,9 +334,27 @@ class FrozenStaticCompletion private constructor(
         private val ownId = graph.id(method.method)
         private val local = locals[method]
         private val ownRows = ownBridges[method.method] ?: LongArray(0)
-        private fun eligible(owners: Owners): Boolean = if (inherited)
-            method.method in owners.outsideGraph || reach.reachesAny(owners.graphIds)
-        else method.method in owners.outsideGraph || (ownId != null && owners.graphIds.binarySearch(ownId) >= 0)
+        private var eligibility: ByteArray? = null
+        private fun eligible(owners: Owners): Boolean {
+            ap.cancellation.checkpoint()
+            if (!inherited) return method.method in owners.outsideGraph ||
+                (ownId != null && owners.graphIds.binarySearch(ownId) >= 0)
+            val memo = eligibility ?: ByteArray(ownerFamilyCount).also {
+                eligibility = it
+                ownerStatistics?.incrementAndGet(2)
+                ownerStatistics?.addAndGet(3, ownerFamilyCount.toLong())
+            }
+            when (memo[owners.familyId]) {
+                ELIGIBLE_YES -> { ownerStatistics?.incrementAndGet(1); return true }
+                ELIGIBLE_NO -> { ownerStatistics?.incrementAndGet(1); return false }
+            }
+            // Keep the outside-graph short circuit and the graph scratch lazy.
+            // An interrupted computation does not install a negative answer.
+            val answer = method.method in owners.outsideGraph || reach.reachesAny(owners.graphIds)
+            ownerStatistics?.incrementAndGet(0)
+            memo[owners.familyId] = if (answer) ELIGIBLE_YES else ELIGIBLE_NO
+            return answer
+        }
 
         private fun rows(id: Int, flowOnly: Boolean = false,
                          keep: StaticCandidateFilter? = null): Sequence<StaticGuidanceEdge> = sequence {
@@ -550,6 +576,10 @@ class FrozenStaticCompletion private constructor(
             val own = LinkedHashMap<CommonMethod, LongArrayList>()
             val projectedEntries = LinkedHashMap<Pattern, MutableSet<CommonMethod>>()
             var memberships = 0L
+            var nextFamilyId = 0
+            fun freezeOwners(methods: Set<CommonMethod>) = Owners(nextFamilyId++,
+                methods.mapNotNull { graph.id(it) }.toIntArray().also { it.sort() },
+                methods.filterTo(LinkedHashSet()) { graph.id(it) == null })
             for ((geometry, rows) in bridges) {
                 ap.cancellation.checkpoint()
                 val labels = LongArray(rows.size)
@@ -564,8 +594,7 @@ class FrozenStaticCompletion private constructor(
                     for (method in methods) own.getOrPut(method) { LongArrayList() }
                         .add((frozenBridges.size.toLong() shl 32) or index.toLong())
                     memberships += methods.size
-                    owners += Owners(methods.mapNotNull { graph.id(it) }.toIntArray().also { it.sort() },
-                        methods.filterTo(LinkedHashSet()) { graph.id(it) == null })
+                    owners += freezeOwners(methods)
                     if (row.longKey == 0L) {
                         flowStarts.add(STATIC, geometry.from.fact.path.toIntArray(), frozenBridges.size)
                         flowEnds.add(STATIC, geometry.to.fact.path.toIntArray(), frozenBridges.size)
@@ -611,13 +640,12 @@ class FrozenStaticCompletion private constructor(
             for ((entry, methods) in projectedEntries) {
                 ap.cancellation.checkpoint()
                 entryIndex.add(entry.fact.base, entry.fact.path.toIntArray(), entryRows.size)
-                entryRows += EntryRows(entry, Owners(methods.mapNotNull { graph.id(it) }.toIntArray().also { it.sort() },
-                    methods.filterTo(LinkedHashSet()) { graph.id(it) == null }))
+                entryRows += EntryRows(entry, freezeOwners(methods))
             }
             return FrozenStaticCompletion(ap, graph, frozenBridges, ends, starts, flowStarts, flowEnds, coloredOutputs,
                 Collections.unmodifiableSet(bridgeOwners), own.mapValues { it.value.toLongArray() },
                 entryRows, entryIndex,
-                Collections.unmodifiableMap(locals),
+                Collections.unmodifiableMap(locals), nextFamilyId,
                 memberships, localRows.values.sumOf { it.first.size.toLong() },
                 localRows.values.sumOf { it.second.size.toLong() })
         }
