@@ -34,8 +34,6 @@ class InitialAp internal constructor(
         check(tail == Tail.STAR || tail == Tail.ANY_TAINT || exclusion == ExclusionSet.Empty) {
             "Only a STAR or must premise can exclude fields"
         }
-        check(tail != Tail.EXACT || mark is MarkSlot.Concrete) { "S8: an exact premise needs a concrete mark" }
-        check(tail != Tail.ANY_TAINT || mark is MarkSlot.Concrete) { "W8: a must premise needs a concrete mark" }
         check(base != AccessPathBase.Zero || (path == null && tail == Tail.EXACT &&
             exclusion == ExclusionSet.Empty && mark == MarkSlot.Concrete(TaintMark.ZERO))) {
             "The zero base has only the canonical zero fact"

@@ -34,10 +34,11 @@ class FactShapeTest {
         Pattern(PathFact(base, listOf(f), tail, slot), exclusion)
 
     @Test
-    fun `initial rejects abstract exact and abstract must shapes`() {
+    fun `initial admits abstract exact and abstract must shapes`() {
         for (tail in listOf(Tail.EXACT, Tail.ANY_TAINT)) {
-            assertFails { manager.initial(pattern(tail, MarkSlot.STAR)) }
-            assertFails { manager.initial(base, manager.path(listOf(f)), tail, ExclusionSet.Empty, MarkSlot.STAR) }
+            assertEquals(pattern(tail, MarkSlot.STAR), manager.initial(pattern(tail, MarkSlot.STAR)).toPattern())
+            assertSame(manager.initial(pattern(tail, MarkSlot.STAR)),
+                manager.initial(base, manager.path(listOf(f)), tail, ExclusionSet.Empty, MarkSlot.STAR))
         }
     }
 
@@ -106,12 +107,12 @@ class FactShapeTest {
     }
 
     @Test
-    fun `raw generic abstract exact remains available without becoming an initial`() {
+    fun `raw abstract exact is a legal query initial`() {
         val p = pattern(Tail.EXACT, MarkSlot.STAR)
         val raw = Conclusion(p.fact, p.exclusion, false)
         assertEquals(Tail.EXACT, raw.fact.tail)
         assertEquals(MarkSlot.STAR, raw.fact.mark)
-        assertFails { manager.initial(p) }
+        assertEquals(p, manager.initial(p).toPattern())
     }
 
     @Test

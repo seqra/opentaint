@@ -82,7 +82,7 @@ class StaticProducerGrammarTest {
                 "Direct native/summary results keep their existing header too")
         }
     }
-    @Test fun `a demanded concrete static STAR result keeps its exclusion at the next run2 call`() {
+    @Test fun `same-prefix concrete static STAR demand selects the exact root at the next run2 call`() {
         for (hasNextDemand in listOf(true, false)) for (exclusionKind in 0..2) MethodAnalysisFixtures().use { f ->
             val path = listOf(f.manager.accessors.index(ClassStaticAccessor("C")), f.field("f"))
             val mark = MarkSlot.Concrete(f.mark("T"))
@@ -106,12 +106,13 @@ class StaticProducerGrammarTest {
             f.onLink = { link -> next.addLink(link.ref, link.linkLayer, link.added) }
             val input = f.fact(STATIC, path, Tail.ANY, mark, layer = Layer.DEMAND)
             owner.addLink(CallerRef(f.key, f.manager.zero, input.layer, f.inst(1)), input.layer, input)
-            assertEquals(listOf(f.manager.initial(entry)), owner.initials.all().toList())
+            val exact = entry.copy(fact = entry.fact.copy(tail = Tail.EXACT), exclusion = ExclusionSet.Empty)
+            assertEquals(listOf(f.manager.initial(exact)), owner.initials.all().toList())
             f.drain(owner)
             assertTrue(f.sentLinks.any { it.callee == callee && f.ops.leaves(it.added).any { leaf ->
-                leaf == entry
-            } }, "Ordinary demanded execution keeps the complete STAR/E header at the call")
-            assertEquals(if (hasNextDemand) listOf(f.manager.initial(entry)) else emptyList(),
+                leaf == exact
+            } }, "Same-prefix admission selects the root; child exclusions do not constrain the root")
+            assertEquals(if (hasNextDemand) listOf(f.manager.initial(exact)) else emptyList(),
                 next.initials.all().toList(), "Accepted static inputs still need the callee's fixed demand")
             assertEquals(Tail.ANY, f.ops.leaves(input).single().fact.tail, "The supplied value remains unchanged")
         }

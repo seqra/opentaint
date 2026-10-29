@@ -62,8 +62,8 @@ class CurrentModeIterationTest {
             assertContains(f.summaries(1, c.callee), forward)
             assertContains(f.summaries(1, c.callee, selected = true), forward)
             assertEquals(setOf(DemandPattern(mayOutput, flowInput)), f.patterns(2, c.callee, ret))
-            assertEquals(setOf(flowReturn), f.premises(2, c.callee),
-                "The fixed abstract entry shares one FLOW execution across actual T and U")
+            assertEquals(setOf(f.p(ret, tail = Tail.EXACT)), f.premises(2, c.callee),
+                "The same-prefix ANY demand shares one exact FLOW execution across actual T and U")
             assertContains(f.summaries(2, c.callee), backward)
             normalBackwardRecord(f, c, flowReturn, flowField)
             assertTrue(f.summaries(2, c.callee, selected = true).none { it.conclusion.fact.base != AccessPathBase.Zero })
@@ -119,8 +119,8 @@ class CurrentModeIterationTest {
             val retT = f.p(ret, mark = MarkSlot.Concrete(c.t))
             val boundT = f.p(c.outputs[0], mark = MarkSlot.Concrete(c.t))
             val sharedReturn = f.p(ret, tail = Tail.STAR)
-            assertEquals(setOf(sharedReturn, retT), f.premises(2, c.callee),
-                "The abstract demand shares FLOW; only the explicit T guide starts a concrete cleaner check")
+            assertEquals(setOf(f.p(ret, tail = Tail.EXACT), retT), f.premises(2, c.callee),
+                "The abstract demand shares exact FLOW; the explicit T guide starts a concrete cleaner check")
             assertTrue(f.links.any { it.run == 2 && it.callee == c.callee && it.added == boundU })
             val excludedFullT = MarkSlot.Star(f.manager.markSetOf(c.t))
             normalBackwardRecord(f, c, sharedReturn, f.p(arg, c.fields, Tail.STAR, excludedFullT))

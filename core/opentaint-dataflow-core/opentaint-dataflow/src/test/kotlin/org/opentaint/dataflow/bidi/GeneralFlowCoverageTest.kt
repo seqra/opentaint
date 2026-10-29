@@ -34,7 +34,7 @@ class GeneralFlowCoverageTest {
         assertNotNull(removeFlowCovered(m, initial(), marked(), listOf(flow(e = ExclusionSet.of(g)))))
         assertNotNull(removeFlowCovered(m, initial(), marked(listOf(f, g)), listOf(flow())))
         assertNotNull(removeFlowCovered(m, initial(), marked(), listOf(flow(emptyList()))))
-        assertNotNull(removeFlowCovered(m, initial(), marked(), listOf(flow(tail = Tail.ANY))))
+        assertNotNull(removeFlowCovered(m, initial(), marked(), listOf(flow(tail = Tail.ANY, layer = Layer.DEMAND))))
         assertNotNull(removeFlowCovered(m, initial(), marked(), listOf(flow(excluded = m.markSetOf(t)))))
         assertNotNull(removeFlowCovered(m, initial(), marked(layer = Layer.NORMAL), listOf(flow(layer = Layer.DEMAND))))
     }

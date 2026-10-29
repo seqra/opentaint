@@ -55,8 +55,12 @@ class FlowGroup(private val m: ApManager, private val interner: TrieInterner<Flo
         for (stored in others) {
             m.cancellation.checkpoint()
             val marks = stored.markExclusion.isSubsetOf(t.markExclusion)
-            val atOk = marks && (stored.tail == Tail.ANY ||
-                (t.tail == Tail.STAR && stored.exclusion.isSubsetOf(t.exclusion)))
+            val atOk = marks && when (stored.tail) {
+                Tail.ANY -> true
+                Tail.STAR -> t.tail == Tail.STAR && stored.exclusion.isSubsetOf(t.exclusion)
+                Tail.EXACT -> t.tail == Tail.EXACT && stored.exclusion.isSubsetOf(t.exclusion)
+                Tail.ANY_TAINT -> t.tail == Tail.ANY_TAINT && stored.exclusion.isSubsetOf(t.exclusion)
+            }
             val belowOk = marks && stored.tail == Tail.ANY
             root = FlowAlgebra.subtract(root, stored.root, FlowLeaf.NONE,
                 at = { if (atOk) it else FlowLeaf.NONE },

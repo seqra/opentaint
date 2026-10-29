@@ -62,6 +62,8 @@ class NaiveClosure(
     private val references = HashMap<MethodKey, FormsReference>()
     private val selectedReferences = HashMap<MethodKey, SelectedFormsReference>()
     private val run1Origins = RawRun1Origins()
+    private val demandReference by lazy { SelectedDemandReference(config.index, config.fieldLimit,
+        config.direction, program.manager.marks, program.field("__admission_witness__")) }
     private var invoked = false
 
     private data class Part(
@@ -267,9 +269,16 @@ class NaiveClosure(
     }
 
     private fun summary(method: MethodKey, premise: Set<Pattern>, conclusion: Conclusion) {
-        val raw = ObservedEdge(method, premise, conclusion)
+        // Canonicalize only a complete singleton FLOW pair. Point states retain their read barrier.
+        val flow = premise.singleOrNull()?.fact?.mark is MarkSlot.Star && conclusion.fact.mark is MarkSlot.Star
+        fun endpoint(p: Pattern) = if (flow && p.fact.tail == Tail.EXACT)
+            p.copy(fact = p.fact.copy(tail = Tail.STAR)) else p
+        val key = premise.mapTo(linkedSetOf(), ::endpoint)
+        val result = if (flow && conclusion.fact.tail == Tail.EXACT)
+            conclusion.copy(fact = conclusion.fact.copy(tail = Tail.STAR)) else conclusion
+        val raw = ObservedEdge(method, key, result)
         if (!rawSummaries.add(raw)) return
-        publish(method, premise, conclusion)
+        publish(method, key, result)
     }
 
     private fun publish(method: MethodKey, premise: Set<Pattern>, conclusion: Conclusion) {
@@ -278,7 +287,7 @@ class NaiveClosure(
             for (member in premise) {
                 val guides = inputs.demand.filter { it.first == method }.map { it.second } + listOfNotNull(staticCarry(member))
                 for (demand in guides)
-                    restrict(member, conclusion, demand, if (this@NaiveClosure.selected) program.manager.marks else null)?.let { add(it) }
+                    demandReference.restrict(member, conclusion, demand)?.let { add(it) }
             }
         }
         for (piece in pieces) {
@@ -328,7 +337,7 @@ class NaiveClosure(
                 config.run1 -> addInitial(part.callee, policy(added))
                 added.fact.base == AccessPathBase.Zero -> addInitial(part.callee, ZERO_PATTERN)
                 else -> for ((method, demand) in inputs.demand) if (method == part.callee)
-                    emit(demand.entry, added)?.let { addInitial(method, it) }
+                    demandReference.emit(demand.entry, added)?.let { addInitial(method, it) }
             }
             if (selected) replaySelected(link)
             else for (request in requests.toList()) if (request.method == part.callee) act(request, link)
@@ -562,7 +571,7 @@ class NaiveClosure(
         val leaf = Pattern(input.fact, input.exclusion)
         val guides = inputs.demand.filter { it.first == method }.map { it.second } + listOfNotNull(staticCarry(leaf))
         for (guide in guides)
-            emit(guide.entry, leaf, program.manager.marks)?.let { addInitial(method, it) }
+            demandReference.emit(guide.entry, leaf)?.let { addInitial(method, it) }
     }
     /** A family is instantiated at this actual slot; a root probe is never a stored universal pair. */
     private fun staticCarry(actual: Pattern): DemandPattern? {

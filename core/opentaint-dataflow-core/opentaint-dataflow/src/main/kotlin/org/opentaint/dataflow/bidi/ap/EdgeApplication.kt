@@ -22,11 +22,12 @@ internal class CompiledEdge(
     init {
         check(fromMark !is MarkSlot.Star || fromMark.excluded.isEmpty) { "S7: a premise cannot exclude marks" }
         check(toMark !is MarkSlot.Concrete || fromMark is MarkSlot.Concrete) { "S7: a concrete target needs a concrete premise" }
-        check(fromTail != Tail.EXACT || fromMark is MarkSlot.Concrete) { "S8: an exact premise needs a concrete mark" }
-        check(fromTail != Tail.EXACT || toTail != Tail.STAR) { "S8: an exact premise cannot have a STAR target" }
-        check(toTail != Tail.EXACT || fromMark is MarkSlot.Concrete) { "S8: an exact target needs a concrete premise" }
-        check(toTail != Tail.ANY_TAINT || toMark is MarkSlot.Concrete) { "W8: a must target needs a concrete mark" }
-        check(fromTail != Tail.ANY_TAINT || fromMark is MarkSlot.Concrete) { "W8: a must premise needs a concrete mark" }
+        check(fromTail != Tail.EXACT || toTail != Tail.STAR || fromMark is MarkSlot.Star) {
+            "A concrete exact premise cannot have a STAR target"
+        }
+        check(toTail != Tail.ANY_TAINT || toMark is MarkSlot.Concrete || fromMark is MarkSlot.Star) {
+            "An abstract must target needs a FLOW relation"
+        }
         check(fromTail == Tail.STAR || toTail == Tail.STAR || exclusion == ExclusionSet.Empty) { "W1: only STAR sides have shared E" }
         check(fromTail == Tail.ANY_TAINT || fromExclusion == ExclusionSet.Empty) { "A2: only a must premise has own E" }
         check(toTail == Tail.ANY_TAINT || toExclusion == ExclusionSet.Empty) { "A2: only a must target has own E" }
@@ -71,8 +72,12 @@ internal class EdgeApplication(private val m: ApManager, private val ce: Compile
             if ((ce.fromMark as? MarkSlot.Concrete)?.mark?.id == id) requested = true
         }
         val mx = gate.flowMarks(c.markExclusion)
-        check(mx == null || (ce.toTail != Tail.EXACT && ce.toTail != Tail.ANY_TAINT))
-        val normal = c.tail == Tail.STAR
+        val exact = c.tail == Tail.EXACT
+        val must = c.tail == Tail.ANY_TAINT
+        val normal = c.tail != Tail.ANY
+        val writeKeep = ce.fromBase == ce.toBase && ce.fromTail == Tail.STAR &&
+            ce.toTail == Tail.STAR && ce.fromPathData.contentEquals(ce.toPath?.toIntArray() ?: EMPTY_PATH) &&
+            ce.exclusion != ExclusionSet.Empty
         val layer = c.layer or edgeDemand
         val unchanged = if (mode.run1 && mode.markMode == MarkMode.FULL) unchangedStaticFlowPath(c, unchangedStaticInitial) else null
         val u = c.root.walk(ce.fromPathData) { d, n ->
@@ -80,21 +85,29 @@ internal class EdgeApplication(private val m: ApManager, private val ce: Compile
             if (n.leaf.isEmpty || (normal && !c.exclusion.admits(ce.fromPathData[d]))) return@walk
             if (normal && d == staticAt) {
                 // Prescan catalog emission replaces the old position request. This parent gives no fact.
-            } else flowHit(mx, c, { !sameFlowLeaf(m, unchanged, ce.fromPathData, d) }) {
-                results.flow(Layer.DEMAND, ExclusionSet.Empty, it, flagAtTarget())
+            } else if (!exact || writeKeep) flowHit(mx, c, { !sameFlowLeaf(m, unchanged, ce.fromPathData, d) }) {
+                if (must) {
+                    val tail = if (layer == Layer.DEMAND) Tail.ANY else mustAboveTail
+                    results.flow(if (tail == Tail.ANY) Layer.DEMAND else layer,
+                        if (tail == Tail.ANY || tail == Tail.EXACT) ExclusionSet.Empty else aboveExclusion, it, flagAtTarget(), tail)
+                } else results.flow(Layer.DEMAND, ExclusionSet.Empty, it, flagAtTarget())
             }
         } ?: return
         val kids = FlowAlgebra.retainChildren(u, m.cancellation, admitsRest)
         when (ce.toTail) {
             Tail.STAR -> {
                 if (kids != null) flowHit(mx, c, { changedFlowSubtree(m, kids, ce.fromPathData, unchanged) }) {
-                    results.flow(layer, c.exclusion, it, FlowAlgebra.prepend(m, ce.toPath, kids), c.tail)
+                    if (layer == Layer.DEMAND && (exact || must))
+                        results.flow(Layer.DEMAND, ExclusionSet.Empty, it, FlowAlgebra.prepend(m, ce.toPath, kids), Tail.ANY)
+                    else results.flow(layer, c.exclusion, it, FlowAlgebra.prepend(m, ce.toPath, kids), c.tail)
                 }
                 if (!u.leaf.isEmpty) flowHit(mx, c, {
                     !sameFlowLeaf(m, unchanged, ce.fromPathData, ce.fromPathData.size)
                 }) {
-                    if (mode.run1 && ce.exclusion != ExclusionSet.Empty && c.tail == Tail.STAR)
+                    if (mode.run1 && ce.exclusion != ExclusionSet.Empty && c.tail != Tail.ANY)
                         results.flow(Layer.DEMAND, ExclusionSet.Empty, it, flagAtTarget(), c.tail)
+                    else if (layer == Layer.DEMAND && (exact || must))
+                        results.flow(Layer.DEMAND, ExclusionSet.Empty, it, flagAtTarget(), Tail.ANY)
                     else results.flow(layer, c.exclusion.union(ce.exclusion), it, flagAtTarget(), c.tail)
                 }
             }
@@ -102,7 +115,13 @@ internal class EdgeApplication(private val m: ApManager, private val ce: Compile
                 (!u.leaf.isEmpty && !sameFlowLeaf(m, unchanged, ce.fromPathData, ce.fromPathData.size)) ||
                     (kids != null && changedFlowSubtree(m, kids, ce.fromPathData, unchanged))
             }) {
-                results.flow(Layer.DEMAND, ExclusionSet.Empty, it, flagAtTarget())
+                val tail = if (layer == Layer.DEMAND && ce.toTail != Tail.ANY) Tail.ANY else ce.toTail
+                val exclusion = when (tail) {
+                    Tail.ANY_TAINT -> ce.toExclusion
+                    Tail.EXACT -> ExclusionSet.Empty
+                    else -> ExclusionSet.Empty
+                }
+                results.flow(if (tail == Tail.ANY) Layer.DEMAND else layer, exclusion, it, flagAtTarget(), tail)
             }
         }
     }

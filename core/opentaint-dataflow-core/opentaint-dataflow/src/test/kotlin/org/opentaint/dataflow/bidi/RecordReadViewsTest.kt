@@ -225,8 +225,6 @@ class RecordReadViewsTest {
             RecordLeafView(pattern(y, listOf(g), Tail.STAR, MarkSlot.STAR), exactResult),
             RecordLeafView(pattern(y, listOf(g), Tail.EXACT, mt),
                 conclusion(x, listOf(f), Tail.STAR, MarkSlot.STAR)),
-            RecordLeafView(pattern(y, listOf(g), Tail.ANY_TAINT, MarkSlot.STAR),
-                conclusion(x, listOf(f), Tail.ANY, MarkSlot.STAR)),
         )
         val input = typed(conclusion(y, listOf(g), Tail.EXACT, mt))
         for (view in malformed) {
@@ -239,6 +237,18 @@ class RecordReadViewsTest {
         assertNull(reverseRecordLeaf(Direction.FORWARD, malformedNative, exactResult))
         assertNull(reverseRecordLeaf(Direction.FORWARD, malformedNative,
             conclusion(y, listOf(g), Tail.ANY_TAINT, mt)))
+    }
+
+    @Test
+    fun `abstract MUST is a legal FLOW tail but requires a definite uniform actual`() {
+        val premise = pattern(y, listOf(g), Tail.ANY_TAINT, MarkSlot.STAR, ex(h))
+        for (actual in listOf(
+            conclusion(y, listOf(g), Tail.EXACT, mt),
+            conclusion(y, listOf(g), Tail.ANY, mt),
+            conclusion(y, listOf(g), Tail.STAR, MarkSlot.STAR),
+        )) assertNull(ops.satisfying(typed(actual), premise, forward))
+        val definite = conclusion(y, listOf(g), Tail.ANY_TAINT, mt, ex(h))
+        assertNotNull(ops.satisfying(typed(definite), premise, forward))
     }
 
     @Test

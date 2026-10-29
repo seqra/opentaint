@@ -95,7 +95,7 @@ class ReturnGroupScheduleTest {
         val temporary = AccessPathBase.CleanerTemporary()
         val barriers = listOf<CleanStep>(
             clean(mark = t), clean(mark = TaintMark.ZERO), clean(base = STATIC), clean(base = temporary),
-            clean(mark = null), CleanStep.Kill(StatementSummary.EMPTY),
+            clean(mark = null, reach = CleanReach.AT_AND_BELOW), CleanStep.Kill(StatementSummary.EMPTY),
             CleanStep.Field(temporary, StatementSummary.EMPTY,
                 Cleaner(temporary, null, CleanReach.EXACT, g), StatementSummary.EMPTY),
         )

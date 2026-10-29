@@ -13,6 +13,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
+import kotlin.test.assertIs
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertFalse
@@ -309,12 +310,14 @@ class KindFactoryTest {
     }
 
     @Test
-    fun `typed factories reject abstract exact and abstract must without widening`() {
+    fun `typed factories preserve new abstract point tails and widen uncertain results`() {
         for (tail in listOf(Tail.EXACT, Tail.ANY_TAINT)) {
             for (mark in listOf(MarkSlot.STAR, MarkSlot.Star(marks(t.id)))) {
                 for (layer in Layer.entries) {
                     for (path in listOf(emptyList(), listOf(cls, f, element))) {
-                        assertFails { manager.factsOf(PathFact(x, path, tail, mark), empty, layer) }
+                        val actual = assertIs<FlowTree>(manager.factsOf(PathFact(x, path, tail, mark), empty, layer))
+                        assertEquals(if (layer == Layer.DEMAND) Tail.ANY else tail, actual.tail)
+                        assertEquals(layer, actual.layer)
                     }
                 }
             }

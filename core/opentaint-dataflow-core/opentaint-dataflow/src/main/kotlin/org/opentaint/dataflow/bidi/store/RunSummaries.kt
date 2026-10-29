@@ -55,6 +55,7 @@ class RunSummaryStore(private val m: ApManager, flowBacked: Boolean = false) {
     }
 
     private fun checkShape(premise: PremiseKey, facts: Facts) {
+        assertCanonicalFlowSummary(premise, facts)
         check(facts.base !is AccessPathBase.CleanerTemporary) { "A field-action temporary cannot enter a summary" }
         check((facts is FlowTree) == premise.isFlow) { "K6: the conclusion kind follows the premise" }
         check(premise !is PremiseSet || facts is TaintTree) { "A multi-premise summary must be TAINT" }

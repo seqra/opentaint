@@ -85,7 +85,7 @@ class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Stat
         }
         else {
             ids += index.lookupPrefixes(initial.base, initial.pathData)
-            if (initial.mark is MarkSlot.Star) ids += index.lookupExtensions(initial.base, initial.pathData)
+            if (initial.mark is MarkSlot.Star || initial.tail == Tail.STAR) ids += index.lookupExtensions(initial.base, initial.pathData)
         }
         // Capture every candidate value before callbacks can grow this directory.
         val snapshot = ArrayList<Subscription>(ids.size + if (pub.premise.isZero) zeroParts.size else 0)

@@ -44,7 +44,22 @@ class DirectCurrentIteration(private val program: FiniteProgramFixtures, private
                 run1MarkMode = MarkMode.GROUP)
             val inputs = ProgramRunInputs(roots.toList(), demand.toList(), records.toList(), seeds.toList(),
                 hasSharedStaticCarry = index == 2)
-            HistoricalF71.validate(program, inputs, allowEndFacts, allowMustSources)
+            // Keep the frozen historical program domain. Current native FLOW records
+            // additionally retain field exclusions and use canonical STAR endpoints.
+            HistoricalF71.validate(program, inputs.copy(records = emptyList()), allowEndFacts, allowMustSources)
+            for (record in inputs.records) {
+                val p = record.premise
+                val c = record.conclusion
+                check(!c.demand)
+                check(record.direction != Direction.BACKWARD || p.fact.base != AccessPathBase.Zero)
+                check(p.exclusion == ExclusionSet.Empty || p.fact.tail == Tail.STAR || p.fact.tail == Tail.ANY_TAINT)
+                if (p.fact.mark is MarkSlot.Star) {
+                    check(c.fact.mark is MarkSlot.Star)
+                    check(p.fact.tail == Tail.STAR || p.fact.tail == Tail.ANY_TAINT)
+                    check(c.fact.tail == Tail.STAR || c.fact.tail == Tail.ANY_TAINT)
+                    check(record.direction != Direction.BACKWARD || p.fact.tail != Tail.ANY_TAINT)
+                } else check(c.fact.mark is MarkSlot.Concrete)
+            }
             var observation = RawCurrentClosure(program, config, inputs).run()
             if (config.direction == Direction.FORWARD) {
                 currentDemand = LinkedHashMap()

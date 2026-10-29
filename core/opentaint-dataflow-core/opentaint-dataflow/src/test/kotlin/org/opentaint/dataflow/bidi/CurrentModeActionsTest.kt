@@ -120,35 +120,31 @@ class CurrentModeActionsTest {
             assertTrue(f.summaries(1, c.callee, selected = true).any { it.conclusion.demand &&
                 it.conclusion.fact.base == ret && it.conclusion.fact.tail == Tail.ANY })
             assertContains(f.premises(1, c.callee), f.p(arg, tail = Tail.STAR, mark = groupT))
-            val gReturn = f.p(ret, listOf(g), mark = MarkSlot.Concrete(c.t))
             val gInput = f.p(arg, listOf(h, g), mark = MarkSlot.Concrete(c.t))
             val kInput = f.p(arg, listOf(h, k), mark = MarkSlot.Concrete(c.u))
-            val kReturn = f.p(ret, listOf(k), mark = MarkSlot.Concrete(c.u))
-            val gResidual = f.p(arg, listOf(g), mark = MarkSlot.Concrete(c.t))
-            val kResidual = f.p(arg, listOf(k), mark = MarkSlot.Concrete(c.u))
-            val sharedReturn = f.p(ret, tail = Tail.STAR)
-            val keptFields = ExclusionSet.of(field)
-            native(f, c, sharedReturn, f.p(arg, tail = Tail.STAR, exclusion = keptFields))
-            native(f, c, sharedReturn, f.p(arg, listOf(h), Tail.STAR, exclusion = keptFields))
-            // B2/L1 computes both FLOW residuals once, with the real field exclusion.
-            // The partial selected-mark cleaner keeps a FLOW demand with T excluded.
             val excludedFullT = MarkSlot.Star(f.manager.markSetOf(c.t))
-            for (path in listOf(listOf(h), listOf(field))) {
-                val coarse = f.p(arg, path, Tail.ANY, excludedFullT)
-                assertContains(f.summaries(2, c.callee), CurrentSummary(setOf(sharedReturn),
+            val fieldReturns = listOf(field, g, k).map { f.p(ret, listOf(it), Tail.STAR) }
+            // One new field refines each ANY return demand. The fixed input
+            // field is retained in both the NORMAL record and its coarse read residual.
+            for ((at, entry) in listOf(field, g, k).zip(fieldReturns)) {
+                val marks = if (at == field) excludedFullT else MarkSlot.STAR
+                native(f, c, entry, f.p(arg, listOf(at), Tail.STAR, marks))
+                val coarse = f.p(arg, listOf(h), Tail.ANY, marks)
+                assertContains(f.summaries(2, c.callee), CurrentSummary(setOf(entry),
                     Conclusion(coarse.fact, ExclusionSet.Empty, true)))
             }
-            assertEquals(setOf(sharedReturn, f.p(ret, listOf(field), mark = MarkSlot.Concrete(c.t))),
+            assertEquals(fieldReturns.toSet() + f.p(ret, listOf(field), mark = MarkSlot.Concrete(c.t)),
                 f.premises(2, c.callee),
-                "Abstract demand shares FLOW; the concrete f/T guide separately tests the selected cleaner")
+                "Each field refines FLOW; the concrete f/T guide tests the selected cleaner separately")
             assertTrue(f.summaries(2, c.callee).none { it.conclusion.fact ==
                 PathFact(arg, listOf(h, field), Tail.EXACT, MarkSlot.Concrete(c.t)) })
             assertTrue(f.patterns(3, c.callee, arg).all { it.entry.fact.mark is MarkSlot.Star },
                 "The selected partial-cleaner demand remains abstract and starts shared FLOW")
             val cleanedInput = f.p(arg, listOf(h, field), mark = MarkSlot.Concrete(c.t))
             val actualInputs = setOf(cleanedInput, gInput, kInput)
-            assertEquals(setOf(f.p(arg, listOf(h), Tail.STAR)), f.premises(3, c.callee),
-                "The actual source facts share the demanded h/FLOW body; the caller applies its T exclusion")
+            assertEquals(listOf(field, g, k).map { f.p(arg, listOf(h, it), Tail.STAR) }.toSet(),
+                f.premises(3, c.callee),
+                "Each actual child refines h/ANY with its first new field")
             val sources = f.program.entryInputs.single { it.key == c.root }.rules.summary.edges.map { it.forward }
                 .filter { it.from.base == AccessPathBase.Zero && it.to.base != AccessPathBase.Zero }
             assertEquals(3, sources.size)
@@ -159,15 +155,14 @@ class CurrentModeActionsTest {
                 assertTrue(f.links.any { it.run == 3 && it.callee == c.callee && it.layer == Layer.NORMAL &&
                     it.added == expected })
             }
-            assertTrue(f.actual.results[2].recordCrossings >= 2)
-            assertTrue(f.actual.results[2].demandLayerEdges > 0L,
-                "The shared FLOW body retains its partial-cleaner demand with T excluded")
+            assertEquals(0L, f.actual.results[2].demandLayerEdges,
+                "Known child fields remove the former coarse partial-cleaner demand")
             val killed = key(c, 0)
             assertTrue(killed !in f.actual.results[2].witnessesByKey())
             assertTrue(report.entries.none { it.key == killed })
             assertEquals(setOf(key(c, 1), key(c, 2)), report.entries.map { it.key }.toSet())
             assertTrue(report.entries.all { it.state == ReportState.DEMAND && it.run == 3 })
-            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.POLICY,
+            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE,
                 run1MarkMode = MarkMode.GROUP), report.end)
         }
     }

@@ -291,7 +291,7 @@ class ConcreteDesignDifferentialTest {
         val added = f.pattern(x, listOf(a, b), mark = t)
         val abstract = f.pattern(x, tail = Tail.ANY, mark = MarkSlot.STAR)
         assertEquals(added, HistoricalF71.emit(abstract, added))
-        assertEquals(f.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR), emit(abstract, added))
+        assertEquals(f.pattern(x, listOf(a), tail = Tail.STAR, mark = MarkSlot.STAR), emit(abstract, added))
         val excluded = abstract.copy(fact = abstract.fact.copy(mark = MarkSlot.Star(MarkSet.EMPTY + t.mark)))
         assertNull(HistoricalF71.emit(excluded, added))
         assertEquals(f.pattern(x, listOf(a, b), mark = u), HistoricalF71.emit(excluded, added.copy(fact = added.fact.copy(mark = u))))
@@ -359,7 +359,7 @@ class ConcreteDesignDifferentialTest {
             CallStage.Edges(BEFORE, BOUND, UNRESOLVED, f.summary(keepEdge(x), ZERO_KEEP)),
             CallStage.Actions(BOUND, AFTER, listOf(
                 CleanStep.Clean(Cleaner(x, null, CleanReach.AT_AND_BELOW, t)),
-                CleanStep.Clean(Cleaner(x, f.manager.path(listOf(b)), CleanReach.EXACT, null)))),
+                CleanStep.Clean(Cleaner(x, f.manager.path(listOf(b)), CleanReach.AT_AND_BELOW, null)))),
         ), emptyList(), BEFORE, AFTER))
         val sink = SinkRule(f.rule("excluded-mark sink"), 0, listOf(f.program.pattern(x, listOf(a), mark = u)), emptyList())
         f.program.exit(root, 2, ExitRules(RuleStatement(StatementSummary.EMPTY, StatementSummary.EMPTY, listOf(sink)), false, emptySet()))

@@ -497,7 +497,7 @@ class CallPlanTest {
         }
         MethodAnalysisFixtures().use { f ->
             val mark = f.mark("T")
-            val plan = straight(actions = listOf(CleanStep.Clean(Cleaner(x, null, CleanReach.EXACT, null))))
+            val plan = straight(actions = listOf(CleanStep.Clean(Cleaner(x, null, CleanReach.AT_AND_BELOW, null))))
             f.call(1, plan)
             val (_, calls) = service(f)
             val j = initial(f,f.pattern())
@@ -505,8 +505,7 @@ class CallPlanTest {
             assertTrue(f.unresolvedCalls.isEmpty(), "A dropped cleaner input never reaches ADDED")
             repeat(2) { process(f, calls, EdgeDelta(j, f.inst(1), f.fact(tail = Tail.ANY_TAINT))) }
             process(f, calls, EdgeDelta(j, f.inst(1), f.fact(tail = Tail.ANY, layer = Layer.DEMAND)))
-            assertEquals(2, f.unresolvedCalls.size,
-                "The same added demand fact has two distinct original caller layers")
+            assertTrue(f.unresolvedCalls.isEmpty(), "Whole-position RemoveAll also kills uniform and may inputs")
         }
     }
 

@@ -175,9 +175,9 @@ class ApOps(val manager: ApManager) {
     fun startFact(i: InitialAp, mode: ApMode): Facts = manager.runtimeFact(initialFacts(manager, i), mode)
     fun runtimeFact(f: Facts, mode: ApMode): Facts = manager.runtimeFact(f, mode)
     fun policy(added: Facts): InitialAp = policyInitial(manager, added)
-    fun emit(d: DemandPattern, added: Facts): List<InitialAp> = emitInitials(this, d, added)
+    fun emit(d: DemandPattern, added: Facts, policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = manager.marks)): List<InitialAp> = emitInitials(this, d, added, policy)
     fun restrictReference(j: InitialAp, g: Facts, d: DemandPattern): List<Conclusion> = restrictRaw(this, j, g, d)
-    fun restrict(j: InitialAp, g: Facts, d: DemandPattern): List<Facts> = restrictFacts(this, j, g, d)
+    fun restrict(j: InitialAp, g: Facts, d: DemandPattern, policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = manager.marks)): List<Facts> = restrictFacts(this, j, g, d, policy)
     fun demandPart(premise: PremiseKey, g: Facts, direction: Direction): Facts? =
         selectDemand(manager, premise, g, direction)
 }

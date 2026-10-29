@@ -326,9 +326,8 @@ class EdgeTreeEquivalenceTest {
         val malformed = listOf(
             edge(Tail.STAR, Tail.STAR, fromMark = MarkSlot.Star(marks(t.id))),
             edge(Tail.STAR, Tail.ANY, fromMark = star, toMark = mu),
-            edge(Tail.EXACT, Tail.ANY, fromMark = star),
-            edge(Tail.EXACT, Tail.STAR), edge(Tail.STAR, Tail.EXACT, fromMark = star, toMark = star),
-            edge(Tail.STAR, Tail.ANY_TAINT, toMark = star), edge(Tail.ANY_TAINT, Tail.ANY, fromMark = star),
+            edge(Tail.EXACT, Tail.STAR),
+            edge(Tail.STAR, Tail.ANY_TAINT, toMark = star),
             edge(Tail.ANY, Tail.EXACT, exclusion = ex(h)),
             edge(Tail.STAR, Tail.STAR, fromE = ex(h)), edge(Tail.STAR, Tail.STAR, toE = ex(h)),
         )

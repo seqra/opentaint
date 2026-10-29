@@ -281,8 +281,8 @@ class JIRRuleValidationTest : BasicTestUtils() {
             assertFalse(forms.valid(cleaner(listOf(RemoveMark(t, arg0), RemoveAllMarks(any(position))))))
             assertFalse(forms.valid(cleaner(listOf(RemoveAllMarks(any(position))), mkFalse())))
         }
-        assertTrue(forms.valid(cleaner(listOf(RemoveAllMarks(any(arg0))))))
-        assertTrue(forms.valid(cleaner(listOf(RemoveAllMarks(any(field(arg0)))))))
+        assertFalse(forms.valid(cleaner(listOf(RemoveAllMarks(any(arg0))))))
+        assertFalse(forms.valid(cleaner(listOf(RemoveAllMarks(any(field(arg0)))))))
     }
 
     @Test

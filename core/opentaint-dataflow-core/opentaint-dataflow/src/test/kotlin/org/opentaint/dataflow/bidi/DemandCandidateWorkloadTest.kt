@@ -106,7 +106,7 @@ class DemandCandidateWorkloadTest {
         val first = store.initials(f.method, f.fact(base = p, mark = MarkSlot.Concrete(f.mark("T")))).single()
         assertTrue(held.add(first))
         val second = store.initials(f.method, f.fact(base = p, mark = MarkSlot.Concrete(f.mark("U")))).single()
-        assertEquals(f.manager.initial(entry), first)
+        assertEquals(f.manager.initial(entry.copy(fact=entry.fact.copy(tail=Tail.EXACT))), first)
         assertTrue(first === second)
         assertFalse(held.add(second), "The method already has this FLOW initial; the C2 query returned it again")
     }

@@ -94,7 +94,6 @@ internal fun cleanSelectedFullMask(m: ApManager, c: Facts, cl: Cleaner, selected
 private class FlowClean(private val m: ApManager, private val c: FlowTree, private val cl: Cleaner,
                         private val mode: ApMode, private val out: ApOut) {
     private val results = Results(m, c.base)
-    private val tail = c.tail
 
     fun run() {
         val selected = cl.mark?.let { m.marks.runtimeAtom(it, mode.markMode) }
@@ -105,9 +104,20 @@ private class FlowClean(private val m: ApManager, private val c: FlowTree, priva
             results.flush(out)
             return
         }
-        FlowAlgebra.cleanSpine(c.root, cl.pathArray, cl.reach, 0, m.cancellation, ::row) { null }
-            ?.let { results.flow(c.layer, c.exclusion, c.markExclusion, it, c.tail) }
-        results.flush(out)
+        FlowAlgebra.cleanSpine(c.root, cl.pathArray, cl.reach, 0, m.cancellation,
+            { depth, leaf ->
+                if (leaf.isEmpty) leaf else {
+                    val pattern = PathFact(c.base, cl.pathArray.copyOf(depth).asList(), c.tail,
+                        MarkSlot.Star(c.markExclusion))
+                    for (kept in wholeFlowClean(cl, Conclusion(pattern, c.exclusion, c.layer == Layer.DEMAND))) {
+                        val node = FlowAlgebra.prepend(m, m.path(kept.fact.path), FlowAlgebra.LEAF_NODE)
+                        results.flow(if (kept.demand) Layer.DEMAND else Layer.NORMAL, kept.exclusion,
+                            c.markExclusion, node, kept.fact.tail)
+                    }
+                    FlowLeaf.NONE
+                }
+            }, { null })?.let { results.flow(c.layer, c.exclusion, c.markExclusion, it, c.tail) }
+        results.flush(out.run1Policy(m, mode))
     }
 
     /** A disjoint static field is not a mark-interest producer. Split selected
@@ -137,17 +147,7 @@ private class FlowClean(private val m: ApManager, private val c: FlowTree, priva
         results.flush(out)
     }
 
-    private fun row(d: Int, leaf: FlowLeaf): FlowLeaf {
-        if (leaf.isEmpty) return leaf
-        val path = cl.pathArray
-        val pos = cleanPosAt(cl, tail, d, d < path.size && c.exclusion.admits(path[d]))
-        if (pos == Pos.DISJOINT) return leaf
-        if (pos == Pos.PART) {
-            val at = FlowAlgebra.prepend(m, m.path(path.copyOf(d)), FlowAlgebra.LEAF_NODE)
-            results.flow(Layer.DEMAND, c.exclusion, c.markExclusion, at, c.tail)
-        }
-        return FlowLeaf.NONE
-    }
+
 }
 
 /** Concrete and all-mark cleaners retain the spatial and partial-cleaning rows. */

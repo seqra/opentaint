@@ -136,7 +136,7 @@ class DemandSelectionTest {
         val root = manager.taintAlg.node(manager.taintLeaves(MarkSet.EMPTY, manager.markSetOf(t)), intArrayOf(f),
             arrayOf(manager.taintAlg.leafNode(manager.taintLeaves(MarkSet.EMPTY, manager.markSetOf(t)))))
         val normal = manager.taintTree(y, Layer.NORMAL, root, ex(g))
-        val demand = DemandPattern(p(emptyList(), Tail.ANY), p(listOf(f), Tail.STAR, exclusion = ex(h), base = y))
+        val demand = DemandPattern(p(emptyList(), Tail.ANY, MarkSlot.Concrete(t)), p(listOf(f), Tail.STAR, exclusion = ex(h), base = y))
         assertNull(ops.demandPart(single, normal, Direction.FORWARD))
         val narrowed = ops.restrict(single, normal, demand)
         assertEquals(setOf(empty, ex(g)), narrowed.map { (it as TaintTree).exclusion }.toSet(),

@@ -14,11 +14,14 @@ class CumulativeSubscriptionReference(private val universe: BoundedDenotation) {
             (premise.fact.tail !in listOf(Tail.ANY, Tail.ANY_TAINT) || a.fact.tail in listOf(Tail.ANY, Tail.ANY_TAINT))
         val inside = aPositions.containsAll(pPositions) &&
             universe.markedValues(premise.fact.mark).containsAll(universe.markedValues(a.fact.mark))
+        if (premise.fact.tail == Tail.ANY_TAINT && premise.fact.mark is MarkSlot.Star)
+            return a.fact.tail == Tail.ANY_TAINT && aPositions.containsAll(pPositions) &&
+                universe.markedValues(premise.fact.mark).containsAll(universe.markedValues(a.fact.mark))
         if (!restricted) return applicable || inside
         val canonicalFlow = premise.fact.tail == Tail.STAR && premise.exclusion == ExclusionSet.Empty &&
             premise.fact.mark == MarkSlot.STAR
         return if (canonicalFlow) pPositions.any { it in aPositions }
-        else inside || (premise.fact.mark == MarkSlot.STAR && applicable)
+        else inside || ((premise.fact.mark == MarkSlot.STAR || premise.fact.tail == Tail.STAR) && applicable)
     }
 
     fun transfer(premise: Pattern, conclusion: Conclusion, added: Conclusion, restricted: Boolean, run1: Boolean = false): EdgeOutcome =

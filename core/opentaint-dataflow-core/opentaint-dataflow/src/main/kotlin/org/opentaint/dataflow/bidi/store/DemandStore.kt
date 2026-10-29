@@ -17,18 +17,37 @@ class DemandStore private constructor(
     private val statistics = if (java.lang.Boolean.getBoolean("org.opentaint.bidi.optimizationStatistics"))
         DemandQueryStatistics() else null
     val hasStaticCompletion: Boolean get() = completion != null
+    internal fun validateIncoming(run: Int) {
+        require(run >= 2)
+        check(run == 2 || completion == null && !hasSharedStaticCarry) {
+            "Only run-2 can use the run-1 static completion"
+        }
+        for (method in byMethod.values) for (d in method.rows) {
+            ap.cancellation.checkpoint()
+            if (d.entry.fact.mark !is MarkSlot.Star) continue
+            check(d.entry.fact.tail == Tail.ANY || run == 2 && d.entry.fact.tail == Tail.STAR) {
+                "A run-$run FLOW demand entry must be ANY (STAR is valid only in run-2): $d"
+            }
+            check(d.exit == null || d.exit.fact.mark is MarkSlot.Star &&
+                d.exit.fact.tail in setOf(Tail.STAR, Tail.ANY)) { "Invalid paired FLOW exit: $d" }
+        }
+    }
     fun staticCompletionStatistics(): String? = (completion?.statistics() ?: "localOnly=true") +
         " entryRows=${byMethod.values.sumOf { it.entryCount.toLong() }}" +
         " pairRows=${byMethod.values.sumOf { it.rows.size.toLong() }}" +
         (statistics?.let { " $it" } ?: "")
 
     /** C2 uses an entry-only index and never materializes origin products. */
-    fun initials(method: MethodKey, boundedActual: Facts): Set<InitialAp> {
+    fun admissionPolicy(run: Int, fieldLimit: Int, direction: Direction): RestrictedInitialPolicy =
+        RestrictedInitialPolicy(run, fieldLimit, direction, ap.marks)
+
+    fun initials(method: MethodKey, boundedActual: Facts,
+                 policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ap.marks)): Set<InitialAp> {
         ap.cancellation.checkpoint()
         statistics?.add(0)
         val ops = ApOps(ap)
         val leaves = ops.leaves(boundedActual).toList()
-        val result = InitialDemandResults(ap)
+        val result = InitialDemandResults(ap, policy, statistics)
         val local = byMethod[method]
         for (leaf in leaves) {
             ap.cancellation.checkpoint()
@@ -59,7 +78,8 @@ class DemandStore private constructor(
     }
 
     /** C5 selects complete paired rows and preserves the whole original ND premise at the caller. */
-    fun intersect(method: MethodKey, original: PremiseKey, raw: Facts): List<Facts> {
+    fun intersect(method: MethodKey, original: PremiseKey, raw: Facts,
+                  policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ap.marks)): List<Facts> {
         ap.cancellation.checkpoint()
         val ops = ApOps(ap)
         val result = ExactDemandResults(ap, ops)
@@ -69,7 +89,7 @@ class DemandStore private constructor(
             statistics?.add(7)
             if (pair.exit == null) return
             statistics?.add(9)
-            for (kept in ops.restrict(member, raw, pair)) result.add(kept)
+            for (kept in ops.restrict(member, raw, pair, policy)) result.add(kept)
         }
         val outputIds = HashSet<Int>()
         if (local != null) for (leaf in outputLeaves)
@@ -90,7 +110,7 @@ class DemandStore private constructor(
                 offer(member, DemandPattern(edge.to, edge.from))
         }
         if (result.covers(raw)) { statistics?.add(10); return result.all() }
-        val query = StaticPairLookup(ap, skipped, statistics)
+        val query = StaticPairLookup(ap, skipped, statistics) { entry, member -> policy.canStoreInitial(entry, member.toPattern()) }
         query.walk(method, original, outputLeaves, visible = false, ::offer) { result.covers(raw) }
         if (result.covers(raw)) { statistics?.add(10); return result.all() }
         if (!skipped.mayNeedInheritedPairs(method)) return result.all()

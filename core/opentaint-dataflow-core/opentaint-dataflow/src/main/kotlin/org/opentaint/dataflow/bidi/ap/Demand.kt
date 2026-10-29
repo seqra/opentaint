@@ -10,11 +10,10 @@ internal fun initialFacts(m: ApManager, i: InitialAp): Facts {
             val layer = when (i.tail) {
                 Tail.STAR -> Layer.NORMAL
                 Tail.ANY -> Layer.DEMAND
-                Tail.EXACT -> error("S8: an exact premise needs a concrete mark")
-                Tail.ANY_TAINT -> error("W8: a must premise needs a concrete mark")
+                Tail.EXACT, Tail.ANY_TAINT -> Layer.NORMAL
             }
             m.flowTree(i.base, layer, i.exclusion, MarkSet.EMPTY,
-                FlowAlgebra.prepend(m, i.path, FlowAlgebra.LEAF_NODE))
+                FlowAlgebra.prepend(m, i.path, FlowAlgebra.LEAF_NODE), i.tail)
         }
         is MarkSlot.Concrete -> {
             val marks = m.markSetOf(mark.mark)
@@ -35,51 +34,52 @@ internal fun policyInitial(m: ApManager, added: Facts): InitialAp {
 }
 
 /** An abstract entry shares one FLOW initial across matching concrete marks and exit patterns. */
-internal fun emitInitials(ops: ApOps, d: DemandPattern, added: Facts): List<InitialAp> {
+internal fun emitInitials(ops: ApOps, d: DemandPattern, added: Facts,
+                          policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ops.manager.marks)): List<InitialAp> {
     val m = ops.manager
     m.cancellation.checkpoint()
     check(d.entry.fact.tail != Tail.ANY_TAINT) { "W8 (d): a demand entry cannot have a must tail" }
     val result = LinkedHashSet<InitialAp>()
     for (a in ops.leaves(added)) {
         m.cancellation.checkpoint()
-        val j = emit(d.entry, a, m.marks) ?: continue
+        val j = policy.emit(d.entry, a) ?: continue
         result += m.initial(j)
     }
     return result.toList()
 }
 
 /** Preserve the reference result, including shapes outside typed Facts. */
-internal fun restrictRaw(ops: ApOps, j: InitialAp, g: Facts, d: DemandPattern): List<Conclusion> {
+internal fun restrictRaw(ops: ApOps, j: InitialAp, g: Facts, d: DemandPattern,
+                         policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ops.manager.marks)): List<Conclusion> {
     val m = ops.manager
     m.cancellation.checkpoint()
     val initial = j.toPattern()
     val result = LinkedHashSet<Conclusion>()
     for (a in ops.leaves(g)) {
         m.cancellation.checkpoint()
-        restrict(initial, Conclusion(a.fact, a.exclusion, g.layer == Layer.DEMAND), d, m.marks)?.let { result += it }
+        restrict(initial, Conclusion(a.fact, a.exclusion, g.layer == Layer.DEMAND), d, m.marks, policy)?.let { result += it }
     }
     return result.toList()
 }
 
 /** Restrict protected memberships with the same geometry as the ordinary result. */
-internal fun restrictFacts(ops: ApOps, j: InitialAp, g: Facts, d: DemandPattern): List<Facts> {
+internal fun restrictFacts(ops: ApOps, j: InitialAp, g: Facts, d: DemandPattern,
+                           policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ops.manager.marks)): List<Facts> {
     val out = CollectingOut()
     ops.manager.transportProtection(g, out) { part, sink ->
-        for (value in restrictPlainFacts(ops, j, part, d)) sink.result(value)
+        for (value in restrictPlainFacts(ops, j, part, d, policy)) sink.result(value)
     }
     return out.results
 }
 
 /** Exact-key packing preserves every reference leaf and its raw layer. */
-private fun restrictPlainFacts(ops: ApOps, j: InitialAp, g: Facts, d: DemandPattern): List<Facts> {
+private fun restrictPlainFacts(ops: ApOps, j: InitialAp, g: Facts, d: DemandPattern,
+                           policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ops.manager.marks)): List<Facts> {
     val m = ops.manager
     val values = LinkedHashMap<GroupKey, Facts>()
-    for (c in restrictRaw(ops, j, g, d)) {
+    for (selected in restrictRaw(ops, j, g, d, policy)) {
+        val c = normalizeFlowSummaryConclusion(selected)
         m.cancellation.checkpoint()
-        check(c.fact.mark !is MarkSlot.Star ||
-            c.fact.tail == Tail.STAR || (c.fact.tail == Tail.ANY && c.demand)) {
-            "The reference result needs a FLOW tail that Facts cannot encode; validate the canonical paired guard"
-        }
         val f = m.factsOf(c.fact, c.exclusion, if (c.demand) Layer.DEMAND else Layer.NORMAL)
         val old = values[f.groupKey]
         values[f.groupKey] = if (old == null) f else m.mergeAddDelta(old, f).first

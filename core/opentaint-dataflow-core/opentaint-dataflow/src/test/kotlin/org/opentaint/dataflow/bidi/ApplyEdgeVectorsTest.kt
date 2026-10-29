@@ -323,7 +323,7 @@ class ApplyEdgeVectorsTest {
         val c = input(listOf(f, g), Tail.EXACT, mx(u.id))
         assertEquals(out(listOf(k, g), Tail.EXACT, mx(u.id)),
             concat(c, edge(Tail.STAR, Tail.STAR, fromMark = star)))
-        assertEquals(out(listOf(k, g), Tail.EXACT, mx(u.id), true),
+        assertEquals(out(listOf(k, g), Tail.ANY, mx(u.id), true),
             concat(c, edge(Tail.STAR, Tail.STAR, fromMark = star), edgeDemand = true))
         assertEquals(out(listOf(k), Tail.ANY, mx(u.id), true),
             concat(c, edge(Tail.STAR, Tail.ANY, fromMark = star)))
@@ -387,11 +387,13 @@ class ApplyEdgeVectorsTest {
             NormalRow("generic abstract exact", raw(Tail.EXACT, mx(u.id)), ExclusionSet.Empty, false,
                 Conclusion(raw(Tail.EXACT, mx(u.id)), ExclusionSet.Empty, false)),
             NormalRow("generic demand abstract exact", raw(Tail.EXACT, mx(u.id)), ExclusionSet.Empty, true,
-                Conclusion(raw(Tail.EXACT, mx(u.id)), ExclusionSet.Empty, true)),
+                Conclusion(raw(Tail.ANY, mx(u.id)), ExclusionSet.Empty, true)),
         )
         for (row in rows) assertEquals(row.expected, normalize(row.fact, row.exclusion, row.demand), row.name)
-        assertFails { normalize(raw(Tail.ANY_TAINT, star), ExclusionSet.Empty, false) }
-        assertFails { normalize(raw(Tail.ANY_TAINT, star), ExclusionSet.Empty, true) }
+        assertEquals(Conclusion(raw(Tail.ANY_TAINT, star), ExclusionSet.Empty, false),
+            normalize(raw(Tail.ANY_TAINT, star), ExclusionSet.Empty, false))
+        assertEquals(Conclusion(raw(Tail.ANY, star), ExclusionSet.Empty, true),
+            normalize(raw(Tail.ANY_TAINT, star), ExclusionSet.Empty, true))
     }
 
     @Test
@@ -399,11 +401,8 @@ class ApplyEdgeVectorsTest {
         val malformed = listOf(
             "S7 excluded premise mark" to edge(Tail.STAR, Tail.STAR, fromMark = mx(t.id)),
             "S7 concrete target abstract premise" to edge(Tail.STAR, Tail.ANY, fromMark = star, toMark = mu),
-            "S8 exact abstract premise" to edge(Tail.EXACT, Tail.ANY, fromMark = star, toMark = star),
             "S8 exact premise STAR target" to edge(Tail.EXACT, Tail.STAR),
-            "S8 exact target abstract premise" to edge(Tail.STAR, Tail.EXACT, fromMark = star, toMark = star),
             "W8 abstract must target" to edge(Tail.STAR, Tail.ANY_TAINT, toMark = star),
-            "W8 abstract must premise" to edge(Tail.ANY_TAINT, Tail.ANY, fromMark = star, toMark = star),
         )
         for ((name, e) in malformed) {
             assertFails(name) { concat(input(listOf(f), Tail.EXACT), e) }

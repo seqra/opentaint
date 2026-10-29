@@ -70,7 +70,7 @@ class GroupedScalarReferenceTest {
         val paths = listOf(emptyList(), listOf(a), listOf(b))
         var checked = 0
         for (path in paths) for (flow in listOf(false, true)) for (cleanPath in paths)
-            for (reach in CleanReach.entries) for (selected in listOf(null, t, v)) {
+            for (reach in CleanReach.entries) for (selected in if (reach == CleanReach.AT_AND_BELOW) listOf(null, t, v) else listOf(t, v)) {
                 val input = scalar.conclusion(Conclusion(PathFact(x, path,
                     if (flow) Tail.STAR else Tail.EXACT,
                     if (flow) MarkSlot.Star(MarkExclusions.of(m.marks, t)) else MarkSlot.Concrete(u)),
@@ -84,6 +84,6 @@ class GroupedScalarReferenceTest {
                 assertEquals(setOfNotNull(expected.request), actual.markRequests.toSet(), "input=$input cleaner=$cleaner")
                 checked++
             }
-        assertEquals(162, checked)
+        assertEquals(126, checked)
     }
 }

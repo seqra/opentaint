@@ -63,12 +63,13 @@ class ModesTest {
                 if (input is FlowTree) caller.copy(premise = f.manager.initial(f.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR)))
                 else caller, input.layer, input)
             val concrete = f.manager.initial(f.pattern(x, listOf(field), mark = mt))
-            val flow = f.manager.initial(f.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR))
+            val flow = f.manager.initial(f.pattern(x, listOf(field), Tail.STAR, MarkSlot.STAR))
+            val flowG = f.manager.initial(f.pattern(x, listOf(g), Tail.STAR, MarkSlot.STAR))
             val currentU = f.manager.initial(f.pattern(x, listOf(g), mark = mu))
-            assertEquals(setOf(concrete, flow), core.initials.all().toSet())
+            assertEquals(setOf(concrete, flow, flowG), core.initials.all().toSet())
             assertEquals(setOf(Conclusion(PathFact(x, listOf(field), Tail.EXACT, mt), ExclusionSet.Empty, false)),
                 methodLeaves(f.ops, core.edges.edgesAt(f.inst(0), concrete).map { it.second }.toList()))
-            assertEquals(setOf(Conclusion(PathFact(x, emptyList(), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty, false)),
+            assertEquals(setOf(Conclusion(PathFact(x, listOf(field), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty, false)),
                 methodLeaves(f.ops, core.edges.edgesAt(f.inst(0), flow).map { it.second }.toList()))
             assertTrue(f.requests.isEmpty())
         }

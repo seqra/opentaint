@@ -401,7 +401,8 @@ class NaiveClosureTest {
                     Seed.Source(consumer, consumerMethod.inst(0), sourceA))
                 val actual = check(f, f.config(index = 3, roots = listOf(producer, consumer), demand = demand, seeds = seeds),
                     listOf(a, b), listOf(t.mark, u.mark, v.mark), sameUnit, policy)
-                val members = setOf(literals[0], f.pattern(y, if (mixed) listOf(a, b) else listOf(a), if (mixed) Tail.ANY else Tail.EXACT, u))
+                // The new field b refines ANY once. Its concrete STAR initial remains DEMAND.
+                val members = setOf(literals[0], f.pattern(y, if (mixed) listOf(a, b) else listOf(a), if (mixed) Tail.STAR else Tail.EXACT, u))
                 val joined = ObservedEdge(callee, members, Conclusion(target, ExclusionSet.Empty, mixed))
                 assertContains(actual.rawSummaries, joined)
                 assertContains(actual.publications, joined)
@@ -472,7 +473,8 @@ class NaiveClosureTest {
                 listOf(a, b, f.field("fresh accessor")), listOf(t.mark, u.mark, v.mark, d.mark, f.mark("fresh mark"), TaintMark.ZERO), 2)
             try {
                 actual.assertEquivalent(expected, universe)
-                val members = setOf(literals[0], f.pattern(y, if (mixed) listOf(a, b) else listOf(a), if (mixed) Tail.ANY else Tail.EXACT, u))
+                // The new field b refines ANY once. Its concrete STAR initial remains DEMAND.
+                val members = setOf(literals[0], f.pattern(y, if (mixed) listOf(a, b) else listOf(a), if (mixed) Tail.STAR else Tail.EXACT, u))
                 val pub = ObservedEdge(callee, members, Conclusion(target, ExclusionSet.Empty, mixed))
                 assertContains(actual.publications, pub)
                 assertContains(actual.rawSummaries, ObservedEdge(consumer, zero, Conclusion(target, ExclusionSet.Empty, mixed)))

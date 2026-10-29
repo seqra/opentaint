@@ -418,7 +418,7 @@ internal class JIRRuleForms(
             is TaintCleaner -> for (a in rule.actionsAfter) when (a) {
                 is RemoveMark -> at(a.position)
                 is RemoveAllMarks -> at(a.position)?.let {
-                    if (it.base == AccessPathBase.ClassStatic && it.any) reject("RemoveAllMarks(P.AnyField) on S (§1.4)")
+                    if (it.any) reject("RemoveAll requires a whole position")
                 }
                 else -> Unit
             }
@@ -605,13 +605,13 @@ internal class JIRRuleForms(
         is RemoveAllMarks -> {
             val p = checkNotNull(pos(rule, a.position)) { "a rejected rule reaches the forms (§1.3): $rule" }
             when {
-                p.base == AccessPathBase.ClassStatic && p.any -> error("a rejected rule reaches the forms (§1.4): $rule")
+                p.any -> error("a rejected below-only RemoveAll reaches the forms: $rule")
                 p.base == AccessPathBase.ClassStatic -> listOf(CleanStep.Kill(MicroEdgeBuilder().apply {
                     touch(AccessPathBase.ClassStatic)
                     strongKeep(AccessPathBase.ClassStatic, p.path).forEach { edge(it) }
                 }.build()))
                 else -> listOf(lowerCleaner(Cleaner(p.base, node(p.path),
-                    if (p.any) CleanReach.BELOW else CleanReach.AT_AND_BELOW, mark = null), types,
+                    CleanReach.AT_AND_BELOW, mark = null), types,
                     actionId?.let { TemporaryKey(it) }))
             }
         }

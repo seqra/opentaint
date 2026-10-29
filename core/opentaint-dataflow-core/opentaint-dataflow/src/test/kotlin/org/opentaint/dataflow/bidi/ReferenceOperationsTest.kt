@@ -137,8 +137,9 @@ class ReferenceOperationsTest {
     fun `AP 4_7 all-mark cleaner drops inside passes disjoint and normalizes partial abstract`() {
         val flow = c(emptyList(), Tail.STAR, MarkSlot.Star(marks(u.id)), ex(g))
         assertClean(emptyList(), null, cleaner(emptyList(), CleanReach.AT_AND_BELOW, null), flow)
-        assertClean(listOf(c(emptyList(), Tail.STAR, MarkSlot.Star(marks(u.id)), ex(g), demand = true)), null,
-            cleaner(listOf(f), CleanReach.EXACT, null), flow)
+        assertFails { cleaner(listOf(f), CleanReach.EXACT, null) }
+        assertClean(listOf(c(emptyList(), Tail.STAR, MarkSlot.Star(marks(u.id)), ex(f, g))), null,
+            cleaner(listOf(f), CleanReach.AT_AND_BELOW, null), flow)
         val disjoint = c(listOf(g), Tail.STAR, MarkSlot.STAR, ex(h))
         assertClean(listOf(disjoint), null, cleaner(listOf(f), CleanReach.AT_AND_BELOW, null), disjoint)
         assertFails { Cleaner(AccessPathBase.Zero, null, CleanReach.EXACT, t) }
@@ -223,7 +224,7 @@ class ReferenceOperationsTest {
     @Test
     fun `AP 6_3 abstract emission shares FLOW across concrete and abstract added marks`() {
         val demand = p(listOf(f), Tail.ANY, MarkSlot.STAR)
-        val expected = p(listOf(f), Tail.STAR, MarkSlot.STAR)
+        val expected = p(listOf(f, g), Tail.STAR, MarkSlot.STAR)
         for (mark in listOf(mt, mu, MarkSlot.STAR, MarkSlot.Star(marks(t.id)))) {
             assertEquals(expected, emit(demand, p(listOf(f, g), Tail.EXACT, mark)))
         }
@@ -244,7 +245,7 @@ class ReferenceOperationsTest {
         val rows = listOf(
             Triple(Tail.EXACT, Tail.EXACT, Tail.EXACT), Triple(Tail.EXACT, Tail.ANY, Tail.EXACT),
             Triple(Tail.EXACT, Tail.STAR, Tail.EXACT), Triple(Tail.ANY, Tail.EXACT, Tail.EXACT),
-            Triple(Tail.ANY, Tail.ANY, Tail.ANY), Triple(Tail.ANY, Tail.STAR, Tail.STAR),
+            Triple(Tail.ANY, Tail.ANY, Tail.ANY), Triple(Tail.ANY, Tail.STAR, Tail.EXACT),
             Triple(Tail.ANY_TAINT, Tail.EXACT, Tail.EXACT), Triple(Tail.ANY_TAINT, Tail.ANY, Tail.ANY_TAINT),
         )
         for ((addedTail, demandTail, outputTail) in rows) {
@@ -254,7 +255,7 @@ class ReferenceOperationsTest {
             assertEquals(p(listOf(f), outputTail, exclusion = outputE),
                 emit(p(listOf(f), demandTail, exclusion = demandE), p(listOf(f), addedTail, exclusion = addedE)))
         }
-        assertEquals(p(listOf(f), Tail.ANY_TAINT, exclusion = ex(g, h)),
+        assertEquals(p(listOf(f), Tail.EXACT),
             emit(p(listOf(f), Tail.STAR, exclusion = ex(h)),
                 p(listOf(f), Tail.ANY_TAINT, exclusion = ex(g))))
     }
@@ -266,26 +267,21 @@ class ReferenceOperationsTest {
             emit(demand, p(emptyList(), Tail.ANY_TAINT, exclusion = ex(g))))
         assertNull(emit(demand, p(emptyList(), Tail.ANY_TAINT, exclusion = ex(f))))
         val below = p(listOf(f, g), Tail.ANY_TAINT, exclusion = ex(h))
-        assertSame(below, emit(demand, below))
+        assertEquals(p(listOf(f, g), Tail.STAR), emit(demand, below))
         assertNull(emit(p(listOf(f), Tail.STAR, exclusion = ex(g)), below))
         assertNull(emit(p(listOf(f), Tail.EXACT), below))
     }
 
     @Test
-    fun `concrete STAR and must inputs rebase ancestor E before a deeper entry meet`() {
+    fun `broader input consumes only ancestor E before selected query construction`() {
         for (tail in listOf(Tail.STAR, Tail.ANY_TAINT)) {
             val actual = p(emptyList(), tail, exclusion = ex(f))
-            // E is about the first accessor at x, not at x.g.  In particular x.g.f is allowed.
             val result = emit(p(listOf(g), Tail.ANY), actual)
-            assertEquals(p(listOf(g), tail), result)
-            assertTrue(covers(requireNotNull(result), p(listOf(g, f), Tail.EXACT)))
+            assertEquals(if (tail == Tail.ANY_TAINT) p(listOf(g), tail) else null, result)
             assertNull(emit(p(listOf(f), Tail.ANY), actual))
-            val withEntryE = emit(p(listOf(g), Tail.STAR, exclusion = ex(h)), actual)
-            assertEquals(p(listOf(g), tail, exclusion = ex(h)), withEntryE)
-            assertTrue(covers(requireNotNull(withEntryE), p(listOf(g, f), Tail.EXACT)))
-            assertFalse(covers(withEntryE, p(listOf(g, h), Tail.EXACT)))
-            // Same-path intersection still reads the actual E; descent does not mutate it.
-            assertEquals(p(emptyList(), tail, exclusion = ex(f, h)),
+            assertEquals(p(listOf(g), Tail.EXACT),
+                emit(p(listOf(g), Tail.STAR, exclusion = ex(h)), actual))
+            assertEquals(p(emptyList(), Tail.EXACT),
                 emit(p(emptyList(), Tail.STAR, exclusion = ex(h)), actual))
             assertEquals(ex(f), actual.exclusion)
         }
@@ -397,8 +393,10 @@ class ReferenceOperationsTest {
         val widerPremise = p(listOf(f), Tail.ANY_TAINT, exclusion = ex(g))
         val result = c(emptyList(), Tail.EXACT, base = y)
         val exit = p(emptyList(), Tail.EXACT, base = y)
-        assertEquals(result, restrict(narrowPremise, result,
-            DemandPattern(p(listOf(f), Tail.STAR, exclusion = ex(g)), exit)))
+        val starDemand = p(listOf(f), Tail.STAR, exclusion = ex(g))
+        assertTrue(insideDemand(narrowPremise, starDemand))
+        assertNull(restrict(narrowPremise, result, DemandPattern(starDemand, exit)),
+            "Containment alone does not permit a MUST initial from a STAR demand")
         assertNull(restrict(widerPremise, result,
             DemandPattern(p(listOf(f), Tail.STAR, exclusion = ex(g, h)), exit)))
         // The facts overlap at f itself. Neither exclusion contains the other,
@@ -442,18 +440,16 @@ class ReferenceOperationsTest {
         val abstractMay = c(emptyList(), Tail.ANY, MarkSlot.Star(marks(u.id)))
         assertClean(listOf(may), null, cleaner(emptyList(), CleanReach.EXACT), may)
         assertClean(emptyList(), null, cleaner(emptyList(), CleanReach.AT_AND_BELOW), may)
-        assertClean(listOf(abstractMay), null, cleaner(emptyList(), CleanReach.EXACT, null), abstractMay)
+        assertFails { cleaner(emptyList(), CleanReach.EXACT, null) }
         assertClean(emptyList(), null, cleaner(emptyList(), CleanReach.AT_AND_BELOW, null), abstractMay)
     }
 
     @Test
     fun `AP 4_7 partial all-mark cleaning of abstract ANY keeps its mark and DEMAND layer`() {
         val may = c(emptyList(), Tail.ANY, MarkSlot.Star(marks(t.id, u.id)))
-        for (reach in CleanReach.entries) {
-            assertClean(listOf(may), null, cleaner(listOf(f), reach, null), may)
-        }
-        assertClean(listOf(may), null,
-            cleaner(emptyList(), CleanReach.BELOW, null), may)
+        assertClean(listOf(may), null, cleaner(listOf(f), CleanReach.AT_AND_BELOW, null), may)
+        for (reach in listOf(CleanReach.EXACT, CleanReach.BELOW))
+            assertFails { cleaner(listOf(f), reach, null) }
     }
 
     @Test

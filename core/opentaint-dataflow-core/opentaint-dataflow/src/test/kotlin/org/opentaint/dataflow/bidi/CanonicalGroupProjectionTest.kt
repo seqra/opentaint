@@ -73,10 +73,11 @@ class CanonicalGroupProjectionTest {
     @Test fun `flow reuse preserves static demotion field exclusions tail and projected mark exclusions`() {
         for (base in listOf(x, STATIC)) for (tail in listOf(Tail.STAR, Tail.ANY)) {
             val exclusion = if (tail == Tail.STAR) ExclusionSet.Concrete(intArrayOf(f)) else ExclusionSet.Empty
-            val input = m.flowTree(base, Layer.NORMAL, exclusion,
+            val inputLayer = if (tail == Tail.ANY) Layer.DEMAND else Layer.NORMAL
+            val input = m.flowTree(base, inputLayer, exclusion,
                 MarkExclusions.of(m.marks, listOf(t, h, TaintMark.ZERO)), FlowAlgebra.LEAF_NODE, tail)
             val result = assertIs<FlowTree>(m.runtimeFact(input, grouped))
-            assertEquals(if (base == STATIC) Layer.DEMAND else Layer.NORMAL, result.layer)
+            assertEquals(if (base == STATIC) Layer.DEMAND else inputLayer, result.layer)
             assertEquals(tail, result.tail)
             assertEquals(exclusion, result.exclusion)
             assertSame(input.root, result.root)
