@@ -3,6 +3,11 @@
 Date: 29 October 2026. Primary runtime: `c2bc5e78dfdb13f95bda970c5f4e0c247acbac29`.
 Saved default runtime: `2273c824510ed9366ccd2aa65935f8d3561c38d1`.
 
+Follow-up: the [summary and demand workload investigation](bidirectional-summary-demand-workload-20261029.md)
+adds focused source-method profiles, a small OWASP cycle and actual
+thingsboard operation counts. The 13 raw profiles from this campaign were
+removed after those readers closed. Compact evidence remains available.
+
 The 16 GiB heap avoids conductor's earlier OOM, but it does not increase the accepted field limit on any project. All four analyses end on timeout. Stirling run-5 is shorter, while the long work in conductor and thingsboard remains.
 
 These results show that extra memory alone does not complete the selected workloads within their fixed time limits. They do not prove unbounded memory growth or an infinite loop.
@@ -192,7 +197,7 @@ Post-reader timestamp wrappers needed two corrections. Their failure logs remain
 
 The memory parser passes seven synthetic controls. The chart was made after primary closure in an isolated Matplotlib tool environment. Its source, input CSV and output hashes are recorded. No MAT process, manual heap dump or additional primary analyzer configuration was used.
 
-The [data JSON](data/bidirectional-repeat-run1-16g-performance-20261029.json) contains both phase histories, all comparison/counter values, exact frontier and scheduler lines, numeric memory curves, focused CPU results, strict identity counts, input audits, source/command bindings and reader receipts. It is sufficient to read the report without missing external shape-result files. Raw recordings, logs and SARIF remain outside Git under:
+The [data JSON](data/bidirectional-repeat-run1-16g-performance-20261029.json) contains both phase histories, all comparison/counter values, exact frontier and scheduler lines, numeric memory curves, focused CPU results, strict identity counts, input audits, source/command bindings and reader receipts. It is sufficient to read the report without missing external shape-result files. Logs and SARIF remain outside Git under the path below. The follow-up removed 13 raw profiles after hash and open-handle checks. Its receipt and the compact reader results are linked in the follow-up.
 
 ```text
 /drive-testcomp/opentaint-go-rules/repeat-run1-16g-20261029

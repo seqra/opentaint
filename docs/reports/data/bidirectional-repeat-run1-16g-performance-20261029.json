@@ -235284,5 +235284,82 @@
       "xml_semantic_comparison": "PASS: same element hierarchy, normalized attributes and text",
       "reason": "Remove generated trailing whitespace for git diff --check."
     }
-  ]
+  ],
+  "raw_profile_availability_after_followup": {
+    "status": "REMOVED_AFTER_FINAL_FOCUSED_READERS",
+    "utc": "2026-10-29T11:25:17.274080+00:00",
+    "files": [
+      {
+        "path": "/drive-testcomp/opentaint-go-rules/repeat-run1-16g-20261029/projects/OWASP/bidi/continuous.jfr",
+        "bytes": 123853075,
+        "sha256": "dcbdbcd59dc1a55eb6fae53fbc60f64ea7015266e2a9178b6723960c7ffa1f30"
+      },
+      {
+        "path": "/drive-testcomp/opentaint-go-rules/repeat-run1-16g-20261029/projects/OWASP/bidi/near-limit.collapsed",
+        "bytes": 3996041,
+        "sha256": "60f5e738df1f035bb7038f8e1d4eda55de0fd07508fcc95b9ec00528d18c2ca5"
+      },
+      {
+        "path": "/drive-testcomp/opentaint-go-rules/repeat-run1-16g-20261029/projects/OWASP/bidi/normal.collapsed",
+        "bytes": 3354601,
+        "sha256": "3819718ca3538533de065328a63b165e7c7a69d90c98844c6b370702ff5159ad"
+      },
+      {
+        "path": "/drive-testcomp/opentaint-go-rules/repeat-run1-16g-20261029/projects/OWASP/bidi/run1.jfr",
+        "bytes": 18504705,
+        "sha256": "0977876bc1cbabb2fa37c579a1f719f5355b22fe17cdfef0387fc7ba96f38ecc"
+      },
+      {
+        "path": "/drive-testcomp/opentaint-go-rules/repeat-run1-16g-20261029/projects/Stirling-PDF/bidi/continuous.jfr",
+        "bytes": 120339831,
+        "sha256": "5ffd59ccc6d9062264812d106762972585d175e01752e3745c82f6f60949f502"
+      },
+      {
+        "path": "/drive-testcomp/opentaint-go-rules/repeat-run1-16g-20261029/projects/Stirling-PDF/bidi/near-limit.collapsed",
+        "bytes": 4029940,
+        "sha256": "f31e4875843629f732c524d8d083a777e22e4dada767dfe2357bbfc1777d0e18"
+      },
+      {
+        "path": "/drive-testcomp/opentaint-go-rules/repeat-run1-16g-20261029/projects/conductor/bidi/continuous.jfr",
+        "bytes": 142505741,
+        "sha256": "900b04540c7129338e46f4266ef423b5e3a092d7e8ffdf7e6695d6b9a79a862d"
+      },
+      {
+        "path": "/drive-testcomp/opentaint-go-rules/repeat-run1-16g-20261029/projects/conductor/bidi/near-limit.collapsed",
+        "bytes": 4367796,
+        "sha256": "ae24c6272906aa43cadca533866b908e007aeed6504b5dffcc2da5f940430582"
+      },
+      {
+        "path": "/drive-testcomp/opentaint-go-rules/repeat-run1-16g-20261029/projects/conductor/bidi/run1.jfr",
+        "bytes": 19161556,
+        "sha256": "71a0db27f7330f974ddecce1a92f342ee3be4eab8b2a1887eaa66ac1f533f499"
+      },
+      {
+        "path": "/drive-testcomp/opentaint-go-rules/repeat-run1-16g-20261029/projects/thingsboard/bidi/continuous.jfr",
+        "bytes": 266505027,
+        "sha256": "01148b6a9a02f7d45861b02b87f0cd82a9a513a21410ebfec4e8032be3b3d2e4"
+      },
+      {
+        "path": "/drive-testcomp/opentaint-go-rules/repeat-run1-16g-20261029/projects/thingsboard/bidi/near-limit.collapsed",
+        "bytes": 7762336,
+        "sha256": "f2482f3cb1ea2b875188445319472225840556f1411f4475ca8d51549dc3e626"
+      },
+      {
+        "path": "/drive-testcomp/opentaint-go-rules/repeat-run1-16g-20261029/projects/thingsboard/bidi/normal.collapsed",
+        "bytes": 37343519,
+        "sha256": "a4729f3ab7e6b3548410185c59a480dd081744db78838582a93fb5510f857cf5"
+      },
+      {
+        "path": "/drive-testcomp/opentaint-go-rules/repeat-run1-16g-20261029/projects/thingsboard/bidi/run1.jfr",
+        "bytes": 192596801,
+        "sha256": "f61a9d85291f2943ad37c7f45ce22ec2e6dd0474522b78eaf14caa3504f9994f"
+      }
+    ],
+    "file_count": 13,
+    "logical_bytes": 944320969,
+    "cleanup_receipt_sha256": "3df1c391c69af319c5fe66214b095e730b0e80cae480ce44531ba22e1a353e8e",
+    "compact_results_preserved": true,
+    "followup_report": "docs/reports/bidirectional-summary-demand-workload-20261029.md",
+    "scope": "Historical capture hashes/reader results above remain evidence of the closed campaign. Raw profiles are no longer present. Logs, SARIF and all numeric curve/sample results remain."
+  }
 }
