@@ -3,6 +3,13 @@
 Date: 28 October 2026. Analyzer: `2273c824510ed9366ccd2aa65935f8d3561c38d1`.
 Saved baseline: `f945f92c5ae554ff4f5fc7696ee5a269210478bb`.
 
+Follow-up: the [16 GiB experiment](bidirectional-repeat-run1-16g-performance-20261029.md)
+keeps the `1,1,2,...` field limits and the same time limits. It reaches
+run-12 / run-4 / run-2 / run-6 for OWASP / conductor / thingsboard /
+Stirling-PDF. See the [OWASP demand trace](bidirectional-owasp-demand-convergence-20261029.md)
+for the repeated forward frontier after run-4. These follow-up results do
+not change the measurements below.
+
 The implementation is committed. The four fixed project tests are complete.
 All four current analyses stop before convergence. Conductor stops on OOM;
 the other three stop on timeout. The intended no-missing-results target is
