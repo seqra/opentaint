@@ -58,6 +58,8 @@ added. The demand rewrite can change their populations substantially.
 | Part | Semantic status |
 |---|---|
 | One-step initial refinement, abstract EXACT/MUST, concrete STAR coverage, and emittable-entry intersection | Previously selected semantic changes; complete their domain and application proofs first |
+| STAR demand phase rule | Run-2 may answer with requested STAR; later FLOW STAR entries are invalid; later concrete STAR answers remain precise |
+| Summary normalization, write E and whole RemoveAll | Explicit selected semantic changes; normal STAR summaries retain E; partial all-mark cleaners are prohibited |
 | Fixed-entry C5 pruning | Work removal only; same complete query results as the rewritten reference |
 | Query-local eligibility answers | Work removal only; same answers and incremental reachability state for the same remaining request stream |
 
@@ -68,6 +70,8 @@ p.ANY/FLOW + p.f.g.EXACT/T -> p.f.STAR/FLOW
 p.ANY/T    + p.f.g.EXACT/T -> p.f.STAR/T, DEMAND
 p.ANY/T    + p.f.EXACT/T   -> p.f.EXACT/T
 concrete demand U + supplied T, U != T -> no initial
+run-2: p.STAR/M + compatible submitted p.f.... -> requested p.STAR/M
+run-2 onward: outgoing FLOW demand conclusion is ANY, not STAR
 
 EntryIntersection(Dc, J) nonempty
     -> Emit(Dc, a) = I and NormalizeSummaryInitial(I) = J for some supplied a
@@ -76,6 +80,10 @@ EntryIntersection(Dc, J) nonempty
 Concrete STAR starts and stays DEMAND. Coverage matching does not promote
 its result to NORMAL. Entry intersection retains A; it does not project a
 summary under a different initial.
+
+The run-2 exception does not make raw self-emission a valid image test. Use
+the explicit output-template witness and current field budget. Later FLOW
+STAR entry demands are invalid; a paired exit may still reference STAR.
 
 The rewrite still needs complete abstract EXACT/MUST point-transfer and
 adapter proofs. The selected summary normalization stores STAR rather than

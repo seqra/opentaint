@@ -123,6 +123,19 @@ targeted RemoveMark and structural field-write tests unchanged.
 
 ## 3. Storage and publication
 
+The later phase rule is part of this boundary contract. From run-2, an
+outgoing FLOW DEMAND conclusion is MAY/ANY with Empty E, not STAR or an
+EXACT result that would normalize to STAR. Its next entry Dc is ANY.
+Run-2 may consume a STAR/FLOW demand from run-1 and emit the requested
+STAR query; later FLOW STAR entries are invalid. This does not ban STAR
+in the paired exit Dp, a NORMAL summary, or an initial that refines ANY.
+
+Fix the actual producers, not the exported tail. Whole-field RemoveAll
+uses ordinary kill/strong-preserve residuals. A direct conservative partial
+cleaner result remains ANY/DEMAND and loses uniform-MUST certainty; it must
+not restore the EXACT read barrier on that uncertain result. Concrete
+selected-mark and concrete uniform transport remain unchanged.
+
 Normalize a complete pair. Do not normalize only the Facts result inside
 `RunSummaryStore.add`: the caller would still publish the old premise.
 
@@ -190,6 +203,10 @@ fun canStoreInitial(entry: Pattern, stored: Pattern): Boolean {
 
 Implement these two structural tests without interning hypothetical APs or
 enumerating marks. The formal witness is proof data, not a new retained store.
+
+The raw emitter image is explicit and run-aware. A requested run-2 STAR
+can have a descendant witness even when self-emission returns EXACT.
+Check the current field budget; do not use the former projection shortcut.
 
 Apply the old containment test to the candidate raw initial. Testing the
 canonical STAR against an EXACT demand would reject a legitimate raw EXACT
@@ -263,9 +280,15 @@ For that write cell, the normalized NORMAL relation equals the ordinary
 excluded write-keep followed by return. It also checks run-1 demotion.
 The old Empty-E widening is retained as a rejected counterexample.
 
+Integration proofs check raw containment in canonical lookup, layer joins,
+nested write residuals, correct E when C5 selects an EXACT slice, and
+transient ANY/DEMAND native views for abstract MUST->STAR, MUST->MUST and
+STAR->MUST records. Concrete native-record handling is not extended by the
+new pure-FLOW view selector.
+
 The model also checks whole-position cleaner admission and kills. Historical
 partial-cleaner counterexamples remain regression evidence, not admitted
-behavior. It has 31 checked theorems. The executable check is true. All-theorem axiom audits use only
+behavior. It has 57 checked theorems. Its executable checks are true. All-theorem axiom audits use only
 `propext` and `Quot.sound`. The model does not prove all nested writes,
 cleaners, adapters, alias closure, global observation coverage, or whole-run
 termination. Complete those integration obligations before implementation.

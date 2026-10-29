@@ -6,8 +6,10 @@ It does not change production code.
 
 Later clarification: the
 [implementation proposal](bidirectional-summary-demand-workload-implementation-20261029.md)
-adds the selected precise-demand cells and a total scalar policy. Its
-projection proof permits self-emission as an image test within that scope.
+adds the selected mode-aware STAR-demand cells and a total scalar policy.
+Use explicit output templates and witnesses for the current image test:
+run-2 requested STAR is not a self-emission fixed point. The earlier raw
+projection theorem describes the historical policy only.
 The partial model below remains historical evidence. The
 [closed exact-replay trace](bidirectional-exact-flow-replay-trace-20261029.md)
 replaces the standalone application example as the reachable gap witness.
@@ -27,6 +29,24 @@ Check concrete marks before field refinement. A demand for U and a submitted
 T emit nothing when U differs from T. Do not rename the submitted mark to
 make it satisfy a concrete demand. The tables use FULL marks and empty
 exclusions. FLOW denotes an abstract demand mark.
+
+The later STAR-demand correction is mode-specific:
+
+```text
+run-2:  p.*/M + submitted p.f.... with a compatible mark -> requested p.*/M
+later:  no FLOW STAR demand entry is admitted
+later:  concrete STAR/T keeps precise EXACT-at-demand answers
+```
+
+From run-2, outgoing FLOW DEMAND conclusions are ANY, not STAR. Their next
+entry Dc is therefore ANY. A paired exit Dp may still be STAR. Do not ban
+NORMAL FLOW STAR or the first-new-field STAR initial from an ANY demand.
+For a concrete run-2 STAR initial, the starting layer remains DEMAND.
+Keep demand E, check its admitted child, and use the submitted fact after
+field limiting. This correction supersedes the earlier descendant-rejection
+row; the closed overwrite/source diagnostic is retained as historical
+evidence in `RestrictedInitialPolicy.PreciseDemandWriteDiagnostic`.
+The current model is `RestrictedInitialPolicy.DemandStarPolicy`.
 
 | Demand entry | Submitted fact | Selected initial |
 |---|---|---|

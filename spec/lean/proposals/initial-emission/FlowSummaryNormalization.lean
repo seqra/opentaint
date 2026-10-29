@@ -419,8 +419,10 @@ cleaner; the rejected historical BELOW controls cannot enter this path.
 
 This section checks the root and named-field cells. For a newly introduced
 EXACT/FLOW barrier above a field cleaner, the direct scalar effect view is
-conservative DEMAND. The proposed JIR read/clean/write path can instead
-record the precise write exclusion, as the write cell above demonstrates.
+conservative ANY/DEMAND. A DEMAND residual keeps that ANY tail: restoring
+EXACT here would create a forbidden later STAR/FLOW demand at storage.
+The proposed JIR read/clean/write path can instead record the precise write
+exclusion, as the write cell above demonstrates.
 There is no whole-analyzer cleaner theorem here.
 -/
 
@@ -431,9 +433,21 @@ def admittedCleaner (cleaner : Cleaner) : Bool :=
     | .atAndBelow => true
     | .exact | .below => false
 
+def restoreActiveReadBarrier (original : Endpoint) (result : XFact) : AnnotatedResult :=
+  if result.af.demand then
+    if abstractMark original.fact.mark && abstractMark result.af.fact.mark &&
+        result.af.fact.kind.isAny then
+      ⟨⟨result.af.fact,Excl.empty,false⟩,true⟩
+    else ⟨⟨result.af.fact,result.ex,original.must⟩,true⟩
+  else restoreReadBarrier original result
+
 def activeCleaner (cleaner : Cleaner) (x : AnnotatedResult) :
     Option (List AnnotatedResult) :=
-  if admittedCleaner cleaner then some (guardedCleaner cleaner x) else none
+  if admittedCleaner cleaner then
+    let geometry := cleanerGeometry x.endpoint
+    let results := cleanResX cleaner ⟨⟨geometry.fact,x.demand⟩,geometry.exclusion⟩
+    some (results.facts.map (restoreActiveReadBarrier x.endpoint))
+  else none
 
 def allAtRoot : Cleaner := ⟨1, [], .atAndBelow, none⟩
 def allAtField : Cleaner := ⟨1, [7], .atAndBelow, none⟩
@@ -475,7 +489,370 @@ theorem whole_position_named_field_is_admitted_and_cleans_its_subtree :
       some [⟨ep ⟨1,[8],.exact,.conc 1⟩,false⟩] := by decide
 
 theorem direct_ancestor_field_effect_does_not_create_NORMAL_EmptyE :
-    activeCleaner allAtField annotatedStart = some [⟨ep (point 1),true⟩] := by decide
+    activeCleaner allAtField annotatedStart =
+      some [⟨ep ⟨1,[],.any,.star⟩,true⟩] := by decide
+
+theorem partial_DEMAND_keeps_ANY_but_NORMAL_keeps_the_read_barrier :
+    restoreActiveReadBarrier annotatedStart.endpoint (xf ⟨1,[],.any,.star⟩ true) =
+      ⟨ep ⟨1,[],.any,.star⟩,true⟩ ∧
+    restoreActiveReadBarrier annotatedStart.endpoint
+      ⟨⟨⟨1,[],.star overwritten,.star⟩,false⟩,overwritten⟩ =
+      ⟨⟨point 1,overwritten,false⟩,false⟩ := by decide
+
+/-- A partial pure-FLOW effect is MAY, even if its incoming query was
+uniform/MUST. Keep normal MUST and concrete uniform transport unchanged. -/
+theorem partial_FLOW_MUST_cleaner_loses_uniformity_without_changing_other_MUST_transport :
+    activeCleaner allAtField flowMustRoot =
+      some [⟨ep ⟨1,[],.any,.star⟩,true⟩] ∧
+    restoreActiveReadBarrier flowMustRoot.endpoint (xf ⟨1,[],.any,.star⟩ false) =
+      flowMustRoot ∧
+    restoreActiveReadBarrier concreteMustRoot.endpoint
+      (xf ⟨1,[],.any,.conc 1⟩ true) =
+      ⟨concreteMustRoot.endpoint,true⟩ := by decide
+
+/-! ## Focused boundary integration contracts
+
+These are scalar integration laws, not a proof of the analyzer driver.
+The raw admission predicate is supplied by the selected emitter; the
+independent containment predicate is checked on the same raw preimage.
+No emitter-history or global observation-coverage assumption is introduced.
+-/
+
+namespace Integration
+
+/-- Output grammar selected for completed runs. FLOW DEMAND STAR is legal
+only as run-1 output. Later FLOW DEMAND is MAY/ANY. This is an output/next-Dc
+contract; it does not forbid STAR at the exit Dp of a demand pair. -/
+def validOutgoingFlowDemand (run : Nat) (summary : Summary) : Bool :=
+  !pureFlow summary || !summary.demand || Nat.beq run 1 ||
+    (summary.conclusion.fact.kind.isAny && !summary.conclusion.must)
+
+theorem outgoing_grammar_allows_run1_STAR_but_rejects_it_afterwards :
+    validOutgoingFlowDemand 1 ⟨ep (star 1),ep (star 2),true⟩ = true ∧
+    validOutgoingFlowDemand 2 ⟨ep (star 1),ep (star 2),true⟩ = false ∧
+    validOutgoingFlowDemand 3 ⟨ep (star 1),ep (star 2),true⟩ = false := by decide
+
+theorem admitted_partial_cleaner_produces_valid_later_ANY_demand (run : Nat) :
+    validOutgoingFlowDemand run
+      (normalizeSummary ⟨ep (point 1),ep ⟨1,[],.any,.star⟩,true⟩) = true := by
+  change (Nat.beq run 1 || true) = true
+  simp only [Bool.or_true]
+
+theorem late_FLOW_MUST_demand_is_not_a_MAY_output :
+    validOutgoingFlowDemand 2 ⟨ep (star 1),flowMustRoot.endpoint,true⟩ = false ∧
+    validOutgoingFlowDemand 2 ⟨ep (star 1),ep ⟨1,[],.any,.star⟩,true⟩ = true := by decide
+
+theorem normal_E_write_and_run1_cover_have_selected_output_shapes :
+    validOutgoingFlowDemand 2 storedAnnotatedWrite = true ∧
+    validOutgoingFlowDemand 1
+      (normalizeSummary ⟨annotatedStart.endpoint,
+        (publishAnnotation true annotatedReturned).endpoint,true⟩) = true ∧
+    normalizeSummary ⟨ep (point 1),ep ⟨1,[],.any,.star⟩,true⟩ =
+      ⟨ep (star 1),ep ⟨1,[],.any,.star⟩,true⟩ := by decide
+
+def rawAdmissible (canEmit insideDemand : Endpoint → Bool) (raw : Endpoint) : Bool :=
+  canEmit raw && insideDemand raw
+
+def c5EntryWitness (canEmit insideDemand : Endpoint → Bool) (stored : Endpoint) :
+    Option Endpoint := imageWitness (rawAdmissible canEmit insideDemand) stored
+
+theorem normalized_entry_witness_checks_emission_and_raw_containment
+    (canEmit insideDemand : Endpoint → Bool) (stored raw : Endpoint)
+    (found : c5EntryWitness canEmit insideDemand stored = some raw) :
+    canEmit raw = true ∧ insideDemand raw = true ∧ normalizeFlowEndpoint raw = stored := by
+  obtain ⟨admitted, normalized⟩ :=
+    image_witness_sound (rawAdmissible canEmit insideDemand) stored raw found
+  obtain ⟨emitted, contained⟩ := (Bool.and_eq_true _ _).mp admitted
+  exact ⟨emitted,contained,normalized⟩
+
+theorem normalized_entry_witness_is_complete
+    (canEmit insideDemand : Endpoint → Bool) (stored : Endpoint) :
+    (∃ raw, c5EntryWitness canEmit insideDemand stored = some raw) ↔
+    ∃ raw, canEmit raw = true ∧ insideDemand raw = true ∧
+      normalizeFlowEndpoint raw = stored := by
+  constructor
+  · rintro ⟨raw,found⟩
+    exact ⟨raw,normalized_entry_witness_checks_emission_and_raw_containment
+      canEmit insideDemand stored raw found⟩
+  · rintro ⟨raw,emitted,contained,normalized⟩
+    apply image_witness_complete
+    exact ⟨raw,by simp only [rawAdmissible,emitted,contained,Bool.true_and],normalized⟩
+
+def joinLayer (summary : Summary) (additionalDemand : Bool) : Summary :=
+  { summary with demand := summary.demand || additionalDemand }
+
+theorem normalization_commutes_with_layer_join (summary : Summary) (additionalDemand : Bool) :
+    normalizeSummary (joinLayer summary additionalDemand) =
+      joinLayer (normalizeSummary summary) additionalDemand := by
+  have sameFlow : pureFlow (joinLayer summary additionalDemand) = pureFlow summary := rfl
+  unfold normalizeSummary
+  rw [sameFlow]
+  cases h : pureFlow summary <;> rfl
+
+theorem boundary_never_promotes_DEMAND (summary : Summary) :
+    (normalizeSummary (joinLayer summary true)).demand = true ∧
+    (normalizeSummary (joinLayer {summary with demand := true} false)).demand = true := by
+  constructor
+  · rw [(summary_layer_and_endpoint_data_unchanged _).1]
+    simp only [joinLayer,Bool.or_true]
+  · rw [(summary_layer_and_endpoint_data_unchanged _).1]
+    rfl
+
+/-! ### Nested overwrite residuals
+
+For p.f.g = clean, the old value outside f has the normal residual /{f}.
+The affected f subtree has a proper-prefix DEMAND residual. This second
+piece must not disappear merely because the point query has an EXACT read
+barrier. It uses the existing STAR effect geometry and proper-prefix row.
+An inner write cannot be summarized only by the normal outer /{f} piece.
+-/
+
+def innerOverwritten : Excl := .set [8]
+def nestedKeep : MicroEdge :=
+  (⟨1,[7],.star innerOverwritten,.star⟩,⟨1,[7],.star innerOverwritten,.star⟩)
+def nestedDemand : PFact := ⟨1,[7],.any,.star⟩
+
+theorem nested_write_uses_effect_geometry_and_keeps_proper_prefix_DEMAND :
+    (bindX (xf (point 1)) nestedKeep).facts = [] ∧
+    (bindX (xf (star 1)) nestedKeep).facts = [xf nestedDemand true] ∧
+    (bindX (xf ⟨1,[7,9],.exact,.conc 1⟩) nestedKeep).facts =
+      [xf ⟨1,[7,9],.exact,.conc 1⟩] ∧
+    (bindX (xf ⟨1,[7,8],.exact,.conc 1⟩) nestedKeep).facts = [] := by decide
+
+theorem nested_write_normal_piece_keeps_sibling_but_needs_inner_DEMAND :
+    den storedAnnotatedWrite.initial.fact storedAnnotatedWrite.conclusion.fact
+      ⟨1,[9],1⟩ ⟨2,[9],1⟩ ∧
+    ¬ den storedAnnotatedWrite.initial.fact storedAnnotatedWrite.conclusion.fact
+      ⟨1,[7,9],1⟩ ⟨2,[7,9],1⟩ ∧
+    den (star 1) ⟨2,[7],.any,.star⟩ ⟨1,[7,9],1⟩ ⟨2,[7,9],1⟩ := by
+  constructor
+  · exact ⟨rfl,rfl,True.intro,rfl,True.intro,[9],[9],rfl,rfl,rfl,rfl,rfl⟩
+  constructor
+  · rintro ⟨_,_,_,_,_,suffix,_,path,_,_,_,allowed⟩
+    have same : suffix = [7,9] := by simpa [storedAnnotatedWrite,
+      annotatedWriteSummary,annotatedReturned,annotatedWritten,annotatedStart,
+      normalizeSummary,pureFlow,normalizeFlowEndpoint,abstractMark,moveRoot,
+      writeExactFlowAnnotation,ep,point,star,Excl.union,Excl.empty] using path.symm
+    rw [same] at allowed
+    cases allowed
+  · exact ⟨rfl,rfl,True.intro,rfl,True.intro,[7,9],[9],rfl,rfl,rfl,True.intro⟩
+
+/-- A first-accessor exclusion belongs to its owning prefix. A valid descent
+from a MUST value consumes the ancestor mask. Copying /{f} onto g would
+incorrectly exclude the unrelated child g.f. -/
+theorem admitted_MUST_descent_consumes_ancestor_E :
+    (bindX ⟨⟨⟨1,[],.any,.conc 1⟩,false⟩,overwritten⟩
+      (star 1 [9],star 2)).facts = [xf ⟨2,[],.any,.conc 1⟩] ∧
+    (bindX ⟨⟨⟨1,[],.any,.conc 1⟩,false⟩,overwritten⟩
+      (star 1 [7],star 2)).facts = [] := by decide
+
+/-! ### Same-prefix C5 EXACT selection retains latent write E
+
+The old scalar meet drops E when it selects an EXACT piece from MUST.
+For a new FLOW piece, that E is still needed after boundary normalization.
+The selected same-prefix cell retains it; an admitted descent is separate.
+-/
+
+def selectExactFlowPiece (source : Endpoint) : Endpoint :=
+  { source with fact := { source.fact with kind := .exact }, must := false }
+
+def oldSelectExactDroppingE (source : Endpoint) : Endpoint :=
+  { selectExactFlowPiece source with exclusion := Excl.empty }
+
+def mustFlowResult : Endpoint := ⟨⟨2,[],.any,.star⟩,overwritten,true⟩
+def mustFlowInitial : Endpoint := ⟨⟨1,[],.any,.star⟩,Excl.empty,true⟩
+def oldSelectedSummary : Summary :=
+  normalizeSummary ⟨mustFlowInitial,oldSelectExactDroppingE mustFlowResult,false⟩
+def selectedSummary : Summary :=
+  normalizeSummary ⟨mustFlowInitial,selectExactFlowPiece mustFlowResult,false⟩
+
+theorem same_prefix_exact_piece_keeps_E_before_and_after_normalization :
+    (selectExactFlowPiece mustFlowResult).fact = point 2 ∧
+    (selectExactFlowPiece mustFlowResult).exclusion = overwritten ∧
+    selectedSummary.conclusion.fact = ⟨2,[],.star overwritten,.star⟩ ∧
+    selectedSummary.conclusion.exclusion = overwritten ∧
+    selectedSummary.demand = false := by decide
+
+theorem dropping_C5_E_adds_false_overwritten_pair_but_retaining_E_blocks_it :
+    den oldSelectedSummary.initial.fact oldSelectedSummary.conclusion.fact
+      inputField outputField ∧
+    ¬ den selectedSummary.initial.fact selectedSummary.conclusion.fact
+      inputField outputField ∧
+    den selectedSummary.initial.fact selectedSummary.conclusion.fact
+      disjointInput disjointOutput := by
+  constructor
+  · exact ⟨rfl,rfl,True.intro,rfl,True.intro,[7],[7],rfl,rfl,True.intro,rfl,rfl⟩
+  constructor
+  · rintro ⟨_,_,_,_,_,suffix,_,path,_,_,_,allowed⟩
+    have same : suffix = [7] := by
+      change [7] = suffix at path
+      exact path.symm
+    rw [same] at allowed
+    cases allowed
+  · exact ⟨rfl,rfl,True.intro,rfl,True.intro,[8],[8],rfl,rfl,True.intro,rfl,rfl⟩
+
+/-- A canonical STAR/E piece selected from a same-prefix uniform/MUST result
+is contained in that original ANY-tail relation, with both own exclusions
+retained. The application-side definite-MUST requirement remains separate.
+This theorem does not justify generalizing an arbitrary literal EXACT pair.
+-/
+theorem canonical_C5_piece_is_covered_by_same_prefix_uniform_result
+    (initial : PFact) (initialE finalE : Excl) (base : Base)
+    (path : List Acc) (mark : MarkA) (input output : Loc)
+    (covered : denX initial initialE ⟨base,path,.star finalE,mark⟩ finalE input output) :
+    denX initial initialE ⟨base,path,.any,mark⟩ finalE input output := by
+  obtain ⟨ib,ob,im,om,pass,suffix,outSuffix,ip,op,initialTail,_,initialAdmits,finalAdmits⟩ := covered
+  exact ⟨ib,ob,im,om,pass,suffix,outSuffix,ip,op,initialTail,True.intro,
+    initialAdmits,finalAdmits⟩
+
+def check : Bool :=
+  (bindX (xf (star 1)) nestedKeep).facts == [xf nestedDemand true] &&
+  selectedSummary.conclusion.fact == ⟨2,[],.star overwritten,.star⟩ &&
+  (normalizeSummary (joinLayer rawHelper true)).demand
+
+theorem checked : check = true := by decide
+
+#eval check
+#print axioms outgoing_grammar_allows_run1_STAR_but_rejects_it_afterwards
+#print axioms admitted_partial_cleaner_produces_valid_later_ANY_demand
+#print axioms late_FLOW_MUST_demand_is_not_a_MAY_output
+#print axioms normal_E_write_and_run1_cover_have_selected_output_shapes
+#print axioms normalized_entry_witness_checks_emission_and_raw_containment
+#print axioms normalized_entry_witness_is_complete
+#print axioms normalization_commutes_with_layer_join
+#print axioms boundary_never_promotes_DEMAND
+#print axioms nested_write_uses_effect_geometry_and_keeps_proper_prefix_DEMAND
+#print axioms nested_write_normal_piece_keeps_sibling_but_needs_inner_DEMAND
+#print axioms admitted_MUST_descent_consumes_ancestor_E
+#print axioms same_prefix_exact_piece_keeps_E_before_and_after_normalization
+#print axioms dropping_C5_E_adds_false_overwritten_pair_but_retaining_E_blocks_it
+#print axioms canonical_C5_piece_is_covered_by_same_prefix_uniform_result
+#print axioms checked
+
+end Integration
+
+/-! ## Transient native MUST read views
+
+A canonical pure-FLOW native record with a MUST endpoint needs an
+opposite-direction read view. The view is transient, not a new persistent
+record or a backward MUST initial. Its premise is result.STAR/Eg and its
+conclusion is source.ANY/FLOW, DEMAND, Empty E. Source Ep is deliberately
+forgotten on the uncorrelated ANY output. Result Eg stays on the read premise.
+
+This certificate covers the transpose of the concrete pair relation. It
+does not turn DEMAND into a confirmation and does not prove global native
+record availability. Only plain FLOW marks are selected (no mark exclusion).
+-/
+
+namespace NativeMustView
+
+def plainFlow : MarkA → Bool
+  | .star => true
+  | _ => false
+
+def transientView (native : Summary) : Summary :=
+  ⟨⟨⟨native.conclusion.fact.base,native.conclusion.fact.path,
+        .star native.conclusion.exclusion,.star⟩,native.conclusion.exclusion,false⟩,
+    ⟨⟨native.initial.fact.base,native.initial.fact.path,.any,.star⟩,Excl.empty,false⟩,
+    true⟩
+
+def selectedView (native : Summary) : Option Summary :=
+  if !native.demand && plainFlow native.initial.fact.mark &&
+      plainFlow native.conclusion.fact.mark && (native.initial.must || native.conclusion.must)
+  then some (transientView native) else none
+
+theorem view_has_no_MUST_initial_and_is_always_DEMAND (native : Summary) :
+    (transientView native).initial.fact.kind = .star native.conclusion.exclusion ∧
+    (transientView native).initial.exclusion = native.conclusion.exclusion ∧
+    (transientView native).initial.must = false ∧
+    (transientView native).conclusion.fact.kind = .any ∧
+    (transientView native).conclusion.exclusion = Excl.empty ∧
+    (transientView native).conclusion.must = false ∧
+    (transientView native).demand = true := ⟨rfl,rfl,rfl,rfl,rfl,rfl,rfl⟩
+
+theorem view_preserves_opposite_bases_and_paths (native : Summary) :
+    (transientView native).initial.fact.base = native.conclusion.fact.base ∧
+    (transientView native).initial.fact.path = native.conclusion.fact.path ∧
+    (transientView native).conclusion.fact.base = native.initial.fact.base ∧
+    (transientView native).conclusion.fact.path = native.initial.fact.path := ⟨rfl,rfl,rfl,rfl⟩
+
+/-- Executable inverse witness: use the forward output suffix as the view's
+input suffix and the forward input suffix as its ANY output suffix. -/
+theorem transient_view_covers_forward_transpose (native : Summary)
+    (_initialFlow : native.initial.fact.mark = .star)
+    (conclusionFlow : native.conclusion.fact.mark = .star)
+    (source target : Loc)
+    (pair : denX native.initial.fact native.initial.exclusion
+      native.conclusion.fact native.conclusion.exclusion source target) :
+    denX (transientView native).initial.fact (transientView native).initial.exclusion
+      (transientView native).conclusion.fact (transientView native).conclusion.exclusion
+      target source := by
+  obtain ⟨sb,tb,_,marks,_,inputSuffix,outputSuffix,sp,tp,_,_,_,resultAdmits⟩ := pair
+  have sameMark : target.mark = source.mark := by simpa only [conclusionFlow,MarkA.out] using marks
+  have emptyAllows : Excl.empty.admits inputSuffix = true := by cases inputSuffix <;> rfl
+  exact ⟨tb,sb,True.intro,sameMark.symm,True.intro,
+    outputSuffix,inputSuffix,tp,sp,resultAdmits,True.intro,resultAdmits,emptyAllows⟩
+
+theorem transient_view_is_already_canonical (native : Summary) :
+    normalizeSummary (transientView native) = transientView native := rfl
+
+def mustToStar (initialBase finalBase : Base) (initialPath finalPath : List Acc)
+    (initialE finalE : Excl) : Summary :=
+  ⟨⟨⟨initialBase,initialPath,.any,.star⟩,initialE,true⟩,
+    ⟨⟨finalBase,finalPath,.star finalE,.star⟩,finalE,false⟩,false⟩
+
+def mustToMust (initialBase finalBase : Base) (initialPath finalPath : List Acc)
+    (initialE finalE : Excl) : Summary :=
+  ⟨⟨⟨initialBase,initialPath,.any,.star⟩,initialE,true⟩,
+    ⟨⟨finalBase,finalPath,.any,.star⟩,finalE,true⟩,false⟩
+
+def starToMust (initialBase finalBase : Base) (initialPath finalPath : List Acc)
+    (initialE finalE : Excl) : Summary :=
+  ⟨⟨⟨initialBase,initialPath,.star initialE,.star⟩,initialE,false⟩,
+    ⟨⟨finalBase,finalPath,.any,.star⟩,finalE,true⟩,false⟩
+
+theorem all_three_normal_MUST_shapes_select_the_same_view (ib fb : Base)
+    (ip fp : List Acc) (ie fe : Excl) :
+    selectedView (mustToStar ib fb ip fp ie fe) =
+      some (transientView (mustToStar ib fb ip fp ie fe)) ∧
+    selectedView (mustToMust ib fb ip fp ie fe) =
+      some (transientView (mustToStar ib fb ip fp ie fe)) ∧
+    selectedView (starToMust ib fb ip fp ie fe) =
+      some (transientView (mustToStar ib fb ip fp ie fe)) := ⟨rfl,rfl,rfl⟩
+
+theorem concrete_record_is_not_selected (native : Summary) (mark : Mark)
+    (concrete : native.initial.fact.mark = .conc mark) : selectedView native = none := by
+  simp only [selectedView,concrete,plainFlow,Bool.and_false,Bool.false_and,
+    Bool.false_eq_true,if_false]
+
+theorem concrete_result_is_not_selected (native : Summary) (mark : Mark)
+    (concrete : native.conclusion.fact.mark = .conc mark) : selectedView native = none := by
+  simp only [selectedView,concrete,plainFlow,Bool.and_false,Bool.false_and,
+    Bool.false_eq_true,if_false]
+
+theorem DEMAND_record_cannot_create_a_NORMAL_view (native : Summary)
+    (demand : native.demand = true) : selectedView native = none := by
+  simp only [selectedView,demand,Bool.not_true,Bool.false_and,Bool.false_eq_true,if_false]
+
+def check : Bool :=
+  selectedView (mustToStar 1 2 [7] [8] (.set [9]) (.set [10])) ==
+    some ⟨⟨⟨2,[8],.star (.set [10]),.star⟩,.set [10],false⟩,
+      ⟨⟨1,[7],.any,.star⟩,Excl.empty,false⟩,true⟩
+
+theorem checked : check = true := by decide
+
+#eval check
+#print axioms view_has_no_MUST_initial_and_is_always_DEMAND
+#print axioms view_preserves_opposite_bases_and_paths
+#print axioms transient_view_covers_forward_transpose
+#print axioms transient_view_is_already_canonical
+#print axioms all_three_normal_MUST_shapes_select_the_same_view
+#print axioms concrete_record_is_not_selected
+#print axioms concrete_result_is_not_selected
+#print axioms DEMAND_record_cannot_create_a_NORMAL_view
+#print axioms checked
+
+end NativeMustView
 
 def check : Bool :=
   storedHelper == ⟨ep (star 2), ep (star 1 [7]), false⟩ &&
@@ -520,6 +897,8 @@ theorem checked : check = true := by decide
 #print axioms whole_position_root_cleaner_kills_FLOW_MUST_and_concrete
 #print axioms whole_position_named_field_is_admitted_and_cleans_its_subtree
 #print axioms direct_ancestor_field_effect_does_not_create_NORMAL_EmptyE
+#print axioms partial_DEMAND_keeps_ANY_but_NORMAL_keeps_the_read_barrier
+#print axioms partial_FLOW_MUST_cleaner_loses_uniformity_without_changing_other_MUST_transport
 #print axioms checked
 
 end FlowSummaryNormalization
