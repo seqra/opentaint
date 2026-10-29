@@ -2774,12 +2774,72 @@
   },
   "sourceSHA256": {
     "spec/lean/proposals/initial-emission/RestrictedInitialPolicy.lean": "d05400801fe135e02c3ec81a80bd565ef018405a0acb4a3cbd951d11d58e8545",
-    "docs/design/bidirectional-exact-flow-replay-trace-20261029.md": "334bd36292fd97270a55ac59de8bb8d83b0497d55978d7fb8decd6726fef13c6",
+    "docs/design/bidirectional-exact-flow-replay-trace-20261029.md": "3e674f64d0f6750e9880b38ce0fb4ad19dc9b1b0101a75d04290ec88f8d647d3",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/MicroEdgeBuilder.kt": "557f90c24c2b1aa0182afffa2039344b4b5c3e9b75a3bbf1d148b09b798c2963",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/MicroEdge.kt": "4a1523f257fafa2c51ce6fb227fa3f5b001d6c921dc925e04c6d83afc3d687a3",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": "b0452a5b3d356a20d7f042cd6486976b7c96db28d2cefa663e0c66e76d7ec593",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt": "9bef227f4e2fbc7bcca7d44aed889f6398782b15f24eb1531f25dfa37c5ae0cc",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RecordStore.kt": "aa6c6a89915d52d049b4e946cf0271ea1a55fa00fab14f162196bc4635f715d2",
     "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRRuleForms.kt": "7370b426ba4edb241f6b0c39bf27854214a91f4a5ee81f254dde5862d7faf285"
+  },
+  "presentation": {
+    "document": "docs/design/bidirectional-exact-flow-replay-trace-20261029.md",
+    "layout": "One annotated Java listing per run. Previous demand/submitted facts/emitted initials above each method; produced NORMAL/DEMAND summaries after its closing brace. Reused records are separate.",
+    "latestModeledIteration": "run-3",
+    "semanticChanges": false,
+    "validation": {
+      "scope": "Readability-only edit. All three annotated Java listings compile and their four executable method bodies equal the original code after removing comments/whitespace. No model or runtime change.",
+      "receipts": [
+        {
+          "run": "run-1",
+          "fieldLimit": 1,
+          "command": "javac -d /tmp/exact-replay-annotated-listings/run-1 /tmp/exact-replay-annotated-listings/run-1/ExactReplayExample.java",
+          "exitCode": 0,
+          "stdout": "",
+          "stderr": "",
+          "javaSHA256": "bedf995a47a202fedfff3ab5b7cf80bb9996fe2f19307528d693b29d0e716cac",
+          "methodBodiesEqualOriginal": true,
+          "methodNames": [
+            "main",
+            "wrapper",
+            "helper",
+            "box"
+          ]
+        },
+        {
+          "run": "run-2",
+          "fieldLimit": 1,
+          "command": "javac -d /tmp/exact-replay-annotated-listings/run-2 /tmp/exact-replay-annotated-listings/run-2/ExactReplayExample.java",
+          "exitCode": 0,
+          "stdout": "",
+          "stderr": "",
+          "javaSHA256": "8cfb3224ecad22347d0c04d457380ecaaed1ecc9a7a0ce0dc1bdfa958b171c37",
+          "methodBodiesEqualOriginal": true,
+          "methodNames": [
+            "main",
+            "wrapper",
+            "helper",
+            "box"
+          ]
+        },
+        {
+          "run": "run-3",
+          "fieldLimit": 2,
+          "command": "javac -d /tmp/exact-replay-annotated-listings/run-3 /tmp/exact-replay-annotated-listings/run-3/ExactReplayExample.java",
+          "exitCode": 0,
+          "stdout": "",
+          "stderr": "",
+          "javaSHA256": "8cc3dd2ec985fc96ed397d977b4a849442ca2aaaa3f3def6b2ab00e601c19a98",
+          "methodBodiesEqualOriginal": true,
+          "methodNames": [
+            "main",
+            "wrapper",
+            "helper",
+            "box"
+          ]
+        }
+      ],
+      "summaryLocationCheck": "PASS: all four method inventories per run occur immediately after their closing braces."
+    }
   }
 }

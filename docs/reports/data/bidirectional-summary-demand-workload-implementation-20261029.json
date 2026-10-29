@@ -161,17 +161,19 @@
   ],
   "closedTrace": {
     "path": "docs/reports/data/bidirectional-closed-exact-replay-20261029.json",
-    "sha256": "80b25b1d8d880fea62116121f1fba657d37ccee1455becc5bed8ca3db4753733",
+    "sha256": "ebb16956ac21f1f50985ebf3a3668e9c133203f21bbac3c7565f340112a29e8d",
     "activeNamespace": "RestrictedInitialPolicy.CodeOnlyExactReplay",
     "latestModeledRun": "run-3",
     "activeTheoremCount": 11,
     "ordinaryCodeOnly": true,
     "predefinedSummaryCount": 0,
-    "customPassRuleCount": 0
+    "customPassRuleCount": 0,
+    "presentation": "Per-run annotated code; summary inventories after complete method bodies.",
+    "presentationCheck": "All three listings compile; all 12 method bodies match the original example after comments/whitespace are removed."
   },
   "sourceSHA256": {
     "docs/design/bidirectional-summary-demand-workload-implementation-20261029.md": "69fa1790db9e5d5a04f64b379bd63a52ac5ad82fd9007d93491b72fc0630242c",
-    "docs/design/bidirectional-exact-flow-replay-trace-20261029.md": "334bd36292fd97270a55ac59de8bb8d83b0497d55978d7fb8decd6726fef13c6",
+    "docs/design/bidirectional-exact-flow-replay-trace-20261029.md": "3e674f64d0f6750e9880b38ce0fb4ad19dc9b1b0101a75d04290ec88f8d647d3",
     "docs/design/bidirectional-one-step-initial-refinement-20261029.md": "537fb250a9e32fe4d587ce42250f0c7d4d755cbb615254bd46c96c8eb16fb20e",
     "docs/design/bidirectional-next-demand-work-20261029.md": "95b869da61ba812a90485fd6552917a8bdeeb01875e7105e9c29075d124b4d88",
     "spec/impl-proposal-guide.md": "0068a5ea23d3215cab580fc341bbcbfaf64d504920d35d8bf041b166c73ea17a",
