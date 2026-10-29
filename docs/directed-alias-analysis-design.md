@@ -39,8 +39,12 @@ This document uses one term for each concept. Prose uses the term in the first c
 | deep origin `deep(b)` | All objects below base `b` at a depth greater than K. | `deep b` | `DEEP` |
 | allocation origin `alloc(s)` | All objects of allocation site `s`. | `alloc s` | `ALLOC` |
 | `alloc-new(s)`, `alloc-old(s)` | With recency: the most recent object of site `s`, and all older objects of `s` (§4.2). | `rNew s`, `rOld s` | `ALLOC_NEW`, `ALLOC_OLD` |
-| site havoc origin `havoc(s)` | All objects that call site `s` writes, and all objects below them. Mode `SHARED` uses it. | `havoc s` | `HAVOC_SITE` |
-| per-cell havoc origin `havocC(s, k, c, q)`, `havocDeep(s, k, c)` | The new object that call site `s` writes into cell `c` of a holder with key `k`, and the tree below it. Mode `PER_CELL` uses it (§4.9). | `hsym s k c q`, `hdeep s k c` | `SYM`, `DEEP` over a `HAVOC_CELL` base |
+| site havoc origin `havoc(s)` | All objects that call site `s` writes, and all objects below them. The Lean concept C uses it (A2-wide). The engine has no such origin (§7.6). | `havoc s` | none |
+| per-cell havoc origin `havocC(s, k, c, q)`, `havocDeep(s, k, c)` | The new object that call site `s` writes into cell `c` of a holder with key `k`, and the tree below it. Only the Lean model has it: the per-cell reference (§4.9). The engine has no such origin (§7.6). | `hsym s k c q`, `hdeep s k c` | none |
+| allocation child origin `⟨@s.c.q⟩`, `deep(@s.c)` | The object that a callee writes into cell `c` of an object of allocation site `s`, the objects at path `q` (at most K cells) below it, and the objects deeper than K there. Never unique. The call rule makes it (§4.11). | `hsym 0 (rOld s) c q`, `hdeep 0 (rOld s) c` | `SYM`, `DEEP` over an `ALLOC_CHILD` base |
+| cell name `name(o, c)` | The origin that names each object that a callee can write into cell `c` of origin `o`: the default child of a symbolic origin, or the allocation child of an allocation origin (§4.11). | `childCN K o c` | `OriginTable.cellName` |
+| exposed set `E` | The origins that some unresolved call on some path to this point reached. A symbolic origin below an exposed origin is not unique (§4.11). | `CtxN.xe`, `X.env xe`, `expB` | the reserved key `EXPOSED_VAR` of `env` |
+| covered origin, call closure | At a call: an origin of the closure `R`, or an origin below one. `R` starts at the arguments and the static roots and adds the content of each cell of each covered origin (§4.11). | `coveredB`, `callRoots`, `closeN` | `DirectedTransfer.havoc` |
 | constant origin | One origin for each box type, class literal or string value (§7.5). | none | `BOX_CONST`, `CLASS_CONST`, `STRING_CONST`, `SITE_CONST` |
 | holder | A variable, or a heap cell `(o, c)` of origin `o` and cell `c`. | `Key` (`v x`, `h o c`) | `VarId`, `HeapKey` |
 | points-to set `pts(p)` | The origins that the access path `p` may hold. | `aevalPath` | `valueOf`, `load` |
@@ -62,9 +66,10 @@ This document uses one term for each concept. Prose uses the term in the first c
 | entry root | `this`, an argument, or a static root at method entry. | `Base.root r` | `ROOT_THIS`, `ROOT_ARG`, `ROOT_STATIC` |
 | unresolved call | A call that the analysis does not inline. | `call s args` | `Stmt.Call` without a resolved callee |
 | A2-wide | Concrete call semantics: one call can write one new object into many cells (§3.1). | `Havoc`, `Exec` | — |
-| A2-strict | Concrete call semantics: one call writes a distinct new object into each cell that it changes (§3.1). | `HavocS`, `ExecS` | — |
-| havoc mode `SHARED`, `PER_CELL` | The abstract call rule: site havoc origins (sound for A2-wide), or per-cell havoc origins (sound for A2-strict). | `astep`, `astepH` (with recency: `astepR`, `astepHR`) | `HavocMode` |
-| havoc layer | The record of unresolved calls in a state. It replaces explicit havoc writes (§7.6). | none | `havocOuter`, `havocAlloc`, call-site lists |
+| A2-strict | Concrete call semantics: one call writes a distinct new object into each cell that it changes. The callee can reach each symbolic object (§3.1). | `HavocS`, `ExecS` | — |
+| A2-narrow | Concrete call semantics: A2-strict, and the callee reaches only the closure of its arguments (receiver included) and of the static roots (§3.1). The assumption of the call rule. | `ReachN`, `HavocN`, `ExecN`, `CAliasN` | — |
+| call rule CN | The abstract call rule of the engine: cell-named havoc with narrow reach, sound for A2-narrow (§4.11). It is the only call rule of the engine. The engine has no havoc mode switch (D2). The Lean model also has per-cell havoc origins (sound for A2-strict, the formal reference for the precision comparison, §4.9) and site havoc origins (sound for A2-wide). | `astepCN`; `astepH`, `astepHR`; `astep`, `astepR` | `DirectedTransfer.havoc` |
+| exposed key | The reserved environment key that holds the node of the exposed set. Join, change bit, equality and `retire` treat it as each other key (§7.6). | `xe` (`ctxCN`) | `EXPOSED_VAR` |
 | origin depth K | The depth limit of symbolic origins. | `Ctx.K` | `symDepth` |
 | query depth D | The maximum number of accessors of a reported path. | `findAlias D` | `maxAccessors` (main: `HEAP_CHAIN_LIMIT = 5`, which allows 6 accessors) |
 | inlining depth | The number of call levels that the analysis inlines. | none | `aliasAnalysisInterProcCallDepth` |
@@ -88,7 +93,7 @@ Technical verbs: **intern** (find the id of a set in the node table, or add the 
 | CS1-CS8 | JVM consumers of the alias analysis | §8 |
 | CX1-CX7 | Counterexamples at the completeness boundary | §4.8 |
 | D1-D13 | Decisions for the user | §12 |
-| F1-F9 | Lean follow-ups | §11.4 |
+| F1-F11 | Lean follow-ups | §11.4 |
 | G-JVM, G-CORE, G-QL, G-ROOT, G-LEAN | Test gates | §10.2 |
 | L0-L4 | Test layers | §10.1 |
 | M1-M8 | Consumer changes | §8.2 |
@@ -130,7 +135,7 @@ Technical verbs: **intern** (find the id of a set in the node table, or add the 
 1. Concept C: points-to sets keyed by origin. The order is set inclusion; may-alias is set intersection (§4).
 2. Optimization O: hash-consed origin-set nodes with a union memo (§5).
 3. Queries: a backward search over a lazy reverse index (§6).
-4. Two CEGAR steps: recency for loop allocation sites, per-cell havoc origins for unresolved calls (§1.8).
+4. CEGAR steps (§1.8): recency for loop allocation sites (step 1); per-cell havoc origins for unresolved calls (step 2, now only the formal reference in the Lean model, §4.9); cell-named havoc with narrow reach, the call rule CN (step 4, decided by the user 2026-10-29, §4.11). CN creates no origin at a call. It names each unknown object by its cell and keeps an `exposed` set that removes uniqueness below a reached object. CN is the only call rule of the engine. The user dropped the havoc modes `SHARED` and `PER_CELL` from the engine (D2).
 5. The mode switch `aliasAnalysisMode = DSU | SHADOW | DIRECTED`, default `DSU` (D7). In `SHADOW`, the taint analysis gets the DSU answers, and statistics compare both answers (§10.2).
 
 **Results.**
@@ -138,10 +143,10 @@ Technical verbs: **intern** (find the id of a set in the node table, or add the 
 | Area | Result | Status |
 |---|---|---|
 | Order | The stored relation is a congruent order; may-alias is derived (§1.5, §1.7). | proved |
-| Soundness | Each one-execution alias is a may-alias under A1-A3: `SHARED` under A2-wide, `PER_CELL` under A2-strict (§4.5, §4.9). | proved |
+| Soundness | Each one-execution alias is a may-alias under A1-A3. The call rule CN under A2-narrow: `csoundCN` (both policies, recency, each K, each list of static roots) (§4.11). The references: site havoc under A2-wide, per-cell havoc under A2-strict (§4.5, §4.9). | proved |
 | Completeness | Exact in two scopes without loops and calls, with computable witnesses (§4.7). | proved |
 | DSU defects | U1-U4 (unsound), LT1 (latent), PL1-PL7 (precision) (§2.3). | proved, measured |
-| O ≡ C | Equal answers for each combination of recency and havoc mode (§5.5). | proved |
+| O ≡ C | Equal answers for each combination of recency and call rule, CN included (`mayProgCNO_eq`, `csoundCNO`) (§5.5). | proved |
 | Cost | O is linear where C is a product or exponential on three families (§5.6, §5.8). | proved; argued |
 | Audit | No `Classical`, no `sorryAx`, no `ofReduceBool` (Appendix A). | checked |
 
@@ -149,15 +154,16 @@ Technical verbs: **intern** (find the id of a set in the node table, or add the 
 
 1. Alias answer volume (R0). The taint analysis copies one fact for each reported alias path. On main, the call drop and the cache truncation limit this volume by accident. A fix of either explodes the fact count, and thingsboard runs out of memory fast (user report). The directed engine removes both limits; its non-transitive answers are smaller. The net volume is unknown and is the first gate (§11.2, D11).
 2. Entry aliasing: A1 is an accepted precondition, and strong updates on entry roots can lose aliases (D1, §3.3).
-3. Loops and calls are in no completeness scope (§4.8). The default policy is proved sound only under A2-strict (§4.9).
+3. Loops and calls are in no completeness scope (§4.8). The call rule is proved sound only under A2-narrow; with generous reach or with one object in two cells it misses aliases (`generous_reach_breaks_CN`, `generous_havoc_breaks_CN`, §3.1, §4.11).
 4. The node table can hold Θ(m²) set elements on a join chain (§5.7).
+5. CN has three accepted precision losses (the user accepted them, D2): a weak store below an exposed origin, a false alias with the entry content of a cell, and a false alias between the objects of two calls in one cell (`losses_CN`, `loss1_noneN`, `loss2_noneN`, `loss3_noneN`, §4.11). CN and per-cell havoc are incomparable in precision (`precision_order_fails`). No cost theorem exists for the O call of CN (F10).
 
 **Decisions** (§12):
 
 | Status | Decisions |
 |---|---|
-| Decided by the user (2026-10-29) | D1 (`entryUnique = true`), D2 (no alias drop at unresolved calls), D5 (must-alias postponed), D6 (copy the helpers), D7 (mode switch), D12 (inlining depth 1 stays), D13 (the DSU of main stays unchanged). |
-| Open until the spec revisit | D3 (recency), D4 (depths K, D), D8 (state container), D9 (unknown-origin signal), D10 (`cantMutateAliasedHeap()`), D11 (volume control), and the havoc-origin form of D2. |
+| Decided by the user (2026-10-29) | D1 (`entryUnique = true`), D2 (no alias drop at unresolved calls; the call rule CN), D5 (must-alias postponed), D6 (copy the helpers), D7 (mode switch), D12 (inlining depth 1 stays), D13 (the DSU of main stays unchanged). |
+| Open until the spec revisit | D3 (recency), D4 (depths K, D), D8 (state container), D9 (unknown-origin signal), D10 (`cantMutateAliasedHeap()`), D11 (volume control). |
 
 ---
 
@@ -339,8 +345,9 @@ CEGAR log. Each row is one refinement step.
 | Step | Counterexample | Cause | Change | Scope after the step | Evidence after the step |
 |---|---|---|---|---|---|
 | 1. Recency | CX7: `loop { b = new; b.f = x; b.f = y }`, query `b.f ~ x` (`loop_bf_x`, `loop_none`). Here the DSU is more precise than C (`loop_dsu_more_precise`). | A loop site has one origin, so its stores are weak. | Two origins for each site: `alloc-new(s)` and `alloc-old(s)` (§4.2). | The same concrete semantics. A true refinement. | `csoundR`, `mayProgRO_eq`, `loop_bf_x_exact` |
-| 2. Per-cell havoc | `pHv = m(x); a = x.f; b = y.g`, query `a ~ b` (§4.9). | One site havoc origin for each call. Under A2-wide the alias is real. | First, narrow the call semantics from A2-wide to A2-strict. The soundness claim then covers fewer callees. Second, refine the abstraction: per-cell havoc origins. Mode `SHARED` stays available for A2-wide. | A2-strict (§3.1) | `csoundH`, `csoundHR`, `mayProgHO_eq`, `mayProgHRO_eq`, `strict_answers`, `strict_ab_none`, `generous_breaks_strict` (§4.9) |
+| 2. Per-cell havoc | `pHv = m(x); a = x.f; b = y.g`, query `a ~ b` (§4.9). | One site havoc origin for each call. Under A2-wide the alias is real. | First, narrow the call semantics from A2-wide to A2-strict. The soundness claim then covers fewer callees. Second, refine the abstraction: per-cell havoc origins. Site havoc stays in the Lean model for A2-wide. Since step 4, per-cell havoc is the precise reference of the Lean model only. The engine does not implement it. | A2-strict (§3.1) | `csoundH`, `csoundHR`, `mayProgHO_eq`, `mayProgHRO_eq`, `strict_answers`, `strict_ab_none`, `generous_breaks_strict` (§4.9) |
 | 3. Store certificate | CX4-CX6: correlated control and correlated values break "a strong store is exact" (§4.8). CX3: null blocking. | A per-variable domain has no correlation. | Completeness scopes with checks: the null-kind check (`nullSafeB`) and the certificate `bcert` (§4.7). | Completeness only; soundness does not change. | `ccomplete_coreB`, `ccomplete_store` |
+| 4. Cell-named havoc with narrow reach (CN) | A cost problem, then a counterexample. Cost (user, 2026-10-29): per-cell havoc adds `havocC(s, key(o), c, [])` to each cell of each reachable origin at each call, and each symbolic object is reachable. So each call writes almost the whole heap map, and the values grow with the number of calls. Counterexample to the cheap "dead-end" rule (an unknown object gets no origin): `n = new N(); m(n); a = n.f; if (*) { b = a; d = a } else { b = y; d = z }`, query `b ~ d`. The alias is real (`dead_realN`). | Per-cell havoc makes one origin for each call, holder and cell. The dead-end rule drops the object that the callee writes into `n.f`, so `b` and `d` share no origin. | First, narrow the concrete call semantics from A2-strict to A2-narrow: the callee reaches only the closure of its arguments and of the static roots. Second, refine the abstraction: name each unknown object by its cell (`name(o, c)`), keep the set `exposed` of the reached origins, and make each symbolic origin below an exposed origin not unique. No call creates an origin. The user rejected a lazy havoc log (it complicates state identity and the join) and accepted CN with its three precision losses (D2). | A2-narrow (§3.1) | `csoundCN`, `mayProgCNO_eq`, `csoundCNO`, `dead_answerCN`, `need_answersCN`, `spread_goneCN`, `gain_answersCN`; the losses `losses_CN`, `loss1_noneN`, `loss2_noneN`, `loss3_noneN`; the scope `generous_reach_breaks_CN`, `generous_havoc_breaks_CN` (§4.11) |
 
 Design bugs of the new design. The Lean model, a hand evaluation of its definitions, or a review of the design against the model found each bug before the implementation.
 
@@ -348,6 +355,9 @@ Design bugs of the new design. The Lean model, a hand evaluation of its definiti
 |---|---|---|---|
 | The fixpoint test is "state equal to the old state". | The transfer is not monotone (`astep`: a store with `pts(x) = ∅` against `{o}`). A copy-on-write add and remove gives a new object with equal content. | The change bit of the join is the signal (`joinO_flag`). | §7.10 |
 | One site havoc origin for each call. | `pHv`: a value loaded after a call may-aliases each outer path. | Per-cell havoc origins under A2-strict. | §4.9 |
+| Per-cell havoc origins at each call, with each symbolic object reachable. | Cost: each call writes almost the whole heap map, and the values grow with the number of calls (user, 2026-10-29). | The call rule CN under A2-narrow. | §4.11 |
+| An unknown object gets no origin ("dead end"): the call keeps the old content and adds nothing. | `n = new N(); m(n); a = n.f; if (*) { b = a; d = a } else { b = y; d = z }`: `b ~ d` is real (`dead_realN`). CN answers true (`dead_answerCN`). | The cell name: the object in `n.f` is `⟨@s.f⟩`. | §4.11 |
+| The hypothesis "CN is at least as precise as per-cell havoc". | `precision_order_fails`: on `pNest` per-cell havoc answers true and CN answers false, and no execution has the alias (`nest_noneN`). The three losses go the other way. | The two rules are incomparable. The Lean examples give the losses and the nesting gain. The engine implements only CN. | §4.11 |
 | `entryUnique = true` is sound. | Entry aliasing: `skip_unsound`, `write_read_unsound`, `swap_strong`. | Document A1 as a precondition of the intra-procedural analysis. The user keeps the default `entryUnique = true` and accepts the loss (D1). | §3.3 |
 | "Each strong store is exact." | CX4, CX5 (`corr_none`, `strongTwo_none`); null blocking CX3 (`block_none`). | Certified store scope with null kinds. | §4.7, §4.8 |
 | K = D. | `deep(b)` holds itself in each cell. After a long list walk the query output is `\|cells\|^D`. | K ≥ D + 1, and the search never expands a self edge of a deep origin. | §6.2, §6.4 |
@@ -513,17 +523,27 @@ The concrete semantics (`Concrete.lean`) builds A1-A3 in. So the soundness theor
 | Id | Assumption | How `Concrete.lean` builds it in |
 |---|---|---|
 | A1 | No entry aliasing. Entry roots are distinct objects. The entry heap below them is a tree. Objects that unknown expressions and calls return are new, with a tree below them. | `Obj.sym (Base.root r) p`: distinct root ids give distinct objects. `cdefault`: cell `c` of `sym b p` holds `sym b (p ++ [c])`. `Base.fresh s n` for results. |
-| A2 | An unresolved call returns a new object. It keeps each cell, or writes a new object into a cell of a reachable object. It never makes existing objects alias. Two forms exist: A2-wide and A2-strict (below). | A2-wide: `Havoc st args s n h'`: `h' o c = st.heap o c`, or `Reach st args o` and `h' o c = sym (havoc s n k) []`. A2-strict: §4.9. |
+| A2 | An unresolved call returns a new object. It keeps each cell, or writes a new object into a cell of a reachable object. It never makes existing objects alias. Three forms exist: A2-wide, A2-strict and A2-narrow (below). The call rule needs A2-narrow. | A2-wide: `Havoc st args s n h'`: `h' o c = st.heap o c`, or `Reach st args o` and `h' o c = sym (havoc s n k) []`. A2-strict: `HavocS` (Sound/Havoc/Concept.lean, §4.9). A2-narrow: `HavocN` (Sound/CellNamed/Concept.lean, §4.11). |
 | A3 | Origin depth limit K for symbolic objects. The abstraction maps each deeper object to one origin `deep(b)`. | Only in the abstraction: `alpha K` maps paths longer than K to `deep b`. Concrete paths have no limit. |
 
-The two forms of A2:
+The three forms of A2:
 
-| Form | Rule | Abstract mode | Sound for |
-|---|---|---|---|
-| A2-wide | One call can write the same new object into several cells (free tag `k`). | `SHARED`: one site havoc origin `havoc(s)` | A2-wide and A2-strict |
-| A2-strict | One call writes a distinct new object into each cell that it changes. | `PER_CELL`: per-cell havoc origins | A2-strict only (§4.9) |
+| Form | Reach of the callee | Objects written | Abstract call rule | Sound for |
+|---|---|---|---|---|
+| A2-wide | each symbolic object (`Reach`) | one call can write the same new object into several cells (free tag `k`) | site havoc origin `havoc(s)` (Lean only) | A2-wide, A2-strict, A2-narrow |
+| A2-strict | each symbolic object (`Reach`) | a distinct new object into each cell that the call changes (`HavocS`) | per-cell havoc origins (Lean only; the precise reference, §4.9) | A2-strict, A2-narrow |
+| A2-narrow | the closure of the argument values (receiver included) and of the static roots, through cells (`ReachN`) | as A2-strict (`HavocN`) | CN, the only call rule of the engine (§4.11) | A2-narrow only |
 
-A2-strict is narrower. Under it, the soundness claim covers fewer callees. Out of scope under A2-strict: a callee that writes one new object into two cells, for example `void m(A x, B y) { Object o = new Object(); x.f = o; y.g = o; }`. The DSU also misses this shape (§4.9). For such callees, only the taint analysis of the callee itself gives cover (§3.4).
+A2-narrow is the assumption of the call rule. Statement: an unresolved callee reaches only the closure of its arguments (receiver included) and of the static roots. It keeps each reachable cell, or overwrites it with a distinct new object for each cell. It makes no alias between existing objects. Each A2-narrow execution is an A2-strict execution and an A2-wide execution (`ExecN.toExecS`, `ExecN.toExec`). Under A1, the narrow reach is the faithful reach: an object that no argument and no static root reaches is reachable only through the locals of the method.
+
+Both parts of A2-narrow are necessary for CN. Each part has a counterexample (Sound/CellNamed/Scope.lean):
+
+| Part removed | Program and query | CN answer | Concrete fact | Theorem |
+|---|---|---|---|---|
+| narrow reach (the callee writes into a cell that no argument reaches) | `w = x.f; e = w.g; touch(); t = x.f; t.g = z`, query `w.g ~ e` | false: `x` is not exposed, so `t.g = z` is strong | an A2-strict execution with generous reach writes a new object into `x.f`; then `w.g` is still `e` | `generous_reach_breaks_CN` (`touch_noneN`: no A2-narrow execution has the alias) |
+| strict havoc (one object in two cells) | `pHv = m(x); a = x.f; b = y.g`, query `a ~ b` | false: the names `⟨x.f⟩` and `⟨y.g⟩` differ | an A2-wide callee writes one object into `x.f` and `y.g` | `generous_havoc_breaks_CN` |
+
+Out of scope under A2-narrow: (1) a callee that writes one new object into two cells, for example `void m(A x, B y) { Object o = new Object(); x.f = o; y.g = o; }`. The DSU also misses this shape (§4.9). (2) A callee that changes a cell of an object that its arguments and the static roots do not reach. Under A1 a Java callee cannot reach such an object: the entry trees are disjoint, and the method holds the other objects only in its locals (argued). A violation of (2) needs an entry alias, for example `this` of a singleton that a static field also holds, and §3.4 already puts that out of scope (argued). For such callees, only the taint analysis of the callee itself gives cover (§3.4).
 
 Other properties of the concrete semantics:
 
@@ -531,7 +551,8 @@ Other properties of the concrete semantics:
 |---|---|---|
 | Null dereference | A load or store through null **blocks** (no step). | Exceptions are out of the model (§3.4). |
 | Array index | `aload`/`astore` take any index `i`. | Array cells are not separated. |
-| Wide reach | `Reach` makes each symbolic object reachable by the callee. This includes entry objects that the method detached, and objects that a later unknown expression or call returns (the heap is total). | It matches the DSU idea "groups with outer elements". It makes A2-wide wider again. |
+| Wide reach (A2-wide, A2-strict) | `Reach` makes each symbolic object reachable by the callee. This includes entry objects that the method detached, and objects that a later unknown expression or call returns (the heap is total). | It matches the DSU idea "groups with outer elements". It makes A2-wide wider again. |
+| Narrow reach (A2-narrow) | `ReachN st statics args`: the argument values, the entry objects `sym (root r) []` of the static roots `r ∈ statics`, and each object in a cell of a reachable object of the current heap. | The proof of CN holds for each list `statics` (`csoundCN`). |
 | Sites | Counter `cnt s` for each site. The n-th run of `new@s` makes `alloc s n`. | Distinct objects for each run. |
 
 ### 3.2 Parameters of the abstraction
@@ -567,7 +588,8 @@ The Lean quotient result needs the **exact** concrete root partition (`frC`). A 
 | Exceptions | out of the Lean model | A null dereference blocks. The engine joins the states before and after each thrower on catch edges (§7.10), and gives the catch variable a fresh symbolic origin (§7.5). Both rules are argued. |
 | Inlining of callees | out of the Lean model | Production uses inlining depth 1, and the directed engine keeps it (D12, decided by the user: "we keep inlining"). An inlined callee body is ordinary IR, so C applies to it (argued). §7.7 gives the design. |
 | Callee-made aliasing of existing objects | out | A2 allows only new havoc objects. Example: an unresolved `m(x, y) { x.f = y; }`. The IFDS taint analysis covers a resolved callee through its own summary, and a library callee through its pass-through rules (argued). §9.1 lists the effect. |
-| One new object in two cells | out under A2-strict | §3.1. Mode `SHARED` covers it. |
+| One new object in two cells | out under A2-narrow and A2-strict | §3.1 (`generous_havoc_breaks_CN`). Only the Lean site havoc rule covers it; the engine has no such mode (§7.6). |
+| A callee that reaches an object that its arguments and the static roots do not reach | out under A2-narrow | §3.1 (`generous_reach_breaks_CN`). Under A1 a Java callee cannot reach such an object (argued). |
 | Entry aliasing | out | §3.3. The user accepts the loss (D1). |
 | Static roots and A1 | out | A static path and an argument (or `this` of a singleton) can be one object at entry. This breaks A1 more often than argument aliasing does. |
 | Concurrency | out | Other threads can write shared cells between statements. Strong stores assume one thread. |
@@ -591,8 +613,10 @@ Origins (`Origin`, Concept.lean):
 | `havoc(s)` | all havoc objects of call site `s`, and all objects below them | `{havoc(s)}` | yes |
 | `havocC(s, k, c, q)` | the object at path `q` below the new object that call `s` writes into cell `c` of a holder with key `k` (§4.9) | at cell `c'`: `{havocC(s, k, c, q ++ [c'])}` if `\|q\| + 1 ≤ K`, else `{havocDeep(s, k, c)}` | yes |
 | `havocDeep(s, k, c)` | the objects of that tree deeper than K | `{havocDeep(s, k, c)}` | yes |
+| `⟨@s.c.q⟩` (allocation child) | each object that a callee writes into cell `c` of an object of allocation site `s`, and the objects at path `q` below it, with recency below `alloc-new(s)` or `alloc-old(s)` (§4.11) | at cell `c'`: `{⟨@s.c.q.c'⟩}` if `q.c'` has at most K cells, else `{deep(@s.c)}` | yes |
+| `deep(@s.c)` | the objects of the tree below `⟨@s.c⟩` deeper than K | `{deep(@s.c)}` | yes |
 
-Concept C makes only the first four kinds. The per-cell refinement (§4.9) makes the last two.
+Concept C makes only the first four kinds. The per-cell refinement (§4.9) makes `havocC` and `havocDeep`. The call rule CN (§4.11) makes no call origin: it makes only allocation children, and it names every other unknown object by a symbolic or deep origin of the first rows.
 
 Abstract state (`AState`): `env : Var → List Origin` and `heap : Origin → ACell → List Origin`. The entry heap is `adefault K`. The entry env maps each frame variable bound to root `r` to `{sym(root r, [])}`, and each other variable to `∅`. Abstract cells are `fld f` and `elem` (all array indices). Null is no origin. An empty set means "always null".
 
@@ -608,7 +632,7 @@ Abstract state (`AState`): `env : Var → List Origin` and `heap : Origin → AC
 | `sym(fresh s, q)` | `entryUnique` and `once s` and `elem ∉ q` |
 | `deep(b)` | false |
 | `alloc(s)` | `once s` |
-| `havoc(s)`, `havocC`, `havocDeep` | false |
+| `havoc(s)`, `havocC`, `havocDeep`, `⟨@s.c.q⟩`, `deep(@s.c)` | false |
 
 Recency (Sound/Recency/Concept.lean): `alloc-new(s)` (Lean `rNew s`, encoded `alloc (2s)`) is the most recent object of site `s`. `alloc-old(s)` (Lean `rOld s`, encoded `alloc (2s+1)`) is all older objects.
 
@@ -619,6 +643,8 @@ Recency (Sound/Recency/Concept.lean): `alloc-new(s)` (Lean `rNew s`, encoded `al
 | other | `uniqueB once entryUnique` |
 
 `retire s X`: rename `alloc-new(s)` to `alloc-old(s)` in each value. Move the cells of `alloc-new(s)` into the cells of `alloc-old(s)` (union). Give `alloc-new(s)` empty cells.
+
+With the call rule CN (Sound/CellNamed/Concept.lean), uniqueness also reads the exposed set `E` of the state: `uniqueCN = uniqueR && !expB E`. `expB E (sym(b, q))` is true if `E` holds `sym(b, p)` for a proper prefix `p` of `q`. So a symbolic origin below an exposed origin is not unique. The exposed origin itself keeps its uniqueness: a callee cannot change the value of a variable. Allocation origins and depth-0 origins (entry roots, results `sym(fresh s, [])`) keep the rules above. §4.11 gives the reason.
 
 ### 4.3 Transfer table
 
@@ -634,7 +660,7 @@ Notation: `H(o, c)` is the content of cell `c` of origin `o`. `S ∪= T` is a we
 | `x = y[i]` | `pts(x) := ⋃ { H(o, elem) : o ∈ pts(y) }` | same as C |
 | `x[i] = y` | always weak: `H(o, elem) ∪= pts(y)` for each `o ∈ pts(x)` | same as C |
 | `x = unknown@s` | `pts(x) := {sym(fresh s, [])}` | `retire s`, then the same |
-| `x = call@s(args)` | havoc: `H(o, c) ∪= {havoc(s)}` for each universe cell `c` and each `o` with `reachB o`. Then `pts(x) := {sym(fresh s, [])}`. Mode `PER_CELL`: §4.9. | havoc, then `retire s`, then the same |
+| `x = call@s(args)` | havoc: `H(o, c) ∪= {havoc(s)}` for each universe cell `c` and each `o` with `reachB o`. Then `pts(x) := {sym(fresh s, [])}`. Per-cell havoc: §4.9. The call rule CN: §4.11. | havoc, then `retire s`, then the same |
 
 The strong-update condition, as in Lean (`AState.store`):
 
@@ -646,7 +672,7 @@ match single? (X.env x) with
 
 `single? l = some o` if `l` is not empty and each element is `o`. So `[o, o]` counts as one origin. With `pts(x) = ∅` the store does nothing. This is sound, because the concrete store blocks.
 
-Reach of a call (`reachB ctx X args`): `o` is reachable if `o` is outer, or if `o` is in the closure of `pts(args) ∪ {outer universe origins}` under all universe cells. If the closure does not converge within its fuel, each origin is reachable.
+Reach of a call (`reachB ctx X args`): `o` is reachable if `o` is outer, or if `o` is in the closure of `pts(args) ∪ {outer universe origins}` under all universe cells. If the closure does not converge within its fuel, each origin is reachable. This is the generous reach of A2-wide and A2-strict. CN uses the narrow closure of §4.11 (`closeN`).
 
 Remarks:
 
@@ -682,10 +708,11 @@ Statement (`CSound K`, Concept.lean):
 | `csound K` | `CSound K` for each K (`entryUnique = true`, the default policy). | Sound/Soundness.lean |
 | `csoundE eu K ...` | The same for both policies (`mayProgE eu`). | Sound/Soundness.lean |
 | `csoundR eu K ...` | The same with recency, both policies (`mayProgR eu`). | Sound/Recency/Soundness.lean |
-| `csoundH src eu K ...` | Mode `PER_CELL` without recency (`mayProgH eu`): each one-execution alias under A2-strict (`CAliasS src`), for each tag naming `src`, is a may-alias. Both policies. | Sound/Havoc/Soundness.lean |
-| `csoundHR src eu K ...` | Mode `PER_CELL` with recency (`mayProgHR eu`), the default policy. The same statement. | Sound/HavocRecency/Soundness.lean |
+| `csoundH src eu K ...` | Per-cell havoc without recency (`mayProgH eu`): each one-execution alias under A2-strict (`CAliasS src`), for each tag naming `src`, is a may-alias. Both policies. | Sound/Havoc/Soundness.lean |
+| `csoundHR src eu K ...` | Per-cell havoc with recency (`mayProgHR eu`). The same statement, both policies. | Sound/HavocRecency/Soundness.lean |
+| `csoundCN src statics eu K ...` | The call rule CN with recency (`mayProgCN eu K statics`): each one-execution alias under A2-narrow (`CAliasN src statics`) is a may-alias. For each tag naming `src`, each list of static roots, each K and both policies. | Sound/CellNamed/Soundness.lean |
 
-The first three theorems use A2-wide (`CAlias`). `csoundH` and `csoundHR` use A2-strict, and they do not hold under A2-wide (`generous_breaks_strict`, §4.9).
+The first three theorems use A2-wide (`CAlias`). `csoundH` and `csoundHR` use A2-strict, and they do not hold under A2-wide (`generous_breaks_strict`, §4.9). `csoundCN` uses A2-narrow, and it holds neither with generous reach nor under A2-wide (`generous_reach_breaks_CN`, `generous_havoc_breaks_CN`, §3.1). `no_alias_of_mayProgCN` is the contrapositive: a false answer of CN excludes each A2-narrow execution with the alias.
 
 The invariant (`Inv`, Sound/Invariant.lean) is the contract of each transfer rule. It relates a concrete state to an abstract state:
 
@@ -702,8 +729,9 @@ Main lemmas:
 - A once site runs at most one time (`Exec.cnt_le`).
 - A loop keeps it (`loop_keeps`).
 - With recency, a counter increase keeps it (`retire_inv`, `alphaR_bump`, `unique_objR`).
+- With CN, the call keeps the extended invariant `InvCN` (`havocCN_sound`, §4.11).
 
-Soundness has no hypothesis beyond the concrete semantics: A1-A3, one thread, no exceptional flow, and callees that write only new objects (A2-wide for `SHARED`, A2-strict for `PER_CELL`).
+Soundness has no hypothesis beyond the concrete semantics: A1-A3, one thread, no exceptional flow, and callees that write only new objects (A2-wide for site havoc, A2-strict for per-cell havoc, A2-narrow for CN).
 
 Scope of the statement. It is about the end of the program and a cell universe that contains the query fields. Soundness at an inner point follows for a structured program by a prefix argument (argued). Soundness of the query (`findAlias`) follows from `csound` and `findAlias_iff` for paths over the analysis cells. The engine never reports a path over a field outside the analysis cells. Under mode `SHARED` such a path can be a real alias.
 
@@ -783,7 +811,7 @@ Exactness certificate as an analysis output (argued). `bcert` reads only the abs
 - a test oracle: if the result is true, each reported may-alias must have a witness pair of executions;
 - a precision metric: the share of methods (and of queries) with exact answers (`DirectedAliasStats.exactMethods`, §11.2).
 
-The next scope to prove is "the core plus unresolved calls under A2-strict" (F6). Calls are the most common reason that a method is outside the proved scopes.
+The next scope to prove is "the core plus unresolved calls under A2-narrow" (F6). The three losses of CN (§4.11) bound it: such a scope must exclude them. Calls are the most common reason that a method is outside the proved scopes.
 
 ### 4.8 The boundary: counterexamples CX1-CX7
 
@@ -810,11 +838,13 @@ Findings from the boundary:
 | A site that runs twice without a loop is not exact. JIR has one site for each statement. | CX2 |
 | In loops, "unique = once site" is too weak. Recency fixes the tested shape: `mayProgR` answers no, and this is exact. | CX7, `loop_bf_x_fixed`, `loop_bf_x_fixed_weak`, `loop_bf_x_exact` (Sound/Recency/Examples.lean) |
 
-Calls are in no proved scope. No completeness counterexample for calls exists. Under A2-wide, any reachable cell can get a havoc object, so we expect that each abstract `havoc(s)` edge has a concrete execution. No proof exists. Status: open (F6). §4.9 shows that A2-wide is not the right target for calls.
+Calls are in no proved scope. Under A2-wide, any reachable cell can get a havoc object, so we expect that each abstract `havoc(s)` edge has a concrete execution. No proof exists. Status: open (F6). §4.9 shows that A2-wide is not the right target for calls. Under the narrower call semantics, completeness counterexamples for calls exist: `cost_answers` with `cost_none` for per-cell havoc (§4.9), `precision_order_fails` with `nest_noneN` for per-cell havoc, and the three losses `losses_CN` with `loss1_noneN`, `loss2_noneN`, `loss3_noneN` for CN (§4.11).
 
-### 4.9 CEGAR step 2: per-cell havoc origins
+### 4.9 CEGAR step 2: per-cell havoc origins (the precise reference)
 
-This step has two parts. First, it narrows the concrete call semantics from A2-wide to A2-strict. This is a scope change, not an abstraction error: under A2-wide, the aliases of the counterexample below are real. After the change, the soundness claim covers fewer callees. Second, it refines the abstraction, so that C keeps its precision under A2-strict. Mode `SHARED` stays in the engine, and it stays sound for A2-wide (§7.6).
+Status. Per-cell havoc was the call rule until 2026-10-29. Then the user found it too expensive, and CEGAR step 4 replaced it by the call rule CN (§4.11). Per-cell havoc stays in the Lean model only, as the formal reference for the precision comparison: it is proved sound under A2-strict. The engine does not implement it. The user dropped the engine mode `PER_CELL` on 2026-10-29 (§7.6, D2). CN and per-cell havoc are incomparable in precision (`precision_order_fails`, §4.11).
+
+This step has two parts. First, it narrows the concrete call semantics from A2-wide to A2-strict. This is a scope change, not an abstraction error: under A2-wide, the aliases of the counterexample below are real. After the change, the soundness claim covers fewer callees. Second, it refines the abstraction, so that C keeps its precision under A2-strict. The site havoc rule stays in the Lean model, and it stays sound for A2-wide. The engine does not implement it (§7.6).
 
 Counterexample. The program uses the frame of Examples.lean:
 
@@ -858,21 +888,30 @@ Status: proved. The theorems are in Sound/Havoc/, Sound/HavocRecency/, Opt/Havoc
 |---|---|---|
 | A2-strict as a concrete semantics: each new object goes into one cell only; each strict run is a wide run | `HavocS.inj`, `fresh_at_call`, `ExecS.toExec` | proved |
 | Per-cell havoc is sound under A2-strict, for each K and both policies | `csoundH` (the only new step: `InvS.havocH`) | proved |
-| Recency with per-cell havoc (the default policy) is sound under A2-strict, both policies | `csoundHR` (shared invariant `InvG`; new step `InvG.havocHR`) | proved |
+| Recency with per-cell havoc is sound under A2-strict, both policies | `csoundHR` (shared invariant `InvG`; new step `InvG.havocHR`) | proved |
 | The key does not depend on the site counter, so `retire` never renames a per-cell havoc origin | `keyOfR_alphaRS` | proved |
 | O equals the concept, per-cell havoc | `mayProgHO_eq`; cost of one call `addHv_work` | proved |
 | O equals the concept, recency with per-cell havoc; so O is sound | `mayProgHRO_eq`, `csoundHRO` | proved |
 | On `pHv`, the spread is gone: `a ~ b`, `a ~ z.f`, `a ~ w.g` are false; `a ~ x.f` stays true | `strict_answers`, `strict_ab_none`, `strict_az_none`, `strict_axf_keep`, `strict_axf_new` | proved |
 | Under A2-wide, the spread is real, so the refinement needs A2-strict | `spread_real_ab`, `spread_real_az`, `generous_breaks_strict` | proved |
 | `loop_bf_x` stays exact with both refinements | `loop_bf_x_exactHR` | proved |
-| The default needs both refinements: on `pBoth = loop { b = new@7; b.f = x; b.f = y }; m(x); a = x.f; c = y.g`, only the combination answers `b.f ~ x` and `a ~ c` false, and both are exact | `both_answers`, `both_bf_x_none`, `both_a_c_none` | proved |
+| Per-cell havoc needs recency too: on `pBoth = loop { b = new@7; b.f = x; b.f = y }; m(x); a = x.f; c = y.g`, only the combination answers `b.f ~ x` and `a ~ c` false, and both are exact | `both_answers`, `both_bf_x_none`, `both_a_c_none` | proved |
 | The shared key `alloc-old(s)` is sound, and it has a precision cost: `o = new@7; b = new@7; m(b, o); t = b.f; u = o.f` answers `t ~ u` true, but no strict execution aliases them. Recency alone and per-cell havoc alone also answer true, so this is no regression against a proved configuration | `keyOfR_alphaRS`, `csoundHR`; `cost_answers`, `cost_none` | proved |
 | "The combination is at least as precise as each refinement alone" | none (evidence: all examples) | open (F6) |
 | A finer key (the current recency origin of the holder) removes the `cost_answers` alias | none (`retire` must then rename and merge per-cell havoc origins) | open (F6) |
-| A more precise rule for havoc-derived holders: the new object goes into the tree of its holder, with no new origin | none. The proved rule is the model rule of the Key row; §7.6 uses it. | open (F1) |
+| A more precise rule for havoc-derived holders: the new object goes into the tree of its holder, with no new origin | none for per-cell havoc. The proved rule is the model rule of the Key row. CN uses this idea for each holder: a callee object below a callee object extends the path of its cell name (§4.11). | open for per-cell havoc (F1) |
 | Completeness for calls | none | open (F6) |
 
-Effect: on `pHv`, `a ~ b`, `a ~ z.f` and `a ~ w.g` become false. The old content of each cell stays, so the fix of U2 stays. The user decided that the may analysis keeps the old content (no alias drop, D2). Per-cell havoc is the proposed havoc-origin form of D2. The user confirms the form at the spec revisit (§12).
+Why the call needs a havoc origin at all (HavocNeed.lean). The weak havoc keeps the old content, because the callee can keep the cell. It also adds a havoc origin, because the callee can write a new object. Without the havoc origin (keep the old content, add nothing) the analysis is unsound in two ways:
+
+| Case | Program | Real alias (witness) | Without havoc | With havoc |
+|---|---|---|---|---|
+| A later strong update writes the old object | `w = x.f; e = w.g; m(x); t = x.f; t.g = z` | `w.g ~ e`, if `m` writes a new object into `x.f` (`strong_after_call_real`) | `pts(t) = {⟨x.f⟩}` is unique, so `t.g = z` is strong and removes `e` from `w.g`: false (`strong_after_call_nohavoc`) | `pts(t)` has two origins, so the store is weak: true (`strong_after_call_havoc`, `strong_after_call_havocHR`) |
+| The old content is empty | `n = new N(); m(n); a = n.f; b = n.f` | `a ~ b`, if `m` writes one new object into `n.f` (`empty_cell_real`) | `n.f` stays null: false (`empty_cell_nohavoc`) | both loads hold the havoc origin: true (`empty_cell_havoc`, `empty_cell_havocHR`) |
+
+The second case is each constructor that the analysis does not inline (§7.6). CN answers both cases true (`need_answersCN`), and both aliases are real under A2-narrow (`strong_after_call_realN`, `empty_cell_realN`, §4.11).
+
+Effect: on `pHv`, `a ~ b`, `a ~ z.f` and `a ~ w.g` become false. The old content of each cell stays, so the fix of U2 stays. The user decided that the may analysis keeps the old content (no alias drop, D2). Per-cell havoc was the first havoc-origin form of D2. The user replaced it by CN on 2026-10-29 (§4.11, §12).
 
 ### 4.10 Precision relative to the DSU
 
@@ -885,11 +924,129 @@ Effect: on `pHv`, `a ~ b`, `a ~ z.f` and `a ~ w.g` become false. The old content
 | loop strong update, `b.f ~ x` | yes (C), no (recency) | no | no | `loop_dsu_more_precise`, `loop_bf_x_exact` |
 | K = 1, `x.f.f ~ x.f.f.f` | yes | no | no | `deep_concept_imprecise` |
 | U1-U4 | yes (sound) | no (unsound) | yes | §2.3 |
-| `pHv`, `a ~ b` after a call | yes (`SHARED`), no (`PER_CELL`) | no | no under A2-strict | §4.9 |
+| `pHv`, `a ~ b` after a call | yes (site havoc), no (per-cell havoc, CN) | no | no under A2-strict and A2-narrow | §4.9, §4.11 (`spread_goneCN`) |
 
 Recency keeps the other answers (`join_answers`, `field_answers`, `strong_answers`, `call_answer`, Sound/Recency/Examples.lean). Not proved: "recency is at least as precise as C" in general (F6).
 
 The volume table of §11.1 (R0) gives the effect of each row on the alias answer volume.
+
+### 4.11 CEGAR step 4: cell-named havoc with narrow reach (the call rule)
+
+Status: the call rule of the design (D2, decided by the user 2026-10-29). Short name: CN. It is the only call rule of the engine (§7.6). The compact specification states the same rule (`directed-alias-analysis-spec.md` §4, §5.6). Lean: Sound/CellNamed/ and Opt/CellNamed.lean.
+
+History. The step started from a cost problem, not from a wrong answer:
+
+| Order | Finding | Evidence |
+|---|---|---|
+| 1 | Per-cell havoc (§4.9) is too expensive (the user, 2026-10-29). At each call it adds `havocC(s, keyOf(o), c, [])` to each universe cell of each reachable origin, and each symbolic origin is reachable (§4.3). So each call writes almost the whole heap map. Each call site adds new origins, so the values grow with the number of calls. | the user; the cost of one call is linear in the number of keys (`addSets_work`, §5.5) |
+| 2 | A lazy havoc log records the calls and applies them at a read. The havoc layer of the earlier engine design was such a log. The user rejected it: it complicates state identity and the join. | the user |
+| 3 | A "dead-end" rule gives an unknown object no origin: the call keeps the old content and adds nothing. It is unsound. In `n = new N(); m(n); a = n.f; if (*) { b = a; d = a } else { b = y; d = z }`, `m` can write a new object into `n.f`. Then the left branch makes `b == d`. With the dead-end rule, `pts(a) = ∅`, so `b ~ d` is false. | `dead_realN` (the alias is real); `dead_answerCN` (CN answers true) |
+| 4 | CN. The user accepted it with its three precision losses (below). | `csoundCN`, `mayProgCNO_eq` |
+
+Scope change. CN needs A2-narrow (§3.1): the callee reaches only the closure of its arguments (receiver included) and of the static roots, and it writes a distinct new object into each cell that it changes. Both parts are necessary (`generous_reach_breaks_CN`, `generous_havoc_breaks_CN`, §3.1).
+
+Cell names. The rule names each unknown object by the cell where the method finds it. `name(o, c)` is the name of each object that a callee can write into cell `c` of origin `o` (Lean `childCN K o c`):
+
+| `o` | `name(o, c)` | Lean |
+|---|---|---|
+| `sym(b, q)` | `symOrDeep(b, q ++ [c])`: the default content of the cell | `symOrDeep K b (q ++ [c])` |
+| `deep(b)` | `deep(b)` | `deep b` |
+| `alloc(t)`, `alloc-new(t)`, `alloc-old(t)` | `⟨@t.c⟩`, the same name for the most recent object and the older objects | `hsym 0 (rOld t) c []` (the key `keyOfR`) |
+| `⟨@t.c0.q⟩` | `⟨@t.c0.q.c⟩`, or `deep(@t.c0)` beyond K | `extendCN`: the path grows |
+
+Consequences of the definition:
+
+- The name is a function of `(o, c)` only. So a call creates no origin. A cell can get its name, but no call adds a second name to it. Repeated calls do not grow the values (argued from the definition).
+- For an unwritten cell of a symbolic origin, the name is the default content. So the call needs no work there.
+- `alloc-new(t)` and `alloc-old(t)` give the same name. So `retire` renames no name.
+- A callee object below a callee object has a name that extends the path of the name of its holder. So the names never nest, and the universe stays finite.
+
+Lean encoding. The model encodes `⟨@t.c.q⟩` as `hsym 0 (rOld t) c q` and `deep(@t.c)` as `hdeep 0 (rOld t) c`, and keeps `Concept.lean` unchanged (no new base constructor). The depth limit counts the path `q` below the first cell `c`. The specification and the engine use the same form, so the Lean vectors compare by equality.
+
+Exposed set. The abstract state gets one more component: the set `exposed` (`E`) of the origins that some call reached. It is empty at entry. A call adds its closure `R`. The join is the union. `retire` renames inside it. The Lean model keeps it as the value of one reserved variable `xe` (`CtxN.xe`, `ctxCN`), so the join, the loop test and `top` treat it as each other variable.
+
+Uniqueness rule: `uniqueCN = uniqueR && !expB E` (§4.2). A symbolic origin `sym(b, q)` is not unique if `E` holds `sym(b, p)` for a proper prefix `p` of `q`. Reason: a call that reaches `sym(b, p)` can put a new object into a cell below it. That object has the name of its cell, and the name of the cell is the name of the old object. So the name can denote two live objects. Example (HavocNeed.lean): `w = x.f; e = w.g; m(x); t = x.f; t.g = z`. After `m(x)`, `⟨x.f⟩` can denote the old object in `w` and a new object of `m`. So `t.g = z` must be weak, and `w.g ~ e` stays (`need_answersCN`; real: `strong_after_call_realN`). The exposed origin itself stays unique. A callee object gets the name `sym(b, p)` only in a cell of a covered origin `sym(b, p')` with `p = p' ++ [c]`. Then `R` holds a prefix of `p'`, which is a proper prefix of `p`, so `sym(b, p)` is below an exposed origin. A callee cannot change the value of a variable.
+
+Closure. At call site `s` with arguments `a1 .. an`:
+
+1. Start set (`callRoots`): `R := pts(a1) ∪ ... ∪ pts(an) ∪ {sym(root r, []) : r a static root}`. The receiver is an argument.
+2. Covered origins (`coveredB R`): each origin of `R`; each `sym(b, q)` with `sym(b, p) ∈ R` and `p` a prefix of `q`; each `deep(b)` with some `sym(b, p) ∈ R`. Lean `descB` also counts the allocation children of a covered allocation. This has no effect on the result: an allocation child is never unique, so its cells always keep the default child.
+3. Closure (`succsN`, `closeN`): add to `R` the content of each universe cell of each covered origin. Repeat until `R` does not grow. The closure is a checked closure with fuel, as `closeIter` of Concept.lean.
+4. Fallback (`havocCN`): if the closure does not converge within its fuel, the call covers each origin and exposes each universe origin. This is sound.
+
+Coverage includes the descendants for a reason. A callee can reach an object through a cell that the method never names. Such an object can come back to a universe name only as `deep(b)` (`reach_cover`, the `outside` part of the invariant). The model does not prove that a narrower coverage is sound. So the engine keeps the rule as stated.
+
+Call rule (`astepCN`, the call case):
+
+1. Compute `R` (closure above).
+2. Weak havoc by name (`havocWith`): for each covered origin `o` and each universe cell `c`: `H(o, c) ∪= {name(o, c)}`. The old content stays, because the callee can keep the cell. For an unwritten cell of a covered symbolic origin this changes nothing.
+3. Exposure: `E := E ∪ R`.
+4. Recency: `retire(s)`. Result: `pts(x) := {sym(fresh s, [])}`.
+
+The store is `storeCN`: strong if `single? pts(x) = some o` and `uniqueCN o`, else weak. Each other statement is as in recency with per-cell havoc (`astepHR`): copy, `new` (with `retire`), null, load, array load, array store (weak), `unknown`, join, `loopIter`.
+
+Origins of the default configuration (Lean `originsCN`):
+
+| Origin | Source |
+|---|---|
+| `sym(b, q)`, `deep(b)` | `b` an entry root, a static root, or the result of an unknown expression or call at site `s` (`sym(fresh s, [])`) |
+| `alloc-new(s)`, `alloc-old(s)` | allocation sites (recency) |
+| `⟨@s.c.q⟩`, `deep(@s.c)` | allocation sites (`heapKids`): the callee objects below allocations |
+
+The default configuration has no `havoc(s)`, no `havocC` and no `havocDeep`. The engine adds the constant origins of §7.5.
+
+Proof (Sound/CellNamed/). The abstraction of a callee object needs the name of its holder, and the holder can itself be a callee object. A direct definition through the tag map `src` does not terminate. So the proof uses a ghost naming `N`: when call `(s, n)` writes tag `k` into the cell `src k = (O, c)`, the proof sets `N s n k := childCN (alpha O) c` (`namesAfter`). The invariant is `InvCN = ∃ N, InvG ∧ InvX ∧ CntOK`. `InvG` is the generic invariant of Sound/HavocRecency/Inv.lean; its lemmas for variables, stores, `retire`, loops and queries are used without change. `InvX` adds the facts about names (`NameOK`, `ExpOK`). The three new facts:
+
+| Fact | Lemma |
+|---|---|
+| A written object has the name of its cell, and the abstract call adds that name, because the holder of the cell is covered. | `InvG.havocCN`, `reach_cover` |
+| A unique origin denotes at most one live object. A callee object never has a unique origin: its name is junk, or not symbolic, or below an exposed origin. | `unique_objCN`, `not_havoc_of_unique`, `expOK_closure` |
+| A narrow call keeps each cell that the callee cannot reach. So an unchanged abstract cell is sound. | `reach_facts`, `junk_kept`, `written_reach` |
+
+The main lemmas are `havocCN_sound`, `step_soundCN`, `analyze_soundCN` and `inv_initCN`.
+
+Theorems:
+
+| Claim | Theorem | Status |
+|---|---|---|
+| A2-narrow as a concrete semantics; each A2-narrow execution is an A2-strict and an A2-wide execution | `ReachN`, `HavocN`, `ExecN`, `CAliasN`; `ExecN.toExecS`, `ExecN.toExec`, `CAliasN.toCAliasS` | proved |
+| CN with recency is sound under A2-narrow, for each `src`, each list of static roots, each K and both policies | `csoundCN`, `no_alias_of_mayProgCN` | proved |
+| O equals the concept, and O is sound | `mayProgCNO_eq`, `csoundCNO` (§5.5) | proved |
+| A computable executor for A2-narrow witnesses | `runAliasBN`, `runAliasBN_sound` (Run.lean) | proved |
+| Both cases of HavocNeed answer true, and both aliases are real | `need_answersCN`, `strong_after_call_realN`, `empty_cell_realN` | proved |
+| On `pHv`, the spread is gone: `a ~ b`, `a ~ z.f`, `a ~ w.g` are false, and `a ~ x.f` stays true | `spread_goneCN`, `spread_ab_noneN`, `spread_axf_keepN` | proved |
+| The dead-end case answers `b ~ d` true, and the alias is real | `dead_answerCN`, `dead_realN` | proved |
+| Gain of narrow reach: in `t = this.box; u = t.value; touch(); t.value = z`, `touch()` does not reach `this`, so `⟨this⟩` is not exposed and the store stays strong (with generous reach, the call would expose `⟨this⟩`), so `t.value ~ u` is false. It is true (weak store) with `touch(this)` or with `this` as a static root. An unrelated static root does not change the answer. The false answer is exact. | `gain_answersCN`, `gain_noneN` | proved |
+| The three accepted losses: CN answers true, the per-cell analysis answers false, and no A2-narrow execution has the alias | `losses_CN`, `losses_HR`, `loss1_noneN`, `loss2_noneN`, `loss3_noneN` | proved |
+| The join example, the field example, the strong-update example, the call example and `loop_bf_x` keep their answers | `other_answersCN`, `loop_bf_x_CN` | proved |
+| O gives the concept answers on the gain, loss and dead-end examples | `o_answersCN` | proved |
+| "CN is at least as precise as per-cell havoc" | `precision_order_fails`, `nest_noneN` | false |
+| The order holds on each example query | `precision_need`, `precision_old`, `precision_new` | proved |
+| Both scope restrictions are necessary | `generous_reach_breaks_CN`, `touch_noneN`, `generous_havoc_breaks_CN` (§3.1) | proved |
+| The narrow per-cell reference `mayProgHRN` (Reference.lean) is sound | none | open (F11; model only, not needed by the engine) |
+| A cost bound for the O call | none | open (F10) |
+| Completeness for calls under A2-narrow | none; the three losses bound the scope | open (F6) |
+
+Accepted precision losses. A cell name stands for the entry object of the cell and for each object that a callee writes into the cell. So CN cannot tell these objects apart. The user accepted the three losses (D2):
+
+| Id | Program | Query | CN | Per-cell havoc | Concrete fact | Cause |
+|---|---|---|---|---|---|---|
+| L1 | `t = x.f; u = t.g; m(x); t.g = z` | `t.g ~ u` | true: `⟨x.f⟩` is below the exposed `⟨x⟩`, so `t.g = z` is weak | false | `t` holds one object, so the store is strong in each execution (`loss1_noneN`) | the old object and the new object of `m` have one name |
+| L2 | `w = x.f; x.f = b; m(x); t = x.f` | `t ~ w` | true | false | `t` is `b` or a new object; never the old object in `w` (`loss2_noneN`) | the name of the new object is the entry content of `x.f` |
+| L3 | `x.f = b1; m(x); a = x.f; x.f = b2; m(x); c = x.f` (two call sites; 9 and 8 in Lean) | `a ~ c` | true | false | the two calls write two different new objects (`loss3_noneN`) | the objects of two calls in one cell have one name |
+
+`losses_CN` gives the CN answers (K = 0 and 1). `losses_HR` gives the answers of the proved per-cell analysis `mayProgHR` (generous reach), and `precision_new` gives those of the narrow reference.
+
+Measurement status. The engine does not implement per-cell havoc. So the three losses and the opposite case (`precision_order_fails`, below) are known only from the Lean examples: `losses_CN`, `losses_HR`, `precision_new`, `loss1_noneN`, `loss2_noneN`, `loss3_noneN` and `nest_noneN`. The engine does not measure them on real code. The shadow runs measure the alias answer volume and the call cost of CN (§11.2), not the losses.
+
+Comparison with per-cell havoc. The two rules are incomparable. Per-cell havoc is more precise on L1-L3. CN is more precise where per-cell havoc merges the objects of two holders that are callee objects of one call: `m(x, y)@9; m'(x, y)@8; t = x.f; a = t.g; u = y.f; b = u.g`, query `a ~ b`. The second call writes into `x.f.g` and into `y.f.g` two objects with the one origin `hsym 8 (havoc 9) g []`, because the key of a callee holder is only its call site. So per-cell havoc answers true (both `mayProgHRN` and `mayProgHR`). CN answers false (the names `⟨x.f.g⟩` and `⟨y.f.g⟩`), and no A2-narrow execution has the alias (`precision_order_fails`, `nest_noneN`). On each example query, each true answer of the narrow reference is also a true answer of CN (`precision_need`, `precision_old`, `precision_new`).
+
+Requirements for the engine. The proof depends on these rules (§7.6):
+
+1. The exposed set takes part in each join (union) and in the loop test. In the model, `xe` is in `ctx.vars`, so `leOn` tests it. If the loop test ignores it, a loop can stop before `exposed` is stable.
+2. `top` exposes each universe origin.
+3. If the closure does not converge, cover each origin and expose each universe origin.
+4. Coverage includes the descendants (step 2 of the closure).
 
 ---
 
@@ -944,7 +1101,7 @@ State: `OState = List (Key × NodeId)` with `Key = v x | h o c`. A missing key h
 | `x := y.c` | `loadO`: memoized union over cells `c` of the members of the node of `y` | one union for each member |
 | `x.c := y` | `storeO`: `single?` on the members of the node of `x`, and the `uniqueB` test with `ctx.entryUnique`. Strong: set `(o, c)` to the node of `y`. Weak: `addAll`. | one union for each member (weak) |
 | `x[*] := y` | `weakO` | one union for each member |
-| call havoc | `havocO` (`SHARED`): `reachB` on the denotation, then add the node `{havoc(s)}` to each reachable universe cell. `havocHO` (`PER_CELL`): the same reach test, then add the interned node `{havocC(s, keyOf(o), c, [])}` to each reachable universe cell `(o, c)` (`addHv`). | one union for each cell |
+| call havoc | `havocO` (site havoc): `reachB` on the denotation, then add the node `{havoc(s)}` to each reachable universe cell. `havocHO` (per-cell havoc): the same reach test, then add the interned node `{havocC(s, keyOf(o), c, [])}` to each reachable universe cell `(o, c)` (`addHv`). `havocCNO` (CN, the default): `closeN` on the denotation, then one `addSets`: the exposed key gets the closure, and each universe cell of each covered origin gets its cell name. | one union for each cell |
 | join | `joinO`: one memoized union for each key of either map. The change bit is true if some id differs from the first state. | one union for each key |
 | top | `topO` | one union for each key |
 | loop | `loopO`: the same fuel and checked post-fixpoint. The test is the change bit. | one join for each iteration |
@@ -994,7 +1151,7 @@ Without recency:
 | `analyzeProgO_rel`, `mayProgO_eq` | For each program, the final O state represents the final C state, and `mayProgO = mayProg`. | Opt/Equiv.lean |
 | `analyzeProgOE_rel`, `mayProgOE_eq` | The same for both strong-update policies. | Opt/Equiv.lean |
 
-O soundness without recency is a composition: `csoundE` and `mayProgOE_eq`. The two `mayProgE` definitions (`Sound.mayProgE`, `Opt.mayProgE`) are equal by unfolding. For this configuration, no single theorem states "a one-execution alias is an O may-alias" (F9). For the default configuration, `csoundHRO` states it (below).
+O soundness without recency is a composition: `csoundE` and `mayProgOE_eq`. The two `mayProgE` definitions (`Sound.mayProgE`, `Opt.mayProgE`) are equal by unfolding. For this configuration, no single theorem states "a one-execution alias is an O may-alias" (F9). For the default configuration (recency with CN), `csoundCNO` states it (below). For recency with per-cell havoc, `csoundHRO` states it.
 
 With recency (Opt/Recency.lean). The O retire `retireO ctx s T st` has two steps:
 
@@ -1035,16 +1192,28 @@ With per-cell havoc (Opt/Havoc.lean, Opt/HavocRecency.lean). The O call `havocHO
 | `mayProgHO_eq` | For both policies and each program, `mayProgHO eu = mayProgH eu` on the variables of the program and the frame. | Opt/Havoc.lean |
 | `addHv_spec`, `addHv_work` | The per-cell havoc adds the correct origin to each listed key. One call over keys `ks` costs at most `\|ks\|·(6 + 4\|U\|)`. | Opt/Havoc.lean |
 | `havocHRO_rel`, `ostepHR_rel`, `analyzeHRO_rel`, `analyzeProgHRO_rel` | The same with recency. `retireO_rel` is used without change. | Opt/HavocRecency.lean |
-| `mayProgHRO_eq`, `csoundHRO` | For both policies, `mayProgHRO eu = mayProgHR eu`. So O with the default configuration is sound under A2-strict. | Opt/HavocRecency.lean |
+| `mayProgHRO_eq`, `csoundHRO` | For both policies, `mayProgHRO eu = mayProgHR eu`. So O with recency and per-cell havoc is sound under A2-strict. | Opt/HavocRecency.lean |
 | `addSets_work` | One per-cell havoc with recency has the same cost bound as `addHv_work`. | Opt/HavocRecency.lean |
 
-Cost note. `SHARED` adds one node `{havoc(s)}` to all cells, so equal unions give memo hits. `PER_CELL` interns up to `\|ks\|` new singleton nodes and up to `\|ks\|` new union nodes for each call. The engine avoids this work with the havoc layer (§7.6).
+Cost note. Site havoc adds one node `{havoc(s)}` to all cells, so equal unions give memo hits. Per-cell havoc interns up to `\|ks\|` new singleton nodes and up to `\|ks\|` new union nodes for each call. This is the cost that made the user replace per-cell havoc by CN (§4.11).
+
+With CN (Opt/CellNamed.lean). The O state is the map of Opt/Prim.lean. The exposed set is the node of one reserved variable key `.v xe`, so the O join, the change bit, the loop test and `retireO` apply to it without change. The O call `havocCNO` has four steps: `closeN` on the denotation of the state; one `addSets` (the reserved key gets the closure, and each universe cell of each covered origin gets the interned singleton of its cell name, by one memoized union); `retireO`; the result. A cell name depends only on `(o, c)`, so the second call on the same cell gives a memo hit, and the values do not grow with the number of calls (argued). The O store is the O recency store with `uniqueCN` on the node of the reserved key (`storeCNO`).
+
+| Theorem | Statement | File |
+|---|---|---|
+| `havocCNO_rel`, `storeCNO_rel`, `ostepCN_rel` | The O call, the O store and each O statement represent the CN concept on every universe key. | Opt/CellNamed.lean |
+| `analyzeCNO_rel`, `analyzeProgCNO_rel` | The analysis and the final O state represent the CN concept. | Opt/CellNamed.lean |
+| `mayProgCNO_eq` | For both policies, each list of static roots and each program, `mayProgCNO = mayProgCN` on the variables of the program and the frame. | Opt/CellNamed.lean |
+| `csoundCNO` | O with CN is sound under A2-narrow. | Opt/CellNamed.lean |
+| `o_answersCN` | O gives the concept answers on the gain, loss and dead-end examples. | Opt/CellNamed.lean |
+
+No theorem bounds the cost of the O call of CN. An analogue of `addSets_work` is not stated (F10). The engine cost of §7.6 is argued.
 
 Limits of the equivalence:
 
-- It holds on the universe only. `mayProgO_eq`, `mayProgRO_eq`, `mayProgHO_eq` and `mayProgHRO_eq` need `x, y ∈ p.vars ++ fr.vars`. Outside, C can differ only after a loop ran out of fuel (`top`) (argued). All queries are on such variables.
+- It holds on the universe only. `mayProgO_eq`, `mayProgRO_eq`, `mayProgHO_eq`, `mayProgHRO_eq` and `mayProgCNO_eq` need `x, y ∈ p.vars ++ fr.vars`. Outside, C can differ only after a loop ran out of fuel (`top`) (argued). All queries are on such variables.
 - O does not remove a cell entry whose node equals the default content. This has no effect on the equivalence and on the bounds. The Kotlin state must remove such entries (§7.10).
-- Not in the O model: the havoc layer of §7.6, the iteration strategy of §7.10, exceptional edges.
+- Not in the O model: the engine form of the CN call of §7.6 (the closure over written cells only, the filtered exposed node with its markers, the explicit cells of covered allocations), the iteration strategy of §7.10, exceptional edges.
 
 ### 5.6 Cost separations
 
@@ -1091,6 +1260,7 @@ All proved separations compare O with C. No theorem compares O with the DSU. Thi
 | copy `x = y` | one union, O(α) | share the node id, O(1) | O(1) |
 | load `x = y.f` | one union with one heap element | one memo union for each member of `pts(y)`: O(`\|pts(y)\|`) memo operations | a memo miss merges two sets (`Tbl.union_work`) |
 | store `x.f = y` | removal and union | strong: O(1). Weak: one memo union for each member of `pts(x)` | as load |
+| unresolved call | `invalidateOuterHeapAliases`: remove the heap elements of outer groups | CN: the closure over the written cells of the covered origins, then one memo union for each written cell of a covered origin and for each cell of a covered allocation, then one union for the exposed key (§7.6) | the closure visits each written cell of a covered origin (no theorem, F10) |
 | join | union of the parent relations, then congruence repair until stable | one memo union for each key (`joinO_work`) | `6 + 4\|U\|` for each key with different values |
 | fixpoint test | partition equality | the change bit, one id comparison for each key | a memo miss (`test_miss`) |
 | query | enumerate the group, then convert paths up to depth D | backward search, bounded by the output (`searchCost_le`) | `\|cells\|^D` output on cyclic heaps (§6.2) |
@@ -1110,7 +1280,16 @@ Practical condition (argued). If each points-to set has at most `c` origins, eac
 | `forEachHeapAlias(x, π, P)` | For each prefix `pre` of `π`: the paths that may alias `x.pre` (`heapAliases`). |
 | `AliasAllocInfo(s)` in `alias(x)` | `alloc(s) ∈ pts(x)`. With recency: `alloc-new(s) ∈ pts(x)` or `alloc-old(s) ∈ pts(x)`. Never inside a heap path. |
 
-`AliasAllocInfo` follows the points-to set of the queried local only, not "the allocations of a group". This fixes the transitive answer for `JIRCallResolver` (CK5). A symbolic, deep, havoc or catch origin in `pts(x)` means "an object that is not a local allocation". §8.2 (M6) uses it as an "unknown origin present" signal.
+Query for a heap path `x.π`. The seed is `T = aevalPath(x, π)`: read the cells of `π` from `pts(x)`, with default content for unwritten cells. Then run the same backward search from `T` (`heapAliases_iff`). Rules:
+
+- The answer is every path `v.ρ` (`|ρ| ≤ D`) with `pts(v.ρ) ∩ T ≠ ∅`, except `x.π` itself. The query path `π` can be longer than D. The answer paths cannot.
+- The answer cannot be derived from `findAlias(x)`. Congruence gives `v.π` for each `v` that shares an origin with `x`, if the cell is not empty. But a path can also reach the content of the cell by a write: after `x.f = z`, `z ~ x.f`, and `z` is not an alias of `x` (`field_heapAliases_x`).
+- If `T` is empty (`x.π` is always null), the answer is empty.
+- If `π` passes depth K, `T` holds `deep(b)`. Its holders are the variables that hold it and the symbolic parents at depth K. The search does not follow its self cells (§6.2). So the answer is the paths that may reach the deep summary, not all paths over all cells.
+- An unwritten cell on `π` gives a default origin, for example `⟨x.f.g⟩`. The query computes it by rule and does not intern it (§7.12). Its holders are the default parent cell and the variables that loaded it.
+- After a strong update of `x.f`, the old holders of the cell content are no longer in the answer.
+
+`AliasAllocInfo` follows the points-to set of the queried local only, not "the allocations of a group". This fixes the transitive answer for `JIRCallResolver` (CK5). A symbolic, deep, allocation child or catch origin in `pts(x)` means "an object that is not a local allocation". §8.2 (M6) uses it as an "unknown origin present" signal.
 
 ### 6.2 Backward search (Opt/Query.lean)
 
@@ -1176,9 +1355,9 @@ The Lean search has no deep-self-edge rule. The rule of §6.2 is a Kotlin restri
 | `org.opentaint.dataflow.jvm.ap.ifds.analysis` | `JIRAliasUtil.kt` (changed) | The copies of the shared receiver helpers, with the facade as receiver (M3, §8.3) |
 | `org.opentaint.dataflow.jvm.ap.ifds.alias` | `JIRDsuAliasBackend` (the body of `JIRLocalAliasAnalysis` on main, renamed) | The DSU backend. It extends `LocalAliasAnalysis`, as on main. Its behaviour does not change. |
 | `org.opentaint.dataflow.jvm.ap.ifds.alias.directed` (new) | `NodeTable` | Interned origin sets (nodes), union memo |
-| same | `OriginTable`, `BaseTable`, `SiteTable`, `CellTable`, `VarTable`, `SiteListTable` | Dense `Int` ids for origins, bases, sites, cells, variables, and sorted call-site lists |
-| same | `DirectedState` | State for each statement: environment map, heap map, havoc layer |
-| same | `DirectedTransfer` | The operations of O (copy, allocate, load, store, havoc, retire, join, garbage collection) |
+| same | `OriginTable`, `BaseTable`, `SiteTable`, `CellTable`, `VarTable` | Dense `Int` ids for origins, bases, sites, cells and variables |
+| same | `DirectedState` | State for each statement: environment map (with the exposed key), heap map |
+| same | `DirectedTransfer` | The operations of O (copy, allocate, load, store, the call rule, retire, join, garbage collection) |
 | same | `DirectedAliasAnalysis` | JIR driver: maps `Stmt` (from `JIRDSUAABuilder`) to `DirectedTransfer` operations; inlining |
 | same | `DirectedAliasResult` | Frozen tables and the states of each statement after the fixpoint |
 | same | `DirectedAliasQuery`, `ReverseIndex` | Lazy reverse index, backward search, conversion to `AliasInfo` |
@@ -1208,15 +1387,13 @@ typealias BaseId = Int
 typealias SiteId = Int
 typealias CellId = Int
 typealias VarId = Int
-typealias SiteListId = Int
 typealias HeapKey = Long
-typealias HeapEntry = Long
 typealias PairKey = Long
 
 const val EMPTY_NODE: NodeId = 0
-const val EMPTY_SITE_LIST: SiteListId = 0
 const val ABSENT: Int = -1
 const val ELEM_CELL: CellId = 0
+const val EXPOSED_VAR: VarId = 0
 
 inline fun heapKey(origin: OriginId, cell: CellId): HeapKey =
     (origin.toLong() shl 32) or (cell.toLong() and 0xFFFF_FFFFL)
@@ -1224,13 +1401,6 @@ inline fun heapKey(origin: OriginId, cell: CellId): HeapKey =
 inline fun heapKeyOrigin(key: HeapKey): OriginId = (key ushr 32).toInt()
 
 inline fun heapKeyCell(key: HeapKey): CellId = key.toInt()
-
-inline fun heapEntry(value: NodeId, calls: SiteListId): HeapEntry =
-    (value.toLong() shl 32) or (calls.toLong() and 0xFFFF_FFFFL)
-
-inline fun heapEntryValue(entry: HeapEntry): NodeId = (entry ushr 32).toInt()
-
-inline fun heapEntryCalls(entry: HeapEntry): SiteListId = entry.toInt()
 
 inline fun pairKey(a: NodeId, b: NodeId): PairKey =
     if (a <= b) (a.toLong() shl 32) or b.toLong() else (b.toLong() shl 32) or a.toLong()
@@ -1261,16 +1431,16 @@ class NodeTable {
 Origins and bases. `SiteTable`, `CellTable` and `VarTable` give dense ids in the same way. `SiteTable.isLoopSite(site)` is the loop test of §7.5:
 
 ```kotlin
-enum class OriginKind { SYM, DEEP, ALLOC, ALLOC_NEW, ALLOC_OLD, BOX_CONST, CLASS_CONST, STRING_CONST, SITE_CONST, HAVOC_SITE }
+enum class OriginKind { SYM, DEEP, ALLOC, ALLOC_NEW, ALLOC_OLD, BOX_CONST, CLASS_CONST, STRING_CONST, SITE_CONST, EXPOSED_STATICS, EXPOSED_ALL }
 
-enum class BaseKind { ROOT_THIS, ROOT_ARG, ROOT_STATIC, FRESH, HAVOC_CELL }
+enum class BaseKind { ROOT_THIS, ROOT_ARG, ROOT_STATIC, FRESH, ALLOC_CHILD }
 
 class BaseTable {
     fun thisBase(): BaseId
     fun argBase(index: Int): BaseId
     fun staticBase(binaryClassName: String): BaseId
     fun freshBase(site: SiteId): BaseId
-    fun havocCellBase(site: SiteId, key: OriginId, cell: CellId): BaseId
+    fun allocChildBase(site: SiteId): BaseId
     fun kind(base: BaseId): BaseKind
     fun freeze()
 }
@@ -1278,23 +1448,19 @@ class BaseTable {
 class OriginTable(val symDepth: Int, val bases: BaseTable) {
     fun kind(origin: OriginId): OriginKind
     fun isOuter(origin: OriginId): Boolean
-    fun isHavocDerived(origin: OriginId): Boolean
-    fun keyOf(origin: OriginId): OriginId
+    fun base(origin: OriginId): BaseId
+    fun parent(origin: OriginId): OriginId
     fun symRoot(base: BaseId): OriginId
     fun symChild(parent: OriginId, cell: CellId): OriginId
+    fun cellName(origin: OriginId, cell: CellId): OriginId
     fun alloc(site: SiteId, level: Int, kind: OriginKind): OriginId
     fun boxConst(boxType: String): OriginId
     fun classConst(binaryClassName: String): OriginId
     fun stringConst(value: String): OriginId
     fun siteConst(site: SiteId): OriginId
-    fun havocSite(site: SiteId): OriginId
+    fun exposedStatics(): OriginId
+    fun exposedAll(): OriginId
     fun freeze()
-}
-
-class SiteListTable {
-    fun add(list: SiteListId, site: SiteId): SiteListId
-    fun union(a: SiteListId, b: SiteListId): SiteListId
-    fun sites(list: SiteListId): IntArray
 }
 ```
 
@@ -1303,12 +1469,10 @@ Policy and parameters:
 ```kotlin
 enum class AliasAnalysisMode { DSU, SHADOW, DIRECTED }
 
-enum class HavocMode { SHARED, PER_CELL }
-
 data class DirectedAliasPolicy(
     val entryUnique: Boolean = true,
     val recency: Boolean = true,
-    val havocMode: HavocMode = HavocMode.PER_CELL,
+    val maxCallClosure: Int = 10_000,
     val symDepth: Int = 7,
     val maxAccessors: Int = 6,
     val maxTableContent: Long = 50_000_000L,
@@ -1325,7 +1489,7 @@ data class Params(
 )
 ```
 
-Status of the defaults: `aliasAnalysisMode = DSU` (D7) and `entryUnique = true` (D1) are decided by the user. `havocMode = PER_CELL` is the proposed form of D2. `recency` (D3), `symDepth` and `maxAccessors` (D4), `maxQueryPaths` and `diagnosticCallDrop` (D11), and `maxTableContent` (§7.11) are open until the spec revisit. The defaults of the two D11 fields mean "no volume control" (D11 (a)).
+Status of the defaults: `aliasAnalysisMode = DSU` (D7) and `entryUnique = true` (D1) are decided by the user. The call rule CN (D2) is decided by the user (2026-10-29). It is the only call rule, so the policy has no havoc mode field (§7.6). `maxCallClosure` (the closure budget of §7.6) is open until the measurement. `recency` (D3), `symDepth` and `maxAccessors` (D4), `maxQueryPaths` and `diagnosticCallDrop` (D11), and `maxTableContent` (§7.11) are open until the spec revisit. The defaults of the two D11 fields mean "no volume control" (D11 (a)).
 
 Modes:
 
@@ -1373,9 +1537,7 @@ State and transfer:
 ```kotlin
 class DirectedState(
     val env: Int2IntOpenHashMap,
-    val heap: Long2LongOpenHashMap,
-    val havocOuter: SiteListId,
-    val havocAlloc: Int2IntOpenHashMap,
+    val heap: Long2IntOpenHashMap,
 ) {
     override fun equals(other: Any?): Boolean
     override fun hashCode(): Int
@@ -1387,7 +1549,7 @@ class DirectedTransfer(
     val nodes: NodeTable,
     val origins: OriginTable,
     val sites: SiteTable,
-    val siteLists: SiteListTable,
+    val cells: CellTable,
     val vars: VarTable,
     val policy: DirectedAliasPolicy,
     val cancellation: AnalysisCancellation,
@@ -1399,17 +1561,18 @@ class DirectedTransfer(
     fun allocate(s: DirectedState, target: VarId, site: SiteId, kind: OriginKind): DirectedState
     fun store(s: DirectedState, base: NodeId, cell: CellId, value: NodeId): DirectedState
     fun storeWeak(s: DirectedState, base: NodeId, cell: CellId, value: NodeId): DirectedState
+    fun exposed(s: DirectedState): NodeId
     fun havoc(s: DirectedState, reachRoots: NodeId, site: SiteId): DirectedState
     fun retire(s: DirectedState, site: SiteId): DirectedState
     fun dropVars(s: DirectedState, keep: (VarId) -> Boolean): DirectedState
     fun collectGarbage(s: DirectedState): DirectedState
-    fun isUnique(origin: OriginId): Boolean
+    fun isUnique(s: DirectedState, origin: OriginId): Boolean
     fun mergeAll(states: List<DirectedState>): DirectedState
     fun join(old: DirectedState?, incoming: DirectedState): Joined<DirectedState>
 }
 ```
 
-`env` and `heap` use `defaultReturnValue(ABSENT)`. `EMPTY_NODE` is a valid written value (`x.f = null`). It must stay different from "absent", because absent means default content.
+`env` and `heap` use `defaultReturnValue(ABSENT)`. `EMPTY_NODE` is a valid written value (`x.f = null`). It must stay different from "absent", because absent means default content. `VarTable` reserves the id `EXPOSED_VAR` for the exposed key. `isUnique` reads the exposed node of the state (§7.5, §7.6).
 
 Simulator:
 
@@ -1531,13 +1694,13 @@ Uniqueness (`isUnique`), with `entryUnique = policy.entryUnique`:
 
 | Origin | Unique | Lean source |
 |---|---|---|
-| `sym(root, q)`, `q` without `ELEM_CELL` | `entryUnique` | `Origin.uniqueB` (Concept.lean) |
-| `sym(fresh s, q)`, `q` without `ELEM_CELL` | `entryUnique` and not `isLoopSite(s)` | same |
-| per-cell havoc origins | no | `Origin.uniqueB` (`hsym`, `hdeep`) |
+| `sym(root, q)`, `q` without `ELEM_CELL` | `entryUnique`, and `q` is not below an exposed origin | `Origin.uniqueB` (Concept.lean), `uniqueCN` (Sound/CellNamed/Concept.lean) |
+| `sym(fresh s, q)`, `q` without `ELEM_CELL` | `entryUnique` and not `isLoopSite(s)`, and `q` is not below an exposed origin | same |
+| allocation children `⟨@s.c.q⟩`, `deep(@s.c)` | no | `uniqueR_name`; `hsym`, `hdeep` |
 | `deep(b)` | no | same |
 | `alloc(s)` (recency off) | not `isLoopSite(s)` | same (`once s`) |
 | `alloc-new(s)` | yes | `uniqueR` (Sound/Recency/Concept.lean) |
-| `alloc-old(s)`, constants, `havoc(s)` | no | `uniqueR`, `uniqueB` |
+| `alloc-old(s)`, constants | no | `uniqueR`, `uniqueB` |
 
 `isLoopSite(s)` is true in two cases. Case 1: the statement of `s` is on a cycle of its graph (`onCycle`). Case 2: `s` is in a callee, and the call statement is on a cycle of the caller. Each JIR statement index occurs one time in each context. So "occurs at most one time" in `Prog.onceB` holds for each JIR site.
 
@@ -1549,32 +1712,39 @@ No alias drop (D2, decided by the user). The may analysis does not drop aliases 
 
 Volume effect. On main the drop removes heap aliases after each unresolved call, so it also limits the alias answer volume. The user reports that a fix of the drop on main explodes the analysis (R0). D2 stands. The flag `diagnosticCallDrop` (D11 (e), default `false`) applies the drop of main in the directed engine, for an A/B diagnosis only: it isolates the volume effect of D2. It is unsound (U2) and never a default.
 
-The engine has two havoc modes. Both keep the old content of each cell. This fixes U2. The havoc-origin form is proposed, to confirm at the spec revisit (D2).
+The engine has one call rule: CN (D2, decided by the user 2026-10-29, §4.11). It keeps the old content of each cell, so it fixes U2. Call `s` adds the cell name `name(o, c)` to each written cell of each covered origin and to each cell of each covered allocation. It adds the closure to the exposed set. Concrete call semantics: A2-narrow (§3.1). Proof state: proved (`csoundCN`, `mayProgCNO_eq`, `csoundCNO`, §4.11). The engine has no havoc mode switch.
 
-| Mode | Origin that call `s` adds to cell `(o, c)` | Concrete call semantics | Proof state |
-|---|---|---|---|
-| `SHARED` | `havoc(s)`, one for each call site | A2-wide (§3.1) | proved: `csoundE`, `mayProgOE_eq`; with recency `csoundR`, `mayProgRO_eq` |
-| `PER_CELL` | `havocC(s, keyOf(o), c, [])`, one for each call site, holder key and cell | A2-strict (§3.1) | proved: `csoundH`, `mayProgHO_eq`; with recency `csoundHR`, `mayProgHRO_eq`, `csoundHRO` (§4.9) |
+Dropped modes. On 2026-10-29 the user dropped the two other call rules from the engine (D2):
 
-`PER_CELL` is the proposed production default (the form of D2, to confirm at the spec revisit). Its soundness claim covers fewer callees than `SHARED` (§3.1). `SHARED` stays in the engine. The Lean vector tests use both modes (§10.1), and a user can select `SHARED` for A2-wide. For new content, the DSU also uses A2-strict. After a call removes a heap element, a later load makes a new heap element. No other cell shares this element. So `PER_CELL` keeps the DSU call semantics for new content and also keeps the old content.
+- `SHARED` (site havoc origins). As a call rule it makes each value loaded after a call alias each outer path (`havoc_spread`, R1). As a diagnostic it gives no clear signal: almost each answer after a call differs from the CN answer, so a comparison cannot isolate one cause. Its only gain is the cover of a callee that writes one object into two cells (A2-wide), and that shape stays out of scope (§3.4). The site havoc rule stays in the Lean model as the proof for A2-wide (`csoundE`, `csoundR`).
+- `PER_CELL` (per-cell havoc origins with the closure of CN), dropped for simplicity. It was only a diagnostic reference. It needed a separate havoc layer in the state, it had the cost that CN removes, and its narrow form is not proved sound (F11). Per-cell havoc stays in the Lean model only, as the formal reference for the precision comparison (§4.9). The three accepted losses of CN and the opposite case (`precision_order_fails`) are known from the Lean examples, not measured in the engine (§4.11).
 
-Reach roots. The receiver is part of the reach roots. The DSU uses only `stmt.args`. The directed engine needs the receiver: after an unresolved `x.<init>(v)`, the cells of the allocation of `x` get havoc content. Without it they read as null, and later loads lose aliases.
+Reach roots. The receiver is part of the reach roots. The DSU uses only `stmt.args`. The directed engine needs the receiver: after an unresolved `x.<init>(v)`, the cells of the allocation of `x` get their cell names. Without it they read as null, and later loads lose aliases. The static roots are reach roots of each call (A2-narrow). So each call exposes each static root.
 
-Constructor calls. An unresolved `<init>` call always havocs its receiver, also with no reference argument. The directed engine does not use the `cantMutateAliasedHeap()` exemption of the DSU (D10). With `PER_CELL`, two loads of one field of the new object give the same origin `havocC(s, keyOf(o), f, [])`, so they alias, as in the DSU. Test: `directed no-argument constructor call makes the allocation fields havoc content`.
+Constructor calls. An unresolved `<init>` call always havocs its receiver, also with no reference argument. The directed engine does not use the `cantMutateAliasedHeap()` exemption of the DSU (D10). With CN, the receiver `alloc-new(s)` is covered, so each cell `f` of the new object gets `⟨@s.f⟩`. Two loads of one field of the new object then alias, as in the DSU (`need_answersCN`, `empty_cell_realN`). Test: `directed no-argument constructor call makes the allocation fields havoc content`.
 
-The havoc layer. A call does not write each (origin, cell) pair. It records the call in a layer of sorted call-site lists (`SiteListTable`):
+The call. `havoc(s, roots, site)` implements `havocCNO` (Opt/CellNamed.lean) with these steps:
 
-- `havocOuter` is the list of the calls on some path to this point. It applies to each outer origin. `havocAlloc` maps each allocation origin that some call reached to such a list.
-- Each heap entry is a pair `(value, calls)` packed in one `Long`. `value` is the node of the last store. `calls` is the list of the calls after that store that reached the cell. A strong store sets `calls := EMPTY_SITE_LIST`. A weak store keeps `calls`. Join is pointwise on both parts.
-- `read(o, c)` is the value (or `default(o, c)` if the map has no entry) plus the layer content of each listed call `s`. In mode `SHARED` the layer content is `havoc(s)`. In mode `PER_CELL` it is `havocC(s, keyOf(o), c, [])`.
-- In both modes the layer applies to each reachable origin, also to havoc-derived origins. This follows Lean (`AState.havoc`, `AState.havocH`): a havoc origin is outer, so a later call havocs it too. In mode `PER_CELL` the key of a havoc-derived holder is its site origin `havoc(s0)` (Lean `keyOf`). Do not use the more precise rule "no new origin for a havoc-derived holder": it is not proved (§4.9, F1).
-- Keys (`OriginTable.keyOf`). The key of a holder is a function of the origin only. It never reads the recency state: the key of `alloc-new(s')` and of `alloc-old(s')` is `alloc-old(s')` (Lean `keyOfR`, proved by `keyOfR_alphaRS` and `csoundHR`). So `retire` never renames a per-cell havoc origin (§7.9). Cost: havoc objects in one cell of the most recent object and of the older objects of `s'` share one origin (`cost_answers`). Recency alone and per-cell havoc alone have the same answer, so this is no regression.
-- `havoc(roots, s)`: compute the reached allocation origins (closure over written cells, from the argument and receiver origins and from the cells of outer origins). Add `s` to `havocOuter`, to `havocAlloc` of each reached allocation origin, and to `calls` of each written cell of each outer or reached origin. Cost: `O(|written cells of reached origins| + |reached|)` list adds for each call. No node is interned for a havoc union: the lists are shared by all cells with the same call history.
-- A load interns the read set, as for any load. The memo key of such a read is (value node, call-site list, holder key, cell).
+1. Start set. `R := members(roots)`. `roots` is the union of the nodes of the arguments and of the receiver. Add the marker origin `EXPOSED_STATICS`. It stands for each static root `sym(static C, [])`, also for a class that `BaseTable` does not have yet.
+2. Closure over the written heap entries only. An unwritten cell of a covered origin holds its default content, and that content is null or below a covered origin. So it adds no covered origin. A worklist visits each written entry `(o, c)` with `o` covered, and adds the members of its node to `R`. `o` is covered if one of these is true: `o ∈ R`; `o` is `SYM` and an ancestor of `o` (the `parent` chain, at most K steps) is in `R`; `o` is `DEEP` over base `b` and `R` has a `SYM` origin over `b`; the base of `o` is a static root and `R` has `EXPOSED_STATICS`. The worklist uses an index from a base to its written origins. The retire of §7.9 needs the heap grouped by origin too. The Lean closure reads each universe cell (`succsN`). The engine closure has the same covered origins and the same exposed answers: the extra Lean members are below members of `R` (argued; F3). Lean `descB` also covers the allocation children of a covered allocation. The engine does not: an allocation child is never unique, so each of its cells keeps its default child, which is its cell name. So the Lean step adds nothing there.
+3. Budget. If `R` has more than `maxCallClosure` origins, stop the closure and use the fallback: cover each origin, and set the exposed node to `{EXPOSED_ALL}`. This is the `none` branch of `havocCN`, so it is sound (`csoundCN`). On a finite heap the closure always ends. The budget only bounds its cost.
+4. Names on written cells. For each written entry `(o, c)` with `o` covered: `heap[(o, c)] := union(heap[(o, c)], singleton(cellName(o, c)))`. For a `SYM` origin the name is its default child. So if the new node is equal to the default content (example: `x.f = null` before the call), remove the entry (normal form, §7.10).
+5. Names on covered allocations. For each covered allocation origin (`ALLOC`, `ALLOC_NEW`, `ALLOC_OLD`) and each cell `c` of `CellTable`: `heap[(o, c)] := union(read(o, c), singleton(⟨@s'.c⟩))`, with `s'` the allocation site of `o`. The default content of an allocation cell is null, not its name, so this step writes each cell. `CellTable` is fixed before the fixpoint: a pre-pass collects `ELEM_CELL` and the fields of the method and of its inlined callees. A cell outside `CellTable` is not an analysis cell, and the engine never reports a path over it (§4.5).
+6. Exposure. `env[EXPOSED_VAR] := union(env[EXPOSED_VAR], intern(filter(R)))`. The filter keeps the markers and the `SYM` origins with a path shorter than K. Only these members can change the uniqueness test: a unique origin has at most K cells, and the test reads only its proper prefixes. So the filter does not change answers (argued).
+7. Result. `env[l] := {sym(fresh(s), [])}` (Lean `astepCN`, call case). Then the pass-through models (§7.8).
 
-Lean has no layer. The Lean proofs use explicit havoc writes (`AState.havoc`, `AState.havocH`, `havocHO`, `havocHRO`). The layer is equal in denotation to these writes (argued; F3).
+Uniqueness. `isUnique(s, o)` applies the table of §7.5. For a `SYM` origin with a non-empty path, it also tests each proper prefix (the `parent` chain, at most K steps): the exposed node of `s` must not contain it (binary search). If the exposed node has `EXPOSED_ALL`, no `SYM` origin with a non-empty path is unique. If it has `EXPOSED_STATICS`, no `SYM` origin with a non-empty path over a static root is unique. Cost: `O(K · log |E|)` for each strong-store candidate.
 
-Return value: `env[l] := {sym(fresh(s), [])}` after the havoc (Lean `astep` call case).
+The exposed key. The proof of `csoundCN` needs these rules (§4.11):
+
+- The join makes the union of the exposed key as of each other key, and the change bit includes it. So a loop does not stop before `exposed` is stable.
+- `dropVars` and `collectGarbage` never remove `EXPOSED_VAR`. The garbage collection does not use exposed origins as roots.
+- `retire` renames inside the exposed node as inside each environment entry. After the filter of step 6 the node has no allocation origin, so the rename has no effect (argued).
+- At method entry the key is absent (the empty set). `top` sets it to `{EXPOSED_ALL}`.
+
+Cost of one call (argued; no theorem, F10). Let `W` be the written entries of the covered origins and `A` the covered allocation origins. The closure costs `O(|W| · K)`. The names cost `|W| + |A| · |CellTable|` memoized unions. The exposure costs one intern and one union. A cell name depends only on `(o, c)`. So the second call on a cell gives a memo hit, and the values do not grow with the number of calls. A call on an object with a large written subtree costs more (R15). Counters: `callClosureSize`, `callWrittenCellsTouched`, `callAllocCellsTouched`, `exposedSize`, `callFallbacks` (§11.2).
+
+Lean has no written-cells-only closure. The Lean proofs use explicit writes over the universe (`havocCN`, `havocCNO`).
 
 ### 7.7 Inlining, depth 1
 
@@ -1623,14 +1793,14 @@ Concept C without recency is weak on a loop allocation site. There it is less pr
 Transfer rule (`astepR`, `retire` in Sound/Recency/Concept.lean; `retireO` in Opt/Recency.lean), for `x = new` at site `s`, with recency on:
 
 1. `retire(s)`, with `n = alloc-new(s)` and `o = alloc-old(s)`:
-   - each cell `c` of `n` (written, or with the havoc layer): `heap[o, c] := union(read(o, c), read(n, c))`. Then remove all entries `(n, c)`. After this, each cell of `n` is empty (`mergeCells`).
+   - each written cell `c` of `n`: `heap[o, c] := union(read(o, c), read(n, c))`. Then remove all entries `(n, c)`. After this, each cell of `n` is empty (`mergeCells`).
    - each environment entry and each heap entry whose node holds `n`: replace the node by `rename(node, n, o)` (`renameKeys`).
-   - havoc layer: if `havocAlloc` has `n`, move its entry to `o` (union with the entry of `o`).
+   - the exposed key is an environment entry, so this step renames inside it too.
 2. `env[x] := {n}`.
 
 `NodeTable.rename` is memoized by `(node, from)`. A site that is not a loop site cannot hold `alloc-new(s)` before its own statement, because no path goes from the statement back to it. So only loop sites retire.
 
-Per-cell havoc keys (proved: `keyOfR_alphaRS`, `csoundHR`; §4.9, §7.6). The key of an allocation holder is `alloc-old(s)` for both `alloc-new(s)` and `alloc-old(s)`. So `retire` never renames a key inside a per-cell havoc origin. A cell of `alloc-new(s)` and the same cell of `alloc-old(s)` read the same per-cell havoc origin, so the move of the `havocAlloc` entry in step 1 keeps the havoc content. The precision cost is `cost_answers` (§4.9).
+Cell names (proved: `renameO_childCN`, `csoundCN`; §4.11). The cell name of `alloc-new(s)` and of `alloc-old(s)` is the same allocation child `⟨@s.c⟩`. So `retire` never renames a cell name, and the merge of step 1 keeps the names.
 
 Cost: `retireO_work` bounds one retire by `|cells|·(6 + 4|U|)` for the merge of the cells, plus `|U| + 1` for each key whose node holds `alloc-new(s)`. The model does not charge the scan for holders. To reach this bound, the implementation needs two indexes (§5.5): written cells grouped by origin, and holders of `alloc-new(s)` for each loop site. Without the holder index, step 2 scans the state: `O(|env| + |heap|)` for each loop allocation (R6).
 
@@ -1656,11 +1826,11 @@ For a reducible CFG (javac output), this strategy gives the states of the struct
 
 Exceptional edges (argued). `MethodInstGraph` merges normal and exceptional successors. An instruction that throws does not do its effect. So a catch handler needs the state before the thrower too. For an inlined callee the v1 rule is `join(statesBefore[call], statesAfter[call])`. The Lean model has no exceptional flow. The DSU on main uses only the state after the thrower, so it has the same defect (argued; P0 adds a characterization probe for it). The production graph (`JTryBoundaryExceptionsApplicationGraph`) has fewer catch edges than the test graph (`JApplicationGraphImpl`). The rule above does not depend on the graph: it uses `flowGraph.throwers(catch)` of the raw JIR graph.
 
-Change test at other nodes. Propagate if the new state is not equal to the old state. Use content equality (`DirectedState.equals`). Node ids are canonical (`Tbl.id_inj`), so content equality is one `Int` comparison for each key. Content equality needs one canonical form: remove a heap entry whose node and call list equal the read value without the entry, and keep one form of the havoc layer. Otherwise equal states compare unequal. This costs only extra propagation, because each cycle has a head.
+Change test at other nodes. Propagate if the new state is not equal to the old state. Use content equality (`DirectedState.equals`). Node ids are canonical (`Tbl.id_inj`), so content equality is one `Int` comparison for each key. Content equality needs one canonical form: remove a heap entry whose node equals the default content of its cell (also after a call, §7.6 step 4). Otherwise equal states compare unequal. This costs only extra propagation, because each cycle has a head.
 
-Do not use object identity as the change signal. A copy-on-write operation that adds and then removes an entry gives a new object with equal content. At a loop head, an identity test then makes the analysis run forever. `join` computes `changed` from the union ids: `changed` is true if some union id is not the old id for that key, or if a call-site list grows. This is `joinO_flag`.
+Do not use object identity as the change signal. A copy-on-write operation that adds and then removes an entry gives a new object with equal content. At a loop head, an identity test then makes the analysis run forever. `join` computes `changed` from the union ids: `changed` is true if some union id is not the old id for that key. The exposed key is a key, so a growth of `exposed` sets the bit. This is `joinO_flag`.
 
-Termination (argued): the heads only grow, and the universe is finite (symbolic paths up to K, deep origins, sites, cells, per-cell havoc bases with keys that never nest). So the heads become stable. Other nodes are functions of the heads.
+Termination (argued): the heads only grow, and the universe is finite (symbolic paths up to K, deep origins, sites, cells, allocation children up to K below each allocation site). So the heads become stable. Other nodes are functions of the heads.
 
 ### 7.11 Data structures
 
@@ -1671,11 +1841,11 @@ Termination (argued): the heads only grow, and the universe is finite (symbolic 
 | Singletons | `IntArrayList` indexed by origin id | `singleton(o)` is the most frequent intern (new, unknown, call result). |
 | Union memo | `Long2IntOpenHashMap`, key `pairKey(a, b)`, default return `-1` | Symmetric key (`mkey`). `Tbl.union_again`: each pair is merged at most one time. Before the lookup, test three cases: `a == b`, `a == 0` and `b == 0`. In each case, the result is known without the memo. |
 | Rename memo | `Long2IntOpenHashMap`, key `(node shl 32) or from` | `retire` renames the same nodes in each loop iteration. |
-| Default content | By rule, not stored: `sym(b, q).c → {symOrDeep(b, q + c)}`; `deep(b) → {deep(b)}`; allocations and constants `→ {}`; catch and other fresh origins as `sym(fresh s, [])`; `havoc(s) → {havoc(s)}`; per-cell havoc origins as in §4.1; multi-dimensional arrays as in §7.5. During the analysis, a `Long2IntOpenHashMap` caches the default node for each heap key. | Lean `adefault`. The heap map holds only written cells (§5.5). |
-| Environment | `Int2IntOpenHashMap` `VarId → NodeId`, live non-null variables only | Copy cost `O(live vars)`. Dead variables are removed at each statement, as on main. |
-| Heap | `Long2LongOpenHashMap` `HeapKey → HeapEntry`, written or havoced cells only | `fam_osize`: the map part is linear in the program. |
-| Havoc layer | `havocOuter: SiteListId`, `havocAlloc: Int2IntOpenHashMap` | One entry for all outer origins. No write for each (origin, cell) at a call. |
-| Call-site lists | `SiteListTable`: interned sorted `IntArray`, memoized `add` and `union` | Lists are small and shared by all cells with the same call history. |
+| Default content | By rule, not stored: `sym(b, q).c → {symOrDeep(b, q + c)}`; `deep(b) → {deep(b)}`; allocations and constants `→ {}`; catch and other fresh origins as `sym(fresh s, [])`; allocation children `⟨@s.c.q⟩.c' → {⟨@s.c.q.c'⟩}`, `deep(@s.c)` beyond K (§4.1); multi-dimensional arrays as in §7.5. During the analysis, a `Long2IntOpenHashMap` caches the default node for each heap key. | Lean `adefault`. The heap map holds only written cells (§5.5). |
+| Environment | `Int2IntOpenHashMap` `VarId → NodeId`, live non-null variables only, plus the exposed key `EXPOSED_VAR` | Copy cost `O(live vars)`. Dead variables are removed at each statement, as on main. The exposed key is never removed. |
+| Heap | `Long2IntOpenHashMap` `HeapKey → NodeId`, written cells only (a call writes the cells of §7.6 steps 4 and 5) | `fam_osize`: the map part is linear in the program. |
+| Heap index | written origins grouped by origin and by base | the call closure (§7.6 step 2) and `retire` (§7.9) |
+| Exposed set | the node of `EXPOSED_VAR`: filtered `SYM` origins and the markers `EXPOSED_STATICS`, `EXPOSED_ALL` | no own join, comparison or copy (§7.6) |
 | State containers | fastutil maps, copy-on-write (copy, then change, for each statement that changes the state) | See below. |
 | Reverse index | Lazy, one for each state that a query uses, cached in an `AtomicReferenceArray<ReverseIndex?>` | §5.7: the eager index costs more than enumeration on small programs. Default edges are computed by rule. |
 | Answer cache | `ConcurrentHashMap<Long, List<AliasInfo>>`, key `(stmtIdx shl 33) or (after shl 32) or varId` | Full answers only (or the answer cut by the deterministic budget `maxQueryPaths`, which depends only on the key). No depth in the key, because no outer call truncates an answer. So the directed path does not have the cache-order defect of main (CK7). |
@@ -1683,7 +1853,7 @@ Termination (argued): the heads only grow, and the universe is finite (symbolic 
 Memory (to be measured; gate in §11.2). The DSU removes heap elements of removed groups (`State.removeUnsafe`) and dead locals. The directed heap map has no such removal by itself. So the engine does four things:
 
 1. Abstract garbage collection at each join and at the method exit of each inlined callee: drop each heap entry whose origin is not reachable from live variables, entry roots or statics, through written cells and default content. This is sound, because each query starts only from these roots.
-2. `DirectedState` shares each component map (`env`, `heap`, `havocAlloc`) by reference when a statement does not change it.
+2. `DirectedState` shares each component map (`env`, `heap`) by reference when a statement does not change it.
 3. For a node with one predecessor, `statesBefore[i]` is the same object as `statesAfter[pred]`.
 4. After the fixpoint, intern equal states (one copy for each distinct content). `DirectedAliasStats.retainedEntries` counts the map entries after this step.
 
@@ -1703,12 +1873,12 @@ Table growth (`chain_table`, §5.7): count `contentSize`. If it exceeds `maxTabl
 
 1. Seeds: `members(val(x))` at state `P`.
 2. Holders of an origin `o`: variables `v` with `o ∈ env[v]` (reverse environment index); static roots and argument roots by rule; heap holders `(p, c)` with `o ∈ read(p, c)`. Heap holders come from two sources:
-   - the heap map: each written entry, with its call-site list;
+   - the heap map: each written entry;
    - default edges by rule:
      - `sym(b, q)` holds `sym(b, q + c)` at `c` if `(sym(b, q), c)` is not written;
      - `sym(b, q)` with `|q| = K` holds `deep(b)`;
      - `deep(b)` holds `deep(b)` at each cell, but the search never expands this self edge (§6.2);
-     - the havoc layer gives `(p, c)` for each havoc origin that a listed call adds to `(p, c)`.
+     - an allocation child `⟨@s.c.q⟩` holds `⟨@s.c.q.c'⟩` at `c'` if `(⟨@s.c.q⟩, c')` is not written.
 3. Backward search with suffixes, up to `maxAccessors = 6` heap accessors. Prune a child suffix if its preimage set does not meet the liveness layer of the remaining depth (`mem_live`).
 4. Output: variable holders become `AliasApInfo(LocalVar | Argument | This, path)`. Static roots become `AliasApInfo(ClassStatic, [Static(T)] + path)`. Filter bases by `JIRLocalVariableReachability.isReachable(base, stmtIdx)`, as `compress` does. Drop `(x, [])` (CK4). Keep other paths with base `x`.
 5. Allocation origins in `val(x)`: `AliasAllocInfo(instIdx)` for root-context `new`, `newarray` and catch sites, and for box, class and other non-string constants (CK5; both `alloc-new(s)` and `alloc-old(s)` map to `s`). String constants: `AliasApInfo(Constant("java.lang.String", v), [])` (CK6). No heap path on a `Constant` base. Never report `null`.
@@ -1738,7 +1908,7 @@ Test: a query at depth 6 on a new symbolic chain after `freeze()`.
 | Property | Mechanism |
 |---|---|
 | Lazy compute | `lazy(LazyThreadSafetyMode.SYNCHRONIZED)` in the facade, as `LocalAliasAnalysis.aliasInfo`. On parent cancellation the exception leaves the `lazy`, and the next access tries again (as on main). |
-| Frozen tables | `freeze()` on `NodeTable`, `OriginTable`, `BaseTable` and `SiteListTable` after the fixpoint. A write after `freeze()` throws. |
+| Frozen tables | `freeze()` on `NodeTable`, `OriginTable`, `BaseTable` after the fixpoint. A write after `freeze()` throws. |
 | Read-only queries | Uncached merges and query-local virtual origins (§7.12). No shared mutable state except the two caches. |
 | Caches | Answer cache: `ConcurrentHashMap.computeIfAbsent`. Reverse index: `AtomicReferenceArray.compareAndSet`. Two threads can build an index for the same state. `compareAndSet` keeps the first index and discards the second. The two indexes are equal, so the answers do not change. |
 | Determinism (CK7) | The fixpoint is single-threaded. fastutil iteration order depends only on the insertion sequence. Node ids can depend on the order of unions, but the answers depend only on sets. The output list is sorted. The cache keys have no depth, so query order cannot truncate an answer. |
@@ -1777,7 +1947,7 @@ No JVM consumer needs symmetry. Only the CS8 vararg branch needs transitivity (i
 |---|---|---|
 | CK1 | `findAlias` / `findAliasAfterStatement`; `null` or empty if no answer | The facade keeps both: `statesBefore[idx]` / `statesAfter[idx]`. `null` on timeout or for an unreachable statement. A variable with an empty value gives an empty list (main: `null` when the element is absent). Consumers treat both the same. |
 | CK2 | Meaning of `AliasApInfo(base, accessors)` | The path may hold an object that `x` may hold at P: `pts(path) ∩ pts(x) ≠ ∅`. Same bases and accessors. |
-| CK3 | Completeness up to the query depth | The backward search gives exactly the paths of the enumeration (`findAlias_iff`, `findAliasO_iff`), except paths through a deep self edge (§6.2). D is `maxAccessors = 6` (the effective value of main), a parameter. Volume controls (b), (c) and (d) of D11 change this item: a smaller D, a path budget, or simple paths only. Soundness of C: `csoundE`, `csoundR` (scope A1-A3, mode `SHARED`); `csoundH`, `csoundHR` (mode `PER_CELL`, A2-strict). |
+| CK3 | Completeness up to the query depth | The backward search gives exactly the paths of the enumeration (`findAlias_iff`, `findAliasO_iff`), except paths through a deep self edge (§6.2). D is `maxAccessors = 6` (the effective value of main), a parameter. Volume controls (b), (c) and (d) of D11 change this item: a smaller D, a path budget, or simple paths only. Soundness of C: `csoundCN` (the call rule CN, A2-narrow); the references `csoundE`, `csoundR` (site havoc, A2-wide) and `csoundH`, `csoundHR` (per-cell havoc, A2-strict). |
 | CK4 | Exclude `(x, [])` | Step 4 of §7.12 |
 | CK5 | `AliasAllocInfo(i)` if and only if `alloc(i) ∈ pts(x)` | Step 5 of §7.12. Only from `val(x)`, never from heap paths, and not from group members (the transitive set of main). |
 | CK6 | String constants as `Constant`; never `null`; no heap path on a constant | `stringConst(value)` origin; step 5 |
@@ -1849,6 +2019,8 @@ The rows change the alias answer volume in both directions. R0 (§11.1) gives th
 | CS1-CS6 | Callee-made aliasing of existing objects (an unresolved `m(x, y) { x.f = y; }`) stays out of scope, as on main. | No change | §3.4. The IFDS analysis covers resolved callees through their summaries and library callees through pass-through rules (argued). Test in P6: `directed unresolved setter call does not alias the argument with the field`. |
 | CS1-CS6 | Full heap chains up to D. The cut of the DSU cache (§8.5) does not occur. | More facts, longer access paths, more IFDS work | §8.5, D13. Measure in shadow mode (R0). |
 | CS4/CS5 copy to aliases at calls | The after-call set keeps heap paths (weak havoc, no alias drop, D2). The intersection `before ∩ after` keeps them, so more facts are copied. | More facts, possibly more findings, more IFDS work | CK10, M5. Measure in shadow mode, then on thingsboard and Conductor (R0, R4). |
+| CS1-CS6 after an unresolved call | The call rule CN (§4.11). A store through a cell below an object that the call reached is weak (L1). A value loaded from a cell after a call aliases the entry content of that cell and the objects of other calls in that cell (L2, L3). | More facts, possibly more findings: the three accepted losses (D2) | `losses_CN`, `loss1_noneN`, `loss2_noneN`, `loss3_noneN`. The call-rule shadow counts them (§11.2). |
+| CS1-CS6 after an unresolved call | A call changes only the objects that its arguments and the static roots reach. A strong update on another object stays strong. Two loads of different cells after a call do not alias. | Precision gain | `gain_answersCN`, `spread_goneCN` (§4.11) |
 | CS4/CS5 | Pass-through models are directed. The receiver after the call no longer holds each member of the argument set. | Precision gain. Fewer copies. | PL6 |
 | CS6 call precondition (trace) | Fewer false backward candidates | Precision gain. Shorter trace search. | The same relation as CS4 before the call |
 | CS7 type constraints | `AliasAllocInfo` only from `pts(x)`. Fewer exact-type constraints. The accidental root widening of the DSU stops. | Precision gain, and possible new false negatives. The example `x = c ? new A() : foo()` gives `{A exact}` on main too, because the DSU converts `CallReturn` and `Unknown` to nothing. The new false negatives come from shapes where a DSU group had an `Argument`, `This` or static member by a transitive merge. That member added the default or context constraint. The directed answer removes the member. | Mitigation M6 / D9 |
@@ -1869,7 +2041,7 @@ In DSU mode both tests keep their assertions. In directed mode they get the new 
 
 ### 9.3 Probe tests that change
 
-Counts for the default policy (`entryUnique = true` (D1), recency on, `PER_CELL`). Appendix B gives each row.
+Counts for the default policy (`entryUnique = true` (D1), recency on). The counts were derived with per-cell havoc, before the user chose CN. They are not derived again for CN. At inlining depth 0 most samples have unresolved calls: `touch`, the `<init>` call of each `new`, and the `probe` call itself. So a row can change by a loss or a gain of §4.11 (argued). The groups are expected to stay; P5-P7 take the exact sets for CN from the oracle (§10.1). Appendix B gives each row.
 
 | Group | Count | Probe rows |
 |---|---|---|
@@ -1894,30 +2066,30 @@ With recency on, the loop stores on `cur` become strong. Then the sets of rows 1
 | Layer | What | Where | How |
 |---|---|---|---|
 | L0 | Lean vectors as Kotlin tables | `formal/directed-alias/Export/Vectors.lean` (the library does not import it). Output committed as `JTEST/alias/directed/lean-vectors.txt`. | A small `#eval` exporter (below). `LeanVectorTest` parses the file and runs the engine through `MiniDriver`. |
-| L1 | Core unit tests of O against a naive C oracle; differential and property tests | `JTEST/alias/directed/` | `NaiveConcept` is a direct Kotlin port of `astep` / `astepR` / `analyze` with explicit sets. A seeded random generator makes structured programs. |
+| L1 | Core unit tests of O against a naive C oracle; differential and property tests | `JTEST/alias/directed/` | `NaiveConcept` is a direct Kotlin port of `astep` / `astepR` / `analyze` with explicit sets. Its call case is the call case of `astepCN` (§4.11). A seeded random generator makes structured programs. |
 | L2 | JIR sample tests | `JTEST/alias/DirectedAliasProbeTest.kt`, `AliasSampleTest.kt` | Keep each `today ...` test in DSU mode. Add a `directed ...` test for each probe in directed mode. |
 | L3 | Existing suites, both modes | jvm-dataflow, java-querylang, root `:test` | `-PaliasAnalysisMode=<DSU\|SHADOW\|DIRECTED>` and `-PaliasDepth=1` set the system properties `opentaint.test.aliasAnalysisMode` and `opentaint.test.aliasDepth`. Each test harness reads them (P1). |
 | L4 | End to end | thingsboard first (the volume explosion reproduces there fast), then Conductor, tms, dataflowbench Java and Kotlin | §11.3 |
 
-L0 exporter. For each example program of `Examples.lean`, `Sound/Boundary.lean` (CX1-CX7), `Sound/Recency/Examples.lean`, `Sound/StoreExamples.lean`, `Sound/EntryAlias.lean`, `Sound/Havoc/Examples.lean`, `Sound/HavocRecency/Examples.lean`, `DSU/Probes.lean`, `Opt/QueryFam.lean` and `Opt/Recency.lean`, print one line for each query:
+L0 exporter. For each example program of `Examples.lean`, `Sound/Boundary.lean` (CX1-CX7), `Sound/Recency/Examples.lean`, `Sound/StoreExamples.lean`, `Sound/EntryAlias.lean`, `Sound/Havoc/Examples.lean`, `Sound/HavocRecency/Examples.lean`, `Sound/CellNamed/Examples.lean`, `Sound/CellNamed/Scope.lean`, `Sound/CellNamed/Reference.lean`, `HavocNeed.lean`, `DSU/Probes.lean`, `Opt/QueryFam.lean`, `Opt/Recency.lean` and `Opt/CellNamed.lean`, print one line for each query:
 
 ```
-V <name> | K=<k> eu=<0|1> rec=<0|1> hv=<shared|cell> | frame=<var>:<root>,... | prog=<s-expression> | q=<x>.<path>~<y>.<path> | may=<true|false>
-F <name> | K=<k> eu=<0|1> rec=<0|1> hv=<shared|cell> | frame=... | prog=... | var=<x> | D=<d> | paths=<sorted list>
+V <name> | K=<k> eu=<0|1> rec=<0|1> hv=<shared|cell|cellN|cn> | statics=<root>,... | frame=<var>:<root>,... | prog=<s-expression> | q=<x>.<path>~<y>.<path> | may=<true|false>
+F <name> | K=<k> eu=<0|1> rec=<0|1> hv=<shared|cell|cellN|cn> | statics=... | frame=... | prog=... | var=<x> | D=<d> | paths=<sorted list>
 ```
 
-`may` comes from `mayProg`, `mayProgE eu` or `mayProgR eu` (`hv=shared`), or from `mayProgH eu` or `mayProgHR eu` (`hv=cell`). `paths` comes from `findAlias` (Opt/Query.lean). Each `V` line has a `decide` theorem in the Lean library for the same program (for example `join_x_y`, `loop_bf_x_fixed`). So the exported value is also a proved value. P3 changes `check.sh` so that it regenerates the file and fails on a difference from the committed copy. `#eval` is data export, not a proof, so the axiom audit does not change.
+`may` comes from `mayProg`, `mayProgE eu` or `mayProgR eu` (`hv=shared`), from `mayProgH eu` or `mayProgHR eu` (`hv=cell`, generous reach), from `mayProgHRN eu K statics` (`hv=cellN`, the narrow reference), or from `mayProgCN eu K statics` (`hv=cn`, the default). `paths` comes from `findAlias` (Opt/Query.lean). Each `V` line has a `decide` theorem in the Lean library for the same program (for example `join_x_y`, `loop_bf_x_fixed`). So the exported value is also a proved value. P3 changes `check.sh` so that it regenerates the file and fails on a difference from the committed copy. `#eval` is data export, not a proof, so the axiom audit does not change.
 
-L0 rule for calls. Vectors with a call exist for both modes, and the engine answer must be equal to the vector in each mode: `hv=shared` from `mayProgE` and `mayProgR`, `hv=cell` from `mayProgH` and `mayProgHR` (for example `strict_answers`, `strict_answersHR`, `both_answers`, `cost_answers`). Add a vector with two calls and a load through a havoc object (the layer applies to `havoc(s1)` after the call `s2`). Also check that each `hv=cell` answer is a subset of the `hv=shared` answer of the same program, and that each Lean `*_witness` alias stays. No theorem states this subset relation (F6), so a failure is a finding, not a test bug.
+L0 rule for calls. The engine answer must be equal to each `hv=cn` vector (for example `need_answersCN`, `spread_goneCN`, `dead_answerCN`, `gain_answersCN`, `losses_CN`, `other_answersCN`, `loop_bf_x_CN`, `precision_order_fails`). The `hv=shared`, `hv=cell` and `hv=cellN` vectors are Lean-only documentation of the earlier call rules. The exporter can export them, but no test reads them, because the engine has only the call rule CN (§7.6). Each Lean `*_witness` and `*_realN` alias must stay in the `hv=cn` answer. Allocation children deeper than K: the engine and Lean both have one `deep(@s.c)` for each site and first cell (§4.11), so these vectors also compare by equality. The comparison of CN with per-cell havoc (the losses L1-L3 and the nesting gain, `precision_order_fails`) is in the Lean examples only (§4.11).
 
 L1 differential test.
 
 1. Generate 10 000 programs with a fixed seed: variables 0..4, fields 0..1, sites 0..3, `seq` / `choice` / `loop` up to depth 3, random frames. Use only the statement kinds of the current step (§10.2).
-2. Use each combination of `entryUnique`, recency and havoc mode.
+2. Use each combination of `entryUnique` and recency, with the call rule CN (the only call rule of the engine).
 3. Make `NaiveConcept` run on the same CFG with the same strategy as O (recursive WTO, §7.10). Run O with `MiniDriver` on that CFG.
 4. Compare the answers for each pair of variables and each path of length 2 or less. Compare `findAlias` with enumeration. Equality is required.
 5. Also run `NaiveConcept` with the structured `loopIter`. For a program whose CFG is the structured one, require equality. Else require inclusion (each structured answer is also an O answer), and record each strict difference.
-6. A port of the Lean executor `runFrom` gives a soundness fuzz: each concrete alias of a random run must be in the O answer. For `PER_CELL`, the executor uses a distinct tag `k` for each havoc write (A2-strict), and `NaiveConcept` ports the per-cell call rule of §4.9 (`astepH`).
+6. A port of the Lean executor gives a soundness fuzz: each concrete alias of a random run must be in the O answer. For CN, the executor follows `runAliasBN` (Sound/CellNamed/Run.lean): each havoc write starts at an argument or a static root (A2-narrow), with a distinct tag for each write. `NaiveConcept` ports the CN call rule of §4.11 (`astepCN`).
 
 ### 10.2 Steps
 
@@ -1939,13 +2111,13 @@ G-LEAN:  cd formal/directed-alias && ./check.sh
 |---|---|---|---|---|
 | P0 | — (characterization: each test asserts the answer of main) | Commit `DirectedAliasSample.java`, `DirectedAliasProbeTest` and the runtime Java witness program. Add four characterization probes. (1) A loop at the first instruction. (2) A catch after a throwing call. (3) A constructor call with no reference argument, then two loads of one field. (4) A static write, then a read, in a generic class and in a nested class. No fix. | `G-JVM` | — |
 | P0a (scope `docs`) | — | This document and `formal/directed-alias/` (an ignored root for the scope check, so it can go in the same PR) | `G-LEAN` | — |
-| P0c (volume baseline) | `dsu volume stats count answer paths and the maximum chain length` (answers of main unchanged); `dsu volume stats count a cache hit of a cut chain`: query the top-level variable of a chain of 7 fields first (sample method in `HeapAliasSample.java`), then the variable that holds the inner element; the second answer stays cut, as on main, and `cutCacheHits` is 1 | `AliasVolumeStats` on the DSU path (§7.3): for each query the answer count, the maximum chain length and the accessor sum; totals for each method and each project; `cutConversions` and `cutCacheHits` in the conversion cache (§8.5); the alias timer `aliasTimeMs`. No answer change. Then the volume baseline run (§11.3 step 1). | `G-JVM`, `G-CORE`, `G-QL`, Go CI; thingsboard, Conductor and tms findings equal to main | `DSU` only |
+| P0c (volume baseline) | `dsu volume stats count answer paths and the maximum chain length` (answers of main unchanged); `dsu cost stats count statement evaluations and loop head iterations` (a loop sample: the counters are positive, and the answers equal main); `dsu volume stats count a cache hit of a cut chain`: query the top-level variable of a chain of 7 fields first (sample method in `HeapAliasSample.java`), then the variable that holds the inner element; the second answer stays cut, as on main, and `cutCacheHits` is 1 | `AliasVolumeStats` on the DSU path (§7.3): for each query the answer count, the maximum chain length and the accessor sum; totals for each method and each project; the fixpoint cost counters `dsuStmtEvals`, `dsuHeadIterations`, `dsuTimeMs`, `dsuStateEntries` (§11.2); `cutConversions` and `cutCacheHits` in the conversion cache (§8.5); the alias timer `aliasTimeMs`. No answer change. Then the volume baseline run (§11.3 step 1). | `G-JVM`, `G-CORE`, `G-QL`, Go CI; thingsboard, Conductor and tms findings equal to main | `DSU` only |
 | P1 | `vararg element aliases equal the partition answer in dsu mode` (characterization, green before and after); `alias mode directed is accepted by params`; in each suite, a canary test that fails if the property is `DIRECTED` and the backend in use is DSU | Facade with no shared base class + `JIRDsuAliasBackend`; copies of the receiver helpers in `JIRAliasUtil.kt` (M3, D6); `Params.aliasAnalysisMode` (default `DSU`, D7; `SHADOW` works from P9a, `DIRECTED` from P5 in tests); `findArrayElementAliases` (M1, DSU implementation); `findHeapAlias` (M4, DSU implementation) and `heapAnswer` on it; delete M4 wrappers; generic `CallTreeNode<S>`; mode plumbing (list below). No change of shared code. | `G-JVM`, `G-QL`, `G-ROOT` | `DSU` only |
-| P2 | `NodeTableTest`: `intern gives one id for each set`, `empty set has id zero`, `union is symmetric and memoized`, `second union of a pair is a memo hit`, `join chain grows content quadratically and nodes linearly` (numbers of `chain_table`), `rename is memoized` | `NodeTable`, `OriginTable`, `BaseTable`, `SiteTable`, `CellTable`, `VarTable`, `SiteListTable` | `G-JVM` | not used yet |
+| P2 | `NodeTableTest`: `intern gives one id for each set`, `empty set has id zero`, `union is symmetric and memoized`, `second union of a pair is a memo hit`, `join chain grows content quadratically and nodes linearly` (numbers of `chain_table`), `rename is memoized` | `NodeTable`, `OriginTable`, `BaseTable`, `SiteTable`, `CellTable`, `VarTable` | `G-JVM` | not used yet |
 | P3 | `LeanVectorTest` for `V` lines without a call and with `rec=0`; `DirectedStateLawTest` (list below); `RandomDifferentialTest` on the generator subset without calls and with recency off; `loop at the first instruction joins the back edge` | `DirectedState`, `DirectedTransfer` (copy, allocate, load, store, weak store, null), `isUnique` and the `entryUnique` policy (default `true`, D1), `simulateGraphWto`, `weakTopologicalOrder`, `onCycle`, synthetic entry node, `MiniDriver`, `NaiveConcept`, Lean exporter, `Export/Computed.lean`, the `check.sh` regeneration check | `G-JVM`, `G-CORE`, `G-LEAN` | not used yet |
 | P4 | `LeanVectorTest` `F` lines; query tests (list below) | `ReverseIndex`, `DirectedAliasQuery` on mini programs; caches; freeze; virtual origins; `AliasVolumeStats` on the directed path; the path budget `maxQueryPaths` (D11 (c), default off): test `path budget keeps the shortest paths and counts the truncated query` | `G-JVM` | not used yet |
-| P5 | Directed probes for PS1, PS2, PS6-PS9, PS12, PS13 (list below); expected sets from `NaiveConcept` | `DirectedAliasAnalysis` intra-procedural. Unresolved calls with the provisional rule: return value `{sym(fresh(s), [])}`, `SHARED` havoc on the reach roots (arguments and receiver), and the `<init>` receiver rule (§7.6). `JIRDirectedAliasBackend`, base conversion, exceptional edges, catch origin, `collectGarbage`, exactness certificate (`exactMethods`) | `G-JVM` (DSU tests unchanged, new directed tests green) | `DIRECTED` in tests only |
-| P6 | PS4 flips and call tests (list below); `LeanVectorTest` for `V` lines with `hv=cell` | `PER_CELL` havoc (the proposed form of D2; no alias drop) and the call-site lists, static writes with the static root key, directed models, `<rule-storage>` filter, constants (boxes, class literals, strings), multi-dimensional arrays, constant returns, the builder box list; the diagnostic flag `diagnosticCallDrop` (D11 (e), default off): test `diagnostic call drop gives the answer of main for an unknown call on the argument` (probe row 21) | `G-JVM` | tests only |
+| P5 | Directed probes for PS1, PS2, PS6-PS9, PS12, PS13 (list below); expected sets from `NaiveConcept` | `DirectedAliasAnalysis` intra-procedural. Unresolved calls with the provisional rule: the fallback of CN (cover each origin, and the exposed key with the marker `EXPOSED_ALL`: §7.6 step 3; sound by `csoundCN`), return value `{sym(fresh(s), [])}`, and the `<init>` receiver rule (§7.6). `JIRDirectedAliasBackend`, base conversion, exceptional edges, catch origin, `collectGarbage`, exactness certificate (`exactMethods`) | `G-JVM` (DSU tests unchanged, new directed tests green) | `DIRECTED` in tests only |
+| P6 | PS4 flips and call tests (list below); `LeanVectorTest` for `V` lines with `hv=cn` | The call rule CN (D2, decided by the user; no alias drop): the closure over written cells with its budget and fallback, the cell names, the exposed key `EXPOSED_VAR` with its markers, `isUnique` with the exposed test, the counters of §11.2 (§7.6). Also static writes with the static root key, directed models, `<rule-storage>` filter, constants (boxes, class literals, strings), multi-dimensional arrays, constant returns, the builder box list; the diagnostic flag `diagnosticCallDrop` (D11 (e), default off): test `diagnostic call drop gives the answer of main for an unknown call on the argument` (probe row 21) | `G-JVM` | tests only |
 | P7 | PS3 directed probes (list below); Lean vectors with `rec=1` (`loop_bf_x_fixed`, `loop_bf_y` of Sound/Recency/Examples.lean; `o_loop_bf_x` of Opt/Recency.lean); `directed this field write in a method is a strong update under the default policy` (probe row 30, D1) | Recency (`retire`, loop sites), constructor `this` as root | `G-JVM`, `G-LEAN` | tests only |
 | P8 | `AliasSampleTest` in directed mode with inlining depth 1: `test getter aliases this field`, `test setter then getter`, `test identity same-class call`, `HeaderValues addAll fixpoint must terminate`; `write enters flushBufferWithUserData and fixpoint must terminate` at depth 0; new `directed callee constructor makes a strong field write on the new object`; `type constraints add the default for an unknown origin` | Inlining depth 1 (§7.7) with new callee state arrays; `mayHoldUnknownObject`; M6 in `JIRCallResolver` (directed mode only, or both by D9) | `G-JVM`, `G-ROOT` | tests only |
 | P9 | `AliasSampleTest` parameterized by mode; directed variant of `test external call invalidates heap aliases` with the inverted assertion `alias(dst) ∋ arg0` (D2: the may analysis has no alias drop at an unresolved call); `test swap fields` in directed mode with the second and the third assertion inverted (`aValueAliases` has no `Argument(1).value`, `bValueAliases` has no `Argument(0).value`). Reason: the default `entryUnique = true` (D1) makes both stores strong, and the two removed aliases need entry aliasing, which A1 excludes (§9.2). Non-transitive tests (`alias of x does not contain y after a join`, the field example, `alias alloc info comes from points-to only`) | Test changes only | `G-JVM` | tests only |
@@ -1964,7 +2136,7 @@ Test lists:
 - P3 `DirectedStateLawTest`: `join is idempotent`, `join is commutative on content`, `join flag is false for equal content in a new object`, `join flag is true when one union id changes` (`joinO_flag`).
 - P4 query tests: `field example findAlias of z gives x.f y.f` (`field_findAlias_z`), `forEachHeapAlias of x f gives z x.f y.f` (`field_heapAliases_x`), `search gives no duplicates` (`search_nodup`), `directed answers do not depend on query order`, `directed concurrent queries give equal answers`, `query at depth 6 on a new symbolic chain after freeze`, `search does not expand a deep self edge`.
 - P5 probes: `directed join of two allocations keeps x apart from y`, `directed join of two arguments keeps x apart from y`, `directed field write through a join of allocations keeps x f and y f with z and keeps x apart from y`, `directed load into the live root of the instance group keeps the aliased load`, `directed no-argument constructor call makes the allocation fields havoc content`, `directed catch after a throwing call keeps the value before the call`, `directed catch variable fields alias the thrown object fields`.
-- P6 call tests: `directed unknown call on the argument keeps the loaded field alias` and the other four PS4 flips; `directed jdk call on the argument keeps the loaded field alias`; `directed value loaded after a call does not alias unrelated outer paths` (§4.9); `directed static field write then read aliases the written value`; `directed static write then read in a generic class and in a nested class aliases the written value`; `directed pass-through models of two arguments keep x apart from y`; `directed equal string literals in two locals alias`; `directed constant return replaces the old value`; `directed unresolved setter call does not alias the argument with the field`; `directed one new object in two cells is out of scope under per cell havoc` (the shape of §3.1).
+- P6 call tests: `directed unknown call on the argument keeps the loaded field alias` and the other four PS4 flips; `directed jdk call on the argument keeps the loaded field alias`; `directed value loaded after a call does not alias unrelated outer paths` (`spread_goneCN`); `directed store through a field loaded after a call is weak` (`need_answersCN`, `strong_after_call_realN`); `directed two loads of a cell of a new object after a call alias` (`need_answersCN`, `empty_cell_realN`); `directed dead end case keeps b alias d` (`dead_answerCN`, `dead_realN`); `directed call without arguments keeps the strong update on this box value` and `directed call on this makes the update on this box value weak` (`gain_answersCN`); `directed unrelated static root does not expose this` (`gain_answersCN`); `directed loss one store after a call on the holder is weak`, `directed loss two value after a call aliases the entry field`, `directed loss three values of two calls in one cell alias` (`losses_CN`); `directed nested cells of two arguments after two calls do not alias` (`precision_order_fails`); `directed exposed set grows at a loop head and the loop runs again` (§4.11, requirement 1); `directed closure over budget covers and exposes all` (§7.6 step 3); `directed retire keeps the cell names of a loop allocation` (`renameO_childCN`); `directed static field write then read aliases the written value`; `directed static write then read in a generic class and in a nested class aliases the written value`; `directed pass-through models of two arguments keep x apart from y`; `directed equal string literals in two locals alias`; `directed constant return replaces the old value`; `directed unresolved setter call does not alias the argument with the field`; `directed one new object in two cells is out of scope under the narrow call semantics` (the shape of §3.1, `generous_havoc_breaks_CN`).
 - P7 probes: `directed strong update on a loop allocation site keeps the previous object field after a call` (PS3.1) and the PS3.2-PS3.5 directed probes.
 
 Mode plumbing (P1 and P9a). Each hop must pass the mode (`DSU`, `SHADOW` or `DIRECTED`) and the inlining depth:
@@ -1986,22 +2158,22 @@ Mode plumbing (P1 and P9a). Each hop must pass the mode (`DSU`, `SHADOW` or `DIR
 | Id | Risk | Evidence | Mitigation |
 |---|---|---|---|
 | R0 | Alias answer volume. The taint analysis turns each reported alias path into copied facts (CS1-CS6, §8). So the cost driver is the number and the length of the alias paths of each query, not the alias fixpoint. More paths, or longer paths, explode the fact count and the memory. | User report (D13): on main, a fix of the call drop or of the cache truncation makes the alias analysis report many more alias chains, and the analysis explodes. It reproduces fast on thingsboard: the number of taint facts (IFDS events) explodes, and the run ends with an out-of-memory error. The volume table below gives the effect of each design change. | First gate: the volume baseline of main (P0c), then shadow mode (P9a), then the shadow volume gate (§11.2). Only then do directed answers feed the taint analysis (P10). Volume control: D11. |
-| R1 | Mode `SHARED` makes each value loaded after a call alias each outer path (output and time growth). | §4.9 (`pHv`) | Proposed default `PER_CELL` (the form of D2, to confirm at the spec revisit). Test `directed value loaded after a call does not alias unrelated outer paths`. |
+| R1 | The three accepted losses of CN add answers after calls: weak stores below an exposed origin (L1) and false aliases with the entry content of a cell or between the objects of two calls in one cell (L2, L3). A part of R0. (Site havoc, which made each value loaded after a call alias each outer path, is not in the engine.) | `losses_CN`, `loss1_noneN`, `loss2_noneN`, `loss3_noneN` (§4.11); `havoc_spread` (§4.9) | Accepted by the user (D2). The engine does not measure the losses: it has no per-cell reference (§7.6). The losses and the opposite case (`precision_order_fails`) are known only from the Lean examples (§4.11). The shadow runs measure the volume of CN against the DSU (§11.2). If the volume after calls is too large, a later refinement can separate the entry object from the callee objects. Tests `directed value loaded after a call does not alias unrelated outer paths` and the loss tests of P6. |
 | R2 | Node table content grows as `m²/2` on join chains. | `chain_table` | `contentSize` counter and `maxTableContent` cap. Log the statistics. |
 | R3 | Memo misses at loop tests | `test_miss` | Same order as a sorted merge. Count misses in L4. |
 | R4 | Weak havoc keeps heap paths after calls, so CS4/CS5 copy more facts. IFDS work and memory grow. A part of R0. | CK10, M5. thingsboard and Conductor are already memory bound. | Measure the volume in shadow mode first (R0). Then measure IFDS events and heap on thingsboard and Conductor at 16 GB. If the growth is too large, keep weak havoc in the alias state. Then add a direct after-call query for CS4/CS5. This query excludes the cells that a call touched. |
 | R5 | Entry aliasing is unsound for both policies. The default `entryUnique = true` also loses the aliases that `false` keeps on a swap. | `skip_unsound`, `write_read_unsound`, `swap_strong` (§3.3). The DSU is also unsound there. | Accepted by the user (D1): A1 is a precondition of the intra-procedural analysis. Keep `entryUnique = false` as a policy value for an A/B check. Caller information on the exact partition is a later option (§3.3). |
 | R6 | `retire` scans the state for each loop allocation if no holder index exists. | `retireO_work` (§5.5) | Only loop sites retire. Keep a holder index for `alloc-new` of loop sites. Measure with a counter. |
 | R7 | After a walk deeper than K, a variable holds `deep(b)`, and `deep(b)` holds itself in each cell. Without a rule, `findAlias` gives `\|cells\|^D` answers, most of them false aliases. The DSU gives only the accessed chain. | `adefault` (Concept.lean), §6.2 | K ≥ D + 1, and the search never expands a deep self edge (§6.2). Measure the output size in shadow mode on thingsboard and Conductor (R0, §11.3 step 2). |
-| R8 | Parts of the engine are not in the O proof: the havoc layer, the WTO strategy, exceptional edges, constants, garbage collection. | `mayProgOE_eq`, `mayProgRO_eq`, `mayProgHO_eq` and `mayProgHRO_eq` cover C with each combination of recency and havoc mode, with explicit havoc writes. | L1 differential test against `NaiveConcept` on the same CFG with the same strategy. Lean follow-ups F3, F4, F5, F8. |
+| R8 | Parts of the engine are not in the O proof: the engine form of the CN call (closure over written cells only, the filtered exposed node with markers, the explicit cells of covered allocations over `CellTable`), the WTO strategy, exceptional edges, constants, garbage collection. | `mayProgCNO_eq` covers the CN concept with explicit writes over the universe; `mayProgOE_eq`, `mayProgRO_eq`, `mayProgHO_eq` and `mayProgHRO_eq` cover the Lean references, which are not in the engine. | L1 differential test against `NaiveConcept` on the same CFG with the same strategy. Lean follow-ups F3, F4, F5, F8. |
 | R9 | The directed engine havocs at each unresolved call, also at the calls that the DSU exempts (`cantMutateAliasedHeap()`). | §7.6, D10 | Count `havocs` and compare alias time in L4. |
 | R10 | CS7 precision exposes the unknown-origin gap of main. | §9.1 CS7 | M6 / D9 |
 | R11 | CS8 and negated atoms change findings in both directions. | §9.1 CS8 | Review each changed finding in L4 by hand. P12 needs an explanation for each lost finding (§11.2). |
 | R12 | Interned constants and boxes: one run-time object for many executions | JVM semantics, not in Lean (F4) | Box and class constants are keyed by type, strings by value. Never unique, never split by recency (§7.5). |
 | R13 | States for each statement use memory `O(statements × entries)`. Each method result stays in memory for the whole run (`JIRAnalysisManager.contexts`). | Not measured. The DSU removes heap elements of removed groups; the directed heap needs garbage collection (§7.11). | The four measures of §7.11. `retainedEntries` budget (§11.2). D8 if the budget fails. |
 | R14 | Exceptions: catch states and the catch origin are outside the Lean model. | §3.4, §7.10 | Catch edges join the states before and after the thrower (argued, F8). The DSU uses the state after only. |
-| R15 | Havoc content on written cells grows with the number of calls. | §7.6 | Call-site lists, shared by all cells with the same call history. No node for a havoc union. Count `siteLists` in `DirectedAliasStats`. |
-| R16 | The default policy is proved sound only under A2-strict (`csoundHR`); under A2-wide it misses aliases (`generous_breaks_strict`). Completeness of recency and of calls is not proved (§4.7, F6). | §4.9 | A callee that writes one object into two cells is out of scope. Mode `SHARED` (A2-wide, proved by `csoundE` and `csoundR`) stays available for an A/B check. The havoc-origin form of D2 is open until the spec revisit. |
+| R15 | The cost of one call. The CN call visits each written cell of each covered origin, and each cell of each covered allocation. A call on an object with a large written subtree (`this` of a large method, many statics) touches many cells at each call. No theorem bounds the O call (F10). | §7.6 (cost of one call) | The values do not grow with the number of calls: a cell name is fixed, so a second call on a cell is a memo hit. Count `callClosureSize`, `callWrittenCellsTouched`, `callAllocCellsTouched`, `exposedSize` and `callFallbacks` (§11.2). The budget `maxCallClosure` bounds the closure; over it, the sound fallback applies. The shadow runs report these counters (§11.3 step 3). |
+| R16 | The call rule is proved sound only under A2-narrow (`csoundCN`). With generous reach or with one object in two cells it misses aliases (`generous_reach_breaks_CN`, `generous_havoc_breaks_CN`). Completeness of recency and of calls is not proved (§4.7, F6). | §3.1, §4.11 | Both shapes are out of scope (§3.4), and the user accepted the scope with CN (D2). Under A1, a callee cannot reach an object outside the narrow closure (argued). The taint analysis covers resolved callees by their summaries. The engine has no A2-wide mode; the Lean site havoc rule (`csoundE`, `csoundR`) documents the cost of the wider scope. |
 
 Volume table (R0). Main has two defects that limit the volume by accident: the order-dependent conversion cache cuts heap chains (§8.5), and the call drop removes heap aliases (U2). The user reports that a fix of either one explodes the analysis. The directed engine has both changes that increase the volume: no drop at calls (D2, decided) and a deterministic, depth-aware query that reports full chains up to D. It also has changes that decrease the volume: non-transitive answers (`alias(x) = {a}`, not `{a, y}`), and dominance where the DSU is sound (there, the directed answers are a subset of the DSU answers). The subset claim is proved only for the heap-free fragment (`dsu_dominates_heapFree`, with `dsu_sound_heapFree`, DSU/HeapFree.lean, §2.5). With loads and stores it is not proved (F6). So the net volume is not known. It is the first gate (§11.2).
 
@@ -2015,7 +2187,7 @@ Volume table (R0). Main has two defects that limit the volume by accident: the o
 | Other soundness fixes: U1, U3, U4 restore lost aliases | + | proved: `a1_unsound` .. `a4_unsound`, `static_unsound`, `repr_unsound`; measured on main: probe rows 13-16, 28, 35, 36. Rows 35 and 36 also lose a false `x.next^k` chain (−). |
 | Strong updates on entry roots (D1): a strong store removes the old content of the cell | − | proved: `root_concept_more_precise`, `swap_strong`; measured on main: probe row 30 |
 | Recency: strong stores on `alloc-new(s)` of loop sites | − | proved: `loop_bf_x_fixed`, `loop_bf_x_exact`; probe rows 17-20 get smaller sets (§9.3, argued from the oracle) |
-| Per-cell havoc (`PER_CELL`) against site havoc (`SHARED`) | − for `PER_CELL`; + for `SHARED`: with `SHARED`, each value loaded after a call aliases each outer path (about `\|vars\|·\|cells\|^D` paths, §4.9) | proved: `havoc_spread`, `strict_answers`, `strict_ab_none`; for new content `PER_CELL` equals the DSU (`dsu_ab`) |
+| The call rule CN against site havoc and against per-cell havoc | − against site havoc: with site havoc, each value loaded after a call aliases each outer path (about `\|vars\|·\|cells\|^D` paths, §4.9). Against per-cell havoc: + for the losses L1-L3, − for the nesting gain and for the narrow reach (§4.11) | proved: `havoc_spread`, `spread_goneCN`, `spread_ab_noneN`; `losses_CN`, `losses_HR`; `precision_order_fails`; `gain_answersCN`. Not measured in the engine: the comparison is from the Lean examples only (§4.11). |
 | Interned constants: one origin for each string value, box type and class literal (§7.5) | + | argued: two locals with one literal now alias (§9.1); not in Lean (F4) |
 | Deep self edges are never expanded (§6.2) | − | argued (F7) |
 | Query depth D | the main knob: the output can grow as `\|cells\|^D` on cyclic heaps | proved: `searchCost_le` bounds the query cost by the output; `qfam_sep`; D11 (b) |
@@ -2045,8 +2217,21 @@ Other gates (directed against the baseline). The user sets each performance numb
 | Alias state memory | report p50 / p99 / max of `retainedEntries` for each method; the sum over thingsboard and Conductor against the DSU state entries | `DirectedAliasStats` |
 | dataflowbench | Java at least 49/58, Kotlin at least 50/58; explain each changed case | §11.3 step 7 |
 | Exactness | Report the share of methods with `exactMethods` true, for each project | `DirectedAliasStats` |
+| Call cost | report p50 / p99 / max of `callClosureSize`, `callWrittenCellsTouched`, `callAllocCellsTouched`, `exposedSize` for each method, and the count of `callFallbacks` | `DirectedAliasStats` |
 
 The DSU state entries come from the DSU path of the same jar (a counter of the `IntDisjointSets` size after the fixpoint).
+
+Fixpoint cost gate (iterations, time, memory). The origin universe is finite, because the analysis can enumerate each path of at most K cells below each base. So the fixpoint cost has an upper bound, and the gate compares the measured cost with this bound and with the DSU. Both engines report the same counters in shadow mode (P9a), so one run gives both sides. The user sets the numbers after the measurement.
+
+| Metric | Bound (argued) | Comparison | Source |
+|---|---|---|---|
+| Iterations of each loop head (`headIterations`, max and p99 for each method) | A head state only grows. Each iteration that changes it adds at least one origin to one key. So the iterations of one head are at most `1 + \|keys\|·\|U\|`. A list walk over one field needs about K + 2 iterations (example 6.5 of `directed-alias-analysis-spec.md`). | Directed against the DSU loop iterations of the same method | `DirectedAliasStats`, DSU counters of P0c |
+| Statement evaluations (`stmtEvals`) for each method | iterations × statements of the loop body, summed over the weak topological order | Directed against DSU | the same |
+| Origins created, for each kind and for each path depth (`symByDepth[0..K]`, `deepOrigins`, `allocChildOrigins`) | At most `Σ_{i≤K} \|cells\|^i` symbolic origins below each base. A walk over `w` fields gives up to `Σ_{i≤K} w^i`. | Measured value against the bound; the share of methods that reach `deep` | `DirectedAliasStats` |
+| Fixpoint time for each method (`fixpointTimeMs`), and the share of methods at the time limit | — | Directed against DSU, for each project (thingsboard, Conductor, tms) | the same |
+| Alias memory for each method: retained state entries, node table content (`contentSize`), memo size | Table content is at most `Θ(m²)` on a join chain of m allocations (§5.7) | Directed against the DSU state entries and the DSU element count | the same |
+
+These counters are added in P0c (DSU side: `dsuStmtEvals`, `dsuHeadIterations`, `dsuTimeMs`, `dsuStateEntries`) and in P4 (directed side). The DSU counters do not change answers.
 
 P10 start condition: V1 holds with the thresholds that the user set after the shadow-mode measurement, and the user decided D11.
 
@@ -2057,9 +2242,9 @@ P12 go/no-go. P12 needs all of these conditions:
 3. No unexplained lost finding on thingsboard, Conductor or tms.
 4. dataflowbench at or above the baseline.
 5. The precision metric of V1 is better than the baseline.
-6. The user accepts A2-strict as the call scope of the default policy at the spec revisit (the havoc-origin form of D2; §4.9, R16).
+6. A2-narrow is the call scope of the call rule CN (D2, decided by the user; §3.1, §4.11, R16).
 
-`DirectedAliasStats` is a small counter object for each analysis, logged at DEBUG: `stmtEvals`, `headIterations`, `nodeCount`, `contentSize`, `memoHits`, `memoMisses`, `retires`, `havocs`, `siteLists`, `retainedEntries`, `exactMethods`, `queryCount`, `queryNodes`, `aliasTimeMs`. The volume counters are in `AliasVolumeStats` (§7.3).
+`DirectedAliasStats` is a small counter object for each analysis, logged at DEBUG: `stmtEvals`, `headIterations`, `nodeCount`, `contentSize`, `memoHits`, `memoMisses`, `retires`, `havocs`, `callClosureSize`, `callWrittenCellsTouched`, `callAllocCellsTouched`, `exposedSize`, `callFallbacks`, `retainedEntries`, `exactMethods`, `queryCount`, `queryNodes`, `aliasTimeMs`, `fixpointTimeMs`, `symByDepth`, `deepOrigins`, `allocChildOrigins`. The call counters are the sum, the p99 and the maximum over the calls of the method: `callClosureSize` (origins in `R`), `callWrittenCellsTouched` (step 4 of §7.6), `callAllocCellsTouched` (step 5), `exposedSize` (members of the exposed node at the method exit), `callFallbacks` (calls over `maxCallClosure`). The DSU path of P0c has `dsuStmtEvals`, `dsuHeadIterations`, `dsuTimeMs`, `dsuStateEntries`. The volume counters are in `AliasVolumeStats` (§7.3).
 
 ### 11.3 Measurement plan
 
@@ -2069,7 +2254,8 @@ Steps 1-3 are the volume phase (R0). They run before any directed answer feeds t
 
 1. Volume baseline (P0c). Build the jar of main with the P0c counters (no answer change): `cd core && ./gradlew :projectAnalyzerJar --offline -x :opentaint-ir:go:buildGoServer`. Build the CLI one time: `cd cli && GOPROXY=off go build -o <out>/opentaint-cli .`. Run thingsboard, then Conductor, with the arguments of step 5, then tms with the command of step 6. Record the `AliasVolumeStats` totals of each project, `cutConversions`, `cutCacheHits`, the IFDS events (`Progress: N/M`), the peak heap and the memory guard events. Check that the findings equal the findings of main.
 2. Shadow runs (P9a). The same projects in the same order, with `--experimental-alias-analysis-mode=shadow`. Check that the findings equal the `DSU` findings. Collect `AliasShadowStats`: the per-query comparison and the per-project totals of V1 (§11.2). Two engines run, so time and memory of this run are not budgets. If a shadow run does not fit in 16 GB, record it, and run again with more memory.
-3. Shadow report. For each project: directed total against DSU total; the distributions of the answer size and the chain length for each query kind; the not-subset queries with their class (U1-U4, cache cut, interned constant, new). Optional diagnostic runs in shadow mode isolate the volume of single changes: `diagnosticCallDrop = true` (the volume of D2, D11 (e)), a smaller `maxAccessors` (D11 (b)), a `maxQueryPaths` budget (D11 (c)). Then the user sets the thresholds of V1 and V2 and decides D11 (§11.2, §12).
+3. Shadow report. For each project: directed total against DSU total; the distributions of the answer size and the chain length for each query kind; the not-subset queries with their class (U1-U4, cache cut, interned constant, new). Optional diagnostic runs in shadow mode isolate the volume of single changes: `diagnosticCallDrop = true` (the volume of D2, D11 (e)), a smaller `maxAccessors` (D11 (b)), a `maxQueryPaths` budget (D11 (c)). Report the call counters of `DirectedAliasStats` (§11.2; input for R15). Then the user sets the thresholds of V1 and V2 and decides D11 (§11.2, §12).
+3b. K sweep (input for D4). Run shadow mode on thingsboard and Conductor with K = 3, 5 and 7, with D unchanged. For each K, report the fixpoint cost gate (iterations, statement evaluations, origins for each depth, `deepOrigins`, fixpoint time, alias memory) and the V1 volume and precision metrics. The smallest K whose precision and volume equal those of K = 7 is the candidate for D4.
 
 Steps 4-8 run in directed mode (P11), after the shadow volume gate.
 
@@ -2083,15 +2269,17 @@ Steps 4-8 run in directed mode (P11), after the shadow volume gate.
 
 | Id | Item | Status |
 |---|---|---|
-| F1 | Per-cell havoc under A2-strict: concrete strict havoc, per-cell havoc origins, soundness, O equivalence, recency with per-cell havoc, and the shared key `alloc-old(s)`. | proved: `csoundH`, `csoundHR`, `mayProgHO_eq`, `mayProgHRO_eq`, `csoundHRO`, `keyOfR_alphaRS` (§4.9). Open part: the more precise rule for havoc-derived holders (§4.9, §7.6). |
+| F1 | Per-cell havoc under A2-strict: concrete strict havoc, per-cell havoc origins, soundness, O equivalence, recency with per-cell havoc, and the shared key `alloc-old(s)`. Then the call rule CN under A2-narrow. | proved: `csoundH`, `csoundHR`, `mayProgHO_eq`, `mayProgHRO_eq`, `csoundHRO`, `keyOfR_alphaRS` (§4.9); `csoundCN`, `mayProgCNO_eq`, `csoundCNO` (§4.11, §5.5). Open part: the more precise rule for havoc-derived holders of per-cell havoc (§4.9). |
 | F2 | O with recency: retire on node ids, equivalence with the recency concept, cost bound | proved: `retireO_rel`, `storeRO_rel`, `ostepR_rel`, `analyzeRO_rel`, `mayProgRO_eq` (both policies), `retireO_work` (Opt/Recency.lean) |
-| F3 | The havoc layer (call-site lists, `havocOuter`, `havocAlloc`) is equal in denotation to the explicit havoc writes. | open |
+| F3 | The engine form of the CN call (closure over written cells only, the filtered exposed node with the markers `EXPOSED_STATICS` and `EXPOSED_ALL`, the cells of covered allocations over `CellTable`) gives the answers of `havocCNO`. | open |
 | F4 | Multi-dimensional array defaults; interned constants (boxes, class literals, strings) | open |
 | F5 | Prove that WTO iteration equals the structured `loopIter` for reducible CFGs. | open |
-| F6 | Completeness for calls under A2-strict; "recency is at least as precise as C"; "the combination is at least as precise as each refinement alone"; the finer key that removes the `cost_answers` alias; dominance over the DSU with loads and stores | open |
+| F6 | Completeness for calls under A2-narrow (the three losses of CN bound the scope); "recency is at least as precise as C"; "the combination is at least as precise as each refinement alone" (the form "CN is at least as precise as per-cell havoc" is false: `precision_order_fails`); the finer key that removes the `cost_answers` alias; dominance over the DSU with loads and stores | open |
 | F7 | The deep-self-edge search rule with K ≥ D + 1: it removes no path of length at most D from a root. | open |
 | F8 | Exceptional flow: the catch-edge state and the catch origin are sound. | open |
 | F9 | Small theorems: "recency equals C when each site is once" (`mayProgR eu = mayProgE eu`), which carries the completeness theorems to recency; a theorem `osoundE` for O without recency (for O with recency and per-cell havoc, `csoundHRO` exists). | open |
+| F10 | A cost bound for the O call of CN (`havocCNO`), an analogue of `addSets_work`: the closure and the name unions as a function of the covered keys. | open |
+| F11 | Soundness of the narrow per-cell reference `mayProgHRN` (Reference.lean) under A2-narrow. Model only, not needed by the engine: the engine has no per-cell mode (D2). It stays a follow-up of the formal precision reference (§4.11). | open (model only) |
 
 ### 11.5 Rollback
 
@@ -2106,7 +2294,7 @@ The user decided D1, D2, D5, D6, D7, D12 and D13 on 2026-10-29. D3, D4, D8, D9, 
 | Id | Status | Decision | Options | Recommendation or decision | Evidence |
 |---|---|---|---|---|---|
 | D1 | Decided by the user | Strong updates on entry roots (`entryUnique`) | (a) `false`: weak on symbolic origins; only allocation origins can get strong updates. (b) `true`: strong store on `sym(root, q)` without `elem`, and on unique call results. | (b) `true` is the default. The user: "We may lose some aliases, but it is acceptable. We remain intra-proc." A1 is an accepted precondition of the intra-procedural analysis. (a) stays a policy value for an A/B check. | Under entry aliasing both policies are unsound (`skip_unsound`, `write_read_unsound`). (b) also loses aliases that (a) keeps: `swap_alias` with `swap_strong` false and `swap_weak` true. These theorems document the accepted loss (§3.3). No theorem orders the two policies. The completeness theorems use (b), so they cover the default (§4.7). Gain of (b): probe row 30 flips, row 29 keeps its answer, and `root_concept_more_precise`. Cost of (b): 2 of the 4 assertions of `test swap fields` change in directed mode (§9.2, P9). |
-| D2 | Decided by the user; the havoc-origin form is proposed | Call model | (a) the heap-alias removal of main. (b) weak havoc with site havoc origins (`SHARED`). (c) weak havoc with per-cell havoc origins (`PER_CELL`). | No alias drop in the may analysis: (a) is out. The drop of main (`invalidateOuterHeapAliases`) is a must-side rule: a callee can overwrite a cell, so a must relation through it ends. A future must analysis keeps it (§8.4). Main has no must analysis enabled, so the directed analysis uses weak havoc. Proposed form, to confirm at the spec revisit: (c) `PER_CELL` as the default under A2-strict, and (b) `SHARED` as a mode for A2-wide and for A/B. | (a) is unsound for may-alias (U2: probe rows 21, 24, 27; `b_unsound`, `b_local_unsound`, `call_w_xf`). (b) is sound under A2-wide, with and without recency (`csoundE`, `csoundR`, `mayProgOE_eq`, `mayProgRO_eq`). But a value loaded after a call may-aliases each outer path (`havoc_spread`, §4.9). (c) is sound under A2-strict, with and without recency (`csoundH`, `csoundHR`), and O equals C (`mayProgHO_eq`, `mayProgHRO_eq`, `csoundHRO`). It removes the spread (`strict_answers`, `strict_ab_none`) and keeps the precision of the DSU for new content (`dsu_ab`). It is not sound under A2-wide (`generous_breaks_strict`), so the user must accept A2-strict (§3.1, R16, §11.2 condition 5). The shared key `alloc-old(s)` is sound (`keyOfR_alphaRS`). Its cost is `cost_answers` / `cost_none`, and recency alone and per-cell havoc alone have the same cost. Behaviour change for CS4/CS5 (§9.1) and for `test external call invalidates heap aliases` (§9.2). Volume: no drop increases the alias answer volume (R0); the diagnostic flag of D11 (e) measures this part. |
+| D2 | Decided by the user (2026-10-29), with the call rule | Call model | (a) the heap-alias removal of main. (b) weak havoc with site havoc origins (A2-wide). (c) weak havoc with per-cell havoc origins (A2-strict). (d) weak havoc with no origin for an unknown object ("dead end"). (e) the call rule CN: weak havoc with cell names, narrow reach and the exposed set (A2-narrow). | No alias drop in the may analysis: (a) is out. The drop of main (`invalidateOuterHeapAliases`) is a must-side rule: a callee can overwrite a cell, so a must relation through it ends. A future must analysis keeps it (§8.4). Main has no must analysis enabled, so the directed analysis uses weak havoc. Call rule, decided by the user (2026-10-29): (e) CN, with its three precision losses. The engine has one call rule; the `SHARED` mode ((b)) and the `PER_CELL` mode ((c) with the closure of CN) were dropped by the user, 2026-10-29 (§7.6). (b) and (c) stay in the Lean model as formal references. History: the user first chose (c) and considered the call-result origin `⟨s⟩` as the havoc origin (rejected: `⟨s⟩` makes every post-call load alias every other one and the call result, and it removes strong updates on call results). Then the user found (c) too expensive: it adds a per-cell origin to each cell of each reachable origin at each call, and each symbolic object is reachable. The user rejected a lazy havoc log (it complicates state identity and the join). (d) is unsound. The user accepted (e) (CEGAR step 4, §1.8, §4.11). | (a) is unsound for may-alias (U2: probe rows 21, 24, 27; `b_unsound`, `b_local_unsound`, `call_w_xf`). (b) is sound under A2-wide (`csoundE`, `csoundR`, `mayProgOE_eq`, `mayProgRO_eq`), but a value loaded after a call may-aliases each outer path (`havoc_spread`, §4.9). (c) is sound under A2-strict (`csoundH`, `csoundHR`, `mayProgHO_eq`, `mayProgHRO_eq`, `csoundHRO`) and removes the spread (`strict_answers`, `strict_ab_none`), but its cost grows with the calls (§4.11). (d) misses a real alias: `n = new N(); m(n); a = n.f; if (*) { b = a; d = a } else { b = y; d = z }`, `b ~ d` (`dead_realN`; CN answers true: `dead_answerCN`). (e) is sound under A2-narrow, for both policies, with recency, each K and each list of static roots (`csoundCN`); O equals C (`mayProgCNO_eq`, `csoundCNO`). Both parts of A2-narrow are necessary (`generous_reach_breaks_CN`, `generous_havoc_breaks_CN`). It keeps the HavocNeed cases (`need_answersCN`), removes the spread (`spread_goneCN`) and keeps strong updates on objects that a call does not reach (`gain_answersCN`, `gain_noneN`). Its three losses are real losses (`losses_CN`, `loss1_noneN`, `loss2_noneN`, `loss3_noneN`; per-cell havoc answers false: `losses_HR`). (c) and (e) are incomparable (`precision_order_fails`, `nest_noneN`). No cost theorem for the O call (F10). Behaviour change for CS4/CS5 (§9.1) and for `test external call invalidates heap aliases` (§9.2). Volume: no drop increases the alias answer volume (R0); the diagnostic flag of D11 (e) measures this part (§11.2). The losses are known from the Lean examples only (§4.11). |
 | D3 | Open: the user decides after the spec revisit | Recency | (a) on. (b) off. | (a) | §1.8 (CEGAR step 1). Cost: R6. |
 | D4 | Open: the user decides after the spec revisit | Origin depth K and query depth D | K: 3, 7 or 9. D: 6 accessors, or less. | D = 6 (unchanged, `HEAP_CHAIN_LIMIT = 5`). K = 7 (K ≥ D + 1). | With K ≥ D + 1, a reported path from a root variable is its own origin, with no deep origin in the reported range (CX1 shows the merge). A path from a loaded variable can reach a deep origin in the reported range; the search rule of §6.2 then applies. Cost of K: origins and node sizes, up to `Σ_{i≤K} w^i` symbolic origins for each base on a walk over `w` fields (§6.2). Measure `nodeCount` and `contentSize` for K = 3 and K = 7 in L4 before the decision. Contract item CK3 needs an unchanged query depth D. D is also the main knob of the alias answer volume (R0, D11 (b)). |
 | D5 | Decided by the user | Must-alias | (a) derive from O (§8.4). (b) take the branch `origin/DanielELog/must_alias` (second DSU with a meet join). (c) none now. | (c): must-alias is postponed. Later work can derive it from O (a). It must keep the alias drop at unresolved calls (D2). | Main has no must analysis enabled. A derivation from O needs no second fixpoint, and `must ⊆ may` holds. The branch is on the old API, and its unfinished part can lose may-aliases (not verified). §8.4. |
@@ -2129,7 +2317,7 @@ Build and audit:
 cd formal/directed-alias && ./check.sh
 ```
 
-`check.sh` builds the package with `lake build` (Lean `v4.35.0`, no Mathlib). It fails on `sorry`, `admit`, `native_decide` or an `axiom` declaration. It regenerates `AxiomAudit.lean` and fails if a theorem depends on `Classical.choice`, `sorryAx` or `ofReduceBool`. Output for the full package: 905 public theorems; 62 depend on no axiom, 313 on `propext`, 529 on `propext` and `Quot.sound`, 1 on `Quot.sound`; about 18.3k lines of Lean. Concrete checks use `decide`, or `decide +kernel` for large terms. The kernel checks both. No check uses `native_decide`.
+`check.sh` builds the package with `lake build` (Lean `v4.35.0`, no Mathlib). It fails on `sorry`, `admit`, `native_decide` or an `axiom` declaration. It regenerates `AxiomAudit.lean` and fails if a theorem depends on `Classical.choice`, `sorryAx` or `ofReduceBool`. Output for the full package: 1070 public theorems; 83 depend on no axiom, 362 on `propext`, 624 on `propext` and `Quot.sound`, 1 on `Quot.sound`; about 22.9k lines of Lean in about 70 build jobs. The call rule CN added 157 of these theorems. Concrete checks use `decide`, or `decide +kernel` for large terms. The kernel checks both. No check uses `native_decide`.
 
 Constructive claims. `propext` and `Quot.sound` are in the Lean core. Without `Classical.choice` they do not give the excluded middle, and they do not stop `decide` from reducing. So each proof is constructive. Each example witness is an explicit choice list. The executor `runFrom` runs it, and `decide` checks the result (`runAliasB_sound`). Each completeness theorem also has a computable witness search (`crossWitness`, `witness_core`, `witness_store`, Sound/Witness/Search.lean, §4.7). In the two scopes, a true answer yields a witness that a reader can run with `#eval`.
 
@@ -2139,7 +2327,7 @@ The body gives each theorem with its claim. This index gives the files. "Other l
 |---|---|---|---|
 | `Syntax.lean` | The IR: statements, programs, sites | §2.1, §4 | — |
 | `ListSet.lean` | Lists as sets, `single?` | §4.3 | — |
-| `Concrete.lean` | Concrete semantics (A1-A3, A2-wide), the executor `runFrom`. A2-strict is in `Sound/Havoc/Concept.lean`. | §3.1, §4.7 | `run_sound`, `runAliasB_sound` |
+| `Concrete.lean` | Concrete semantics (A1-A3, A2-wide), the executor `runFrom`. A2-strict is in `Sound/Havoc/Concept.lean`, A2-narrow in `Sound/CellNamed/Concept.lean`. | §3.1, §4.7 | `run_sound`, `runAliasB_sound` |
 | `Concept.lean` | Concept C: origins, `adefault`, `astep`, `join`, `loopIter`, `may`, `mayProg`, `CSound`, `CCompleteIn` | §4 | `alphaV_cdefault`, `closeIter_spec`, `loopIter_post`, `sub_loopIter`, `may_iff`, `may_comm` |
 | `Examples.lean` | Task and field examples | §1, §4.4 | `join_a_x`, `join_a_y`, `join_x_y`, `join_a_x_witness`, `join_a_y_witness`, `strong_bf_x`, `strong_bf_y`, `call_w_xf_witness`, `call_w_xf_overwrite` |
 | `Sound/Invariant.lean` | The invariant `Inv`, the once budget | §4.5 | `Exec.cnt_le` |
@@ -2151,8 +2339,18 @@ The body gives each theorem with its claim. This index gives the files. "Other l
 | `Sound/EntryAlias.lean` | Entry aliasing: the accepted loss of D1 | §3.3 | — |
 | `Sound/Facts.lean` | Symmetry, non-transitivity, the partition theorem | §1.5, §1.7, §4.4 | — |
 | `Order.lean` (namespace `DirectedAlias.Order`) | The directed relation as a congruent order: `Above`, reflexive, transitive, antisymmetric on nodes, congruent; stores write down the order; may-alias derived from it; `symm_antisymm_eq`; the task and field examples (`join_order`, `field_order`) | §0, §1.7, §5.1 | — |
+| `HavocNeed.lean` (namespace `DirectedAlias.HavocNeed`) | Why an unresolved call needs a havoc origin: two programs where an analysis without it misses a real alias (a later strong update; an empty cell), each with a concrete witness, and the answers of C and of recency with per-cell havoc | §4.9, §4.11 | `strong_after_call_nohavoc`, `empty_cell_nohavoc` |
 | `Sound/Havoc/*.lean` (`Concept`, `Soundness`, `Fresh`, `Examples`, `ExamplesK1`) | A2-strict (`HavocS`, `ExecS`), per-cell havoc concept (`mayProgH`), soundness `csoundH`, freshness, the `pHv` examples | §3.1, §4.9 | `HavocS.toHavoc`, `keyOf_alphaS`, `alphaS_head`, `InvS.havocH`, `reachB_of_reachS`, `ctxH_ok`, `fresh_head`, `ExecS.hinv`, `strict_answers_K1`, `havoc_spread_exact`, `new_answers`, `loop_answers` |
-| `Sound/HavocRecency/*.lean` (`Inv`, `Concept`, `Soundness`, `Examples`, `ExamplesK1`) | Recency with per-cell havoc (the default policy): the generic invariant `InvG`, the key `keyOfR`, soundness `csoundHR`, the cost of the shared key | §4.9, §7.9 | `InvG.retire`, `alphaRS_bump`, `alphaRS_head`, `InvG.havocHR`, `ctxHR_ok`, `no_alias_of_mayProgHR`, `strict_answersHR_K1`, `spread_with_recency_only`, `havocS_distinct` |
+| `Sound/HavocRecency/*.lean` (`Inv`, `Concept`, `Soundness`, `Examples`, `ExamplesK1`) | Recency with per-cell havoc (the precise reference; CN reuses `InvG`): the generic invariant `InvG`, the key `keyOfR`, soundness `csoundHR`, the cost of the shared key | §4.9, §7.9 | `InvG.retire`, `alphaRS_bump`, `alphaRS_head`, `InvG.havocHR`, `ctxHR_ok`, `no_alias_of_mayProgHR`, `strict_answersHR_K1`, `spread_with_recency_only`, `havocS_distinct` |
+| `Sound/CellNamed/Concept.lean` | A2-narrow (`ReachN`, `HavocN`, `SStepN`, `ExecN`, `CAliasN`) and the CN concept: cell names (`childCN`, `extendCN`), coverage (`descB`, `coveredB`), the exposed test (`expB`, `uniqueCN`), the closure (`callRoots`, `succsN`, `closeN`), the call (`havocWith`, `havocCN`), `astepCN`, `originsCN`, `ctxCN`, `mayProgCN` | §3.1, §4.11 | `ExecN.toExecS`, `ExecN.toExec`, `CAliasN.toCAliasS`, `closeN_spec`, `mem_succsN` |
+| `Sound/CellNamed/Names.lean` | Properties of cell names, descendants and the exposed test | §4.11 | `uniqueR_name`, `childCN_name`, `descB_iff`, `expB_mono`, `expB_renameL` |
+| `Sound/CellNamed/Inv.lean` | The ghost naming `Names`, the abstraction `alphaCN`, the invariant `InvCN` (`InvG`, `InvX`, `CntOK`), the uniqueness lemma | §4.11 | `unique_objCN`, `not_havoc_of_unique`, `renameO_childCN`, `InvX.retire`, `InvCN.mono` |
+| `Sound/CellNamed/Call.lean` | Soundness of the CN call: the written object has the name of its cell, coverage, unreachable cells are kept | §4.11 | `havocCN_sound`, `InvG.havocCN`, `reach_cover`, `reach_facts`, `expOK_closure`, `junk_kept`, `written_reach`, `namesAfter` |
+| `Sound/CellNamed/Soundness.lean` | Soundness of CN: `csoundCN`, `no_alias_of_mayProgCN` | §4.5, §4.11 | `step_soundCN`, `loop_keepsCN`, `analyze_soundCN`, `inv_initCN`, `ctxCN_ok`, `ctxCN_frame`, `ctxCN_stmts`, `ctxCN_budget` |
+| `Sound/CellNamed/Run.lean` | A computable executor for A2-narrow witnesses (`runAliasBN`) | §4.11 | `runAliasBN_sound`, `runN_soundN`, `applyHavocN_spec` |
+| `Sound/CellNamed/Examples.lean` | The CN examples: HavocNeed, the spread, the dead-end case, the narrow-reach gain, the three losses, the other examples | §4.11 | `strong_after_call_realN`, `empty_cell_realN`, `spread_ab_noneN`, `spread_axf_keepN` |
+| `Sound/CellNamed/Reference.lean` | Formal reference for the precision comparison only (not in the engine): the narrow per-cell reference `mayProgHRN` (not proved sound, F11) and the precision order on the examples | §4.11 | `precision_need`, `precision_old`, `precision_new` |
+| `Sound/CellNamed/Scope.lean` | Both parts of A2-narrow are necessary; the precision order fails | §3.1, §4.11 | `generous_reach_breaks_CN`, `touch_noneN`, `generous_havoc_breaks_CN`, `precision_order_fails`, `nest_noneN` |
 | `Sound/Witness/*.lean` (`Rename`, `Compact`, `Search`, `Examples`) | Computable witnesses for the completeness theorems: `crossWitness`, `witness_core`, `witness_store`, `oneWitness` | §0, §4.7 | `run_completeA`, `run_r`, `compact`, `checkW_sound`, `crossWitness_sound`, `crossWitness_complete`, `crossWitness_none_iff`, `arr_of_core`, `arr_of_store` |
 | `DSU/Model.lean`, `DSU/Lemmas.lean`, `DSU/Props.lean` | The DSU model and its invariants | §2.1, §1.5, §1.7 | `dsuMayD_iff`, `DMayL_iff_short` |
 | `DSU/Examples.lean` | DSU defects and the dominance boundary | §2.3, §2.4, §2.5 | `field_x_y_none`, `a1_witness`, `a2_witness`, `a4_witness`, `static_as_field`, `loop_bf_x_none` |
@@ -2165,6 +2363,7 @@ The body gives each theorem with its claim. This index gives the files. "Other l
 | `Opt/Recency.lean` | O with recency | §5.5 | `renameL_congr`, `renameL_of_not_mem`, `renameL_dflt`, `renameL_sub`, `cval_retire`, `supp_retire`, `supp_storeR`, `supp_astepR`, `supp_analyzeR`, `ctxClosed_R`, `recOK_R`, `progOKR_R`, `supp_ainitR` |
 | `Opt/Havoc.lean`, `Opt/HavocExamples.lean` | O with per-cell havoc (`havocHO`), `mayProgHO_eq` | §4.9, §5.5 | `analyzeHO_rel`, `callHO_rel`, `addHv_spec`, `addHv_work`, `Supp.havocH`, `ctxClosed_H`, `o_new_answers` |
 | `Opt/HavocRecency.lean` | O with recency and per-cell havoc (`havocHRO`), `mayProgHRO_eq`, `csoundHRO` | §4.9, §5.5 | `havocHRO_rel`, `analyzeHRO_rel`, `addSets_spec`, `addHv_eq_addSets`, `addSets_work`, `o_cost`, `o_pHv`, `o_both` |
+| `Opt/CellNamed.lean` | O with the call rule CN (`havocCNO`, `storeCNO`, `ostepCN`), the exposed set as the node of one reserved key, `mayProgCNO_eq`, `csoundCNO` | §5.3, §5.5 | `havocCNO_rel`, `storeCNO_rel`, `ostepCN_rel`, `analyzeCNO_rel`, `analyzeProgCNO_rel`, `o_answersCN` |
 | `Opt/Examples.lean` | O examples | §5.4 | `o_join_a_x`, `o_join_x_y`, `o_strong_bf_x`, `o_loop_bf_x`, `o_call_w_xf` |
 | `Opt/Cost.lean`, `Opt/LoopCost.lean` | Cost separations | §5.6 | `Tbl.intern_work`, `Tbl.union_self_work`, `Tbl.union_work`, `getId_work`, `jfold_work` |
 | `Opt/Findings.lean` | Table growth and the fixpoint-test miss | §5.7 | — |
@@ -2184,7 +2383,7 @@ Some short names occur in two files. Cite them with the file:
 
 ## Appendix B. Probe index
 
-All tests are in `JTEST/alias/DirectedAliasProbeTest.kt`; the sample is `DirectedAliasSample.java`. "Today" is the measured verdict on main. "Directed" is the expected answer under the default policy (§9.3): `entryUnique = true` (D1), recency on, `PER_CELL`. In this column, `new(x)` is the `AliasAllocInfo` of the allocation of `x`, and `arg:p` is the argument path `p`. "Rec" marks sets that also depend on recency (D3). "Lean" is the related theorem.
+All tests are in `JTEST/alias/DirectedAliasProbeTest.kt`; the sample is `DirectedAliasSample.java`. "Today" is the measured verdict on main. "Directed" is the expected answer under the default policy (§9.3): `entryUnique = true` (D1), recency on. The column was derived with per-cell havoc; for CN the rows with a call can differ (§9.3). In this column, `new(x)` is the `AliasAllocInfo` of the allocation of `x`, and `arg:p` is the argument path `p`. "Rec" marks sets that also depend on recency (D3). "Lean" is the related theorem.
 
 | # | Probe test | Scenario | Today | Directed | Rec | Lean |
 |---|---|---|---|---|---|---|

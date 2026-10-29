@@ -34,15 +34,17 @@ An origin is an abstract object. A value is a finite set of origins. The empty s
 
 | Origin | Meaning | Unique |
 |---|---|---|
-| `⟨r.q⟩` | The object at path `q` below the entry root `r` (an argument, `this`, or the static holder of a class). `q` has at most K cells. `⟨r⟩` is the root itself. | yes, if `q` has no array cell |
-| `⟨s.q⟩` | The object at path `q` below the result of the unresolved call or unknown expression at site `s`. A catch variable is such a result. `q` has at most K cells. | yes, if site `s` is not in a loop and `q` has no array cell |
-| `deep(b)` | All objects deeper than K below the base `b` (a root or a site) | no |
+| `⟨r.q⟩` | The object at path `q` below the entry root `r` (an argument, `this`, or the static holder of a class). `q` has at most K cells. `⟨r⟩` is the root itself. It also names each object that a callee writes into cell `q` (§5.6). | yes, if `q` has no array cell and is not below an exposed origin (§4) |
+| `⟨s.q⟩` | The object at path `q` below the result of the unresolved call or unknown expression at site `s`. A catch variable is such a result. `q` has at most K cells. | yes, if site `s` is not in a loop, `q` has no array cell, and `q` is not below an exposed origin |
+| `⟨@s.c.q⟩` | The object that a callee writes into cell `c` of an object of the allocation site `s` (for `q` empty), or the object at path `q` below it. `q` has at most K cells. | no |
+| `deep(b)` | All objects deeper than K below the base `b`: a root, a result site, or `@s.c` (an allocation site and the first cell) | no |
 | `new(s)` | The most recent object of the allocation site `s` | yes |
 | `old(s)` | All older objects of the allocation site `s` | no |
-| `hv(s, k, c, q)` | The object at path `q` below the new object that the call at site `s` writes into cell `c` of a holder with key `k` (§5.6) | no |
 | `const(v)` | An interned constant: a string value, a boxed value type, a class literal. The JVM can share one object for all sites. | no |
 
 A unique origin denotes at most one live object. Only a unique origin can get a strong update.
+
+Below an exposed origin. `⟨b.q⟩` is below an exposed origin if `exposed` (§4) holds `⟨b.p⟩` for a proper prefix `p` of `q`. A call that reaches `⟨b.p⟩` can put a new object into a cell below it. That object has the same name, so the name can denote two objects. The origin `⟨b.p⟩` itself stays unique: a callee cannot replace the value of a variable.
 
 A cell is `f` (an instance field, or a static field on the static holder) or `[]` (all elements of an array).
 
@@ -53,13 +55,13 @@ Default content. A cell that the method did not write holds its default content:
 | `⟨b.q⟩` | `{⟨b.q.c⟩}` if `q.c` has at most K cells, else `{deep(b)}` |
 | `deep(b)` | `{deep(b)}` |
 | `new(s)`, `old(s)` | `{}` (null) |
-| `hv(s, k, c, q)` | the same rule as `⟨b.q⟩`, with its own deep summary |
+| `⟨@s.c.q⟩` | `{⟨@s.c.q.c'⟩}` at cell `c'` if `q.c'` has at most K cells, else `{deep(@s.c)}` |
 | `const(v)` | `{}` |
 
 Assumptions. The analysis is sound if these three statements are true:
 
 1. **Entry heap is a tree.** Two different entry roots are different objects. Two different entry paths below the roots are different objects. Aliases that the callers make between arguments are not visible.
-2. **Callees do not make aliases.** An unresolved call can overwrite a cell of an object that it can reach, or keep the cell. Each overwritten cell gets its own new object. The call does not store an existing object into a cell. The taint analysis models those effects with its own summaries.
+2. **Callees reach only their arguments and the statics, and do not make aliases.** An unresolved call can reach the objects reachable from its arguments (the receiver included) and from the static holders. It can overwrite a cell of such an object, or keep the cell. Each overwritten cell gets its own new object. The call does not store an existing object into a cell. The taint analysis models those effects with its own summaries.
 3. **Depth limit.** Objects deeper than K are summarized by `deep`.
 
 ## 4. State
@@ -68,9 +70,12 @@ The analysis stores one state before and one state after each statement.
 
 ```
 State
-  env  : Var            -> NodeId     absent key: null
-  heap : (Origin, Cell) -> NodeId     absent key: default content
+  env     : Var            -> NodeId     absent key: null
+  heap    : (Origin, Cell) -> NodeId     absent key: default content
+  exposed : NodeId                       the origins that a call reached (§5.6); node 0 at entry
 ```
+
+In an implementation, `exposed` is one reserved key of `env`. So it needs no own join or comparison.
 
 A node is one origin set in canonical form. All states of one method share one node table:
 
@@ -87,7 +92,7 @@ Rules:
 - Normal form: `heap` does not store an entry equal to the default content of its cell. Dead variables are removed from `env`.
 - In normal form, two states are equal if and only if their maps are equal. The comparison is one integer comparison for each key.
 
-Notation in this document. `pts(x)` is the set of node `env[x]`. `H(o, c)` is the set of node `heap[(o, c)]`, or the default content.
+Notation in this document. `pts(x)` is the set of node `env[x]`. `H(o, c)` is the set of node `heap[(o, c)]`, or the default content. `E` is the set of node `exposed`.
 
 ## 5. Operations
 
@@ -134,7 +139,7 @@ A write goes down the order. After `a.f = z`, each `x` with `a ⊒ x` reads `z` 
 
 ### 5.4 Join
 
-At a node with two or more predecessors, the state is the pointwise union. For each key, the join does one memoized union of the two node ids. The join also gives a change bit: true if some key now holds a node that is not its old node.
+At a node with two or more predecessors, the state is the pointwise union. For each key, `exposed` included, the join does one memoized union of the two node ids. The join also gives a change bit: true if some key now holds a node that is not its old node.
 
 ### 5.5 Loops and the fixpoint
 
@@ -149,11 +154,39 @@ Exceptions: the state on an edge to a catch handler is `join(state before, state
 
 ### 5.6 Unresolved call: `x = m(a1, ..., an)` at site `s`
 
-1. **Reachable origins.** An origin is reachable if it is an entry, result or havoc origin, or if it is in a cell closure from `pts(a1) ∪ ... ∪ pts(an)`. The receiver of a constructor call is an argument.
-2. **Weak havoc.** For each reachable origin `o` and each cell `c` that the method mentions: `H(o, c) := H(o, c) ∪ {hv(s, key(o), c, [])}`. The old content stays.
-3. **Result.** `env[x] := {⟨s⟩}`.
+The rule names each unknown object by the cell where it is found. The name of the object that a callee can write into cell `c` of origin `o` is `name(o, c)`:
 
-`key(o)` is `o`, with two exceptions. Both `new(t)` and `old(t)` have the key `old(t)`, so `retire` never renames a havoc origin. A havoc origin has the key `hv(s0)` of its call site, so keys never nest.
+| `o` | `name(o, c)` |
+|---|---|
+| `⟨b.q⟩` | `⟨b.q.c⟩` (`deep(b)` beyond K): the default content of the cell |
+| `deep(b)` | `deep(b)` |
+| `new(t)`, `old(t)` | `⟨@t.c⟩` (the same name for both, so `retire` does not rename it) |
+| `⟨@t.c0.q⟩` | `⟨@t.c0.q.c⟩` (`deep(@t.c0)` beyond K) |
+
+Steps:
+
+1. **Start set.** `R := pts(a1) ∪ ... ∪ pts(an) ∪ {⟨r⟩ : r a static holder}`. The receiver is an argument; for a constructor call it is the new object.
+2. **Closure.** An origin is covered if it is in `R` or below an origin of `R`. Add to `R` the content of each written cell of each covered origin. Repeat until `R` does not grow. Unwritten cells need no step: their default content is below a covered origin.
+3. **Weak havoc by name.** For each written cell `(o, c)` of a covered origin: `H(o, c) := H(o, c) ∪ {name(o, c)}`. For each covered allocation origin `o` and each cell `c`: the same. The old content stays. An unwritten cell of a covered symbolic origin needs no work: its default content already is `{name(o, c)}`.
+4. **Exposure.** `E := E ∪ R`.
+5. **Result.** `env[x] := {⟨s⟩}`.
+
+The call creates no origin. Its cost is the closure over written cells, plus one union for each written cell of a covered origin and for each cell of a covered allocation.
+
+Why each part is necessary:
+
+- The old content stays, because the callee can keep a cell.
+- Step 3 adds the cell name, because the callee can write a new object. Example: `n = new N(); m(n); a = n.f; b = n.f`. If `m` writes one new object into `n.f`, then `a` and `b` are that object. Without step 3, `n.f` stays null, and `a` and `b` do not alias.
+- Step 4 removes uniqueness below a reached object, because the cell name now can denote the old object and a new one. Example: `w = x.f; e = w.g; m(x); t = x.f; t.g = z`. If `m` puts a new object into `x.f`, then `w.g` is still `e`. `pts(t) = {⟨x.f⟩}`, but `⟨x.f⟩` is below the exposed `⟨x⟩`, so `t.g = z` is a weak update, and `w.g ~ e` stays.
+- The narrow start set keeps precision: a call that does not reach an object does not change it. Example: `t = this.box; touch(); t.value = v`. `touch()` has no arguments, so `⟨this⟩` is not exposed, and `t.value = v` is a strong update.
+
+Accepted precision losses. A cell name stands for the entry object and for each object that any callee writes into the cell. So the analysis cannot tell these objects apart:
+
+| Program | The analysis says | Concrete fact |
+|---|---|---|
+| `t = x.f; m(x); t.g = z` | `t.g = z` is a weak update | `t` holds one object, so the update could be strong |
+| `w = x.f; x.f = b; m(x); t = x.f` | `t ~ w` | `t` is `b` or a new object; it is never the old object in `w` |
+| `x.f = b1; m(x); a = x.f; x.f = b2; m(x); c = x.f` | `a ~ c` | the two calls write two different new objects |
 
 A modeled library call (a pass-through rule `from → to`) is a weak copy: `to ∪= from`.
 
@@ -172,6 +205,8 @@ The query is a backward search, and it is lazy:
 2. Step to the holders of each origin: the variables whose node holds it, and the cells `(o', c)` whose content holds it. Default content counts.
 3. Prefix the cell to the path, up to D cells.
 4. Never follow the self cells of `deep(b)`.
+
+A query for a heap path `x.c1...cm` is the same search. Its start set is the value of the path: read the cells `c1...cm` from `pts(x)` (§5.2). The answer is each path `v.c1'...cn'` (`n ≤ D`) that shares an origin with this value, except the queried path. The answer cannot be derived from `findAlias(x)`. After `x.f = z`, the path `z` aliases `x.f`, but `z` does not alias `x`. If the value is empty, the answer is empty.
 
 Queries do not change the node table.
 
@@ -213,6 +248,7 @@ Queries after `a = w`:
 
 - `findAlias(z) = {x.f, y.f}`. Both fields may hold `z`.
 - `findAlias(x) = {}`. There is no relation between `x` and `y`, and no relation between `x` and `a`.
+- `findAlias(x.f) = {z, y.f}`. This is a heap-path query (§5.7). Its start set is `H(⟨x⟩, f) = {⟨x.f⟩, ⟨z⟩}`.
 - `x.f` and `y.f` may alias, because both may hold `⟨z⟩`. The analysis is path-insensitive, so this is expected.
 
 ### 6.3 Strong update
@@ -268,12 +304,24 @@ The head state of `pts(x)` grows by one origin in each iteration. It is stable w
 
 ```java
 w = x.f;        // pts(w) = {⟨x.f⟩}
-m(x);           // site 9: H(⟨x⟩, f) := {⟨x.f⟩, hv(9, ⟨x⟩, f, [])}
-u = x.f;        // pts(u) = {⟨x.f⟩, hv(9, ⟨x⟩, f, [])}
-v = y.g;        // pts(v) = {⟨y.g⟩, hv(9, ⟨y⟩, g, [])}
+m(x);           // site 9: R = {⟨x⟩}, E = {⟨x⟩}; the cell (⟨x⟩, f) is unwritten: no work
+u = x.f;        // pts(u) = {⟨x.f⟩}
+v = y.g;        // pts(v) = {⟨y.g⟩}
+u.h = z;        // ⟨x.f⟩ is below the exposed ⟨x⟩: weak update
 ```
 
-`w ~ x.f` stays true, because `m` can keep the cell. `u ~ w` is true. `u ~ v` is false: each cell has its own havoc origin (assumption 2).
+`w ~ x.f` stays true, because `m` can keep the cell. `u ~ w` is true. `u ~ v` is false: `m` does not reach `y`, and the two cells have different names. The write `u.h = z` is weak, because `u` can hold the old object or the new object of `m`.
+
+With a new object:
+
+```java
+n = new N();    // site 5: pts(n) = {new(5)}
+m(n);           // R = {new(5)}: H(new(5), f) := {⟨@5.f⟩} for each cell f
+a = n.f;        // pts(a) = {⟨@5.f⟩}
+b = n.f;        // pts(b) = {⟨@5.f⟩}
+```
+
+`a ~ b` is true: both loads find the object of `m` by the name of its cell.
 
 ## 7. Parameters
 
@@ -284,7 +332,7 @@ v = y.g;        // pts(v) = {⟨y.g⟩, hv(9, ⟨y⟩, g, [])}
 | Recency (`new` / `old`) | on | open |
 | Strong update on entry roots | on | decided |
 | Alias removal at calls | none: weak havoc | decided |
-| Havoc origin form | one origin for each written cell (§5.6) | proposed |
+| Call rule | narrow reach, unknown objects named by their cell, `exposed` set (§5.6) | decided |
 | Alias answer volume control | to choose after the measurement | open |
 
 ## 8. Guarantees
@@ -293,12 +341,16 @@ The Lean model in `formal/directed-alias` proves these facts for a structured ve
 
 | Fact | Lean theorem |
 |---|---|
-| The analysis is sound under the assumptions of §3: each alias of one execution is a may-alias. | `csoundHR` |
-| The node representation gives the same answers as the set semantics. | `mayProgHRO_eq` |
+| The analysis is sound under the assumptions of §3: each alias of one execution is a may-alias. | `csoundCN` |
+| The node representation gives the same answers as the set semantics. | `mayProgCNO_eq`, `csoundCNO` |
+| Both parts of assumption 2 are necessary: with every object reachable, or with one object in two cells, the rule misses aliases. | `generous_reach_breaks_CN`, `generous_havoc_breaks_CN` |
+| The call rule keeps the examples of §5.6: the empty cell and the later update are found, the call that reaches nothing keeps the strong update, two different cells do not alias. | `need_answersCN`, `gain_answersCN`, `spread_goneCN`, `dead_answerCN` |
+| The three accepted losses of §5.6 are real losses: no execution has these aliases. | `losses_CN`, `loss1_noneN`, `loss2_noneN`, `loss3_noneN` |
 | The order is reflexive, transitive, antisymmetric on nodes and congruent. | `above_refl`, `above_trans`, `node_antisymm`, `path_mono` |
 | A write goes down the order. | `store_down` |
 | May-alias is a common origin below both paths. | `may_iff_common_lower` |
 | No transitive relation that is sound can keep `x` and `y` apart in §6.1. | `transitive_sound_relates_x_y` |
 | The backward search gives the same paths as an enumeration of all paths. | `findAlias_iff` |
+| The search for a heap path gives the same paths as an enumeration. | `heapAliases_iff` |
 
 The fixpoint strategy of §5.5, the exception rule and the query normal form are argued, not proved.
