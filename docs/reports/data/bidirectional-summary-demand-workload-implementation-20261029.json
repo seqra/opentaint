@@ -2,7 +2,7 @@
   "schema": "summary-demand-workload-implementation-proposal-v1",
   "date": "2026-10-29",
   "sourceRevision": "f99ed7c1afa53f4eff03850a844de180bc02ba6d",
-  "status": "REVIEW DRAFT: runtime unchanged; uncovered EXACT application decision and listed integration/no-loss proofs remain open",
+  "status": "REVIEW DRAFT: initial policy, summary normalization, write E and whole-position RemoveAll selected; runtime unchanged; full integration/no-loss proofs remain open",
   "scope": [
     "Selected demand rewrite dependency",
     "P1 fixed-right C5 pruning",
@@ -44,12 +44,17 @@
     "Demand p.f.STAR/T + actual p.f.g.EXACT/T emits nothing.",
     "Demand p.ANY/T + actual p.STAR/T DEMAND emits nothing.",
     "Demand p.f.ANY/FLOW + actual p.ANY/T DEMAND emits p.f.ANY/FLOW.",
-    "Provide a complete closed example before choosing uncovered exact application behavior."
+    "Provide a complete closed example before choosing uncovered exact application behavior.",
+    "Keep original raw initial emission; the temporary entry-STAR alternative was revoked.",
+    "Normalize each pure FLOW summary EXACT endpoint to STAR before storage; retain both paths/bases, marks, layer, E, and mark exclusions.",
+    "Record ordinary field-write E on derived EXACT/FLOW conclusions and preserve it through moves and returns; raw EXACT initial query E remains empty.",
+    "Keep run1 exclusion update -> DEMAND/EmptyE; persist later NORMAL E.",
+    "RemoveAll clears the selected whole position and descendants. Named p.f is valid; below-only/exact-only variants are prohibited.",
+    "Reject terminal-AnyField RemoveAll configuration rather than silently interpreting it as a whole-parent removal; low-level null-mark reach must be AT_AND_BELOW. Selected RemoveMark is unchanged."
   ],
   "inferredPolicyCell": "Ancestor STAR under ANY demand rejects; stated inferred extension, not a separate explicit user decision.",
-  "pendingDecision": "How must an uncovered exact FLOW record apply to a broad STAR FLOW input? The closed trace is the reachable witness. No DEMAND demotion, exact-only guard, or new relation payload is silently selected.",
   "proofValidation": {
-    "totalNewTheorems": 58,
+    "totalNewTheorems": 89,
     "method": "For each file, compile its complete source with lake env lean, then compile a temporary source copy with #print axioms for every theorem. Complete output is embedded below.",
     "allowedAxioms": [
       "propext",
@@ -150,18 +155,63 @@
         "forbiddenAxioms": false,
         "auditLogSha256": "8e853e68bb65e28dba08d91c0128623cdb4ef198b2dcd92e6bde45245404aebc",
         "auditOutput": "true\n'DemandImplementationContracts.early_filter_preserves_rows' depends on axioms: [propext]\n'DemandImplementationContracts.early_filter_preserves_decoded_outputs' depends on axioms: [propext]\n'DemandImplementationContracts.slot_round_trip' does not depend on any axioms\n'DemandImplementationContracts.write_preserves_representation' depends on axioms: [propext]\n'DemandImplementationContracts.byte_step_refines_logical_step' depends on axioms: [propext]\n'DemandImplementationContracts.owner_id_injective' does not depend on any axioms\n'DemandImplementationContracts.early_filter_preserves_rows' depends on axioms: [propext]\n'DemandImplementationContracts.early_filter_preserves_decoded_outputs' depends on axioms: [propext]\n'DemandImplementationContracts.early_filter_owner_calls_never_increase' depends on axioms: [propext]\n'DemandImplementationContracts.slot_round_trip' does not depend on any axioms\n'DemandImplementationContracts.zero_array_represents_empty' does not depend on any axioms\n'DemandImplementationContracts.write_preserves_representation' depends on axioms: [propext]\n'DemandImplementationContracts.byte_step_refines_logical_step' depends on axioms: [propext]\n'DemandImplementationContracts.owner_id_injective' does not depend on any axioms\n'DemandImplementationContracts.owner_payload_unchanged' does not depend on any axioms\n'DemandImplementationContracts.invalid_slot_is_not_cached_false' does not depend on any axioms\n'DemandImplementationContracts.checked' does not depend on any axioms\n"
+      },
+      {
+        "file": "spec/lean/proposals/initial-emission/FlowSummaryNormalization.lean",
+        "sha256": "7ab98054295ce8d3a339ee40b3bf15662649673a1ceac6cdcd1913e475470f87",
+        "command": "cd spec/lean && lake env lean proposals/initial-emission/FlowSummaryNormalization.lean",
+        "theorems": [
+          "FlowSummaryNormalization.endpoint_fields_unchanged",
+          "FlowSummaryNormalization.endpoint_normalization_idempotent",
+          "FlowSummaryNormalization.summary_normalization_idempotent",
+          "FlowSummaryNormalization.summary_layer_and_endpoint_data_unchanged",
+          "FlowSummaryNormalization.normalization_preimage_cases",
+          "FlowSummaryNormalization.image_witness_sound",
+          "FlowSummaryNormalization.image_witness_complete",
+          "FlowSummaryNormalization.normalized_c5_image_is_exact",
+          "FlowSummaryNormalization.raw_inside_is_not_the_normalized_image_guard",
+          "FlowSummaryNormalization.normalized_helper_replay_is_correlated",
+          "FlowSummaryNormalization.mixed_demand_keeps_any_and_layer",
+          "FlowSummaryNormalization.current_exact_survives_child_overwrite_normal",
+          "FlowSummaryNormalization.write_normalization_adds_a_false_normal_pair",
+          "FlowSummaryNormalization.annotation_is_new_and_survives_return",
+          "FlowSummaryNormalization.move_keeps_new_annotation",
+          "FlowSummaryNormalization.later_publication_keeps_normal_exclusion_but_run1_demotes",
+          "FlowSummaryNormalization.annotated_normalization_rejects_overwritten_field",
+          "FlowSummaryNormalization.annotated_normalization_keeps_disjoint_field",
+          "FlowSummaryNormalization.annotated_write_cell_has_exact_survivor_relation",
+          "FlowSummaryNormalization.raw_initial_exact_has_empty_E",
+          "FlowSummaryNormalization.literal_exact_cleaner_is_disjoint_but_effect_geometry_is_partial",
+          "FlowSummaryNormalization.guarded_all_below_retains_read_tail_and_demotes",
+          "FlowSummaryNormalization.cleaner_geometry_does_not_change_concrete",
+          "FlowSummaryNormalization.concrete_cleaner_cell_is_unchanged",
+          "FlowSummaryNormalization.remove_all_admission_is_independent_of_named_path",
+          "FlowSummaryNormalization.selected_mark_reach_is_not_restricted",
+          "FlowSummaryNormalization.rejected_below_cleaner_cannot_create_MUST_root_survivor",
+          "FlowSummaryNormalization.whole_position_root_cleaner_kills_FLOW_MUST_and_concrete",
+          "FlowSummaryNormalization.whole_position_named_field_is_admitted_and_cleans_its_subtree",
+          "FlowSummaryNormalization.direct_ancestor_field_effect_does_not_create_NORMAL_EmptyE",
+          "FlowSummaryNormalization.checked"
+        ],
+        "count": 31,
+        "exitCode": 0,
+        "executableTrueCount": 1,
+        "forbiddenAxioms": false,
+        "auditMethod": "Compile complete source followed by #print axioms for every theorem. Complete output follows.",
+        "auditOutput": "true\n'FlowSummaryNormalization.endpoint_fields_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.endpoint_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_layer_and_endpoint_data_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.normalization_preimage_cases' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_sound' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_complete' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_c5_image_is_exact' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_inside_is_not_the_normalized_image_guard' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_helper_replay_is_correlated' depends on axioms: [propext]\n'FlowSummaryNormalization.mixed_demand_keeps_any_and_layer' depends on axioms: [propext]\n'FlowSummaryNormalization.current_exact_survives_child_overwrite_normal' depends on axioms: [propext]\n'FlowSummaryNormalization.write_normalization_adds_a_false_normal_pair' depends on axioms: [propext]\n'FlowSummaryNormalization.annotation_is_new_and_survives_return' depends on axioms: [propext]\n'FlowSummaryNormalization.move_keeps_new_annotation' does not depend on any axioms\n'FlowSummaryNormalization.later_publication_keeps_normal_exclusion_but_run1_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_rejects_overwritten_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_keeps_disjoint_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_write_cell_has_exact_survivor_relation' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_initial_exact_has_empty_E' does not depend on any axioms\n'FlowSummaryNormalization.literal_exact_cleaner_is_disjoint_but_effect_geometry_is_partial' depends on axioms: [propext]\n'FlowSummaryNormalization.guarded_all_below_retains_read_tail_and_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.cleaner_geometry_does_not_change_concrete' depends on axioms: [propext, Quot.sound]\n'FlowSummaryNormalization.concrete_cleaner_cell_is_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.remove_all_admission_is_independent_of_named_path' does not depend on any axioms\n'FlowSummaryNormalization.selected_mark_reach_is_not_restricted' does not depend on any axioms\n'FlowSummaryNormalization.rejected_below_cleaner_cannot_create_MUST_root_survivor' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_root_cleaner_kills_FLOW_MUST_and_concrete' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_named_field_is_admitted_and_cleans_its_subtree' depends on axioms: [propext]\n'FlowSummaryNormalization.direct_ancestor_field_effect_does_not_create_NORMAL_EmptyE' depends on axioms: [propext]\n'FlowSummaryNormalization.checked' depends on axioms: [propext]\n'FlowSummaryNormalization.endpoint_fields_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.endpoint_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_layer_and_endpoint_data_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.normalization_preimage_cases' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_sound' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_complete' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_c5_image_is_exact' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_inside_is_not_the_normalized_image_guard' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_helper_replay_is_correlated' depends on axioms: [propext]\n'FlowSummaryNormalization.mixed_demand_keeps_any_and_layer' depends on axioms: [propext]\n'FlowSummaryNormalization.current_exact_survives_child_overwrite_normal' depends on axioms: [propext]\n'FlowSummaryNormalization.write_normalization_adds_a_false_normal_pair' depends on axioms: [propext]\n'FlowSummaryNormalization.annotation_is_new_and_survives_return' depends on axioms: [propext]\n'FlowSummaryNormalization.move_keeps_new_annotation' does not depend on any axioms\n'FlowSummaryNormalization.later_publication_keeps_normal_exclusion_but_run1_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_rejects_overwritten_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_keeps_disjoint_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_write_cell_has_exact_survivor_relation' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_initial_exact_has_empty_E' does not depend on any axioms\n'FlowSummaryNormalization.literal_exact_cleaner_is_disjoint_but_effect_geometry_is_partial' depends on axioms: [propext]\n'FlowSummaryNormalization.guarded_all_below_retains_read_tail_and_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.cleaner_geometry_does_not_change_concrete' depends on axioms: [propext, Quot.sound]\n'FlowSummaryNormalization.concrete_cleaner_cell_is_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.remove_all_admission_is_independent_of_named_path' does not depend on any axioms\n'FlowSummaryNormalization.selected_mark_reach_is_not_restricted' does not depend on any axioms\n'FlowSummaryNormalization.rejected_below_cleaner_cannot_create_MUST_root_survivor' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_root_cleaner_kills_FLOW_MUST_and_concrete' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_named_field_is_admitted_and_cleans_its_subtree' depends on axioms: [propext]\n'FlowSummaryNormalization.direct_ancestor_field_effect_does_not_create_NORMAL_EmptyE' depends on axioms: [propext]\n'FlowSummaryNormalization.checked' depends on axioms: [propext]\n"
       }
     ]
   },
   "remainingProofs": [
-    "Static-anchor, exact class marker, ZERO, field-E and GROUP adapter projection/image laws.",
-    "Complete abstract EXACT/MUST transfer, native record reversal and application law; uncovered EXACT rule pending.",
-    "Global observation coverage for rejected initial admissions, via existing records or independently retained routes; image completeness alone does not establish this.",
-    "Kotlin-to-model P1 fixed-right filter and P2 graph-provider refinement, verified with differential and pipeline tests."
+    "All nested-write and field-cleaner lowering branches under new EXACT/FLOW E",
+    "All new-tail transfer, C2 adapter and MUST-view laws",
+    "C5 canonical-image integration and returned-piece normalization",
+    "Global observation coverage for rejected admissions; alias closure; full Kotlin differential tests",
+    "P1 fixed-right and P2 graph-provider Kotlin refinement after the selected semantic rewrite."
   ],
   "closedTrace": {
     "path": "docs/reports/data/bidirectional-closed-exact-replay-20261029.json",
-    "sha256": "ebb16956ac21f1f50985ebf3a3668e9c133203f21bbac3c7565f340112a29e8d",
+    "sha256": "5a754f1d9f44260caa16188b1b7b39c54915fb5b5f5eda3cb9ac7ae04d178278",
     "activeNamespace": "RestrictedInitialPolicy.CodeOnlyExactReplay",
     "latestModeledRun": "run-3",
     "activeTheoremCount": 11,
@@ -169,13 +219,14 @@
     "predefinedSummaryCount": 0,
     "customPassRuleCount": 0,
     "presentation": "Per-run annotated code; summary inventories after complete method bodies.",
-    "presentationCheck": "All three listings compile; all 12 method bodies match the original example after comments/whitespace are removed."
+    "presentationCheck": "All three listings compile; all 12 method bodies match the original example after comments/whitespace are removed.",
+    "status": "Historical before summary normalization; corrected behavior is in selectedSummaryNormalization."
   },
   "sourceSHA256": {
-    "docs/design/bidirectional-summary-demand-workload-implementation-20261029.md": "69fa1790db9e5d5a04f64b379bd63a52ac5ad82fd9007d93491b72fc0630242c",
-    "docs/design/bidirectional-exact-flow-replay-trace-20261029.md": "3e674f64d0f6750e9880b38ce0fb4ad19dc9b1b0101a75d04290ec88f8d647d3",
-    "docs/design/bidirectional-one-step-initial-refinement-20261029.md": "537fb250a9e32fe4d587ce42250f0c7d4d755cbb615254bd46c96c8eb16fb20e",
-    "docs/design/bidirectional-next-demand-work-20261029.md": "95b869da61ba812a90485fd6552917a8bdeeb01875e7105e9c29075d124b4d88",
+    "docs/design/bidirectional-summary-demand-workload-implementation-20261029.md": "211679756ade2e0c803b41117e9bfc6e4f108f416946893edc8ac0cf15a7f252",
+    "docs/design/bidirectional-exact-flow-replay-trace-20261029.md": "9095b09a9936ab37721b308eed863702c23e4945a861a942593d01415c9e66eb",
+    "docs/design/bidirectional-one-step-initial-refinement-20261029.md": "290fdf7c8c03843717d151d683db5f1bf43fc00bb9668ab147c29f40078dd986",
+    "docs/design/bidirectional-next-demand-work-20261029.md": "1de8174aedb97318c7bdf27d55708a29827734a50e5b2d69cb9ba30ee46e80c7",
     "spec/impl-proposal-guide.md": "0068a5ea23d3215cab580fc341bbcbfaf64d504920d35d8bf041b166c73ea17a",
     "spec/proof-guide.md": "c51296c2773f7a09bc96e3a4679c0b97610c38baf792b39e0de7ef2bf4787dcd",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": "b0452a5b3d356a20d7f042cd6486976b7c96db28d2cefa663e0c66e76d7ec593",
@@ -184,9 +235,11 @@
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticGuidance.kt": "3e87b5f3df57c55f3ffdfc15dd326985a63175939de3cc3d6acaaab45f9dd30a",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticPairLookup.kt": "3aaa0cb07caf84757f8c589441df96eea708374527650948f1da079a70539f2c",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandResultCoverage.kt": "34242d856b65aa1b11b731c50f693b1f427c85d7c840d00b1bcd2e2c3f546c6b",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RecordStore.kt": "aa6c6a89915d52d049b4e946cf0271ea1a55fa00fab14f162196bc4635f715d2"
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RecordStore.kt": "aa6c6a89915d52d049b4e946cf0271ea1a55fa00fab14f162196bc4635f715d2",
+    "spec/lean/proposals/initial-emission/FlowSummaryNormalization.lean": "7ab98054295ce8d3a339ee40b3bf15662649673a1ceac6cdcd1913e475470f87",
+    "docs/design/bidirectional-flow-summary-normalization-20261029.md": "85e3031a805cd9b781e729b186366868d48990509f89daa135402329c28f32ab"
   },
-  "validationScope": "58 checked theorem declarations in the three support files; five executable true checks. The code-only trace has 11 theorems and its Java listing compiles. No runtime implementation, whole-analyzer proof or performance improvement is claimed.",
+  "validationScope": "89 checked theorem declarations in four support files; six executable true checks. The new normalization file has 31. Historical counterexamples model the rejected unnormalized path. No production or project-run change.",
   "peerReview": {
     "result": "Source-bound corrections applied: canonical Reference.emit plus offer/has/requireFamily; whole-walk coverage return; private GuidanceGeometry member overloads; Groups.kt path; pre-replay cross-premise coverage planning; scalar image vs global no-loss scope; invalid MUST demand/actual guards. No runtime changes."
   },
@@ -195,5 +248,11 @@
     "exitCode": 0,
     "executableCheck": true
   },
-  "traceCorrection": "Separate NORMAL instruction micro-edges from derived result layers. Replace arbitrary ANY-target pass and Pair pass model with real allocation/write/return code. Box summary is inferred, run1 B MAY comes from field limiting, run2 B MAY comes from ancestor native-record replay; no direct helper probe or cross-caller context assumption."
+  "traceCorrection": "Separate NORMAL instruction micro-edges from derived result layers. Replace arbitrary ANY-target pass and Pair pass model with real allocation/write/return code. Box summary is inferred, run1 B MAY comes from field limiting, run2 B MAY comes from ancestor native-record replay; no direct helper probe or cross-caller context assumption.",
+  "selectedSummaryNormalization": {
+    "spec": "docs/design/bidirectional-flow-summary-normalization-20261029.md",
+    "evidence": "docs/reports/data/bidirectional-flow-summary-normalization-20261029.json",
+    "sha256": "341090b645b786087f6820ea039c7c7a86f31740d09dbb3d23a85b63b3d26dad",
+    "uncoveredExactReplayDecision": "Resolved by canonical STAR summary storage, preserving write E. No exact FLOW summary replay."
+  }
 }

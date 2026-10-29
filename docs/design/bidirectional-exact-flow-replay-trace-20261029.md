@@ -1,5 +1,11 @@
 # Exact FLOW replay: facts inside the code
 
+Status: historical regression **before** the selected
+[FLOW summary normalization and write-exclusion update](bidirectional-flow-summary-normalization-20261029.md).
+The stored EXACT rows below describe the rejected path. With normalization,
+run-2 stores STAR summaries and run-3 preserves h. Point-query EXACT facts
+remain part of the selected design.
+
 Date: 29 October 2026. Source reviewed: `036b4569a`.
 Latest modeled iteration: **run-3**. Field limits: `1,1,2`. FULL marks.
 This is the proposed abstract EXACT domain with the current exact-target
