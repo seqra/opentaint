@@ -22,6 +22,12 @@ except ImportError:
 ASPROF = Path('/home/sobol/.local/opt/async-profiler-4.5-linux-x64/bin/asprof')
 
 
+def heap_memory(value):
+    if not re.fullmatch(r'[1-9][0-9]*[mMgG]', value):
+        raise argparse.ArgumentTypeError('Use a positive heap size such as 16g or 8192m')
+    return value.lower()
+
+
 def analyzer_jvm_args(args, directory, side, memory):
     values = [f'-Xmx{memory}', '-Dorg.opentaint.ir.impl.storage.defaultBatchSize=2000',
               '-Djdk.util.jar.enableMultiRelease=false', '-XX:FlightRecorderOptions=stackdepth=256',
@@ -333,6 +339,8 @@ def main():
                         help='Select run-1 mark precision in the analyzer JVM; later runs remain FULL')
     parser.add_argument('--field-limit-schedule', choices=['REPEAT_RUN1', 'RUN_INDEX'], default='REPEAT_RUN1',
                         help='Use limits 1,1,2,... (default) or the experiment 1,2,3,...')
+    parser.add_argument('--heap-memory', type=heap_memory,
+                        help='Override only analyzer JVM heaps for the selected projects, e.g. 16g')
     args = parser.parse_args()
     for name in ('main', 'current', 'test', 'output'):
         setattr(args, name, getattr(args, name).resolve())
@@ -343,6 +351,9 @@ def main():
         'thingsboard': {'model': str(args.test / 'opentaint-test-thingsboard/opentaint-project/project.yaml'), 'memory': '12g', 'timeout': 1080, 'outer_timeout': 1200},
         'Stirling-PDF': {'model': str(parent / 'e2e-root/model-Stirling-PDF/project.yaml'), 'memory': '8g', 'timeout': 1080, 'outer_timeout': 1200},
     }
+    if args.heap_memory is not None:
+        for config in configs.values():
+            config['memory'] = args.heap_memory
     for project in args.projects:
         for side in args.sides:
             run(args, project, side, configs[project])
