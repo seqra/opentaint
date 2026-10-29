@@ -53,3 +53,4 @@ import DirectedAlias.Sound.HavocRecency.Soundness
 import DirectedAlias.Sound.HavocRecency.Examples
 import DirectedAlias.Opt.HavocRecency
 import DirectedAlias.Sound.HavocRecency.ExamplesK1
+import DirectedAlias.Order

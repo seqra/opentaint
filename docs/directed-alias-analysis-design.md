@@ -1,6 +1,6 @@
 # Directed alias analysis for the JVM: design proposal
 
-Status: proposal. Base: main `f945f92c5`. The formal model `formal/directed-alias/` (Lean 4, constructive) and the probe suite `DirectedAliasProbeTest` are not committed yet. Step P0 commits the probe suite, and step P0a commits the model and this document (§10.2).
+Status: proposal. Base: main `f945f92c5`. The formal model `formal/directed-alias/` (Lean 4, constructive) and the probe suite `DirectedAliasProbeTest` are not committed yet. Step P0 commits the probe suite, and step P0a commits the model and this document (§10.2). The user decided seven of the thirteen decisions on 2026-10-29 (§12).
 
 ## Conventions
 
@@ -44,7 +44,9 @@ This document uses one term for each concept. Prose uses the term in the first c
 | constant origin | One origin for each box type, class literal or string value (§7.5). | none | `BOX_CONST`, `CLASS_CONST`, `STRING_CONST`, `SITE_CONST` |
 | holder | A variable, or a heap cell `(o, c)` of origin `o` and cell `c`. | `Key` (`v x`, `h o c`) | `VarId`, `HeapKey` |
 | points-to set `pts(p)` | The origins that the access path `p` may hold. | `aevalPath` | `valueOf`, `load` |
-| may-alias, `p ~ q` | `pts(p) ∩ pts(q) ≠ ∅`. | `may` | `findAlias` |
+| congruence `≡` | A reflexive, symmetric and transitive relation with `x ≡ y ⇒ x.f ≡ y.f`. The DSU keeps one (§1.7). | `DMay` | DSU partition |
+| order `p ⊒ q` | `pts(p) ⊇ pts(q)`: `p` may hold each object that `q` may hold. The edge `p → q` of the task notation. A congruent order: reflexive, transitive, congruent (`p ⊒ q ⇒ p.f ⊒ q.f`), and antisymmetric on nodes (§1.7). | `Above`, `aboveB` | the node DAG of `NodeTable` |
+| may-alias, `p ~ q` | `pts(p) ∩ pts(q) ≠ ∅`: one origin is below `p` and `q` in the order. Derived, not stored (§1.7). | `may` | `findAlias` |
 | false alias | A may-alias that no execution (or pair of executions) has. | `NoCrossAlias` | — |
 | one-execution alias | One execution makes `p` and `q` the same object. | `CAlias` | — |
 | cross-execution alias | `p` at the end of one execution and `q` at the end of a second execution are the same object. | `CAliasX` | — |
@@ -56,7 +58,7 @@ This document uses one term for each concept. Prose uses the term in the first c
 | group | A class of the DSU partition. | node | DSU set |
 | strong update, weak update | A store that replaces the content of a cell; a store that adds to it. | `setCell`, `weakStore` | `store`, `storeWeak` |
 | unique origin | An origin that denotes at most one live object in one state. | `uniqueB`, `uniqueR` | `isUnique` |
-| strong-update policy `entryUnique` | `true`: symbolic origins of entry paths and of once-site results are unique. `false`: only allocation origins of once sites (and `alloc-new`) are unique (§3.2). | `Ctx.entryUnique`, `eu` | `DirectedAliasPolicy.entryUnique` |
+| strong-update policy `entryUnique` | `true` (the default, D1): symbolic origins of entry paths and of once-site results are unique. `false`: only allocation origins of once sites (and `alloc-new`) are unique (§3.2). | `Ctx.entryUnique`, `eu` | `DirectedAliasPolicy.entryUnique` |
 | entry root | `this`, an argument, or a static root at method entry. | `Base.root r` | `ROOT_THIS`, `ROOT_ARG`, `ROOT_STATIC` |
 | unresolved call | A call that the analysis does not inline. | `call s args` | `Stmt.Call` without a resolved callee |
 | A2-wide | Concrete call semantics: one call can write one new object into many cells (§3.1). | `Havoc`, `Exec` | — |
@@ -72,6 +74,8 @@ This document uses one term for each concept. Prose uses the term in the first c
 | change bit | The result bit of an O join: true if the state grew. | `joinO_flag` | `Joined.changed` |
 | exactness certificate | A check on the abstract states that puts a program in the certified store scope (§4.7). | `bcert` | `DirectedAliasStats.exactMethods` |
 | flip | The `directed` answer of a probe differs from its `today` answer. | — | — |
+| alias answer volume | The number and the length of the alias paths that the queries report, for one query, one method or one project. The taint analysis copies one fact for each reported path (R0). | none | `AliasVolumeStats` |
+| shadow mode | Mode `SHADOW`: both engines run, the consumers get the DSU answers, and the statistics compare the two answers of each query (P9a). | none | `AliasAnalysisMode.SHADOW`, `AliasShadowStats` |
 
 Technical verbs: **intern** (find the id of a set in the node table, or add the set); **memoize** (store a result under its inputs); **retire** (rename `alloc-new(s)` to `alloc-old(s)`, §4.2); **havoc** (apply the effect of an unresolved call).
 
@@ -83,15 +87,15 @@ Technical verbs: **intern** (find the id of a set in the node table, or add the 
 | CK1-CK13 | Contract items of the alias API | §8.1 |
 | CS1-CS8 | JVM consumers of the alias analysis | §8 |
 | CX1-CX7 | Counterexamples at the completeness boundary | §4.8 |
-| D1-D10 | Decisions for the user | §12 |
+| D1-D13 | Decisions for the user | §12 |
 | F1-F9 | Lean follow-ups | §11.4 |
 | G-JVM, G-CORE, G-QL, G-ROOT, G-LEAN | Test gates | §10.2 |
 | L0-L4 | Test layers | §10.1 |
 | M1-M8 | Consumer changes | §8.2 |
-| P0-P13 | Implementation steps (one pull request each), with P0a and P0b | §10.2 |
+| P0-P13 | Implementation steps (one pull request each), with P0a, P0c and P9a | §10.2 |
 | PL1-PL7, U1-U4, LT1 | DSU defects: precision losses, unsound defects (U1 has shapes U1.a1-U1.a4), one latent defect | §2.3 |
 | PS1-PS13 | Probe scenarios | §2.2, Appendix B |
-| R1-R16 | Risks | §11.1 |
+| R0-R16 | Risks | §11.1 |
 
 ### Abbreviations and projects
 
@@ -112,43 +116,48 @@ Technical verbs: **intern** (find the id of a set in the node table, or add the 
 | fastutil | A Java library of collections for primitive types. |
 | tms | A Java project of the end-to-end suite (`opentaint-test/opentaint-test-tms`, a checkout next to this repository). One scan takes about 37 s. It is the standard check for changed findings. |
 | Conductor | Netflix Conductor, a large Java workflow engine in the end-to-end suite (`opentaint-test/opentaint-test-conductor`). Its scan is memory bound at 8 GB. |
-| thingsboard | ThingsBoard, a large Java IoT platform in the end-to-end suite (`opentaint-test/opentaint-test-thingsboard`). Its scan is memory bound at 8 GB. |
+| thingsboard | ThingsBoard, a large Java IoT platform in the end-to-end suite (`opentaint-test/opentaint-test-thingsboard`). Its scan is memory bound at 8 GB. With a fix of the DSU defects of main, the number of taint facts explodes and the scan runs out of memory fast (user report, R0). So it is the first project of each volume measurement. |
 | dataflowbench | `BrokkAi/dataflowbench`, a public data-flow benchmark with an OpenTaint adapter. It has 58 Java and 58 Kotlin assertions. |
 
 ---
 
 ## 0. Summary
 
-**Problem.** Today, the JVM local alias analysis is a disjoint-set union (DSU) with congruence closure. A DSU state is a partition, so its alias relation is transitive. Assignments have a direction, and the DSU loses it (§1).
+**Problem.** Today, the JVM local alias analysis is a disjoint-set union (DSU). It keeps a congruence (symmetric, transitive, `x ≡ y ⇒ x.f ≡ y.f`), so it loses the direction of `a = x`: it merges `a` and `x`, and transitivity then merges `x` and `y` (§1). The analysis needs a congruent order `⊒`. `a ⊒ x` means "`a` may hold each object that `x` may hold". May-alias is derived from the order and is not transitive (§1.7).
 
-**Decision.**
+**Design.**
 
-1. Replace the DSU with concept C: points-to sets keyed by origin. May-alias is set intersection (§4).
-2. Implement C as optimization O: hash-consed origin-set nodes with a union memo (§5).
-3. Answer queries with a backward search over a lazy reverse index (§6).
-4. Use two CEGAR steps: recency for allocation sites in loops, and per-cell havoc origins for unresolved calls (§1.7).
-5. Ship the engine behind the mode switch `aliasAnalysisMode = DSU | DIRECTED`. The default stays `DSU` until the gates of §11.2 pass.
+1. Concept C: points-to sets keyed by origin. The order is set inclusion; may-alias is set intersection (§4).
+2. Optimization O: hash-consed origin-set nodes with a union memo (§5).
+3. Queries: a backward search over a lazy reverse index (§6).
+4. Two CEGAR steps: recency for loop allocation sites, per-cell havoc origins for unresolved calls (§1.8).
+5. The mode switch `aliasAnalysisMode = DSU | SHADOW | DIRECTED`, default `DSU` (D7). In `SHADOW`, the taint analysis gets the DSU answers, and statistics compare both answers (§10.2).
 
 **Results.**
 
 | Area | Result | Status |
 |---|---|---|
-| Soundness | Each one-execution alias is a may-alias of C, for each K and both policies, with and without recency, under A1-A3 (§4.5). This is mode `SHARED` under A2-wide. Mode `PER_CELL` is sound under A2-strict, without recency (`csoundH`) and with recency (`csoundHR`, the default policy) (§4.9). | proved |
-| Completeness | C is exact in two checkable scopes without loops and calls: the store-free core and certified stores (§4.7). In both scopes, a computable search gives the witness pair of executions (`crossWitness`, `witness_core`, `witness_store`). | proved |
-| Partition limit | No sound transitive relation separates `x` and `y` in the task example. No DSU can be exact (§1.5). | proved |
-| DSU defects | 4 unsound defects (U1-U4), 1 latent defect (LT1), 7 precision losses (PL1-PL7) (§2.3). | proved, measured |
-| O ≡ C | O and C give the same may-alias answers for the variables of the program and the frame: with and without recency, and with per-cell havoc with and without recency (§5.5, §4.9). | proved |
-| Cost | On three program families, O is linear where C is a product or exponential (§5.6; state size counts map entries only). Cost relative to the DSU: §5.8. | proved; argued |
+| Order | The stored relation is a congruent order; may-alias is derived (§1.5, §1.7). | proved |
+| Soundness | Each one-execution alias is a may-alias under A1-A3: `SHARED` under A2-wide, `PER_CELL` under A2-strict (§4.5, §4.9). | proved |
+| Completeness | Exact in two scopes without loops and calls, with computable witnesses (§4.7). | proved |
+| DSU defects | U1-U4 (unsound), LT1 (latent), PL1-PL7 (precision) (§2.3). | proved, measured |
+| O ≡ C | Equal answers for each combination of recency and havoc mode (§5.5). | proved |
+| Cost | O is linear where C is a product or exponential on three families (§5.6, §5.8). | proved; argued |
 | Audit | No `Classical`, no `sorryAx`, no `ofReduceBool` (Appendix A). | checked |
 
 **Limits.**
 
-1. Entry aliasing breaks each local analysis that separates entry roots. The DSU has the same limit (§3.3).
-2. Loops and calls are in no completeness scope (§4.8).
-3. The default policy (recency with per-cell havoc) is proved sound only under A2-strict: a callee does not write one object into two cells (§4.9). Under A2-wide, mode `SHARED` is the proved mode.
-4. The node table can hold Θ(m²) set elements on a join chain of m allocations (§5.7).
+1. Alias answer volume (R0). The taint analysis copies one fact for each reported alias path. On main, the call drop and the cache truncation limit this volume by accident. A fix of either explodes the fact count, and thingsboard runs out of memory fast (user report). The directed engine removes both limits; its non-transitive answers are smaller. The net volume is unknown and is the first gate (§11.2, D11).
+2. Entry aliasing: A1 is an accepted precondition, and strong updates on entry roots can lose aliases (D1, §3.3).
+3. Loops and calls are in no completeness scope (§4.8). The default policy is proved sound only under A2-strict (§4.9).
+4. The node table can hold Θ(m²) set elements on a join chain (§5.7).
 
-**Decisions.** §12 gives ten decisions for the user (D1-D10). For each decision, it gives the options, a recommendation and the evidence.
+**Decisions** (§12):
+
+| Status | Decisions |
+|---|---|
+| Decided by the user (2026-10-29) | D1 (`entryUnique = true`), D2 (no alias drop at unresolved calls), D5 (must-alias postponed), D6 (copy the helpers), D7 (mode switch), D12 (inlining depth 1 stays), D13 (the DSU of main stays unchanged). |
+| Open until the spec revisit | D3 (recency), D4 (depths K, D), D8 (state container), D9 (unknown-origin signal), D10 (`cantMutateAliasedHeap()`), D11 (volume control), and the havoc-origin form of D2. |
 
 ---
 
@@ -172,7 +181,7 @@ No execution makes `x == y` (proved: `join_x_y_none`, Examples.lean). The DSU sa
 
 ### 1.2 Directed graph view
 
-Concept C keeps a directed graph. An edge goes from a holder to each origin that the holder may hold. A copy `a = x` adds the edges of `x` to `a`. In the notation of the task, `a -> x` means `pts(a) ⊇ pts(x)` after the copy.
+Concept C keeps a directed graph. An edge goes from a holder to each origin that the holder may hold. A copy `a = x` adds the edges of `x` to `a`. In the notation of the task, `a -> x` means `pts(a) ⊇ pts(x)` after the copy. This is the order `a ⊒ x` of §1.7.
 
 Task example, after the join:
 
@@ -184,7 +193,7 @@ Task example, after the join:
     y  ───────────►  oy
 ```
 
-`pts(x) ∩ pts(a) = {ox}`: alias. `pts(a) ∩ pts(y) = {oy}`: alias. `pts(x) ∩ pts(y) = ∅`: no alias. The relation is symmetric and not transitive.
+`pts(x) ∩ pts(a) = {ox}`: alias. `pts(a) ∩ pts(y) = {oy}`: alias. `pts(x) ∩ pts(y) = ∅`: no alias. The may-alias relation is symmetric and not transitive. The order `⊒` under it is transitive (§1.7).
 
 ### 1.3 Field example
 
@@ -266,18 +275,55 @@ Measured: probe rows 3 and 4. Proved: `field_precision_loss` (DSU/Examples.lean)
 | The DSU answer is symmetric, transitive and a congruence. It is reflexive on each variable that has a group. | proved | `DMay.refl`, `DMay.symm`, `DMay.trans`, `DMay.ext` (DSU/Props.lean) |
 | No DSU state and no program give `x ~ a`, `a ~ y` and not `x ~ y`. | proved | `dsu_never_directed`, `dsuMay_never_directed` (DSU/Props.lean) |
 
-Consequence: a better DSU cannot fix the task example. The relation must not be transitive.
+Consequence: a better DSU cannot fix the task example. The may-alias relation must not be transitive. The stored relation stays transitive and congruent, but it is an order, not a congruence (§1.7).
 
 ### 1.6 Goal
 
 | Goal | Measure |
 |---|---|
-| Precision | Non-transitive may-alias. Exact across executions in the largest checkable scope. |
+| Precision | Non-transitive may-alias, derived from a transitive congruent order (§1.7). Exact across executions in the largest checkable scope. |
 | Soundness | Sound under A1-A3 (§3) for each program of the IR. |
 | Efficiency | Join and fixpoint test by node ids. Query cost bounded by output size times depth. State size relative to the DSU: measured in L4 (§5.8, §11.2). |
 | Separation | Concept C and optimization O are separate. O is proved equal to C. |
 
-### 1.7 Method
+### 1.7 The relation the analysis keeps
+
+Today, the DSU keeps a congruence `≡`. The analysis needs a congruent order `⊒`. Both relations are transitive and congruent. The difference is symmetry against antisymmetry.
+
+| Property | DSU: congruence `≡` | Needed: congruent order `⊒` | Lean theorem |
+|---|---|---|---|
+| Reflexive | `x ≡ x`, for each variable that has a group | `p ⊒ p` | `DMay.refl` (DSU/Props.lean); `above_refl` |
+| Symmetric | `x ≡ y ⇒ y ≡ x` | no: `a ⊒ x`, but not `x ⊒ a` | `DMay.symm`; `join_order` |
+| Antisymmetric | no: a symmetric relation that is antisymmetric is equality | on O nodes: `u ⊒ v` and `v ⊒ u` ⇒ `u = v` | `symm_antisymm_eq`; `node_antisymm` |
+| Transitive | yes | yes | `DMay.trans`; `above_trans` |
+| Congruent | `x ≡ y ⇒ x.f ≡ y.f` | monotone: `a ⊒ x ⇒ a.f ⊒ x.f`, for each path | `DMay.ext`; `aread_mono`, `aevalFrom_mono`, `path_mono` |
+| Store `a.f = z` | a union of groups | writes down the order: each `x ⊑ a` reads `z` at `f` | `store_down`, `weak_cell`, `strong_cell` |
+| May-alias | the relation itself; transitive | derived: one origin below both paths; symmetric, not transitive | `dsu_never_directed`; `may_iff_common_lower`, `may_of_above`, `may_symm`, `may_not_transitive` |
+
+The new theorems of this table are in `Order.lean` (namespace `DirectedAlias.Order`). The other theorems are in the files of §1.5 and §4.4.
+
+Definition. In concept C, `p ⊒ q` if `pts(p) ⊇ pts(q)`: "`p` may hold each object that `q` may hold" (Lean `Above`; `aboveB` decides it, `aboveB_iff`). The edge `a → x` of the task notation is `a ⊒ x`. `x ⊑ a` is the same fact. Concept C realizes the order as inclusion of points-to sets.
+
+Antisymmetry. On variables and paths, `⊒` is a preorder: two variables can hold the same set and stay two variables. O interns each set as one canonical node (§5.2). On nodes, `⊒` is antisymmetric: two nodes that are above each other are one node (`node_antisymm`, from `Tbl.id_inj`). So variables with the same node hold the same set.
+
+Writes go down the order. A store through `a` writes the cell of each origin of `pts(a)`. Each `x ⊑ a` that holds an origin then reads at least the stored value in that cell. This holds for a strong store and for a weak store (`store_down`). In the field example: after `a.f = z`, `x.f` and `y.f` both alias `z`.
+
+May-alias is derived, not stored. `p ~ q` if one origin `o` is below both paths: `p ⊒ {o}` and `q ⊒ {o}` (`may_iff_common_lower`). If `p ⊒ q` and `q` holds an origin, then `p ~ q` (`may_of_above`). The stored order is transitive and congruent. The derived may-alias is symmetric (`may_symm`) and not transitive (`may_not_transitive`): `x ⊑ a ⊒ y` gives `x ~ a` and `a ~ y`, but `x` and `y` have no common lower origin.
+
+The order is a relation of one state. A copy or a strong store can remove a pair from it: after `a = w`, `a` is not above `x` (`field_order`).
+
+Why the DSU cannot keep it. The DSU relation is symmetric. A symmetric relation that is also antisymmetric relates only equal elements (`symm_antisymm_eq`). So the DSU can record `a ⊒ x` only as `a ≡ x`: it merges `a` and `x`. In the task example, transitivity then merges `x` and `y` (`partition_sound_merges_x_y`, `transitive_sound_relates_x_y`, §1.5).
+
+Examples (Order.lean, on the programs of Examples.lean):
+
+| Example | State | Order facts | Theorem |
+|---|---|---|---|
+| Task | after `if (c) a = x; else a = y;` | `a ⊒ x` and `a ⊒ y`. `x` and `y` are not ordered. `x` is not above `a`. | `join_order` |
+| Field | after the join, `a.f = z; a = w` | `x.f ⊒ z` and `y.f ⊒ z`. `a` is above neither `x` nor `y`. `x` and `y` are not ordered. | `field_order` |
+
+O keeps the order as a DAG of nodes (§5.1). A union node keeps its two children, so each DAG edge is a pair of the order.
+
+### 1.8 Method
 
 The work used this order. Each phase has a gate.
 
@@ -302,7 +348,7 @@ Design bugs of the new design. The Lean model, a hand evaluation of its definiti
 |---|---|---|---|
 | The fixpoint test is "state equal to the old state". | The transfer is not monotone (`astep`: a store with `pts(x) = ∅` against `{o}`). A copy-on-write add and remove gives a new object with equal content. | The change bit of the join is the signal (`joinO_flag`). | §7.10 |
 | One site havoc origin for each call. | `pHv`: a value loaded after a call may-aliases each outer path. | Per-cell havoc origins under A2-strict. | §4.9 |
-| `entryUnique = true` is sound. | Entry aliasing: `skip_unsound`, `write_read_unsound`, `swap_strong`. | Document A1. Default `entryUnique = false` (D1). | §3.3 |
+| `entryUnique = true` is sound. | Entry aliasing: `skip_unsound`, `write_read_unsound`, `swap_strong`. | Document A1 as a precondition of the intra-procedural analysis. The user keeps the default `entryUnique = true` and accepts the loss (D1). | §3.3 |
 | "Each strong store is exact." | CX4, CX5 (`corr_none`, `strongTwo_none`); null blocking CX3 (`block_none`). | Certified store scope with null kinds. | §4.7, §4.8 |
 | K = D. | `deep(b)` holds itself in each cell. After a long list walk the query output is `\|cells\|^D`. | K ≥ D + 1, and the search never expands a self edge of a deep origin. | §6.2, §6.4 |
 | A flat CFG worklist with accumulating loop heads. | Nested loops with strong stores: the inner head keeps stale entry states. | Recursive WTO iteration; new state arrays for each callee evaluation. | §7.10 |
@@ -313,6 +359,8 @@ Design bugs of the new design. The Lean model, a hand evaluation of its definiti
 ---
 
 ## 2. The DSU on main
+
+Status (D13, decided by the user). This section documents the defects of the DSU. The design does not fix them on main. The DSU of main stays as it is, and it is the A/B baseline. The user: "The issues are known, but we don't land the fix. The problem is the analyzer itself: after any of the fixes the AA starts producing way more alias chains, resulting in analysis explosion." So the call drop (U2) and the cache truncation (§8.5) also limit the alias answer volume by accident (R0, §11.1).
 
 ### 2.1 Model
 
@@ -409,7 +457,7 @@ Notes:
 
 - U2 depends on the IR shape (measured). If the code uses an argument directly (`arg$0`), an unrelated call keeps its heap aliases. If the code first copies the argument to a local, the call removes them (row 24). One program meaning gives two answers. U2 also removes final fields of arguments (row 25).
 - U4 needs a dead copy right before the load. JIR keeps the left side alive at its own statement. So `x` is still the root of the group of `p`. `evalHeapLoad` computes the instance before it removes `x`. With pure partition semantics the DSU is sound here (`repr_partition_ok`). The root choice is the cause.
-- Main also has a query-order defect outside the analysis: the conversion cache key has no depth, so heap chains can be cut (§8.5).
+- Main also has a query-order defect outside the analysis: the conversion cache key has no depth, so heap chains can be cut (§8.5). It is not fixed (D13). Step P0c counts the cut conversions (§10.2).
 
 ### 2.4 The strong-update guard (U1)
 
@@ -450,7 +498,9 @@ Known cases where dominance fails. Each case has a theorem or a computed example
 | The origin depth K of C | K = 1, `x.f.f ~ x.f.f.f` | `deep_concept_imprecise` (DSU/Examples.lean) | K ≥ D + 1 (D4). |
 | The origin depth K of C, list walk | `cur = head; while (c) cur = cur.next;`, a walk longer than K | argued: `deep(head)` holds itself in each cell (`adefault`, Concept.lean) | The search rule of §6.2. |
 
-On a root store, C with `entryUnique = true` is more precise than the DSU: `root_concept_more_precise`.
+On a root store, C with `entryUnique = true` (the default policy, D1) is more precise than the DSU: `root_concept_more_precise`.
+
+Volume. Where dominance holds, each directed answer is a subset of the DSU answer, so it adds no alias volume (R0, §11.1). This is proved only for the heap-free fragment (`dsu_dominates_heapFree`).
 
 ---
 
@@ -489,7 +539,7 @@ Other properties of the concrete semantics:
 | Parameter | Meaning | Lean |
 |---|---|---|
 | K | Origin depth: `sym(b, q)` with `\|q\| ≤ K`, else `deep(b)`. | `Ctx.K`, `symOrDeep` |
-| `entryUnique` | Strong-update policy for symbolic origins. `true` (A1): unique entry paths and unique once-site results get strong updates. `false`: only allocations of once sites (and `alloc-new`) get strong updates. `false` is the intended policy of the DSU for outer bases. The measured DSU also strong-updates constructor `this` and summary sites (U1, §2.4). | `Ctx.entryUnique` (Concept.lean) |
+| `entryUnique` | Strong-update policy for symbolic origins. `true` (A1; the default, decided by the user, D1): unique entry paths and unique once-site results get strong updates. `false`: only allocations of once sites (and `alloc-new`) get strong updates. `false` is the intended policy of the DSU for outer bases. The measured DSU also strong-updates constructor `this` and summary sites (U1, §2.4). | `Ctx.entryUnique` (Concept.lean) |
 | recency | Two origins for each allocation site: the most recent object and all older objects. | Sound/Recency/Concept.lean |
 | D | Query depth: the number of accessors of a reported path. | `findAlias D` (Opt/Query.lean) |
 
@@ -497,16 +547,16 @@ K and D are different limits. K bounds the origin universe. D bounds the output 
 
 ### 3.3 Entry aliasing
 
-A1 is a real restriction. The model shows that no local analysis can remove it.
+A1 is a real restriction. The model shows that no local analysis can remove it. The user accepts A1 as a precondition of the intra-procedural analysis (D1, decided by the user): "We may lose some aliases, but it is acceptable. We remain intra-proc." So the default is `entryUnique = true`. The theorems below document the accepted loss.
 
 | Claim | Status | Theorem (Sound/EntryAlias.lean) |
 |---|---|---|
 | The empty program aliases `x` and `y` if both are one root. Both policies answer no. | proved | `skip_unsound` |
 | `x.f = z`: `y.f` aliases `z`. Both policies answer no. The missing alias is on the **read** side, so weak stores do not help. | proved | `write_read_unsound` |
-| `swapFields(box, box)` aliases the two values. The policy `entryUnique = true` answers no (unsound). The policy `false` answers yes, because the kept old value is the entry value. | proved | `swap_alias`, `swap_strong`, `swap_weak` |
+| `swapFields(box, box)` aliases the two values. The default policy `entryUnique = true` answers no (unsound; the accepted loss of D1). The policy `false` answers yes, because the kept old value is the entry value. | proved | `swap_alias`, `swap_strong`, `swap_weak` |
 | On the exact concrete frame of the execution (`frC`), both policies answer yes. | proved | `write_read_quotient`, `swap_quotient` |
 
-Result: without caller information, no local analysis that separates two entry roots is sound under entry aliasing. Both policies are unsound there. The policy `true` also loses aliases that the policy `false` keeps (`swap_strong`, `swap_weak`). No theorem orders the two policies in general.
+Result: without caller information, no local analysis that separates two entry roots is sound under entry aliasing. Both policies are unsound there. The default policy `true` also loses aliases that the policy `false` keeps (`swap_strong`, `swap_weak`). No theorem orders the two policies in general. The user accepts this loss (D1). The policy `false` stays a policy value for an A/B check. Under A1, the soundness theorems hold for both policies (§4.5), and the completeness theorems use the default value `true` (§4.7).
 
 The Lean quotient result needs the **exact** concrete root partition (`frC`). A caller partition that is only a may-partition (roots that are equal in some calls) makes a merged root denote two objects. Such a root is not unique. Use weak stores on merged roots, or analyze one time for each exact partition. This extension is not proved. The DSU has the same limit, because it also separates distinct arguments (argued).
 
@@ -515,10 +565,10 @@ The Lean quotient result needs the **exact** concrete root partition (`frC`). A 
 | Item | Status | Reason |
 |---|---|---|
 | Exceptions | out of the Lean model | A null dereference blocks. The engine joins the states before and after each thrower on catch edges (§7.10), and gives the catch variable a fresh symbolic origin (§7.5). Both rules are argued. |
-| Inlining of callees | out of the Lean model | Production uses inlining depth 1. An inlined callee body is ordinary IR, so C applies to it (argued). §7.7 gives the design. |
+| Inlining of callees | out of the Lean model | Production uses inlining depth 1, and the directed engine keeps it (D12, decided by the user: "we keep inlining"). An inlined callee body is ordinary IR, so C applies to it (argued). §7.7 gives the design. |
 | Callee-made aliasing of existing objects | out | A2 allows only new havoc objects. Example: an unresolved `m(x, y) { x.f = y; }`. The IFDS taint analysis covers a resolved callee through its own summary, and a library callee through its pass-through rules (argued). §9.1 lists the effect. |
 | One new object in two cells | out under A2-strict | §3.1. Mode `SHARED` covers it. |
-| Entry aliasing | out | §3.3. |
+| Entry aliasing | out | §3.3. The user accepts the loss (D1). |
 | Static roots and A1 | out | A static path and an argument (or `this` of a singleton) can be one object at entry. This breaks A1 more often than argument aliasing does. |
 | Concurrency | out | Other threads can write shared cells between statements. Strong stores assume one thread. |
 | Static initializers | out | A first static access can run `<clinit>`. It is not modelled as a call. |
@@ -629,7 +679,7 @@ Statement (`CSound K`, Concept.lean):
 
 | Theorem | Statement | File |
 |---|---|---|
-| `csound K` | `CSound K` for each K (`entryUnique = true`). | Sound/Soundness.lean |
+| `csound K` | `CSound K` for each K (`entryUnique = true`, the default policy). | Sound/Soundness.lean |
 | `csoundE eu K ...` | The same for both policies (`mayProgE eu`). | Sound/Soundness.lean |
 | `csoundR eu K ...` | The same with recency, both policies (`mayProgR eu`). | Sound/Recency/Soundness.lean |
 | `csoundH src eu K ...` | Mode `PER_CELL` without recency (`mayProgH eu`): each one-execution alias under A2-strict (`CAliasS src`), for each tag naming `src`, is a may-alias. Both policies. | Sound/Havoc/Soundness.lean |
@@ -723,7 +773,7 @@ The certificate `bcert` runs with the analysis:
 | `pre_in_scope` | `x.f = z; if (*) a = x else a = y; t = a.f` is certified. | Sound/StoreExamples.lean |
 | `field_rejected` | The certificate rejects the field example (`a.f = z` through two origins is weak). | Sound/StoreExamples.lean |
 
-The completeness theorems use the policy `entryUnique = true`. Completeness of recency is not proved. With the default `entryUnique = false`, the store-free core does not depend on the policy, because it has no store (argued). The certified store scope then accepts only stores on unique allocation origins (argued).
+The completeness theorems use the policy `entryUnique = true`. This is the default policy (D1), so the theorems cover the default value of `entryUnique`. Completeness of recency is not proved (F9 would carry the theorems to recency when each site is once). With the A/B value `entryUnique = false`, the store-free core does not depend on the policy, because it has no store (argued). The certified store scope then accepts only stores on unique allocation origins (argued).
 
 Witnesses. Each example witness is an explicit choice list (the branch choices of one execution). The executor `runFrom` runs it, and `decide` checks the result (`runAliasB_sound`, Concrete.lean). For example, `field_xf_z_witness` is `runAliasB_sound (cs := [.left]) (by decide)`. Executable witnesses for the completeness theorems (Sound/Witness/). The theorems above conclude a Prop-level `∃`, which Lean cannot run. So the model adds a computable search `crossWitness fr p x px y py`. It tries every choice list of a loop-free, call-free program and every concrete path that abstracts to the query paths, with array indices below a fixed bound. It returns the first pair of executions that aliases the two paths. `crossWitness_sound`: each result is a cross-execution alias. `crossWitness_complete`: for each loop-free, call-free program, each cross-execution alias makes the search succeed, so `crossWitness_none_iff` decides `NoCrossAlias`. `witness_core` and `witness_store`: in the core scope and in the certified store scope, `mayProg = true` makes the search succeed. `coreWitness` and `storeWitness` return the witness as a value (`coreWitness_spec`, `storeWitness_spec`). `oneWitness` is the same search for one-execution aliases (`oneWitness_sound`, `oneWitness_complete`). Example: on `pJoin`, the search returns the choice lists `[left]`, `[left]` for `a ~ x`, and `none` for `x ~ y`. Loops and calls are outside the search; it then returns `none`, which stays sound.
 
@@ -822,7 +872,7 @@ Status: proved. The theorems are in Sound/Havoc/, Sound/HavocRecency/, Opt/Havoc
 | A more precise rule for havoc-derived holders: the new object goes into the tree of its holder, with no new origin | none. The proved rule is the model rule of the Key row; §7.6 uses it. | open (F1) |
 | Completeness for calls | none | open (F6) |
 
-Effect: on `pHv`, `a ~ b`, `a ~ z.f` and `a ~ w.g` become false. The old content of each cell stays, so the fix of U2 stays. This is decision input to D2 (§12).
+Effect: on `pHv`, `a ~ b`, `a ~ z.f` and `a ~ w.g` become false. The old content of each cell stays, so the fix of U2 stays. The user decided that the may analysis keeps the old content (no alias drop, D2). Per-cell havoc is the proposed havoc-origin form of D2. The user confirms the form at the spec revisit (§12).
 
 ### 4.10 Precision relative to the DSU
 
@@ -831,7 +881,7 @@ Effect: on `pHv`, `a ~ b`, `a ~ z.f` and `a ~ w.g` become false. The old content
 | task example, `x ~ y` | no | yes | no | `join_precision_loss` |
 | field example after `a = w`, `x ~ y` | no | yes | no | `field_precision_loss` |
 | field example, `x.f ~ z`, `y.f ~ z` | yes | yes | yes | `dsu_field_xf_z`, `field_xf_z` |
-| root store `x.f = y; x.f = z`, `x.f ~ y`, policy `entryUnique = true` | no | yes | no | `root_concept_more_precise` |
+| root store `x.f = y; x.f = z`, `x.f ~ y`, policy `entryUnique = true` (the default) | no | yes | no | `root_concept_more_precise` |
 | loop strong update, `b.f ~ x` | yes (C), no (recency) | no | no | `loop_dsu_more_precise`, `loop_bf_x_exact` |
 | K = 1, `x.f.f ~ x.f.f.f` | yes | no | no | `deep_concept_imprecise` |
 | U1-U4 | yes (sound) | no (unsound) | yes | §2.3 |
@@ -839,23 +889,26 @@ Effect: on `pHv`, `a ~ b`, `a ~ z.f` and `a ~ w.g` become false. The old content
 
 Recency keeps the other answers (`join_answers`, `field_answers`, `strong_answers`, `call_answer`, Sound/Recency/Examples.lean). Not proved: "recency is at least as precise as C" in general (F6).
 
+The volume table of §11.1 (R0) gives the effect of each row on the alias answer volume.
+
 ---
 
 ## 5. Optimization O
 
 ### 5.1 Idea
 
-O shares origin sets in the way that congruence closure shares classes, but it keeps the direction.
+O shares origin sets in the way that congruence closure shares classes, but it keeps the direction. Congruence closure keeps a congruence. O keeps a directed congruence: the congruent order `⊒` of §1.7.
 
 | Congruence closure (DSU) | O |
 |---|---|
+| The relation is a congruence: symmetric, transitive, closed under fields. | The relation is a congruent order: transitive, monotone under fields (`path_mono`), antisymmetric on nodes (`node_antisymm`). |
 | A node is an equivalence class. | A node is a canonical origin set. |
 | A union merges two classes in place. The operands are lost. | A union makes a **new** node. Its two children are the operands. The operands stay. |
 | Holders in one class are one holder. | Each holder points to its own node. Holders never merge. |
 | Congruence: the work on a class is shared by all its members. | O shares **sets** (hash-consing), but not **loads**. A load through a node is a memoized union over the cells of its member origins. It does not reuse the loads of the two children of the node. |
 | State equality is partition equality. | State equality is node-id equality. |
 
-DAG view: an edge `u -> v` means `L(u) ⊇ L(v)`. The denotation of a node is the set of leaves below it.
+DAG view: an edge `u -> v` means `L(u) ⊇ L(v)`, that is `u ⊒ v` (§1.7). The DAG edges are the stored edges of the order, in the role of Hasse edges: O stores only these edges, and each path of edges is a pair of the order (`Tbl.kids_den`, `above_trans`). A union node keeps its two children, so a union adds two order edges and removes none. The DAG does not hold each pair of the order: two nodes can be ordered with no path of edges between them (argued; for example, the node of `union({o1}, {o2, o3})` is above a node `{o1, o2}` of the table, but no path of edges connects them). The denotation of a node is the set of leaves below it (`Tbl.mem_iff_leaf`).
 
 ### 5.2 Nodes and table (Opt/Table.lean)
 
@@ -914,7 +967,7 @@ After `a.f = z`. The ids are examples. `n5` and `n7` are default contents. O add
                └─► n7 {oy.f}
 ```
 
-The kid edges of O are the arrows of the task: `a -> x` is the edge `n3 → n1`.
+The kid edges of O are the arrows of the task: `a -> x` is the edge `n3 → n1`, that is `n3 ⊒ n1`.
 
 After `a = w`, only the entry of `a` changes. `n3` stays in the table, but no holder holds it:
 
@@ -1100,7 +1153,7 @@ The Lean search has no deep-self-edge rule. The rule of §6.2 is a Kotlin restri
 |---|---|---|
 | Index | Build the reverse heap index lazily from the **written** heap entries. Compute default edges by rule (§7.12). | §5.7 eager index cost |
 | Liveness | Compute the liveness layers forward from the live variables, up to depth D. | `search_nodes` |
-| Depths | D = 6 accessors (main: `HEAP_CHAIN_LIMIT = 5`, counted from 0). K = D + 1 = 7. | CK3, D4, §6.2 |
+| Depths | D = 6 accessors (main: `HEAP_CHAIN_LIMIT = 5`, counted from 0). K = D + 1 = 7. D is also the main knob of the alias answer volume (R0, D11 (b)). | CK3, D4, §6.2 |
 | Deep self edges | Never expand them. | §6.2 |
 | Sub-search cache (optional) | A cache keyed by (seed node id, suffix, remaining depth) can share work between queries at one point. The key must include the depth. | the cache defect of main (§8.5) |
 | Determinism | The search is a pure function of (state, `x`, D). Answers do not depend on query order or threads. | definition of `search` |
@@ -1115,12 +1168,13 @@ The Lean search has no deep-self-edge rule. The rule of §6.2 is a Kotlin restri
 
 | Package (module) | Entity | Role |
 |---|---|---|
-| `org.opentaint.dataflow.ap.ifds.analysis.alias` (`opentaint-dataflow`, shared with Go) | `LocalAliasQueries` (new interface) | The query contract that `AliasUtil` helpers and JVM consumers use (M3, §8.3) |
-| same | `LocalAliasAnalysis` (changed: implements `LocalAliasQueries`) | Unchanged DSU base. Go and the JVM DSU backend use it. |
+| `org.opentaint.dataflow.ap.ifds.analysis.alias` (`opentaint-dataflow`, shared with Go) | `LocalAliasAnalysis`, `AliasUtil.kt` (no change, D6) | The DSU base. Go and the JVM DSU backend use it. The directed backend and the facade do not extend it (§8.3). |
 | `org.opentaint.dataflow.graph` (`opentaint-dataflow`) | `CompactGraphTopSort.weakTopologicalOrder`, `CompactGraphTopSort.onCycle` (new public functions) | The WTO of a graph (null for an irreducible graph), and the nodes on a cycle |
 | same | `simulateGraphWto` (new) | Recursive WTO iteration with an accumulating join and a change bit at loop heads (§7.10) |
-| `org.opentaint.dataflow.jvm.ap.ifds` (`opentaint-jvm-dataflow`) | `JIRLocalAliasAnalysis` (changed: facade) | Same constructor, same public queries. It selects a backend by `Params.aliasAnalysisMode`. |
-| `org.opentaint.dataflow.jvm.ap.ifds.alias` | `JIRDsuAliasBackend` (the body of `JIRLocalAliasAnalysis` on main, renamed) | The DSU backend. Its behaviour does not change. |
+| `org.opentaint.dataflow.jvm.ap.ifds` (`opentaint-jvm-dataflow`) | `JIRLocalAliasAnalysis` (changed: facade, no shared base class) | Same constructor, same public queries. It selects a backend by `Params.aliasAnalysisMode` (D7). In mode `SHADOW` it runs both backends, returns the DSU answer, and records both answers in `AliasShadowStats`. |
+| same | `AliasVolumeStats` (new, P0c), `AliasShadowStats` (new, P9a) | Volume counters for each query, method and project (DSU path and directed path); the per-query comparison of shadow mode (§10.2, §11.3) |
+| `org.opentaint.dataflow.jvm.ap.ifds.analysis` | `JIRAliasUtil.kt` (changed) | The copies of the shared receiver helpers, with the facade as receiver (M3, §8.3) |
+| `org.opentaint.dataflow.jvm.ap.ifds.alias` | `JIRDsuAliasBackend` (the body of `JIRLocalAliasAnalysis` on main, renamed) | The DSU backend. It extends `LocalAliasAnalysis`, as on main. Its behaviour does not change. |
 | `org.opentaint.dataflow.jvm.ap.ifds.alias.directed` (new) | `NodeTable` | Interned origin sets (nodes), union memo |
 | same | `OriginTable`, `BaseTable`, `SiteTable`, `CellTable`, `VarTable`, `SiteListTable` | Dense `Int` ids for origins, bases, sites, cells, variables, and sorted call-site lists |
 | same | `DirectedState` | State for each statement: environment map, heap map, havoc layer |
@@ -1128,9 +1182,9 @@ The Lean search has no deep-self-edge rule. The rule of §6.2 is a Kotlin restri
 | same | `DirectedAliasAnalysis` | JIR driver: maps `Stmt` (from `JIRDSUAABuilder`) to `DirectedTransfer` operations; inlining |
 | same | `DirectedAliasResult` | Frozen tables and the states of each statement after the fixpoint |
 | same | `DirectedAliasQuery`, `ReverseIndex` | Lazy reverse index, backward search, conversion to `AliasInfo` |
-| same | `JIRDirectedAliasBackend` | Implements `LocalAliasQueries` on `DirectedAliasResult` |
+| same | `JIRDirectedAliasBackend` | Implements the facade queries on `DirectedAliasResult`. It has no shared base class. |
 
-The directed engine is in the JVM module. It does not change shared behaviour. The only shared-code changes are at the type level (`LocalAliasQueries`) and two additive graph functions. Go behaviour stays the same.
+The directed engine is in the JVM module. It does not change shared behaviour. The shared alias classes do not change (D6, decided by the user). The only shared-code changes are two additive graph functions and two additive counters in the conversion cache of `LocalAliasAnalysis` (P0c: cut conversions and hits of cut lists, §8.5). The counters do not change answers. They are an exception to "the shared alias code does not change" (D6), and the user approved them (2026-10-29). The DSU cache is not fixed (D13). Go code does not call the graph functions and does not read the counters, so Go behaviour stays the same.
 
 The engine core (`NodeTable`, `OriginTable`, `DirectedState`, `DirectedTransfer`, the simulator) does not depend on JIR. A test driver (`MiniDriver`, in test sources) runs it on the Lean IR. Thus the Lean vectors and the naive oracle test the code that production uses (§10).
 
@@ -1247,17 +1301,19 @@ class SiteListTable {
 Policy and parameters:
 
 ```kotlin
-enum class AliasAnalysisMode { DSU, DIRECTED }
+enum class AliasAnalysisMode { DSU, SHADOW, DIRECTED }
 
 enum class HavocMode { SHARED, PER_CELL }
 
 data class DirectedAliasPolicy(
-    val entryUnique: Boolean = false,
+    val entryUnique: Boolean = true,
     val recency: Boolean = true,
     val havocMode: HavocMode = HavocMode.PER_CELL,
     val symDepth: Int = 7,
     val maxAccessors: Int = 6,
     val maxTableContent: Long = 50_000_000L,
+    val maxQueryPaths: Int = Int.MAX_VALUE,
+    val diagnosticCallDrop: Boolean = false,
 )
 
 data class Params(
@@ -1268,6 +1324,49 @@ data class Params(
     val directedPolicy: DirectedAliasPolicy = DirectedAliasPolicy(),
 )
 ```
+
+Status of the defaults: `aliasAnalysisMode = DSU` (D7) and `entryUnique = true` (D1) are decided by the user. `havocMode = PER_CELL` is the proposed form of D2. `recency` (D3), `symDepth` and `maxAccessors` (D4), `maxQueryPaths` and `diagnosticCallDrop` (D11), and `maxTableContent` (§7.11) are open until the spec revisit. The defaults of the two D11 fields mean "no volume control" (D11 (a)).
+
+Modes:
+
+| Mode | Backends that run | Answers that the consumers get | Use |
+|---|---|---|---|
+| `DSU` | DSU | DSU | Default (D7). The DSU of main without change (D13). |
+| `SHADOW` | DSU and directed | DSU | Measurement only: the volume gate (§11.2). Findings must equal the `DSU` findings. Time and memory are not budgets, because two engines run. |
+| `DIRECTED` | directed | directed | Only after the shadow volume gate passes (§10.2). |
+
+`maxQueryPaths` is D11 (c): a per-query budget of reported paths, shortest paths first, with a `truncated` counter. `diagnosticCallDrop` is D11 (e): the alias drop of main at unresolved calls, for an A/B diagnosis only. It is not a default, and D2 stands.
+
+Volume statistics:
+
+```kotlin
+class AliasVolumeStats {
+    val queries: Long
+    val answerPaths: Long
+    val accessorSum: Long
+    val maxAnswerSize: Int
+    val maxChainLength: Int
+    val truncatedQueries: Long
+    val cutConversions: Long
+    val cutCacheHits: Long
+
+    fun record(query: AliasQueryKind, answer: List<AliasInfo>?)
+    fun addTo(total: AliasVolumeStats)
+}
+
+enum class AliasQueryKind { BEFORE, AFTER, ARRAY_ELEMENT, HEAP }
+
+class AliasShadowStats {
+    val dsu: AliasVolumeStats
+    val directed: AliasVolumeStats
+    val directedNotSubset: Long
+    val dsuNotSubset: Long
+
+    fun record(query: AliasQueryKind, method: JIRMethod, stmtIdx: Int, base: AccessPathBase.LocalVar, dsu: List<AliasInfo>?, directed: List<AliasInfo>?)
+}
+```
+
+`accessorSum` is the sum of the accessor counts of the reported paths. `cutConversions` and `cutCacheHits` exist only on the DSU path (§8.5). `AliasQueryKind` tells the facade query: `BEFORE` is `findAlias` (CS1-CS3, CS6-CS8), `AFTER` is `findAliasAfterStatement` (CS4/CS5). One `AliasVolumeStats` exists for each method analysis, and one total for each project run. Both are logged at DEBUG; the project total is also logged at INFO at the end of the run.
 
 State and transfer:
 
@@ -1351,18 +1450,7 @@ class DirectedAliasAnalysis(
 
 The backend switch is in `JIRIntraProcAliasAnalysis.compute`, which also holds the time limit. In directed mode it returns `DirectedAliasResult?`. `getJIG` and the private `CallResolver` of that file become `internal`. A table-limit stop throws the JVM exception `DirectedTableLimitExceeded`. `compute` catches it, logs the table statistics, and returns `null`. So the shared `AnalysisCancellation` does not change.
 
-Shared query interface (M3):
-
-```kotlin
-interface LocalAliasQueries<AliasInfo, AliasAccessor> {
-    fun findAlias(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>?
-    fun findAliasAfterStatement(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>?
-}
-
-abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> : LocalAliasQueries<AliasInfo, AliasAccessor>
-```
-
-JVM facade additions:
+The facade has no shared base class (D6, M3). The shared `LocalAliasAnalysis` does not change. JVM facade:
 
 ```kotlin
 class JIRLocalAliasAnalysis(
@@ -1374,10 +1462,11 @@ class JIRLocalAliasAnalysis(
     cancellation: Cancellation,
     languageManager: JIRLanguageManager,
     params: Params,
-) : LocalAliasQueries<AliasInfo, AliasAccessor> {
+) {
+    fun findAlias(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>?
+    fun findAliasAfterStatement(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>?
     fun findArrayElementAliases(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>?
     fun mayHoldUnknownObject(base: AccessPathBase.LocalVar, statement: CommonInst): Boolean
-    fun findMustAlias(base: AccessPathBase, statement: CommonInst): List<AliasApInfo>?
     fun findHeapAlias(base: AccessPathBase.LocalVar, accessors: List<AliasAccessor>, statement: CommonInst): List<AliasInfo>?
 }
 ```
@@ -1397,6 +1486,7 @@ class JIRLocalAliasAnalysis(
 | `AnalysisCancellation`, `withAnalysisCancellation` | Use as is (time limit 10 s, parent cancellation). |
 | `ExternalCallModelProvider`, `CallModelProvider` in `JIRLocalAliasAnalysis` | Use as is. Apply the `<rule-storage>` filter (CK11) in the directed model step only, so that DSU answers do not change. |
 | `LocalAlias.Alloc(stmt, ctx)` keys | Replace with `SiteTable.site(ctx, instIdx)`. Same key content, dense id. |
+| `AliasUtil.kt`: the generic `forEachAliasAtStatement` overloads and `forEachAliasAtStatementAmongBases` (receiver `LocalAliasAnalysis`) | Copy them into `JVM/analysis/JIRAliasUtil.kt` with the facade as receiver (D6, M3). The copies call the shared `applyAlias` and `unapplyAlias`, which have no receiver. Do not change `AliasUtil.kt`. |
 | `Convert.convertBaseAccessor` | Reuse its mapping rules for bases (Local, Arg, This, Static, string constant, other allocation) in `DirectedAliasQuery`. |
 
 ### 7.5 Transfer rules (JIR `Stmt` to O operation)
@@ -1451,18 +1541,22 @@ Uniqueness (`isUnique`), with `entryUnique = policy.entryUnique`:
 
 `isLoopSite(s)` is true in two cases. Case 1: the statement of `s` is on a cycle of its graph (`onCycle`). Case 2: `s` is in a callee, and the call statement is on a cycle of the caller. Each JIR statement index occurs one time in each context. So "occurs at most one time" in `Prog.onceB` holds for each JIR site.
 
-Constructor `this`. `this` is the root `sym(root this, [])` in each method, also in `<init>`. The builder flag `This(isOuter)` has no effect on the directed engine. This fixes shapes U1.a3 and U1.a4 (Lean `a3_unsound`, `a4_unsound`): `env n = {this, alloc}` has two origins, so the store is weak. With the default `entryUnique = false`, a store on `this` is weak in each method, also in a constructor (probe row 29 changes, §9.3). With `entryUnique = true`, it is strong in each method (probe row 30 flips).
+Constructor `this`. `this` is the root `sym(root this, [])` in each method, also in `<init>`. The builder flag `This(isOuter)` has no effect on the directed engine. This fixes shapes U1.a3 and U1.a4 (Lean `a3_unsound`, `a4_unsound`): `env n = {this, alloc}` has two origins, so the store is weak. With the default `entryUnique = true` (D1), a store on `this` alone is strong in each method, also in a constructor (probe row 29 keeps its answer, and probe row 30 flips, §9.3). With `entryUnique = false`, it is weak in each method (probe row 29 then loses precision against the DSU).
 
 ### 7.6 Calls: havoc model
 
-The engine has two havoc modes. Both keep the old content of each cell. This fixes U2.
+No alias drop (D2, decided by the user). The may analysis does not drop aliases at an unresolved call. The drop of main (`invalidateOuterHeapAliases`) is a must-side rule: a callee can overwrite a cell, so a must relation through that cell ends. A future must analysis keeps the drop (§8.4). Main has no must analysis, so the directed (may) analysis removes the drop and uses weak havoc.
+
+Volume effect. On main the drop removes heap aliases after each unresolved call, so it also limits the alias answer volume. The user reports that a fix of the drop on main explodes the analysis (R0). D2 stands. The flag `diagnosticCallDrop` (D11 (e), default `false`) applies the drop of main in the directed engine, for an A/B diagnosis only: it isolates the volume effect of D2. It is unsound (U2) and never a default.
+
+The engine has two havoc modes. Both keep the old content of each cell. This fixes U2. The havoc-origin form is proposed, to confirm at the spec revisit (D2).
 
 | Mode | Origin that call `s` adds to cell `(o, c)` | Concrete call semantics | Proof state |
 |---|---|---|---|
 | `SHARED` | `havoc(s)`, one for each call site | A2-wide (§3.1) | proved: `csoundE`, `mayProgOE_eq`; with recency `csoundR`, `mayProgRO_eq` |
 | `PER_CELL` | `havocC(s, keyOf(o), c, [])`, one for each call site, holder key and cell | A2-strict (§3.1) | proved: `csoundH`, `mayProgHO_eq`; with recency `csoundHR`, `mayProgHRO_eq`, `csoundHRO` (§4.9) |
 
-`PER_CELL` is the production default (D2). Its soundness claim covers fewer callees than `SHARED` (§3.1). `SHARED` stays in the engine. The Lean vector tests use both modes (§10.1), and a user can select `SHARED` for A2-wide. For new content, the DSU also uses A2-strict. After a call removes a heap element, a later load makes a new heap element. No other cell shares this element. So `PER_CELL` keeps the DSU call semantics for new content and also keeps the old content.
+`PER_CELL` is the proposed production default (the form of D2, to confirm at the spec revisit). Its soundness claim covers fewer callees than `SHARED` (§3.1). `SHARED` stays in the engine. The Lean vector tests use both modes (§10.1), and a user can select `SHARED` for A2-wide. For new content, the DSU also uses A2-strict. After a call removes a heap element, a later load makes a new heap element. No other cell shares this element. So `PER_CELL` keeps the DSU call semantics for new content and also keeps the old content.
 
 Reach roots. The receiver is part of the reach roots. The DSU uses only `stmt.args`. The directed engine needs the receiver: after an unresolved `x.<init>(v)`, the cells of the allocation of `x` get havoc content. Without it they read as null, and later loads lose aliases.
 
@@ -1483,6 +1577,8 @@ Lean has no layer. The Lean proofs use explicit havoc writes (`AState.havoc`, `A
 Return value: `env[l] := {sym(fresh(s), [])}` after the havoc (Lean `astep` call case).
 
 ### 7.7 Inlining, depth 1
+
+Decided by the user (D12): "we keep inlining". The directed engine inlines at depth 1, as main does.
 
 Production uses inlining depth 1 (`experimentalAAInterProcCallDepth = 1` in `core/src/main/kotlin/org/opentaint/common/sast/CommonAnalysisOptions.kt`). Unit and integration tests use depth 0. The directed engine keeps the structure of main (`DSUAliasAnalysis.evalCall` with resolved methods).
 
@@ -1522,7 +1618,7 @@ Expected answer for the sample `passThroughOfTwoArgs`: `env r = {fresh, px, py}`
 
 ### 7.9 Recency (`alloc-new` / `alloc-old`)
 
-Concept C without recency is weak on a loop allocation site. There it is less precise than the DSU (`loop_dsu_more_precise`, DSU/Examples.lean; `loop_bf_x`, Examples.lean). §1.7 gives the CEGAR step and its theorems.
+Concept C without recency is weak on a loop allocation site. There it is less precise than the DSU (`loop_dsu_more_precise`, DSU/Examples.lean; `loop_bf_x`, Examples.lean). §1.8 gives the CEGAR step and its theorems.
 
 Transfer rule (`astepR`, `retire` in Sound/Recency/Concept.lean; `retireO` in Opt/Recency.lean), for `x = new` at site `s`, with recency on:
 
@@ -1582,7 +1678,7 @@ Termination (argued): the heads only grow, and the universe is finite (symbolic 
 | Call-site lists | `SiteListTable`: interned sorted `IntArray`, memoized `add` and `union` | Lists are small and shared by all cells with the same call history. |
 | State containers | fastutil maps, copy-on-write (copy, then change, for each statement that changes the state) | See below. |
 | Reverse index | Lazy, one for each state that a query uses, cached in an `AtomicReferenceArray<ReverseIndex?>` | §5.7: the eager index costs more than enumeration on small programs. Default edges are computed by rule. |
-| Answer cache | `ConcurrentHashMap<Long, List<AliasInfo>>`, key `(stmtIdx shl 33) or (after shl 32) or varId` | Full answers only. No depth in the key, because no outer call truncates an answer (fixes the cache-order defect, CK7). |
+| Answer cache | `ConcurrentHashMap<Long, List<AliasInfo>>`, key `(stmtIdx shl 33) or (after shl 32) or varId` | Full answers only (or the answer cut by the deterministic budget `maxQueryPaths`, which depends only on the key). No depth in the key, because no outer call truncates an answer. So the directed path does not have the cache-order defect of main (CK7). |
 
 Memory (to be measured; gate in §11.2). The DSU removes heap elements of removed groups (`State.removeUnsafe`) and dead locals. The directed heap map has no such removal by itself. So the engine does four things:
 
@@ -1599,7 +1695,7 @@ Container decision (D8): fastutil copy-on-write, not `kotlinx.collections.immuta
 
 If the memory gate fails (§11.2), measure a persistent variant. The container is private to `DirectedState`, so the change is local.
 
-Table growth (`chain_table`, §5.7): count `contentSize`. If it exceeds `maxTableContent`, stop the analysis of the method (§7.14). The initial value 50 000 000 is about 200 MB of `int` content for one method. P10 measures the maximum on Conductor and sets the cap from the 16 GB budget and the number of parallel method analyses. Memo misses (`test_miss`, §5.7): count `memoMisses` for the measurement plan.
+Table growth (`chain_table`, §5.7): count `contentSize`. If it exceeds `maxTableContent`, stop the analysis of the method (§7.14). The initial value 50 000 000 is about 200 MB of `int` content for one method. The shadow runs (P9a) measure the maximum on thingsboard and Conductor. P10 sets the cap from these maxima, the 16 GB budget and the number of parallel method analyses. Memo misses (`test_miss`, §5.7): count `memoMisses` for the measurement plan.
 
 ### 7.12 Query implementation
 
@@ -1617,6 +1713,8 @@ Table growth (`chain_table`, §5.7): count `contentSize`. If it exceeds `maxTabl
 4. Output: variable holders become `AliasApInfo(LocalVar | Argument | This, path)`. Static roots become `AliasApInfo(ClassStatic, [Static(T)] + path)`. Filter bases by `JIRLocalVariableReachability.isReachable(base, stmtIdx)`, as `compress` does. Drop `(x, [])` (CK4). Keep other paths with base `x`.
 5. Allocation origins in `val(x)`: `AliasAllocInfo(instIdx)` for root-context `new`, `newarray` and catch sites, and for box, class and other non-string constants (CK5; both `alloc-new(s)` and `alloc-old(s)` map to `s`). String constants: `AliasApInfo(Constant("java.lang.String", v), [])` (CK6). No heap path on a `Constant` base. Never report `null`.
 6. Sort the list with one fixed comparator (kind, base, accessors). The search gives no duplicates (`search_nodup`), so no deduplication pass is necessary.
+7. Path budget (D11 (c), only if `maxQueryPaths` is less than `Int.MAX_VALUE`). The search runs by suffix length: all paths with `j` accessors before the paths with `j + 1` accessors. Inside one length, the order is the comparator of step 6. The query stops after `maxQueryPaths` paths, increments `truncatedQueries`, and returns the paths so far. The cut is unsound like the cut of main, but it is a function of (state, `x`, D, budget), so it does not depend on query order. It changes CK3.
+8. Volume statistics: `AliasVolumeStats.record` for each answer (§7.3).
 
 Cost: `searchCost_le`. Enumeration is exponential in D (`qfam_sep`).
 
@@ -1653,7 +1751,7 @@ Test: a query at depth 6 on a new symbolic chain after `freeze()`.
 | `contentSize > maxTableContent` | Throw `DirectedTableLimitExceeded`. `JIRIntraProcAliasAnalysis.compute` logs the table statistics. All queries answer `null`. |
 | Parent `Cancellation.Cancelled` | Leaves the `lazy`, as on main. |
 | Checkpoints | One for each evaluated statement (as `DSUAliasAnalysis.eval`), and one for each 1024 entries inside `join`, `havoc`, `retire` and `collectGarbage`. |
-| Query cost | Bounded by `searchCost_le`. The query calls `parentCancellation.checkpoint()` for each 1024 expanded nodes. On main the query has no check. A per-query node budget (`maxQueryNodes`, "log and return the partial list") is a later decision, because it changes CK3. |
+| Query cost | Bounded by `searchCost_le`. The query calls `parentCancellation.checkpoint()` for each 1024 expanded nodes. On main the query has no check. A per-query path budget (`maxQueryPaths`, §7.12 step 7) is option (c) of D11. It changes CK3. |
 
 ---
 
@@ -1669,6 +1767,8 @@ Consumers (eight JVM sites in main sources):
 | CS7 | Receiver and argument type constraints (`JIRCallResolver.resolveValueTypeConstraints`) | `findAlias`; `AliasAllocInfo` gives exact-type constraints |
 | CS8 | Rule-condition atoms (`JIRBasicAtomEvaluator`) | `findAlias`; the vararg branch uses `getAllAliasAtStatement` |
 
+Cost of an answer. CS1-CS6 turn each reported path into facts: the store summary adds a fact for each alias path of the stored base (CS1-CS3), the call rule copies a fact to each path of `before ∩ after` (CS4/CS5), and the precondition adds a candidate for each path (CS6). A longer path gives a fact with a longer access path. So the taint cost grows with the number and the length of the reported paths, not with the cost of the alias fixpoint (R0, §11.1).
+
 No JVM consumer needs symmetry. Only the CS8 vararg branch needs transitivity (it takes "the alias set that contains `lv[*]`"). No JVM main code calls `forEachHeapAlias`. Only Go and the untracked probe suite call it.
 
 ### 8.1 Contract CK1-CK13
@@ -1677,7 +1777,7 @@ No JVM consumer needs symmetry. Only the CS8 vararg branch needs transitivity (i
 |---|---|---|
 | CK1 | `findAlias` / `findAliasAfterStatement`; `null` or empty if no answer | The facade keeps both: `statesBefore[idx]` / `statesAfter[idx]`. `null` on timeout or for an unreachable statement. A variable with an empty value gives an empty list (main: `null` when the element is absent). Consumers treat both the same. |
 | CK2 | Meaning of `AliasApInfo(base, accessors)` | The path may hold an object that `x` may hold at P: `pts(path) ∩ pts(x) ≠ ∅`. Same bases and accessors. |
-| CK3 | Completeness up to the query depth | The backward search gives exactly the paths of the enumeration (`findAlias_iff`, `findAliasO_iff`), except paths through a deep self edge (§6.2). D is `maxAccessors = 6` (the effective value of main), a parameter. Soundness of C: `csoundE`, `csoundR` (scope A1-A3, mode `SHARED`); `csoundH`, `csoundHR` (mode `PER_CELL`, A2-strict). |
+| CK3 | Completeness up to the query depth | The backward search gives exactly the paths of the enumeration (`findAlias_iff`, `findAliasO_iff`), except paths through a deep self edge (§6.2). D is `maxAccessors = 6` (the effective value of main), a parameter. Volume controls (b), (c) and (d) of D11 change this item: a smaller D, a path budget, or simple paths only. Soundness of C: `csoundE`, `csoundR` (scope A1-A3, mode `SHARED`); `csoundH`, `csoundHR` (mode `PER_CELL`, A2-strict). |
 | CK4 | Exclude `(x, [])` | Step 4 of §7.12 |
 | CK5 | `AliasAllocInfo(i)` if and only if `alloc(i) ∈ pts(x)` | Step 5 of §7.12. Only from `val(x)`, never from heap paths, and not from group members (the transitive set of main). |
 | CK6 | String constants as `Constant`; never `null`; no heap path on a constant | `stringConst(value)` origin; step 5 |
@@ -1686,8 +1786,8 @@ No JVM consumer needs symmetry. Only the CS8 vararg branch needs transitivity (i
 | CK9 | Cost bounds, cancellation, `null` on timeout | §7.14 |
 | CK10 | Before/after at calls with a documented model | Before = the state before the call. After = havoc (§7.6) + return + models (§7.8). Documented as a behaviour change (§9). |
 | CK11 | Pass-through models after the call; `<rule-storage>` excluded | Directed weak copy (§7.8) |
-| CK12 | Inlining depth 1 works; no callee elements in answers | §7.7 |
-| CK13 | No symmetry or transitivity required | The relation is symmetric (`may_symm`) and not transitive (`alias_not_transitive`). No consumer needs more after M1. |
+| CK12 | Inlining depth 1 works; no callee elements in answers | §7.7. Inlining stays (D12, decided by the user). |
+| CK13 | No symmetry or transitivity required | The may-alias relation is derived from the order `⊒` (§1.7). It is symmetric (`may_symm`) and not transitive (`alias_not_transitive`). No consumer needs more after M1. |
 
 ### 8.2 Changes M1-M8
 
@@ -1695,39 +1795,32 @@ No JVM consumer needs symmetry. Only the CS8 vararg branch needs transitivity (i
 |---|---|---|
 | M1 | `JIRBasicAtomEvaluator.resolveLocalVarValue`, vararg branch: replace `getAllAliasAtStatement` + "the set that contains `lv[*]`" with `findArrayElementAliases(lv)`. The DSU backend implements it with the partition logic of main, so DSU answers stay the same. | P1 |
 | M2 | `getAllAliasAtStatement` leaves the JVM API. It stays in `LocalAliasAnalysis` for the DSU backend. | P1 |
-| M3 | Base class: extract `LocalAliasQueries` (option a of D6). | P1 |
+| M3 | Base class (D6, decided by the user: copy). The facade `JIRLocalAliasAnalysis` does not extend `LocalAliasAnalysis`. Copy the generic receiver helpers of `AliasUtil.kt` into `JVM/analysis/JIRAliasUtil.kt`, with the facade as receiver (§7.4). `JIRDsuAliasBackend` extends `LocalAliasAnalysis`, as on main. The shared code and Go do not change. | P1 |
 | M4 | Delete the unused JVM wrappers `forEachHeapAliasBeforeStatement` and `forEachAliasAtStatement(InitialFactAp)` in `JVM/analysis/JIRAliasUtil.kt`. Add `findHeapAlias` to the facade, with a DSU implementation over `forEachHeapAlias`. Change the probe helper `heapAnswer` to it, so the probe suite compiles after P1. | P1 |
-| M5 | `forEachAliasAfterCallStatement`: no code change. The weak havoc keeps heap paths in the after set, so the intersection copies more facts (§9). A direct query is a later option. | — |
+| M5 | `forEachAliasAfterCallStatement`: no code change. The weak havoc (no alias drop, D2) keeps heap paths in the after set, so the intersection copies more facts (§9). A direct query is a later option. | — |
 | M6 | `JIRCallResolver.resolveValueTypeConstraints`: if `mayHoldUnknownObject(x)`, add `defaultConstraint` (D9). | P8 |
-| M7 | Negated atoms: no forced change. If D5 is accepted, use `findMustAlias` for `negated = true`. | P9 (optional) |
-| M8 | Tests: keep `DSUAliasAnalysisStateTest` for the shared DSU. `DSUAliasAnalysisInvalidateOuterHeapAliasesTest` tests the JVM class `DSUAliasAnalysis`, so P13 removes it with that class. Add state-law tests for `DirectedState`. Change `test external call invalidates heap aliases` for the directed mode only (§9.2). Add the non-transitive tests (§10). | P3-P9, P13 |
+| M7 | Negated atoms: no change. Must-alias is postponed (D5, §8.4). | — |
+| M8 | Tests: keep `DSUAliasAnalysisStateTest` for the shared DSU. `DSUAliasAnalysisInvalidateOuterHeapAliasesTest` tests the JVM class `DSUAliasAnalysis`, so P13 removes it with that class. Add state-law tests for `DirectedState`. Change `test external call invalidates heap aliases` for the directed mode only (§9.2, D2). Add the non-transitive tests (§10). | P3-P9, P13 |
 
-### 8.3 Shared base class with Go (D6)
+### 8.3 Shared base class with Go (D6, decided by the user)
 
 | Option | Shared-code change | JVM change | Go | Risk |
 |---|---|---|---|---|
-| (a) Extract `LocalAliasQueries` (two methods). `LocalAliasAnalysis` implements it. The generic helpers `forEachAliasAtStatement` and `forEachAliasAtStatementAmongBases` in `AliasUtil.kt` take `LocalAliasQueries` as receiver. `forEachHeapAliasBeforeStatement` stays on `LocalAliasAnalysis`. | Type level only | `JIRLocalAliasAnalysis` is a facade over two backends. | No behaviour change. The same call sites compile. | Low |
-| (b) `JIRLocalAliasAnalysis` stops extending `LocalAliasAnalysis`. Copy the JVM helpers into `JIRAliasUtil.kt`. | None | Duplicate helpers | No change | The two copies of the `applyAlias` / `unapplyAlias` logic can become different. |
+| (a) Extract an interface for the two queries. `LocalAliasAnalysis` implements it. The generic helpers of `AliasUtil.kt` take the interface as receiver. | Type level | `JIRLocalAliasAnalysis` is a facade over two backends. | No behaviour change | Low |
+| (b) Copy. `JIRLocalAliasAnalysis` and the directed backend do not extend `LocalAliasAnalysis`. Copy the generic receiver helpers into `JIRAliasUtil.kt`. | None | Duplicate helpers. `JIRDsuAliasBackend` extends `LocalAliasAnalysis`, as on main. | No change | The two copies of the helper loops can become different. |
 
-Recommendation: (a). It keeps one copy of the helpers. It lets the mode switch select a backend at run time. A later Go migration can implement the same interface.
+Decided by the user: (b). The shared alias code and Go code do not change. The copies call the shared `applyAlias` and `unapplyAlias` (plain functions, no receiver), so only the loops over the alias lists are duplicated. The mode switch (D7) selects the backend inside the facade, so it does not need a shared interface. A later Go migration is a separate design.
 
-### 8.4 Must-alias (D5)
+### 8.4 Must-alias (D5): future work
 
-Derive must-alias from O. No second fixpoint.
+Decided by the user: must-alias is postponed. Main has no must analysis, and this design adds none. The facade has no `findMustAlias`, and the TDD plan has no must-alias step.
 
-Definition: `must(x, p)` at P if `val(x) == val(p) == singleton(o)` and `isUnique(o)`. Node ids are canonical, so the test is one `Int` comparison for each holder.
+Notes for the later work:
 
-Search: the same backward search, restricted to singleton edges. A variable `v` is a holder if `env[v] == singleton(o)`. A heap holder `(p, c)` counts if `read(p, c) == singleton(o)` and `p` itself is a must-holder (`val(prefix) == singleton(p)`, `p` unique).
-
-| Property | Reason |
-|---|---|
-| `must ⊆ may` | Equal singleton sets meet. This keeps the invariant of `MayAndMustRelationTest` (branch `origin/DanielELog/must_alias`, not merged). |
-| Sound under A1 | A unique origin denotes at most one object (`unique_obj`, `unique_objR`). Under entry aliasing a must-alias answer can be false, and a kill then drops taint. |
-| "Must alias or null" | Null is not an origin. If one side may be null, `must` can still hold. A store through null throws. With the catch rule of §7.10, the catch path also gets the state before the store, so the old value of `p.f` stays there. Negated atoms (M7) need a non-null bit. Option: a non-null bit for each variable in `DirectedState`, as the Lean null kinds (`nsafe_sound`). |
-| Cost | No second analysis. The `DanielELog` branch runs a second DSU with a meet join. |
-| Query bases | `AccessPathBase` (locals, `Argument`, `This`), as the must consumers on that branch need. |
-
-The branch `origin/DanielELog/must_alias` is on the old API (before #216 and #406). It has a second DSU run. Its unfinished "LValue alias" can lose may-aliases (not verified). Recommendation: do not rebase it. Port only its consumers onto `findMustAlias` and onto `StatementSummaryBuilder.write` (a strong kill on the must-alias path), in a later PR.
+- Derive must-alias from O, with no second fixpoint: `must(x, p)` at P if `val(x) == val(p) == singleton(o)` and `isUnique(o)`. Then `must ⊆ may`, because equal singleton sets meet.
+- A must analysis must keep the alias drop at unresolved calls (D2). A callee can overwrite a cell, so a must relation through that cell ends at the call. This is the rule `invalidateOuterHeapAliases` of main. The may analysis does not use it (§7.6).
+- A must answer depends on A1. Under entry aliasing a must-alias answer can be false, and a kill then drops taint (§3.3).
+- The unmerged branch `origin/DanielELog/must_alias` has must consumers and the test `MayAndMustRelationTest`. It is on the old API (before #216 and #406). It is input for the later design, not a base for it.
 
 ### 8.5 The alias cache defect
 
@@ -1736,7 +1829,7 @@ Main caches `convertedAliases` by `(element, stateId)` without the depth (`CORE/
 | Backend | Action |
 |---|---|
 | Directed | Not affected. The search has no nested conversion, and the cache holds full answers (§7.11). |
-| DSU | Fix the DSU cache before the A/B measurement. Use a separate small PR (P0b). Port commit `deff91ca0` (branch `origin/DanielELog/alias_cache_fix`, not merged). This commit stores the depth with each cached list. For a smaller depth, it computes the list again. Measure that PR alone on tms. The A/B baseline for the directed engine is then main plus this fix, so the A/B does not count the cache fix as a directed gain. The shared `LocalAliasAnalysis` is also the Go base, so this fix also changes Go answers. |
+| DSU | Not fixed (D13, decided by the user). A fix exists: commit `deff91ca0` (branch `origin/DanielELog/alias_cache_fix`, not merged) stores the depth with each cached list. The user does not land it: with it, the alias analysis reports more alias chains, and the analysis explodes (R0). The cut also limits the alias answer volume by accident. Step P0c adds two counters and no answer change: `cutConversions` (conversions that stopped at `HEAP_CHAIN_LIMIT` inside a nested conversion and went into the cache) and `cutCacheHits` (later hits of such an entry by a query at a smaller depth). So the volume baseline shows how much the cut hides. The A/B baseline is main as it is, so the A/B difference of the directed engine also contains the effect of the cut. The shadow statistics separate it (§11.3). |
 
 ---
 
@@ -1744,14 +1837,18 @@ Main caches `convertedAliases` by `(element, stateId)` without the depth (`CORE/
 
 ### 9.1 For each consumer
 
+The rows change the alias answer volume in both directions. R0 (§11.1) gives the net effect: it is not known, and it is the first gate (§11.2).
+
 | Consumer | Change | Direction | Reason |
 |---|---|---|---|
 | CS1/CS2/CS3 store summary | Fewer alias paths at a store. No edge to a path that only a transitive merge related. | Precision gain. Fewer false taint edges. | PL1-PL4. Test `field write through an alias adds the value forward and keeps the alias path backward` needs `alias(y) = {a.box}` exactly; the directed answer gives it. |
 | CS1/CS2/CS3 | New edges after unresolved calls (heap paths kept) and after static writes | Soundness gain. Possible new findings. | U2 (`b_unsound`, `b_local_unsound`); U3 (`static_unsound`) |
 | CS1/CS2/CS3 | New edges where the unsound strong update of main dropped a path | Soundness gain | U1 (`a1_unsound` .. `a4_unsound`); U4 (`repr_unsound`) |
+| CS1/CS2/CS3 | A store on one entry path (an argument path, `this`, a static path) is strong (D1). The old content of the cell is not kept. Under entry aliasing this can drop a taint edge. | Precision gain under A1. Accepted loss under entry aliasing. | §3.3 (`swap_strong`, `root_concept_more_precise`); probe row 30; `test swap fields` (§9.2) |
 | CS1-CS6 | Two locals that hold the same string literal now alias (one `stringConst` origin for each value). Facts on one local are copied to the other. | More facts, possibly more findings | §7.5. Test in P6: `directed equal string literals in two locals alias`. |
 | CS1-CS6 | Callee-made aliasing of existing objects (an unresolved `m(x, y) { x.f = y; }`) stays out of scope, as on main. | No change | §3.4. The IFDS analysis covers resolved callees through their summaries and library callees through pass-through rules (argued). Test in P6: `directed unresolved setter call does not alias the argument with the field`. |
-| CS4/CS5 copy to aliases at calls | The after-call set keeps heap paths (weak havoc). The intersection `before ∩ after` keeps them, so more facts are copied. | More facts, possibly more findings, more IFDS work | CK10, M5. Measure on Conductor (R4). |
+| CS1-CS6 | Full heap chains up to D. The cut of the DSU cache (§8.5) does not occur. | More facts, longer access paths, more IFDS work | §8.5, D13. Measure in shadow mode (R0). |
+| CS4/CS5 copy to aliases at calls | The after-call set keeps heap paths (weak havoc, no alias drop, D2). The intersection `before ∩ after` keeps them, so more facts are copied. | More facts, possibly more findings, more IFDS work | CK10, M5. Measure in shadow mode, then on thingsboard and Conductor (R0, R4). |
 | CS4/CS5 | Pass-through models are directed. The receiver after the call no longer holds each member of the argument set. | Precision gain. Fewer copies. | PL6 |
 | CS6 call precondition (trace) | Fewer false backward candidates | Precision gain. Shorter trace search. | The same relation as CS4 before the call |
 | CS7 type constraints | `AliasAllocInfo` only from `pts(x)`. Fewer exact-type constraints. The accidental root widening of the DSU stops. | Precision gain, and possible new false negatives. The example `x = c ? new A() : foo()` gives `{A exact}` on main too, because the DSU converts `CallReturn` and `Unknown` to nothing. The new false negatives come from shapes where a DSU group had an `Argument`, `This` or static member by a transitive merge. That member added the default or context constraint. The directed answer removes the member. | Mitigation M6 / D9 |
@@ -1765,24 +1862,26 @@ Taint-level tests to watch: `field flow - may-alias field survives write through
 
 | Test (`JTEST/alias/AliasSampleTest.kt`) | Main | Directed | Reason | Decision |
 |---|---|---|---|---|
-| `test swap fields` (`swapFields(Box a, Box b)`) | `a.value` read at the sink aliases `arg0.value` and `arg1.value`; the same for `b.value` | Default `entryUnique = false`: no change. With `entryUnique = true`: both stores are strong, the value read from `a.value` aliases only `arg0.value`, and 2 of 4 assertions fail. | The DSU store on an outer receiver is weak. §3.3 gives the theorems. | D1 |
-| `test external call invalidates heap aliases` (`arr[0] = src; System.arraycopy(arr, ...); dst = arr[0]`) | `alias(dst) ∌ arg0` | `pts(dst) ⊇ pts(src)`, so `alias(dst) ∋ arg0`. The assertion is inverted. | The removal of main is unsound (`b_unsound`, probe row 27). The callee can keep the cell (`call_w_xf`). | D2 |
+| `test swap fields` (`swapFields(Box a, Box b)`) | `a.value` read at the sink aliases `arg0.value` and `arg1.value`; the same for `b.value` (4 assertions) | Default `entryUnique = true`: both stores are strong. The value read from `a.value` aliases `arg0.value` and not `arg1.value`. The value read from `b.value` aliases `arg1.value` and not `arg0.value`. So 2 of the 4 assertions change: the second (`aValueAliases` has `Argument(1).value`) and the third (`bValueAliases` has `Argument(0).value`) become "has not". The first and the fourth stay. With `entryUnique = false`: no change. | The DSU store on an outer receiver is weak. The two removed aliases exist only if `a` and `b` are one object at entry. A1 excludes this, and the user accepts the loss (D1, `swap_strong`, §3.3). | D1 (decided) |
+| `test external call invalidates heap aliases` (`arr[0] = src; System.arraycopy(arr, ...); dst = arr[0]`) | `alias(dst) ∌ arg0` | `pts(dst) ⊇ pts(src)`, so `alias(dst) ∋ arg0`. The assertion is inverted. | The may analysis has no alias drop at an unresolved call (D2). For may-alias the removal of main is unsound (`b_unsound`, probe row 27): the callee can keep the cell (`call_w_xf`). The removal is a must-side rule. A future must analysis keeps it and gets its own test (§8.4). | D2 (decided) |
 
 In DSU mode both tests keep their assertions. In directed mode they get the new assertions (P9).
 
 ### 9.3 Probe tests that change
 
-Counts for the default policy (`entryUnique = false`, recency on, `PER_CELL`). Appendix B gives each row.
+Counts for the default policy (`entryUnique = true` (D1), recency on, `PER_CELL`). Appendix B gives each row.
 
 | Group | Count | Probe rows |
 |---|---|---|
-| Flip: precision (transitive merge removed) | 10 | 1, 2, 3, 4, 8, 10, 11, 37, 41, 42 |
+| Flip: precision (transitive merge removed, or a strong store on `this`) | 11 | 1, 2, 3, 4, 8, 10, 11, 30, 37, 41, 42 (row 30: both stores on `this` in a method are strong) |
 | Flip: soundness (lost alias restored) | 12 | 13, 14, 15, 16, 21, 22, 24, 25, 27, 28, 35, 36 (rows 35 and 36 also lose the false `x.next^k` chain) |
 | Smaller sets with recency (precision) | 4 | 17, 18, 19, 20 |
-| Precision loss against the DSU | 1 | 29: the store on `this` in a constructor is weak with `entryUnique = false` |
-| Same answer | 15 | 5, 6, 7, 9, 12 (`null` becomes empty), 23, 26, 30, 31, 32, 33, 34, 38, 39, 40 |
+| Precision loss against the DSU | 0 | — |
+| Same answer | 15 | 5, 6, 7, 9, 12 (`null` becomes empty), 23, 26, 29, 31, 32, 33, 34, 38, 39, 40 |
 
-With `entryUnique = true`, row 29 keeps its answer, and row 30 flips (precision).
+Total: 42 rows. With the A/B value `entryUnique = false`, row 29 loses precision against the DSU (the store on `this` in a constructor is weak), and row 30 keeps its answer: 10 precision flips, 1 precision loss, 15 same answers.
+
+The policy also changes the exact sets of rows 13-16 and 19: a store on one entry path or on `this` before the loop or the join becomes strong. Rows 13, 14 and 19 are "Rec" rows. The group of each row does not change (argued).
 
 With recency on, the loop stores on `cur` become strong. Then the sets of rows 13, 14 and 17-20 get smaller. For example, `alias(seen)` loses `cur.value`. This is correct, because `seen` holds `pa` and `cur.value` holds `pw`. So the expected sets of the directed probes come from the naive oracle with the chosen policy (§10.1), not from a manual derivation.
 
@@ -1797,8 +1896,8 @@ With recency on, the loop stores on `cur` become strong. Then the sets of rows 1
 | L0 | Lean vectors as Kotlin tables | `formal/directed-alias/Export/Vectors.lean` (the library does not import it). Output committed as `JTEST/alias/directed/lean-vectors.txt`. | A small `#eval` exporter (below). `LeanVectorTest` parses the file and runs the engine through `MiniDriver`. |
 | L1 | Core unit tests of O against a naive C oracle; differential and property tests | `JTEST/alias/directed/` | `NaiveConcept` is a direct Kotlin port of `astep` / `astepR` / `analyze` with explicit sets. A seeded random generator makes structured programs. |
 | L2 | JIR sample tests | `JTEST/alias/DirectedAliasProbeTest.kt`, `AliasSampleTest.kt` | Keep each `today ...` test in DSU mode. Add a `directed ...` test for each probe in directed mode. |
-| L3 | Existing suites, both modes | jvm-dataflow, java-querylang, root `:test` | `-PaliasAnalysisMode=DIRECTED` and `-PaliasDepth=1` set the system properties `opentaint.test.aliasAnalysisMode` and `opentaint.test.aliasDepth`. Each test harness reads them (P1). |
-| L4 | End to end | tms, dataflowbench Java and Kotlin, Conductor, thingsboard | §11.3 |
+| L3 | Existing suites, both modes | jvm-dataflow, java-querylang, root `:test` | `-PaliasAnalysisMode=<DSU\|SHADOW\|DIRECTED>` and `-PaliasDepth=1` set the system properties `opentaint.test.aliasAnalysisMode` and `opentaint.test.aliasDepth`. Each test harness reads them (P1). |
+| L4 | End to end | thingsboard first (the volume explosion reproduces there fast), then Conductor, tms, dataflowbench Java and Kotlin | §11.3 |
 
 L0 exporter. For each example program of `Examples.lean`, `Sound/Boundary.lean` (CX1-CX7), `Sound/Recency/Examples.lean`, `Sound/StoreExamples.lean`, `Sound/EntryAlias.lean`, `Sound/Havoc/Examples.lean`, `Sound/HavocRecency/Examples.lean`, `DSU/Probes.lean`, `Opt/QueryFam.lean` and `Opt/Recency.lean`, print one line for each query:
 
@@ -1840,20 +1939,25 @@ G-LEAN:  cd formal/directed-alias && ./check.sh
 |---|---|---|---|---|
 | P0 | — (characterization: each test asserts the answer of main) | Commit `DirectedAliasSample.java`, `DirectedAliasProbeTest` and the runtime Java witness program. Add four characterization probes. (1) A loop at the first instruction. (2) A catch after a throwing call. (3) A constructor call with no reference argument, then two loads of one field. (4) A static write, then a read, in a generic class and in a nested class. No fix. | `G-JVM` | — |
 | P0a (scope `docs`) | — | This document and `formal/directed-alias/` (an ignored root for the scope check, so it can go in the same PR) | `G-LEAN` | — |
-| P0b | `depth-aware cache keeps the full chain of an element first converted as a nested instance`. First, query the top-level variable. Its chain has at least 6 accessors, so the conversion of the inner element is cut. Then query the variable that holds the inner element directly. Expect its full chain. The sample method goes into `HeapAliasSample.java` (a chain of 7 fields). The test fails on main. | DSU cache depth fix (§8.5). Add the alias timer `aliasTimeMs` to the DSU path. | `G-JVM`, `G-CORE`, `G-QL`, Go CI, then the tms A/B alone | none (bug fix) |
-| P1 | `vararg element aliases equal the partition answer in dsu mode` (characterization, green before and after); `alias mode directed is accepted by params`; in each suite, a canary test that fails if the property is `DIRECTED` and the backend in use is DSU | `LocalAliasQueries`; facade + `JIRDsuAliasBackend`; `Params.aliasAnalysisMode` (default `DSU`); `findArrayElementAliases` (M1, DSU implementation); `findHeapAlias` (M4, DSU implementation) and `heapAnswer` on it; delete M4 wrappers; generic `CallTreeNode<S>`; mode plumbing (list below) | `G-CORE`, `G-JVM`, `G-QL`, `G-ROOT` | `DSU` only |
+| P0c (volume baseline) | `dsu volume stats count answer paths and the maximum chain length` (answers of main unchanged); `dsu volume stats count a cache hit of a cut chain`: query the top-level variable of a chain of 7 fields first (sample method in `HeapAliasSample.java`), then the variable that holds the inner element; the second answer stays cut, as on main, and `cutCacheHits` is 1 | `AliasVolumeStats` on the DSU path (§7.3): for each query the answer count, the maximum chain length and the accessor sum; totals for each method and each project; `cutConversions` and `cutCacheHits` in the conversion cache (§8.5); the alias timer `aliasTimeMs`. No answer change. Then the volume baseline run (§11.3 step 1). | `G-JVM`, `G-CORE`, `G-QL`, Go CI; thingsboard, Conductor and tms findings equal to main | `DSU` only |
+| P1 | `vararg element aliases equal the partition answer in dsu mode` (characterization, green before and after); `alias mode directed is accepted by params`; in each suite, a canary test that fails if the property is `DIRECTED` and the backend in use is DSU | Facade with no shared base class + `JIRDsuAliasBackend`; copies of the receiver helpers in `JIRAliasUtil.kt` (M3, D6); `Params.aliasAnalysisMode` (default `DSU`, D7; `SHADOW` works from P9a, `DIRECTED` from P5 in tests); `findArrayElementAliases` (M1, DSU implementation); `findHeapAlias` (M4, DSU implementation) and `heapAnswer` on it; delete M4 wrappers; generic `CallTreeNode<S>`; mode plumbing (list below). No change of shared code. | `G-JVM`, `G-QL`, `G-ROOT` | `DSU` only |
 | P2 | `NodeTableTest`: `intern gives one id for each set`, `empty set has id zero`, `union is symmetric and memoized`, `second union of a pair is a memo hit`, `join chain grows content quadratically and nodes linearly` (numbers of `chain_table`), `rename is memoized` | `NodeTable`, `OriginTable`, `BaseTable`, `SiteTable`, `CellTable`, `VarTable`, `SiteListTable` | `G-JVM` | not used yet |
-| P3 | `LeanVectorTest` for `V` lines without a call and with `rec=0`; `DirectedStateLawTest` (list below); `RandomDifferentialTest` on the generator subset without calls and with recency off; `loop at the first instruction joins the back edge` | `DirectedState`, `DirectedTransfer` (copy, allocate, load, store, weak store, null), `isUnique` and the `entryUnique` policy, `simulateGraphWto`, `weakTopologicalOrder`, `onCycle`, synthetic entry node, `MiniDriver`, `NaiveConcept`, Lean exporter, `Export/Computed.lean`, the `check.sh` regeneration check | `G-JVM`, `G-CORE`, `G-LEAN` | not used yet |
-| P4 | `LeanVectorTest` `F` lines; query tests (list below) | `ReverseIndex`, `DirectedAliasQuery` on mini programs; caches; freeze; virtual origins | `G-JVM` | not used yet |
+| P3 | `LeanVectorTest` for `V` lines without a call and with `rec=0`; `DirectedStateLawTest` (list below); `RandomDifferentialTest` on the generator subset without calls and with recency off; `loop at the first instruction joins the back edge` | `DirectedState`, `DirectedTransfer` (copy, allocate, load, store, weak store, null), `isUnique` and the `entryUnique` policy (default `true`, D1), `simulateGraphWto`, `weakTopologicalOrder`, `onCycle`, synthetic entry node, `MiniDriver`, `NaiveConcept`, Lean exporter, `Export/Computed.lean`, the `check.sh` regeneration check | `G-JVM`, `G-CORE`, `G-LEAN` | not used yet |
+| P4 | `LeanVectorTest` `F` lines; query tests (list below) | `ReverseIndex`, `DirectedAliasQuery` on mini programs; caches; freeze; virtual origins; `AliasVolumeStats` on the directed path; the path budget `maxQueryPaths` (D11 (c), default off): test `path budget keeps the shortest paths and counts the truncated query` | `G-JVM` | not used yet |
 | P5 | Directed probes for PS1, PS2, PS6-PS9, PS12, PS13 (list below); expected sets from `NaiveConcept` | `DirectedAliasAnalysis` intra-procedural. Unresolved calls with the provisional rule: return value `{sym(fresh(s), [])}`, `SHARED` havoc on the reach roots (arguments and receiver), and the `<init>` receiver rule (§7.6). `JIRDirectedAliasBackend`, base conversion, exceptional edges, catch origin, `collectGarbage`, exactness certificate (`exactMethods`) | `G-JVM` (DSU tests unchanged, new directed tests green) | `DIRECTED` in tests only |
-| P6 | PS4 flips and call tests (list below); `LeanVectorTest` for `V` lines with `hv=cell` | `PER_CELL` havoc and the call-site lists, static writes with the static root key, directed models, `<rule-storage>` filter, constants (boxes, class literals, strings), multi-dimensional arrays, constant returns, the builder box list | `G-JVM` | tests only |
-| P7 | PS3 directed probes (list below); Lean vectors with `rec=1` (`loop_bf_x_fixed`, `loop_bf_y` of Sound/Recency/Examples.lean; `o_loop_bf_x` of Opt/Recency.lean); `directed this field write in a method is a strong update with entryUnique true` | Recency (`retire`, loop sites), constructor `this` as root | `G-JVM`, `G-LEAN` | tests only |
+| P6 | PS4 flips and call tests (list below); `LeanVectorTest` for `V` lines with `hv=cell` | `PER_CELL` havoc (the proposed form of D2; no alias drop) and the call-site lists, static writes with the static root key, directed models, `<rule-storage>` filter, constants (boxes, class literals, strings), multi-dimensional arrays, constant returns, the builder box list; the diagnostic flag `diagnosticCallDrop` (D11 (e), default off): test `diagnostic call drop gives the answer of main for an unknown call on the argument` (probe row 21) | `G-JVM` | tests only |
+| P7 | PS3 directed probes (list below); Lean vectors with `rec=1` (`loop_bf_x_fixed`, `loop_bf_y` of Sound/Recency/Examples.lean; `o_loop_bf_x` of Opt/Recency.lean); `directed this field write in a method is a strong update under the default policy` (probe row 30, D1) | Recency (`retire`, loop sites), constructor `this` as root | `G-JVM`, `G-LEAN` | tests only |
 | P8 | `AliasSampleTest` in directed mode with inlining depth 1: `test getter aliases this field`, `test setter then getter`, `test identity same-class call`, `HeaderValues addAll fixpoint must terminate`; `write enters flushBufferWithUserData and fixpoint must terminate` at depth 0; new `directed callee constructor makes a strong field write on the new object`; `type constraints add the default for an unknown origin` | Inlining depth 1 (§7.7) with new callee state arrays; `mayHoldUnknownObject`; M6 in `JIRCallResolver` (directed mode only, or both by D9) | `G-JVM`, `G-ROOT` | tests only |
-| P9 | `AliasSampleTest` parameterized by mode; directed variant of `test external call invalidates heap aliases` with the new assertion; `test swap fields` with `entryUnique = true` and the new assertions; non-transitive tests (`alias of x does not contain y after a join`, the field example, `alias alloc info comes from points-to only`) | Test changes only; optional `findMustAlias` (D5) with `must alias is a subset of may alias` | `G-JVM` | tests only |
-| P10 | — | Full suites in directed mode: `G-JVM`, `G-QL`, `G-ROOT` with `-PaliasAnalysisMode=DIRECTED`, also with `-PaliasDepth=1` where the harness supports it. Fix each failure with a failing test first. CLI option and the end-to-end plumbing (list below). The per-query differential mode (system property `opentaint.aliasDifferential`, §11.3 step 6). Set `maxTableContent` from the Conductor maximum (§7.11). | `G-JVM`, `G-QL`, `G-ROOT` in both modes | CLI opt-in |
-| P11 (no code) | — | L4 measurements (§11.3), report | — | opt-in |
+| P9 | `AliasSampleTest` parameterized by mode; directed variant of `test external call invalidates heap aliases` with the inverted assertion `alias(dst) ∋ arg0` (D2: the may analysis has no alias drop at an unresolved call); `test swap fields` in directed mode with the second and the third assertion inverted (`aValueAliases` has no `Argument(1).value`, `bValueAliases` has no `Argument(0).value`). Reason: the default `entryUnique = true` (D1) makes both stores strong, and the two removed aliases need entry aliasing, which A1 excludes (§9.2). Non-transitive tests (`alias of x does not contain y after a join`, the field example, `alias alloc info comes from points-to only`) | Test changes only | `G-JVM` | tests only |
+| P9a (shadow mode) | `shadow mode gives the DSU answers to the consumers`; `shadow mode records both answer sizes of each query`; `shadow mode records a query where the directed answer is not a subset of the DSU answer` (the shape of probe row 21, U2) | `aliasAnalysisMode = SHADOW` in the facade (§7.3), `AliasShadowStats`, the not-subset log (§11.3 steps 2-3); CLI option and the end-to-end plumbing (list below). Then the shadow runs on thingsboard, Conductor and tms (§11.3 steps 2-3). | `G-JVM`, `G-QL`, `G-ROOT`; findings in `SHADOW` equal to `DSU` on thingsboard, Conductor and tms; then the user sets the volume gate (§11.2) | `SHADOW` opt-in |
+| P10 | the shadow volume gate passed (§11.2) | Full suites in directed mode: `G-JVM`, `G-QL`, `G-ROOT` with `-PaliasAnalysisMode=DIRECTED`, also with `-PaliasDepth=1` where the harness supports it. Fix each failure with a failing test first. Set `maxTableContent` from the shadow maxima (§7.11). Apply the volume control that the user chooses (D11). | `G-JVM`, `G-QL`, `G-ROOT` in both modes | CLI opt-in |
+| P11 (no code) | — | L4 measurements in `DIRECTED` mode (§11.3 steps 4-8), report | — | opt-in |
 | P12 | — | Default `DIRECTED` (separate PR) when each condition of §11.2 holds | all gates | default on |
 | P13 | — | After one release: remove the JVM DSU backend, its JVM-only tests and `DSUAliasAnalysisInvalidateOuterHeapAliasesTest`. Keep the shared DSU and its tests for Go. | all gates | mode switch removed |
+
+Step P0b (the DSU cache fix) is dropped (D13, decided by the user). The DSU of main stays as it is.
+
+Volume order. Before P10, directed answers reach only the alias tests (L0-L2), never the taint analysis. P0c measures the volume of main. P9a measures the directed volume next to it, with the DSU answers still in use. P10 is the first step in which directed answers feed the taint analysis, and it starts only after the shadow volume gate passes (§11.2).
 
 Test lists:
 
@@ -1863,7 +1967,7 @@ Test lists:
 - P6 call tests: `directed unknown call on the argument keeps the loaded field alias` and the other four PS4 flips; `directed jdk call on the argument keeps the loaded field alias`; `directed value loaded after a call does not alias unrelated outer paths` (§4.9); `directed static field write then read aliases the written value`; `directed static write then read in a generic class and in a nested class aliases the written value`; `directed pass-through models of two arguments keep x apart from y`; `directed equal string literals in two locals alias`; `directed constant return replaces the old value`; `directed unresolved setter call does not alias the argument with the field`; `directed one new object in two cells is out of scope under per cell havoc` (the shape of §3.1).
 - P7 probes: `directed strong update on a loop allocation site keeps the previous object field after a call` (PS3.1) and the PS3.2-PS3.5 directed probes.
 
-Mode plumbing (P1 and P10). Each hop must pass the mode and the inlining depth:
+Mode plumbing (P1 and P9a). Each hop must pass the mode (`DSU`, `SHADOW` or `DIRECTED`) and the inlining depth:
 
 1. CLI option `--experimental-alias-analysis-mode` in `ProjectAnalyzerRunner`.
 2. The Go CLI builds the analyzer command line from a fixed list (`cli/cmd/command_builder.go`). It needs a passthrough for the new option (a `cli`-scoped PR).
@@ -1881,13 +1985,14 @@ Mode plumbing (P1 and P10). Each hop must pass the mode and the inlining depth:
 
 | Id | Risk | Evidence | Mitigation |
 |---|---|---|---|
-| R1 | Mode `SHARED` makes each value loaded after a call alias each outer path (output and time growth). | §4.9 (`pHv`) | Default `PER_CELL` (D2). Test `directed value loaded after a call does not alias unrelated outer paths`. |
+| R0 | Alias answer volume. The taint analysis turns each reported alias path into copied facts (CS1-CS6, §8). So the cost driver is the number and the length of the alias paths of each query, not the alias fixpoint. More paths, or longer paths, explode the fact count and the memory. | User report (D13): on main, a fix of the call drop or of the cache truncation makes the alias analysis report many more alias chains, and the analysis explodes. It reproduces fast on thingsboard: the number of taint facts (IFDS events) explodes, and the run ends with an out-of-memory error. The volume table below gives the effect of each design change. | First gate: the volume baseline of main (P0c), then shadow mode (P9a), then the shadow volume gate (§11.2). Only then do directed answers feed the taint analysis (P10). Volume control: D11. |
+| R1 | Mode `SHARED` makes each value loaded after a call alias each outer path (output and time growth). | §4.9 (`pHv`) | Proposed default `PER_CELL` (the form of D2, to confirm at the spec revisit). Test `directed value loaded after a call does not alias unrelated outer paths`. |
 | R2 | Node table content grows as `m²/2` on join chains. | `chain_table` | `contentSize` counter and `maxTableContent` cap. Log the statistics. |
 | R3 | Memo misses at loop tests | `test_miss` | Same order as a sorted merge. Count misses in L4. |
-| R4 | Weak havoc keeps heap paths after calls, so CS4/CS5 copy more facts. IFDS work and memory grow. | CK10, M5. Conductor is already memory bound. | Measure IFDS events and heap on Conductor at 16 GB. If the growth is too large, keep weak havoc in the alias state. Then add a direct after-call query for CS4/CS5. This query excludes the cells that a call touched. |
-| R5 | Entry aliasing is unsound for both policies. | `skip_unsound`, `write_read_unsound` (§3.3). The DSU is also unsound there. | Document A1. Caller information on the exact partition is a later option (§3.3). |
+| R4 | Weak havoc keeps heap paths after calls, so CS4/CS5 copy more facts. IFDS work and memory grow. A part of R0. | CK10, M5. thingsboard and Conductor are already memory bound. | Measure the volume in shadow mode first (R0). Then measure IFDS events and heap on thingsboard and Conductor at 16 GB. If the growth is too large, keep weak havoc in the alias state. Then add a direct after-call query for CS4/CS5. This query excludes the cells that a call touched. |
+| R5 | Entry aliasing is unsound for both policies. The default `entryUnique = true` also loses the aliases that `false` keeps on a swap. | `skip_unsound`, `write_read_unsound`, `swap_strong` (§3.3). The DSU is also unsound there. | Accepted by the user (D1): A1 is a precondition of the intra-procedural analysis. Keep `entryUnique = false` as a policy value for an A/B check. Caller information on the exact partition is a later option (§3.3). |
 | R6 | `retire` scans the state for each loop allocation if no holder index exists. | `retireO_work` (§5.5) | Only loop sites retire. Keep a holder index for `alloc-new` of loop sites. Measure with a counter. |
-| R7 | After a walk deeper than K, a variable holds `deep(b)`, and `deep(b)` holds itself in each cell. Without a rule, `findAlias` gives `\|cells\|^D` answers, most of them false aliases. The DSU gives only the accessed chain. | `adefault` (Concept.lean), §6.2 | K ≥ D + 1, and the search never expands a deep self edge (§6.2). Measure the output size on Conductor before P12. |
+| R7 | After a walk deeper than K, a variable holds `deep(b)`, and `deep(b)` holds itself in each cell. Without a rule, `findAlias` gives `\|cells\|^D` answers, most of them false aliases. The DSU gives only the accessed chain. | `adefault` (Concept.lean), §6.2 | K ≥ D + 1, and the search never expands a deep self edge (§6.2). Measure the output size in shadow mode on thingsboard and Conductor (R0, §11.3 step 2). |
 | R8 | Parts of the engine are not in the O proof: the havoc layer, the WTO strategy, exceptional edges, constants, garbage collection. | `mayProgOE_eq`, `mayProgRO_eq`, `mayProgHO_eq` and `mayProgHRO_eq` cover C with each combination of recency and havoc mode, with explicit havoc writes. | L1 differential test against `NaiveConcept` on the same CFG with the same strategy. Lean follow-ups F3, F4, F5, F8. |
 | R9 | The directed engine havocs at each unresolved call, also at the calls that the DSU exempts (`cantMutateAliasedHeap()`). | §7.6, D10 | Count `havocs` and compare alias time in L4. |
 | R10 | CS7 precision exposes the unknown-origin gap of main. | §9.1 CS7 | M6 / D9 |
@@ -1896,48 +2001,83 @@ Mode plumbing (P1 and P10). Each hop must pass the mode and the inlining depth:
 | R13 | States for each statement use memory `O(statements × entries)`. Each method result stays in memory for the whole run (`JIRAnalysisManager.contexts`). | Not measured. The DSU removes heap elements of removed groups; the directed heap needs garbage collection (§7.11). | The four measures of §7.11. `retainedEntries` budget (§11.2). D8 if the budget fails. |
 | R14 | Exceptions: catch states and the catch origin are outside the Lean model. | §3.4, §7.10 | Catch edges join the states before and after the thrower (argued, F8). The DSU uses the state after only. |
 | R15 | Havoc content on written cells grows with the number of calls. | §7.6 | Call-site lists, shared by all cells with the same call history. No node for a havoc union. Count `siteLists` in `DirectedAliasStats`. |
-| R16 | The default policy is proved sound only under A2-strict (`csoundHR`); under A2-wide it misses aliases (`generous_breaks_strict`). Completeness of recency and of calls is not proved (§4.7, F6). | §4.9 | A callee that writes one object into two cells is out of scope. Mode `SHARED` (A2-wide, proved by `csoundE` and `csoundR`) stays available for an A/B check (D2). |
+| R16 | The default policy is proved sound only under A2-strict (`csoundHR`); under A2-wide it misses aliases (`generous_breaks_strict`). Completeness of recency and of calls is not proved (§4.7, F6). | §4.9 | A callee that writes one object into two cells is out of scope. Mode `SHARED` (A2-wide, proved by `csoundE` and `csoundR`) stays available for an A/B check. The havoc-origin form of D2 is open until the spec revisit. |
+
+Volume table (R0). Main has two defects that limit the volume by accident: the order-dependent conversion cache cuts heap chains (§8.5), and the call drop removes heap aliases (U2). The user reports that a fix of either one explodes the analysis. The directed engine has both changes that increase the volume: no drop at calls (D2, decided) and a deterministic, depth-aware query that reports full chains up to D. It also has changes that decrease the volume: non-transitive answers (`alias(x) = {a}`, not `{a, y}`), and dominance where the DSU is sound (there, the directed answers are a subset of the DSU answers). The subset claim is proved only for the heap-free fragment (`dsu_dominates_heapFree`, with `dsu_sound_heapFree`, DSU/HeapFree.lean, §2.5). With loads and stores it is not proved (F6). So the net volume is not known. It is the first gate (§11.2).
+
+| Change | Effect on volume | Evidence |
+|---|---|---|
+| Non-transitive answers: `alias(x) = {a}`, not `{a, y}` (PL1-PL4, PL7) | − | proved: `alias_not_transitive`, `join_precision_loss`, `field_precision_loss`; measured on main: probe rows 1-4, 8, 10, 37, 41, 42 (the expected directed flips, §9.3) |
+| Directed pass-through models (PL6) | − | measured on main: probe row 11; argued for the directed answer (§7.8) |
+| Dominance where the DSU is sound: the directed answer is a subset of the DSU answer | − | proved only for the heap-free fragment (`dsu_dominates_heapFree`); open with loads and stores (F6); known failures in §2.5 |
+| No alias drop at unresolved calls (D2) | + | proved: `b_unsound`, `b_local_unsound`, `call_w_xf`; measured on main: probe rows 21, 22, 24, 25, 27; reported by the user: the fix of the drop on main explodes the analysis |
+| No cache truncation: full chains up to D (§8.5, §7.11) | + | argued; reported by the user: the cache fix on main explodes the analysis; P0c counts the cut (`cutConversions`, `cutCacheHits`) |
+| Other soundness fixes: U1, U3, U4 restore lost aliases | + | proved: `a1_unsound` .. `a4_unsound`, `static_unsound`, `repr_unsound`; measured on main: probe rows 13-16, 28, 35, 36. Rows 35 and 36 also lose a false `x.next^k` chain (−). |
+| Strong updates on entry roots (D1): a strong store removes the old content of the cell | − | proved: `root_concept_more_precise`, `swap_strong`; measured on main: probe row 30 |
+| Recency: strong stores on `alloc-new(s)` of loop sites | − | proved: `loop_bf_x_fixed`, `loop_bf_x_exact`; probe rows 17-20 get smaller sets (§9.3, argued from the oracle) |
+| Per-cell havoc (`PER_CELL`) against site havoc (`SHARED`) | − for `PER_CELL`; + for `SHARED`: with `SHARED`, each value loaded after a call aliases each outer path (about `\|vars\|·\|cells\|^D` paths, §4.9) | proved: `havoc_spread`, `strict_answers`, `strict_ab_none`; for new content `PER_CELL` equals the DSU (`dsu_ab`) |
+| Interned constants: one origin for each string value, box type and class literal (§7.5) | + | argued: two locals with one literal now alias (§9.1); not in Lean (F4) |
+| Deep self edges are never expanded (§6.2) | − | argued (F7) |
+| Query depth D | the main knob: the output can grow as `\|cells\|^D` on cyclic heaps | proved: `searchCost_le` bounds the query cost by the output; `qfam_sep`; D11 (b) |
 
 ### 11.2 Performance, precision and memory gates
 
-Baseline: main + P0b. One jar that has both modes runs both sides of each A/B, so the alias timer is the same on both sides.
+Baseline: main as it is (D13, decided by the user). The DSU of main keeps its defects (U1-U4, the cache cut of §8.5); no DSU fix goes into the baseline. One jar that has all three modes runs both sides of each A/B (mode `DSU` against mode `SHADOW` or `DIRECTED`), so the alias timer and the counters are the same on both sides.
 
-| Quantity | Budget (directed against baseline) | Source |
+Volume gate (R0). It is the first gate. It has two parts: V1 in shadow mode (P9a), before any directed answer feeds the taint analysis, and V2 in directed mode (P11). This document sets no thresholds for it. The user: "measure after the implementation, then decide". So the user sets the thresholds after the shadow-mode measurement. This document defines only the metrics and the comparisons. Projects in this order: thingsboard first (the explosion of main reproduces there fast), then Conductor, then tms.
+
+| Part | Metric | Comparison | Source |
+|---|---|---|---|
+| V1 (shadow, P9a) | For each query: answer count, accessor sum, maximum chain length, for each backend; the query kind (`BEFORE`, `AFTER`, `ARRAY_ELEMENT`, `HEAP`) | Directed against DSU for each query. Each query where the directed answer is not a subset of the DSU answer is logged and classified: U1-U4, the cache cut (§8.5: the DSU query had a `cutCacheHits` increment), an interned constant (§7.5), or a new bug. Unexplained queries: zero (a correctness rule, not a volume threshold). Each query where the DSU answer is not a subset of the directed answer is counted (precision gain). | `AliasShadowStats` |
+| V1 | For each method and each project: number of queries, total paths, total accessors, p50 / p99 / max of the answer size and of the chain length, for each query kind; `truncatedQueries` (D11 (c)); `cutConversions` and `cutCacheHits` of the DSU | Directed total against DSU total, for each project | `AliasShadowStats`, `AliasVolumeStats` |
+| V1 | Precision: mean and p99 of `\|alias(x)\|` | Directed against DSU | `AliasShadowStats` |
+| V1 | Findings in `SHADOW` | Equal to the `DSU` findings (a check of the mode) | SARIF |
+| V2 (directed, P11) | Taint facts: IFDS events before the memory guard (the `Progress: N/M` lines), IFDS time, peak heap, memory guard events, out-of-memory errors | `DIRECTED` against `DSU`, thingsboard first, then Conductor, at 16 GB | §11.3 step 5 |
+| V2 | Alias timeouts ("exceed 10s" lines) and table-limit stops | `DIRECTED` against `DSU` on thingsboard, Conductor, tms | logs |
+
+Other gates (directed against the baseline). The user sets each performance number after the measurement, as for the volume gate. The table gives the metric and the comparison only. The dataflowbench row is a correctness rule: no score may go down.
+
+| Quantity | Comparison | Source |
 |---|---|---|
-| tms wall time | at most +10 % (median of 3 alternating rounds) | §11.3 step 2 |
-| Alias time for each method | log `aliasTimeMs`; sum over tms at most 1.5 × DSU | `DirectedAliasStats` |
-| Alias timeouts ("exceed 10s" lines) and table-limit stops | not more than the baseline timeouts on tms, Conductor, thingsboard | logs |
+| tms wall time | `DIRECTED` against `DSU`, median of 3 alternating rounds | §11.3 step 6 |
+| Alias time for each method | log `aliasTimeMs`; the sum over tms against the DSU sum | `DirectedAliasStats` |
 | Table | maximum `contentSize` for each method below `maxTableContent`; report p50 / p99 / max of `nodeCount`, `contentSize`, `memoMisses / (memoHits + memoMisses)` | `DirectedAliasStats` |
-| Memory | report p50 / p99 / max of `retainedEntries` for each method; the sum over Conductor at most 1.5 × the DSU state entries | `DirectedAliasStats` |
-| Conductor at 16 GB | IFDS events before the memory guard and IFDS time within +10 %; no new memory guard event | §11.3 step 5 |
-| thingsboard at 16 GB | the same | the same |
-| dataflowbench | Java at least 49/58, Kotlin at least 50/58; explain each changed case | §11.3 step 4 |
-| Precision (per-query differential) | Report mean and p99 of `\|alias(x)\|` in both modes on tms and Conductor. The mean in directed mode is smaller. Each query where the directed answer is not a subset of the DSU answer maps to a known class U1-U4, or it is a new bug. Unexplained queries: zero. | §11.3 step 6 |
+| Alias state memory | report p50 / p99 / max of `retainedEntries` for each method; the sum over thingsboard and Conductor against the DSU state entries | `DirectedAliasStats` |
+| dataflowbench | Java at least 49/58, Kotlin at least 50/58; explain each changed case | §11.3 step 7 |
 | Exactness | Report the share of methods with `exactMethods` true, for each project | `DirectedAliasStats` |
 
 The DSU state entries come from the DSU path of the same jar (a counter of the `IntDisjointSets` size after the fixpoint).
 
+P10 start condition: V1 holds with the thresholds that the user set after the shadow-mode measurement, and the user decided D11.
+
 P12 go/no-go. P12 needs all of these conditions:
 
-1. Each budget of the table above holds.
-2. No unexplained lost finding on tms, Conductor or thingsboard.
-3. dataflowbench at or above the baseline.
-4. The precision metric is better than the baseline.
-5. The user accepts A2-strict as the call scope of the default policy (§4.9, R16, D2).
+1. V1 and V2 hold with the thresholds that the user set.
+2. Each budget of the table "Other gates" holds.
+3. No unexplained lost finding on thingsboard, Conductor or tms.
+4. dataflowbench at or above the baseline.
+5. The precision metric of V1 is better than the baseline.
+6. The user accepts A2-strict as the call scope of the default policy at the spec revisit (the havoc-origin form of D2; §4.9, R16).
 
-`DirectedAliasStats` is a small counter object for each analysis, logged at DEBUG: `stmtEvals`, `headIterations`, `nodeCount`, `contentSize`, `memoHits`, `memoMisses`, `retires`, `havocs`, `siteLists`, `retainedEntries`, `exactMethods`, `queryCount`, `queryNodes`, `aliasTimeMs`.
+`DirectedAliasStats` is a small counter object for each analysis, logged at DEBUG: `stmtEvals`, `headIterations`, `nodeCount`, `contentSize`, `memoHits`, `memoMisses`, `retires`, `havocs`, `siteLists`, `retainedEntries`, `exactMethods`, `queryCount`, `queryNodes`, `aliasTimeMs`. The volume counters are in `AliasVolumeStats` (§7.3).
 
 ### 11.3 Measurement plan
 
 The sources of the baseline numbers: tms timing measured 2026-08-27 on this development machine; dataflowbench 49/58 and 50/58 reproduced 2026-09-01 with release `analyzer/2026.08.27.17eb0fe`; Conductor at 16 GB measured 2026-08-20.
 
-1. Build two jars from one source tree: the baseline (main + P0b) and the directed build (P10, mode by option). Command: `cd core && ./gradlew :projectAnalyzerJar --offline -x :opentaint-ir:go:buildGoServer`. Build the CLI one time: `cd cli && GOPROXY=off go build -o <out>/opentaint-cli .`.
-2. tms. Run `<out>/opentaint-cli scan --debug --experimental --analyzer-jar <jar> --ruleset rules/ruleset --project-model ../opentaint-test/opentaint-test-tms/opentaint-project --output <out>.sarif --timeout 800s --max-memory 8G` with each jar. Alternate the two jars over 3 rounds. The first run is cold: about 64 s, against about 37 s for a warm run. If you do not alternate the jars, the cold run can show a false slowdown of 70 %.
-3. Compare findings on `(ruleId, message, locations, codeFlows)`. Then key again on `(ruleId, path, startLine, startColumn)`, and report changes of the code-flow count separately. A changed flow count shows as one removed and one added finding in the first key.
-4. dataflowbench. Use JDK 21 and kotlinc 2.4.10. Run `dataflowbench run-opentaint-java-kernel --analyzer-jar <jar> --models-archive <models> --java <jdk21>/bin/java --javac <jdk21>/bin/javac` and `run-opentaint-kotlin-kernel` (with `--kotlinc` and `--kotlin-stdlib`) with each jar. Compare case outcomes.
-5. Conductor and thingsboard. Run the scan on `opentaint-test/opentaint-test-conductor/opentaint-project/project.yaml` (and the thingsboard project) with the CI arguments: `--passthrough-approximations`, `--java-dataflow-approximations`, the bundled ruleset plus the project rules, `--verbosity=DEBUG`, `--timeout 1080s`, and `--max-memory 16G` (at 8 GB every build reaches the memory guard). Alternate the jars over 3 rounds. Compare the events before the guard (the `Progress: N/M` lines), IFDS time, guard events and findings.
-6. Per-query differential. In the directed build, set the system property `opentaint.aliasDifferential=true`. Then each query runs in both backends. The analyzer logs both answer sizes. It also logs each query where the directed answer is not a subset of the DSU answer. Run it on tms and Conductor. Classify each such query as U1-U4 or as a new bug.
-7. For each new or lost finding: map it to a consumer (CS1-CS8) and to a probe shape. Add a probe if the shape is new.
+Steps 1-3 are the volume phase (R0). They run before any directed answer feeds the taint analysis. The project order is thingsboard, Conductor, tms: the explosion of main reproduces fast on thingsboard (a fast out-of-memory error from the number of taint facts).
+
+1. Volume baseline (P0c). Build the jar of main with the P0c counters (no answer change): `cd core && ./gradlew :projectAnalyzerJar --offline -x :opentaint-ir:go:buildGoServer`. Build the CLI one time: `cd cli && GOPROXY=off go build -o <out>/opentaint-cli .`. Run thingsboard, then Conductor, with the arguments of step 5, then tms with the command of step 6. Record the `AliasVolumeStats` totals of each project, `cutConversions`, `cutCacheHits`, the IFDS events (`Progress: N/M`), the peak heap and the memory guard events. Check that the findings equal the findings of main.
+2. Shadow runs (P9a). The same projects in the same order, with `--experimental-alias-analysis-mode=shadow`. Check that the findings equal the `DSU` findings. Collect `AliasShadowStats`: the per-query comparison and the per-project totals of V1 (§11.2). Two engines run, so time and memory of this run are not budgets. If a shadow run does not fit in 16 GB, record it, and run again with more memory.
+3. Shadow report. For each project: directed total against DSU total; the distributions of the answer size and the chain length for each query kind; the not-subset queries with their class (U1-U4, cache cut, interned constant, new). Optional diagnostic runs in shadow mode isolate the volume of single changes: `diagnosticCallDrop = true` (the volume of D2, D11 (e)), a smaller `maxAccessors` (D11 (b)), a `maxQueryPaths` budget (D11 (c)). Then the user sets the thresholds of V1 and V2 and decides D11 (§11.2, §12).
+
+Steps 4-8 run in directed mode (P11), after the shadow volume gate.
+
+4. Compare findings on `(ruleId, message, locations, codeFlows)`. Then key again on `(ruleId, path, startLine, startColumn)`, and report changes of the code-flow count separately. A changed flow count shows as one removed and one added finding in the first key.
+5. thingsboard, then Conductor. Run the scan on the thingsboard project (`opentaint-test/opentaint-test-thingsboard`), then on `opentaint-test/opentaint-test-conductor/opentaint-project/project.yaml`, with the CI arguments: `--passthrough-approximations`, `--java-dataflow-approximations`, the bundled ruleset plus the project rules, `--verbosity=DEBUG`, `--timeout 1080s`, and `--max-memory 16G` (at 8 GB every build reaches the memory guard). Alternate the modes `DSU` and `DIRECTED` over 3 rounds. Compare the events before the guard (the `Progress: N/M` lines), IFDS time, peak heap, guard events, out-of-memory errors and findings (V2).
+6. tms. Run `<out>/opentaint-cli scan --debug --experimental --analyzer-jar <jar> --ruleset rules/ruleset --project-model ../opentaint-test/opentaint-test-tms/opentaint-project --output <out>.sarif --timeout 800s --max-memory 8G` in each mode (`--experimental-alias-analysis-mode=dsu` or `=directed`). Alternate the two modes over 3 rounds. The first run is cold: about 64 s, against about 37 s for a warm run. If you do not alternate the runs, the cold run can show a false slowdown of 70 %.
+7. dataflowbench. Use JDK 21 and kotlinc 2.4.10. Run `dataflowbench run-opentaint-java-kernel --analyzer-jar <jar> --models-archive <models> --java <jdk21>/bin/java --javac <jdk21>/bin/javac` and `run-opentaint-kotlin-kernel` (with `--kotlinc` and `--kotlin-stdlib`) in each mode. Compare case outcomes.
+8. For each new or lost finding: map it to a consumer (CS1-CS8) and to a probe shape. Add a probe if the shape is new.
 
 ### 11.4 Lean follow-ups
 
@@ -1955,24 +2095,29 @@ The sources of the baseline numbers: tms timing measured 2026-08-27 on this deve
 
 ### 11.5 Rollback
 
-The mode switch is the rollback. Set `aliasAnalysisMode = DSU` (CLI `--experimental-alias-analysis-mode=dsu`). The DSU backend stays in the code until P13. After P12 the rollback is a one-line default change.
+The mode switch is the rollback. Mode `SHADOW` gives the DSU answers to the consumers, so it needs no rollback. Set `aliasAnalysisMode = DSU` (CLI `--experimental-alias-analysis-mode=dsu`). The DSU backend stays in the code until P13. After P12 the rollback is a one-line default change.
 
 ---
 
 ## 12. Decisions for the user
 
-| Id | Decision | Options | Recommendation | Evidence |
-|---|---|---|---|---|
-| D1 | Strong updates on entry roots (`entryUnique`) | (a) `false`: weak on symbolic origins; only allocation origins can get strong updates. (b) `true`: strong store on `sym(root, q)` without `elem`, and on unique call results. | (a) as the default for v1. Keep (b) as a policy value for A/B. | Soundness: under entry aliasing both policies are unsound (`skip_unsound`, `write_read_unsound`). (b) also loses aliases that (a) keeps: `swap_alias` with `swap_strong` false and `swap_weak` true. No theorem orders the two policies. The swap case is a real call shape (`test swap fields`). With (a), `test swap fields` keeps its assertions. Precision cost of (a): stores on `this` are weak, also in a constructor (probe row 29, a precision loss against the DSU). Gain of (b): probe row 30 flips, and `root_concept_more_precise`. |
-| D2 | Call model | (a) the heap-alias removal of main. (b) weak havoc with site havoc origins (`SHARED`). (c) weak havoc with per-cell havoc origins (`PER_CELL`). | (c) `PER_CELL` as the default, under A2-strict (proved). Keep (b) `SHARED` as a mode for A2-wide (proved) and for A/B. | (a) is unsound (U2: probe rows 21, 24, 27; `b_unsound`, `b_local_unsound`, `call_w_xf`). (b) is sound under A2-wide, with and without recency (`csoundE`, `csoundR`, `mayProgOE_eq`, `mayProgRO_eq`). But a value loaded after a call may-aliases each outer path (`havoc_spread`, §4.9). (c) is sound under A2-strict, with and without recency (`csoundH`, `csoundHR`), and O equals C (`mayProgHO_eq`, `mayProgHRO_eq`, `csoundHRO`). It removes the spread (`strict_answers`, `strict_ab_none`) and keeps the precision of the DSU for new content (`dsu_ab`). It is not sound under A2-wide (`generous_breaks_strict`), so the user must accept A2-strict (§3.1, R16, §11.2 condition 5). The shared key `alloc-old(s)` is sound (`keyOfR_alphaRS`). Its cost is `cost_answers` / `cost_none`, and recency alone and per-cell havoc alone have the same cost. Behaviour change for CS4/CS5 (§9.1) and for `test external call invalidates heap aliases` (§9.2). |
-| D3 | Recency | (a) on. (b) off. | (a) | §1.7 (CEGAR step 1). Cost: R6. |
-| D4 | Origin depth K and query depth D | K: 3, 7 or 9. D: 6 accessors, or less. | D = 6 (unchanged, `HEAP_CHAIN_LIMIT = 5`). K = 7 (K ≥ D + 1). | With K ≥ D + 1, a reported path from a root variable is its own origin, with no deep origin in the reported range (CX1 shows the merge). A path from a loaded variable can reach a deep origin in the reported range; the search rule of §6.2 then applies. Cost of K: origins and node sizes, up to `Σ_{i≤K} w^i` symbolic origins for each base on a walk over `w` fields (§6.2). Measure `nodeCount` and `contentSize` for K = 3 and K = 7 in L4 before the decision. Contract item CK3 needs an unchanged query depth D. |
-| D5 | Must-alias | (a) derive from O (§8.4). (b) rebase `origin/DanielELog/must_alias` (second DSU with a meet join). (c) none now. | (a), as a later PR after P9 | No second fixpoint; `must ⊆ may`; ids make the test one comparison. (b) is on the old API, and its unfinished part can lose may-aliases (not verified). |
-| D6 | Shared base class with Go | (a) extract `LocalAliasQueries`. (b) stop extending, copy the helpers. | (a) | §8.3. Type-level change only. Go does not change. |
-| D7 | Rollout | (a) mode switch, default `DSU`, opt-in CLI; default `DIRECTED` after the conditions of §11.2 (P12); remove the DSU after one release (P13). (b) switch in one step. | (a) | Rollback by the mode switch (§11.5). L4 noise needs interleaved runs. |
-| D8 | State container | (a) fastutil copy-on-write. (b) `kotlinx.collections.immutable` persistent maps. | (a). Measure (b) only if the memory gate fails. | §7.11: no boxing, `joinO_work` per key. Memory is to be measured (§11.2). |
-| D9 | Unknown-origin signal for CS7 (M6) | (a) add `defaultConstraint` when `mayHoldUnknownObject` (both modes). (b) directed mode only. (c) no change. | (b) first, then (a) after a separate tms A/B | It closes the unsoundness of main that the directed precision makes visible (§9.1 CS7). (a) changes DSU results too, so measure it alone. |
-| D10 | The `cantMutateAliasedHeap()` exemption | (a) no exemption in directed mode: each unresolved call havocs. (b) keep the exemption for static calls with only primitive arguments; never for the receiver of `<init>`. | (a) | The exemption is outside the Lean model: such a callee can write statics. For a constructor it removes the receiver havoc, and two loads of one field of the new object then do not alias (§7.6). Cost: more havocs (R9). |
+The user decided D1, D2, D5, D6, D7, D12 and D13 on 2026-10-29. D3, D4, D8, D9, D10 and D11 are open: the user decides after the spec revisit. For an open decision, the row gives the options, a recommendation and the evidence.
+
+| Id | Status | Decision | Options | Recommendation or decision | Evidence |
+|---|---|---|---|---|---|
+| D1 | Decided by the user | Strong updates on entry roots (`entryUnique`) | (a) `false`: weak on symbolic origins; only allocation origins can get strong updates. (b) `true`: strong store on `sym(root, q)` without `elem`, and on unique call results. | (b) `true` is the default. The user: "We may lose some aliases, but it is acceptable. We remain intra-proc." A1 is an accepted precondition of the intra-procedural analysis. (a) stays a policy value for an A/B check. | Under entry aliasing both policies are unsound (`skip_unsound`, `write_read_unsound`). (b) also loses aliases that (a) keeps: `swap_alias` with `swap_strong` false and `swap_weak` true. These theorems document the accepted loss (§3.3). No theorem orders the two policies. The completeness theorems use (b), so they cover the default (§4.7). Gain of (b): probe row 30 flips, row 29 keeps its answer, and `root_concept_more_precise`. Cost of (b): 2 of the 4 assertions of `test swap fields` change in directed mode (§9.2, P9). |
+| D2 | Decided by the user; the havoc-origin form is proposed | Call model | (a) the heap-alias removal of main. (b) weak havoc with site havoc origins (`SHARED`). (c) weak havoc with per-cell havoc origins (`PER_CELL`). | No alias drop in the may analysis: (a) is out. The drop of main (`invalidateOuterHeapAliases`) is a must-side rule: a callee can overwrite a cell, so a must relation through it ends. A future must analysis keeps it (§8.4). Main has no must analysis enabled, so the directed analysis uses weak havoc. Proposed form, to confirm at the spec revisit: (c) `PER_CELL` as the default under A2-strict, and (b) `SHARED` as a mode for A2-wide and for A/B. | (a) is unsound for may-alias (U2: probe rows 21, 24, 27; `b_unsound`, `b_local_unsound`, `call_w_xf`). (b) is sound under A2-wide, with and without recency (`csoundE`, `csoundR`, `mayProgOE_eq`, `mayProgRO_eq`). But a value loaded after a call may-aliases each outer path (`havoc_spread`, §4.9). (c) is sound under A2-strict, with and without recency (`csoundH`, `csoundHR`), and O equals C (`mayProgHO_eq`, `mayProgHRO_eq`, `csoundHRO`). It removes the spread (`strict_answers`, `strict_ab_none`) and keeps the precision of the DSU for new content (`dsu_ab`). It is not sound under A2-wide (`generous_breaks_strict`), so the user must accept A2-strict (§3.1, R16, §11.2 condition 5). The shared key `alloc-old(s)` is sound (`keyOfR_alphaRS`). Its cost is `cost_answers` / `cost_none`, and recency alone and per-cell havoc alone have the same cost. Behaviour change for CS4/CS5 (§9.1) and for `test external call invalidates heap aliases` (§9.2). Volume: no drop increases the alias answer volume (R0); the diagnostic flag of D11 (e) measures this part. |
+| D3 | Open: the user decides after the spec revisit | Recency | (a) on. (b) off. | (a) | §1.8 (CEGAR step 1). Cost: R6. |
+| D4 | Open: the user decides after the spec revisit | Origin depth K and query depth D | K: 3, 7 or 9. D: 6 accessors, or less. | D = 6 (unchanged, `HEAP_CHAIN_LIMIT = 5`). K = 7 (K ≥ D + 1). | With K ≥ D + 1, a reported path from a root variable is its own origin, with no deep origin in the reported range (CX1 shows the merge). A path from a loaded variable can reach a deep origin in the reported range; the search rule of §6.2 then applies. Cost of K: origins and node sizes, up to `Σ_{i≤K} w^i` symbolic origins for each base on a walk over `w` fields (§6.2). Measure `nodeCount` and `contentSize` for K = 3 and K = 7 in L4 before the decision. Contract item CK3 needs an unchanged query depth D. D is also the main knob of the alias answer volume (R0, D11 (b)). |
+| D5 | Decided by the user | Must-alias | (a) derive from O (§8.4). (b) take the branch `origin/DanielELog/must_alias` (second DSU with a meet join). (c) none now. | (c): must-alias is postponed. Later work can derive it from O (a). It must keep the alias drop at unresolved calls (D2). | Main has no must analysis enabled. A derivation from O needs no second fixpoint, and `must ⊆ may` holds. The branch is on the old API, and its unfinished part can lose may-aliases (not verified). §8.4. |
+| D6 | Decided by the user | Shared base class with Go | (a) extract an interface for the two queries. (b) copy: the JVM facade and the directed backend do not extend `LocalAliasAnalysis`; copy the helpers into the JVM module. | (b). The shared alias code and Go code do not change. | §8.3. The copies are the generic receiver helpers of `AliasUtil.kt` (M3, §7.4). Risk: the two copies of the helper loops can become different. |
+| D7 | Decided by the user | Rollout | (a) mode switch `aliasAnalysisMode = DSU \| SHADOW \| DIRECTED`, default `DSU`, opt-in CLI; `SHADOW` for the volume gate (P9a); default `DIRECTED` after the conditions of §11.2 (P12); remove the DSU after one release (P13). (b) switch in one step. | (a): add the mode switch, default `DSU`. The value `SHADOW` follows the user input of 2026-10-29 on the volume (R0, D13). | Rollback by the mode switch (§11.5). L4 noise needs interleaved runs. |
+| D8 | Open: the user decides after the spec revisit | State container | (a) fastutil copy-on-write. (b) `kotlinx.collections.immutable` persistent maps. | (a). Measure (b) only if the memory gate fails. | §7.11: no boxing, `joinO_work` per key. Memory is to be measured (§11.2). |
+| D9 | Open: the user decides after the spec revisit | Unknown-origin signal for CS7 (M6) | (a) add `defaultConstraint` when `mayHoldUnknownObject` (both modes). (b) directed mode only. (c) no change. | (b) first, then (a) after a separate tms A/B | It closes the unsoundness of main that the directed precision makes visible (§9.1 CS7). (a) changes DSU results too, so measure it alone. |
+| D10 | Open: the user decides after the spec revisit | The `cantMutateAliasedHeap()` exemption | (a) no exemption in directed mode: each unresolved call havocs. (b) keep the exemption for static calls with only primitive arguments; never for the receiver of `<init>`. | (a) | The exemption is outside the Lean model: such a callee can write statics. For a constructor it removes the receiver havoc, and two loads of one field of the new object then do not alias (§7.6). Cost: more havocs (R9). |
+| D11 | Open: the user decides after the spec revisit and the shadow-mode measurement | Volume control (R0) | (a) No control: rely on the precision gains (non-transitive answers, D1, recency). Sound; keeps CK3. (b) Query depth D as the knob (`maxAccessors`, D4). Each answer stays complete up to the chosen D. A D smaller than 6 changes CK3: paths longer than D are not reported, which is unsound against main. (c) A deterministic per-query path budget (`maxQueryPaths`): shortest paths first, then the fixed comparator, and a `truncated` counter (§7.12 step 7). Unsound like the cut of main, but deterministic and measured; the cut of main depends on query order (§8.5). Changes CK3. (d) Simple paths only: a reported path never visits an origin two times. It cuts cyclic unrolling such as `x.next.next...`. It is a deviation from the answer set of the concept (`findAlias_iff` then gives only inclusion), so it needs a consumer-level argument or a measurement. Unsound in general: on a list of one summary origin, `x.next.next` can be a real alias. (e) The call drop of main as an A/B-only diagnostic flag in the may analysis (`diagnosticCallDrop`). It isolates the volume effect of D2. Not a default; D2 stands. Unsound (U2). | (b) and (c) are ready in the engine (P4); the measurement chooses between them and their values (§11.3 step 3). (e) for diagnosis only. (a) if the shadow volume gate holds without control. (d) only with a consumer-level argument. | R0 and the volume table (§11.1). Thresholds: the user sets them after the shadow-mode measurement (§11.2). Query cost bound: `searchCost_le`; `\|cells\|^D` output on cyclic heaps (§6.2). |
+| D12 | Decided by the user | Inlining | (a) Keep inlining depth 1 in production. (b) No inlining in the directed engine. | (a). The user: "Inlining — yes, we keep inlining." | §3.4, §7.7, CK12. Production uses `experimentalAAInterProcCallDepth = 1`. |
+| D13 | Decided by the user | The DSU on main | (a) Fix the DSU on main: the cache depth fix (commit `deff91ca0`, §8.5) and the removal of the call drop. (b) Keep the DSU of main as it is; document its defects. | (b). The user: "The issues are known, but we don't land the fix. The problem is the analyzer itself: after any of the fixes the AA starts producing way more alias chains, resulting in analysis explosion." So the cache-fix step is dropped, the A/B baseline is main as it is, and U1-U4, LT1 and the cache cut stay documented (§2, §8.5), not fixed. | User report: the explosion reproduces fast on thingsboard (taint facts, out-of-memory error). R0. P0c counts the volume of main and the cut of the cache, with no answer change. |
 
 ---
 
@@ -1984,7 +2129,7 @@ Build and audit:
 cd formal/directed-alias && ./check.sh
 ```
 
-`check.sh` builds the package with `lake build` (Lean `v4.35.0`, no Mathlib). It fails on `sorry`, `admit`, `native_decide` or an `axiom` declaration. It regenerates `AxiomAudit.lean` and fails if a theorem depends on `Classical.choice`, `sorryAx` or `ofReduceBool`. Output for the full package: 890 public theorems; 59 depend on no axiom, 309 on `propext`, 521 on `propext` and `Quot.sound`, 1 on `Quot.sound`; about 18.2k lines of Lean in 58 build jobs. Concrete checks use `decide`, or `decide +kernel` for large terms. The kernel checks both. No check uses `native_decide`.
+`check.sh` builds the package with `lake build` (Lean `v4.35.0`, no Mathlib). It fails on `sorry`, `admit`, `native_decide` or an `axiom` declaration. It regenerates `AxiomAudit.lean` and fails if a theorem depends on `Classical.choice`, `sorryAx` or `ofReduceBool`. Output for the full package: 905 public theorems; 62 depend on no axiom, 313 on `propext`, 529 on `propext` and `Quot.sound`, 1 on `Quot.sound`; about 18.3k lines of Lean. Concrete checks use `decide`, or `decide +kernel` for large terms. The kernel checks both. No check uses `native_decide`.
 
 Constructive claims. `propext` and `Quot.sound` are in the Lean core. Without `Classical.choice` they do not give the excluded middle, and they do not stop `decide` from reducing. So each proof is constructive. Each example witness is an explicit choice list. The executor `runFrom` runs it, and `decide` checks the result (`runAliasB_sound`). Each completeness theorem also has a computable witness search (`crossWitness`, `witness_core`, `witness_store`, Sound/Witness/Search.lean, §4.7). In the two scopes, a true answer yields a witness that a reader can run with `#eval`.
 
@@ -2000,20 +2145,21 @@ The body gives each theorem with its claim. This index gives the files. "Other l
 | `Sound/Invariant.lean` | The invariant `Inv`, the once budget | §4.5 | `Exec.cnt_le` |
 | `Sound/Step.lean` | Local soundness of each statement | §4.5 | `unique_obj`, `reachB_of_reach`, `Inv.havoc` |
 | `Sound/Soundness.lean` | Soundness of C | §4.5 | `mayProgE_true`, `analyze_sound`, `loop_keeps`, `inv_init`, `evalPath_sound`, `ctxE_ok` |
-| `Sound/Recency/*.lean` | Recency concept, soundness, examples | §4.2, §1.7, §4.8 | `analyze_soundR`, `step_soundR`, `loop_bf_y`, `loop_bf_y_witness`, `crossB_sound`, `list_may`, `list_cross` |
+| `Sound/Recency/*.lean` | Recency concept, soundness, examples | §4.2, §1.8, §4.8 | `analyze_soundR`, `step_soundR`, `loop_bf_y`, `loop_bf_y_witness`, `crossB_sound`, `list_may`, `list_cross` |
 | `Sound/Complete.lean`, `Sound/NullSafe.lean`, `Sound/StoreScope.lean`, `Sound/StoreExamples.lean` | Completeness scopes and the certificate | §4.7 | `nsafe_sound`, `nullSafe_safe` |
 | `Sound/Boundary.lean` | Counterexamples CX1-CX7, the decision procedure | §4.8 | `pJoin_in_scope`, `pJoin_exact` |
-| `Sound/EntryAlias.lean` | Entry aliasing | §3.3 | — |
-| `Sound/Facts.lean` | Symmetry, non-transitivity, the partition theorem | §1.5, §4.4 | — |
+| `Sound/EntryAlias.lean` | Entry aliasing: the accepted loss of D1 | §3.3 | — |
+| `Sound/Facts.lean` | Symmetry, non-transitivity, the partition theorem | §1.5, §1.7, §4.4 | — |
+| `Order.lean` (namespace `DirectedAlias.Order`) | The directed relation as a congruent order: `Above`, reflexive, transitive, antisymmetric on nodes, congruent; stores write down the order; may-alias derived from it; `symm_antisymm_eq`; the task and field examples (`join_order`, `field_order`) | §0, §1.7, §5.1 | — |
 | `Sound/Havoc/*.lean` (`Concept`, `Soundness`, `Fresh`, `Examples`, `ExamplesK1`) | A2-strict (`HavocS`, `ExecS`), per-cell havoc concept (`mayProgH`), soundness `csoundH`, freshness, the `pHv` examples | §3.1, §4.9 | `HavocS.toHavoc`, `keyOf_alphaS`, `alphaS_head`, `InvS.havocH`, `reachB_of_reachS`, `ctxH_ok`, `fresh_head`, `ExecS.hinv`, `strict_answers_K1`, `havoc_spread_exact`, `new_answers`, `loop_answers` |
 | `Sound/HavocRecency/*.lean` (`Inv`, `Concept`, `Soundness`, `Examples`, `ExamplesK1`) | Recency with per-cell havoc (the default policy): the generic invariant `InvG`, the key `keyOfR`, soundness `csoundHR`, the cost of the shared key | §4.9, §7.9 | `InvG.retire`, `alphaRS_bump`, `alphaRS_head`, `InvG.havocHR`, `ctxHR_ok`, `no_alias_of_mayProgHR`, `strict_answersHR_K1`, `spread_with_recency_only`, `havocS_distinct` |
 | `Sound/Witness/*.lean` (`Rename`, `Compact`, `Search`, `Examples`) | Computable witnesses for the completeness theorems: `crossWitness`, `witness_core`, `witness_store`, `oneWitness` | §0, §4.7 | `run_completeA`, `run_r`, `compact`, `checkW_sound`, `crossWitness_sound`, `crossWitness_complete`, `crossWitness_none_iff`, `arr_of_core`, `arr_of_store` |
-| `DSU/Model.lean`, `DSU/Lemmas.lean`, `DSU/Props.lean` | The DSU model and its invariants | §2.1, §1.5 | `dsuMayD_iff`, `DMayL_iff_short` |
+| `DSU/Model.lean`, `DSU/Lemmas.lean`, `DSU/Props.lean` | The DSU model and its invariants | §2.1, §1.5, §1.7 | `dsuMayD_iff`, `DMayL_iff_short` |
 | `DSU/Examples.lean` | DSU defects and the dominance boundary | §2.3, §2.4, §2.5 | `field_x_y_none`, `a1_witness`, `a2_witness`, `a4_witness`, `static_as_field`, `loop_bf_x_none` |
 | `DSU/HeapFree.lean` | Heap-free soundness and dominance | §2.5 | `inv_sim`, `rel_sim`, `alias_good`, `aOk_loopFree` |
 | `DSU/ConcreteFacts.lean` | Generic execution invariants | — | `exec_preserve`, `exec_loop_inv`, `exec_env_keep` |
 | `DSU/Probes.lean` | The model against the measured Kotlin answers | §2.1, §2.3 | `s31_witness`, `s33_witness`, `s34_witness`, `sound_on_pJoin`, `dominates_on_pJoin`, `dominates_on_s7` |
-| `Opt/Table.lean` | Node table | §5.2 | `Tbl.Below.mem_sub` |
+| `Opt/Table.lean` | Node table | §5.1, §5.2 | `Tbl.Below.mem_sub` |
 | `Opt/Prim.lean`, `Opt/Machine.lean`, `Opt/Equiv.lean` | O operations and O ≡ C | §5.3, §5.5 | — |
 | `Opt/Support.lean` | Support of C | §5.5 | `Supp.astep`, `Supp.join`, `Supp.top`, `Supp.loopIter`, `Supp.analyze`, `ctxClosed_ofProg`, `progOK_ofProg`, `supp_ainit` |
 | `Opt/Recency.lean` | O with recency | §5.5 | `renameL_congr`, `renameL_of_not_mem`, `renameL_dflt`, `renameL_sub`, `cval_retire`, `supp_retire`, `supp_storeR`, `supp_astepR`, `supp_analyzeR`, `ctxClosed_R`, `recOK_R`, `progOKR_R`, `supp_ainitR` |
@@ -2038,7 +2184,7 @@ Some short names occur in two files. Cite them with the file:
 
 ## Appendix B. Probe index
 
-All tests are in `JTEST/alias/DirectedAliasProbeTest.kt`; the sample is `DirectedAliasSample.java`. "Today" is the measured verdict on main. "Directed" is the expected answer under the default policy (§9.3). In this column, `new(x)` is the `AliasAllocInfo` of the allocation of `x`, and `arg:p` is the argument path `p`. "Rec" marks sets that also depend on recency (D3). "Lean" is the related theorem.
+All tests are in `JTEST/alias/DirectedAliasProbeTest.kt`; the sample is `DirectedAliasSample.java`. "Today" is the measured verdict on main. "Directed" is the expected answer under the default policy (§9.3): `entryUnique = true` (D1), recency on, `PER_CELL`. In this column, `new(x)` is the `AliasAllocInfo` of the allocation of `x`, and `arg:p` is the argument path `p`. "Rec" marks sets that also depend on recency (D3). "Lean" is the related theorem.
 
 | # | Probe test | Scenario | Today | Directed | Rec | Lean |
 |---|---|---|---|---|---|---|
@@ -2070,8 +2216,8 @@ All tests are in `JTEST/alias/DirectedAliasProbeTest.kt`; the sample is `Directe
 | 26 | `today unknown call on the local allocation keeps the loaded final field alias` | PS4 | same on path | same on paths (depth 0) | | — |
 | 27 | `today jdk call on the argument removes the loaded field alias` | PS4 | unsound | flip: `alias(w) = {arg:x.value}` | | `b_unsound` |
 | 28 | `today static field write is ignored so the static read does not alias the written value` | PS10 | unsound | flip: `alias(t) ∋ v, new(v)` | | `static_unsound`, `static_as_field` |
-| 29 | `today this field write in a constructor is a strong update` | PS11 | same | weak with `entryUnique = false` (precision loss); same with `true` | | — |
-| 30 | `today this field write in a method is a weak update` | PS11 | precision loss | same with `entryUnique = false`; flip with `true`: `alias(t) = {v2, arg:p2, this.value}` | | `root_concept_more_precise` |
+| 29 | `today this field write in a constructor is a strong update` | PS11 | same | same (default `entryUnique = true`); weak with `false` (precision loss) | | — |
+| 30 | `today this field write in a method is a weak update` | PS11 | precision loss | flip (default `entryUnique = true`): `alias(t) = {v2, arg:p2, this.value}`; same with `false` | | `root_concept_more_precise` |
 | 31 | `today a source self assignment leaves no self copy in JIR and x keeps z` | PS12 | shape not produced | same | | `self_copy_unsound` (latent) |
 | 32 | `today a source self assignment of an argument copy leaves no self copy in JIR and x keeps z` | PS12 | shape not produced | same | | same |
 | 33 | `today a self cast gets a new JIR local and x keeps z` | PS12 | shape not produced | same | | — |
@@ -2085,4 +2231,4 @@ All tests are in `JTEST/alias/DirectedAliasProbeTest.kt`; the sample is `Directe
 | 41 | `today linked list walk merges cur with head and every next chain` | PS13.4 | precision loss | flip: `alias(cur) ∋ arg:head.next^k`, no `cur.next^k` through `head` | | — |
 | 42 | `today linked list walk merges cur with the second node` | PS13.4 | precision loss | flip: `second ∌ arg:head` | | — |
 
-Totals under the default policy: §9.3. The six "Rec" rows need the oracle for their exact sets.
+Totals under the default policy: §9.3. The six "Rec" rows need the oracle for their exact sets. The sets of rows 13-16 and 19 also depend on `entryUnique` (§9.3).
