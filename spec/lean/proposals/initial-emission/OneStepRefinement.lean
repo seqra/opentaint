@@ -410,6 +410,128 @@ theorem relaxed_current_replay_adds_a_false_normal_pair :
     rw [midRoot] at midField
     cases midField
 
+/-! Directed entry intersection follows the image of the selected emitter.
+It is not location overlap or a symmetric meet. A summary premise includes
+the explicit MUST flag. The actual used below is a structural witness; an
+individual caller must still satisfy the ordinary application boundary.
+-/
+
+def CanEmit (dc : PFact) (initial : Submitted) : Prop :=
+  ∃ actual : Submitted, selected dc actual = .emit initial.fact initial.must
+
+/-- Construct an actual input from an allowed image shape. The first-field
+    STAR witness is child ANY, not the STAR initial itself: selected does not
+    define self-emission for supplied STAR. FLOW uses representative mark T;
+    a concrete demand uses its own mark. No mark census or rule lookup occurs. -/
+def imageActualCandidate (dc : PFact) (initial : Submitted) : Option Submitted :=
+  let representedMark : Option Mark := match dc.mark with
+    | .star => some T
+    | .conc t => some t
+    | _ => none
+  match representedMark with
+  | none => none
+  | some t =>
+    if dc.kind.isAny && dc.base == initial.fact.base && dc.mark == initial.fact.mark then
+      match relate dc.path initial.fact.path with
+      | .below [] =>
+        match initial.fact.kind with
+        | .exact =>
+          if initial.must then none else
+            some ⟨{ initial.fact with mark := .conc t }, false⟩
+        | .any => some ⟨{ initial.fact with mark := .conc t }, initial.must⟩
+        | _ => none
+      | .below [_] =>
+        if initial.must then none else
+          match initial.fact.kind with
+          | .star e => if e == Excl.empty then
+                some ⟨{ initial.fact with kind := .any, mark := .conc t }, false⟩
+              else none
+          | .exact =>
+              match dc.mark with
+              | .conc _ => some ⟨{ initial.fact with mark := .conc t }, false⟩
+              | _ => none
+          | _ => none
+      | _ => none
+    else none
+
+/-- The certificate checks the computed witness against the selected emitter.
+    It does not use a nonconstructive existence oracle or test self-emission. -/
+structure EntryCertificate (dc : PFact) (initial : Submitted) where
+  actual : Submitted
+  emits : selected dc actual = .emit initial.fact initial.must
+
+def entryCertificate (dc : PFact) (initial : Submitted) :
+    Option (EntryCertificate dc initial) :=
+  match imageActualCandidate dc initial with
+  | none => none
+  | some actual =>
+    if h : selected dc actual = .emit initial.fact initial.must then
+      some ⟨actual, h⟩
+    else none
+
+/-- Keep the exact summary premise only when it belongs to the emitter's
+    directed image. Never change its mark or tail during entry intersection. -/
+def entryMeet (dc : PFact) (initial : Submitted) : Option Submitted :=
+  (entryCertificate dc initial).map fun _ => initial
+
+theorem entryMeet_nonempty_has_executable_emission_witness (dc : PFact)
+    (initial result : Submitted) (h : entryMeet dc initial = some result) :
+    CanEmit dc initial := by
+  cases hc : entryCertificate dc initial with
+  | none => simp [entryMeet, hc] at h
+  | some cert => exact ⟨cert.actual, cert.emits⟩
+
+theorem entryMeet_keeps_the_summary_premise (dc : PFact) (initial result : Submitted)
+    (h : entryMeet dc initial = some result) : result = initial := by
+  cases hc : entryCertificate dc initial with
+  | none => simp [entryMeet, hc] at h
+  | some cert => simpa [entryMeet, hc] using h.symm
+
+theorem entry_image_principal_cells :
+    entryMeet (demand .star) ⟨selectedRoot .star, false⟩ =
+      some ⟨selectedRoot .star, false⟩ ∧
+    entryMeet (demand .star) ⟨⟨x, [], .any, .star⟩, false⟩ =
+      some ⟨⟨x, [], .any, .star⟩, false⟩ ∧
+    entryMeet (demand .star) (uniformMustCandidate .star) =
+      some (uniformMustCandidate .star) ∧
+    entryMeet (demand .star) ⟨selectedField .star, false⟩ =
+      some ⟨selectedField .star, false⟩ ∧
+    entryMeet (demand (.conc T)) ⟨actualField, false⟩ = some ⟨actualField, false⟩ ∧
+    entryMeet (demand (.conc T)) ⟨selectedField (.conc T), false⟩ =
+      some ⟨selectedField (.conc T), false⟩ := by decide
+
+/-- The chosen first-field STAR has an actual child-ANY witness, even though
+    submitting that STAR itself is outside the current partial table. -/
+theorem entry_image_is_not_self_emission :
+    selected (demand .star) ⟨selectedField .star, false⟩ = .unspecified ∧
+    imageActualCandidate (demand .star) ⟨selectedField .star, false⟩ =
+      some ⟨⟨x, [F], .any, .conc T⟩, false⟩ ∧
+    entryMeet (demand .star) ⟨selectedField .star, false⟩ =
+      some ⟨selectedField .star, false⟩ := by decide
+
+/-- Generic insideDemand admits these shapes by location/mark inclusion.
+    None is an allowed emitter-image premise for this root FLOW demand. -/
+theorem entry_image_rejects_old_inside_false_positives :
+    insideB ⟨x, [], .star Excl.empty, .star⟩ (demand .star) = true ∧
+    entryMeet (demand .star) ⟨⟨x, [], .star Excl.empty, .star⟩, false⟩ = none ∧
+    insideB ⟨x, [F, G], .star Excl.empty, .star⟩ (demand .star) = true ∧
+    entryMeet (demand .star) ⟨⟨x, [F, G], .star Excl.empty, .star⟩, false⟩ = none ∧
+    insideB ⟨x, [F], .any, .star⟩ (demand .star) = true ∧
+    entryMeet (demand .star) ⟨⟨x, [F], .any, .star⟩, false⟩ = none ∧
+    entryMeet (demand .star) ⟨⟨x, [F], .any, .star⟩, true⟩ = none ∧
+    insideB actualRoot (demand .star) = true ∧
+    entryMeet (demand .star) ⟨actualRoot, false⟩ = none := by decide
+
+theorem entry_image_rejects_child_abstract_exact_and_mark_mismatch :
+    entryMeet (demand .star) ⟨⟨x, [F], .exact, .star⟩, false⟩ = none ∧
+    entryMeet (demand (.conc T)) ⟨⟨x, [], .any, .conc 2⟩, false⟩ = none := by decide
+
+def entryImageCheck : Bool :=
+  entryMeet (demand .star) ⟨selectedField .star, false⟩ ==
+    some ⟨selectedField .star, false⟩ &&
+  entryMeet (demand .star) ⟨⟨x, [], .star Excl.empty, .star⟩, false⟩ == none &&
+  entryMeet (demand (.conc T)) ⟨actualField, false⟩ == some ⟨actualField, false⟩
+
 def check : Bool :=
   satW (selectedField .star) actualField &&
   !satW (selectedField (.conc T)) actualField &&
@@ -422,6 +544,7 @@ def check : Bool :=
 theorem checked : check = true := by decide
 
 #eval check
+#eval entryImageCheck
 #print axioms selected_flow_child_matches_current
 #print axioms concrete_mark_mismatch_always_rejects
 #print axioms selected_policy_cells
@@ -440,5 +563,10 @@ theorem checked : check = true := by decide
 #print axioms exact_must_not_silently_start_as_star
 #print axioms widening_adds_a_false_pair
 #print axioms relaxed_current_replay_adds_a_false_normal_pair
+#print axioms entryMeet_nonempty_has_executable_emission_witness
+#print axioms entryMeet_keeps_the_summary_premise
+#print axioms entry_image_principal_cells
+#print axioms entry_image_is_not_self_emission
+#print axioms entry_image_rejects_old_inside_false_positives
 
 end ApSpec.InitialEmissionOneStep
