@@ -1,6 +1,6 @@
 # One-step initial refinement
 
-Date: 29 October 2026. Source revision: `6082e52e4`.
+Date: 29 October 2026. Source revision: `f6f544ab5`.
 This note records the selected changes and the remaining proof gaps.
 It does not change production code.
 
@@ -23,16 +23,18 @@ exclusions. FLOW denotes an abstract demand mark.
 | `p.[any]/FLOW` | `p.[any]/T` | `p.[any]/FLOW` |
 | `p.[any]/FLOW` | `p.[any-taint]/T` | `p.[any-taint]/FLOW` |
 | `p.[any]/T` | `p.f.$/T` | `p.f.$/T` |
-| `p.[any]/T` | `p.f.g.$/T` | `p.f.g.$/T`, under the exact-exception interpretation below |
+| `p.[any]/T` | `p.f.g.$/T` | `p.f.*/T`, DEMAND |
 | `p.[any]/T` | `p.f.g.[any-taint]/T` | `p.f.*/T`, DEMAND |
 | `p.[any]/U`, U differs from T | Any submitted fact with T | None |
 
 `.f` resolves the current unknown field. Do not also consume `.g` or the
 terminal `$` in that refinement step. The concrete-T exact-input case is
 the selected exception: `p.f.$/T` stays exact instead of becoming STAR.
-This note interprets that exception as keeping the submitted exact fact,
-including its full known path. It does not apply first-field abstraction
-and then make the shorter path exact.
+The exception applies only when the exact input ends after that first new
+field. If `.g` remains, emit `p.f.*/T` in DEMAND. Do not preserve `.g.$` in
+the initial. The earlier whole-path interpretation was incorrect.
+Use the submitted fact after the existing field-limit step. A cut to ANY
+does not qualify for the exact-input exception.
 
 An unchanged `[any]` intersection remains valid. Strict field progress is
 not a general admission requirement. The earlier source and sink examples
@@ -181,10 +183,10 @@ identity example and both abstract-EXACT hazards.
 The model is scalar and uses empty exclusions. It is not a proof of the full
 new initial grammar or of whole-driver convergence. A complete emission table
 still needs all ancestor, equal-prefix, field-exclusion, and mark-mode cells.
-The model states the whole-exact-path interpretation of the concrete exception
-explicitly. It does not silently shorten a concrete exact location.
+The model pins the exception boundary: `p.f.$/T` stays exact, but every exact
+path with at least two new fields stops at `p.f.*/T` in DEMAND.
 
-The new file has 32 checked theorem declarations. It proves that the current
+The new file has 35 checked theorem declarations. It proves that the current
 concrete STAR start retains STAR and enters DEMAND; its computed transfers
 remain DEMAND; and application of a DEMAND summary cannot produce a NORMAL
 result. The NORMAL abstract-EXACT counterexample is a different case.

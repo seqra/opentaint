@@ -7,10 +7,10 @@
     demand x.p.ANY/T + actual x.p.f.EXACT/T => x.p.f.EXACT/T
   A concrete demand U rejects actual T when U differs from T.
   The first cell permits abstract EXACT as a new premise shape.
-  Stop after the first new field for FLOW: actual x.p.f.g.EXACT/T gives
-  x.p.f.STAR/FLOW. Interpret the concrete EXACT exception as retaining the
-  complete submitted exact path, including f.g. No table for other tails is
-  completed for ancestor/STAR cases in this model.
+  Stop after the first new field: actual x.p.f.g.EXACT/T gives x.p.f.STAR/M.
+  A concrete STAR result starts DEMAND. The concrete EXACT exception applies
+  only if no field remains after that first step: x.p.f.EXACT/T stays exact.
+  No complete table for ancestor/STAR cases is supplied by this model.
   The previous concrete-MUST-retention exception is revoked. The selected
   same-prefix MUST template below uses demand mark M; its new abstract-MUST
   representation and transfer proof are not supplied by the old library.
@@ -97,7 +97,10 @@ def selectedGeometry (d : PFact) (a : Submitted) : Decision :=
       if a.fact.kind == .exact then
         match d.mark with
         | .star => .emit (selectedFlowFromExact d.base d.path rest) false
-        | .conc _ => .emit a.fact false
+        | .conc _ =>
+          match rest with
+          | [] | [_] => .emit a.fact false
+          | f :: _ => .emit ⟨d.base, d.path ++ [f], .star Excl.empty, d.mark⟩ false
         | _ => .unspecified
       else if a.fact.kind.isAny then
         match rest with
@@ -135,12 +138,16 @@ theorem mismatches_in_all_requested_shapes :
     selected (demand (.conc 2)) ⟨⟨x, [], .any, .conc T⟩, false⟩ = .reject ∧
     selected (demand (.conc 2)) ⟨⟨x, [], .any, .conc T⟩, true⟩ = .reject := by decide
 
-/-- Explicit interpretation of the concrete EXACT exception: retain the
-    whole submitted exact fact, including any deeper known suffix. -/
-theorem deeper_concrete_exact_keeps_whole_submitted_fact :
+/-- The exact exception stops at one new field. A second field still causes
+    first-field abstraction; the concrete STAR start is DEMAND. -/
+theorem deeper_concrete_exact_stops_after_first_field :
     selected (demand (.conc T)) ⟨⟨x, [F, G], .exact, .conc T⟩, false⟩ =
-      .emit ⟨x, [F, G], .exact, .conc T⟩ false ∧
-    satW ⟨x, [F, G], .exact, .conc T⟩ ⟨x, [F, G], .exact, .conc T⟩ = true := by decide
+      .emit (selectedField (.conc T)) false ∧
+    applicable (selectedField (.conc T)) ⟨x, [F, G], .exact, .conc T⟩ = true := by decide
+
+theorem exact_exception_has_one_field_boundary (rest : List Acc) :
+    selected (demand (.conc T)) ⟨⟨x, F :: G :: rest, .exact, .conc T⟩, false⟩ =
+      .emit (selectedField (.conc T)) false := by rfl
 
 theorem selected_concrete_exact_child_matches_current :
     insideB actualField (demand (.conc T)) = true ∧
@@ -198,6 +205,9 @@ theorem coverage_matching_admits_deeper_concrete_must :
     proposedMatching (selectedField (.conc T)) deepMustSupplier.fact = true ∧
     proposedMatching (selectedField (.conc T)) actualField = true := by decide
 
+theorem coverage_matching_admits_deeper_concrete_exact :
+    proposedMatching (selectedField (.conc T)) ⟨x, [F, G], .exact, .conc T⟩ = true := by decide
+
 theorem ordinary_concrete_matching_is_unchanged (b : Base) (path : List Acc)
     (t : Mark) (a : PFact) :
     proposedMatching ⟨b, path, .any, .conc t⟩ a = satW ⟨b, path, .any, .conc t⟩ a ∧
@@ -223,6 +233,12 @@ theorem current_concrete_star_starts_demand :
 
 theorem selected_deeper_concrete_start_is_demand :
     selected (demand (.conc T)) deepMustSupplier =
+      .emit (selectedField (.conc T)) false ∧
+    concreteStarStart.fact = selectedField (.conc T) ∧
+    concreteStarStart.demand = true := by decide
+
+theorem selected_deeper_exact_start_is_demand :
+    selected (demand (.conc T)) ⟨⟨x, [F, G], .exact, .conc T⟩, false⟩ =
       .emit (selectedField (.conc T)) false ∧
     concreteStarStart.fact = selectedField (.conc T) ∧
     concreteStarStart.demand = true := by decide
