@@ -1,12 +1,15 @@
 {
-  "schema": "summary-demand-workload-implementation-proposal-v1",
+  "schema": "summary-demand-workload-implementation-proposal-v2",
   "date": "2026-10-29",
-  "sourceRevision": "f99ed7c1afa53f4eff03850a844de180bc02ba6d",
-  "status": "REVIEW DRAFT: initial policy, summary normalization, write E and whole-position RemoveAll selected; runtime unchanged; full integration/no-loss proofs remain open",
+  "sourceRevision": "6ed31830fee132ce27cb14aa9e49415f6fdc4d04",
+  "status": "COMPLETE UPDATED IMPLEMENTATION PROPOSAL; no runtime changes or new project runs; all declared models compile; runtime refinement and campaign remain planned",
   "scope": [
-    "Selected demand rewrite dependency",
-    "P1 fixed-right C5 pruning",
-    "P2 query-local owner-family eligibility memo"
+    "Run-aware restricted C2 table and explicit bounded raw emitter image",
+    "Abstract EXACT/MUST FLOW point tails; field-write E; whole-position RemoveAll",
+    "Canonical FLOW summary pairs and C5 returned pieces; raw preimages/containment",
+    "Both-order concrete STAR delivery; native abstract-MUST backward views",
+    "P1 internal filtered C5 lookup and fixed-right branch pruning",
+    "P2 immutable owner-family IDs and per-visible-view eligibility memo"
   ],
   "runtimeChanged": false,
   "newProjectRuns": false,
@@ -41,21 +44,25 @@
   "userDecisions": [
     "Use a retained NORMAL STAR/STAR FLOW relation to subsume the corresponding exact relation; verify an actual cover exists.",
     "New abstract MUST summary premises require definite MUST input.",
-    "Demand p.f.STAR/T + actual p.f.g.EXACT/T emits nothing.",
     "Demand p.ANY/T + actual p.STAR/T DEMAND emits nothing.",
     "Demand p.f.ANY/FLOW + actual p.ANY/T DEMAND emits p.f.ANY/FLOW.",
-    "Provide a complete closed example before choosing uncovered exact application behavior.",
-    "Keep original raw initial emission; the temporary entry-STAR alternative was revoked.",
     "Normalize each pure FLOW summary EXACT endpoint to STAR before storage; retain both paths/bases, marks, layer, E, and mark exclusions.",
     "Record ordinary field-write E on derived EXACT/FLOW conclusions and preserve it through moves and returns; raw EXACT initial query E remains empty.",
     "Keep run1 exclusion update -> DEMAND/EmptyE; persist later NORMAL E.",
     "RemoveAll clears the selected whole position and descendants. Named p.f is valid; below-only/exact-only variants are prohibited.",
-    "Reject terminal-AnyField RemoveAll configuration rather than silently interpreting it as a whole-parent removal; low-level null-mark reach must be AT_AND_BELOW. Selected RemoveMark is unchanged."
+    "Reject terminal-AnyField RemoveAll configuration rather than silently interpreting it as a whole-parent removal; low-level null-mark reach must be AT_AND_BELOW. Selected RemoveMark is unchanged.",
+    "Keep raw exact query points. The temporary general entry-STAR alternative was revoked; summary normalization remains selected.",
+    "Run-2: STAR/M demand plus a compatible proper-descendant submitted fact emits requested STAR/M at the demand prefix. Use the actual after the field cut and retain concrete mark/E gates.",
+    "From run-2, outgoing pure FLOW DEMAND is MAY/ANY, Empty E, no MUST certainty. Run-2 alone consumes STAR/FLOW entry demand from run-1; later such entries are invalid.",
+    "The entry Dc restriction does not ban STAR in paired exit Dp, NORMAL summaries or initial facts that refine ANY.",
+    "Later concrete STAR/T admission retains precise EXACT-at-demand cells and rejects proper descendants. Concrete STAR starts and remains DEMAND."
   ],
-  "inferredPolicyCell": "Ancestor STAR under ANY demand rejects; stated inferred extension, not a separate explicit user decision.",
+  "inferredPolicyCell": "The unchanged scalar table rejects a broader STAR actual under an ANY demand; it does not refine ANY. Same-prefix STAR demand keeps the former EXACT result. The run-2 descendant override is not extended to these cells.",
   "proofValidation": {
-    "totalNewTheorems": 89,
-    "method": "For each file, compile its complete source with lake env lean, then compile a temporary source copy with #print axioms for every theorem. Complete output is embedded below.",
+    "totalTheorems": 174,
+    "totalExecutableTrueChecks": 11,
+    "method": "Compile the complete source with #print axioms for every theorem. Audit all printed dependencies against the allowed set. Complete output and theorem names are embedded per file.",
+    "auditReproduction": "For each model, append one #print axioms <fully qualified name> line for each theorem listed in its receipt to a temporary copy of the unchanged complete source. Run lake env lean <copy> from spec/lean. The theorem lists include historical controls and current selected namespaces.",
     "allowedAxioms": [
       "propext",
       "Quot.sound"
@@ -64,7 +71,9 @@
     "models": [
       {
         "file": "spec/lean/proposals/initial-emission/RestrictedInitialPolicy.lean",
-        "sha256": "d05400801fe135e02c3ec81a80bd565ef018405a0acb4a3cbd951d11d58e8545",
+        "sha256": "3a42cc1eb3209c82400ba528bdb1e80ba17bc09540e19e59b0d5272f9fd7c5f0",
+        "command": "cd spec/lean && lake env lean proposals/initial-emission/RestrictedInitialPolicy.lean",
+        "theoremCount": 70,
         "theorems": [
           "RestrictedInitialPolicy.mark_accepts_itself",
           "RestrictedInitialPolicy.template_is_its_own_emission",
@@ -105,61 +114,58 @@
           "RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_normal_is_persisted",
           "RestrictedInitialPolicy.CodeOnlyExactReplay.concrete_code_keeps_h",
           "RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_pair",
-          "RestrictedInitialPolicy.CodeOnlyExactReplay.checked"
+          "RestrictedInitialPolicy.CodeOnlyExactReplay.checked",
+          "RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.run1_source_write_demand_and_report_are_derived",
+          "RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.backward_sink_binding_is_concrete_descendant_and_admission_rejects_it",
+          "RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.current_selected_route_has_no_backward_source_hit_or_forward_replay",
+          "RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.actual_unaffected_sibling_flow_exists",
+          "RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.zero_frames_provide_no_hidden_return_route",
+          "RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.contrast_broad_FLOW_query_builds_excluded_normal_record_and_finds_source",
+          "RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.checked",
+          "RestrictedInitialPolicy.DemandStarPolicy.run2_decision_uses_the_selected_adapter",
+          "RestrictedInitialPolicy.DemandStarPolicy.later_FLOW_STAR_entry_is_explicitly_invalid",
+          "RestrictedInitialPolicy.DemandStarPolicy.later_concrete_STAR_keeps_precise_cells_and_ANY_refinement_stays_legal",
+          "RestrictedInitialPolicy.DemandStarPolicy.unchanged_outside_override",
+          "RestrictedInitialPolicy.DemandStarPolicy.override_requires_STAR_demand",
+          "RestrictedInitialPolicy.DemandStarPolicy.former_canonical_template_does_not_use_override",
+          "RestrictedInitialPolicy.DemandStarPolicy.former_template_has_executable_witness",
+          "RestrictedInitialPolicy.DemandStarPolicy.requested_STAR_has_executable_descendant_witness",
+          "RestrictedInitialPolicy.DemandStarPolicy.complete_image",
+          "RestrictedInitialPolicy.DemandStarPolicy.image_classifier_sound_and_complete",
+          "RestrictedInitialPolicy.DemandStarPolicy.requested_STAR_is_emittable_but_is_not_a_fixed_point",
+          "RestrictedInitialPolicy.DemandStarPolicy.new_initial_keeps_the_demand_mark",
+          "RestrictedInitialPolicy.DemandStarPolicy.mismatching_full_marks_are_still_rejected",
+          "RestrictedInitialPolicy.DemandStarPolicy.concrete_requested_STAR_starts_DEMAND",
+          "RestrictedInitialPolicy.DemandStarPolicy.other_selected_cells_keep_their_previous_results",
+          "RestrictedInitialPolicy.DemandStarPolicy.budget_emission_facts",
+          "RestrictedInitialPolicy.DemandStarPolicy.budget_emission_from_facts",
+          "RestrictedInitialPolicy.DemandStarPolicy.proper_descendant_has_longer_path",
+          "RestrictedInitialPolicy.DemandStarPolicy.bounded_image_has_executable_witness",
+          "RestrictedInitialPolicy.DemandStarPolicy.capped_raw_STAR_image_and_exact_preimage_are_distinct",
+          "RestrictedInitialPolicy.DemandStarPolicy.ClosedWrite.selected_STAR_emission_closes_the_backward_source_route",
+          "RestrictedInitialPolicy.DemandStarPolicy.ClosedWrite.normal_excluded_record_preserves_forward_sibling_and_reaches_sink",
+          "RestrictedInitialPolicy.DemandStarPolicy.checked"
         ],
-        "count": 40,
         "exitCode": 0,
-        "executableTrueCount": 3,
-        "forbiddenAxioms": false,
-        "auditLogSha256": "e23b40b4ac7cc770c98c785a871109210dbdf4f4ad9bc954f4a8dd7c31fa3864",
-        "auditOutput": "true\n'RestrictedInitialPolicy.template_is_its_own_emission' depends on axioms: [propext]\n'RestrictedInitialPolicy.emission_is_idempotent' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_canonical_template' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_classifier_sound_and_complete' depends on axioms: [propext]\n'RestrictedInitialPolicy.entry_intersection_exactly_matches_emitter_image' depends on axioms: [propext]\n'RestrictedInitialPolicy.different_full_marks_never_emit' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.emitted_mark_is_demand_mark' depends on axioms: [propext]\n'RestrictedInitialPolicy.concrete_star_uses_current_demand_start' depends on axioms: [propext]\ntrue\n'RestrictedInitialPolicy.ClosedExactReplay.source_and_helper_record_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.wrapper_backward_and_run3_input_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.no_covering_helper_relation_is_assumed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_row_is_raw_and_persisted_but_not_published' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.persisted_normal_has_a_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_pair_is_absent_from_declared_wrapper_relation' depends on axioms: [propext]\ntrue\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_generated_box_record_and_run1_cut' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.every_code_data_edge_is_star_to_star' does not depend on any axioms\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_box_replay_builds_the_coarse_b_demand' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_writes_have_only_the_certified_frames' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.helper_inventory_has_no_hidden_cover' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_argument_frames_support_the_backward_pass' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_zero_frames_generate_no_extra_data' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_normal_is_persisted' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.mark_accepts_itself' depends on axioms: [propext]\n'RestrictedInitialPolicy.template_is_its_own_emission' depends on axioms: [propext]\n'RestrictedInitialPolicy.selected_template_is_valid' depends on axioms: [propext]\n'RestrictedInitialPolicy.emission_is_idempotent' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_canonical_template' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_self_projection' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_classifier_sound_and_complete' depends on axioms: [propext]\n'RestrictedInitialPolicy.entry_intersection_exactly_matches_emitter_image' depends on axioms: [propext]\n'RestrictedInitialPolicy.emitted_mark_is_demand_mark' depends on axioms: [propext]\n'RestrictedInitialPolicy.emitted_input_has_valid_must_flag' depends on axioms: [propext]\n'RestrictedInitialPolicy.different_full_marks_never_emit' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.user_pinned_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.any_demand_one_step_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.same_prefix_and_ancestor_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_false_positives_are_rejected' depends on axioms: [propext]\n'RestrictedInitialPolicy.failed_matches_do_not_emit' depends on axioms: [propext]\n'RestrictedInitialPolicy.concrete_star_uses_current_demand_start' depends on axioms: [propext]\n'RestrictedInitialPolicy.checked' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.zero_frames_do_not_add_a_hidden_return_cover' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.run1_reports_and_frontiers_are_derived' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.source_and_helper_record_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.wrapper_backward_and_run3_input_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.no_covering_helper_relation_is_assumed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_row_is_raw_and_persisted_but_not_published' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.concrete_program_keeps_the_suffix' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.persisted_normal_has_a_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.other_wrapper_paths_do_not_supply_false_a' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_pair_is_absent_from_declared_wrapper_relation' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.checked' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.every_code_data_edge_is_star_to_star' does not depend on any axioms\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_generated_box_record_and_run1_cut' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_box_replay_builds_the_coarse_b_demand' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.helper_inventory_has_no_hidden_cover' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_argument_frames_support_the_backward_pass' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_zero_frames_generate_no_extra_data' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_writes_have_only_the_certified_frames' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_normal_is_persisted' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.concrete_code_keeps_h' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.checked' depends on axioms: [propext]\n"
-      },
-      {
-        "file": "spec/lean/proposals/initial-emission/AbstractTailContracts.lean",
-        "sha256": "6aa49c8afe9c37cab643b06ad86737a7e97f5a7e5f030b8ea9fd444f2a073c4a",
-        "theorems": [
-          "AbstractTailContracts.normal_star_identity_geometry_covers_exact",
-          "AbstractTailContracts.dropping_exact_preserves_union_when_cover_is_present",
-          "AbstractTailContracts.geometry_alone_does_not_establish_must",
-          "AbstractTailContracts.only_definite_must_is_admitted",
-          "AbstractTailContracts.layer_does_not_create_must",
-          "AbstractTailContracts.invalid_must_flags_do_not_bypass_tail_guard",
-          "AbstractTailContracts.checked"
+        "executableTrueChecks": 5,
+        "axioms": [
+          "Quot.sound",
+          "propext"
         ],
-        "count": 7,
-        "exitCode": 0,
-        "executableTrueCount": 1,
-        "forbiddenAxioms": false,
-        "auditLogSha256": "81edfae9a1ccbea1dde2b5e15749aad3101ad5d9e14819704ca692d129f1545d",
-        "auditOutput": "true\n'AbstractTailContracts.normal_star_identity_geometry_covers_exact' depends on axioms: [propext]\n'AbstractTailContracts.dropping_exact_preserves_union_when_cover_is_present' depends on axioms: [propext]\n'AbstractTailContracts.only_definite_must_is_admitted' depends on axioms: [propext]\n'AbstractTailContracts.layer_does_not_create_must' depends on axioms: [propext]\n'AbstractTailContracts.normal_star_identity_geometry_covers_exact' depends on axioms: [propext]\n'AbstractTailContracts.dropping_exact_preserves_union_when_cover_is_present' depends on axioms: [propext]\n'AbstractTailContracts.geometry_alone_does_not_establish_must' depends on axioms: [propext]\n'AbstractTailContracts.only_definite_must_is_admitted' depends on axioms: [propext]\n'AbstractTailContracts.layer_does_not_create_must' depends on axioms: [propext]\n'AbstractTailContracts.invalid_must_flags_do_not_bypass_tail_guard' depends on axioms: [propext]\n'AbstractTailContracts.checked' depends on axioms: [propext]\n"
-      },
-      {
-        "file": "spec/lean/proposals/demand-work/ImplementationContracts.lean",
-        "sha256": "65bc74b667561584148a7a45be46b7243480a545930296e8a95eaf1cb3d0bb53",
-        "theorems": [
-          "DemandImplementationContracts.early_filter_preserves_rows",
-          "DemandImplementationContracts.early_filter_preserves_decoded_outputs",
-          "DemandImplementationContracts.early_filter_owner_calls_never_increase",
-          "DemandImplementationContracts.slot_round_trip",
-          "DemandImplementationContracts.zero_array_represents_empty",
-          "DemandImplementationContracts.write_preserves_representation",
-          "DemandImplementationContracts.byte_step_refines_logical_step",
-          "DemandImplementationContracts.owner_id_injective",
-          "DemandImplementationContracts.owner_payload_unchanged",
-          "DemandImplementationContracts.invalid_slot_is_not_cached_false",
-          "DemandImplementationContracts.checked"
+        "allTheoremAudit": "Complete source compiled with #print axioms for every theorem; complete output embedded.",
+        "output": "true\n'RestrictedInitialPolicy.template_is_its_own_emission' depends on axioms: [propext]\n'RestrictedInitialPolicy.emission_is_idempotent' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_canonical_template' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_classifier_sound_and_complete' depends on axioms: [propext]\n'RestrictedInitialPolicy.entry_intersection_exactly_matches_emitter_image' depends on axioms: [propext]\n'RestrictedInitialPolicy.different_full_marks_never_emit' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.emitted_mark_is_demand_mark' depends on axioms: [propext]\n'RestrictedInitialPolicy.concrete_star_uses_current_demand_start' depends on axioms: [propext]\ntrue\n'RestrictedInitialPolicy.ClosedExactReplay.source_and_helper_record_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.wrapper_backward_and_run3_input_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.no_covering_helper_relation_is_assumed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_row_is_raw_and_persisted_but_not_published' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.persisted_normal_has_a_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_pair_is_absent_from_declared_wrapper_relation' depends on axioms: [propext]\ntrue\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_generated_box_record_and_run1_cut' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.every_code_data_edge_is_star_to_star' does not depend on any axioms\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_box_replay_builds_the_coarse_b_demand' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_writes_have_only_the_certified_frames' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.helper_inventory_has_no_hidden_cover' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_argument_frames_support_the_backward_pass' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_zero_frames_generate_no_extra_data' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_normal_is_persisted' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_pair' depends on axioms: [propext]\ntrue\n'RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.run1_source_write_demand_and_report_are_derived' depends on axioms: [propext]\n'RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.backward_sink_binding_is_concrete_descendant_and_admission_rejects_it' depends on axioms: [propext]\n'RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.current_selected_route_has_no_backward_source_hit_or_forward_replay' depends on axioms: [propext]\n'RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.actual_unaffected_sibling_flow_exists' depends on axioms: [propext]\n'RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.zero_frames_provide_no_hidden_return_route' depends on axioms: [propext]\n'RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.contrast_broad_FLOW_query_builds_excluded_normal_record_and_finds_source' depends on axioms: [propext]\n'RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.checked' depends on axioms: [propext]\ntrue\n'RestrictedInitialPolicy.DemandStarPolicy.unchanged_outside_override' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.run2_decision_uses_the_selected_adapter' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.later_FLOW_STAR_entry_is_explicitly_invalid' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.later_concrete_STAR_keeps_precise_cells_and_ANY_refinement_stays_legal' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.override_requires_STAR_demand' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.former_canonical_template_does_not_use_override' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.former_template_has_executable_witness' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.requested_STAR_has_executable_descendant_witness' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.complete_image' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.image_classifier_sound_and_complete' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.requested_STAR_is_emittable_but_is_not_a_fixed_point' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.new_initial_keeps_the_demand_mark' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.mismatching_full_marks_are_still_rejected' depends on axioms: [propext,\n Quot.sound]\n'RestrictedInitialPolicy.DemandStarPolicy.concrete_requested_STAR_starts_DEMAND' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.other_selected_cells_keep_their_previous_results' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.budget_emission_facts' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.budget_emission_from_facts' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.proper_descendant_has_longer_path' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.DemandStarPolicy.bounded_image_has_executable_witness' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.DemandStarPolicy.capped_raw_STAR_image_and_exact_preimage_are_distinct' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.ClosedWrite.selected_STAR_emission_closes_the_backward_source_route' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.ClosedWrite.normal_excluded_record_preserves_forward_sibling_and_reaches_sink' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.checked' depends on axioms: [propext]\n'RestrictedInitialPolicy.mark_accepts_itself' depends on axioms: [propext]\n'RestrictedInitialPolicy.template_is_its_own_emission' depends on axioms: [propext]\n'RestrictedInitialPolicy.selected_template_is_valid' depends on axioms: [propext]\n'RestrictedInitialPolicy.emission_is_idempotent' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_canonical_template' depends on axioms: [propext]\n'RestrictedInitialPolicy.emittable_iff_self_projection' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_classifier_sound_and_complete' depends on axioms: [propext]\n'RestrictedInitialPolicy.entry_intersection_exactly_matches_emitter_image' depends on axioms: [propext]\n'RestrictedInitialPolicy.emitted_mark_is_demand_mark' depends on axioms: [propext]\n'RestrictedInitialPolicy.emitted_input_has_valid_must_flag' depends on axioms: [propext]\n'RestrictedInitialPolicy.different_full_marks_never_emit' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.user_pinned_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.any_demand_one_step_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.same_prefix_and_ancestor_cells' depends on axioms: [propext]\n'RestrictedInitialPolicy.image_false_positives_are_rejected' depends on axioms: [propext]\n'RestrictedInitialPolicy.failed_matches_do_not_emit' depends on axioms: [propext]\n'RestrictedInitialPolicy.concrete_star_uses_current_demand_start' depends on axioms: [propext]\n'RestrictedInitialPolicy.checked' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.zero_frames_do_not_add_a_hidden_return_cover' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.run1_reports_and_frontiers_are_derived' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.source_and_helper_record_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.wrapper_backward_and_run3_input_are_constructed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.no_covering_helper_relation_is_assumed' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_row_is_raw_and_persisted_but_not_published' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.concrete_program_keeps_the_suffix' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.persisted_normal_has_a_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.other_wrapper_paths_do_not_supply_false_a' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.false_normal_pair_is_absent_from_declared_wrapper_relation' depends on axioms: [propext]\n'RestrictedInitialPolicy.ClosedExactReplay.checked' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.every_code_data_edge_is_star_to_star' does not depend on any axioms\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_generated_box_record_and_run1_cut' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_box_replay_builds_the_coarse_b_demand' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.helper_inventory_has_no_hidden_cover' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_argument_frames_support_the_backward_pass' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_zero_frames_generate_no_extra_data' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.ordinary_writes_have_only_the_certified_frames' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_normal_is_persisted' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.concrete_code_keeps_h' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_pair' depends on axioms: [propext]\n'RestrictedInitialPolicy.CodeOnlyExactReplay.checked' depends on axioms: [propext]\n'RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.run1_source_write_demand_and_report_are_derived' depends on axioms: [propext]\n'RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.backward_sink_binding_is_concrete_descendant_and_admission_rejects_it' depends on axioms: [propext]\n'RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.current_selected_route_has_no_backward_source_hit_or_forward_replay' depends on axioms: [propext]\n'RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.actual_unaffected_sibling_flow_exists' depends on axioms: [propext]\n'RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.zero_frames_provide_no_hidden_return_route' depends on axioms: [propext]\n'RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.contrast_broad_FLOW_query_builds_excluded_normal_record_and_finds_source' depends on axioms: [propext]\n'RestrictedInitialPolicy.PreciseDemandWriteDiagnostic.checked' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.run2_decision_uses_the_selected_adapter' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.later_FLOW_STAR_entry_is_explicitly_invalid' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.later_concrete_STAR_keeps_precise_cells_and_ANY_refinement_stays_legal' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.unchanged_outside_override' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.override_requires_STAR_demand' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.former_canonical_template_does_not_use_override' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.former_template_has_executable_witness' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.requested_STAR_has_executable_descendant_witness' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.complete_image' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.image_classifier_sound_and_complete' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.requested_STAR_is_emittable_but_is_not_a_fixed_point' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.new_initial_keeps_the_demand_mark' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.mismatching_full_marks_are_still_rejected' depends on axioms: [propext,\n Quot.sound]\n'RestrictedInitialPolicy.DemandStarPolicy.concrete_requested_STAR_starts_DEMAND' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.other_selected_cells_keep_their_previous_results' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.budget_emission_facts' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.budget_emission_from_facts' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.proper_descendant_has_longer_path' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.DemandStarPolicy.bounded_image_has_executable_witness' depends on axioms: [propext, Quot.sound]\n'RestrictedInitialPolicy.DemandStarPolicy.capped_raw_STAR_image_and_exact_preimage_are_distinct' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.ClosedWrite.selected_STAR_emission_closes_the_backward_source_route' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.ClosedWrite.normal_excluded_record_preserves_forward_sibling_and_reaches_sink' depends on axioms: [propext]\n'RestrictedInitialPolicy.DemandStarPolicy.checked' depends on axioms: [propext]\n",
+        "workingDirectory": "spec/lean",
+        "allowedAxioms": [
+          "propext",
+          "Quot.sound"
         ],
-        "count": 11,
-        "exitCode": 0,
-        "executableTrueCount": 1,
-        "forbiddenAxioms": false,
-        "auditLogSha256": "8e853e68bb65e28dba08d91c0128623cdb4ef198b2dcd92e6bde45245404aebc",
-        "auditOutput": "true\n'DemandImplementationContracts.early_filter_preserves_rows' depends on axioms: [propext]\n'DemandImplementationContracts.early_filter_preserves_decoded_outputs' depends on axioms: [propext]\n'DemandImplementationContracts.slot_round_trip' does not depend on any axioms\n'DemandImplementationContracts.write_preserves_representation' depends on axioms: [propext]\n'DemandImplementationContracts.byte_step_refines_logical_step' depends on axioms: [propext]\n'DemandImplementationContracts.owner_id_injective' does not depend on any axioms\n'DemandImplementationContracts.early_filter_preserves_rows' depends on axioms: [propext]\n'DemandImplementationContracts.early_filter_preserves_decoded_outputs' depends on axioms: [propext]\n'DemandImplementationContracts.early_filter_owner_calls_never_increase' depends on axioms: [propext]\n'DemandImplementationContracts.slot_round_trip' does not depend on any axioms\n'DemandImplementationContracts.zero_array_represents_empty' does not depend on any axioms\n'DemandImplementationContracts.write_preserves_representation' depends on axioms: [propext]\n'DemandImplementationContracts.byte_step_refines_logical_step' depends on axioms: [propext]\n'DemandImplementationContracts.owner_id_injective' does not depend on any axioms\n'DemandImplementationContracts.owner_payload_unchanged' does not depend on any axioms\n'DemandImplementationContracts.invalid_slot_is_not_cached_false' does not depend on any axioms\n'DemandImplementationContracts.checked' does not depend on any axioms\n"
+        "constructiveAuditPassed": true
       },
       {
         "file": "spec/lean/proposals/initial-emission/FlowSummaryNormalization.lean",
-        "sha256": "7ab98054295ce8d3a339ee40b3bf15662649673a1ceac6cdcd1913e475470f87",
+        "sha256": "06705ed9aa40dfc6d1d3f215ce29912963b85b61c7934a7a79a8e52741ee9c73",
         "command": "cd spec/lean && lake env lean proposals/initial-emission/FlowSummaryNormalization.lean",
+        "theoremCount": 57,
         "theorems": [
           "FlowSummaryNormalization.endpoint_fields_unchanged",
           "FlowSummaryNormalization.endpoint_normalization_idempotent",
@@ -191,27 +197,172 @@
           "FlowSummaryNormalization.whole_position_root_cleaner_kills_FLOW_MUST_and_concrete",
           "FlowSummaryNormalization.whole_position_named_field_is_admitted_and_cleans_its_subtree",
           "FlowSummaryNormalization.direct_ancestor_field_effect_does_not_create_NORMAL_EmptyE",
+          "FlowSummaryNormalization.partial_DEMAND_keeps_ANY_but_NORMAL_keeps_the_read_barrier",
+          "FlowSummaryNormalization.partial_FLOW_MUST_cleaner_loses_uniformity_without_changing_other_MUST_transport",
+          "FlowSummaryNormalization.Integration.outgoing_grammar_allows_run1_STAR_but_rejects_it_afterwards",
+          "FlowSummaryNormalization.Integration.admitted_partial_cleaner_produces_valid_later_ANY_demand",
+          "FlowSummaryNormalization.Integration.late_FLOW_MUST_demand_is_not_a_MAY_output",
+          "FlowSummaryNormalization.Integration.normal_E_write_and_run1_cover_have_selected_output_shapes",
+          "FlowSummaryNormalization.Integration.normalized_entry_witness_checks_emission_and_raw_containment",
+          "FlowSummaryNormalization.Integration.normalized_entry_witness_is_complete",
+          "FlowSummaryNormalization.Integration.normalization_commutes_with_layer_join",
+          "FlowSummaryNormalization.Integration.boundary_never_promotes_DEMAND",
+          "FlowSummaryNormalization.Integration.nested_write_uses_effect_geometry_and_keeps_proper_prefix_DEMAND",
+          "FlowSummaryNormalization.Integration.nested_write_normal_piece_keeps_sibling_but_needs_inner_DEMAND",
+          "FlowSummaryNormalization.Integration.admitted_MUST_descent_consumes_ancestor_E",
+          "FlowSummaryNormalization.Integration.same_prefix_exact_piece_keeps_E_before_and_after_normalization",
+          "FlowSummaryNormalization.Integration.dropping_C5_E_adds_false_overwritten_pair_but_retaining_E_blocks_it",
+          "FlowSummaryNormalization.Integration.canonical_C5_piece_is_covered_by_same_prefix_uniform_result",
+          "FlowSummaryNormalization.Integration.checked",
+          "FlowSummaryNormalization.NativeMustView.view_has_no_MUST_initial_and_is_always_DEMAND",
+          "FlowSummaryNormalization.NativeMustView.view_preserves_opposite_bases_and_paths",
+          "FlowSummaryNormalization.NativeMustView.transient_view_covers_forward_transpose",
+          "FlowSummaryNormalization.NativeMustView.transient_view_is_already_canonical",
+          "FlowSummaryNormalization.NativeMustView.all_three_normal_MUST_shapes_select_the_same_view",
+          "FlowSummaryNormalization.NativeMustView.concrete_record_is_not_selected",
+          "FlowSummaryNormalization.NativeMustView.concrete_result_is_not_selected",
+          "FlowSummaryNormalization.NativeMustView.DEMAND_record_cannot_create_a_NORMAL_view",
+          "FlowSummaryNormalization.NativeMustView.checked",
           "FlowSummaryNormalization.checked"
         ],
-        "count": 31,
         "exitCode": 0,
-        "executableTrueCount": 1,
-        "forbiddenAxioms": false,
-        "auditMethod": "Compile complete source followed by #print axioms for every theorem. Complete output follows.",
-        "auditOutput": "true\n'FlowSummaryNormalization.endpoint_fields_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.endpoint_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_layer_and_endpoint_data_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.normalization_preimage_cases' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_sound' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_complete' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_c5_image_is_exact' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_inside_is_not_the_normalized_image_guard' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_helper_replay_is_correlated' depends on axioms: [propext]\n'FlowSummaryNormalization.mixed_demand_keeps_any_and_layer' depends on axioms: [propext]\n'FlowSummaryNormalization.current_exact_survives_child_overwrite_normal' depends on axioms: [propext]\n'FlowSummaryNormalization.write_normalization_adds_a_false_normal_pair' depends on axioms: [propext]\n'FlowSummaryNormalization.annotation_is_new_and_survives_return' depends on axioms: [propext]\n'FlowSummaryNormalization.move_keeps_new_annotation' does not depend on any axioms\n'FlowSummaryNormalization.later_publication_keeps_normal_exclusion_but_run1_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_rejects_overwritten_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_keeps_disjoint_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_write_cell_has_exact_survivor_relation' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_initial_exact_has_empty_E' does not depend on any axioms\n'FlowSummaryNormalization.literal_exact_cleaner_is_disjoint_but_effect_geometry_is_partial' depends on axioms: [propext]\n'FlowSummaryNormalization.guarded_all_below_retains_read_tail_and_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.cleaner_geometry_does_not_change_concrete' depends on axioms: [propext, Quot.sound]\n'FlowSummaryNormalization.concrete_cleaner_cell_is_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.remove_all_admission_is_independent_of_named_path' does not depend on any axioms\n'FlowSummaryNormalization.selected_mark_reach_is_not_restricted' does not depend on any axioms\n'FlowSummaryNormalization.rejected_below_cleaner_cannot_create_MUST_root_survivor' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_root_cleaner_kills_FLOW_MUST_and_concrete' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_named_field_is_admitted_and_cleans_its_subtree' depends on axioms: [propext]\n'FlowSummaryNormalization.direct_ancestor_field_effect_does_not_create_NORMAL_EmptyE' depends on axioms: [propext]\n'FlowSummaryNormalization.checked' depends on axioms: [propext]\n'FlowSummaryNormalization.endpoint_fields_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.endpoint_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_layer_and_endpoint_data_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.normalization_preimage_cases' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_sound' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_complete' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_c5_image_is_exact' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_inside_is_not_the_normalized_image_guard' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_helper_replay_is_correlated' depends on axioms: [propext]\n'FlowSummaryNormalization.mixed_demand_keeps_any_and_layer' depends on axioms: [propext]\n'FlowSummaryNormalization.current_exact_survives_child_overwrite_normal' depends on axioms: [propext]\n'FlowSummaryNormalization.write_normalization_adds_a_false_normal_pair' depends on axioms: [propext]\n'FlowSummaryNormalization.annotation_is_new_and_survives_return' depends on axioms: [propext]\n'FlowSummaryNormalization.move_keeps_new_annotation' does not depend on any axioms\n'FlowSummaryNormalization.later_publication_keeps_normal_exclusion_but_run1_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_rejects_overwritten_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_keeps_disjoint_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_write_cell_has_exact_survivor_relation' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_initial_exact_has_empty_E' does not depend on any axioms\n'FlowSummaryNormalization.literal_exact_cleaner_is_disjoint_but_effect_geometry_is_partial' depends on axioms: [propext]\n'FlowSummaryNormalization.guarded_all_below_retains_read_tail_and_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.cleaner_geometry_does_not_change_concrete' depends on axioms: [propext, Quot.sound]\n'FlowSummaryNormalization.concrete_cleaner_cell_is_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.remove_all_admission_is_independent_of_named_path' does not depend on any axioms\n'FlowSummaryNormalization.selected_mark_reach_is_not_restricted' does not depend on any axioms\n'FlowSummaryNormalization.rejected_below_cleaner_cannot_create_MUST_root_survivor' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_root_cleaner_kills_FLOW_MUST_and_concrete' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_named_field_is_admitted_and_cleans_its_subtree' depends on axioms: [propext]\n'FlowSummaryNormalization.direct_ancestor_field_effect_does_not_create_NORMAL_EmptyE' depends on axioms: [propext]\n'FlowSummaryNormalization.checked' depends on axioms: [propext]\n"
+        "executableTrueChecks": 3,
+        "axioms": [
+          "Quot.sound",
+          "propext"
+        ],
+        "allTheoremAudit": "Complete source compiled with #print axioms for every theorem; complete output embedded.",
+        "output": "true\n'FlowSummaryNormalization.Integration.outgoing_grammar_allows_run1_STAR_but_rejects_it_afterwards' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.admitted_partial_cleaner_produces_valid_later_ANY_demand' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.late_FLOW_MUST_demand_is_not_a_MAY_output' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.normal_E_write_and_run1_cover_have_selected_output_shapes' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.normalized_entry_witness_checks_emission_and_raw_containment' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.normalized_entry_witness_is_complete' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.normalization_commutes_with_layer_join' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.boundary_never_promotes_DEMAND' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.nested_write_uses_effect_geometry_and_keeps_proper_prefix_DEMAND' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.nested_write_normal_piece_keeps_sibling_but_needs_inner_DEMAND' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.admitted_MUST_descent_consumes_ancestor_E' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.same_prefix_exact_piece_keeps_E_before_and_after_normalization' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.dropping_C5_E_adds_false_overwritten_pair_but_retaining_E_blocks_it' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.canonical_C5_piece_is_covered_by_same_prefix_uniform_result' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.checked' depends on axioms: [propext]\ntrue\n'FlowSummaryNormalization.NativeMustView.view_has_no_MUST_initial_and_is_always_DEMAND' does not depend on any axioms\n'FlowSummaryNormalization.NativeMustView.view_preserves_opposite_bases_and_paths' does not depend on any axioms\n'FlowSummaryNormalization.NativeMustView.transient_view_covers_forward_transpose' depends on axioms: [propext]\n'FlowSummaryNormalization.NativeMustView.transient_view_is_already_canonical' depends on axioms: [propext]\n'FlowSummaryNormalization.NativeMustView.all_three_normal_MUST_shapes_select_the_same_view' depends on axioms: [propext]\n'FlowSummaryNormalization.NativeMustView.concrete_record_is_not_selected' depends on axioms: [propext]\n'FlowSummaryNormalization.NativeMustView.concrete_result_is_not_selected' depends on axioms: [propext]\n'FlowSummaryNormalization.NativeMustView.DEMAND_record_cannot_create_a_NORMAL_view' depends on axioms: [propext]\n'FlowSummaryNormalization.NativeMustView.checked' depends on axioms: [propext]\ntrue\n'FlowSummaryNormalization.endpoint_fields_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.endpoint_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_layer_and_endpoint_data_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.normalization_preimage_cases' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_sound' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_complete' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_c5_image_is_exact' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_inside_is_not_the_normalized_image_guard' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_helper_replay_is_correlated' depends on axioms: [propext]\n'FlowSummaryNormalization.mixed_demand_keeps_any_and_layer' depends on axioms: [propext]\n'FlowSummaryNormalization.current_exact_survives_child_overwrite_normal' depends on axioms: [propext]\n'FlowSummaryNormalization.write_normalization_adds_a_false_normal_pair' depends on axioms: [propext]\n'FlowSummaryNormalization.annotation_is_new_and_survives_return' depends on axioms: [propext]\n'FlowSummaryNormalization.move_keeps_new_annotation' does not depend on any axioms\n'FlowSummaryNormalization.later_publication_keeps_normal_exclusion_but_run1_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_rejects_overwritten_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_keeps_disjoint_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_write_cell_has_exact_survivor_relation' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_initial_exact_has_empty_E' does not depend on any axioms\n'FlowSummaryNormalization.literal_exact_cleaner_is_disjoint_but_effect_geometry_is_partial' depends on axioms: [propext]\n'FlowSummaryNormalization.guarded_all_below_retains_read_tail_and_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.cleaner_geometry_does_not_change_concrete' depends on axioms: [propext, Quot.sound]\n'FlowSummaryNormalization.concrete_cleaner_cell_is_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.remove_all_admission_is_independent_of_named_path' does not depend on any axioms\n'FlowSummaryNormalization.selected_mark_reach_is_not_restricted' does not depend on any axioms\n'FlowSummaryNormalization.rejected_below_cleaner_cannot_create_MUST_root_survivor' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_root_cleaner_kills_FLOW_MUST_and_concrete' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_named_field_is_admitted_and_cleans_its_subtree' depends on axioms: [propext]\n'FlowSummaryNormalization.direct_ancestor_field_effect_does_not_create_NORMAL_EmptyE' depends on axioms: [propext]\n'FlowSummaryNormalization.partial_DEMAND_keeps_ANY_but_NORMAL_keeps_the_read_barrier' depends on axioms: [propext]\n'FlowSummaryNormalization.partial_FLOW_MUST_cleaner_loses_uniformity_without_changing_other_MUST_transport' depends on axioms: [propext]\n'FlowSummaryNormalization.checked' depends on axioms: [propext]\n'FlowSummaryNormalization.endpoint_fields_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.endpoint_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_normalization_idempotent' depends on axioms: [propext]\n'FlowSummaryNormalization.summary_layer_and_endpoint_data_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.normalization_preimage_cases' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_sound' depends on axioms: [propext]\n'FlowSummaryNormalization.image_witness_complete' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_c5_image_is_exact' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_inside_is_not_the_normalized_image_guard' depends on axioms: [propext]\n'FlowSummaryNormalization.normalized_helper_replay_is_correlated' depends on axioms: [propext]\n'FlowSummaryNormalization.mixed_demand_keeps_any_and_layer' depends on axioms: [propext]\n'FlowSummaryNormalization.current_exact_survives_child_overwrite_normal' depends on axioms: [propext]\n'FlowSummaryNormalization.write_normalization_adds_a_false_normal_pair' depends on axioms: [propext]\n'FlowSummaryNormalization.annotation_is_new_and_survives_return' depends on axioms: [propext]\n'FlowSummaryNormalization.move_keeps_new_annotation' does not depend on any axioms\n'FlowSummaryNormalization.later_publication_keeps_normal_exclusion_but_run1_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_rejects_overwritten_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_normalization_keeps_disjoint_field' depends on axioms: [propext]\n'FlowSummaryNormalization.annotated_write_cell_has_exact_survivor_relation' depends on axioms: [propext]\n'FlowSummaryNormalization.raw_initial_exact_has_empty_E' does not depend on any axioms\n'FlowSummaryNormalization.literal_exact_cleaner_is_disjoint_but_effect_geometry_is_partial' depends on axioms: [propext]\n'FlowSummaryNormalization.guarded_all_below_retains_read_tail_and_demotes' depends on axioms: [propext]\n'FlowSummaryNormalization.cleaner_geometry_does_not_change_concrete' depends on axioms: [propext, Quot.sound]\n'FlowSummaryNormalization.concrete_cleaner_cell_is_unchanged' depends on axioms: [propext]\n'FlowSummaryNormalization.remove_all_admission_is_independent_of_named_path' does not depend on any axioms\n'FlowSummaryNormalization.selected_mark_reach_is_not_restricted' does not depend on any axioms\n'FlowSummaryNormalization.rejected_below_cleaner_cannot_create_MUST_root_survivor' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_root_cleaner_kills_FLOW_MUST_and_concrete' depends on axioms: [propext]\n'FlowSummaryNormalization.whole_position_named_field_is_admitted_and_cleans_its_subtree' depends on axioms: [propext]\n'FlowSummaryNormalization.direct_ancestor_field_effect_does_not_create_NORMAL_EmptyE' depends on axioms: [propext]\n'FlowSummaryNormalization.partial_DEMAND_keeps_ANY_but_NORMAL_keeps_the_read_barrier' depends on axioms: [propext]\n'FlowSummaryNormalization.partial_FLOW_MUST_cleaner_loses_uniformity_without_changing_other_MUST_transport' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.outgoing_grammar_allows_run1_STAR_but_rejects_it_afterwards' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.admitted_partial_cleaner_produces_valid_later_ANY_demand' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.late_FLOW_MUST_demand_is_not_a_MAY_output' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.normal_E_write_and_run1_cover_have_selected_output_shapes' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.normalized_entry_witness_checks_emission_and_raw_containment' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.normalized_entry_witness_is_complete' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.normalization_commutes_with_layer_join' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.boundary_never_promotes_DEMAND' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.nested_write_uses_effect_geometry_and_keeps_proper_prefix_DEMAND' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.nested_write_normal_piece_keeps_sibling_but_needs_inner_DEMAND' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.admitted_MUST_descent_consumes_ancestor_E' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.same_prefix_exact_piece_keeps_E_before_and_after_normalization' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.dropping_C5_E_adds_false_overwritten_pair_but_retaining_E_blocks_it' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.canonical_C5_piece_is_covered_by_same_prefix_uniform_result' depends on axioms: [propext]\n'FlowSummaryNormalization.Integration.checked' depends on axioms: [propext]\n'FlowSummaryNormalization.NativeMustView.view_has_no_MUST_initial_and_is_always_DEMAND' does not depend on any axioms\n'FlowSummaryNormalization.NativeMustView.view_preserves_opposite_bases_and_paths' does not depend on any axioms\n'FlowSummaryNormalization.NativeMustView.transient_view_covers_forward_transpose' depends on axioms: [propext]\n'FlowSummaryNormalization.NativeMustView.transient_view_is_already_canonical' depends on axioms: [propext]\n'FlowSummaryNormalization.NativeMustView.all_three_normal_MUST_shapes_select_the_same_view' depends on axioms: [propext]\n'FlowSummaryNormalization.NativeMustView.concrete_record_is_not_selected' depends on axioms: [propext]\n'FlowSummaryNormalization.NativeMustView.concrete_result_is_not_selected' depends on axioms: [propext]\n'FlowSummaryNormalization.NativeMustView.DEMAND_record_cannot_create_a_NORMAL_view' depends on axioms: [propext]\n'FlowSummaryNormalization.NativeMustView.checked' depends on axioms: [propext]\n'FlowSummaryNormalization.checked' depends on axioms: [propext]\n",
+        "workingDirectory": "spec/lean",
+        "allowedAxioms": [
+          "propext",
+          "Quot.sound"
+        ],
+        "constructiveAuditPassed": true
+      },
+      {
+        "file": "spec/lean/proposals/initial-emission/AbstractTailContracts.lean",
+        "sha256": "6aa49c8afe9c37cab643b06ad86737a7e97f5a7e5f030b8ea9fd444f2a073c4a",
+        "command": "cd spec/lean && lake env lean proposals/initial-emission/AbstractTailContracts.lean",
+        "theoremCount": 7,
+        "theorems": [
+          "AbstractTailContracts.normal_star_identity_geometry_covers_exact",
+          "AbstractTailContracts.dropping_exact_preserves_union_when_cover_is_present",
+          "AbstractTailContracts.geometry_alone_does_not_establish_must",
+          "AbstractTailContracts.only_definite_must_is_admitted",
+          "AbstractTailContracts.layer_does_not_create_must",
+          "AbstractTailContracts.invalid_must_flags_do_not_bypass_tail_guard",
+          "AbstractTailContracts.checked"
+        ],
+        "exitCode": 0,
+        "executableTrueChecks": 1,
+        "axioms": [
+          "propext"
+        ],
+        "allTheoremAudit": "Complete source compiled with #print axioms for every theorem; complete output embedded.",
+        "output": "true\n'AbstractTailContracts.normal_star_identity_geometry_covers_exact' depends on axioms: [propext]\n'AbstractTailContracts.dropping_exact_preserves_union_when_cover_is_present' depends on axioms: [propext]\n'AbstractTailContracts.only_definite_must_is_admitted' depends on axioms: [propext]\n'AbstractTailContracts.layer_does_not_create_must' depends on axioms: [propext]\n'AbstractTailContracts.normal_star_identity_geometry_covers_exact' depends on axioms: [propext]\n'AbstractTailContracts.dropping_exact_preserves_union_when_cover_is_present' depends on axioms: [propext]\n'AbstractTailContracts.geometry_alone_does_not_establish_must' depends on axioms: [propext]\n'AbstractTailContracts.only_definite_must_is_admitted' depends on axioms: [propext]\n'AbstractTailContracts.layer_does_not_create_must' depends on axioms: [propext]\n'AbstractTailContracts.invalid_must_flags_do_not_bypass_tail_guard' depends on axioms: [propext]\n'AbstractTailContracts.checked' depends on axioms: [propext]\n",
+        "workingDirectory": "spec/lean",
+        "allowedAxioms": [
+          "propext",
+          "Quot.sound"
+        ],
+        "constructiveAuditPassed": true
+      },
+      {
+        "file": "spec/lean/proposals/demand-work/DemandWorkPruning.lean",
+        "sha256": "e774523ff94857bea0f63b710bd632cf8217457c55390374180077bae88d7640",
+        "command": "cd spec/lean && lake env lean proposals/demand-work/DemandWorkPruning.lean",
+        "theoremCount": 29,
+        "theorems": [
+          "DemandWorkPruning.bad_persists_on_walk",
+          "DemandWorkPruning.good_endpoint_has_good_start",
+          "DemandWorkPruning.good_walk_survives",
+          "DemandWorkPruning.kept_walk_is_original",
+          "DemandWorkPruning.pruning_preserves_accepted_outputs",
+          "DemandWorkPruning.mapped_output_does_not_change",
+          "DemandWorkPruning.prepend_preserves_fixed_right",
+          "DemandWorkPruning.fixed_right_rejection_is_downward_closed",
+          "DemandWorkPruning.c5_fixed_right_pruning_keeps_outputs",
+          "DemandWorkPruning.fixed_bad_output_stays_bad",
+          "DemandWorkPruning.left_mismatch_is_not_downward_closed",
+          "DemandWorkPruning.unresolved_flow_can_become_compatible_mapped",
+          "DemandWorkPruning.repeated_family_is_state_identity",
+          "DemandWorkPruning.identity_survives_other_family",
+          "DemandWorkPruning.empty_memo_valid",
+          "DemandWorkPruning.memo_hit_changes_no_state",
+          "DemandWorkPruning.memo_step_preserves_result_and_scratch",
+          "DemandWorkPruning.memo_execution_preserves_results_and_scratch",
+          "DemandWorkPruning.empty_memo_execution_is_equivalent",
+          "DemandWorkPruning.memo_step_defined_support",
+          "DemandWorkPruning.memo_execution_defined_support",
+          "DemandWorkPruning.empty_memo_defines_only_queried_families",
+          "DemandWorkPruning.unequal_member_survives_remove",
+          "DemandWorkPruning.remove_first_length",
+          "DemandWorkPruning.nodup_length_le_subset",
+          "DemandWorkPruning.dense_memo_domain_bound",
+          "DemandWorkPruning.memo_defined_cells_bound_by_distinct_families",
+          "DemandWorkPruning.finite_interleaved_control",
+          "DemandWorkPruning.checked"
+        ],
+        "exitCode": 0,
+        "executableTrueChecks": 1,
+        "axioms": [
+          "Quot.sound",
+          "propext"
+        ],
+        "allTheoremAudit": "Complete source compiled with #print axioms for every theorem; complete output embedded.",
+        "output": "'DemandWorkPruning.pruning_preserves_accepted_outputs' does not depend on any axioms\n'DemandWorkPruning.prepend_preserves_fixed_right' depends on axioms: [propext]\n'DemandWorkPruning.c5_fixed_right_pruning_keeps_outputs' depends on axioms: [propext]\ntrue\n'DemandWorkPruning.repeated_family_is_state_identity' does not depend on any axioms\n'DemandWorkPruning.identity_survives_other_family' does not depend on any axioms\n'DemandWorkPruning.memo_execution_preserves_results_and_scratch' depends on axioms: [propext, Quot.sound]\n'DemandWorkPruning.memo_defined_cells_bound_by_distinct_families' depends on axioms: [propext, Quot.sound]\n'DemandWorkPruning.nodup_length_le_subset' depends on axioms: [propext]\n'DemandWorkPruning.dense_memo_domain_bound' depends on axioms: [propext]\n'DemandWorkPruning.finite_interleaved_control' depends on axioms: [propext]\n'DemandWorkPruning.bad_persists_on_walk' does not depend on any axioms\n'DemandWorkPruning.good_endpoint_has_good_start' does not depend on any axioms\n'DemandWorkPruning.good_walk_survives' does not depend on any axioms\n'DemandWorkPruning.kept_walk_is_original' does not depend on any axioms\n'DemandWorkPruning.pruning_preserves_accepted_outputs' does not depend on any axioms\n'DemandWorkPruning.mapped_output_does_not_change' depends on axioms: [propext]\n'DemandWorkPruning.prepend_preserves_fixed_right' depends on axioms: [propext]\n'DemandWorkPruning.fixed_right_rejection_is_downward_closed' depends on axioms: [propext]\n'DemandWorkPruning.c5_fixed_right_pruning_keeps_outputs' depends on axioms: [propext]\n'DemandWorkPruning.fixed_bad_output_stays_bad' does not depend on any axioms\n'DemandWorkPruning.left_mismatch_is_not_downward_closed' does not depend on any axioms\n'DemandWorkPruning.unresolved_flow_can_become_compatible_mapped' does not depend on any axioms\n'DemandWorkPruning.repeated_family_is_state_identity' does not depend on any axioms\n'DemandWorkPruning.identity_survives_other_family' does not depend on any axioms\n'DemandWorkPruning.empty_memo_valid' does not depend on any axioms\n'DemandWorkPruning.memo_hit_changes_no_state' depends on axioms: [propext]\n'DemandWorkPruning.memo_step_preserves_result_and_scratch' depends on axioms: [propext, Quot.sound]\n'DemandWorkPruning.memo_execution_preserves_results_and_scratch' depends on axioms: [propext, Quot.sound]\n'DemandWorkPruning.empty_memo_execution_is_equivalent' depends on axioms: [propext, Quot.sound]\n'DemandWorkPruning.memo_step_defined_support' depends on axioms: [propext]\n'DemandWorkPruning.memo_execution_defined_support' depends on axioms: [propext]\n'DemandWorkPruning.empty_memo_defines_only_queried_families' depends on axioms: [propext]\n'DemandWorkPruning.unequal_member_survives_remove' depends on axioms: [propext]\n'DemandWorkPruning.remove_first_length' depends on axioms: [propext]\n'DemandWorkPruning.nodup_length_le_subset' depends on axioms: [propext]\n'DemandWorkPruning.dense_memo_domain_bound' depends on axioms: [propext]\n'DemandWorkPruning.memo_defined_cells_bound_by_distinct_families' depends on axioms: [propext, Quot.sound]\n'DemandWorkPruning.finite_interleaved_control' depends on axioms: [propext]\n'DemandWorkPruning.checked' depends on axioms: [propext]\n",
+        "workingDirectory": "spec/lean",
+        "allowedAxioms": [
+          "propext",
+          "Quot.sound"
+        ],
+        "constructiveAuditPassed": true
+      },
+      {
+        "file": "spec/lean/proposals/demand-work/ImplementationContracts.lean",
+        "sha256": "65bc74b667561584148a7a45be46b7243480a545930296e8a95eaf1cb3d0bb53",
+        "command": "cd spec/lean && lake env lean proposals/demand-work/ImplementationContracts.lean",
+        "theoremCount": 11,
+        "theorems": [
+          "DemandImplementationContracts.early_filter_preserves_rows",
+          "DemandImplementationContracts.early_filter_preserves_decoded_outputs",
+          "DemandImplementationContracts.early_filter_owner_calls_never_increase",
+          "DemandImplementationContracts.slot_round_trip",
+          "DemandImplementationContracts.zero_array_represents_empty",
+          "DemandImplementationContracts.write_preserves_representation",
+          "DemandImplementationContracts.byte_step_refines_logical_step",
+          "DemandImplementationContracts.owner_id_injective",
+          "DemandImplementationContracts.owner_payload_unchanged",
+          "DemandImplementationContracts.invalid_slot_is_not_cached_false",
+          "DemandImplementationContracts.checked"
+        ],
+        "exitCode": 0,
+        "executableTrueChecks": 1,
+        "axioms": [
+          "propext"
+        ],
+        "allTheoremAudit": "Complete source compiled with #print axioms for every theorem; complete output embedded.",
+        "output": "true\n'DemandImplementationContracts.early_filter_preserves_rows' depends on axioms: [propext]\n'DemandImplementationContracts.early_filter_preserves_decoded_outputs' depends on axioms: [propext]\n'DemandImplementationContracts.slot_round_trip' does not depend on any axioms\n'DemandImplementationContracts.write_preserves_representation' depends on axioms: [propext]\n'DemandImplementationContracts.byte_step_refines_logical_step' depends on axioms: [propext]\n'DemandImplementationContracts.owner_id_injective' does not depend on any axioms\n'DemandImplementationContracts.early_filter_preserves_rows' depends on axioms: [propext]\n'DemandImplementationContracts.early_filter_preserves_decoded_outputs' depends on axioms: [propext]\n'DemandImplementationContracts.early_filter_owner_calls_never_increase' depends on axioms: [propext]\n'DemandImplementationContracts.slot_round_trip' does not depend on any axioms\n'DemandImplementationContracts.zero_array_represents_empty' does not depend on any axioms\n'DemandImplementationContracts.write_preserves_representation' depends on axioms: [propext]\n'DemandImplementationContracts.byte_step_refines_logical_step' depends on axioms: [propext]\n'DemandImplementationContracts.owner_id_injective' does not depend on any axioms\n'DemandImplementationContracts.owner_payload_unchanged' does not depend on any axioms\n'DemandImplementationContracts.invalid_slot_is_not_cached_false' does not depend on any axioms\n'DemandImplementationContracts.checked' does not depend on any axioms\n",
+        "workingDirectory": "spec/lean",
+        "allowedAxioms": [
+          "propext",
+          "Quot.sound"
+        ],
+        "constructiveAuditPassed": true
       }
     ]
   },
   "remainingProofs": [
-    "All nested-write and field-cleaner lowering branches under new EXACT/FLOW E",
-    "All new-tail transfer, C2 adapter and MUST-view laws",
-    "C5 canonical-image integration and returned-piece normalization",
-    "Global observation coverage for rejected admissions; alias closure; full Kotlin differential tests",
-    "P1 fixed-right and P2 graph-provider Kotlin refinement after the selected semantic rewrite."
+    "Refine every changed Kotlin transfer/factory/group/index/record boundary to the selected model contracts; complete focused and differential tests.",
+    "Discharge static-anchor, E and GROUP adapters outside the FULL Empty-E scalar admission model.",
+    "Check all field/cleaner lowering branches, alias closure and observation preservation under the selected semantic rewrite.",
+    "Complete the selected project campaign after implementation; model compilation is not a project run.",
+    "Refine P1 private packed-row/filter loops and P2 graph-provider state transitions to the checked work-removal models during implementation."
   ],
   "closedTrace": {
     "path": "docs/reports/data/bidirectional-closed-exact-replay-20261029.json",
-    "sha256": "5a754f1d9f44260caa16188b1b7b39c54915fb5b5f5eda3cb9ac7ae04d178278",
+    "sha256": "4a25b91c0ff97d5f64cb5cecf18073a1bfba0d0f70b84aa7fb01680c8d0b736f",
     "activeNamespace": "RestrictedInitialPolicy.CodeOnlyExactReplay",
     "latestModeledRun": "run-3",
     "activeTheoremCount": 11,
@@ -220,13 +371,13 @@
     "customPassRuleCount": 0,
     "presentation": "Per-run annotated code; summary inventories after complete method bodies.",
     "presentationCheck": "All three listings compile; all 12 method bodies match the original example after comments/whitespace are removed.",
-    "status": "Historical before summary normalization; corrected behavior is in selectedSummaryNormalization."
+    "status": "Historical rejected unnormalized Box/helper path. Current selected behavior is in the normalization spec and current model namespaces."
   },
   "sourceSHA256": {
-    "docs/design/bidirectional-summary-demand-workload-implementation-20261029.md": "211679756ade2e0c803b41117e9bfc6e4f108f416946893edc8ac0cf15a7f252",
+    "docs/design/bidirectional-summary-demand-workload-implementation-20261029.md": "bdd914a73b09b03cd16bfa6ef1137f62609a5a3264698fe25688924340640a53",
     "docs/design/bidirectional-exact-flow-replay-trace-20261029.md": "9095b09a9936ab37721b308eed863702c23e4945a861a942593d01415c9e66eb",
-    "docs/design/bidirectional-one-step-initial-refinement-20261029.md": "290fdf7c8c03843717d151d683db5f1bf43fc00bb9668ab147c29f40078dd986",
-    "docs/design/bidirectional-next-demand-work-20261029.md": "1de8174aedb97318c7bdf27d55708a29827734a50e5b2d69cb9ba30ee46e80c7",
+    "docs/design/bidirectional-one-step-initial-refinement-20261029.md": "1aaa6025c08cad5fa478d36847dbe4af48dfa3791a5d04fc47ba905699954856",
+    "docs/design/bidirectional-next-demand-work-20261029.md": "f9d1c9431e114a88afc2fbe23f3bf2fd1ea1b1903faff2d9c920f6b44586a953",
     "spec/impl-proposal-guide.md": "0068a5ea23d3215cab580fc341bbcbfaf64d504920d35d8bf041b166c73ea17a",
     "spec/proof-guide.md": "c51296c2773f7a09bc96e3a4679c0b97610c38baf792b39e0de7ef2bf4787dcd",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": "b0452a5b3d356a20d7f042cd6486976b7c96db28d2cefa663e0c66e76d7ec593",
@@ -236,23 +387,70 @@
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticPairLookup.kt": "3aaa0cb07caf84757f8c589441df96eea708374527650948f1da079a70539f2c",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandResultCoverage.kt": "34242d856b65aa1b11b731c50f693b1f427c85d7c840d00b1bcd2e2c3f546c6b",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RecordStore.kt": "aa6c6a89915d52d049b4e946cf0271ea1a55fa00fab14f162196bc4635f715d2",
-    "spec/lean/proposals/initial-emission/FlowSummaryNormalization.lean": "7ab98054295ce8d3a339ee40b3bf15662649673a1ceac6cdcd1913e475470f87",
-    "docs/design/bidirectional-flow-summary-normalization-20261029.md": "85e3031a805cd9b781e729b186366868d48990509f89daa135402329c28f32ab"
+    "spec/lean/proposals/initial-emission/FlowSummaryNormalization.lean": "06705ed9aa40dfc6d1d3f215ce29912963b85b61c7934a7a79a8e52741ee9c73",
+    "docs/design/bidirectional-flow-summary-normalization-20261029.md": "cb447ffceec66306eef8820b88b1c68f9c553e959ca1fb628a0186dc8210a991",
+    "spec/lean/proposals/initial-emission/RestrictedInitialPolicy.lean": "3a42cc1eb3209c82400ba528bdb1e80ba17bc09540e19e59b0d5272f9fd7c5f0",
+    "spec/lean/proposals/initial-emission/AbstractTailContracts.lean": "6aa49c8afe9c37cab643b06ad86737a7e97f5a7e5f030b8ea9fd444f2a073c4a",
+    "spec/lean/proposals/demand-work/DemandWorkPruning.lean": "e774523ff94857bea0f63b710bd632cf8217457c55390374180077bae88d7640",
+    "spec/lean/proposals/demand-work/ImplementationContracts.lean": "65bc74b667561584148a7a45be46b7243480a545930296e8a95eaf1cb3d0bb53",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/CalleeSubscriptions.kt": "52791e6b318dd2cefff2b99e6daaa0465b90fdc4b096b9ec3e5af24ebfdef33e",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/PublicationIndex.kt": "98f8a99cb9976cbcf177143d04f5945831fedf808f36ac4e6d862932acac0b8d",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Conclusions.kt": "6071579427c80badc35990e8fc0fcbbdcaeaaed8e504e58096b7916dee67b5fd",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/EdgeApplication.kt": "7c3bbdb0ea444fe50c971213907661da1280a18682f16a1db0dd23ee29bcf792",
+    "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRRuleForms.kt": "7370b426ba4edb241f6b0c39bf27854214a91f4a5ee81f254dde5862d7faf285"
   },
-  "validationScope": "89 checked theorem declarations in four support files; six executable true checks. The new normalization file has 31. Historical counterexamples model the rejected unnormalized path. No production or project-run change.",
+  "validationScope": "174 checked theorem declarations across five files, including historical controls; 11 true executable checks. The current raw-emitter model covers FULL marks, Empty E and ordinary counted nonstatic paths. Transfer/view models prove stated cells and finite-relation laws, not whole-JVM/alias completeness or whole-analyzer termination.",
   "peerReview": {
-    "result": "Source-bound corrections applied: canonical Reference.emit plus offer/has/requireFamily; whole-walk coverage return; private GuidanceGeometry member overloads; Groups.kt path; pre-replay cross-premise coverage planning; scalar image vs global no-loss scope; invalid MUST demand/actual guards. No runtime changes."
-  },
-  "additionalValidation": {
-    "command": "cd spec/lean && lake env lean proposals/demand-work/DemandWorkPruning.lean",
-    "exitCode": 0,
-    "executableCheck": true
+    "result": "No remaining concrete contradiction or blocker found in final source-bound review.",
+    "checked": [
+      "Run-2 incoming STAR/FLOW versus later ANY/FLOW entries",
+      "Legal STAR paired exits and NORMAL summaries",
+      "Requested-STAR witness and field budget; non-idempotence",
+      "Canonical pair and selected-piece normalization; raw preimage containment",
+      "Write/C5 E and layer preservation",
+      "Both-order delivery indexes; transient native MUST views",
+      "Private filtered API, null-path order, whole-walk coverage return, memo ownership"
+    ]
   },
   "traceCorrection": "Separate NORMAL instruction micro-edges from derived result layers. Replace arbitrary ANY-target pass and Pair pass model with real allocation/write/return code. Box summary is inferred, run1 B MAY comes from field limiting, run2 B MAY comes from ancestor native-record replay; no direct helper probe or cross-caller context assumption.",
   "selectedSummaryNormalization": {
     "spec": "docs/design/bidirectional-flow-summary-normalization-20261029.md",
     "evidence": "docs/reports/data/bidirectional-flow-summary-normalization-20261029.json",
-    "sha256": "341090b645b786087f6820ea039c7c7a86f31740d09dbb3d23a85b63b3d26dad",
-    "uncoveredExactReplayDecision": "Resolved by canonical STAR summary storage, preserving write E. No exact FLOW summary replay."
+    "sha256": "55760941ff9baab2d050ab15eae44a604f3ce0fa6bab3b37d8ee7fd564ee74a1",
+    "uncoveredExactReplayDecision": "Resolved by canonical STAR summary storage with write E. No native abstract-EXACT record replay planner."
+  },
+  "modeAndImage": {
+    "receivingRun": {
+      "run-2": "Incoming FLOW Dc may be STAR or ANY; later outgoing FLOW demand must be ANY.",
+      "run-3-and-later": "Incoming FLOW Dc must be ANY. Concrete STAR demand remains legal and precise.",
+      "Dp": "STAR is legal in paired exit."
+    },
+    "rawImage": "Explicit selected output-template classifier. A requested run-2 STAR has a proper-descendant witness but is not a self-emission fixed point.",
+    "budget": "The proper-descendant witness must survive the receiving field limit. In the ordinary counted-field model, requested STAR needs demand depth < limit. A capped canonical FLOW STAR can still have a valid raw EXACT preimage.",
+    "representation": "No new fact metadata, input/origin history, grounding support or query-result cache."
+  },
+  "closedStarOverwriteTrace": {
+    "namespace": "RestrictedInitialPolicy.DemandStarPolicy.ClosedWrite",
+    "code": "main(q) { source(q); Root y=m(q); sinkT(y.g); }\nRoot m(Root p) { p.f=new Leaf(); return p; }",
+    "rules": "source assigns exact T to q.g; sink checks exact T at its argument; f != g; aliases disabled is sufficient.",
+    "run-1": {
+      "submitted": "p.g.EXACT/T, DEMAND",
+      "rawInitial": "p.STAR/FLOW, NORMAL",
+      "normalReturnRecord": "none",
+      "demandSummary": "p.STAR/FLOW -> ret.STAR/FLOW, Empty E"
+    },
+    "run-2": {
+      "demand": "entry ret.STAR/FLOW; exit p.STAR/FLOW",
+      "submitted": "ret.g.EXACT/T, DEMAND",
+      "rawInitial": "ret.STAR/FLOW, NORMAL",
+      "normalSummary": "ret.STAR/FLOW -> p.STAR/FLOW, output E={f}",
+      "answer": "Concrete suffix g survives; caller layer remains DEMAND; the backward source is reached."
+    },
+    "run-3": {
+      "recordView": "p.STAR/FLOW -> ret.STAR/FLOW, output E={f}, NORMAL",
+      "answer": "Source q.g.EXACT/T NORMAL reaches ret.g.EXACT/T NORMAL and the sink."
+    },
+    "latestModeledIteration": "run-3",
+    "scope": "Finite checked causal operator trace; no project execution or unselected replay channel."
   }
 }

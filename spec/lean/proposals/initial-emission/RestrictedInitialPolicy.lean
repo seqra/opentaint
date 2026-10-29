@@ -8,8 +8,10 @@
   supply a concrete full mark. Such metadata also permits structural image
   queries without inventing a concrete caller input.
 
-  Pinned cells: precise STAR/EXACT demand emits only EXACT at its own path;
-  a proper descendant does not apply. ANY demand resolves at most one new
+  Historical policy below: precise STAR/EXACT demand emits only EXACT at its
+  own path; a proper descendant does not apply. The selected DemandStarPolicy
+  namespace at the end supersedes only the STAR proper-descendant cell.
+  ANY demand resolves at most one new
   field, with the terminal concrete EXACT exception. Same-prefix supplied
   STAR emits nothing. Ancestor STAR for ANY demand also emits nothing:
   this last row is the stated inferred no-ANY/no-refinement interpretation.
@@ -924,3 +926,566 @@ theorem checked : check = true := by decide
 #print axioms code_only_false_pair
 
 end RestrictedInitialPolicy.CodeOnlyExactReplay
+
+/-
+  Historical closed diagnostic for the former precise-demand rejection.
+  DemandStarPolicy below resolves this run-2 case. The rejected admission
+  is retained here as regression evidence. Latest modeled iteration: run-3;
+  limits 1,1,2.
+
+  Code (ordinary field overwrite and return, aliases disabled):
+    main(q) { sourceExactT(q.g); y = m(q); sinkExactT(y.g); }
+    m(p)    { p.f = new Leaf(); return p; }
+  f != g. The source rule assigns only q.g/$/T. The sink checks only y.g/$/T.
+  No static, ND, cleaner, MUST, class accessor or implicit pass model is used.
+
+  rawApply/rawSummary reuse the existing geometry and mark operators without
+  the historical W2 STAR-to-ANY rewrite. Current run-1 exclusion cover is
+  explicit: demote and clear E, while keeping STAR. A fresh clean RHS emits
+  no marked assignment; its only nonzero old-value transfer is writeKeep.
+  Runtime forceRun1Layer also demotes the source TAINT result before call
+  admission. rawSource1 is the normative concrete code result before that
+  run-1 layer rule; source1 is the actual run-1 DEMAND packet.
+
+  The finite principal row inventory is derived from code below. This is a
+  diagnostic of admission and source-route loss, not a proof of the whole
+  JVM/driver. The final contrast deliberately changes that one admission
+  cell and is not the selected policy.
+-/
+namespace RestrictedInitialPolicy.PreciseDemandWriteDiagnostic
+open ApSpec ApSpec.AnyTaintEx ApSpec.Handoff ApSpec.Abs
+open ApSpec.Run1CorrelatedConcreteInitials
+
+def q : Base := 10
+def y : Base := 11
+def p : Base := 20
+def ret : Base := 21
+def f : Acc := 7
+def g : Acc := 9
+def t : ApSpec.Mark := 1
+def flow (base : Base) (path : List Acc := []) (kind : Kind := .star Excl.empty) : PFact :=
+  ⟨base,path,kind,.star⟩
+def taint (base : Base) (path : List Acc) : PFact := ⟨base,path,.exact,.conc t⟩
+def step (edge : MicroEdge) (inputs : List AFact) : List AFact :=
+  inputs.flatMap fun input => (rawApply input edge.1 edge.2).facts
+def move (fromBase toBase : Base) : MicroEdge := (flow fromBase,flow toBase)
+def zero : AFact := ⟨zeroFact,false⟩
+def toMethod : MicroEdge := move q p
+def toCaller : MicroEdge := move ret y
+def returnEdge : MicroEdge := move p ret
+def writeKeep : MicroEdge :=
+  (flow p [] (.star (.set [f])),flow p [] (.star (.set [f])))
+def sourceEdge : MicroEdge := (zeroFact,taint q [g])
+def rawSource1 : List AFact := step sourceEdge [zero]
+def source1 : List AFact := rawSource1.map fun source => {source with demand := true}
+def sinkPattern : PFact := taint y [g]
+
+/-- Current run-1 policy, not weak update: an exclusion update moves the
+edge to DEMAND, clears E, and preserves its STAR tail and known path. -/
+def run1Cover (result : AFact) : AFact :=
+  match result.fact.kind with
+  | .star e =>
+    if e.isEmptyB then result else
+      ⟨{result.fact with kind := .star Excl.empty},true⟩
+  | _ => result
+
+def run1Initials : List AFact :=
+  (step toMethod source1).map fun actual => ⟨flow actual.fact.base,false⟩
+def writeRun1 (inputs : List AFact) : List AFact := (step writeKeep inputs).map run1Cover
+def bodyRun1 (inputs : List AFact) : List AFact :=
+  let kept := writeRun1 inputs
+  kept ++ step returnEdge kept
+abbrev Row := PFact × AFact
+def analyze (initials : List AFact) (body : List AFact → List AFact) : List Row :=
+  initials.flatMap fun initial => (body [initial]).map fun final => (initial.fact,final)
+def zeroRow : Row := (zeroFact,zero)
+def rows1 : List Row := [zeroRow] ++ analyze run1Initials bodyRun1
+def applyRows (rows : List Row) (inputs : List AFact) : List AFact :=
+  inputs.flatMap fun input => rows.flatMap fun row => (rawSummary input row.1 row.2).facts
+def normalReturns (rows : List Row) : List Row :=
+  rows.filter fun row => !row.2.demand && Nat.beq row.2.fact.base ret
+def demandFrom (row : Row) : DemandEdge :=
+  let reversed := revEdge row.1 row.2.fact
+  ⟨reversed.1,some reversed.2⟩
+def demands2 : List DemandEdge :=
+  (rows1.filter fun row => row.2.demand).map demandFrom
+def mainResults1 : List AFact := step toCaller (applyRows rows1 (step toMethod source1))
+def observed (inputs : List AFact) : Bool :=
+  inputs.any fun fact => checkX zeroFact (plain fact) sinkPattern == .triggered
+
+theorem run1_source_write_demand_and_report_are_derived :
+    rawSource1 = [⟨taint q [g],false⟩] ∧
+    source1 = [⟨taint q [g],true⟩] ∧
+    run1Initials = [⟨flow p,false⟩] ∧
+    step writeKeep run1Initials = [⟨flow p [] (.star (.set [f,f])),false⟩] ∧
+    rows1 = [zeroRow,(flow p,⟨flow p,true⟩),(flow p,⟨flow ret,true⟩)] ∧
+    normalReturns rows1 = [] ∧
+    demands2 = [⟨flow p,some (flow p)⟩,⟨flow ret,some (flow p)⟩] ∧
+    mainResults1 = [⟨taint y [g],true⟩] ∧ observed mainResults1 = true := by decide
+
+def sinkSeed2 : List AFact := [⟨sinkPattern,true⟩]
+def actual2 : List AFact := step (revEdge toCaller.1 toCaller.2) sinkSeed2
+def selectedInitials (demand : DemandEdge) (actuals : List AFact) : List AFact :=
+  actuals.flatMap fun actual =>
+    (emit (ClosedExactReplay.asDemand demand.din)
+      (ClosedExactReplay.asInput actual.fact)).toList.map fun selected => selectedStart (toAp selected)
+def initials2 : List AFact := demands2.flatMap fun demand => selectedInitials demand actual2
+def bodyBackward (inputs : List AFact) : List AFact :=
+  step (revEdge writeKeep.1 writeKeep.2)
+    (step (revEdge returnEdge.1 returnEdge.2) inputs)
+def rows2 : List Row := analyze initials2 bodyBackward
+def callerResults2 : List AFact := step (revEdge toMethod.1 toMethod.2)
+  (applyRows rows2 actual2)
+def sourceHits2 : List AFact :=
+  step (revEdge sourceEdge.1 sourceEdge.2) callerResults2
+def sourceSelected3 : Bool := sourceHits2.any fun hit => Nat.beq hit.fact.base zeroBase
+def source3 : List AFact := if sourceSelected3 then step sourceEdge [zero] else []
+
+theorem backward_sink_binding_is_concrete_descendant_and_admission_rejects_it :
+    actual2 = [⟨taint ret [g],true⟩] ∧
+    emit ⟨ret,[],.star,.flow⟩ ⟨ret,[g],.exact,.full t,false⟩ = none ∧
+    initials2 = [] := by decide
+
+theorem current_selected_route_has_no_backward_source_hit_or_forward_replay :
+    rows2 = [] ∧ callerResults2 = [] ∧ sourceHits2 = [] ∧
+    sourceSelected3 = false ∧ source3 = [] := by decide
+
+/-- Normative concrete-code control before forceRun1Layer: the overwrite
+of f cannot kill exact g, and return preserves g. The actual run-1 source
+packet is DEMAND; this control deliberately starts from rawSource1. -/
+theorem actual_unaffected_sibling_flow_exists :
+    step returnEdge (step writeKeep (step toMethod rawSource1)) =
+      [⟨taint ret [g],false⟩] ∧
+    observed (step toCaller (step returnEdge (step writeKeep (step toMethod rawSource1)))) = true := by decide
+
+/-- ZERO and the fresh clean RHS cannot create an unlisted marked return. -/
+theorem zero_frames_provide_no_hidden_return_route :
+    step writeKeep [zero] = [] ∧ step returnEdge [zero] = [] ∧
+    step (revEdge sourceEdge.1 sourceEdge.2) [zero] = [] := by decide
+
+/-! Counterfactual contrast only: admit the broad FLOW STAR at the demanded
+root. This is a proposed alternative for the pending decision, not `emit`.
+Its backwards record has /{f}; it can carry g/T back to the source. -/
+
+def contrastInitials2 : List AFact := [⟨flow ret,false⟩]
+def contrastRows2 : List Row := analyze contrastInitials2 bodyBackward
+def contrastCaller2 : List AFact := step (revEdge toMethod.1 toMethod.2)
+  (applyRows contrastRows2 actual2)
+def contrastSourceHits2 : List AFact :=
+  step (revEdge sourceEdge.1 sourceEdge.2) contrastCaller2
+def contrastSourceSelected3 : Bool :=
+  contrastSourceHits2.any fun hit => Nat.beq hit.fact.base zeroBase
+
+theorem contrast_broad_FLOW_query_builds_excluded_normal_record_and_finds_source :
+    contrastRows2 = [(flow ret,⟨flow p [] (.star (.set [f,f])),false⟩)] ∧
+    contrastCaller2 = [⟨taint q [g],true⟩] ∧
+    contrastSourceHits2 = [⟨zeroFact,true⟩] ∧
+    contrastSourceSelected3 = true := by decide
+
+def check : Bool :=
+  observed mainResults1 && normalReturns rows1 == [] &&
+  initials2 == [] && !sourceSelected3 && contrastSourceSelected3
+
+theorem checked : check = true := by decide
+
+#eval check
+#print axioms run1_source_write_demand_and_report_are_derived
+#print axioms backward_sink_binding_is_concrete_descendant_and_admission_rejects_it
+#print axioms current_selected_route_has_no_backward_source_hit_or_forward_replay
+#print axioms actual_unaffected_sibling_flow_exists
+#print axioms zero_frames_provide_no_hidden_return_route
+#print axioms contrast_broad_FLOW_query_builds_excluded_normal_record_and_finds_source
+#print axioms checked
+
+end RestrictedInitialPolicy.PreciseDemandWriteDiagnostic
+
+/-
+  Selected run-2 STAR-demand correction. No production change.
+
+  If demand p.STAR/M has a valid matching-mark submitted descendant p.f...,
+  run-2 emits p.STAR/M as requested. The complete demand prefix is retained.
+  Later runs reject a FLOW STAR entry as an invalid demand snapshot.
+  A concrete STAR entry uses the former precise EXACT admission after run-2.
+  The STAR restriction concerns the entry Dc, not a pair's exit Dp.
+  Same-prefix STAR still follows the former policy and emits EXACT; this
+  cell is not silently changed to make projection idempotent. ANY one-step
+  refinement and its terminal concrete EXACT exception remain unchanged.
+
+  The raw emitter is therefore not idempotent. Its complete image is the
+  former canonical image plus the requested STAR at a STAR demand. The new
+  image case has an executable one-field descendant witness. This scalar
+  model has an unbounded field domain; production field-budget and static
+  accessor adapters must establish that their witness is legal separately.
+
+  The earlier rejection namespace is historical diagnostic evidence. The
+  closed trace at the end here uses the selected correction and finds the
+  source, then reuses the excluded normal record for the forward sink.
+-/
+namespace RestrictedInitialPolicy.DemandStarPolicy
+open ApSpec
+
+def properDescendant (demandPath actualPath : List Acc) : Bool :=
+  match relate demandPath actualPath with
+  | .below (_ :: _) => true
+  | _ => false
+
+def overrideStar (d : Demand) (a : Input) : Bool :=
+  validInput a && Nat.beq d.base a.base && acceptsMark d.mark a.mark &&
+    shapeEq d.shape .star && properDescendant d.path a.path
+
+def requestedStar (d : Demand) : Input := ⟨d.base,d.path,.star,d.mark,false⟩
+def descendantWitness (d : Demand) : Input := ⟨d.base,d.path ++ [0],.exact,d.mark,false⟩
+
+def emit (d : Demand) (a : Input) : Option Input :=
+  if overrideStar d a then some (requestedStar d) else RestrictedInitialPolicy.emit d a
+
+inductive PolicyDecision where
+  | decided (result : Option Input)
+  | invalidLaterFlowStarEntry
+deriving DecidableEq, Repr
+
+/-- Restricted-run API (run >= 2). A broken later FLOW STAR snapshot is an
+explicit domain error, not a silently changed initial or an empty answer. -/
+def decisionForRun (run : Nat) (d : Demand) (a : Input) : PolicyDecision :=
+  if Nat.beq run 2 then .decided (emit d a)
+  else if shapeEq d.shape .star && !fullMark d.mark then .invalidLaterFlowStarEntry
+  else .decided (RestrictedInitialPolicy.emit d a)
+
+theorem run2_decision_uses_the_selected_adapter (d : Demand) (actual : Input) :
+    decisionForRun 2 d actual = .decided (emit d actual) := rfl
+
+theorem later_FLOW_STAR_entry_is_explicitly_invalid (run : Nat) (d : Demand) (actual : Input)
+    (later : run ≠ 2) (star : d.shape = .star) (flow : d.mark = .flow) :
+    decisionForRun run d actual = .invalidLaterFlowStarEntry := by
+  have notRun2 : Nat.beq run 2 = false := by
+    cases h : Nat.beq run 2 with
+    | false => rfl
+    | true => exact False.elim (later (Nat.eq_of_beq_eq_true h))
+  simp only [decisionForRun,notRun2,Bool.false_eq_true,if_false,star,flow,
+    shapeEq,fullMark,Bool.not_false,Bool.true_and,if_true]
+
+theorem later_concrete_STAR_keeps_precise_cells_and_ANY_refinement_stays_legal :
+    decisionForRun 3 ⟨1,[],.star,.full 1⟩ ⟨1,[7],.exact,.full 1,false⟩ =
+      .decided none ∧
+    decisionForRun 3 ⟨1,[],.star,.full 1⟩ ⟨1,[],.exact,.full 1,false⟩ =
+      .decided (some ⟨1,[],.exact,.full 1,false⟩) ∧
+    decisionForRun 3 ⟨1,[],.any,.flow⟩ ⟨1,[7,8],.exact,.full 1,false⟩ =
+      .decided (some ⟨1,[7],.star,.flow,false⟩) := by decide
+
+theorem unchanged_outside_override (d : Demand) (a : Input)
+    (outside : overrideStar d a = false) :
+    emit d a = RestrictedInitialPolicy.emit d a := by
+  simp only [emit,outside,Bool.false_eq_true,if_false]
+
+theorem override_requires_STAR_demand (d : Demand) (a : Input)
+    (selected : overrideStar d a = true) : shapeEq d.shape .star = true := by
+  obtain ⟨left,_⟩ := (Bool.and_eq_true _ _).mp selected
+  exact ((Bool.and_eq_true _ _).mp left).2
+
+theorem former_canonical_template_does_not_use_override (d : Demand) (t : Template)
+    (valid : validTemplate d t = true) : overrideStar d (render d t) = false := by
+  have self : dropPrefix d.path d.path = some [] :=
+    ApSpec.Handoff.RAux.dropPrefix_self' d.path
+  cases t with
+  | rootExact =>
+    simp only [overrideStar,render,properDescendant,relate,self,Bool.and_false]
+  | rootAny must =>
+    cases hs : d.shape <;> simp only [validTemplate,hs,shapeEq] at valid
+    all_goals try cases valid
+    all_goals simp only [overrideStar,hs,shapeEq,Bool.and_false,Bool.false_and]
+  | childStar field =>
+    cases hs : d.shape <;> simp only [validTemplate,hs,shapeEq] at valid
+    all_goals try cases valid
+    all_goals simp only [overrideStar,hs,shapeEq,Bool.and_false,Bool.false_and]
+  | childExact field =>
+    cases hs : d.shape <;> simp only [validTemplate,hs,shapeEq,Bool.false_and] at valid
+    all_goals try cases valid
+    all_goals simp only [overrideStar,hs,shapeEq,Bool.and_false,Bool.false_and]
+
+theorem former_template_has_executable_witness (d : Demand) (t : Template)
+    (valid : validTemplate d t = true) : emit d (render d t) = some (render d t) := by
+  rw [unchanged_outside_override d (render d t)
+    (former_canonical_template_does_not_use_override d t valid)]
+  exact template_is_its_own_emission d t valid
+
+theorem requested_STAR_has_executable_descendant_witness (d : Demand)
+    (star : shapeEq d.shape .star = true) :
+    emit d (descendantWitness d) = some (requestedStar d) := by
+  have path : dropPrefix d.path (d.path ++ [0]) = some [0] :=
+    CoreAux.dropPrefix_some.mpr rfl
+  have chosen : overrideStar d (descendantWitness d) = true := by
+    simp only [overrideStar,descendantWitness,validInput,Bool.not_false,
+      Bool.true_or,Nat.beq_refl,mark_accepts_itself,star,properDescendant,
+      relate,path,Bool.true_and]
+  simp only [emit,chosen,if_true]
+
+def CanEmit (d : Demand) (initial : Input) : Prop := ∃ actual, emit d actual = some initial
+
+theorem complete_image (d : Demand) (initial : Input) :
+    CanEmit d initial ↔ RestrictedInitialPolicy.CanEmit d initial ∨
+      (shapeEq d.shape .star = true ∧ initial = requestedStar d) := by
+  constructor
+  · rintro ⟨actual,emitted⟩
+    cases chosen : overrideStar d actual with
+    | false =>
+      exact Or.inl ⟨actual,by simpa only [emit,chosen,Bool.false_eq_true,if_false] using emitted⟩
+    | true =>
+      have same : requestedStar d = initial := by
+        simpa only [emit,chosen,if_true,Option.some.injEq] using emitted
+      exact Or.inr ⟨override_requires_STAR_demand d actual chosen,same.symm⟩
+  · intro image
+    cases image with
+    | inl former =>
+      obtain ⟨t,valid,same⟩ := (emittable_iff_canonical_template d initial).mp former
+      exact ⟨render d t,by rw [← same]; exact former_template_has_executable_witness d t valid⟩
+    | inr added =>
+      refine ⟨descendantWitness d,?_⟩
+      rw [added.2]
+      exact requested_STAR_has_executable_descendant_witness d added.1
+
+def canEmit (d : Demand) (initial : Input) : Bool :=
+  RestrictedInitialPolicy.canEmit d initial ||
+    (shapeEq d.shape .star && decide (initial = requestedStar d))
+
+theorem image_classifier_sound_and_complete (d : Demand) (initial : Input) :
+    canEmit d initial = true ↔ CanEmit d initial := by
+  rw [complete_image]
+  simp only [canEmit,Bool.or_eq_true,Bool.and_eq_true,decide_eq_true_eq,
+    RestrictedInitialPolicy.image_classifier_sound_and_complete]
+
+/-- The classifier does not test self-emission. This finite case disproves
+that shortcut while providing the actual descendant emission witness. -/
+theorem requested_STAR_is_emittable_but_is_not_a_fixed_point :
+    emit ⟨1,[],.star,.flow⟩ ⟨1,[7],.exact,.full 1,false⟩ =
+      some ⟨1,[],.star,.flow,false⟩ ∧
+    canEmit ⟨1,[],.star,.flow⟩ ⟨1,[],.star,.flow,false⟩ = true ∧
+    emit ⟨1,[],.star,.flow⟩ ⟨1,[],.star,.flow,false⟩ =
+      some ⟨1,[],.exact,.flow,false⟩ := by decide
+
+theorem new_initial_keeps_the_demand_mark (d : Demand) (actual initial : Input)
+    (emitted : emit d actual = some initial) : initial.mark = d.mark := by
+  cases chosen : overrideStar d actual with
+  | false =>
+    apply emitted_mark_is_demand_mark d actual initial
+    simpa only [emit,chosen,Bool.false_eq_true,if_false] using emitted
+  | true =>
+    have same : requestedStar d = initial := by
+      simpa only [emit,chosen,if_true,Option.some.injEq] using emitted
+    rw [← same]
+    rfl
+
+theorem mismatching_full_marks_are_still_rejected (db ab u t : Nat) (dp ap : List Acc)
+    (ds ashape : Shape) (certainty : Bool) (different : u ≠ t) :
+    emit ⟨db,dp,ds,.full u⟩ ⟨ab,ap,ashape,.full t,certainty⟩ = none := by
+  have mismatch : Nat.beq u t = false := by
+    cases hb : Nat.beq u t with
+    | false => rfl
+    | true => exact False.elim (different (Nat.eq_of_beq_eq_true hb))
+  rw [unchanged_outside_override]
+  · exact different_full_marks_never_emit db ab u t dp ap ds ashape certainty different
+  · simp only [overrideStar,acceptsMark,mismatch,Bool.and_false,Bool.false_and]
+
+theorem concrete_requested_STAR_starts_DEMAND (base : Nat) (path : List Acc) (mark : Nat) :
+    (ApSpec.Run1CorrelatedConcreteInitials.selectedStart
+      (toAp (requestedStar ⟨base,path,.star,.full mark⟩))).demand = true := rfl
+
+theorem other_selected_cells_keep_their_previous_results :
+    emit ⟨1,[],.any,.flow⟩ ⟨1,[7,8],.exact,.full 1,false⟩ =
+      some ⟨1,[7],.star,.flow,false⟩ ∧
+    emit ⟨1,[],.any,.full 1⟩ ⟨1,[7],.exact,.full 1,false⟩ =
+      some ⟨1,[7],.exact,.full 1,false⟩ ∧
+    emit ⟨1,[],.star,.full 1⟩ ⟨1,[7,8],.exact,.full 1,false⟩ =
+      some ⟨1,[],.star,.full 1,false⟩ ∧
+    emit ⟨1,[],.any,.full 1⟩ ⟨1,[],.star,.full 1,false⟩ = none ∧
+    emit ⟨1,[],.exact,.flow⟩ ⟨1,[7],.exact,.full 1,false⟩ = none := by decide
+
+/-! All accessors are counted in this bounded scalar adapter. Actuals are
+already limited. The output check is a descriptor-domain validation, not a
+new refinement row. Static anchors and uncounted class accessors need their
+separate production adapter. -/
+
+def emitAtBudget (limit : Nat) (d : Demand) (actual : Input) : Option Input :=
+  if d.path.length ≤ limit ∧ actual.path.length ≤ limit then
+    match emit d actual with
+    | none => none
+    | some initial => if initial.path.length ≤ limit then some initial else none
+  else none
+
+theorem budget_emission_facts (limit : Nat) (d : Demand) (actual initial : Input)
+    (emitted : emitAtBudget limit d actual = some initial) :
+    d.path.length ≤ limit ∧ actual.path.length ≤ limit ∧
+    emit d actual = some initial ∧ initial.path.length ≤ limit := by
+  by_cases valid : d.path.length ≤ limit ∧ actual.path.length ≤ limit
+  · unfold emitAtBudget at emitted
+    rw [if_pos valid] at emitted
+    cases raw : emit d actual with
+    | none => rw [raw] at emitted; cases emitted
+    | some candidate =>
+      rw [raw] at emitted
+      change (if candidate.path.length ≤ limit then some candidate else none) = some initial at emitted
+      by_cases fits : candidate.path.length ≤ limit
+      · rw [if_pos fits] at emitted
+        have same := Option.some.inj emitted
+        exact ⟨valid.1,valid.2,congrArg some same,same ▸ fits⟩
+      · rw [if_neg fits] at emitted
+        cases emitted
+  · unfold emitAtBudget at emitted
+    rw [if_neg valid] at emitted
+    cases emitted
+
+theorem budget_emission_from_facts (limit : Nat) (d : Demand) (actual initial : Input)
+    (demandFits : d.path.length ≤ limit) (actualFits : actual.path.length ≤ limit)
+    (emitted : emit d actual = some initial) (initialFits : initial.path.length ≤ limit) :
+    emitAtBudget limit d actual = some initial := by
+  have valid : d.path.length ≤ limit ∧ actual.path.length ≤ limit := ⟨demandFits,actualFits⟩
+  simp only [emitAtBudget,if_pos valid,emitted,if_pos initialFits]
+
+theorem proper_descendant_has_longer_path (dp ap : List Acc)
+    (proper : properDescendant dp ap = true) : dp.length < ap.length := by
+  unfold properDescendant at proper
+  cases related : relate dp ap with
+  | apart => rw [related] at proper; cases proper
+  | above rest => rw [related] at proper; cases proper
+  | below rest =>
+    rw [related] at proper
+    cases rest with
+    | nil => cases proper
+    | cons field rest =>
+      have same := Exact.relate_below related
+      rw [same,List.length_append,List.length_cons]
+      omega
+
+def canEmitAtBudget (limit : Nat) (d : Demand) (initial : Input) : Bool :=
+  decide (d.path.length ≤ limit ∧ initial.path.length ≤ limit) &&
+    (RestrictedInitialPolicy.canEmit d initial ||
+      (shapeEq d.shape .star && decide (initial = requestedStar d) &&
+        decide (d.path.length < limit)))
+
+theorem bounded_image_has_executable_witness (limit : Nat) (d : Demand) (initial : Input) :
+    canEmitAtBudget limit d initial = true ↔
+      ∃ actual, emitAtBudget limit d actual = some initial := by
+  constructor
+  · intro allowed
+    obtain ⟨fits,image⟩ := (Bool.and_eq_true _ _).mp allowed
+    obtain ⟨demandFits,initialFits⟩ := of_decide_eq_true fits
+    cases old : RestrictedInitialPolicy.canEmit d initial with
+    | true =>
+      obtain ⟨template,valid,same⟩ := (emittable_iff_canonical_template d initial).mp
+        ((RestrictedInitialPolicy.image_classifier_sound_and_complete d initial).mp old)
+      refine ⟨initial,budget_emission_from_facts limit d initial initial
+        demandFits initialFits ?_ initialFits⟩
+      rw [← same]
+      exact former_template_has_executable_witness d template valid
+    | false =>
+      rw [old,Bool.false_or] at image
+      obtain ⟨selected,room⟩ := (Bool.and_eq_true _ _).mp image
+      obtain ⟨star,same⟩ := (Bool.and_eq_true _ _).mp selected
+      have same' : initial = requestedStar d := of_decide_eq_true same
+      have room' : d.path.length < limit := of_decide_eq_true room
+      refine ⟨descendantWitness d,budget_emission_from_facts limit d _ initial
+        demandFits ?_ ?_ initialFits⟩
+      · change (d.path ++ [0]).length ≤ limit
+        simp only [List.length_append,List.length_cons,List.length_nil]
+        omega
+      · rw [same']
+        exact requested_STAR_has_executable_descendant_witness d star
+  · rintro ⟨actual,emitted⟩
+    obtain ⟨demandFits,actualFits,raw,initialFits⟩ :=
+      budget_emission_facts limit d actual initial emitted
+    have fits : decide (d.path.length ≤ limit ∧ initial.path.length ≤ limit) = true :=
+      decide_eq_true ⟨demandFits,initialFits⟩
+    rw [canEmitAtBudget,fits,Bool.true_and]
+    cases chosen : overrideStar d actual with
+    | false =>
+      have former : RestrictedInitialPolicy.CanEmit d initial :=
+        ⟨actual,by simpa only [emit,chosen,Bool.false_eq_true,if_false] using raw⟩
+      have yes := (RestrictedInitialPolicy.image_classifier_sound_and_complete d initial).mpr former
+      simp only [yes,Bool.true_or]
+    | true =>
+      have star := override_requires_STAR_demand d actual chosen
+      have same : initial = requestedStar d := by
+        have same' : requestedStar d = initial := by
+          simpa only [emit,chosen,if_true,Option.some.injEq] using raw
+        exact same'.symm
+      have proper : properDescendant d.path actual.path = true :=
+        ((Bool.and_eq_true _ _).mp chosen).2
+      have longer := proper_descendant_has_longer_path d.path actual.path proper
+      have room : d.path.length < limit := by omega
+      simp only [star,decide_eq_true same,decide_eq_true room,Bool.true_and,Bool.or_true]
+
+/-- At the budget cap a raw requested STAR has no legal strict-descendant
+witness. A canonical stored FLOW STAR can still have a raw EXACT preimage.
+The latter is summary normalization, not raw STAR self-emission. -/
+theorem capped_raw_STAR_image_and_exact_preimage_are_distinct :
+    canEmitAtBudget 1 ⟨1,[7],.star,.flow⟩ ⟨1,[7],.star,.flow,false⟩ = false ∧
+    canEmitAtBudget 1 ⟨1,[7],.star,.flow⟩ ⟨1,[7],.exact,.flow,false⟩ = true ∧
+    emitAtBudget 1 ⟨1,[7],.star,.flow⟩ ⟨1,[7],.exact,.flow,false⟩ =
+      some ⟨1,[7],.exact,.flow,false⟩ := by decide
+
+namespace ClosedWrite
+open PreciseDemandWriteDiagnostic
+open ApSpec.Run1CorrelatedConcreteInitials
+
+abbrev p := PreciseDemandWriteDiagnostic.p
+abbrev f := PreciseDemandWriteDiagnostic.f
+abbrev g := PreciseDemandWriteDiagnostic.g
+
+def selectedInitials (demand : ApSpec.DemandEdge) (actuals : List AFact) : List AFact :=
+  actuals.flatMap fun actual =>
+    (DemandStarPolicy.emit (ClosedExactReplay.asDemand demand.din)
+      (ClosedExactReplay.asInput actual.fact)).toList.map fun selected => selectedStart (toAp selected)
+def initials2 : List AFact := demands2.flatMap fun demand => selectedInitials demand actual2
+def rows2 : List Row := analyze initials2 bodyBackward
+def caller2 : List AFact := step (revEdge toMethod.1 toMethod.2) (applyRows rows2 actual2)
+def sourceHits2 : List AFact := step (revEdge sourceEdge.1 sourceEdge.2) caller2
+def sourceSelected3 : Bool := sourceHits2.any fun hit => Nat.beq hit.fact.base zeroBase
+def source3 : List AFact := if sourceSelected3 then step sourceEdge [zero] else []
+def forwardRecord (row : Row) : Row :=
+  let reversed := revEdge row.1 row.2.fact
+  (reversed.1,⟨reversed.2,row.2.demand⟩)
+def records3 : List Row := rows2.map forwardRecord
+def results3 : List AFact := step toCaller (applyRows records3 (step toMethod source3))
+
+theorem selected_STAR_emission_closes_the_backward_source_route :
+    initials2 = [⟨flow ret,false⟩] ∧ rows2 = contrastRows2 ∧
+    caller2 = [⟨taint q [g],true⟩] ∧ sourceHits2 = [⟨zeroFact,true⟩] ∧
+    sourceSelected3 = true ∧ source3 = [⟨taint q [g],false⟩] := by decide
+
+theorem normal_excluded_record_preserves_forward_sibling_and_reaches_sink :
+    records3 = [(flow p,⟨flow ret [] (.star (.set [f,f])),false⟩)] ∧
+    results3 = [⟨taint y [g],false⟩] ∧ observed results3 = true := by decide
+
+end ClosedWrite
+
+def check : Bool :=
+  canEmit ⟨1,[],.star,.flow⟩ ⟨1,[],.star,.flow,false⟩ &&
+  ClosedWrite.sourceSelected3 && PreciseDemandWriteDiagnostic.observed ClosedWrite.results3
+
+theorem checked : check = true := by decide
+
+#eval check
+#print axioms unchanged_outside_override
+#print axioms run2_decision_uses_the_selected_adapter
+#print axioms later_FLOW_STAR_entry_is_explicitly_invalid
+#print axioms later_concrete_STAR_keeps_precise_cells_and_ANY_refinement_stays_legal
+#print axioms override_requires_STAR_demand
+#print axioms former_canonical_template_does_not_use_override
+#print axioms former_template_has_executable_witness
+#print axioms requested_STAR_has_executable_descendant_witness
+#print axioms complete_image
+#print axioms image_classifier_sound_and_complete
+#print axioms requested_STAR_is_emittable_but_is_not_a_fixed_point
+#print axioms new_initial_keeps_the_demand_mark
+#print axioms mismatching_full_marks_are_still_rejected
+#print axioms concrete_requested_STAR_starts_DEMAND
+#print axioms other_selected_cells_keep_their_previous_results
+#print axioms budget_emission_facts
+#print axioms budget_emission_from_facts
+#print axioms proper_descendant_has_longer_path
+#print axioms bounded_image_has_executable_witness
+#print axioms capped_raw_STAR_image_and_exact_preimage_are_distinct
+#print axioms ClosedWrite.selected_STAR_emission_closes_the_backward_source_route
+#print axioms ClosedWrite.normal_excluded_record_preserves_forward_sibling_and_reaches_sink
+#print axioms checked
+
+end RestrictedInitialPolicy.DemandStarPolicy

@@ -1,374 +1,562 @@
-# Summary and demand workload: implementation proposal
+# Next iteration: implementation proposal
 
-Date: 29 October 2026. Source reviewed: `7b0a3eed5`.
-Status: review draft. Summary normalization and write exclusions are selected.
-RemoveAll clears the whole position. The integration proofs remain open.
-Production code is unchanged.
+Date: 29 October 2026. Source reviewed: `6ed31830f`.
+Status: proposal only. No production code changes are included.
+Use ASD-STE100 Simplified Technical English.
 
-This proposal implements the selected first and second targets in
-[the workload report](../reports/bidirectional-summary-demand-workload-20261029.md#8-next-design-targets),
-as specified in
-[the next-iteration design](bidirectional-next-demand-work-20261029.md).
-It follows [the implementation proposal guide](../../spec/impl-proposal-guide.md)
-and [the proof guide](../../spec/proof-guide.md).
-Code below is Kotlin pseudocode unless identified as current code.
+This document replaces the earlier implementation draft. It implements:
 
-The implementation order is fixed:
+- [One-step initial emission](bidirectional-one-step-initial-refinement-20261029.md), with the latest STAR-demand correction below.
+- [FLOW summary normalization and write exclusions](bidirectional-flow-summary-normalization-20261029.md).
+- [The selected C5 and owner-eligibility work removal](bidirectional-next-demand-work-20261029.md).
 
-```text
-selected demand rewrite, FLOW summary normalization, and entry-admission contract
-    -> record the reference for that rewrite
-    -> C5 fixed-entry pruning
-    -> query-local owner eligibility answers
-```
+It follows [the implementation guide](../../spec/impl-proposal-guide.md) and
+[the proof guide](../../spec/proof-guide.md). Code blocks are Kotlin pseudocode
+unless marked as code under analysis. Use the existing manager and interner
+APIs where a sketch shows a descriptive helper name.
 
-The demand rewrite has its own selected
-[one-step specification](bidirectional-one-step-initial-refinement-20261029.md).
-Sections 2 and 3 define the exact integration boundary. They do not turn its
-required AP transfer and normalization contracts into hidden implementation choices.
+Notation: STAR (`*`) preserves a correlated field suffix; EXACT (`$`) names
+only the stated position. ANY (`[any]`) is an uncertain suffix. MUST
+(`ANY_TAINT`, `[any-taint]`) means uniform taint. FLOW is the abstract mark
+slot; T and U are full marks. E excludes fields; mx excludes marks. C2 is
+initial admission. C5 is paired summary restriction. Dc is the demand entry
+for the current run; Dp is its paired exit.
 
-## 1. Scope, evidence, and semantic changes
+## 1. Scope and selected semantic changes
 
-| Part | Before | After | Status |
-|---|---|---|---|
-| Demand admission and C5 entry guard | FLOW-form emission and geometric entry containment | Selected one-step emission and possible-output entry guard | Prior selected semantic changes; dependency |
-| FLOW summary boundary | Persist EXACT/FLOW roots and replay them directly | Preserve write E during point analysis; replace each FLOW EXACT endpoint with STAR before storage | Selected semantic generalization; see the normalization design |
-| C5 graph lookup | Visit mapped states that can never admit the current initial | Drop those branches before owner tests and expansion | Same results as the rewritten reference |
-| Eligibility | Re-evaluate fixed owner families within one view | Reuse completed true and false answers | Same answers and incremental graph state for the same request stream |
+Implement the semantic changes first. Then capture a reference. Compare the
+two performance changes with that reference.
 
-No summary replay grouping, admitted-delta link suppression, cross-query
-cache, new source replay, new grounding support, IR storage, or stop-policy
-change is included. Keep existing field-write policy and add its write-effect
-E to the new abstract EXACT shape. Prohibit partial RemoveAll actions as
-specified below; keep selected-mark cleaner behavior.
-Keep ZERO, aliases, protection, full ND premises, rule identities, native
-record semantics, and FULL/GROUP composition compatibility.
+| Part | Before | Selected behavior |
+|---|---|---|
+| Restricted C2 | Abstract demand emits its FLOW form | ANY demand resolves one field; retain selected exact and uniform cases |
+| STAR demand | Earlier proposal rejected a marked child | Run-2 emits the requested STAR; later answers are precise, as below |
+| Outgoing FLOW demand | A partial operation can retain STAR/DEMAND | From run-2, FLOW demand conclusions are ANY; no STAR/DEMAND export |
+| New EXACT/FLOW | Rejected by typed factories | Read barrier; field effects retain E through point transfer |
+| Summary boundary | Raw point premise is also the storage key | Normalize each pure FLOW EXACT endpoint to STAR before storage |
+| C5 | Geometric containment | Normalized emitter image, then the existing conclusion restriction |
+| RemoveAll | Terminal AnyField can mean below-only removal | Whole selected position only; named fields are valid |
+| C5 search | Expand fixed impossible right endpoints | Reject those branches before owner tests and expansion |
+| Owner eligibility | Repeat graph questions in a view | One completed answer per immutable family per view |
 
-The recorded runtime is `c2bc5e78dfdb13f95bda970c5f4e0c247acbac29`.
-The source changes since that runtime are tests, documents and formal models.
-No new project run was made for this implementation proposal.
+Keep full marks by default, mark compatibility, mark-group selection,
+source/sink identities, ZERO rules, ND semantics after run-1, protection,
+alias closure, field limits and stop policy. Keep the existing run-1
+field-write rule: updating E moves the affected result to DEMAND and clears
+E. This is not a weak-write policy.
 
-| Project, recorded 16g campaign | Latest reached | Latest complete | Accepted forward | Result |
+The new EXACT/FLOW exclusion is an explicit new-tail contract. It does not
+change concrete EXACT/T. Whole-position-only RemoveAll is also an explicit
+semantic change. No grounding support, source replay channel, origin store,
+completed-query cache, cross-query graph cache or IR storage is added.
+
+### Evidence and latest iterations
+
+The saved runtime is `c2bc5e78dfdb13f95bda970c5f4e0c247acbac29`. Production
+sources are unchanged. No new project run is claimed here.
+
+| Saved 16g campaign | Latest reached | Latest complete | Accepted forward | Result |
 |---|---|---|---|---|
 | OWASP | run-12 | run-11 | run-11 | TIMEOUT |
 | conductor | run-4 | run-3 | run-3 | TIMEOUT |
 | thingsboard | run-2 | run-1 | run-1 | TIMEOUT |
 | Stirling-PDF | run-6 | run-5 | run-5 | TIMEOUT |
 
-The isolated thingsboard counter run also reaches **run-2**, completes and
-accepts **run-1**, then times out. Its 3,741,361 fixed mapped-output failures
-occur among 3,992,093 popped states. It performs 2,893,937 predecessor
-expansions after that failure and 930,415,459 composition attempts in total.
-At least 1,358,983,156 C5 reachability questions repeat a view/family pair.
+The thingsboard counter run reaches run-2 and completes run-1. It has
+3,992,093 popped C5 states, 3,741,361 fixed-right failures, 2,893,937
+predecessor expansions after failure and 930,415,459 compositions. At least
+1,358,983,156 owner questions repeat a view/family pair. These are historical
+interrupted-run counts, not matched speedup measurements.
 
-These are historical interrupted-run counts, not measured improvements.
-Use the reference after the demand rewrite for each performance comparison.
-Do not add the old pruning and memo percentages to predict runtime.
+## 2. Ownership, APIs and implementation files
 
-## 2. Demand rewrite dependency
+Let B be `core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi`.
+Let J be `core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi`.
 
-### 2.1 Selected rules
-
-The rewrite must provide these behaviors before the performance changes:
-
-```text
-p.ANY/FLOW + p.f.g.EXACT/T -> p.f.STAR/FLOW
-p.ANY/T    + p.f.g.EXACT/T -> p.f.STAR/T, DEMAND
-p.ANY/T    + p.f.EXACT/T   -> p.f.EXACT/T
-p.ANY/FLOW + p.EXACT/T    -> p.EXACT/FLOW
-p.ANY/FLOW + p.ANY/T      -> p.ANY/FLOW
-p.ANY/FLOW + p.MUST/T     -> p.MUST/FLOW
-concrete U demand + supplied T, U != T -> reject
-```
-
-Use the fact after existing field limiting. Class accessors do not count as
-refinement fields. Preserve static field anchors and exact class markers;
-never create a class-wide `S.C.STAR` mark by taking the first array element
-of a raw static path.
-
-Concrete STAR always starts in DEMAND. The selected coverage direction can
-match a deeper supplied fact, but it cannot promote the result to NORMAL.
-The exact-input exception ends after the first new field. It does not keep
-an arbitrary deeper exact path.
-
-### 2.2 Canonical policy API
-
-Add a pure internal policy, separate from stores and method actors:
-
-```kotlin
-internal interface RestrictedInitialPolicy {
-    // Input is already limited; entry demand is canonically normalized.
-    fun emit(entry: Pattern, actual: Pattern): Pattern?
-
-    // True only if some valid actual can make emit(entry, actual) return initial.
-    fun canEmitInitial(entry: Pattern, initial: Pattern): Boolean
-}
-```
-
-Make scalar `Reference.emit` delegate to this policy. Production C2 uses
-`InitialDemandResults.offer`, `has`, and `requireFamily`, not only the
-standalone `emitInitials` helper. Route all three methods through that same
-entry point. Use the normalized-image classifier in C5 `Reference.restrict`
-and in the early C5 filter. A wrapper must not implement another tail/mark table.
-
-```kotlin
-fun restrict(initial: Pattern, raw: Conclusion, demand: DemandPattern): Conclusion? {
-    val entry = normalizeDemandFieldExclusion(demand.entry)
-    if (!canStoreInitial(entry, initial)) return null // Raw preimage + containment.
-    return existingConclusionRestriction(initial, raw, demand)
-}
-```
-
-`canEmitInitial` tests a complete initial descriptor. The earlier partial
-emitter could not use self-emission. The completed scalar policy now proves
-idempotence and exact image classification. That proof permits a structural
-`emit(entry, initial) == initial` implementation for that policy; it is not an
-assumption. Prove the corresponding law for static, E and mark-mode adapters
-before using the shortcut there. Do not enumerate marks or intern hypothetical
-APs. The formal emission witness is proof data, not a runtime store.
-
-The C5 guard retains the canonical stored initial. The summary boundary has
-already normalized its raw FLOW initial as specified below. C5 does not
-independently coarsen a premise to make it pass. Only retained final pieces enter
-`ExactDemandResults` before its `covered()` test. The current run-1 and
-backward-ZERO publication bypasses remain outside ordinary C5 restriction.
-
-### 2.3 New FLOW tails and explicit decisions
-
-The new abstract EXACT and MUST shapes require a typed extension. Retain one
-tail in `FlowTree`; no per-leaf payload bit is required. Existing `GroupKey`
-already includes the tail. Extend the tail dispatch in these components:
-
-| Component | Required dependency work |
+| File | Change |
 |---|---|
-| `Premise.kt`, `Demand.kt`, `ApManager.kt` | Admit selected abstract query shapes; preserve write E on EXACT/FLOW conclusions |
-| `Conclusions.kt`, `LeafViews.kt` | Preserve the header; an exact ancestor cannot supply a deeper position |
-| `EdgeApplication.kt`, `Reference.kt` | Add proved EXACT/MUST rows without weakening ordinary IR/binding validation |
-| `Summary.kt` | Handle EXACT/FLOW actual input and its E; stored FLOW output has no EXACT tail; keep MUST dispatch explicit |
-| `ap/Groups.kt` (`FlowGroup`) | Preserve old STAR/ANY subsumption; do not let new tails use the old non-ANY-as-STAR shortcut |
-| `DemandStore.Builder` | Check canonical summary endpoints; normalize any selected EXACT/FLOW result piece before handoff |
-| `RecordStore.kt` and call replay | Keep canonical FLOW records without EXACT; implement abstract MUST view/matching work separately |
+| New B/ap/RestrictedInitialPolicy.kt | Pure run-aware emission and explicit image classifier |
+| New B/ap/FlowSummaryNormalization.kt | Normalize a complete pair and a selected conclusion; assert normal form |
+| B/ap/Premise.kt, Conclusions.kt, ApManager.kt, Reference.kt | New EXACT/MUST FLOW guards, raw query starts, latent write E |
+| B/ap/EdgeApplication.kt, LeafViews.kt, Summary.kt, Groups.kt | Tail-aware transfer, matching, header selection and safe grouping |
+| B/ap/Clean.kt, Primitives.kt; J/interp/JIRRuleForms.kt | Whole-position RemoveAll; field lowering; direct FLOW residuals |
+| B/ap/Demand.kt; B/store/DemandResultCoverage.kt | C2 policy delegation, normalized C5 pieces, conservative coverage |
+| B/engine/RunMethodAnalyzer.kt | Canonical summary admission before storage and publication |
+| B/store/RunSummaries.kt; B/engine/PublicationIndex.kt | Assert canonical summary pairs; retain exact keys and protection |
+| B/engine/CalleeSubscriptions.kt, PublicationIndex.kt | STAR coverage candidates in both delivery orders |
+| B/store/RecordStore.kt; B/ap/Reference.kt | Native canonical FLOW and abstract MUST read views |
+| B/driver/HandOff.kt, engine/RunConfig.kt | Validate receiving-run demand grammar; keep source/sink seed handling |
+| New B/store/C5StaticDemandView.kt | Internal filtered lookup capability |
+| B/store/StaticPairLookup.kt, StaticGuidance.kt | Fixed-right pruning; owner-family IDs; per-view memo |
 
-Keep ordinary statement and binding validators separate from summary/read-view
-validators. Do not globally delete S8. New exact/must summary validation must
-not admit arbitrary new IR micro-edges. Do not add runtime Universe exclusions.
+Point state owns raw query initials and their exact tails. Summary storage
+owns canonical pairs. Demand snapshots own immutable query indexes. Each
+lookup owns its queues. Each visible static view owns its graph scratch and
+memo. No mutable query answers belong to a snapshot or a native record.
 
-Selected application rule: an abstract MUST premise requires a definite MUST
-input covering the premise scope, including E. Ordinary STAR, MAY or exact-only
-taint does not prove uniform taint of the whole subtree.
+EXACT -> STAR intentionally merges summary keys. Do not change rule IDs,
+MethodKey equality, or fact equality to attach compiler metadata. E, tail,
+layer and mark exclusions already belong to FLOW group keys. Owner IDs do
+not enter fact or rule keys.
 
-Selected boundary rule: normalize each pure FLOW EXACT endpoint to STAR
-before summary storage. Keep paths, marks, layers and E. Record the ordinary
-write exclusion on EXACT/FLOW point conclusions and preserve it through moves
-and returns. Run-1 keeps the existing exclusion-to-DEMAND/Empty-E policy.
+## 3. Run-aware C2 admission
 
-The complete boundary contract and implementation sketch are in
-[FLOW summary normalization](bidirectional-flow-summary-normalization-20261029.md).
-It includes the new-tail effect contract, canonical C5 entry lookup, storage
-and publication paths, and the field-write proof. This replaces the proposed
-covered-EXACT replay planner and native abstract-EXACT record extension.
-
-```text
-point result:  ret.$/FLOW -> p.f.$/FLOW, NORMAL
-stored form:   ret.*/FLOW -> p.f.*/FLOW, NORMAL
-forward view:  p.f.*/FLOW -> ret.*/FLOW
-caller input:  p.f.h.[any-taint]/T
-caller result: ret.h.[any-taint]/T
-```
-
-The [earlier annotated trace](bidirectional-exact-flow-replay-trace-20261029.md)
-is retained as the regression before this normalization. Its stored EXACT
-rows are no longer the selected behavior. Normalization fixes its read-only
-helper path. It does not justify clearing a field-write exclusion.
-
-An actual NORMAL STAR cover can still subsume an exact relation. No separate
-exact replay case is required once all pure FLOW summary boundaries enforce
-the normal form. Intraprocedural EXACT queries keep their read barrier.
-
-The remaining emitter examples were resolved as follows:
-
-```text
-Dc=p.f.STAR/T,       actual=p.f.g.EXACT/T  -> no initial
-Dc=p.ANY/T,          actual=p.STAR/T D    -> no initial
-Dc=p.f.ANY/FLOW,     actual=p.ANY/T D     -> p.f.ANY/FLOW
-```
-
-STAR and EXACT demands have no unresolved ANY tail. They admit only an exact
-initial at their demanded prefix; a longer supplied path does not start a new
-refinement. For an ANY demand, a same-prefix STAR does not supply a new
-refinement. The ancestor STAR rejection in the model is the inferred
-extension of this rule, not an additional explicit user decision. A known
-descendant field supplies a refinement. A broader ANY/MUST input can
-descend conditionally to the demand prefix, respecting actual field E.
-
-### 2.4 Canonical templates and total scalar selection
-
-Use small structural templates so C2 and C5 share one executable policy:
+### 3.1 Mode and the demand grammar
 
 ```kotlin
-sealed interface InitialTemplate {
-    data object ExactAtDemand : InitialTemplate
-    data object AnyAtDemand : InitialTemplate
-    data object MustAtDemand : InitialTemplate
-    data class StarAtNextField(val prefix: List<AccessorIdx>) : InitialTemplate
-    data class ExactAtNextField(val prefix: List<AccessorIdx>) : InitialTemplate
+data class AdmissionMode(
+    val run: Int,
+    val direction: Direction,
+    val fieldLimit: Int,
+    val markMode: MarkMode,
+)
+
+interface RestrictedInitialPolicy {
+    fun emit(entry: Pattern, boundedActual: Pattern): Pattern?
+    fun canEmitInitial(entry: Pattern, rawInitial: Pattern): Boolean
+}
+```
+
+Create one immutable policy for the run. Pass it to `DemandStore.initials`,
+`InitialDemandResults`, scalar `Reference.emit`, and C5. It is not a cache.
+Keep run-1 `Run1Abstraction` unchanged. Its first limit is 1.
+The restricted policy requires `run >= 2`.
+
+The latest restriction applies to the outgoing DEMAND conclusion, which
+becomes the next demand entry Dc. It does not prohibit STAR in the paired
+exit Dp or in a NORMAL summary.
+
+```kotlin
+fun validateIncoming(mode: AdmissionMode, d: DemandPattern) {
+    if (d.entry.isFlow) {
+        require(d.entry.tail == Tail.ANY ||
+            (mode.run == 2 && d.entry.tail == Tail.STAR))
+        require(d.exit == null || d.exit.isFlow)
+        require(d.exit == null || d.exit.tail in setOf(Tail.STAR, Tail.ANY))
+    }
 }
 
-fun chooseTemplate(d: Pattern, a: Pattern): InitialTemplate? {
-    require(d.fact.tail in setOf(Tail.STAR, Tail.EXACT, Tail.ANY))
-    require(isLegalAdmissionActual(a)) // Valid certainty, E, and base grammar.
-    if (!compatibleInputMark(d.fact.mark, a.fact.mark)) return null
-    if (d.fact.base != a.fact.base) return null
-    val relation = relate(d.fact.path, a.fact.path)
+fun assertRestrictedFlowResult(mode: AdmissionMode, facts: Facts) {
+    if (mode.run >= 2 && facts is FlowTree && facts.layer == Layer.DEMAND)
+        check(facts.tail == Tail.ANY && facts.exclusion.isEmpty)
+}
+```
 
-    if (d.fact.tail != Tail.ANY) {
-        if (relation.isProperDescendant || relation.isApart) return null
-        if (relation.isAncestor && !a.tailAdmits(relation.remainder)) return null
-        return ExactAtDemand
+ANY here means MAY, with no uniform-MUST certainty. Use this at the actual
+producer/boundary. Do not silently change a broken
+STAR/DEMAND result to ANY at export. Fix the producer. Run-1 may export
+STAR/FLOW DEMAND. The run-1 static completion and shared static carry are
+installed for run-2 only. A later FLOW Dc=STAR is an invalid snapshot, not
+an unanswered later-prefix choice.
+
+Concrete STAR/T demands remain a separate domain. They can request STAR on
+run-2. Later they use precise EXACT answers at the demanded position; the
+former precise descendant rejection applies there. ANY-demand first-field
+STAR initials remain legal on later runs: they start NORMAL for FLOW and
+are not STAR/FLOW DEMAND results.
+
+### 3.2 Complete ordinary scalar table
+
+Use the fact after the existing field cut. Match base and mark first. A
+concrete U demand rejects T when U differs from T. FLOW accepts the
+compatible actual mark but renders the selected demand mark.
+
+| Demand | Actual position/tail | Raw initial |
+|---|---|---|
+| ANY/M | Same prefix, EXACT | EXACT/M |
+| ANY/M | Same prefix, ANY | ANY/M |
+| ANY/M | Same prefix, MUST | MUST/M |
+| ANY/M | Same prefix, STAR | None |
+| ANY/M | Proper descendant | Stop after first new counted field; STAR/M |
+| ANY/T | Descendant ends EXACT at that first new field | EXACT/T exception |
+| ANY/M | Broader ANY/MUST | Demand prefix, retain actual ANY/MUST certainty |
+| ANY/M | Broader STAR or EXACT | None |
+| STAR/M, run-2 | Proper descendant | Requested STAR/M at demand prefix |
+| STAR/T, later | Proper descendant | None |
+| STAR/M or EXACT/M | Same prefix | EXACT/M |
+| STAR/M or EXACT/M | Broader admitted non-EXACT actual | EXACT/M at demand prefix |
+| EXACT/M | Proper descendant | None |
+| Any | Different base, incompatible mark, excluded descent, or apart paths | None |
+
+Later STAR/FLOW rows are outside the incoming grammar. Preserve all
+unmodified cells above; do not change same-prefix STAR to STAR merely to
+make self-emission idempotent.
+
+```kotlin
+fun choose(d: Pattern, a: Pattern): InitialTemplate? {
+    val entry = normalizeDemandFieldExclusion(d)
+    if (!sameBase(entry, a) || !compatibleInputMark(entry.mark, a.mark)) return null
+    val r = relate(entry.path, a.path)
+    if (!admittedPrefixRelation(entry, a, r)) return null
+
+    if (entry.tail == Tail.STAR && r.isProperDescendant) {
+        if (mode.run == 2) return RequestedStar(entry.path, entry.exclusion)
+        check(!entry.isFlow) // Later FLOW STAR entries are invalid.
+        return null
     }
+    return selectedUnchangedCells(entry, a, r) // The complete table above.
+}
+```
 
-    return when (relation) {
-        Same -> when (a.fact.tail) {
-            Tail.EXACT -> ExactAtDemand
-            Tail.ANY -> AnyAtDemand
-            Tail.ANY_TAINT -> MustAtDemand
-            Tail.STAR -> null
-        }
-        is Descendant -> {
-            val step = nextLegalRefinementField(d, a, relation.remainder)
-            if (isConcreteFullDemand(d) && a.fact.tail == Tail.EXACT && step.atActualEnd)
-                ExactAtNextField(step.prefix)
-            else StarAtNextField(step.prefix)
-        }
-        is Ancestor -> when (a.fact.tail) {
-            Tail.ANY -> AnyAtDemand
-            Tail.ANY_TAINT -> if (a.tailAdmits(relation.remainder)) MustAtDemand else null
-            Tail.EXACT, Tail.STAR -> null
-        }
+Concrete demand E is retained and checked before admitting a child. Only
+existing abstract STAR demand E normalization clears E. Do not lift an
+actual's deeper E to the broader requested STAR. Concrete STAR initials
+always start DEMAND; FLOW STAR starts NORMAL. EXACT starts NORMAL. ANY
+starts DEMAND. MUST is forward-only and starts NORMAL. Caller DEMAND still
+joins into every applied result.
+
+### 3.3 Static, exclusion and mark adapters
+
+Run the existing static FULL-anchor validator before generic refinement.
+Class accessors do not consume the field budget; fields and elements do.
+A static field initial keeps `[class, field]` together. Never select a raw
+array element as a refinement and create class-wide `S.C.*`.
+
+Keep exact global class markers in their direct concrete-marker protocol.
+They stay EXACT/T; they are not normalized as FLOW or converted to a
+class-wide STAR. The legal abstract root `S.* / FLOW` default is separate:
+on run-2 it can accept a named descendant through the requested-STAR rule.
+Keep the static input validator's named-field, root-default and exact-marker
+cases distinct. Test them before implementing the generic path walk.
+
+MUST means explicit uniform taint, not a synonym for DEMAND or ANY. At a
+same-prefix MUST admission preserve its own E. Consume ancestor E only
+after it admits a real descent; keep the demanded prefix's own constraints.
+A first-new-field STAR has selected Empty E. GROUP selectors first use the
+existing selector-to-full-mark binding; do not invent a mark census or
+rename a distinct full U to T.
+
+### 3.4 Explicit raw emitter image
+
+The new run-2 requested STAR has an actual descendant witness. It need not
+emit itself: the unchanged same-prefix STAR cell emits EXACT. Therefore
+remove the old self-emission shortcut.
+
+```kotlin
+fun canEmitInitial(entry: Pattern, initial: Pattern): Boolean =
+    legalRawInitial(initial) && classifyOutputTemplate(entry, initial).any { template ->
+        template.hasValidSubmittedWitness(mode.fieldLimit, staticGrammar, markPolicy)
+    }
+```
+
+Implement structural template tests, not a runtime enumeration of actual
+facts. Exact/ANY/MUST and one-field templates use the table's executable
+witness classes. Requested STAR at the demand prefix needs a legal proper
+child after limiting. In the ordinary counted-field model this requires
+`demandDepth < fieldLimit`; at the cap there is no such witness. Static
+anchors use the existing class/field grammar. No possible key is interned.
+
+Use the same policy in `InitialDemandResults.offer`, `has`, and
+`requireFamily`. Their existing keys deduplicate actual initials. Missing
+families are structural possible-output keys, not another answer history.
+
+## 4. New FLOW tails and point transfer
+
+Keep one tail per FLOW header. No per-leaf payload flag is needed.
+
+```kotlin
+// InitialAp: EXACT/FLOW and MUST/FLOW are now query shapes.
+require(tail != Tail.EXACT || exclusion.isEmpty)
+require(mark !is MarkSlot.Star || mark.excluded.isEmpty)
+
+// FlowTree / scalar Conclusion:
+require(tail in setOf(STAR, EXACT, ANY, ANY_TAINT))
+require(tail != ANY || (layer == DEMAND && exclusion.isEmpty))
+// EXACT/FLOW conclusions may carry E. Concrete EXACT/T may not.
+```
+
+`initialFacts` must use the actual tail and explicit layer, not the factory's
+layer-derived default. Preserve tail/E/mx in manager conversion, `withRoot`,
+`withLayer`, leaf views and result grouping. A raw EXACT query starts with
+Empty E. Its derived FLOW result can acquire a field-effect exclusion.
+
+### 4.1 Read versus write-preserve effect
+
+```kotlin
+fun PathEdge.isExcludedIdentityKeep(): Boolean =
+    from.base == to.base && from.path == to.path &&
+    from.tail == STAR && to.tail == STAR && exclusion.isNotEmpty()
+
+fun exactFlowTransfer(c: Conclusion, e: PathEdge): Conclusion? {
+    return when (val r = relate(e.from.path, c.path)) {
+        is Same -> exactTailCopy(e.to.base, e.to.path,
+            c.exclusion.union(e.exclusion)) // Retain incoming EXACT, not target STAR.
+        is ActualBelowPremise -> admittedSuffixCopy(c, e, r.suffix) // Keep c's own E.
+        is ActualAbovePremise -> if (e.isExcludedIdentityKeep())
+            mayAt(e.to.base, e.to.path) // Proper-prefix write residual; DEMAND, Empty E.
+        else null           // Ordinary field read: preserve the EXACT read barrier.
         Apart -> null
     }
 }
 ```
 
-These relation names are specification notation, not new retained runtime
-objects. Implement with the existing prefix walk and immutable path helpers.
-Demand entries cannot have a MUST tail. Validate this before the precise-tail
-branch. Validate actual certainty flags before selection; a MUST flag on an
-EXACT or STAR descriptor is invalid, not another matching case.
-`nextLegalRefinementField` includes uncounted static class accessors until the
-next counted field. Exact global class markers use the existing direct-marker
-adapter. Validate legal static input/initial forms before interning.
+This sketch covers the STAR-target FLOW cell. Keep the complete existing
+mark gate, target tail and exclusion tests around it. Use the same rules in
+scalar `Reference.below/above/normalize` and typed `EdgeApplication.flow`.
+The excluded identity keep already describes the write effect; add no new
+stored origin label. Real field reads must not be promoted by this test.
 
-Render the template with the selected demand mark. A concrete full U requires
-the same supplied full T, U=T. A supplied abstract mark cannot supply a
-concrete T. Preserve the existing GROUP-selector-to-full-mark binding before
-this FULL-mode check; do not rename a distinct full U into T or introduce a
-mark census. Run-2 and later still evaluate full marks.
+For `p.f.g = value`, retain the existing residual split:
 
-Preserve actual own E on a same-prefix MUST initial. Check E before descending
-from an ancestor; consume ancestor E after an admitted descent. A first-field
-STAR abstraction has the selected empty E, rather than moving an exclusion
-from an unconsumed deeper prefix up to that field. Carry actual exclusions in
-ordinary call application as before.
+```text
+p.$/FLOW -> p.$/FLOW, output E={f}, NORMAL
+p.$/FLOW -> p.f.[any]/FLOW, DEMAND, Empty E
+```
+
+The first normalizes to a STAR summary with E={f}. The inner demand preserves
+work for unaffected suffixes below f. Do not replace it with a NORMAL p.f
+STAR continuation or drop it because an ordinary read would be blocked.
+Run-1's exclusion policy still demotes and clears E.
+
+`nearLeafViews` and summary selectors must not match a new EXACT header as
+an ordinary ancestor leaf. Flow-tail selection is explicit:
 
 ```kotlin
-fun canEmitInitial(d: Pattern, initial: Pattern): Boolean {
-    val emitted = emitWithoutInterning(d, initial) ?: return false
-    return emitted == initial // Complete key, including tail/MUST and E.
+when (actual.tail) {
+    STAR -> selectStar()
+    EXACT -> selectExact()
+    ANY -> selectMay()
+    ANY_TAINT -> selectUniformMust(actual.exclusion)
 }
 ```
 
-The scalar projection and image theorem is in
-`RestrictedInitialPolicy.emission_is_idempotent` and
-`RestrictedInitialPolicy.image_classifier_sound_and_complete`. Full adapter
-proofs remain necessary. This is the raw-query image test. The summary guard
-uses the normalized image and validates at most the STAR and EXACT raw
-preimages. Do not use self-emission of the canonical STAR as that guard.
+### 4.2 MUST matching
 
-Image classification is not a global no-loss theorem. The new policy rejects
-some inputs which overlap the demand, including same-prefix STAR under ANY
-and a proper descendant under a precise demand. The old local emission-cover
-theorem does not apply unchanged to these cells. Before implementation, prove
-that reusable records or another retained analysis route cover every required
-observation for each rejected cell. If this requires another behavior rule,
-show a closed trace and ask for that rule. Do not add admission history,
-grounding support, or a hidden source replay channel to make the proof pass.
+A new abstract MUST premise requires a definite MUST actual covering its
+scope and exclusions. STAR, MAY and root-only EXACT do not establish it.
+Select only the MUST leaves of a mixed TaintTree. Preserve the input layer
+join and the existing concrete-MUST matching/demotion policy. No backward
+MUST initial is admitted.
 
-### 2.5 Tail-aware storage and transport
+Make `FlowGroup` tail dispatch explicit. The old non-ANY branch must not
+classify a new EXACT or MUST header as STAR. Keep unproved cross-tail
+subsumption out of point groups. Canonical STAR summaries continue through
+the existing all-run FLOW-backed replacement rules, including protection.
+Do not extend those rules to a MUST premise without its definite-input law.
+
+## 5. Whole-position RemoveAll and the restricted FLOW grammar
 
 ```kotlin
-// Preserve this header in withRoot, withLayer, grouping and interning.
-class FlowTree(/* existing fields */, val tail: Tail) {
-    init {
-        require(tail in setOf(Tail.STAR, Tail.EXACT, Tail.ANY, Tail.ANY_TAINT))
-        // EXACT/FLOW can carry field-effect E until summary normalization.
-        require(tail != Tail.ANY || layer == Layer.DEMAND)
-    }
-}
+// JIR rule validation; keep existing rejection scope/diagnostics.
+is RemoveAllMarks -> if (resolvedPosition.any)
+    reject("RemoveAll requires a whole position")
+
+// For an admitted root or named field:
+Cleaner(p.base, p.path, CleanReach.AT_AND_BELOW, mark = null)
+
+// Bidi primitive constructor, including generated CallCleaners:
+require(mark != null || reach == CleanReach.AT_AND_BELOW)
 ```
 
-Keep backward MUST initials forbidden. Native MUST read views become the
-existing STAR read premise/ANY demand result shapes, with their mark reversal
-and exclusion laws proved for the new abstract case. Never start a backward
-MUST initial or persist a DEMAND view as a new NORMAL record.
+`RemoveAll(p.f)` is valid: remove p.f and descendants, preserve p and p.g.
+Reject a terminal AnyField below-only all-mark action. Keep selected
+RemoveMark reach, mark requests and mark exclusions unchanged. Existing
+Spring generated whole-position cleaners remain valid.
 
-Make each FLOW selector explicit:
+Keep named-field read/temporary-clean/strong-write lowering. The final write
+records E even if an EXACT/FLOW read of the child produced no temporary
+fact. The preserved parent continues through that sequence.
 
-```kotlin
-fun selectFlowFlag(tail: Tail, star: Boolean, any: Boolean, exact: Boolean) =
-    when (tail) {
-        Tail.STAR -> star
-        Tail.EXACT -> exact
-        Tail.ANY, Tail.ANY_TAINT -> any
-    }
-```
+For a legal direct all-mark primitive, use the same whole-subtree kill
+residuals. Whole-root cleaning kills. A whole-field clean at f has a normal
+outer exclusion; nested cleaning keeps the existing inner ANY/DEMAND
+residual. If a direct conservative partial cell remains, its uncertain
+result is ANY/DEMAND: never restore EXACT over that DEMAND result. Concrete
+selected-mark cleaner handling is unchanged.
 
-MUST uses its own E in the `anyExclusion` slot. EXACT/FLOW point conclusions
-keep their field-effect E; concrete EXACT/T stays Empty E. Normalize FLOW
-EXACT to STAR before summary packing. Stored packing still emits the real
-STAR/ANY/MUST tail, not `tail != STAR ? ANY : STAR`.
-EXACT contributes no ancestor match. MUST contributes an ancestor match only
-after its exclusion admits the descent; its uniform taint remains MUST.
-MAY targets and field cuts remain ANY/DEMAND.
+Audit all restricted FLOW producers:
 
-Apply definite-MUST admission only to the new abstract MUST premise. Select
-only uniform MUST leaves from mixed concrete TaintTrees. Keep the existing
-concrete MUST record/view rules unchanged, including their pending demotion.
-
-Selected-mark FLOW cleaners keep their existing mark-exclusion behavior.
-RemoveAll admits only AT_AND_BELOW for the selected position; reject its
-below-only and exact-only variants. This selected semantic change removes
-the root-only survivor case for both full-mark and abstract inputs.
-Concrete selected-mark cleaners retain their old behavior. New abstract
-EXACT/FLOW is a read barrier with field-effect E. Do not add a new cleaner
-survivor flag or a summary normalization exception.
-Keep new tail groups separate from existing STAR/ANY subsumption until their
-own coverage laws are proved.
-
-## 3. Components and ownership
-
-Let `B` be
-`core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi`.
-
-| File | Change for P1/P2 |
+| Producer | Result class |
 |---|---|
-| New `B/store/C5StaticDemandView.kt` | Internal filter capability and compatibility dispatch; no public API expansion |
-| `B/store/StaticGuidance.kt` | Implement filtered private view; preserve packed storage; assign owner-family IDs and query-local answer array |
-| `B/store/StaticPairLookup.kt` | Per-member fixed-entry filters, prospective mark checks, queue guard |
-| `B/store/DemandStore.kt` | Keep result accumulation after full C5 restriction; no new query-history store |
-| `B/store/StaticEntryLookup.kt` | Keep C2 calls on the existing unfiltered public API |
-| `B/store/DemandResultCoverage.kt` | Keep exact result/protection coverage unchanged |
+| FLOW initial STAR/EXACT/MUST | NORMAL |
+| FLOW initial ANY | ANY/DEMAND |
+| Copy, filter, selected-mark cleaner | Preserve class/header |
+| Same-prefix strong write | NORMAL/E, or preserve incoming ANY/DEMAND |
+| Nonuniform ancestor read or proper-prefix loss | ANY/DEMAND |
+| Admitted uniform MUST descent | MUST/NORMAL; consume ancestor E, retain target E |
+| Field cut | ANY/DEMAND |
+| Whole-position RemoveAll | Kill, preserve normal residual/E, or ANY/DEMAND |
+| Native abstract-MUST backward view | ANY/DEMAND result |
+| Reversed may pass | Generic revTails maps STAR->ANY to ANY->ANY |
 
-The frozen completion owns immutable geometries, labels, owner sets, IDs and
-the detached graph. Each lookup owns its queues and seen sets. Each visible
-view owns its memo and lazy reachability scratch. No new mutable answer
-state belongs to the snapshot, a method actor, or a persistent record.
+Do not change generic micro-edge reversal. Its existing tail table already
+keeps reversed MAY output uncorrelated. Run-1-only static demotion and
+STAR/DEMAND remain guarded by run-1. ND/combinations are TAINT-only.
+Assert the restricted FLOW result invariant at summary/publication and
+handoff boundaries; use producer tests to find violations, not a silent
+STAR-to-ANY boundary coercion.
 
-Do not change equality or hashing of facts, initial APs, rule occurrences,
-MethodKeys or static edges. `Owners` is an ordinary private class with
-identity equality; its new immutable ID does not change that equality.
+## 6. Normalize summaries and C5 results
 
-## 4. P1: internal C5 filtering API
+### 6.1 One complete boundary pair
+
+```kotlin
+data class SummaryForm(val premise: PremiseKey, val facts: Facts)
+
+fun normalizeSummary(p: PremiseKey, f: Facts): SummaryForm {
+    if (!p.isFlow || f !is FlowTree) return SummaryForm(p, f)
+    val i = p as InitialAp
+    val stored = if (i.tail == EXACT)
+        manager.initial(i.base, i.path, STAR, i.exclusion, i.mark) else i
+    val result = if (f.tail == EXACT)
+        manager.flowTree(f.base, f.layer, f.exclusion, f.markExclusion, f.root, STAR)
+    else f
+    return SummaryForm(stored, result)
+}
+
+fun retainSummary(rawInitial: PremiseKey, rawFacts: Facts) {
+    val s = normalizeSummary(rawInitial, rawFacts)
+    assertCanonicalSummary(s)
+    // Keep existing summary-base/disabled-static filters and computed supplies.
+    if (erasesRun1StaticSummary(s.premise, s.facts)) {
+        staticGuidanceSeeds.add(s.premise, s.facts)
+        return
+    }
+    val delta = summaries.add(s.premise, s.facts) ?: return
+    queuePublications(s.premise, delta)
+}
+```
+
+Point MethodEdgeStore premises remain raw EXACT. Do not rekey the method
+analysis. Normalization preserves bases, field chains, E, mx and layer. It is
+idempotent. TAINT, ND, ZERO and concrete exact class markers are unchanged.
+Deduplication uses the canonical pair before notification.
+
+Assert canonical FLOW in `RunSummaryStore.add/addDemand`, the real summary
+publication index, predefined schema admission and native record storage.
+Do not put this assertion in the generic `Publication` constructor: joined
+static writer binding also uses it as a raw point adapter.
+
+Keep static write points and killed-write observation keys raw. When those
+rows become guidance, canonicalize both observed and surviving comparison
+keys. Otherwise normalization could look like a killed write. Do not change
+raw static supplier facts or normalize instantiated predefined outputs.
+
+### 6.2 C5 uses the normalized raw-query image
+
+```kotlin
+fun canStoreInitial(entry: Pattern, stored: Pattern): Boolean {
+    fun fits(raw: Pattern): Boolean =
+        policy.canEmitInitial(entry, raw) && insideDemand(raw, entry) &&
+            normalizeFlowInitial(raw) == stored
+    if (fits(stored)) return true
+    return stored.isFlow && stored.tail == STAR && stored.exclusion.isEmpty &&
+        fits(stored.withTail(EXACT))
+}
+```
+
+The raw candidate uses the current run's table and budget. Keep its legality
+and mark/E tests. There are at most two raw preimages. Test raw containment,
+not whole canonical STAR containment against an EXACT query. Never use
+self-emission as the image classifier.
+
+### 6.3 Normalize selected pieces before keys and coverage
+
+```kotlin
+// Reference.kt: replace the old first premise-containment guard.
+fun restrictStored(initial: Pattern, raw: Conclusion, pair: DemandPattern): Conclusion? {
+    val entry = normalizeDemandFieldExclusion(pair.entry)
+    if (!canStoreInitial(entry, initial)) return null
+    return restrictConclusionOnly(raw, pair.exit) // Existing mark/base/path rules.
+}
+
+// Demand.kt: restrictRaw uses restrictStored, not the old double-guard path.
+// Demand.kt: restrictPlainFacts
+for (selected in restrictRaw(ops, canonicalInitial, canonicalRaw, pair)) {
+    val kept = normalizeFlowSummaryConclusion(selected)
+    val piece = manager.factsOf(kept.fact, kept.exclusion, kept.layer)
+    mergeByGroupKey(piece)
+}
+// Every DemandStore.offer path receives canonical pieces here.
+```
+
+The order is mandatory:
+
+```text
+raw point relation
+ -> normalize pair -> raw store
+ -> full C5 paired restriction
+ -> normalize each kept FLOW conclusion
+ -> Facts/group-key merge -> ExactDemandResults.add -> coverage test
+ -> Publication / addDemand
+```
+
+Extract the conclusion-only helper from the code after the former
+`insideDemand` check. Do not call that old guard again on canonical STAR.
+Raw containment is already tested on a possible raw query by `canStoreInitial`.
+
+When C5 takes an EXACT root slice of a same-prefix MUST/FLOW result, preserve
+its latent E. A concrete EXACT/T slice still has Empty E. On an admitted
+descent, consume ancestor E at its old prefix; never move it onto the new
+prefix. The STAR/E result must remain covered by the uniform source result.
+
+Actual paired FLOW Dp is STAR or ANY after canonicalization and MUST handoff
+projection. Keep that grammar. A restricted raw ANY/DEMAND stays ANY under
+those pairs. Unsupported arbitrary mixed test snapshots must not manufacture
+a late STAR/FLOW DEMAND result.
+
+Keep `ExactDemandResults.covers` based on the original canonical raw packet.
+ANY and MUST always exhaust: another pair can rebase or select a distinct
+piece. For STAR/EXACT raw packets, retain exact leaf, layer, E, mx and
+protection equality. Do not substitute geometric STAR coverage for this
+query-completion test.
+
+## 7. Summary delivery and native records
+
+### 7.1 Concrete STAR coverage in both delivery orders
+
+```kotlin
+fun supportsDescendantActual(j: Pattern): Boolean =
+    j.mark is MarkSlot.Star || j.tail == STAR
+```
+
+Use this alongside existing restrictions in scalar `satisfies`, typed
+`Summary.satisfyingPart`, and both candidate indexes. A concrete STAR initial
+must cover a deeper actual with the same mark and admitted suffix. Its
+summary/result remains DEMAND.
+
+```text
+PublicationIndex: a new deep actual must find an existing STAR premise prefix.
+CalleeSubscriptions: a new STAR publication must find existing deep actuals.
+Final AP match: check mark, tail, E and the whole original ND premise.
+```
+
+Keep candidate snapshotting and callback ownership. Updating only the final
+predicate loses deliveries. Do not extend the STAR fallback to concrete
+ANY/MUST indiscriminately.
+
+### 7.2 Native FLOW normal form and MUST views
+
+The persistent record store (R1) takes canonical NORMAL singleton pairs from
+raw summary storage, before C5. No FLOW EXACT record is stored. Retain
+nonempty E on NORMAL records. The previous covered-EXACT replay planner and
+abstract EXACT native-record extension are removed from the implementation
+plan.
+
+New abstract MUST initials/results still need native read views:
+
+```text
+forward native FLOW (MUST/Ei) -> (MUST/Eg or canonical STAR/Eg), NORMAL
+backward read premise: old result scope as STAR/Eg
+backward result:       old MUST input scope as ANY/DEMAND, Empty E
+
+forward native FLOW STAR/Ei -> MUST/Eg, NORMAL
+backward read premise: old result scope as STAR/Eg
+backward result:       old input scope as ANY/DEMAND, Empty E
+```
+
+The view preserves existing mark reversal. It forgets the old MUST-input E
+only where the existing demand projection does. It is transient: do not
+start, intern or persist it as a new NORMAL record. If a canonical STAR
+result came from a MUST exact slice, it still needs this MUST-input view;
+the old concrete-only EXACT/MUST guard is insufficient.
+
+Keep concrete native record cases and generic `revEdge` unchanged. A
+backward record has no MUST initial. Definite-MUST forward application is a
+separate gate. Record availability does not suppress C2 or add a completed
+query cache.
+
+## 8. C5: internal C5 filtering API
 
 `GuidanceGeometry` and packed-label helpers are private to `StaticGuidance.kt`.
 Do not expose those private types through the public `StaticDemandView` API.
@@ -419,18 +607,19 @@ capability filters target existence early. A reference fallback may keep the
 old coarse preflight and let filtered target enumeration return no states;
 it remains correct but makes no early-owner-work guarantee.
 
-### 4.1 Packed bridge rows
+### 8.1 Packed bridge rows
 
 Add the overloads inside the existing private `GuidanceGeometry` class.
 Replace its current `edge(label)` body with a delegation. Do not add a
 shadowed extension function. The new overload reuses decoded marks:
 
 ```kotlin
-private fun GuidanceGeometry.edge(marks: GuidanceMarks): StaticGuidanceEdge =
-    existingEndpointConstructionWith(marks)
+private data class GuidanceGeometry(/* existing endpoint fields */) {
+    fun edge(marks: GuidanceMarks): StaticGuidanceEdge =
+        existingEndpointConstructionWith(marks)
 
-private fun GuidanceGeometry.edge(label: Long): StaticGuidanceEdge =
-    edge(unpackBridgeMarks(label))
+    fun edge(label: Long): StaticGuidanceEdge = edge(unpackBridgeMarks(label))
+}
 ```
 
 Keep current ZERO handling and exact full/group label encoding.
@@ -472,7 +661,7 @@ Method-local W/R rows are already decoded and belong to the exact MethodKey.
 Apply `keep` to each such row before yielding it. Do not broaden their owner
 scope to a common method.
 
-### 4.2 Target and source preflight are different
+### 8.2 Target and source preflight are different
 
 ```kotlin
 private fun hasComposedEndpointsImpl(
@@ -491,7 +680,7 @@ the primitive phase. Do not expand preflight ownership or use the target
 predicate on isolated source/writer rows. Their own output is not the final
 right endpoint of a future composition.
 
-## 5. P1: fixed-right pruning and composition
+## 9. C5: fixed-right pruning and composition
 
 Extract the existing pure label composition into one helper. Keep its current
 full/group compatibility test; do not introduce another equality rule.
@@ -575,9 +764,9 @@ Do not prune because the current left endpoint fails raw-output restriction.
 A writer can repair that endpoint. The final offer may return nothing while
 its predecessor traversal remains necessary.
 
-## 6. P2: immutable family IDs and private byte memo
+## 10. Owner eligibility: immutable family IDs and private byte memo
 
-### 6.1 Freeze-time construction
+### 10.1 Freeze-time construction
 
 ```kotlin
 private class Owners(
@@ -605,7 +794,7 @@ Do not renumber graph methods, intern equal owner sets, reorder labels, or
 change row references. Each constructed Owners has one stable ID in `[0,F)`.
 The ID belongs only to this snapshot. It does not enter any fact or rule key.
 
-### 6.2 Query-local lookup
+### 10.2 Query-local lookup
 
 ```kotlin
 private const val UNKNOWN: Byte = 0
@@ -644,7 +833,7 @@ another memo for entries, marked outputs, or each bridge row. Local direct
 owner tests remain unchanged. The view, array and scratch do not escape the
 lookup. They are released together on return or cancellation.
 
-### 6.3 Storage bound
+### 10.3 Storage bound
 
 ```text
 immutable metadata: one Int per Owners, one family count per snapshot
@@ -659,136 +848,244 @@ local-only demand and allocate no static-completion view memo.
 The memo removes repeated questions, not the first graph tour of a new view.
 Cross-query root reuse remains outside this implementation.
 
-## 7. Required tests and work counters
+## 11. Principal regression traces
 
-Extend existing tests before modifying runtime loops:
+The code-under-analysis convention is fixed: demand and submitted facts go
+above the declaration; summaries go after the closing brace.
 
-| Test file | Cases |
-|---|---|
-| `FrozenStaticCompletionTest.kt` | IDs, own/visible ownership, outside-graph owners, exact context W/R |
-| `DemandStorageDifferentialTest.kt`, `DemandSnapshotReference.kt` | Same finite explicit relation after early filtering |
-| `BidirectionalEntryLookupTest.kt` | C2 uses the unchanged public/unfiltered path |
-| New `StaticPairPruningTest.kt` | Fixed mapped failure, FLOW repair, left repair, ZERO, cycles, GROUP labels, concrete E normalization |
-| New `StaticEligibilityMemoTest.kt` | True/false hits, A/B/A queries, empty owner array, unknown root, cancellation, view/snapshot isolation |
-| `DemandCandidateWorkloadTest.kt`, `DemandLinkTest.kt` | Coverage after final restriction, protection, DEMAND presence |
+### 11.1 Run-1: an overwrite produces a precise STAR demand
 
-Use a nonempty concrete STAR exclusion in a packed mapped row. Assert the
-output label is restored before normalization and before the entry test.
-Include a target-invalid/source-valid preflight case and a target-valid/
-repairable-source case. The latter must not be filtered with the target test.
-
-Use operation assertions rather than time assertions:
-
-```text
-fixed rejected state -> no queue insertion, no predecessor expansion
-rejected packed label -> no owner test, no complete edge decode
-first view/family evaluation -> unchanged provider call
-repeated view/family evaluation -> one byte lookup, no provider call
-accepted pieces -> same tails, marks, E, layers, protection, whole premise
+```java
+// Source rule in main: assign exact T to q.g. Sink: check T at m(q).g.
+// f != g. Aliases can be disabled for this regression.
+// Previous demand: none. Submitted: p.g.$/T.
+// Emitted initial: p.*/FLOW; start NORMAL.
+Root m(Root p) {
+    p.f = new Leaf();
+    // The preserve edge needs E={f} on p.*.
+    // Run-1 policy: p.*/FLOW, DEMAND, Empty E.
+    return p;
+    // ret.*/FLOW, DEMAND, Empty E.
+}
+// Produced NORMAL return summaries: none.
+// Produced DEMAND return summary: p.*/FLOW -> ret.*/FLOW.
+// Run-2 entry demand: ret.*/FLOW; exit: p.*/FLOW.
 ```
 
-No raw-output deduplication may hide a missing composition in the reference
-comparison. Compare merged semantic results and required observations, not
-only final counts.
+The new Leaf has no mark. The concrete mark on g really survives the
+write. No usable NORMAL return record exists to answer the backward call.
 
-## 8. Proof-to-code contract
+### 11.2 Run-2: answer the requested STAR and find the source
 
-| Contract | Formal model | Code boundary |
+```java
+// Previous demand: entry ret.*/FLOW; exit p.*/FLOW.
+// Submitted backward fact: ret.g.$/T, DEMAND.
+// Run-2 emitted initial: ret.*/FLOW; start NORMAL.
+Root m(Root p) {
+    p.f = new Leaf();
+    // Backward keep: p.*/FLOW, NORMAL, E={f}.
+    return p;
+    // Backward from ret.* to p.* first; preserve its NORMAL layer.
+}
+// Produced NORMAL: ret.*/FLOW -> p.*/FLOW, output E={f}.
+// Produced DEMAND return dependency: none.
+// Applying the NORMAL answer to ret.g/T gives q.g/T (caller layer DEMAND).
+// g is not excluded. The backward source hit enables the next forward source.
+```
+
+The old descendant-rejection diagnostic stays in Lean as historical evidence.
+The selected run-2 policy now proves this route reaches the source. Its
+NORMAL record later maps q.g/T to ret.g/T with suffix g intact.
+
+### 11.3 Exact query, write E, canonical summary
+
+```java
+// Previous demand: entry p.[any]/FLOW; exit ret.*/FLOW.
+// Submitted: p.$/T. Emitted raw initial: p.$/FLOW, NORMAL, E={}.
+Root keepOtherFields(Root p) {
+    p.f = new Leaf();
+    // p.$/FLOW, NORMAL, E={f}. Exact read barrier remains.
+    return p;
+    // ret.$/FLOW, NORMAL, E={f}.
+}
+// Raw point relation: p.$/FLOW -> ret.$/FLOW, NORMAL, output E={f}.
+// Stored NORMAL summary: p.*/FLOW -> ret.*/FLOW, output E={f}.
+// No input at p.f can pass through this NORMAL row; p.g can.
+```
+
+### 11.4 Whole-position field removal
+
+```java
+// Previous demand: entry p.[any]/FLOW; exit ret.*/FLOW.
+// Submitted: p.$/T. Emitted raw initial: p.$/FLOW, NORMAL.
+Root clearField(Root p) {
+    removeAll(p.f);
+    // Legal: clear p.f and its descendants.
+    // Lowering is read/clean/strong-write. Parent write effect E={f} survives.
+    return p;
+}
+// Stored NORMAL summary: p.*/FLOW -> ret.*/FLOW, output E={f}.
+// Keep parent/sibling flow. RemoveAll(p.f.AnyField) is rejected.
+```
+
+Use real code and source/sink rules in the JVM regression. Do not replace
+these operations with predefined summaries. Predefined schemas have their
+own isolated tests.
+
+## 12. Tests, proof contracts and validation
+
+Write failing tests before changing runtime loops. Separate semantic tests
+from work-removal tests. A counter example must name its actual producer,
+emitted initial, stored row, publication and receiving iteration.
+
+| Test area | Required checks |
+|---|---|
+| Scalar initial matrix | Complete table; exact mark mismatch; ANY first field; exact-input exception; run-2 requested STAR; later phase grammar |
+| Bounded image | Executable witness; requested STAR needs remaining counted-field budget; canonical FLOW STAR can still have EXACT raw preimage at cap |
+| Static adapters | Named field plus class anchor; fields/elements counted; exact global class markers; root S.* distinct from S.C.* |
+| E adapters | Demand E checked; actual prefix E consumed at admitted descent; no deeper-mask lift; raw EXACT query Empty E |
+| New FLOW tail factories | EXACT/MUST starts; layer independent of tail; EXACT/E point grouping; leaf views; withRoot/withLayer/conversion |
+| Transfers | Ordinary EXACT child read absent; same-prefix write E; nested proper-prefix ANY demand; return/binding E; run-1 demotion |
+| Whole RemoveAll | Root and p.f valid; named subtree removed; sibling survives; terminal AnyField rejected; generated partial all-mark primitive rejected |
+| C5 | Canonical raw preimage plus containment; MUST-to-EXACT slice keeps E; normalization before group keys/coverage; all member premises retained |
+| Summary delivery | Existing/new deep actual and old/new concrete STAR publication, both orders; mark/E rejection; concrete STAR remains DEMAND |
+| Native records | No FLOW EXACT; nonempty E persists; abstract MUST->STAR and MUST->MUST views are pending ANY; no backward MUST start |
+| Mode closure | Run-1 STAR/FLOW demand allowed; every restricted producer emits valid FLOW classes; no later STAR/FLOW demand entry |
+| Static integration | Write-point keys stay raw; canonical survivor comparison; no false killed-write row; actual labels restored before normalization |
+| P1 | Fixed mapped rejection; unfixed FLOW repair; repairable left endpoint; ZERO; groups; cycles; raw target/source preflight distinction |
+| P2 | True/false hits; A/B/A interleaving; empty owners; outside-graph root; cancellation; separate views/snapshots |
+
+Extend `BidirectionalEntryLookupTest`, `DemandStorageDifferentialTest`,
+`DemandSnapshotReference`, `FrozenStaticCompletionTest`,
+`DemandCandidateWorkloadTest`, `DemandLinkTest`, and the JIR cleaner mapping,
+validation and lowered-effect tests. Add focused tests for new point tails,
+canonical summaries, late FLOW grammar, P1 pruning and P2 memoization.
+Update tests that deliberately construct now-prohibited partial all-mark
+cleaners to assert rejection. Keep selected-mark and generic geometry tests.
+
+For P1/P2 use operation assertions, not timing assertions:
+
+```text
+fixed rejected state: no enqueue, no predecessor expansion
+rejected packed label: no owner query or complete edge decode
+view/family first evaluation: the existing graph/outside-root test
+repeat evaluation: one byte-table hit, no graph question
+semantic output: equal normalized facts, E/mx/layers, protection and whole premise
+```
+
+### 12.1 Constructive proof-to-code map
+
+`DemandStarPolicy` below is short for
+`RestrictedInitialPolicy.DemandStarPolicy`.
+
+| Law | Model / theorem | Implementation boundary |
 |---|---|---|
-| Total raw scalar selection is a projection and has an executable witness | `RestrictedInitialPolicy.emission_is_idempotent`, `image_classifier_sound_and_complete`, `entry_intersection_exactly_matches_emitter_image` | C2 raw initials and the raw-preimage predicate for C5 |
-| Concrete STAR starts/stays DEMAND | `OneStepRefinement.current_concrete_star_starts_demand` and layer lemmas | Initial start, transfer and summary application |
-| An actual NORMAL STAR cover subsumes its exact relation | `AbstractTailContracts.normal_star_identity_geometry_covers_exact`, `dropping_exact_preserves_union_when_cover_is_present` | Same-method summary subsumption |
-| New abstract MUST needs definite MUST input | `AbstractTailContracts.only_definite_must_is_admitted`, `layer_does_not_create_must` | New abstract MUST premise matching |
-| Ordinary code exposes the rejected unnormalized replay | `RestrictedInitialPolicy.CodeOnlyExactReplay.code_only_false_normal_is_persisted`, `code_only_false_pair` | Historical regression certificate |
-| Tail normalization and canonical C5 lookup are exact structural operations | `FlowSummaryNormalization.summary_normalization_idempotent`, `normalized_c5_image_is_exact` | Normalize complete summary pairs and classify raw preimages |
-| Write E survives and blocks the overwritten suffix | `FlowSummaryNormalization` annotated-write and ordinary-write equivalence lemmas | EXACT/FLOW point transfer, root return, and canonical summary E |
-| Fixed right endpoint cannot be repaired by prepend | `DemandWorkPruning.prepend_preserves_fixed_right` | `composeMarks`, immutable right geometry |
-| Pruning preserves accepted finite-walk outputs | `DemandWorkPruning.c5_fixed_right_pruning_keeps_outputs` | Per-member queue and seen set |
-| Early pure filtering preserves row order and output | `DemandImplementationContracts.early_filter_preserves_rows`, `early_filter_preserves_decoded_outputs` | Packed rows and local candidates |
-| Memo preserves answers and exact scratch for interleaved queries | `DemandWorkPruning.memo_execution_preserves_results_and_scratch` | Private visible view |
-| 0/1/2 encoding implements the logical memo | `DemandImplementationContracts.byte_step_refines_logical_step`, `write_preserves_representation` | ByteArray lookup and update |
-| IDs preserve payload and identify distinct families | `DemandImplementationContracts.owner_id_injective`, `owner_payload_unchanged` | Freeze factory |
-| Memo size is bounded | `DemandWorkPruning.memo_defined_cells_bound_by_distinct_families` | F-byte array and query lifetime |
+| Selected run-2 image has an executable witness | `DemandStarPolicy.image_classifier_sound_and_complete` | Raw template classifier |
+| Current budget is part of witness validity | `DemandStarPolicy.bounded_image_has_executable_witness` | Field-limit adapter |
+| Requested STAR is not a raw self-projection | `DemandStarPolicy.requested_STAR_is_emittable_but_is_not_a_fixed_point` | Remove the old image shortcut |
+| Full U/T mismatch rejects | `DemandStarPolicy.mismatching_full_marks_are_still_rejected` | Existing mark selector |
+| Concrete STAR starts DEMAND | `DemandStarPolicy.concrete_requested_STAR_starts_DEMAND` | Initial layer and application join |
+| Corrected overwrite route finds source/sink | `DemandStarPolicy.ClosedWrite` | Whole call/seed regression |
+| Exact canonical image includes raw containment | `FlowSummaryNormalization.Integration.normalized_entry_witness_checks_emission_and_raw_containment` | C5 and early fixed-entry filter |
+| Normalization preserves metadata and is idempotent | `FlowSummaryNormalization` structural laws | Complete boundary pair |
+| Layer join cannot turn DEMAND into NORMAL | `FlowSummaryNormalization.Integration.boundary_never_promotes_DEMAND` | Summary/record application |
+| Outer write mask and inner demand are both needed | `FlowSummaryNormalization.Integration.nested_write_uses_effect_geometry_and_keeps_proper_prefix_DEMAND` | Write-preserve operation split |
+| C5 exact slice retains E | `FlowSummaryNormalization.Integration.same_prefix_exact_piece_keeps_E_before_and_after_normalization` | Scalar restriction and selected-piece packing |
+| Selected canonical piece remains within uniform output | `FlowSummaryNormalization.Integration.canonical_C5_piece_is_covered_by_same_prefix_uniform_result` | MUST result selection |
+| Abstract MUST native views cover the transposed relation | `FlowSummaryNormalization.NativeMustView` | Transient STAR-to-ANY/DEMAND view; pure FLOW selector |
+| Whole-position cleaner is allowed; partial all-mark reaches are not | `FlowSummaryNormalization` admission/effect laws | Rule and primitive guards |
+| Fixed right survives prepend | `DemandWorkPruning.prepend_preserves_fixed_right` | P1 mark/geometry composition |
+| Pruning preserves all accepted finite-walk outputs | `DemandWorkPruning.c5_fixed_right_pruning_keeps_outputs` | P1 queues and early filtering |
+| Early pure filtering preserves row order | `DemandImplementationContracts.early_filter_preserves_rows` | Packed rows / local candidates |
+| Memo preserves answers and scratch | `DemandWorkPruning.memo_execution_preserves_results_and_scratch` | Visible-view eligible |
+| Byte encoding refines logical memo | `DemandImplementationContracts.byte_step_refines_logical_step` | 0/1/2 array |
+| IDs preserve immutable payload | `DemandImplementationContracts.owner_id_injective`, `owner_payload_unchanged` | Freeze-time factory |
 
-The three earlier support files contain 58 checked theorems: 40 in the scalar policy
-and two trace certificates, seven in abstract-tail contracts, and 11 in
-implementation contracts. The code-only regression snapshot has 11 theorems. The
-earlier declared-transfer trace stays in the model as historical evidence;
-the code-only trace uses ordinary code and source/sink rules only. Both
-record the behavior before the newly selected boundary normalization.
-The scalar policy is total within its stated scope: FULL marks,
-ordinary nonstatic bases, counted fields, and empty exclusions. Static
-anchors, ZERO, GROUP adapters, exclusions, complete new-tail application,
-and global no-loss discharge remain separate obligations. The old EXACT
-counterexample certifies the rejected unnormalized behavior. The new
-`FlowSummaryNormalization.lean` adds 31 theorems for normalization, finite
-canonical-image lookup, helper replay, the immediate-child write cell, and
-whole-position cleaner admission/effects. Its old partial-cleaner controls
-are historical rejected alternatives.
-Its scope does not replace the remaining full transfer and cleaner proofs.
+The scalar admission model covers FULL marks, empty E, ordinary nonstatic
+bases and counted accessors. Its bounded version proves the exact image in
+that scope. Static, E and GROUP adapters must refine the same contracts;
+do not infer their proof from a scalar example. The new transfer model
+checks nested-write, C5-mask, layer and cleaner cells, plus the outgoing mode
+grammar. It does not claim a complete JVM/alias implementation proof or a
+whole-analyzer termination theorem.
 
-Run these commands from `spec/lean`:
+The inherited historical models retain the rejected EXACT replay and former
+STAR admission as regression evidence. Their old idempotence theorem is not
+the selected requested-STAR image theorem. Keep the selected namespace and
+mode wrapper explicit in tests and documentation.
+
+Run from `spec/lean`:
 
 ```sh
 lake env lean proposals/initial-emission/RestrictedInitialPolicy.lean
 lake env lean proposals/initial-emission/FlowSummaryNormalization.lean
 lake env lean proposals/initial-emission/AbstractTailContracts.lean
-lake env lean proposals/demand-work/ImplementationContracts.lean
 lake env lean proposals/demand-work/DemandWorkPruning.lean
+lake env lean proposals/demand-work/ImplementationContracts.lean
 ```
 
-All four support files compile. Their six executable checks return `true`.
-All-theorem axiom audits contain only `propext` and `Quot.sound`; they contain
-no classical choice, unproved axiom, or `sorry`. Commands, hashes, theorem
-names and complete audit output are in the
-[implementation evidence](../reports/data/bidirectional-summary-demand-workload-implementation-20261029.json).
-This is formal validation within the stated scope, not JVM or project-run
-validation. Do not infer missing integration proofs from generic pruning
-and memo theorems.
+All models are constructive. Audit every theorem for `sorryAx`, unproved
+axioms and classical choice. Complete commands, output, theorem names and
+source hashes are embedded in
+[the implementation evidence](../reports/data/bidirectional-summary-demand-workload-implementation-20261029.json).
+The five files contain 174 checked theorem declarations and 11 true
+executable checks. Their axiom audits use only `propext` and `Quot.sound`.
+The ordinary closed examples reach modeled **run-3**. No new project
+measurement or full JVM domain execution is claimed by those models.
 
-For the graph bridge, preserve these source invariants:
+## 13. Implementation sequence and experiment plan
+
+Implement the new semantics as one reviewable unit with its tests: C2 mode
+policy, point tails/E, whole RemoveAll, canonical summaries/C5, matching and
+native MUST views. Do not expose the new EXACT point shape while still
+storing/replaying an unsafe EXACT/FLOW summary in an intermediate runnable
+commit. Add no unselected feature flag to hide incomplete semantics.
+
+Then use separate commits:
 
 ```text
-true answer: an outside-graph match, or an owner in monotone seen
-false answer: no outside-graph match and pending exhausted
-other family calls cannot remove seen hits or restart exhausted traversal
+1. Selected semantic rewrite + formal contracts + meaningful tests.
+2. Capture the semantic reference results and operation counts.
+3. Internal C5 filtered capability + fixed-right pruning + differential tests.
+4. Immutable owner-family IDs + per-view byte memo + state tests.
+5. Required project campaign and reports.
 ```
 
-Thus a repeated answer would not advance scratch even after intervening
-families. P1 can remove questions from the stream; it need not preserve the
-old unpruned scratch. P2 preserves scratch for its own remaining stream.
+Before the campaign, complete the focused core/JIR tests and the existing
+semantic suites. Use `runProjectAnalyzer` directly for OWASP, conductor,
+thingsboard and Stirling-PDF. Keep the selected FULL mode, statics/aliases,
+16g comparison campaign and `1,1,2,3,...` schedule. Use the current project
+timeout settings. Reuse the saved `f945f92c5ae554ff4f5fc7696ee5a269210478bb`
+baseline; do not rerun it or add an unrequested configuration.
 
-## 9. Commits, measurements, and completion
+Report finding locations versus baseline, candidate/report states, run-1
+engine time, transition time, each iteration time, OOM/timeout, memory and
+latest reached/complete/accepted iteration. The run-1 engine target remains
+60 seconds. Profile the selected workload and inspect any OOM snapshot.
+Clean prior task-owned snapshots before the actual campaign; do not delete
+unrelated user files.
+
+Record these work counters:
 
 ```text
-1. Complete demand/domain, write-E, normalization/image proofs and tests.
-2. Implement selected demand rewrite; capture its reference results.
-3. Add internal C5 capability and pure filter controls.
-4. Add fixed-entry C5 pruning; run differential and pipeline tests.
-5. Add immutable family IDs and query-local memo; test state equivalence.
-6. Run selected project campaign; compare against step 2 and saved baseline.
+C2: offered/accepted initials by demand/actual/result tail and run
+mode: rejected stale late FLOW STAR entries; invalid outgoing FLOW shapes
+summary: raw EXACT candidates; canonical rows; E retained; deduplicated rows
+C5: candidates, fixed rejects, owner tests, decoded rows, enqueue/pop/duplicates,
+    predecessor expansions, compositions, offers and retained pieces
+memo: first evaluations, true/false hits, family count F, active views/bytes,
+      graph vertices and edges visited
 ```
 
-Keep semantic and work-removal commits separate. Use the repository project
-memory/time settings, FULL default, statics and aliases enabled, and the
-selected `1,1,2,3,...` schedule. Use `runProjectAnalyzer`, not the CLI. Reuse
-the saved required baseline; do not rerun it.
+Compare P1/P2 with the captured post-semantic reference. Use identical finite
+fixtures, matched completed queries or completed phases for operation ratios.
+Different timeout prefixes are not a matched speedup. Aim for at least a
+factor-of-two C5 workload reduction; do not add overlapping rejection/memo
+percentages or promise the same factor in wall time.
 
-Report run-1 time, transition time, each iteration's time, memory, OOM/timeout,
-findings, and latest reached/complete/accepted iteration. For work ratios use
-identical finite query fixtures, matched completed queries, or completed
-phases. Different timeout prefixes are not a matched performance comparison.
-
-Record C5 candidates before/after filtering, owner calls, decoded edges,
-queued/popped/duplicate states, predecessor expansions, compositions, final
-offers and accepted pieces. Record memo requests, first evaluations, true/
-false hits, F, simultaneously live views, bytes, vertices and graph edges.
-
-The direct criteria are zero predecessor work for fixed rejected states and
-at most one first evaluation per view/family. The performance target is at
-least a twofold C5 workload reduction on a matched workload. It is not a
-promised wall-time improvement or evidence that thingsboard run-2 completes.
-
-Only declare the implementation complete after the prerequisite decisions,
-proofs, meaningful tests and selected project validation have completed.
-No unresolved behavior may be supplied as an implicit default.
+Implementation is complete only after the selected behavior, proofs in their
+stated scope, required tests, source/sink comparison and selected project
+campaign pass. If an adapter needs a new behavior rather than a code change,
+show its exact code/facts and obtain the behavior decision first. Do not
+close a proof by introducing grounding support or changing field semantics
+outside the explicit scope above.
