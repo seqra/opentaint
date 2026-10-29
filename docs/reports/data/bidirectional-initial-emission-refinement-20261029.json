@@ -7474,5 +7474,57 @@
         "stderr": ""
       }
     }
+  },
+  "oneStepRefinement": {
+    "sourceRevision": "6082e52e4",
+    "productionCodeChanged": false,
+    "latestIterationsUnchanged": true,
+    "newJVMDiagnostics": false,
+    "selectedDecisions": [
+      "Stop after first new field for abstract demand",
+      "Permit abstract EXACT and abstract MUST shapes; no concrete-MUST-retention exception",
+      "Concrete mark U rejects submitted mark T when U != T",
+      "Concrete T demand with exact input retains exact fact",
+      "Permit coverage matching for these concrete STAR initials",
+      "Concrete STAR initial and derived edges always DEMAND, including application to a NORMAL caller"
+    ],
+    "explicitInterpretations": [
+      "The concrete exact exception retains the whole submitted exact path",
+      "Removing the MUST mark exception uses the abstract demand mark for a same-prefix MUST initial"
+    ],
+    "openProofGaps": [
+      "Complete emission table and nonempty exclusions",
+      "Typed abstract EXACT/MUST transfer and application",
+      "False NORMAL exact-FLOW replay after only relaxing S8",
+      "New native record/read-view invariants"
+    ],
+    "validation": {
+      "file": "spec/lean/proposals/initial-emission/OneStepRefinement.lean",
+      "sha256": "3b5b080380d07a5f3c40b73105606d8223159be7d1b9c52edc6ae87ceb1367d9",
+      "theorems": 32,
+      "leanVersion": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "proposals/initial-emission/OneStepRefinement.lean"
+      ],
+      "workingDirectory": "spec/lean",
+      "exitCode": 0,
+      "stdout": "true\n'ApSpec.InitialEmissionOneStep.selected_flow_child_matches_current' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.concrete_mark_mismatch_always_rejects' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.selected_policy_cells' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.selected_concrete_exact_child_matches_current' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.uniform_abstract_must_needs_new_representation' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.deeper_concrete_may_must_matching_gap' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.coverage_matching_admits_deeper_concrete_must' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.ordinary_concrete_matching_is_unchanged' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.current_concrete_star_starts_demand' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.concrete_star_start_cannot_make_normal' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.demand_summary_application_cannot_make_normal' depends on axioms: [propext, Quot.sound]\n'ApSpec.InitialEmissionOneStep.rejected_concrete_star_child_matching_gap' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.selected_prefix_covers_actual' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.first_field_flow_identity_preserves_suffix' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.selected_abstract_exact_is_a_grammar_change' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.exact_must_not_silently_start_as_star' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.widening_adds_a_false_pair' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.relaxed_current_replay_adds_a_false_normal_pair' depends on axioms: [propext]\n",
+      "dependencyBuild": {
+        "command": [
+          "lake",
+          "build",
+          "ApSpec.CorrelatedConcreteImplementation"
+        ],
+        "exitCode": 0
+      },
+      "allTheoremAxiomAudit": {
+        "exitCode": 0,
+        "stdout": "true\n'ApSpec.InitialEmissionOneStep.selected_flow_child_matches_current' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.concrete_mark_mismatch_always_rejects' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.selected_policy_cells' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.selected_concrete_exact_child_matches_current' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.uniform_abstract_must_needs_new_representation' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.deeper_concrete_may_must_matching_gap' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.coverage_matching_admits_deeper_concrete_must' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.ordinary_concrete_matching_is_unchanged' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.current_concrete_star_starts_demand' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.concrete_star_start_cannot_make_normal' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.demand_summary_application_cannot_make_normal' depends on axioms: [propext, Quot.sound]\n'ApSpec.InitialEmissionOneStep.rejected_concrete_star_child_matching_gap' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.selected_prefix_covers_actual' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.first_field_flow_identity_preserves_suffix' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.selected_abstract_exact_is_a_grammar_change' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.exact_must_not_silently_start_as_star' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.widening_adds_a_false_pair' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.relaxed_current_replay_adds_a_false_normal_pair' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.stop_after_first_new_field' does not depend on any axioms\n'ApSpec.InitialEmissionOneStep.remainder_does_not_change_initial' does not depend on any axioms\n'ApSpec.InitialEmissionOneStep.selected_prefix_covers_actual' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.two_known_fields_still_select_only_one' does not depend on any axioms\n'ApSpec.InitialEmissionOneStep.concrete_mark_mismatch_always_rejects' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.selected_policy_cells' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.mismatches_in_all_requested_shapes' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.deeper_concrete_exact_keeps_whole_submitted_fact' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.selected_concrete_exact_child_matches_current' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.uniform_abstract_must_needs_new_representation' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.deeper_concrete_may_must_matching_gap' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.unchanged_any_remains_valid' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.coverage_matching_admits_deeper_concrete_must' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.ordinary_concrete_matching_is_unchanged' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.ordinary_any_must_premise_still_rejects_exact_supplier' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.current_concrete_star_starts_demand' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.selected_deeper_concrete_start_is_demand' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.concrete_star_identity_summary_is_demand' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.concrete_star_start_cannot_make_normal' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.demand_summary_application_cannot_make_normal' depends on axioms: [propext, Quot.sound]\n'ApSpec.InitialEmissionOneStep.normal_caller_gets_demand_from_concrete_star_summary' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.selected_flow_child_matches_current' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.rejected_concrete_star_child_matching_gap' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.first_field_flow_identity_preserves_suffix' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.selected_exact_cells_match_mathematically' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.selected_abstract_exact_is_a_grammar_change' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.exact_must_not_silently_start_as_star' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.widening_adds_a_false_pair' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.exact_does_not_authorize_child_location' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.new_exact_record_reaches_the_unprotected_current_cell' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.relaxed_current_replay_adds_a_false_normal_pair' depends on axioms: [propext]\n'ApSpec.InitialEmissionOneStep.checked' depends on axioms: [propext]\n",
+        "stderr": ""
+      }
+    }
   }
 }
