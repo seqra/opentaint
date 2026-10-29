@@ -429,3 +429,8 @@ source case stops with `NO_DEMAND_EDGE`, and the sink case uses a POLICY cap.
 Their full traces, test source and validation receipts are
 [embedded](data/bidirectional-initial-emission-refinement-20261029.json).
 No production admission rule or stop rule has changed.
+
+The refinement clarification permits ANY-with-ANY intersection. The two
+observation examples reject a strict-progress gate; they do not require
+exceptions to ordinary intersection. The follow-up now includes a Lean
+matrix for EXACT, ANY, MUST, field prefixes, and supplied STAR.
