@@ -4,6 +4,15 @@ Date: 29 October 2026. Source revision: `1a40d9008`.
 This note records the selected changes and the remaining proof gaps.
 It does not change production code.
 
+Later clarification: the
+[implementation proposal](bidirectional-summary-demand-workload-implementation-20261029.md)
+adds the selected precise-demand cells and a total scalar policy. Its
+projection proof permits self-emission as an image test within that scope.
+The partial model below remains historical evidence. The
+[closed exact-replay trace](bidirectional-exact-flow-replay-trace-20261029.md)
+replaces the standalone application example as the reachable gap witness.
+No uncovered EXACT replay behavior is selected yet.
+
 The earlier scalar intersection matrix is a comparison with current code.
 It is not the selected emission policy. The new policy stops after one new
 field. It can emit an initial broader than the submitted fact.
