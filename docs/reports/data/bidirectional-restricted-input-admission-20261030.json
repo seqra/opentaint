@@ -1,6 +1,6 @@
 {
   "state": "PASS_DIAGNOSTIC_CONTROLS",
-  "utc": "2026-10-30T22:02:09.770639+00:00",
+  "utc": "2026-10-30T22:27:29.072890+00:00",
   "runtimeUnderReview": "edb2e06cdb17eecafbe03415236bf56c57910239",
   "productionSourcesUnchanged": true,
   "newProjectAnalyzerRuns": 0,
@@ -208,17 +208,30 @@
   "selectedCallPolicy": {
     "scope": "Restricted runs. No production implementation change in this investigation.",
     "order": [
-      "Apply persisted NORMAL summaries using the existing native/reversed record rules.",
-      "Run the same bounded-input demand admission as initial emission. Empty result ends this current-run route.",
-      "For a nonempty result, register/replay current summaries, subscribe to new ones, and submit emitted initials."
+      "Replay persisted NORMAL summaries on every whole original offer, using existing native/reversed application and post-statement output deduplication; retain no native-replay input history.",
+      "Run complete bounded-input demand admission once in the caller. Empty emission ends this current-run route.",
+      "For a nonempty result, register/replay current summaries with existing fresh live input admission; send the completed immutable initial set to the callee."
     ],
     "withdrawn": "Do not test compatibility with hypothetical normalized summary premises. Applicability alone does not make a current-run answer necessary.",
     "dedupDistinction": "Demand match is independent of whether the callee initial was already started. Keep full actual input and caller binding for summary application.",
     "lookupResultDelivery": {
       "caller": "Perform bounded-input demand lookup and initial emission once. Send the completed immutable collection of canonical InitialAp keys addressed to the full callee MethodKey.",
-      "callee": "Consume the provided initial keys through the existing addInitial start gate. Do not repeat input limiting, leaf scanning, demand lookup, or demand eligibility testing.",
+      "callee": "Consume supplied canonical keys through the existing addInitial gate. No repeated limiting, leaf scan, demand lookup or demand eligibility test.",
       "retainedCallerState": "Keep the original actual Facts and full CallerRef, layers and stage for summary matching/application. Do not replace them with the emitted initial.",
       "scope": "Proposed restricted normal-input delivery only. Keys and payload remain within the same run and shared AP manager. Existing required-delivery and cancellation contracts apply. No production implementation change."
-    }
+    },
+    "persistedReplayFreshness": "User decision: replay each offer and rely on output deduplication. Current-summary replay remains fresh-only."
+  },
+  "implementationProposal": {
+    "path": "docs/design/bidirectional-selected-call-policy-implementation-20261030.md",
+    "sha256": "cbbb39cc01dac02ec47ba7d675069182e73053444936b0d7811a2fdd10e1c263",
+    "status": "PROPOSAL_ONLY",
+    "newProductionImplementation": false,
+    "formalReceipt": "spec/lean/proposals/selected-call-policy-20261030/checks.json",
+    "formalReceiptSha256": "f7cc303b5a91467bc835be8fce6dbabca3f9d03e0556029ef09a328013c83b19",
+    "formalTheoremsNew": 30,
+    "formalTheoremsIncludingDependency": 58,
+    "auditedDeclarationsIncludingDependency": 112,
+    "wholeAnalyzerVerified": false
   }
 }
