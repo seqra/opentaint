@@ -13,9 +13,6 @@ import org.opentaint.ir.api.common.CommonMethod
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicLongArray
 
-private const val ELIGIBLE_NO: Byte = 1
-private const val ELIGIBLE_YES: Byte = 2
-
 /** Virtual demand only. A lookup neither starts a query nor changes publication permission. */
 interface FrozenCompletion {
     fun statistics(): String = "unavailable"
@@ -180,32 +177,9 @@ class DetachedStaticCallGraph private constructor(
     val methodCount: Int get() = adjacency.size
     val edgeCount: Long get() = adjacency.sumOf { it.size.toLong() }
 
-    internal fun scratch(method: CommonMethod, cancellation: Cancellation): Reachability =
-        Reachability(ids[method], adjacency, cancellation)
-
     internal fun id(method: CommonMethod): Int? = ids[method]
-
-    /** Incremental query scratch: a graph vertex is expanded at most once per lookup. */
-    internal class Reachability(root: Int?, private val graph: Array<IntArray>, private val cancellation: Cancellation) {
-        private val seen = HashSet<Int>()
-        private val pending = ArrayDeque<Int>()
-        init { if (root != null) { seen += root; pending += root } }
-        fun reachesAny(owners: IntArray): Boolean {
-            if (owners.any { it in seen }) return true
-            while (pending.isNotEmpty()) {
-                cancellation.checkpoint()
-                val next = pending.removeLast()
-                var hit = false
-                for (child in graph[next]) {
-                    cancellation.checkpoint()
-                    if (seen.add(child)) pending += child
-                    if (owners.binarySearch(child) >= 0) hit = true
-                }
-                if (hit) return true
-            }
-            return false
-        }
-    }
+    internal fun outDegree(methodId: Int): Int = adjacency[methodId].size
+    internal fun calleeAt(methodId: Int, position: Int): Int = adjacency[methodId][position]
 
     companion object {
         val EMPTY = DetachedStaticCallGraph(emptyMap(), emptyArray())
@@ -241,12 +215,12 @@ class FrozenStaticCompletion private constructor(
     private val bridgeEntryRows: List<EntryRows>,
     private val bridgeEntries: EntryDirectory,
     private val locals: Map<MethodKey, Attachments>,
-    private val ownerFamilyCount: Int,
+    private val ownerVisibility: FrozenOwnerVisibility,
     val seedMemberships: Long,
     val writerAttachments: Long,
     val readerAttachments: Long,
 ) : FrozenCompletion {
-    // Opt-in totals only; answers remain local to one View.
+    // Opt-in query totals only. The immutable graph relation is shared by all views.
     private val ownerStatistics = if (java.lang.Boolean.getBoolean("org.opentaint.bidi.optimizationStatistics"))
         AtomicLongArray(4) else null
     val seedKeys: Int get() = bridges.sumOf { it.labels.size }
@@ -254,8 +228,13 @@ class FrozenStaticCompletion private constructor(
     override fun statistics(): String = "seedKeys=$seedKeys seedEntryKeys=${bridgeEntryRows.size} seedGeometries=$seedGeometries ownerMemberships=$seedMemberships " +
         "writerAttachments=$writerAttachments readerAttachments=$readerAttachments " +
         "callMethods=${graph.methodCount} callEdges=${graph.edgeCount} " +
-        "ownBridgeMemberships=${ownBridges.values.sumOf { it.size.toLong() }} ownerFamilies=$ownerFamilyCount" +
-        (ownerStatistics?.let { " ownerEvaluations=${it[0]} ownerHits=${it[1]} ownerMemoViews=${it[2]} ownerMemoAllocatedBytes=${it[3]}" } ?: "")
+        "ownBridgeMemberships=${ownBridges.values.sumOf { it.size.toLong() }} ownerFamilies=${ownerVisibility.familyCount} " +
+        ownerVisibility.statistics.let {
+            "ownerComponents=${it.components} ownerDagEdges=${it.dagEdges} ownerIndexSeedMemberships=${it.seedMemberships} " +
+                "ownerIndexWords=${it.allocatedWords} ownerIndexBytes=${it.allocatedWords * Long.SIZE_BYTES} ownerIndexBuildNanos=${it.buildNanos}"
+        } + (ownerStatistics?.let {
+            " ownerBitQueries=${it[0]} ownerBitHits=${it[1]} ownerOutsideQueries=${it[2]} ownerOutsideHits=${it[3]}"
+        } ?: "")
     private class Owners(val familyId: Int, val graphIds: IntArray, val outsideGraph: Set<CommonMethod>)
     private class BridgeRows(val geometry: GuidanceGeometry, val labels: LongArray, val owners: List<Owners>,
                              val outputs: StaticOutputOrdinals)
@@ -405,29 +384,22 @@ class FrozenStaticCompletion private constructor(
     }
 
     private inner class View(private val method: MethodKey, private val inherited: Boolean) : C5StaticDemandView {
-        private val reach by lazy { graph.scratch(method.method, ap.cancellation) }
         private val ownId = graph.id(method.method)
         private val local = locals[method]
         private val ownRows = ownBridges[method.method] ?: LongArray(0)
-        private var eligibility: ByteArray? = null
         private fun eligible(owners: Owners): Boolean {
             ap.cancellation.checkpoint()
             if (!inherited) return method.method in owners.outsideGraph ||
                 (ownId != null && owners.graphIds.binarySearch(ownId) >= 0)
-            val memo = eligibility ?: ByteArray(ownerFamilyCount).also {
-                eligibility = it
-                ownerStatistics?.incrementAndGet(2)
-                ownerStatistics?.addAndGet(3, ownerFamilyCount.toLong())
+            ownerStatistics?.incrementAndGet(2)
+            if (method.method in owners.outsideGraph) {
+                ownerStatistics?.incrementAndGet(3)
+                return true
             }
-            when (memo[owners.familyId]) {
-                ELIGIBLE_YES -> { ownerStatistics?.incrementAndGet(1); return true }
-                ELIGIBLE_NO -> { ownerStatistics?.incrementAndGet(1); return false }
-            }
-            // Keep the outside-graph short circuit and the graph scratch lazy.
-            // An interrupted computation does not install a negative answer.
-            val answer = method.method in owners.outsideGraph || reach.reachesAny(owners.graphIds)
+            ap.cancellation.checkpoint()
             ownerStatistics?.incrementAndGet(0)
-            memo[owners.familyId] = if (answer) ELIGIBLE_YES else ELIGIBLE_NO
+            val answer = ownerVisibility.contains(ownId, owners.familyId)
+            if (answer) ownerStatistics?.incrementAndGet(1)
             return answer
         }
 
@@ -674,10 +646,14 @@ class FrozenStaticCompletion private constructor(
             val own = LinkedHashMap<CommonMethod, LongArrayList>()
             val projectedEntries = LinkedHashMap<Pattern, MutableSet<CommonMethod>>()
             var memberships = 0L
-            var nextFamilyId = 0
-            fun freezeOwners(methods: Set<CommonMethod>) = Owners(nextFamilyId++,
-                methods.mapNotNull { graph.id(it) }.toIntArray().also { it.sort() },
-                methods.filterTo(LinkedHashSet()) { graph.id(it) == null })
+            val ownerFamilies = ArrayList<Owners>()
+            fun freezeOwners(methods: Set<CommonMethod>): Owners {
+                val owners = Owners(ownerFamilies.size,
+                    methods.mapNotNull { ap.cancellation.checkpoint(); graph.id(it) }.toIntArray().also { it.sort() },
+                    methods.filterTo(LinkedHashSet()) { ap.cancellation.checkpoint(); graph.id(it) == null })
+                ownerFamilies += owners
+                return owners
+            }
             for ((geometry, rows) in bridges) {
                 ap.cancellation.checkpoint()
                 val labels = LongArray(rows.size)
@@ -734,10 +710,17 @@ class FrozenStaticCompletion private constructor(
                 ap.cancellation.checkpoint()
                 entryRows += EntryRows(entry, freezeOwners(methods))
             }
+            // Both original B labels and their projected entry families now have stable IDs.
+            val visibilityBuilder = FrozenOwnerVisibility.Builder(graph, ownerFamilies.size, ap.cancellation)
+            for (family in ownerFamilies) {
+                ap.cancellation.checkpoint()
+                for (owner in family.graphIds) visibilityBuilder.seed(family.familyId, owner)
+            }
+            val visibility = visibilityBuilder.finish()
             return FrozenStaticCompletion(ap, graph, frozenBridges, ends, starts, flowStarts, flowEnds, coloredOutputs,
                 Collections.unmodifiableSet(bridgeOwners), own.mapValues { it.value.toLongArray() },
                 entryRows, EntryDirectory.build(ap, entryRows.map { it.entry }),
-                Collections.unmodifiableMap(locals), nextFamilyId,
+                Collections.unmodifiableMap(locals), visibility,
                 memberships, localRows.values.sumOf { it.first.size.toLong() },
                 localRows.values.sumOf { it.second.size.toLong() })
         }
