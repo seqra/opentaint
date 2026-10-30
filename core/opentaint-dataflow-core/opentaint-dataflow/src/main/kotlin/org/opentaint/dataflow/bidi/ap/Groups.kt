@@ -71,6 +71,18 @@ class FlowGroup(private val m: ApManager, private val interner: TrieInterner<Flo
     }
 }
 
+/** Construct a store result after its mask is proved to be included in root.
+ * This is coordinate inclusion, not AP prefix coverage. General factories still trim. */
+private fun admittedTree(
+    m: ApManager, header: TaintTree, root: TaintNode, includedMask: TaintNode?,
+    exclusion: ExclusionSet = header.exclusion,
+): TaintTree = TaintTree(
+    header.base, header.layer, root,
+    if (!root.hasAny || header.anyTail == Tail.ANY) ExclusionSet.Empty else m.intern(exclusion),
+    if (root.hasAny) header.anyTail else Tail.ANY_TAINT,
+    includedMask,
+)
+
 /** TAINT values for one base. STAR and must spans keep distinct suffix semantics. */
 class TaintGroup(private val m: ApManager, private val interner: TrieInterner<TaintLeaves>) {
     private val trees = arrayOf(ArrayList<TaintTree>(1), ArrayList<TaintTree>(1))
@@ -110,12 +122,12 @@ class TaintGroup(private val m: ApManager, private val interner: TrieInterner<Ta
                         val rest = subtractSubsumed(pending, list) ?: return null
                         val protection = mergeProtection(stored.nonSubsumable, rest.nonSubsumable)
                         val root = alg.mergeAdd(stored.root, rest.root, m.cancellation)
-                        list[k] = stored.withRoot(interner.internIfRequired(root)).withProtection(protection)
+                        list[k] = admittedTree(m, stored, interner.internIfRequired(root), protection)
                         return rest
                     }
                     list.removeAt(k)
-                    pending = m.taintTree(pending.base, pending.layer, stored.root, exclusion, pending.anyTail)
-                        .withProtection(mergeProtection(stored.nonSubsumable, pending.nonSubsumable))
+                    pending = admittedTree(m, pending, stored.root,
+                        mergeProtection(stored.nonSubsumable, pending.nonSubsumable), exclusion)
                     continue
                 }
             }
@@ -127,16 +139,15 @@ class TaintGroup(private val m: ApManager, private val interner: TrieInterner<Ta
                 it.anyTail == rest.anyTail && it.exclusion == rest.exclusion
             }
             if (i < 0) {
-                list += rest.withRoot(interner.internIfRequired(rest.root))
+                list += admittedTree(m, rest, interner.internIfRequired(rest.root), rest.nonSubsumable)
                 return rest
             }
             val stored = list[i]
             val (merged, delta) = alg.mergeAddDelta(stored.root, rest.root, m.cancellation)
             val protection = mergeProtection(stored.nonSubsumable, rest.nonSubsumable)
             val deltaRoot = mergeProtection(delta, rest.nonSubsumable) ?: return null
-            list[i] = stored.withRoot(interner.internIfRequired(merged)).withProtection(protection)
-            return m.taintTree(pending.base, pending.layer, deltaRoot, rest.exclusion, rest.anyTail)
-                .withProtection(rest.nonSubsumable)
+            list[i] = admittedTree(m, stored, interner.internIfRequired(merged), protection)
+            return admittedTree(m, rest, deltaRoot, rest.nonSubsumable)
         }
     }
 
@@ -146,7 +157,7 @@ class TaintGroup(private val m: ApManager, private val interner: TrieInterner<Ta
         val protection = t.nonSubsumable?.let { subtract(it, t, others, protectedOnly = true) }
         val root = mergeProtection(ordinary, protection) ?: return null
         if (root === t.root && protection === t.nonSubsumable) return t
-        return t.withRoot(root).withProtection(protection)
+        return admittedTree(m, t, root, protection)
     }
 
     private fun mergeProtection(a: TaintNode?, b: TaintNode?): TaintNode? = when {
