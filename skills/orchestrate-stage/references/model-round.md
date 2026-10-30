@@ -27,7 +27,7 @@ Expect back — every method classified into the batch's `passthrough` / `datafl
 uv run <skill-dir>/scripts/generate.py merge-skipped
 ```
 
-It merges every batch's `skipped` / `engine_issues` into `approximations/skipped.yaml` and prunes the consumed plans.
+It merges every batch's `skipped` / `engine_issues` into `models/skipped.yaml` and prunes the consumed plans.
 
 ## Build the unbuilt batches
 

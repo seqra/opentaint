@@ -21,8 +21,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from _common import (APPROX, DATAFLOW,
-                     FINDINGS_TR, MODEL, PASS_THROUGH, ROOT, RULES, RULES_TR,
+from _common import (DATAFLOW,
+                     FINDINGS_TR, MODEL, MODELS_TR, PASS_THROUGH, ROOT, RULES, RULES_TR,
                      SARIF, SINKS_TR, SOURCES_TR, TAGS, TRACKING,
                      active_lib_rules, build_done_keys, builtin_rules_root,
                      classified_keys, dropped_entries, git_head, iter_rules,
@@ -34,7 +34,7 @@ SCAN_LEVEL = STATE.get("scan_level")
 TRIAGE_LEVEL = STATE.get("triage_level")
 
 DISCOVER_PLANS = RULES_TR / "plans"
-APPROX_PLANS = APPROX / "plans"
+MODEL_PLANS = MODELS_TR / "plans"
 VULN = ROOT / "vulnerabilities.md"
 GLOBAL_CAP = 10
 
@@ -321,7 +321,7 @@ def ph_models():
     classified = classified_keys()
     uncovered = [e for e in dropped_entries() if member_key(e) not in classified]
     if uncovered:
-        plans = sorted(glob.glob(str(APPROX_PLANS / "*.yaml")))
+        plans = sorted(glob.glob(str(MODEL_PLANS / "*.yaml")))
         if plans:
             tasks = [f"dispatch analyze-external-methods, one per plan (cap {GLOBAL_CAP}):"]
             tasks += [f"  {p}" for p in plans]

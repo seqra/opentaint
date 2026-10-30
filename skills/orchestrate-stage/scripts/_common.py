@@ -15,7 +15,7 @@ import yaml
 ROOT = Path(".opentaint")
 MODEL = ROOT / "project"
 TRACKING = ROOT / "tracking"
-APPROX = TRACKING / "approximations"
+MODELS_TR = TRACKING / "models"
 RULES_TR = TRACKING / "rules"
 SOURCES_TR = RULES_TR / "sources"
 SINKS_TR = RULES_TR / "sinks"
@@ -214,7 +214,7 @@ MODELED_BUCKETS = ("passthrough", "dataflow")
 
 def batch_files():
     """Every model batch file (skipped.yaml is the merged view, not a batch)."""
-    return [Path(p) for p in sorted(glob.glob(str(APPROX / "*.yaml")))
+    return [Path(p) for p in sorted(glob.glob(str(MODELS_TR / "*.yaml")))
             if Path(p).name != "skipped.yaml"]
 
 

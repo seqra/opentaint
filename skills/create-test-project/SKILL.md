@@ -19,7 +19,7 @@ Provided by the caller, fall back to the default value when omitted. Ask back on
 - `language` (required) — target language for this project and language-specific instructions
 - `type` (required) — what this project verifies, selecting the sample style and the identifying inputs below: `rule-source`, `rule-sink`, or `dataflow`
 - for `rule-source` / `rule-sink` — `unit`: the unit id; its members and `dependencies` come from `.opentaint/tracking/rules/sources|sinks/<unit>.yaml`
-- for `dataflow` — `batch`: the batch whose `.opentaint/tracking/approximations/<batch>.yaml` provides the dataflow methods to exercise and their `dependencies`
+- for `dataflow` — `batch`: the batch whose `.opentaint/tracking/models/<batch>.yaml` provides the dataflow methods to exercise and their `dependencies`
 
 The project folder `<name>` is that identifier — the `unit` for a rule side, the `batch` for a dataflow model.
 
@@ -108,7 +108,7 @@ stages:
   tests_passing: pending
 ```
 
-`.opentaint/tracking/approximations/<batch>.yaml` — one batch's callable classification, `<batch>` the plan's filename stem. Every callable sits in exactly one verdict bucket, keyed with the exact language-specific `method` and `signature` from the plan so distinct variants stay separate:
+`.opentaint/tracking/models/<batch>.yaml` — one batch's callable classification, `<batch>` the plan's filename stem. Every callable sits in exactly one verdict bucket, keyed with the exact language-specific `method` and `signature` from the plan so distinct variants stay separate:
 - `passthrough`, `dataflow` — modeled carriers; each entry `{ method, signature }`
 - `skipped` — terminal non-carriers; each `{ method, signature, reason }`
 - `engine_issues` — a separate bucket for carriers the engine provably can't propagate (built but still dropped); each `{ method, signature, reason }`. Terminal and treated just like `skipped` — the only difference is the reason. `merge-skipped` carries it into `skipped.yaml` as its own `engine_issues` group alongside the regular skipped `methods`.

@@ -6,7 +6,7 @@ Language reference for a `dataflow` type, keyed to the body's steps.
 
 ### 1. Scaffold the project
 
-`opentaint test model init <project> --language go` scaffolds a Go module with module path `test`, the `taint` package (the fixed `taint.Source()` / `taint.Sink()`) and the fixed `approximation-rule.yaml` the harness applies. Pass each lib as a `--dependency` at its exact version from the app's `go.mod` verbatim — including pseudo-versions — not a guess. The model module scaffolded later takes the same pins, so the samples and the models they exercise build against one version.
+`opentaint test model init <project> --language go` scaffolds a Go module with module path `test`, the `taint` package (the fixed `taint.Source()` / `taint.Sink()`) and the fixed `model-rule.yaml` the harness applies. Pass each lib as a `--dependency` at its exact version from the app's `go.mod` verbatim — including pseudo-versions — not a guess. The model module scaffolded later takes the same pins, so the samples and the models they exercise build against one version.
 
 ```bash
 opentaint test model init .opentaint/test-projects/<name> \
@@ -18,7 +18,7 @@ When the app replaces a module with a local directory, add the same replacement 
 
 ### 2. Write the samples
 
-Write one sample per callable in the batch's `dataflow` bucket, across all its packages. Each `dataflow` entry records the callable's `signature` (`args:<count>`, the receiver excluded) — use it to shape the call. Look at how the callable is actually called in the project to shape the sample and pick the receiver type. Each sample is a plain exported function in `package test` at the module root — you don't author a rule; the scaffold's fixed `approximation-rule.yaml` is what the harness applies. The sample just routes `taint.Source()` through the modeled callable into `taint.Sink(...)`. Its verdict is recorded in `rule-test.yaml` (below), not on the function.
+Write one sample per callable in the batch's `dataflow` bucket, across all its packages. Each `dataflow` entry records the callable's `signature` (`args:<count>`, the receiver excluded) — use it to shape the call. Look at how the callable is actually called in the project to shape the sample and pick the receiver type. Each sample is a plain exported function in `package test` at the module root — you don't author a rule; the scaffold's fixed `model-rule.yaml` is what the harness applies. The sample just routes `taint.Source()` through the modeled callable into `taint.Sink(...)`. Its verdict is recorded in `rule-test.yaml` (below), not on the function.
 
 Mark each callable's test-project status (per Tracking): `done` once its sample is in the project. If no sample can be written for a callable, exclude it, mark it `failed`, and note it in the summary — don't let one unmodelable callable block the rest.
 
@@ -53,7 +53,7 @@ Register the verdicts — write `rule-test.yaml` at the test-project root (next 
 
 ```yaml
 tests:
-  - rule-id: approximation-rule.yaml#approximation-rule
+  - rule-id: model-rule.yaml#model-rule
     positive:
       - test.TaintReachesSink
     negative:

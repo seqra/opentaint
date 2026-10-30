@@ -6,7 +6,7 @@ Language reference for a `dataflow` type, keyed to the body's steps.
 
 ### 1. Scaffold the project
 
-`opentaint test model init <project> --language java` scaffolds the Gradle build plus `Taint.java` and the fixed `approximation-rule.yaml` the harness applies. Pass each lib as a `--dependency` at its exact version from the app's dependency management (`.opentaint/project/sources/**/pom.xml`) verbatim — including timestamped snapshots — not a guess. The model project scaffolded later takes the same pins, so the samples and the models they exercise compile against one version.
+`opentaint test model init <project> --language java` scaffolds the Gradle build plus `Taint.java` and the fixed `model-rule.yaml` the harness applies. Pass each lib as a `--dependency` at its exact version from the app's dependency management (`.opentaint/project/sources/**/pom.xml`) verbatim — including timestamped snapshots — not a guess. The model project scaffolded later takes the same pins, so the samples and the models they exercise compile against one version.
 
 ```bash
 opentaint test model init .opentaint/test-projects/<name> \
@@ -16,7 +16,7 @@ opentaint test model init .opentaint/test-projects/<name> \
 
 ### 2. Write the samples
 
-Write one sample per method in the batch's `dataflow` bucket, across all its classes. Each `dataflow` entry records the method's `signature` (JVM descriptor) — reuse it so your sample matches. Look at how the method is actually called in the project to shape the sample and pick the receiver type. Each sample is a plain public method under `src/main/java/test/` — you don't author a rule; the scaffold's fixed `approximation-rule.yaml` is what the harness applies. The sample just routes `Taint.source()` through the modeled method into `Taint.sink(...)`. Its verdict is recorded in `rule-test.yaml` (below), not on the method.
+Write one sample per method in the batch's `dataflow` bucket, across all its classes. Each `dataflow` entry records the method's `signature` (JVM descriptor) — reuse it so your sample matches. Look at how the method is actually called in the project to shape the sample and pick the receiver type. Each sample is a plain public method under `src/main/java/test/` — you don't author a rule; the scaffold's fixed `model-rule.yaml` is what the harness applies. The sample just routes `Taint.source()` through the modeled method into `Taint.sink(...)`. Its verdict is recorded in `rule-test.yaml` (below), not on the method.
 
 Mark each method's test-project status (per Tracking): `done` once its sample is in the project. If no sample can be written for a method, exclude it, mark it `failed`, and note it in the summary — don't let one unmodelable method block the rest.
 
@@ -53,7 +53,7 @@ Register the verdicts — write `rule-test.yaml` at the test-project root (next 
 
 ```yaml
 tests:
-  - rule-id: approximation-rule.yaml#approximation-rule
+  - rule-id: model-rule.yaml#model-rule
     positive:
       - test.ModelSamples#taintReachesSink
     negative:

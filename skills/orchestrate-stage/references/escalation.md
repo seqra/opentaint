@@ -39,6 +39,6 @@ The stage orchestrator writes the terminal mark after the reporting leaf returns
 - { method: "cn.hutool.core.lang.Assert#notNull", signature: "(Ljava/lang/Object;Ljava/util/function/Supplier;)Ljava/lang/Object;", reason: "one-line engine limitation" }
 ```
 
-After a model mark, run `uv run <skill-dir>/scripts/generate.py merge-skipped` so `approximations/skipped.yaml` reflects the terminal item.
+After a model mark, run `uv run <skill-dir>/scripts/generate.py merge-skipped` so `models/skipped.yaml` reflects the terminal item.
 
 A malformed model is not immediately an engine issue: re-dispatch its authoring skill with `language` + `batch` and, when the scan identifies the affected methods, that `methods` subset. The leaf repairs the existing package config or dataflow source even when those methods are already in `build.done`; unrelated existing carriers stay unchanged. Finish with the project rescan as the next step. If the repaired carrier is still dropped, use the terminal flow above.

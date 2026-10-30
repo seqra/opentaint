@@ -4,6 +4,6 @@
 {% include "shared/inputs/language.md" %}
 - `type` (required) — what this project verifies, selecting the sample style and the identifying inputs below: `rule-source`, `rule-sink`, or `dataflow`
 - for `rule-source` / `rule-sink` — `unit`: the unit id; its members and `dependencies` come from `.opentaint/tracking/rules/sources|sinks/<unit>.yaml`
-- for `dataflow` — `batch`: the batch whose `.opentaint/tracking/approximations/<batch>.yaml` provides the dataflow methods to exercise and their `dependencies`
+- for `dataflow` — `batch`: the batch whose `.opentaint/tracking/models/<batch>.yaml` provides the dataflow methods to exercise and their `dependencies`
 
 The project folder `<name>` is that identifier — the `unit` for a rule side, the `batch` for a dataflow model.
