@@ -20,6 +20,13 @@ func scanExitCodesHelp(completedLine string) string {
   1    General failure (configuration or infrastructure error)` + analyzerExitCodeRows()
 }
 
+func gateExitCodesHelp(completedLine string) string {
+	return `Exit codes:
+  0    ` + completedLine + `
+  1    General failure (configuration or infrastructure error)
+  2    Findings remain and --error-on-findings was set` + analyzerExitCodeRows()
+}
+
 func testExitCodesHelp(passedLine string) string {
 	return `Exit codes:
   0    ` + passedLine + `

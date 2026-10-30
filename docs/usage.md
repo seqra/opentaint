@@ -111,6 +111,8 @@ On the first run, the compiled project model is cached in `~/.opentaint/cache/`.
 | `--ruleset` | Rules to run: a YAML file, a directory of rules files, or `builtin` (default: `builtin`) |
 | `--dry-run` | Validate inputs and show what would run without compiling or scanning |
 | `--log-file` | Path to the log file (default: `<cache-dir>/logs/<timestamp>.log`) |
+| `--rule-id` | Run only rules with this ID (repeatable) |
+| `--exclude-rule-id` | Never run rules matching this ID: full id, bare name, or glob over the full id — the same matching as summary's `--rule-id` filter (repeatable, overrides `rules.exclude` from the config, composes with `--rule-id`) |
 
 #### Rule-authoring flags
 
@@ -332,3 +334,25 @@ These options apply to all commands:
 - `--color string` — Color mode (`auto`, `always`, `never`), defaults to `auto` (detects terminal)
 
 For persistent configuration using files or environment variables, see the [Configuration](configuration.md) documentation.
+
+### Fail a CI job on findings
+
+By default a successful scan exits with code 0 even when it finds issues. Use
+`--error-on-findings` to exit with code 2 when findings remain. Analyzer failures
+keep their existing exit codes. `--error-on-severity` restricts the findings that
+count. It accepts repeated flags and comma-separated SARIF levels: `error`,
+`warning`, `note`, and `none`. Without a severity filter every level counts.
+
+```bash
+opentaint scan . --error-on-findings --error-on-severity error,warning
+```
+
+Use `--exclude-rule-id` to skip rules before analysis. It accepts a full rule ID,
+a bare rule name, or a glob over the full ID, and can be repeated. With
+`--rule-id`, exclusions are subtracted from the explicit selection. Excluding
+every selected rule is an error. Quote glob patterns to keep the shell from
+expanding them.
+
+```bash
+opentaint scan . --exclude-rule-id 'security/experimental/**'
+```
