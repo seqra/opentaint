@@ -24,8 +24,10 @@ need no compilation.`,
 		projectPath := log.AbsPathOrExit(args[0], "model-project")
 
 		if models.IsGoProject(projectPath) {
-			out.Fatalf("%s is a Go model module. Go models are loaded from source; no compilation needed. "+
-				"Pass the directory to --dataflow-models", projectPath)
+			out.Printf("%s is a Go model module. Go models are loaded from source; no compilation needed.", projectPath)
+			suggest("Pass the directory to --dataflow-models",
+				fmt.Sprintf("opentaint scan <project> --dataflow-models %s", args[0]))
+			return
 		}
 		if !models.IsProject(projectPath) {
 			out.Fatalf("%s is not a model project: it has no build.gradle.kts declaring the "+
