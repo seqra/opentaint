@@ -5,6 +5,11 @@ The measured runtime is `bb74cef6cf483db167c161020a8a4cca576ca005`.
 Use the final [performance report](../reports/bidirectional-demand-refinement-workload-20261029.md)
 and its embedded data for the measurements.
 
+**Selected for the next iteration:** outgoing-demand stop, static-label
+selection, and cached CFG delivery. Use the
+[detailed implementation proposal](bidirectional-demand-stop-static-labels-cfg-delivery-implementation-20261030.md)
+for these three changes. The other candidates below remain unselected.
+
 All four project runs are closed. All end on TIMEOUT. Latest reached/complete/accepted
 reports are OWASP run-12/run-11/run-11, conductor run-6/run-5/run-5, thingsboard
 run-2/run-1/run-1, and Stirling-PDF run-6/run-5/run-5. The order below uses the
