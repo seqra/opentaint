@@ -118,11 +118,11 @@ def main():
             'noLeanSorryWarning':all("uses 'sorry'" not in (ROOT/r['log']).read_text() for r in runs)}
     runtime=ROOT/'core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi'
     bindings={str((runtime/p).relative_to(ROOT)):sha(runtime/p) for p in [
-        'store/MethodEdges.kt','store/StaticGuidance.kt','store/StaticEntryLookup.kt',
+        'store/MethodEdges.kt','store/FrozenOwnerVisibility.kt','store/StaticGuidance.kt','store/StaticEntryLookup.kt',
         'store/StaticPairLookup.kt','store/C5StaticDemandView.kt','store/StaticSelectorIndex.kt',
-        'ap/Groups.kt','ap/Conclusions.kt','ap/FlowBackedProtection.kt','ap/TrieOps.kt',
+        'ap/LiteralInitialImage.kt','ap/Groups.kt','ap/Conclusions.kt','ap/FlowBackedProtection.kt','ap/TrieOps.kt',
         'ap/Trie.kt','ap/Facts.kt','ap/Premise.kt','ap/ApManager.kt',
-        'engine/RunMethodAnalyzer.kt']}
+        'engine/RunMethodAnalyzer.kt','driver/IterationDriver.kt']}
     proposal=ROOT/'docs/design/bidirectional-identity-owner-protection-implementation-20261030.md'
     receipt={'status':'PASS' if all(checks.values()) else 'FAILED','runtimeVerifiedByThisChecker':False,
              'baseRuntime':'c98d12582a138d5898e94908ee6690dda73998ca',

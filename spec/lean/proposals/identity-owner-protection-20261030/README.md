@@ -1,11 +1,16 @@
 # Checked models: identity storage, owner visibility and protection admission
 
-Status: checked proposal models. The analyzer implementation is unchanged.
+Status: checked models with runtime adapter tests. The selected runtime
+implementation is in `LiteralInitialImage.kt`, `MethodEdges.kt`,
+`FrozenOwnerVisibility.kt`, `StaticGuidance.kt` and `Groups.kt`.
 Base analyzer: `c98d12582a138d5898e94908ee6690dda73998ca`.
 
 Read the [implementation proposal](../../../../docs/design/bidirectional-identity-owner-protection-implementation-20261030.md)
 for the runtime adapters, code snippets, unchanged contracts and tests.
 Use [checks.json](checks.json) for source hashes and the proof receipt.
+The checker binds current runtime source bytes. It does not verify Kotlin.
+Differential tests compare literal admission and protection with the previous
+scalar groups. Independent BFS tests check the SCC and packed-word adapter.
 
 From the repository root:
 

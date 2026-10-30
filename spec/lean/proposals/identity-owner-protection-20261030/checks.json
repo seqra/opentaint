@@ -3,7 +3,7 @@
   "runtimeVerifiedByThisChecker": false,
   "baseRuntime": "c98d12582a138d5898e94908ee6690dda73998ca",
   "proposalSha256": "91452c71a6a537711b1b5201bd6ed96ec74efab5cdd62ca2c495521ec0839055",
-  "utc": "2026-10-30T10:01:52.982278+00:00",
+  "utc": "2026-10-30T10:59:15.418127+00:00",
   "toolchain": "leanprover/lean4:v4.33.1",
   "leanVersion": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
   "moduleSourceHashes": {
@@ -12,7 +12,7 @@
     "spec/lean/proposals/identity-owner-protection-20261030/ProtectionAdmission.lean": "b374d3f9ba400f3c68b46ffadacf960c480b9a30158932e1a8d249437c62ddc1",
     "spec/lean/proposals/identity-owner-protection-20261030/OwnerVisibility.lean": "5e521e2c182f08b06509e2f7b8fb2253e65f9c8f965d74c8a1b7484e3e2ae0c1"
   },
-  "checkerSha256": "a6eda39397676161e7b9692ac2ac40de856ff7ff219988919d34584a2a2ec07d",
+  "checkerSha256": "5b69ce52601074725a39d11afa8dda10793844fd58597879a7e8a10e08d034ee",
   "theoremCount": 58,
   "auditedDeclarationCount": 124,
   "auditedDeclarations": [
@@ -163,13 +163,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T100149448663Z/CachedCfgDelivery.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/CachedCfgDelivery.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/selected-work-20261030/CachedCfgDelivery.lean"
       ],
       "cwd": "spec/lean/proposals/selected-work-20261030",
       "exitCode": 0,
-      "wallSeconds": 1.3641210049390793,
-      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T100149448663Z/CachedCfgDelivery.log",
+      "wallSeconds": 3.202482208609581,
+      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/CachedCfgDelivery.log",
       "logSha256": "fd9d54ad09f5e998e46734dcc30488aa5aca89ab20bd75e15065c15138c4d083"
     },
     {
@@ -180,13 +180,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T100149448663Z/IdentityCells.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/IdentityCells.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/identity-owner-protection-20261030/IdentityCells.lean"
       ],
       "cwd": "spec/lean/proposals/identity-owner-protection-20261030",
       "exitCode": 0,
-      "wallSeconds": 0.5745788216590881,
-      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T100149448663Z/IdentityCells.log",
+      "wallSeconds": 1.1524285972118378,
+      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/IdentityCells.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -197,13 +197,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T100149448663Z/ProtectionAdmission.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/ProtectionAdmission.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/identity-owner-protection-20261030/ProtectionAdmission.lean"
       ],
       "cwd": "spec/lean/proposals/identity-owner-protection-20261030",
       "exitCode": 0,
-      "wallSeconds": 0.40559305250644684,
-      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T100149448663Z/ProtectionAdmission.log",
+      "wallSeconds": 1.6316443532705307,
+      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/ProtectionAdmission.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -214,13 +214,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T100149448663Z/OwnerVisibility.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/OwnerVisibility.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/identity-owner-protection-20261030/OwnerVisibility.lean"
       ],
       "cwd": "spec/lean/proposals/identity-owner-protection-20261030",
       "exitCode": 0,
-      "wallSeconds": 0.8664713799953461,
-      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T100149448663Z/OwnerVisibility.log",
+      "wallSeconds": 2.066546618938446,
+      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/OwnerVisibility.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -230,23 +230,25 @@
         "1",
         "-M",
         "768",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T100149448663Z/Audit.lean"
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/Audit.lean"
       ],
-      "cwd": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T100149448663Z",
+      "cwd": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z",
       "exitCode": 0,
-      "wallSeconds": 0.30752959847450256,
-      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T100149448663Z/Audit.log",
+      "wallSeconds": 0.20655712485313416,
+      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/Audit.log",
       "logSha256": "b4181cc6eea1ee5440626aa0c9142d81a1bba8f61d4d2b5c1226dc4d3bab528a"
     }
   ],
   "runtimeSourceHashes": {
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/MethodEdges.kt": "d1ae81e0416e4f563e645eba2df4ceb73c58782c4e88f88a11d0e1bfb7de7799",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticGuidance.kt": "a366d49f902101a59007b5d2273491a61b352c5b3e6ff3c5f3a1b99380b34ee7",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/MethodEdges.kt": "69ee803e5ad5e25f1b77d84239dbe3c29e23bf3959f82432b01fce1b44ee3c08",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/FrozenOwnerVisibility.kt": "21bd1084670e0ebd857c576680ed11b534054fbcd22194afc0b2542890a1f5b0",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticGuidance.kt": "5280c902f1010fbfc140223d73e45137b3b98b222a4e06ab5f857d666595abbf",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticEntryLookup.kt": "4e9de8b22b16440b6c14a1862bb5f053e87564618936d52ed753598677f47b4d",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticPairLookup.kt": "b9841cb1f77dc17be8f9ea21e33049db7d37f17d51dd93a1521a42df878b7b2b",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/C5StaticDemandView.kt": "12ad3ea3f2785c209b43fc65ae2af2b952ca9085eb340a45d457cee3090aeddd",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticSelectorIndex.kt": "487904fc700e893b08d58a76588ef8340ba86eb9575c7d9bbd07e6f78e9bd983",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Groups.kt": "82114e53aff1c2e959880c65ec63a041d9e30e55d3c4c1cccba6a32b919f73e4",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/LiteralInitialImage.kt": "b1c639509a74ba916ce8831bf64347f4673920c91c4f3b25e1f6cd411cceb2dd",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Groups.kt": "4acac35dc174c5e07596f5de84f5d6b38a26837cbc81879bb22b80b0183298fa",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Conclusions.kt": "ff059941492674f0eb063e546a1e81ed83d7e13b5294d9124ef42ea807d2e9ec",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/FlowBackedProtection.kt": "babe4411354ceeaa06c169602c8bae726ae29b83ad979fb8febaa95a70f37d62",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/TrieOps.kt": "610b7b4ef0a7567ed0bd073c3addfcf084529fb7d00046d0920976dd3a568375",
@@ -254,7 +256,8 @@
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Facts.kt": "9aa496dcd49a96333843a2fa70ffc0b2284bcad7aec92a7b990667b9c3af7cf1",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Premise.kt": "e8a6b398a0c138d64a4bf013ccd8a4ca554f453d2cfa1f05dbe75964ff022c53",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApManager.kt": "d8a575de8fc4f65d7d589f82784e1614a1728f6284b6865e055749a02b8b02b0",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt": "fb50b04f6b13ebbe1ba5e74bff1eaf470666a3dc77e1d9beb61e1c6f8c6152d7"
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt": "15c9dc1d1ee7cc2a1bc2fd2e2f3ee289eb5740d698034bc637c6d8f4e707e03c",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/IterationDriver.kt": "fe0d34089d9c4cd673f486a51864225246e84214895df7cac99eb43c39bb8bb0"
   },
   "scope": "Constructive identity state/delta and promotion kernels, finite graph path and certified quotient/DAG visibility, and exact-coordinate protection admission. Kotlin SCC extraction, AP recognition and runtime tests are separate implementation obligations."
 }
