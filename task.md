@@ -6,7 +6,7 @@ Our current goal: implement optimization and repeat major testing on real projec
 Always cleanup memory snapshot/profiles from the previous runs.
 
 # Optimization:
-Implement optimization wrt the [bidirectional-identity-owner-protection-implementation-20261030.md](docs/design/bidirectional-identity-owner-protection-implementation-20261030.md)
+Implement optimization wrt the [bidirectional-selected-call-policy-implementation-20261030.md](docs/design/bidirectional-selected-call-policy-implementation-20261030.md)
 Commit after implementation.  
 Avoid changes in the analyzer core, that were not proposed and designed.
 If you have an optimization idea, write a proposal. Then we will include it into the next iteration.
