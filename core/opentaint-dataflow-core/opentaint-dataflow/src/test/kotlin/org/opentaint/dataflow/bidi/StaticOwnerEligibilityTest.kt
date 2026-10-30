@@ -32,7 +32,7 @@ class StaticOwnerEligibilityTest {
         }
     }
 
-    @Test fun `visible view reuses true and false families across interleaved APIs and isolates new views`() {
+    @Test fun `visible views share one frozen exact graph relation across interleaved APIs`() {
         val f = EngineShellFixtures()
         val root = Method("root", 1)
         val yes = Method("reachable", 2)
@@ -72,15 +72,15 @@ class StaticOwnerEligibilityTest {
             view.incoming(c(1)).any(), view.incoming(c(2)).any())
         assertEquals(expected, actual)
         assertEquals(4, referenceEvaluations, "The unoptimized owner test repeats all four questions")
-        assertEquals(3, root.hashCalls, "Two owner-set tests plus one lazy graph-root lookup; repeated true and false add no tests")
+        assertEquals(4, root.hashCalls, "Each query keeps its exact outside-owner check; none starts another graph search")
         assertTrue("ownerFamilies=4" in snapshot.statistics())
-        assertTrue("ownerEvaluations=2 ownerHits=2 ownerMemoViews=1 ownerMemoAllocatedBytes=4" in snapshot.statistics())
+        assertTrue("ownerBitQueries=4 ownerBitHits=2 ownerOutsideQueries=4 ownerOutsideHits=0" in snapshot.statistics())
 
         val otherView = snapshot.visible(method)
         root.hashCalls = 0
         assertEquals(1, otherView.targets(c(1)).count())
-        assertEquals(2, root.hashCalls, "A new query must compute its own owner answer and graph root")
-        assertTrue("ownerEvaluations=3 ownerHits=2 ownerMemoViews=2 ownerMemoAllocatedBytes=8" in snapshot.statistics())
+        assertEquals(1, root.hashCalls, "A new view reads the same graph relation and its exact outside set")
+        assertTrue("ownerBitQueries=5 ownerBitHits=3 ownerOutsideQueries=5 ownerOutsideHits=0" in snapshot.statistics())
         f.cancellation.cancel()
         assertFailsWith<Cancellation.Cancelled> { view.incoming(c(1)).toList() }
     }
@@ -106,10 +106,10 @@ class StaticOwnerEligibilityTest {
         assertTrue(view.filteredTargets(c("b", "T"), true, reject).none())
         assertEquals(0, root.hashCalls, "Rejected packed labels must not touch their owner sets")
         assertEquals(3, view.targets(c("b", "T")).count(), "Unfiltered C2 enumeration is unchanged")
-        assertEquals(4, root.hashCalls, "Three owner tests plus one graph-root lookup")
+        assertEquals(3, root.hashCalls, "Three exact outside-owner checks; graph membership uses immutable words")
     }
 
-    @Test fun `cancelled owner search installs no negative result`() {
+    @Test fun `cancelled owner query cannot alter the frozen graph relation`() {
         val f = EngineShellFixtures()
         val root = Method("root", 1)
         val owner = Method("owner", 2)
@@ -127,6 +127,62 @@ class StaticOwnerEligibilityTest {
         assertFailsWith<Cancellation.Cancelled> { view.targets(c("b")).toList() }
         root.onHash = null
         f.cancellation.activate()
-        assertEquals(1, view.targets(c("b")).count(), "Retry must still perform and complete the graph search")
+        assertEquals(1, view.targets(c("b")).count(), "Retry must read the same complete graph relation")
     }
+
+    @Test fun `equal geometry keeps each label owner and each projected entry owner`() {
+        val f = EngineShellFixtures()
+        val root = Method("root", 1)
+        val reached = Method("reached", 2)
+        val disconnected = Method("disconnected", 3)
+        val graph = DetachedStaticCallGraph.copyOf(linkedMapOf(root to setOf(reached), disconnected to emptySet()), f.cancellation)
+        val cls = f.manager.accessors.index(ClassStaticAccessor("C"))
+        fun c(name: String, mark: String) = Pattern(PathFact(STATIC,
+            listOf(cls, f.field(name)), Tail.STAR, MarkSlot.Concrete(f.manager.marks.mark(mark))), ExclusionSet.Empty)
+        val snapshot = FrozenStaticCompletion.Builder(f.manager, graph).apply {
+            addSeed(f.key(reached), c("a", "T"), c("b", "T"))
+            addSeed(f.key(disconnected), c("a", "U"), c("b", "U"))
+        }.build()
+        val view = snapshot.visible(f.key(root))
+        assertEquals(listOf(c("b", "T")), view.targets(c("b", "T")).map { it.to }.toList())
+        assertEquals(listOf(c("b", "T")), view.entries(c("b", "T")).toList())
+        assertTrue(view.entries(c("b", "U")).none())
+        assertTrue(snapshot.local(f.key(root)).targets(c("b", "T")).none())
+    }
+
+    @Test fun `SCC membership never broadens local ownership or full MethodKey attachments`() {
+        val f = EngineShellFixtures()
+        val graph = DetachedStaticCallGraph.copyOf(mapOf(f.methodA to setOf(f.methodB), f.methodB to setOf(f.methodA)), f.cancellation)
+        val cls = f.manager.accessors.index(ClassStaticAccessor("C"))
+        fun c(name: String) = Pattern(PathFact(STATIC,
+            listOf(cls, f.field(name)), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty)
+        val ret = Pattern(PathFact(org.opentaint.dataflow.ap.ifds.AccessPathBase.Return,
+            emptyList(), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty)
+        val snapshot = FrozenStaticCompletion.Builder(f.manager, graph).apply {
+            addSeed(f.b, c("a"), c("b"))
+            addSeed(f.a, c("a"), ret)
+        }.build()
+        assertTrue(snapshot.visible(f.a).targets(c("b")).any())
+        assertTrue(snapshot.local(f.a).targets(c("b")).none())
+        assertEquals(listOf(ret), snapshot.visible(f.a).entries(ret).toList())
+        assertTrue(snapshot.visible(f.key(f.methodA, context = "other")).entries(ret).none())
+        assertTrue(snapshot.visible(f.b).entries(ret).none())
+    }
+
+    @Test fun `outside-only owner families remain visible in an empty detached graph`() {
+        val f = EngineShellFixtures()
+        val cls = f.manager.accessors.index(ClassStaticAccessor("C"))
+        fun c(name: String) = Pattern(PathFact(STATIC,
+            listOf(cls, f.field(name)), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty)
+        val snapshot = counted { FrozenStaticCompletion.Builder(f.manager, DetachedStaticCallGraph.EMPTY).apply {
+            addSeed(f.a, c("a"), c("b"))
+        }.build() }
+        assertTrue(snapshot.visible(f.a).targets(c("b")).any())
+        assertTrue(snapshot.visible(f.a).entries(c("b")).any())
+        assertTrue(snapshot.visible(f.b).targets(c("b")).none())
+        assertTrue("ownerComponents=0" in snapshot.statistics())
+        assertTrue("ownerIndexBytes=0" in snapshot.statistics())
+        assertTrue("ownerBitQueries=1 ownerBitHits=0 ownerOutsideQueries=3 ownerOutsideHits=2" in snapshot.statistics(), snapshot.statistics())
+    }
+
 }

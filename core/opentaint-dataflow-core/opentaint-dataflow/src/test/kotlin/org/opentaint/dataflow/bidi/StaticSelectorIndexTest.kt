@@ -106,10 +106,10 @@ class StaticSelectorIndexTest {
         }
         val view = snapshot.visible(f.f.a)
         assertEquals(setOf(f.static(f.b), f.static(f.b, f.mark(f.t))), view.entries(f.static(f.b, f.mark(f.t))).toSet())
-        assertTrue("ownerEvaluations=2 " in snapshot.statistics(), snapshot.statistics())
+        assertTrue("ownerBitQueries=2 " in snapshot.statistics(), snapshot.statistics())
         val ret = Pattern(PathFact(AccessPathBase.Return, emptyList(), Tail.STAR, f.mark(f.t)), ExclusionSet.Empty)
         assertEquals(listOf(ret), view.entries(ret).toList())
-        assertTrue("ownerEvaluations=2 " in snapshot.statistics(), "Local R must not ask a graph owner")
+        assertTrue("ownerBitQueries=2 " in snapshot.statistics(), "Local R must not ask a graph owner")
         assertTrue(snapshot.visible(f.f.b).entries(ret).none(), "R from a different MethodKey is not visible")
     }
 
