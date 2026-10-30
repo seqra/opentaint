@@ -96,13 +96,13 @@ The marker rules resolve from the side's `test-rules` root, a selected lib ref r
 
 ### 3. Check the build
 
-There is no `opentaint compile` step for Go: `test rule run` takes the side's module directory, resolves its dependencies, and builds it. Check that the samples build in the side's module with:
+There is no `opentaint compile` step for Go: `test rule run` takes the side's module directory, runs `go mod tidy` and `go build ./...` in it, and stops with the compiler output if a sample doesn't compile. Run it once to check the build:
 
 ```bash
-go build -mod=mod ./...
+opentaint test rule run .opentaint/test-projects/<name>/<side>
 ```
 
-`-mod=mod` lets Go record the samples' dependencies in `go.mod` and `go.sum`.
+A `'go build ./...' failed` error is a samples-or-dependencies problem to fix. Once the run gets past the build, the rest of its result doesn't matter yet — the rules or models it needs come later.
 
 ## Constraints
 

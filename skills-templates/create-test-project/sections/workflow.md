@@ -24,7 +24,7 @@ opentaint compile .opentaint/test-projects/<name>/sources -o .opentaint/test-com
 opentaint compile .opentaint/test-projects/<name> -o .opentaint/test-compiled/<name>
 ```
 
-For Go, skip `opentaint compile`: `test rule run` and `test model run` take the test project directory, resolve its dependencies, and build it themselves. Check that the samples build with the command in the reference instead.
+For Go, skip `opentaint compile`: `test rule run` and `test model run` take the test project directory, run `go mod tidy` and `go build ./...` in it, and stop with the compiler output if a sample doesn't compile. Check the build by running the test command from the reference once — at this stage only the build matters, not the rest of the result.
 
 A clean build is the deliverable. Feedback loop: a build failure is a fixable samples-or-dependencies problem — surface the real error, fix it, and rebuild. On a clean build set the test-project stage done (per Tracking).
 

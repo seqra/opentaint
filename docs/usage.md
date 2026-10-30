@@ -146,7 +146,7 @@ The `test` command group is tooling for rule and model development. A test proje
 Java and Go test projects run differently:
 
 - Java: compile the test project with `opentaint compile`, then run the tests on the compiled project model.
-- Go: run the tests on the test project directory. The CLI resolves the project dependencies, which may update its `go.mod` and `go.sum`, and loads the samples from source. No `opentaint compile` step is needed.
+- Go: run the tests on the test project directory. The CLI resolves the project dependencies, which may update its `go.mod` and `go.sum`, builds the samples, stopping with the compiler output if one doesn't compile, and loads them from source. No `opentaint compile` step is needed.
 
 #### Rule tests
 
