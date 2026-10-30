@@ -184,7 +184,7 @@ func (cb *OpentaintCommandBuilder) WithRuleID(ruleIDs []string) *OpentaintComman
 func (cb *OpentaintCommandBuilder) WithPassthroughApproximations(paths []string) *OpentaintCommandBuilder {
 	for _, p := range paths {
 		if p != "" {
-			cb.arrayFlags["passthrough-approximations"] = append(cb.arrayFlags["passthrough-approximations"], p)
+			cb.arrayFlags["passthrough-models"] = append(cb.arrayFlags["passthrough-models"], p)
 		}
 	}
 	return cb
@@ -193,7 +193,7 @@ func (cb *OpentaintCommandBuilder) WithPassthroughApproximations(paths []string)
 func (cb *OpentaintCommandBuilder) WithDataflowApproximations(paths []string) *OpentaintCommandBuilder {
 	for _, p := range paths {
 		if p != "" {
-			cb.arrayFlags["dataflow-approximations"] = append(cb.arrayFlags["dataflow-approximations"], p)
+			cb.arrayFlags["java-models"] = append(cb.arrayFlags["java-models"], p)
 		}
 	}
 	return cb

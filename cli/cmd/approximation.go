@@ -18,7 +18,7 @@ methods the analyzer cannot see into, together with the exact dependency version
 models are written against.
 
 Compile one with 'opentaint compile approximations', and apply it with the
---dataflow-approximations flag of 'opentaint scan' or 'opentaint test approximation run'.`,
+--java-models flag of 'opentaint scan' or 'opentaint test dataflow-model run'.`,
 }
 
 var approximationInitCmd = &cobra.Command{

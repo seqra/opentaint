@@ -15,7 +15,7 @@ opentaint test rule reachability <full-id> \
 
 - `<full-id>` — the one rule whose sample routes taint through the code under test (`<ruleSetRelativePath>.yaml:<shortId>`). One rule per run — across many rules the trace is unusably huge. Its library `refs` are collected automatically
 - read the sibling `<results-dir>/debug-ifds-fact-reachability.sarif`, not the `-o` file. The `-o` SARIF only shows default scan output. The sibling holds the per-instruction facts that show where taint dies
-- apply the approximations the failing run used so the trace matches it: `--passthrough-approximations <pass-through-dir>` and/or `--dataflow-approximations <dataflow-dir>`. Taint dying at an approximated call then means that approximation isn't propagating
+- apply the approximations the failing run used so the trace matches it: `--passthrough-models <pass-through-dir>` and/or `--java-models <dataflow-dir>`. Taint dying at an approximated call then means that approximation isn't propagating
 - debug the exact run that showed the problem — same model, rulesets, approximation dirs — or you're debugging something else
 
 ## Reading the trace
@@ -35,7 +35,7 @@ When a positive won't pass and the suspicion is a library method on its flow dro
 opentaint scan --project-model .opentaint/test-compiled/<unit>/<side> \
   -o .opentaint/test-results/<unit>/<side>/diag.sarif \
   --ruleset builtin --ruleset .opentaint/rules --ruleset .opentaint/test-projects/<unit>/<side>/test-rules \
-  --passthrough-approximations .opentaint/pass-through \
+  --passthrough-models .opentaint/pass-through \
   --track-external-methods
 ```
 

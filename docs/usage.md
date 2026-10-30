@@ -78,21 +78,23 @@ Use [CodeChecker](https://github.com/Ericsson/codechecker) for advanced result m
 
 | Command | Description |
 |---------|-------------|
-| `opentaint scan` | Analyze projects (auto-detects Maven/Gradle, builds, and scans) |
+| `opentaint scan` | Analyze projects (auto-detects the build system, builds, and scans) |
 | `opentaint compile` | Build project model separately from scanning |
 | `opentaint project` | Create project model from precompiled JARs/classes |
 | `opentaint summary` | View SARIF analysis results |
-| `opentaint health` | Show resolved paths for the analyzer, autobuilder, rules, and Java runtime |
+| `opentaint health` | Show dependency paths and report missing components |
 | `opentaint test rule` | Create, run, and debug detection-rule tests |
-| `opentaint test approximation` | Create and run dataflow-approximation tests |
+| `opentaint test dataflow-model` | Create and run dataflow model tests |
 | `opentaint approximation` | Create dataflow approximation projects |
-| `opentaint pull` | Download analyzer dependencies |
+
+`test approximation` remains accepted as a deprecated compatibility alias for `test dataflow-model`.
+| `opentaint pull` | Download the analysis toolchain and Java runtime |
 | `opentaint update` | Update to latest version |
-| `opentaint prune` | Remove stale downloaded artifacts and cached models |
+| `opentaint prune` | Remove old downloaded artifacts and cached models |
 
 ### opentaint scan
 
-Automatically detects Maven/Gradle projects, builds them, and performs security analysis. The source path defaults to the current directory when omitted.
+Automatically detects the project's build system (Maven or Gradle), builds the project, and runs taint analysis over the result. The source path defaults to the current directory when omitted.
 
 On the first run, the compiled project model is cached in `~/.opentaint/cache/`. Subsequent scans of the same project reuse the cached model, skipping compilation entirely.
 
@@ -101,24 +103,34 @@ On the first run, the compiled project model is cached in `~/.opentaint/cache/`.
 | `--output`, `-o` | Path to the SARIF report (default: `<model-dir>/sources/opentaint.sarif`) |
 | `--recompile` | Force recompilation even if a cached project model exists |
 | `--project-model` | Path to a pre-compiled project model (skips compilation) |
-| `--timeout`, `-t` | Timeout for analysis (default: `15m`) |
-| `--max-memory` | Maximum memory for the analyzer (default: `8G`) |
-| `--severity` | Severity levels to report (default: `warning`, `error`) |
-| `--ruleset` | YAML rules file or directory (default: `builtin`) |
+| `--timeout`, `-t` | Maximum wall-clock time for analysis (default: `15m`) |
+| `--max-memory` | Maximum analyzer heap size (default: `8G`) |
+| `--severity` | Run only rules at these severity levels: `note`, `warning`, `error` (default: `warning`, `error`) |
+| `--ruleset` | Rules to run: a YAML file, a directory of rules files, or `builtin` (default: `builtin`) |
 | `--dry-run` | Validate inputs and show what would run without compiling or scanning |
 | `--log-file` | Path to the log file (default: `<cache-dir>/logs/<timestamp>.log`) |
 
 #### Rule-authoring flags
 
-These flags are to work with custom approximations:
+These flags are for working with custom models:
 
 | Flag | Description |
 |------|-------------|
 | `--track-external-methods` | Write external-method coverage files next to the SARIF report |
-| `--passthrough-approximations` | Apply pass-through approximation YAML files or directories (repeatable) |
-| `--dataflow-approximations` | Apply dataflow approximation projects, build outputs, or class directories (repeatable) |
+| `--passthrough-models` | Apply pass-through model YAML files or directories (repeatable) |
+| `--java-models` | Apply Java dataflow model projects, build outputs, or class directories (repeatable) |
 
-Use external-method tracking when a scan may miss flows through library methods. The dropped-methods file shows where taint was killed because no model was available; the approximated-methods file shows methods already covered by built-in or custom models.
+<details>
+<summary>Deprecated flag names</summary>
+
+The old names remain accepted for compatibility and are deprecated:
+
+- `--passthrough-approximations` → `--passthrough-models`
+- `--dataflow-approximations` → `--java-models`
+
+</details>
+
+Use external-method tracking when a scan may miss flows through library methods. The dropped-methods file shows where taint was killed because no model was available. The modeled-methods file shows methods already covered by built-in or custom models.
 
 ### opentaint health
 
@@ -130,7 +142,7 @@ opentaint health --rules
 opentaint health --analyzer
 ```
 
-With no flags, `health` shows the autobuilder, analyzer, built-in rules, and Java runtime. With a single component flag, it prints only the bare path, which is useful for scripts.
+With no flags, `health` shows the autobuilder, analyzer, built-in rules, and Java runtime, and reports whether each is present. With a single component flag, it prints only the bare path, which is useful for scripts. The command exits non-zero when a selected component is missing. Fetch missing components with `opentaint pull`.
 
 | Flag | Description |
 |------|-------------|
@@ -141,7 +153,7 @@ With no flags, `health` shows the autobuilder, analyzer, built-in rules, and Jav
 
 ### opentaint test
 
-The `test` command group is tooling for rule and approximation development.
+The `test` command group is tooling for rule and dataflow model development.
 
 #### Rule tests
 
@@ -156,24 +168,28 @@ opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-mo
 |---------|-------------|
 | `opentaint test rule init <output-dir>` | Create source and sink test projects with annotated sample support |
 | `opentaint test rule run <project-model>` | Run detection-rule tests on a compiled project model |
-| `opentaint test rule reachability <rule-id> [source-path]` | Trace why a rule can or cannot reach its facts |
+| `opentaint test rule reachability <rule-id> [source-path]` | Show why a rule does or does not fire |
 
-#### Approximation tests
+Rule-test options include `--ruleset`, `--rule-id`, `--project-model`, `--entry-points`, `--output`, `--timeout`, `--max-memory`, and `--dry-run`.
+Rule runs also accept `--java-models` and the deprecated `--dataflow-approximations` alias. Reachability accepts `--project-model` or a source path, but not both.
+
+#### Java dataflow model tests
 
 ```bash
-opentaint test approximation init .opentaint/test-projects/my-approximation \
+opentaint test dataflow-model init .opentaint/test-projects/my-model \
   --dependency "io.projectreactor:reactor-core:3.8.5"
-opentaint compile .opentaint/test-projects/my-approximation -o .opentaint/test-compiled/my-approximation
-opentaint test approximation run .opentaint/test-compiled/my-approximation \
-  --dataflow-approximations .opentaint/dataflow/my-approximation
+opentaint compile .opentaint/test-projects/my-model -o .opentaint/test-compiled/my-model
+opentaint test dataflow-model run .opentaint/test-compiled/my-model \
+  --java-models .opentaint/dataflow/my-model
 ```
 
 | Command | Description |
 |---------|-------------|
-| `opentaint test approximation init <output-dir>` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
-| `opentaint test approximation run <project-model>` | Run dataflow approximation tests on a compiled project model |
+| `opentaint test dataflow-model init <output-dir>` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
+| `opentaint test dataflow-model run <project-model>` | Run dataflow model tests on a compiled project model |
 
-Rule and approximation test runs write `test-result.json` and `test-results.sarif` to the selected output directory.
+Dataflow-model-test options include `--java-models`, `--output`, `--timeout`, `--max-memory`, and `--dry-run`. The deprecated `test approximation` command and `--dataflow-approximations` flag remain accepted.
+Rule and model test runs write `test-result.json` and `test-results.sarif` to the selected output directory.
 
 ### opentaint compile
 
@@ -186,7 +202,7 @@ opentaint scan --project-model ./my-project-model
 
 | Flag | Description |
 |------|-------------|
-| `--output`, `-o` | Path to the result project model (required) |
+| `--output`, `-o` | Path to the project model directory to create (required, must not exist) |
 | `--dry-run` | Validate inputs and show what would run without compiling |
 | `--log-file` | Path to the log file (default: `<cache-dir>/logs/<timestamp>.log`) |
 
@@ -200,12 +216,12 @@ opentaint approximation init .opentaint/dataflow/my-batch \
 
 # write the @Approximate classes under src/main/java/, then apply them
 opentaint scan --project-model ./my-project-model \
-  --dataflow-approximations .opentaint/dataflow/my-batch
+  --java-models .opentaint/dataflow/my-batch
 ```
 
 Pin the versions the target application uses. Those pins are the models' compile environment: they, and nothing about the project under analysis, decide what the models compile against, so a model compiles identically wherever it is applied.
 
-`--dataflow-approximations` accepts an approximation project, a build output, or a directory of compiled classes — and a directory holding any of those, so a tree with one project per batch can be passed as a single flag. A directory counts as compiled classes only when nothing below it still needs building; one that holds compiled classes of its own alongside a project is reported rather than guessed at. Paths may overlap, and the same models may be reached twice, but two of them may not offer the same class with different content — which copy an analysis would read is not defined. Projects are built on demand and rebuilt when their sources, their dependency pins, or the compiler change.
+`--java-models` accepts an approximation project, a build output, or a directory of compiled classes — and a directory holding any of those, so a tree with one project per batch can be passed as a single flag. A directory counts as compiled classes only when nothing below it still needs building; one that holds compiled classes of its own alongside a project is reported rather than guessed at. Paths may overlap, and the same models may be reached twice, but two of them may not offer the same class with different content — which copy an analysis would read is not defined. Projects are built on demand and rebuilt when their sources, their dependency pins, or the compiler change.
 
 | Command | Description |
 |---------|-------------|
@@ -221,14 +237,14 @@ Compiling ahead of time is optional — scanning and testing build the project t
 
 ### opentaint summary
 
-View findings from a SARIF report. By default it prints the Scan Summary; add
+View findings from a SARIF report. By default it prints the Scan Summary. Add
 `--show-findings` for the detailed listing. The filter flags below narrow the
-whole summary (both the counts and the listing); `Rules executed` always
+whole summary (both the counts and the listing). `Rules executed` always
 reflects the full set the tool ran.
 
 | Flag | Description |
 |------|-------------|
-| `--show-findings` | Show all findings |
+| `--show-findings` | Show every finding in the SARIF report |
 | `--show-code-snippets` | Show code snippets for each finding |
 | `--verbose-flow` | Show full code flow steps for each finding |
 | `--path` | Show only findings whose file path matches this glob (`**` supported, repeatable) |
@@ -255,13 +271,25 @@ opentaint scan --project-model ./project-model
 
 | Flag | Description |
 |------|-------------|
-| `--output`, `-o` | Output directory for project.yaml (required) |
-| `--source-root` | Source root directory (required) |
-| `--classpath` | Classpath entries — classes or JAR files (required) |
-| `--package` | Project packages (required) |
-| `--dependency` | Project dependencies — JAR files |
-| `--dry-run` | Validate inputs and show what would run without generating project model |
+| `--output`, `-o` | Directory to write the generated project model (required, must not exist) |
+| `--source-root` | Path to the project source root (required) |
+| `--classpath` | Classpath entries: compiled classes directories or JAR files (required, repeatable) |
+| `--package` | Packages to include in the generated model (required, repeatable) |
+| `--dependency` | Additional dependency JAR files on the compile classpath (repeatable) |
+| `--dry-run` | Validate inputs and show what would run without generating the project model |
 | `--log-file` | Path to the log file (default: `<cache-dir>/logs/<timestamp>.log`) |
+
+### opentaint pull, update, and prune
+
+`opentaint pull` downloads the analyzer, autobuilder, built-in rules, and Java runtime. Use it before the first scan or to restore components removed by pruning.
+
+`opentaint update [version]` updates the OpenTaint binary. `--check` checks for an available update without installing it, and `--yes` skips confirmation. Homebrew and npm installations are updated with their package managers.
+
+`opentaint prune` removes old cached artifacts and models. By default it removes old artifacts, rules, JDK/JRE versions, and cached models. Use `--logs` or `--install` to include those categories, `--all` to select every category, `--dry-run` to preview deletion, and `--yes` to skip confirmation. `--all` cannot be combined with a category flag.
+
+### opentaint health
+
+`opentaint health` reports the autobuilder, analyzer, built-in rules, and Java runtime. Use `--autobuilder`, `--analyzer`, `--rules`, or `--runtime` to select one component. A selected missing component causes a non-zero exit status.
 
 ## Model Caching
 
@@ -298,6 +326,6 @@ These options apply to all commands:
 - `--java-version int` — Java version for analyzer (default: 21)
 - `--quiet` / `-q` — Suppress interactive output (spinners, progress bars, JAR streaming)
 - `--debug` / `-d` — Enable debug output (stream JAR subprocess output, show debug fields)
-- `--color string` — Color mode (`auto`, `always`, `never`); defaults to `auto` (detects terminal)
+- `--color string` — Color mode (`auto`, `always`, `never`), defaults to `auto` (detects terminal)
 
 For persistent configuration using files or environment variables, see the [Configuration](configuration.md) documentation.

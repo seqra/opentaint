@@ -1,6 +1,6 @@
 # Installation
 
-**Prerequisites:** Same build requirements as your Java/Kotlin project (Maven or Gradle, project dependencies). Java runtime is bundled with release archives.
+**Prerequisites:** Same build requirements as your project (Maven or Gradle for Java/Kotlin). Java runtime is bundled with release archives.
 
 ## Homebrew (Linux/macOS)
 
@@ -150,7 +150,7 @@ For package manager installations, `opentaint update` will show the appropriate 
 
 ## Cleaning Up
 
-Remove stale downloaded artifacts:
+Remove old downloaded artifacts:
 
 ```bash
 opentaint prune              # Interactive confirmation
