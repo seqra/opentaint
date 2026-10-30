@@ -9,7 +9,7 @@ metadata:
 
 # Skill: Create Rule
 
-OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis engine. It already propagates through visible application code, calls, aliases, and individual fields; custom rules and approximations model only the assigned source, sink, or opaque-method boundary. Compile-time constants and literals carry no taint, so a source or carrier whose output is only a constant introduces nothing.
+OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis engine. It already propagates through visible application code, calls, aliases, and individual fields; custom rules and models describe only the assigned source, sink, or opaque-method boundary. Compile-time constants and literals carry no taint, so a source or carrier whose output is only a constant introduces nothing.
 
 A unit names the source or sink members to detect. Identify an existing built-in or project library rule when it already implements the boundary, otherwise author a custom rule, then verify the unit against its test project. Every selected or created source rule must carry the unit's `untrusted-data-source` tag, and every selected or created sink rule must carry its unit group's `*-sink` tag. Production joins use those tags and are assembled later only when a new sink tag needs one.
 
@@ -58,7 +58,7 @@ opentaint test rule run .opentaint/test-compiled/<unit>/<side> \
   --passthrough-approximations .opentaint/pass-through
 ```
 
-`test rule run` auto-loads the built-in rules, so pass only your custom rulesets. Apply the passthrough approximations as-is, an empty one is harmless. Read the result with the bundled script — it prints the pass/fail counts and names the failing samples, so you never parse the JSON by hand:
+`test rule run` auto-loads the built-in rules, so pass only your custom rulesets. Apply the passthrough models as-is, an empty one is harmless. Read the result with the bundled script — it prints the pass/fail counts and names the failing samples, so you never parse the JSON by hand:
 
 ```bash
 uv run <skill-dir>/scripts/check-test-result.py <unit>/<side>
@@ -87,7 +87,7 @@ A positive that won't pass after ~3 rule fixes may have a cause no rule edit can
 
 - the implementing lib rule ids, identifying which were built-in and which were created, a one-line test summary for the side, and the exact `test rule run` command used
 - if blocked at step 5: `stages.tests_passing` left pending, and the cause —
-  - a dropped library method on the failing sample's flow → the methods that need a model, to be approximated before a re-dispatch
+  - a dropped library method on the failing sample's flow → the methods that need a model, to be modeled before a re-dispatch
   - nothing dropped and no clear rule cause → non-convergence, for the orchestrator to intervene
 
 ## Tracking
@@ -136,5 +136,5 @@ stages:
 ## Gotchas
 
 - If you think a test project is wrong — hand it back upstream
-- A positive that won't pass because a library method drops taint is not a rule bug — surface it for approximation (per step 5), don't broaden the rule to force it
+- A positive that won't pass because a library method drops taint is not a rule bug — surface it for modeling (per step 5), don't broaden the rule to force it
 - Keep produced rule files comment-free

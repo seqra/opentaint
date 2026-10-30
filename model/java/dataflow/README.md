@@ -1,4 +1,4 @@
-# Built-in dataflow approximations
+# Built-in Java dataflow models
 
 These code models describe how taint moves through methods that the analyzer cannot inspect.
 Each directory is an independent Gradle module. Each module has its own pinned dependencies.
@@ -47,7 +47,7 @@ You do not need to edit another build file. The
 ## Writing a model
 
 Use the same form for built-in and custom models. See
-`skills/create-dataflow-approximation` for the full instructions. Use the `opentaint.`
+`skills/create-dataflow-model` for the full instructions. Use the `opentaint.`
 prefix to address the target. Use `@ApproximatedClassName` when Java cannot express the
 target JVM class name. Cast `(TargetClass) (Object) this` to access the real receiver. Add
 `@ArgumentTypeContext` to functional-interface parameters. Use

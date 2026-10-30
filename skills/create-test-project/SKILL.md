@@ -1,6 +1,6 @@
 ---
 name: create-test-project
-description: Create an OpenTaint test project with positive/negative samples for verifying a rule or approximation. Use when a rule or approximation needs a test project to check against
+description: Create an OpenTaint test project with positive/negative samples for verifying a rule or model. Use when a rule or model needs a test project to check against
 license: Apache-2.0
 metadata:
   author: opentaint
@@ -9,7 +9,7 @@ metadata:
 
 # Skill: Create Test Project
 
-Build a minimal compiled test project whose samples reproduce the flow a rule or approximation is verified against. A sample routes data between a real library method and the generic taint marker the scaffold provides, with the one verdict it must produce — a positive that must flag, a negative that must not. The compiled model is the deliverable; its sample sources sit alongside it.
+Build a minimal compiled test project whose samples reproduce the flow a rule or model is verified against. A sample routes data between a real library method and the generic taint marker the scaffold provides, with the one verdict it must produce — a positive that must flag, a negative that must not. The compiled model is the deliverable; its sample sources sit alongside it.
 
 ## Inputs
 
@@ -21,13 +21,13 @@ Provided by the caller, fall back to the default value when omitted. Ask back on
 - for `rule-source` / `rule-sink` — `unit`: the unit id; its members and `dependencies` come from `.opentaint/tracking/rules/sources|sinks/<unit>.yaml`
 - for `dataflow` — `batch`: the batch whose `.opentaint/tracking/approximations/<batch>.yaml` provides the dataflow methods to exercise and their `dependencies`
 
-The project folder `<name>` is that identifier — the `unit` for a rule side, the `batch` for a dataflow approximation.
+The project folder `<name>` is that identifier — the `unit` for a rule side, the `batch` for a dataflow model.
 
 ## Workflow
 
 ### 1. Scaffold the project
 
-The scaffold command and sample form are language-specific — read the reference for your `type`: `references/<lang>-rule.md` for `rule-source` / `rule-sink`, or `references/<lang>-approximation.md` for `dataflow` (one self-contained reference, no need to read the other). Scaffold the project for the `type`, passing each of the unit's `dependencies` at its pinned version. The scaffold provides the generic taint marker and the fixed test rule the samples run against, so you author only the samples. If the `<name>` project already exists — re-invoked because its surface grew or a dependency moved — extend it instead: add the missing samples and recompile rather than scaffolding fresh. The init command is in that reference.
+The scaffold command and sample form are language-specific — read the reference for your `type`: `references/<lang>-rule.md` for `rule-source` / `rule-sink`, or `references/<lang>-model.md` for `dataflow` (one self-contained reference, no need to read the other). Scaffold the project for the `type`, passing each of the unit's `dependencies` at its pinned version. The scaffold provides the generic taint marker and the fixed test rule the samples run against, so you author only the samples. If the `<name>` project already exists — re-invoked because its surface grew or a dependency moved — extend it instead: add the missing samples and recompile rather than scaffolding fresh. The init command is in that reference.
 
 ### 2. Write the samples
 
@@ -77,7 +77,7 @@ Short and concise report of what was done
 This skill writes only the test-project stage back:
 
 - a rule side → `stages.test_project: done` in the source or sink unit
-- a dataflow approximation → one `build.test_project` entry per method in the batch file, `status: done` for a method whose sample made it into the project, `status: failed` for one no sample could be written for (excluded)
+- a dataflow model → one `build.test_project` entry per method in the batch file, `status: done` for a method whose sample made it into the project, `status: failed` for one no sample could be written for (excluded)
 
 `.opentaint/tracking/rules/sources/<package-kebab>.yaml` — one source unit per package (a dependency can span several packages), the file named for that package with `.` → `-`. `tag` is always the reusable `untrusted-data-source` group. `dependencies` names the dependency the package comes from, `sources` each an entry point `{ method, signature, note, rule_id }` (`method` and `signature` use the exact language-specific identifiers from the plan), `stages` tracks the unit through rule authoring, and a `blocker` string is added under it when the unit can't be made to pass. Keep it clear from comments
 
@@ -130,6 +130,6 @@ build:
 
 ## Constraints
 
-OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis engine. It already propagates through visible application code, calls, aliases, and individual fields; custom rules and approximations model only the assigned source, sink, or opaque-method boundary. Compile-time constants and literals carry no taint, so a source or carrier whose output is only a constant introduces nothing.
+OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis engine. It already propagates through visible application code, calls, aliases, and individual fields; custom rules and models describe only the assigned source, sink, or opaque-method boundary. Compile-time constants and literals carry no taint, so a source or carrier whose output is only a constant introduces nothing.
 
 - One `<name>` folder per unit — never write into another unit's test project, so concurrent agents don't race

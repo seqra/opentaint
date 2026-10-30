@@ -40,7 +40,7 @@ analyzer JAR, and the loader finds each directory that has a `go.mod` file.
 ## Writing a model
 
 Use the same form for built-in and custom models. See
-`skills/create-dataflow-approximation` for the full instructions. Use the `opentaint/`
+`skills/create-dataflow-model` for the full instructions. Use the `opentaint/`
 prefix to address the target package. Keep each modeled function's exact name, receiver and
 signature. Use target types through their original imports. Declare a partial target struct
 when Go needs a local type, for example for a method receiver. List only the fields that the

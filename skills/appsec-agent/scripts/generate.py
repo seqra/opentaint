@@ -9,7 +9,7 @@ from the project root: `uv run scripts/generate.py <cmd>`.
 
   init                bootstrap the .opentaint tree + state.yaml from the workflow flags
   tags                refresh tracking/rules/tags.yaml from the active lib rules
-  partition analyze   dropped external methods -> per-root batch plans (approximations)
+  partition analyze   dropped external methods -> per-root batch plans (models)
   partition discover  coverage.yaml's used members -> balanced discover plans
   mark-safe           discover plans' verdicts -> classification.yaml ledger (+prune plans)
   merge-skipped       batch skipped/engine_issues -> approximations/skipped.yaml (+prune plans)
@@ -35,7 +35,7 @@ from _common import (APPROX, DATAFLOW, DROPPED,
                      git_head, ledger_verdicted_keys, load_yaml, member_key,
                      package_of, strip_quotes)
 
-ANALYZE_BUDGET = 20                       # methods per approximation batch
+ANALYZE_BUDGET = 20                       # methods per model batch
 ANALYZE_MISC = 6                          # roots with <= this many methods pool into one misc batch
 ROOT_DEPTH = 2                            # library root = first 2 dotted segments
 DISCOVER_TARGET, DISCOVER_BAND = 50, 15   # project-used members per discover plan (~50, loose)
@@ -513,7 +513,7 @@ def cmd_merge_skipped(args):
         for p in pruned:
             Path(p).unlink()
         if pruned:
-            print(f"pruned {len(pruned)} consumed approximation plan(s)")
+            print(f"pruned {len(pruned)} consumed model plan(s)")
     return 0
 
 
@@ -686,7 +686,7 @@ def main():
     m.set_defaults(func=cmd_mark_safe)
 
     s = sub.add_parser("merge-skipped", help="rebuild approximations/skipped.yaml from batches")
-    s.add_argument("--keep", action="store_true", help="keep the consumed approximation plans")
+    s.add_argument("--keep", action="store_true", help="keep the consumed model plans")
     s.set_defaults(func=cmd_merge_skipped)
 
     f = sub.add_parser("findings", help="seed per-rule finding files from results/report.sarif")

@@ -73,8 +73,8 @@ def newest_mtime(paths):
     return m
 
 
-def approx_dirty():
-    # scan older than the newest applied approximation artifact -> a rescan is pending
+def models_dirty():
+    # scan older than the newest applied model artifact -> a rescan is pending
     if not SARIF.is_file():
         return False
     arts = list(PASS_THROUGH.rglob("*")) + list(DATAFLOW.rglob("*"))
@@ -315,7 +315,7 @@ def ph_scan():
     return True, [], None
 
 
-def ph_approximations():
+def ph_models():
     if not SARIF.is_file():
         return False, ["dispatch run-scan"], None
     classified = classified_keys()
@@ -340,14 +340,14 @@ def ph_approximations():
             by_kind.setdefault(kind, set()).add(p.stem)
         tasks = ["build unbuilt batches:"]
         if by_kind.get("passthrough"):
-            tasks.append("  passthrough  create-pass-through-approximation: "
+            tasks.append("  passthrough  create-pass-through-model: "
                          + ", ".join(sorted(by_kind["passthrough"])))
         if by_kind.get("dataflow"):
             tasks.append("  dataflow  create-test-project type dataflow, then "
-                         "create-dataflow-approximation: " + ", ".join(sorted(by_kind["dataflow"])))
+                         "create-dataflow-model: " + ", ".join(sorted(by_kind["dataflow"])))
         return False, tasks, None
-    if approx_dirty():
-        return False, ["approximations built after the last scan", "dispatch run-scan"], None
+    if models_dirty():
+        return False, ["models built after the last scan", "dispatch run-scan"], None
     stuck = sorted({e["method"] for e in dropped_entries()
                     if member_key(e) in done and member_key(e) not in terminal})
     if stuck:
@@ -411,7 +411,7 @@ PHASES = [
     ("discover", ph_discover, lambda: SCAN_LEVEL == "deep"),
     ("source_rules", ph_source_rules, lambda: SCAN_LEVEL == "deep"),
     ("scan", ph_scan, lambda: True),
-    ("approximations", ph_approximations, lambda: SCAN_LEVEL in ("normal", "deep")),
+    ("models", ph_models, lambda: SCAN_LEVEL in ("normal", "deep")),
     ("sink_rules", ph_sink_rules, lambda: SCAN_LEVEL == "deep"),
     ("triage", ph_triage, lambda: True),
     ("poc", ph_poc, lambda: TRIAGE_LEVEL == "dynamic"),

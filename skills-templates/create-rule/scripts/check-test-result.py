@@ -33,7 +33,7 @@ def names(v):
 
 def resolve(arg):
     # accept either a full path to a test-result.json or a shorthand id under
-    # .opentaint/test-results/: a rule `<unit>/<side>` or an approximation `<batch>`
+    # .opentaint/test-results/: a rule `<unit>/<side>` or a model `<batch>`
     if arg.endswith("test-result.json"):
         return Path(arg)
     return Path(".opentaint/test-results") / arg / "test-result.json"

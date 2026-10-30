@@ -205,7 +205,7 @@ def git_head():
         return None
 
 
-# ---- approximation batch readers (shared by coverage + partition) ----
+# ---- model batch readers (shared by coverage + partition) ----
 
 # a method counts classified once it sits in any batch classification bucket or in build.done
 CLASSIFIED_BUCKETS = ("passthrough", "dataflow", "skipped", "engine_issues")
@@ -213,7 +213,7 @@ MODELED_BUCKETS = ("passthrough", "dataflow")
 
 
 def batch_files():
-    """Every approximation batch file (skipped.yaml is the merged view, not a batch)."""
+    """Every model batch file (skipped.yaml is the merged view, not a batch)."""
     return [Path(p) for p in sorted(glob.glob(str(APPROX / "*.yaml")))
             if Path(p).name != "skipped.yaml"]
 
@@ -250,7 +250,7 @@ def classified_keys():
 def skipped_keys():
     """method+signature keys classified terminal — the `skipped` and `engine_issues` buckets of
     every batch. Terminal means the method will never build a working carrier, so it must not hold
-    the approximations phase pending even if it is still modeled and still dropped by the scan.
+    the models phase pending even if it is still modeled and still dropped by the scan.
     (skipped.yaml is the merged view of these same buckets, so reading the batches alone suffices.)"""
     out = set()
     for p in batch_files():
@@ -275,7 +275,7 @@ def modeled_entries():
 
 
 def build_done_keys():
-    """Overload-precise keys of every built approximation across batches."""
+    """Overload-precise keys of every built model across batches."""
     keys = set()
     for p in batch_files():
         doc = load_yaml(p, {}) or {}

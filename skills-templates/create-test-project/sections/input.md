@@ -6,4 +6,4 @@
 - for `rule-source` / `rule-sink` — `unit`: the unit id; its members and `dependencies` come from `.opentaint/tracking/rules/sources|sinks/<unit>.yaml`
 - for `dataflow` — `batch`: the batch whose `.opentaint/tracking/approximations/<batch>.yaml` provides the dataflow methods to exercise and their `dependencies`
 
-The project folder `<name>` is that identifier — the `unit` for a rule side, the `batch` for a dataflow approximation.
+The project folder `<name>` is that identifier — the `unit` for a rule side, the `batch` for a dataflow model.

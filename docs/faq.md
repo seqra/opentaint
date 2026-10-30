@@ -22,7 +22,7 @@ Java and Kotlin today. The engine works on bytecode, which gives it precise reso
 
 **Why is OpenTaint the most thorough taint analyzer for Spring apps?**
 
-It does inter-procedural data-flow analysis, following tainted data across method boundaries and through async constructs — Reactor, Spring WebFlux, and Kotlin coroutines are all modeled via data-flow approximations. Out of the box, it also models JPA persistence layers, so it catches stored injections where untrusted input arrives at one endpoint, gets saved to the database, and reappears in a completely different request later. Most engines treat the persistence layer as an opaque boundary; OpenTaint models it as part of the flow, linking writes in one request to reads in another.
+It does inter-procedural data-flow analysis, following tainted data across method boundaries and through async constructs — Reactor, Spring WebFlux, and Kotlin coroutines all have built-in data-flow models. Out of the box, it also models JPA persistence layers, so it catches stored injections where untrusted input arrives at one endpoint, gets saved to the database, and reappears in a completely different request later. Most engines treat the persistence layer as an opaque boundary; OpenTaint models it as part of the flow, linking writes in one request to reads in another.
 
 **How does OpenTaint compare to Semgrep?**
 

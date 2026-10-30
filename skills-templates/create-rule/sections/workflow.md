@@ -31,7 +31,7 @@ opentaint test rule run .opentaint/test-compiled/<unit>/<side> \
   --passthrough-approximations .opentaint/pass-through
 ```
 
-`test rule run` auto-loads the built-in rules, so pass only your custom rulesets. Apply the passthrough approximations as-is, an empty one is harmless. Read the result with the bundled script — it prints the pass/fail counts and names the failing samples, so you never parse the JSON by hand:
+`test rule run` auto-loads the built-in rules, so pass only your custom rulesets. Apply the passthrough models as-is, an empty one is harmless. Read the result with the bundled script — it prints the pass/fail counts and names the failing samples, so you never parse the JSON by hand:
 
 ```bash
 uv run <skill-dir>/scripts/check-test-result.py <unit>/<side>

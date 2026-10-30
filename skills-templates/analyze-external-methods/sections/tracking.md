@@ -1,8 +1,8 @@
 ### Batch classification
 
-{% include "shared/tracking/approximations-batch.md" %}
+{% include "shared/tracking/models-batch.md" %}
 
-This skill writes `passthrough`/`dataflow`/`skipped` and `dependencies`; leave the `build` block and `engine_issues` alone — they are filled later in the approximation stage.
+This skill writes `passthrough`/`dataflow`/`skipped` and `dependencies`; leave the `build` block and `engine_issues` alone — they are filled later in the model stage.
 
 ### Sink units (only when `sinks` is set)
 

@@ -88,7 +88,7 @@ source:
 
 ## Constraints
 
-OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis engine. It already propagates through visible application code, calls, aliases, and individual fields; custom rules and approximations model only the assigned source, sink, or opaque-method boundary. Compile-time constants and literals carry no taint, so a source or carrier whose output is only a constant introduces nothing.
+OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis engine. It already propagates through visible application code, calls, aliases, and individual fields; custom rules and models describe only the assigned source, sink, or opaque-method boundary. Compile-time constants and literals carry no taint, so a source or carrier whose output is only a constant introduces nothing.
 
 - This stage finds only sources — the boundaries where untrusted data enters, sinks are found later from the taint frontier
 - Work only your own plan and the source units it maps to — never another agent's plan or unit, shared coverage/classification state, or `tags.yaml`. Plans partition their write ownership according to the language reference
