@@ -1,7 +1,10 @@
 # Implementation proposal: identity storage, owner visibility and protection admission
 
-Date: 30 October 2026. Status: proposal and checked formal models only.
-**Do not change the analyzer implementation in this task.**
+Date: 30 October 2026. Status: implemented at
+`edb2e06cdb17eecafbe03415236bf56c57910239` and measured.
+See the [closed campaign report](../reports/bidirectional-identity-owner-protection-performance-20261030.md)
+for current results. The design and base measurements below describe the
+implementation contract; they do not describe the next iteration.
 
 Base analyzer: `c98d12582a138d5898e94908ee6690dda73998ca`.
 The documentation commit `24b83a094` contains the measurements and the selected
