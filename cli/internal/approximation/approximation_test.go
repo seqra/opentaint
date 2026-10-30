@@ -57,6 +57,22 @@ func writeModuleClasses(t *testing.T, projectModelDir string, modules map[string
 	writeFile(t, filepath.Join(projectModelDir, "project.yaml"), config)
 }
 
+// resolveJava returns the Java class directories found in paths.
+func resolveJava(paths []string, builder Builder) ([]string, error) {
+	models, err := ResolveAll(paths, builder)
+	if err != nil {
+		return nil, err
+	}
+	return models.JavaClassDirs, nil
+}
+
+// writeBuildOutput writes a Java model build output holding one class.
+func writeBuildOutput(t *testing.T, dir, bytecode string) {
+	t.Helper()
+	writeFile(t, filepath.Join(dir, descriptorName), "sourceProject: /elsewhere\n")
+	writeFile(t, filepath.Join(dir, classesDirName, "com", "example", "Model.class"), bytecode)
+}
+
 func writeFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -79,7 +95,7 @@ func TestResolveBuildsProject(t *testing.T) {
 	project := newProject(t, t.TempDir())
 	builder := newFakeBuilder(t)
 
-	classDirs, err := Resolve(project, builder)
+	classDirs, err := resolveJava([]string{project}, builder)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -168,7 +184,7 @@ func TestResolveBuiltOutput(t *testing.T) {
 	writeFile(t, filepath.Join(dir, classesDirName, "com", "example", "Model.class"), "bytecode")
 
 	builder := newFakeBuilder(t)
-	classDirs, err := Resolve(dir, builder)
+	classDirs, err := resolveJava([]string{dir}, builder)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -180,26 +196,13 @@ func TestResolveBuiltOutput(t *testing.T) {
 	}
 }
 
-func TestResolvePrecompiledClassDirectory(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "com", "example", "Model.class"), "bytecode")
-
-	classDirs, err := Resolve(dir, newFakeBuilder(t))
-	if err != nil {
-		t.Fatalf("Resolve: %v", err)
-	}
-	if len(classDirs) != 1 || classDirs[0] != dir {
-		t.Fatalf("Resolve() = %v, want [%s]", classDirs, dir)
-	}
-}
-
 func TestResolveTreeOfProjects(t *testing.T) {
 	root := t.TempDir()
 	newProject(t, filepath.Join(root, "batch-a"))
 	newProject(t, filepath.Join(root, "batch-b"))
 
 	builder := newFakeBuilder(t)
-	classDirs, err := Resolve(root, builder)
+	classDirs, err := resolveJava([]string{root}, builder)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -211,7 +214,7 @@ func TestResolveTreeOfProjects(t *testing.T) {
 	}
 
 	// The second call must ignore the nested build outputs.
-	again, err := Resolve(root, builder)
+	again, err := resolveJava([]string{root}, builder)
 	if err != nil {
 		t.Fatalf("second Resolve: %v", err)
 	}
@@ -223,30 +226,7 @@ func TestResolveTreeOfProjects(t *testing.T) {
 	}
 }
 
-// A tree may mix model projects with directories that are already compiled. Resolving
-// such a tree must build the project and keep the compiled classes, not collapse the
-// whole tree into one classpath root.
-func TestResolveTreeMixingProjectAndClasses(t *testing.T) {
-	root := t.TempDir()
-	project := newProject(t, filepath.Join(root, "models"))
-	precompiled := filepath.Join(root, "precompiled")
-	writeFile(t, filepath.Join(precompiled, "com", "example", "Other.class"), "bytecode")
-
-	builder := newFakeBuilder(t)
-	classDirs, err := Resolve(root, builder)
-	if err != nil {
-		t.Fatalf("Resolve: %v", err)
-	}
-	want := []string{ClassesDir(BuildDir(project)), precompiled}
-	if !reflect.DeepEqual(classDirs, want) {
-		t.Fatalf("Resolve() = %v, want %v", classDirs, want)
-	}
-	if !reflect.DeepEqual(builder.compiled, []string{project}) {
-		t.Fatalf("expected the project to be compiled, got %v", builder.compiled)
-	}
-}
-
-// The same tree with a previous build output in place of the loose classes.
+// A tree may mix model projects with build outputs; each contributes its own classes.
 func TestResolveTreeMixingProjectAndBuildOutput(t *testing.T) {
 	root := t.TempDir()
 	project := newProject(t, filepath.Join(root, "models"))
@@ -255,7 +235,7 @@ func TestResolveTreeMixingProjectAndBuildOutput(t *testing.T) {
 	writeFile(t, filepath.Join(prebuilt, classesDirName, "com", "example", "Other.class"), "bytecode")
 
 	builder := newFakeBuilder(t)
-	classDirs, err := Resolve(root, builder)
+	classDirs, err := resolveJava([]string{root}, builder)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -268,45 +248,13 @@ func TestResolveTreeMixingProjectAndBuildOutput(t *testing.T) {
 	}
 }
 
-// A directory that holds classes of its own and a project below it belongs to neither
-// shape: putting it on the classpath hides the project, recursing past it drops the
-// classes.
-func TestResolveRejectsAmbiguousDirectory(t *testing.T) {
-	root := t.TempDir()
-	newProject(t, filepath.Join(root, "models"))
-	writeFile(t, filepath.Join(root, "Stray.class"), "bytecode")
-
-	_, err := Resolve(root, newFakeBuilder(t))
-	if err == nil {
-		t.Fatal("expected a directory holding both classes and a project to be rejected")
-	}
-	if !strings.Contains(err.Error(), root) {
-		t.Errorf("error should name the ambiguous directory, got: %v", err)
-	}
-}
-
-// A plain class directory resolves to its root, not to the package directory that
-// happens to hold the class files.
-func TestResolvePrecompiledClassDirectoryKeepsItsRoot(t *testing.T) {
-	root := t.TempDir()
-	writeFile(t, filepath.Join(root, "com", "example", "Model.class"), "bytecode")
-
-	classDirs, err := Resolve(root, newFakeBuilder(t))
-	if err != nil {
-		t.Fatalf("Resolve: %v", err)
-	}
-	if !reflect.DeepEqual(classDirs, []string{root}) {
-		t.Fatalf("Resolve() = %v, want the classpath root %s", classDirs, root)
-	}
-}
-
 // The analyzer is handed every path's answer at once, so a directory reached twice must
 // contribute once.
 func TestResolveAllPassesEachDirectoryOnce(t *testing.T) {
 	project := newProject(t, t.TempDir())
 	builder := newFakeBuilder(t)
 
-	classDirs, err := ResolveAll([]string{project, project}, builder)
+	classDirs, err := resolveJava([]string{project, project}, builder)
 	if err != nil {
 		t.Fatalf("ResolveAll: %v", err)
 	}
@@ -321,14 +269,14 @@ func TestResolveAllAcceptsIdenticalCopiesOfAClass(t *testing.T) {
 	root := t.TempDir()
 	first := filepath.Join(root, "first")
 	second := filepath.Join(root, "second")
-	writeFile(t, filepath.Join(first, "com", "example", "Model.class"), "bytecode")
-	writeFile(t, filepath.Join(second, "com", "example", "Model.class"), "bytecode")
+	writeBuildOutput(t, first, "bytecode")
+	writeBuildOutput(t, second, "bytecode")
 
-	classDirs, err := ResolveAll([]string{first, second}, newFakeBuilder(t))
+	classDirs, err := resolveJava([]string{first, second}, newFakeBuilder(t))
 	if err != nil {
 		t.Fatalf("ResolveAll: %v", err)
 	}
-	if !reflect.DeepEqual(classDirs, []string{first, second}) {
+	if !reflect.DeepEqual(classDirs, []string{ClassesDir(first), ClassesDir(second)}) {
 		t.Fatalf("ResolveAll() = %v, want both directories", classDirs)
 	}
 }
@@ -339,8 +287,8 @@ func TestResolveAllRejectsClashingClasses(t *testing.T) {
 	root := t.TempDir()
 	first := filepath.Join(root, "first")
 	second := filepath.Join(root, "second")
-	writeFile(t, filepath.Join(first, "com", "example", "Model.class"), "one bytecode")
-	writeFile(t, filepath.Join(second, "com", "example", "Model.class"), "another bytecode")
+	writeBuildOutput(t, first, "one bytecode")
+	writeBuildOutput(t, second, "another bytecode")
 
 	_, err := ResolveAll([]string{first, second}, newFakeBuilder(t))
 	if err == nil {
@@ -353,23 +301,56 @@ func TestResolveAllRejectsClashingClasses(t *testing.T) {
 	}
 }
 
-func TestResolveLooseSourcesReportsMigration(t *testing.T) {
+func TestResolveLooseSourcesWarnsAboutMigration(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "com", "example", "Model.java"), "package com.example;\n")
 
-	_, err := Resolve(dir, newFakeBuilder(t))
-	if err == nil {
-		t.Fatal("expected loose .java sources to be rejected")
+	models, err := Resolve(dir, newFakeBuilder(t))
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
 	}
-	if !strings.Contains(err.Error(), "approximation init") {
-		t.Errorf("error should point at the migration command, got: %v", err)
+	if len(models.Warnings) != 1 || !strings.Contains(models.Warnings[0], "--language java") {
+		t.Errorf("warnings = %v, want one pointing at the migration command", models.Warnings)
 	}
 }
 
-func TestResolveEmptyDirectory(t *testing.T) {
-	_, err := Resolve(t.TempDir(), newFakeBuilder(t))
-	if err == nil {
-		t.Fatal("expected an empty directory to be rejected")
+// A path without models is not an error: the scan runs without them and says so.
+func TestResolveEmptyDirectoryWarns(t *testing.T) {
+	dir := t.TempDir()
+	models, err := Resolve(dir, newFakeBuilder(t))
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	if len(models.JavaClassDirs)+len(models.GoModelDirs) != 0 {
+		t.Errorf("an empty directory resolved to models: %+v", models)
+	}
+	if len(models.Warnings) != 1 || !strings.Contains(models.Warnings[0], dir) {
+		t.Errorf("warnings = %v, want one naming %s", models.Warnings, dir)
+	}
+}
+
+// Compiled classes outside a build output are not models any more.
+func TestResolveIgnoresBareClassDirectory(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "com", "example", "Model.class"), "bytecode")
+
+	models, err := Resolve(dir, newFakeBuilder(t))
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	if len(models.JavaClassDirs) != 0 || len(models.Warnings) != 1 {
+		t.Errorf("Resolve() = %+v, want no class directories and one warning", models)
+	}
+}
+
+func TestResolveMissingPath(t *testing.T) {
+	if _, err := Resolve(filepath.Join(t.TempDir(), "missing"), newFakeBuilder(t)); err == nil {
+		t.Fatal("expected a missing model path to be rejected")
+	}
+	file := filepath.Join(t.TempDir(), "models")
+	writeFile(t, file, "")
+	if _, err := Resolve(file, newFakeBuilder(t)); err == nil || !strings.Contains(err.Error(), "not a directory") {
+		t.Fatalf("Resolve(file) error = %v, want not a directory", err)
 	}
 }
 
@@ -448,8 +429,12 @@ func TestStagingIsInvisibleToTheResolver(t *testing.T) {
 	abandoned := filepath.Join(stagingRoot(output), filepath.Base(output)+"-1")
 	writeFile(t, filepath.Join(abandoned, classesDirName, "com", "example", "Other.class"), "bytecode")
 
-	if _, err := Resolve(root, newFakeBuilder(t)); err == nil {
-		t.Error("a leftover staging directory was resolved as compiled models")
+	models, err := Resolve(root, newFakeBuilder(t))
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	if len(models.JavaClassDirs) != 0 {
+		t.Errorf("a leftover staging directory was resolved as compiled models: %v", models.JavaClassDirs)
 	}
 }
 

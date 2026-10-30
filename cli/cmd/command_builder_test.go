@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -77,15 +79,39 @@ func TestAnalyzerBuildNativeCommandRoutesGoModels(t *testing.T) {
 	}
 }
 
-func TestGoModelsAvailableOnTestCommands(t *testing.T) {
-	commands := map[string]*cobra.Command{
-		"rule tests":          testRuleRunCmd,
-		"approximation tests": testApproximationRunCmd,
-	}
-	for name, command := range commands {
-		if command.Flags().Lookup("go-models") == nil {
-			t.Errorf("%s do not expose --go-models", name)
+func TestGoModelsFlagIsGone(t *testing.T) {
+	for _, command := range []*cobra.Command{scanCmd, testRuleRunCmd, testApproximationRunCmd} {
+		if command.Flags().Lookup("go-models") != nil {
+			t.Errorf("%s still exposes --go-models", command.CommandPath())
 		}
+	}
+}
+
+// One model path can hold models of every language; each reaches the analyzer the way it loads them.
+func TestAddDataflowModelsRoutesEachLanguage(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, filepath.Join(root, "java", "approximation.yaml"), "sourceProject: ..\n")
+	writeTestFile(t, filepath.Join(root, "java", "classes", "opentaint", "Model.class"), "bytecode")
+	writeTestFile(t, filepath.Join(root, "go", "go.mod"), "module opentaint\n")
+
+	b := NewAnalyzerBuilder()
+	addDataflowApproximations(b, []string{root}, "")
+
+	if want := []string{filepath.Join(root, "java", "classes")}; !reflect.DeepEqual(b.dataflowApproximations, want) {
+		t.Errorf("Java class directories = %v, want %v", b.dataflowApproximations, want)
+	}
+	if want := []string{filepath.Join(root, "go")}; !reflect.DeepEqual(b.goModels, want) {
+		t.Errorf("Go model directories = %v, want %v", b.goModels, want)
+	}
+}
+
+func writeTestFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }
 

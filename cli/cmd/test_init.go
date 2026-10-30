@@ -102,7 +102,7 @@ Use --language go to create a Go module with module path "test". The module incl
 Positive and negative samples are specified via rule-test.yaml.
 
 The approximation under test is supplied separately at test time with
---dataflow-approximations for Java or --go-models for Go.
+--dataflow-approximations.
 
 Use --dependency to add each library the samples use. For Java, use Maven coordinates. For
 Go, use module@version. Use the versions from the target application.`,

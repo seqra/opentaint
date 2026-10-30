@@ -199,15 +199,6 @@ func (cb *OpentaintCommandBuilder) WithDataflowApproximations(paths []string) *O
 	return cb
 }
 
-func (cb *OpentaintCommandBuilder) WithGoModels(paths []string) *OpentaintCommandBuilder {
-	for _, p := range paths {
-		if p != "" {
-			cb.arrayFlags["go-models"] = append(cb.arrayFlags["go-models"], p)
-		}
-	}
-	return cb
-}
-
 func (cb *OpentaintCommandBuilder) WithTrackExternalMethods(enabled bool) *OpentaintCommandBuilder {
 	if enabled {
 		cb.boolFlags["track-external-methods"] = true
@@ -390,7 +381,6 @@ func BuildScanCommandWithDocker(base *OpentaintCommandBuilder, projectPath, sari
 		WithOutput("/output/" + sarifName).
 		WithRuleset(containerRulesets)
 	mapDockerInputPaths(scanCmd, base, "dataflow-approximations", "/dataflow-approximations", &volumes)
-	mapDockerInputPaths(scanCmd, base, "go-models", "/go-models", &volumes)
 	mapDockerInputPaths(scanCmd, base, "passthrough-approximations", "/passthrough-approximations", &volumes)
 
 	return fmt.Sprintf("docker run --rm %s ghcr.io/seqra/opentaint:latest %s", volumes, scanCmd.Build())

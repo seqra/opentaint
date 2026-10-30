@@ -20,7 +20,6 @@ var (
 	testRulesMaxMemory   string
 	testRulesRuleID      []string
 	testRulesDataflow    []string
-	testRulesGoModels    []string
 	testRulesPassthrough []string
 )
 
@@ -42,7 +41,6 @@ compiled project model.
 			maxMemory:           testRulesMaxMemory,
 			ruleIDs:             testRulesRuleID,
 			dataflowApprox:      testRulesDataflow,
-			goModels:            testRulesGoModels,
 			passthroughApprox:   testRulesPassthrough,
 			includeBuiltinRules: true,
 		})
@@ -58,7 +56,6 @@ type testProjectOptions struct {
 	maxMemory           string
 	ruleIDs             []string
 	dataflowApprox      []string
-	goModels            []string
 	passthroughApprox   []string
 	includeBuiltinRules bool
 }
@@ -133,7 +130,6 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	builder.SetJarPath(analyzerJarPath)
 
 	addDataflowApproximations(builder, opts.dataflowApprox, analyzerJarPath)
-	addGoModels(builder, opts.goModels)
 	addPassthroughApproximations(builder, opts.passthroughApprox)
 
 	projectConfig, err := projectutil.LoadConfig(projectPath)
@@ -194,7 +190,6 @@ func init() {
 		&testRulesTimeout,
 		&testRulesMaxMemory,
 		&testRulesDataflow,
-		&testRulesGoModels,
 	)
 	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleID, "rule-id", nil, "Run only rules with this ID (repeatable)")
 	testRuleRunCmd.Flags().StringArrayVar(&testRulesPassthrough, "passthrough-approximations", nil, "Pass-through approximation YAML file or directory (repeatable)")

@@ -21,8 +21,7 @@ var approximationCmd = &cobra.Command{
 methods the analyzer cannot see into, together with the dependency versions those models
 use.
 
-Java projects compile with 'opentaint compile approximations' and use the
---dataflow-approximations flag. Go projects are Go modules and use the --go-models flag.`,
+Pass a project, or a directory that holds projects, to --dataflow-approximations.`,
 }
 
 var approximationInitCmd = &cobra.Command{
@@ -99,7 +98,7 @@ func initGoApproximation(projectPath, projectArg string) {
 	}
 
 	printApproximationInitResult(projectPath, existing)
-	suggest("To apply the models run", fmt.Sprintf("opentaint scan <project> --go-models %s", projectArg))
+	suggest("To apply the models run", fmt.Sprintf("opentaint scan <project> --dataflow-approximations %s", projectArg))
 }
 
 func printApproximationInitResult(projectPath string, existing bool) {

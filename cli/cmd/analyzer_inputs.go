@@ -5,39 +5,36 @@ import (
 	"github.com/seqra/opentaint/internal/utils/log"
 )
 
-// addDataflowApproximations resolves the paths to compiled model directories.
-// It rebuilds a model project when its inputs change.
+// addDataflowApproximations finds the models in the model paths and passes them to the analyzer:
+// Java models as class directories and Go models as model modules. It rebuilds a Java model
+// project when its inputs change.
 func addDataflowApproximations(b *AnalyzerBuilder, paths []string, analyzerJarPath string) {
 	if len(paths) == 0 {
 		return
 	}
 
 	absPaths := make([]string, 0, len(paths))
-	for _, approxPath := range paths {
-		absPaths = append(absPaths, log.AbsPathOrExit(approxPath, "dataflow-approximations"))
+	for _, modelPath := range paths {
+		absPaths = append(absPaths, log.AbsPathOrExit(modelPath, "dataflow-approximations"))
 	}
 
-	classDirs, err := approximation.ResolveAll(absPaths, newApproximationBuilder(analyzerJarPath))
+	models, err := approximation.ResolveAll(absPaths, newApproximationBuilder(analyzerJarPath))
 	if err != nil {
 		out.Fatalf("Failed to apply dataflow approximations: %s", err)
 	}
-	for _, classDir := range classDirs {
+	for _, warning := range models.Warnings {
+		out.Warn(warning)
+	}
+	for _, classDir := range models.JavaClassDirs {
 		b.AddDataflowApproximations(classDir)
+	}
+	for _, goModelDir := range models.GoModelDirs {
+		b.AddGoModel(goModelDir)
 	}
 }
 
 func addPassthroughApproximations(b *AnalyzerBuilder, paths []string) {
 	for _, passthrough := range paths {
 		b.AddPassthroughApproximations(log.AbsPathOrExit(passthrough, "passthrough-approximations"))
-	}
-}
-
-func addGoModels(b *AnalyzerBuilder, paths []string) {
-	for _, modelPath := range paths {
-		absPath := log.AbsPathOrExit(modelPath, "go-models")
-		if err := approximation.ValidateGoModel(absPath); err != nil {
-			out.Fatalf("Failed to apply Go models: %s", err)
-		}
-		b.AddGoModel(absPath)
 	}
 }

@@ -214,16 +214,6 @@ func TestScanCommandWithoutArgument(t *testing.T) {
 	}
 }
 
-func TestScanCommandWithGoModels(t *testing.T) {
-	cmd := NewScanCommand("/project").
-		WithGoModels([]string{"/models/stdlib", "/models/http"}).
-		Build()
-	expected := "opentaint scan /project --go-models /models/stdlib --go-models /models/http"
-	if cmd != expected {
-		t.Errorf("Go model flags = %q, want %q", cmd, expected)
-	}
-}
-
 func TestBuildCompileCommandWithDocker(t *testing.T) {
 	base := NewCompileCommand("").WithOutput("/path/to/output")
 	cmd := BuildCompileCommandWithDocker(base, "/path/to/project", "/path/to/output")
@@ -281,7 +271,6 @@ func TestBuildScanCommandWithDocker(t *testing.T) {
 func TestBuildScanCommandWithDockerMountsApproximationInputs(t *testing.T) {
 	base := NewScanCommand("").
 		WithDataflowApproximations([]string{"/host/dataflow"}).
-		WithGoModels([]string{"/host/go-model-1", "/host/go-model-2"}).
 		WithPassthroughApproximations([]string{"/host/passthrough.yaml"})
 
 	cmd := BuildScanCommandWithDocker(
@@ -293,14 +282,10 @@ func TestBuildScanCommandWithDockerMountsApproximationInputs(t *testing.T) {
 	expected := "docker run --rm " +
 		"-v /host/project:/project -v /host/output:/output " +
 		"-v /host/dataflow:/dataflow-approximations/input0 " +
-		"-v /host/go-model-1:/go-models/input0 " +
-		"-v /host/go-model-2:/go-models/input1 " +
 		"-v /host/passthrough.yaml:/passthrough-approximations/input0 " +
 		"ghcr.io/seqra/opentaint:latest opentaint scan /project " +
 		"--output /output/results.sarif " +
 		"--dataflow-approximations /dataflow-approximations/input0 " +
-		"--go-models /go-models/input0 " +
-		"--go-models /go-models/input1 " +
 		"--passthrough-approximations /passthrough-approximations/input0"
 
 	if cmd != expected {

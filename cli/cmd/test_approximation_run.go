@@ -14,7 +14,6 @@ var (
 	testApproxTimeout   time.Duration
 	testApproxMaxMemory string
 	testApproxDataflow  []string
-	testApproxGoModels  []string
 )
 
 var testApproximationRunCmd = &cobra.Command{
@@ -45,7 +44,6 @@ language: taint.Source() to taint.Sink() for a Go project, Taint.source() to Tai
 			timeout:        testApproxTimeout,
 			maxMemory:      testApproxMaxMemory,
 			dataflowApprox: testApproxDataflow,
-			goModels:       testApproxGoModels,
 		})
 	},
 }
@@ -68,6 +66,5 @@ func init() {
 		&testApproxTimeout,
 		&testApproxMaxMemory,
 		&testApproxDataflow,
-		&testApproxGoModels,
 	)
 }
