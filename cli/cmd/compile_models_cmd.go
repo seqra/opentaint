@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/seqra/opentaint/internal/approximation"
+	"github.com/seqra/opentaint/internal/models"
 	"github.com/seqra/opentaint/internal/utils/log"
 	"github.com/spf13/cobra"
 )
@@ -23,11 +23,11 @@ need no compilation.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath := log.AbsPathOrExit(args[0], "model-project")
 
-		if approximation.IsGoProject(projectPath) {
+		if models.IsGoProject(projectPath) {
 			out.Fatalf("%s is a Go model module. Go models are loaded from source; no compilation needed. "+
 				"Pass the directory to --dataflow-models", projectPath)
 		}
-		if !approximation.IsProject(projectPath) {
+		if !models.IsProject(projectPath) {
 			out.Fatalf("%s is not a model project: it has no build.gradle.kts declaring the "+
 				"dependencies its models are written against.\nCreate one with 'opentaint model init %s "+
 				"--language java --dependency <group:artifact:version>'", projectPath, args[0])
@@ -35,7 +35,7 @@ need no compilation.`,
 
 		outputPath := compileModelsOutput
 		if outputPath == "" {
-			outputPath = approximation.BuildDir(projectPath)
+			outputPath = models.BuildDir(projectPath)
 		} else {
 			outputPath = log.AbsPathOrExit(outputPath, "output")
 		}
@@ -45,13 +45,13 @@ need no compilation.`,
 			out.Fatalf("Failed to resolve analyzer: %s", err)
 		}
 
-		if err := approximation.Build(projectPath, outputPath, newApproximationBuilder(analyzerJarPath)); err != nil {
+		if err := models.Build(projectPath, outputPath, newModelBuilder(analyzerJarPath)); err != nil {
 			out.Fatalf("Model compilation failed: %s", err)
 		}
 
 		out.Section("Model Compile Summary").
 			Field("Model project", projectPath).
-			Field("Compiled models written to", approximation.ClassesDir(outputPath)).
+			Field("Compiled models written to", models.ClassesDir(outputPath)).
 			Render()
 		suggest("To use the models run", fmt.Sprintf("opentaint scan <project> --dataflow-models %s", args[0]))
 	},

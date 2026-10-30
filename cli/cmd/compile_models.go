@@ -5,27 +5,27 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/seqra/opentaint/internal/approximation"
+	"github.com/seqra/opentaint/internal/models"
 	"github.com/seqra/opentaint/internal/autobuilder"
 	"github.com/seqra/opentaint/internal/globals"
 	"github.com/seqra/opentaint/internal/output"
 )
 
-// approximationBuilder compiles a model project with the autobuilder.
+// modelBuilder compiles a model project with the autobuilder.
 // The model project supplies the compile dependencies.
-type approximationBuilder struct {
+type modelBuilder struct {
 	analyzerJarPath string
 	apiJar          []byte
 }
 
-func newApproximationBuilder(analyzerJarPath string) approximation.Builder {
-	return &approximationBuilder{analyzerJarPath: analyzerJarPath}
+func newModelBuilder(analyzerJarPath string) models.Builder {
+	return &modelBuilder{analyzerJarPath: analyzerJarPath}
 }
 
 // Fingerprint identifies the compiler a build was produced with.
 // The source stamp covers the model project but not the tool that reads it, so without
 // this an upgraded CLI keeps serving models compiled by the previous one.
-func (b *approximationBuilder) Fingerprint() (string, error) {
+func (b *modelBuilder) Fingerprint() (string, error) {
 	autobuilder := globals.ArtifactByKind("autobuilder")
 	if autobuilder.Override == "" {
 		return "autobuilder " + autobuilder.Version, nil
@@ -42,18 +42,18 @@ func (b *approximationBuilder) Fingerprint() (string, error) {
 
 // Prepare updates the model API jar in the model project.
 // The builder reads the jar from the analyzer only once.
-func (b *approximationBuilder) Prepare(projectDir string) error {
+func (b *modelBuilder) Prepare(projectDir string) error {
 	if b.apiJar == nil {
-		apiJar, err := approximation.ExtractApiJar(b.analyzerJarPath)
+		apiJar, err := models.ExtractApiJar(b.analyzerJarPath)
 		if err != nil {
 			return err
 		}
 		b.apiJar = apiJar
 	}
-	return approximation.WriteApiJar(projectDir, b.apiJar)
+	return models.WriteApiJar(projectDir, b.apiJar)
 }
 
-func (b *approximationBuilder) Compile(projectDir, projectModelDir string) error {
+func (b *modelBuilder) Compile(projectDir, projectModelDir string) error {
 	autobuilderJarPath, err := ensureAutobuilderAvailable()
 	if err != nil {
 		return fmt.Errorf("failed to resolve autobuilder: %w", err)

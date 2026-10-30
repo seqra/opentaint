@@ -1,4 +1,4 @@
-package testapprox
+package testmodel
 
 import (
 	_ "embed"

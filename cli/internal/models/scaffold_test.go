@@ -1,4 +1,4 @@
-package approximation
+package models
 
 import (
 	"archive/zip"

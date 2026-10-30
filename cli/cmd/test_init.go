@@ -5,19 +5,19 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/seqra/opentaint/internal/approximation"
-	"github.com/seqra/opentaint/internal/testapprox"
+	"github.com/seqra/opentaint/internal/models"
+	"github.com/seqra/opentaint/internal/testmodel"
 	"github.com/seqra/opentaint/internal/testproject"
 	"github.com/seqra/opentaint/internal/testrule"
 	"github.com/spf13/cobra"
 )
 
 var initRuleProjectDeps []string
-var initApproxProjectDeps []string
+var initModelTestDeps []string
 var initRuleSinksOnly bool
 var initRuleSourcesOnly bool
 var initRuleLanguage string
-var initApproxLanguage string
+var initModelTestLanguage string
 
 // testProjectModulePath is the module path of a Go test project, so samples are named test.<Function>.
 const testProjectModulePath = "test"
@@ -107,21 +107,21 @@ Use --dependency to add each library the samples use. For Java, use Maven coordi
 Go, use module@version. Use the versions from the target application.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		language := testProjectLanguage(initApproxLanguage)
+		language := testProjectLanguage(initModelTestLanguage)
 		rejectOtherTestProjectLanguage(args[0], language)
 		switch language {
 		case "java":
-			if err := testproject.Bootstrap(args[0], "model-test-project", initApproxProjectDeps); err != nil {
+			if err := testproject.Bootstrap(args[0], "model-test-project", initModelTestDeps); err != nil {
 				out.Fatalf("Failed to bootstrap test project: %s", err)
 			}
-			if err := testapprox.Scaffold(args[0]); err != nil {
+			if err := testmodel.Scaffold(args[0]); err != nil {
 				out.Fatalf("Failed to scaffold model test project: %s", err)
 			}
 		case "go":
-			if err := testproject.BootstrapGo(args[0], testProjectModulePath, initApproxProjectDeps); err != nil {
+			if err := testproject.BootstrapGo(args[0], testProjectModulePath, initModelTestDeps); err != nil {
 				out.Fatalf("Failed to bootstrap test project: %s", err)
 			}
-			if err := testapprox.ScaffoldGo(args[0]); err != nil {
+			if err := testmodel.ScaffoldGo(args[0]); err != nil {
 				out.Fatalf("Failed to scaffold model test project: %s", err)
 			}
 		}
@@ -167,9 +167,9 @@ func rejectOtherTestProjectLanguage(dir, language string) {
 
 func otherTestProjectLanguage(dir, language string) error {
 	switch {
-	case language == "java" && approximation.IsGoProject(dir):
+	case language == "java" && models.IsGoProject(dir):
 		return fmt.Errorf("the output directory already contains a Go test project: %s", dir)
-	case language == "go" && approximation.IsProject(dir):
+	case language == "go" && models.IsProject(dir):
 		return fmt.Errorf("the output directory already contains a Java test project: %s", dir)
 	}
 	return nil
@@ -188,9 +188,9 @@ func init() {
 		"Create only the sources test project")
 
 	testModelCmd.AddCommand(testModelInitCmd)
-	testModelInitCmd.Flags().StringArrayVar(&initApproxProjectDeps, "dependency", nil,
+	testModelInitCmd.Flags().StringArrayVar(&initModelTestDeps, "dependency", nil,
 		"Maven coordinate for Java or module@version for Go (repeatable)")
-	testModelInitCmd.Flags().StringVar(&initApproxLanguage, "language", "",
+	testModelInitCmd.Flags().StringVar(&initModelTestLanguage, "language", "",
 		"Test project language: java or go")
 	_ = testModelInitCmd.MarkFlagRequired("language")
 	testApproximationCmd.AddCommand(deprecatedCommand(testModelInitCmd, "init", "opentaint test model init"))

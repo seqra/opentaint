@@ -1,4 +1,4 @@
-package approximation
+package models
 
 import (
 	"crypto/sha256"

@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/seqra/opentaint/internal/testapprox"
+	"github.com/seqra/opentaint/internal/testmodel"
 	"github.com/seqra/opentaint/internal/validation"
 	"github.com/spf13/cobra"
 
@@ -157,7 +157,7 @@ func compile(absProjectRoot, absOutputProjectModelPath, autobuilderJarPath strin
 // is tested rather than scanned.
 func compileNextStep(absProjectRoot, projectRoot, absOutputProjectModelPath string) (string, string) {
 	if info, err := os.Stat(filepath.Join(absProjectRoot, "rule-test.yaml")); err == nil && !info.IsDir() {
-		if testapprox.IsTestProject(absProjectRoot) {
+		if testmodel.IsTestProject(absProjectRoot) {
 			return "To run the model tests run",
 				"opentaint test model run " + absOutputProjectModelPath + " --dataflow-models <models>"
 		}

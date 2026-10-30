@@ -4,17 +4,17 @@ import (
 	"os"
 	"time"
 
-	"github.com/seqra/opentaint/internal/testapprox"
+	"github.com/seqra/opentaint/internal/testmodel"
 	projectutil "github.com/seqra/opentaint/internal/utils/project"
 	"github.com/spf13/cobra"
 )
 
 var (
-	testApproxOutputDir   string
-	testApproxTimeout     time.Duration
-	testApproxMaxMemory   string
-	testApproxDataflow    []string
-	testApproxPassthrough []string
+	testModelOutputDir   string
+	testModelTimeout     time.Duration
+	testModelMaxMemory   string
+	testModelDataflow    []string
+	testModelPassthrough []string
 )
 
 var testModelRunCmd = &cobra.Command{
@@ -36,7 +36,7 @@ language: taint.Source() to taint.Sink() for a Go project, Taint.source() to Tai
 		if err != nil {
 			out.Fatalf("Failed to create temp dir for harness rule: %s", err)
 		}
-		if _, err := testapprox.WriteFixedRule(ruleDir, projectModelLanguage(projectConfig)); err != nil {
+		if _, err := testmodel.WriteFixedRule(ruleDir, projectModelLanguage(projectConfig)); err != nil {
 			out.Fatalf("Failed to materialize harness rule: %s", err)
 		}
 
@@ -44,11 +44,11 @@ language: taint.Source() to taint.Sink() for a Go project, Taint.source() to Tai
 			label:             "Model tests",
 			tempDir:           "opentaint-test-models-*",
 			rulesets:          []string{ruleDir},
-			outputDir:         testApproxOutputDir,
-			timeout:           testApproxTimeout,
-			maxMemory:         testApproxMaxMemory,
-			dataflowModels:    testApproxDataflow,
-			passthroughModels: testApproxPassthrough,
+			outputDir:         testModelOutputDir,
+			timeout:           testModelTimeout,
+			maxMemory:         testModelMaxMemory,
+			dataflowModels:    testModelDataflow,
+			passthroughModels: testModelPassthrough,
 		})
 	},
 }
@@ -65,11 +65,11 @@ func init() {
 	testModelCmd.AddCommand(testModelRunCmd)
 	addTestRunFlags(
 		testModelRunCmd,
-		&testApproxOutputDir,
-		&testApproxTimeout,
-		&testApproxMaxMemory,
-		&testApproxDataflow,
-		&testApproxPassthrough,
+		&testModelOutputDir,
+		&testModelTimeout,
+		&testModelMaxMemory,
+		&testModelDataflow,
+		&testModelPassthrough,
 	)
 	testApproximationCmd.AddCommand(deprecatedCommand(testModelRunCmd, "run", "opentaint test model run"))
 }
