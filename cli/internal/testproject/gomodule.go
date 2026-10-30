@@ -24,6 +24,20 @@ func BootstrapGo(outputDir, modulePath string, dependencies []string) error {
 	})
 }
 
+// TidyGo runs 'go mod tidy' in dir, so its go.mod lists the modules its packages import.
+func TidyGo(dir string) error {
+	command := exec.Command("go", "mod", "tidy")
+	command.Dir = dir
+	output, err := command.CombinedOutput()
+	if err == nil {
+		return nil
+	}
+	if details := strings.TrimSpace(string(output)); details != "" {
+		return fmt.Errorf("'go mod tidy' failed in %s:\n%s", dir, details)
+	}
+	return fmt.Errorf("'go mod tidy' failed in %s: %w", dir, err)
+}
+
 // GoVersion is the language version for a generated go.mod: the version of the local Go toolchain,
 // so the module builds with the toolchain that will build the samples. Without a local toolchain it
 // falls back to the version the CLI was built with.

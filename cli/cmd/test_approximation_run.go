@@ -18,26 +18,29 @@ var (
 )
 
 var testModelRunCmd = &cobra.Command{
-	Use:   "run <project-model>",
-	Short: "Run dataflow model tests on a compiled project model",
+	Use:   "run <test-project>",
+	Short: "Run dataflow model tests on a test project",
 	Long: `Run the samples specified in rule-test.yaml with the supplied dataflow models applied.
 
 A built-in source-to-sink harness rule is applied automatically; positive samples reference the
 approximation-rule.yaml rule with id "approximation-rule". The rule matches the project model's
 language: taint.Source() to taint.Sink() for a Go project, Taint.source() to Taint.sink() otherwise.
 
+` + testProjectArgHelp + `
+
 ` + testExitCodesHelp("All model tests passed"),
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		projectPath, projectConfig := prepareTestProject(args[0])
 		ruleDir, err := os.MkdirTemp("", "opentaint-approx-rule-*")
 		if err != nil {
 			out.Fatalf("Failed to create temp dir for harness rule: %s", err)
 		}
-		if _, err := testapprox.WriteFixedRule(ruleDir, projectModelLanguage(args[0])); err != nil {
+		if _, err := testapprox.WriteFixedRule(ruleDir, projectModelLanguage(projectConfig)); err != nil {
 			out.Fatalf("Failed to materialize harness rule: %s", err)
 		}
 
-		runTestProject(args[0], testProjectOptions{
+		runTestProject(projectPath, projectConfig, testProjectOptions{
 			label:             "Model tests",
 			tempDir:           "opentaint-test-models-*",
 			rulesets:          []string{ruleDir},
@@ -51,10 +54,8 @@ language: taint.Source() to taint.Sink() for a Go project, Taint.source() to Tai
 }
 
 // projectModelLanguage is "go" for a project model with only Go projects and "java" otherwise.
-// A model that cannot be read is reported later by the test run.
-func projectModelLanguage(projectModel string) string {
-	config, err := projectutil.LoadConfig(projectModel)
-	if err == nil && len(config.GoProjects) > 0 && len(config.JavaProjects) == 0 {
+func projectModelLanguage(config *projectutil.Config) string {
+	if len(config.GoProjects) > 0 && len(config.JavaProjects) == 0 {
 		return "go"
 	}
 	return "java"

@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/seqra/opentaint/internal/analyzer"
+	"github.com/seqra/opentaint/internal/testproject"
 	"github.com/seqra/opentaint/internal/utils"
 	"github.com/seqra/opentaint/internal/utils/log"
 	projectutil "github.com/seqra/opentaint/internal/utils/project"
+	"github.com/seqra/opentaint/internal/validation"
 	"github.com/spf13/cobra"
 )
 
@@ -24,15 +26,18 @@ var (
 )
 
 var testRuleRunCmd = &cobra.Command{
-	Use:   "run <project-model>",
-	Short: "Run detection-rule tests on a compiled project model",
+	Use:   "run <test-project>",
+	Short: "Run detection-rule tests on a test project",
 	Long: `Run detection rules against the samples specified in rule-test.yaml in the
-compiled project model.
+test project.
+
+` + testProjectArgHelp + `
 
 ` + testExitCodesHelp("All rule tests passed"),
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		runTestProject(args[0], testProjectOptions{
+		projectPath, projectConfig := prepareTestProject(args[0])
+		runTestProject(projectPath, projectConfig, testProjectOptions{
 			label:               "Rule tests",
 			tempDir:             "opentaint-test-rules-*",
 			rulesets:            testRulesRuleset,
@@ -60,16 +65,65 @@ type testProjectOptions struct {
 	includeBuiltinRules bool
 }
 
-func runTestProject(projectModelArg string, opts testProjectOptions) {
-	projectPath := log.AbsPathOrExit(projectModelArg, "project-model")
+// testProjectArgHelp describes the <test-project> argument of the test run commands.
+const testProjectArgHelp = `<test-project> is a Go test project directory, or the project model that
+'opentaint compile <test-project> -o <project-model>' writes for it. A Java test project
+must be compiled first. Go projects get 'go mod tidy' before the tests run.`
+
+// prepareTestProject returns the project model to test and its configuration. A Go test
+// project directory has no project model, so one is written for it to a temporary directory.
+// Every Go project is tidied first: the samples are written after the test project is
+// created and may import modules its go.mod does not list yet.
+func prepareTestProject(arg string) (string, *projectutil.Config) {
+	projectPath := log.AbsPathOrExit(arg, "test-project")
 	nativeProjectPath := filepath.Join(projectPath, "project.yaml")
 
 	if _, err := os.Stat(nativeProjectPath); err != nil {
-		if os.IsNotExist(err) {
-			out.Fatalf("Project model not found: %s", nativeProjectPath)
+		if !os.IsNotExist(err) {
+			out.Fatalf("Cannot access project model %s: %s", nativeProjectPath, err)
 		}
-		out.Fatalf("Cannot access project model %s: %s", nativeProjectPath, err)
+		if !validation.IsGoSourceProject(projectPath) {
+			out.Error(fmt.Sprintf("Project model not found: %s", nativeProjectPath))
+			suggest("Compile a Java test project first:",
+				utils.NewCompileCommand(arg).WithOutput("<project-model>").Build())
+			os.Exit(1)
+		}
+		modelPath, err := os.MkdirTemp("", "opentaint-test-project-*")
+		if err != nil {
+			out.Fatalf("Failed to create temp dir for the project model: %s", err)
+		}
+		if err := projectutil.WriteGoProjectModel(projectPath, modelPath); err != nil {
+			out.Fatalf("Failed to write the project model: %s", err)
+		}
+		projectPath = modelPath
 	}
+
+	projectConfig, err := projectutil.LoadConfig(projectPath)
+	if err != nil {
+		out.Fatalf("Failed to read the project model: %s", err)
+	}
+	for _, goProject := range projectConfig.GoProjects {
+		if err := tidyGoProject(projectPath, goProject.ProjectDir); err != nil {
+			out.Fatalf("%s", err)
+		}
+	}
+	return projectPath, projectConfig
+}
+
+// tidyGoProject tidies the Go module of a project model's Go project. A workspace root
+// without a go.mod of its own is left alone.
+func tidyGoProject(projectModelPath, projectDir string) error {
+	if !filepath.IsAbs(projectDir) {
+		projectDir = filepath.Join(projectModelPath, projectDir)
+	}
+	if info, err := os.Stat(filepath.Join(projectDir, "go.mod")); err != nil || info.IsDir() {
+		return nil
+	}
+	return testproject.TidyGo(projectDir)
+}
+
+func runTestProject(projectPath string, projectConfig *projectutil.Config, opts testProjectOptions) {
+	nativeProjectPath := filepath.Join(projectPath, "project.yaml")
 
 	maxMemory, err := utils.ParseMemoryValue(opts.maxMemory)
 	if err != nil {
@@ -132,10 +186,6 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	addDataflowModels(builder, opts.dataflowModels, analyzerJarPath)
 	addPassthroughModels(builder, opts.passthroughModels)
 
-	projectConfig, err := projectutil.LoadConfig(projectPath)
-	if err != nil {
-		out.Fatalf("Failed to read the project model: %s", err)
-	}
 	goServerPath := ""
 	if len(projectConfig.GoProjects) > 0 {
 		goServerPath, err = ensureGoServerAvailable()
