@@ -83,7 +83,7 @@ func TestCompileNextStep(t *testing.T) {
 	writeTestFile(t, filepath.Join(ruleTest, "rule-test.yaml"), "")
 	modelTest := t.TempDir()
 	writeTestFile(t, filepath.Join(modelTest, "rule-test.yaml"), "")
-	writeTestFile(t, filepath.Join(modelTest, "approximation-rule.yaml"), "")
+	writeTestFile(t, filepath.Join(modelTest, "model-rule.yaml"), "")
 
 	for dir, want := range map[string]string{
 		plain:     "opentaint scan",

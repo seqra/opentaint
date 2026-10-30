@@ -527,7 +527,7 @@ func TestBuildRejectsCollidingModelClasses(t *testing.T) {
 
 	err := Build(project, BuildDir(project), builder)
 	if err == nil {
-		t.Fatal("expected colliding approximation classes to fail the build")
+		t.Fatal("expected colliding model classes to fail the build")
 	}
 	if !strings.Contains(err.Error(), "exactly one target class") {
 		t.Errorf("unexpected error: %v", err)

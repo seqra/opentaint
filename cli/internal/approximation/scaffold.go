@@ -11,7 +11,7 @@ import (
 	"github.com/seqra/opentaint/internal/testproject"
 )
 
-const gradleProjectName = "approximation-models"
+const gradleProjectName = "dependency-models"
 
 // Scaffold creates a Gradle project for dataflow models.
 func Scaffold(projectDir string, dependencies []string, analyzerJarPath string) error {
@@ -43,7 +43,7 @@ func goModule(dependencies []string, goVersion string) ([]byte, error) {
 	return testproject.GoModule(goModelModulePath, dependencies, goVersion)
 }
 
-// ExtractApiJar reads the approximation API jar from the analyzer jar.
+// ExtractApiJar reads the model API jar from the analyzer jar.
 func ExtractApiJar(analyzerJarPath string) ([]byte, error) {
 	reader, err := zip.OpenReader(analyzerJarPath)
 	if err != nil {
@@ -69,7 +69,7 @@ func readZipEntry(file *zip.File) ([]byte, error) {
 	return io.ReadAll(content)
 }
 
-// WriteApiJar writes the approximation API jar to a model project.
+// WriteApiJar writes the model API jar to a model project.
 // It does not write the file when the content is current.
 func WriteApiJar(projectDir string, apiJar []byte) error {
 	path := apiJarPath(projectDir)

@@ -1,4 +1,4 @@
-// Package taint is the fixed source and sink of a Go approximation test project.
+// Package taint is the fixed source and sink of a Go model test project.
 package taint
 
 // Source returns the tainted test input.

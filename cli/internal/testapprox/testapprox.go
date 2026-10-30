@@ -9,15 +9,15 @@ import (
 	"github.com/seqra/opentaint/internal/utils"
 )
 
-const fixedRuleFileName = "approximation-rule.yaml"
+const fixedRuleFileName = "model-rule.yaml"
 
-//go:embed example/approximation-rule.yaml
+//go:embed example/model-rule.yaml
 var fixedRule []byte
 
 //go:embed example/src/main/java/test/Taint.java
 var taintJava []byte
 
-//go:embed example/go/approximation-rule.yaml
+//go:embed example/go/model-rule.yaml
 var fixedGoRule []byte
 
 //go:embed example/go/taint/taint.go
@@ -31,7 +31,7 @@ func WriteFixedRule(dir, language string) (string, error) {
 	}
 	path := filepath.Join(dir, fixedRuleFileName)
 	if err := os.WriteFile(path, rule, 0o644); err != nil {
-		return "", fmt.Errorf("write fixed approximation rule: %w", err)
+		return "", fmt.Errorf("write fixed model rule: %w", err)
 	}
 	return path, nil
 }

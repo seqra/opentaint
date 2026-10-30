@@ -1,9 +1,9 @@
 rules:
-  - id: approximation-rule
+  - id: model-rule
     severity: ERROR
-    message: Tainted value from taint.Source() reached taint.Sink() through an approximated function
+    message: Tainted value from taint.Source() reached taint.Sink() through a modeled function
     metadata:
-      short-description: Approximation test source-to-sink flow
+      short-description: Model test source-to-sink flow
     languages:
       - go
     mode: taint

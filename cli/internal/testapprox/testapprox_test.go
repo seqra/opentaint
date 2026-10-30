@@ -23,8 +23,28 @@ func TestScaffoldGoWritesHarness(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(rule), "- go") || !strings.Contains(string(rule), "id: approximation-rule") {
-		t.Errorf("fixed rule is not the Go approximation-rule:\n%s", rule)
+	if !strings.Contains(string(rule), "- go") || !strings.Contains(string(rule), "id: model-rule") {
+		t.Errorf("fixed rule is not the Go model-rule:\n%s", rule)
+	}
+}
+
+func TestScaffoldWritesJavaHarness(t *testing.T) {
+	dir := t.TempDir()
+	if err := Scaffold(dir); err != nil {
+		t.Fatalf("Scaffold: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "src", "main", "java", "test", "Taint.java")); err != nil {
+		t.Error(err)
+	}
+	rule, err := os.ReadFile(filepath.Join(dir, "model-rule.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(rule), "- java") || !strings.Contains(string(rule), "id: model-rule") {
+		t.Errorf("fixed rule is not the Java model-rule:\n%s", rule)
+	}
+	if !IsTestProject(dir) {
+		t.Error("scaffolded directory is not recognized as a model test project")
 	}
 }
 

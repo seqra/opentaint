@@ -1,6 +1,7 @@
 package approximation
 
 import (
+	"archive/zip"
 	"os"
 	"path/filepath"
 	"slices"
@@ -47,7 +48,53 @@ func TestScaffoldGoCreatesModelModule(t *testing.T) {
 		t.Fatalf("dependencies = %v, want %v", gotDependencies, dependencies)
 	}
 	if !IsGoProject(projectDir) {
-		t.Fatal("generated directory is not recognized as a Go approximation project")
+		t.Fatal("generated directory is not recognized as a Go model project")
+	}
+}
+
+func TestScaffoldCreatesGradleModelProject(t *testing.T) {
+	analyzerJar := filepath.Join(t.TempDir(), "analyzer.jar")
+	writeAnalyzerJar(t, analyzerJar, []byte("api"))
+	projectDir := filepath.Join(t.TempDir(), "models")
+
+	if err := Scaffold(projectDir, nil, analyzerJar); err != nil {
+		t.Fatalf("Scaffold: %v", err)
+	}
+
+	settings, err := os.ReadFile(filepath.Join(projectDir, "settings.gradle.kts"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `rootProject.name = "dependency-models"`; !strings.Contains(string(settings), want) {
+		t.Errorf("settings.gradle.kts does not contain %s:\n%s", want, settings)
+	}
+	if apiJar, err := os.ReadFile(apiJarPath(projectDir)); err != nil || string(apiJar) != "api" {
+		t.Errorf("API jar = %q, %v, want the bundled jar", apiJar, err)
+	}
+	if !IsProject(projectDir) {
+		t.Fatal("generated directory is not recognized as a Java model project")
+	}
+}
+
+func writeAnalyzerJar(t *testing.T, path string, apiJar []byte) {
+	t.Helper()
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := zip.NewWriter(file)
+	entry, err := writer.Create(apiJarResourcePrefix + apiJarName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := entry.Write(apiJar); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
 

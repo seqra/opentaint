@@ -23,7 +23,7 @@ var testModelRunCmd = &cobra.Command{
 	Long: `Run the samples specified in rule-test.yaml with the supplied dataflow models applied.
 
 A built-in source-to-sink harness rule is applied automatically; positive samples reference the
-approximation-rule.yaml rule with id "approximation-rule". The rule matches the project model's
+model-rule.yaml rule with id "model-rule". The rule matches the project model's
 language: taint.Source() to taint.Sink() for a Go project, Taint.source() to Taint.sink() otherwise.
 
 ` + testProjectArgHelp + `
@@ -32,7 +32,7 @@ language: taint.Source() to taint.Sink() for a Go project, Taint.source() to Tai
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath, projectConfig := prepareTestProject(args[0])
-		ruleDir, err := os.MkdirTemp("", "opentaint-approx-rule-*")
+		ruleDir, err := os.MkdirTemp("", "opentaint-model-rule-*")
 		if err != nil {
 			out.Fatalf("Failed to create temp dir for harness rule: %s", err)
 		}

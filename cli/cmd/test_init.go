@@ -91,12 +91,12 @@ var testModelInitCmd = &cobra.Command{
 Use --language java to create a Gradle project. The project includes:
   - build.gradle.kts with compile-only dependencies
   - settings.gradle.kts
-  - approximation-rule.yaml, the fixed source-to-sink rule the samples are checked against
+  - model-rule.yaml, the fixed source-to-sink rule the samples are checked against
   - src/main/java/test/ with Taint.java (the fixed source() and sink()) for test sample sources
 
 Use --language go to create a Go module with module path "test". The module includes:
   - go.mod with the required dependencies
-  - approximation-rule.yaml, the fixed source-to-sink rule the samples are checked against
+  - model-rule.yaml, the fixed source-to-sink rule the samples are checked against
   - taint/taint.go (the fixed Source() and Sink()) for test sample sources
 
 Positive and negative samples are specified via rule-test.yaml.
