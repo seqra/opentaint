@@ -24,6 +24,16 @@ passThrough:
     to: result
   - from: kwarg(args)
     to: result
+- function: array.array
+  copy:
+  - from: arg(1)
+    to: result
+- function: array.array.append
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - '[*]'
 - function: base64.b64encode
   copy:
   - from: arg(0)
@@ -304,6 +314,10 @@ passThrough:
     to: result
   - from: kwarg(url)
     to: result
+- function: numpy.array
+  copy:
+  - from: arg(0)
+    to: result
 - function: optparse.OptionParser.parse_args
   copy:
   - from: arg(0)
@@ -343,6 +357,24 @@ passThrough:
 - function: pathlib.PurePath.__fspath__
   copy:
   - from: this
+    to: result
+- function: posixpath.join
+  copy:
+  - from: arg(0)
+    to: result
+  - from: arg(1)
+    to: result
+  - from: arg(2)
+    to: result
+  - from: arg(3)
+    to: result
+  - from: arg(4)
+    to: result
+  - from: arg(5)
+    to: result
+  - from: arg(6)
+    to: result
+  - from: arg(7)
     to: result
 - function: queue.Queue.get_nowait
   copy:
@@ -416,6 +448,12 @@ passThrough:
     to: result
   - from: kwarg(seq)
     to: result
+- function: re.findall
+  copy:
+  - from: arg(1)
+    to:
+    - result
+    - '[*]'
 - function: shlex.quote
   copy:
   - from: arg(0)

@@ -207,3 +207,21 @@ fun findOpentaintSeEnvInitializer(): Task? {
 tasks.withType<Test> {
     maxHeapSize = "4G"
 }
+
+tasks.test {
+    useJUnitPlatform {
+        excludeTags("ant-benchmark")
+    }
+}
+
+val testSourceSet = sourceSets["test"]
+
+tasks.register<Test>("antBenchmarkTest") {
+    group = "verification"
+    description = "Runs the Ant Python benchmark."
+    testClassesDirs = testSourceSet.output.classesDirs
+    classpath = testSourceSet.runtimeClasspath
+    useJUnitPlatform {
+        includeTags("ant-benchmark")
+    }
+}

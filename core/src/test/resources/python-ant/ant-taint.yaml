@@ -1,0 +1,13 @@
+rules:
+  - id: ant-taint-src-to-sink
+    languages: [python]
+    severity: ERROR
+    message: "Benchmark input reaches taint_sink"
+    patterns:
+      - pattern-inside: |
+          def $CASE($SRC, ...):
+            ...
+      - pattern: taint_sink($SRC)
+      - metavariable-regex:
+          metavariable: $CASE
+          regex: .*_[0-9]+_[TF]

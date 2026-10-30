@@ -146,6 +146,10 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+- function: builtins.bytearray
+  copy:
+  - from: arg(0)
+    to: result
 
 # --- Collection mutations: arg → receiver (taint flows into the collection) ---
 - function: builtins.list.append
@@ -236,6 +240,34 @@ passThrough:
   copy:
   - from: this
     to: result
+- function: builtins.set.union
+  copy:
+  - from: this
+    to: result
+  - from: arg(0)
+    to: result
+- function: builtins.next
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+- function: builtins.enumerate
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - '[*]'
+- function: builtins.zip
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - '[*]'
+  - from: arg(1)
+    to:
+    - result
+    - '[*]'
 - function: configparser.ConfigParser.set
   copy:
     - from: arg(2)

@@ -3,12 +3,14 @@ package org.opentaint.python.sast.dataflow
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.opentaint.common.sast.dataflow.DummySerializationContext
 import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
@@ -17,6 +19,8 @@ import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.RefManager
 import org.opentaint.dataflow.python.analysis.PIRAnalysisManager
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
+import org.opentaint.dataflow.python.rules.PIRCombinedTaintRulesProvider
+import org.opentaint.dataflow.python.rules.PIRTaintRulesProvider
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.python.PIRClasspath
@@ -27,13 +31,13 @@ import java.io.File
 import java.nio.file.Path
 import java.util.jar.JarFile
 import kotlin.io.path.createDirectories
+import kotlin.io.path.createTempDirectory
 import kotlin.io.path.writeText
-import kotlin.test.Ignore
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-@Ignore
+@Tag("ant-benchmark")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AntBenchmarkTest {
 
@@ -54,6 +58,15 @@ class AntBenchmarkTest {
 
     private var tempDir: File? = null
 
+    private val combinedProvider: PIRTaintRulesProvider by lazy {
+        val extendAll = PIRCombinedTaintRulesProvider.CombinationOptions(
+            entryPoint = PIRCombinedTaintRulesProvider.CombinationMode.EXTEND,
+            source = PIRCombinedTaintRulesProvider.CombinationMode.EXTEND,
+            sink = PIRCombinedTaintRulesProvider.CombinationMode.EXTEND,
+        )
+        PIRCombinedTaintRulesProvider(loadDefaultConfig(), loadSemgrepRules("/python-ant"), extendAll)
+    }
+
     @BeforeAll
     fun setup() {
         val jarPath = System.getenv("ANT_BENCHMARK_SAMPLES_JAR")
@@ -68,7 +81,7 @@ class AntBenchmarkTest {
             return
         }
 
-        val tmp = java.nio.file.Files.createTempDirectory("ant-benchmark").toFile()
+        val tmp = createTempDirectory("ant-benchmark").toFile()
         tempDir = tmp
         extractPythonFiles(jarPath, tmp.toPath())
 
@@ -108,10 +121,13 @@ class AntBenchmarkTest {
         val refManager = RefManager()
         val cancellation = Cancellation()
 
+        val analysisManager = PIRAnalysisManager(cp, combinedProvider)
+        analysisManager.selectPhase(TaintAnalysisManager.Phase.FullScan)
+
         @Suppress("UNCHECKED_CAST")
         val engine = TaintAnalysisUnitRunnerManager(
             refManager, cancellation,
-            PIRAnalysisManager(cp, loadDefaultConfig()),
+            analysisManager,
             ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
             unitResolver = { SingletonUnit },
             summarySerializationContext = DummySerializationContext,
