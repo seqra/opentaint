@@ -37,7 +37,7 @@ The more AI writes code, the more you need formal methods underneath.
 
 The engine runs IFDS-with-abduction — formal inter-procedural dataflow analysis. It tracks untrusted data from HTTP inputs to dangerous APIs across endpoints, persistence layers, object fields, aliased references, and async code. That includes multi-hop attack paths — cross-endpoint flows, stored injections, data through object fields and aliases — at monorepo scale. 100+ rules across 20+ vulnerability classes.
 
-Models Spring data flow and the full Boot ecosystem, analyzing Java and Kotlin at bytecode level. More languages and frameworks ahead.
+Models Spring data flow and the full Boot ecosystem, analyzing Java and Kotlin at bytecode level and Go on SSA form. More languages and frameworks ahead.
 
 ### One finding becomes total coverage
 
@@ -110,7 +110,7 @@ Each finding includes the HTTP endpoint, making it easy to map your application'
 | **Docker** | See [Docker docs](docker.md) |
 | **Binary** | [Download from releases](https://github.com/seqra/opentaint/releases/latest) |
 
-Release archives come in three variants: **`opentaint-full`** (binary + JARs + rules + JRE), **`opentaint`** (binary + JARs + rules), and **`opentaint-cli`** (binary only). Homebrew and install scripts default to `full`.
+Release archives come in three variants: **`opentaint-full`** (binary + JARs + rules + go-ssa-server + JRE), **`opentaint`** (binary + JARs + rules + go-ssa-server), and **`opentaint-cli`** (binary only). Homebrew and install scripts default to `full`.
 
 For detailed instructions, see [Installation Guide](installation.md).
 

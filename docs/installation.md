@@ -1,6 +1,6 @@
 # Installation
 
-**Prerequisites:** Same build requirements as your project (Maven or Gradle for Java/Kotlin). Java runtime is bundled with release archives.
+**Prerequisites:** Same build requirements as your project (Maven or Gradle for Java/Kotlin, the Go toolchain for Go modules). Java runtime is bundled with release archives.
 
 ## Homebrew (Linux/macOS)
 
@@ -104,8 +104,8 @@ Each release provides three archive variants:
 
 | Variant | Contents | Use case |
 |---------|----------|----------|
-| **`opentaint-full`** | Binary + JARs + rules + JRE | Recommended — everything included, no additional downloads |
-| **`opentaint`** | Binary + JARs + rules | Use your own JRE (Java 17+) |
+| **`opentaint-full`** | Binary + JARs + rules + go-ssa-server + JRE | Recommended — everything included, no additional downloads |
+| **`opentaint`** | Binary + JARs + rules + go-ssa-server | Use your own JRE (Java 17+) |
 | **`opentaint-cli`** | Binary only | Minimal install; run `opentaint pull` to download components |
 
 Download `opentaint-full` for your platform (recommended):
@@ -119,7 +119,7 @@ Download `opentaint-full` for your platform (recommended):
 | Windows x64 | [opentaint-full_windows_amd64.zip](https://github.com/seqra/opentaint/releases/latest/download/opentaint-full_windows_amd64.zip) |
 | Windows ARM64 | [opentaint-full_windows_arm64.zip](https://github.com/seqra/opentaint/releases/latest/download/opentaint-full_windows_arm64.zip) |
 
-The `opentaint-full` archives include bundled JARs, rules, and JRE — no additional downloads needed. Replace `opentaint-full` with `opentaint` or `opentaint-cli` in the URLs above for other variants.
+The `opentaint-full` archives include bundled JARs, rules, the go-ssa-server, and a JRE — no additional downloads needed. Replace `opentaint-full` with `opentaint` or `opentaint-cli` in the URLs above for other variants.
 
 ### Linux/macOS Installation
 

@@ -1,6 +1,9 @@
 package globals
 
-import "strings"
+import (
+	"runtime"
+	"strings"
+)
 
 // ArtifactDef declaratively describes a downloadable artifact.
 type ArtifactDef struct {
@@ -26,6 +29,16 @@ func (a ArtifactDef) Kind() string {
 	return strings.ToLower(a.Name)
 }
 
+// TagPrefix returns the release-tag prefix of this artifact, for example
+// "analyzer/". The go-ssa-server tag uses "go-server/", which differs from
+// the artifact kind.
+func (a ArtifactDef) TagPrefix() string {
+	if a.Kind() == "goserver" {
+		return "go-server/"
+	}
+	return a.Kind() + "/"
+}
+
 // IsBindVersion reports whether the configured version matches the compile-time bind version.
 func (a ArtifactDef) IsBindVersion() bool {
 	return a.Version == a.BindVersion
@@ -40,6 +53,14 @@ func (a ArtifactDef) WithVersion(v string) ArtifactDef {
 // Artifacts returns the list of artifact definitions, reading current globals and Config.
 // This is a function (not a var) so it picks up mutable bind version vars and Config at call time.
 func Artifacts() []ArtifactDef {
+	// go-ssa-server is a single native binary (Unpack:false). The bundled and
+	// install tiers store it under its platform asset name. The per-machine
+	// cache file keeps the windows .exe suffix. Thus the resolved path stays
+	// executable on windows.
+	goServerCacheSuffix := ""
+	if runtime.GOOS == "windows" {
+		goServerCacheSuffix = ".exe"
+	}
 	return []ArtifactDef{
 		{
 			Name:        "Autobuilder",
@@ -73,6 +94,18 @@ func Artifacts() []ArtifactDef {
 			BindVersion: RulesBindVersion,
 			Version:     Config.Rules.Version,
 			Unpack:      true,
+		},
+		{
+			Name:        "GoServer",
+			RepoName:    Config.Repo,
+			AssetName:   GoServerAssetName(),
+			LibSubpath:  GoServerAssetName(),
+			CachePrefix: GoServerAssetNamePrefix,
+			CacheSuffix: goServerCacheSuffix,
+			BindVersion: GoServerBindVersion,
+			Version:     Config.GoServer.Version,
+			Override:    Config.GoServer.Binary,
+			Unpack:      false,
 		},
 	}
 }

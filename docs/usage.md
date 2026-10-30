@@ -94,7 +94,9 @@ Use [CodeChecker](https://github.com/Ericsson/codechecker) for advanced result m
 
 ### opentaint scan
 
-Automatically detects the project's build system (Maven or Gradle), builds the project, and runs taint analysis over the result. The source path defaults to the current directory when omitted.
+Automatically detects the project's build system (Maven, Gradle, or go.mod), builds the project, and runs taint analysis over the result. The source path defaults to the current directory when omitted.
+
+Go projects need the `go` command on `PATH`. The first Go scan downloads the `go-ssa-server` component. A project can mix languages. If `go` is missing in a mixed project, the scan skips the Go code and shows a warning.
 
 On the first run, the compiled project model is cached in `~/.opentaint/cache/`. Subsequent scans of the same project reuse the cached model, skipping compilation entirely.
 
@@ -142,13 +144,14 @@ opentaint health --rules
 opentaint health --analyzer
 ```
 
-With no flags, `health` shows the autobuilder, analyzer, built-in rules, and Java runtime, and reports whether each is present. With a single component flag, it prints only the bare path, which is useful for scripts. The command exits non-zero when a selected component is missing. Fetch missing components with `opentaint pull`.
+With no flags, `health` shows the autobuilder, analyzer, built-in rules, go-ssa-server, and Java runtime, and reports whether each is present. With a single component flag, it prints only the bare path, which is useful for scripts. The command exits non-zero when a selected component is missing. Fetch missing components with `opentaint pull`.
 
 | Flag | Description |
 |------|-------------|
 | `--autobuilder` | Print only the autobuilder JAR path |
 | `--analyzer` | Print only the analyzer JAR path |
 | `--rules` | Print only the built-in rules path, downloading rules if needed |
+| `--go-server` | Print only the go-ssa-server binary path |
 | `--runtime` | Print only the Java runtime path |
 
 ### opentaint test
@@ -193,7 +196,7 @@ Rule and model test runs write `test-result.json` and `test-results.sarif` to th
 
 ### opentaint compile
 
-Compiles Java and Kotlin projects and generates project models for analysis. Useful when you want to separate compilation from scanning or need to inspect the project model.
+Compiles Java, Kotlin, and Go projects and generates project models for analysis. Useful when you want to separate compilation from scanning or need to inspect the project model.
 
 ```bash
 opentaint compile --output ./my-project-model /path/to/project

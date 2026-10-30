@@ -35,7 +35,7 @@ var updateHintCh = make(chan string, 1)
 var rootCmd = &cobra.Command{
 	Use:   "opentaint",
 	Short: "Find vulnerabilities in source code with taint analysis",
-	Long: `OpenTaint finds vulnerabilities in your code. It follows tainted data from untrusted sources to dangerous sinks. Java and Kotlin projects are supported.
+	Long: `OpenTaint finds vulnerabilities in your code. It follows tainted data from untrusted sources to dangerous sinks. Java, Kotlin, and Go projects are supported.
 
 Quick start:
   1. Run "opentaint pull" one time. This downloads the toolchain.
@@ -132,6 +132,14 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&globals.Config.Rules.Version, "rules-version", globals.RulesBindVersion, "Version of opentaint rules")
 	_ = rootCmd.PersistentFlags().MarkHidden("rules-version")
 	_ = viper.BindPFlag("rules.version", rootCmd.PersistentFlags().Lookup("rules-version"))
+
+	rootCmd.PersistentFlags().StringVar(&globals.Config.GoServer.Version, "go-server-version", globals.GoServerBindVersion, "The go-ssa-server version to download")
+	_ = rootCmd.PersistentFlags().MarkHidden("go-server-version")
+	_ = viper.BindPFlag("go-server.version", rootCmd.PersistentFlags().Lookup("go-server-version"))
+
+	rootCmd.PersistentFlags().StringVar(&globals.Config.GoServer.Binary, "go-server-binary", "", "Path to a go-ssa-server binary (developer override, no download)")
+	_ = rootCmd.PersistentFlags().MarkHidden("go-server-binary")
+	_ = viper.BindPFlag("go-server.binary", rootCmd.PersistentFlags().Lookup("go-server-binary"))
 
 	rootCmd.PersistentFlags().IntVar(&globals.Config.Java.Version, "java-version", globals.DefaultJavaVersion, "Java version to use for running analyzer")
 	_ = viper.BindPFlag("java.version", rootCmd.PersistentFlags().Lookup("java-version"))
