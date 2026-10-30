@@ -28,10 +28,10 @@ class Run1StaticExitRoutingTest {
             // A return transfer must never run on the shortcut.
             f.statement(1, StatementSummary(setOf(STATIC), emptyList(), emptyList(), emptyMap()))
             val actor = f.core()
-            actor.routeStaticResultToExit(original, static)
+            actor.routeStaticResultToExit(f.inst(1), original, static)
             assertTrue(actor.summaries.all().none(), "Producer cannot insert a summary before exit rules")
-            assertTrue(actor.edges.edgesAt(f.inst(2)).any())
-            assertTrue(actor.edges.edgesAt(f.inst(1)).none())
+            assertTrue(actor.edges.edgesAt(f.inst(1)).any(), "Shortcut output belongs to its producer")
+            assertTrue(actor.edges.edgesAt(f.inst(2)).none(), "Exit input is not a completed exit result")
             f.drain(actor)
             assertEquals(setOf(2), f.processed.filter { it.facts.base == STATIC }.map { it.node.location.index }.toSet())
             assertTrue(actor.summaries.all().any { it.first === original && it.second.base == AccessPathBase.Return })
@@ -76,7 +76,7 @@ class Run1StaticExitRoutingTest {
                 staticOperations = listOf(StaticOperation.Write(operation, Pattern(transfer.to, ExclusionSet.Empty), transfer)))
             f.exitRules(2, ExitRules(RuleStatement(rules, StatementSummary.EMPTY, emptyList()), false, emptySet()))
             val actor = f.core()
-            repeat(3) { actor.routeStaticResultToExit(initial, value) }
+            repeat(3) { actor.routeStaticResultToExit(f.inst(1), initial, value) }
             f.drain(actor)
             assertEquals(1, f.processed.count { it.facts.base == STATIC }, "Equal shortcut arrivals share point admission")
             assertTrue(actor.summaries.all().none(), "Static/static is a private handoff seed")
@@ -102,7 +102,7 @@ class Run1StaticExitRoutingTest {
             f.exitRules(2, ExitRules(RuleStatement(StatementSummary.EMPTY, StatementSummary.EMPTY, listOf(sink)), false, emptySet()))
             val actor = f.core(localFactory = MethodLocalServicesFactory(::RunMethodLocalServices))
             val initial = f.manager.initial(f.pattern(STATIC, from, Tail.STAR, MarkSlot.STAR))
-            actor.routeStaticResultToExit(initial, f.fact(STATIC, target, Tail.STAR, MarkSlot.STAR, layer = Layer.DEMAND))
+            actor.routeStaticResultToExit(f.inst(1), initial, f.fact(STATIC, target, Tail.STAR, MarkSlot.STAR, layer = Layer.DEMAND))
             f.drain(actor)
             assertTrue(f.vulnerabilities.witnessesOf(1).none())
             val before = f.processed.count { it.facts.base == STATIC }
@@ -359,7 +359,7 @@ class Run1StaticExitRoutingTest {
         MethodAnalysisFixtures(successors = listOf(listOf(1), listOf(1), emptyList())).use { f ->
             val path = listOf(f.manager.accessors.index(ClassStaticAccessor("C")), f.field("f"))
             val actor = f.core()
-            actor.routeStaticResultToExit(f.manager.zero, f.run1Fact(STATIC, path))
+            actor.routeStaticResultToExit(f.inst(1), f.manager.zero, f.run1Fact(STATIC, path))
             f.drain(actor)
             assertEquals(setOf(2), f.processed.map { it.node.location.index }.toSet())
             assertTrue(actor.summaries.all().any { it.first.isZero && it.second.base == STATIC })

@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.*
 import org.opentaint.dataflow.bidi.engine.*
@@ -10,11 +11,43 @@ import kotlin.time.Duration.Companion.seconds
 
 /** Analyzer inventory 9: explicit joined-result witness-boundary regression, not a native-program theorem. */
 class EarlierConfirmationStopTest {
+    /** A declared joined-result row keeps this report-order test live to run-5.
+     * The ordinary run-3 snapshot is empty and the selected stop would end there.
+     * No transfer of the real program or its engine stores is changed.
+     */
+    private fun selectedCheckpoint(f: DriverFixtures, config: RunConfig, key: MethodKey): RunMethodAnalyzer {
+        val port = object : RunnerPort<RunMethodAnalyzer> {
+            override val config = config
+            override val shared = f.shared
+            override val forms = shared.contexts.directed(config.direction)
+            override val ops = f.ops
+            override val steps = ProtocolSteps.Inline
+            override fun send(event: RunEvent): Boolean = error("A frozen checkpoint sends no work")
+            override fun post(event: RunEvent.Delivery): Boolean = error("A frozen checkpoint receives no work")
+            override fun enqueue(analyzer: RunMethodAnalyzer): Boolean = error("A checkpoint has no queued input")
+            override fun analyzer(key: MethodKey): RunMethodAnalyzer = error("A checkpoint has no actor lookup")
+            override fun summaryStorage(key: MethodKey): SummaryStorage = error("A checkpoint has no subscriptions")
+            override fun subscribe(sub: Subscription): Unit = error("A checkpoint has no subscriptions")
+            override fun link(callee: MethodKey, ref: CallerRef, linkLayer: Layer, added: Facts): Unit =
+                error("A checkpoint has no input links")
+        }
+        val actor = RunMethodAnalyzer(key, port, PublicationSink { _, _ -> error("No publication work") },
+            MethodLocalServicesFactory(::RunMethodLocalServices), MethodCallServicesFactory(::RunMethodCallServices))
+        val initial = f.manager.initial(f.program.pattern(AccessPathBase.Argument(0)))
+        val target = f.manager.factsOf(f.program.pattern(AccessPathBase.Return, tail = Tail.ANY).fact,
+            ExclusionSet.Empty, Layer.DEMAND)
+        actor.summaries.add(initial, target)
+        actor.summaries.addDemand(initial, target)
+        actor.freeze()
+        return actor
+    }
+
     @Test
     fun `a final earlier confirmation suppresses latest demand only evidence and its seed before the stop decision`(): Unit {
         DriverFixtures().use { f ->
             val confirmed = f.confirmed()
             val pending = f.persistentDemand()
+            val checkpoint = f.program.method("selected barrier checkpoint", listOf(listOf(1), emptyList()), 1).key()
             val callbacks = ArrayList<Int>()
             var firstWitness: SinkWitness? = null
             var injected: SinkWitness? = null
@@ -37,13 +70,18 @@ class EarlierConfirmationStopTest {
                     // This test supplies an independent certificate at the joined-result seam.
                     // NORMAL alone is deliberately insufficient in the minimal driver.
                     assertNotNull(firstWitness).confirmed = true
+                    // Prescribe independent selected support so the new empty-demand
+                    // stop does not mask the intended later report-order regression.
+                    val support = selectedCheckpoint(f, config, checkpoint)
+                    return@driver RunResult(actual.status, actual.analyzers + support,
+                        actual.runIndex, actual.direction, actual.vulnerabilities)
                 }
                 if (config.index != 5) actual else {
                     val actualRows = actual.witnessesByKey()
                     assertEquals(setOf(pending.rule), actualRows.keys.map { it.rule }.toSet(),
                         "The unchanged real engine must still have exactly its persistent DEMAND finding")
                     assertTrue(actualRows.values.flatten().all { it.edges.any { edge -> edge.layer == Layer.DEMAND } })
-                    assertTrue(actual.demandLayerEdges > 0L, "STOP_RULE must beat the object-based stop and policy")
+                    assertTrue(actual.demandLayerEdges > 0L, "The latest witness still has actual demand work")
                     val key = VulnerabilityKey(confirmed.rule, confirmed.root.method, confirmed.sink)
                     val demandFacts = f.ops.targetTree(confirmed.source.to, Layer.DEMAND)
                     val latest = SinkWitness(0, confirmed.root,

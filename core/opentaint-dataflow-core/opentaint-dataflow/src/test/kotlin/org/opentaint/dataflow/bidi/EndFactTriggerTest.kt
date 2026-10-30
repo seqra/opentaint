@@ -170,10 +170,11 @@ class EndFactTriggerTest {
             val expected = setOf(Conclusion(ZERO_FACT, ExclusionSet.Empty, false),
                 Conclusion(PathFact(argument, path.take(1), Tail.ANY, t), ExclusionSet.Empty, true),
                 Conclusion(any.fact, ExclusionSet.Empty, true))
-            assertEquals(expected, methodLeaves(f.ops, core.edges.edgesAt(f.inst(2), f.manager.zero).map { it.second }.toList()))
+            assertTrue(core.edges.edgesAt(f.inst(2), f.manager.zero).none(), "Sink seeds queue input; the result store remains empty")
             assertEquals(setOf(Conclusion(exact.fact, ExclusionSet.Empty, false), Conclusion(any.fact, ExclusionSet.Empty, true)),
                 methodLeaves(f.ops, f.cuts.filter { it.first == Cut.SEED }.map { it.second }))
             f.drain(core, quantum = 1)
+            assertEquals(expected, methodLeaves(f.ops, core.edges.edgesAt(f.inst(2), f.manager.zero).map { it.second }.toList()))
             assertEquals(expected.map { f.manager.zero to it }.toSet(), methodEntries(f.ops, core.summaries.all()))
             assertEquals(0L, core.triggerSeeds)
             assertTrue(core.sourceHits!!.entries().none())

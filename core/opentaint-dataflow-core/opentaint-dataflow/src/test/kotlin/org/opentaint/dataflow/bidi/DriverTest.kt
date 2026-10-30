@@ -29,7 +29,7 @@ class DriverTest {
                 assertTrue(f.configs.all { it.mode.markMode == MarkMode.FULL })
                 assertTrue(f.results.all { it.markMode == MarkMode.FULL })
                 assertEquals(MarkMode.FULL, report.end.run1MarkMode)
-                assertEquals(EndReason.POLICY, report.end.reason)
+                assertEquals(EndReason.NO_DEMAND_EDGE, report.end.reason)
             }
         } finally {
             if (old == null) System.clearProperty(name) else System.setProperty(name, old)
@@ -193,8 +193,8 @@ class DriverTest {
             assertEquals(listOf(1, 2, 3), f.configs.map { it.index })
             assertEquals(listOf(1, 1, 2), f.configs.map { it.fieldLimit })
             assertEquals(listOf(Direction.FORWARD, Direction.BACKWARD, Direction.FORWARD), f.configs.map { it.direction })
-            assertEquals(listOf(1, 3), calls)
-            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.POLICY), report.end)
+            assertEquals(listOf(1), calls, "Run-3 stops from its selected snapshot before the policy")
+            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
             assertEquals(ReportState.DEMAND, report.entries.single().state)
         }
     }
@@ -233,10 +233,10 @@ class DriverTest {
             val before = driver.frontiers
             assertTrue(before.isEmpty())
             val report = driver.analyze(listOf(c.root))
-            assertEquals(EndReason.POLICY, report.end.reason)
+            assertEquals(EndReason.NO_DEMAND_EDGE, report.end.reason)
             assertTrue(before.isEmpty(), "A getter snapshot from before the run cannot become a live view")
-            assertEquals(listOf(1), policySnapshots[0].map { it.run })
-            assertEquals(listOf(1, 2, 3), policySnapshots[1].map { it.run })
+            assertEquals(listOf(1), policySnapshots.single().map { it.run },
+                "The run-1 policy snapshot stays stable after the run-2 and run-3 barriers")
             assertEquals(listOf(1, 2, 3), driver.frontiers.map { it.run })
             assertFails { (driver.frontiers as MutableList<Frontier>).clear() }
             assertEquals(3, driver.frontiers.size)

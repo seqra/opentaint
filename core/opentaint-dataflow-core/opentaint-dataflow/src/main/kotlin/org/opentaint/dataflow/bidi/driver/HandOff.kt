@@ -15,7 +15,11 @@ import java.util.Collections
 import mu.KotlinLogging
 import kotlin.time.TimeSource
 
-/** Immutable outgoing demand, seeds and accepted explicit-pattern counts. */
+/** Immutable outgoing demand, seeds and accepted explicit-pattern counts.
+ * [of] counts only successful normalized builder insertions. Its method-key support is
+ * empty exactly when the built explicit snapshot is empty; virtual static families are separate.
+ * Manually constructed test values need not have that binding.
+ */
 class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<MethodKey, Int>) {
     val demandEdges: Map<MethodKey, Int> = Collections.unmodifiableMap(LinkedHashMap(demandEdges))
 

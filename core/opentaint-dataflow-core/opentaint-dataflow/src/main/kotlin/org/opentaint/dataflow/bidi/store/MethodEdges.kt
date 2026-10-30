@@ -7,7 +7,8 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import java.util.BitSet
 import java.util.IdentityHashMap
 
-/** One writer owns the method's statement/premise values for a run. */
+/** One writer owns completed post-statement results for a run. A row at S is
+ * the output of S, never its incoming input or the output of a predecessor. */
 class MethodEdgeStore(private val m: ApManager, private val method: MethodKey, private val lm: LanguageManager,
                       private val fieldLimit: Int, flowBacked: Boolean = false) {
     init { require(fieldLimit >= 1) { "The field limit must be positive" } }

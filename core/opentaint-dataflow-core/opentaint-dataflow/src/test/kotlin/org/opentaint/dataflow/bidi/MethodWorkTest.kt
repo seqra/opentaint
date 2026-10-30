@@ -38,7 +38,7 @@ class MethodWorkTest {
         }
     }
 
-    @Test fun `actual unchanged cycles terminate across quanta and a later burst can repeat`(): Unit {
+    @Test fun `identity cycles terminate across quanta and completed producers do not repeat`(): Unit {
         for (index in listOf(1, 2)) MethodAnalysisFixtures(listOf(listOf(1), listOf(1, 2), emptyList())).use { f ->
             val core = f.core(index = index)
             core.addRootZero()
@@ -51,7 +51,7 @@ class MethodWorkTest {
             val first = f.processed.first()
             core.emitUnchanged(first)
             f.drain(core, quantum = 1)
-            assertTrue(core.steps > previousSteps)
+            assertEquals(previousSteps, core.steps)
             assertEquals(previousDeltas, core.edgeDeltas)
             assertTrue(core.work(1))
         }
@@ -85,7 +85,7 @@ class MethodWorkTest {
             assertEquals(2, f.publications.size)
             assertEquals(facts, f.publications[0].single().conclusion)
             assertSame(f.publications[0].single(), f.publications[1].single())
-            assertEquals(1L, core.edgeDeltas)
+            assertEquals(2L, core.edgeDeltas)
         }
     }
 

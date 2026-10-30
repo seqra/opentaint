@@ -1,5 +1,9 @@
 # IR interpreter — specification
 
+[Cached CFG delivery](cached-cfg-delivery.md) adds a conservative base-relevance
+query to MethodForms. It changes routing and completed-result ownership only;
+the transfer forms and rule semantics below stay in force.
+
 > For the selected mark/static change, use [Mark groups and direct static handling](grouped-run1-statics.md)
 > and its pinned pre-bottom-up baseline. It overrides older proposal links
 > at the listed phase seams. Other ordinary contracts below remain in force.

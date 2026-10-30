@@ -167,8 +167,9 @@ enum class RunStatus { COMPLETE, TIMEOUT, OOM, FAILED }
 
 /** The result of one run. The driver reads its stores only if `status == COMPLETE` (§7.5). `demandLayerEdges`: the sum
  *  of the `counters` of its analyzers (§4.1): the demand-layer objects of the run, that is the deltas of `edges.add`
- *  and the summary deltas in the demand layer and the new demand links (§4.2 `addLink`, §4.6); 0 gives the stop rule
- *  NO_DEMAND_EDGE after a forward run (§7.1). `recordCrossings`: the record applications at a call (§4.2, §7.8). The
+ *  and the summary deltas in the demand layer and the new demand links (§4.2 `addLink`, §4.6). This counter is
+ *  diagnostic. The stop rule uses the selected outgoing hand-off instead (§7.1).
+ *  `recordCrossings`: the record applications at a call (§4.2, §7.8). The
  *  DEMAND vulnerabilities are a state of the REPORT, not of one run: `ReportBuilder.hasDemandVulnerability`. */
 class RunResult(val status: RunStatus, val analyzers: Sequence<RunMethodAnalyzer>, val runIndex: Int,
                 val vulnerabilities: VulnerabilityStore, val demandLayerEdges: Long, val recordCrossings: Long)
@@ -179,7 +180,7 @@ class RunResult(val status: RunStatus, val analyzers: Sequence<RunMethodAnalyzer
  *  marks of its piece, with `*∖X` replaced by `*` (F72 R1), and the next run reads them (§7.3 THE MARKS OF A
  *  PATTERN). `seeds`: the sink seeds of
  *  the DEMAND vulnerabilities (forward run), or the source seeds (backward run). */
-class HandOff(val demand: DemandStore, val seeds: SeedIndex)
+class HandOff(val demand: DemandStore, val seeds: SeedIndex, val demandEdges: Map<MethodKey, Int>)
 
 /** §7.8: THE FRONTIER of one complete run, for the log and for `continueAfter`. Counts and method keys only, no edge.
  *  The vulnerability counts are 0 after a backward run. `demandByCause`: an option (a diagnostic), null if the AP does
@@ -203,7 +204,8 @@ data class Frontier(
 enum class DemandCause { FIELD_LIMIT_CUT, MAY_TARGET, CLEANER_ROW, MUST_RECORD, DEMAND_INPUT }
 
 /** §7.1: why the iteration ended. STOP_RULE: no DEMAND vulnerability after a complete forward run. NO_DEMAND_EDGE: a
- *  complete forward run with no demand-layer edge delta, summary delta or link (argued, §11). POLICY: `continueAfter`
+ *  complete restricted forward run with no selected normalized outgoing demand pattern. Run-1 is excluded.
+ *  POLICY: `continueAfter`
  *  gave false. ABNORMAL: an
  *  incomplete run (its status), a throw in the guarded region of the driver (FAILED), or a hit of the memory guard of
  *  the barrier (OOM). */
@@ -253,32 +255,16 @@ data class EdgeDelta(val premise: PremiseKey, val node: CommonInst, val facts: F
     val zeroToZero: Boolean get() = premise.isZero && facts is Reach
 }
 
-/** §4.3: the worklist of one method analyzer: two queues. */
+/** §4.3: ordinary inputs. Completed output admission belongs to edges at producer S.
+ * See cached-cfg-delivery.md for cached delivery, packed work and reservations. */
 class DeltaWorklist {
-    private val unchanged = ArrayDeque<EdgeDelta>()
-    private var seen = HashSet<EdgeDelta>()                     // the set of `unchanged`: it discards the repetitions
-    private var zeroUnchanged = 0                               // the zero-to-zero items in `unchanged`
-    private val zero = ArrayDeque<EdgeDelta>()                  // `normal`: the zero-to-zero items first
-    private val other = ArrayDeque<EdgeDelta>()                 // `normal`: then LIFO
-
-    /** A delta of `edges.add`. */
+    private val zero = ArrayDeque<EdgeDelta>()
+    private val other = ArrayDeque<EdgeDelta>()
     fun add(d: EdgeDelta) { if (d.zeroToZero) zero.addLast(d) else other.addLast(d) }
-
-    /** An item of the unchanged path; false for a repeat. */
-    fun addUnchanged(d: EdgeDelta): Boolean =
-        seen.add(d).also { if (it) { unchanged.addLast(d); if (d.zeroToZero) zeroUnchanged++ } }
-
-    /** `unchanged` first. When the step finds `unchanged` empty, the set goes, and a `normal` item comes next. */
-    fun removeNext(): EdgeDelta {
-        if (unchanged.isNotEmpty()) return unchanged.removeLast().also { if (it.zeroToZero) zeroUnchanged-- }
-        if (seen.isNotEmpty()) seen = HashSet()
-        return if (zero.isNotEmpty()) zero.removeLast() else other.removeLast()
-    }
-
-    val isEmpty: Boolean get() = unchanged.isEmpty() && zero.isEmpty() && other.isEmpty()
-    /** A zero-to-zero item in either queue: the priority of the runner (§6.1). */
-    val hasZeroWork: Boolean get() = zero.isNotEmpty() || zeroUnchanged > 0
-    val size: Int get() = unchanged.size + zero.size + other.size
+    fun removeNext(): EdgeDelta = if (zero.isNotEmpty()) zero.removeLast() else other.removeLast()
+    val isEmpty get() = zero.isEmpty() && other.isEmpty()
+    val hasZeroWork get() = zero.isNotEmpty()
+    val size get() = zero.size + other.size
 }
 
 /** The counter of one run (§6.2). `onZero` is the quiescence: it sets the status by `compareAndSet(null, COMPLETE)`,

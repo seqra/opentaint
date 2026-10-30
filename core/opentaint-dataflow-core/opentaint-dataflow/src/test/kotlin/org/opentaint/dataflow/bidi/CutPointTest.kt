@@ -35,7 +35,7 @@ class CutPointTest {
             assertEquals(setOf(Conclusion(PathFact(y, listOf(field, g, h), Tail.EXACT, mt), ExclusionSet.Empty, false)),
                 methodLeaves(f.ops, before))
             assertEquals(setOf(Conclusion(PathFact(y, listOf(field, g), Tail.ANY, mt), ExclusionSet.Empty, true)),
-                methodLeaves(f.ops, core.edges.edgesAt(f.inst(2), initial).map { it.second }.toList()))
+                methodLeaves(f.ops, core.edges.edgesAt(f.inst(1), initial).map { it.second }.toList()))
             assertTrue(f.processed.all { it.premise === initial })
             assertTrue(f.requests.isEmpty())
         }
@@ -62,7 +62,7 @@ class CutPointTest {
         }
     }
 
-    @Test fun `untouched propagation keeps the processed Facts identity and bypasses operand filters storage and statement cuts`(): Unit {
+    @Test fun `untouched propagation keeps Facts identity and post-statement results without operand filters or statement cuts`(): Unit {
         val f = MethodAnalysisFixtures()
         f.shared.use {
             val field = f.field("f")
@@ -75,12 +75,14 @@ class CutPointTest {
             f.drain(core, quantum = 1)
             assertEquals(listOf(1, 2), f.processed.map { it.node.location.index })
             assertTrue(f.processed.all { it.premise === premise && it.facts === input })
-            assertTrue(core.edges.edgesAt(f.inst(1), premise).none())
-            assertTrue(core.edges.edgesAt(f.inst(2), premise).none())
+            for (index in 0..2) {
+                val completed = core.edges.edgesAt(f.inst(index), premise).single().second
+                assertEquals(input, completed, "The store can canonicalize its wrapper; the completed value belongs to producer $index")
+            }
             assertTrue(f.cuts.none { it.first == Cut.STATEMENT })
             assertEquals(setOf(premise to Conclusion(PathFact(x, listOf(field), Tail.EXACT, mt), ExclusionSet.Empty, false)),
                 methodEntries(f.ops, core.summaries.all()))
-            assertEquals(1L, core.edgeDeltas, "Only the accepted end summary is stored")
+            assertEquals(4L, core.edgeDeltas, "Three post-statement identity results and one accepted summary")
         }
     }
 
@@ -185,11 +187,12 @@ class CutPointTest {
             assertEquals(setOf(Conclusion(requirement.fact, ExclusionSet.Empty, false)), methodLeaves(f.ops, seedCuts))
             val expected = setOf(Conclusion(ZERO_FACT, ExclusionSet.Empty, false),
                 Conclusion(PathFact(y, listOf(field), Tail.ANY, mt), ExclusionSet.Empty, true))
-            assertEquals(expected, methodLeaves(f.ops, core.edges.edgesAt(f.inst(2), f.manager.zero).map { it.second }.toList()))
+            assertTrue(core.edges.edgesAt(f.inst(2), f.manager.zero).none(), "Seed admission queues input, not completed output")
             f.drain(core, quantum = 1)
+            assertEquals(expected, methodLeaves(f.ops, core.edges.edgesAt(f.inst(2), f.manager.zero).map { it.second }.toList()))
             assertEquals(setOf(f.manager.zero), core.initials.all().toSet())
             assertEquals(expected.map { f.manager.zero to it }.toSet(), methodEntries(f.ops, core.summaries.all()))
-            assertEquals(2L, core.demandLayerEdges)
+            assertEquals(4L, core.demandLayerEdges, "The seed has three completed point results and one summary")
             assertTrue(f.requests.isEmpty())
         }
     }
@@ -218,7 +221,7 @@ class CutPointTest {
             assertEquals(expected, methodEntries(f.ops, f.publications.flatten().asSequence().map { it.premise to it.conclusion }))
             assertEquals(expected.filter { it.second.demand }.toSet(), methodEntries(f.ops, core.summaries.demandEdges()),
                 "Only DEMAND rows are run-1 guidance; normal singletons remain record-only")
-            assertEquals(1L, core.demandLayerEdges, "The boundary result adds a summary delta without a successor edge")
+            assertEquals(2L, core.demandLayerEdges, "The exit stores its completed result and its summary; no successor output is stored")
             assertTrue(f.cuts.none { it.first == Cut.STATEMENT })
             assertTrue(f.requests.isEmpty())
         }

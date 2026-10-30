@@ -385,6 +385,58 @@ union of all owners of that geometry. Share reachability scratch within
 the query. The default VISIBLE scope describes the full reference relation.
 The local stage must pass LOCAL explicitly and perform no call-graph lookup.
 
+### 4.1 Select necessary mark labels before owner checks
+
+Keep each complete packed mark pair at its original ordinal. Keep that
+ordinal's owner family. Freeze sorted output postings for exact FULL atoms,
+GROUP atoms, and stored FULL outputs by group. Freeze one FLOW ordinal for
+each complete geometry. No mark census or group-member enumeration is needed.
+Entry indexes use mark-free geometry blocks with references to the original
+full patterns. Restore the concrete mark before demand E normalization.
+
+```text
+query                       output postings                  FLOW
+FULL T                      exact T + GROUP owner(T)         keep
+GROUP G, directional cover  GROUP G                          keep
+GROUP G, composition        GROUP G + stored FULLs in G      keep
+real endpoint ZERO, cover   real ZERO endpoints              keep
+real endpoint ZERO, compose no mapped row                    keep
+unclassified nonnull atom   all original rows                keep
+```
+
+A nonnull control atom is not a nullable ZERO endpoint. Unknown blocks and
+queries use the old all-row path. Do not reject a legal old row to make it
+indexable. Merge postings in ordinal order without duplicates. Empty and
+FLOW-only geometries need no mark-posting maps.
+
+C2 entry selection retains FLOW and output labels which cover the actual
+mark. It then applies the old `markSub` and admission policy. Only shared B
+projections ask an owner; exact-context W/R need no graph owner check. The
+possible-target envelope retains the FLOW repair family before testing
+complete result coverage. FLOW adjacency uses the single FLOW ordinal.
+Marked-output existence uses directional output coverage and no FLOW row.
+
+C5 selects target labels with output coverage of the original full mark.
+An abstract original selects only FLOW. A mapped right state selects left
+outputs composable with its input. A FLOW right state keeps FLOW and the
+same target-output selector. Preserve the exact final predicate and owner
+test after selection. Source/writer existence preflight remains unfiltered:
+a writer with U can feed a mark-changing U-to-T bridge for an original T.
+
+A false mapped-geometry precheck can skip mapped labels, but cannot skip
+FLOW. For a FULL original, test the unchanged target geometry after replacing
+only its mark with the original mark. Old mapped success implies this
+reflexive-mark test passes. For ZERO or an unproved abstract/group case,
+keep the old path. The implementation must not intern a hypothetical initial.
+
+These indexes change work only. Every kept ordinal retains its exact relation,
+geometry, exclusions and owner family. Every successful old final predicate
+has a necessary indexed label (or the All fallback). Thus index selection
+and the old predicate return the same relevant C2/C5 results. The constructive
+finite-label model is `SelectedStaticLabels.lean` in
+[the selected-work proof package](lean/proposals/selected-work-20261030/README.md).
+The AP adapter and unknown-atom fallback also need production tests.
+
 ## 5. Transitive lookup for initial admission
 
 C2 needs only a target entry. It must not enumerate all possible original

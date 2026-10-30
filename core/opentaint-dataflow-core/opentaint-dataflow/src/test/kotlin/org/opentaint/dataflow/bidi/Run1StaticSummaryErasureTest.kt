@@ -49,7 +49,7 @@ class Run1StaticSummaryErasureTest {
             for (tail in listOf(Tail.EXACT, Tail.ANY, Tail.ANY_TAINT)) Fixture(mode).use { t ->
                 val premise = t.initial(if (exactClass) listOf(t.cls) else t.from,
                     if (exactClass) Tail.EXACT else Tail.STAR)
-                t.actor.routeStaticResultToExit(premise, t.value(tail = tail))
+                t.actor.routeStaticResultToExit(t.f.inst(1), premise, t.value(tail = tail))
                 t.assertNoRows()
                 assertTrue(t.actor.staticBatch.supplies.isNotEmpty())
                 val expected = t.actor.staticBatch.supplies.toList()
@@ -67,7 +67,7 @@ class Run1StaticSummaryErasureTest {
             val premise = t.initial(tail = Tail.EXACT)
             val actual = RegionGroups(t.f.pattern(STATIC, t.from, Tail.STAR, MarkSlot.STAR), MarkSet.of(t.input))
             if (supplyFirst) t.service.commit(StaticBatch().apply { supplies += actual })
-            repeat(3) { t.actor.routeStaticResultToExit(premise, t.value()) }
+            repeat(3) { t.actor.routeStaticResultToExit(t.f.inst(1), premise, t.value()) }
             assertEquals(1, t.actor.staticBatch.interests.size,
                 "Equal unanswered joins have one complete scalar payload and one interest")
             t.assertNoRows()
@@ -90,7 +90,7 @@ class Run1StaticSummaryErasureTest {
             assertEquals(listOf(MarkSet.of(t.output)), answers.map { it.supply.groups })
             t.assertNoRows()
             assertTrue(t.actor.work(1), "An answered input join has no retained work")
-            t.actor.routeStaticResultToExit(premise, t.value())
+            t.actor.routeStaticResultToExit(t.f.inst(1), premise, t.value())
             assertEquals(1, t.actor.staticBatch.interests.size,
                 "The answered join was removed; no completed scalar archive suppresses a new offer")
             t.f.drain(t.actor)
@@ -110,7 +110,7 @@ class Run1StaticSummaryErasureTest {
             val part = Subscription(t.f.store.key("set"),
                 CallerRef(t.actor.key, callerInitial, Layer.DEMAND, t.f.inst(1)), Layer.DEMAND, actual)
             // set(p) { C.target = p; } remains an ordinary nonstatic-to-static callee row.
-            t.actor.routeStaticResultToExit(formal, t.value(atom = t.input))
+            t.actor.routeStaticResultToExit(t.f.inst(1), formal, t.value(atom = t.input))
             t.f.drain(t.actor)
             assertTrue(t.actor.summaries.all().any { it.first == formal })
             assertTrue(t.actor.staticBatch.supplies.isEmpty(), "A hypothetical formal is not a source")

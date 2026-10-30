@@ -121,8 +121,12 @@ def main():
         'driver/IterationDriver.kt','driver/HandOff.kt','store/DemandStore.kt','store/StaticGuidance.kt',
         'store/StaticPairLookup.kt','store/C5StaticDemandView.kt','ap/RestrictedInitialPolicy.kt',
         'engine/RunMethodAnalyzer.kt','engine/DeltaWorklist.kt','engine/Run1PointResume.kt',
+        'engine/CfgDeliveryCache.kt','engine/MethodContextCache.kt','engine/NeutralBatchWorklist.kt',
+        'engine/RunMethodCallServices.kt','store/StaticSelectorIndex.kt','store/StaticEntryLookup.kt',
         'store/MethodEdges.kt','interp/FormsCache.kt','interp/FormApplier.kt']}
-    receipt={'status':'PASS' if all(checks.values()) else 'FAILED','runtimeImplemented':False,
+    jvm=ROOT/'core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRMethodForms.kt'
+    bindings[str(jvm.relative_to(ROOT))]=sha(jvm)
+    receipt={'status':'PASS' if all(checks.values()) else 'FAILED','runtimeVerifiedByThisChecker':False,
              'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'toolchain':TOOLCHAIN,
              'leanVersion':version,'moduleSourceHashes':{str(p.relative_to(ROOT)):sha(p) for p in sources},
              'checkerSha256':sha(Path(__file__)),'theoremCount':theorem_count,

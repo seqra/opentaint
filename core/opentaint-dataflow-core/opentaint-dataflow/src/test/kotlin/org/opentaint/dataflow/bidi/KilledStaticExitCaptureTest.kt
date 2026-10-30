@@ -18,7 +18,7 @@ class KilledStaticExitCaptureTest {
             f.exitRules(2, ExitRules(RuleStatement(StatementSummary(setOf(STATIC), emptyList(), emptyList(), emptyMap()),
                 StatementSummary.EMPTY, emptyList()), false, emptySet()))
             val actor = f.core()
-            actor.routeStaticResultToExit(original, value)
+            actor.routeStaticResultToExit(f.inst(1), original, value)
             f.drain(actor)
             assertTrue(actor.summaries.all().none())
             val frozen = actor.freezeStaticWriteCandidates()
@@ -62,7 +62,7 @@ class KilledStaticExitCaptureTest {
             f.exitRules(2, ExitRules(RuleStatement(StatementSummary(setOf(STATIC), listOf(MicroEdge.of(transfer)),
                 emptyList(), emptyMap()), StatementSummary.EMPTY, emptyList()), false, emptySet()))
             val actor = f.core()
-            actor.routeStaticResultToExit(original, value)
+            actor.routeStaticResultToExit(f.inst(1), original, value)
             f.drain(actor)
             val frozen = actor.freezeStaticWriteCandidates()
             assertEquals(setOf(from, to), frozen.observedRows().map { it.result.fact.path }.toSet())

@@ -1,7 +1,7 @@
 {
   "status": "PASS",
-  "runtimeImplemented": false,
-  "utc": "2026-10-30T01:33:54.337170+00:00",
+  "runtimeVerifiedByThisChecker": false,
+  "utc": "2026-10-30T02:05:31.562758+00:00",
   "toolchain": "leanprover/lean4:v4.33.1",
   "leanVersion": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
   "moduleSourceHashes": {
@@ -10,7 +10,7 @@
     "spec/lean/proposals/selected-work-20261030/SelectedStaticLabels.lean": "8853aa675890535192fcacc711f99d3578dd10a756e692485f2777a93a8c4987",
     "spec/lean/proposals/selected-work-20261030/CachedCfgDelivery.lean": "1e8afebd9a469e7075326f4190ee745e452d494b2b391935e82ba7a644ef6f28"
   },
-  "checkerSha256": "c59e048180225e0aa8cb55eeeb857db7a5801c5430c4d2d11f9cc5b532b6e452",
+  "checkerSha256": "055c2b403e4102de382efc6c30aa244aeaca57b05225688799ae6ff3be79f704",
   "theoremCount": 67,
   "auditedDeclarationCount": 127,
   "auditedDeclarations": [
@@ -164,13 +164,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/selected-work-20261030/20261030T013350776052Z/ApSpec/CurrentDemandFrontier.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/selected-work-20261030/20261030T020527906272Z/ApSpec/CurrentDemandFrontier.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/ApSpec/CurrentDemandFrontier.lean"
       ],
       "cwd": "spec/lean",
       "exitCode": 0,
-      "wallSeconds": 0.3618108481168747,
-      "log": "spec/lean/.lake/verification/selected-work-20261030/20261030T013350776052Z/CurrentDemandFrontier.log",
+      "wallSeconds": 0.38266655802726746,
+      "log": "spec/lean/.lake/verification/selected-work-20261030/20261030T020527906272Z/CurrentDemandFrontier.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -181,13 +181,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/selected-work-20261030/20261030T013350776052Z/SelectedStop.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/selected-work-20261030/20261030T020527906272Z/SelectedStop.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/selected-work-20261030/SelectedStop.lean"
       ],
       "cwd": "spec/lean/proposals/selected-work-20261030",
       "exitCode": 0,
-      "wallSeconds": 0.9487660229206085,
-      "log": "spec/lean/.lake/verification/selected-work-20261030/20261030T013350776052Z/SelectedStop.log",
+      "wallSeconds": 0.9500857144594193,
+      "log": "spec/lean/.lake/verification/selected-work-20261030/20261030T020527906272Z/SelectedStop.log",
       "logSha256": "963e532ce65d067431bccc14a9c9c4225ba2c86d279a0ec22ec6882d614e1e3a"
     },
     {
@@ -198,13 +198,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/selected-work-20261030/20261030T013350776052Z/SelectedStaticLabels.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/selected-work-20261030/20261030T020527906272Z/SelectedStaticLabels.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/selected-work-20261030/SelectedStaticLabels.lean"
       ],
       "cwd": "spec/lean/proposals/selected-work-20261030",
       "exitCode": 0,
-      "wallSeconds": 0.7303331792354584,
-      "log": "spec/lean/.lake/verification/selected-work-20261030/20261030T013350776052Z/SelectedStaticLabels.log",
+      "wallSeconds": 0.7636845707893372,
+      "log": "spec/lean/.lake/verification/selected-work-20261030/20261030T020527906272Z/SelectedStaticLabels.log",
       "logSha256": "9fc134c9894fbb111ab96e6496cbca37e1266c3fe44a5ec217d33fba3b57f210"
     },
     {
@@ -215,13 +215,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/selected-work-20261030/20261030T013350776052Z/CachedCfgDelivery.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/selected-work-20261030/20261030T020527906272Z/CachedCfgDelivery.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/selected-work-20261030/CachedCfgDelivery.lean"
       ],
       "cwd": "spec/lean/proposals/selected-work-20261030",
       "exitCode": 0,
-      "wallSeconds": 1.2646041810512543,
-      "log": "spec/lean/.lake/verification/selected-work-20261030/20261030T013350776052Z/CachedCfgDelivery.log",
+      "wallSeconds": 1.300123780965805,
+      "log": "spec/lean/.lake/verification/selected-work-20261030/20261030T020527906272Z/CachedCfgDelivery.log",
       "logSha256": "fd9d54ad09f5e998e46734dcc30488aa5aca89ab20bd75e15065c15138c4d083"
     },
     {
@@ -231,29 +231,36 @@
         "1",
         "-M",
         "768",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/selected-work-20261030/20261030T013350776052Z/Audit.lean"
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/selected-work-20261030/20261030T020527906272Z/Audit.lean"
       ],
-      "cwd": "spec/lean/.lake/verification/selected-work-20261030/20261030T013350776052Z",
+      "cwd": "spec/lean/.lake/verification/selected-work-20261030/20261030T020527906272Z",
       "exitCode": 0,
-      "wallSeconds": 0.23977045714855194,
-      "log": "spec/lean/.lake/verification/selected-work-20261030/20261030T013350776052Z/Audit.log",
+      "wallSeconds": 0.2447248101234436,
+      "log": "spec/lean/.lake/verification/selected-work-20261030/20261030T020527906272Z/Audit.log",
       "logSha256": "e6cbf66c4b6fbed39293b6499a0122b9d5cb7ae76c4f0c90b9051ba37ca16ded"
     }
   ],
   "runtimeSourceHashes": {
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/IterationDriver.kt": "11581f80fd2be12013d8fedfc751ee893b5526035e9a166ea27e636249f48871",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/HandOff.kt": "7f42c8c87e911a2714ec539f4fc88dda7de0e28c8071a58363c3ba93b82caeb7",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/IterationDriver.kt": "e22e17146ed1e176047935e75a4ec8fd8c0d7c3d11d0011894c965dd322546b4",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/HandOff.kt": "acd228426b4cbf47338b6bfab28d73850d3a8a6b1aafe188e15fabeaf294625e",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandStore.kt": "bd08ff4d9b11fa9e0ea1172c52b48f7ce42e963d05ad2e39b2715011b5d36f1b",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticGuidance.kt": "2e26fca107bf211166c8ad9e70fbabacf406d842740469563a9f4f74aa036005",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticPairLookup.kt": "1b2912569ed4690487d49e9c3eb24413f812312f2b6b151e3e4a52294ed628d7",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/C5StaticDemandView.kt": "4f7ae5d5d85da0db0d60a920aa0199306abeec323a8821e73ff0427b1fc67f4d",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticGuidance.kt": "a366d49f902101a59007b5d2273491a61b352c5b3e6ff3c5f3a1b99380b34ee7",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticPairLookup.kt": "b9841cb1f77dc17be8f9ea21e33049db7d37f17d51dd93a1521a42df878b7b2b",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/C5StaticDemandView.kt": "12ad3ea3f2785c209b43fc65ae2af2b952ca9085eb340a45d457cee3090aeddd",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/RestrictedInitialPolicy.kt": "85c0afc84e4f9759961d98a5d57eaf82a87cdaf80d3380044046cc43325bc14d",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt": "121c8127b769b7c3675a4bb6c07eae851964e1908cd3ed00e6a21b7d0d82a78c",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/DeltaWorklist.kt": "3f31f4bde824687f37f75a51dbe47e6691f5ca829054c8b87f7ff0fcc3f7b19b",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt": "fb50b04f6b13ebbe1ba5e74bff1eaf470666a3dc77e1d9beb61e1c6f8c6152d7",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/DeltaWorklist.kt": "08076c3dc9f714f6197828e8bcd4ed3555360039a1be4fd64d538b800fd81ba6",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Run1PointResume.kt": "6dbec4b7b07cf65b7c76094bf3908c6c350ebd7b00f038436c7e1c7a71243923",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/MethodEdges.kt": "e1cc70244c71848ab6796638c1a8cd559e5fad05c0da4656478340ceb35ecbde",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/FormsCache.kt": "3f6a3601ed7984ea39b6f621c7f950939c2dc251f83922be2e744ff52edb1864",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/FormApplier.kt": "06bca49113a3aced10ecdf858ee323ccf9354c471902189d11425a9678109b6a"
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/CfgDeliveryCache.kt": "8d020e964a9b0a260f688e95299d3ffb9f06529cf3b149a6fbee0fe59e7ed63e",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/MethodContextCache.kt": "6cc1be26fc71a67c4ed9c51a5046a4b682f4742c0312c4683308098b85751d7d",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/NeutralBatchWorklist.kt": "0b60ac1af21c844f790dfa5889fd6aac2e243b632dc659689d32a4c6e7af53f2",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodCallServices.kt": "58eb666c28d4ecb0884769bd2327c3e5f6b8319c38333a159a395de7b71c4ca6",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticSelectorIndex.kt": "487904fc700e893b08d58a76588ef8340ba86eb9575c7d9bbd07e6f78e9bd983",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticEntryLookup.kt": "4e9de8b22b16440b6c14a1862bb5f053e87564618936d52ed753598677f47b4d",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/MethodEdges.kt": "d1ae81e0416e4f563e645eba2df4ceb73c58782c4e88f88a11d0e1bfb7de7799",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/FormsCache.kt": "e0cf7ab188d21b9ba9485a15cc7fbb59d0c1a40b01394186c97c4845a62507b0",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/FormApplier.kt": "06bca49113a3aced10ecdf858ee323ccf9354c471902189d11425a9678109b6a",
+    "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRMethodForms.kt": "a0e3164146949243a5529f1666622e416d66d838c8aaad1176d10e4845e1c2b9"
   },
   "scope": "Constructive finite stop-control, selector, and CFG/post-result kernels. Source adapter proofs and runtime TDD gates remain in the implementation proposal."
 }

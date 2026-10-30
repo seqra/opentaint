@@ -56,7 +56,7 @@ class EmptyStaticSummaryFallbackTest {
             val input = f.run1Fact(x, listOf(field))
             val original = f.manager.initial(f.run1Pattern(x))
             resume(f, actor, services, original, input)
-            val output = actor.edges.edgesAt(f.inst(2), original).map { it.second }.toList()
+            val output = actor.edges.edgesAt(f.inst(1), original).map { it.second }.toList()
             assertEquals(listOf(input), output)
             assertEquals(listOf("read-input:path", "read-result:mark", "write-input:mark", "write-result:path"), trace)
             assertEquals(listOf(Cut.STATEMENT, Cut.STATEMENT, Cut.CALL), f.cuts.map { it.first })
@@ -92,8 +92,8 @@ class EmptyStaticSummaryFallbackTest {
             }
             service.commit(supply).filter { it.owner == actor.key }.forEach(actor::onStaticEffect)
             f.drain(actor)
-            val concrete = actor.edges.edgesAt(f.inst(2)).filter { it.second is TaintTree && it.second.base == x }.toList()
-            assertTrue(concrete.isNotEmpty(), "The real read answer must reach the cleaner suffix and ordinary successor")
+            val concrete = actor.edges.edgesAt(f.inst(1)).filter { it.second is TaintTree && it.second.base == x }.toList()
+            assertTrue(concrete.isNotEmpty(), "The real read answer must complete the cleaner suffix at its producing call")
             assertTrue(concrete.all { (premise, value) ->
                 premise.members.all { it.base == STATIC } && value.layer == Layer.DEMAND &&
                     f.ops.leaves(value).all { it.fact.mark == f.groupMark() }
@@ -123,8 +123,10 @@ class EmptyStaticSummaryFallbackTest {
                 it.region.fact.path == target && it.groups == MarkSet.of(f.groupMark().mark)
             }, "The write supplies only its actual static image and mark")
             assertTrue(actor.staticBatch.reads.isEmpty(), "WRITE metadata does not create a static read")
-            assertTrue(actor.edges.edgesAt(f.inst(2), original).any(), "Static output enters the normal boundary")
+            assertTrue(actor.edges.edgesAt(f.inst(1), original).any(), "The static write result is stored at its producer")
+            assertTrue(actor.edges.edgesAt(f.inst(2), original).none(), "The normal boundary has only queued input before execution")
             f.drain(actor)
+            assertTrue(actor.edges.edgesAt(f.inst(2), original).any(), "The completed normal-boundary result is stored after exit processing")
             val raw = actor.summaries.all().filter { it.second.base == STATIC }.toList()
             assertTrue(raw.isNotEmpty())
             assertTrue(raw.all { (premise, value) -> premise === original && value.layer == Layer.DEMAND })

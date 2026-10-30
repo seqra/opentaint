@@ -545,7 +545,8 @@ class AnyTaintIterationTest {
                 })
                 assertEquals(setOf(Seed.Source(root, root.statement, src)), runs.barriers[1].seeds)
                 assertEquals(ReportState.DEMAND, report.entries.single().state)
-                assertEquals(EndReason.POLICY, report.end.reason)
+                assertEquals(EndReason.NO_DEMAND_EDGE, report.end.reason)
+                assertTrue(runs.barriers.last().observation.selectedDemand.isEmpty())
                 assertEquals(listOf(1, 2, 3), frontiers.map { it.run })
             }
         }

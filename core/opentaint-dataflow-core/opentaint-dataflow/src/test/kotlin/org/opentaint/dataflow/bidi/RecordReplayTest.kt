@@ -38,8 +38,8 @@ class RecordReplayTest {
         Subscription(callee, CallerRef(f.key, premise, callerLayer, f.inst(call)), added.layer, added)
     private fun leaves(f: MethodAnalysisFixtures, values: List<Facts>): Set<Conclusion> =
         values.flatMap(FormsReference(f.ops)::conclusions).toSet()
-    private fun atSuccessor(f: MethodAnalysisFixtures, actor: RunMethodAnalyzer, premise: PremiseKey): List<Facts> =
-        actor.edges.edgesAt(f.inst(2), premise).map { it.second }.toList()
+    private fun atCallResult(f: MethodAnalysisFixtures, actor: RunMethodAnalyzer, premise: PremiseKey): List<Facts> =
+        actor.edges.edgesAt(f.inst(1), premise).map { it.second }.toList()
     private fun transferred(f: MethodAnalysisFixtures, actor: RunMethodAnalyzer, sub: Subscription,
                             j: InitialAp, g: Facts): List<PlanItem> {
         val pr = sub.ref.premise.members.map { it.toPattern() }.toSet()
@@ -73,7 +73,7 @@ class RecordReplayTest {
             val actor = core(f)
             actor.applyRecord(sub, record)
             val expected = setOf(Conclusion(PathFact(x, emptyList(), Tail.EXACT, u), ExclusionSet.Empty, false))
-            assertEquals(expected, leaves(f, atSuccessor(f, actor, sub.ref.premise)))
+            assertEquals(expected, leaves(f, atCallResult(f, actor, sub.ref.premise)))
             assertEquals(expected, leaves(f, f.cuts.filter { it.first == Cut.CALL }.map { it.second }))
             assertEquals(1L, actor.recordCrossings)
             assertTrue(f.requests.isEmpty())
@@ -99,7 +99,7 @@ class RecordReplayTest {
             if (recordPath) actor.applyRecord(sub, Record(sub.callee, Direction.FORWARD, j, g))
             else actor.applySummary(sub, Publication(j, g), 0)
             assertEquals(setOf(Conclusion(PathFact(x, listOf(b, a), Tail.EXACT, u), ExclusionSet.Empty, layer == Layer.DEMAND)), expected)
-            assertEquals(expected, leaves(f, atSuccessor(f, actor, sub.ref.premise)))
+            assertEquals(expected, leaves(f, atCallResult(f, actor, sub.ref.premise)))
             assertEquals(if (recordPath) 1L else 0L, actor.recordCrossings)
             assertTrue(f.subscriptions.isEmpty())
             assertTrue(f.sentLinks.isEmpty())
@@ -126,7 +126,7 @@ class RecordReplayTest {
                 if (layer == Layer.DEMAND) add(Conclusion(PathFact(alias, emptyList(), Tail.EXACT, t), ExclusionSet.Empty, true))
             }
             assertEquals(wanted, expected)
-            assertEquals(expected, leaves(f, atSuccessor(f, actor, sub.ref.premise)))
+            assertEquals(expected, leaves(f, atCallResult(f, actor, sub.ref.premise)))
             assertEquals(1L, actor.recordCrossings)
         }
     }
@@ -155,7 +155,7 @@ class RecordReplayTest {
             }
             assertEquals(wanted, reference(f, actor, callPlan, transferred(f, actor, sub, j, g)))
             actor.applyRecord(sub, Record(sub.callee, Direction.FORWARD, j, g))
-            assertEquals(wanted, leaves(f, atSuccessor(f, actor, sub.ref.premise)))
+            assertEquals(wanted, leaves(f, atCallResult(f, actor, sub.ref.premise)))
             assertEquals(1L, actor.recordCrossings)
         }
     }
@@ -185,7 +185,7 @@ class RecordReplayTest {
             }
             assertEquals(wanted, reference(f, actor, callPlan, transferred(f, actor, sub, j, g)))
             actor.applyRecord(sub, Record(sub.callee, Direction.FORWARD, j, g))
-            assertEquals(wanted, leaves(f, atSuccessor(f, actor, sub.ref.premise)))
+            assertEquals(wanted, leaves(f, atCallResult(f, actor, sub.ref.premise)))
             assertEquals(1L, actor.recordCrossings)
             assertTrue(f.requests.isEmpty())
         }
@@ -205,7 +205,7 @@ class RecordReplayTest {
             actor.applySummary(sub, Publication(j, g), 0)
             assertEquals(setOf(Conclusion(PathFact(x, emptyList(), Tail.EXACT, MarkSlot.Concrete(f.mark("T"))), ExclusionSet.Empty, true),
                 Conclusion(PathFact(alias, emptyList(), Tail.EXACT, MarkSlot.Concrete(f.mark("T"))), ExclusionSet.Empty, true)), expected)
-            assertEquals(expected, leaves(f, atSuccessor(f, actor, sub.ref.premise)))
+            assertEquals(expected, leaves(f, atCallResult(f, actor, sub.ref.premise)))
             assertEquals(0L, actor.recordCrossings)
         }
     }
@@ -229,7 +229,7 @@ class RecordReplayTest {
             assertTrue(transferred(f, actor, sub, j, g).isNotEmpty())
             assertTrue(reference(f, actor, callPlan, transferred(f, actor, sub, j, g)).isEmpty())
             actor.applyRecord(sub, Record(sub.callee, Direction.FORWARD, j, g))
-            assertTrue(atSuccessor(f, actor, sub.ref.premise).isEmpty())
+            assertTrue(atCallResult(f, actor, sub.ref.premise).isEmpty())
             assertTrue(f.cuts.none { it.first == Cut.CALL })
             assertEquals(1L, actor.recordCrossings)
             val wrong = sub.copy(added = f.fact(mark = MarkSlot.Concrete(f.mark("wrong"))))
@@ -267,7 +267,7 @@ class RecordReplayTest {
                 val wanted = if (blocked) emptySet() else setOf(Conclusion(PathFact(x, listOf(a), if (oldMust) Tail.ANY else Tail.EXACT, inMark),
                     ExclusionSet.Empty, oldMust || layer == Layer.DEMAND))
                 assertEquals(wanted, expected)
-                assertEquals(expected, leaves(f, actor.edges.edgesAt(f.inst(0), sub.ref.premise).map { it.second }.toList()))
+                assertEquals(expected, leaves(f, actor.edges.edgesAt(f.inst(1), sub.ref.premise).map { it.second }.toList()))
                 assertEquals(if (blocked) 0L else 1L, actor.recordCrossings)
                 assertTrue(f.requests.isEmpty())
                 assertTrue(f.subscriptions.isEmpty())
@@ -290,8 +290,8 @@ class RecordReplayTest {
                 val sub = Subscription(f.store.key("callee"), CallerRef(callerKey, callerPremise, callerLayer, f.inst(1)),
                     addedLayer, f.fact(layer = addedLayer))
                 actor.applyRecord(sub, Record(sub.callee, Direction.FORWARD, j, g))
-                assertEquals(setOf(callerPremise), actor.edges.edgesAt(f.inst(2)).map { it.first }.toSet())
-                assertEquals(leaves(f, listOf(f.fact(layer = addedLayer))), leaves(f, atSuccessor(f, actor, callerPremise)))
+                assertEquals(setOf(callerPremise), actor.edges.edgesAt(f.inst(1)).map { it.first }.toSet())
+                assertEquals(leaves(f, listOf(f.fact(layer = addedLayer))), leaves(f, atCallResult(f, actor, callerPremise)))
                 assertEquals(1L, actor.recordCrossings)
             }
         }

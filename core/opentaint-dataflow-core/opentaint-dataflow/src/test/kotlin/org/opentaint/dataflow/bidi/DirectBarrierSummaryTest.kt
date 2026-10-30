@@ -11,7 +11,7 @@ import kotlin.test.*
 
 class DirectBarrierSummaryTest {
     @Test
-    fun `an exact forward exit demand keeps refinement live without processed demand or links`(): Unit = DriverFixtures().use { f ->
+    fun `raw forward exit demand does not force another run without selected outgoing support`(): Unit = DriverFixtures().use { f ->
         val base = AccessPathBase.LocalVar(0)
         val ret = AccessPathBase.Return
         val t = MarkSlot.Concrete(f.program.mark("summary-only T"))
@@ -31,13 +31,15 @@ class DirectBarrierSummaryTest {
             assertTrue(exact.links.isEmpty())
             assertContains(exact.rawSummaries, ObservedEdge(root, setOf(ZERO_PATTERN),
                 Conclusion(PathFact(ret, emptyList(), Tail.ANY, t), ExclusionSet.Empty, true)))
-            assertEquals(listOf(1, 2, 3), reference.runs.map { it.index }, "Raw summaries count as demand objects at the barrier")
+            assertEquals(listOf(1, 2, 3), reference.runs.map { it.index }, "Both references reach the restricted forward run")
             assertEquals(mapOf(HistoricalFinding(sink.rule, f.program.inst(root, 1)) to HistoricalState.DEMAND), reference.findings)
         }
         val report = f.driver(FixedLimits(listOf(1, 1, 2)), run1MarkMode = MarkMode.GROUP).analyze(listOf(root))
         assertEquals(listOf(1, 2, 3), f.configs.map { it.index })
         assertTrue(f.results.first().demandLayerEdges > 0)
-        assertEquals(EndReason.POLICY, report.end.reason)
+        assertEquals(EndReason.NO_DEMAND_EDGE, report.end.reason)
+        assertTrue(f.results.last().demandLayerEdges > 0L)
+        assertTrue(f.results.last().analyzers.all { it.summaries.demandEdges().none() })
         assertEquals(ReportState.DEMAND, report.entries.single().state)
     }
 }

@@ -169,7 +169,7 @@ class Run1StaticGroupProtocolRemovalTest {
             t.ground()
             val outputFull = t.f.mark("output"); val output = t.f.manager.marks.groupOf(outputFull)
             val value = t.f.run1Fact(STATIC, t.target, Tail.ANY, outputFull)
-            t.actor.routeStaticResultToExit(t.initial, value)
+            t.actor.routeStaticResultToExit(t.f.inst(1), t.initial, value)
             assertTrue(t.actor.staticBatch.interests.isEmpty(), "An answered original needs no unary input join")
             assertTrue(t.actor.staticBatch.supplies.isNotEmpty())
             val expected = emptySet<Pair<PremiseKey, Conclusion>>()

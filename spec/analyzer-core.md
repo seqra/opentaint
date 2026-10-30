@@ -312,7 +312,7 @@ only the forms that the analyzer reads: the forward forms of the interpreter, or
 | `sourceHits` | source hit store (`ap.md` §8.11) | backward run only: the unconditional sources of this method that a requirement reached |
 | `conjunctions` | conjunction store (`ap.md` §8.9) | manual fixed-literal inputs and the E6 combinations of callee summaries with several premises (§5.4) |
 | predicate state | `RulePredicateStore` (`ap.md` §8.9) | forward only: scoped observed source/sink proofs, canonical binding headers and matched sink-fact versions, including evaluated exit `S` parts; no compiled topology |
-| `worklist` | `DeltaWorklist` (§4.3, §10) | the edge deltas to process: the `unchanged` queue with its set, and the `normal` queue |
+| `worklist` | `DeltaWorklist` (§4.3, §10) | ordinary inputs with ZERO priority, optional FULL run-1 FLOW priority and pending mark cohorts; no unchanged queue |
 | `pendingPublications` | | the publications that the analyzer has not yet given to its `SummaryStorage` (§4.6) |
 | pending requests P | actor-owned empty-base RequestStorage, same class as R | every producer first filters effective R, then unions remaining marks; commit P then replace it at method fact-queue-empty. Never read P for membership. No deferred-answer memo or old input snapshots (§4.6). |
 | `queued` | | true while the analyzer has a `Work` event in its runner (§6.2) |
@@ -410,22 +410,13 @@ A new initial fact `j` (from any handler) is event E3: the analyzer adds the sta
   2: the exit sources, the exit sinks and their end facts, with `Result` read as `exc`; the unconditional exit rules
   fire there on the zero fact, `interpreter.md` D26). Its results end there: an exceptional exit is not an end node
   and makes no summary edge.
-* Each result goes to every successor node in the graph of the run, through `edges.add`.
-* THE UNCHANGED PATH stays as today (`ap.md` §8.1). If the statement does not touch the base of an edge, the
-  analyzer puts the edge for each successor into the `unchanged` queue with no `edges.add` (today
-  `addSequentialUnchangedEdge`). The new core has no edge post-processor (`interpreter.md` D14), so an unchanged edge
-  always goes on as it is.
-* THE TWO QUEUES. The worklist (`DeltaWorklist`, §10) has two queues:
-  * `unchanged`: the items of the unchanged path. A SET discards the repetitions: an item that the set holds does not
-    go into the queue again (today `enqueuedUnchangedEdges`);
-  * `normal`: the deltas of `edges.add`. The zero-to-zero items (REACH on `{zero}`) come first, then the other items
-    in LIFO order, as today.
-
-  The step always takes an `unchanged` item while that queue is not empty. The step takes a `normal` item only when
-  the `unchanged` queue is empty. When the step finds the `unchanged` queue empty (after the last `unchanged` item
-  put its successors into the queues), the analyzer drops the set (it starts a new empty set). The set stays at the
-  end of a `Work` event (today the event end resets it). So a loop of statements that do not touch a base ends: the
-  set holds the items of the loop until the `unchanged` queue is empty.
+* Store each completed result after S under S, then deliver its fresh delta to
+  each successor's first relevant frontier. Identity outputs use the same gate.
+  Initial/resume inputs do not populate post-S rows. Relevant destinations have
+  no completed-input gate. [Cached CFG delivery](cached-cfg-delivery.md) defines
+  the relevance contract, finite BFS, empty rows, boundary/static seams, ordinary
+  queue priorities, packed fan-out and work reservations. It replaces the old
+  unchanged lanes, repeat set and burst reset. The AP admission algebra stays.
 * The analyzer does not delay an edge by its depth. There is no fact-depth limit: the field limit of the run is the
   only depth bound (`ap.md` §4.4; `bidirectional-task.md` §5 item 1).
 
@@ -1516,8 +1507,11 @@ class IterationDriver(private val policy: IterationPolicy, private val shared: S
         logger.info { frontier.toString() }                           // THE FRONTIER LOG (§7.8), every complete run
         if (forward && !report.hasDemandVulnerability())              // no DEMAND vulnerability, so no seed
             return Next.End(RunStatus.COMPLETE, EndReason.STOP_RULE)
-        if (forward && result.demandLayerEdges == 0L)                 // includes incoming DEMAND contribution counters; no stored links
-            return Next.End(RunStatus.COMPLETE, EndReason.NO_DEMAND_EDGE)
+        if (forward && !config.run1) {                              // run-1 can have virtual static demand
+            check(!handOff.demand.hasStaticCompletion && !handOff.demand.hasSharedStaticCarry)
+            if (handOff.demandEdges.isEmpty())                       // exact selected outgoing support, after normalization
+                return Next.End(RunStatus.COMPLETE, EndReason.NO_DEMAND_EDGE)
+        }
         if (forward && !policy.continueAfter(config, result, frontiers))
             return Next.End(RunStatus.COMPLETE, EndReason.POLICY)
         return Next.Run(nextConfig(config, handOff))
@@ -1545,19 +1539,24 @@ class IterationDriver(private val policy: IterationPolicy, private val shared: S
      Confirmation is final (§7.5). Under AP §6.6's no-loss contract, every real
      vulnerability is confirmed at this stop. The full F77 contract and the
      claim that later runs repeat only zero work and records remain open (§7.7).
-  2. `NO_DEMAND_EDGE` (the user's rule, `task.md`): the run has NO DEMAND-LAYER OBJECT: no demand-layer edge delta,
-     no demand-layer summary delta and no admitted DEMAND input contribution (`ap.md` §8.3), under the
-     counter definition of §4.1. No retained input table is required. An unverified candidate can remain DEMAND
-     even when all its observed edges are normal. This stop does not validate same-call support, an ND guard, or a
-     trace. Keep the candidate in the output. Full later-refinement/no-loss claims remain open (§7.7);
+  2. `NO_DEMAND_EDGE`: a complete restricted forward run has no selected explicit outgoing demand after the
+     hand-off normalizes and deduplicates its patterns. Test `handOff.demandEdges.isEmpty()`. `HandOff.of` adds
+     a method count on exactly each successful normalized `Builder.add`, and `build` keeps accepted patterns.
+     Thus, empty method-key support is equivalent to an empty explicit snapshot. This invariant applies to
+     `HandOff.of`, not to arbitrary manually constructed test hand-offs. Run-1 is excluded: it can have virtual
+     static completion and shared static carry even with no explicit row. Observed demand counters remain
+     diagnostics. They can be positive when the selected snapshot is empty, or zero when selected NORMAL ND
+     support remains. An unresolved candidate stays DEMAND; this stop does not validate it. Nonempty sink seeds
+     do not override this stop. Persist records, replace the forward report, build the hand-off, and log the
+     frontier before this decision. Full later-refinement/no-loss claims remain open (§7.7);
   3. `POLICY`: `continueAfter(config, result, frontiers)` gave false (a practical stop strategy that reads the
      frontier log, §7.8; out of scope).
 
   Under that no-loss contract, every stop after a complete forward run retains
   every real vulnerability as CONFIRMED or DEMAND. Historical driver instances
   prove this for their versions; the F77 instance is open (§7.7). `STOP_RULE`
-  leaves only confirmed entries. The claim that `NO_DEMAND_EDGE` permits no later
-  confirmation is open. `POLICY` can stop while later refinement remains possible.
+  leaves only confirmed entries. `NO_DEMAND_EDGE` is the selected empty-outgoing-demand stop contract. It does
+  not assert that a skipped backward run would do no work. `POLICY` can stop while later refinement remains possible.
 * The driver applies the stop rules and asks `continueAfter` only after a complete FORWARD run. A complete backward run
   always goes on to the next forward run: its only output is the hand-off of that run (§7.4). So the iteration always
   ends after a forward run, or at an abnormal end (§7.7).
@@ -1576,8 +1575,8 @@ class IterationDriver(private val policy: IterationPolicy, private val shared: S
 * THE END OF THE ANALYSIS is an output: `Report.end = AnalysisEnd(status, run, direction, reason)` (§10). `run` and
   `direction` are those of the last run. The reasons:
   * `STOP_RULE`: a complete forward run with no DEMAND vulnerability; `status` is `COMPLETE`;
-  * `NO_DEMAND_EDGE`: a complete forward run with a DEMAND vulnerability and no demand-layer object (edge delta,
-    summary delta, incoming input contribution); `status` is `COMPLETE`;
+  * `NO_DEMAND_EDGE`: a complete restricted forward run with a DEMAND vulnerability and no normalized selected
+    outgoing demand pattern; `status` is `COMPLETE`;
   * `POLICY`: `continueAfter` gave false after a complete forward run; `status` is `COMPLETE`;
   * `ABNORMAL`: an incomplete run (`status` is its status: `TIMEOUT`, `OOM` or `FAILED`), a throw in the guarded
     region of the driver (`status` is `FAILED`), or a hit of the memory guard of the barrier (`status` is `OOM`).
