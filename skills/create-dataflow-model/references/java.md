@@ -109,10 +109,9 @@ Fix by the verdict it reports:
 - Java 8 source compatibility
 - A model may only reference libraries its own project pins. A model that needs a type from an unpinned library is a missing `--dependency`, not a reason to weaken the model to `Object`
 - Use `opentaint.<exact-target-package>` as the package. The class name must match the target binary name. Use `@ApproximatedClassName` only when Java cannot express the JVM name.
-- Every target has one canonical model class. Do not model the same target in more than one batch.
-- One model class per target class — a strict global bijection enforced at load: each model FQCN maps to exactly one target and vice-versa; duplicates or a reused FQCN across batches throw `IllegalArgumentException`
+- Model each target class once, in one batch — a strict global bijection enforced at load: each model FQCN maps to exactly one target and vice versa; a duplicate, or a FQCN reused across batches, throws `IllegalArgumentException`
 - Method signatures must match the target class methods exactly
 - Built-in dataflow models are first-priority and presumed correct — you cannot override them locally
 - A custom dataflow model overrides a passThrough for the same method — use dataflow as the fallback when a faithful passThrough cannot express or restore the propagation
-- Built-in passThrough models, by contrast, a user config on the same method overrides. So a coarse built-in on a *related* method — a driver that invokes the callback you modelled, a wrapper the flow passes through — can silently suppress an otherwise-correct model. When a faithful model doesn't fire, suspect a built-in on a neighbouring method and model/override that method instead; debug-rule shows which model actually applied
+- A user passThrough config, by contrast, overrides a built-in passThrough model on the same method. So a coarse built-in on a *related* method — a driver that invokes the callback you modelled, a wrapper the flow passes through — can silently suppress an otherwise-correct model. When a faithful model doesn't fire, suspect a built-in on a neighbouring method and model/override that method instead; debug-rule shows which model actually applied
 - Don't unpack or grep the analyzer JAR for built-in models or signatures — its internals aren't a stable API; go through the CLI

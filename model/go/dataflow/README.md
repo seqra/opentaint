@@ -10,9 +10,10 @@ library do not share a module graph, so use one module for each dependency versi
 | `modelcontextprotocol-go-sdk-v1` | MCP Go SDK server callbacks: tool, prompt, resource, middleware, server option and HTTP server factory handlers | `github.com/modelcontextprotocol/go-sdk` v1.7.0 |
 | `github-mcp-server` | GitHub MCP server tool handlers registered with `inventory.NewServerToolWithContextHandler` | `github.com/modelcontextprotocol/go-sdk` v1.7.0 |
 
-The build copies these modules to `model/go/dataflow/` in the analyzer JAR. The analysis
-loader extracts them and loads every module that has a `go.mod` file. A model package applies
-only when its target package is present in the analyzed project.
+The `go-config` build copies these modules to `model/go/dataflow/` in the analyzer JAR. The
+analysis loader extracts them and loads every module that has a `go.mod` file, so a new module
+needs no build file changes. A model package applies only when its target package is present
+in the analyzed project.
 
 ## Adding a module
 
@@ -33,9 +34,6 @@ only when its target package is present in the analyzed project.
    clause. For example, `github.com/modelcontextprotocol/go-sdk/mcp/` models
    `github.com/modelcontextprotocol/go-sdk/mcp`. Each target package can have only one model
    across all modules. A duplicate model makes the analysis fail when it loads the models.
-
-You do not need to edit a build file. The `go-config` build copies `model/go` into the
-analyzer JAR, and the loader finds each directory that has a `go.mod` file.
 
 ## Writing a model
 

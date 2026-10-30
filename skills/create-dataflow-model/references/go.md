@@ -88,11 +88,8 @@ Fix by the verdict it reports:
 ## Constraints
 
 - A model may only import the analyzed project's packages, their dependencies, and the modules its own `go.mod` pins. A model that needs a type from an unpinned module is a missing `--dependency`, not a reason to weaken the model
-- Use `opentaint/<exact-target-import-path>` as the package path and the target's package name in the package clause
-- Every target package has one model package. Do not model the same package in more than one batch
-- One model package per target package — a global bijection enforced at load across custom and built-in models: a second model of the same package fails the scan with `Go package "<target>" is modeled more than once`
-- Callable signatures must match the target exactly
+- Use `opentaint/<exact-target-import-path>` as the package path, the target's package name in the package clause, and the target's exact callable signatures
+- Model each target package once, in one batch. The built-in Go models (`model/go/dataflow`) load with every scan, so their target packages can't be modeled locally either. A second model of a package fails the scan with `Go package "<target>" is modeled more than once`
 - Model `init` functions are ignored
-- Built-in Go models (`model/go/dataflow`) load with every scan — you cannot model their target packages locally
 - A Go model overrides a passThrough for the same callable — passThrough rules apply only to calls without a body, and the model gives the call one. Use a model as the fallback when a faithful passThrough cannot express the propagation
 - Don't unpack or grep the analyzer JAR for built-in models or signatures — its internals aren't a stable API; go through the CLI
