@@ -97,6 +97,25 @@ class IterationDriver internal constructor(
                     "maxWidth=${result.analyzers.maxOfOrNull { it.cfgDeliveryMaxWidth } ?: 0}"
             }
         }
+        if (shared.n2Statistics != null) {
+            // These are scalar-store end-state gauges, not cumulative edge work.
+            // Cancelled/live actors need a heap census; absent snapshots are not zero.
+            val snapshots = result.analyzers.mapNotNull { it.scalarIdentityStatistics }
+            val reasons = sortedMapOf<String, Long>()
+            for (snapshot in snapshots) for ((reason, count) in snapshot.fallbackReasons)
+                reasons[reason] = (reasons[reason] ?: 0L) + count
+            logger.info {
+                "BIDI_IDENTITY_STORAGE_STATISTICS run=${config.index} scope=frozen-scalar-stores " +
+                    "snapshotActors=${snapshots.size} unavailableActors=${result.analyzers.size - snapshots.size} " +
+                    "compactPoints=${snapshots.sumOf { it.compactPoints }} " +
+                    "compactNormal=${snapshots.sumOf { it.compactNormal }} compactDemand=${snapshots.sumOf { it.compactDemand }} " +
+                    "compactFlow=${snapshots.sumOf { it.compactFlow }} compactTaint=${snapshots.sumOf { it.compactTaint }} " +
+                    "protectedNormal=${snapshots.sumOf { it.protectedNormal }} protectedDemand=${snapshots.sumOf { it.protectedDemand }} " +
+                    "fullPoints=${snapshots.sumOf { it.fullPoints }} promotedPoints=${snapshots.sumOf { it.promotedPoints }} " +
+                    "firstFullPoints=${snapshots.sumOf { it.firstFullPoints }} bitWords=${snapshots.sumOf { it.bitWords }} " +
+                    "fullArrayCapacity=${snapshots.sumOf { it.fullArrayCapacity }} fallbackReasons=$reasons"
+            }
+        }
         logOptimizationStatistics(config, "END")
         config.demand?.staticCompletionStatistics()?.let {
             logger.info { "BIDI_STATIC_CLOSURE_LOOKUP run=${config.index} $it" }

@@ -28,7 +28,8 @@ class RunMethodAnalyzer(
     private val limit = port.config.fieldLimit
 
     private var edgeStore: MethodEdgeStore? = MethodEdgeStore(ap, key, port.shared.language, limit,
-        flowBacked = mode.run1 && mode.markMode == MarkMode.FULL)
+        flowBacked = mode.run1 && mode.markMode == MarkMode.FULL,
+        collectStatistics = port.shared.n2Statistics != null)
     private var initialStore: InitialFactStore? = InitialFactStore()
     val edges: MethodEdgeStore get() = checkNotNull(edgeStore) { "The method edges were released" }
     val initials: InitialFactStore get() = checkNotNull(initialStore) { "The initial facts were released" }
@@ -104,6 +105,8 @@ class RunMethodAnalyzer(
     var cfgDeliveryVisitedNodes: Long = 0; private set
     var cfgDeliveryDestinations: Long = 0; private set
     var cfgDeliveryMaxWidth: Int = 0; private set
+    /** Scalar gauges copied before release. No premise, fact or actor is retained. */
+    var scalarIdentityStatistics: ScalarIdentityStatistics? = null; private set
 
     private var initialized = false
 
@@ -885,6 +888,7 @@ class RunMethodAnalyzer(
             runContext = null
             worklist.clear()
             pending = ArrayList()
+            release { scalarIdentityStatistics = edgeStore?.scalarStatisticsSnapshot() }
             edgeStore = null
             initialStore = null
             temporary = RequestStorage()
