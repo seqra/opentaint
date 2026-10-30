@@ -173,7 +173,7 @@ npx skills add https://github.com/seqra/opentaint
 
 - **스캔 및 분류:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
 - **커버리지 확장:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
-- **데이터플로우 모델링:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+- **데이터플로우 모델링:** `analyze-external-methods`, `create-pass-through-model`, `create-dataflow-model`, `debug-rule`, `report-analyzer-issue`
 
 ---
 

@@ -173,7 +173,7 @@ Las habilidades incluidas cubren el ciclo habitual de analisis de seguridad:
 
 - **Escaneo y triaje:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
 - **Ampliacion de cobertura:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
-- **Modelado de flujo de datos:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+- **Modelado de flujo de datos:** `analyze-external-methods`, `create-pass-through-model`, `create-dataflow-model`, `debug-rule`, `report-analyzer-issue`
 
 ---
 

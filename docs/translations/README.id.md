@@ -173,7 +173,7 @@ Keterampilan yang disertakan mencakup siklus analisis keamanan umum:
 
 - **Pemindaian dan triage:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
 - **Perluasan cakupan:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
-- **Pemodelan aliran data:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+- **Pemodelan aliran data:** `analyze-external-methods`, `create-pass-through-model`, `create-dataflow-model`, `debug-rule`, `report-analyzer-issue`
 
 ---
 
