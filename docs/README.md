@@ -130,11 +130,12 @@ opentaint summary --show-findings --verbose-flow --show-code-snippets results.sa
 |---------|-------------|
 | `opentaint scan` | Analyze projects (auto-detects Maven/Gradle) |
 | `opentaint compile` | Build project model separately |
-| `opentaint project` | Create model from precompiled JARs |
+| `opentaint project` | Create project model from precompiled JARs |
 | `opentaint summary` | View SARIF results |
 | `opentaint health` | Show resolved analyzer, autobuilder, rules, and runtime paths |
 | `opentaint test rule` | Scaffold, test, and debug detection rules |
-| `opentaint test approximation` | Scaffold and test dataflow approximations |
+| `opentaint test model` | Scaffold and test dataflow models |
+| `opentaint model` | Create dataflow model projects |
 | `opentaint pull` | Download dependencies |
 | `opentaint update` | Update to latest version |
 | `opentaint prune` | Remove stale artifacts and cached models |
