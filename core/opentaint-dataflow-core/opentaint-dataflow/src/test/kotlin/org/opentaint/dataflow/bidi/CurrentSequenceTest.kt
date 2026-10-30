@@ -362,9 +362,9 @@ class CurrentSequenceTest {
             assertTrue(f.configs[2].seeds.allowsSource(root, root.statement, sa))
             assertTrue(f.configs[2].seeds.allowsSource(root, root.statement, sb))
             assertTrue(f.results[2].witnessesByKey().values.flatten().all { !it.confirmed })
-            assertTrue(f.links(3, m).asSequence().any { link ->
+            assertEquals(!normalReversal, f.links(3, m).asSequence().any { link ->
                 link.caller.call == p.inst(root, 5) && link.addedFact == required.first() && link.linkLayer == Layer.NORMAL
-            }, "The second call really supplies T1 even when the independent record bypasses callee emission")
+            }, "A saved independent record bypasses an empty demand gate; only demanded input retains a live route")
             assertEquals(listOf(2, 0, if (normalReversal) 2 else 1), driver.frontiers.map { it.demandVulnerabilities })
         }
     }

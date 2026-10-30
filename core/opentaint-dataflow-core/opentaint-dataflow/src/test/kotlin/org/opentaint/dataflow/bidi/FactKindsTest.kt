@@ -102,7 +102,7 @@ class FactKindsTest {
             f.admit(core, ref, Layer.DEMAND, added)
             f.drain(core, quantum = 1)
             val initial = core.initials.all().single()
-            assertEquals(4L, core.demandLayerEdges, "One input presence, two producer results and one summary delta")
+            assertEquals(3L, core.demandLayerEdges, "Restricted inputs are keys: two producer results and one summary delta")
             assertEquals(4L, core.edgeDeltas, "Three producer results and the raw summary")
             val expected = Conclusion(PathFact(y, emptyList(), Tail.ANY, mt), ExclusionSet.Empty, true)
             assertEquals(setOf(initial to expected), methodEntries(f.ops, core.summaries.all()))
@@ -111,7 +111,7 @@ class FactKindsTest {
                 .map { it.premise to it.conclusion }))
             f.admit(core, ref, Layer.DEMAND, added)
             f.drain(core)
-            assertEquals(4L, core.demandLayerEdges)
+            assertEquals(3L, core.demandLayerEdges)
             assertEquals(4L, core.edgeDeltas)
             assertEquals(2, f.addedLinks.size, "Both deliveries are observed; only emission is deduplicated")
         }

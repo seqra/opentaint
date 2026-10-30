@@ -121,7 +121,14 @@ class CurrentModeIterationTest {
             val sharedReturn = f.p(ret, tail = Tail.STAR)
             assertEquals(setOf(f.p(ret, tail = Tail.EXACT), retT), f.premises(2, c.callee),
                 "The abstract demand shares exact FLOW; the explicit T guide starts a concrete cleaner check")
-            assertTrue(f.links.any { it.run == 2 && it.callee == c.callee && it.added == boundU })
+            val runTwoConfig = f.actual.configs.single { it.index == 2 }
+            val untouchedCallerLocal = f.manager.factsOf(boundU.fact, boundU.exclusion, Layer.NORMAL)
+            assertTrue(emitRestrictedInitials(runTwoConfig, f.ops, c.callee, untouchedCallerLocal).isEmpty(),
+                "The caller-local z/U offer has no callee entry demand")
+            assertTrue(f.links.none { it.run == 2 && it.callee == c.callee && it.added == boundU },
+                "An untouched caller-local offer no longer retains a current callee route")
+            assertTrue(f.links.any { it.run == 2 && it.callee == c.callee && it.added == retU },
+                "The bound ret/U input still reaches the callee's demanded return position")
             val excludedFullT = MarkSlot.Star(f.manager.markSetOf(c.t))
             normalBackwardRecord(f, c, sharedReturn, f.p(arg, c.fields, Tail.STAR, excludedFullT))
             assertTrue(f.premises(3, c.callee).isEmpty(),

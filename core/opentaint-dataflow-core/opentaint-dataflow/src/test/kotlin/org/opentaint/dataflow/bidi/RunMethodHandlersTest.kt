@@ -40,6 +40,8 @@ class RunMethodHandlersTest {
             override fun subscribe(sub: Subscription) = (handler as SubscriptionHandler).subscribe(sub)
             override fun link(callee: MethodKey, ref: CallerRef, linkLayer: Layer, added: Facts) =
                 handler.handle(RunEvent.LinkIn(callee, ref, linkLayer, added))
+            override fun startInitials(callee: MethodKey, initials: Collection<InitialAp>) =
+                handler.handle(RunEvent.InitialsIn(callee, initials))
             override fun send(event: RunEvent): Boolean { events += event; return true }
             override fun post(event: RunEvent.Delivery): Boolean { events += event; return true }
             override fun enqueue(analyzer: RunMethodAnalyzer): Boolean = enqueued.add(analyzer)
@@ -139,6 +141,25 @@ class RunMethodHandlersTest {
             assertFails { h.handler.handle(RunEvent.Work(h.actors.getValue(f.a))) }
         }
         Harness(f).use { h -> assertFails { h.handler.handle(RunEvent.ZeroIn(f.a)) } }
+    }
+
+    @Test fun `restricted completed keys start once without looking up the empty demand again`(): Unit {
+        val f = EngineShellFixtures()
+        Harness(f, index = 3).use { h ->
+            val key = f.key(context = "completed admission")
+            val initial = f.manager.initial(f.pattern())
+            h.port.startInitials(key, listOf(initial))
+            h.port.startInitials(key, listOf(initial))
+            assertEquals(setOf(key), h.actors.keys)
+            assertEquals(listOf(initial), h.actors.getValue(key).initials.all().toList())
+            assertEquals(1, h.enqueued.size)
+            assertTrue(h.links.isEmpty(), "Completed delivery carries no raw call input")
+        }
+        Harness(f).use { h ->
+            val initial = f.manager.initial(f.pattern())
+            assertFailsWith<IllegalStateException> { h.port.startInitials(f.a, listOf(initial)) }
+            assertTrue(h.actors.isEmpty(), "Run-1 must retain its raw request abstraction path")
+        }
     }
 
     @Test fun `delivery applies on the subscribed caller actor even when the callee belongs to another unit`(): Unit {

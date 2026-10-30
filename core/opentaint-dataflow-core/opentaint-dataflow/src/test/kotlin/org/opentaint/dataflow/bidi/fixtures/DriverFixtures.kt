@@ -58,6 +58,14 @@ class DriverFixtures(threads: Int = 1) : AutoCloseable {
             MethodCallServicesFactory(::RunMethodCallServices))
         val factory = RunnerHandlerFactory<RunMethodAnalyzer> { port ->
             val observed = object : RunnerPort<RunMethodAnalyzer> by port {
+                // Restricted input stays in the caller. Observe eligible bindings
+                // at subscription, not at the now-key-only callee packet.
+                override fun subscribe(sub: Subscription) {
+                    if (config.restricted && !sub.zeroOnly) ops.leaves(sub.added).forEach {
+                        inputRows += DriverInput(config.index, sub.callee, Link(it, sub.linkLayer, sub.ref))
+                    }
+                    port.subscribe(sub)
+                }
                 override fun link(callee: MethodKey, ref: CallerRef, linkLayer: Layer, added: Facts) {
                     ops.leaves(added).forEach { inputRows += DriverInput(config.index, callee, Link(it, linkLayer, ref)) }
                     port.link(callee, ref, linkLayer, added)

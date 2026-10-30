@@ -116,15 +116,15 @@ class CallSourceHitTest {
                 override fun post(event: RunEvent.Delivery): Boolean = error("Record replay publishes no current summary")
             })
             val part = Subscription(callee, CallerRef(f.key, initial, Layer.NORMAL, f.inst(1)), Layer.NORMAL, f.fact(result, mark = t))
-            manager.subscribe(part)
+            replayPersistedSummaries(actor.config, f.ops, part, actor)
             f.drain(actor)
             assertEquals(setOf(initial to Conclusion(if (view) ZERO_FACT else PathFact(argument, emptyList(), Tail.EXACT, u),
                 ExclusionSet.Empty, false)), methodEntries(f.ops, actor.summaries.all()))
             assertEquals(1L, actor.recordCrossings)
             assertTrue(actor.sourceHits!!.entries().none(), "Neither persisted callee edge nor caller source is executed by a record reader")
-            manager.subscribe(part)
+            replayPersistedSummaries(actor.config, f.ops, part, actor)
             f.drain(actor)
-            assertEquals(1L, actor.recordCrossings)
+            assertEquals(2L, actor.recordCrossings, "Saved replay runs for each offer; outputs still deduplicate")
             assertTrue(actor.sourceHits!!.entries().none())
             manager.freeze()
         }

@@ -30,6 +30,16 @@ class N2Statistics {
     private val staticSupplyRegionRows = AtomicLong()
     private val staticSupplyCommits = AtomicLong()
 
+    private val selectedCallOffers = AtomicLong()
+    private val persistedReplayInvocations = AtomicLong()
+    private val persistedReplayCandidates = AtomicLong()
+    private val persistedReplayMatches = AtomicLong()
+    private val demandLookupInvocations = AtomicLong()
+    private val demandLookupEmpty = AtomicLong()
+    private val demandLookupEligible = AtomicLong()
+    private val initialPackets = AtomicLong()
+    private val offeredInitialKeys = AtomicLong()
+
     private val fullCleanupBlocks = AtomicLong()
     private val fullCleanupSuffixEntries = AtomicLong()
     private val fullCleanupSelectedSteps = AtomicLong()
@@ -73,7 +83,30 @@ class N2Statistics {
         val staticSupplyFreshMembers: Long = 0,
         val staticSupplyRegionRows: Long = 0,
         val staticSupplyCommits: Long = 0,
+        val selectedCallOffers: Long = 0,
+        val persistedReplayInvocations: Long = 0,
+        val persistedReplayCandidates: Long = 0,
+        val persistedReplayMatches: Long = 0,
+        val demandLookupInvocations: Long = 0,
+        val demandLookupEmpty: Long = 0,
+        val demandLookupEligible: Long = 0,
+        val initialPackets: Long = 0,
+        val offeredInitialKeys: Long = 0,
     )
+
+    internal fun selectedCallOffered() { selectedCallOffers.incrementAndGet() }
+    internal fun persistedReplayStarted() { persistedReplayInvocations.incrementAndGet() }
+    internal fun persistedReplayCandidate() { persistedReplayCandidates.incrementAndGet() }
+    internal fun persistedReplayMatched() { persistedReplayMatches.incrementAndGet() }
+    internal fun demandLookupCompleted(eligible: Boolean) {
+        demandLookupInvocations.incrementAndGet()
+        if (eligible) demandLookupEligible.incrementAndGet() else demandLookupEmpty.incrementAndGet()
+    }
+    internal fun initialPacketOffered(keys: Int) {
+        require(keys > 0)
+        initialPackets.incrementAndGet()
+        offeredInitialKeys.addAndGet(keys.toLong())
+    }
 
     internal fun accepted(newGroup: Boolean = false, zeroOnly: Boolean = false) {
         acceptedDeltas.incrementAndGet()
@@ -157,5 +190,7 @@ class N2Statistics {
         fullCleanupSuffixEntries.get(), fullCleanupSelectedSteps.get(), fullCleanupInputs.get(),
         fullCleanupSingletonFlowInputs.get(), fullCleanupSingletonFlowSteps.get(), fullCleanupFallbacks.get(), fullCleanupRequestMembers.get(), staticSupplyOffers.get(),
         staticSupplyOfferedMembers.get(), staticSupplyFreshMembers.get(), staticSupplyRegionRows.get(),
-        staticSupplyCommits.get())
+        staticSupplyCommits.get(), selectedCallOffers.get(), persistedReplayInvocations.get(),
+        persistedReplayCandidates.get(), persistedReplayMatches.get(), demandLookupInvocations.get(),
+        demandLookupEmpty.get(), demandLookupEligible.get(), initialPackets.get(), offeredInitialKeys.get())
 }

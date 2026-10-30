@@ -2,6 +2,7 @@ package org.opentaint.dataflow.bidi.engine
 
 import org.opentaint.dataflow.bidi.ap.ApOps
 import org.opentaint.dataflow.bidi.ap.Facts
+import org.opentaint.dataflow.bidi.ap.InitialAp
 import org.opentaint.dataflow.bidi.ap.Layer
 import org.opentaint.dataflow.bidi.ap.MethodKey
 import org.opentaint.dataflow.bidi.interp.DirectedForms
@@ -24,6 +25,7 @@ interface RunnerPort<A : RunActor> {
     fun summaryStorage(key: MethodKey): SummaryStorage
     fun subscribe(sub: Subscription)
     fun link(callee: MethodKey, ref: CallerRef, linkLayer: Layer, added: Facts)
+    fun startInitials(callee: MethodKey, initials: Collection<InitialAp>)
 
     val onProcess: ((MethodKey, EdgeDelta) -> Unit)? get() = null
     val onCut: ((Cut, Facts) -> Unit)? get() = null

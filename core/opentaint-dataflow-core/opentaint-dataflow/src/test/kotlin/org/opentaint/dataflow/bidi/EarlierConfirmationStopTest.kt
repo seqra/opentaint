@@ -30,6 +30,8 @@ class EarlierConfirmationStopTest {
             override fun subscribe(sub: Subscription): Unit = error("A checkpoint has no subscriptions")
             override fun link(callee: MethodKey, ref: CallerRef, linkLayer: Layer, added: Facts): Unit =
                 error("A checkpoint has no input links")
+            override fun startInitials(callee: MethodKey, initials: Collection<InitialAp>): Unit =
+                error("A checkpoint has no initial delivery")
         }
         val actor = RunMethodAnalyzer(key, port, PublicationSink { _, _ -> error("No publication work") },
             MethodLocalServicesFactory(::RunMethodLocalServices), MethodCallServicesFactory(::RunMethodCallServices))

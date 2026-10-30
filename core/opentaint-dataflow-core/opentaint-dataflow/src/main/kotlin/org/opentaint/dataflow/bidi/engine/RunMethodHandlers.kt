@@ -48,6 +48,14 @@ class RunMethodHandlers(
             when (event) {
                 is RunEvent.Start -> port.analyzer(event.root).addRootZero()
                 is RunEvent.LinkIn -> port.analyzer(event.callee).addLink(event.ref, event.linkLayer, event.added)
+                is RunEvent.InitialsIn -> {
+                    check(port.config.restricted) { "Completed initial delivery is for restricted runs" }
+                    val actor = port.analyzer(event.callee)
+                    for (initial in event.initials) {
+                        port.shared.cancellation.checkpoint()
+                        actor.addInitial(initial)
+                    }
+                }
                 is RunEvent.ZeroIn -> port.analyzer(event.callee).addZeroEntry()
                 is RunEvent.StaticOwner -> port.analyzer(event.effect.owner).onStaticEffect(event.effect)
                 is RunEvent.MarkRequestsIn -> port.analyzer(event.method).addMarkRequests(event.rows)

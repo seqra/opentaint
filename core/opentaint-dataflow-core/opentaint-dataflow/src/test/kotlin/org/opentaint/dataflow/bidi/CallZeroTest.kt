@@ -138,6 +138,7 @@ class CallZeroTest {
             f.call(1, plan(listOf(callee), listOf(source)))
             f.onSubscribe = {}
             f.onLink = {}
+            f.onInitials = {}
             val sourceSeed = Seed.Source(if (admission == "context") f.store.key(context = "other") else f.key,
                 f.inst(if (admission == "statement") 2 else 1),
                 if (admission == "edge") source.forward.copy(to = target.copy(path = listOf(f.field("other")))) else source.forward)

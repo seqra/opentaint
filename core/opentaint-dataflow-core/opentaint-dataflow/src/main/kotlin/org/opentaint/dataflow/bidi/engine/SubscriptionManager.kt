@@ -2,7 +2,6 @@ package org.opentaint.dataflow.bidi.engine
 
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.store.forEachMark
-import org.opentaint.dataflow.bidi.store.Record
 import org.opentaint.dataflow.bidi.store.RequestMarkSetBuilder
 
 /** Replay and delivery use one complete AP predicate after their candidate scans. */
@@ -60,7 +59,6 @@ class SubscriptionManager(port: SubscriptionPort) {
             port.ops.manager.cancellation.checkpoint()
             applyStaticControl(part, pub, member)
         }
-        if (!part.zeroOnly && port.config.restricted) replayRecords(part)
         if (port.config.run1 && !admitted.fresh.zeroOnly) {
             val current = admitted.current
             checkKinds(current)
@@ -226,41 +224,6 @@ class SubscriptionManager(port: SubscriptionPort) {
         check(isStaticControl(part))
         check(pub.premise.member(member).base == STATIC)
         port.applier(part.caller).applyStaticSummary(part, pub, member)
-    }
-
-    /** Native records and transient reversed views remain reads of the previous-run store. */
-    private fun replayRecords(part: Subscription) {
-        val port = active()
-        val records = port.config.records
-        val direction = port.config.direction
-        val mode = port.config.mode
-        val ops = port.ops
-        val cancellation = ops.manager.cancellation
-        val applier = port.applier(part.caller)
-        val seen = HashSet<Any>()
-        val seenViews = HashMap<RecordLeafView, Boolean>()
-        for (leaf in ops.leaves(part.added)) {
-            cancellation.checkpoint()
-            for (record in records.byEntry(part.callee, leaf)) {
-                cancellation.checkpoint()
-                if (record.direction != direction || !seen.add(record)) continue
-                val added = ops.satisfying(part.added, record.premise, mode, record = true) ?: continue
-                applier.applyRecord(part.copy(added = added), record)
-            }
-            for (record in records.byExit(part.callee, leaf)) {
-                cancellation.checkpoint()
-                if (record.direction == direction) continue
-                record.forEachReversedAt(leaf) { view, nonSubsumable ->
-                    cancellation.checkpoint()
-                    val previous = seenViews[view]
-                    if (previous == true || previous == false && !nonSubsumable) return@forEachReversedAt
-                    seenViews[view] = previous == true || nonSubsumable
-                    val added = ops.satisfying(part.added, view.premise, mode, record = true)
-                        ?: return@forEachReversedAt
-                    applier.applyRecordView(part.copy(added = added), view, nonSubsumable)
-                }
-            }
-        }
     }
 
     /** P2's notification reads no caller-local subscriptions. */

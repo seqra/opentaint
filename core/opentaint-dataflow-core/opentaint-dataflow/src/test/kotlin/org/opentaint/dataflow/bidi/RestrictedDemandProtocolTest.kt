@@ -12,8 +12,7 @@ import kotlin.test.*
 /** Demand admits execution and paired publications. Actual input is not permission. */
 class RestrictedDemandProtocolTest {
     private fun arrive(f: MethodAnalysisFixtures, actor: RunMethodAnalyzer, value: Facts) {
-        val ref = CallerRef(f.key, f.manager.zero, value.layer, f.inst(1))
-        actor.addLink(ref, value.layer, value)
+        f.submitRestricted(actor, value)
     }
 
     @Test fun `empty demand starts no nonzero initial in either restricted direction`() {

@@ -103,15 +103,15 @@ class StaticProducerGrammarTest {
             val owner = f.core(config, callFactory = MethodCallServicesFactory(::RunMethodCallServices))
             val next = f.core(config, key = callee)
             f.onSubscribe = { }
-            f.onLink = { link -> next.addLink(link.ref, link.linkLayer, link.added) }
+            f.onInitials = { event -> event.initials.forEach(next::addInitial) }
             val input = f.fact(STATIC, path, Tail.ANY, mark, layer = Layer.DEMAND)
-            owner.addLink(CallerRef(f.key, f.manager.zero, input.layer, f.inst(1)), input.layer, input)
+            f.submitRestricted(owner, input)
             val exact = entry.copy(fact = entry.fact.copy(tail = Tail.EXACT), exclusion = ExclusionSet.Empty)
             assertEquals(listOf(f.manager.initial(exact)), owner.initials.all().toList())
             f.drain(owner)
-            assertTrue(f.sentLinks.any { it.callee == callee && f.ops.leaves(it.added).any { leaf ->
-                leaf == exact
-            } }, "Same-prefix admission selects the root; child exclusions do not constrain the root")
+            assertEquals(if (hasNextDemand) listOf(callee to listOf(f.manager.initial(exact))) else emptyList(),
+                f.sentInitials.map { it.callee to it.initials }, "The caller sends final exact roots only when the target has demand")
+            assertTrue(f.sentLinks.isEmpty(), "Restricted calls do not send raw inputs")
             assertEquals(if (hasNextDemand) listOf(f.manager.initial(exact)) else emptyList(),
                 next.initials.all().toList(), "Accepted static inputs still need the callee's fixed demand")
             assertEquals(Tail.ANY, f.ops.leaves(input).single().fact.tail, "The supplied value remains unchanged")
@@ -131,7 +131,7 @@ class StaticProducerGrammarTest {
             }.build()
             val actor = f.core(f.config(index = 2, demand = demand))
             val input = f.fact(STATIC, path, Tail.STAR, actual.fact.mark, actual.exclusion, Layer.DEMAND)
-            actor.addLink(CallerRef(f.key, f.manager.zero, input.layer, f.inst(1)), input.layer, input)
+            f.submitRestricted(actor, input)
             f.drain(actor)
             assertTrue(actor.initials.all().isEmpty())
             assertTrue(actor.summaries.all().none())
@@ -167,7 +167,7 @@ class StaticProducerGrammarTest {
             val input = f.fact(STATIC, path, Tail.ANY_TAINT)
             val actor = f.core(f.config(index = 2, demand = demand(f)))
             assertFailsWith<IllegalStateException> {
-                actor.addLink(CallerRef(f.key, f.manager.zero, input.layer, f.inst(1)), input.layer, input)
+                f.submitRestricted(actor, input)
             }
             assertTrue(actor.initials.all().isEmpty())
         }

@@ -82,6 +82,7 @@ class ProductionSchedule(
         is RunEvent.LinkIn -> "Link(callee=${event.callee},caller=${event.ref.caller}," +
             "premise=${observedPremise(event.ref.premise)},callerLayer=${event.ref.callerLayer}," +
             "call=${event.ref.call},linkLayer=${event.linkLayer},added=${shared.ops.leaves(event.added).toList()})"
+        is RunEvent.InitialsIn -> "Initials(${event.callee},${event.initials.map { it.toPattern() }})"
         is RunEvent.ZeroIn -> "Zero(${event.callee})"
         is RunEvent.MarkRequestsIn -> "MarkRequests(${event.method},${event.rows})"
         is RunEvent.InitialAnswersIn -> "InitialAnswers(${event.method},${event.answers.map { it.toPattern() }})"
@@ -156,6 +157,11 @@ class ProductionSchedule(
             storages.getOrPut(key) { SummaryStorage(key, shared.ap, ops, deferred) }
 
         override fun subscribe(sub: Subscription) {
+            // Restricted input transport contains only initial keys. This observer
+            // records the original eligible input retained by the caller.
+            if (config.restricted && !sub.zeroOnly) ops.leaves(sub.added).forEach {
+                inputs += observedLink(sub.callee, Link(it, sub.linkLayer, sub.ref))
+            }
             registered += sub
             log += "subscribe callee=${sub.callee} caller=${sub.caller} " +
                 "premise=${observedPremise(sub.ref.premise)},callerLayer=${sub.ref.callerLayer}," +
@@ -168,6 +174,15 @@ class ProductionSchedule(
             ops.leaves(added).forEach { inputs += observedLink(callee, Link(it, linkLayer, ref)) }
             val destination = owner(callee)
             val event = RunEvent.LinkIn(callee, ref, linkLayer, added)
+            if (destination === this) {
+                log += "direct ${description(event)}"
+                handler.handle(event)
+            } else destination.postEvent(event)
+        }
+
+        override fun startInitials(callee: MethodKey, initials: Collection<InitialAp>) {
+            val destination = owner(callee)
+            val event = RunEvent.InitialsIn(callee, initials)
             if (destination === this) {
                 log += "direct ${description(event)}"
                 handler.handle(event)

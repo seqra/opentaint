@@ -78,6 +78,10 @@ class PipelineFixtures(index: Int = 1, limit: Int = maxOf(1, index - 1),
                      zeroOnly: Boolean = false): Subscription =
         Subscription(callee, CallerRef(caller, premise, callerLayer, store.inst(call)), added.layer, added, zeroOnly)
 
+    /** Persisted replay is an offer operation, independent of live subscription admission. */
+    fun replayPersisted(part: Subscription) =
+        replayPersistedSummaries(config, ops, part, port.applier(part.caller))
+
     fun deliverAll() {
         while (deliveries.isNotEmpty()) {
             val event = deliveries.removeAt(0)

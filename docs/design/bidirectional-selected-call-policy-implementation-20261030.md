@@ -1,7 +1,13 @@
 # Implementation proposal: persisted summaries, demand, current summaries
 
-Date: 30 October 2026. Status: proposal and checked finite models only.
-Do not change production code as part of this document task.
+Date: 30 October 2026. Status: implemented and tested.
+
+The implementation uses the selected policy below. The complete core suite
+passes 2,126 tests; the JVM suite passes 452 tests. The constructive model
+passes 58 named theorems, including its dependency. The
+[source and test receipt](../../spec/lean/proposals/selected-call-policy-20261030/implementation-checks.json)
+binds the implementation adapters. These checks do not prove whole-project
+finding completeness. The project campaign remains a separate gate.
 
 Base runtime: `edb2e06cdb17eecafbe03415236bf56c57910239`.
 Use the selected policy in the
@@ -75,7 +81,7 @@ private fun enterCallees(ctx: CallContext, stage: CallStage.Callees, fact: PlanF
         }
 
         // Phase 1. Every offer, including repeats. No standing input admission.
-        replayPersistedSummaries(core.config, core.ops, part, applier = this)
+        replayPersistedSummaries(core.config, core.ops, part, applier = core)
 
         // Phase 2. Query the original full offer, not a merge delta or a
         // post-replay result. The helper makes the same bounded query as before.
@@ -92,6 +98,10 @@ private fun enterCallees(ctx: CallContext, stage: CallStage.Callees, fact: PlanF
     }
 }
 ```
+
+Use the method actor as the SummaryApplier. It dispatches through the existing
+method-call service, including its configured wrappers. Do not bypass that
+dispatch by passing this service directly.
 
 Persisted replay must finish before phase 2 begins. It can produce ordinary
 return-stage work. It does not replace or mutate `part.added` for the next

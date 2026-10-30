@@ -306,8 +306,24 @@ class NaiveClosure(
             callees = { stage, item ->
                 for (callee in stage.callees) {
                     val part = Part(callee, method, item.premise, callerLayer, node, item.c)
-                    subscribe(part)
-                    link(part)
+                    if (selected && config.restricted) {
+                        if (program.isKnown(callee)) {
+                            // Saved transfer is independent of current demand and of
+                            // whether this complete scalar offer was seen before.
+                            replayPersisted(part)
+                            val complete = currentInitials(callee, Pattern(item.c.fact, item.c.exclusion))
+                            if (complete.isNotEmpty()) {
+                                subscribe(part)
+                                val observed = ObservedLink(callee, method, item.premise, callerLayer,
+                                    node, layer(item.c), Pattern(item.c.fact, item.c.exclusion))
+                                links += observed
+                                complete.forEach { addInitial(callee, it) }
+                            }
+                        }
+                    } else {
+                        subscribe(part)
+                        link(part)
+                    }
                 }
                 emptyList()
             },
@@ -333,7 +349,7 @@ class NaiveClosure(
         work += {
             when {
                 selected && config.run1 -> emitSelected(link)
-                selected -> admitCurrent(part.callee, added)
+                selected -> currentInitials(part.callee, added).forEach { addInitial(part.callee, it) }
                 config.run1 -> addInitial(part.callee, policy(added))
                 added.fact.base == AccessPathBase.Zero -> addInitial(part.callee, ZERO_PATTERN)
                 else -> for ((method, demand) in inputs.demand) if (method == part.callee)
@@ -348,14 +364,16 @@ class NaiveClosure(
         if (!program.isKnown(part.callee) || !subscriptions.add(part)) return
         work += {
             for (pub in publications.toList()) if (pub.method == part.callee) match(part, pub)
-            if (config.restricted && !part.zeroOnly) {
-                val seen = HashSet<RecordLeafView>()
-                for (record in inputs.records) if (record.method == part.callee) {
-                    if (record.direction == config.direction) native(part, record)
-                    else reverseRecordLeaf(record.direction, record.premise, record.conclusion)?.let { view ->
-                        if (seen.add(view)) view(part, view)
-                    }
-                }
+            if (!selected && config.restricted && !part.zeroOnly) replayPersisted(part)
+        }
+    }
+
+    private fun replayPersisted(part: Part) {
+        val seen = HashSet<RecordLeafView>()
+        for (record in inputs.records) if (record.method == part.callee) {
+            if (record.direction == config.direction) native(part, record)
+            else reverseRecordLeaf(record.direction, record.premise, record.conclusion)?.let { view ->
+                if (seen.add(view)) view(part, view)
             }
         }
     }
@@ -562,16 +580,12 @@ class NaiveClosure(
         admittedRequests[method] = linkedMapOf()
     }
     /** Selected original AP protocol: input intersects fixed demand; there is no actual-query authority. */
-    private fun admitCurrent(method: MethodKey, actual: Pattern) {
-        if (actual.fact.base == AccessPathBase.Zero) {
-            addInitial(method, ZERO_PATTERN)
-            return
-        }
+    private fun currentInitials(method: MethodKey, actual: Pattern): Set<Pattern> {
+        if (actual.fact.base == AccessPathBase.Zero) return setOf(ZERO_PATTERN)
         val input = limit(normalize(actual.fact, actual.exclusion, demand = actual.fact.tail == Tail.ANY), config.fieldLimit)
         val leaf = Pattern(input.fact, input.exclusion)
         val guides = inputs.demand.filter { it.first == method }.map { it.second } + listOfNotNull(staticCarry(leaf))
-        for (guide in guides)
-            demandReference.emit(guide.entry, leaf)?.let { addInitial(method, it) }
+        return guides.mapNotNullTo(linkedSetOf()) { demandReference.emit(it.entry, leaf) }
     }
     /** A family is instantiated at this actual slot; a root probe is never a stored universal pair. */
     private fun staticCarry(actual: Pattern): DemandPattern? {

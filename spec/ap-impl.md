@@ -1,5 +1,14 @@
 # AP, stores and IR interpreter — implementation proposal
 
+The selected [restricted-call implementation](../docs/design/bidirectional-selected-call-policy-implementation-20261030.md)
+updates the caller boundary and input transport below. Ordinary restricted
+calls replay persisted records on every offer, then execute complete demand
+initial emission in the caller. Only eligible offers enter current N2. The
+callee receives immutable `InitialsIn` keys and starts them once; it does not
+repeat emission. Run-1 retains raw `LinkIn`. This supersedes older raw-link
+restricted sketches and fresh-only persisted replay. No AP table changes.
+
+
 F78 is the current run-1 request target: [specification](run1-requests.md),
 [proofs](run1-request-proofs.md), and
 [implementation proposal](../docs/design/bidirectional-run1-mark-request-implementation-20261015.md).
@@ -3303,8 +3312,11 @@ and fresh delta. Preserve full method context/entry, premise, caller layer, call
 An exact-only fresh TAINT delta can clear E; it never changes the admitted key. Existing N2 summary matching and
 ND binding normalization remain unchanged.
 
-The emitter does not wrap this accumulator in another path index or value directory. It consumes incoming data
-for immediate initial emission. Questions replay existing N2 values with full-query prefix+extension candidates
+The emitter does not wrap this accumulator in another path index or value directory.
+Run-1 consumes raw incoming data for initial emission. Restricted callers run
+the complete emission query and send canonical initial keys. Their live
+accumulator retains only offers that passed this query. Persisted replay has
+no input history and runs before this gate, on every offer. Questions replay existing N2 values with full-query prefix+extension candidates
 and the complete request predicate (§7.9); support, if selected, borrows joined N2 before release. No original
 supplier Fact, caller-keyed group, historical delta or captured COW root is retained by the emitter.
 

@@ -125,6 +125,7 @@ class RunMethodAnalyzer(
     }
 
     fun addLink(ref: CallerRef, linkLayer: Layer, added: Facts) {
+        check(config.run1) { "Raw call inputs are for run-1 only" }
         checkPremise(ref.premise)
         ap.cancellation.checkpoint()
         initialize()
@@ -133,25 +134,7 @@ class RunMethodAnalyzer(
         context.shared.abstractionStatistics?.arrival()
         // Diagnostic input presence; this is not selected outgoing demand or a retained-group count.
         if (added.layer == Layer.DEMAND && !sawDemandInput) { sawDemandInput = true; demandLayerEdges++ }
-        if (config.run1) checkNotNull(abstraction).emit(ref, added) else {
-            // Demand is immutable for the run. A new actual input can start only
-            // intersections with its matching entries; it cannot authorize old
-            // raw answers or synthesize an actual-input query.
-            ops.limit(added, limit, object : ApOut {
-                override fun markRequest(mark: TaintMark) = error("A field cut cannot request a mark")
-                override fun result(f: Facts) {
-                    for (leaf in ops.leaves(f)) {
-                        ap.cancellation.checkpoint()
-                        if (checkRun2StaticAnchors) validateRun2StaticFullInput(ap, leaf, limit)
-                    }
-                    for (initial in checkNotNull(config.demand).initials(key, f, config.admissionPolicy)) {
-                        ap.cancellation.checkpoint()
-                        context.shared.abstractionStatistics?.intersection()
-                        addInitial(initial)
-                    }
-                }
-            })
-        }
+        checkNotNull(abstraction).emit(ref, added)
     }
 
     private var sawDemandInput = false

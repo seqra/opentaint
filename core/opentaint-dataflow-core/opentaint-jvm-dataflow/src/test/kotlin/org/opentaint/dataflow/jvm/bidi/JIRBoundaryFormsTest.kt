@@ -572,6 +572,8 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
                 override fun subscribe(sub: Subscription): Unit = error("No boundary call subscription")
                 override fun link(callee: MethodKey, ref: CallerRef, linkLayer: Layer, added: Facts): Unit =
                     error("No boundary call link")
+                override fun startInitials(callee: MethodKey, initials: Collection<InitialAp>): Unit =
+                    error("No boundary call initial delivery")
             }
             core = RunMethodAnalyzer(method, port, PublicationSink { key, batch ->
                 assertEquals(method, key)

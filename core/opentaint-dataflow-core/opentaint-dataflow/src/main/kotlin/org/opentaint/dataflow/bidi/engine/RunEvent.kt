@@ -10,6 +10,11 @@ import java.util.Collections
 sealed interface RunEvent {
     data class Start(val root: MethodKey) : RunEvent
     data class LinkIn(val callee: MethodKey, val ref: CallerRef, val linkLayer: Layer, val added: Facts) : RunEvent
+    /** Restricted callers have already completed demand lookup and initial emission. */
+    class InitialsIn(val callee: MethodKey, initials: Collection<InitialAp>) : RunEvent {
+        val initials: List<InitialAp> = Collections.unmodifiableList(ArrayList(initials))
+        init { require(this.initials.isNotEmpty()) }
+    }
     data class ZeroIn(val callee: MethodKey) : RunEvent
     data class StaticOwner(val effect: StaticOwnerEffect) : RunEvent
 
@@ -35,6 +40,7 @@ sealed interface RunEvent {
 fun RunEvent.target(): MethodKey = when (this) {
     is RunEvent.Start -> root
     is RunEvent.LinkIn -> callee
+    is RunEvent.InitialsIn -> callee
     is RunEvent.ZeroIn -> callee
     is RunEvent.StaticOwner -> effect.owner
     is RunEvent.MarkRequestsIn -> method

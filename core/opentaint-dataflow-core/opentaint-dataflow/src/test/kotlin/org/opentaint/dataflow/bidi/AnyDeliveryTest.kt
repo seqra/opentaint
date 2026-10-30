@@ -31,7 +31,7 @@ class AnyDeliveryTest {
                 f.store.fact(argument, listOf(field), Tail.ANY_TAINT, t, inputE),
                 f.store.fact(argument, listOf(g), Tail.ANY_TAINT, t, inputE)))
             val sub = f.subscription(input)
-            f.subscriptions.subscribe(sub)
+            f.replayPersisted(sub)
             assertEquals(1, f.native.size)
             val call = f.native.single()
             assertEquals(f.caller, call.caller)
@@ -45,8 +45,8 @@ class AnyDeliveryTest {
             assertTrue(f.views.isEmpty())
             assertTrue(f.summaries.isEmpty())
             assertTrue(f.storage().candidates(sub, f.config.mode).isEmpty(), "Reading records adds no current publication or demand")
-            f.subscriptions.subscribe(sub)
-            assertEquals(1, f.native.size)
+            f.replayPersisted(sub)
+            assertEquals(2, f.native.size)
         }
     }
 
@@ -62,7 +62,7 @@ class AnyDeliveryTest {
             f.records.add(record)
             val input = packed(f, listOf(f.store.fact(result, listOf(field), mark = t), f.store.fact(result, listOf(g), mark = t)))
             val sub = f.subscription(input)
-            f.subscriptions.subscribe(sub)
+            f.replayPersisted(sub)
             assertEquals(1, f.views.size)
             val call = f.views.single()
             assertEquals(f.caller, call.caller)
@@ -74,8 +74,8 @@ class AnyDeliveryTest {
             assertTrue(f.native.isEmpty())
             assertTrue(f.summaries.isEmpty())
             assertTrue(f.storage().candidates(sub, f.config.mode).isEmpty())
-            f.subscriptions.subscribe(sub)
-            assertEquals(1, f.views.size)
+            f.replayPersisted(sub)
+            assertEquals(2, f.views.size)
         }
     }
 
@@ -98,7 +98,7 @@ class AnyDeliveryTest {
             rows.forEach(f.records::add)
 
             val exactSub = f.subscription(f.store.fact(argument, listOf(field), Tail.EXACT, t))
-            f.subscriptions.subscribe(exactSub)
+            f.replayPersisted(exactSub)
             assertEquals(listOf(rows[0]), f.native.map { it.record })
             assertEquals(setOf(Conclusion(PathFact(argument, listOf(field), Tail.EXACT, t), ExclusionSet.Empty, false)),
                 methodLeaves(f.ops, listOf(f.native.single().part.added)))
@@ -108,7 +108,7 @@ class AnyDeliveryTest {
             // Keep the root and descendants in distinct subscriptions: a root must leaf can subsume its children.
             val rootE = ExclusionSet.of(intArrayOf(g, h))
             val rootSub = f.subscription(f.store.fact(argument, listOf(field), Tail.ANY_TAINT, t, rootE), call = 2)
-            f.subscriptions.subscribe(rootSub)
+            f.replayPersisted(rootSub)
             assertEquals(rows.toSet(), f.native.map { it.record }.toSet())
             assertEquals(4, f.native.size)
             for (call in f.native) {
@@ -124,7 +124,7 @@ class AnyDeliveryTest {
             val deepSub = f.subscription(packed(f, deepPaths.map {
                 f.store.fact(argument, it, Tail.ANY_TAINT, t, deepE)
             }), call = 3)
-            f.subscriptions.subscribe(deepSub)
+            f.replayPersisted(deepSub)
             assertEquals(rows.drop(1).toSet(), f.native.map { it.record }.toSet())
             assertEquals(3, f.native.size)
             for (call in f.native) {
@@ -143,7 +143,7 @@ class AnyDeliveryTest {
             f.native.clear()
 
             val exactChildren = f.subscription(packed(f, deepPaths.map { f.store.fact(argument, it, mark = t) }), call = 4)
-            f.subscriptions.subscribe(exactChildren)
+            f.replayPersisted(exactChildren)
             assertTrue(f.native.isEmpty(), "Exact descendants satisfy neither applicability's any-tail guard nor inside the root")
             assertTrue(f.summaries.isEmpty())
             assertTrue(f.views.isEmpty())
@@ -160,9 +160,9 @@ class AnyDeliveryTest {
             val record = Record(f.callee, Direction.FORWARD, initial, f.store.fact(result, mark = u))
             f.records.add(record)
             val flowPremise = f.ap.initial(f.store.pattern(argument, tail = Tail.STAR, mark = MarkSlot.STAR))
-            f.subscriptions.subscribe(f.subscription(f.store.fact(argument, tail = Tail.STAR, mark = MarkSlot.STAR), premise = flowPremise))
-            f.subscriptions.subscribe(f.subscription(f.store.fact(argument, listOf(blocked), Tail.ANY_TAINT, t), call = 2))
-            f.subscriptions.subscribe(f.subscription(f.store.fact(argument, tail = Tail.ANY_TAINT, mark = u), call = 3))
+            f.replayPersisted(f.subscription(f.store.fact(argument, tail = Tail.STAR, mark = MarkSlot.STAR), premise = flowPremise))
+            f.replayPersisted(f.subscription(f.store.fact(argument, listOf(blocked), Tail.ANY_TAINT, t), call = 2))
+            f.replayPersisted(f.subscription(f.store.fact(argument, tail = Tail.ANY_TAINT, mark = u), call = 3))
             assertTrue(f.native.isEmpty())
             assertTrue(f.views.isEmpty())
             assertTrue(f.summaries.isEmpty())
@@ -188,7 +188,7 @@ class AnyDeliveryTest {
                 val inputPath = if (resultMust) listOf(g, if (blocked) h else field) else listOf(g)
                 val inputMark = if (blocked && !resultMust) u else t
                 val sub = f.subscription(f.store.fact(result, inputPath, mark = inputMark))
-                f.subscriptions.subscribe(sub)
+                f.replayPersisted(sub)
                 if (blocked) assertTrue(f.views.isEmpty())
                 else {
                     val expected = RecordLeafView(Pattern(PathFact(result, listOf(g), if (resultMust) Tail.STAR else Tail.EXACT, t),
@@ -217,7 +217,7 @@ class AnyDeliveryTest {
             val record = Record(f.callee, Direction.BACKWARD, initial, f.store.fact(argument, listOf(field), mark = t))
             f.records.add(record)
             val sub = f.subscription(f.store.fact(argument, listOf(field), mark = t))
-            f.subscriptions.subscribe(sub)
+            f.replayPersisted(sub)
             assertEquals(listOf(RecordLeafView(Pattern(PathFact(argument, listOf(field), Tail.EXACT, t), ExclusionSet.Empty),
                 Conclusion(PathFact(result, listOf(g), Tail.ANY, u), ExclusionSet.Empty, true))), f.views.map { it.view })
             assertEquals(sub, f.views.single().part)
@@ -274,7 +274,7 @@ class AnyDeliveryTest {
         }
     }
 
-    @Test fun `distinct caller references and link layers each replay a native record once with their complete metadata`(): Unit {
+    @Test fun `distinct caller references and link layers retain complete metadata on every native replay`(): Unit {
         PipelineFixtures(index = 3).use { f ->
             val initial = f.ap.initial(f.store.pattern())
             val record = Record(f.callee, Direction.FORWARD, initial, f.store.fact(result))
@@ -283,8 +283,8 @@ class AnyDeliveryTest {
             val a = f.subscription(input, caller = f.store.key(context = "first"), callerLayer = Layer.NORMAL)
             val b = f.subscription(input, caller = f.store.key(context = "second"), callerLayer = Layer.DEMAND, call = 2)
             val c = a.copy(added = f.store.fact(layer = Layer.DEMAND), linkLayer = Layer.DEMAND)
-            for (sub in listOf(a, b, c, a, b, c)) f.subscriptions.subscribe(sub)
-            assertEquals(3, f.native.size)
+            for (sub in listOf(a, b, c, a, b, c)) f.replayPersisted(sub)
+            assertEquals(6, f.native.size)
             assertEquals(setOf(a, b, c), f.native.map { it.part }.toSet())
             for (call in f.native) {
                 assertSame(record, call.record)
@@ -305,7 +305,7 @@ class AnyDeliveryTest {
             val record = Record(f.callee, Direction.FORWARD, f.ap.zero, f.ap.factsOf(target, ExclusionSet.Empty, Layer.NORMAL))
             f.records.add(record)
             val sub = f.subscription(f.store.fact(result, listOf(field), mark = t))
-            f.subscriptions.subscribe(sub)
+            f.replayPersisted(sub)
             assertEquals(listOf(RecordLeafView(Pattern(target, ExclusionSet.Empty), Conclusion(
                 PathFact(AccessPathBase.Zero, emptyList(), Tail.EXACT, MarkSlot.Concrete(TaintMark.ZERO)), ExclusionSet.Empty, false))),
                 f.views.map { it.view })
@@ -331,7 +331,7 @@ class AnyDeliveryTest {
             val callerPremise = f.ap.initial(f.store.pattern(inputBase, tail = Tail.STAR, mark = MarkSlot.STAR))
             val input = f.store.fact(inputBase, listOf(field), Tail.STAR, MarkSlot.Star(f.ap.markSetOf(t)), inputE)
             val sub = f.subscription(input, premise = callerPremise)
-            f.subscriptions.subscribe(sub)
+            f.replayPersisted(sub)
             if (index == 3) {
                 assertEquals(1, f.native.size)
                 assertSame(record, f.native.single().record)

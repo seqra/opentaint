@@ -59,6 +59,8 @@ class SupportFixtures(val index: Int = 1) : AutoCloseable {
         override fun subscribe(sub: Subscription): Unit = error("Support fixtures never subscribe")
         override fun link(callee: MethodKey, ref: CallerRef, linkLayer: Layer, added: Facts): Unit =
             error("Support fixtures insert actual added links directly")
+        override fun startInitials(callee: MethodKey, initials: Collection<InitialAp>): Unit =
+            error("Support fixtures insert support directly")
     }
 
     fun actor(key: MethodKey): RunMethodAnalyzer {

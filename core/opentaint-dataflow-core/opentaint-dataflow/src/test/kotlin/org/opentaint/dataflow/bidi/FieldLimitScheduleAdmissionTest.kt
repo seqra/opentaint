@@ -40,7 +40,7 @@ class FieldLimitScheduleAdmissionTest {
             val actor = f.core(config(f, schedule, demand))
             val actual = f.fact(STATIC, nested, Tail.EXACT, layer = Layer.DEMAND)
 
-            actor.addLink(CallerRef(f.key, f.manager.zero, actual.layer, f.inst(1)), actual.layer, actual)
+            f.submitRestricted(actor, actual)
 
             val expected = if (schedule == FieldLimitSchedule.RUN_INDEX)
                 f.pattern(STATIC, nested, Tail.EXACT) else oldDemand
@@ -81,7 +81,7 @@ class FieldLimitScheduleAdmissionTest {
                 layer = Layer.DEMAND)
             val actor = f.core(config(f, FieldLimitSchedule.RUN_INDEX, demand))
 
-            actor.addLink(CallerRef(f.key, f.manager.zero, actual.layer, f.inst(1)), actual.layer, actual)
+            f.submitRestricted(actor, actual)
 
             val expected = f.pattern(AccessPathBase.Argument(0), path + f.field("nested"), Tail.STAR, MarkSlot.STAR)
             assertEquals(setOf(f.manager.initial(expected)), actor.initials.all().toSet())
