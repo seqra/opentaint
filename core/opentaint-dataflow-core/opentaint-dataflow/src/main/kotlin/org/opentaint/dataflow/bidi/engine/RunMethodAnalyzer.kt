@@ -99,6 +99,11 @@ class RunMethodAnalyzer(
     var neutralBulkStorePackets: Long = 0; private set
     var neutralBulkStoreMemberships: Long = 0; private set
     var neutralScalarFallbackMemberships: Long = 0; private set
+    var cfgDeliveryHits: Long = 0; private set
+    var cfgDeliverySearches: Long = 0; private set
+    var cfgDeliveryVisitedNodes: Long = 0; private set
+    var cfgDeliveryDestinations: Long = 0; private set
+    var cfgDeliveryMaxWidth: Int = 0; private set
 
     private var initialized = false
 
@@ -123,7 +128,7 @@ class RunMethodAnalyzer(
         check(added.base !is AccessPathBase.CleanerTemporary) { "A field-action temporary cannot enter an added link" }
         check(linkLayer == added.layer) { "The link layer must be the added fact's layer" }
         context.shared.abstractionStatistics?.arrival()
-        // This is input presence for NO_DEMAND_EDGE, not a distinct retained-group count.
+        // Diagnostic input presence; this is not selected outgoing demand or a retained-group count.
         if (added.layer == Layer.DEMAND && !sawDemandInput) { sawDemandInput = true; demandLayerEdges++ }
         if (config.run1) checkNotNull(abstraction).emit(ref, added) else {
             // Demand is immutable for the run. A new actual input can start only
@@ -298,7 +303,7 @@ class RunMethodAnalyzer(
                     // independently of its later exit rules and summary.
                     checkNotNull(pointResumes).localWrite(premise, bounded)
                     if (boundary != null && !boundary.atStart) sink(premise, bounded)
-                    else routeBoundedRun1StaticToExit(premise, bounded)
+                    else routeBoundedRun1StaticToExit(at.site.operation.form.statement, premise, bounded)
                 }
             } else if (boundary != null && !boundary.atStart) {
                 // This value already belongs to an exit-rule pipeline. Finish
@@ -453,7 +458,6 @@ class RunMethodAnalyzer(
                     processed++
                     process(worklist.removeNext())
                 }
-                worklist.afterProcess()
             }
             flushPublications()
             ap.cancellation.checkpoint()
@@ -497,7 +501,7 @@ class RunMethodAnalyzer(
             if (!NeutralRelationBatch.certifies(summary)) return@withStatement
             val chunk = work.batch.take(budget)
             used = chunk.size
-            worklist.addBatch(node, work.batch, work.unchanged)
+            worklist.addBatch(node, work.batch)
             steps += used
             neutralBatchApplications++
             neutralBatchMemberships += used
@@ -511,7 +515,7 @@ class RunMethodAnalyzer(
         }
         if (used != 0) return used
         val (premise, facts) = work.batch.removeFirst()
-        worklist.addBatch(node, work.batch, work.unchanged)
+        worklist.addBatch(node, work.batch)
         process(EdgeDelta(premise, node, facts))
         return 1
     }
@@ -526,24 +530,25 @@ class RunMethodAnalyzer(
             return
         }
         check(!context.isEnd(node) && !context.isExceptionalExit(node))
-        context.forEachSuccessor(node) { successor ->
+        val fresh = edges.addDiagonal(node, offered)
+        if (fresh == null) {
+            // Decode once at the producer, before successor fan-out.
+            neutralScalarFallbackMemberships += marks.size
+            NeutralRelationBatch.decodePacked(ap, shape, facts, marks) { premise, value ->
+                completeOutput(premise, node, value)
+            }
+        } else for (delta in fresh) {
             ap.cancellation.checkpoint()
-            val fresh = edges.addDiagonal(successor, offered)
-            if (fresh == null) {
-                // Differing overlapping geometry needs the existing scalar
-                // admission law. This fallback is selected before decoding.
-                neutralScalarFallbackMemberships += marks.size
-                NeutralRelationBatch.decodePacked(ap, shape, facts, marks) { premise, value ->
-                    edges.add(successor, premise, value)?.let { push(EdgeDelta(premise, successor, it)) }
+            neutralBulkStorePackets++
+            neutralBulkStoreMemberships += delta.marks.size
+            edgeDeltas += delta.marks.size
+            if (delta.layer == Layer.DEMAND) demandLayerEdges += delta.marks.size
+            context.forEachSuccessor(node) { successor ->
+                context.forEachDeliveryTarget(successor, delta.base) { target ->
+                    // Each queued destination owns its mutable remaining-mark wrapper.
+                    worklist.addBatch(target, checkNotNull(NeutralRelationBatch.fromDiagonal(ap, delta)))
+                    requestWork()
                 }
-            } else for (delta in fresh) {
-                ap.cancellation.checkpoint()
-                neutralBulkStorePackets++
-                neutralBulkStoreMemberships += delta.marks.size
-                edgeDeltas += delta.marks.size
-                if (delta.layer == Layer.DEMAND) demandLayerEdges += delta.marks.size
-                worklist.addBatch(successor, checkNotNull(NeutralRelationBatch.fromDiagonal(ap, delta)))
-                requestWork()
             }
         }
     }
@@ -566,33 +571,41 @@ class RunMethodAnalyzer(
     }
 
     private fun emitCovered(premise: PremiseKey, node: CommonInst, facts: Facts) {
-        exitRulesAt(premise, node, facts)
-        context.forEachSuccessor(node) { successor ->
-            ap.cancellation.checkpoint()
-            edges.add(successor, premise, facts)?.let { push(EdgeDelta(premise, successor, it)) }
+        when {
+            context.isEnd(node) -> endAt(premise, node, facts, summary = true)
+            context.isExceptionalExit(node) -> endAt(premise, node, facts, summary = false)
+            else -> completeOutput(premise, node, facts)
         }
     }
 
     internal fun emitUnchanged(item: EdgeDelta) {
         checkPremise(item.premise)
         if (config.run1 && item.facts.base == STATIC && !context.isEnd(item.node)) return
-        exitRulesAt(item.premise, item.node, item.facts)
-        context.forEachSuccessor(item.node) { successor ->
-            ap.cancellation.checkpoint()
-            if (worklist.addUnchanged(EdgeDelta(item.premise, successor, item.facts))) requestWork()
-        }
+        emitCovered(item.premise, item.node, item.facts)
     }
 
-    private fun exitRulesAt(premise: PremiseKey, node: CommonInst, facts: Facts) {
-        if (context.isEnd(node)) endAt(premise, node, facts, summary = true)
-        else if (context.isExceptionalExit(node)) endAt(premise, node, facts, summary = false)
+    /** One durable result row per producer. Identity output uses this gate too. */
+    private fun completeOutput(premise: PremiseKey, node: CommonInst, facts: Facts) {
+        val fresh = admitOutput(node, premise, facts) ?: return
+        // Complete fan-out while the current Work reservation is held.
+        context.forEachSuccessor(node) { deliverAt(it, premise, fresh) }
     }
 
-    private fun push(delta: EdgeDelta) {
-        checkKinds(delta.premise, delta.facts)
+    private fun admitOutput(node: CommonInst, premise: PremiseKey, facts: Facts): Facts? {
+        checkKinds(premise, facts)
+        val fresh = edges.add(node, premise, facts) ?: return null
         edgeDeltas++
-        if (delta.facts.layer == Layer.DEMAND) demandLayerEdges++
-        worklist.add(delta)
+        if (fresh.layer == Layer.DEMAND) demandLayerEdges++
+        return fresh
+    }
+
+    private fun deliverAt(start: CommonInst, premise: PremiseKey, facts: Facts) {
+        context.forEachDeliveryTarget(start, facts.base) { enqueueInput(it, premise, facts) }
+    }
+
+    private fun enqueueInput(node: CommonInst, premise: PremiseKey, facts: Facts) {
+        checkKinds(premise, facts)
+        worklist.add(EdgeDelta(premise, node, facts))
         requestWork()
     }
 
@@ -658,7 +671,7 @@ class RunMethodAnalyzer(
             work.forEachResult { pr, facts ->
                 ap.cancellation.checkpoint()
                 if (config.run1 && facts.base == STATIC) return@forEachResult
-                edges.add(node, pr, facts)?.let { push(EdgeDelta(pr, node, it)) }
+                deliverAt(node, pr, facts)
             }
         }
     }
@@ -669,7 +682,12 @@ class RunMethodAnalyzer(
             val work = RuleWorklist(exit.rules, node, if (forward) Cut.EXIT_RULES else Cut.ENTRY_RULES)
             work.input(premise, facts)
             work.drain { pr, value, triggers ->
-                if (!summary) return@drain
+                if (!summary) {
+                    // Exceptional rules and observations still run, but normal
+                    // summary adjustment and killed-write guidance do not.
+                    admitOutput(node, pr, value)
+                    return@drain
+                }
                 if (config.run1) checkNotNull(staticWriteCandidates).observe(pr, value)
                 var result: Facts? = value
                 if (exit.globalStateDrop && pr.isZero && value.base == AccessPathBase.ClassStatic)
@@ -682,7 +700,12 @@ class RunMethodAnalyzer(
                 // A ZERO original has no ordinary Base request to propagate.
                 if (!config.run1 && pr.isZero && value is TaintTree)
                     exit.entryMarkRemoval(value.base)?.let { marks -> result = result?.let { ops.withoutMarks(it, marks) } }
-                result?.let { summaryDelta(pr, it) }
+                result?.let { completed ->
+                    boundedSummaryResult(pr, completed) { boundedPremise, bounded ->
+                        val fresh = admitOutput(node, boundedPremise, bounded)
+                        if (fresh != null) retainSummary(boundedPremise, fresh)
+                    }
+                }
             }
         }
     }
@@ -710,18 +733,18 @@ class RunMethodAnalyzer(
     }
 
     /** A call result supplies its computed mark, but is not a new local writer. */
-    internal fun routeStaticResultToExit(premise: PremiseKey, value: Facts) {
+    internal fun routeStaticResultToExit(node: CommonInst, premise: PremiseKey, value: Facts) {
         check(config.run1 && value.base == STATIC) { "Static exit routing needs a run-1 static result" }
         boundedSummaryResult(premise, value) { pr, bounded ->
             checkNotNull(pointResumes).computedGroups(pr, bounded)
-            routeBoundedRun1StaticToExit(pr, bounded)
+            routeBoundedRun1StaticToExit(node, pr, bounded)
         }
     }
 
-    private fun routeBoundedRun1StaticToExit(premise: PremiseKey, bounded: Facts) {
+    private fun routeBoundedRun1StaticToExit(node: CommonInst, premise: PremiseKey, bounded: Facts) {
         check(config.run1 && bounded.base == STATIC)
-        val exit = context.normalExit
-        edges.add(exit, premise, bounded)?.let { push(EdgeDelta(premise, exit, it)) }
+        val fresh = admitOutput(node, premise, bounded) ?: return
+        enqueueInput(context.normalExit, premise, fresh)
     }
 
     internal fun summaryDelta(premise: PremiseKey, value: Facts) =
@@ -848,6 +871,13 @@ class RunMethodAnalyzer(
             release { pointResumes?.clear() }
 
         } finally {
+            context.delivery.let {
+                cfgDeliveryHits = it.hits
+                cfgDeliverySearches = it.searches
+                cfgDeliveryVisitedNodes = it.visitedNodes
+                cfgDeliveryDestinations = it.destinations
+                cfgDeliveryMaxWidth = it.maxWidth
+            }
             local = null
             calls = null
             publicationSink = null

@@ -334,7 +334,7 @@ class PredicateClosureTest {
             assertEquals(RunStatus.COMPLETE, report.end.status)
             assertEquals(3, report.end.run)
             assertEquals(Direction.FORWARD, report.end.direction)
-            assertEquals(EndReason.POLICY, report.end.reason)
+            assertEquals(EndReason.NO_DEMAND_EDGE, report.end.reason)
             assertTrue(f.results.last().demandLayerEdges > 0L)
             assertTrue(retained(f.results.last(), f.ops).selectedDemand.isEmpty())
             val oneField = f.program.pattern(y, p.fields.take(1), Tail.STAR,

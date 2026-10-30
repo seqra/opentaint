@@ -51,7 +51,7 @@ class CallServiceLifetimeTest {
             val suspended = f.subscriptions.single()
             assertEquals(1, f.sentLinks.size)
             assertTrue(f.cuts.isEmpty())
-            assertTrue(actor.edges.edgesAt(f.inst(2), initial).none())
+            assertTrue(actor.edges.edgesAt(f.inst(1), initial).none())
             assertEquals(0L, stats.snapshot().activePins)
             assertEquals(1, refs.cleanup())
             refs.enable()
@@ -62,7 +62,7 @@ class CallServiceLifetimeTest {
             assertEquals(2, builds)
             assertEquals(0L, stats.snapshot().activePins)
             assertEquals(setOf(initial to Conclusion(f.run1Pattern(AccessPathBase.Return).fact,
-                ExclusionSet.Empty, true)), methodEntries(f.ops, actor.edges.edgesAt(f.inst(2), initial)))
+                ExclusionSet.Empty, true)), methodEntries(f.ops, actor.edges.edgesAt(f.inst(1), initial)))
             assertEquals(listOf(Cut.CALL), f.cuts.map { it.first })
             assertEquals(1, f.subscriptions.size)
             assertEquals(1, f.sentLinks.size)
@@ -84,7 +84,7 @@ class CallServiceLifetimeTest {
             assertTrue(f.enqueued.isEmpty())
             assertEquals(0L, core.recordCrossings)
             f.cancellation.activate()
-            assertTrue(core.edges.edgesAt(f.inst(2), f.manager.zero).none())
+            assertTrue(core.edges.edgesAt(f.inst(1), f.manager.zero).none())
             assertTrue(core.summaries.all().none())
             core.applySummary(part, pub, 0)
             f.drain(core, quantum = 1)
@@ -161,12 +161,12 @@ class CallServiceLifetimeTest {
             assertTrue(f.cuts.isEmpty())
             assertTrue(f.enqueued.isEmpty())
             f.cancellation.activate()
-            assertTrue(core.edges.edgesAt(f.inst(2), f.manager.zero).none())
+            assertTrue(core.edges.edgesAt(f.inst(1), f.manager.zero).none())
             apply()
             assertEquals(1L, core.recordCrossings)
             assertEquals(setOf(f.manager.zero to Conclusion(f.pattern(AccessPathBase.Return).fact,
                 ExclusionSet.Empty, false)), methodEntries(f.ops,
-                core.edges.edgesAt(f.inst(2), f.manager.zero)))
+                core.edges.edgesAt(f.inst(1), f.manager.zero)))
             assertTrue(f.cuts.any { it.first == Cut.CALL })
             assertTrue(f.subscriptions.isEmpty())
             assertTrue(f.sentLinks.isEmpty())
@@ -194,7 +194,7 @@ class CallServiceLifetimeTest {
             calls.process(item)
             assertEquals(1, f.sentLinks.size)
             assertEquals(item.premise, f.sentLinks.single().ref.premise)
-            assertTrue(core.edges.edgesAt(f.inst(2), item.premise).none())
+            assertTrue(core.edges.edgesAt(f.inst(1), item.premise).none())
         }
     }
 }

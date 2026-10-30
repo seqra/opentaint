@@ -12,8 +12,11 @@ internal class StaticPairLookup(private val ap: ApManager, private val completio
         if (visible) stats?.add(11)
         val view = if (visible) completion.visible(method) else completion.local(method)
         original.forEachMember { member ->
+            val targetLabels = outputCovering(member.toPattern(), ap.marks)
+            val fullOriginal = (targetLabels as? StaticLabelSelection.OutputCovers)?.actual is StaticMarkSelector.Full
+            val targetQuery = StaticRowQuery(targetLabels) { right -> mappedRightMayEmit(member, right, fullOriginal) }
             val keepTarget = StaticCandidateFilter { _, to, marks -> mayKeep(member, to, marks) }
-            if (!view.filteredHasComposedEndpoints(member, outputs, keepTarget)) return@forEachMember
+            if (!view.selectedHasComposedEndpoints(member, outputs, targetQuery, keepTarget)) return@forEachMember
             val pending = ArrayDeque<StaticGuidanceEdge>()
             val seen = HashSet<StaticGuidanceEdge>()
             fun admit(edge: StaticGuidanceEdge) {
@@ -21,7 +24,7 @@ internal class StaticPairLookup(private val ap: ApManager, private val completio
                 if (!mayKeep(member, edge.to, edge.marks)) return
                 if (seen.add(edge)) { stats?.add(8); pending.addLast(edge) } else stats?.add(13)
             }
-            for (edge in view.filteredTargets(member.toPattern(), prefixesOnly = true, keepTarget)) admit(edge)
+            for (edge in view.selectedTargets(member.toPattern(), true, targetQuery, keepTarget)) admit(edge)
             while (pending.isNotEmpty()) {
                 ap.cancellation.checkpoint()
                 val state = pending.removeFirst()
@@ -34,12 +37,23 @@ internal class StaticPairLookup(private val ap: ApManager, private val completio
                     val marks = composeMarks(leftMarks, state.marks)
                     marks != null && mayKeep(member, state.to, marks)
                 }
-                for (left in view.filteredIncoming(state.from, flowOnly = false, keepIncoming)) {
+                val incomingLabels = when (val marks = state.marks) {
+                    GuidanceMarks.Flow -> if (mappedRightMayEmit(member, state.to, fullOriginal)) targetLabels else StaticLabelSelection.FlowOnly
+                    is GuidanceMarks.Mapped -> outputComposable(marks.input, ap.marks)
+                }
+                for (left in view.selectedIncoming(state.from, StaticRowQuery(incomingLabels), keepIncoming)) {
                     stats?.add(16)
                     compose(left, state)?.let { stats?.add(17); admit(it) }
                 }
             }
         }
+    }
+
+    /** A false result excludes mapped rows only. FLOW remains a possible repair route. */
+    private fun mappedRightMayEmit(member: InitialAp, right: Pattern, fullOriginal: Boolean): Boolean {
+        if (!fullOriginal || right.fact.base == AccessPathBase.Zero) return true
+        val sameMark = right.copy(fact = right.fact.copy(mark = member.mark))
+        return canStoreInitial(normalizeDemandFieldExclusion(sameMark), member)
     }
 
     private fun mayKeep(member: InitialAp, right: Pattern, marks: GuidanceMarks): Boolean = when (marks) {

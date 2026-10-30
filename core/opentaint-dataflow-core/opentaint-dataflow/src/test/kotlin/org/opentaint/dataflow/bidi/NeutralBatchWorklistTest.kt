@@ -32,7 +32,7 @@ class NeutralBatchWorklistTest {
     private fun mark(delta: EdgeDelta): TaintMark = ((delta.premise as InitialAp).mark as MarkSlot.Concrete).mark
 
     @Test
-    fun `changed diagonal marks enqueue one exact cohort`() {
+    fun `ordinary diagonal marks enqueue one exact cohort`() {
         val queue = work()
         queue.add(delta(t))
         queue.add(delta(u))
@@ -40,7 +40,6 @@ class NeutralBatchWorklistTest {
         assertEquals(1, queue.size)
         val pending = assertIs<PendingWork.MarkedBatch>(queue.removeNextBatch())
         assertEquals(3, pending.batch.size)
-        assertFalse(pending.unchanged)
         assertEquals(setOf(t, u, v), pending.batch.decode().map { (initial, facts) ->
             val origin = (initial.mark as MarkSlot.Concrete).mark
             assertEquals(setOf(origin), fixture.ops.leaves(facts).map { (it.fact.mark as MarkSlot.Concrete).mark }.toSet())
@@ -63,21 +62,20 @@ class NeutralBatchWorklistTest {
     }
 
     @Test
-    fun `unchanged inputs keep their scalar repeat and global ZERO ordering`() {
+    fun `pending memberships merge and the same inputs can be queued again after removal`() {
         val queue = work()
         val first = delta(t)
         val last = delta(u)
-        val control = zero()
-        assertTrue(queue.addUnchanged(first))
-        assertTrue(queue.addUnchanged(control))
-        assertTrue(queue.addUnchanged(last))
-        assertFalse(queue.addUnchanged(first))
-        assertEquals(3, queue.size)
-        for (expected in listOf(last, control, first)) {
-            assertSame(expected, assertIs<PendingWork.Scalar>(queue.removeNextBatch()).delta)
-            queue.afterProcess()
-        }
-        assertTrue(queue.addUnchanged(first))
+        listOf(first, last, first.copy()).forEach(queue::add)
+        assertEquals(1, queue.size)
+        val pending = assertIs<PendingWork.MarkedBatch>(queue.removeNextBatch())
+        assertEquals(setOf(t, u), pending.batch.decode().map { (it.first.mark as MarkSlot.Concrete).mark }.toSet())
+        assertEquals(2, pending.batch.size)
+        assertTrue(queue.isEmpty)
+        queue.add(first)
+        val repeated = assertIs<PendingWork.MarkedBatch>(queue.removeNextBatch())
+        assertEquals(setOf(t), repeated.batch.decode().map { (it.first.mark as MarkSlot.Concrete).mark }.toSet())
+        assertTrue(queue.isEmpty)
     }
 
     @Test
@@ -103,8 +101,7 @@ class NeutralBatchWorklistTest {
         val cohort = assertIs<PendingWork.MarkedBatch>(queue.removeNextBatch())
         val first = cohort.batch.take(1)
         assertEquals(1, first.size)
-        queue.addBatch(cohort.node, cohort.batch, cohort.unchanged)
-        queue.afterProcess()
+        queue.addBatch(cohort.node, cohort.batch)
         assertFalse(queue.isEmpty)
         assertEquals(1, queue.size)
         val before = flow()
@@ -122,7 +119,6 @@ class NeutralBatchWorklistTest {
         val observed = buildSet {
             repeat(3) { index ->
                 add(mark(queue.removeNext()))
-                queue.afterProcess()
                 assertEquals(index == 2, queue.isEmpty)
             }
         }

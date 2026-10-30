@@ -65,6 +65,7 @@ class MethodAnalysisFixtures(
     private val reversedEntries = IdentityHashMap<RuleStatement, RuleStatement>()
     private val reversedExits = IdentityHashMap<ExitRules, ExitRules>()
     private val reversedCalls = IdentityHashMap<CallPlan, CallPlan>()
+    var baseRelevance: ((Direction, CommonInst, AccessPathBase, RuleView) -> Boolean)? = null
     val unresolvedCalls = ArrayList<Triple<CommonCallExpr, AccessPathBase, CallPlan>>()
 
     init {
@@ -83,6 +84,8 @@ class MethodAnalysisFixtures(
     }
 
     private val forms = object : MethodForms {
+        override fun isBaseRelevant(direction: Direction, s: CommonInst, base: AccessPathBase, view: RuleView): Boolean =
+            baseRelevance?.invoke(direction, s, base, view) ?: true
         override fun statement(direction: Direction, s: CommonInst): StatementSummary {
             val value = statements[s.location.index] ?: StatementSummary.EMPTY
             return if (direction == Direction.FORWARD) value

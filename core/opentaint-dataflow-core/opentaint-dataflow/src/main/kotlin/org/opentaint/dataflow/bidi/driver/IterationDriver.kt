@@ -88,6 +88,15 @@ class IterationDriver internal constructor(
         if (config.run1 && config.mode.markMode == MarkMode.FULL && result.status == RunStatus.COMPLETE) {
             logger.info { "BIDI_FLOW_BACKED_STATISTICS run=${config.index} neutralBatches=${result.analyzers.sumOf { it.neutralBatchApplications }} neutralMemberships=${result.analyzers.sumOf { it.neutralBatchMemberships }} bulkStorePackets=${result.analyzers.sumOf { it.neutralBulkStorePackets }} bulkStoreMemberships=${result.analyzers.sumOf { it.neutralBulkStoreMemberships }} scalarStoreFallbackMemberships=${result.analyzers.sumOf { it.neutralScalarFallbackMemberships }}" }
         }
+        if (shared.n2Statistics != null && result.status == RunStatus.COMPLETE) {
+            logger.info {
+                "BIDI_CFG_DELIVERY_STATISTICS run=${config.index} hits=${result.analyzers.sumOf { it.cfgDeliveryHits }} " +
+                    "searches=${result.analyzers.sumOf { it.cfgDeliverySearches }} " +
+                    "visitedNodes=${result.analyzers.sumOf { it.cfgDeliveryVisitedNodes }} " +
+                    "destinations=${result.analyzers.sumOf { it.cfgDeliveryDestinations }} " +
+                    "maxWidth=${result.analyzers.maxOfOrNull { it.cfgDeliveryMaxWidth } ?: 0}"
+            }
+        }
         logOptimizationStatistics(config, "END")
         config.demand?.staticCompletionStatistics()?.let {
             logger.info { "BIDI_STATIC_CLOSURE_LOOKUP run=${config.index} $it" }
@@ -139,8 +148,17 @@ class IterationDriver internal constructor(
         frontier.log()
         if (forward && !report.hasDemandVulnerability())
             return Next.End(RunStatus.COMPLETE, EndReason.STOP_RULE)
-        if (forward && !config.run1 && result.demandLayerEdges == 0L)
-            return Next.End(RunStatus.COMPLETE, EndReason.NO_DEMAND_EDGE)
+        if (forward && !config.run1) {
+            check(!handOff.demand.hasStaticCompletion && !handOff.demand.hasSharedStaticCarry) {
+                "A restricted forward hand-off has local demand only"
+            }
+            logger.info {
+                "BIDI_STOP_INPUTS run=${config.index} outgoingDemandMethods=${handOff.demandEdges.size} " +
+                    "observedDemandObjects=${result.demandLayerEdges}"
+            }
+            if (handOff.demandEdges.isEmpty())
+                return Next.End(RunStatus.COMPLETE, EndReason.NO_DEMAND_EDGE)
+        }
         if (forward && !policy.continueAfter(config, result, frontiers))
             return Next.End(RunStatus.COMPLETE, EndReason.POLICY)
         return Next.Run(nextConfig(config, handOff))

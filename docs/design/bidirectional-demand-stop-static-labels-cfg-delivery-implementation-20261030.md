@@ -1,6 +1,9 @@
 # Implementation: outgoing-demand stop, static labels, and cached CFG delivery
 
-Date: 30 October 2026. Status: implementation proposal only.
+Date: 30 October 2026. Status: selected implementation contract.
+Runtime implementation and adapter tests are included in the current iteration.
+Project measurements are recorded separately after the implementation commit.
+The [CFG runtime contract](../../spec/cached-cfg-delivery.md) records the selected storage and routing change.
 Source reviewed: `9d997343a83469e67540083fb12bc0a839d54779`.
 The reviewed analyzer core is unchanged from measured runtime
 `bb74cef6cf483db167c161020a8a4cca576ca005`.
@@ -14,8 +17,8 @@ This proposal implements exactly these selections from the
 
 It follows [the implementation guide](../../spec/impl-proposal-guide.md) and
 [the proof guide](../../spec/proof-guide.md). Code is Kotlin pseudocode unless
-stated otherwise. New helper names describe proposed APIs. No production code
-or new project measurement is included.
+stated otherwise. Helper names describe the implementation interfaces.
+This document contains the design and proof scope, not project measurement results.
 
 ## 1. Selected scope and evidence
 

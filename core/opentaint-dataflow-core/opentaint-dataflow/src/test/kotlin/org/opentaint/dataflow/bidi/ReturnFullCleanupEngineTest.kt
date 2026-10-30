@@ -41,7 +41,7 @@ class ReturnFullCleanupEngineTest {
             }
             val expected = atoms.drop(start ?: 0).toSet()
             assertEquals(expected, f.requests.map { (it.second as ReferenceRequestKind.Mark).mark }.toSet())
-            val outputs = actor.edges.edgesAt(f.inst(2), initial).map { it.second }.toList()
+            val outputs = actor.edges.edgesAt(f.inst(1), initial).map { it.second }.toList()
             assertEquals(expected, (outputs.single() as FlowTree).markExclusion.ids.map(::TaintMark).toSet())
             services.freeze()
         }
@@ -79,7 +79,7 @@ class ReturnFullCleanupEngineTest {
             assertEquals(0, service.statistics().pointSubscriptions)
             for (atom in expectedAtoms) {
                 val initial = f.manager.initial(f.pattern(STATIC, path, Tail.STAR, MarkSlot.Concrete(atom)))
-                assertTrue(actor.edges.edgesAt(f.inst(2), initial).any { (_, value) ->
+                assertTrue(actor.edges.edgesAt(f.inst(1), initial).any { (_, value) ->
                     value.layer == Layer.DEMAND && f.ops.leaves(value).any { it.fact.mark == MarkSlot.Concrete(atom) }
                 })
             }
@@ -127,13 +127,13 @@ class ReturnFullCleanupEngineTest {
             services.process(EdgeDelta(original, f.inst(1), input))
             f.drain(actor)
             fun encode(value: Facts) = f.ops.leaves(value).map { "${it.fact.base}/${it.fact.path}/${it.fact.tail}/${it.fact.mark}/${it.exclusion}/${value.layer}" }.toList()
-            val edges = actor.edges.edgesAt(f.inst(2), original).flatMap { encode(it.second).asSequence() }.toSet()
+            val edges = actor.edges.edgesAt(f.inst(1), original).flatMap { encode(it.second).asSequence() }.toSet()
             val summaries = actor.summaries.all().flatMap { (premise, value) ->
                 encode(value).asSequence().map { "${premise.members.map { it.toPattern() }} -> $it" }
             }.toSet()
             if (kind == 0) {
                 assertTrue(edges.isNotEmpty(), "The static mismatch is queued at NormalExit")
-                assertTrue(actor.edges.edgesAt(f.inst(2), original).all { it.second.base == STATIC })
+                assertTrue(actor.edges.edgesAt(f.inst(1), original).all { it.second.base == STATIC })
             }
             services.freeze()
             edges to summaries

@@ -50,7 +50,7 @@ class CleanerStepDeduplicationTest {
             val operation = OperationId(FormKey(FormOwner(), f.key.method, f.key, f.inst(1)))
             services.resumePoint(f.manager.zero, input, ResumeSite.CleanerInput(operation, 0, CleanerPhase.INPUT),
                 CallResumeState(Layer.NORMAL, true))
-            val actual = actor.edges.edgesAt(f.inst(2), f.manager.zero).flatMap { reference.conclusions(it.second) }.toSet()
+            val actual = actor.edges.edgesAt(f.inst(1), f.manager.zero).flatMap { reference.conclusions(it.second) }.toSet()
             assertEquals(expected, actual)
             val actualCuts = f.cuts.count { it.first == Cut.STATEMENT }
             if (index == 1) assertTrue(actualCuts < scalarCuts,
@@ -79,7 +79,7 @@ class CleanerStepDeduplicationTest {
                     CallResumeState(Layer.NORMAL, listOf(null, true, false)[i]))
             }
             assertEquals(originals, f.requests.map { it.first }, "No cross-invocation visited history")
-            assertTrue(originals.all { original -> actor.edges.edgesAt(f.inst(2), original).any() })
+            assertTrue(originals.all { original -> actor.edges.edgesAt(f.inst(1), original).any() })
             services.freeze()
         }
     }
@@ -124,7 +124,7 @@ class CleanerStepDeduplicationTest {
             val site = ResumeSite.CleanerInput(
                 OperationId(FormKey(FormOwner(), f.key.method, f.key, f.inst(1))), 0, CleanerPhase.INPUT)
             services.resumePoint(original, input, site, CallResumeState(Layer.NORMAL, false))
-            assertEquals(expected, actor.edges.edgesAt(f.inst(2), original)
+            assertEquals(expected, actor.edges.edgesAt(f.inst(1), original)
                 .flatMap { reference.conclusions(it.second) }.toSet())
             val actualRequests = f.requests.map { (it.second as ReferenceRequestKind.Mark).mark }
             assertEquals(scalarRequests.toSet(), actualRequests.toSet())

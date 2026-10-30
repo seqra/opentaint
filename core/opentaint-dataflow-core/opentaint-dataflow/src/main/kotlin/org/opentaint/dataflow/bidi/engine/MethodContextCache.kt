@@ -39,6 +39,19 @@ class RunMethodContext(
     private val exceptionalExits: Set<CommonInst> =
         if (config.direction != Direction.FORWARD) emptySet()
         else shared.interpreter.exitNodes(key).filter { it.exceptional }.mapTo(HashSet()) { it.node }
+    internal val delivery = CfgDeliveryCache(graph.graph, shared.cancellation) { index, base ->
+        val node = graph.instructions[index]
+        isEnd(node) || isExceptionalExit(node) || forms.isBaseRelevant(key, node, base)
+    }
+
+    internal fun forEachDeliveryTarget(start: CommonInst,
+        base: org.opentaint.dataflow.ap.ifds.AccessPathBase, body: (CommonInst) -> Unit) {
+        if (base == org.opentaint.dataflow.ap.ifds.AccessPathBase.Zero) { body(start); return }
+        for (index in delivery.targets(shared.language.getInstIndex(start), base)) {
+            shared.cancellation.checkpoint()
+            body(graph.instructions[index])
+        }
+    }
 
     val mode: ApMode get() = config.mode
     val ops: ApOps get() = shared.ops

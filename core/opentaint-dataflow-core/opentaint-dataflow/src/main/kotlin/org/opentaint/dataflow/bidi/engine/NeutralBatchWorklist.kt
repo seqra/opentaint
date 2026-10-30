@@ -7,12 +7,11 @@ import org.opentaint.ir.api.common.cfg.CommonInst
  * mask. A fallback consumes that mask incrementally and retains the remainder. */
 sealed interface PendingWork {
     class Scalar(val delta: EdgeDelta) : PendingWork
-    class MarkedBatch(val node: CommonInst, val batch: NeutralRelationBatch,
-                      val unchanged: Boolean = false) : PendingWork
+    class MarkedBatch(val node: CommonInst, val batch: NeutralRelationBatch) : PendingWork
 }
 
-/** Pending changed cohorts only. Unchanged work retains its original scalar
- * order/repeat contract, including the ZERO phase. There is one input tree per
+/** Pending ordinary cohorts. ZERO retains its separate priority phase.
+ * There is one input tree per
  * cohort and an exact mark mask, with no per-mark scalar input archive. */
 internal class NeutralBatchWorklist(private val m: ApManager) {
     private data class Key(val node: CommonInst, val geometry: Any)
@@ -25,8 +24,7 @@ internal class NeutralBatchWorklist(private val m: ApManager) {
         return retain(delta.node, batch)
     }
 
-    /** The marks were already admitted. This path does not rerun the unchanged
-     * repeat gate when a caller retains an unfinished quantum or scalar fallback. */
+    /** Retain an unfinished quantum or scalar fallback without losing marks. */
     fun retain(node: CommonInst, batch: NeutralRelationBatch): Admission {
         m.cancellation.checkpoint()
         check(!batch.isEmpty) { "An empty mask is not pending work" }

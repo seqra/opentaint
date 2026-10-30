@@ -2232,9 +2232,16 @@ After a complete forward run the driver applies these stop rules:
 | Reason | Condition and effect |
 |---|---|
 | `STOP_RULE` | The report has no DEMAND entry. There is no next backward sink seed. The confirmed report is final. |
-| `NO_DEMAND_EDGE` | No demand-layer edge, summary, or admitted input contribution was observed under the run counters. No retained link is required. An unvalidated/unsupported candidate can remain DEMAND; keep it in the output. This stop does not validate it. |
+| `NO_DEMAND_EDGE` | A complete restricted forward run has no selected explicit outgoing demand after hand-off normalization and deduplication. Use the empty method-key support of `HandOff.of`. Run-1 is excluded because it can have virtual static completion and shared static carry. Observed demand counters are diagnostics. An unresolved candidate stays DEMAND; this stop does not validate it. |
 | `POLICY` | The configured iteration policy stops. Keep the last complete report. |
 | `ABNORMAL` | Timeout, memory guard, or exception. Discard the incomplete run and keep the last complete report. |
+
+The report, normal-record persistence, hand-off, and frontier are complete before
+the stop check. A nonempty sink seed set does not override the selected empty
+outgoing-demand stop. A complete backward run still starts the next forward run.
+This change selects termination; it does not change AP transfer or claim that a
+skipped later run would have no work. The checked finite model is
+[`SelectedStop.lean`](lean/proposals/selected-work-20261030/SelectedStop.lean).
 
 Stopping at a complete forward run is the design contract. Its full current
 no-loss proof, method exclusion, and round-to-round narrowing are open. A method
@@ -2524,9 +2531,10 @@ candidates; the store then applies the exact test that the section names (`overl
   `[any-taint]` it is argued, §11.2). The premise key includes the tail and the exclusion, so a fact of a
   must-premise never subsumes a fact of the `[any]` premise at the same path, or the reverse (§7.1).
 * A demand-layer conclusion never subsumes a normal one (`Subsume.recordSubsumesLB_layer` for records).
-* The unchanged propagation (`Sequent.Unchanged`, §4.2 step 2) skips the store: its items do not go through `add`.
-  The method analyzer keeps them in their own queue, with a set that discards the repetitions, and it takes them
-  before every other item. When that queue is empty, it drops the set (`analyzer-core.md` §4.3).
+* The unchanged transfer (`Sequent.Unchanged`, §4.2 step 2) remains identity AP
+  transfer. Its completed output now uses the same post-S admission as other
+  output. [Cached CFG delivery](cached-cfg-delivery.md) replaces hop queueing and
+  the transient unchanged repeat set. Stored AP merge and subsumption stay.
 * The store lives for its run. No store of a run stays for a trace resolution: the trace resolution is out of scope
   (§8.10).
 

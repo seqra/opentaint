@@ -64,14 +64,14 @@ class DriverIntegrationTest {
     }
 
     @Test
-    fun `selected limits run a real forward backward forward sequence before the fixed policy stops`(): Unit {
+    fun `selected limits run a real forward backward forward sequence before outgoing demand becomes empty`(): Unit {
         DriverFixtures().use { f ->
             val program = f.persistentDemand()
             val driver = f.driver(FixedLimits(listOf(1, 1, 2)))
             val report = driver.analyze(listOf(program.root))
             assertEquals(listOf(1, 1, 2), f.configs.map { it.fieldLimit })
             assertEquals(listOf(1, 2, 3), driver.frontiers.map { it.run })
-            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.POLICY), report.end)
+            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
             assertEquals(ReportState.DEMAND, report.entries.single().state)
             assertEquals(3, report.entries.single().run)
             assertTrue(f.results.filter { it.direction == Direction.FORWARD }.all { it.demandLayerEdges > 0L })

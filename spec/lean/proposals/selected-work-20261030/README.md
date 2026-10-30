@@ -1,6 +1,7 @@
 # Checked models for the three selected changes
 
-Status: proposal models. No analyzer implementation or new project run.
+Status: checked models for the selected implementation. The checker verifies
+the models and source hashes only. It does not certify runtime tests or project measurements.
 
 Read the [implementation proposal](../../../../docs/design/bidirectional-demand-stop-static-labels-cfg-delivery-implementation-20261030.md)
 for source bindings, APIs, required tests, and the limits of these models.

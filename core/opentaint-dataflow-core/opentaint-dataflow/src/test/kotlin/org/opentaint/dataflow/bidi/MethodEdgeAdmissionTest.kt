@@ -7,7 +7,7 @@ import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
 import org.opentaint.dataflow.bidi.store.MethodEdgeStore
 import kotlin.test.*
 
-/** AP memberships and transient unchanged work are the only admission keys. */
+/** Completed output membership is independent of pending inputs. */
 class MethodEdgeAdmissionTest {
     @Test fun `mixed exact and MAY values admit once and do not replay a covered exact leaf`() {
         MethodAnalysisFixtures().use { f ->
@@ -67,19 +67,21 @@ class MethodEdgeAdmissionTest {
         }
     }
 
-    @Test fun `unchanged self loop repeats once per finite burst without persistent facts`() {
+    @Test fun `identity self loop stops at durable producer output admission`() {
         MethodAnalysisFixtures().use { f ->
             val store = MethodEdgeStore(f.manager, f.key, f.language, 1)
             val original = f.manager.initial(f.run1Pattern())
             val delta = EdgeDelta(original, f.inst(1), f.run1Fact())
             val work = DeltaWorklist()
-            assertTrue(work.addUnchanged(delta))
-            assertEquals(delta, work.removeNext())
-            assertFalse(work.addUnchanged(delta), "A self edge is already seen in the current burst")
-            work.afterProcess()
+            work.add(delta)
+            val input = work.removeNext()
+            val fresh = assertNotNull(store.add(input.node, input.premise, input.facts))
+            work.add(input.copy(facts = fresh))
+            val repeated = work.removeNext()
+            assertNull(store.add(repeated.node, repeated.premise, repeated.facts))
             assertTrue(work.isEmpty)
-            assertTrue(store.edgesAt(f.inst(1)).none(), "Transient traversal does not populate method storage")
-            assertTrue(work.addUnchanged(delta), "A later real admission can start a fresh burst")
+            assertEquals(1, store.edgesAt(f.inst(1)).count())
+            assertNull(store.add(delta.node, delta.premise, delta.facts), "A later burst cannot replay a completed result")
         }
     }
 }

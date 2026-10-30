@@ -84,9 +84,7 @@ class DirectCurrentIteration(private val program: FiniteProgramFixtures, private
                 ProgramRunInputs(roots.toList(), demand.toList(), records.toList(), seeds.toList(),
                     hasSharedStaticCarry = index == 1))
             if (config.direction == Direction.FORWARD && (currentDemand.isEmpty() ||
-                (!config.run1 && observation.processed.none { it.conclusion.demand } &&
-                    observation.rawSummaries.none { it.conclusion.demand } &&
-                    observation.links.none { it.linkLayer == Layer.DEMAND }))) break
+                (!config.run1 && demand.isEmpty()))) break
         }
         return HistoricalIterationResult(LinkedHashMap<HistoricalFinding, HistoricalState>().also {
             it.putAll(confirmed); it.putAll(currentDemand)
@@ -100,13 +98,17 @@ class DirectCurrentIteration(private val program: FiniteProgramFixtures, private
             program.cancellation.checkpoint()
             fun normalized(p: Pattern): Pattern {
                 val forgotten = if (p.fact.tail == Tail.ANY_TAINT) Pattern(p.fact.copy(tail = Tail.ANY), ExclusionSet.Empty) else p
-                return if (forgotten.fact.mark is MarkSlot.Star) forgotten.copy(fact = forgotten.fact.copy(mark = MarkSlot.STAR)) else forgotten
+                return if (forgotten.fact.mark is MarkSlot.Star) forgotten.copy(
+                    fact = forgotten.fact.copy(mark = MarkSlot.STAR), exclusion = ExclusionSet.Empty) else forgotten
             }
             val entry = normalized(Pattern(edge.conclusion.fact.copy(path = edge.conclusion.fact.path.toList()), edge.conclusion.exclusion))
             if (direction == Direction.FORWARD) for (member in edge.premise) result += edge.method to DemandPattern(entry, normalized(member))
             else {
                 check(edge.premise.size == 1)
-                result += edge.method to DemandPattern(entry, edge.premise.single().takeUnless { it.fact.base == AccessPathBase.Zero }?.let(::normalized))
+                val pattern = DemandPattern(entry, edge.premise.single().takeUnless {
+                    it.fact.base == AccessPathBase.Zero
+                }?.let(::normalized))
+                if (pattern != DemandPattern(program.ap.zero.toPattern(), null)) result += edge.method to pattern
             }
         }
         return result.toList()

@@ -32,13 +32,21 @@ class ModesTest {
             for (input in inputs) core.addLink(caller(input), input.layer, input)
             val initial = core.initials.all().single()
             assertSame(f.manager.initial(f.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR)), initial)
+            assertTrue(core.edges.edgesAt(f.inst(0), initial).none(), "Initial admission queues input, not a post-statement result")
+            assertTrue(core.nonZeroInitial)
+            assertEquals(0L, core.edgeDeltas, "No statement has executed and the static default is shared metadata")
+            f.drain(core)
             assertEquals(setOf(Conclusion(PathFact(x, emptyList(), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty, false)),
                 methodLeaves(f.ops, core.edges.edgesAt(f.inst(0), initial).map { it.second }.toList()))
-            assertTrue(core.nonZeroInitial)
-            assertEquals(1L, core.edgeDeltas, "The static default is shared metadata, not a propagated edge")
+            val completedDeltas = core.edgeDeltas
+            val completedSteps = core.steps
             for (input in inputs) core.addLink(caller(input), input.layer, input)
-            assertEquals(1L, core.edgeDeltas, "The static default is shared metadata, not a propagated edge")
+            f.drain(core)
+            assertEquals(completedDeltas, core.edgeDeltas, "Duplicate links do not produce new completed results")
+            assertEquals(completedSteps, core.steps, "Duplicate initial admission creates no new statement work")
             assertEquals(listOf(initial), core.initials.all().toList())
+            assertTrue((0..2).all { index -> core.edges.edgesAt(f.inst(index)).all { it.second.base == x } },
+                "The shared static default must not become a propagated point result")
         }
     }
 
@@ -67,6 +75,8 @@ class ModesTest {
             val flowG = f.manager.initial(f.pattern(x, listOf(g), Tail.STAR, MarkSlot.STAR))
             val currentU = f.manager.initial(f.pattern(x, listOf(g), mark = mu))
             assertEquals(setOf(concrete, flow, flowG), core.initials.all().toSet())
+            assertTrue(core.edges.edgesAt(f.inst(0)).none(), "All three initials are input admissions")
+            f.drain(core)
             assertEquals(setOf(Conclusion(PathFact(x, listOf(field), Tail.EXACT, mt), ExclusionSet.Empty, false)),
                 methodLeaves(f.ops, core.edges.edgesAt(f.inst(0), concrete).map { it.second }.toList()))
             assertEquals(setOf(Conclusion(PathFact(x, listOf(field), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty, false)),
@@ -93,6 +103,8 @@ class ModesTest {
             val must = f.manager.initial(f.pattern(x, tail = Tail.ANY_TAINT, mark = mt, exclusion = e))
             val exactG = f.manager.initial(f.pattern(x, listOf(g), Tail.EXACT, mt))
             assertEquals(setOf(must, exactG), core.initials.all().toSet())
+            assertTrue(core.edges.edgesAt(f.inst(0)).none(), "The admitted must and exact inputs have not executed")
+            f.drain(core)
             assertEquals(setOf(Conclusion(PathFact(x, emptyList(), Tail.ANY_TAINT, mt), e, false)),
                 methodLeaves(f.ops, core.edges.edgesAt(f.inst(0), must).map { it.second }.toList()))
             assertEquals(setOf(Conclusion(PathFact(x, listOf(g), Tail.EXACT, mt), ExclusionSet.Empty, false)),
@@ -170,7 +182,7 @@ class ModesTest {
         }
     }
 
-    @Test fun `forward unchanged component drains without summarizing a detached normal exit`(): Unit {
+    @Test fun `forward identity component drains without summarizing a detached normal exit`(): Unit {
         MethodAnalysisFixtures(listOf(listOf(1), listOf(1), emptyList())).use { f ->
             // A later forward run admits this generic non-root FLOW initial.
             val core = f.core(index = 3)
@@ -180,14 +192,19 @@ class ModesTest {
             f.drain(core, quantum = 1)
             assertEquals(setOf(f.manager.zero, initial), core.initials.all().toSet())
             assertEquals(setOf(0, 1), f.processed.map { it.node.location.index }.toSet())
-            assertEquals(4L, core.steps)
+            assertEquals(6L, core.steps, "Each initial processes entry, loop, and one repeated loop input before post-S dedup")
+            for (premise in listOf(f.manager.zero, initial)) {
+                assertEquals(listOf(0, 1, 1), f.processed.filter { it.premise === premise }.map { it.node.location.index })
+                assertEquals(1, core.edges.edgesAt(f.inst(0), premise).count())
+                assertEquals(1, core.edges.edgesAt(f.inst(1), premise).count())
+            }
             assertTrue(f.processed.none { it.node === f.inst(2) })
             assertTrue(core.summaries.all().none())
             assertTrue(core.summaries.demandEdges().none())
             assertTrue(f.publications.isEmpty())
             assertTrue(f.requests.isEmpty())
             assertTrue(f.cuts.none { it.first == Cut.STATEMENT || it.first == Cut.EXIT_RULES })
-            assertEquals(2L, core.edgeDeltas)
+            assertEquals(4L, core.edgeDeltas, "Two producers each store one result for each initial")
             assertEquals(0L, core.demandLayerEdges)
             assertTrue(core.work(1))
         }

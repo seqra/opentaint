@@ -45,8 +45,8 @@ class FrontierPropertyTest {
             val result = f.result()
             assertEquals(RunStatus.COMPLETE, result.status)
             assertEquals(3L, f.core(zero).steps)
-            assertEquals(2L, f.core(zero).edgeDeltas,
-                "An accepted entry and summary count; unchanged interior processing is not another stored edge")
+            assertEquals(4L, f.core(zero).edgeDeltas,
+                "Three completed statement results and a summary count")
             assertFalse(f.core(zero).nonZeroInitial)
             assertTrue(f.core(concrete).nonZeroInitial)
             assertTrue(f.core(flow).nonZeroInitial)
@@ -56,7 +56,7 @@ class FrontierPropertyTest {
             assertEquals(f.config.direction, frontier.direction)
             assertEquals(setOf(concrete, flow), frontier.analysed)
             assertEquals(setOf(zero), frontier.zeroOnly)
-            assertEquals(2L, frontier.zeroOnlyEdges)
+            assertEquals(4L, frontier.zeroOnlyEdges)
             assertEquals(emptyMap(), frontier.demandEdges)
             assertEquals(0L, frontier.recordCrossings)
             assertEquals(0, frontier.seeds)
@@ -81,10 +81,10 @@ class FrontierPropertyTest {
             f.admit(actor, second, Layer.DEMAND, added)
             f.admit(actor, second, Layer.DEMAND, added)
             val result = f.result()
-            assertEquals(3L, actor.demandLayerEdges,
-                "One demand-input presence flag, one demand output edge and one demand summary delta")
-            assertEquals(3L, result.demandLayerEdges)
-            assertEquals(3L, actor.edgeDeltas)
+            assertEquals(4L, actor.demandLayerEdges,
+                "One demand-input presence flag, two completed demand results and one demand summary delta")
+            assertEquals(4L, result.demandLayerEdges)
+            assertEquals(4L, actor.edgeDeltas)
             assertEquals(setOf(first, second), f.links(actor).asSequence().map { it.caller }.toSet())
             assertEquals(0, actor.summaries.demandEdges().count(), "Raw demand without paired exit permission is not published")
             val handOff = HandOff.of(f.config, result, f.report, f.shared)
@@ -121,12 +121,12 @@ class FrontierPropertyTest {
             assertEquals(2L, actor.recordCrossings, "The wrong-mark record has no admitted native result")
             assertEquals(2L, result.recordCrossings)
             assertFalse(actor.nonZeroInitial, "Concrete effects of the zero premise are not nonzero initial facts")
-            assertEquals(4L, actor.edgeDeltas)
+            assertEquals(6L, actor.edgeDeltas)
             val frontier = frontierOf(f.config, result, emptyHandOff(f), f.report)
             assertEquals(2L, frontier.recordCrossings)
             assertTrue(frontier.analysed.isEmpty())
             assertEquals(setOf(actor.key), frontier.zeroOnly)
-            assertEquals(4L, frontier.zeroOnlyEdges)
+            assertEquals(6L, frontier.zeroOnlyEdges)
         }
     }
 
@@ -200,7 +200,7 @@ class FrontierPropertyTest {
             assertFailsWith<UnsupportedOperationException> { (frontier.analysed as MutableSet).clear() }
             assertFailsWith<UnsupportedOperationException> { (frontier.zeroOnly as MutableSet).clear() }
             assertEquals(mapOf(nonzero to 2), frontier.demandEdges)
-            assertEquals(2L, frontier.zeroOnlyEdges)
+            assertEquals(4L, frontier.zeroOnlyEdges)
         }
     }
 

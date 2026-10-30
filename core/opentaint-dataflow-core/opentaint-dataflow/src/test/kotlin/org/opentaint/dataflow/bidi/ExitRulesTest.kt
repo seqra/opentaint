@@ -183,7 +183,7 @@ class ExitRulesTest {
         assertEquals(decode(target).map { j to it }.toSet(), raw(core))
         assertTrue(selected(core).isEmpty())
         assertTrue(f.publications.isEmpty())
-        assertEquals(1L, core.demandLayerEdges)
+        assertEquals(2L, core.demandLayerEdges)
     }
 
     @Test

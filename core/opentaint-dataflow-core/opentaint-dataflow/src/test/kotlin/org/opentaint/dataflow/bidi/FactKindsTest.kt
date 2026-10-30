@@ -42,7 +42,7 @@ class FactKindsTest {
             for (premise in listOf(f.manager.zero, concrete)) for (layer in Layer.entries) {
                 core.emitAfter(premise, f.inst(2), Reach.of(layer))
                 core.emitAfter(premise, f.inst(2), Reach.of(layer))
-                assertSame(Reach.of(layer), core.edges.edgesAt(f.inst(1), premise)
+                assertSame(Reach.of(layer), core.edges.edgesAt(f.inst(2), premise)
                     .single { it.second.layer == layer }.second)
             }
             assertEquals(4L, core.edgeDeltas)
@@ -67,6 +67,8 @@ class FactKindsTest {
             )
             prems.forEach(core::addInitial)
             assertEquals(prems.toSet(), core.initials.all().toSet())
+            assertTrue(core.edges.edgesAt(f.inst(0)).none(), "Initials are queued inputs, not completed results")
+            f.drain(core)
             for (premise in prems) {
                 val initialFacts = core.edges.edgesAt(f.inst(0), premise).single().second
                 assertEquals(setOf(Conclusion(premise.toPattern().fact, premise.exclusion, premise.tail == Tail.ANY)),
@@ -79,8 +81,8 @@ class FactKindsTest {
             )
             flowValues.forEach { core.emitAfter(flowPremise, f.inst(0), it) }
             assertEquals(methodLeaves(f.ops, flowValues),
-                methodLeaves(f.ops, core.edges.edgesAt(f.inst(1), flowPremise).map { it.second }.toList()))
-            assertEquals(1L, core.demandLayerEdges)
+                methodLeaves(f.ops, core.edges.edgesAt(f.inst(0), flowPremise).map { it.second }.toList()))
+            assertEquals(4L, core.demandLayerEdges)
         }
     }
 
@@ -100,8 +102,8 @@ class FactKindsTest {
             f.admit(core, ref, Layer.DEMAND, added)
             f.drain(core, quantum = 1)
             val initial = core.initials.all().single()
-            assertEquals(3L, core.demandLayerEdges, "One accepted added fact, one method delta and one summary delta")
-            assertEquals(3L, core.edgeDeltas, "Initial method edge, generated method edge and raw summary")
+            assertEquals(4L, core.demandLayerEdges, "One input presence, two producer results and one summary delta")
+            assertEquals(4L, core.edgeDeltas, "Three producer results and the raw summary")
             val expected = Conclusion(PathFact(y, emptyList(), Tail.ANY, mt), ExclusionSet.Empty, true)
             assertEquals(setOf(initial to expected), methodEntries(f.ops, core.summaries.all()))
             assertEquals(setOf(initial to expected), methodEntries(f.ops, core.summaries.demandEdges()))
@@ -109,8 +111,8 @@ class FactKindsTest {
                 .map { it.premise to it.conclusion }))
             f.admit(core, ref, Layer.DEMAND, added)
             f.drain(core)
-            assertEquals(3L, core.demandLayerEdges)
-            assertEquals(3L, core.edgeDeltas)
+            assertEquals(4L, core.demandLayerEdges)
+            assertEquals(4L, core.edgeDeltas)
             assertEquals(2, f.addedLinks.size, "Both deliveries are observed; only emission is deduplicated")
         }
     }
@@ -155,7 +157,7 @@ class FactKindsTest {
             assertEquals(setOf(initial to piece), methodEntries(f.ops, core.summaries.demandEdges()))
             assertEquals(setOf(initial to piece), methodEntries(f.ops, f.publications.flatten().asSequence()
                 .map { it.premise to it.conclusion }))
-            assertEquals(2L, core.demandLayerEdges)
+            assertEquals(3L, core.demandLayerEdges)
         }
     }
 
@@ -180,7 +182,7 @@ class FactKindsTest {
                     methodEntries(f.ops, core.summaries.all()))
                 assertTrue(core.summaries.demandEdges().none())
                 assertTrue(f.publications.isEmpty())
-                assertEquals(2L, core.demandLayerEdges)
+                assertEquals(3L, core.demandLayerEdges)
             }
         }
     }

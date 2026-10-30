@@ -37,7 +37,7 @@ class ReturnGroupScheduleEngineTest {
             }
             val expected = atoms.drop(start ?: 0).distinct()
             assertEquals(expected, f.requests.map { (it.second as ReferenceRequestKind.Mark).mark })
-            val outputs = actor.edges.edgesAt(f.inst(2), original).map { it.second }.toList()
+            val outputs = actor.edges.edgesAt(f.inst(1), original).map { it.second }.toList()
             assertEquals(1, outputs.size)
             assertEquals(expected.toSet(), (outputs.single() as FlowTree).markExclusion.ids.map(::TaintMark).toSet())
             services.freeze()
@@ -74,7 +74,7 @@ class ReturnGroupScheduleEngineTest {
             f.drain(actor)
             for (atom in listOf(g, h)) {
                 val markedInitial = f.manager.initial(f.pattern(STATIC, path, Tail.STAR, MarkSlot.Concrete(atom)))
-                assertTrue(actor.edges.edgesAt(f.inst(2), markedInitial).any { (_, value) ->
+                assertTrue(actor.edges.edgesAt(f.inst(1), markedInitial).any { (_, value) ->
                     value.layer == Layer.DEMAND && f.ops.leaves(value).any {
                         it.fact.base == x && it.fact.mark == MarkSlot.Concrete(atom)
                     }

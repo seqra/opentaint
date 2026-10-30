@@ -113,6 +113,9 @@ class FormsCache<F : Any>(
 
 /** Cached language forms retain method and context ownership. */
 interface MethodForms {
+    /** False certifies identity transfer with no observation or registration on this base. */
+    fun isBaseRelevant(direction: Direction, s: CommonInst,
+                       base: org.opentaint.dataflow.ap.ifds.AccessPathBase, view: RuleView): Boolean = true
     fun statement(direction: Direction, s: CommonInst): StatementSummary
     fun call(direction: Direction, s: CommonInst, call: CommonCallExpr): CallPlan
     fun entryRules(direction: Direction): RuleStatement
@@ -149,6 +152,8 @@ class DirectedForms(val interp: Interpreter, val direction: Direction, private v
     constructor(interp: Interpreter, direction: Direction, forms: (MethodKey) -> MethodForms) :
         this(interp, direction, forms, RuleView.FULL)
     private val forward get() = direction == Direction.FORWARD
+    fun isBaseRelevant(m: MethodKey, s: CommonInst, base: org.opentaint.dataflow.ap.ifds.AccessPathBase): Boolean =
+        forms(m).isBaseRelevant(direction, s, base, ruleView)
     fun startNodes(m: MethodKey, zero: Boolean): List<CommonInst> =
         if (forward) listOf(interp.entryNode(m)) else interp.exitNodes(m).filter { zero || !it.exceptional }.map { it.node }
     fun startRules(m: MethodKey, node: CommonInst): RuleStatement =

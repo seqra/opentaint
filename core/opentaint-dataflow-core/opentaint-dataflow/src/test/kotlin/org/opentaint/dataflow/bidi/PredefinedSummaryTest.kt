@@ -71,8 +71,12 @@ class PredefinedSummaryTest {
             val path = listOf(m.manager.accessors.index(registry), m.store.field("bean"))
             val input = m.store.fact(STATIC, path, Tail.STAR, mark = MarkSlot.STAR)
             calls.process(EdgeDelta(initial, m.inst(1), input))
-            val result = core.edges.edgesAt(m.inst(2), initial).single().second
+            val result = core.edges.edgesAt(m.inst(1), initial).single().second
             assertEquals(Layer.DEMAND, result.layer)
+            assertTrue(core.edges.edgesAt(m.inst(2), initial).none(), "Static shortcut queues the exit input without pre-storing it")
+            m.drain(core)
+            assertTrue(core.edges.edgesAt(m.inst(2), initial).any { it.second.layer == Layer.DEMAND },
+                "Exit processing stores the completed DEMAND result")
             assertTrue(m.subscriptions.isEmpty())
             assertTrue(m.sentLinks.isEmpty())
             assertTrue(m.events.none { it is RunEvent.StaticOwner })
@@ -93,6 +97,7 @@ class PredefinedSummaryTest {
             val core = m.core(localFactory = MethodLocalServicesFactory(::RunMethodLocalServices),
                 callFactory = MethodCallServicesFactory { RunMethodCallServices(it).also { calls = it } })
             calls.process(EdgeDelta(m.manager.zero, m.inst(1), Reach.of(Layer.NORMAL)))
+            assertTrue(core.edges.edgesAt(m.inst(1), m.manager.zero).none(), "An empty complete model has no call output")
             assertTrue(core.edges.edgesAt(m.inst(2), m.manager.zero).none())
             assertTrue(m.subscriptions.isEmpty())
             assertTrue(m.sentLinks.isEmpty())
@@ -121,7 +126,12 @@ class PredefinedSummaryTest {
                 callFactory = MethodCallServicesFactory { RunMethodCallServices(it).also { calls = it } })
             val initial = m.manager.initial(m.store.pattern(x))
             calls.process(EdgeDelta(initial, m.inst(1), m.store.fact(x)))
-            assertTrue(core.edges.edgesAt(m.inst(0), initial).any { it.second is Reach })
+            assertTrue(core.edges.edgesAt(m.inst(1), initial).any { it.second is Reach },
+                "The reversed source result is stored under its call statement")
+            assertTrue(core.edges.edgesAt(m.inst(0), initial).none(), "The predecessor input has not executed")
+            m.drain(core)
+            assertTrue(core.edges.edgesAt(m.inst(0), initial).any { it.second is Reach },
+                "The reversed source dependency completes at the method entry boundary")
             assertTrue(m.subscriptions.isEmpty())
             assertTrue(m.sentLinks.isEmpty())
         }

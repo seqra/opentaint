@@ -64,8 +64,8 @@ class CallPlanTest {
         return core to service
     }
 
-    private fun stored(f: MethodAnalysisFixtures, core: RunMethodAnalyzer, index: Int = 1): Set<Pair<Set<Pattern>, Conclusion>> =
-        methodEntries(f.ops, core.edges.edgesAt(f.inst(if (index % 2 == 1) 2 else 0))).map {
+    private fun stored(f: MethodAnalysisFixtures, core: RunMethodAnalyzer): Set<Pair<Set<Pattern>, Conclusion>> =
+        methodEntries(f.ops, core.edges.edgesAt(f.inst(1))).map {
             it.first.members.map(InitialAp::toPattern).toSet() to it.second
         }.toSet()
 
@@ -101,7 +101,7 @@ class CallPlanTest {
                 core.forms.call(f.key, f.inst(1), f.callExpression))
             process(f, calls, EdgeDelta(initial, f.inst(1), input), index = index)
             assertEquals(expected(f, plan, initial, Conclusion(pattern.fact, pattern.exclusion, false), index),
-                stored(f, core, index))
+                stored(f, core))
             assertEquals(listOf(Cut.CALL), f.cuts.map { it.first })
             assertTrue(f.subscriptions.isEmpty() && f.sentLinks.isEmpty())
         }
@@ -117,7 +117,10 @@ class CallPlanTest {
                 CleanReach.AT_AND_BELOW, null))), aliases = true))
             val (core, calls) = service(f)
             process(f, calls, EdgeDelta(initial, f.inst(1), input))
-            assertTrue(stored(f, core).isEmpty(), "Unchanged propagation stays in the worklist")
+            assertEquals(setOf(setOf(initial.toPattern()) to
+                Conclusion(initial.toPattern().fact, ExclusionSet.Empty, true)), stored(f, core),
+                "The completed identity is stored at its producing call")
+            assertTrue(core.edges.edgesAt(f.inst(2)).none(), "The successor has no result before it runs")
             assertTrue(f.cuts.isEmpty())
             assertTrue(f.subscriptions.isEmpty() && f.sentLinks.isEmpty())
             f.drain(core)
@@ -180,9 +183,9 @@ class CallPlanTest {
             val input = Conclusion(PathFact(x, path, Tail.EXACT, t), ExclusionSet.Empty, layer == Layer.DEMAND)
             val (core, calls) = service(f, index)
             process(f, calls, EdgeDelta(initial, f.inst(1), f.fact(x, path, mark = t, layer = layer)), index)
-            assertEquals(expected(f, plan, initial, input, index), stored(f, core, index))
+            assertEquals(expected(f, plan, initial, input, index), stored(f, core))
             assertEquals(effect || (index != 1 && layer == Layer.DEMAND),
-                stored(f, core, index).any { it.second.fact.base == alias })
+                stored(f, core).any { it.second.fact.base == alias })
         }
     }
 
@@ -196,8 +199,8 @@ class CallPlanTest {
             val input = Conclusion(PathFact(alias, path, Tail.EXACT, mark), ExclusionSet.Empty, false)
             val (core, calls) = service(f, index = 2)
             process(f, calls, EdgeDelta(initial, f.inst(1), f.fact(alias, path, mark = mark)), index = 2)
-            assertEquals(expected(f, plan, initial, input, index = 2), stored(f, core, index = 2))
-            assertEquals(setOf(x, alias), stored(f, core, index = 2).map { it.second.fact.base }.toSet())
+            assertEquals(expected(f, plan, initial, input, index = 2), stored(f, core))
+            assertEquals(setOf(x, alias), stored(f, core).map { it.second.fact.base }.toSet())
         }
     }
 
@@ -218,8 +221,8 @@ class CallPlanTest {
             val input = Conclusion(PathFact(x, path, Tail.EXACT, mark), ExclusionSet.Empty, false)
             val (core, calls) = service(f, index)
             process(f, calls, EdgeDelta(initial, f.inst(1), f.fact(x, path, mark = mark)), index = index)
-            assertEquals(expected(f, plan, initial, input, index), stored(f, core, index))
-            assertEquals(index == 2, stored(f, core, index).isNotEmpty())
+            assertEquals(expected(f, plan, initial, input, index), stored(f, core))
+            assertEquals(index == 2, stored(f, core).isNotEmpty())
             assertEquals(if (index == 2) listOf(Cut.CALL) else emptyList(), f.cuts.map { it.first })
         }
     }
@@ -280,8 +283,8 @@ class CallPlanTest {
             val input = Conclusion(PathFact(x, path, Tail.EXACT, mark), ExclusionSet.Empty, false)
             val (core, calls) = service(f, index, L)
             process(f, calls, EdgeDelta(initial, f.inst(1), f.fact(x, path, mark = mark)), index = index)
-            assertEquals(expected(f, plan, initial, input, index, L), stored(f, core, index))
-            assertTrue(stored(f, core, index).none { it.second.fact.base == temporary })
+            assertEquals(expected(f, plan, initial, input, index, L), stored(f, core))
+            assertTrue(stored(f, core).none { it.second.fact.base == temporary })
             assertEquals(listOf(Cut.STATEMENT, Cut.STATEMENT, Cut.CALL), f.cuts.map { it.first })
         }
     }
@@ -346,10 +349,10 @@ class CallPlanTest {
             val input = Conclusion(PathFact(x, emptyList(), Tail.EXACT, mark), ExclusionSet.Empty, layer == Layer.DEMAND)
             val (core, calls) = service(f, index)
             process(f, calls, EdgeDelta(initial, f.inst(1), f.fact(x, mark = mark, layer = layer)), index)
-            assertEquals(expected(f, plan, initial, input, index), stored(f, core, index))
+            assertEquals(expected(f, plan, initial, input, index), stored(f, core))
             val hasAlias = index != 1 && layer == Layer.DEMAND
             assertEquals(if (hasAlias) setOf(x, alias) else setOf(x),
-                stored(f, core, index).map { it.second.fact.base }.toSet())
+                stored(f, core).map { it.second.fact.base }.toSet())
             assertEquals(List(if (hasAlias) 2 else 1) { Cut.CALL }, f.cuts.map { it.first })
         }
     }
@@ -470,7 +473,9 @@ class CallPlanTest {
                 assertTrue(plan.passReads.isEmpty(), "Metadata is not a transfer filter")
             }
             if (index == 2 && kind == FactsKind.REACH) {
-                assertTrue(stored(f, core, index).isEmpty(), "Backward zero passes through the unchanged worklist")
+                assertEquals(setOf(setOf(f.manager.zero.toPattern()) to
+                    Conclusion(ZERO_FACT, ExclusionSet.Empty, false)), stored(f, core),
+                    "Backward ZERO also admits its completed call identity")
                 assertTrue(f.cuts.none { it.first == Cut.CALL })
             }
             f.drain(core)

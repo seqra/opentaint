@@ -81,7 +81,7 @@ class CurrentSequenceTest {
     }
 
     @Test
-    fun `WRAP reuses normal FLOW records while source cuts refine through five runs`(): Unit {
+    fun `WRAP reuses normal FLOW records and stops on the empty run3 outgoing snapshot`(): Unit {
         DriverFixtures().use { f ->
             val p = f.program
             val root = p.method("WRAP root", straight(3), 2).key()
@@ -98,10 +98,10 @@ class CurrentSequenceTest {
             exit(f, root, 2, finding)
             val driver = f.driver(FixedLimits(listOf(1, 1, 2, 3, 4)))
             val report = driver.analyze(listOf(root))
-            assertEquals(listOf(1, 2, 3, 4, 5), f.configs.map { it.index })
-            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 5, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
+            assertEquals(listOf(1, 2, 3), f.configs.map { it.index })
+            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
             assertEquals(ReportState.DEMAND, report.entries.single().state)
-            assertEquals(5, report.entries.single().run)
+            assertEquals(3, report.entries.single().run)
             val from = p.pattern(argument, tail = Tail.STAR, mark = MarkSlot.STAR)
             val to = Conclusion(PathFact(returned, listOf(field), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty, false)
             assertContains(raw(f, f.results[0], wrap), setOf(from) to to)
@@ -131,11 +131,10 @@ class CurrentSequenceTest {
                 }
             }
             assertTrue(f.configs[2].seeds.allowsSource(root, root.statement, source))
-            assertTrue(f.configs[4].seeds.allowsSource(root, root.statement, source))
-            assertEquals(listOf(1, 0, 1, 0, 1), driver.frontiers.map { it.demandVulnerabilities })
+            assertEquals(listOf(1, 0, 1), driver.frontiers.map { it.demandVulnerabilities })
+            assertTrue(driver.frontiers.last().demandEdges.isEmpty())
             assertTrue(f.results[0].witnessesByKey().values.flatten().all { !it.confirmed })
             assertTrue(f.results[2].witnessesByKey().values.flatten().all { !it.confirmed })
-            assertTrue(f.results[4].witnessesByKey().values.flatten().all { !it.confirmed })
             assertTrue(f.records.byEntry(wrap, from).any { record ->
                 record.direction == Direction.FORWARD && record.premise.toPattern() == from &&
                     record.conclusion.layer == Layer.NORMAL && f.ops.leaves(record.conclusion).any {
@@ -329,8 +328,11 @@ class CurrentSequenceTest {
             })
             val report = try { driver.analyze(listOf(root)) } finally { control?.close() }
             assertEquals(listOf(1, 2, 3), f.configs.map { it.index })
-            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE,
+            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD,
+                if (normalReversal) EndReason.NO_DEMAND_EDGE else EndReason.POLICY,
                 run1MarkMode = MarkMode.GROUP), report.end)
+            assertEquals(normalReversal, driver.frontiers.last().demandEdges.isEmpty(),
+                "The complete NORMAL ND summary retains selected support; independent native records do not")
             assertEquals(if (normalReversal) setOf(goodSink.rule, badSink.rule) else setOf(goodSink.rule),
                 report.entries.map { it.key.rule }.toSet())
             assertTrue(report.entries.all { it.state == ReportState.DEMAND && it.run == 3 })

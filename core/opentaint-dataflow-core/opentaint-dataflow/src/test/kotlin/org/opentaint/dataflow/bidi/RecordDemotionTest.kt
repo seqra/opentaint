@@ -70,7 +70,7 @@ class RecordDemotionTest {
         return reference(f, actor, plan, inside, false) + reference(f, actor, plan, only, true)
     }
     private fun actual(f: MethodAnalysisFixtures, actor: RunMethodAnalyzer): Set<Conclusion> =
-        leaves(f, actor.edges.edgesAt(f.inst(2), f.manager.zero).map { it.second }.toList())
+        leaves(f, actor.edges.edgesAt(f.inst(1), f.manager.zero).map { it.second }.toList())
 
     @Test
     fun `applicable-only must record resumes normal then demotes surviving results immediately before the CALL cut`(): Unit {
@@ -91,7 +91,7 @@ class RecordDemotionTest {
             val actor = core(f)
             actor.applyRecord(sub, record)
             val expected = setOf(Conclusion(PathFact(x, emptyList(), Tail.ANY_TAINT, u), e, true))
-            assertEquals(expected, leaves(f, actor.edges.edgesAt(f.inst(2), f.manager.zero).map { it.second }.toList()))
+            assertEquals(expected, leaves(f, actor.edges.edgesAt(f.inst(1), f.manager.zero).map { it.second }.toList()))
             assertEquals(expected, leaves(f, f.cuts.filter { it.first == Cut.CALL }.map { it.second }))
             assertEquals(1L, actor.recordCrossings)
             assertEquals(Layer.NORMAL, record.conclusion.layer)
