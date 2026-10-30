@@ -3,6 +3,8 @@
 Date: 30 October 2026. Base analyzer:
 `c98d12582a138d5898e94908ee6690dda73998ca`.
 Status: proposal only. None of these changes is implemented.
+The detailed [implementation proposal](bidirectional-identity-owner-protection-implementation-20261030.md)
+contains the APIs, source changes, checked formal models and test gates.
 
 Use the [current performance report](../reports/bidirectional-demand-stop-static-labels-cfg-delivery-performance-20261030.md).
 The latest reached / complete / accepted iterations are OWASP **run-5 / run-5 /
@@ -27,7 +29,7 @@ local invariants. They do not merely make each traversal a little faster.
 The ranking is a decision priority, not a predicted common speedup across
 different projects. Measure each change separately before combining results.
 
-**No major semantic change is proposed.** Keep all of these contracts:
+**No analyzer semantic change is proposed.** Keep all of these contracts:
 
 ```text
 completed output belongs to producing statement S
