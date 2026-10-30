@@ -150,6 +150,9 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	fmt.Printf("Test results:     %s\n", resultPath)
 
 	if analyzerFail != nil {
+		if analyzerLog, ok := analyzerLogSuggestion(analyzerFail, builder.LogsFile()); ok {
+			out.Suggestions(analyzerLog)
+		}
 		os.Exit(analyzerFail.ExitCode)
 	}
 
