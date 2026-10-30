@@ -69,6 +69,29 @@ func TestTidyGo(t *testing.T) {
 	}
 }
 
+func TestBuildGo(t *testing.T) {
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("no Go toolchain")
+	}
+	dir := t.TempDir()
+	writeGoFile(t, filepath.Join(dir, "go.mod"), "module test\n\ngo 1.21\n")
+	writeGoFile(t, filepath.Join(dir, "main.go"), "package main\n\nfunc main() {}\n")
+	if err := BuildGo(dir); err != nil {
+		t.Fatalf("BuildGo: %v", err)
+	}
+	// The executable of a main package is not left in the test project.
+	if _, err := os.Stat(filepath.Join(dir, "test")); !os.IsNotExist(err) {
+		t.Errorf("BuildGo wrote an executable into %s", dir)
+	}
+
+	writeGoFile(t, filepath.Join(dir, "broken.go"), "package main\n\nfunc broken() { undefinedCall() }\n")
+	err := BuildGo(dir)
+	if err == nil || !strings.Contains(err.Error(), "'go build ./...' failed in "+dir) ||
+		!strings.Contains(err.Error(), "undefined: undefinedCall") {
+		t.Errorf("error = %v, want the compile error and the directory", err)
+	}
+}
+
 func writeGoFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {

@@ -31,7 +31,7 @@ func TestProjectModelLanguage(t *testing.T) {
 	}
 }
 
-// A Go test project runs from its source directory: it is tidied and gets a project model of its own.
+// A Go test project runs from its source directory: it is tidied, built and gets a project model of its own.
 func TestPrepareTestProjectFromGoSources(t *testing.T) {
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skip("no Go toolchain")
@@ -57,7 +57,7 @@ func TestPrepareTestProjectFromGoSources(t *testing.T) {
 	assertTidied(t, dir)
 }
 
-// A compiled project model keeps working, and its Go projects are tidied too.
+// A compiled project model keeps working, and its Go projects are tidied and built too.
 func TestPrepareTestProjectTidiesCompiledGoProjects(t *testing.T) {
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skip("no Go toolchain")

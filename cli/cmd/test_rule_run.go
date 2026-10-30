@@ -68,12 +68,13 @@ type testProjectOptions struct {
 // testProjectArgHelp describes the <test-project> argument of the test run commands.
 const testProjectArgHelp = `<test-project> is a Go test project directory, or the project model that
 'opentaint compile <test-project> -o <project-model>' writes for it. A Java test project
-must be compiled first. Go projects get 'go mod tidy' before the tests run.`
+must be compiled first. Go projects are tidied and built before the tests run.`
 
 // prepareTestProject returns the project model to test and its configuration. A Go test
 // project directory has no project model, so one is written for it to a temporary directory.
-// Every Go project is tidied first: the samples are written after the test project is
-// created and may import modules its go.mod does not list yet.
+// Every Go project is tidied and built first: the samples are written after the test project
+// is created and may import modules its go.mod does not list yet, and a sample that does not
+// compile would otherwise only show up as a missing entry point in the analyzer log.
 func prepareTestProject(arg string) (string, *projectutil.Config) {
 	projectPath := log.AbsPathOrExit(arg, "test-project")
 	nativeProjectPath := filepath.Join(projectPath, "project.yaml")
@@ -103,23 +104,26 @@ func prepareTestProject(arg string) (string, *projectutil.Config) {
 		out.Fatalf("Failed to read the project model: %s", err)
 	}
 	for _, goProject := range projectConfig.GoProjects {
-		if err := tidyGoProject(projectPath, goProject.ProjectDir); err != nil {
+		if err := prepareGoProject(projectPath, goProject.ProjectDir); err != nil {
 			out.Fatalf("%s", err)
 		}
 	}
 	return projectPath, projectConfig
 }
 
-// tidyGoProject tidies the Go module of a project model's Go project. A workspace root
-// without a go.mod of its own is left alone.
-func tidyGoProject(projectModelPath, projectDir string) error {
+// prepareGoProject tidies and builds the Go module of a project model's Go project. A workspace
+// root without a go.mod of its own is left alone.
+func prepareGoProject(projectModelPath, projectDir string) error {
 	if !filepath.IsAbs(projectDir) {
 		projectDir = filepath.Join(projectModelPath, projectDir)
 	}
 	if info, err := os.Stat(filepath.Join(projectDir, "go.mod")); err != nil || info.IsDir() {
 		return nil
 	}
-	return testproject.TidyGo(projectDir)
+	if err := testproject.TidyGo(projectDir); err != nil {
+		return err
+	}
+	return testproject.BuildGo(projectDir)
 }
 
 func runTestProject(projectPath string, projectConfig *projectutil.Config, opts testProjectOptions) {

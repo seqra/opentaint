@@ -3,6 +3,7 @@ package testproject
 import (
 	"fmt"
 	"go/version"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -26,16 +27,27 @@ func BootstrapGo(outputDir, modulePath string, dependencies []string) error {
 
 // TidyGo runs 'go mod tidy' in dir, so its go.mod lists the modules its packages import.
 func TidyGo(dir string) error {
-	command := exec.Command("go", "mod", "tidy")
+	return runGo(dir, "go mod tidy", "mod", "tidy")
+}
+
+// BuildGo runs 'go build ./...' in dir, so compile errors in the samples surface before the
+// analyzer runs. The build output is discarded.
+func BuildGo(dir string) error {
+	return runGo(dir, "go build ./...", "build", "-o", os.DevNull, "./...")
+}
+
+// runGo runs the go command with args in dir. A failure reports name, dir and the go output.
+func runGo(dir, name string, args ...string) error {
+	command := exec.Command("go", args...)
 	command.Dir = dir
 	output, err := command.CombinedOutput()
 	if err == nil {
 		return nil
 	}
 	if details := strings.TrimSpace(string(output)); details != "" {
-		return fmt.Errorf("'go mod tidy' failed in %s:\n%s", dir, details)
+		return fmt.Errorf("'%s' failed in %s:\n%s", name, dir, details)
 	}
-	return fmt.Errorf("'go mod tidy' failed in %s: %w", dir, err)
+	return fmt.Errorf("'%s' failed in %s: %w", name, dir, err)
 }
 
 // GoVersion is the language version for a generated go.mod: the version of the local Go toolchain,
