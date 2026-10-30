@@ -14,6 +14,7 @@ Scaffold the approximation project with the same `--dependency` pins as the batc
 
 ```bash
 opentaint approximation init .opentaint/dataflow/<batch> \
+  --language java \
   --dependency "io.projectreactor:reactor-core:3.8.5"
 ```
 

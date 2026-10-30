@@ -268,6 +268,31 @@ func TestBuildScanCommandWithDocker(t *testing.T) {
 	}
 }
 
+func TestBuildScanCommandWithDockerMountsModelInputs(t *testing.T) {
+	base := NewScanCommand("").
+		WithDataflowModels([]string{"/host/dataflow"}).
+		WithPassthroughModels([]string{"/host/passthrough.yaml"})
+
+	cmd := BuildScanCommandWithDocker(
+		base,
+		"/host/project",
+		"/host/output/results.sarif",
+		[]string{"builtin"},
+	)
+	expected := "docker run --rm " +
+		"-v /host/project:/project -v /host/output:/output " +
+		"-v /host/dataflow:/dataflow-models/input0 " +
+		"-v /host/passthrough.yaml:/passthrough-models/input0 " +
+		"ghcr.io/seqra/opentaint:latest opentaint scan /project " +
+		"--output /output/results.sarif " +
+		"--dataflow-models /dataflow-models/input0 " +
+		"--passthrough-models /passthrough-models/input0"
+
+	if cmd != expected {
+		t.Fatalf("Docker model inputs = %q, want %q", cmd, expected)
+	}
+}
+
 func TestCopyFlagsFrom(t *testing.T) {
 	base := NewScanCommand("/original").
 		WithTimeout(1200 * time.Second).

@@ -1,0 +1,75 @@
+package cmd
+
+import (
+	"os"
+	"time"
+
+	"github.com/seqra/opentaint/internal/testmodel"
+	projectutil "github.com/seqra/opentaint/internal/utils/project"
+	"github.com/spf13/cobra"
+)
+
+var (
+	testModelOutputDir   string
+	testModelTimeout     time.Duration
+	testModelMaxMemory   string
+	testModelDataflow    []string
+	testModelPassthrough []string
+)
+
+var testModelRunCmd = &cobra.Command{
+	Use:   "run <test-project>",
+	Short: "Run dataflow model tests on a test project",
+	Long: `Run the samples specified in rule-test.yaml with the supplied dataflow models applied.
+
+A built-in source-to-sink harness rule is applied automatically; positive samples reference the
+model-rule.yaml rule with id "model-rule". The rule matches the project model's
+language: taint.Source() to taint.Sink() for a Go project, Taint.source() to Taint.sink() otherwise.
+
+` + testProjectArgHelp + `
+
+` + testExitCodesHelp("All model tests passed"),
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		projectPath, projectConfig := prepareTestProject(args[0])
+		ruleDir, err := os.MkdirTemp("", "opentaint-model-rule-*")
+		if err != nil {
+			out.Fatalf("Failed to create temp dir for harness rule: %s", err)
+		}
+		if _, err := testmodel.WriteFixedRule(ruleDir, projectModelLanguage(projectConfig)); err != nil {
+			out.Fatalf("Failed to materialize harness rule: %s", err)
+		}
+
+		runTestProject(projectPath, projectConfig, testProjectOptions{
+			label:             "Model tests",
+			tempDir:           "opentaint-test-models-*",
+			rulesets:          []string{ruleDir},
+			outputDir:         testModelOutputDir,
+			timeout:           testModelTimeout,
+			maxMemory:         testModelMaxMemory,
+			dataflowModels:    testModelDataflow,
+			passthroughModels: testModelPassthrough,
+		})
+	},
+}
+
+// projectModelLanguage is "go" for a project model with only Go projects and "java" otherwise.
+func projectModelLanguage(config *projectutil.Config) string {
+	if len(config.GoProjects) > 0 && len(config.JavaProjects) == 0 {
+		return "go"
+	}
+	return "java"
+}
+
+func init() {
+	testModelCmd.AddCommand(testModelRunCmd)
+	addTestRunFlags(
+		testModelRunCmd,
+		&testModelOutputDir,
+		&testModelTimeout,
+		&testModelMaxMemory,
+		&testModelDataflow,
+		&testModelPassthrough,
+	)
+	testApproximationCmd.AddCommand(deprecatedCommand(testModelRunCmd, "run", "opentaint test model run"))
+}

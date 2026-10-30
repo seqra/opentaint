@@ -65,10 +65,18 @@ type AnalyzerBuilder struct {
 	ruleIDs                               []string
 	passthroughApproximations             []string
 	dataflowApproximations                []string
+	goModels                              []string
 	trackExternalMethods                  bool
 	debugFactReachabilitySarif            bool
 	runRuleTests                          bool
 	debugRunAnalysisOnSelectedEntryPoints string
+	// logsFile is the analyzer log of the last command built.
+	logsFile string
+}
+
+// LogsFile returns the path of the analyzer log that the last command from BuildNativeCommand writes.
+func (a *AnalyzerBuilder) LogsFile() string {
+	return a.logsFile
 }
 
 func (a *AnalyzerBuilder) SetProject(projectPath string) *AnalyzerBuilder {
@@ -166,6 +174,11 @@ func (a *AnalyzerBuilder) AddDataflowApproximations(approxPath string) *Analyzer
 	return a
 }
 
+func (a *AnalyzerBuilder) AddGoModel(modelPath string) *AnalyzerBuilder {
+	a.goModels = append(a.goModels, modelPath)
+	return a
+}
+
 func (a *AnalyzerBuilder) SetTrackExternalMethods(track bool) *AnalyzerBuilder {
 	a.trackExternalMethods = track
 	return a
@@ -193,6 +206,7 @@ func (a *AnalyzerBuilder) BuildNativeCommand() []string {
 		return []string{}
 	}
 	tempLogsFile := filepath.Join(tempLogsDir, "analyzer.log")
+	a.logsFile = tempLogsFile
 
 	command := []string{
 		a.maxMemory,
@@ -269,6 +283,10 @@ func (a *AnalyzerBuilder) BuildNativeCommand() []string {
 
 	for _, approxPath := range a.dataflowApproximations {
 		flags = append(flags, "--java-dataflow-approximations", approxPath)
+	}
+
+	for _, modelPath := range a.goModels {
+		flags = append(flags, "--go-models", modelPath)
 	}
 
 	if a.trackExternalMethods {

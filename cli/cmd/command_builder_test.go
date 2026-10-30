@@ -1,8 +1,12 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
 func TestHasNestedKey(t *testing.T) {
@@ -60,6 +64,65 @@ func TestAppendVerbosityFlagPreservesExistingFlags(t *testing.T) {
 	want := []string{"--project", "foo.yaml", "--verbosity=debug"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("appendVerbosityFlag did not preserve prior flags: got %v, want %v", got, want)
+	}
+}
+
+func TestAnalyzerBuildNativeCommandRoutesGoModels(t *testing.T) {
+	cmd := NewAnalyzerBuilder().
+		SetProject("/project/project.yaml").
+		SetOutputDir("/output").
+		AddGoModel("/models/stdlib").
+		BuildNativeCommand()
+
+	if !containsFlagPair(cmd, "--go-models", "/models/stdlib") {
+		t.Fatalf("Go model path not passed to analyzer; command was %v", cmd)
+	}
+}
+
+// The analyzer log path is reported after an analyzer exception, so it must be the one the command writes.
+func TestAnalyzerBuilderReportsItsLogsFile(t *testing.T) {
+	b := NewAnalyzerBuilder().SetProject("/project/project.yaml").SetOutputDir("/output")
+	cmd := b.BuildNativeCommand()
+	t.Cleanup(func() { _ = os.RemoveAll(filepath.Dir(b.LogsFile())) })
+
+	if filepath.Base(b.LogsFile()) != "analyzer.log" || !containsFlagPair(cmd, "--logs-file", b.LogsFile()) {
+		t.Fatalf("LogsFile() = %q, command was %v", b.LogsFile(), cmd)
+	}
+}
+
+func TestGoModelsFlagIsGone(t *testing.T) {
+	for _, command := range []*cobra.Command{scanCmd, testRuleRunCmd, testModelRunCmd} {
+		if command.Flags().Lookup("go-models") != nil {
+			t.Errorf("%s still exposes --go-models", command.CommandPath())
+		}
+	}
+}
+
+// One model path can hold models of every language; each reaches the analyzer the way it loads them.
+func TestAddDataflowModelsRoutesEachLanguage(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, filepath.Join(root, "java", "approximation.yaml"), "sourceProject: ..\n")
+	writeTestFile(t, filepath.Join(root, "java", "classes", "opentaint", "Model.class"), "bytecode")
+	writeTestFile(t, filepath.Join(root, "go", "go.mod"), "module opentaint\n")
+
+	b := NewAnalyzerBuilder()
+	addDataflowModels(b, []string{root}, "")
+
+	if want := []string{filepath.Join(root, "java", "classes")}; !reflect.DeepEqual(b.dataflowApproximations, want) {
+		t.Errorf("Java class directories = %v, want %v", b.dataflowApproximations, want)
+	}
+	if want := []string{filepath.Join(root, "go")}; !reflect.DeepEqual(b.goModels, want) {
+		t.Errorf("Go model directories = %v, want %v", b.goModels, want)
+	}
+}
+
+func writeTestFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }
 

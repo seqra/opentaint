@@ -146,7 +146,7 @@ The `test` command group is tooling for rule and approximation development.
 #### Rule tests
 
 ```bash
-opentaint test rule init .opentaint/test-projects/my-rule
+opentaint test rule init .opentaint/test-projects/my-rule --language java
 opentaint compile .opentaint/test-projects/my-rule/sinks -o .opentaint/test-compiled/my-rule/sinks
 opentaint test rule run .opentaint/test-compiled/my-rule/sinks --ruleset .opentaint/rules --ruleset .opentaint/test-projects/my-rule/sinks/test-rules
 opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-model .opentaint/test-compiled/my-rule/sinks --ruleset builtin --ruleset .opentaint/rules
@@ -154,7 +154,7 @@ opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-mo
 
 | Command | Description |
 |---------|-------------|
-| `opentaint test rule init <output-dir>` | Create source and sink test projects with annotated sample support |
+| `opentaint test rule init <output-dir> --language java` | Create source and sink test projects with annotated sample support |
 | `opentaint test rule run <project-model>` | Run detection-rule tests on a compiled project model |
 | `opentaint test rule reachability <rule-id> [source-path]` | Trace why a rule can or cannot reach its facts |
 
@@ -162,6 +162,7 @@ opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-mo
 
 ```bash
 opentaint test approximation init .opentaint/test-projects/my-approximation \
+  --language java \
   --dependency "io.projectreactor:reactor-core:3.8.5"
 opentaint compile .opentaint/test-projects/my-approximation -o .opentaint/test-compiled/my-approximation
 opentaint test approximation run .opentaint/test-compiled/my-approximation \
@@ -170,7 +171,7 @@ opentaint test approximation run .opentaint/test-compiled/my-approximation \
 
 | Command | Description |
 |---------|-------------|
-| `opentaint test approximation init <output-dir>` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
+| `opentaint test approximation init <output-dir> --language java` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
 | `opentaint test approximation run <project-model>` | Run dataflow approximation tests on a compiled project model |
 
 Rule and approximation test runs write `test-result.json` and `test-results.sarif` to the selected output directory.
@@ -196,6 +197,7 @@ A dataflow approximation models how taint moves through a method the analyzer ca
 
 ```bash
 opentaint approximation init .opentaint/dataflow/my-batch \
+  --language java \
   --dependency "io.projectreactor:reactor-core:3.8.5"
 
 # write the @Approximate classes under src/main/java/, then apply them
@@ -209,11 +211,12 @@ Pin the versions the target application uses. Those pins are the models' compile
 
 | Command | Description |
 |---------|-------------|
-| `opentaint approximation init <output-dir>` | Create a dataflow approximation project |
+| `opentaint approximation init <output-dir> --language LANGUAGE` | Create a dataflow approximation project |
 | `opentaint compile approximations <approximation-project>` | Compile a dataflow approximation project |
 
 | Flag | Description |
 |------|-------------|
+| `--language` | Required model language, `java` or `go` (`init` only) |
 | `--dependency` | Compile-only Maven dependency coordinates the models are written against (repeatable, `init` only) |
 | `--output`, `-o` | Path to the compiled models (default: `<approximation-project>/.opentaint/build`, `compile approximations` only) |
 

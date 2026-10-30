@@ -3,6 +3,7 @@ package cmd
 import (
 	"testing"
 
+	"github.com/seqra/opentaint/internal/analyzer"
 	"github.com/seqra/opentaint/internal/globals"
 	"github.com/seqra/opentaint/internal/output"
 )
@@ -58,5 +59,20 @@ func TestBuildFailSuggestions(t *testing.T) {
 	// No contextual and no log: empty slice (renders nothing downstream).
 	if got := buildFailSuggestions(nil); len(got) != 0 {
 		t.Errorf("expected no suggestions, got %+v", got)
+	}
+}
+
+func TestAnalyzerLogSuggestion(t *testing.T) {
+	for code, want := range map[int]bool{analyzer.ExitException: true, analyzer.ExitOOM: false, analyzer.ExitTimeout: false, 1: false} {
+		sug, ok := analyzerLogSuggestion(&analyzer.Error{ExitCode: code}, "/tmp/opentaint-1/analyzer.log")
+		if ok != want {
+			t.Errorf("exit %d: suggestion shown = %v, want %v", code, ok, want)
+		}
+		if ok && sug.Command != "/tmp/opentaint-1/analyzer.log" {
+			t.Errorf("exit %d: command = %q, want the analyzer log", code, sug.Command)
+		}
+	}
+	if _, ok := analyzerLogSuggestion(nil, "/tmp/analyzer.log"); ok {
+		t.Error("a successful run points at the analyzer log")
 	}
 }

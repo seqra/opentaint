@@ -34,8 +34,8 @@ type ScanConfig struct {
 	Recompile                 bool
 	LogFile                   string
 	RuleID                    []string
-	PassthroughApproximations []string
-	DataflowApproximations    []string
+	PassthroughModels         []string
+	DataflowModels            []string
 	TrackExternalMethods      bool
 	IterationLimit            int
 
@@ -142,9 +142,8 @@ func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&scanFlags.ProjectModelPath, "project-model", "", "Path to a pre-compiled project model (skips compilation)")
 	cmd.Flags().StringVar(&scanFlags.LogFile, "log-file", "", "Path to the log file (default: <cache-dir>/logs/<timestamp>.log)")
 
-	cmd.Flags().StringArrayVar(&scanFlags.PassthroughApproximations, "passthrough-approximations", nil, "Pass-through approximation YAML file or directory (repeatable)")
-
-	cmd.Flags().StringArrayVar(&scanFlags.DataflowApproximations, "dataflow-approximations", nil, "Dataflow approximation project, build output, or class directory (repeatable)")
+	addPassthroughModelsFlag(cmd, &scanFlags.PassthroughModels)
+	addDataflowModelsFlag(cmd, &scanFlags.DataflowModels)
 
 	cmd.Flags().BoolVar(&scanFlags.TrackExternalMethods, "track-external-methods", false, "Write external-method coverage files next to the SARIF report")
 
@@ -159,8 +158,8 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 		WithRuleset(cfg.Ruleset).
 		WithSemgrepCompatibility(cfg.SemgrepCompatibilitySarif).
 		WithRuleID(cfg.RuleID).
-		WithPassthroughApproximations(cfg.PassthroughApproximations).
-		WithDataflowApproximations(cfg.DataflowApproximations).
+		WithPassthroughModels(cfg.PassthroughModels).
+		WithDataflowModels(cfg.DataflowModels).
 		WithTrackExternalMethods(cfg.TrackExternalMethods).
 		WithIterationLimit(cfg.IterationLimit)
 	if !isDefaultSeverity(cfg.Severity) {
@@ -305,14 +304,19 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 
 	if plan.needsCompilation {
-		autobuilderJarPath, err := ensureAutobuilderAvailable()
-		if err != nil {
-			out.Fatalf("Native compile preparation failed: %s", err)
-		}
+		var autobuilderJarPath string
+		var compileJavaRunner java.JavaRunner
+		if !validation.IsGoSourceProject(absUserProjectRoot) {
+			var err error
+			autobuilderJarPath, err = ensureAutobuilderAvailable()
+			if err != nil {
+				out.Fatalf("Native compile preparation failed: %s", err)
+			}
 
-		compileJavaRunner := newAutobuilderJavaRunner()
-		if _, err := compileJavaRunner.EnsureJava(); err != nil {
-			out.Fatalf("Failed to resolve Java for compilation: %s", err)
+			compileJavaRunner = newAutobuilderJavaRunner()
+			if _, err := compileJavaRunner.EnsureJava(); err != nil {
+				out.Fatalf("Failed to resolve Java for compilation: %s", err)
+			}
 		}
 
 		// Wipe any residue from a prior crashed compile before writing new output.
@@ -388,7 +392,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	for _, ruleID := range ruleIDs {
 		nativeBuilder.AddRuleID(ruleID)
 	}
-	addPassthroughApproximations(nativeBuilder, cfg.PassthroughApproximations)
+	addPassthroughModels(nativeBuilder, cfg.PassthroughModels)
 	if cfg.TrackExternalMethods {
 		nativeBuilder.SetTrackExternalMethods(true)
 	}
@@ -408,9 +412,21 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 	nativeBuilder.SetJarPath(analyzerJarPath)
 
-	addDataflowApproximations(nativeBuilder, cfg.DataflowApproximations, analyzerJarPath)
+	addDataflowModels(nativeBuilder, cfg.DataflowModels, analyzerJarPath)
 
-	analyzerJavaRunner := newAnalyzerJavaRunner()
+	projectConfig, err := project.LoadConfig(absProjectModelPath)
+	if err != nil {
+		out.Fatalf("Failed to read the project model: %s", err)
+	}
+	goServerPath := ""
+	if len(projectConfig.GoProjects) > 0 {
+		goServerPath, err = ensureGoServerAvailable()
+		if err != nil {
+			out.Fatalf("Go scan preparation failed: %s", err)
+		}
+	}
+
+	analyzerJavaRunner := newAnalyzerJavaRunner(goServerPath)
 	if _, err := analyzerJavaRunner.EnsureJava(); err != nil {
 		out.Fatalf("Failed to resolve Java for analyzer: %s", err)
 	}
@@ -467,6 +483,9 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	var suggestions []output.Suggestion
 	if analyzerFail != nil {
 		suggestions = appendLogSuggestion(suggestions)
+		if analyzerLog, ok := analyzerLogSuggestion(analyzerFail, nativeBuilder.LogsFile()); ok {
+			suggestions = append(suggestions, analyzerLog)
+		}
 	}
 	if report != nil {
 		// Scan does not expose summary's filter/group flags, so pass zero values:
