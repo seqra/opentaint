@@ -148,9 +148,10 @@ cannot omit native and reversed record application. Keep ZERO/REACH control
 and the backward-ZERO publication rule as separate cases too.
 
 Make record replay an explicit operation. Do not call the whole subscription
-path only to obtain it. Its repeated-offer policy still needs a proof and cost
-check: replacing fresh replay with unconditional whole-offer replay can add
-work. This note does not authorize that replacement.
+path only to obtain it. The selected policy replays persisted summaries on
+every offer and relies on existing output deduplication. It keeps no native-only
+input history. Temporary seen-record/view sets stay local to each replay.
+Repeated return processing is an explicit cost tradeoff to measure.
 
 ### 3.2 Applicability does not authorize current-run work
 
@@ -199,8 +200,9 @@ fun handleCallInput(callee: MethodKey, ref: CallerRef, actual: Facts) {
 
 These are logical operations, not new runtime APIs. The persisted store keeps
 eligible NORMAL summaries from earlier completed runs, in both native
-directions; it is not limited to the immediately preceding run. Keep its
-fresh-replay and native must-record demotion rules.
+directions; it is not limited to the immediately preceding run. Replay the
+whole original offer each time. Keep native must-record demotion and existing
+output/observation admission. Current-summary replay remains fresh-only.
 
 An initial already started by the callee is still a demand match. Do not use
 the callee's initial-deduplication result as this gate. A new caller/ref can
@@ -213,7 +215,8 @@ route. The gate must preserve these cases and full ND caller premises.
 
 This modifies current-summary admission: the current implementation can apply
 an applicable current summary before checking this caller input's demand.
-The selected behavior forbids that when demand admission is empty. Field,
+The selected behavior forbids that when demand admission is empty. Persisted
+replay also changes from fresh-only input to every offered input. Field,
 mark, cleaner, alias, normalization and layer transfer rules stay unchanged.
 The correctness target is preservation of required demand and observations,
 not equality of every old callback outside current demand.
@@ -261,8 +264,9 @@ removes a repeated lookup, not caller separation or initial-start admission.
 
 ## 4. Mitigation order
 
-1. Apply persisted normal summaries before the demand gate. Preserve their
-   original input, fresh replay, native/reversed handling and return effects.
+1. Apply persisted normal summaries before the demand gate, on every offer.
+   Preserve their original input, native/reversed handling and return effects.
+   Keep no persisted-replay input history.
 2. Reuse initial-emission demand admission before current-summary replay and
    subscription allocation. On an empty result, skip all current-summary work
    and raw callee submission for that input.
@@ -290,15 +294,15 @@ callee:
   run the method and publish answers as now
 ```
 
-This is a design direction, not an implementation-ready specification.
-Before changing code, prove the selected gate preserves demand-required
-results and observations after persisted-summary application. Include FLOW
-normalization, full ND origins, ZERO controls and run-2 static completion.
-Prove that moving emission to the caller preserves its result set, and that
-fresh actual input suffices where a delta is used, including exact children
-under ANY parents. Preserve fresh saved-record replay and native must-record
-demotion. Do not close a proof gap by restoring the withdrawn compatibility
-test or silently changing transfer rules.
+The detailed [implementation proposal](../design/bidirectional-selected-call-policy-implementation-20261030.md)
+defines the source changes, transport, proofs and test gates. Before changing
+code, prove the selected gate preserves demand-required results and
+observations after persisted-summary application. Include FLOW normalization,
+full ND origins, ZERO controls and run-2 static completion. Move the unchanged
+complete emission query, keep native must-record demotion, and check repeated
+native replay against existing output/observation admission. Do not close a
+proof gap by restoring the withdrawn compatibility test or silently changing
+transfer rules.
 
 Measure offers by: empty demand admission; nonempty demand admission; new
 callee initial; repeated started initial. Separately measure native record
