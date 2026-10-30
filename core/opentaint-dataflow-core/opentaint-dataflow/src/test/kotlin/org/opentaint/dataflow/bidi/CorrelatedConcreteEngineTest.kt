@@ -81,7 +81,7 @@ class CorrelatedConcreteEngineTest {
             p.records.add(Record(p.callee, Direction.FORWARD, initial, conclusion))
             p.records.add(Record(p.callee, Direction.FORWARD, initial, conclusion.withProtection(conclusion.root)))
             val part = p.subscription(added = p.store.fact(base = AccessPathBase.Return, mark = mark))
-            p.subscriptions.subscribe(part)
+            p.replayPersisted(part)
             assertEquals(listOf(false, true), p.views.map { it.nonSubsumable })
             assertEquals(1, p.views.map { it.view }.toSet().size,
                 "Protection does not change semantic view identity")

@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.bidi.engine
 
+import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.interp.*
 import org.opentaint.dataflow.bidi.store.AddedFactAccumulator
@@ -319,9 +320,32 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
         val ref = CallerRef(core.key, fact.premise, ctx.callerLayer, ctx.node, ctx.plan.stages.indexOf(stage))
         for (callee in stage.callees) {
             core.ap.cancellation.checkpoint()
-            core.runnerPort.subscribe(Subscription(callee, ref, fact.facts.layer, fact.facts))
+            val part = Subscription(callee, ref, fact.facts.layer, fact.facts)
+            check(part.added.base !is AccessPathBase.CleanerTemporary) {
+                "A field-action temporary cannot enter an added link"
+            }
+            check(part.linkLayer == part.added.layer) { "The link layer must be the added fact's layer" }
+            if (core.config.run1) {
+                core.runnerPort.subscribe(part)
+                core.ap.cancellation.checkpoint()
+                core.runnerPort.link(callee, ref, part.linkLayer, part.added)
+                continue
+            }
+
+            val statistics = core.context.shared.n2Statistics
+            statistics?.selectedCallOffered()
+            // Saved NORMAL records apply to every offer, without standing input admission.
+            replayPersistedSummaries(core.config, core.ops, part, core, statistics)
+            // Demand admission uses the complete original offer, never a live merge delta.
+            val initials = emitRestrictedInitials(core.config, core.ops, callee, part.added, statistics)
+            if (initials.isEmpty()) continue
+
+            // Register before a same-unit callee can publish. Current replay remains fresh-only.
+            core.runnerPort.subscribe(part)
             core.ap.cancellation.checkpoint()
-            core.runnerPort.link(callee, ref, fact.facts.layer, fact.facts)
+            // A duplicate live offer can still carry a complete initial packet.
+            statistics?.initialPacketOffered(initials.size)
+            core.runnerPort.startInitials(callee, initials)
         }
     }
 

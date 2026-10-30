@@ -8,6 +8,7 @@ import kotlinx.coroutines.yield
 import mu.KLogging
 import org.opentaint.dataflow.bidi.ap.MethodKey
 import org.opentaint.dataflow.bidi.ap.Facts
+import org.opentaint.dataflow.bidi.ap.InitialAp
 import org.opentaint.dataflow.bidi.ap.Layer
 import org.opentaint.dataflow.bidi.store.CallerRef
 import org.opentaint.dataflow.ifds.UnitType
@@ -64,6 +65,19 @@ class UnitRunner<A : RunActor> internal constructor(
         val event = RunEvent.LinkIn(callee, ref, linkLayer, added)
         if (shared.unitResolver.resolve(callee.method) == unit) handler.handle(event)
         else send(event)
+    }
+
+    override fun startInitials(callee: MethodKey, initials: Collection<InitialAp>) {
+        check(!run.ended && !closed.get()) { "The runner is closed" }
+        check(config.restricted) { "Completed initial delivery is for restricted runs" }
+        shared.cancellation.checkpoint()
+        val event = RunEvent.InitialsIn(callee, initials)
+        if (shared.unitResolver.resolve(callee.method) == unit) handler.handle(event)
+        else {
+            val accepted = send(event)
+            shared.cancellation.checkpoint()
+            check(accepted) { "An active run rejected initial delivery" }
+        }
     }
 
     override fun analyzer(key: MethodKey): A {

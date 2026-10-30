@@ -1,6 +1,6 @@
 # Selected restricted call policy: checked proposal kernels
 
-This package changes no production implementation. It supports the
+The Lean checker in this package changes no production implementation. It supports the
 [implementation proposal](../../../../docs/design/bidirectional-selected-call-policy-implementation-20261030.md)
 for runtime `edb2e06cdb17eecafbe03415236bf56c57910239`.
 
@@ -85,3 +85,42 @@ points; it does not verify locks, coroutines or cancellation in Kotlin.
 Do not use these kernel proofs to change field transfer, conditions, marks,
 layers, equality, record persistence or stopping. No production source was
 modified or verified by this checker.
+
+## Implementation adapter audit
+
+The separate checker below binds the finite model to the implemented source
+adapters and the completed test reports. It does not replace the model checker.
+
+```sh
+python3 spec/lean/proposals/selected-call-policy-20261030/check_implementation.py \
+  --test-log /absolute/path/to/successful-implementation-tests.log
+```
+
+`implementation-checks.json` records these checks:
+
+- The extracted persisted-record loop has the same Kotlin tokens as the base
+  loop, after removal of aggregate diagnostic calls. Native and reversed
+  record matching, temporary deduplication, and protection upgrades stay equal.
+- AP, store, interpreter, key, and selected protocol sources retain the base
+  bytes. Initial admission, boundary start, current summary application,
+  native record application, return handling, and ZERO handling retain their
+  base function bodies.
+- The caller applies persisted records through its actor's SummaryApplier.
+  This keeps existing call-service decorators in the dispatch path.
+- The restricted caller queries the complete original offer once, stops on
+  empty emission, subscribes before it delivers keys, and sends no raw LinkIn.
+  The owner starts those keys without another demand query or field cut.
+- Initial packets copy their key list. Owner routing retains cancellation and
+  required-send checks. The selected tests cover immediate same-unit delivery,
+  counted cross-unit delivery, duplicate starts, and cancelled or rejected sends.
+- Passing test XML files and a successful suite command log are bound by hash.
+  The complete-query differential test covers 432 submitted cases. Other
+  tests cover repeated saved replay, reversed records, original caller paths,
+  protection-only growth, empty gates, native must demotion, and ZERO calls.
+
+The original `checks.json` remains a finite-model receipt. The implementation
+receipt is a source and test audit. Token equality is not a proof of Kotlin
+semantics. Tests do not prove all schedules or whole-project finding
+completeness. Project measurements and baseline comparisons are separate
+requirements. The implementation receipt must report FAILED while any
+required source, model, or test gate is missing or has failed.

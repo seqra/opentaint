@@ -1,5 +1,15 @@
 # Access paths and storages — specification
 
+Selected restricted-call integration: use the
+[implementation contract](../docs/design/bidirectional-selected-call-policy-implementation-20261030.md).
+The caller applies persisted records on every original offer before current
+demand admission. It runs the complete existing initial-emission operation;
+only a nonempty result permits current subscription and replay. It sends
+final canonical keys to the callee, which only starts unseen keys. Keep the
+AP emission, matching, C5, record and transfer tables unchanged. This policy
+does not use applicability of a hypothetical normalized summary as admission.
+
+
 > The selected 22 October
 > [local-writer and summary-alias contract](run1-static-writers-and-summary-aliases.md)
 > overrides run-1 static writer registration and forward alias admission
@@ -1827,8 +1837,8 @@ bindings of each call kind (`interpreter.md` §3).
 
 | Side | Owns | Does |
 |---|---|---|
-| CALLER (the method that contains the call) | the subscriptions: (caller edge, call statement, added fact) | binds each caller fact into the callee (micro edges); applies every published summary edge of the callee whose premise its added fact satisfies, and every record that applies to it (§8.7 R4); binds back; applies the field limit |
-| CALLEE (the called method) | fixed demand, initial emission, initial facts, edges/summaries and owner-write-only P; SummaryStorage owns R | consumes/releases incoming input; reads R for supplied answers; commits P then replaces it at method queue-empty; no query-role table or deferred-answer memo |
+| CALLER (the method that contains the call) | eligible current subscriptions: (caller edge, call statement, original added fact) | bind the input; in restricted runs replay records on every offer, then perform complete initial emission. If nonempty, subscribe for current summaries and send final initial keys. Apply results with the original caller binding and field limit. |
+| CALLEE (the called method) | initial facts, edges/summaries and run-1 owner-write-only P; SummaryStorage owns R | run 1 consumes/releases actual input and reads R; restricted runs consume final initial keys with no second demand query. Start each key once. Commit run-1 P at method queue-empty; no supplier history. |
 
 ### 5.3 Call processing
 
@@ -2549,13 +2559,15 @@ candidates; the store then applies the exact test that the section names (`overl
 
 ### 8.3 No runtime emitter added-fact store
 
-`AddedFactStore` is not an emitter owner. Each arriving input is consumed by §6.2 or §6.3, and its transport
-payload is released. Do not replace the removed store with a caller-keyed memo, full Facts seen-set, supplier
+`AddedFactStore` is not an emitter owner. Run-1 consumes each arriving input by §6.2 and releases its payload. In
+restricted runs, the caller executes §6.3 and sends immutable final initial
+keys; the callee starts these keys without another demand lookup. Do not replace the removed store with a caller-keyed memo, full Facts seen-set, supplier
 path index, historical delta list, or callback capture. InitialFactStore may deduplicate starts.
 
 The semantic link is `(original bound input, full caller reference, independent input/link layer)`. The full
 reference is `(caller MethodKey, caller premise key, caller layer, call statement)`. These values still exist in
-caller N2 (§8.4) for summary/record application and late question replay. Normal must inputs retain their E;
+caller N2 (§8.4) for current summary application and run-1 late question replay. Persisted
+record replay does not require retaining this input relation. Normal must inputs retain their E;
 DEMAND any inputs obey W8. An exact-only fresh delta can clear E without changing its admitted N2 group header.
 
 Ghost closure rules can quantify over the complete admitted relation to state emission, request replay or support.
@@ -2573,8 +2585,14 @@ lifetime (§4.9), not a deleted or released store.
   Then the store applies the exact test of §4.3 (`PipelineStore.deliver_run1`, `deliver_restricted`; the F72 query
   of a FLOW premise has checked base query equivalence in `AbsStore`;
   X-tail/tree pipeline integration remains open, §11.2).
-* On a new subscription: apply every published summary edge of every initial fact that `a` satisfies, and every record
-  that applies to `a` (§8.7 R4).
+* Before an ordinary restricted subscription, replay every applicable persisted record
+  on the whole original offer, including repeats (§8.7 R4). Retain no native-only
+  input history. Then run complete demand initial emission. If empty, stop
+  current-run processing for this offer.
+* On an admitted new subscription: apply current publications to its fresh delta.
+  Retain the complete eligible original offer under its full caller key. Send
+  the emitted initial keys even if live admission has no new delta. The callee
+  InitialFactStore deduplicates starts before boundary rules.
 * Only this retained input relation answers the caller "satisfies" query. It keeps full caller references and
   original admitted headers; caller-free emitter answer deduplication does not merge these bindings.
 * F78 late mark batches select eligible current inputs by the two normal slots, ignoring E and FLOW mark

@@ -89,9 +89,12 @@ class OutgoingDemandStopTest {
     fun `empty selected output stops despite demand input work and retains complete barrier products`() {
         StopCase().use { c ->
             val driver = c.driver(prescribe = { config, actor ->
-                if (config.index == 3) actor.addLink(
-                    CallerRef(c.key, c.f.manager.zero, Layer.DEMAND, c.f.inst(1)),
-                    Layer.DEMAND, c.f.fact(argument, mark = c.mark, layer = Layer.DEMAND))
+                if (config.index == 3) {
+                    // Input-only presence is no longer counted by the callee.
+                    // Simulate completed DEMAND work, with no selected output.
+                    actor.emitAfter(c.f.manager.zero, c.f.inst(1),
+                        c.f.fact(argument, mark = c.mark, layer = Layer.DEMAND))
+                }
             })
             val report = driver.analyze(listOf(c.key))
 

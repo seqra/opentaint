@@ -201,7 +201,13 @@ class MethodAnalysisFixtures(
         if (facts !is Reach) questionManagers.getValue(core).subscribe(
             Subscription(core.key, ref, layer, facts, zeroOnly = false))
         (core.localServices as? ScalarPositionLocalServices)?.onInput(ref, facts)
-        core.addLink(ref, layer, facts)
+        if (core.config.run1) core.addLink(ref, layer, facts)
+        else submitRestricted(core, facts)
+    }
+
+    /** Caller-side complete admission followed by the existing callee start gate. */
+    fun submitRestricted(core: RunMethodAnalyzer, facts: Facts) {
+        for (initial in emitRestrictedInitials(core.config, ops, core.key, facts)) core.addInitial(initial)
     }
 
     /** Queued question delivery never calls an actor during a captured N2 visit. */
@@ -226,6 +232,8 @@ class MethodAnalysisFixtures(
     internal val positionDeliveries = ArrayList<ReferenceRequestDelivery>()
     val subscriptions = ArrayList<Subscription>()
     val sentLinks = ArrayList<RunEvent.LinkIn>()
+    val sentInitials = ArrayList<RunEvent.InitialsIn>()
+    var onInitials: ((RunEvent.InitialsIn) -> Unit)? = null
     var onSubscribe: ((Subscription) -> Unit)? = null
     var onLink: ((RunEvent.LinkIn) -> Unit)? = null
     var onPublish: ((MethodKey, List<Publication>) -> Unit)? = null
@@ -293,6 +301,14 @@ class MethodAnalysisFixtures(
                 val event = RunEvent.LinkIn(callee, ref, linkLayer, added)
                 sentLinks += event
                 receive(event)
+            }
+            override fun startInitials(callee: MethodKey, initials: Collection<InitialAp>) {
+                val event = RunEvent.InitialsIn(callee, initials)
+                sentInitials += event
+                onInitials?.invoke(event) ?: run {
+                    if (callee == actor.key) for (initial in event.initials) actor.addInitial(initial)
+                    else error("Initial delivery requires an explicit protocol fixture")
+                }
             }
             override fun enqueue(analyzer: RunMethodAnalyzer): Boolean { enqueued += analyzer; return true }
             override fun analyzer(key: MethodKey): RunMethodAnalyzer {

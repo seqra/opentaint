@@ -32,7 +32,8 @@ class DemandLinkTest {
             val demandLinks = f.links(3, mThree.key).asSequence().filter { it.linkLayer == Layer.DEMAND }.toList()
             assertTrue(demandLinks.isNotEmpty(), "The primitive root EXACT cleaner demotes the layer while retaining the must payload")
             assertTrue(demandLinks.any { it.addedFact == coarseLink })
-            assertTrue(runThree.demandLayerEdges > 0L, "Observed DEMAND inputs remain diagnostic when selected outgoing support is empty")
+            assertEquals(0L, runThree.demandLayerEdges,
+                "Restricted initial packets do not retain the removed raw-input-presence diagnostic")
             assertTrue(mThree.summaries.all().none(), "The throwing method has no reached normal exit summary")
             val key = VulnerabilityKey(program.rule, program.sinkMethod.method, program.sink)
             val witnesses = runThree.witnessesByKey().getValue(key)

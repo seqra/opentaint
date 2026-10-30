@@ -81,9 +81,9 @@ class FrontierPropertyTest {
             f.admit(actor, second, Layer.DEMAND, added)
             f.admit(actor, second, Layer.DEMAND, added)
             val result = f.result()
-            assertEquals(4L, actor.demandLayerEdges,
-                "One demand-input presence flag, two completed demand results and one demand summary delta")
-            assertEquals(4L, result.demandLayerEdges)
+            assertEquals(3L, actor.demandLayerEdges,
+                "Restricted inputs are keys: two completed demand results and one demand summary delta")
+            assertEquals(3L, result.demandLayerEdges)
             assertEquals(4L, actor.edgeDeltas)
             assertEquals(setOf(first, second), f.links(actor).asSequence().map { it.caller }.toSet())
             assertEquals(0, actor.summaries.demandEdges().count(), "Raw demand without paired exit permission is not published")

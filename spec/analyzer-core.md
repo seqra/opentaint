@@ -1,5 +1,17 @@
 # Analyzer core — specification
 
+The selected [restricted call policy](../docs/design/bidirectional-selected-call-policy-implementation-20261030.md)
+overrides older unconditional restricted subscription and raw-input delivery
+at the ordinary resolved-callee boundary. For each original offer, replay
+persisted records first, on every offer. Then run the complete fixed-demand
+initial-emission query in the caller. An empty result stops current-run work
+for this offer. Otherwise, retain the complete original offer for current
+summary replay and notifications, then deliver immutable final initial keys
+to the callee. The callee starts each key once. Run-1 and explicit backward
+ZERO control keep their existing routes. AP transfer and C5 tables do not change.
+Repeated persisted callbacks can change diagnostic counts. Semantic output
+and observation stores keep their existing equality and deduplication.
+
 > For the selected mark/static change, use [Mark groups and direct static handling](grouped-run1-statics.md)
 > and its pinned pre-bottom-up baseline. It overrides older proposal links
 > at the listed phase seams. Other ordinary contracts below remain in force.
@@ -307,7 +319,7 @@ only the forms that the analyzer reads: the forward forms of the interpreter, or
 | `initials` | initial fact store (`ap.md` §8.2) | the initial facts of the run: zero, emissions, answers |
 | incoming input | transient handler argument (`ap.md` §8.3) | consume for direct emission, then release; no `links`/AddedFactStore, supplier index or historical payload seen-set |
 | `summaries` | run summary store (`ap.md` §8.5) | Raw summaries per premise key and layer supply R1 records. Selected publications supply demand edges (§4.6; `ap-impl.md` DD17, `RunSummaryStore.addDemand`, `demandEdges()`). The hand-off reads only the stored demand edges (§7.3, §7.4). |
-| `counters` | | Frontier/stop counts (§7.1, §7.8): demand-layer edges, summaries and admitted incoming contributions, record applications, nonzero initials and zero-premise edges. Incoming counts need no retained link; distinguish transport arrivals, N2 fresh deltas and new starts. Optional demotion counts retain their units. |
+| `counters` | | Frontier/stop counts (§7.1, §7.8): demand-layer edges, summaries, run-1 incoming contributions, record applications, nonzero initials and zero-premise edges. Restricted raw input presence is no longer counted in the callee. Distinguish original offers, demand admissions, initial packets, N2 fresh deltas and new starts. Optional demotion counts retain their units. |
 | `abstraction` | run-1 initial emitter (§4.6) | the joined static plan and borrowed R reads; no local cumulative questions, answer memo, caller inputs or Position transport |
 | `sourceHits` | source hit store (`ap.md` §8.11) | backward run only: the unconditional sources of this method that a requirement reached |
 | `conjunctions` | conjunction store (`ap.md` §8.9) | manual fixed-literal inputs and the E6 combinations of callee summaries with several premises (§5.4) |
@@ -337,12 +349,13 @@ The runner calls these handlers. Each handler is part of one event (§5.1).
 | Handler | When | Actions | `ap.md` |
 |---|---|---|---|
 | `addRootZero()` | the run starts at a root | the zero fact is an initial fact | §6.1 |
-| incoming-input handler | a caller binds a fact into this method | emit directly (§4.4): run-1 abstract/catalog and active concrete answers, or fixed-demand intersection after run 1. Read R for concrete answers; retain no unrequested answer rows. Release the input. N2 owns its original admitted header and full ref separately. Count DEMAND input contributions without storing them. Zero emits zero. | E1, E2 |
+| `addLink` (run 1 only) | a caller binds an actual fact into this method | emit run-1 initials and active concrete answers; read R and release the input. N2 owns the original admitted header and full ref. Count run-1 DEMAND input presence. | E1, E2 |
+| `InitialsIn(callee, initials)` | caller fixed-demand emission is nonempty in a restricted run | pass each immutable canonical key to `addInitial`; no second limit or demand lookup. Keep the start gate before boundary rules. | E3 |
 | `addZeroEntry()` | backward: the zero fact of a caller reaches a call to this method | the zero fact is an initial fact (rule `zin`) | §9.2 |
 | `addMarkRequests(initial, marks)` | run 1: an eligible N2 FLOW supplier routes interest to this original caller initial | filter effective R, union remaining independent marks into owner-only P; schedule existing Work for a nonempty contribution; commit at method fact-queue-empty (§4.6) | E5 |
 | `applySummary(sub, pub)` | the `SubscriptionManager` matched a publication with a subscription of this method | one premise: apply the summary to the added fact (`ap.md` §4.3), then the stages after the callees stage (§4.5). Several premises: the combination of §5.4. | §4.3, E2, E4, E6 |
-| `applyRecord(sub, record)` | a new subscription; a same-direction native record covers or contains the added fact | apply the record, then the stages after the callees stage (§4.5). Keep its `inside` and `applicable`-only results separate. The latter must-record results keep their exclusions through these stages; demote them immediately before the call field cut. Count one `recordCrossings` increment if either initial result batch is nonempty, before rewriting | AP §4.3, §8.7 R4 |
-| `applyRecordView(sub, view)` | a new subscription; an opposite-direction transient leaf view covers or contains the added fact | apply the view directly with its premise exclusion and result layer, then the stages after the callees stage. Do not emit, start, persist, or demote its premise through `InitialAp`. Count each application with a result as a record crossing | AP §8.7 R3 |
+| `applyRecord(sub, record)` | an ordinary restricted offer, including a repeat; a same-direction native record covers or contains the added fact | apply the record, then the stages after the callees stage (§4.5). Keep its `inside` and `applicable`-only results separate. The latter must-record results keep their exclusions through these stages; demote them immediately before the call field cut. Count one `recordCrossings` increment if either initial result batch is nonempty, before rewriting | AP §4.3, §8.7 R4 |
+| `applyRecordView(sub, view)` | an ordinary restricted offer, including a repeat; an opposite-direction transient leaf view covers or contains the added fact | apply the view directly with its premise exclusion and result layer, then the stages after the callees stage. Do not emit, start, persist, or demote its premise through `InitialAp`. Count each application with a result as a record crossing | AP §8.7 R3 |
 | `step(quantum)` | a `Work` event | process at most `quantum` worklist items (§4.3) | §6.1 (S6: any order) |
 
 A new initial fact `j` (from any handler) is event E3: the analyzer adds the start edges of `j` to the worklist
@@ -636,19 +649,41 @@ The reversed plan is the backward call order of `interpreter.md` §4.9:
 The core reverses only a forward plan. The reversal is not an involution: it drops the guards and the filters, and it
 adds identity edges.
 
-SUBSCRIBE: the analyzer gives the subscription `(caller edge, s, a)` for the callee `m` to the `SubscriptionManager`
-of its runner (§5.3). The replay applies the publications of `m` that `a` satisfies, and the records of `m` that apply
-to `a`.
+ORDINARY CALLEE INPUT:
 
-LINK: the analyzer sends the link `(a, caller edge)` to `m`. For `m` in another unit, it sends the event `LinkIn`. For
-`m` in the same unit, it may call `m.addLink` directly (as today `submitMethodInitialFact`; §6.1 permits it).
+```kotlin
+val part = Subscription(callee, fullCallerRef, actual.layer, actual)
+if (config.run1) {
+    runner.subscribe(part)
+    runner.link(callee, fullCallerRef, actual.layer, actual)
+} else {
+    replayPersistedSummaries(config, ops, part, applier) // every original offer
+    val initials = emitRestrictedInitials(config, ops, callee, actual)
+    if (initials.isNotEmpty()) {
+        runner.subscribe(part) // register before current replay and callee start
+        runner.startInitials(callee, initials) // even if live admission is duplicate
+    }
+}
+```
+
+The caller runs the same limit, run-2 static validation and complete demand
+query which the callee previously ran. Keep the original full actual and
+caller reference for current summary matching. Do not replace them with an
+emitted initial or demand-filtered leaves. Rejected offers create no live
+input history. Persisted replay has only per-invocation seen collections.
+It does not depend on current demand or live-input freshness.
+
+Run-1 sends `LinkIn`; a restricted call sends `InitialsIn`. Same-unit delivery
+can call the owner directly; other delivery uses counted events. The callee
+performs only its existing once-per-key start gate on `InitialsIn`.
 
 The zero fact at a call. The zero base is not touched, so the zero fact passes over the call in both directions (rule
 `zpass` in the backward run). It also acts at the rule point:
 
 * forward: the zero binding takes it to `BOUND`. There the unconditional sinks fire, and the sources stage fires on it
   (in a forward restricted run, only the source seeds, §4.7). No cleaner acts on the zero base, so it goes on to
-  `ADDED` and enters every resolved callee: a subscription and a link;
+  `ADDED` and enters the ordinary callee-input policy above. The implicit
+  forward zero demand admits its zero initial;
 * backward: the zero fact at the call fires the sink seeds at `BOUND` (§4.7); they go on through the reversed binding
   in. The analyzer adds a ZERO SUBSCRIPTION for each resolved callee `m` (it matches the zero-premise publications of
   `m`, §5.3) and sends `ZeroIn` to `m` (rule `zin`). A zero-premise publication applies to the zero fact of the caller
@@ -1037,7 +1072,8 @@ Each runner has one channel and one local priority queue, as today. The events:
 | Event | Goes to the channel of | Handler | `ap.md` | From today |
 |---|---|---|---|---|
 | `Start(root)` | the runner of `root` (sent by the driver) | `addRootZero` | §6.1 | the `MethodWithContext` start event |
-| incoming added input | the runner of `callee` | direct initial emission, then release payload | E1, E2 | replaces retaining `LinkIn` payloads in a callee store |
+| `LinkIn` (run 1 only) | the runner of `callee` | direct run-1 initial emission, then release payload | E1, E2 | no callee input history |
+| `InitialsIn(callee, initials)` (restricted) | the runner of `callee` | start unseen canonical keys; no demand query | E3 | immutable completed caller lookup |
 | `ZeroIn(callee)` | the runner of `callee` (backward) | `addZeroEntry` | §9.2 `zin` | `ExternalInputFact.InputZero` |
 | request batch `(method, slot -> marks)` | the runner of `method` (run 1) | filter effective R, merge remaining marks into P and schedule Work if nonempty; commit at its method barrier | E5, F78 | independent marks, no caller mutation on publisher thread |
 | `Delivery(callee, publications)` | the SUBSCRIBED runner; the publisher's thread sends it | `SubscriptionManager.onDelivery` | E4 | `NewSummaryEdgeEvent` |
@@ -1128,6 +1164,11 @@ its original-header/fresh-delta requirements below.
 There is no emitter supplier store, answer memo, query-role relation, request-by-input seen product or subscriber
 copy of cumulative R. F78 §§5–7 defines static frame, normal method barrier and the complete request protocol.
 
+For ordinary restricted calls, only offers with nonempty complete initial
+emission reach this manager. Persisted replay occurs before this gate and
+has no retained native-only input store. Run-1 and explicit zero-only calls
+keep their existing admission.
+
 One `SubscriptionManager` per runner. Per callee, it keeps the subscriptions of the unit in a path trie keyed by
 `base :: added fact path` (`ap.md` §8.4).
 
@@ -1144,7 +1185,7 @@ with the same full `matches` operation as replay. A callback can add a subscript
 its own registered replay and cannot depend on a live candidate iterator.
 
 ```kotlin
-// SubscriptionManager excerpts. active(), byCallee and replayRecords are its owner/read helpers.
+// SubscriptionManager excerpts. Persisted replay is a separate caller phase.
 fun subscribe(sub: Subscription) {
     val port = active()
     val storage = port.summaryStorage(sub.callee)
@@ -1159,7 +1200,6 @@ private fun replay(storage: SummaryStorage, fresh: Subscription) {
     val port = active()
     for ((pub, member) in storage.candidates(fresh, port.config.mode))       // P3
         applyMatch(fresh, pub, member)
-    if (!fresh.zeroOnly && port.config.restricted) replayRecords(fresh)     // R3/R4: previous-run native/view reads
 }
 
 fun notify(callee: MethodKey, pubs: List<Publication>): Boolean =
@@ -1330,8 +1370,9 @@ The loop of today stays: an unlimited channel, a local priority queue, a quantum
 * The events of §5.1 replace the old events.
 * Two direct calls are permitted, as today:
   1. the analyzer calls `subscribe` of its own `SubscriptionManager`. The replay then calls `applySummary` and
-     `applyRecord` of the SAME analyzer. These only add to its edge store and its worklist;
-  2. the analyzer may consume an added input in a callee of the same unit (§4.5). This performs initial admission and queues work/events; it does not retain a caller-separated supplier or run the callee to closure.
+     current-summary callbacks of the SAME analyzer. Persisted replay runs
+     separately before demand admission and uses the existing return pipeline;
+  2. the analyzer may deliver run-1 input or restricted initial keys to a callee of the same unit (§4.5). This performs initial admission and queues work/events; it does not retain a caller-separated supplier or run the callee to closure.
      A recursive input to the same analyzer is permitted under the same ownership and no-mutating-visit rules.
 
   Every other interaction between two analyzers is an event.
@@ -1353,7 +1394,8 @@ interface RunnerPort {
     fun analyzer(key: MethodKey): RunMethodAnalyzer        // this unit only; made on demand
     fun subscribe(sub: Subscription)                       // the SubscriptionManager of this runner
     fun summaryStorage(key: MethodKey): SummaryStorage     // RunManager.summaryStorage: any unit (O2)
-    fun link(callee: MethodKey, link: Link)                // same unit: a direct addLink; else LinkIn
+    fun link(callee: MethodKey, link: Link)                // run 1 only; same unit or counted LinkIn
+    fun startInitials(callee: MethodKey, initials: Collection<InitialAp>) // restricted; immutable InitialsIn
 }
 ```
 

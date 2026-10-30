@@ -57,6 +57,12 @@ class AnyTaintIterationTest {
             val actual = RunMethodHandlers(local, calls)
             val observed = RunnerHandlerFactory<RunMethodAnalyzer> { port ->
                 val observedPort = object : RunnerPort<RunMethodAnalyzer> by port {
+                    override fun subscribe(sub: Subscription) {
+                        if (config.restricted && !sub.zeroOnly) f.ops.leaves(sub.added).forEach {
+                            inputs += config.index to observedLink(sub.callee, Link(it, sub.linkLayer, sub.ref))
+                        }
+                        port.subscribe(sub)
+                    }
                     override fun link(callee: MethodKey, ref: CallerRef, linkLayer: Layer, added: Facts) {
                         f.ops.leaves(added).forEach { inputs += config.index to observedLink(callee, Link(it, linkLayer, ref)) }
                         port.link(callee, ref, linkLayer, added)
