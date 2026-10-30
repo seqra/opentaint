@@ -10,12 +10,24 @@ reports are OWASP run-12/run-11/run-11, conductor run-6/run-5/run-5, thingsboard
 run-2/run-1/run-1, and Stirling-PDF run-6/run-5/run-5. The order below uses the
 measured hot work and source-confirmed repeated operations.
 
+**New decision after the report:** fix the stopping criterion. OWASP must stop
+after its complete run-5, which has no selected outgoing demand. Run-5 then
+becomes the reached, complete and accepted forward iteration. This is the
+proposed result, not a new measured run. The historical report remains unchanged.
+
 ## 1. Scope
 
-The intended semantic change is none. Each candidate removes repeated processing
-of an exact relation union. Keep the same marks, paths, layers, exclusions,
-protected memberships, complete premises, source/sink identities and demand guide.
-Keep the current stop policy. Batch-dependent callback diagnostics can change.
+There is one selected major semantic change: the driver uses the final outgoing
+refinement demand to decide whether another backward/forward pair is needed.
+It does not use the count of DEMAND work observed during the completed run.
+This can change the last iteration and the accepted report. It does not confirm
+an unresolved candidate or claim that a later run could produce no facts.
+
+All other candidates remove repeated processing of an exact relation union.
+Keep the same marks, paths, layers, exclusions, protected memberships, complete
+premises, source/sink identities and demand guide within each executed run.
+Batch-dependent callback diagnostics can change. Those optimizations must
+preserve the new outgoing-demand stop decision.
 
 Do not change field transfer, rule conditions, source-output reset, static supply,
 static reachability or the backward ZERO exception as part of this work.
@@ -37,14 +49,15 @@ schedule equivalence.
 
 | Order | Candidate | Main target | Current evidence | Expected effect |
 |---|---|---|---|---|
-| 1 | Select relevant static-demand labels before owner checks | thingsboard run-2 | 412.7 million fixed-filter rejection calls and 603.4 million owner evaluations | Skip colored rows in FLOW-only queries; use exact mark and geometry selectors |
-| 2 | Compute frozen owner visibility once | thingsboard run-2 | Call-graph reachability contains 47.68% of whole-run Java samples and 50.94% of sampled allocation weight | Replace per-query graph traversal and memo arrays with one immutable family-reachability index |
-| 3 | Keep proved protection containment through exact unions | OWASP run-12 and Stirling run-6 | Protection contains about 55% of whole-run Java samples; Stirling mask intersection contains 28.35% of late native samples | Remove full validation walks when union already proves mask containment |
-| 4 | Share joined writer input selection | thingsboard run-1 completion | 230.023 s joined phase; 222,495,546 candidate input visits | Select and match once for several writer outputs with one owner/original |
-| 5 | Merge pending summary replay inputs | thingsboard run-1 engine | Immediate replay contains 26.38% of the normal CPU samples | Scan existing summaries and apply them once to a compatible input union |
-| 6 | Merge fresh summary publications | conductor run-4 | Delivery contains 65.24% of the middle-window samples | Match and resume each subscriber once for a compatible conclusion union |
-| 7 | Merge pending changed method facts | OWASP later runs | Run-12 taint admission 34.64%; GC workers 52.75% | Process a compatible pending tree once after a fan-in |
-| Conditional | Skip certified neutral instruction chains | Stirling-PDF run-5 | Unchanged routing 33.21%; call detection 27.19%; GC 0.98% | Deliver unchanged data to the next relevant operation |
+| 1 | Stop when outgoing refinement demand is empty | OWASP run-5 | Selected outgoing demand is zero in run-5, run-7, run-9 and run-11 | Accept run-5 and do not start run-6 or any later run |
+| 2 | Select relevant static-demand labels before owner checks | thingsboard run-2 | 412.7 million fixed-filter rejection calls and 603.4 million owner evaluations | Skip colored rows in FLOW-only queries; use exact mark and geometry selectors |
+| 3 | Compute frozen owner visibility once | thingsboard run-2 | Call-graph reachability contains 47.68% of whole-run Java samples and 50.94% of sampled allocation weight | Replace per-query graph traversal and memo arrays with one immutable family-reachability index |
+| 4 | Keep proved protection containment through exact unions | OWASP run-12 and Stirling run-6 | Protection contains about 55% of whole-run Java samples; Stirling mask intersection contains 28.35% of late native samples | Remove full validation walks when union already proves mask containment |
+| 5 | Share joined writer input selection | thingsboard run-1 completion | 230.023 s joined phase; 222,495,546 candidate input visits | Select and match once for several writer outputs with one owner/original |
+| 6 | Merge pending summary replay inputs | thingsboard run-1 engine | Immediate replay contains 26.38% of the normal CPU samples | Scan existing summaries and apply them once to a compatible input union |
+| 7 | Merge fresh summary publications | conductor run-4 | Delivery contains 65.24% of the middle-window samples | Match and resume each subscriber once for a compatible conclusion union |
+| 8 | Merge pending changed method facts | OWASP later runs | Run-12 taint admission 34.64%; GC workers 52.75% | Process a compatible pending tree once after a fan-in |
+| Stirling design | Cache CFG delivery by instruction and base | Stirling-PDF run-5 | Unchanged routing 33.21%; call detection 27.19%; GC 0.98% | Skip neutral CFG traversal; retain post-statement fact admission |
 
 The CPU shares are inclusive and overlap. A 30-second window is not a complete-run
 CPU distribution. The counts do not give the number of mergeable keys. The project
@@ -57,7 +70,156 @@ Removing all joined binding would still leave the engine. Thus writer selection
 alone cannot halve this complete interval. Writer selection and replay merging
 target different parts of that interval.
 
-## 2.1 First target: select static-demand rows
+## 2.1 First target: stop on empty outgoing refinement demand
+
+### Current versus new behavior
+
+The measured driver stops a restricted forward run only when the report has no
+DEMAND candidate, its observed DEMAND counter is zero, or the policy stops it.
+The observed counter includes incoming DEMAND before C2, internal deltas and
+raw summary deltas before C5. It can remain positive after all selected outgoing
+demand has disappeared.
+
+```text
+Current, OWASP run-5:
+    outgoing demand = 0
+    observed DEMAND counter > 0; unresolved candidates remain
+    -> start backward run-6
+
+New, OWASP run-5:
+    complete forward run; final outgoing demand = 0
+    -> accept the run-5 report and end with NO_DEMAND_EDGE
+    -> do not start run-6
+```
+
+Replace the observed-counter condition. Do not leave it as a second stop rule
+that can stop a run with nonempty selected outgoing demand.
+
+```kotlin
+// IterationDriver.barrier, after the existing complete-run barrier work.
+if (forward) report.add(config, result)
+shared.records.persist(/* existing native NORMAL summary persistence */)
+val handOff = HandOff.of(config, result, report, shared)
+val frontier = frontierOf(config, result, handOff, report)
+frontierLog += frontier
+frontier.log()
+
+if (forward && !report.hasDemandVulnerability())
+    return Next.End(RunStatus.COMPLETE, EndReason.STOP_RULE)
+
+if (forward && !config.run1) {
+    check(!handOff.demand.hasStaticCompletion)
+    check(!handOff.demand.hasSharedStaticCarry)
+    if (handOff.demandEdges.isEmpty())
+        return Next.End(RunStatus.COMPLETE, EndReason.NO_DEMAND_EDGE)
+}
+
+if (forward && !policy.continueAfter(config, result, frontiers))
+    return Next.End(RunStatus.COMPLETE, EndReason.POLICY)
+
+return Next.Run(nextConfig(config, handOff))
+```
+
+The existing `HandOff.demandEdges` map counts exactly the newly admitted,
+normalized explicit demand patterns. Every stored count is positive. Its
+emptiness is the stop predicate; no closure or leaf enumeration is needed.
+Prove that this map and the outgoing snapshot agree. Count all selected demand
+patterns, including selected NORMAL relations such as unresolved ND support.
+Do not replace this test with a scan of `Layer.DEMAND` summaries alone.
+
+The scope is complete restricted forward runs: run-3, run-5 and later odd runs.
+Keep the run-1 exclusion. Its run-2 handoff can have virtual static completion
+and shared static carry that the explicit count does not represent. Backward
+runs still proceed to the next forward run. Incomplete runs keep the existing
+abnormal-end behavior and the last accepted forward report.
+
+When unresolved candidates remain, the decision is:
+
+| Observed DEMAND counter | Final outgoing demand | New decision after a complete restricted forward run |
+|---|---|---|
+| Zero | Empty | Stop |
+| Positive | Empty | Stop; incoming or discarded work cannot force another run |
+| Zero | Nonempty | Continue, subject to the existing policy and budget |
+| Positive | Nonempty | Continue, subject to the existing policy and budget |
+
+Keep `demandLayerEdges` as diagnostic data. Do not remove or redefine its
+producer counters as part of this change. Log the stop inputs separately:
+
+```text
+BIDI_STOP_CHECK run=5 outgoingDemand=0 observedDemandCounter=...
+BIDI_ANALYSIS_END run=5 status=COMPLETE reason=NO_DEMAND_EDGE
+```
+
+### Report and ZERO behavior
+
+Accept the complete run-5 report as it stands. Keep unresolved entries as
+`ReportState.DEMAND`; do not turn them into CONFIRMED or drop them. Persist the
+normal summaries and record the final frontier before returning. A seed list
+alone does not require another iteration when outgoing refinement demand is
+empty. Do not start a new backward ZERO/sink-seed analysis just to regenerate
+requirements in that case.
+
+Do not remove the backward ZERO publication exception or change seed handling
+inside a run that is executed. The measured run-6 produces 326,227 outgoing
+demands despite its empty incoming demand snapshot. Thus empty outgoing forward
+demand is not a proof that the next backward run could do no work. The selected
+contract ends refinement at that boundary and retains unconfirmed candidates.
+It does not promise equality with all reports from hypothetical later runs.
+
+### Expected work removed on OWASP
+
+The first empty outgoing forward frontier is run-5: run-3 still has 85 demand
+memberships. The saved engine times for run-1 through run-5 sum to 242.041
+seconds; their full iteration times sum to 247.461 seconds. The engines from
+run-6 through the interrupted run-12 consume a further 710.440 seconds.
+
+These are sums of the recorded intervals, not a new wall-time measurement.
+The expected new terminal labels are run-5/run-5/run-5 instead of the measured
+run-12/run-11/run-11. Do not add old prescan or export times to claim a measured
+new command duration. Recheck report locations and memory in the next campaign.
+
+This stop removes OWASP's measured later tree-growth workload altogether.
+The protection and pending-tree proposals remain useful for projects and
+iterations with nonempty outgoing demand; do not use skipped OWASP run-12 as
+their next-campaign speedup evidence.
+
+### Required proofs and regression tests
+
+Before implementation, model this driver decision in constructive Lean.
+Prove the following contracts and connect them to the production barrier:
+
+- The positive count map is empty exactly when its explicit outgoing snapshot
+  has no selected demand. Restricted forward handoffs have no virtual family.
+- A complete restricted forward run with empty outgoing demand returns
+  `NO_DEMAND_EDGE` and cannot invoke the next engine or the policy callback.
+- With nonempty outgoing demand, this stop cannot fire, including when the
+  observed counter is zero. Keep the existing policy and report-empty rules.
+- The final report is exactly the report accepted at that barrier. DEMAND
+  entries keep their state, identities and witnesses. Persistence and the
+  frontier finish first. An earlier confirmed entry remains confirmed.
+- Run-1, backward runs, cancellation, barrier failure, timeout and OOM retain
+  their existing control paths. Do not expose a partial snapshot as empty.
+
+Add a driver regression with the recorded OWASP frontier sequence
+`111374, 112217, 85, 200801, 0`. Require engine calls only for run-1 through
+run-5, the complete run-5 report, and no invocation of run-6. Add finite code
+fixtures with rejected C2 input, a C5-discarded raw summary, an internal demand,
+unresolved sink candidates, and nonempty selected outgoing demand.
+
+Review `DemandLinkTest` and other tests that use the observed counter to force
+continuation. If their outgoing demand is empty, update the expected stop and
+keep the unresolved sink in the accepted report. Do not invent an outgoing
+edge to preserve their old iteration count. Keep separate tests for the
+backward ZERO mechanism when a backward run is actually started.
+
+The next implementation must update the stop tables and driver examples in
+`spec/ap.md`, `spec/analyzer-core.md`, and `spec/implementation-background.md`.
+The current definitions there use observed work. This proposal explicitly
+replaces that termination contract; it does not claim the old rule already
+used the outgoing frontier. The historical performance report describes the
+old behavior and remains a valid measurement of that runtime.
+
+## 2.2 Select static-demand rows
 
 Thingsboard reaches run-2, completes run-1 and accepts the run-1 report. Run-2
 ends on timeout after 367.234 seconds. Its late profile contains 41.66% static
@@ -131,7 +293,7 @@ owners. Omitting the second family source would lose C2 entry visibility.
 If the selector stage removes this cost, keep the extra index unbuilt; do not add
 its memory merely to follow the plan.
 
-## 2.2 Keep proved protection containment through exact unions
+## 2.3 Keep proved protection containment through exact unions
 
 Protection stays pointwise and unchanged. This candidate changes how the store
 constructs an already-valid value. It must not remove a protected membership.
@@ -502,8 +664,8 @@ Required gates:
   invariant. A mixed packet is not uniformly an identity or an effect.
 - Preserve publication/input arrival orders, current-state replay, publisher failure
   handling, cancellation, Work reservations and the backward ZERO exception.
-- Preserve final demand-presence decisions and selected frontiers. Callback counts
-  may decrease; the stop policy does not change.
+- Preserve selected frontiers and the outgoing-demand stop decision in §2.1.
+  Callback counts may decrease; publication packing adds no further stop change.
 - Measure normalized fresh fragments versus exact packed keys, mark/path width,
   callbacks and continuations. Include an all-distinct-key overhead control.
 
@@ -562,8 +724,8 @@ The unchanged immediate store admissions also remain. Do not present this change
 as a proof of convergence or polynomial path work.
 
 Prove exact union, protection upgrades, operator distribution, complete nonlinear
-rule bindings, call/alias behavior, fair queue coverage, reservations and unchanged
-stop decisions. Test multiple quanta and delivery orders. Measure offered packets,
+rule bindings, call/alias behavior, fair queue coverage, reservations and preservation
+of the outgoing-demand stop decision in §2.1. Test multiple quanta and delivery orders. Measure offered packets,
 pending-key hits, processed packets and output work by ZERO/nonzero and FLOW/TAINT.
 
 ## 7. Later native replay candidate
@@ -585,7 +747,40 @@ delta fragments. Replacing them with the current cumulative store needs a revers
 application theorem for T2 exclusion reduction and superseded headers. Do not drop
 historical normal effects merely because the current forward store has a cover.
 
-## 7.1 Conditional Stirling target: skip neutral instruction chains
+## 7.1 Stirling target: cache CFG delivery by instruction and base
+
+The later [small-demand investigation](../reports/bidirectional-stirling-small-demand-workload-20261029.md)
+identifies the owner. Its isolated diagnostic run-5 records 1,581,415,551
+processed items in `PipelineProcessor.runPipelineAgainstFiles`, from 147
+initials. Of those items, 1,575,082,922 are unchanged. This is 99.961% of all
+method `process()` calls in that diagnostic run. The largest spatial packet
+tree in that owner has seven logical node occurrences, with no protected
+packet. These figures do not bound cumulative stored trees or mark-set width.
+
+The current repeat set clears when unchanged work empties, even if changed
+work remains. It clears 6,190,624 times with changed work pending in this
+owner. A bounded full-equality probe records 7,751,326 exact revisits across
+clears. Its biased sample does not estimate a global duplicate percentage.
+The diagnostic run has different frontier counts from the clean campaign;
+retain the clean timing below and do not calculate a speedup between them.
+
+The [relevant-input clarification](../reports/bidirectional-relevant-input-dedup-20261030.md)
+adds an important limit: relevant transfer outputs are still durably deduplicated.
+A repeated unchanged prefix can end at a relevant copy whose outputs are already
+stored. The production-actor diamond test confirms two equal relevant-input
+evaluations but one admitted returned output. This is not evidence of an open
+duplicate-output cycle. The existing counters do not identify the producer of
+every repeated prefix or prove that most unchanged work is removable. The design
+below skips neutral traversal for required new packets too. Its saving does not
+require a high global duplicate rate.
+
+**Design decision, 30 October:** remove the unchanged queue and cache the next
+relevant instruction indices by start instruction and fact base. After processing
+an edge at statement S, admit its result once into the result store for S. Then
+deliver the fresh delta through S's CFG successors using the route cache.
+The store key is S, not an immediate successor or a farther relevant destination.
+Repeated evaluation at a destination remains permitted. Do not add a standing
+cache of complete processed inputs in this iteration.
 
 Stirling completes run-5 and reaches run-6. Its 30-second run-5 profile has 3,056
 weighted samples. `emitUnchanged` contains 33.21%, successor routing 29.71%,
@@ -605,25 +800,129 @@ int a1 = 1;
 sinkT(x);         // Same ZERO -> x.$/T.
 ```
 
-A first safe design builds a route through a certified linear noncall CFG region,
-then delivers the same immutable fact to its next relevant boundary. Stop at calls,
-field writes, aliases, rule observations, branches, joins and exits. Reuse the plain
-form certificate and add a complete untouched-base check. Do not infer neutrality
-from a local-variable name or liveness alone.
+Extend the method form with a base relevance query. It uses the selected
+direction and rule view, and does not depend on the incoming mark set or path.
 
-For k compatible traversals of n certified instructions, current work has k*n
-instruction visits. New work has one route construction plus k boundary deliveries.
-The route is method/direction owned and must use the actual selected forms. It is
-not an IR storage rewrite.
+```kotlin
+fun MethodForms.isBaseRelevant(direction, instruction, base, view): Boolean
+```
 
-Keep ZERO control and its phase unchanged. Preserve the unchanged repeat gate,
-pointwise protection and original exit/summary handlers. A route with no boundary
-needs an executable closed-neutral-cycle or dead-end witness. Prove path simulation
-in both directions, no omitted observation, no invented normal return and fair work
-reservations before implementation. Measure actual certified region lengths and
-traffic first. The current profile does not prove this project's packing or jump ratio.
+Non-call relevance uses the instruction's normalized operand/result locations,
+including its bound rule locations. Call relevance also includes the static
+base. ZERO source/control effects and normal/exceptional boundaries must be
+included. The query must cover every effect and observation of the current
+interpreter. `StatementSummary.touched` alone is insufficient because the
+untouched path can still evaluate sources, conjunctions and static-operation
+hooks. Use frontend relevance metadata instead of evaluating mark conditions
+or materializing all bound rules for each cache lookup.
+
+Use the existing alias-expanded locations in the selected direction. For
+example, a forward write can emit an alias target `c.f` which becomes an input
+of its backward form, although `c` is not a literal operand of the original
+write. This is an existing transfer effect, not a new alias policy.
+
+The route cache is sparse and owned by a fixed method context, run, direction
+and rule view. It holds only instruction indices:
+
+```kotlin
+// start is before execution of this instruction.
+cache: Map<InstIndex, Map<Base, Set<InstIndex>>>
+
+fun deliverAt(start, premise, facts) {
+    val targets = cache.getOrCompute(start, facts.base) {
+        val todo = dequeOf(start)
+        val visited = mutableSetOf<InstIndex>()
+        val result = mutableSetOf<InstIndex>()
+        while (todo.isNotEmpty()) {
+            cancellation.checkpoint()
+            val n = todo.removeFirst()
+            if (!visited.add(n)) continue
+            if (isRelevantBoundary(n) || forms.isBaseRelevant(direction, n, facts.base, view))
+                result += n
+            else
+                todo.addAll(orientedCfg.successors(n))
+        }
+        result // Publish only after BFS completes. Empty is a valid cached value.
+    }
+    for (target in targets)
+        worklist.add(EdgeDelta(premise, instruction(target), facts))
+    if (targets.isNotEmpty()) requestWork()
+    // No destination input-store admission here.
+}
+
+// Result storage belongs to the statement which produced the result.
+// Called after the current cuts, operation hooks and exit handling.
+fun admitOutputsAfter(processed, premise, facts) {
+    val fresh = edges.add(processed, premise, facts) ?: return
+    for (next in orientedCfg.successors(processed)) {
+        deliverAt(next, premise, fresh)
+    }
+}
+```
+
+This changes the current implementation's store key from the successor to the
+producer. Admission occurs once before fan-out; every successor receives the
+same fresh delta. Apply the same producer key to scalar and packed output
+admission. Preserve the complete premise, layer, exclusions and protection.
+Inputs arriving from different producers can reach a common relevant statement
+more than once. Its equal outputs are deduplicated in its own result store.
+
+Initial and resumed inputs must not prepopulate this result store before the
+statement executes. Keep initial admission in the existing initial-fact store,
+and preserve the existing entry/boundary and continuation handlers. In particular,
+the current `startAt` write at the entry node must not make an unchanged first
+result look already processed. Audit every direct scalar/packed store write and
+distinguish an incoming work item from a completed statement result.
+This includes statement-input resumes and the run-1 direct-to-normal-exit
+delivery: neither may prepopulate the destination's result row. Preserve
+immediate static write supply and execute the exit rules before admitting the
+completed exit result. Secure one admitted delta's complete fan-out before
+yielding or reaching a completion barrier.
+
+Stop BFS at the first relevant node on each path. Traverse branches and joins
+without enumerating paths. A local visited set handles neutral cycles. A closed
+neutral component or dead end can produce an empty set. Cache only the queried
+start's completed result; other visited nodes need not have the same result.
+
+**Required termination detail:** every output of a processed relevant node,
+including its forwarded identity, uses the post-statement admission above.
+Today `emitUnchanged` bypasses that store. Retaining this bypass while removing
+the unchanged repeat set can make an identity loop infinite. For example,
+an operand-based relevance check can stop at `while (x != null)`, while its
+current statement form forwards the x fact unchanged. Cached routing then
+returns to the same branch. The post-statement gate closes that cycle. This
+stores the forwarded result under the processed branch statement; it does not
+add an input gate at the cached destination. Do not repeat rules, cuts or
+transfers while sharing this gate.
+
+Keep the existing ZERO phase, pointwise protection, static direct-to-exit
+shortcut, internal call/cleaner continuations and boundary handlers. Route only
+completed statement results through the ordinary CFG. Cache computation and
+all destination enqueues stay inside the counted owner work reservation.
+
+For k packets sharing a start/base and n neutral instruction visits, current
+work can require k*n visits. New work has one CFG search plus k deliveries to
+its first relevant destinations. This also helps when all k packets are new.
+Measure destination-set width, BFS misses, relevant evaluations, post-statement
+admissions, time and retained metadata. No project speedup is measured yet.
+
+Prove constructive path simulation in both directions, no skipped observation,
+preserved post-statement output relations and protection, no invented normal
+return from a closed component, identity-cycle termination and fair completion.
+Test both diamond controls with permitted repeated destination evaluations and
+deduplicated producer outputs. Also test first-entry identity propagation,
+fan-out from one admitted result, packed/scalar parity, a relevant identity loop,
+an empty cached result, backward alias inputs, ZERO/source behavior, late
+joins/publications and static exit routing. Implementation remains unchanged;
+these proof and test gates precede implementation.
 
 ## 8. Acceptance
+
+Implement and test the stopping correction first. On the OWASP sequence above,
+require `COMPLETE / NO_DEMAND_EDGE` after run-5 and no later engine start.
+Compare its accepted source/sink locations with the required baseline and the
+saved run-11 output. Equal finding counts alone do not prove equal identities.
+Do not mark an unresolved candidate CONFIRMED to make this check pass.
 
 First discharge the selected candidate's proof and finite differential tests.
 Then use the same fixed four-project controls as the current campaign. Report:
