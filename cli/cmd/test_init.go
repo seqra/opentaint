@@ -56,8 +56,10 @@ Go, use module@version. Use the versions from the target application.`,
 			kinds = []string{"sources"}
 		}
 		language := testProjectLanguage(initRuleLanguage)
+		var dirs []string
 		for _, kind := range kinds {
 			dir := filepath.Join(args[0], kind)
+			dirs = append(dirs, dir)
 			rejectOtherTestProjectLanguage(dir, language)
 			switch language {
 			case "java":
@@ -77,9 +79,7 @@ Go, use module@version. Use the versions from the target application.`,
 			}
 			fmt.Printf("Rule test project (%s) initialized at %s\n", kind, dir)
 		}
-		if language == "go" {
-			suggest("After writing the samples, resolve their dependencies in each project with", "go mod tidy")
-		}
+		suggest(testRunHint(language, "opentaint test rule run %s", dirs))
 	},
 }
 
@@ -117,7 +117,6 @@ Go, use module@version. Use the versions from the target application.`,
 			if err := testapprox.Scaffold(args[0]); err != nil {
 				out.Fatalf("Failed to scaffold model test project: %s", err)
 			}
-			fmt.Printf("Model test project initialized at %s\n", args[0])
 		case "go":
 			if err := testproject.BootstrapGo(args[0], testProjectModulePath, initApproxProjectDeps); err != nil {
 				out.Fatalf("Failed to bootstrap test project: %s", err)
@@ -125,10 +124,29 @@ Go, use module@version. Use the versions from the target application.`,
 			if err := testapprox.ScaffoldGo(args[0]); err != nil {
 				out.Fatalf("Failed to scaffold model test project: %s", err)
 			}
-			fmt.Printf("Model test project initialized at %s\n", args[0])
-			suggest("After writing the samples, resolve their dependencies with", "go mod tidy")
 		}
+		fmt.Printf("Model test project initialized at %s\n", args[0])
+		suggest(testRunHint(language, "opentaint test model run %s --dataflow-models <models>", args))
 	},
+}
+
+// testRunHint tells how to run the tests of the test projects in dirs once their samples are
+// written. runFormat is the run command with %s for the project. A Go test project runs as it
+// is; a Java one is compiled to a project model first.
+func testRunHint(language, runFormat string, dirs []string) (string, string) {
+	if language == "go" {
+		commands := make([]string, 0, len(dirs))
+		for _, dir := range dirs {
+			commands = append(commands, fmt.Sprintf(runFormat, dir))
+		}
+		return "After writing the samples, run the tests with", strings.Join(commands, "\n")
+	}
+	project := "<test-project>"
+	if len(dirs) == 1 {
+		project = dirs[0]
+	}
+	return "After writing the samples, compile the test project and run the tests with",
+		fmt.Sprintf("opentaint compile %s -o <project-model>\n", project) + fmt.Sprintf(runFormat, "<project-model>")
 }
 
 // testProjectLanguage normalizes a --language value to java or go.

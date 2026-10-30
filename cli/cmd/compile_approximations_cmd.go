@@ -13,19 +13,20 @@ var compileModelsOutput string
 var compileModelsCmd = &cobra.Command{
 	Use:   "models <model-project>",
 	Short: "Compile a Java dataflow model project",
-	Long: `Compile the dataflow models in <model-project> against the
-dependencies that project pins in its own build file.
+	Long: `Compile the Java dataflow models in <model-project> against the library versions
+pinned in its build.gradle.kts.
 
-This is the model project, not the project to scan: its build.gradle.kts lists the exact
-library versions the models are written against, so the same models compile identically
-wherever they are applied.
-
-Scanning and testing build a model project on demand, so running this is only
-needed to compile ahead of time or to see compilation errors on their own.`,
+Scans and tests build a model project on demand, so this is only needed to compile ahead
+of time or to see compilation errors on their own. Go models are loaded from source and
+need no compilation.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath := log.AbsPathOrExit(args[0], "model-project")
 
+		if approximation.IsGoProject(projectPath) {
+			out.Fatalf("%s is a Go model module. Go models are loaded from source; no compilation needed. "+
+				"Pass the directory to --dataflow-models", projectPath)
+		}
 		if !approximation.IsProject(projectPath) {
 			out.Fatalf("%s is not a model project: it has no build.gradle.kts declaring the "+
 				"dependencies its models are written against.\nCreate one with 'opentaint model init %s "+
@@ -52,8 +53,7 @@ needed to compile ahead of time or to see compilation errors on their own.`,
 			Field("Model project", projectPath).
 			Field("Compiled models written to", approximation.ClassesDir(outputPath)).
 			Render()
-		suggest("To apply these models in a scan run",
-			fmt.Sprintf("opentaint scan <project-model> --dataflow-models %s", args[0]))
+		suggest("To use the models run", fmt.Sprintf("opentaint scan <project> --dataflow-models %s", args[0]))
 	},
 }
 

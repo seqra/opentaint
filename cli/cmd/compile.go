@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/seqra/opentaint/internal/testapprox"
 	"github.com/seqra/opentaint/internal/validation"
 	"github.com/spf13/cobra"
 
@@ -108,7 +109,7 @@ Arguments:
 		}); err == nil {
 			out.Blank()
 			printCompileSummary(absOutputProjectModelPath)
-			suggest("To scan project run", utils.BuildScanCommandFromCompile(projectRoot, absOutputProjectModelPath))
+			suggest(compileNextStep(absProjectRoot, projectRoot, absOutputProjectModelPath))
 		} else {
 			out.InteractiveBlank()
 			failWith(1, fmt.Sprintf("Native compile has failed: %s", err), dockerCompileSuggestion())
@@ -150,6 +151,19 @@ func compile(absProjectRoot, absOutputProjectModelPath, autobuilderJarPath strin
 	}
 
 	return nil
+}
+
+// compileNextStep returns the hint printed after a successful compile. A compiled test project
+// is tested rather than scanned.
+func compileNextStep(absProjectRoot, projectRoot, absOutputProjectModelPath string) (string, string) {
+	if info, err := os.Stat(filepath.Join(absProjectRoot, "rule-test.yaml")); err == nil && !info.IsDir() {
+		if testapprox.IsTestProject(absProjectRoot) {
+			return "To run the model tests run",
+				"opentaint test model run " + absOutputProjectModelPath + " --dataflow-models <models>"
+		}
+		return "To run the rule tests run", "opentaint test rule run " + absOutputProjectModelPath
+	}
+	return "To scan project run", utils.BuildScanCommandFromCompile(projectRoot, absOutputProjectModelPath)
 }
 
 func printCompileSummary(absOutputProjectModelPath string) {

@@ -36,6 +36,12 @@ func WriteFixedRule(dir, language string) (string, error) {
 	return path, nil
 }
 
+// IsTestProject reports whether dir is a model test project: it holds the fixed rule.
+func IsTestProject(dir string) bool {
+	info, err := os.Stat(filepath.Join(dir, fixedRuleFileName))
+	return err == nil && !info.IsDir()
+}
+
 func Scaffold(projectDir string) error {
 	return utils.WriteFiles(map[string][]byte{
 		filepath.Join(projectDir, fixedRuleFileName):                           fixedRule,

@@ -29,11 +29,13 @@ var modelInitCmd = &cobra.Command{
 	Short: "Create a dataflow model project",
 	Long: `Create an OpenTaint dataflow model project.
 
-Use --language java to create a Java project. A Java project includes:
+Use --language java to create a Gradle project. It includes:
   - build.gradle.kts with compile-only dependencies, settings.gradle.kts
-  - libs/opentaint-approximations-api.jar, the @Approximate annotations and the
-    OpentaintNdUtil / ArgumentTypeContext support types
-  - src/main/java/ for the model sources, one @Approximate class per target class
+  - libs/opentaint-approximations-api.jar with the OpentaintNdUtil and
+    @ArgumentTypeContext support types
+  - src/main/java/ for the model sources, one class per target class. A model is named
+    after its target with an "opentaint." prefix: opentaint.java.util.Optional models
+    java.util.Optional
 
 Use --language go to create a Go module with module path "opentaint". Put each model package
 at the target import path below the module root. For example, model net/http in net/http.
@@ -79,7 +81,7 @@ func initJavaApproximation(projectPath, projectArg string) {
 	}
 
 	printApproximationInitResult(projectPath, existing)
-	suggest("To compile the models run", fmt.Sprintf("opentaint compile models %s", projectArg))
+	suggestModelTest(projectArg)
 }
 
 func initGoApproximation(projectPath, projectArg string) {
@@ -98,7 +100,13 @@ func initGoApproximation(projectPath, projectArg string) {
 	}
 
 	printApproximationInitResult(projectPath, existing)
-	suggest("To apply the models run", fmt.Sprintf("opentaint scan <project> --dataflow-models %s", projectArg))
+	suggestModelTest(projectArg)
+}
+
+// suggestModelTest suggests how to test the models once they are written.
+func suggestModelTest(projectArg string) {
+	suggest("After writing the models, test them with",
+		fmt.Sprintf("opentaint test model run <test-project> --dataflow-models %s", projectArg))
 }
 
 func printApproximationInitResult(projectPath string, existing bool) {
