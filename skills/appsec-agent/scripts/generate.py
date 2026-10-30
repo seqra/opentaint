@@ -9,10 +9,10 @@ from the project root: `uv run scripts/generate.py <cmd>`.
 
   init                bootstrap the .opentaint tree + state.yaml from the workflow flags
   tags                refresh tracking/rules/tags.yaml from the active lib rules
-  partition analyze   dropped external methods -> per-root batch plans (approximations)
+  partition analyze   dropped external methods -> per-root batch plans (models)
   partition discover  coverage.yaml's used members -> balanced discover plans
   mark-safe           discover plans' verdicts -> classification.yaml ledger (+prune plans)
-  merge-skipped       batch skipped/engine_issues -> approximations/skipped.yaml (+prune plans)
+  merge-skipped       batch skipped/engine_issues -> models/skipped.yaml (+prune plans)
   findings            results/report.sarif -> per-rule finding tracking files (idempotent)
 """
 import argparse
@@ -27,28 +27,28 @@ from pathlib import Path
 
 import yaml
 
-from _common import (APPROX, DATAFLOW, DROPPED,
-                     FINDINGS_TR, MODEL, PASS_THROUGH, RESULTS, RULES, RULES_TR,
+from _common import (DATAFLOW, DROPPED,
+                     FINDINGS_TR, MODEL, MODELS_TR, PASS_THROUGH, RESULTS, RULES, RULES_TR,
                      SARIF, SINKS_TR, SOURCES_TR, TAGS, TRACKING,
                      builtin_rules_root, class_of, classified_keys,
-                     collect_lib_tags, dropped_entries, dump_yaml, fqn_base,
+                     collect_lib_tags, dropped_entries, dump_yaml, fqn_base, is_go_name,
                      git_head, ledger_verdicted_keys, load_yaml, member_key,
                      package_of, strip_quotes)
 
-ANALYZE_BUDGET = 20                       # methods per approximation batch
+ANALYZE_BUDGET = 20                       # methods per model batch
 ANALYZE_MISC = 6                          # roots with <= this many methods pool into one misc batch
 ROOT_DEPTH = 2                            # library root = first 2 dotted segments
 DISCOVER_TARGET, DISCOVER_BAND = 50, 15   # project-used members per discover plan (~50, loose)
 
 DISCOVER_PLANS = RULES_TR / "plans"
-APPROX_PLANS = APPROX / "plans"
+MODEL_PLANS = MODELS_TR / "plans"
 
 
 # ---- init: bootstrap the working tree + state.yaml ----
 
 # the durable directories a run writes into; the leaves/scripts mkdir on write, but seeding
 # them up front gives every stage a place to land and makes the empty tree self-describing.
-INIT_DIRS = [TRACKING, APPROX, SOURCES_TR, SINKS_TR, FINDINGS_TR,
+INIT_DIRS = [TRACKING, MODELS_TR, SOURCES_TR, SINKS_TR, FINDINGS_TR,
              RESULTS, RULES, PASS_THROUGH, DATAFLOW]
 STATE_DERIVED = ("model_commit", "build_jdk", "max_memory")   # build/scan fill these, init preserves
 
@@ -113,13 +113,26 @@ def regen_plans(out_dir):
 # ---- partition: shared bin-packing ----
 
 def root_of(fqn, depth=ROOT_DEPTH):
-    segs = class_of(fqn).split(".")
-    return ".".join(segs[:depth]) if len(segs) >= depth else class_of(fqn)
+    # JVM: the first dotted segments of the class (`com.google`); Go: the first import-path
+    # segments of the package (`net/http`, `github.com/acme`, `fmt`)
+    if is_go_name(fqn):
+        segs = package_of(fqn).split("/")
+        return "/".join(segs[:depth])
+    cls = class_of(fqn)
+    segs = cls.split(".")
+    return ".".join(segs[:depth]) if len(segs) >= depth else cls
 
 
 def in_packages(cls, prefixes):
-    # dotted-boundary match: `a.b.collect` never matches a sibling `a.b.collectX`
-    return any(cls == p or cls.startswith(p + ".") for p in prefixes)
+    # Boundary match for JVM packages and Go import paths. A receiver type
+    # follows a Go import path with a dot.
+    return any(cls == p or cls.startswith(p + ".") or cls.startswith(p + "/")
+               for p in prefixes)
+
+
+def package_parts(package):
+    separator = "/" if "/" in package else "."
+    return separator, package.split(separator)
 
 
 def atomize(fqns, cap):
@@ -132,15 +145,16 @@ def atomize(fqns, cap):
         if len(items) <= cap:
             scopes.append((prefix, items))
             return
-        depth = len(prefix.split("."))
+        separator, prefix_parts = package_parts(prefix)
+        depth = len(prefix_parts)
         buckets, leaf = {}, []
         for f in items:
             pkg = package_of(f)
-            segs = pkg.split(".") if pkg else []
+            pkg_separator, segs = package_parts(pkg) if pkg else (separator, [])
             if pkg == prefix or len(segs) <= depth:
                 leaf.append(f)
             else:
-                child = ".".join(segs[: depth + 1])
+                child = pkg_separator.join(segs[: depth + 1])
                 buckets.setdefault(child, []).append(f)
         if leaf:
             scopes.append((prefix, leaf))
@@ -150,7 +164,8 @@ def atomize(fqns, cap):
     top = {}
     for f in fqns:
         pkg = package_of(f)
-        top.setdefault(pkg.split(".")[0] if pkg else class_of(f), []).append(f)
+        _, segs = package_parts(pkg) if pkg else (".", [])
+        top.setdefault(segs[0] if segs else class_of(f), []).append(f)
     for seg0, items in top.items():
         recurse(seg0, items)
     return scopes
@@ -183,7 +198,7 @@ def write_plans(plans, out_dir, prefix_id):
     paths = []
     for i, scopes in enumerate(plans, 1):
         pid = f"{prefix_id}-{i:03d}"
-        norm = {p.replace(".", "-"): sorted(v, key=lambda x: (x["method"], x.get("signature", ""))
+        norm = {p.replace(".", "-").replace("/", "-"): sorted(v, key=lambda x: (x["method"], x.get("signature", ""))
                                             if isinstance(x, dict) else x)
                 for p, v in sorted(scopes.items())}
         path = out_dir / f"{pid}.yaml"
@@ -202,7 +217,7 @@ def _root_next_index(prefix):
     # owns, or the new plan's analyze agent would overwrite that batch. Continue past the highest
     # index any existing batch OR leftover plan already claims for this root.
     mx = 0
-    for d in (APPROX, APPROX_PLANS):
+    for d in (MODELS_TR, MODEL_PLANS):
         for p in glob.glob(str(d / f"{prefix}-*.yaml")):
             m = re.match(rf"^{re.escape(prefix)}-(\d+)\.yaml$", Path(p).name)
             if m:
@@ -211,7 +226,7 @@ def _root_next_index(prefix):
 
 
 def cmd_analyze(args):
-    regen_plans(APPROX_PLANS)
+    regen_plans(MODEL_PLANS)
     classified = classified_keys()
     rows = [r for r in dropped_entries() if member_key(r) not in classified]
     if not rows:
@@ -234,7 +249,7 @@ def cmd_analyze(args):
         for r in by_root[root]:
             by_fqn.setdefault(fqn_base(r["method"]), []).append(r)
         bins = pack(atomize(sorted(by_fqn), ANALYZE_BUDGET), ANALYZE_BUDGET, ANALYZE_BUDGET)
-        prefix = root.replace(".", "-")
+        prefix = root.replace(".", "-").replace("/", "-")
         start = _root_next_index(prefix)
         for i, b in enumerate(bins):
             scopes = {}
@@ -243,7 +258,7 @@ def cmd_analyze(args):
             norm = {cls: sorted(v, key=lambda x: (x["method"], x.get("signature", "")))
                     for cls, v in sorted(scopes.items())}
             pid = f"{prefix}-{start + i:03d}"
-            path = APPROX_PLANS / f"{pid}.yaml"
+            path = MODEL_PLANS / f"{pid}.yaml"
             path.write_text(dump_yaml({"scopes": norm}), encoding="utf-8")
             paths.append(str(path))
     for p in paths:
@@ -274,6 +289,14 @@ def yaml_modules(model_yaml):
     return mods
 
 
+def yaml_go_projects(model_yaml):
+    # each goProjects entry's projectDir: absolute from `opentaint compile`, relative to the model
+    # dir in a portable model (`go_0`), as the engine resolves it
+    doc = load_yaml(model_yaml, {}) or {}
+    return [str(p["projectDir"]) for p in (doc.get("goProjects") or [])
+            if isinstance(p, dict) and p.get("projectDir")]
+
+
 def is_project_class(cls, packages):
     # mirrors the engine's ProjectClasses.isModuleClass; empty packages = a project-only module
     return not packages or any(cls.startswith(p) for p in packages)
@@ -282,7 +305,7 @@ def is_project_class(cls, packages):
 CALL_RE = re.compile(r"//\s*(?:Interface)?Method\s+(\S+?)\.(<?\w+>?):(\S+)")
 
 
-def extract_usages():
+def extract_jvm_usages():
     # disassemble project classes, collect // Method / // InterfaceMethod call sites with their
     # JVM descriptor; returns (fqn, signature) pairs so an overloaded member stays disambiguated
     fqns = set()
@@ -316,6 +339,38 @@ def extract_usages():
                 for owner, method, sig in CALL_RE.findall(out):
                     fqns.add((f"{owner.replace('/', '.')}#{method}", sig))
     return fqns
+
+
+def extract_go_usages():
+    # build the SSA form of each Go project (the form the engine reads) and collect the static
+    # callee of every call site with its `args:<count>` arity, named as the engine names it.
+    # A project that cannot be read stops discovery: an empty result would read as "all done".
+    helper = Path(__file__).resolve().parent / "go-usage"
+    fqns = set()
+    for entry in yaml_go_projects(MODEL / "project.yaml"):
+        p = MODEL / entry
+        if not p.is_dir():
+            raise SystemExit(f"Go project directory not found: {p}")
+        try:
+            result = subprocess.run(["go", "run", ".", "--dir", str(p.resolve())], cwd=helper,
+                                    stdout=subprocess.PIPE, text=True)
+        except OSError as error:
+            raise SystemExit(f"cannot run the Go usage extractor: {error}") from error
+        if result.returncode != 0:
+            raise SystemExit(f"Go usage extraction failed for {p} (see the errors above)")
+        for row in json.loads(result.stdout or "[]"):
+            fqns.add((row["method"], row["signature"]))
+    return fqns
+
+
+def extract_usages():
+    state = load_yaml(TRACKING / "state.yaml", {}) or {}
+    language = str(state.get("language") or "java").lower()
+    if language == "go":
+        return extract_go_usages()
+    if language in ("java", "kotlin"):
+        return extract_jvm_usages()
+    raise SystemExit(f"usage extraction is not implemented for language: {language}")
 
 
 def pending_packages():
@@ -448,17 +503,17 @@ def cmd_merge_skipped(args):
     # collects the `skipped` and `engine_issues` buckets of every batch into skipped.yaml, keeping
     # them as two separate groups — regular skips under `methods`, engine issues under `engine_issues`.
     docs = [load_yaml(p, {}) or {} for p in
-            (Path(x) for x in sorted(glob.glob(str(APPROX / "*.yaml"))))
+            (Path(x) for x in sorted(glob.glob(str(MODELS_TR / "*.yaml"))))
             if p.name != "skipped.yaml"]
     out = {"methods": _collect(docs, "skipped"), "engine_issues": _collect(docs, "engine_issues")}
-    (APPROX / "skipped.yaml").write_text(dump_yaml(out), encoding="utf-8")
+    (MODELS_TR / "skipped.yaml").write_text(dump_yaml(out), encoding="utf-8")
     print(f"skipped.yaml: {len(out['methods'])} methods, {len(out['engine_issues'])} engine_issues")
-    if not args.keep and APPROX_PLANS.is_dir():
-        pruned = [p for p in glob.glob(str(APPROX_PLANS / "*.yaml"))]
+    if not args.keep and MODEL_PLANS.is_dir():
+        pruned = [p for p in glob.glob(str(MODEL_PLANS / "*.yaml"))]
         for p in pruned:
             Path(p).unlink()
         if pruned:
-            print(f"pruned {len(pruned)} consumed approximation plan(s)")
+            print(f"pruned {len(pruned)} consumed model plan(s)")
     return 0
 
 
@@ -630,8 +685,8 @@ def main():
     m.add_argument("--keep", action="store_true", help="keep the reconciled discover plans")
     m.set_defaults(func=cmd_mark_safe)
 
-    s = sub.add_parser("merge-skipped", help="rebuild approximations/skipped.yaml from batches")
-    s.add_argument("--keep", action="store_true", help="keep the consumed approximation plans")
+    s = sub.add_parser("merge-skipped", help="rebuild models/skipped.yaml from batches")
+    s.add_argument("--keep", action="store_true", help="keep the consumed model plans")
     s.set_defaults(func=cmd_merge_skipped)
 
     f = sub.add_parser("findings", help="seed per-rule finding files from results/report.sarif")

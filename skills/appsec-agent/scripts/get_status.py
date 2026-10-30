@@ -21,8 +21,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from _common import (APPROX, DATAFLOW,
-                     FINDINGS_TR, MODEL, PASS_THROUGH, ROOT, RULES, RULES_TR,
+from _common import (DATAFLOW,
+                     FINDINGS_TR, MODEL, MODELS_TR, PASS_THROUGH, ROOT, RULES, RULES_TR,
                      SARIF, SINKS_TR, SOURCES_TR, TAGS, TRACKING,
                      active_lib_rules, build_done_keys, builtin_rules_root,
                      classified_keys, dropped_entries, git_head, iter_rules,
@@ -34,7 +34,7 @@ SCAN_LEVEL = STATE.get("scan_level")
 TRIAGE_LEVEL = STATE.get("triage_level")
 
 DISCOVER_PLANS = RULES_TR / "plans"
-APPROX_PLANS = APPROX / "plans"
+MODEL_PLANS = MODELS_TR / "plans"
 VULN = ROOT / "vulnerabilities.md"
 GLOBAL_CAP = 10
 
@@ -73,8 +73,8 @@ def newest_mtime(paths):
     return m
 
 
-def approx_dirty():
-    # scan older than the newest applied approximation artifact -> a rescan is pending
+def models_dirty():
+    # scan older than the newest applied model artifact -> a rescan is pending
     if not SARIF.is_file():
         return False
     arts = list(PASS_THROUGH.rglob("*")) + list(DATAFLOW.rglob("*"))
@@ -315,13 +315,13 @@ def ph_scan():
     return True, [], None
 
 
-def ph_approximations():
+def ph_models():
     if not SARIF.is_file():
         return False, ["dispatch run-scan"], None
     classified = classified_keys()
     uncovered = [e for e in dropped_entries() if member_key(e) not in classified]
     if uncovered:
-        plans = sorted(glob.glob(str(APPROX_PLANS / "*.yaml")))
+        plans = sorted(glob.glob(str(MODEL_PLANS / "*.yaml")))
         if plans:
             tasks = [f"dispatch analyze-external-methods, one per plan (cap {GLOBAL_CAP}):"]
             tasks += [f"  {p}" for p in plans]
@@ -340,14 +340,14 @@ def ph_approximations():
             by_kind.setdefault(kind, set()).add(p.stem)
         tasks = ["build unbuilt batches:"]
         if by_kind.get("passthrough"):
-            tasks.append("  passthrough  create-pass-through-approximation: "
+            tasks.append("  passthrough  create-pass-through-model: "
                          + ", ".join(sorted(by_kind["passthrough"])))
         if by_kind.get("dataflow"):
             tasks.append("  dataflow  create-test-project type dataflow, then "
-                         "create-dataflow-approximation: " + ", ".join(sorted(by_kind["dataflow"])))
+                         "create-dataflow-model: " + ", ".join(sorted(by_kind["dataflow"])))
         return False, tasks, None
-    if approx_dirty():
-        return False, ["approximations built after the last scan", "dispatch run-scan"], None
+    if models_dirty():
+        return False, ["models built after the last scan", "dispatch run-scan"], None
     stuck = sorted({e["method"] for e in dropped_entries()
                     if member_key(e) in done and member_key(e) not in terminal})
     if stuck:
@@ -411,7 +411,7 @@ PHASES = [
     ("discover", ph_discover, lambda: SCAN_LEVEL == "deep"),
     ("source_rules", ph_source_rules, lambda: SCAN_LEVEL == "deep"),
     ("scan", ph_scan, lambda: True),
-    ("approximations", ph_approximations, lambda: SCAN_LEVEL in ("normal", "deep")),
+    ("models", ph_models, lambda: SCAN_LEVEL in ("normal", "deep")),
     ("sink_rules", ph_sink_rules, lambda: SCAN_LEVEL == "deep"),
     ("triage", ph_triage, lambda: True),
     ("poc", ph_poc, lambda: TRIAGE_LEVEL == "dynamic"),

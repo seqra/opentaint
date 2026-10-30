@@ -173,7 +173,7 @@ npx skills add https://github.com/seqra/opentaint
 
 - **扫描与分诊：** `build-project`、`run-scan`、`analyze-findings`、`generate-poc`
 - **覆盖范围扩展：** `triage-dependencies`、`discover-attack-surface`、`create-test-project`、`create-rule`、`assemble-lib-rules`
-- **数据流建模：** `analyze-external-methods`、`create-pass-through-approximation`、`create-dataflow-approximation`、`debug-rule`、`report-analyzer-issue`
+- **数据流建模：** `analyze-external-methods`、`create-pass-through-model`、`create-dataflow-model`、`debug-rule`、`report-analyzer-issue`
 
 ---
 

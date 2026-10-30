@@ -1,7 +1,7 @@
 # Skill: Analyze External Methods
 
-OpenTaint is a dataflow taint analyzer: it starts from the data a source introduces and follows it call by call until the flow stops. A flow stops for one of two reasons — the data reached a callable that retains none of it (call `size()` on a tainted collection and its whole contents collapse into one number, so the taint is gone), or it reached a callable whose body the analyzer can't see, typically in an external dependency. That opaque callable may itself be taint-killing, or it may in fact carry the data onward — and then it needs an approximation telling the engine exactly how the data moves through the call, or every trace through it is silently cut.
+OpenTaint is a dataflow taint analyzer: it starts from the data a source introduces and follows it call by call until the flow stops. A flow stops for one of two reasons — the data reached a callable that retains none of it (call `size()` on a tainted collection and its whole contents collapse into one number, so the taint is gone), or it reached a callable whose body the analyzer can't see, typically in an external dependency. That opaque callable may itself be taint-killing, or it may in fact carry the data onward — and then it needs a model telling the engine exactly how the data moves through the call, or every trace through it is silently cut.
 
-You are handed the list of those dropped methods. Decide which ones actually carry data and which don't, and for each carrier determine the kind of approximation it needs, so the build stage can restore the flow.
+You are handed the list of those dropped methods. Decide which ones actually carry data and which don't, and for each carrier determine the kind of model it needs, so the build stage can restore the flow.
 
 On a deep run these same methods carry a second, independent question — whether the call is itself a dangerous operation (a sink); that pass is step 2.

@@ -173,7 +173,7 @@ Các kỹ năng đi kèm bao phủ vòng lặp phân tích bảo mật thông d�
 
 - **Quét và phân loại:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
 - **Mở rộng phạm vi bao phủ:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
-- **Mô hình hóa luồng dữ liệu:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+- **Mô hình hóa luồng dữ liệu:** `analyze-external-methods`, `create-pass-through-model`, `create-dataflow-model`, `debug-rule`, `report-analyzer-issue`
 
 ---
 

@@ -21,8 +21,8 @@ Ask the user for both levels together:
 
 1. Scan level — `lite` · `normal` · `deep`
    - lite — build + scan (expected, when there are already existing artifacts)
-   - normal — build + scan + custom approximations
-   - deep — build + scan + custom approximations + custom rules
+   - normal — build + scan + custom dependency models
+   - deep — build + scan + custom dependency models + custom rules
    - recommend by what's on disk: a cold start (no `.opentaint` artifacts) → deep; a prior run's artifacts already present → lite
 2. Triage level — `static` · `dynamic`
    - static — classify findings from the model, no running app

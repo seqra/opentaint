@@ -9,7 +9,7 @@ metadata:
 
 # Skill: Create Rule
 
-OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis engine. It already propagates through visible application code, calls, aliases, and individual fields; custom rules and approximations model only the assigned source, sink, or opaque-method boundary. Compile-time constants and literals carry no taint, so a source or carrier whose output is only a constant introduces nothing.
+OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis engine. It already propagates through visible application code, calls, aliases, and individual fields; custom rules and models describe only the assigned source, sink, or opaque-method boundary. Compile-time constants and literals carry no taint, so a source or carrier whose output is only a constant introduces nothing.
 
 A unit names the source or sink members to detect. Identify an existing built-in or project library rule when it already implements the boundary, otherwise author a custom rule, then verify the unit against its test project. Every selected or created source rule must carry the unit's `untrusted-data-source` tag, and every selected or created sink rule must carry its unit group's `*-sink` tag. Production joins use those tags and are assembled later only when a new sink tag needs one.
 
@@ -20,7 +20,7 @@ Provided by the caller, fall back to the default value when omitted. Ask back on
 - `project-root` (optional) — root of the target project. Opentaint keeps all analysis artifacts under the fixed `<project-root>/.opentaint/` directory, so every `.opentaint/...` path below resolves there. Default: current directory
 - `language` (required) — target language for this project and language-specific instructions
 - `side` (required) — `sources` or `sinks`; the unit's side. It selects the unit file, the sample style, and the test sub-project
-- `unit` (required) — the `<package-kebab>` identifying the unit. Its spec and tracking are in `.opentaint/tracking/rules/<side>/<unit>.yaml`; its test project is `.opentaint/test-projects/<unit>/<side>` and its compiled model `.opentaint/test-compiled/<unit>/<side>`
+- `unit` (required) — the `<package-kebab>` identifying the unit. Its spec and tracking are in `.opentaint/tracking/rules/<side>/<unit>.yaml`; its test project is `.opentaint/test-projects/<unit>/<side>`. The tests run on its `<test-target>`: the compiled model `.opentaint/test-compiled/<unit>/<side>` for Java, the test project directory itself for Go
 - `fix-target` (optional) — a created rule `<path>#<id>` the main scan flagged, plus the false positive or false negative to correct. When set, narrow or broaden that one rule instead of authoring from the unit
 
 ## Workflow
@@ -52,13 +52,13 @@ A library rule emits nothing on its own — to exercise it, wire it to the gener
 Run the rule tests directly as a foreground, blocking command and wait for exit — never background them or use Monitor. Load your lib rules and the test joins + markers, and iterate until every sample passes:
 
 ```bash
-opentaint test rule run .opentaint/test-compiled/<unit>/<side> \
+opentaint test rule run <test-target> \
   -o .opentaint/test-results/<unit>/<side> \
   --ruleset .opentaint/rules --ruleset .opentaint/test-projects/<unit>/<side>/test-rules \
-  --passthrough-approximations .opentaint/pass-through
+  --passthrough-models .opentaint/pass-through
 ```
 
-`test rule run` auto-loads the built-in rules, so pass only your custom rulesets. Apply the passthrough approximations as-is, an empty one is harmless. Read the result with the bundled script — it prints the pass/fail counts and names the failing samples, so you never parse the JSON by hand:
+`test rule run` auto-loads the built-in rules, so pass only your custom rulesets. Apply the passthrough models as-is, an empty one is harmless. A Go test project needs no compile step: `test rule run` resolves its dependencies and builds it. Read the result with the bundled script — it prints the pass/fail counts and names the failing samples, so you never parse the JSON by hand:
 
 ```bash
 uv run <skill-dir>/scripts/check-test-result.py <unit>/<side>
@@ -87,7 +87,7 @@ A positive that won't pass after ~3 rule fixes may have a cause no rule edit can
 
 - the implementing lib rule ids, identifying which were built-in and which were created, a one-line test summary for the side, and the exact `test rule run` command used
 - if blocked at step 5: `stages.tests_passing` left pending, and the cause —
-  - a dropped library method on the failing sample's flow → the methods that need a model, to be approximated before a re-dispatch
+  - a dropped library method on the failing sample's flow → the methods that need a model, to be modeled before a re-dispatch
   - nothing dropped and no clear rule cause → non-convergence, for the orchestrator to intervene
 
 ## Tracking
@@ -136,5 +136,5 @@ stages:
 ## Gotchas
 
 - If you think a test project is wrong — hand it back upstream
-- A positive that won't pass because a library method drops taint is not a rule bug — surface it for approximation (per step 5), don't broaden the rule to force it
+- A positive that won't pass because a library method drops taint is not a rule bug — surface it for modeling (per step 5), don't broaden the rule to force it
 - Keep produced rule files comment-free

@@ -9,9 +9,9 @@ metadata:
 
 # AppSec Agent
 
-Orchestrate an end-to-end OpenTaint security analysis. Keep the long project build and every full-project scan in this main session; delegate each bounded source, approximation, sink, triage, and PoC stage to an `orchestrate-stage` subagent, which owns its leaf fan-out and joins.
+Orchestrate an end-to-end OpenTaint security analysis. Keep the long project build and every full-project scan in this main session; delegate each bounded source, dependency-model, sink, triage, and PoC stage to an `orchestrate-stage` subagent, which owns its leaf fan-out and joins.
 
-OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis SAST. The run produces confirmed vulnerabilities plus reusable project-specific rules and approximations under one self-contained `.opentaint/` directory at the project root.
+OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis SAST. The run produces confirmed vulnerabilities plus reusable project-specific rules and models under one self-contained `.opentaint/` directory at the project root.
 
 ## Setup
 
@@ -38,8 +38,8 @@ Ask the user for both levels together:
 
 1. Scan level — `lite` · `normal` · `deep`
    - lite — build + scan (expected, when there are already existing artifacts)
-   - normal — build + scan + custom approximations
-   - deep — build + scan + custom approximations + custom rules
+   - normal — build + scan + custom dependency models
+   - deep — build + scan + custom dependency models + custom rules
    - recommend by what's on disk: a cold start (no `.opentaint` artifacts) → deep; a prior run's artifacts already present → lite
 2. Triage level — `static` · `dynamic`
    - static — classify findings from the model, no running app
@@ -63,7 +63,7 @@ The run is one fixed pipeline; the selected levels determine which phases are in
 build                       → MAIN: build
 discover / source_rules     → stage subagent: sources
 scan                        → MAIN: scan
-approximations              → stage subagent: approx-round, then MAIN: rescan; repeat
+models              → stage subagent: model-round, then MAIN: rescan; repeat
 sink_rules                  → stage subagent: sinks, then MAIN: rescan
 triage                      → stage subagent: triage
 poc                         → stage subagent: poc
@@ -79,9 +79,9 @@ After a successful build, write the language-specific build fields named by the 
 
 When status reports `scan`, or a stage returns with a rescan pending, load and follow the `run-scan` skill in this main session. Start the scan with the harness's main-session background-command facility, keep the engine's self-timeout, add a 1200-second outer backstop, and wait for the process completion event.
 
-A valid `.opentaint/results/report.sarif` means the scan completed, including exit 254 after an engine timeout. Record `max_memory: 16G` when the scan had to bump memory and reuse it on later scans. If no SARIF exists after the allowed retry/backstop, follow the repair path below for a malformed rule/approximation; otherwise dispatch `orchestrate-stage` with `stage: escalation` and the scan `setup` to write the scan-wide resource issue, then stop.
+A valid `.opentaint/results/report.sarif` means the scan completed, including exit 254 after an engine timeout. Record `max_memory: 16G` when the scan had to bump memory and reuse it on later scans. If no SARIF exists after the allowed retry/backstop, follow the repair path below for a malformed rule/model; otherwise dispatch `orchestrate-stage` with `stage: escalation` and the scan `setup` to write the scan-wide resource issue, then stop.
 
-When a scan or later stage reports a malformed approximation, unloadable created rule, ineffective join, or a created rule's false positive/negative, route the exact diagnosis and artifact path/id to the responsible stage agent per Dispatching, then scan again in MAIN.
+When a scan or later stage reports a malformed model, unloadable created rule, ineffective join, or a created rule's false positive/negative, route the exact diagnosis and artifact path/id to the responsible stage agent per Dispatching, then scan again in MAIN.
 
 After every build, scan, or stage return, run `uv run <skill-dir>/scripts/get_status.py` once to choose the next action. Use `--full` at run start, on resume, or when the brief output does not settle the question.
 
@@ -92,15 +92,15 @@ Dispatch exactly one stage-orchestrator subagent for each stage invocation:
 ```
 Invoke the Skill orchestrate-stage first, then follow its instructions precisely
 Inputs:
-  stage: <sources|approx-round|sinks|triage|poc|escalation>
+  stage: <sources|model-round|sinks|triage|poc|escalation>
 ```
 
-For a `deep` approximation round, also pass `sinks: true`. A subagent inherits the project-root working directory, so omit `project-root`.
+For a `deep` model round, also pass `sinks: true`. A subagent inherits the project-root working directory, so omit `project-root`.
 
 Stage context:
 
 - `sources` — discover dependency sources and author tag-grouped source rules
-- `approx-round` — classify and build one dropped-method frontier; use a fresh agent for each new frontier
+- `model-round` — classify and build one dropped-method frontier; use a fresh agent for each new frontier
 - `sinks` — author classified sink rules and wire the joins
 - `triage` — classify the latest findings and refresh the vulnerability report
 - `poc` — reproduce confirmed findings and add the outcomes to the report
@@ -119,15 +119,15 @@ Use this ownership map to route work and scan errors:
   project/             MAIN build
   results/             MAIN scan
   rules/               sources or sinks stage
-  pass-through/        approximation stage
-  dataflow/            approximation stage
+  pass-through/        model stage
+  dataflow/            model stage
   tracking/state.yaml  MAIN run knobs
   tracking/            stage agents, leaves, and join scripts otherwise
   vulnerabilities.md   triage / PoC stage
   issues/               escalation stage
 ```
 
-The tree is long-lived. On resume, reuse `DONE` artifacts; `get_status.py` derives the next phase from disk. Existing rules and approximations apply to every scan.
+The tree is long-lived. On resume, reuse `DONE` artifacts; `get_status.py` derives the next phase from disk. Existing rules and models apply to every scan.
 
 `state.yaml` shape:
 

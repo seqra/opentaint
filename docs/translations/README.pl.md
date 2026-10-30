@@ -173,7 +173,7 @@ Dołączone umiejętności obejmują typowy cykl analizy bezpieczeństwa:
 
 - **Skanowanie i selekcja:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
 - **Rozszerzanie pokrycia:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
-- **Modelowanie przepływu danych:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+- **Modelowanie przepływu danych:** `analyze-external-methods`, `create-pass-through-model`, `create-dataflow-model`, `debug-rule`, `report-analyzer-issue`
 
 ---
 

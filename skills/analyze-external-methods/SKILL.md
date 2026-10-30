@@ -9,9 +9,9 @@ metadata:
 
 # Skill: Analyze External Methods
 
-OpenTaint is a dataflow taint analyzer: it starts from the data a source introduces and follows it call by call until the flow stops. A flow stops for one of two reasons — the data reached a callable that retains none of it (call `size()` on a tainted collection and its whole contents collapse into one number, so the taint is gone), or it reached a callable whose body the analyzer can't see, typically in an external dependency. That opaque callable may itself be taint-killing, or it may in fact carry the data onward — and then it needs an approximation telling the engine exactly how the data moves through the call, or every trace through it is silently cut.
+OpenTaint is a dataflow taint analyzer: it starts from the data a source introduces and follows it call by call until the flow stops. A flow stops for one of two reasons — the data reached a callable that retains none of it (call `size()` on a tainted collection and its whole contents collapse into one number, so the taint is gone), or it reached a callable whose body the analyzer can't see, typically in an external dependency. That opaque callable may itself be taint-killing, or it may in fact carry the data onward — and then it needs a model telling the engine exactly how the data moves through the call, or every trace through it is silently cut.
 
-You are handed the list of those dropped methods. Decide which ones actually carry data and which don't, and for each carrier determine the kind of approximation it needs, so the build stage can restore the flow.
+You are handed the list of those dropped methods. Decide which ones actually carry data and which don't, and for each carrier determine the kind of model it needs, so the build stage can restore the flow.
 
 On a deep run these same methods carry a second, independent question — whether the call is itself a dangerous operation (a sink); that pass is step 2.
 
@@ -21,14 +21,14 @@ Provided by the caller, fall back to the default value when omitted. Ask back on
 
 - `project-root` (optional) — root of the target project. Opentaint keeps all analysis artifacts under the fixed `<project-root>/.opentaint/` directory, so every `.opentaint/...` path below resolves there. Default: current directory
 - `language` (required) — target language for this project and language-specific instructions
-- `plan` (required) — path to this agent's batch plan `.opentaint/tracking/approximations/plans/<batch>.yaml`: the dropped methods to classify
+- `plan` (required) — path to this agent's batch plan `.opentaint/tracking/models/plans/<batch>.yaml`: the dropped methods to classify
 - `sinks` (optional) — a flag whether to classify sinks per step 2 or not
 
 ## Workflow
 
 ### 1. Classify propagation
 
-Take the members from the plan's `scopes`, judge each one, and write the verdict to the batch file `.opentaint/tracking/approximations/<batch>.yaml` — `<batch>` is your plan's filename stem, the batch id, reused for the coverage check below.
+Take the members from the plan's `scopes`, judge each one, and write the verdict to the batch file `.opentaint/tracking/models/<batch>.yaml` — `<batch>` is your plan's filename stem, the batch id, reused for the coverage check below.
 
 Always classify from the method's real code, never from its name. Start by reading the method's source — `<skill-dir>/references/<language>.md` describes how to get it. Then answer, for each method: where does its input data go? Data that arrives on the receiver or an argument — does it come back out, through the return value, an argument the method writes into, the receiver, or an object or field it stores the data in? That answer picks the bucket:
 
@@ -36,7 +36,7 @@ Always classify from the method's real code, never from its name. Start by readi
 - `dataflow` — the method carries the data through a function, lambda, or callback parameter, or an async chain. Choose it over `passthrough` when the tainted data actually travels through that functional argument. Prefer it too whenever the data does flow but not by a plain copy you can point at between positions — the propagation is opaque or too complex to name as a passThrough edge — since a dataflow model is real code and can reproduce any behaviour
 - `skipped` — the method carries the data nowhere, give a short `reason`. This is exactly where a flow ends. A few examples: a predicate or inspector that only tests, compares, or measures its input (handing back a boolean or a number); a conversion that collapses the data into a scalar that no longer holds it (a size, a parse into a number, a one-way hash — the `size()` from the preamble); a side-effect that keeps none of the data. These are illustrations of the idea, not a closed list — many methods and cases fall outside it, so decide each on what its code does
 
-The common trap is skipping an implicit carrier — a method that moves its data somewhere other than the plain return value. A `void` method that writes its argument into the receiver or another object still carries the data: it lives on in that object and the flow continues. A sanitizer or encoder is a carrier too — it returns a transformed copy of its input, so the data flows through it; model it, never skip it (whether the transform actually neutralizes the taint is settled later by the rules, not here). When in doubt, model it: over-approximating an inert method is cheap, dropping a real carrier is a false negative the run can't recover.
+The common trap is skipping an implicit carrier — a method that moves its data somewhere other than the plain return value. A `void` method that writes its argument into the receiver or another object still carries the data: it lives on in that object and the flow continues. A sanitizer or encoder is a carrier too — it returns a transformed copy of its input, so the data flows through it; model it, never skip it (whether the transform actually neutralizes the taint is settled later by the rules, not here). When in doubt, model it: modeling an inert method is cheap, dropping a real carrier is a false negative the run can't recover.
 
 An opaque external key-value store — a cache, a Redis/DB template, a session map, anything whose data lives outside the process — is a carrier too, not a dead end: a value written by a `put`/`set` survives the round trip, so a later `get` can hand attacker-controlled data back. Model both ends as `passthrough`. Only the key-only or boolean operations that move no value — `delete`, `exists`, `hasKey`, `size` — are skipped.
 
@@ -74,7 +74,7 @@ Short and concise report of what was done
 
 ### Artifacts:
 
-- `.opentaint/tracking/approximations/<batch>.yaml` — the batch classification (per Tracking)
+- `.opentaint/tracking/models/<batch>.yaml` — the batch classification (per Tracking)
 - `.opentaint/tracking/rules/sinks/<package-kebab>.yaml` — the per-package sink units, when `sinks` was set (per Tracking)
 
 ### Summary:
@@ -86,7 +86,7 @@ Short and concise report of what was done
 
 ### Batch classification
 
-`.opentaint/tracking/approximations/<batch>.yaml` — one batch's callable classification, `<batch>` the plan's filename stem. Every callable sits in exactly one verdict bucket, keyed with the exact language-specific `method` and `signature` from the plan so distinct variants stay separate:
+`.opentaint/tracking/models/<batch>.yaml` — one batch's callable classification, `<batch>` the plan's filename stem. Every callable sits in exactly one verdict bucket, keyed with the exact language-specific `method` and `signature` from the plan so distinct variants stay separate:
 - `passthrough`, `dataflow` — modeled carriers; each entry `{ method, signature }`
 - `skipped` — terminal non-carriers; each `{ method, signature, reason }`
 - `engine_issues` — a separate bucket for carriers the engine provably can't propagate (built but still dropped); each `{ method, signature, reason }`. Terminal and treated just like `skipped` — the only difference is the reason. `merge-skipped` carries it into `skipped.yaml` as its own `engine_issues` group alongside the regular skipped `methods`.
@@ -108,7 +108,7 @@ build:
   done: []
 ```
 
-This skill writes `passthrough`/`dataflow`/`skipped` and `dependencies`; leave the `build` block and `engine_issues` alone — they are filled later in the approximation stage.
+This skill writes `passthrough`/`dataflow`/`skipped` and `dependencies`; leave the `build` block and `engine_issues` alone — they are filled later in the model stage.
 
 ### Sink units (only when `sinks` is set)
 
@@ -130,7 +130,7 @@ The partition keeps a whole package in one batch, so populate only the units you
 
 ## Constraints
 
-OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis engine. It already propagates through visible application code, calls, aliases, and individual fields; custom rules and approximations model only the assigned source, sink, or opaque-method boundary. Compile-time constants and literals carry no taint, so a source or carrier whose output is only a constant introduces nothing.
+OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis engine. It already propagates through visible application code, calls, aliases, and individual fields; custom rules and models describe only the assigned source, sink, or opaque-method boundary. Compile-time constants and literals carry no taint, so a source or carrier whose output is only a constant introduces nothing.
 
 - Judge intrinsic propagation only, never per-project flow. Don't skip a carrier because its data doesn't seem to reach a sink here, and don't gate a sink on where its data goes — whether a flow reaches a sink is the analyzer's job, not yours
 - Classify every method the plan assigns and only those — each is a real place data was lost, don't invent methods outside the plan. `check-coverage.py --batch` must report `0 UNCOVERED` before you return

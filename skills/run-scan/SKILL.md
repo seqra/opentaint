@@ -33,12 +33,12 @@ opentaint scan --project-model .opentaint/project \
 ```
 
 - `--rule-id <full-id>` — restrict to specific executable rules (repeatable, one per input rule ID); referenced library rules remain available without listing their IDs separately. Omit to run all loaded rules
-- `--passthrough-approximations .opentaint/pass-through` — add when that directory exists: passThrough configs override built-ins at the rule level, a provided rule overriding a built-in only when it matches one
-- `--dataflow-approximations .opentaint/dataflow` — add when that directory exists: code-based approximations, one project per batch
+- `--passthrough-models .opentaint/pass-through` — add when that directory exists: passThrough configs override built-ins at the rule level, a provided rule overriding a built-in only when it matches one
+- `--dataflow-models .opentaint/dataflow` — add when that directory exists: code-based models, one project per batch, Java or Go. The CLI builds Java model projects on demand
 
-Both approximation-dir flags walk their trees recursively; pass each parent directory once, not every package or batch separately.
+Both model flags walk their trees recursively; pass each parent directory once, not every package or batch separately.
 
-The scan is long — run it in the background and wait for it to finish. Leave `--timeout` at the engine default (900s); the CLI ends the analysis itself and writes whatever SARIF it has.
+The scan can take a long time. Run it in the background and wait for it to finish. Keep `--timeout` at the engine default of 900 seconds. The CLI ends the analysis and writes the available SARIF report.
 
 ### 2. Retry once on out-of-memory
 
@@ -46,7 +46,7 @@ Start at the 8G default. An out-of-memory failure at 8G — even when the engine
 
 ### 3. Collect the report, or escalate
 
-A SARIF is complete enough to use even alongside the two normal scan errors — a timeout (the CLI ended the analysis and wrote what it had), or an out-of-memory at 16G (after §2's bump), take it as-is. The other two outcomes are not results to accept. A config-load failure on a malformed approximation is fixed, not bumped: report the engine error and the offending file under `.opentaint/pass-through`/`.opentaint/dataflow` per Output so it can be repaired and rescanned. No SARIF at all, even at 16G, is a plain failure: report it per Output with the scan setup.
+A SARIF is complete enough to use even alongside the two normal scan errors — a timeout (the CLI ended the analysis and wrote what it had), or an out-of-memory at 16G (after §2's bump), take it as-is. The other two outcomes are not results to accept. A config-load failure on a malformed model is fixed, not bumped: report the engine error and the offending file under `.opentaint/pass-through`/`.opentaint/dataflow` per Output so it can be repaired and rescanned. No SARIF at all, even at 16G, is a plain failure: report it per Output with the scan setup. On exit code 252, an unhandled analyzer error, the CLI prints the analyzer log path — read that log for the cause and report it too.
 
 ## Output
 
@@ -62,10 +62,10 @@ All three sit next to the report under `.opentaint/results/`:
 
 ### Summary:
 
-- finding count, and dropped-vs-approximated external-method counts
+- finding count, and dropped-vs-modeled external-method counts
 - whether memory was bumped to 16G
-- if the scan failed at config-load on a malformed approximation: the engine error and the offending file under `.opentaint/pass-through` or `.opentaint/dataflow` (located from the error), so it can be fixed and rescanned — this is not an out-of-memory failure and 16G won't help
-- if no SARIF came out even at 16G: that the scan is left failed, with the setup used (full scan command with ruleset, approximation dirs, model)
+- if the scan failed at config-load on a malformed model: the engine error and the offending file under `.opentaint/pass-through` or `.opentaint/dataflow` (located from the error), so it can be fixed and rescanned — this is not an out-of-memory failure and 16G won't help
+- if no SARIF came out even at 16G: that the scan is left failed, with the setup used (full scan command with rulesets, dependency-model dirs, project model)
 
 ## Constraints
 

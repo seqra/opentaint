@@ -2,7 +2,7 @@ Match the stage keyword to its reference and read it fully:
 
 ```
 sources      → <skill-dir>/references/sources.md
-approx-round → <skill-dir>/references/approx-round.md
+model-round → <skill-dir>/references/model-round.md
 sinks        → <skill-dir>/references/sinks.md
 triage       → <skill-dir>/references/triage.md
 poc          → <skill-dir>/references/poc.md

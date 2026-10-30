@@ -173,7 +173,7 @@ Le skill incluse coprono il ciclo comune di analisi della sicurezza:
 
 - **Scansione e triage:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
 - **Espansione della copertura:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
-- **Modellazione del dataflow:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+- **Modellazione del dataflow:** `analyze-external-methods`, `create-pass-through-model`, `create-dataflow-model`, `debug-rule`, `report-analyzer-issue`
 
 ---
 

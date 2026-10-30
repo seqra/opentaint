@@ -84,8 +84,8 @@ Use [CodeChecker](https://github.com/Ericsson/codechecker) for advanced result m
 | `opentaint summary` | View SARIF analysis results |
 | `opentaint health` | Show resolved paths for the analyzer, autobuilder, rules, and Java runtime |
 | `opentaint test rule` | Create, run, and debug detection-rule tests |
-| `opentaint test approximation` | Create and run dataflow-approximation tests |
-| `opentaint approximation` | Create dataflow approximation projects |
+| `opentaint test model` | Create and run dataflow model tests |
+| `opentaint model` | Create dataflow model projects |
 | `opentaint pull` | Download analyzer dependencies |
 | `opentaint update` | Update to latest version |
 | `opentaint prune` | Remove stale downloaded artifacts and cached models |
@@ -110,15 +110,15 @@ On the first run, the compiled project model is cached in `~/.opentaint/cache/`.
 
 #### Rule-authoring flags
 
-These flags are to work with custom approximations:
+Use these flags when you write custom rules and models:
 
 | Flag | Description |
 |------|-------------|
 | `--track-external-methods` | Write external-method coverage files next to the SARIF report |
-| `--passthrough-approximations` | Apply pass-through approximation YAML files or directories (repeatable) |
-| `--dataflow-approximations` | Apply dataflow approximation projects, build outputs, or class directories (repeatable) |
+| `--passthrough-models` | Apply pass-through model YAML files or directories (repeatable) |
+| `--dataflow-models` | Apply the dataflow models found in a directory (repeatable); see [Applying models](#applying-models) |
 
-Use external-method tracking when a scan may miss flows through library methods. The dropped-methods file shows where taint was killed because no model was available; the approximated-methods file shows methods already covered by built-in or custom models.
+Use external-method tracking when a scan may miss flows through library methods. `dropped-external-methods.yaml` lists the methods where taint was killed because no model was available. `approximated-external-methods.yaml` lists the methods already covered by built-in or custom models.
 
 ### opentaint health
 
@@ -141,44 +141,73 @@ With no flags, `health` shows the autobuilder, analyzer, built-in rules, and Jav
 
 ### opentaint test
 
-The `test` command group is tooling for rule and approximation development.
+The `test` command group is tooling for rule and model development. A test project holds samples and a `rule-test.yaml` that records the verdict each sample must produce.
+
+Java and Go test projects run differently:
+
+- Java: compile the test project with `opentaint compile`, then run the tests on the compiled project model.
+- Go: run the tests on the test project directory. The CLI resolves the project dependencies, which may update its `go.mod` and `go.sum`, builds the samples, stopping with the compiler output if one doesn't compile, and loads them from source. No `opentaint compile` step is needed.
 
 #### Rule tests
 
 ```bash
+# Java
 opentaint test rule init .opentaint/test-projects/my-rule --language java
 opentaint compile .opentaint/test-projects/my-rule/sinks -o .opentaint/test-compiled/my-rule/sinks
 opentaint test rule run .opentaint/test-compiled/my-rule/sinks --ruleset .opentaint/rules --ruleset .opentaint/test-projects/my-rule/sinks/test-rules
 opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-model .opentaint/test-compiled/my-rule/sinks --ruleset builtin --ruleset .opentaint/rules
+
+# Go
+opentaint test rule init .opentaint/test-projects/my-rule --language go
+opentaint test rule run .opentaint/test-projects/my-rule/sinks --ruleset .opentaint/rules --ruleset .opentaint/test-projects/my-rule/sinks/test-rules
 ```
 
 | Command | Description |
 |---------|-------------|
-| `opentaint test rule init <output-dir> --language java` | Create source and sink test projects with annotated sample support |
-| `opentaint test rule run <project-model>` | Run detection-rule tests on a compiled project model |
+| `opentaint test rule init <output-dir> --language LANGUAGE` | Create source and sink test projects with annotated sample support |
+| `opentaint test rule run <test-project>` | Run detection-rule tests on a compiled Java project model or a Go test project |
 | `opentaint test rule reachability <rule-id> [source-path]` | Trace why a rule can or cannot reach its facts |
 
-#### Approximation tests
+`test rule run` also accepts `--dataflow-models` and `--passthrough-models`, so rule tests can apply the models a rule depends on.
+
+#### Model tests
 
 ```bash
-opentaint test approximation init .opentaint/test-projects/my-approximation \
+# Java
+opentaint test model init .opentaint/test-projects/my-model \
   --language java \
   --dependency "io.projectreactor:reactor-core:3.8.5"
-opentaint compile .opentaint/test-projects/my-approximation -o .opentaint/test-compiled/my-approximation
-opentaint test approximation run .opentaint/test-compiled/my-approximation \
-  --dataflow-approximations .opentaint/dataflow/my-approximation
+opentaint compile .opentaint/test-projects/my-model -o .opentaint/test-compiled/my-model
+opentaint test model run .opentaint/test-compiled/my-model \
+  --dataflow-models .opentaint/dataflow/my-model
+
+# Go
+opentaint test model init .opentaint/test-projects/my-model \
+  --language go \
+  --dependency github.com/acme/library@v1.2.3
+opentaint test model run .opentaint/test-projects/my-model \
+  --dataflow-models .opentaint/dataflow/my-model
 ```
 
 | Command | Description |
 |---------|-------------|
-| `opentaint test approximation init <output-dir> --language java` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
-| `opentaint test approximation run <project-model>` | Run dataflow approximation tests on a compiled project model |
+| `opentaint test model init <output-dir> --language LANGUAGE` | Create a test project with a fixed source-to-sink harness: `Taint.source()` to `Taint.sink(...)` for Java, `taint.Source()` to `taint.Sink(...)` for Go |
+| `opentaint test model run <test-project>` | Run dataflow model tests on a compiled Java project model or a Go test project |
 
-Rule and approximation test runs write `test-result.json` and `test-results.sarif` to the selected output directory.
+`test model run` applies the harness rule for the test project's language. It also accepts `--passthrough-models`.
+
+| Flag | Description |
+|------|-------------|
+| `--language` | Required test project language, `java` or `go` (`init` only) |
+| `--dependency` | Maven coordinate for Java or `module@version` for Go (repeatable, `init` only) |
+
+A Go test project is a Go module with module path `test`, so a sample function is named `test.<Function>` in `rule-test.yaml`.
+
+Rule and model test runs write `test-result.json` and `test-results.sarif` to the selected output directory.
 
 ### opentaint compile
 
-Compiles Java and Kotlin projects and generates project models for analysis. Useful when you want to separate compilation from scanning or need to inspect the project model.
+Compiles Java and Kotlin projects and generates project models for analysis. For Go modules and workspaces, it writes a project model pointing to the source directory; Go sources are loaded at analysis time. Useful when you want to separate project preparation from scanning or need to inspect the project model.
 
 ```bash
 opentaint compile --output ./my-project-model /path/to/project
@@ -191,36 +220,87 @@ opentaint scan --project-model ./my-project-model
 | `--dry-run` | Validate inputs and show what would run without compiling |
 | `--log-file` | Path to the log file (default: `<cache-dir>/logs/<timestamp>.log`) |
 
-### opentaint approximation
+### opentaint model
 
-A dataflow approximation models how taint moves through a method the analyzer cannot see into. Because a model references the library type it models, it needs that library to compile — so the models live in their own project, which pins those versions itself:
-
-```bash
-opentaint approximation init .opentaint/dataflow/my-batch \
-  --language java \
-  --dependency "io.projectreactor:reactor-core:3.8.5"
-
-# write the @Approximate classes under src/main/java/, then apply them
-opentaint scan --project-model ./my-project-model \
-  --dataflow-approximations .opentaint/dataflow/my-batch
-```
-
-Pin the versions the target application uses. Those pins are the models' compile environment: they, and nothing about the project under analysis, decide what the models compile against, so a model compiles identically wherever it is applied.
-
-`--dataflow-approximations` accepts an approximation project, a build output, or a directory of compiled classes — and a directory holding any of those, so a tree with one project per batch can be passed as a single flag. A directory counts as compiled classes only when nothing below it still needs building; one that holds compiled classes of its own alongside a project is reported rather than guessed at. Paths may overlap, and the same models may be reached twice, but two of them may not offer the same class with different content — which copy an analysis would read is not defined. Projects are built on demand and rebuilt when their sources, their dependency pins, or the compiler change.
+A dataflow model describes how taint moves through a library function or method that the analyzer cannot follow. A model is code that refers to the library it models, so models live in their own model project, which pins the library versions. Java and Go models use separate projects.
 
 | Command | Description |
 |---------|-------------|
-| `opentaint approximation init <output-dir> --language LANGUAGE` | Create a dataflow approximation project |
-| `opentaint compile approximations <approximation-project>` | Compile a dataflow approximation project |
+| `opentaint model init <output-dir> --language LANGUAGE` | Create a dataflow model project |
+| `opentaint compile models <model-project>` | Compile a Java model project (optional) |
 
 | Flag | Description |
 |------|-------------|
-| `--language` | Required model language, `java` or `go` (`init` only) |
-| `--dependency` | Compile-only Maven dependency coordinates the models are written against (repeatable, `init` only) |
-| `--output`, `-o` | Path to the compiled models (default: `<approximation-project>/.opentaint/build`, `compile approximations` only) |
+| `--language` | Required model language, `java` or `go` (`model init` only) |
+| `--dependency` | Maven coordinate for Java or `module@version` for Go (repeatable, `model init` only) |
+| `--output`, `-o` | Path to the compiled models (default: `<model-project>/.opentaint/build`, `compile models` only) |
 
-Compiling ahead of time is optional — scanning and testing build the project themselves. Run it to see compilation errors on their own.
+Pin the library versions the target application uses. Running `model init` again keeps the model sources and replaces `build.gradle.kts` for Java or `go.mod` for Go, so pass the full dependency list again.
+
+#### Applying models
+
+`--dataflow-models <dir>` works with `scan`, `test rule run`, and `test model run`. It searches the directory recursively for models in these forms:
+
+| Form | Recognized by | Use |
+|------|---------------|-----|
+| Java model project | `build.gradle.kts` | Built on demand into `<model-project>/.opentaint/build`; rebuilt when its sources, its dependency pins, or the compiler change |
+| Java build output | `approximation.yaml` next to `classes/` | Used as is, for example the output of `compile models` |
+| Go model module | `go.mod` with `module opentaint` | Loaded from source |
+
+A directory with one model project per batch, in either language, can therefore be passed as a single flag. The search does not look inside a model it has found and skips directories such as `.opentaint`, `build`, and `.git`. A directory of compiled classes on its own is not a model, and a `go.mod` with another module path is skipped with a warning (passing such a module directly is an error). If the search finds no model in a directory, the CLI prints a warning. Models for a language the analyzed project does not use are ignored.
+
+#### Java models
+
+```bash
+opentaint model init .opentaint/dataflow/my-batch \
+  --language java \
+  --dependency "io.projectreactor:reactor-core:3.8.5"
+
+# Write the model classes under src/main/java, then apply them.
+opentaint scan --project-model ./my-project-model \
+  --dataflow-models .opentaint/dataflow
+```
+
+Name each model class after its target with an `opentaint.` prefix. For example, `opentaint.java.util.Optional` models `java.util.Optional`: its source declares `package opentaint.java.util` and `class Optional`. Existing models that use the `@Approximate` annotation still work, but use the prefix for new models.
+
+Some Kotlin/JVM names are not valid Java names. For these, keep the target package after the prefix and set the real name with `@ApproximatedClassName`, or with `@ApproximatedMethodName` and `@ApproximatedFieldName` for members.
+
+A Java model project compiles against its pinned dependencies and the OpenTaint model support classes only; the analyzed project does not add to them. Run `compile models` to see compilation errors without a scan or test.
+
+#### Go models
+
+```bash
+opentaint model init .opentaint/dataflow/my-batch \
+  --language go \
+  --dependency github.com/acme/library@v1.2.3
+
+# Write the model packages, then apply them.
+opentaint scan --project-model ./my-project-model \
+  --dataflow-models .opentaint/dataflow
+```
+
+A Go model project is a module with module path `opentaint`. Place each model package at `opentaint/` followed by the target import path, and give it the target package name. For example, `opentaint/net/url` models `net/url` and declares `package url`:
+
+```text
+my-batch/
+├── go.mod                  # module opentaint
+└── net/url/model.go        # import path opentaint/net/url
+```
+
+```go
+package url
+
+// Taint on the input flows to the result.
+func QueryUnescape(s string) (string, error) {
+	return s, nil
+}
+```
+
+A model function or method replaces the target with the same name and signature. Target functions that the model does not declare keep their own bodies. A model can add helper functions, methods, variables, constants, types, and struct fields. A model struct lists only the fields that its bodies use: an existing field is matched by name and must have the target field's type, and a new field is added after the target's fields. OpenTaint ignores model `init` functions.
+
+A model can import the analyzed project's packages and their dependencies. Add any other module it needs to the model's `go.mod`, at the version the target application uses, so that the model does not change the dependency versions under analysis.
+
+Model each target package only once across custom and built-in models. A model package applies only when the analyzed project uses its target package.
 
 ### opentaint summary
 

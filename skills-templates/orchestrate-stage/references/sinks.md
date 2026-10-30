@@ -1,6 +1,6 @@
 # Author sinks + assemble
 
-Author the sink rules flagged into per-package units during approximation classification and join them to every relevant source. The final project rescan follows to surface findings.
+Author the sink rules flagged into per-package units during dropped-method classification and join them to every relevant source. The final project rescan follows to surface findings.
 
 ## Sink lib rules
 
@@ -32,7 +32,7 @@ Once no sink unit is pending, status checks the active tag-pair matrix. A create
 Inputs:
 - `language`
 
-Expect back — one tag-to-tag join per missing pair, then a clean coverage check. Delete the sink units' `test-compiled/` models.
+Expect back — one tag-to-tag join per missing pair, then a clean coverage check. Delete the sink units' `test-compiled/` models, if any.
 
 ## Stage gate
 
