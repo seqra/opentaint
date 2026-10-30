@@ -2,14 +2,16 @@
 
 ## Confirming a dropped library method
 
-When a positive won't pass and the suspicion is a library method on its flow dropping taint (not a rule bug), scan your own compiled sub-model with `--track-external-methods` and read the methods it lists as dropped. Run this diagnostic directly as a foreground, blocking command and wait for exit — never background it or use Monitor:
+When a positive won't pass and the suspicion is a library method on its flow dropping taint (not a rule bug), scan your own test sub-project with `--track-external-methods` and read the methods it lists as dropped. Run this diagnostic directly as a foreground, blocking command and wait for exit — never background it or use Monitor:
 
 ```bash
 opentaint scan --project-model .opentaint/test-compiled/<unit>/<side> \
   -o .opentaint/test-results/<unit>/<side>/diag.sarif \
   --ruleset builtin --ruleset .opentaint/rules --ruleset .opentaint/test-projects/<unit>/<side>/test-rules \
-  --passthrough-approximations .opentaint/pass-through \
+  --passthrough-models .opentaint/pass-through \
   --track-external-methods
 ```
 
-Read `dropped-external-methods.yaml` next to the SARIF: a dropped method on the failing sample's source→sink path is the cause, not the rule — those methods need a model before the positive can pass. This diagnostic scan runs only over your own test sub-model, never the main project model.
+For Go, pass the test project `.opentaint/test-projects/<unit>/<side>` as the source path in place of `--project-model`.
+
+Read `dropped-external-methods.yaml` next to the SARIF: a dropped method on the failing sample's source→sink path is the cause, not the rule — those methods need a model before the positive can pass. This diagnostic scan runs only over your own test sub-project, never the main project model.

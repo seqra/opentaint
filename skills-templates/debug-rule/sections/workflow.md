@@ -7,11 +7,11 @@ opentaint test rule reachability <rule> \
   --project-model <model> \
   -o <results-dir>/report.sarif \
   --ruleset builtin --ruleset .opentaint/rules \
-  --passthrough-approximations .opentaint/pass-through \
-  --dataflow-approximations .opentaint/dataflow
+  --passthrough-models .opentaint/pass-through \
+  --dataflow-models .opentaint/dataflow
 ```
 
-`<results-dir>` is `.opentaint/test-results/<name>` for a test model, `.opentaint/results` for the main scan. The per-instruction facts are in the sibling `<results-dir>/debug-ifds-fact-reachability.sarif`, not the `-o` file — the `-o` SARIF only shows whether the rule fired. Read that sibling to find the kill:
+`<results-dir>` is `.opentaint/test-results/<name>` for a test project, `.opentaint/results` for the main scan. A Go test project has no compiled model: pass its directory as the source path in place of `--project-model <model>`. The per-instruction facts are in the sibling `<results-dir>/debug-ifds-fact-reachability.sarif`, not the `-o` file — the `-o` SARIF only shows whether the rule fired. Read that sibling to find the kill:
 
 - a missed detection (a positive that won't pass, or a flow absent from a scan) — confirm a fact exists at the source; if none, the gap is in `pattern-sources`, not the flow. Otherwise walk the facts to the last instruction still carrying it and the first where it's gone — that gap is the kill
 - a spurious detection (a negative that fires) — the reverse: find where a fact appears with no tainted input reaching it

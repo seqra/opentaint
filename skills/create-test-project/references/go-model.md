@@ -6,10 +6,10 @@ Language reference for a `dataflow` type, keyed to the body's steps.
 
 ### 1. Scaffold the project
 
-`opentaint test approximation init <project> --language go` scaffolds a Go module with module path `test`, the `taint` package (the fixed `taint.Source()` / `taint.Sink()`) and the fixed `approximation-rule.yaml` the harness applies. Pass each lib as a `--dependency` at its exact version from the app's `go.mod` verbatim — including pseudo-versions — not a guess. The model module scaffolded later takes the same pins, so the samples and the models they exercise build against one version.
+`opentaint test model init <project> --language go` scaffolds a Go module with module path `test`, the `taint` package (the fixed `taint.Source()` / `taint.Sink()`) and the fixed `approximation-rule.yaml` the harness applies. Pass each lib as a `--dependency` at its exact version from the app's `go.mod` verbatim — including pseudo-versions — not a guess. The model module scaffolded later takes the same pins, so the samples and the models they exercise build against one version.
 
 ```bash
-opentaint test approximation init .opentaint/test-projects/<name> \
+opentaint test model init .opentaint/test-projects/<name> \
   --language go \
   --dependency github.com/acme/library@v1.2.3
 ```
@@ -18,7 +18,7 @@ When the app replaces a module with a local directory, add the same replacement 
 
 ### 2. Write the samples
 
-Write one sample per callable in the batch's `dataflow` bucket, across all its packages. Each `dataflow` entry records the callable's `signature` (`args:<count>`, the receiver excluded) — use it to shape the call. Look at how the callable is actually called in the project to shape the sample and pick the receiver type. Each sample is a plain exported function in `package test` at the module root — you don't author a rule; the scaffold's fixed `approximation-rule.yaml` is what the harness applies. The sample just routes `taint.Source()` through the modeled callable into `taint.Sink(...)`. Its verdict is recorded in `rule-test.yaml` (below), not on the function. After writing the samples, run `go mod tidy` in the project so their dependencies resolve.
+Write one sample per callable in the batch's `dataflow` bucket, across all its packages. Each `dataflow` entry records the callable's `signature` (`args:<count>`, the receiver excluded) — use it to shape the call. Look at how the callable is actually called in the project to shape the sample and pick the receiver type. Each sample is a plain exported function in `package test` at the module root — you don't author a rule; the scaffold's fixed `approximation-rule.yaml` is what the harness applies. The sample just routes `taint.Source()` through the modeled callable into `taint.Sink(...)`. Its verdict is recorded in `rule-test.yaml` (below), not on the function.
 
 Mark each callable's test-project status (per Tracking): `done` once its sample is in the project. If no sample can be written for a callable, exclude it, mark it `failed`, and note it in the summary — don't let one unmodelable callable block the rest.
 
@@ -64,8 +64,17 @@ Note — a sample's receiver type fixes the dropped callable's name, and the lat
 
 When the modeled callable hands the data to a callback instead of returning it, put the sink inside the callback body: `text.Each(values, func(v string) { taint.Sink(v) })`. Don't stash the value in a captured variable and sink it after the call.
 
+### 3. Check the build
+
+There is no `opentaint compile` step for Go: `test model run` takes the test project directory, resolves its dependencies, and builds it. Check that the samples build in the project with:
+
+```bash
+go build -mod=mod ./...
+```
+
+`-mod=mod` lets Go record the samples' dependencies in `go.mod` and `go.sum`.
+
 ## Constraints
 
 - Write ordinary `.go` files, not `_test.go` files — the Go project loader skips test files
-- Diagnose a compile failure with `go build ./...` in the project
-- For Go, `opentaint compile` writes a project model that points to the sample sources, not a frozen build — keep the samples fixed after compiling
+- `test model run` reads the sample sources directly, not a frozen build — keep the samples fixed once the project is done

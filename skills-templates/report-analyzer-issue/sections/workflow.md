@@ -13,7 +13,7 @@ Write `.opentaint/issues/<slug>.md` — the self-contained deliverable, `<slug>`
 Header (both kinds):
 
 - Type — `analysis` or `resource`
-- Setup — the exact command that reproduces it: the `opentaint test rule …` / `test approximation run` for `analysis`, or the failed `opentaint scan` for `resource`, each with its project model, rulesets, and dependency-model dirs (plus final memory and timeout/backstop outcome for `resource`)
+- Setup — the exact command that reproduces it: the `opentaint test rule …` / `test model run` for `analysis`, or the failed `opentaint scan` for `resource`, each with its project model, rulesets, and dependency-model dirs (plus final memory and timeout/backstop outcome for `resource`)
 - Run logs — the run's log files, by path: for `analysis`, any debug log or fact-reachability SARIF the caller cited, if present; for `resource`, the scan's output log
 - Minimal repro — the smallest set of files/folders that demonstrates it: for `analysis`, the test project `.opentaint/test-projects/<name>` if one was named; for `resource`, the project model, rulesets, and dependency-model dirs in play (with their rough size)
 - TL;DR — 2–3 sentences: the symptom, and for `analysis` where taint appears to die and what the engine should do instead

@@ -50,4 +50,4 @@ Expect back — the built carriers appended to each batch's `build.done`; `get_s
 
 ## Stage gate
 
-`get_status.py` names unclassified methods, plans, unbuilt batches, or built-but-still-dropped methods. Delete this round's dataflow `test-compiled/` models and finish when its methods are classified and built or terminal. If status reports `models built after the last scan`, report the pending rescan and stop.
+`get_status.py` names unclassified methods, plans, unbuilt batches, or built-but-still-dropped methods. Delete this round's dataflow `test-compiled/` models, if any, and finish when its methods are classified and built or terminal. If status reports `models built after the last scan`, report the pending rescan and stop.

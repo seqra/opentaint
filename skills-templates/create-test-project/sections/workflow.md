@@ -1,6 +1,6 @@
 ### 1. Scaffold the project
 
-The scaffold command and sample form are language-specific — read the reference for your `type`: `references/<lang>-rule.md` for `rule-source` / `rule-sink`, or `references/<lang>-model.md` for `dataflow` (one self-contained reference, no need to read the other). Scaffold the project for the `type`, passing each of the unit's `dependencies` at its pinned version. The scaffold provides the generic taint marker and the fixed test rule the samples run against, so you author only the samples. If the `<name>` project already exists — re-invoked because its surface grew or a dependency moved — extend it instead: add the missing samples and recompile rather than scaffolding fresh. The init command is in that reference.
+The scaffold command and sample form are language-specific — read the reference for your `type`: `references/<lang>-rule.md` for `rule-source` / `rule-sink`, or `references/<lang>-model.md` for `dataflow` (one self-contained reference, no need to read the other). Scaffold the project for the `type`, passing each of the unit's `dependencies` at its pinned version. The scaffold provides the generic taint marker and the fixed test rule the samples run against, so you author only the samples. If the `<name>` project already exists — re-invoked because its surface grew or a dependency moved — extend it instead: add the missing samples and rebuild rather than scaffolding fresh. The init command is in that reference.
 
 ### 2. Write the samples
 
@@ -13,9 +13,9 @@ For a sink unit, the methods are nested under `groups[].sinks`, exercise every m
 
 The sample code, the `rule-test.yaml` form, and which verdicts a type needs are in that reference.
 
-### 3. Compile to the model
+### 3. Check the build
 
-Compile the project you built to `.opentaint/test-compiled/<name>` — a rule side compiles the one sub-project you scaffolded (`sources/` or `sinks/`) to the matching sub-model, a dataflow project compiles once:
+For Java, compile the project you built to `.opentaint/test-compiled/<name>` — a rule side compiles the one sub-project you scaffolded (`sources/` or `sinks/`) to the matching sub-model, a dataflow project compiles once:
 
 ```bash
 # rule side — the one you built
@@ -24,8 +24,10 @@ opentaint compile .opentaint/test-projects/<name>/sources -o .opentaint/test-com
 opentaint compile .opentaint/test-projects/<name> -o .opentaint/test-compiled/<name>
 ```
 
-A clean compile is the deliverable. Feedback loop: a build failure is a fixable samples-or-dependencies problem — surface the real error, fix it, and recompile. On a clean compile set the test-project stage done (per Tracking).
+For Go, skip `opentaint compile`: `test rule run` and `test model run` take the test project directory, resolve its dependencies, and build it themselves. Check that the samples build with the command in the reference instead.
+
+A clean build is the deliverable. Feedback loop: a build failure is a fixable samples-or-dependencies problem — surface the real error, fix it, and rebuild. On a clean build set the test-project stage done (per Tracking).
 
 ### 4. Escalate
 
-When a project won't compile after ~3 fixes with no clear cause → report the failure and leave the test-project stage pending, for the orchestrator to intervene.
+When a project won't build after ~3 fixes with no clear cause → report the failure and leave the test-project stage pending, for the orchestrator to intervene.

@@ -21,7 +21,7 @@ When the app replaces a module with a local directory, add the same replacement 
 
 ### 2. Write the samples
 
-Each unit entry already records the callable's `signature` (`args:<count>`, the receiver excluded) — the callable the sample must match. To shape a faithful call, look at how the callable is used in the project. Write the samples as ordinary `.go` files in `package test` at the side's module root, then run `go mod tidy` there so their dependencies resolve:
+Each unit entry already records the callable's `signature` (`args:<count>`, the receiver excluded) — the callable the sample must match. To shape a faithful call, look at how the callable is used in the project. Write the samples as ordinary `.go` files in `package test` at the side's module root:
 
 - positive sample — a minimal flow that must flag, with the real sink/source signature and no extra hops:
   - **sink** under test → `t := taint.Source(); pkg.TheSink(t)` — convert the marker string to the sink argument's type when it differs
@@ -94,9 +94,18 @@ rules:
 
 The marker rules resolve from the side's `test-rules` root, a selected lib ref resolves from either the built-in ruleset or `.opentaint/rules`, both loaded by `test rule run`. Metavariable names must match across `refs` and `on`.
 
+### 3. Check the build
+
+There is no `opentaint compile` step for Go: `test rule run` takes the side's module directory, resolves its dependencies, and builds it. Check that the samples build in the side's module with:
+
+```bash
+go build -mod=mod ./...
+```
+
+`-mod=mod` lets Go record the samples' dependencies in `go.mod` and `go.sum`.
+
 ## Constraints
 
 - Write ordinary `.go` files, not `_test.go` files — the Go project loader skips test files
-- Diagnose a compile failure with `go build ./...` in the side's module
-- For Go, `opentaint compile` writes a project model that points to the sample sources, not a frozen build — keep the samples fixed after compiling
-- Add `--go-models <model-module>` to `test rule run` only when the flow needs an existing Go model; never add a model to force a rule to pass
+- `test rule run` reads the sample sources directly, not a frozen build — keep the samples fixed once the project is done
+- Add `--dataflow-models .opentaint/dataflow` to `test rule run` only when the flow needs an existing dataflow model; never add a model to force a rule to pass

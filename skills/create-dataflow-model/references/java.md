@@ -13,7 +13,7 @@ An app-internal method sits in the project's own sources under `<project-root>`.
 Scaffold the model project with the same `--dependency` pins as the batch's test project (`.opentaint/test-projects/<batch>/build.gradle.kts`):
 
 ```bash
-opentaint approximation init .opentaint/dataflow/<batch> \
+opentaint model init .opentaint/dataflow/<batch> \
   --language java \
   --dependency "io.projectreactor:reactor-core:3.8.5"
 ```
@@ -69,18 +69,18 @@ public class Mono {
 
 ### 3. Test against the test project
 
-Run `test approximation run` over the compiled test project applying this batch's sources, iterate the sources until the samples pass:
+Run `test model run` on the compiled test model with this batch's models, and iterate the model sources until the samples pass:
 
 ```bash
-opentaint test approximation run .opentaint/test-compiled/<batch> \
+opentaint test model run .opentaint/test-compiled/<batch> \
   -o .opentaint/test-results/<batch> \
-  --dataflow-approximations .opentaint/dataflow/<batch>
+  --dataflow-models .opentaint/dataflow/<batch>
 ```
 
-`test approximation run` applies its bundled source-to-sink rule. The CLI builds the model project with its pinned dependencies. The project `libs` directory supplies the name-patch annotations, `OpentaintNdUtil`, and `ArgumentTypeContext`. A build failure stops the test and reports the compiler errors. OpenTaint rebuilds only when the source, the dependency pins, or the compiler change. Use this command to compile the project without a test:
+`test model run` applies its bundled source-to-sink rule. The CLI builds the model project with its pinned dependencies. The project `libs` directory supplies the name-patch annotations, `OpentaintNdUtil`, and `ArgumentTypeContext`. A build failure stops the test and reports the compiler errors. OpenTaint rebuilds only when the source, the dependency pins, or the compiler change. Use this command to compile the project without a test:
 
 ```bash
-opentaint compile approximations .opentaint/dataflow/<batch>
+opentaint compile models .opentaint/dataflow/<batch>
 ```
 
 A positive sample is a `falseNegative` until the model propagates taint. Read the result with the bundled script — it prints the pass/fail counts and names each failing sample, so you don't parse the JSON by hand:

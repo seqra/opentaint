@@ -32,7 +32,7 @@ Once no sink unit is pending, status checks the active tag-pair matrix. A create
 Inputs:
 - `language`
 
-Expect back — one tag-to-tag join per missing pair, then a clean coverage check. Delete the sink units' `test-compiled/` models.
+Expect back — one tag-to-tag join per missing pair, then a clean coverage check. Delete the sink units' `test-compiled/` models, if any.
 
 ## Stage gate
 

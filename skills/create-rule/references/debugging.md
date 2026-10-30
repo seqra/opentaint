@@ -13,9 +13,10 @@ opentaint test rule reachability <full-id> \
   --ruleset builtin --ruleset <rules-dir>
 ```
 
+- `<model-dir>` — the project model the failing run used. A Go test project has no compiled model: pass its directory as the source path in place of `--project-model <model-dir>`
 - `<full-id>` — the one rule whose sample routes taint through the code under test (`<ruleSetRelativePath>.yaml:<shortId>`). One rule per run — across many rules the trace is unusably huge. Its library `refs` are collected automatically
 - read the sibling `<results-dir>/debug-ifds-fact-reachability.sarif`, not the `-o` file. The `-o` SARIF only shows default scan output. The sibling holds the per-instruction facts that show where taint dies
-- apply the models the failing run used so the trace matches it: `--passthrough-approximations <pass-through-dir>` and/or `--dataflow-approximations <dataflow-dir>`. Taint dying at a modeled call then means that model isn't propagating
+- apply the models the failing run used so the trace matches it: `--passthrough-models <pass-through-dir>` and/or `--dataflow-models <dataflow-dir>`. Taint dying at a modeled call then means that model isn't propagating
 - debug the exact run that showed the problem — same project model, rulesets, dependency-model dirs — or you're debugging something else
 
 ## Reading the trace
@@ -29,14 +30,16 @@ When you suspect the entry method is never reached, add `--entry-points "<method
 
 ## Confirming a dropped library method
 
-When a positive won't pass and the suspicion is a library method on its flow dropping taint (not a rule bug), scan your own compiled sub-model with `--track-external-methods` and read the methods it lists as dropped. Run this diagnostic directly as a foreground, blocking command and wait for exit — never background it or use Monitor:
+When a positive won't pass and the suspicion is a library method on its flow dropping taint (not a rule bug), scan your own test sub-project with `--track-external-methods` and read the methods it lists as dropped. Run this diagnostic directly as a foreground, blocking command and wait for exit — never background it or use Monitor:
 
 ```bash
 opentaint scan --project-model .opentaint/test-compiled/<unit>/<side> \
   -o .opentaint/test-results/<unit>/<side>/diag.sarif \
   --ruleset builtin --ruleset .opentaint/rules --ruleset .opentaint/test-projects/<unit>/<side>/test-rules \
-  --passthrough-approximations .opentaint/pass-through \
+  --passthrough-models .opentaint/pass-through \
   --track-external-methods
 ```
 
-Read `dropped-external-methods.yaml` next to the SARIF: a dropped method on the failing sample's source→sink path is the cause, not the rule — those methods need a model before the positive can pass. This diagnostic scan runs only over your own test sub-model, never the main project model.
+For Go, pass the test project `.opentaint/test-projects/<unit>/<side>` as the source path in place of `--project-model`.
+
+Read `dropped-external-methods.yaml` next to the SARIF: a dropped method on the failing sample's source→sink path is the cause, not the rule — those methods need a model before the positive can pass. This diagnostic scan runs only over your own test sub-project, never the main project model.

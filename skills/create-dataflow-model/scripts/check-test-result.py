@@ -5,7 +5,7 @@
 Summarize an OpenTaint test-result.json so the agent never parses it by hand.
 Prints pass/fail counts and names every failing sample by verdict.
 Exit 0 when all samples pass, 1 when any fail, 2 on a bad/missing file.
-Works for both `test rule run` and `test approximation run` outputs (same shape).
+Works for both `test rule run` and `test model run` outputs (same shape).
 """
 import json
 import sys

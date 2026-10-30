@@ -57,7 +57,7 @@ Expect back — each source's `rule_id` set and `stages.tests_passing: done`.
 
 ## Complete source rules
 
-Created source rules use `untrusted-data-source`, so existing tag joins expand to them automatically. No source-only join assembly is needed. Once all source units pass and `get_status.py` accepts their tags, delete the source units' `test-compiled/` models.
+Created source rules use `untrusted-data-source`, so existing tag joins expand to them automatically. No source-only join assembly is needed. Once all source units pass and `get_status.py` accepts their tags, delete the source units' `test-compiled/` models, if any.
 
 ## Stage gate
 
