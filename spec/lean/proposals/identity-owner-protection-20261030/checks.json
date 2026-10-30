@@ -2,8 +2,8 @@
   "status": "PASS",
   "runtimeVerifiedByThisChecker": false,
   "baseRuntime": "c98d12582a138d5898e94908ee6690dda73998ca",
-  "proposalSha256": "91452c71a6a537711b1b5201bd6ed96ec74efab5cdd62ca2c495521ec0839055",
-  "utc": "2026-10-30T10:59:15.418127+00:00",
+  "proposalSha256": "4c2f5aa8c16acee6afcd70c00ef9d69ef6e5858bffed197f4c269304f472bc8d",
+  "utc": "2026-10-30T13:10:28.903885+00:00",
   "toolchain": "leanprover/lean4:v4.33.1",
   "leanVersion": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
   "moduleSourceHashes": {
@@ -163,13 +163,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/CachedCfgDelivery.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T131025851320Z/CachedCfgDelivery.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/selected-work-20261030/CachedCfgDelivery.lean"
       ],
       "cwd": "spec/lean/proposals/selected-work-20261030",
       "exitCode": 0,
-      "wallSeconds": 3.202482208609581,
-      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/CachedCfgDelivery.log",
+      "wallSeconds": 1.2780216336250305,
+      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T131025851320Z/CachedCfgDelivery.log",
       "logSha256": "fd9d54ad09f5e998e46734dcc30488aa5aca89ab20bd75e15065c15138c4d083"
     },
     {
@@ -180,13 +180,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/IdentityCells.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T131025851320Z/IdentityCells.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/identity-owner-protection-20261030/IdentityCells.lean"
       ],
       "cwd": "spec/lean/proposals/identity-owner-protection-20261030",
       "exitCode": 0,
-      "wallSeconds": 1.1524285972118378,
-      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/IdentityCells.log",
+      "wallSeconds": 0.45274779200553894,
+      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T131025851320Z/IdentityCells.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -197,13 +197,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/ProtectionAdmission.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T131025851320Z/ProtectionAdmission.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/identity-owner-protection-20261030/ProtectionAdmission.lean"
       ],
       "cwd": "spec/lean/proposals/identity-owner-protection-20261030",
       "exitCode": 0,
-      "wallSeconds": 1.6316443532705307,
-      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/ProtectionAdmission.log",
+      "wallSeconds": 0.3362947255373001,
+      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T131025851320Z/ProtectionAdmission.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -214,13 +214,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/OwnerVisibility.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T131025851320Z/OwnerVisibility.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/identity-owner-protection-20261030/OwnerVisibility.lean"
       ],
       "cwd": "spec/lean/proposals/identity-owner-protection-20261030",
       "exitCode": 0,
-      "wallSeconds": 2.066546618938446,
-      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/OwnerVisibility.log",
+      "wallSeconds": 0.7597305029630661,
+      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T131025851320Z/OwnerVisibility.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -230,12 +230,12 @@
         "1",
         "-M",
         "768",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/Audit.lean"
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T131025851320Z/Audit.lean"
       ],
-      "cwd": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z",
+      "cwd": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T131025851320Z",
       "exitCode": 0,
-      "wallSeconds": 0.20655712485313416,
-      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T105907140726Z/Audit.log",
+      "wallSeconds": 0.20958928763866425,
+      "log": "spec/lean/.lake/verification/identity-owner-protection-20261030/20261030T131025851320Z/Audit.log",
       "logSha256": "b4181cc6eea1ee5440626aa0c9142d81a1bba8f61d4d2b5c1226dc4d3bab528a"
     }
   ],

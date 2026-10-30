@@ -2,7 +2,11 @@
 
 Date: 30 October 2026. Base analyzer:
 `c98d12582a138d5898e94908ee6690dda73998ca`.
-Status: proposal only. None of these changes is implemented.
+Status: the selected changes are implemented at
+`edb2e06cdb17eecafbe03415236bf56c57910239`.
+See the [closed campaign report](../reports/bidirectional-identity-owner-protection-performance-20261030.md)
+and the [new next proposal](bidirectional-input-admission-delivery-next-iteration-20261030.md).
+The base measurements below are historical.
 The detailed [implementation proposal](bidirectional-identity-owner-protection-implementation-20261030.md)
 contains the APIs, source changes, checked formal models and test gates.
 
