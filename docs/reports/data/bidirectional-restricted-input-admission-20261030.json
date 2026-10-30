@@ -1,0 +1,224 @@
+{
+  "state": "PASS_DIAGNOSTIC_CONTROLS",
+  "utc": "2026-10-30T22:02:09.770639+00:00",
+  "runtimeUnderReview": "edb2e06cdb17eecafbe03415236bf56c57910239",
+  "productionSourcesUnchanged": true,
+  "newProjectAnalyzerRuns": 0,
+  "testCommand": "cd core && ./gradlew :opentaint-dataflow-core:opentaint-dataflow:test --tests org.opentaint.dataflow.bidi.RestrictedSubscriptionEligibilityTest",
+  "testSummary": {
+    "name": "org.opentaint.dataflow.bidi.RestrictedSubscriptionEligibilityTest",
+    "tests": "5",
+    "skipped": "0",
+    "failures": "0",
+    "errors": "0",
+    "timestamp": "2026-10-30T21:56:45",
+    "hostname": "dev-1",
+    "time": "0.094"
+  },
+  "testCases": [
+    {
+      "name": "different actual paths and marks can start the same canonical initial()",
+      "classname": "org.opentaint.dataflow.bidi.RestrictedSubscriptionEligibilityTest",
+      "time": "0.052"
+    },
+    {
+      "name": "initial admission occurs before there is a post-statement entry row()",
+      "classname": "org.opentaint.dataflow.bidi.RestrictedSubscriptionEligibilityTest",
+      "time": "0.025"
+    },
+    {
+      "name": "empty demand does not remove native or reversed normal record replay()",
+      "classname": "org.opentaint.dataflow.bidi.RestrictedSubscriptionEligibilityTest",
+      "time": "0.008"
+    },
+    {
+      "name": "normalized publication applicability does not establish current demand admission()",
+      "classname": "org.opentaint.dataflow.bidi.RestrictedSubscriptionEligibilityTest",
+      "time": "0.002"
+    },
+    {
+      "name": "two branch writes offer one call input twice even when only one subscription is fresh()",
+      "classname": "org.opentaint.dataflow.bidi.RestrictedSubscriptionEligibilityTest",
+      "time": "0.006"
+    }
+  ],
+  "currentProjectCounts": {
+    "conductor": {
+      "latestReached": "run-4",
+      "latestComplete": "run-3",
+      "accepted": "run-3",
+      "partialRun4": {
+        "summaryWork": {
+          "acceptedDeltas": 2439370,
+          "createdGroups": 195704,
+          "createdZeroOnlyEntries": 33562,
+          "createdIndexPostings": 3391063
+        },
+        "abstractionWork": {
+          "inputArrivals": 4856738,
+          "restrictedIntersections": 2125414,
+          "initialCandidates": 2167152,
+          "newInitials": 28965
+        }
+      },
+      "nonfreshOfferLowerBound": 2417368
+    },
+    "Stirling-PDF": {
+      "latestReached": "run-6",
+      "latestComplete": "run-5",
+      "accepted": "run-5",
+      "partialRun6": {
+        "N2": {
+          "acceptedDeltas": 1029061,
+          "createdGroups": 8916,
+          "createdZeroOnlyEntries": 17724,
+          "createdIndexPostings": 1012153
+        },
+        "abstraction": {
+          "inputArrivals": 2334947,
+          "restrictedIntersections": 12077,
+          "initialCandidates": 33841,
+          "newInitials": 7988
+        }
+      },
+      "nonfreshOfferLowerBound": 1305886
+    }
+  },
+  "controls": [
+    {
+      "name": "branch convergence",
+      "given": "Two separate field-write producers retain the same exact root T and reach one call; no callee answer yet",
+      "observed": {
+        "subscriptionOffers": 2,
+        "freshSubscriptions": 1,
+        "rawLinks": 2,
+        "completedCallOutputRows": 0
+      }
+    },
+    {
+      "name": "many actuals, one initial",
+      "run": 3,
+      "limit": 2,
+      "demand": "p.[any]/FLOW",
+      "actuals": [
+        "p.f.a.$/T",
+        "p.f.b.$/U"
+      ],
+      "initials": [
+        "p.f.*/FLOW",
+        "p.f.*/FLOW"
+      ],
+      "sameCanonicalInitialObject": true,
+      "summary": "p.f.*/FLOW -> ret.*/FLOW",
+      "differentAnswers": [
+        "ret.a.$/T",
+        "ret.b.$/U"
+      ]
+    },
+    {
+      "name": "entry admission precedes output storage",
+      "observed": "Initial admitted and boundary rules applied while entrypoint post-statement row is empty. Repeated initial does no boundary work because InitialFactStore rejects it."
+    },
+    {
+      "name": "native replay with empty demand",
+      "forwardRun": 3,
+      "backwardRun": 4,
+      "normalRecord": "p.*/FLOW -> ret.*/FLOW",
+      "forwardActual": "p.$/T",
+      "backwardActual": "ret.$/T",
+      "observed": "Forward native callback and backward reversed-view callback both occur with no initial emission."
+    },
+    {
+      "name": "normalized applicability is not demand authorization",
+      "run": 3,
+      "demand": "p.[any]/FLOW -> ret.[any]/FLOW",
+      "supportingActual": "p.$/T",
+      "supportingInitial": "p.$/FLOW",
+      "rawNormalSummary": "p.$/FLOW -> ret.$/FLOW",
+      "normalizedPublishedSummary": "p.*/FLOW -> ret.*/FLOW",
+      "offeredActual": "p.*/FLOW",
+      "initialEmissionEmpty": true,
+      "publicationMatchNonempty": true,
+      "scope": "Production policy/normalization/C5/matcher control. It proves applicability only. Under the selected policy, apply persisted records first and skip current-summary replay/subscription when demand admission is empty. This is not a soundness counterexample to that gate."
+    }
+  ],
+  "artifactBindings": {
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/RestrictedSubscriptionEligibilityTest.kt": {
+      "sha256": "d581094f4bd8a95d4d9f0b342b32661866d1bf90e1a7b1774da37727c338b449",
+      "bytes": 7570
+    },
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RestrictedSubscriptionEligibilityTest.xml": {
+      "sha256": "0f0cb0aadff000373e4de0557542bdf0796b28f10b576afdca09164f6b488803",
+      "bytes": 1285
+    },
+    "/drive-testcomp/opentaint-go-rules/identity-owner-protection-20261030/preparation/restricted-subscription-eligibility-tests.log": {
+      "sha256": "03d53820224d235e93d402f04990a5cb1e6e10249469064f8989f05c2bbaad89",
+      "bytes": 8557
+    },
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt": {
+      "sha256": "15c9dc1d1ee7cc2a1bc2fd2e2f3ee289eb5740d698034bc637c6d8f4e707e03c",
+      "bytes": 45337
+    },
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodCallServices.kt": {
+      "sha256": "58eb666c28d4ecb0884769bd2327c3e5f6b8319c38333a159a395de7b71c4ca6",
+      "bytes": 35856
+    },
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SubscriptionManager.kt": {
+      "sha256": "583a747561d45ac727d3d553cf58bc19934457331d2267131e1c94b5a045f95b",
+      "bytes": 15273
+    },
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandStore.kt": {
+      "sha256": "bd08ff4d9b11fa9e0ea1172c52b48f7ce42e963d05ad2e39b2715011b5d36f1b",
+      "bytes": 11479
+    },
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/InitialFacts.kt": {
+      "sha256": "0028d24342fb0bc64b2062734fe450e1f184dd68856922d6a196607d794f9abb",
+      "bytes": 352
+    },
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/AddedFacts.kt": {
+      "sha256": "0c4106b0a1e92fe7d2aea73f5676b1c7b34dd9904e9bcb0528e1a4eca8c7a5d4",
+      "bytes": 3175
+    },
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/RestrictedInitialPolicy.kt": {
+      "sha256": "85c0afc84e4f9759961d98a5d57eaf82a87cdaf80d3380044046cc43325bc14d",
+      "bytes": 6562
+    },
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/FlowSummaryNormalization.kt": {
+      "sha256": "42ebef857f4c695cd260dea3738927b512ef843ebb597409e3ac62607404b86e",
+      "bytes": 1695
+    },
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Summary.kt": {
+      "sha256": "f21c80f317d08d9ffc70f86cef2138fb40cd16e7d0c02956700c3f507e32c24f",
+      "bytes": 13024
+    },
+    "/drive-testcomp/opentaint-go-rules/identity-owner-protection-20261030/preparation/conductor-profile-notes.json": {
+      "sha256": "cb3163f3f544d6e097bb63100f4b558d70cc808d73338139cdd7211666ac5e58",
+      "bytes": 157551
+    },
+    "/drive-testcomp/opentaint-go-rules/identity-owner-protection-20261030/preparation/stirling-profile-notes.json": {
+      "sha256": "8096eae78b18d2a56c6e24d3f0f28c41ea9be5eb35c7a9ae409d87378f35b838",
+      "bytes": 434913
+    }
+  },
+  "limits": [
+    "No dynamic per-project attribution of repeated inputs or no-demand eligibility hit rate.",
+    "No new runtime subscription gate, initial-store removal, native replay policy or demand semantics was implemented.",
+    "Five finite diagnostic controls do not prove full-engine equivalence or project speedup."
+  ],
+  "selectedCallPolicy": {
+    "scope": "Restricted runs. No production implementation change in this investigation.",
+    "order": [
+      "Apply persisted NORMAL summaries using the existing native/reversed record rules.",
+      "Run the same bounded-input demand admission as initial emission. Empty result ends this current-run route.",
+      "For a nonempty result, register/replay current summaries, subscribe to new ones, and submit emitted initials."
+    ],
+    "withdrawn": "Do not test compatibility with hypothetical normalized summary premises. Applicability alone does not make a current-run answer necessary.",
+    "dedupDistinction": "Demand match is independent of whether the callee initial was already started. Keep full actual input and caller binding for summary application.",
+    "lookupResultDelivery": {
+      "caller": "Perform bounded-input demand lookup and initial emission once. Send the completed immutable collection of canonical InitialAp keys addressed to the full callee MethodKey.",
+      "callee": "Consume the provided initial keys through the existing addInitial start gate. Do not repeat input limiting, leaf scanning, demand lookup, or demand eligibility testing.",
+      "retainedCallerState": "Keep the original actual Facts and full CallerRef, layers and stage for summary matching/application. Do not replace them with the emitted initial.",
+      "scope": "Proposed restricted normal-input delivery only. Keys and payload remain within the same run and shared AP manager. Existing required-delivery and cancellation contracts apply. No production implementation change."
+    }
+  }
+}
