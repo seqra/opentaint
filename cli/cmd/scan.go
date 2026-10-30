@@ -483,6 +483,9 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	var suggestions []output.Suggestion
 	if analyzerFail != nil {
 		suggestions = appendLogSuggestion(suggestions)
+		if analyzerLog, ok := analyzerLogSuggestion(analyzerFail, nativeBuilder.LogsFile()); ok {
+			suggestions = append(suggestions, analyzerLog)
+		}
 	}
 	if report != nil {
 		// Scan does not expose summary's filter/group flags, so pass zero values:

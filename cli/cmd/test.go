@@ -41,7 +41,7 @@ func testExitCodesHelp(passedLine string) string {
   0    ` + passedLine + `
   1    General failure (configuration or infrastructure error)
   2    One or more tests failed (false negatives/positives or skipped samples)
-  252  Unhandled analyzer exception
+  252  Unhandled analyzer exception (details are in the analyzer log, whose path is printed)
   253  Out of memory (try increasing --max-memory)
   254  Analysis timed out (try increasing --timeout)
   255  Project configuration error`

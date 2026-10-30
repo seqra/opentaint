@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/seqra/opentaint/internal/analyzer"
 	"github.com/seqra/opentaint/internal/globals"
 	"github.com/seqra/opentaint/internal/output"
 )
@@ -27,6 +28,19 @@ func logSuggestion() (output.Suggestion, bool) {
 	return output.Suggestion{
 		Description: "For full details, check the log file:",
 		Command:     globals.LogPath,
+	}, true
+}
+
+// analyzerLogSuggestion points at the analyzer log after an unhandled analyzer exception
+// (exit code 252), whose details are only in that log. The second result is false for other
+// outcomes.
+func analyzerLogSuggestion(fail *analyzer.Error, logsFile string) (output.Suggestion, bool) {
+	if fail == nil || fail.ExitCode != analyzer.ExitException || logsFile == "" {
+		return output.Suggestion{}, false
+	}
+	return output.Suggestion{
+		Description: "For the analyzer exception, check the analyzer log:",
+		Command:     logsFile,
 	}, true
 }
 
