@@ -9,7 +9,7 @@ import (
 )
 
 func TestTestInitCommandsRequireLanguage(t *testing.T) {
-	for _, cmd := range []*cobra.Command{testRuleInitCmd, testApproximationInitCmd} {
+	for _, cmd := range []*cobra.Command{testRuleInitCmd, testModelInitCmd} {
 		flag := cmd.Flags().Lookup("language")
 		if flag == nil {
 			t.Fatalf("%s has no language flag", cmd.CommandPath())

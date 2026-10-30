@@ -80,7 +80,7 @@ func TestAnalyzerBuildNativeCommandRoutesGoModels(t *testing.T) {
 }
 
 func TestGoModelsFlagIsGone(t *testing.T) {
-	for _, command := range []*cobra.Command{scanCmd, testRuleRunCmd, testApproximationRunCmd} {
+	for _, command := range []*cobra.Command{scanCmd, testRuleRunCmd, testModelRunCmd} {
 		if command.Flags().Lookup("go-models") != nil {
 			t.Errorf("%s still exposes --go-models", command.CommandPath())
 		}
@@ -95,7 +95,7 @@ func TestAddDataflowModelsRoutesEachLanguage(t *testing.T) {
 	writeTestFile(t, filepath.Join(root, "go", "go.mod"), "module opentaint\n")
 
 	b := NewAnalyzerBuilder()
-	addDataflowApproximations(b, []string{root}, "")
+	addDataflowModels(b, []string{root}, "")
 
 	if want := []string{filepath.Join(root, "java", "classes")}; !reflect.DeepEqual(b.dataflowApproximations, want) {
 		t.Errorf("Java class directories = %v, want %v", b.dataflowApproximations, want)

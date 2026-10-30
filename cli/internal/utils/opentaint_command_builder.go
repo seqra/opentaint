@@ -181,19 +181,19 @@ func (cb *OpentaintCommandBuilder) WithRuleID(ruleIDs []string) *OpentaintComman
 	return cb
 }
 
-func (cb *OpentaintCommandBuilder) WithPassthroughApproximations(paths []string) *OpentaintCommandBuilder {
+func (cb *OpentaintCommandBuilder) WithPassthroughModels(paths []string) *OpentaintCommandBuilder {
 	for _, p := range paths {
 		if p != "" {
-			cb.arrayFlags["passthrough-approximations"] = append(cb.arrayFlags["passthrough-approximations"], p)
+			cb.arrayFlags["passthrough-models"] = append(cb.arrayFlags["passthrough-models"], p)
 		}
 	}
 	return cb
 }
 
-func (cb *OpentaintCommandBuilder) WithDataflowApproximations(paths []string) *OpentaintCommandBuilder {
+func (cb *OpentaintCommandBuilder) WithDataflowModels(paths []string) *OpentaintCommandBuilder {
 	for _, p := range paths {
 		if p != "" {
-			cb.arrayFlags["dataflow-approximations"] = append(cb.arrayFlags["dataflow-approximations"], p)
+			cb.arrayFlags["dataflow-models"] = append(cb.arrayFlags["dataflow-models"], p)
 		}
 	}
 	return cb
@@ -380,8 +380,8 @@ func BuildScanCommandWithDocker(base *OpentaintCommandBuilder, projectPath, sari
 		CopyFlagsFrom(base).
 		WithOutput("/output/" + sarifName).
 		WithRuleset(containerRulesets)
-	mapDockerInputPaths(scanCmd, base, "dataflow-approximations", "/dataflow-approximations", &volumes)
-	mapDockerInputPaths(scanCmd, base, "passthrough-approximations", "/passthrough-approximations", &volumes)
+	mapDockerInputPaths(scanCmd, base, "dataflow-models", "/dataflow-models", &volumes)
+	mapDockerInputPaths(scanCmd, base, "passthrough-models", "/passthrough-models", &volumes)
 
 	return fmt.Sprintf("docker run --rm %s ghcr.io/seqra/opentaint:latest %s", volumes, scanCmd.Build())
 }

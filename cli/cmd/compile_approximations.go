@@ -40,7 +40,7 @@ func (b *approximationBuilder) Fingerprint() (string, error) {
 		autobuilder.Override, info.Size(), info.ModTime().UnixNano()), nil
 }
 
-// Prepare updates the approximation API jar in the model project.
+// Prepare updates the model API jar in the model project.
 // The builder reads the jar from the analyzer only once.
 func (b *approximationBuilder) Prepare(projectDir string) error {
 	if b.apiJar == nil {
@@ -61,27 +61,27 @@ func (b *approximationBuilder) Compile(projectDir, projectModelDir string) error
 
 	javaRunner := newAutobuilderJavaRunner()
 	if _, err := javaRunner.EnsureJava(); err != nil {
-		return fmt.Errorf("failed to resolve Java for approximation compilation: %w", err)
+		return fmt.Errorf("failed to resolve Java for model compilation: %w", err)
 	}
 
-	logsDir, err := os.MkdirTemp("", "opentaint-approximation-logs-*")
+	logsDir, err := os.MkdirTemp("", "opentaint-model-logs-*")
 	if err != nil {
-		return fmt.Errorf("failed to create temp directory for approximation build logs: %w", err)
+		return fmt.Errorf("failed to create temp directory for model build logs: %w", err)
 	}
-	logsFile := filepath.Join(logsDir, "approximation-build.log")
+	logsFile := filepath.Join(logsDir, "model-build.log")
 
 	// Show the spinner for direct and automatic builds.
-	output.LogInfof("Compiling approximation project %s", projectDir)
+	output.LogInfof("Compiling model project %s", projectDir)
 	compile := func() error {
 		return compileProjectWithLogs(projectModelDir, projectDir, autobuilderJarPath, logsFile, true, javaRunner)
 	}
-	if err := out.RunWithSpinner("Compiling approximation project "+filepath.Base(projectDir), compile); err != nil {
+	if err := out.RunWithSpinner("Compiling model project "+filepath.Base(projectDir), compile); err != nil {
 		// Show compiler errors when they are available.
 		// Keep the full log if no compiler error is available.
 		if diagnostics := autobuilder.CompilerDiagnostics(logsFile); diagnostics != "" {
-			return fmt.Errorf("approximation project %s failed to compile:\n%s", projectDir, diagnostics)
+			return fmt.Errorf("model project %s failed to compile:\n%s", projectDir, diagnostics)
 		}
-		return fmt.Errorf("failed to compile approximation project %s (build log: %s): %w", projectDir, logsFile, err)
+		return fmt.Errorf("failed to compile model project %s (build log: %s): %w", projectDir, logsFile, err)
 	}
 
 	_ = os.RemoveAll(logsDir)

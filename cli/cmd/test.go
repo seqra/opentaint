@@ -8,8 +8,8 @@ import (
 
 var testCmd = &cobra.Command{
 	Use:   "test",
-	Short: "Create and run rule and approximation tests",
-	Long:  `Tools for creating test projects, running annotated rule and approximation tests, and debugging rule reachability.`,
+	Short: "Create and run rule and model tests",
+	Long:  `Tools for creating test projects, running annotated rule and model tests, and debugging rule reachability.`,
 }
 
 var testRuleCmd = &cobra.Command{
@@ -17,14 +17,22 @@ var testRuleCmd = &cobra.Command{
 	Short: "Create, run, and debug detection-rule tests",
 }
 
+var testModelCmd = &cobra.Command{
+	Use:   "model",
+	Short: "Create and run dataflow model tests",
+}
+
+// testApproximationCmd is the deprecated name of testModelCmd.
 var testApproximationCmd = &cobra.Command{
-	Use:   "approximation",
-	Short: "Create and run dataflow-approximation tests",
+	Use:        "approximation",
+	Short:      testModelCmd.Short,
+	Deprecated: "use 'opentaint test model' instead",
 }
 
 func init() {
 	rootCmd.AddCommand(testCmd)
 	testCmd.AddCommand(testRuleCmd)
+	testCmd.AddCommand(testModelCmd)
 	testCmd.AddCommand(testApproximationCmd)
 }
 
@@ -49,5 +57,5 @@ func addTestRunFlags(
 	cmd.Flags().StringVarP(outputDir, "output", "o", "", "Directory for test-result.json and test-results.sarif")
 	cmd.Flags().DurationVar(timeout, "timeout", 600*time.Second, "Analysis timeout")
 	cmd.Flags().StringVar(maxMemory, "max-memory", "8G", "Maximum analyzer heap size (e.g., 8G)")
-	cmd.Flags().StringArrayVar(dataflow, "dataflow-approximations", nil, "Java or Go model project, Java model build output, or a directory that holds them (repeatable)")
+	addDataflowModelsFlag(cmd, dataflow)
 }

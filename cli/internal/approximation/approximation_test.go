@@ -471,7 +471,7 @@ func TestBuildRefusesToOverwriteUnrelatedDirectory(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected a build into an unrelated directory to be refused")
 	}
-	if !strings.Contains(err.Error(), "not an approximation build output") {
+	if !strings.Contains(err.Error(), "not a model build output") {
 		t.Errorf("unexpected error: %v", err)
 	}
 	if content, readErr := os.ReadFile(precious); readErr != nil || string(content) != "important user data" {

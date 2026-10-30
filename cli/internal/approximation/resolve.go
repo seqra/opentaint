@@ -204,7 +204,7 @@ func emptyPathWarning(path string) string {
 	if source, found := firstJavaSource(path); found {
 		return fmt.Sprintf(
 			"%s holds Java model sources (e.g. %s) but no model project, so they are not used. "+
-				"Create one with 'opentaint approximation init <dir> --language java "+
+				"Create one with 'opentaint model init <dir> --language java "+
 				"--dependency <group:artifact:version>' and move the sources under <dir>/src/main/java",
 			path, source,
 		)

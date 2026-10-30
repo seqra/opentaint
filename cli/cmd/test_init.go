@@ -83,10 +83,10 @@ Go, use module@version. Use the versions from the target application.`,
 	},
 }
 
-var testApproximationInitCmd = &cobra.Command{
+var testModelInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
-	Short: "Create a dataflow approximation test project",
-	Long: `Create a minimal project for testing OpenTaint dataflow approximations.
+	Short: "Create a dataflow model test project",
+	Long: `Create a minimal project for testing OpenTaint dataflow models.
 
 Use --language java to create a Gradle project. The project includes:
   - build.gradle.kts with compile-only dependencies
@@ -101,8 +101,7 @@ Use --language go to create a Go module with module path "test". The module incl
 
 Positive and negative samples are specified via rule-test.yaml.
 
-The approximation under test is supplied separately at test time with
---dataflow-approximations.
+The models under test are supplied separately at test time with --dataflow-models.
 
 Use --dependency to add each library the samples use. For Java, use Maven coordinates. For
 Go, use module@version. Use the versions from the target application.`,
@@ -112,21 +111,21 @@ Go, use module@version. Use the versions from the target application.`,
 		rejectOtherTestProjectLanguage(args[0], language)
 		switch language {
 		case "java":
-			if err := testproject.Bootstrap(args[0], "approximation-test-project", initApproxProjectDeps); err != nil {
+			if err := testproject.Bootstrap(args[0], "model-test-project", initApproxProjectDeps); err != nil {
 				out.Fatalf("Failed to bootstrap test project: %s", err)
 			}
 			if err := testapprox.Scaffold(args[0]); err != nil {
-				out.Fatalf("Failed to scaffold approximation project: %s", err)
+				out.Fatalf("Failed to scaffold model test project: %s", err)
 			}
-			fmt.Printf("Approximation test project initialized at %s\n", args[0])
+			fmt.Printf("Model test project initialized at %s\n", args[0])
 		case "go":
 			if err := testproject.BootstrapGo(args[0], testProjectModulePath, initApproxProjectDeps); err != nil {
 				out.Fatalf("Failed to bootstrap test project: %s", err)
 			}
 			if err := testapprox.ScaffoldGo(args[0]); err != nil {
-				out.Fatalf("Failed to scaffold approximation project: %s", err)
+				out.Fatalf("Failed to scaffold model test project: %s", err)
 			}
-			fmt.Printf("Approximation test project initialized at %s\n", args[0])
+			fmt.Printf("Model test project initialized at %s\n", args[0])
 			suggest("After writing the samples, resolve their dependencies with", "go mod tidy")
 		}
 	},
@@ -170,10 +169,11 @@ func init() {
 	testRuleInitCmd.Flags().BoolVar(&initRuleSourcesOnly, "sources-only", false,
 		"Create only the sources test project")
 
-	testApproximationCmd.AddCommand(testApproximationInitCmd)
-	testApproximationInitCmd.Flags().StringArrayVar(&initApproxProjectDeps, "dependency", nil,
+	testModelCmd.AddCommand(testModelInitCmd)
+	testModelInitCmd.Flags().StringArrayVar(&initApproxProjectDeps, "dependency", nil,
 		"Maven coordinate for Java or module@version for Go (repeatable)")
-	testApproximationInitCmd.Flags().StringVar(&initApproxLanguage, "language", "",
+	testModelInitCmd.Flags().StringVar(&initApproxLanguage, "language", "",
 		"Test project language: java or go")
-	_ = testApproximationInitCmd.MarkFlagRequired("language")
+	_ = testModelInitCmd.MarkFlagRequired("language")
+	testApproximationCmd.AddCommand(deprecatedCommand(testModelInitCmd, "init", "opentaint test model init"))
 }

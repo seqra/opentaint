@@ -16,16 +16,16 @@ var (
 	testApproxDataflow  []string
 )
 
-var testApproximationRunCmd = &cobra.Command{
+var testModelRunCmd = &cobra.Command{
 	Use:   "run <project-model>",
-	Short: "Run dataflow approximation tests on a compiled project model",
-	Long: `Run the samples specified in rule-test.yaml with the supplied dataflow approximations applied.
+	Short: "Run dataflow model tests on a compiled project model",
+	Long: `Run the samples specified in rule-test.yaml with the supplied dataflow models applied.
 
 A built-in source-to-sink harness rule is applied automatically; positive samples reference the
 approximation-rule.yaml rule with id "approximation-rule". The rule matches the project model's
 language: taint.Source() to taint.Sink() for a Go project, Taint.source() to Taint.sink() otherwise.
 
-` + testExitCodesHelp("All approximation tests passed"),
+` + testExitCodesHelp("All model tests passed"),
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ruleDir, err := os.MkdirTemp("", "opentaint-approx-rule-*")
@@ -37,13 +37,13 @@ language: taint.Source() to taint.Sink() for a Go project, Taint.source() to Tai
 		}
 
 		runTestProject(args[0], testProjectOptions{
-			label:          "Approximation tests",
-			tempDir:        "opentaint-test-approximations-*",
+			label:          "Model tests",
+			tempDir:        "opentaint-test-models-*",
 			rulesets:       []string{ruleDir},
 			outputDir:      testApproxOutputDir,
 			timeout:        testApproxTimeout,
 			maxMemory:      testApproxMaxMemory,
-			dataflowApprox: testApproxDataflow,
+			dataflowModels: testApproxDataflow,
 		})
 	},
 }
@@ -59,12 +59,13 @@ func projectModelLanguage(projectModel string) string {
 }
 
 func init() {
-	testApproximationCmd.AddCommand(testApproximationRunCmd)
+	testModelCmd.AddCommand(testModelRunCmd)
 	addTestRunFlags(
-		testApproximationRunCmd,
+		testModelRunCmd,
 		&testApproxOutputDir,
 		&testApproxTimeout,
 		&testApproxMaxMemory,
 		&testApproxDataflow,
 	)
+	testApproximationCmd.AddCommand(deprecatedCommand(testModelRunCmd, "run", "opentaint test model run"))
 }

@@ -268,10 +268,10 @@ func TestBuildScanCommandWithDocker(t *testing.T) {
 	}
 }
 
-func TestBuildScanCommandWithDockerMountsApproximationInputs(t *testing.T) {
+func TestBuildScanCommandWithDockerMountsModelInputs(t *testing.T) {
 	base := NewScanCommand("").
-		WithDataflowApproximations([]string{"/host/dataflow"}).
-		WithPassthroughApproximations([]string{"/host/passthrough.yaml"})
+		WithDataflowModels([]string{"/host/dataflow"}).
+		WithPassthroughModels([]string{"/host/passthrough.yaml"})
 
 	cmd := BuildScanCommandWithDocker(
 		base,
@@ -281,15 +281,15 @@ func TestBuildScanCommandWithDockerMountsApproximationInputs(t *testing.T) {
 	)
 	expected := "docker run --rm " +
 		"-v /host/project:/project -v /host/output:/output " +
-		"-v /host/dataflow:/dataflow-approximations/input0 " +
-		"-v /host/passthrough.yaml:/passthrough-approximations/input0 " +
+		"-v /host/dataflow:/dataflow-models/input0 " +
+		"-v /host/passthrough.yaml:/passthrough-models/input0 " +
 		"ghcr.io/seqra/opentaint:latest opentaint scan /project " +
 		"--output /output/results.sarif " +
-		"--dataflow-approximations /dataflow-approximations/input0 " +
-		"--passthrough-approximations /passthrough-approximations/input0"
+		"--dataflow-models /dataflow-models/input0 " +
+		"--passthrough-models /passthrough-models/input0"
 
 	if cmd != expected {
-		t.Fatalf("Docker approximation inputs = %q, want %q", cmd, expected)
+		t.Fatalf("Docker model inputs = %q, want %q", cmd, expected)
 	}
 }
 

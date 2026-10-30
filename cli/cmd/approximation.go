@@ -14,20 +14,20 @@ var (
 	initApproximationLanguage string
 )
 
-var approximationCmd = &cobra.Command{
-	Use:   "approximation",
-	Short: "Create dataflow approximation projects",
-	Long: `A dataflow approximation project holds code-based models of how taint moves through
+var modelCmd = &cobra.Command{
+	Use:   "model",
+	Short: "Create dataflow model projects",
+	Long: `A dataflow model project holds code-based models of how taint moves through
 methods the analyzer cannot see into, together with the dependency versions those models
 use.
 
-Pass a project, or a directory that holds projects, to --dataflow-approximations.`,
+Pass a project, or a directory that holds projects, to --dataflow-models.`,
 }
 
-var approximationInitCmd = &cobra.Command{
+var modelInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
-	Short: "Create a dataflow approximation project",
-	Long: `Create an OpenTaint dataflow approximation project.
+	Short: "Create a dataflow model project",
+	Long: `Create an OpenTaint dataflow model project.
 
 Use --language java to create a Java project. A Java project includes:
   - build.gradle.kts with compile-only dependencies, settings.gradle.kts
@@ -51,14 +51,14 @@ Go, use module@version. Use the versions from the target application.`,
 		case "go":
 			initGoApproximation(projectPath, args[0])
 		default:
-			out.Fatalf("Unsupported approximation language %q. Use java or go", initApproximationLanguage)
+			out.Fatalf("Unsupported model language %q. Use java or go", initApproximationLanguage)
 		}
 	},
 }
 
 func initJavaApproximation(projectPath, projectArg string) {
 	if approximation.IsGoProject(projectPath) {
-		out.Fatalf("The output directory already contains a Go approximation project: %s", projectPath)
+		out.Fatalf("The output directory already contains a Go model project: %s", projectPath)
 	}
 
 	analyzerJarPath, err := ensureAnalyzerAvailable()
@@ -70,52 +70,60 @@ func initJavaApproximation(projectPath, projectArg string) {
 	// Warn the user because this removes dependency pins that they added manually.
 	existing := approximation.IsProject(projectPath)
 	if existing {
-		out.Warnf("Replacing the build file of the existing approximation project at %s. "+
+		out.Warnf("Replacing the build file of the existing model project at %s. "+
 			"Pass every dependency the models need, not only the new ones", projectPath)
 	}
 
 	if err := approximation.Scaffold(projectPath, initApproximationDeps, analyzerJarPath); err != nil {
-		out.Fatalf("Failed to create approximation project: %s", err)
+		out.Fatalf("Failed to create model project: %s", err)
 	}
 
 	printApproximationInitResult(projectPath, existing)
-	suggest("To compile the models run", fmt.Sprintf("opentaint compile approximations %s", projectArg))
+	suggest("To compile the models run", fmt.Sprintf("opentaint compile models %s", projectArg))
 }
 
 func initGoApproximation(projectPath, projectArg string) {
 	if approximation.IsProject(projectPath) {
-		out.Fatalf("The output directory already contains a Java approximation project: %s", projectPath)
+		out.Fatalf("The output directory already contains a Java model project: %s", projectPath)
 	}
 
 	existing := approximation.IsGoProject(projectPath)
 	if existing {
-		out.Warnf("Replacing go.mod in the existing approximation project at %s. "+
+		out.Warnf("Replacing go.mod in the existing model project at %s. "+
 			"Pass every dependency the models need", projectPath)
 	}
 
 	if err := approximation.ScaffoldGo(projectPath, initApproximationDeps); err != nil {
-		out.Fatalf("Failed to create Go approximation project: %s", err)
+		out.Fatalf("Failed to create Go model project: %s", err)
 	}
 
 	printApproximationInitResult(projectPath, existing)
-	suggest("To apply the models run", fmt.Sprintf("opentaint scan <project> --dataflow-approximations %s", projectArg))
+	suggest("To apply the models run", fmt.Sprintf("opentaint scan <project> --dataflow-models %s", projectArg))
 }
 
 func printApproximationInitResult(projectPath string, existing bool) {
 	if existing {
-		fmt.Printf("Approximation project updated at %s\n", projectPath)
+		fmt.Printf("Model project updated at %s\n", projectPath)
 	} else {
-		fmt.Printf("Approximation project initialized at %s\n", projectPath)
+		fmt.Printf("Model project initialized at %s\n", projectPath)
 	}
 }
 
 func init() {
-	rootCmd.AddCommand(approximationCmd)
-	approximationCmd.AddCommand(approximationInitCmd)
+	rootCmd.AddCommand(modelCmd)
+	modelCmd.AddCommand(modelInitCmd)
 
-	approximationInitCmd.Flags().StringArrayVar(&initApproximationDeps, "dependency", nil,
+	modelInitCmd.Flags().StringArrayVar(&initApproximationDeps, "dependency", nil,
 		"Maven coordinate for Java or module@version for Go (repeatable)")
-	approximationInitCmd.Flags().StringVar(&initApproximationLanguage, "language", "",
+	modelInitCmd.Flags().StringVar(&initApproximationLanguage, "language", "",
 		"Model language: java or go")
-	_ = approximationInitCmd.MarkFlagRequired("language")
+	_ = modelInitCmd.MarkFlagRequired("language")
+
+	approximationCmd := &cobra.Command{
+		Use:        "approximation",
+		Short:      modelCmd.Short,
+		Deprecated: "use 'opentaint model' instead",
+	}
+	approximationCmd.AddCommand(deprecatedCommand(modelInitCmd, "init", "opentaint model init"))
+	rootCmd.AddCommand(approximationCmd)
 }
