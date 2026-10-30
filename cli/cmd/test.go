@@ -52,10 +52,11 @@ func addTestRunFlags(
 	outputDir *string,
 	timeout *time.Duration,
 	maxMemory *string,
-	dataflow *[]string,
+	dataflow, passthrough *[]string,
 ) {
 	cmd.Flags().StringVarP(outputDir, "output", "o", "", "Directory for test-result.json and test-results.sarif")
 	cmd.Flags().DurationVar(timeout, "timeout", 600*time.Second, "Analysis timeout")
 	cmd.Flags().StringVar(maxMemory, "max-memory", "8G", "Maximum analyzer heap size (e.g., 8G)")
 	addDataflowModelsFlag(cmd, dataflow)
+	addPassthroughModelsFlag(cmd, passthrough)
 }

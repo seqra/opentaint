@@ -10,10 +10,11 @@ import (
 )
 
 var (
-	testApproxOutputDir string
-	testApproxTimeout   time.Duration
-	testApproxMaxMemory string
-	testApproxDataflow  []string
+	testApproxOutputDir   string
+	testApproxTimeout     time.Duration
+	testApproxMaxMemory   string
+	testApproxDataflow    []string
+	testApproxPassthrough []string
 )
 
 var testModelRunCmd = &cobra.Command{
@@ -37,13 +38,14 @@ language: taint.Source() to taint.Sink() for a Go project, Taint.source() to Tai
 		}
 
 		runTestProject(args[0], testProjectOptions{
-			label:          "Model tests",
-			tempDir:        "opentaint-test-models-*",
-			rulesets:       []string{ruleDir},
-			outputDir:      testApproxOutputDir,
-			timeout:        testApproxTimeout,
-			maxMemory:      testApproxMaxMemory,
-			dataflowModels: testApproxDataflow,
+			label:             "Model tests",
+			tempDir:           "opentaint-test-models-*",
+			rulesets:          []string{ruleDir},
+			outputDir:         testApproxOutputDir,
+			timeout:           testApproxTimeout,
+			maxMemory:         testApproxMaxMemory,
+			dataflowModels:    testApproxDataflow,
+			passthroughModels: testApproxPassthrough,
 		})
 	},
 }
@@ -66,6 +68,7 @@ func init() {
 		&testApproxTimeout,
 		&testApproxMaxMemory,
 		&testApproxDataflow,
+		&testApproxPassthrough,
 	)
 	testApproximationCmd.AddCommand(deprecatedCommand(testModelRunCmd, "run", "opentaint test model run"))
 }
