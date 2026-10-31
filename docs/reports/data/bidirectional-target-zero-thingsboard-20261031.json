@@ -1,0 +1,468 @@
+{
+  "project": "thingsboard",
+  "baseline_revision": "f945f92c5ae554ff4f5fc7696ee5a269210478bb",
+  "runtime_revision": "c4a71246519ee5432879ce82518823f1703f3aa4",
+  "mark_mode": "FULL",
+  "heap": "16g",
+  "field_limit_schedule": "REPEAT_RUN1",
+  "assessment": "INCOMPLETE_OR_INVALID_INPUT_COMPARISON",
+  "finding_assessment": "THIRTEEN_FROZEN_BASELINE_SINKS_PRESENT_ONE_OPERATIONAL_OMISSION_BOTH_TIMEOUT",
+  "counts": {
+    "main_unique": 14,
+    "bidi_unique": 13,
+    "unchanged_unique": 13,
+    "removed_unique": 1,
+    "added_unique": 0,
+    "main_occurrences": 14,
+    "bidi_occurrences": 13,
+    "unchanged_occurrences": 13,
+    "removed_occurrences": 1,
+    "added_occurrences": 0
+  },
+  "input_differences": [
+    {
+      "field": "config.memory",
+      "main": "12g",
+      "bidi": "16g"
+    }
+  ],
+  "input_qualification": "Frozen baseline used 12g and ended TIMEOUT; current authorized 16g experiment timed out in backward run-2. Model SHA and test revision match. This is a comparison of incomplete output sets, not completed-analysis equivalence.",
+  "both_complete_without_prescan_error": false,
+  "baseline": {
+    "directory": "/drive-testcomp/opentaint-go-rules/constant-filter-target-zero-20261031/projects/thingsboard/main",
+    "status": "TIMEOUT",
+    "sarif_sha256": "06f69df24968b4268f0d99f49a0b1ae4cf9e70ecccd6cc2799e40be1e717ae1e"
+  },
+  "current": {
+    "directory": "/drive-testcomp/opentaint-go-rules/constant-filter-target-zero-20261031/projects/thingsboard/bidi",
+    "status": "TIMEOUT",
+    "sarif_sha256": "fa472356b7dae9802ff7811eb7ebc213d881171d04a2d54acee86bc753c537b5"
+  },
+  "removed": [
+    {
+      "rule_id": "java.security.unsafe-reflection",
+      "path": "common/data/src/main/java/org/thingsboard/server/common/data/util/ReflectionUtils.java",
+      "occurrences": 1,
+      "unique_sinks": 1,
+      "findings": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.unsafe-reflection",
+            "QqsVp4+sxVrhcl8zO3TCQnLuKU/flyz9avYbI4/f3YY=",
+            "org.thingsboard.server.common.data.util.ReflectionUtils#getAnnotationProperty(java.lang.String, java.lang.String, java.lang.String)"
+          ],
+          "rule_id": "java.security.unsafe-reflection",
+          "sink_fingerprint": "QqsVp4+sxVrhcl8zO3TCQnLuKU/flyz9avYbI4/f3YY=",
+          "method_signature": "org.thingsboard.server.common.data.util.ReflectionUtils#getAnnotationProperty(java.lang.String, java.lang.String, java.lang.String)",
+          "instruction_index": 1,
+          "instruction": "%2 = java.lang.Class.forName(targetType)",
+          "path": "common/data/src/main/java/org/thingsboard/server/common/data/util/ReflectionUtils.java",
+          "region": {
+            "endColumn": 58,
+            "endLine": 27,
+            "startColumn": 33,
+            "startLine": 27
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.thingsboard.server.common.data.util.ReflectionUtils#getAnnotationProperty(java.lang.String, java.lang.String, java.lang.String):1:(%2 = java.lang.Class.forName(targetType))",
+                "fullyQualifiedName": "org.thingsboard.server.common.data.util.ReflectionUtils#getAnnotationProperty"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "common/data/src/main/java/org/thingsboard/server/common/data/util/ReflectionUtils.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 58,
+                "endLine": 27,
+                "startColumn": 33,
+                "startLine": 27
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "QqsVp4+sxVrhcl8zO3TCQnLuKU/flyz9avYbI4/f3YY=",
+            "vulnerabilityWithTraceHash/v1": "wryW8GDieNn/BJa/iohaT8b4rIwOLBr6REXd/eGKnRU=",
+            "vulnerabilitySourceSinkHash/v1": "1uO9TgyY8TCaIyvUG8De8p/B1mXKnbgNFSgYfBnl3qA="
+          },
+          "message": {
+            "text": "If an attacker can supply values that the application then uses to determine which class to instantiate or which method to invoke, the potential exists for the attacker to create control flow paths through the application that were not intended by the application developers. This attack vector may allow the attacker to bypass authentication or access control checks or otherwise cause the application to behave in an unexpected manner."
+          },
+          "properties": null,
+          "code_flow_count": 2,
+          "run_index": 0,
+          "result_index": 2,
+          "location_index": 0
+        }
+      ]
+    }
+  ],
+  "added": [],
+  "removed_classifications": [
+    {
+      "identity": [
+        "sink_fingerprint_and_signature",
+        "java.security.unsafe-reflection",
+        "QqsVp4+sxVrhcl8zO3TCQnLuKU/flyz9avYbI4/f3YY=",
+        "org.thingsboard.server.common.data.util.ReflectionUtils#getAnnotationProperty(java.lang.String, java.lang.String, java.lang.String)"
+      ],
+      "rule_id": "java.security.unsafe-reflection",
+      "path": "common/data/src/main/java/org/thingsboard/server/common/data/util/ReflectionUtils.java",
+      "line": 27,
+      "operational_classification": "MISSING_FROZEN_BASELINE_FINDING_UNDER_TIMEOUT",
+      "refinement_state": "UNFINISHED_BACKWARD_RUN_2",
+      "semantic_false_negative_status": "UNRESOLVED_BOTH_ANALYSES_INCOMPLETE",
+      "eventual_recovery": "NOT_PROVED",
+      "baseline_or_model_issue": "NO_SUPPORTED_FALSE_POSITIVE_DISMISSAL_FOUND",
+      "suppressed": false,
+      "latest_reached_iteration": "run-2",
+      "latest_completed_iteration": "run-1",
+      "latest_accepted_forward_report": "run-1",
+      "explanation": "Both baseline traces start at the RuleChainController.saveRuleChainMetaData request body and carry RuleNode.type through getType to the dynamic targetType argument of Class.forName. The annotationType and property arguments are literals, but the omitted sink uses the separate dynamic targetType argument. A TENANT_ADMIN check exists; it does not make that field constant or remove the configured request-body source. The validator calls reflection before validating the loaded configuration. No evidence supports dropping this baseline-positive location as a constant-only or sanitized flow.",
+      "method_outgoing_guidance_after_run1": {
+        "org.thingsboard.server.common.data.util.ReflectionUtils#getAnnotationProperty(java.lang.String, java.lang.String, java.lang.String)": 1,
+        "org.thingsboard.server.dao.service.validator.RuleChainDataValidator#validateRuleNode(org.thingsboard.server.common.data.rule.RuleNode)": 37,
+        "org.thingsboard.server.dao.rule.BaseRuleChainService#setSingletonMode(org.thingsboard.server.common.data.rule.RuleNode)": 21
+      },
+      "guidance_count_qualification": "The counts are method-level handoff rows, not concrete per-rule demand facts. They establish remaining refinement in the sink and direct callers, but do not prove eventual recovery of this sink.",
+      "baseline_trace_summaries": [
+        {
+          "code_flow": 0,
+          "thread_flow": 0,
+          "steps": 27,
+          "source_method": "org.thingsboard.server.controller.RuleChainController#saveRuleChainMetaData(org.thingsboard.server.common.data.rule.RuleChainMetaData, boolean)",
+          "source_message": "Method entry marks \"ruleChainMetaData\" as $UNTRUSTED",
+          "sink_method": "org.thingsboard.server.common.data.util.ReflectionUtils#getAnnotationProperty(java.lang.String, java.lang.String, java.lang.String)",
+          "sink_instruction": "%2 = java.lang.Class.forName(targetType)",
+          "last_steps": [
+            {
+              "trace_step": 19,
+              "method": "org.thingsboard.server.dao.service.validator.RuleChainDataValidator#validateRuleNode(org.thingsboard.server.common.data.rule.RuleNode)",
+              "instruction_index": 0,
+              "instruction": "%0 = ruleNode.getName()",
+              "message": "Entering \"validateRuleNode\" with $UNTRUSTED data at \"ruleNode\""
+            },
+            {
+              "trace_step": 20,
+              "method": "org.thingsboard.server.dao.service.validator.RuleChainDataValidator#validateRuleNode(org.thingsboard.server.common.data.rule.RuleNode)",
+              "instruction_index": 3,
+              "instruction": "%3 = ruleNode.getType()",
+              "message": "Calling \"getType\" with $UNTRUSTED data at \"ruleNode\""
+            },
+            {
+              "trace_step": 21,
+              "method": "org.thingsboard.server.common.data.rule.RuleNode#getType()",
+              "instruction_index": 1,
+              "instruction": "return %0",
+              "message": "The returning value is assigned marked data from \"this.type\""
+            },
+            {
+              "trace_step": 22,
+              "method": "org.thingsboard.server.common.data.rule.RuleNode#getType()",
+              "instruction_index": 1,
+              "instruction": "return %0",
+              "message": "Exiting \"getType\""
+            },
+            {
+              "trace_step": 23,
+              "method": "org.thingsboard.server.dao.service.validator.RuleChainDataValidator#validateRuleNode(org.thingsboard.server.common.data.rule.RuleNode)",
+              "instruction_index": 3,
+              "instruction": "%3 = ruleNode.getType()",
+              "message": "Method \"getType\" propagates $UNTRUSTED data from \"ruleNode\" to a local variable"
+            },
+            {
+              "trace_step": 24,
+              "method": "org.thingsboard.server.dao.service.validator.RuleChainDataValidator#validateRuleNode(org.thingsboard.server.common.data.rule.RuleNode)",
+              "instruction_index": 4,
+              "instruction": "%4 = org.thingsboard.server.common.data.util.ReflectionUtils.getAnnotationProperty(%3, \"org.thingsboard.rule.engine.api.RuleNode\", \"configClazz\")",
+              "message": "Calling \"getAnnotationProperty\" with $UNTRUSTED data at a local variable"
+            },
+            {
+              "trace_step": 25,
+              "method": "org.thingsboard.server.common.data.util.ReflectionUtils#getAnnotationProperty(java.lang.String, java.lang.String, java.lang.String)",
+              "instruction_index": 0,
+              "instruction": "annotationClass = java.lang.Class.forName(annotationType)",
+              "message": "Entering \"getAnnotationProperty\" with $UNTRUSTED data at \"targetType\""
+            },
+            {
+              "trace_step": 26,
+              "method": "org.thingsboard.server.common.data.util.ReflectionUtils#getAnnotationProperty(java.lang.String, java.lang.String, java.lang.String)",
+              "instruction_index": 1,
+              "instruction": "%2 = java.lang.Class.forName(targetType)",
+              "message": "If an attacker can supply values that the application then uses to determine which class to instantiate or which method to invoke, the potential exists for the attacker to create control flow paths through the application that were not intended by the application developers. This attack vector may allow the attacker to bypass authentication or access control checks or otherwise cause the application to behave in an unexpected manner."
+            }
+          ]
+        },
+        {
+          "code_flow": 1,
+          "thread_flow": 0,
+          "steps": 21,
+          "source_method": "org.thingsboard.server.controller.RuleChainController#saveRuleChainMetaData(org.thingsboard.server.common.data.rule.RuleChainMetaData, boolean)",
+          "source_message": "Method entry marks \"ruleChainMetaData\" as $UNTRUSTED",
+          "sink_method": "org.thingsboard.server.common.data.util.ReflectionUtils#getAnnotationProperty(java.lang.String, java.lang.String, java.lang.String)",
+          "sink_instruction": "%2 = java.lang.Class.forName(targetType)",
+          "last_steps": [
+            {
+              "trace_step": 13,
+              "method": "org.thingsboard.server.dao.rule.BaseRuleChainService#setSingletonMode(org.thingsboard.server.common.data.rule.RuleNode)",
+              "instruction_index": 0,
+              "instruction": "%0 = ruleNode.getType()",
+              "message": "Entering \"setSingletonMode\" with $UNTRUSTED data at \"ruleNode\""
+            },
+            {
+              "trace_step": 14,
+              "method": "org.thingsboard.server.dao.rule.BaseRuleChainService#setSingletonMode(org.thingsboard.server.common.data.rule.RuleNode)",
+              "instruction_index": 0,
+              "instruction": "%0 = ruleNode.getType()",
+              "message": "Calling \"getType\" with $UNTRUSTED data at \"ruleNode\""
+            },
+            {
+              "trace_step": 15,
+              "method": "org.thingsboard.server.common.data.rule.RuleNode#getType()",
+              "instruction_index": 1,
+              "instruction": "return %0",
+              "message": "The returning value is assigned marked data from \"this.type\""
+            },
+            {
+              "trace_step": 16,
+              "method": "org.thingsboard.server.common.data.rule.RuleNode#getType()",
+              "instruction_index": 1,
+              "instruction": "return %0",
+              "message": "Exiting \"getType\""
+            },
+            {
+              "trace_step": 17,
+              "method": "org.thingsboard.server.dao.rule.BaseRuleChainService#setSingletonMode(org.thingsboard.server.common.data.rule.RuleNode)",
+              "instruction_index": 0,
+              "instruction": "%0 = ruleNode.getType()",
+              "message": "Method \"getType\" propagates $UNTRUSTED data from \"ruleNode\" to a local variable"
+            },
+            {
+              "trace_step": 18,
+              "method": "org.thingsboard.server.dao.rule.BaseRuleChainService#setSingletonMode(org.thingsboard.server.common.data.rule.RuleNode)",
+              "instruction_index": 1,
+              "instruction": "%1 = org.thingsboard.server.common.data.util.ReflectionUtils.getAnnotationProperty(%0, \"org.thingsboard.rule.engine.api.RuleNode\", \"clusteringMode\")",
+              "message": "Calling \"getAnnotationProperty\" with $UNTRUSTED data at a local variable"
+            },
+            {
+              "trace_step": 19,
+              "method": "org.thingsboard.server.common.data.util.ReflectionUtils#getAnnotationProperty(java.lang.String, java.lang.String, java.lang.String)",
+              "instruction_index": 0,
+              "instruction": "annotationClass = java.lang.Class.forName(annotationType)",
+              "message": "Entering \"getAnnotationProperty\" with $UNTRUSTED data at \"targetType\""
+            },
+            {
+              "trace_step": 20,
+              "method": "org.thingsboard.server.common.data.util.ReflectionUtils#getAnnotationProperty(java.lang.String, java.lang.String, java.lang.String)",
+              "instruction_index": 1,
+              "instruction": "%2 = java.lang.Class.forName(targetType)",
+              "message": "If an attacker can supply values that the application then uses to determine which class to instantiate or which method to invoke, the potential exists for the attacker to create control flow paths through the application that were not intended by the application developers. This attack vector may allow the attacker to bypass authentication or access control checks or otherwise cause the application to behave in an unexpected manner."
+            }
+          ]
+        }
+      ],
+      "source_evidence": [
+        {
+          "path": "common/data/src/main/java/org/thingsboard/server/common/data/util/ReflectionUtils.java",
+          "start_line": 23,
+          "end_line": 29,
+          "text": "    private ReflectionUtils() {}\n\n    public static <T> T getAnnotationProperty(String targetType, String annotationType, String property) throws Exception {\n        Class<Annotation> annotationClass = (Class<Annotation>) Class.forName(annotationType);\n        Annotation annotation = Class.forName(targetType).getAnnotation(annotationClass);\n        return (T) annotationClass.getDeclaredMethod(property).invoke(annotation);\n    }",
+          "file_sha256": "9a1124488233a38eeeac3a19bbe4513eb889be6b056fbcfab0645a02f394c537"
+        },
+        {
+          "path": "application/src/main/java/org/thingsboard/server/controller/RuleChainController.java",
+          "start_line": 257,
+          "end_line": 279,
+          "text": "\n    @ApiOperation(value = \"Update Rule Chain Metadata\",\n            notes = \"Updates the rule chain metadata. \" + RULE_CHAIN_METADATA_DESCRIPTION + TENANT_AUTHORITY_PARAGRAPH)\n    @PreAuthorize(\"hasAuthority('TENANT_ADMIN')\")\n    @PostMapping(\"/ruleChain/metadata\")\n    public RuleChainMetaData saveRuleChainMetaData(\n            @Parameter(description = \"A JSON value representing the rule chain metadata.\")\n            @RequestBody RuleChainMetaData ruleChainMetaData,\n            @Parameter(description = \"Update related rule nodes.\")\n            @RequestParam(value = \"updateRelated\", required = false, defaultValue = \"true\") boolean updateRelated\n    ) throws Exception {\n        TenantId tenantId = getTenantId();\n        if (debugPerTenantEnabled) {\n            ConcurrentMap<TenantId, DebugTbRateLimits> debugPerTenantLimits = actorContext.getDebugPerTenantLimits();\n            DebugTbRateLimits debugTbRateLimits = debugPerTenantLimits.getOrDefault(tenantId, null);\n            if (debugTbRateLimits != null) {\n                debugPerTenantLimits.remove(tenantId, debugTbRateLimits);\n            }\n        }\n        RuleChain ruleChain = checkRuleChain(ruleChainMetaData.getRuleChainId(), Operation.WRITE);\n\n        return tbRuleChainService.saveRuleChainMetaData(tenantId, ruleChain, ruleChainMetaData, updateRelated, getCurrentUser());\n    }",
+          "file_sha256": "c076c540570f297e056440b61a3c4843e6e03c8860e5f7aea810200a548a5f66"
+        },
+        {
+          "path": "dao/src/main/java/org/thingsboard/server/dao/service/validator/RuleChainDataValidator.java",
+          "start_line": 104,
+          "end_line": 118,
+          "text": "    public static Throwable validateRuleNode(RuleNode ruleNode) {\n        String errorPrefix = \"'\" + ruleNode.getName() + \"' node configuration is invalid: \";\n        ConstraintValidator.validateFields(ruleNode, errorPrefix);\n        Object nodeConfig;\n        try {\n            Class<Object> nodeConfigType = ReflectionUtils.getAnnotationProperty(ruleNode.getType(),\n                    \"org.thingsboard.rule.engine.api.RuleNode\", \"configClazz\");\n            nodeConfig = JacksonUtil.treeToValue(ruleNode.getConfiguration(), nodeConfigType);\n        } catch (Throwable t) {\n            log.warn(\"Failed to validate node configuration: {}\", ExceptionUtils.getRootCauseMessage(t));\n            return t;\n        }\n        ConstraintValidator.validateFields(nodeConfig, errorPrefix);\n        return null;\n    }",
+          "file_sha256": "35185e5c2ab760ce05f65d233a6af520ae4085f0fbdcdfb473ca96448e45539f"
+        },
+        {
+          "path": "dao/src/main/java/org/thingsboard/server/dao/rule/BaseRuleChainService.java",
+          "start_line": 940,
+          "end_line": 951,
+          "text": "    private void setSingletonMode(RuleNode ruleNode) {\n        boolean singletonMode;\n        try {\n            ComponentClusteringMode nodeConfigType = ReflectionUtils.getAnnotationProperty(ruleNode.getType(),\n                    \"org.thingsboard.rule.engine.api.RuleNode\", \"clusteringMode\");\n\n            singletonMode = switch (nodeConfigType) {\n                case ENABLED -> false;\n                case SINGLETON -> true;\n                default -> ruleNode.isSingletonMode();\n            };\n        } catch (Exception e) {",
+          "file_sha256": "ae6163280b45c23fc4459b33257d3da9362fd8a5b73c2569ec6f523ccd4eb515"
+        }
+      ],
+      "current_rule_registration_evidence": [
+        "22:20:44.072 |I| SemgrepTraceLogger - unsafe-reflection.yaml | Register 1 rules",
+        "22:20:55.470 |I| SemgrepTraceLogger - external-configuration-control.yaml/unsafe-reflection | Generate 18 rules from java/security/external-configuration-control.yaml:unsafe-reflection"
+      ],
+      "current_frontier_evidence": [
+        "22:35:01.266 |I| FrontierKt$frontierLogger$1 - Run 1 (FORWARD) frontier: analysed 37316, demand edges 4621432 in 30211 method keys, left 9538, record crossings 0, target demand 2714707, reports 13, seeds 141973, zero only 36352 (670032 edges)"
+      ],
+      "timeout_evidence": [
+        "22:39:16.499 |I| IterationDriver - BIDI_RUN_END run=2 status=TIMEOUT engineTime=4m 14.776209077s",
+        "22:39:16.513 |I| IterationDriver - BIDI_ANALYSIS_END run=2 status=TIMEOUT reason=ABNORMAL elapsed=15m 36.750205596s"
+      ],
+      "budget_qualification": "The current receipt retains only the accepted run-1 report; backward run-2 did not complete. The frozen baseline is itself TIMEOUT. Neither receipt establishes semantic completeness."
+    }
+  ],
+  "by_rule": [
+    {
+      "rule": "java.security.cookie-issecure-false",
+      "main": 1,
+      "bidi": 1,
+      "removed": 0,
+      "added": 0
+    },
+    {
+      "rule": "java.security.hardcoded-password",
+      "main": 1,
+      "bidi": 1,
+      "removed": 0,
+      "added": 0
+    },
+    {
+      "rule": "java.security.java-jwt-decode-without-verify",
+      "main": 3,
+      "bidi": 3,
+      "removed": 0,
+      "added": 0
+    },
+    {
+      "rule": "java.security.stacktrace-printing-in-error-message",
+      "main": 2,
+      "bidi": 2,
+      "removed": 0,
+      "added": 0
+    },
+    {
+      "rule": "java.security.unrestricted-request-mapping",
+      "main": 4,
+      "bidi": 4,
+      "removed": 0,
+      "added": 0
+    },
+    {
+      "rule": "java.security.unsafe-reflection",
+      "main": 1,
+      "bidi": 0,
+      "removed": 1,
+      "added": 0
+    },
+    {
+      "rule": "java.security.unvalidated-redirect#sink#0",
+      "main": 2,
+      "bidi": 2,
+      "removed": 0,
+      "added": 0
+    }
+  ],
+  "multiplicity_changes": [],
+  "equal_identity_location_changes": [],
+  "possible_same_logical_sink": [],
+  "method_exit_location_candidates": [],
+  "issues": {
+    "baseline": [
+      "The run is not complete: TIMEOUT."
+    ],
+    "current": [
+      "The run is not complete: TIMEOUT."
+    ]
+  },
+  "static_writer_binding_evidence": [
+    "22:34:43.236 |I| RunManager - BIDI_STATIC_WRITER_BIND run=1 bindingTime=3m 45.956021304s status=COMPLETE observedCandidates=2699759 lostCandidates=467941 peakCandidateMemberships=2699759 pruneTime=2.376511177s writerTime=3m 38.284641295s closureFreezeTime=1.552477950s Statistics(writerOffers=26409078, admittedWriters=2351008, processedWriters=2351008, candidateInputs=222626595, duplicateInputs=0, matchedInputs=28046748, boundOutputs=27946039)"
+  ],
+  "comparison_json": "/drive-testcomp/opentaint-go-rules/constant-filter-target-zero-20261031/comparison/thingsboard.json",
+  "comparison_json_sha256": "0b0f5bb86391e71ea599a58acd6116ca391d57ef80aad51f3361d3c0391ea810",
+  "interpretation": "The dynamic reflection location remains an operational output omission relative to the frozen baseline. The current sink/callers have remaining run-1 guidance, and run-2 did not finish. No completed-run semantic FN conclusion, eventual recovery claim, or false-positive dismissal is justified.",
+  "latest_bidi_iteration": "run-2",
+  "latest_complete_bidi_iteration": "run-1",
+  "latest_accepted_forward_report": "run-1",
+  "bidi_iteration_progress": {
+    "state": "AVAILABLE",
+    "latest_reached": {
+      "state": "AVAILABLE",
+      "label": "run-2",
+      "source": "BIDI_RUN_START",
+      "engine_end_seen": true,
+      "engine_status": "TIMEOUT",
+      "run": 2,
+      "direction": "BACKWARD",
+      "limit": 1,
+      "timeout": "4m 14.709605317s markMode=FULL",
+      "timeout_seconds": 254.709605317,
+      "start_line": "22:35:01.723 |I| IterationDriver - BIDI_RUN_START run=2 direction=BACKWARD limit=1 timeout=4m 14.709605317s markMode=FULL",
+      "status": "TIMEOUT",
+      "engine_time": "4m 14.776209077s",
+      "engine_seconds": 254.776209077,
+      "end_line": "22:39:16.499 |I| IterationDriver - BIDI_RUN_END run=2 status=TIMEOUT engineTime=4m 14.776209077s"
+    },
+    "latest_complete_engine": {
+      "state": "AVAILABLE",
+      "label": "run-1",
+      "source": "BIDI_RUN_END status=COMPLETE",
+      "engine_end_seen": true,
+      "engine_status": "COMPLETE",
+      "run": 1,
+      "direction": "FORWARD",
+      "limit": 1,
+      "timeout": "15m 36.667814857s markMode=FULL",
+      "timeout_seconds": 936.667814857,
+      "start_line": "22:23:39.765 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=15m 36.667814857s markMode=FULL",
+      "joined_static_binding_time": "3m 45.956021304s",
+      "joined_static_binding_seconds": 225.956021304,
+      "joined_static_binding_status": "COMPLETE",
+      "joined_static_binding_line": "22:34:43.236 |I| RunManager - BIDI_STATIC_WRITER_BIND run=1 bindingTime=3m 45.956021304s status=COMPLETE observedCandidates=2699759 lostCandidates=467941 peakCandidateMemberships=2699759 pruneTime=2.376511177s writerTime=3m 38.284641295s closureFreezeTime=1.552477950s Statistics(writerOffers=26409078, admittedWriters=2351008, processedWriters=2351008, candidateInputs=222626595, duplicateInputs=0, matchedInputs=28046748, boundOutputs=27946039)",
+      "static_candidate_prune_seconds": 2.376511177,
+      "static_writer_apply_seconds": 218.284641295,
+      "static_closure_freeze_seconds": 1.55247795,
+      "observedCandidates": 2699759,
+      "lostCandidates": 467941,
+      "peakCandidateMemberships": 2699759,
+      "status": "COMPLETE",
+      "engine_time": "7m 17.728143569s",
+      "engine_seconds": 437.728143569,
+      "end_line": "22:34:43.450 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=7m 17.728143569s"
+    },
+    "latest_accepted_forward_report": {
+      "state": "AVAILABLE",
+      "label": "run-1",
+      "source": "Terminal snapshot followed by next-run start or completed driver return",
+      "engine_end_seen": true,
+      "engine_status": "COMPLETE",
+      "run": 1,
+      "direction": "FORWARD",
+      "limit": 1,
+      "timeout": "15m 36.667814857s markMode=FULL",
+      "timeout_seconds": 936.667814857,
+      "start_line": "22:23:39.765 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=15m 36.667814857s markMode=FULL",
+      "joined_static_binding_time": "3m 45.956021304s",
+      "joined_static_binding_seconds": 225.956021304,
+      "joined_static_binding_status": "COMPLETE",
+      "joined_static_binding_line": "22:34:43.236 |I| RunManager - BIDI_STATIC_WRITER_BIND run=1 bindingTime=3m 45.956021304s status=COMPLETE observedCandidates=2699759 lostCandidates=467941 peakCandidateMemberships=2699759 pruneTime=2.376511177s writerTime=3m 38.284641295s closureFreezeTime=1.552477950s Statistics(writerOffers=26409078, admittedWriters=2351008, processedWriters=2351008, candidateInputs=222626595, duplicateInputs=0, matchedInputs=28046748, boundOutputs=27946039)",
+      "static_candidate_prune_seconds": 2.376511177,
+      "static_writer_apply_seconds": 218.284641295,
+      "static_closure_freeze_seconds": 1.55247795,
+      "observedCandidates": 2699759,
+      "lostCandidates": 467941,
+      "peakCandidateMemberships": 2699759,
+      "status": "COMPLETE",
+      "engine_time": "7m 17.728143569s",
+      "engine_seconds": 437.728143569,
+      "end_line": "22:34:43.450 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=7m 17.728143569s",
+      "forward_frontier_line": "22:35:01.266 |I| FrontierKt$frontierLogger$1 - Run 1 (FORWARD) frontier: analysed 37316, demand edges 4621432 in 30211 method keys, left 9538, record crossings 0, target demand 2714707, reports 13, seeds 141973, zero only 36352 (670032 edges)",
+      "target_statistics": {
+        "raw": 2714799,
+        "outgoing": 2714707,
+        "reports": 13,
+        "line": "22:35:01.723 |I| IterationDriver - BIDI_TARGET_STATISTICS run=1 raw=2714799 outgoing=2714707 reports=13"
+      },
+      "commit_evidence": "22:35:01.723 |I| IterationDriver - BIDI_RUN_START run=2 direction=BACKWARD limit=1 timeout=4m 14.709605317s markMode=FULL"
+    },
+    "invalid_run_start_lines": [],
+    "limits": "Latest reached follows actual start-marker order, including failed or unfinished engines. Target frontiers are prepared state. Accept them only after a following run starts or the driver completes. Missing report-commit evidence is unavailable, not proof of an empty report."
+  }
+}
