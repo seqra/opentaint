@@ -1,0 +1,94 @@
+{
+  "status": "PASS",
+  "scope": "Existing compiled AP primitives and bounded controls. No Target implementation or whole-engine run. Source and bytecode hashes are recorded; this checker does not prove bytecode was built from those source bytes.",
+  "utc": "2026-10-31T08:02:15.741314+00:00",
+  "gitHead": "3d8116a1a131a96f8423ef96d2b4a5d643dc46fc",
+  "compilerOptions": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/20261029_8894186253707317018.compiler.options",
+  "classpathSha256": "be2dea71d72b217d918116eba39bfe4f74555a48e4cb6dfbd21940d9fdc8d28a",
+  "inputHashes": {
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-20261031/controls/TerminalBoundaryApControl.java": "1ee760bdbdcaef50ebb87e29c6eb175b6ca9efc131bed1a25e9bb1aa77231160",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-20261031/controls/NormalTargetCurrentGateControl.java": "bf6f74a1bc790c4f4e3e0d0fc8666543c18e8e00b519c74dcafa9032ddfed63b",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-20261031/controls/check_ap.py": "76d5eca532d82e95eff5376ab3dc3a79cc19e0e9355a4692a76b574fca77535a",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/20261029_8894186253707317018.compiler.options": "9790dd5b5cc035e8ef4d31041e3d6c213e80f5bf4a07dbc898d970716265b3ab",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApOps.kt": "9ecf5a0a403f8b0b76c5e0bfe79ca94ccba8eb9d5700bc18fb88c11f482d0dc4",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/EdgeApplication.kt": "a9dac26784fe001055bcb4a8fabae5ea88877941aab66c244bbc6d756850fcc5",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/RestrictedInitialPolicy.kt": "85c0afc84e4f9759961d98a5d57eaf82a87cdaf80d3380044046cc43325bc14d",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Demand.kt": "dc710f793ac72104c76232bfe5ce93f6d4dedde269088a1f8872faa21fbfebf1",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Summary.kt": "f21c80f317d08d9ffc70f86cef2138fb40cd16e7d0c02956700c3f507e32c24f",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RecordStore.kt": "21a8d88909fcd03a1c69ef817e742469485c7563df31a55b806fc0fe2a20f3f6",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/FormApplier.kt": "06bca49113a3aced10ecdf858ee323ccf9354c471902189d11425a9678109b6a",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodCallServices.kt": "3bdc73d808d90e4d00e9abf9ef3f4e68b6d810582b7900b0bf1c3f23ca7440af",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/main/org/opentaint/dataflow/bidi/ap/ApOps.class": "176c2a444d867e579bda496978d335aa5efa491a1fd1e3a302b4da617a678ac5",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/main/org/opentaint/dataflow/bidi/ap/RestrictedInitialPolicy.class": "b0886a04dc709ed01069ffa63bc5a910c341be562b19a3d8e67e7d69065a14f3",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/main/org/opentaint/dataflow/bidi/ap/DemandKt.class": "cd5093ac612c71627f50e4c11ca865bbc28f6ea7c8b35660331431cd25d759da",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/main/org/opentaint/dataflow/bidi/ap/SummaryKt.class": "4a98b8c16c0a8cf5977c744eee54ac1a96c74cfba8403c7a4acb65eacb46760e",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/main/org/opentaint/dataflow/bidi/ap/EdgeApplicationKt.class": "928c01498cf6719500317fb037d86f55eaefcf9755780b46915614085011065c"
+  },
+  "results": {
+    "TerminalBoundaryApControl": {
+      "status": "PASS",
+      "scope": "production AP primitives, not Target runtime",
+      "mayActual": "DEMAND",
+      "C2Initial": "EXACT",
+      "calleeSinkFact": "NORMAL",
+      "currentRouteAdmitted": true,
+      "ordinaryWrapperRecordAnswersZero": false,
+      "reverseNormalGENRecordReturnsZero": true,
+      "savedForwardGENNeedsNewSourceHit": false,
+      "fieldLimit2CallInput": "DEMAND",
+      "fieldLimit4CallInput": "NORMAL",
+      "controlZeroTriggersLocalGEN": false
+    },
+    "NormalTargetCurrentGateControl": {
+      "status": "PASS",
+      "scope": "bounded concrete NORMAL-initial current-match search",
+      "paths": 7,
+      "demandPatterns": 35,
+      "actualFacts": 35,
+      "normalInitialInstances": 314,
+      "matchedConsumerFacts": 2967,
+      "emptyEmissionMatches": 0
+    }
+  },
+  "commands": [
+    {
+      "argv": [
+        "javac",
+        "-J-Xmx256m",
+        "-cp",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/java/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/test:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-common/build/classes/kotlin/main:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.detekt.sarif4k/sarif4k-jvm/0.5.0/d3060993cd73b57ee61b260841bedcabb7dcbb02/sarif4k-jvm-0.5.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-collections-immutable-jvm/0.3.8/6119a57df1ad662593dfe21954898183c6c933b4/kotlinx-collections-immutable-jvm-0.3.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk7/2.1.0/d77bee6c7bc849e7b9bf4b83e94e8fd1dfc0ea8a/kotlin-stdlib-jdk7-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-core-jvm/1.10.0/37966d769934a42566dec1ca2e1da6e5565c4e06/kotlinx-coroutines-core-jvm-1.10.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.microutils/kotlin-logging-jvm/3.0.5/82f2256aeedccfd9c27ea585274a50bf06517383/kotlin-logging-jvm-3.0.5.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-json-jvm/1.4.1/e6430b33f06dcdff88998abfcb2e78bc3cd0a1f6/kotlinx-serialization-json-jvm-1.4.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-core-jvm/1.4.1/e0c2c11e5d0d541ca343c8f09602c0c2287d15a1/kotlinx-serialization-core-jvm-1.4.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.1.0/85f8b81009cda5890e54ba67d64b5e599c645020/kotlin-stdlib-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk8/2.1.0/c4a51be16c840b969ed706bc25d5836b099d188a/kotlin-stdlib-jdk8-2.1.0.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/common-util/build/classes/kotlin/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-common/build/classes/kotlin/main:/home/sobol/.gradle/caches/modules-2/files-2.1/it.unimi.dsi/fastutil-core/8.5.13/dd3d3ed477b7c1aee8176f6684813f48304769f9/fastutil-core-8.5.13.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/info.leadinglight/jdot/1.0/8e84489791d7fe20bf1631e791152b554cfea4ba/jdot-1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/23.0.0/8cc20c07506ec18e0834947b84a864bfc094484e/annotations-23.0.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.3/deef7fc81f00bd5e6205bb097be1040b4094f007/slf4j-api-2.0.3.jar",
+        "-d",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-20261031/ap-20261031T080214956718Z/classes",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-20261031/controls/TerminalBoundaryApControl.java",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-20261031/controls/NormalTargetCurrentGateControl.java"
+      ],
+      "exitCode": 0,
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-20261031/ap-20261031T080214956718Z/compile.log",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "java",
+        "-Xmx256m",
+        "-cp",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-20261031/ap-20261031T080214956718Z/classes:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/java/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/test:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-common/build/classes/kotlin/main:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.detekt.sarif4k/sarif4k-jvm/0.5.0/d3060993cd73b57ee61b260841bedcabb7dcbb02/sarif4k-jvm-0.5.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-collections-immutable-jvm/0.3.8/6119a57df1ad662593dfe21954898183c6c933b4/kotlinx-collections-immutable-jvm-0.3.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk7/2.1.0/d77bee6c7bc849e7b9bf4b83e94e8fd1dfc0ea8a/kotlin-stdlib-jdk7-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-core-jvm/1.10.0/37966d769934a42566dec1ca2e1da6e5565c4e06/kotlinx-coroutines-core-jvm-1.10.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.microutils/kotlin-logging-jvm/3.0.5/82f2256aeedccfd9c27ea585274a50bf06517383/kotlin-logging-jvm-3.0.5.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-json-jvm/1.4.1/e6430b33f06dcdff88998abfcb2e78bc3cd0a1f6/kotlinx-serialization-json-jvm-1.4.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-core-jvm/1.4.1/e0c2c11e5d0d541ca343c8f09602c0c2287d15a1/kotlinx-serialization-core-jvm-1.4.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.1.0/85f8b81009cda5890e54ba67d64b5e599c645020/kotlin-stdlib-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk8/2.1.0/c4a51be16c840b969ed706bc25d5836b099d188a/kotlin-stdlib-jdk8-2.1.0.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/common-util/build/classes/kotlin/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-common/build/classes/kotlin/main:/home/sobol/.gradle/caches/modules-2/files-2.1/it.unimi.dsi/fastutil-core/8.5.13/dd3d3ed477b7c1aee8176f6684813f48304769f9/fastutil-core-8.5.13.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/info.leadinglight/jdot/1.0/8e84489791d7fe20bf1631e791152b554cfea4ba/jdot-1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/23.0.0/8cc20c07506ec18e0834947b84a864bfc094484e/annotations-23.0.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.3/deef7fc81f00bd5e6205bb097be1040b4094f007/slf4j-api-2.0.3.jar",
+        "TerminalBoundaryApControl"
+      ],
+      "exitCode": 0,
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-20261031/ap-20261031T080214956718Z/TerminalBoundaryApControl.log",
+      "logSha256": "cf0d2a765b76fb6a5837412e887863831c27786a0dab8b3768ea71b6dbc34804"
+    },
+    {
+      "argv": [
+        "java",
+        "-Xmx256m",
+        "-cp",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-20261031/ap-20261031T080214956718Z/classes:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/java/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/test:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-common/build/classes/kotlin/main:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.detekt.sarif4k/sarif4k-jvm/0.5.0/d3060993cd73b57ee61b260841bedcabb7dcbb02/sarif4k-jvm-0.5.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-collections-immutable-jvm/0.3.8/6119a57df1ad662593dfe21954898183c6c933b4/kotlinx-collections-immutable-jvm-0.3.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk7/2.1.0/d77bee6c7bc849e7b9bf4b83e94e8fd1dfc0ea8a/kotlin-stdlib-jdk7-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-core-jvm/1.10.0/37966d769934a42566dec1ca2e1da6e5565c4e06/kotlinx-coroutines-core-jvm-1.10.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.microutils/kotlin-logging-jvm/3.0.5/82f2256aeedccfd9c27ea585274a50bf06517383/kotlin-logging-jvm-3.0.5.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-json-jvm/1.4.1/e6430b33f06dcdff88998abfcb2e78bc3cd0a1f6/kotlinx-serialization-json-jvm-1.4.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-core-jvm/1.4.1/e0c2c11e5d0d541ca343c8f09602c0c2287d15a1/kotlinx-serialization-core-jvm-1.4.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.1.0/85f8b81009cda5890e54ba67d64b5e599c645020/kotlin-stdlib-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk8/2.1.0/c4a51be16c840b969ed706bc25d5836b099d188a/kotlin-stdlib-jdk8-2.1.0.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/common-util/build/classes/kotlin/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-common/build/classes/kotlin/main:/home/sobol/.gradle/caches/modules-2/files-2.1/it.unimi.dsi/fastutil-core/8.5.13/dd3d3ed477b7c1aee8176f6684813f48304769f9/fastutil-core-8.5.13.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/info.leadinglight/jdot/1.0/8e84489791d7fe20bf1631e791152b554cfea4ba/jdot-1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/23.0.0/8cc20c07506ec18e0834947b84a864bfc094484e/annotations-23.0.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.3/deef7fc81f00bd5e6205bb097be1040b4094f007/slf4j-api-2.0.3.jar",
+        "NormalTargetCurrentGateControl"
+      ],
+      "exitCode": 0,
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-20261031/ap-20261031T080214956718Z/NormalTargetCurrentGateControl.log",
+      "logSha256": "1c52bee40780a6bfeb4124d2ed9bb1386413c71c5df6fe86aec274fac24e4a00"
+    }
+  ]
+}
