@@ -1,0 +1,80 @@
+{
+  "scope": "Constructive finite support kernel and executable ZERO seed protocol only; no production/project/Gradle run.",
+  "timeoutSecondsPerCommand": 60,
+  "memoryCapMiB": 2048,
+  "commands": [
+    {
+      "argv": [
+        "/home/sobol/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "--version"
+      ],
+      "cwd": "/drive-testcomp/opentaint-go-rules/selected-call-policy-20261030/method-key-growth",
+      "exitCode": 0,
+      "elapsedSeconds": 0.027683734893798828,
+      "output": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)\n",
+      "log": "lean-version.log"
+    },
+    {
+      "argv": [
+        "/home/sobol/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-M2048",
+        "-o",
+        "MethodSupport.olean",
+        "MethodSupport.lean"
+      ],
+      "cwd": "/drive-testcomp/opentaint-go-rules/selected-call-policy-20261030/method-key-growth",
+      "exitCode": 0,
+      "elapsedSeconds": 1.1759819984436035,
+      "output": "",
+      "log": "kernel-compile.log"
+    },
+    {
+      "argv": [
+        "/home/sobol/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-M2048",
+        "Audit.lean"
+      ],
+      "cwd": "/drive-testcomp/opentaint-go-rules/selected-call-policy-20261030/method-key-growth",
+      "exitCode": 0,
+      "elapsedSeconds": 4.515144348144531,
+      "output": "Audited 337 MethodSupport declarations, including 135 theorem declarations; 0 have unexpected axioms.\nTransitive axiom union: [Quot.sound, propext]\n'MethodSupport.analysed_subset_incoming' does not depend on any axioms\n'MethodSupport.forward_outgoing_subset_incoming' depends on axioms: [propext, Quot.sound]\n'MethodSupport.new_backward_publication_is_zero' does not depend on any axioms\n'MethodSupport.new_backward_outgoing_has_zero_witness' depends on axioms: [propext, Quot.sound]\n'MethodSupport.new_backward_outgoing_is_zero_only' depends on axioms: [propext]\n'MethodSupport.dedup_support_iff' depends on axioms: [propext, Quot.sound]\n'MethodSupport.stored_support_arbitrarily_grows' depends on axioms: [propext, Quot.sound]\n'MethodSupport.support_contraction_counterexample' depends on axioms: [propext, Quot.sound]\nSix exact controls passed: 2/10 support; seed removal; implicit ZERO suppression; NORMAL requirement retained.\nChain 2: incoming support 1; nonzero initial support 0; seeded outgoing support 2; unseeded outgoing support 0.\nChain 10: incoming support 1; nonzero initial support 0; seeded outgoing support 10; unseeded outgoing support 0.\nChain 1000: incoming support 1; nonzero initial support 0; seeded outgoing support 1000; unseeded outgoing support 0.\n",
+      "log": "kernel-audit.log"
+    }
+  ],
+  "auditedDeclarations": 337,
+  "auditedTheoremDeclarationsIncludingGenerated": 135,
+  "explicitTheorems": 43,
+  "unexpectedAxioms": 0,
+  "transitiveAxiomUnion": [
+    "propext",
+    "Quot.sound"
+  ],
+  "maxChildPeakRssKiB": 1559572,
+  "allCommandsPassed": true,
+  "files": {
+    "MethodSupport.lean": {
+      "bytes": 19845,
+      "sha256": "95e55e7e2a2535b9275361511e38603076dcbc34fdaa3167a985027ebd60a9d9"
+    },
+    "Audit.lean": {
+      "bytes": 2470,
+      "sha256": "2d6f5c25c98cac78293ba3ac58f48c06fb786036c723d7cdb4f6b6c8a3752497"
+    },
+    "validate_kernel.py": {
+      "bytes": 2673,
+      "sha256": "1f53cd863bb10a774c63c9b32fefd905c6c18d6064064392efd0936ce7f1655f"
+    },
+    "lean-version.log": {
+      "bytes": 106,
+      "sha256": "63f3e16bf0258e2cc0ab3010eb1830723df9bb85097b7b72b0137b9be25a78e9"
+    },
+    "kernel-compile.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "kernel-audit.log": {
+      "bytes": 1276,
+      "sha256": "19e93fb9c6e26c13eadfcec591e06562544ccaf0471eae2168613718637e39da"
+    }
+  }
+}
