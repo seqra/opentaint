@@ -1,0 +1,30 @@
+{
+  "status": "BYTE_IDENTICAL_TEST_SOURCE_PREVIOUSLY_PASSED_PORTABLE_INIT_NOT_EXECUTED",
+  "runtime": "e090118e5f9603f1973c0578a3e04998035f4508",
+  "files": [
+    {
+      "path": "src/org/opentaint/dataflow/bidi/InheritedCoverPruneTest.kt",
+      "sha256": "86ad2b55e07812afbda98e827da820869bb2661875c1fc814c45dd7eaa75a85f"
+    },
+    {
+      "path": "controls.init.gradle",
+      "sha256": "f6f864d22c02cbb91baa6dfe4bb78ae84341263d0482e8a1367f3889f69363f5"
+    },
+    {
+      "path": "README.md",
+      "sha256": "99e10229829c66070c8d4e51a6c5e1e50334934b9f104354bf826b93f48e7040"
+    }
+  ],
+  "previousExternalSourceSha256": "86ad2b55e07812afbda98e827da820869bb2661875c1fc814c45dd7eaa75a85f",
+  "sourceMatchesPreviousTest": true,
+  "previousFullSuiteReceiptSha256": "fb897f2ec8314ae974ae7499a8a8661850e082dca19b6cb5b5533b5a95b9cd93",
+  "previousArchivedControlXmlSha256": "1eb75546503b78114fd24e37f6a3b7edc27adf98c818b8109c9410391028b9b3",
+  "previousControlTestCounts": {
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "noGradleCommandDuringPackaging": true,
+  "noProductionChanges": true
+}
