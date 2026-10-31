@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.Seed
@@ -13,15 +15,13 @@ import org.opentaint.dataflow.bidi.interp.CallPoint.*
 import org.opentaint.dataflow.bidi.interp.StageKind.*
 import org.opentaint.dataflow.bidi.store.CallerRef
 import org.opentaint.dataflow.bidi.store.Link
-import org.opentaint.dataflow.bidi.store.SinkWitness
-import org.opentaint.dataflow.bidi.store.VulnerabilityKey
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.test.*
 import kotlin.time.Duration.Companion.seconds
 
-/** Joined candidates preserve complete witnesses without retaining callee input history. */
+/** Joined terminal summaries retain complete premises without callee input history. */
 class SupportIntegrationTest {
     private val x = AccessPathBase.Argument(0)
     private val y = AccessPathBase.Argument(1)
@@ -30,12 +30,16 @@ class SupportIntegrationTest {
     private fun historical(result: RunResult<RunMethodAnalyzer>, config: RunConfig, f: FiniteProgramFixtures) =
         HistoricalSupport(HistoricalSupportInput(result, inputs.groupBy({ it.first }, { it.second })),
             config.roots, config.mode, f.shared)
-    private fun candidateReport(config: RunConfig, result: RunResult<RunMethodAnalyzer>) {
-        assertTrue(result.witnessesByKey().values.flatten().all { !it.confirmed })
-        val report = ReportBuilder().also { it.add(config, result) }.build(
-            AnalysisEnd(RunStatus.COMPLETE, config.index, config.direction, EndReason.POLICY))
-        assertEquals(result.witnessesByKey().keys, report.entries.map { it.key }.toSet())
-        assertTrue(report.entries.all { it.state == ReportState.DEMAND })
+    private fun candidateReport(config: RunConfig, result: RunResult<RunMethodAnalyzer>, f: FiniteProgramFixtures) {
+        val builder = ReportBuilder()
+        builder.commit(builder.prepare(config, result, f.shared))
+        val report = builder.build(AnalysisEnd(RunStatus.COMPLETE, config.index, config.direction, EndReason.POLICY))
+        val expected = result.analyzers.filter { it.key in config.roots }.flatMap { actor ->
+            actor.targets.mapNotNull { row ->
+                (row.target as? Target.NormalTarget)?.id?.takeIf { row.premise.isZero }
+            }
+        }.toSet()
+        assertEquals(expected, report.entries.map { it.id }.toSet())
     }
 
     private fun summary(vararg edges: PathEdge): StatementSummary =
@@ -109,24 +113,19 @@ class SupportIntegrationTest {
         return result
     }
 
-    private fun decoded(f: FiniteProgramFixtures, facts: Facts): Set<Conclusion> =
-        f.ops.leaves(facts).mapTo(LinkedHashSet()) {
-            Conclusion(it.fact, it.exclusion, facts.layer == Layer.DEMAND)
-        }
-
-    private fun checkWitness(f: FiniteProgramFixtures, witness: SinkWitness, method: MethodKey,
-                             run: Int, premises: List<PremiseKey>, conclusions: List<Conclusion>) {
-        assertEquals(method, witness.methodKey)
-        assertEquals(run, witness.run)
-        assertEquals(premises, witness.edges.map { it.premise }, "Keep the ordered literal support headers")
-        assertEquals(conclusions.map { if (it.demand) Layer.DEMAND else Layer.NORMAL },
-            witness.edges.map { it.layer })
-        assertEquals(conclusions.map { setOf(it) }, witness.edges.map { decoded(f, it.facts) })
-        assertTrue(witness.endFacts.isEmpty())
-        assertFalse(witness.confirmed, "No confirmation certificate has been supplied")
+    private fun checkTerminal(f: FiniteProgramFixtures, result: RunResult<RunMethodAnalyzer>, method: MethodKey,
+                              premises: List<PremiseKey>, conclusions: List<Conclusion>): TargetSummary {
+        val actor = result.analyzers.single { it.key == method }
+        val row = actor.targets.single()
+        var original: PremiseKey = f.ap.zero
+        for (premise in premises) original = f.ap.union(original, premise)
+        assertSame(original, row.premise)
+        if (conclusions.any { it.demand }) assertEquals(Target.DemandTarget, row.target)
+        else assertIs<Target.NormalTarget>(row.target)
+        return row
     }
 
-    @Test fun `a joined root zero group exact sink remains a demand candidate without a certificate`(): Unit {
+    @Test fun `a joined root zero group exact sink emits anonymous refinement demand`(): Unit {
         FiniteProgramFixtures().use { f ->
             val method = f.method("rootExact", listOf(listOf(1), emptyList()), 1)
             val key = method.key("root context")
@@ -141,18 +140,15 @@ class SupportIntegrationTest {
             val result = joined(f, config)
             assertEquals(listOf(key), result.analyzers.map { it.key })
             assertTrue(links(result.analyzers.single().key).isEmpty())
-            val (vulnerability, witnesses) = result.witnessesByKey().entries.single()
-            assertEquals(VulnerabilityKey(sink.rule, key.method, method.inst(1)), vulnerability)
-            val witness = witnesses.single()
-            checkWitness(f, witness, key, 1, listOf(f.ap.zero),
+            val terminal = checkTerminal(f, result, key, listOf(f.ap.zero),
                 listOf(Conclusion(grouped(f, target), ExclusionSet.Empty, true)))
 
             val support = historical(result, config, f)
             assertTrue(support.isSupported(key, listOf(f.ap.zero)))
             assertFalse(support.isSupported(key, listOf(f.ap.initial(sink.patterns.single()))),
                 "A root's nonzero member has no root base case")
-            candidateReport(config, result)
-            assertFalse(witness.confirmed)
+            candidateReport(config, result, f)
+            assertEquals(Target.DemandTarget, terminal.target)
         }
     }
 
@@ -169,19 +165,19 @@ class SupportIntegrationTest {
             val config = f.config(L = 1, roots = listOf(key))
             val result = joined(f, config)
             assertTrue(links(result.analyzers.single().key).isEmpty())
-            val witness = result.witnessesByKey().values.single().single()
             val demand = Conclusion(grouped(f, target), ExclusionSet.Empty, true)
-            checkWitness(f, witness, key, 1, listOf(f.ap.zero), listOf(demand))
+            val terminal = checkTerminal(f, result, key, listOf(f.ap.zero), listOf(demand))
             assertTrue(result.demandLayerEdges > 0L)
 
             val support = historical(result, config, f)
             assertTrue(support.isSupported(key, listOf(f.ap.zero)))
-            candidateReport(config, result)
-            assertFalse(witness.confirmed, "Supported premises do not change a DEMAND sink edge into NORMAL")
+            candidateReport(config, result, f)
+            assertEquals(Target.DemandTarget, terminal.target,
+                "Supported premises do not change a DEMAND sink edge into NORMAL")
         }
     }
 
-    @Test fun `seeded restricted concrete inputs preserve joint support without automatic confirmation`(): Unit {
+    @Test fun `seeded restricted concrete inputs preserve full joint terminal support`(): Unit {
         FiniteProgramFixtures(threads = 2).use { f ->
             val main = f.method("jointCaller", listOf(listOf(1), listOf(2), emptyList()), 2)
             val target = f.method("jointCallee", listOf(listOf(1), emptyList()), 1)
@@ -199,7 +195,9 @@ class SupportIntegrationTest {
             f.exit(callee, 1, ExitRules(rules(sink), false, emptySet()))
             val seeds = listOf(Seed.Source(caller, main.inst(0), sourceX), Seed.Source(caller, main.inst(0), sourceY))
             val config = f.config(index = 3, L = 2, roots = listOf(caller),
-                demand = listOf(callee to DemandPattern(px, null), callee to DemandPattern(py, null)), seeds = seeds)
+                demand = listOf(caller to DemandPattern(ZERO_PATTERN, ZERO_PATTERN),
+                    callee to DemandPattern(ZERO_PATTERN, ZERO_PATTERN),
+                    callee to DemandPattern(px, null), callee to DemandPattern(py, null)), seeds = seeds)
             assertTrue(config.seeds.allowsSource(caller, main.inst(0), sourceX))
             assertTrue(config.seeds.allowsSource(caller, main.inst(0), sourceY))
             val result = joined(f, config)
@@ -208,21 +206,18 @@ class SupportIntegrationTest {
             val ref = CallerRef(caller, f.ap.zero, Layer.NORMAL, main.inst(1), stageOrdinal = 2)
             assertEquals(setOf(Link(ZERO_PATTERN, Layer.NORMAL, ref), Link(px, Layer.NORMAL, ref),
                 Link(py, Layer.NORMAL, ref)), links(calleeActor.key))
-            val (key, witnesses) = result.witnessesByKey().entries.single()
-            assertEquals(VulnerabilityKey(sink.rule, callee.method, target.inst(1)), key)
-            val witness = witnesses.single()
             val jx = f.ap.initial(px)
             val jy = f.ap.initial(py)
-            checkWitness(f, witness, callee, 3, listOf(jx, jy),
+            val terminal = checkTerminal(f, result, callee, listOf(jx, jy),
                 listOf(Conclusion(px.fact, px.exclusion, false), Conclusion(py.fact, py.exclusion, false)))
-            assertEquals(3, witness.alternative)
-            assertSame(f.ap.union(jx, jy), witness.supportPremise(f.ap))
+            val descriptor = f.shared.reportCatalog.descriptor(assertIs<Target.NormalTarget>(terminal.target).id)
+            assertEquals(SinkKey(callee.method, target.inst(1), sink.rule.id), descriptor.key)
 
             val support = historical(result, config, f)
             assertTrue(support.isSupported(callee, listOf(jx, jy)),
                 "Different caller edges at one call jointly supply every literal")
-            candidateReport(config, result)
-            assertFalse(witness.confirmed)
+            candidateReport(config, result, f)
+            assertIs<Target.NormalTarget>(terminal.target)
         }
     }
 
@@ -269,7 +264,9 @@ class SupportIntegrationTest {
                 refY = CallerRef(caller, f.ap.zero, Layer.NORMAL, main.inst(4), stageOrdinal = 2)
             }
             val config = f.config(index = 3, L = 2, roots = roots,
-                demand = listOf(callee to DemandPattern(px, null), callee to DemandPattern(py, null)), seeds = seeds)
+                demand = roots.map { it to DemandPattern(ZERO_PATTERN, ZERO_PATTERN) } + listOf(
+                    callee to DemandPattern(ZERO_PATTERN, ZERO_PATTERN),
+                    callee to DemandPattern(px, null), callee to DemandPattern(py, null)), seeds = seeds)
             val result = joined(f, config)
             val calleeActor = result.analyzers.single { it.key == callee }
             assertEquals(setOf(Link(ZERO_PATTERN, Layer.NORMAL, refX), Link(ZERO_PATTERN, Layer.NORMAL, refY),
@@ -277,24 +274,25 @@ class SupportIntegrationTest {
             assertNotEquals(refX, refY)
             assertEquals(differentCallers, refX.caller != refY.caller)
             assertNotEquals(refX.call, refY.call)
-            val witness = result.witnessesByKey().values.single().single()
             val jx = f.ap.initial(px)
             val jy = f.ap.initial(py)
-            checkWitness(f, witness, callee, 3, listOf(jx, jy),
+            val terminal = checkTerminal(f, result, callee, listOf(jx, jy),
                 listOf(Conclusion(px.fact, px.exclusion, false), Conclusion(py.fact, py.exclusion, false)))
-            assertSame(f.ap.union(jx, jy), witness.supportPremise(f.ap))
+            assertTrue(result.analyzers.filter { it.key in roots }.all { actor ->
+                actor.targets.none { it.premise.isZero && it.target is Target.NormalTarget }
+            }, "The full joint terminal cannot combine input members from different call sites")
 
             val support = historical(result, config, f)
             assertTrue(support.isSupported(callee, listOf(jx)))
             assertTrue(support.isSupported(callee, listOf(jy)))
             assertFalse(support.isSupported(callee, listOf(jx, jy)),
                 "The witness retains the whole premise set; singleton support at different sites is insufficient")
-            candidateReport(config, result)
-            assertFalse(witness.confirmed)
+            candidateReport(config, result, f)
+            assertIs<Target.NormalTarget>(terminal.target)
         }
     }
 
-    @Test fun `candidate reporting preserves full witness contexts alternatives and distinct vulnerability rule keys`(): Unit {
+    @Test fun `anonymous terminal dedup retains each complete rule seed across contexts`(): Unit {
         FiniteProgramFixtures().use { f ->
             val method = f.method("contextualRoot", listOf(listOf(1), listOf(2), emptyList()), 2)
             val exactContext = method.key("normal exact context")
@@ -316,27 +314,14 @@ class SupportIntegrationTest {
             val result = joined(f, config)
             assertEquals(setOf(exactContext, demandContext), result.analyzers.map { it.key }.toSet())
             assertTrue(result.analyzers.all { links(it.key).isEmpty() })
-            val primaryKey = VulnerabilityKey(primary, method.method, method.inst(2))
-            val secondaryKey = VulnerabilityKey(secondary, method.method, method.inst(2))
-            val witnesses = result.witnessesByKey()
-            assertEquals(setOf(primaryKey, secondaryKey), witnesses.keys)
-            assertEquals(setOf(exactContext to 0, exactContext to 1, demandContext to 0, demandContext to 1),
-                witnesses.getValue(primaryKey).map { it.methodKey to it.alternative }.toSet())
-            assertEquals(setOf(exactContext to 0, demandContext to 0),
-                witnesses.getValue(secondaryKey).map { it.methodKey to it.alternative }.toSet())
-            assertEquals(6, witnesses.values.sumOf { it.size })
-            for (witness in witnesses.values.flatten()) {
-                val demand = witness.methodKey == demandContext
-                val conclusion = Conclusion(grouped(f, if (demand) must else exact.fact),
-                    ExclusionSet.Empty, true)
-                checkWitness(f, witness, witness.methodKey, 1, listOf(f.ap.zero), listOf(conclusion))
+            for (actor in result.analyzers) {
+                assertEquals(setOf(TargetSummary(f.ap.zero, Target.DemandTarget)), actor.targets)
+                assertEquals(setOf(primary, secondary),
+                    actor.sinkSeeds.filterIsInstance<Seed.Sink>().map { it.rule }.toSet())
+                assertEquals(3, actor.sinkSeeds.size, "Distinct rule and condition seed values survive Target dedup")
             }
+            candidateReport(config, result, f)
 
-            val support = historical(result, config, f)
-            candidateReport(config, result)
-            for (witness in witnesses.values.flatten())
-                assertFalse(witness.confirmed,
-                    "Unproved contexts and alternatives remain separate candidate witnesses")
         }
     }
     @Test fun `mixed caller sink keeps its joint candidate while empty end actions create no derived source`(): Unit {
@@ -368,21 +353,27 @@ class SupportIntegrationTest {
             val derived = SinkRule(rule("zero GEN candidate"), 0, listOf(output), emptyList())
             f.exit(callee, 2, ExitRules(rules(derived), false, emptySet()))
             val config = f.config(index = 3, L = 2, roots = listOf(left, right),
-                demand = listOf(callee to DemandPattern(px, null), callee to DemandPattern(py, null)),
+                demand = listOf(left to DemandPattern(ZERO_PATTERN, ZERO_PATTERN),
+                    right to DemandPattern(ZERO_PATTERN, ZERO_PATTERN), callee to DemandPattern(ZERO_PATTERN, ZERO_PATTERN),
+                    callee to DemandPattern(px, null), callee to DemandPattern(py, null)),
                 seeds = listOf(Seed.Source(left, f.inst(left, 0), sx), Seed.Source(right, f.inst(right, 0), sy)))
             val result = joined(f, config)
-            val all = result.witnessesByKey()
-            val trigger = all.entries.single { it.key.rule === pooled.rule }.value.single()
-            assertEquals(listOf(f.ap.initial(px), f.ap.initial(py)), trigger.edges.map { it.premise })
-            assertTrue(trigger.edges.all { it.layer == Layer.NORMAL })
-            assertFalse(historical(result, config, f).isSupported(callee, trigger.supportPremise(f.ap).members),
+            val calleeActor = result.analyzers.single { it.key == callee }
+            val terminal = calleeActor.targets.single()
+            assertSame(f.ap.union(f.ap.initial(px), f.ap.initial(py)), terminal.premise)
+            val descriptor = f.shared.reportCatalog.descriptor(assertIs<Target.NormalTarget>(terminal.target).id)
+            assertEquals(pooled.rule.id, descriptor.key.ruleId)
+            assertFalse(historical(result, config, f).isSupported(callee, terminal.premise.members),
                 "Different callers supply separate members, never the full AND at one call")
             val emitted = result.analyzers.single { it.key == callee }.summaries.all().filter { it.first.isZero }
                 .flatMap { (_, facts) -> f.ops.leaves(facts) }.toSet()
             assertFalse(output in emitted, "A sink cannot manufacture an end-action source")
             assertTrue(pooled.endFacts.isEmpty())
-            assertTrue(all.keys.none { it.rule === derived.rule }, "No downstream output witness exists")
-            candidateReport(config, result)
+            assertTrue(calleeActor.targets.none { row ->
+                val id = (row.target as? Target.NormalTarget)?.id
+                id != null && f.shared.reportCatalog.descriptor(id).key.ruleId == derived.rule.id
+            }, "No downstream output terminal exists")
+            candidateReport(config, result, f)
         }
     }
 

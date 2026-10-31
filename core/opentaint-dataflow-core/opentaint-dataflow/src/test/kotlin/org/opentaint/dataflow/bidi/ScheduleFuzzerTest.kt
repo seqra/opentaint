@@ -74,8 +74,8 @@ class ScheduleFuzzerTest {
                     (fields + values.flatMap { it.fact.path + (it.exclusion as? ExclusionSet.Concrete)?.ids?.toList().orEmpty() } +
                         positionPaths.flatten() + f.field("fresh accessor")).distinct(),
                     (marks + values.mapNotNull { (it.fact.mark as? MarkSlot.Concrete)?.mark } + f.mark("fresh mark") + TaintMark.ZERO).distinct(), 2)
-                if (catalogRefinement) expected.assertCatalogRefinement(actual, universe, config.roots)
-                else actual.assertEquivalent(expected, universe)
+                if (catalogRefinement) expected.dataOnly().assertCatalogRefinement(actual.dataOnly(), universe, config.roots)
+                else actual.dataOnly().assertEquivalent(expected.dataOnly(), universe)
                 verify(actual)
                 if (seed < 2) {
                     val repeat = ProductionSchedule(f, config, sameUnit = sameUnit, policy = SchedulePolicy.SEEDED,
@@ -125,7 +125,7 @@ class ScheduleFuzzerTest {
                     (expected.witnesses + actual.witnesses).flatMap { it.edges.flatMap { e -> e.premise.map { p -> p.fact.base } + e.facts.map { c -> c.fact.base } } }
                 val universe = BoundedDenotation((bases + listOf(AccessPathBase.Zero, x, returned)).distinct(),
                     listOf(f.field("fresh accessor")), (listOf(t.mark, f.mark("fresh mark"), TaintMark.ZERO) + (listOf(t.mark, f.mark("fresh mark"))).map { f.ap.marks.group(f.ap.marks.groupOf(it)) }).distinct(), 2)
-                try { actual.assertEquivalent(expected, universe) }
+                try { actual.dataOnly().assertEquivalent(expected.dataOnly(), universe) }
                 catch (failure: AssertionError) { throw AssertionError("policy=$policy sameUnit=$sameUnit duplicate=$duplicate program=${f.describe()} trace=${schedule.trace}", failure) }
                 assertContains(actual.rawSummaries, ObservedEdge(caller, setOf(ZERO_PATTERN),
                     GroupedScalarMarks(f.ap.marks).conclusion(Conclusion(PathFact(returned, emptyList(), Tail.EXACT, t), ExclusionSet.Empty, false))))
@@ -414,6 +414,9 @@ class ScheduleFuzzerTest {
                 f.fact(returned, tail = outputTail, mark = u,
                     exclusion = if (outputTail == Tail.ANY_TAINT) ExclusionSet.of(b) else ExclusionSet.Empty))
             val config = f.config(index = 2, roots = listOf(caller), records = listOf(callee to record),
+                demand = listOf(caller to DemandPattern(ZERO_PATTERN, f.pattern(x, listOf(a), Tail.ANY, t)),
+                    caller to DemandPattern(ZERO_PATTERN, ZERO_PATTERN),
+                    callee to DemandPattern(ZERO_PATTERN, ZERO_PATTERN)),
                 seeds = listOf(Seed.Sink(rule("view seed"), caller, main.inst(2), f.pattern(y, mark = u))))
             compareSeed(f, config, listOf(a, b), listOf(t.mark, u.mark), seed) { actual ->
                 val demand = inputTail == Tail.ANY_TAINT
@@ -428,7 +431,7 @@ class ScheduleFuzzerTest {
                 assertContains(actual.rawSummaries, zeroSummary)
                 assertContains(actual.publications, zeroSummary)
                 assertContains(actual.selectedDemand, zeroSummary)
-                assertTrue(actual.requests.isEmpty() && actual.sourceHits.isEmpty() && actual.witnesses.isEmpty())
+                assertTrue(actual.requests.isEmpty() && actual.sourceHits.isEmpty() && actual.targets.isEmpty() && actual.sinkSeeds.isEmpty())
             }
         }
     }

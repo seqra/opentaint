@@ -18,11 +18,9 @@ import org.opentaint.dataflow.bidi.driver.BidiEntry
 import org.opentaint.dataflow.bidi.driver.IterationDriver
 import org.opentaint.dataflow.bidi.driver.IterationPolicy
 import org.opentaint.dataflow.bidi.driver.Report
-import org.opentaint.dataflow.bidi.driver.ReportState
 import org.opentaint.dataflow.bidi.engine.MethodContextCache
 import org.opentaint.dataflow.bidi.engine.RunStatus
 import org.opentaint.dataflow.bidi.engine.SharedObjects
-import org.opentaint.dataflow.bidi.store.ConcurrentVulnerabilityStore
 import org.opentaint.dataflow.bidi.store.PersistentRecordStore
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
@@ -160,19 +158,18 @@ class JIRBidiAnalysis internal constructor(
         val contexts = MethodContextCache(interpreter, JIRMethodContextCache(interpreter, entries))
         @Suppress("UNCHECKED_CAST")
         return SharedObjects(ap, ApOps(ap), interpreter, language, contexts, PersistentRecordStore(ap),
-            ConcurrentVulnerabilityStore(ap), unitResolver as UnitResolver<CommonMethod>, refManager, cancellation,
+            unitResolver as UnitResolver<CommonMethod>, refManager, cancellation,
             formStatistics = entries.formStatistics,
             releaseRun1CatalogCoverage = entries::releaseRun1CatalogCoverage, staticCallGraph = staticCallGraph)
     }
 
     override fun toVulnerabilities(report: Report): List<VulnerabilityWithTrace> {
-        val counts = report.entries.groupingBy { it.state }.eachCount()
-        logger.info { "Bidi analysis: ${counts[ReportState.CONFIRMED] ?: 0} CONFIRMED, ${counts[ReportState.DEMAND] ?: 0} DEMAND vulnerabilities" }
+        logger.info { "Bidi analysis: ${report.entries.size} reported sink identities" }
         return report.entries.map { entry ->
-            val rule = entry.key.rule
-            val witness = entry.witnesses.firstOrNull { it.confirmed } ?: entry.witnesses.first()
-            val node = TaintSinkTracker.TaintVulnerabilityRuleNode.Unconditional(witness.methodKey)
-            VulnerabilityWithTrace(TaintSinkTracker.TaintVulnerability(entry.key.statement, rule.id,
+            val descriptor = entry.descriptor
+            val rule = descriptor.rule
+            val node = TaintSinkTracker.TaintVulnerabilityRuleNode.Unconditional(descriptor.representativeMethodKey)
+            VulnerabilityWithTrace(TaintSinkTracker.TaintVulnerability(descriptor.key.statement, rule.id,
                 hashMapOf(rule to node)), TracePathGenerationResult.Simple)
         }
     }

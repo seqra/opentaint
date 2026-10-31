@@ -92,8 +92,8 @@ class FieldLimitScheduleTest {
                 assertEquals(listOf(1, 2, 3), driver.frontiers.map { it.run })
                 assertFalse(f.configs[2].demand!!.hasStaticCompletion)
                 assertEquals(3, report.end.run)
-                assertEquals(EndReason.NO_DEMAND_EDGE, report.end.reason)
-                assertTrue(driver.frontiers.last().demandEdges.isEmpty())
+                assertEquals(EndReason.POLICY, report.end.reason)
+                assertTrue(driver.frontiers.last().demandEdges.isNotEmpty(), "Intrinsic MAY still requires terminal refinement")
             }
         } finally {
             if (old == null) System.clearProperty(property) else System.setProperty(property, old)

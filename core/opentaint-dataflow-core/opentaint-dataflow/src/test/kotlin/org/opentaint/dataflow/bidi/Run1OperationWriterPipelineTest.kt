@@ -62,7 +62,7 @@ class Run1OperationWriterPipelineTest {
                 val schedule = ProductionSchedule(f, f.config(roots = listOf(main)), policy = policy,
                     quantum = 1, duplicateDeliveries = true)
                 val result = schedule.run()
-                assertTrue(result.witnesses.any { it.rule == sink.rule })
+                assertTrue(result.targets.any { !it.normal })
                 assertEquals(1, schedule.completedStaticStatistics!!.writerRows,
                     "The leaf owns one writer; its callers retain no static/static relays")
                 assertEquals(0, schedule.completedStaticStatistics!!.flowWriterRows)
@@ -125,7 +125,7 @@ class Run1OperationWriterPipelineTest {
                     val schedule = ProductionSchedule(f, f.config(roots = listOf(main)), policy = policy,
                         quantum = 1, duplicateDeliveries = true)
                     val result = schedule.run()
-                    assertTrue(result.witnesses.any { it.rule == sink.rule },
+                    assertTrue(result.targets.any { !it.normal },
                         "Missing computed supply: static=$staticInput late=$lateGroup policy=$policy")
                     val group = f.ap.marks.group(f.ap.marks.groupOf(full))
                     assertTrue(result.requests.any { it.method == setter &&

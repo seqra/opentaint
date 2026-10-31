@@ -5,6 +5,7 @@ import org.opentaint.dataflow.bidi.ap.MarkMode
 import org.opentaint.dataflow.bidi.driver.*
 import org.opentaint.dataflow.bidi.engine.*
 import org.opentaint.dataflow.bidi.fixtures.DriverFixtures
+import org.opentaint.dataflow.bidi.fixtures.settledNormalSink
 import java.util.concurrent.locks.LockSupport
 import kotlin.test.*
 import kotlin.time.Duration
@@ -29,7 +30,7 @@ class DriverTest {
                 assertTrue(f.configs.all { it.mode.markMode == MarkMode.FULL })
                 assertTrue(f.results.all { it.markMode == MarkMode.FULL })
                 assertEquals(MarkMode.FULL, report.end.run1MarkMode)
-                assertEquals(EndReason.NO_DEMAND_EDGE, report.end.reason)
+                assertEquals(EndReason.POLICY, report.end.reason)
             }
         } finally {
             if (old == null) System.clearProperty(name) else System.setProperty(name, old)
@@ -71,7 +72,7 @@ class DriverTest {
     @Test
     fun `the first limit is read once and the public constructor executes the actual normal candidate barrier`(): Unit {
         DriverFixtures().use { f ->
-            val c = f.confirmed()
+            val c = f.settledNormalSink()
             val reads = ArrayList<Int>()
             val p = policy(limit = { index ->
                 reads += index
@@ -81,14 +82,13 @@ class DriverTest {
             val driver = IterationDriver(p, f.shared, 5.seconds)
             val report = driver.analyze(listOf(c.root))
             assertEquals(listOf(1), reads)
-            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 1, Direction.FORWARD, EndReason.POLICY), report.end)
+            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 1, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
             val entry = report.entries.single()
-            assertEquals(c.rule, entry.key.rule)
-            assertEquals(ReportState.DEMAND, entry.state)
-            assertTrue(entry.witnesses.all { !it.confirmed })
+            assertEquals(c.rule, entry.descriptor.rule)
+            assertEquals(1, report.entries.size)
             assertEquals(listOf(1), driver.frontiers.map { it.run })
-            assertEquals(0, driver.frontiers.single().confirmedVulnerabilities)
-            assertEquals(1, driver.frontiers.single().demandVulnerabilities)
+            assertEquals(1, driver.frontiers.single().reportedSinks)
+            assertEquals(0, driver.frontiers.single().targetDemand)
         }
     }
 
@@ -114,10 +114,9 @@ class DriverTest {
             assertEquals(listOf(1, 2), f.configs.map { it.index })
             assertEquals(listOf(1, 1), f.configs.map { it.fieldLimit })
             assertEquals(AnalysisEnd(RunStatus.FAILED, 2, Direction.BACKWARD, EndReason.ABNORMAL), report.end)
-            assertEquals(ReportState.DEMAND, report.entries.single().state)
-            assertEquals(c.rule, report.entries.single().key.rule)
+            assertTrue(report.entries.isEmpty(), "DEMAND terminal is guidance, not a final report")
             assertEquals(listOf(1, 2), driver.frontiers.map { it.run })
-            assertEquals(listOf(1, 0), driver.frontiers.map { it.demandVulnerabilities })
+            assertEquals(listOf(1, 1), driver.frontiers.map { it.targetDemand })
         }
     }
 
@@ -132,15 +131,14 @@ class DriverTest {
                 assertEquals(Direction.FORWARD, result.direction)
                 assertTrue(result.demandLayerEdges > 0)
                 assertEquals(listOf(run.index), frontiers.map { it.run })
-                assertEquals(1, frontiers.last().demandVulnerabilities)
+                assertEquals(1, frontiers.last().targetDemand)
                 assertTrue(frontiers.last().seeds > 0)
                 false
             }))
             val report = driver.analyze(listOf(c.root))
             assertEquals(listOf(1), policyCalls)
             assertEquals(AnalysisEnd(RunStatus.COMPLETE, 1, Direction.FORWARD, EndReason.POLICY), report.end)
-            assertEquals(ReportState.DEMAND, report.entries.single().state)
-            assertEquals(c.rule, report.entries.single().key.rule)
+            assertTrue(report.entries.isEmpty(), "DEMAND terminal is guidance, not a final report")
             assertEquals(listOf(1), driver.frontiers.map { it.run })
         }
     }
@@ -164,15 +162,14 @@ class DriverTest {
     fun `normal unsupported joint support remains a candidate for policy and outgoing sink seeds`(): Unit {
         DriverFixtures().use { f ->
             val c = f.unsupportedJoint()
-            val driver = f.driver(policy(next = { _, _, _ -> false }))
+            val driver = f.driver(policy(next = { _, _, _ -> false }), run1MarkMode = MarkMode.GROUP)
             val report = driver.analyze(listOf(c.root))
-            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 1, Direction.FORWARD, EndReason.POLICY), report.end)
-            assertEquals(ReportState.DEMAND, report.entries.single().state)
-            assertEquals(c.rule, report.entries.single().key.rule)
-            assertTrue(report.entries.single().witnesses.all { !it.confirmed })
+            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 1, Direction.FORWARD, EndReason.POLICY,
+                run1MarkMode = MarkMode.GROUP), report.end)
+            assertTrue(report.entries.isEmpty(), "DEMAND terminal is guidance, not a final report")
             assertTrue(f.results.single().demandLayerEdges > 0,
                 "Grouped run-1 taint is DEMAND even before joint-support confirmation")
-            assertEquals(1, driver.frontiers.single().demandVulnerabilities)
+            assertEquals(3, driver.frontiers.single().targetDemand)
             assertTrue(driver.frontiers.single().seeds >= 2)
             assertEquals(listOf(1), f.configs.map { it.index })
         }
@@ -193,9 +190,9 @@ class DriverTest {
             assertEquals(listOf(1, 2, 3), f.configs.map { it.index })
             assertEquals(listOf(1, 1, 2), f.configs.map { it.fieldLimit })
             assertEquals(listOf(Direction.FORWARD, Direction.BACKWARD, Direction.FORWARD), f.configs.map { it.direction })
-            assertEquals(listOf(1), calls, "Run-3 stops from its selected snapshot before the policy")
-            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
-            assertEquals(ReportState.DEMAND, report.entries.single().state)
+            assertEquals(listOf(1, 3), calls, "Intrinsic MAY keeps terminal refinement guidance")
+            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.POLICY), report.end)
+            assertTrue(report.entries.isEmpty(), "DEMAND terminal is guidance, not a final report")
         }
     }
 
@@ -207,8 +204,7 @@ class DriverTest {
                 val driver = f.driver(policy(next = { _, _, _ -> throw failure }))
                 val report = driver.analyze(listOf(c.root))
                 assertEquals(AnalysisEnd(RunStatus.FAILED, 1, Direction.FORWARD, EndReason.ABNORMAL), report.end)
-                assertEquals(ReportState.DEMAND, report.entries.single().state)
-                assertEquals(c.rule, report.entries.single().key.rule)
+                assertTrue(report.entries.isEmpty(), "DEMAND terminal is guidance, not a final report")
                 assertEquals(listOf(1), driver.frontiers.map { it.run })
                 assertEquals(listOf(1), f.configs.map { it.index })
                 assertEquals(RunStatus.COMPLETE, f.results.single().status)
@@ -233,10 +229,11 @@ class DriverTest {
             val before = driver.frontiers
             assertTrue(before.isEmpty())
             val report = driver.analyze(listOf(c.root))
-            assertEquals(EndReason.NO_DEMAND_EDGE, report.end.reason)
+            assertEquals(EndReason.POLICY, report.end.reason)
             assertTrue(before.isEmpty(), "A getter snapshot from before the run cannot become a live view")
-            assertEquals(listOf(1), policySnapshots.single().map { it.run },
+            assertEquals(listOf(1), policySnapshots.first().map { it.run },
                 "The run-1 policy snapshot stays stable after the run-2 and run-3 barriers")
+            assertEquals(2, policySnapshots.size)
             assertEquals(listOf(1, 2, 3), driver.frontiers.map { it.run })
             assertFails { (driver.frontiers as MutableList<Frontier>).clear() }
             assertEquals(3, driver.frontiers.size)
@@ -246,7 +243,7 @@ class DriverTest {
     @Test
     fun `an oversized positive policy timeout is capped to the freshly remaining analysis budget`(): Unit {
         DriverFixtures().use { f ->
-            val c = f.confirmed()
+            val c = f.persistentDemand()
             val remainingAtPolicy = ArrayList<Duration>()
             val driver = f.driver(policy(timeoutOf = { _, remaining ->
                 remainingAtPolicy += remaining
@@ -306,8 +303,7 @@ class DriverTest {
             assertEquals(listOf(1, 2), remaining.map { it.first })
             assertTrue(remaining[1].second < Duration.ZERO)
             assertTrue(remaining[1].second < remaining[0].second)
-            assertEquals(ReportState.DEMAND, report.entries.single().state)
-            assertEquals(c.rule, report.entries.single().key.rule)
+            assertTrue(report.entries.isEmpty(), "DEMAND terminal is guidance, not a final report")
             assertEquals(listOf(1), driver.frontiers.map { it.run })
             assertTrue(f.timeouts.size <= 2)
             if (f.timeouts.size == 2) assertTrue(f.timeouts[1] <= Duration.ZERO)

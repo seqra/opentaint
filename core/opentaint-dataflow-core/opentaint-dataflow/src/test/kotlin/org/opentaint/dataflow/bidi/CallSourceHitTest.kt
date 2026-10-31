@@ -3,6 +3,7 @@ package org.opentaint.dataflow.bidi
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.engine.*
+import org.opentaint.dataflow.bidi.engine.Target
 import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
 import org.opentaint.dataflow.bidi.interp.*
 import org.opentaint.dataflow.bidi.store.*
@@ -118,8 +119,15 @@ class CallSourceHitTest {
             val part = Subscription(callee, CallerRef(f.key, initial, Layer.NORMAL, f.inst(1)), Layer.NORMAL, f.fact(result, mark = t))
             replayPersistedSummaries(actor.config, f.ops, part, actor)
             f.drain(actor)
-            assertEquals(setOf(initial to Conclusion(if (view) ZERO_FACT else PathFact(argument, emptyList(), Tail.EXACT, u),
-                ExclusionSet.Empty, false)), methodEntries(f.ops, actor.summaries.all()))
+            if (view) {
+                assertTrue(actor.summaries.all().none(), "A reversed source read discharges to a terminal")
+                assertEquals(setOf(TargetSummary(initial, Target.DemandTarget)), actor.targets)
+                assertTrue(f.cuts.none { it.first == Cut.CALL }, "The source terminal skips the call suffix")
+            } else {
+                assertEquals(setOf(initial to Conclusion(PathFact(argument, emptyList(), Tail.EXACT, u),
+                    ExclusionSet.Empty, false)), methodEntries(f.ops, actor.summaries.all()))
+                assertTrue(actor.targets.isEmpty(), "An ordinary nonzero data result remains an AP result")
+            }
             assertEquals(1L, actor.recordCrossings)
             assertTrue(actor.sourceHits!!.entries().none(), "Neither persisted callee edge nor caller source is executed by a record reader")
             replayPersistedSummaries(actor.config, f.ops, part, actor)
@@ -155,7 +163,7 @@ class CallSourceHitTest {
             assertEquals(0, f.cuts.count { it.first == Cut.SEED })
             assertTrue(actor.summaries.all().none(), "Ignored end actions cannot supply a missing call return")
             assertTrue(actor.sourceHits!!.entries().none())
-            assertTrue(f.vulnerabilities.witnessesOf(2).none())
+            assertTrue(actor.targets.isEmpty())
         }
     }
 }

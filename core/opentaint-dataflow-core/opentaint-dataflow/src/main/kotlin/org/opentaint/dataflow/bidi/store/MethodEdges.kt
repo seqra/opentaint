@@ -67,6 +67,7 @@ class MethodEdgeStore(private val m: ApManager, private val method: MethodKey, p
      * The packet decoder, not its FLOW-shaped storage key, determines K6. */
     fun addDiagonal(node: CommonInst, offered: DiagonalDelta): List<DiagonalDelta>? {
         m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.initial(offered.initialShape) || !RuntimeDataDomain.base(offered.base)) return emptyList()
         val statements = packed ?: return null
         check(offered.initialShape.manager === m) { "A diagonal packet needs an owned initial shape" }
         check(offered.base !is AccessPathBase.CleanerTemporary && offered.base != AccessPathBase.Zero)
@@ -80,6 +81,7 @@ class MethodEdgeStore(private val m: ApManager, private val method: MethodKey, p
     /** T4: new leaves, or the whole merged value when a T2 annotation changes. */
     fun add(node: CommonInst, premise: PremiseKey, f: Facts): Facts? {
         m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.packet(premise, f)) return null
         check(f.base !is AccessPathBase.CleanerTemporary) { "A field-action temporary cannot enter method storage" }
         check((f is FlowTree) == premise.isFlow) { "K6: the conclusion kind follows the premise" }
         check(premise !is PremiseSet || f is TaintTree) { "A multi-premise edge must be TAINT" }

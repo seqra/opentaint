@@ -362,7 +362,7 @@ class JIRLoweredCleanerEffectTest : BasicTestUtils() {
             override fun conjunction(cj: ConjunctiveEdge, premise: Set<Pattern>, c: Facts, node: CommonInst,
                                      out: (Set<Pattern>, Facts) -> Unit) = error("A cleaner has no conjunction")
             override fun allowsSource(node: CommonInst, me: MicroEdge) = error("A cleaner is not a source place")
-            override fun sourceHit(node: CommonInst, me: MicroEdge) = error("A cleaner cannot record a source hit")
+            override fun acceptedSource(application: AcceptedSource<Set<Pattern>, Facts>) = error("A cleaner cannot record a source hit")
         })
         fun statement(summary: StatementSummary, input: Facts, cut: Boolean): List<Facts> = buildList {
             applier.statement(summary, callerPremise, input, place,

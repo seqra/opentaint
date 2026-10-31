@@ -14,6 +14,7 @@ class Record(
     private fun reversedLeavesAt(a: Pattern): Sequence<Pair<RecordLeafView, Boolean>> = sequence {
         val m = premise.manager
         m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.packet(premise, conclusion) || !RuntimeDataDomain.base(a.fact.base)) return@sequence
         check(conclusion.layer == Layer.NORMAL) { "Only a normal native record has reversed views" }
         val nativePremise = premise.toPattern()
         for (leaf in ApOps(m).leaves(conclusion)) {
@@ -65,6 +66,7 @@ class PersistentRecordStore(private val m: ApManager) : RecordStore {
 
     override fun add(record: Record) {
         m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.packet(record.premise, record.conclusion)) return
         checkNativeRecord(record.direction, record.premise, record.conclusion)
         entry.getOrPut(record.method) { PathTrie(m.cancellation) }
             .add(record.premise.base, record.premise.pathArray, record)
@@ -76,6 +78,7 @@ class PersistentRecordStore(private val m: ApManager) : RecordStore {
     /** R2 candidates; the caller tests applicable or inside on the full native premise. */
     override fun byEntry(method: MethodKey, addedFact: Pattern): Sequence<Record> = sequence {
         m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.base(addedFact.fact.base)) return@sequence
         val candidates = entry[method]?.around(addedFact.fact.base, addedFact.fact.path.toIntArray()).orEmpty()
         for (record in candidates) {
             m.cancellation.checkpoint()
@@ -86,6 +89,7 @@ class PersistentRecordStore(private val m: ApManager) : RecordStore {
     /** A record at several exit leaf positions is returned once. R3 supplies its transient views. */
     override fun byExit(method: MethodKey, fact: Pattern): Sequence<Record> = sequence {
         m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.base(fact.fact.base)) return@sequence
         val candidates = exit[method]?.around(fact.fact.base, fact.fact.path.toIntArray()).orEmpty()
         val seen = HashSet<Record>()
         for (record in candidates) {
@@ -108,7 +112,7 @@ class PersistentRecordStore(private val m: ApManager) : RecordStore {
             m.cancellation.checkpoint()
             for ((premise, facts) in store.all()) {
                 m.cancellation.checkpoint()
-                if (facts.layer == Layer.DEMAND) continue
+                if (!RuntimeDataDomain.packet(premise, facts) || facts.layer == Layer.DEMAND) continue
                 val initial = premise as? InitialAp ?: continue
                 if (direction == Direction.BACKWARD && initial.isZero) continue
                 checkNativeRecord(direction, initial, facts)

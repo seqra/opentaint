@@ -12,6 +12,7 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
     private val interners = ap.newInterners()
     private val merged = LinkedHashMap<PremiseKey, ConclusionGroup>()
     private val backed = if (flowBacked) FlowBackedSummaries(ap) else null
+    private val targets = LinkedHashMap<PremiseKey, LinkedHashSet<Target>>()
     private val indexed = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<PremiseKey, Boolean>())
     private val byMember = PathTrie<Member>(ap.cancellation)
     fun addAll(pubs: List<Publication>): List<Publication> {
@@ -19,6 +20,7 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
         val out = ArrayList<Publication>()
         for (pub in pubs) {
             ap.cancellation.checkpoint()
+            if (!RuntimeDataDomain.packet(pub.premise, pub.conclusion)) continue
             assertCanonicalFlowSummary(pub.premise, pub.conclusion)
             check(pub.conclusion.base !is AccessPathBase.CleanerTemporary) {
                 "A field-action temporary cannot enter a publication"
@@ -32,13 +34,7 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
             val fresh = if (backed != null) backed.add(pub.premise, pub.conclusion)
                 else merged.getOrPut(pub.premise) { ConclusionGroup(ap, interners) }.add(pub.conclusion)
             if (fresh == null) continue
-            if (indexed.add(pub.premise)) {
-                for (member in 0 until pub.premise.size) {
-                    ap.cancellation.checkpoint()
-                    val initial = pub.premise.member(member)
-                    byMember.add(initial.base, initial.pathData, Member(pub.premise, member))
-                }
-            }
+            indexPremise(pub.premise)
             out += Publication(pub.premise, fresh)
         }
         // FLOW can arrive after a marked delta in this same detached batch.
@@ -49,8 +45,30 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
         return Collections.unmodifiableList(current)
     }
 
-    fun candidates(part: Subscription, mode: ApMode): List<Pair<Publication, Int>> {
+    private fun indexPremise(premise: PremiseKey) {
+        if (!indexed.add(premise)) return
+        for (member in 0 until premise.size) {
+            ap.cancellation.checkpoint()
+            val initial = premise.member(member)
+            byMember.add(initial.base, initial.pathData, Member(premise, member))
+        }
+    }
+
+    fun addTargets(rows: TargetBatch): TargetBatch {
+        val fresh = ArrayList<TargetSummary>()
+        for (row in rows) {
+            ap.cancellation.checkpoint()
+            if (!RuntimeDataDomain.premise(row.premise)) continue
+            if (!targets.getOrPut(row.premise, ::LinkedHashSet).add(row.target)) continue
+            indexPremise(row.premise)
+            fresh += row
+        }
+        return Collections.unmodifiableList(fresh)
+    }
+
+    private fun candidateMembers(part: Subscription, mode: ApMode): Set<Member> {
         ap.cancellation.checkpoint()
+        if (!RuntimeDataDomain.packet(part.ref.premise, part.added)) return emptySet()
         val members = LinkedHashSet<Member>()
         if (part.zeroOnly) {
             for (member in byMember.lookupExtensions(AccessPathBase.Zero, EMPTY_PATH)) {
@@ -79,13 +97,32 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
                 }
             }
         }
+        return members
+    }
+
+    fun candidates(part: Subscription, mode: ApMode): List<Pair<Publication, Int>> {
         val out = ArrayList<Pair<Publication, Int>>()
-        for (member in members) {
+        for (member in candidateMembers(part, mode)) {
             ap.cancellation.checkpoint()
-            for (publication in publications(member.premise)) {
-                ap.cancellation.checkpoint()
-                out += publication to member.index
-            }
+            for (publication in publications(member.premise)) out += publication to member.index
+        }
+        return Collections.unmodifiableList(out)
+    }
+
+    fun targetCandidates(part: Subscription, mode: ApMode): List<Pair<TargetSummary, Int>> {
+        val out = ArrayList<Pair<TargetSummary, Int>>()
+        for (member in candidateMembers(part, mode)) {
+            ap.cancellation.checkpoint()
+            for (target in targets[member.premise].orEmpty()) out += TargetSummary(member.premise, target) to member.index
+        }
+        return Collections.unmodifiableList(out)
+    }
+
+    fun staticTargetCandidates(): List<Pair<TargetSummary, Int>> {
+        val out = ArrayList<Pair<TargetSummary, Int>>()
+        for (member in byMember.lookupExtensions(STATIC, EMPTY_PATH)) {
+            ap.cancellation.checkpoint()
+            for (target in targets[member.premise].orEmpty()) out += TargetSummary(member.premise, target) to member.index
         }
         return Collections.unmodifiableList(out)
     }

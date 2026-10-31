@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.bidi.ap.*
@@ -104,7 +106,7 @@ class Run1StaticExitRoutingTest {
             val initial = f.manager.initial(f.pattern(STATIC, from, Tail.STAR, MarkSlot.STAR))
             actor.routeStaticResultToExit(f.inst(1), initial, f.fact(STATIC, target, Tail.STAR, MarkSlot.STAR, layer = Layer.DEMAND))
             f.drain(actor)
-            assertTrue(f.vulnerabilities.witnessesOf(1).none())
+            assertTrue(actor.targets.isEmpty())
             val before = f.processed.count { it.facts.base == STATIC }
             val effects = checkNotNull(actor.runnerPort.staticService).commit(StaticBatch().apply {
                 supplies += RegionGroups(f.pattern(STATIC, from, Tail.STAR, MarkSlot.STAR), MarkSet.of(atom))
@@ -112,7 +114,7 @@ class Run1StaticExitRoutingTest {
             assertTrue(effects.any { it is StaticOwnerEffect.PointReady && it.owner == actor.key })
             for (effect in effects) if (effect.owner == actor.key) actor.onStaticEffect(effect)
             f.drain(actor)
-            assertTrue(f.vulnerabilities.witnessesOf(1).any { it.first.rule == rule })
+            assertTrue(actor.targets.any { it.target == Target.DemandTarget })
             assertEquals(before, f.processed.count { it.facts.base == STATIC },
                 "The reply finishes BoundaryInput directly and must not schedule the shortcut again")
             assertTrue(actor.staticGuidanceSeeds.frozenRows().count() >= 2, "FLOW and its colored exit relation survive handoff")
@@ -161,7 +163,7 @@ class Run1StaticExitRoutingTest {
                 StatementSummary.EMPTY, listOf(sink)), false, emptySet()))
             val result = f.run(p.config(roots = listOf(root)))
             assertEquals(RunStatus.COMPLETE, result.status)
-            assertTrue(result.witnessesByKey().any { it.key.rule == sink.rule },
+            assertTrue(result.observedSink(sink.rule, f.shared.reportCatalog),
                 "Exit cleanup cannot hide the actual value from an earlier local read; nested=$nested")
             assertTrue(result.analyzers.all { actor -> actor.summaries.all().none { it.second.base == STATIC } },
                 "Producer binding does not fabricate an outgoing method summary after the exit kill")
@@ -224,7 +226,7 @@ class Run1StaticExitRoutingTest {
                 listOf(p.pattern(result, mark = MarkSlot.Concrete(mark))), emptyList())
             p.exit(root, 2, ExitRules(RuleStatement(StatementSummary.EMPTY, StatementSummary.EMPTY, listOf(sink)), false, emptySet()))
             val report = withRun1MarkMode(markMode) { f.driver(FixedLimits(listOf(1, 1, 2))) }.analyze(listOf(root))
-            assertTrue(f.results.first().witnessesByKey().any { it.key.rule == sink.rule }, "Run-1 must discover this candidate")
+            assertTrue(f.results.first().observedSink(sink.rule, f.shared.reportCatalog), "Run-1 must discover this candidate")
             assertTrue(f.results.all { it.status == RunStatus.COMPLETE })
             val trace = buildString {
                 append("kill=").append(kill).append(" wrappers=").append(wrappers).append(" runs=").append(f.configs.map { it.index }).append(" end=").append(report.end)
@@ -238,7 +240,7 @@ class Run1StaticExitRoutingTest {
                     append(" hits=").append(run.analyzers.flatMap { it.sourceHits?.entries()?.toList().orEmpty() })
                 }
             }
-            assertTrue(report.entries.any { it.key.rule == sink.rule },
+            assertTrue(report.entries.any { it.descriptor.rule == sink.rule },
                 "A real p-to-return flow through a pre-exit write must survive restricted refinement: $trace")
         }
     }
@@ -276,16 +278,24 @@ class Run1StaticExitRoutingTest {
                 listOf(p.pattern(result, mark = MarkSlot.Concrete(mark))), emptyList())
             p.exit(root, 2, ExitRules(RuleStatement(StatementSummary.EMPTY, StatementSummary.EMPTY, listOf(sink)), false, emptySet()))
             val report = withRun1MarkMode(MarkMode.GROUP) { f.driver(FixedLimits(listOf(1, 1, 2))) }.analyze(listOf(root))
-            assertTrue(f.results.first().witnessesByKey().any { it.key.rule == sink.rule })
+            assertTrue(f.results.first().observedSink(sink.rule, f.shared.reportCatalog))
             assertTrue(f.results.all { it.status == RunStatus.COMPLETE })
-            assertTrue(report.entries.any { it.key.rule == sink.rule },
+            assertTrue(report.entries.any { it.descriptor.rule == sink.rule },
                 "The internal C.g-to-C.f copy is needed even when its outgoing static summary is killed; " +
                     "runs=${f.configs.map { it.index }} end=${report.end}")
         }
     }
 
-    @Test fun `a genuine ZERO writer returns through wrappers after its static exit value is killed`() {
-        for (wrappers in listOf(0, 2)) for (mode in MarkMode.entries) DriverFixtures().use { f ->
+    @Test fun `a genuine FULL ZERO writer returns through wrappers after its static exit value is killed`() {
+        genuineZeroWriterReturnsThroughWrappers(MarkMode.FULL)
+    }
+
+    @Test fun `a genuine GROUP ZERO writer returns through wrappers after its static exit value is killed`() {
+        genuineZeroWriterReturnsThroughWrappers(MarkMode.GROUP)
+    }
+
+    private fun genuineZeroWriterReturnsThroughWrappers(mode: MarkMode) {
+        for (wrappers in listOf(0, 2)) DriverFixtures().use { f ->
             val p = f.program
             val root = p.method("zero writer caller", listOf(listOf(1), listOf(2), emptyList()), 2).key()
             val writer = p.method("zero writer getter", listOf(listOf(1), listOf(2), emptyList()), 2).key()
@@ -324,9 +334,28 @@ class Run1StaticExitRoutingTest {
                 listOf(sink)), false, emptySet()))
             val report = withRun1MarkMode(mode) { f.driver(FixedLimits(listOf(1, 1, 2))) }.analyze(listOf(root))
             assertTrue(f.results.all { it.status == RunStatus.COMPLETE }, "mode=$mode wrappers=$wrappers")
-            assertTrue(f.results.first().witnessesByKey().keys.any { it.rule == sink.rule })
-            assertTrue(report.entries.any { it.key.rule == sink.rule },
-                "A real ZERO source dependency survives killed-static guidance; mode=$mode wrappers=$wrappers")
+            assertTrue(f.results.first().observedSink(sink.rule, f.shared.reportCatalog))
+            assertTrue(report.entries.any { it.descriptor.rule == sink.rule }, buildString {
+                appendLine("A real ZERO source dependency survives killed-static guidance; mode=$mode wrappers=$wrappers end=${report.end}")
+                for (config in f.configs) {
+                    appendLine("run-${config.index} ${config.direction} mode=${config.mode.markMode}")
+                    for (owner in listOf(root) + relays + writer) {
+                        appendLine("demand ${owner.method.name}: ${config.demand?.explicitRows(owner)}")
+                        appendLine("ZERO ${owner.method.name}: ${config.demand?.initials(owner, Reach.NORMAL, config.admissionPolicy)?.map { it.initial.toPattern() to it.layer }}")
+                    }
+                    for (actor in f.results.single { it.runIndex == config.index }.analyzers) {
+                        fun origins(premise: PremiseKey) = premise.members.map { it.toPattern() }
+                        appendLine("actor ${actor.key}: targets=${actor.targets.map { origins(it.premise) to it.target }} selected=${actor.outgoingTargets.map { origins(it.premise) to it.target }}")
+                        appendLine("hits=${actor.sourceHits?.occurrences()?.toList()}")
+                        appendLine("summaries=${actor.summaries.all().map { (origin, facts) -> Triple(origins(origin), f.ops.leaves(facts).toList(), facts.layer) }.toList()}")
+                        if (config.index == 2) {
+                            val returnedT = f.manager.initial(p.pattern(ret, mark = MarkSlot.Concrete(mark)))
+                            appendLine("ret/T ZERO-intersection=${config.demand!!.intersect(actor.key, returnedT, Reach.NORMAL, config.admissionPolicy)} " +
+                                "Target-intersection=${config.demand.acceptsTarget(actor.key, returnedT, config.admissionPolicy)}")
+                        }
+                    }
+                }
+            })
             assertTrue(f.results.single { it.runIndex == 2 }.analyzers.any { actor ->
                 actor.sourceHits?.occurrences()?.any { it.method == writer && it.forward == source } == true
             }, "Run-2 must reach the actual source action")

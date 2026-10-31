@@ -2,15 +2,9 @@ package org.opentaint.dataflow.bidi.driver
 
 import org.opentaint.dataflow.bidi.ap.Direction
 import org.opentaint.dataflow.bidi.ap.MarkMode
-import org.opentaint.dataflow.bidi.engine.RunActor
-import org.opentaint.dataflow.bidi.engine.RunConfig
-import org.opentaint.dataflow.bidi.engine.RunResult
-import org.opentaint.dataflow.bidi.engine.RunStatus
-import org.opentaint.dataflow.bidi.store.SinkWitness
-import org.opentaint.dataflow.bidi.store.VulnerabilityKey
+import org.opentaint.dataflow.bidi.engine.*
 import java.util.Collections
 
-enum class ReportState { CONFIRMED, DEMAND }
 enum class EndReason { STOP_RULE, NO_DEMAND_EDGE, POLICY, ABNORMAL }
 
 data class AnalysisEnd(
@@ -18,44 +12,46 @@ data class AnalysisEnd(
     val run1MarkMode: MarkMode = MarkMode.FULL,
 )
 
-/** A report owns its lists and retains each witness's complete support shape. */
+/** Only settled configured-root ZERO terminal identities enter the report. */
 class Report(entries: List<Entry>, val end: AnalysisEnd) {
-    val entries: List<Entry> = owned(entries)
-
-    class Entry(val key: VulnerabilityKey, val state: ReportState, val run: Int, witnesses: List<SinkWitness>) {
-        val witnesses: List<SinkWitness> = owned(witnesses)
-    }
+    val entries: List<Entry> = Collections.unmodifiableList(ArrayList(entries))
+    data class Entry(val id: ReportId, val descriptor: ReportDescriptor)
 }
 
-private fun <T> owned(values: Collection<T>): List<T> = Collections.unmodifiableList(ArrayList(values))
-
-/** One driver barrier owns these updates. Only complete forward runs replace the demand set.
- * A NORMAL edge is not a confirmation certificate. Unproved witnesses stay DEMAND; an explicitly
- * proved confirmation remains sticky across later complete and incomplete runs.
- */
+/** One completed driver barrier commits retained relations and root reports together. */
 class ReportBuilder {
-    private class State(val confirmed: Map<VulnerabilityKey, Report.Entry>,
-                        val demand: Map<VulnerabilityKey, Report.Entry>)
-    private var state = State(emptyMap(), emptyMap())
+    class Snapshot internal constructor(val normal: NormalTargetView, entries: Map<ReportId, Report.Entry>) {
+        internal val entries = Collections.unmodifiableMap(LinkedHashMap(entries))
+    }
+    private var state = Snapshot(NormalTargetView.EMPTY, emptyMap())
+    val normalTargets: NormalTargetView get() = state.normal
+    val reportCount: Int get() = state.entries.size
 
-    fun <A : RunActor> add(config: RunConfig, result: RunResult<A>) {
-        if (result.status != RunStatus.COMPLETE || result.direction != Direction.FORWARD ||
-            config.direction != Direction.FORWARD) return
-        val confirmed = LinkedHashMap(state.confirmed)
-        val demand = LinkedHashMap<VulnerabilityKey, Report.Entry>()
-        for ((key, witnesses) in result.witnessesByKey()) {
-            if (!config.run1 && witnesses.any { it.confirmed }) {
-                confirmed.putIfAbsent(key, Report.Entry(key, ReportState.CONFIRMED, config.index, witnesses))
-            } else if (key !in confirmed) {
-                demand[key] = Report.Entry(key, ReportState.DEMAND, config.index, witnesses)
+    fun prepare(config: RunConfig, result: RunResult<RunMethodAnalyzer>, shared: SharedObjects): Snapshot {
+        check(result.status == RunStatus.COMPLETE)
+        if (config.direction != Direction.FORWARD) return state
+        val entries = LinkedHashMap(state.entries)
+        for (actor in result.analyzers) {
+            shared.cancellation.checkpoint()
+            if (actor.key !in config.roots) continue
+            for (row in actor.targets) {
+                val target = row.target as? Target.NormalTarget ?: continue
+                if (row.premise.isZero) entries.putIfAbsent(target.id,
+                    Report.Entry(target.id, shared.reportCatalog.descriptor(target.id)))
             }
         }
-        // Finish all enumeration and allocation before committing either report set.
-        state = State(confirmed, demand)
+        val fresh = result.analyzers.asSequence().flatMap { actor ->
+            actor.targets.asSequence().mapNotNull { row ->
+                (row.target as? Target.NormalTarget)?.let { OwnedNormalTarget(actor.key, row.premise, it.id) }
+            }
+        }
+        val normal = NormalTargetStore(shared.ap, state.normal.rows() + fresh)
+        check(normal.zeroRows().all { it.id in entries }) {
+            "Every retained ZERO terminal must reach a configured root before the barrier"
+        }
+        return Snapshot(normal, entries)
     }
 
-    fun demandEntries(): List<Report.Entry> = owned(state.demand.values)
-    fun hasDemandVulnerability(): Boolean = state.demand.isNotEmpty()
-    val confirmedCount: Int get() = state.confirmed.size
-    fun build(end: AnalysisEnd): Report = Report(state.confirmed.values + state.demand.values, end)
+    fun commit(prepared: Snapshot) { state = prepared }
+    fun build(end: AnalysisEnd): Report = Report(state.entries.values.toList(), end)
 }

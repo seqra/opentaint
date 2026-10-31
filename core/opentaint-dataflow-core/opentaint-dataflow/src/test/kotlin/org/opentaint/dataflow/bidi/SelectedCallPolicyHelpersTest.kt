@@ -74,10 +74,11 @@ class SelectedCallPolicyHelpersTest {
                     mark = MarkSlot.Concrete(f.mark(mark)))
             }
             val answers = actuals.map { emitRestrictedInitials(config, f.ops, f.key, it).single() }
-            assertSame(answers[0], answers[1])
-            assertEquals(listOf(field), answers[0].pathArray.asList())
-            assertEquals(Tail.STAR, answers[0].tail)
-            assertEquals(MarkSlot.STAR, answers[0].mark)
+            assertEquals(answers[0], answers[1])
+            assertSame(answers[0].initial, answers[1].initial)
+            assertEquals(listOf(field), answers[0].initial.pathArray.asList())
+            assertEquals(Tail.STAR, answers[0].initial.tail)
+            assertEquals(MarkSlot.STAR, answers[0].initial.mark)
             assertNotEquals(actuals[0], actuals[1])
         }
     }
@@ -108,7 +109,7 @@ class SelectedCallPolicyHelpersTest {
                         // Only STAR and MUST carry field exclusions in the submitted grammar.
                         if (e != ExclusionSet.Empty && tail !in listOf(Tail.STAR, Tail.ANY_TAINT)) continue
                         val actual = f.fact(path = path, tail = tail, mark = mark, exclusion = e, layer = layer)
-                        val reference = LinkedHashSet<InitialAp>()
+                        val reference = LinkedHashSet<AdmittedInitial>()
                         f.ops.limit(actual, config.fieldLimit, object : ApOut {
                             override fun markRequest(mark: TaintMark): Nothing = error("Unexpected field-cut request")
                             override fun result(facts: Facts) {

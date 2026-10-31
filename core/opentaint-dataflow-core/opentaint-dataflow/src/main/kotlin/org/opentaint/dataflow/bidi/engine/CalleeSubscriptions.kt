@@ -28,6 +28,7 @@ class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Stat
 
     internal fun admit(sub: Subscription): Admission? {
         ops.manager.cancellation.checkpoint()
+        if (!RuntimeDataDomain.packet(sub.ref.premise, sub.added)) return null
         check(!visitingQuestion) { "Question effects must be queued before changing N2 inputs" }
         if (sub.zeroOnly) {
             check(sub.ref.premise.isZero) { "A zero-only subscription needs a zero caller premise" }
@@ -73,9 +74,12 @@ class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Stat
         } finally { visitingQuestion = false }
     }
 
-    fun candidates(pub: Publication, member: Int, mode: ApMode): Sequence<Subscription> = sequence {
+    fun candidates(pub: Publication, member: Int, mode: ApMode): Sequence<Subscription> =
+        candidates(pub.premise, member, mode)
+
+    fun candidates(premise: PremiseKey, member: Int, mode: ApMode): Sequence<Subscription> = sequence {
         ops.manager.cancellation.checkpoint()
-        val initial = pub.premise.member(member)
+        val initial = premise.member(member)
         val ids = LinkedHashSet<Int>()
         if (mode.run1) {
             ids += index.lookupExtensions(initial.base, initial.pathData)
@@ -88,13 +92,13 @@ class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Stat
             if (initial.mark is MarkSlot.Star || initial.tail == Tail.STAR) ids += index.lookupExtensions(initial.base, initial.pathData)
         }
         // Capture every candidate value before callbacks can grow this directory.
-        val snapshot = ArrayList<Subscription>(ids.size + if (pub.premise.isZero) zeroParts.size else 0)
+        val snapshot = ArrayList<Subscription>(ids.size + if (premise.isZero) zeroParts.size else 0)
         for (id in ids) {
             ops.manager.cancellation.checkpoint()
             val value = values.snapshot(id)
             snapshot += Subscription(callees[id], value.ref, value.group.layer, value.facts)
         }
-        if (pub.premise.isZero) snapshot.addAll(zeroParts.values)
+        if (premise.isZero) snapshot.addAll(zeroParts.values)
         for (sub in snapshot) {
             ops.manager.cancellation.checkpoint()
             yield(sub)

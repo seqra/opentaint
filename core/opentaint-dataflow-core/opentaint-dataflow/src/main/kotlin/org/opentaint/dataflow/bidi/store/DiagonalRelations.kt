@@ -108,6 +108,7 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
      * subtraction/protection adapter and is deliberately not guessed here. */
     fun addDiagonal(delta: DiagonalDelta): List<DiagonalDelta>? {
         m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.initial(delta.initialShape) || !RuntimeDataDomain.base(delta.base)) return emptyList()
         require(delta.initialShape.manager === m) { "A diagonal packet must use this AP manager" }
         val header = Header(delta.initialShape, delta.base, delta.layer, delta.tail, delta.exclusion)
         // A different tail/E header can already cover some offered atoms.
@@ -133,6 +134,7 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
 
     fun supports(premise: PremiseKey, facts: Facts): Boolean {
         m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.packet(premise, facts)) return false
         val f = facts as? TaintTree ?: return false
         if ((f.anyTail != Tail.STAR && f.anyTail != Tail.ANY) ||
             flowInitialForCoverage(m, premise) == null) return false
@@ -146,6 +148,7 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
     /** Admit geometry/mask memberships before constructing the one scalar
      * delta needed by the current interpreter interface. */
     fun add(premise: PremiseKey, facts: Facts): Facts? {
+        if (!RuntimeDataDomain.packet(premise, facts)) return null
         require(supports(premise, facts)) { "Only admitted diagonal STAR or ANY relations use this store" }
         val f = facts as TaintTree
         val initial = premise as InitialAp

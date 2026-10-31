@@ -7,7 +7,7 @@ import java.util.Collections
 /** Immutable demand snapshot. Tails, marks, exclusions and exits remain candidate payloads. */
 class DemandStore private constructor(
     private val byMethod: Map<MethodKey, MethodDemandIndex>,
-    internal val zeroDemand: DemandPattern,
+    private val controls: Map<MethodKey, List<PairedDemand>>,
     private val ap: ApManager,
     val hasSharedStaticCarry: Boolean,
     internal val completion: FrozenCompletion?,
@@ -31,10 +31,18 @@ class DemandStore private constructor(
             check(d.exit == null || d.exit.fact.mark is MarkSlot.Star &&
                 d.exit.fact.tail in setOf(Tail.STAR, Tail.ANY)) { "Invalid paired FLOW exit: $d" }
         }
+        for (rows in controls.values) for (row in rows) {
+            ap.cancellation.checkpoint()
+            val entry = (row.entry as? DemandEntry.Data)?.pattern ?: continue
+            if (entry.fact.mark is MarkSlot.Star)
+                check(entry.fact.tail == Tail.ANY || run == 2 && entry.fact.tail == Tail.STAR) {
+                    "A run-$run FLOW demand entry must be ANY (STAR is valid only in run-2): $row"
+                }
+        }
     }
     fun staticCompletionStatistics(): String? = (completion?.statistics() ?: "localOnly=true") +
         " entryRows=${byMethod.values.sumOf { it.entryCount.toLong() }}" +
-        " pairRows=${byMethod.values.sumOf { it.rows.size.toLong() }}" +
+        " pairRows=${byMethod.values.sumOf { it.rows.size.toLong() } + controls.values.sumOf { it.size.toLong() }}" +
         (statistics?.let { " $it" } ?: "")
 
     /** C2 uses an entry-only index and never materializes origin products. */
@@ -42,17 +50,25 @@ class DemandStore private constructor(
         RestrictedInitialPolicy(run, fieldLimit, direction, ap.marks)
 
     fun initials(method: MethodKey, boundedActual: Facts,
-                 policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ap.marks)): Set<InitialAp> {
+                 policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ap.marks)): Set<AdmittedInitial> {
         ap.cancellation.checkpoint()
         statistics?.add(0)
+        if (!RuntimeDataDomain.base(boundedActual.base)) return emptySet()
+        if (boundedActual is Reach) {
+            var admitted = false
+            visitControlPairs(method, policy) { pair ->
+                admitted = pair.entry == DemandEntry.Zero || pair.entry == DemandEntry.Target
+                !admitted
+            }
+            return if (admitted) setOf(existingZeroAdmission(ap.zero)) else emptySet()
+        }
         val ops = ApOps(ap)
         val leaves = ops.leaves(boundedActual).toList()
-        val result = InitialDemandResults(ap, policy, statistics)
+        val result = InitialDemandResults(ap, policy, boundedActual.layer, statistics)
         val local = byMethod[method]
         for (leaf in leaves) {
             ap.cancellation.checkpoint()
             local?.entries?.visitAround(leaf.fact.base, leaf.fact.path.toIntArray()) { result.offer(it, leaf) }
-            if (leaf.fact.base == AccessPathBase.Zero) result.offer(zeroDemand.entry, leaf)
             staticCarry(leaf)?.let { result.offer(it.entry, leaf) }
         }
         val skipped = completion ?: return result.initials // run-3 onward: local only
@@ -81,10 +97,26 @@ class DemandStore private constructor(
     fun intersect(method: MethodKey, original: PremiseKey, raw: Facts,
                   policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ap.marks)): List<Facts> {
         ap.cancellation.checkpoint()
+        if (!RuntimeDataDomain.packet(original, raw)) return emptyList()
         val ops = ApOps(ap)
         val result = ExactDemandResults(ap, ops)
         val local = byMethod[method]
         val outputLeaves = ops.leaves(raw).toList()
+        // A control pair is tested as one row. Entry and exit permissions cannot mix.
+        visitControlPairs(method, policy, includeDerived = original.isZero) { pair ->
+            ap.cancellation.checkpoint()
+            if (!entryAccepts(pair.entry, original, policy)) return@visitControlPairs true
+            when (val exit = pair.exit) {
+                DemandExit.Zero -> if (raw is Reach) result.add(raw)
+                is DemandExit.Data -> if (raw !is Reach) {
+                    // Data/Data rows use the AP index. A control entry admitted ZERO;
+                    // use the existing AP restriction, including protection transport.
+                    val dataPair = DemandPattern(ap.zero.toPattern(), exit.pattern)
+                    for (kept in ops.restrict(ap.zero, raw, dataPair, policy)) result.add(kept)
+                }
+            }
+            !result.covers(raw)
+        }
         fun offer(member: InitialAp, pair: DemandPattern) {
             statistics?.add(7)
             if (pair.exit == null) return
@@ -121,8 +153,58 @@ class DemandStore private constructor(
     /** Immutable seed inspection for the finite explicit reference in tests. No closure is retained. */
     internal fun explicitRows(method: MethodKey): List<DemandPattern> {
         ap.cancellation.checkpoint()
-        return byMethod[method]?.rows.orEmpty()
+        val ordinary = byMethod[method]?.rows.orEmpty()
+        return ordinary + controls[method].orEmpty().mapNotNull { row ->
+            val entry = when (val e = row.entry) {
+                is DemandEntry.Data -> e.pattern
+                DemandEntry.Zero -> ap.zero.toPattern()
+                DemandEntry.Target -> return@mapNotNull null
+            }
+            val exit = when (val e = row.exit) {
+                is DemandExit.Data -> e.pattern
+                DemandExit.Zero -> ap.zero.toPattern()
+            }
+            DemandPattern(entry, exit)
+        }
     }
+
+    /** Terminal C5 needs one complete pair with a ZERO exit, explicit or run-2 static-composed. */
+    fun acceptsTarget(method: MethodKey, original: PremiseKey,
+                      policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ap.marks)): Boolean {
+        // ZERO and Target match exactly the same exit slots. This read-only probe
+        // reuses all paired C5 lookup paths; it never stores or propagates a ZERO edge.
+        return intersect(method, original, Reach.DEMAND, policy).isNotEmpty()
+    }
+
+    /** Virtual terminal pairs share the run-1 static graph; no closure rows are retained. */
+    private fun visitControlPairs(method: MethodKey, policy: RestrictedInitialPolicy, includeDerived: Boolean = true,
+                                  visit: (PairedDemand) -> Boolean): Boolean {
+        for (pair in controls[method].orEmpty()) {
+            ap.cancellation.checkpoint()
+            if (!visit(pair)) return false
+        }
+        val skipped = completion?.takeIf { includeDerived } ?: return true
+        val query = StaticPairLookup(ap, skipped, statistics) { entry, member ->
+            policy.canStoreInitial(entry, member.toPattern())
+        }
+        fun walk(visible: Boolean): Boolean = query.walkTargetOrigins(method, visible) { origin ->
+            val exit = if (origin.fact.base == AccessPathBase.Zero) DemandExit.Zero else DemandExit.Data(origin)
+            visit(PairedDemand(DemandEntry.Target, exit))
+        }
+        if (!walk(false)) return false
+        return !skipped.mayNeedInheritedPairs(method) || walk(true)
+    }
+
+    private fun entryAccepts(entry: DemandEntry, original: PremiseKey, policy: RestrictedInitialPolicy): Boolean {
+        original.forEachMember { if (entryAccepts(entry, it, policy)) return true }
+        return false
+    }
+
+    private fun entryAccepts(entry: DemandEntry, member: InitialAp, policy: RestrictedInitialPolicy): Boolean =
+        when (entry) {
+            DemandEntry.Zero, DemandEntry.Target -> member.isZero
+            is DemandEntry.Data -> !member.isZero && policy.canStoreInitial(entry.pattern, member.toPattern())
+        }
 
     /** Same actual slot and mark only. This family does not connect different fields. */
     private fun staticCarry(actual: Pattern): DemandPattern? {
@@ -134,7 +216,7 @@ class DemandStore private constructor(
 
     class Builder(private val m: ApManager) {
         private val seen = LinkedHashSet<Pair<MethodKey, DemandPattern>>()
-        private val zeroDemand = ownDemand(m, DemandPattern(m.zero.toPattern(), null))
+        private val controlRows = LinkedHashSet<Pair<MethodKey, PairedDemand>>()
         private var staticCarry = false
         private var completion: FrozenCompletion? = null
 
@@ -145,6 +227,15 @@ class DemandStore private constructor(
         /** Count only a new exact normalized pattern. Validate the typed hand-off boundary. */
         fun add(method: MethodKey, d: DemandPattern): Boolean {
             m.cancellation.checkpoint()
+            if (!RuntimeDataDomain.base(d.entry.fact.base) ||
+                d.exit?.let { !RuntimeDataDomain.base(it.fact.base) } == true) return false
+            if (d.entry.fact.base == AccessPathBase.Zero || d.exit?.fact?.base == AccessPathBase.Zero) {
+                val exit = d.exit ?: return false // No unpaired implicit ZERO permission.
+                return add(method, PairedDemand(
+                    if (d.entry.fact.base == AccessPathBase.Zero) DemandEntry.Zero else DemandEntry.Data(d.entry),
+                    if (exit.fact.base == AccessPathBase.Zero) DemandExit.Zero else DemandExit.Data(exit),
+                ))
+            }
             val entry = normalizeDemandFieldExclusion(d.entry)
             val exit = d.exit?.let(::normalizeDemandFieldExclusion)
             check(entry.fact.base !is AccessPathBase.CleanerTemporary && exit?.fact?.base !is AccessPathBase.CleanerTemporary) {
@@ -166,7 +257,35 @@ class DemandStore private constructor(
                 "Only STAR demand endpoints can exclude fields"
             }
             val owned = ownDemand(m, DemandPattern(entry, exit))
-            return owned != zeroDemand && seen.add(method to owned)
+            return seen.add(method to owned)
+        }
+
+        /** Data pairs keep the current AP index; control rows use only this local list. */
+        fun add(method: MethodKey, row: PairedDemand): Boolean {
+            m.cancellation.checkpoint()
+            if (row.entry is DemandEntry.Data && !RuntimeDataDomain.base(row.entry.pattern.fact.base) ||
+                row.exit is DemandExit.Data && !RuntimeDataDomain.base(row.exit.pattern.fact.base)) return false
+            if (row.entry is DemandEntry.Data && row.exit is DemandExit.Data)
+                return add(method, DemandPattern(row.entry.pattern, row.exit.pattern))
+            fun ownData(p: Pattern): Pattern {
+                val normalized = normalizeDemandFieldExclusion(p)
+                check(normalized.fact.base != AccessPathBase.Zero) { "Use a typed ZERO control endpoint" }
+                check(normalized.fact.base !is AccessPathBase.CleanerTemporary)
+                check(normalized.fact.tail != Tail.ANY_TAINT && normalizedMarks(normalized))
+                check(validFieldExclusion(normalized))
+                return ownPattern(m, normalized)
+            }
+            val entry = when (val e = row.entry) {
+                is DemandEntry.Data -> DemandEntry.Data(ownData(e.pattern).also {
+                    check(it.fact.mark !is MarkSlot.Star || it.fact.tail in setOf(Tail.ANY, Tail.STAR))
+                })
+                else -> e
+            }
+            val exit = when (val e = row.exit) {
+                is DemandExit.Data -> DemandExit.Data(ownData(e.pattern))
+                DemandExit.Zero -> DemandExit.Zero
+            }
+            return controlRows.add(method to PairedDemand(entry, exit))
         }
 
         /** The new index has no mutable alias in this builder or in earlier snapshots. */
@@ -176,6 +295,11 @@ class DemandStore private constructor(
             for ((method, demand) in seen) {
                 m.cancellation.checkpoint()
                 grouped.getOrPut(method) { ArrayList() } += demand
+            }
+            val controls = LinkedHashMap<MethodKey, MutableList<PairedDemand>>()
+            for ((method, row) in controlRows) {
+                controls.getOrPut(method) { ArrayList() } += row
+                grouped.getOrPut(method) { ArrayList() }
             }
             val byMethod = LinkedHashMap<MethodKey, MethodDemandIndex>()
             for ((method, rows) in grouped) {
@@ -189,9 +313,15 @@ class DemandStore private constructor(
                     byEntry.add(demand.entry.fact.base, demand.entry.fact.path.toIntArray(), id)
                     demand.exit?.let { byExit.add(it.fact.base, it.fact.path.toIntArray(), id) }
                 }
+                for (row in controls[method].orEmpty()) {
+                    val entry = (row.entry as? DemandEntry.Data)?.pattern ?: continue
+                    if (entries.add(entry.fact.base, entry.fact.path.toIntArray(), entry)) entryCount++
+                }
                 byMethod[method] = MethodDemandIndex(entries, Collections.unmodifiableList(rows), byEntry, byExit, entryCount)
             }
-            return DemandStore(Collections.unmodifiableMap(byMethod), zeroDemand, m, staticCarry, completion)
+            return DemandStore(Collections.unmodifiableMap(byMethod),
+                Collections.unmodifiableMap(controls.mapValues { Collections.unmodifiableList(it.value) }),
+                m, staticCarry, completion)
         }
     }
 }

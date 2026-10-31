@@ -13,9 +13,13 @@ class RestrictedInitialPolicy(
     init { require(run >= 2 && fieldLimit >= 1) }
 
     fun emit(demand: Pattern, actual: Pattern): Pattern? {
+        if (!validDemand(demand)) return null
         val d = normalizeDemandFieldExclusion(demand)
         if (d.fact.base != actual.fact.base || !markSub(d.fact.mark, actual.fact.mark, catalog)) return null
+        if (d.fact.base == AccessPathBase.Zero && !canonicalZero(actual)) return null
         if (!fitsBudget(d) || !fitsBudget(actual)) return null
+        // Only a concrete MAY witness can supply a provisional exact data point.
+        if (d.fact.tail == Tail.EXACT && actual.fact.tail == Tail.ANY && d.fact.mark is MarkSlot.Star) return null
         val p = d.fact.path
         val q = actual.fact.path
         val mark = boundMark(d.fact.mark, actual.fact.mark)
@@ -58,8 +62,16 @@ class RestrictedInitialPolicy(
         return null
     }
 
+    /** Preserve concrete support without interning an AP. Actuals are legal ApOps.leaves views:
+     * exact concrete leaves have Empty E even in a mixed tree; MAY headers also have Empty E. */
+    fun emitAdmission(demand: Pattern, actual: Pattern, actualLayer: Layer): InitialEmission? {
+        val emitted = emit(demand, actual) ?: return null
+        return InitialEmission(emitted, admissionLayer(emitted, actual, actualLayer))
+    }
+
     /** Complete structural output image, including the non-idempotent run-2 requested STAR. */
     fun canEmitInitial(demand: Pattern, initial: Pattern): Boolean {
+        if (!validDemand(demand)) return false
         val d = normalizeDemandFieldExclusion(demand)
         if (!legalInitial(initial) || !fitsBudget(d) || d.fact.base != initial.fact.base ||
             !renderedMark(d.fact.mark, initial.fact.mark)) return false
@@ -81,6 +93,7 @@ class RestrictedInitialPolicy(
 
     /** Summary keys are normalized, but the containment test belongs to their raw preimage. */
     fun canStoreInitial(entry: Pattern, stored: Pattern): Boolean {
+        if (!validDemand(entry)) return false
         fun fits(raw: Pattern): Boolean = canEmitInitial(entry, raw) && insideDemand(raw, entry, catalog)
         if (fits(stored)) return true
         return stored.fact.mark is MarkSlot.Star && stored.fact.tail == Tail.STAR &&
@@ -96,6 +109,13 @@ class RestrictedInitialPolicy(
         else rendered is MarkSlot.Concrete && markSub(required, rendered, catalog)
 
     private fun fitsBudget(p: Pattern): Boolean = p.fact.path.count { it.isCounted() } <= fieldLimit
+
+    private fun validDemand(p: Pattern): Boolean =
+        !(p.fact.tail == Tail.EXACT && p.fact.mark is MarkSlot.Concrete && p.exclusion != ExclusionSet.Empty) &&
+            (p.fact.base != AccessPathBase.Zero || canonicalZero(p))
+
+    private fun canonicalZero(p: Pattern): Boolean = p.fact.path.isEmpty() && p.fact.tail == Tail.EXACT &&
+        p.exclusion == ExclusionSet.Empty && p.fact.mark == MarkSlot.Concrete(TaintMark.ZERO)
 
     private fun legalInitial(p: Pattern): Boolean {
         if (!fitsBudget(p) || p.fact.tail == Tail.ANY_TAINT && direction == Direction.BACKWARD) return false

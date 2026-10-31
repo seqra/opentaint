@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.*
 import org.opentaint.dataflow.bidi.engine.*
+import org.opentaint.dataflow.bidi.engine.Target
 import org.opentaint.dataflow.bidi.fixtures.HandOffFixtures
 import org.opentaint.dataflow.bidi.interp.*
 import org.opentaint.dataflow.bidi.interp.CallPoint.*
@@ -39,7 +40,7 @@ class FrontierPropertyTest {
             val zero = f.key("zero only")
             val concrete = f.key("concrete initial")
             val flow = f.key("flow initial")
-            f.core(zero).addRootZero()
+            f.core(zero).addInitial(f.manager.zero)
             f.core(concrete).addInitial(f.initial())
             f.core(flow).addInitial(f.initial(y, tail = Tail.STAR, mark = MarkSlot.STAR))
             val result = f.result()
@@ -50,8 +51,8 @@ class FrontierPropertyTest {
             assertFalse(f.core(zero).nonZeroInitial)
             assertTrue(f.core(concrete).nonZeroInitial)
             assertTrue(f.core(flow).nonZeroInitial)
-            val handOff = HandOff.of(f.config, result, f.report, f.shared)
-            val frontier = frontierOf(f.config, result, handOff, f.report)
+            val handOff = HandOff.of(f.config, result, f.shared)
+            val frontier = frontierOf(f.config, result, handOff, f.report.reportCount)
             assertEquals(index, frontier.run)
             assertEquals(f.config.direction, frontier.direction)
             assertEquals(setOf(concrete, flow), frontier.analysed)
@@ -60,8 +61,8 @@ class FrontierPropertyTest {
             assertEquals(emptyMap(), frontier.demandEdges)
             assertEquals(0L, frontier.recordCrossings)
             assertEquals(0, frontier.seeds)
-            assertEquals(0, frontier.demandVulnerabilities)
-            assertEquals(0, frontier.confirmedVulnerabilities)
+            assertEquals(0, frontier.targetDemand)
+            assertEquals(0, frontier.reportedSinks)
             assertNull(frontier.demandByCause, "The engine has no optional cause counters")
         }
     }
@@ -87,8 +88,8 @@ class FrontierPropertyTest {
             assertEquals(4L, actor.edgeDeltas)
             assertEquals(setOf(first, second), f.links(actor).asSequence().map { it.caller }.toSet())
             assertEquals(0, actor.summaries.demandEdges().count(), "Raw demand without paired exit permission is not published")
-            val handOff = HandOff.of(f.config, result, f.report, f.shared)
-            val frontier = frontierOf(f.config, result, handOff, f.report)
+            val handOff = HandOff.of(f.config, result, f.shared)
+            val frontier = frontierOf(f.config, result, handOff, f.report.reportCount)
             assertEquals(setOf(actor.key), frontier.analysed)
             assertTrue(frontier.zeroOnly.isEmpty())
             assertEquals(emptyMap(), frontier.demandEdges)
@@ -122,7 +123,7 @@ class FrontierPropertyTest {
             assertEquals(2L, result.recordCrossings)
             assertFalse(actor.nonZeroInitial, "Concrete effects of the zero premise are not nonzero initial facts")
             assertEquals(6L, actor.edgeDeltas)
-            val frontier = frontierOf(f.config, result, emptyHandOff(f), f.report)
+            val frontier = frontierOf(f.config, result, emptyHandOff(f), f.report.reportCount)
             assertEquals(2L, frontier.recordCrossings)
             assertTrue(frontier.analysed.isEmpty())
             assertEquals(setOf(actor.key), frontier.zeroOnly)
@@ -157,22 +158,23 @@ class FrontierPropertyTest {
                 if (index == 2) {
                     f.selected(key, f.manager.zero, Reach.NORMAL)
                     f.selected(key, f.manager.zero, Reach.NORMAL)
+                    expected += key to DemandPattern(f.manager.zero.toPattern(), f.manager.zero.toPattern())
                 }
             }
             val result = f.result()
-            val handOff = HandOff.of(f.config, result, f.report, f.shared)
+            val handOff = HandOff.of(f.config, result, f.shared)
             val counts = expected.groupingBy { it.first }.eachCount()
             assertEquals(counts, handOff.demandEdges, "index=$index mask=$mask")
             val actual = keys.flatMap { key -> listOf(listOf(a), listOf(b)).flatMap { path ->
                 handOff.demand.near(key, demandProbe(y, path)).map { key to it }
-            } }.toSet()
+            } + handOff.demand.near(key, f.manager.zero.toPattern()).map { key to it } }.toSet()
             assertEquals(expected, actual, "Normalized abstract exclusions collide, while full allowed premises and contexts remain distinct")
-            val frontier = frontierOf(f.config, result, handOff, f.report)
+            val frontier = frontierOf(f.config, result, handOff, f.report.reportCount)
             assertEquals(counts, frontier.demandEdges)
             assertEquals(keys.toSet(), frontier.analysed)
             assertTrue(frontier.zeroOnly.isEmpty())
             assertNull(frontier.demandByCause)
-            assertEquals(if (mask == 0) 0 else 8, frontier.demandEdges.values.sum())
+            assertEquals((if (mask == 0) 0 else 8) + (if (index == 2) 2 else 0), frontier.demandEdges.values.sum())
         }
     }
 
@@ -181,7 +183,7 @@ class FrontierPropertyTest {
             val nonzero = f.key("nonzero")
             val zero = f.key("zero")
             f.core(nonzero).addInitial(f.initial())
-            f.core(zero).addRootZero()
+            f.core(zero).addInitial(f.manager.zero)
             val result = f.result()
             val counts = linkedMapOf(nonzero to 2)
             val seeds = arrayListOf<Seed>(Seed.Source(nonzero, f.inst(1),
@@ -189,7 +191,7 @@ class FrontierPropertyTest {
             val handOff = HandOff(DemandStore.Builder(f.manager).build(), SeedIndex.of(seeds), counts)
             counts.clear()
             seeds.clear()
-            val frontier = frontierOf(f.config, result, handOff, f.report)
+            val frontier = frontierOf(f.config, result, handOff, f.report.reportCount)
             assertEquals(mapOf(nonzero to 2), handOff.demandEdges)
             assertEquals(mapOf(nonzero to 2), frontier.demandEdges)
             assertEquals(setOf(nonzero), frontier.analysed)
@@ -204,31 +206,25 @@ class FrontierPropertyTest {
         }
     }
 
-    @Test fun `frontier counts current report states only for a forward result`(): Unit {
-        HandOffFixtures(index = 3).use { forward ->
+    @Test fun `frontier counts outgoing terminal guidance and committed reports independently`(): Unit {
+        HandOffFixtures(index = 1).use { forward ->
             val actor = forward.core()
-            actor.addRootZero()
-            val confirmedRule = rule("confirmed")
-            val demandRule = rule("demand")
-            val confirmed = SinkWitness(0, actor.key,
-                listOf(SinkEdge(forward.manager.zero, Layer.NORMAL, Reach.NORMAL)), 3).also { it.confirmed = true }
-            val demand = SinkWitness(0, actor.key,
-                listOf(SinkEdge(forward.manager.zero, Layer.DEMAND, Reach.DEMAND)), 3)
-            forward.vulnerabilities.add(VulnerabilityKey(confirmedRule, actor.key.method, forward.inst(2)), confirmed)
-            forward.vulnerabilities.add(VulnerabilityKey(demandRule, actor.key.method, forward.inst(2)), demand)
+            val sink = rule("settled")
+            val id = forward.shared.reportCatalog.intern(SinkKey(actor.key.method, forward.inst(2), sink.id), sink, actor.key)
+            actor.emitTarget(forward.manager.zero, Target.NormalTarget(id))
+            actor.emitTarget(forward.manager.zero, Target.DemandTarget)
             val result = forward.result()
-            forward.report.add(forward.config, result)
-            val frontier = frontierOf(forward.config, result, emptyHandOff(forward), forward.report)
-            assertEquals(1, frontier.confirmedVulnerabilities)
-            assertEquals(1, frontier.demandVulnerabilities)
+            forward.report.commit(forward.report.prepare(forward.config, result, forward.shared))
+            val frontier = frontierOf(forward.config, result, emptyHandOff(forward), forward.report.reportCount)
+            assertEquals(1, frontier.reportedSinks)
+            assertEquals(1, frontier.targetDemand)
             HandOffFixtures(index = 2).use { backward ->
-                backward.core().addRootZero()
+                backward.core().addInitial(backward.manager.zero)
                 val backResult = backward.result()
-                val backFrontier = frontierOf(backward.config, backResult, emptyHandOff(backward), forward.report)
-                assertEquals(0, backFrontier.confirmedVulnerabilities)
-                assertEquals(0, backFrontier.demandVulnerabilities)
-                assertEquals(1, forward.report.confirmedCount)
-                assertEquals(1, forward.report.demandEntries().size)
+                val backFrontier = frontierOf(backward.config, backResult, emptyHandOff(backward), forward.report.reportCount)
+                assertEquals(1, backFrontier.reportedSinks, "Committed reports remain visible during backward analysis")
+                assertEquals(0, backFrontier.targetDemand)
+                assertEquals(1, forward.report.reportCount)
             }
         }
     }
@@ -237,13 +233,13 @@ class FrontierPropertyTest {
         HandOffFixtures(index = 3).use { f ->
             val handOff = emptyHandOff(f)
             for (status in listOf(RunStatus.TIMEOUT, RunStatus.OOM, RunStatus.FAILED))
-                assertFailsWith<IllegalStateException> { frontierOf(f.config, f.result(status), handOff, f.report) }
-            f.core().addRootZero()
+                assertFailsWith<IllegalStateException> { frontierOf(f.config, f.result(status), handOff, f.report.reportCount) }
+            f.core().addInitial(f.manager.zero)
             val complete = f.result()
             f.cancellation.cancel()
-            assertFailsWith<Cancellation.Cancelled> { frontierOf(f.config, complete, handOff, f.report) }
+            assertFailsWith<Cancellation.Cancelled> { frontierOf(f.config, complete, handOff, f.report.reportCount) }
             f.cancellation.activate()
-            assertEquals(setOf(f.key()), frontierOf(f.config, complete, handOff, f.report).zeroOnly)
+            assertEquals(setOf(f.key()), frontierOf(f.config, complete, handOff, f.report.reportCount).zeroOnly)
         }
     }
 }

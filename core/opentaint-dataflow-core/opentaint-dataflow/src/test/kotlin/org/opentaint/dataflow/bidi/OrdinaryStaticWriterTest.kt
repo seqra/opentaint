@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.bidi.ap.*
@@ -51,13 +53,13 @@ class OrdinaryStaticWriterTest {
             publish(MarkExclusions.of(f.manager.marks, atom))
             actor.addRootZero()
             f.drain(actor, quantum = 1)
-            assertTrue(f.vulnerabilities.witnessesOf(1).none(), "The actual group is excluded by the saved FLOW relation")
+            assertTrue(actor.targets.isEmpty(), "The actual group is excluded by the saved FLOW relation")
             assertTrue(f.events.filterIsInstance<RunEvent.StaticOwner>().any {
                 it.effect is StaticOwnerEffect.WriterInterest
             }, "The all-static FLOW summary must receive its requested output group")
             publish(MarkExclusions.EMPTY)
             f.drain(actor, quantum = 1)
-            assertTrue(f.vulnerabilities.witnessesOf(1).any { it.first.rule == sink.rule },
+            assertTrue(actor.targets.any { it.target == Target.DemandTarget },
                 "A fresh relaxed relation must reuse the old actual pool group")
             assertTrue(f.processed.filter { it.facts.base == STATIC }.all { it.node === f.inst(f.normalExit) })
         }
@@ -94,7 +96,7 @@ class OrdinaryStaticWriterTest {
             assertTrue(f.events.filterIsInstance<RunEvent.StaticOwner>().none {
                 it.effect is StaticOwnerEffect.PointReady
             }, "An unanswered interest is not an actual group supply")
-            assertTrue(f.vulnerabilities.witnessesOf(1).none())
+            assertTrue(actor.targets.isEmpty())
         }
     }
 }

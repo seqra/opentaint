@@ -178,7 +178,7 @@ class RunSchedulingTest {
             val unit = EngineShellFixtures.Unit("finite method")
             val resolver = UnitResolver<CommonMethod> { method -> if (method == f.key.method) unit else UnknownUnit }
             val shared = SharedObjects(f.manager, f.ops, f.interpreter, f.language, f.contexts, f.records,
-                f.vulnerabilities, resolver, f.refManager, f.cancellation, threads = 1)
+                resolver, f.refManager, f.cancellation, threads = 1)
             try {
                 shared.use {
                     val real = RunMethodHandlers(MethodLocalServicesFactory { actor ->

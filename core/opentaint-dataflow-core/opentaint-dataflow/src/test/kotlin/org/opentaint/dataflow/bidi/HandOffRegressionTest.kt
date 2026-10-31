@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.*
@@ -55,19 +57,15 @@ class HandOffRegressionTest {
                 actor.addRootZero()
                 f.drain(actor, quantum = 1)
                 actor.freeze()
-                return RunResult(RunStatus.COMPLETE, listOf(actor), config.index, config.direction, f.vulnerabilities)
+                return RunResult(RunStatus.COMPLETE, listOf(actor), config.index, config.direction)
             }
             val report = ReportBuilder()
             val forwardConfig = f.config(index = 1, L = 1)
             val forward = run(forwardConfig)
-            val earlyKey = VulnerabilityKey(early.rule, f.key.method, f.inst(1))
-            val laterKey = VulnerabilityKey(later.rule, f.key.method, f.inst(2))
-            report.add(forwardConfig, forward)
-            assertTrue(forward.witnessesByKey().getValue(earlyKey).all { !it.confirmed })
-            assertFalse(laterKey in forward.witnessesByKey())
-            assertEquals(setOf(earlyKey), report.demandEntries().map { it.key }.toSet())
-            assertEquals(0, report.confirmedCount)
-            val toBackward = HandOff.of(forwardConfig, forward, report, f.shared)
+            report.commit(report.prepare(forwardConfig, forward, f.shared))
+            assertTrue(forward.analyzers.single().targets.any { it.target == org.opentaint.dataflow.bidi.engine.Target.DemandTarget })
+            assertEquals(0, report.reportCount)
+            val toBackward = HandOff.of(forwardConfig, forward, f.shared)
             assertEquals(listOf(Seed.Sink(early.rule, f.key, f.inst(1), early.patterns.single())),
                 toBackward.seeds.at(f.key, f.inst(1)), "A normal F1 candidate still supplies its exact seed")
             assertTrue(toBackward.seeds.at(f.key, f.inst(2)).isEmpty())
@@ -77,24 +75,20 @@ class HandOffRegressionTest {
             assertEquals(0L, actor.triggerSeeds, "Ignored end facts cannot create triggers")
             assertEquals(listOf(Triple(f.key, f.inst(0), source)), actor.sourceHits!!.entries().toList())
             assertSame(source, actor.sourceHits.entries().single().third)
-            assertTrue(f.vulnerabilities.witnessesOf(2).none(), "Backward has no sink check")
+            assertTrue(backward.analyzers.all { a -> a.targets.none { it.target is org.opentaint.dataflow.bidi.engine.Target.NormalTarget } })
             f.records.persist(Direction.BACKWARD, backward.analyzers.asSequence().map { it.key to it.summaries })
-            val toForward = HandOff.of(backwardConfig, backward, report, f.shared)
+            val toForward = HandOff.of(backwardConfig, backward, f.shared)
             assertEquals(listOf(Seed.Source(f.key, f.inst(0), source)), toForward.seeds.at(f.key, f.inst(0)))
             assertEquals(1, toForward.seeds.size, "Only the real source supplies the next forward seed")
             val refinedConfig = f.config(index = 3, L = 2, demand = toForward.demand, seeds = toForward.seeds)
             val refined = run(refinedConfig)
-            report.add(refinedConfig, refined)
-            assertTrue(refined.witnessesByKey().getValue(earlyKey).all { !it.confirmed },
-                "Strong raw NORMAL alone still is not a confirmation certificate")
-            assertFalse(laterKey in refined.witnessesByKey())
+            report.commit(report.prepare(refinedConfig, refined, f.shared))
+            assertTrue(refined.analyzers.single().targets.any { it.target is org.opentaint.dataflow.bidi.engine.Target.NormalTarget })
             val final = report.build(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.POLICY))
-            assertEquals(setOf(earlyKey), final.entries.map { it.key }.toSet())
-            assertEquals(ReportState.DEMAND, final.entries.single { it.key == earlyKey }.state)
-            assertEquals(3, final.entries.single { it.key == earlyKey }.run)
+            assertEquals(setOf(early.rule), final.entries.map { it.descriptor.rule }.toSet())
             // A separate direct-core control omits the recovered source seed; this is not a driver schedule.
             val noSource = run(f.config(index = 5, L = 4, demand = toForward.demand, seeds = SeedIndex.EMPTY))
-            assertTrue(noSource.witnessesByKey().isEmpty(), "Without the source seed neither positive sink fires")
+            assertTrue(noSource.analyzers.all { it.targets.isEmpty() }, "Without the source seed neither positive sink fires")
         }
     }
 }

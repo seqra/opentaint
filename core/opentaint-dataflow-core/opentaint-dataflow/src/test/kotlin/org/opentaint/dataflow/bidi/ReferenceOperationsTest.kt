@@ -249,6 +249,13 @@ class ReferenceOperationsTest {
             Triple(Tail.ANY_TAINT, Tail.EXACT, Tail.EXACT), Triple(Tail.ANY_TAINT, Tail.ANY, Tail.ANY_TAINT),
         )
         for ((addedTail, demandTail, outputTail) in rows) {
+            if (addedTail == Tail.ANY && demandTail == Tail.EXACT) {
+                val exact = p(listOf(f), Tail.EXACT)
+                assertEquals(InitialEmission(exact, Layer.DEMAND),
+                    RestrictedInitialPolicy(catalog = manager.marks).emitAdmission(exact,
+                        p(listOf(f), addedTail), Layer.DEMAND),
+                    "A concrete MAY witness answers the exact point only provisionally")
+            }
             val addedE = if (addedTail == Tail.ANY_TAINT) ex(g) else empty
             val demandE = if (demandTail == Tail.STAR) ex(h) else empty
             val outputE = when (outputTail) { Tail.ANY_TAINT -> ex(g); Tail.STAR -> ex(h); else -> empty }

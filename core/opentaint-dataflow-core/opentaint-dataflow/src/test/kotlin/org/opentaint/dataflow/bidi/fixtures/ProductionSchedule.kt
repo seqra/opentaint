@@ -3,6 +3,7 @@ package org.opentaint.dataflow.bidi.fixtures
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.ap.ReferenceRequestKind as RequestKind
 import org.opentaint.dataflow.bidi.engine.*
+import org.opentaint.dataflow.bidi.engine.Target
 import org.opentaint.dataflow.bidi.interp.RuleView
 import org.opentaint.dataflow.bidi.engine.historical.Run1Slot as HistoricalRun1Slot
 import org.opentaint.dataflow.bidi.engine.historical.Run1StaticProfiles
@@ -46,7 +47,7 @@ class ProductionSchedule(
     private val vulnerabilities = ConcurrentVulnerabilityStore(fixture.manager)
     private val shared = fixture.shared.let { source ->
         SharedObjects(source.ap, source.ops, source.interpreter, source.language, source.contexts,
-            source.records, vulnerabilities, source.unitResolver, source.refManager,
+            source.records, source.unitResolver, source.refManager,
             source.cancellation, threads = 1, staticCallGraph = fixture.staticCallGraph(),
             )
     }
@@ -82,10 +83,10 @@ class ProductionSchedule(
         is RunEvent.LinkIn -> "Link(callee=${event.callee},caller=${event.ref.caller}," +
             "premise=${observedPremise(event.ref.premise)},callerLayer=${event.ref.callerLayer}," +
             "call=${event.ref.call},linkLayer=${event.linkLayer},added=${shared.ops.leaves(event.added).toList()})"
-        is RunEvent.InitialsIn -> "Initials(${event.callee},${event.initials.map { it.toPattern() }})"
-        is RunEvent.ZeroIn -> "Zero(${event.callee})"
+        is RunEvent.InitialsIn -> "Initials(${event.callee},${event.initials.map { it.initial.toPattern() to it.layer }})"
+        is RunEvent.TargetDelivery -> "Targets(${event.callee},${event.rows})"
         is RunEvent.MarkRequestsIn -> "MarkRequests(${event.method},${event.rows})"
-        is RunEvent.InitialAnswersIn -> "InitialAnswers(${event.method},${event.answers.map { it.toPattern() }})"
+        is RunEvent.InitialAnswersIn -> "InitialAnswers(${event.method},${event.answers.map { it.initial.toPattern() to it.layer }})"
         is RunEvent.ChangedRequests -> "Requests(${event.callee},${event.rows})"
         is RunEvent.Delivery -> "Delivery(${event.callee},${event.publications.flatMap {
             observedEdges(shared.ops, event.callee, it.premise, it.conclusion)
@@ -116,6 +117,12 @@ class ProductionSchedule(
 
         override fun send(event: RunEvent): Boolean {
             owner(event.target()).postEvent(event)
+            return true
+        }
+
+        override fun post(event: RunEvent.TargetDelivery): Boolean {
+            postEvent(event)
+            if (duplicateDeliveries) postEvent(RunEvent.TargetDelivery(event.callee, event.rows))
             return true
         }
 
@@ -180,7 +187,7 @@ class ProductionSchedule(
             } else destination.postEvent(event)
         }
 
-        override fun startInitials(callee: MethodKey, initials: Collection<InitialAp>) {
+        override fun startInitials(callee: MethodKey, initials: Collection<AdmittedInitial>) {
             val destination = owner(callee)
             val event = RunEvent.InitialsIn(callee, initials)
             if (destination === this) {
@@ -242,11 +249,16 @@ class ProductionSchedule(
         val selected = LinkedHashSet<ObservedEdge>()
         val links = LinkedHashSet(inputs)
         val hits = LinkedHashSet<ObservedSourceHit>()
+        val targets = LinkedHashSet<ObservedTarget>()
+        val sinkSeeds = LinkedHashSet<org.opentaint.dataflow.bidi.driver.Seed>()
         for (unit in units.values) for ((method, actor) in unit.actors) {
+            sinkSeeds.addAll(actor.sinkSeeds)
             actor.initials.all().mapTo(initials) { ObservedInitial(method, it.toPattern()) }
             for ((premise, facts) in actor.summaries.all()) raw += observedEdges(shared.ops, method, premise, facts)
             for ((premise, facts) in actor.summaries.demandEdges())
                 selected += observedEdges(shared.ops, method, premise, facts)
+            for (row in actor.targets) targets += ObservedTarget(method, observedPremise(row.premise),
+                (row.target as? Target.NormalTarget)?.let { shared.reportCatalog.descriptor(it.id).key })
             actor.sourceHits?.entries()?.mapTo(hits) { (key, statement, forward) ->
                 ObservedSourceHit(key, statement, forward)
             }
@@ -261,7 +273,7 @@ class ProductionSchedule(
         }.toSet()
         return RunObservation(processed = processed.toSet(), initials = initials, rawSummaries = raw,
             publications = publications, selectedDemand = selected, links = links,
-            requests = requests.toSet(), sourceHits = hits, witnesses = witnesses)
+            requests = requests.toSet(), sourceHits = hits, witnesses = witnesses, targets = targets, sinkSeeds = sinkSeeds)
     }
 
     /** Read actual stored publications after all production callbacks have finished. */

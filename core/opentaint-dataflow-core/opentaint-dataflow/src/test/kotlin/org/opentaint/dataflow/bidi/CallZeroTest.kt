@@ -7,6 +7,10 @@ import org.opentaint.dataflow.bidi.driver.SeedIndex
 import org.opentaint.dataflow.bidi.engine.*
 import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
 import org.opentaint.dataflow.bidi.interp.*
+import org.opentaint.dataflow.bidi.store.DemandStore
+import org.opentaint.dataflow.bidi.store.DemandEntry
+import org.opentaint.dataflow.bidi.store.DemandExit
+import org.opentaint.dataflow.bidi.store.PairedDemand
 import kotlin.test.*
 
 class CallZeroTest {
@@ -26,8 +30,9 @@ class CallZeroTest {
         ), emptyList(), CallPoint.BEFORE, CallPoint.AFTER)
 
     private fun core(f: MethodAnalysisFixtures, index: Int = 1, limit: Int = maxOf(1, index - 1),
-                     seeds: SeedIndex = SeedIndex.EMPTY, key: MethodKey = f.key): RunMethodAnalyzer =
-        f.core(index = index, L = limit, seeds = seeds, key = key,
+                     seeds: SeedIndex = SeedIndex.EMPTY, key: MethodKey = f.key,
+                     demand: DemandStore? = if (index == 1) null else DemandStore.Builder(f.manager).build()): RunMethodAnalyzer =
+        f.core(index = index, L = limit, seeds = seeds, key = key, demand = demand,
             localFactory = MethodLocalServicesFactory(::RunMethodLocalServices),
             callFactory = MethodCallServicesFactory(::RunMethodCallServices))
 
@@ -55,14 +60,14 @@ class CallZeroTest {
             assertEquals(Reach.of(layer), subscription.added)
             assertFalse(subscription.zeroOnly)
             assertEquals(listOf(RunEvent.LinkIn(callee, subscription.ref, layer, Reach.of(layer))), f.sentLinks)
-            assertTrue(f.events.none { it is RunEvent.ZeroIn })
+            assertTrue(f.events.none { it is RunEvent.InitialsIn })
             assertEquals(setOf(Conclusion(groupedTarget, ExclusionSet.Empty, true)),
                 methodLeaves(f.ops, f.cuts.filter { it.first == Cut.CALL }.map { it.second }))
             assertNull(actor.sourceHits)
         }
     }
 
-    @Test fun `every backward REACH premise passes but only zero to zero subscribes and sends ZeroIn to all callees`(): Unit {
+    @Test fun `backward REACH passes but an empty callee demand starts no zero analysis`(): Unit {
         for (zero in listOf(false, true)) for (layer in Layer.entries) MethodAnalysisFixtures().use { f ->
             val callees = listOf(f.store.key(context = "calleeA"), f.store.key(context = "calleeB"))
             f.call(1, plan(callees))
@@ -74,8 +79,8 @@ class CallZeroTest {
             f.drain(actor, quantum = 1)
             assertEquals(setOf(premise to Conclusion(ZERO_FACT, ExclusionSet.Empty, layer == Layer.DEMAND)),
                 methodEntries(f.ops, actor.summaries.all()))
-            assertEquals(if (zero) callees.toSet() else emptySet(), f.events.filterIsInstance<RunEvent.ZeroIn>().map { it.callee }.toSet())
-            assertEquals(if (zero) 2 else 0, f.subscriptions.size)
+            assertTrue(f.sentInitials.isEmpty())
+            assertTrue(f.subscriptions.isEmpty())
             for (subscription in f.subscriptions) {
                 assertTrue(subscription.zeroOnly)
                 assertSame(f.manager.zero, subscription.ref.premise)
@@ -108,7 +113,11 @@ class CallZeroTest {
                 actor.applySummary(subscription, Publication(f.manager.zero, f.fact(result, returnPath, mark = u)), 0)
             }
             f.onLink = { error("Zero return has no added-link rule") }
-            actor = core(f, index = 2, limit = 1, seeds = seeds)
+            val demand = DemandStore.Builder(f.manager).apply {
+                add(callee, PairedDemand(DemandEntry.Target, DemandExit.Zero))
+            }.build()
+            actor = core(f, index = 2, limit = 1, seeds = seeds, demand = demand)
+            f.onInitials = {}
             val premise = if (zero) f.manager.zero else f.manager.initial(f.pattern(argument, mark = t))
             actor.emitAfter(premise, f.inst(2), Reach.NORMAL)
             f.drain(actor, quantum = 1)

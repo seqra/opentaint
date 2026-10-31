@@ -60,14 +60,15 @@ class RestrictedSubscriptionEligibilityTest {
                     mark = MarkSlot.Concrete(f.mark(mark)))
             }
             val emitted = actuals.map { demand.initials(f.key, it, policy).single() }
-            assertSame(emitted[0], emitted[1])
-            assertEquals(listOf(field), emitted[0].pathArray.asList())
-            assertEquals(Tail.STAR, emitted[0].tail)
-            assertEquals(MarkSlot.STAR, emitted[0].mark)
+            assertEquals(emitted[0], emitted[1])
+            assertSame(emitted[0].initial, emitted[1].initial)
+            assertEquals(listOf(field), emitted[0].initial.pathArray.asList())
+            assertEquals(Tail.STAR, emitted[0].initial.tail)
+            assertEquals(MarkSlot.STAR, emitted[0].initial.mark)
             val summary = f.fact(AccessPathBase.Return, tail = Tail.STAR, mark = MarkSlot.STAR)
             for (actual in actuals) {
                 val out = CollectingOut()
-                f.ops.applySummary(actual, emitted[0], summary, ApMode(false, Direction.FORWARD, 2), out)
+                f.ops.applySummary(actual, emitted[0].initial, summary, ApMode(false, Direction.FORWARD, 2), out)
                 val answer = out.results.flatMap { f.ops.leaves(it).toList() }.single()
                 val source = f.ops.leaves(actual).single()
                 assertEquals(source.fact.path.drop(1), answer.fact.path)
@@ -87,9 +88,9 @@ class RestrictedSubscriptionEligibilityTest {
             val policy = demand.admissionPolicy(3, 2, Direction.FORWARD)
             val exactInput = f.fact(tail = Tail.EXACT, mark = MarkSlot.Concrete(f.mark("T")))
             val exactInitial = demand.initials(f.key, exactInput, policy).single()
-            assertEquals(Tail.EXACT, exactInitial.tail)
+            assertEquals(Tail.EXACT, exactInitial.initial.tail)
             val raw = f.fact(AccessPathBase.Return, tail = Tail.EXACT, mark = MarkSlot.STAR)
-            val normalized = normalizeFlowSummary(f.manager, exactInitial, raw)
+            val normalized = normalizeFlowSummary(f.manager, exactInitial.initial, raw)
             val pub = Publication(normalized.premise,
                 demand.intersect(f.key, normalized.premise, normalized.facts, policy).single())
             assertEquals(Tail.STAR, (pub.premise as InitialAp).tail)

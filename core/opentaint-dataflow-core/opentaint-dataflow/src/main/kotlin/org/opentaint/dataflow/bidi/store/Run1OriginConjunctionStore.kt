@@ -12,8 +12,8 @@ internal class Run1OriginConjunctionStore(private val manager: ApManager) {
         var marks = MarkSet.EMPTY
     }
     private class Emitted {
-        val nonzero = HashMap<InitialAp, Boolean>()
-        var zero: Boolean? = null
+        val nonzero = Array(Layer.entries.size) { HashMap<InitialAp, Boolean>() }
+        val zero = arrayOfNulls<Boolean>(Layer.entries.size)
         var protectedAll = false
     }
     private class State(val arity: Int) {
@@ -33,6 +33,8 @@ internal class Run1OriginConjunctionStore(private val manager: ApManager) {
                             input: ConjunctionStore.Input, assigned: TaintMark?, triggering: TaintMark?,
                             emit: (InitialAp, Layer, Boolean) -> Unit) {
         manager.cancellation.checkpoint()
+        if (!RuntimeDataDomain.premise(input.premise) ||
+            input.facts?.let { !RuntimeDataDomain.base(it.base) } == true) return
         require(arity >= 2) { "A conjunction needs at least two literals" }
         require(literal in 0 until arity) { "A literal index must be within the conjunction's arity" }
         val initial = input.premise
@@ -75,14 +77,26 @@ internal class Run1OriginConjunctionStore(private val manager: ApManager) {
                 originMembershipVisits++
                 if (i.isZero) return
                 val flag = hasProtection || (assigned != null && (i.mark as? MarkSlot.Concrete)?.mark == assigned && hasDifferentMark)
-                val previousFlag = emitted.nonzero[i]
-                if (previousFlag == null || flag && !previousFlag) {
-                    emitted.nonzero[i] = previousFlag == true || flag
-                    emit(i, layer, flag)
+                val armLayer = if (layer == Layer.NORMAL && domains.all {
+                        i in it.inputs || manager.zero in it.inputs
+                    }) Layer.NORMAL else Layer.DEMAND
+                fun offerLane(lane: Layer) {
+                    val flags = emitted.nonzero[lane.ordinal]
+                    val previousFlag = flags[i]
+                    if (previousFlag == null || flag && !previousFlag) {
+                        flags[i] = previousFlag == true || flag
+                        emit(i, lane, flag)
+                    }
+                }
+                offerLane(armLayer)
+                // An annotation upgrade also belongs to any earlier result lane.
+                if (flag) for (lane in Layer.entries) {
+                    if (lane != armLayer && emitted.nonzero[lane.ordinal][i] == false) offerLane(lane)
                 }
             }
             emitted.protectedAll = emitted.protectedAll || hasProtection
-            if (old == null || protectionGrowth) {
+            val zeroGrowth = previous == null && initial.isZero
+            if (old == null || protectionGrowth || zeroGrowth) {
                 for (d in domains) for (i in d.inputs.keys) offer(i)
             } else offer(initial)
             // The same complete header partition has a ZERO choice in EVERY slot.
@@ -90,8 +104,8 @@ internal class Run1OriginConjunctionStore(private val manager: ApManager) {
                 val zeroProtected = assigned != null && domains.any { d ->
                     (d.inputs[manager.zero]?.facts as? TaintTree)?.nonSubsumable != null || assigned in d.marks
                 }
-                if (emitted.zero == null || zeroProtected && emitted.zero == false) {
-                    emitted.zero = emitted.zero == true || zeroProtected
+                if (emitted.zero[layer.ordinal] == null || zeroProtected && emitted.zero[layer.ordinal] == false) {
+                    emitted.zero[layer.ordinal] = emitted.zero[layer.ordinal] == true || zeroProtected
                     emit(manager.zero, layer, zeroProtected)
                 }
             }

@@ -112,6 +112,36 @@ class ReturnFullCleanupTest {
             }
     }
 
+    @Test fun `NORMAL exact source leaves have identical scalar and bulk cleanup outputs`() {
+        val field = f.field("f")
+        val other = f.field("other")
+        val paths = listOf(emptyList(), listOf(field), listOf(other), listOf(field, other))
+        var root: TaintNode? = null
+        for (path in paths) {
+            val leaf = m.taintAlg.prepend(m, m.path(path), m.taintAlg.leafNode(
+                m.taintLeaves(MarkSet(intArrayOf(t.id, u.id, v.id)), MarkSet.EMPTY)))
+            root = root?.let { m.taintAlg.mergeAdd(it, leaf, m.cancellation) } ?: leaf
+        }
+        val plain = m.taintTree(x, Layer.NORMAL, assertNotNull(root))
+        fun protection(values: List<Facts>) = values.flatMap { value ->
+            val protected = (value as? TaintTree)?.protectedPart() ?: return@flatMap emptyList()
+            f.ops.leaves(protected).map { it to protected.layer }.toList()
+        }.toSet()
+        for (input in listOf(plain, plain.withProtection(plain.root)))
+            for (reach in CleanReach.entries) for (path in paths) {
+            var scalar: List<Facts> = listOf(input)
+            for (mark in listOf(t, u, t)) scalar = scalar.flatMap { value ->
+                CollectingOut().also { f.ops.clean(value, m.zero, cleaner(mark, m.path(path), reach), mode, it) }.results
+            }
+            val packed = CollectingOut()
+            f.ops.cleanSelectedFullMask(input, m.zero, cleaner(t, m.path(path), reach), MarkSet.of(t) + u, mode,
+                request = { error("An exact source does not request its mark") }, out = packed)
+            assertEquals(decode(scalar), decode(packed.results), "NORMAL exact reach=$reach path=$path")
+            assertEquals(protection(scalar), protection(packed.results), "NORMAL exact protection reach=$reach path=$path")
+            assertTrue(packed.results.all { it.layer == Layer.NORMAL })
+        }
+    }
+
     @Test fun `flow shares paths requests all mask atoms and preserves previous exclusions`() {
         val input = f.fact(x, listOf(f.field("f")), Tail.STAR, MarkSlot.Star(MarkSet.of(t))) as FlowTree
         val out = CollectingOut()

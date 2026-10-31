@@ -8,6 +8,7 @@ import org.opentaint.dataflow.bidi.store.InitialFactStore
 import org.opentaint.dataflow.bidi.store.PathTrie
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertSame
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -106,8 +107,9 @@ class DemandCandidateWorkloadTest {
         val first = store.initials(f.method, f.fact(base = p, mark = MarkSlot.Concrete(f.mark("T")))).single()
         assertTrue(held.add(first))
         val second = store.initials(f.method, f.fact(base = p, mark = MarkSlot.Concrete(f.mark("U")))).single()
-        assertEquals(f.manager.initial(entry.copy(fact=entry.fact.copy(tail=Tail.EXACT))), first)
-        assertTrue(first === second)
+        assertEquals(AdmittedInitial(f.manager.initial(entry.copy(fact=entry.fact.copy(tail=Tail.EXACT))), Layer.NORMAL), first)
+        assertEquals(first, second)
+        assertSame(first.initial, second.initial)
         assertFalse(held.add(second), "The method already has this FLOW initial; the C2 query returned it again")
     }
 }

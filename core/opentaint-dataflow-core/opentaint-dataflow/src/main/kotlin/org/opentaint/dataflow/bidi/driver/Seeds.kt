@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.bidi.driver
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.bidi.ap.RuntimeDataDomain
 import org.opentaint.dataflow.bidi.ap.MethodKey
 import org.opentaint.dataflow.bidi.ap.PathEdge
 import org.opentaint.dataflow.bidi.ap.Pattern
@@ -59,7 +60,14 @@ sealed interface Seed {
 class SeedIndex(byPlace: Map<Pair<MethodKey, CommonInst>, List<Seed>>) {
     private val byPlace: Map<Pair<MethodKey, CommonInst>, List<Seed>> = Collections.unmodifiableMap(
         LinkedHashMap<Pair<MethodKey, CommonInst>, List<Seed>>().apply {
-            for ((place, seeds) in byPlace) put(place, Collections.unmodifiableList(ArrayList(seeds)))
+            for ((place, seeds) in byPlace) {
+                val admitted = seeds.filter { seed -> when (seed) {
+                    is Seed.Sink -> RuntimeDataDomain.base(seed.requirement.fact.base)
+                    is Seed.Source -> RuntimeDataDomain.producer(seed.edge)
+                    is Seed.PredicateSink -> true
+                } }
+                if (admitted.isNotEmpty()) put(place, Collections.unmodifiableList(ArrayList(admitted)))
+            }
         })
     private val sources: Set<Seed.Source> =
         this.byPlace.values.asSequence().flatten().filterIsInstance<Seed.Source>()
@@ -67,7 +75,7 @@ class SeedIndex(byPlace: Map<Pair<MethodKey, CommonInst>, List<Seed>>) {
 
     fun at(method: MethodKey, statement: CommonInst): List<Seed> = byPlace[method to statement].orEmpty()
     fun allowsSource(method: MethodKey, statement: CommonInst, forward: PathEdge, action: ActionId? = null): Boolean =
-        Seed.Source(method, statement, forward, action) in sources
+        RuntimeDataDomain.producer(forward) && Seed.Source(method, statement, forward, action) in sources
     val size: Int get() = byPlace.values.sumOf { it.size }
 
     fun sinkMethods(): Set<MethodKey> = byPlace.values.asSequence().flatten()

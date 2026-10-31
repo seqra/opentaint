@@ -96,8 +96,8 @@ internal class Run1OriginPredicateStore(private val manager: ApManager, private 
         private set
 
     private class EmittedOrigins {
-        val nonzero = HashMap<InitialAp, Boolean>()
-        var zero: Boolean? = null
+        val nonzero = Array(Layer.entries.size) { HashMap<InitialAp, Boolean>() }
+        val zero = arrayOfNulls<Boolean>(Layer.entries.size)
         var protectedAll = false
         // Only the last processed shape/version is retained, never an old domain snapshot or chain.
         var shape: Shape? = null
@@ -112,13 +112,15 @@ internal class Run1OriginPredicateStore(private val manager: ApManager, private 
     ) {
         /** Emit each original once per fixed action target. ZERO needs one complete all-ZERO binding. */
         fun emitOrigins(action: Any, emit: (InitialAp) -> Unit) =
-            emitProtectedOrigins(action, null) { initial, _ -> emit(initial) }
-        abstract fun emitProtectedOrigins(action: Any, assigned: TaintMark?, emit: (InitialAp, Boolean) -> Unit)
+            emitProtectedOrigins(action, null) { initial, _, _ -> emit(initial) }
+        fun emitLayeredOrigins(action: Any, emit: (InitialAp, Layer) -> Unit) =
+            emitProtectedOrigins(action, null) { initial, layer, _ -> emit(initial, layer) }
+        abstract fun emitProtectedOrigins(action: Any, assigned: TaintMark?, emit: (InitialAp, Layer, Boolean) -> Unit)
     }
 
     private class ReadyResult(proof: ProofKey, leaves: List<Int>, layer: Layer,
-                              private val emitAction: (Any, TaintMark?, (InitialAp, Boolean) -> Unit) -> Unit) : ReadyCube(proof, leaves, layer) {
-        override fun emitProtectedOrigins(action: Any, assigned: TaintMark?, emit: (InitialAp, Boolean) -> Unit) =
+                              private val emitAction: (Any, TaintMark?, (InitialAp, Layer, Boolean) -> Unit) -> Unit) : ReadyCube(proof, leaves, layer) {
+        override fun emitProtectedOrigins(action: Any, assigned: TaintMark?, emit: (InitialAp, Layer, Boolean) -> Unit) =
             emitAction(action, assigned, emit)
     }
 
@@ -126,6 +128,8 @@ internal class Run1OriginPredicateStore(private val manager: ApManager, private 
     fun add(rule: RuleOccurrenceId, statement: CommonInst, predicate: RulePredicate, leaf: Int,
             input: ConjunctionStore.Input, emit: (ReadyCube) -> Unit) {
         manager.cancellation.checkpoint()
+        if (!RuntimeDataDomain.premise(input.premise) ||
+            input.facts?.let { !RuntimeDataDomain.base(it.base) } == true) return
         require(leaf in predicate.leaves.indices)
         val initial = checkedInitial(input.premise)
         val state = states.getOrPut(Scope(rule, statement)) { State() }
@@ -368,27 +372,39 @@ internal class Run1OriginPredicateStore(private val manager: ApManager, private 
                 if (initial.isZero) return
                 val originMark = (initial.mark as? MarkSlot.Concrete)?.mark
                 val flag = hasProtection || (assigned != null && originMark == assigned && triggering.any { it != assigned })
-                val previous = admitted.nonzero[initial]
-                if (previous == null || flag && !previous) {
-                    admitted.nonzero[initial] = previous == true || flag
-                    emit(initial, flag)
+                val armLayer = if (layer == Layer.NORMAL && support.domains.values.all {
+                        initial in it.choices || manager.zero in it.choices
+                    }) Layer.NORMAL else Layer.DEMAND
+                fun offerLane(lane: Layer) {
+                    val flags = admitted.nonzero[lane.ordinal]
+                    val previous = flags[initial]
+                    if (previous == null || flag && !previous) {
+                        flags[initial] = previous == true || flag
+                        emit(initial, lane, flag)
+                    }
+                }
+                offerLane(armLayer)
+                // Preserve protection growth in every already published result lane.
+                if (flag) for (lane in Layer.entries) {
+                    if (lane != armLayer && admitted.nonzero[lane.ordinal][initial] == false) offerLane(lane)
                 }
             }
-            // Only a new contribution flag needs to revisit prior origins. Ordinary domain growth
-            // retains the linear membership path; it does not enumerate input-origin products.
+            // New nonzero membership can complete only that origin. A new ZERO choice or
+            // protection annotation can change older arms; neither case enumerates origin products.
             val consecutive = admitted.shape === support.shape && admitted.version + 1 == support.version
             admitted.shape = support.shape
             admitted.version = support.version
             admitted.protectedAll = admitted.protectedAll || hasProtection
-            if (consecutive && !protectionGrowth) for (initial in support.addedOrigins) offer(initial)
+            if (consecutive && !protectionGrowth && manager.zero !in support.addedOrigins)
+                for (initial in support.addedOrigins) offer(initial)
             else for (domain in support.domains.values) for (initial in domain.choices.keys) offer(initial)
             if (support.domains.values.all { it.choices.containsKey(manager.zero) }) {
                 val zeroProtected = assigned != null && (assigned in triggering || support.domains.values.any {
                     (it.choices[manager.zero]?.input?.facts as? TaintTree)?.nonSubsumable != null
                 })
-                if (admitted.zero == null || zeroProtected && admitted.zero == false) {
-                    admitted.zero = admitted.zero == true || zeroProtected
-                    emit(manager.zero, zeroProtected)
+                if (admitted.zero[layer.ordinal] == null || zeroProtected && admitted.zero[layer.ordinal] == false) {
+                    admitted.zero[layer.ordinal] = admitted.zero[layer.ordinal] == true || zeroProtected
+                    emit(manager.zero, layer, zeroProtected)
                 }
             }
         }

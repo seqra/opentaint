@@ -11,12 +11,16 @@ internal class SelectedDemandReference(
     private val direction: Direction,
     private val marks: MarkTable,
     private val witnessField: Int,
+    private val rejectMayForExact: Boolean = true,
 ) {
     private fun normalizeEntry(d: Pattern) = if (d.fact.tail == Tail.STAR && d.fact.mark is MarkSlot.Star)
         d.copy(exclusion = ExclusionSet.Empty) else d
 
     fun emit(demand: Pattern, actual: Pattern): Pattern? {
         val d = normalizeEntry(demand)
+        // A MAY region is not evidence for an exact location. This is the selected
+        // admission rule; PRE_TARGETS keeps the older table for labelled controls.
+        if (rejectMayForExact && d.fact.tail == Tail.EXACT && actual.fact.tail == Tail.ANY) return null
         if (d.fact.base != actual.fact.base || !markSub(d.fact.mark, actual.fact.mark, marks)) return null
         if (listOf(d, actual).any { it.fact.path.count { field -> field.isCounted() } > limit }) return null
         val mark = if (d.fact.mark is MarkSlot.Concrete && marks.isGroup(d.fact.mark.mark)) actual.fact.mark else d.fact.mark

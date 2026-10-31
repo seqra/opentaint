@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.bidi.ap.*
@@ -34,7 +36,7 @@ class Run1ExceptionalResumeTest {
             val operation = OperationId(FormKey(FormOwner(), f.key.method, f.key, f.inst(1)))
             actor.installPoint(initial, value, ResumeSite.StatementInput(operation))
             f.drain(actor)
-            assertTrue(f.vulnerabilities.witnessesOf(1).none())
+            assertTrue(actor.targets.isEmpty())
             assertTrue(actor.summaries.all().none())
 
             val effects = checkNotNull(actor.runnerPort.staticService).commit(StaticBatch().apply {
@@ -44,7 +46,7 @@ class Run1ExceptionalResumeTest {
             for (effect in effects) if (effect.owner == actor.key) actor.onStaticEffect(effect)
             f.drain(actor)
 
-            assertTrue(f.vulnerabilities.witnessesOf(1).any { it.first.rule == rule })
+            assertTrue(actor.targets.any { it.target == Target.DemandTarget })
             assertTrue(actor.summaries.all().none(), "An exceptional resume has no normal-exit summary")
             assertTrue(actor.staticGuidanceSeeds.frozenRows().none())
             assertTrue(f.publications.flatten().isEmpty())

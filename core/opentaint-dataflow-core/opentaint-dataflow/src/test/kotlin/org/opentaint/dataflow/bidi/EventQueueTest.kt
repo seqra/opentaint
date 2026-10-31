@@ -74,7 +74,7 @@ class EventQueueTest {
         }
         val queue = EventQueue()
         val first = RunEvent.Start(fixture.key("first"))
-        val second = RunEvent.ZeroIn(fixture.key("second"))
+        val second = RunEvent.TargetDelivery(fixture.key("second"), emptyList())
         val third = RunEvent.Start(fixture.key("third"))
         queue.add(first)
         queue.add(second)

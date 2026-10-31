@@ -67,6 +67,26 @@ class SummaryStorage(
         }
     }
 
+    fun publishTargets(rows: TargetBatch) {
+        ap.cancellation.checkpoint()
+        val (delta, recipients) = synchronized(lock) { published.addTargets(rows) to subscribers.toList() }
+        if (delta.isEmpty()) return
+        steps.notify {
+            for (subscriber in recipients) {
+                ap.cancellation.checkpoint()
+                check(subscriber.notifyTargets(method, delta)) {
+                    "An active run rejected a required terminal delivery"
+                }
+            }
+        }
+    }
+
+    fun targetCandidates(part: Subscription, mode: ApMode): List<Pair<TargetSummary, Int>> =
+        synchronized(lock) { published.targetCandidates(part, mode) }
+
+    fun staticTargetCandidates(): List<Pair<TargetSummary, Int>> =
+        synchronized(lock) { published.staticTargetCandidates() }
+
     fun addSubscriber(subscriber: SubscriptionManager) {
         ap.cancellation.checkpoint()
         synchronized(lock) { subscribers.add(subscriber) }

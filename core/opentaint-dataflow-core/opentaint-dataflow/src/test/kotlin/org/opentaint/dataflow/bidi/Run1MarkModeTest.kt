@@ -143,8 +143,8 @@ class Run1MarkModeTest {
                     PathEdge(ZERO_FACT, pattern(t).fact,
                         ExclusionSet.Empty), false, mode, generated)
                 assertTrue(generated.results.isNotEmpty())
-                // FULL primitives retain their ordinary input layer. The engine
-                // applies the shared run-1 DEMAND policy in forceRun1Layer.
+                // FULL keeps its ordinary computed layer. GROUP projection
+                // changes concrete results to DEMAND.
                 assertTrue(generated.results.all { it.layer == if (selected == MarkMode.GROUP) Layer.DEMAND else Layer.NORMAL })
                 val atom = f.ap.marks.runtimeAtom(t, selected)
                 assertEquals(setOf(atom), generated.results.flatMap { f.ops.leaves(it).toList() }
@@ -199,7 +199,8 @@ class Run1MarkModeTest {
             if (!secondInput) assertTrue(rows.isEmpty(), "Both exact full conditions must hold")
             else {
                 assertEquals(setOf(a, b), rows.map { it.first.members.single().base }.toSet())
-                assertTrue(rows.all { (premise, value) -> premise is InitialAp && !premise.isZero && value.layer == Layer.DEMAND })
+                assertTrue(rows.all { (premise, value) -> premise is InitialAp && !premise.isZero && value.layer == Layer.DEMAND },
+                    "The FULL inputs are exact, but each projected arm drops another required origin")
                 assertEquals(setOf(t, u), rows.flatMap { f.ops.leaves(it.second).toList() }
                     .map { (it.fact.mark as MarkSlot.Concrete).mark }.toSet())
             }

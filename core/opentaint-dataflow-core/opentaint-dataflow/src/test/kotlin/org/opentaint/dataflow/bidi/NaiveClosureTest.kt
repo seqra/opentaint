@@ -61,8 +61,8 @@ class NaiveClosureTest {
             (fields + observed.flatMap { it.fact.path + (it.exclusion as? ExclusionSet.Concrete)?.ids?.toList().orEmpty() } + positionPaths.flatten() + f.field("fresh accessor")).distinct(),
             (marks + observed.mapNotNull { (it.fact.mark as? MarkSlot.Concrete)?.mark } + f.mark("fresh mark") + TaintMark.ZERO).distinct(), 2)
         try {
-            if (catalogRefinement) expected.assertCatalogRefinement(actual, universe, config.roots)
-            else actual.assertEquivalent(expected, universe)
+            if (catalogRefinement) expected.dataOnly().assertCatalogRefinement(actual.dataOnly(), universe, config.roots)
+            else actual.dataOnly().assertEquivalent(expected.dataOnly(), universe)
         }
         catch (failure: AssertionError) { throw AssertionError("index=${config.index} sameUnit=$sameUnit policy=$policy program=${f.describe()} trace=${schedule.trace}", failure) }
         return actual
@@ -289,15 +289,11 @@ class NaiveClosureTest {
             for (key in listOf(left, right, both)) f.exit(key, 1, exit)
             val config = f.config(roots = if (includeBoth) listOf(left, right, both) else listOf(left, right))
             val actual = check(f, config, emptyList(), listOf(a.mark, b.mark, c.mark), sameUnit)
-            assertEquals(if (includeBoth) setOf(both) else emptySet(), actual.witnesses.map { it.methodKey }.toSet())
-            for (witness in actual.witnesses) {
-                assertSame(id, witness.rule)
-                assertEquals(0, witness.alternative)
-                assertEquals(1, witness.run)
-                assertFalse(witness.confirmed)
-                assertEquals(listOf(zero, zero), witness.edges.map { it.premise })
-                assertEquals(listOf(Layer.DEMAND, Layer.DEMAND), witness.edges.map { it.layer })
-            }
+            assertEquals(if (includeBoth) setOf(both) else emptySet(), actual.targets.map { it.method }.toSet())
+            assertTrue(actual.targets.all { it.premise == zero && !it.normal })
+            assertEquals(if (includeBoth) literals.toSet() else emptySet(),
+                actual.sinkSeeds.filterIsInstance<Seed.Sink>().map { it.requirement }.toSet())
+            assertTrue(actual.sinkSeeds.all { it.method == both && it.statement == method.inst(1) })
             val generated = actual.rawSummaries.filter { it.conclusion.fact.mark == GroupedScalarMarks(f.ap.marks).slot(c) }
             assertEquals(if (includeBoth) setOf(selectedExpectedEdge(f.ap.marks, 1, ObservedEdge(both, zero,
                 Conclusion(conjunction.target, ExclusionSet.Empty, false)))) else emptySet(), generated.toSet())
@@ -472,7 +468,7 @@ class NaiveClosureTest {
             val universe = BoundedDenotation(listOf(AccessPathBase.Zero, x, y, returned, signal),
                 listOf(a, b, f.field("fresh accessor")), listOf(t.mark, u.mark, v.mark, d.mark, f.mark("fresh mark"), TaintMark.ZERO), 2)
             try {
-                actual.assertEquivalent(expected, universe)
+                actual.dataOnly().assertEquivalent(expected.dataOnly(), universe)
                 // The new field b refines ANY once. Its concrete STAR initial remains DEMAND.
                 val members = setOf(literals[0], f.pattern(y, if (mixed) listOf(a, b) else listOf(a), if (mixed) Tail.STAR else Tail.EXACT, u))
                 val pub = ObservedEdge(callee, members, Conclusion(target, ExclusionSet.Empty, mixed))
@@ -640,6 +636,9 @@ class NaiveClosureTest {
                     f.fact(returned, tail = outputTail, mark = u,
                         exclusion = if (outputTail == Tail.ANY_TAINT) ExclusionSet.of(b) else ExclusionSet.Empty))
                 val config = f.config(index = 2, roots = listOf(caller), records = listOf(callee to record),
+                    demand = listOf(caller to DemandPattern(ZERO_PATTERN, f.pattern(x, listOf(a), Tail.ANY, t)),
+                        caller to DemandPattern(ZERO_PATTERN, ZERO_PATTERN),
+                        callee to DemandPattern(ZERO_PATTERN, ZERO_PATTERN)),
                     seeds = listOf(Seed.Sink(rule("view input"), caller, main.inst(2), f.pattern(y, mark = u))))
                 val actual = check(f, config, listOf(a, b), listOf(t.mark, u.mark), sameUnit)
                 val demand = inputTail == Tail.ANY_TAINT
@@ -656,7 +655,7 @@ class NaiveClosureTest {
                 assertContains(actual.selectedDemand, balanced)
                 assertTrue(actual.initials.none { it.method == callee && it.initial == initial.toPattern() },
                     "A native read view is not started as an initial fact")
-                assertTrue(actual.requests.isEmpty() && actual.sourceHits.isEmpty() && actual.witnesses.isEmpty())
+                assertTrue(actual.requests.isEmpty() && actual.sourceHits.isEmpty() && actual.targets.isEmpty() && actual.sinkSeeds.isEmpty())
             }
     }
 
@@ -675,6 +674,7 @@ class NaiveClosureTest {
             val sink = SinkRule(id, 0, listOf(f.pattern(x, mark = t)), listOf(MicroEdge.of(end)))
             f.exit(key, 2, ExitRules(RuleStatement(StatementSummary.EMPTY, summary(end), listOf(sink)), false, emptySet()))
             val config = f.config(index = 2, roots = listOf(key),
+                demand = listOf(key to DemandPattern(ZERO_PATTERN, ZERO_PATTERN)),
                 seeds = listOf(Seed.Sink(id, key, method.inst(2), f.pattern(returned, mark = u))))
             val actual = check(f, config, emptyList(), listOf(t.mark, u.mark))
             val zeroSummary = ObservedEdge(key, zero, Conclusion(ZERO_FACT, ExclusionSet.Empty, false))
@@ -684,7 +684,7 @@ class NaiveClosureTest {
             assertFalse(actual.processed.any { it.method == key && it.conclusion.fact.base == x },
                 "The ignored end action cannot seed the sink's positive condition")
             assertTrue(actual.sourceHits.isEmpty(), "The unrelated source is not reached by the explicit return/U seed")
-            assertTrue(actual.requests.isEmpty() && actual.witnesses.isEmpty())
+            assertTrue(actual.requests.isEmpty() && actual.targets.isEmpty() && actual.sinkSeeds.isEmpty())
         }
     }
 }

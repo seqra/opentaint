@@ -28,6 +28,8 @@ interface FrozenCompletion {
 }
 
 interface StaticDemandView {
+    /** Anonymous terminal readers have an AP input, but no AP output or output mark. */
+    fun targetInputs(): Sequence<Pattern> = emptySequence()
     fun entries(actual: Pattern): Sequence<Pattern>
     fun targets(actual: Pattern, prefixesOnly: Boolean = false): Sequence<StaticGuidanceEdge>
     fun flowTargets(actual: Pattern): Sequence<StaticGuidanceEdge>
@@ -50,7 +52,8 @@ fun guidancePattern(pattern: Pattern): Pattern {
         path = Collections.unmodifiableList(ArrayList(located.fact.path)), mark = mark)))
 }
 
-/** Endpoints retain geometry; only the mark relation composes. Null is a private ZERO selector. */
+/** Endpoints retain geometry; only the mark relation composes.
+ * Null denotes the absence of a data mark at a typed ZERO or terminal endpoint. */
 sealed interface GuidanceMarks {
     data object Flow : GuidanceMarks
     data class Mapped(val input: TaintMark?, val output: TaintMark?) : GuidanceMarks
@@ -142,6 +145,7 @@ class StaticGuidanceSeedStore(
     /** Called after exit rules, before live static/static suppression. No Facts are retained. */
     fun add(original: PremiseKey, result: Facts) {
         ap.cancellation.checkpoint()
+        if (!RuntimeDataDomain.packet(original, result)) return
         check(original is InitialAp) { "Run-1 cannot contain an ND original" }
         if (original.base != STATIC || result.base != STATIC) return
         val from = original.toPattern()
@@ -215,6 +219,7 @@ class FrozenStaticCompletion private constructor(
     private val bridgeEntryRows: List<EntryRows>,
     private val bridgeEntries: EntryDirectory,
     private val locals: Map<MethodKey, Attachments>,
+    private val terminalReaders: Map<MethodKey, List<Pattern>>,
     private val ownerVisibility: FrozenOwnerVisibility,
     val seedMemberships: Long,
     val writerAttachments: Long,
@@ -227,6 +232,7 @@ class FrozenStaticCompletion private constructor(
     val seedGeometries: Int get() = bridges.size
     override fun statistics(): String = "seedKeys=$seedKeys seedEntryKeys=${bridgeEntryRows.size} seedGeometries=$seedGeometries ownerMemberships=$seedMemberships " +
         "writerAttachments=$writerAttachments readerAttachments=$readerAttachments " +
+        "terminalAttachments=${terminalReaders.values.sumOf { it.size.toLong() }} " +
         "callMethods=${graph.methodCount} callEdges=${graph.edgeCount} " +
         "ownBridgeMemberships=${ownBridges.values.sumOf { it.size.toLong() }} ownerFamilies=${ownerVisibility.familyCount} " +
         ownerVisibility.statistics.let {
@@ -384,6 +390,7 @@ class FrozenStaticCompletion private constructor(
     }
 
     private inner class View(private val method: MethodKey, private val inherited: Boolean) : C5StaticDemandView {
+        override fun targetInputs(): Sequence<Pattern> = terminalReaders[method].orEmpty().asSequence()
         private val ownId = graph.id(method.method)
         private val local = locals[method]
         private val ownRows = ownBridges[method.method] ?: LongArray(0)
@@ -600,11 +607,21 @@ class FrozenStaticCompletion private constructor(
     class Builder(private val ap: ApManager, private val graph: DetachedStaticCallGraph) {
         private val bridges = LinkedHashMap<GuidanceGeometry, Long2ObjectLinkedOpenHashMap<MutableSet<CommonMethod>>>()
         private val localRows = LinkedHashMap<MethodKey, Pair<MutableSet<StaticGuidanceEdge>, MutableSet<StaticGuidanceEdge>>>()
+        private val terminalReaders = LinkedHashMap<MethodKey, MutableSet<Pattern>>()
+
+        /** Only an anonymous DEMAND terminal is an endpoint of this guidance graph. */
+        fun addTarget(method: MethodKey, from: Pattern) {
+            ap.cancellation.checkpoint()
+            if (!RuntimeDataDomain.base(from.fact.base) || staticAnchor(ap, from) == null) return
+            check(from.fact.mark is MarkSlot.Concrete) { "A terminal reader needs a concrete input mark" }
+            terminalReaders.getOrPut(method) { LinkedHashSet() }.add(guidancePattern(from))
+        }
 
         /** Phase B accepts only frozen seeds. Caller binding has finished and
          * no composition result is fed back to that earlier phase. */
         fun addSeed(method: MethodKey, from: Pattern, to: Pattern) {
             ap.cancellation.checkpoint()
+            if (!RuntimeDataDomain.base(from.fact.base) || !RuntimeDataDomain.base(to.fact.base)) return
             val fromStatic = staticAnchor(ap, from) != null
             val toStatic = staticAnchor(ap, to) != null
             if (fromStatic && toStatic) addBridge(method, StaticGuidanceEdge.of(from, to))
@@ -624,6 +641,7 @@ class FrozenStaticCompletion private constructor(
 
         fun addBoundary(method: MethodKey, from: Pattern, to: Pattern) {
             ap.cancellation.checkpoint()
+            if (!RuntimeDataDomain.base(from.fact.base) || !RuntimeDataDomain.base(to.fact.base)) return
             val fromStatic = staticAnchor(ap, from) != null
             val toStatic = staticAnchor(ap, to) != null
             if (fromStatic == toStatic) return
@@ -720,7 +738,8 @@ class FrozenStaticCompletion private constructor(
             return FrozenStaticCompletion(ap, graph, frozenBridges, ends, starts, flowStarts, flowEnds, coloredOutputs,
                 Collections.unmodifiableSet(bridgeOwners), own.mapValues { it.value.toLongArray() },
                 entryRows, EntryDirectory.build(ap, entryRows.map { it.entry }),
-                Collections.unmodifiableMap(locals), visibility,
+                Collections.unmodifiableMap(locals),
+                Collections.unmodifiableMap(terminalReaders.mapValues { Collections.unmodifiableList(it.value.toList()) }), visibility,
                 memberships, localRows.values.sumOf { it.first.size.toLong() },
                 localRows.values.sumOf { it.second.size.toLong() })
         }

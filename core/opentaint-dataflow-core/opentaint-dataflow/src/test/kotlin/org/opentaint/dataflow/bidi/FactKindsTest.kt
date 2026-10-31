@@ -102,7 +102,10 @@ class FactKindsTest {
             f.admit(core, ref, Layer.DEMAND, added)
             f.drain(core, quantum = 1)
             val initial = core.initials.all().single()
-            assertEquals(3L, core.demandLayerEdges, "Restricted inputs are keys: two producer results and one summary delta")
+            assertEquals(listOf(AdmittedInitial(initial, Layer.DEMAND)), core.initials.admissions())
+            assertEquals(Layer.DEMAND, core.edges.edgesAt(f.inst(0), initial).single().second.layer,
+                "The exact DEMAND offer keeps its own layer at entry")
+            assertEquals(4L, core.demandLayerEdges, "The DEMAND start, two later producer results, and one summary delta")
             assertEquals(4L, core.edgeDeltas, "Three producer results and the raw summary")
             val expected = Conclusion(PathFact(y, emptyList(), Tail.ANY, mt), ExclusionSet.Empty, true)
             assertEquals(setOf(initial to expected), methodEntries(f.ops, core.summaries.all()))
@@ -111,7 +114,7 @@ class FactKindsTest {
                 .map { it.premise to it.conclusion }))
             f.admit(core, ref, Layer.DEMAND, added)
             f.drain(core)
-            assertEquals(3L, core.demandLayerEdges)
+            assertEquals(4L, core.demandLayerEdges)
             assertEquals(4L, core.edgeDeltas)
             assertEquals(2, f.addedLinks.size, "Both deliveries are observed; only emission is deduplicated")
         }
@@ -187,7 +190,7 @@ class FactKindsTest {
         }
     }
 
-    @Test fun `normal multi-premise publication retains the full key and normal layer while backward zero bypasses reduction`(): Unit {
+    @Test fun `normal multi-premise publication retains the full key while backward Zero uses paired restriction`(): Unit {
         val f = MethodAnalysisFixtures()
         f.shared.use {
             val mt = MarkSlot.Concrete(f.mark("T"))
@@ -211,7 +214,10 @@ class FactKindsTest {
             assertEquals(0L, core.demandLayerEdges)
 
             f.published.clear()
-            val back = f.core(index = 2)
+            val backDemand = DemandStore.Builder(f.manager).apply {
+                add(f.key, DemandPattern(f.manager.zero.toPattern(), f.pattern(x, mark = mt)))
+            }.build()
+            val back = f.core(index = 2, demand = backDemand)
             back.emitAfter(f.manager.zero, f.inst(0), f.fact(x, mark = mt))
             back.emitAfter(first, f.inst(0), f.fact(x, mark = mt))
             f.drain(back)

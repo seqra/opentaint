@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.bidi.ap.*
@@ -48,17 +50,13 @@ class SinkEndFactTest {
             val input = f.fact(argument, mark = t)
             core.emitAfter(initial, f.inst(2), input)
             f.drain(core)
-            val (key, witness) = f.vulnerabilities.witnessesOf(3).single()
-            assertEquals(VulnerabilityKey(sink.rule, f.key.method, f.inst(2)), key)
-            assertEquals(f.key, witness.methodKey)
-            assertEquals(0, witness.alternative)
-            assertEquals(3, witness.run)
-            assertTrue(witness.endFacts.isEmpty())
-            assertEquals(1, witness.edges.size)
-            assertSame(initial, witness.edges.single().premise)
-            assertEquals(Layer.NORMAL, witness.edges.single().layer)
-            assertEquals(setOf(Conclusion(PathFact(argument, emptyList(), Tail.EXACT, t), ExclusionSet.Empty, false)),
-                methodLeaves(f.ops, listOf(witness.edges.single().facts)))
+            val terminal = core.targets.single()
+            assertSame(initial, terminal.premise)
+            val id = assertIs<Target.NormalTarget>(terminal.target).id
+            val descriptor = f.shared.reportCatalog.descriptor(id)
+            assertEquals(SinkKey(f.key.method, f.inst(2), sink.rule.id), descriptor.key)
+            assertEquals(f.key, descriptor.representativeMethodKey)
+            assertTrue(core.sinkSeeds.isEmpty())
             assertEquals(setOf(initial to Conclusion(PathFact(argument, emptyList(), Tail.EXACT, t), ExclusionSet.Empty, false)), methodEntries(f.ops, core.summaries.all()))
             assertTrue(f.events.isEmpty())
             assertEquals(0L, core.triggerSeeds)
@@ -85,18 +83,14 @@ class SinkEndFactTest {
                 core.emitAfter(premise, f.inst(2), input)
                 f.drain(core)
                 val fires = shape != "wrong mark" && shape != "must excluded"
-                val witnesses = f.vulnerabilities.witnessesOf(3).toList()
-                assertEquals(if (fires) 1 else 0, witnesses.size, "$shape/$layer")
+                assertEquals(if (fires) 1 else 0, core.targets.size, "$shape/$layer")
                 if (fires) {
-                    val edge = witnesses.single().second.edges.single()
-                    assertSame(premise, edge.premise)
-                    val effectiveLayer = layer
-                    assertEquals(effectiveLayer, edge.layer)
-                    val tail = inputTail
-                    val effectiveE = e
-                    assertEquals(setOf(Conclusion(PathFact(argument, if (must) emptyList() else listOf(field), tail, t),
-                        effectiveE, effectiveLayer == Layer.DEMAND)), methodLeaves(f.ops, listOf(edge.facts)))
+                    val terminal = core.targets.single()
+                    assertSame(premise, terminal.premise)
+                    if (layer == Layer.NORMAL) assertIs<Target.NormalTarget>(terminal.target)
+                    else assertEquals(Target.DemandTarget, terminal.target)
                 }
+                assertEquals(fires && layer == Layer.DEMAND, core.sinkSeeds.isNotEmpty())
                 assertTrue(f.events.isEmpty())
             }
     }
@@ -116,14 +110,15 @@ class SinkEndFactTest {
             val tail = Tail.ANY_TAINT
             assertEquals(setOf(initial to Conclusion(initial.toPattern().fact, ExclusionSet.Empty, layer == Layer.DEMAND)),
                 methodEntries(f.ops, core.summaries.all()))
-            val witness = f.vulnerabilities.witnessesOf(3).single().second
-            assertEquals(layer, witness.edges.single().layer)
-            assertTrue(witness.endFacts.isEmpty())
+            val terminal = core.targets.single()
+            assertSame(initial, terminal.premise)
+            if (layer == Layer.NORMAL) assertIs<Target.NormalTarget>(terminal.target)
+            else assertEquals(Target.DemandTarget, terminal.target)
             assertEquals(0L, core.triggerSeeds)
         }
     }
 
-    @Test fun `conjunctive sink witnesses retain each input premise and layer in literal order`(): Unit {
+    @Test fun `conjunctive sink waits for the full binding and retains its complete original premise`(): Unit {
         for (reverse in listOf(false, true)) MethodAnalysisFixtures().use { f ->
             val second = AccessPathBase.Argument(1)
             val t = MarkSlot.Concrete(f.mark("T"))
@@ -139,17 +134,13 @@ class SinkEndFactTest {
             val contributions = listOf(j1 to f.fact(argument, mark = t), j2 to f.fact(second, mark = u, layer = Layer.DEMAND))
                 .let { if (reverse) it.reversed() else it }
             core.emitAfter(contributions[0].first, f.inst(2), contributions[0].second)
-            assertTrue(f.vulnerabilities.witnessesOf(3).none())
+            assertTrue(core.targets.isEmpty())
             core.emitAfter(contributions[1].first, f.inst(2), contributions[1].second)
             f.drain(core)
-            val witness = f.vulnerabilities.witnessesOf(3).single().second
-            assertEquals(listOf(j1, j2), witness.edges.map { it.premise })
-            assertEquals(listOf(Layer.NORMAL, Layer.DEMAND), witness.edges.map { it.layer })
-            assertEquals(setOf(Conclusion(j1.toPattern().fact, ExclusionSet.Empty, false)),
-                methodLeaves(f.ops, listOf(witness.edges[0].facts)))
-            assertEquals(setOf(Conclusion(j2.toPattern().fact, ExclusionSet.Empty, true)),
-                methodLeaves(f.ops, listOf(witness.edges[1].facts)))
-            assertSame(f.manager.union(j1, j2), witness.supportPremise(f.manager))
+            val terminal = core.targets.single()
+            assertSame(f.manager.union(j1, j2), terminal.premise)
+            assertEquals(Target.DemandTarget, terminal.target)
+            assertEquals(2, core.sinkSeeds.size)
             assertEquals(setOf(j1 to Conclusion(j1.toPattern().fact, ExclusionSet.Empty, false),
                 j2 to Conclusion(j2.toPattern().fact, ExclusionSet.Empty, true)),
                 methodEntries(f.ops, core.summaries.all()))
@@ -184,25 +175,21 @@ class SinkEndFactTest {
             val core = localCore(f, index = 3)
             core.emitAfter(premise, f.inst(2), input)
             f.drain(core)
-            assertTrue(f.vulnerabilities.witnessesOf(3).none())
+            assertTrue(core.targets.isEmpty())
             val expectedStatic = if (zeroPremise) setOf(Conclusion(retained, e, false))
                 else setOf(Conclusion(consumed, ExclusionSet.Empty, false), Conclusion(retained, e, false))
             assertEquals(expectedStatic.map { premise to it }.toSet(), methodEntries(f.ops, core.summaries.all()))
             core.emitAfter(second, f.inst(2), f.fact(argument, mark = v))
             f.drain(core)
-            val witness = f.vulnerabilities.witnessesOf(3).single().second
-            assertEquals(listOf(premise, second), witness.edges.map { it.premise })
-            assertEquals(setOf(Conclusion(consumed, ExclusionSet.Empty, false)), methodLeaves(f.ops, listOf(witness.edges[0].facts)))
-            assertEquals(ExclusionSet.Empty, (witness.edges[0].facts as TaintTree).exclusion)
-            assertEquals(setOf(Conclusion(second.toPattern().fact, ExclusionSet.Empty, false)),
-                methodLeaves(f.ops, listOf(witness.edges[1].facts)))
-            assertSame(if (zeroPremise) second else f.manager.union(callerInitial, second), witness.supportPremise(f.manager))
+            val terminal = core.targets.single()
+            assertSame(if (zeroPremise) second else f.manager.union(callerInitial, second), terminal.premise)
+            assertIs<Target.NormalTarget>(terminal.target)
             assertEquals(expectedStatic.map { premise to it }.toSet() + setOf(
                 second to Conclusion(second.toPattern().fact, ExclusionSet.Empty, false)), methodEntries(f.ops, core.summaries.all()))
         }
     }
 
-    @Test fun `sink alternatives share one vulnerability key while their contexts and literal facts remain separate`(): Unit {
+    @Test fun `sink alternatives and contexts share one report id but retain each owned terminal relation`(): Unit {
         MethodAnalysisFixtures().use { f ->
             val t = MarkSlot.Concrete(f.mark("T"))
             val literal = f.pattern(argument, tail = Tail.ANY, mark = t)
@@ -220,15 +207,16 @@ class SinkEndFactTest {
             right.emitAfter(initial, f.inst(2), f.manager.factsOf(rightFact, ExclusionSet.Empty, Layer.NORMAL))
             f.drain(left)
             f.drain(right)
-            val witnesses = f.vulnerabilities.witnessesOf(3).toList()
-            assertEquals(setOf(VulnerabilityKey(first.rule, f.key.method, f.inst(2))), witnesses.map { it.first }.toSet())
-            assertEquals(setOf(leftKey to 0, leftKey to 1, rightKey to 0, rightKey to 1),
-                witnesses.map { it.second.methodKey to it.second.alternative }.toSet())
-            for ((_, witness) in witnesses) {
-                assertSame(initial, witness.edges.single().premise)
-                assertEquals(setOf(Conclusion(if (witness.methodKey == leftKey) leftFact else rightFact, ExclusionSet.Empty, false)),
-                    methodLeaves(f.ops, listOf(witness.edges.single().facts)))
-            }
+            val leftTarget = left.targets.single()
+            val rightTarget = right.targets.single()
+            assertEquals(leftTarget, rightTarget)
+            assertSame(initial, leftTarget.premise)
+            val id = assertIs<Target.NormalTarget>(leftTarget.target).id
+            assertEquals(SinkKey(f.key.method, f.inst(2), first.rule.id), f.shared.reportCatalog.descriptor(id).key)
+            assertEquals(setOf(Conclusion(leftFact, ExclusionSet.Empty, false)),
+                methodLeaves(f.ops, left.summaries.all().map { it.second }.toList()))
+            assertEquals(setOf(Conclusion(rightFact, ExclusionSet.Empty, false)),
+                methodLeaves(f.ops, right.summaries.all().map { it.second }.toList()))
         }
     }
 
@@ -247,12 +235,13 @@ class SinkEndFactTest {
             assertTrue(f.cuts.none { it.first == Cut.EXIT_RULES && it.second.base == result })
             assertEquals(setOf(initial to Conclusion(initial.toPattern().fact, ExclusionSet.Empty, false)),
                 methodEntries(f.ops, core.summaries.all()))
-            assertTrue(f.vulnerabilities.witnessesOf(3).single().second.endFacts.isEmpty())
+            assertIs<Target.NormalTarget>(core.targets.single().target)
+            assertTrue(core.sinkSeeds.isEmpty())
             assertEquals(0L, core.demandLayerEdges)
         }
     }
 
-    @Test fun `repeated sink literals retain two witness slots and an unconditional sink holds only zero`(): Unit {
+    @Test fun `repeated sink literals complete once and an unconditional sink holds only zero`(): Unit {
         MethodAnalysisFixtures().use { f ->
             val t = MarkSlot.Concrete(f.mark("T"))
             val initial = f.manager.initial(f.pattern(argument, mark = t))
@@ -260,20 +249,15 @@ class SinkEndFactTest {
             val unconditional = localSink(listOf(ZERO_PATTERN), id = "unconditional")
             f.exitRules(2, ExitRules(localRules(listOf(repeated, unconditional)), false, emptySet()))
             val core = localCore(f, index = 3)
-            core.addRootZero()
+            core.addInitial(f.manager.zero) // This local transfer fixture supplies an already-admitted ZERO.
             core.addInitial(initial)
             f.drain(core, quantum = 1)
-            val witnesses = f.vulnerabilities.witnessesOf(3).toList()
-            assertEquals(2, witnesses.size)
-            val repeatedWitness = witnesses.single { it.first.rule === repeated.rule }.second
-            assertEquals(listOf(initial, initial), repeatedWitness.edges.map { it.premise })
-            assertEquals(listOf(Layer.NORMAL, Layer.NORMAL), repeatedWitness.edges.map { it.layer })
-            for (edge in repeatedWitness.edges)
-                assertEquals(setOf(Conclusion(initial.toPattern().fact, ExclusionSet.Empty, false)), methodLeaves(f.ops, listOf(edge.facts)))
-            assertSame(initial, repeatedWitness.supportPremise(f.manager))
-            val zeroWitness = witnesses.single { it.first.rule === unconditional.rule }.second
-            assertSame(f.manager.zero, zeroWitness.edges.single().premise)
-            assertSame(Reach.NORMAL, zeroWitness.edges.single().facts)
+            assertEquals(2, core.targets.size)
+            val byRule = core.targets.associateBy {
+                f.shared.reportCatalog.descriptor(assertIs<Target.NormalTarget>(it.target).id).key.ruleId
+            }
+            assertSame(initial, byRule.getValue(repeated.rule.id).premise)
+            assertSame(f.manager.zero, byRule.getValue(unconditional.rule.id).premise)
             assertEquals(setOf(f.manager.zero to Conclusion(ZERO_FACT, ExclusionSet.Empty, false),
                 initial to Conclusion(initial.toPattern().fact, ExclusionSet.Empty, false)), methodEntries(f.ops, core.summaries.all()))
         }
@@ -298,23 +282,21 @@ class SinkEndFactTest {
             f.admit(core, ref, if (index == 1) Layer.DEMAND else Layer.NORMAL,
                 f.fact(argument, mark = t, layer = if (index == 1) Layer.DEMAND else Layer.NORMAL))
             assertEquals(setOf(if (index == 1) policy else answer), core.initials.all().toSet())
-            assertTrue(f.vulnerabilities.witnessesOf(index).none())
+            assertTrue(core.targets.isEmpty())
             f.drain(core, quantum = 1)
             val flow = policy to Conclusion(PathFact(argument, emptyList(), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty, false)
             if (index == 1) {
                 assertEquals(setOf(policy, answer), core.initials.all().toSet())
                 assertEquals(setOf(flow, answer to Conclusion(answer.toPattern().fact, ExclusionSet.Empty, true)), methodEntries(f.ops, core.summaries.all()))
-                val witness = f.vulnerabilities.witnessesOf(1).single().second
-                assertSame(answer, witness.edges.single().premise)
-                assertEquals(Layer.DEMAND, witness.edges.single().layer)
-                assertEquals(setOf(Conclusion(answer.toPattern().fact, ExclusionSet.Empty, true)),
-                    methodLeaves(f.ops, listOf(witness.edges.single().facts)))
+                assertEquals(setOf(TargetSummary(answer, Target.DemandTarget)), core.targets)
+                assertEquals(1, core.sinkSeeds.size)
             } else {
                 assertEquals(setOf(answer), core.initials.all().toSet(), "The matching concrete demand carries T")
                 assertTrue(f.processed.none { it.facts is FlowTree })
                 assertEquals(setOf(answer to Conclusion(answer.toPattern().fact, ExclusionSet.Empty, false)),
                     methodEntries(f.ops, core.summaries.all()))
-                assertEquals(1, f.vulnerabilities.witnessesOf(3).count())
+                assertEquals(1, core.targets.size)
+                assertIs<Target.NormalTarget>(core.targets.single().target)
             }
             assertTrue(f.events.none { it is RunEvent.MarkRequestsIn },
                 "TAINT replay answers locally; restricted mode raises no mark requests")

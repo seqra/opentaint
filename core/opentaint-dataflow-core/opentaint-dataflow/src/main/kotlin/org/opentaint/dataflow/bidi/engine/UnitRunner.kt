@@ -8,7 +8,7 @@ import kotlinx.coroutines.yield
 import mu.KLogging
 import org.opentaint.dataflow.bidi.ap.MethodKey
 import org.opentaint.dataflow.bidi.ap.Facts
-import org.opentaint.dataflow.bidi.ap.InitialAp
+import org.opentaint.dataflow.bidi.ap.AdmittedInitial
 import org.opentaint.dataflow.bidi.ap.Layer
 import org.opentaint.dataflow.bidi.store.CallerRef
 import org.opentaint.dataflow.ifds.UnitType
@@ -42,6 +42,7 @@ class UnitRunner<A : RunActor> internal constructor(
         !closed.get() && channel.trySend(event).isSuccess
     }
 
+    override fun post(event: RunEvent.TargetDelivery): Boolean = postEvent(event)
     override fun post(event: RunEvent.Delivery): Boolean = postEvent(event)
     override fun post(event: RunEvent.ChangedRequests): Boolean = postEvent(event)
     override fun send(event: RunEvent): Boolean = run.route(event)
@@ -49,6 +50,7 @@ class UnitRunner<A : RunActor> internal constructor(
     override fun summaryStorage(key: MethodKey): SummaryStorage = run.summaryStorage(key)
 
     override fun subscribe(sub: Subscription) {
+        if (!org.opentaint.dataflow.bidi.ap.RuntimeDataDomain.packet(sub.ref.premise, sub.added)) return
         check(!run.ended && !closed.get()) { "The runner is closed" }
         check(org.opentaint.dataflow.bidi.interp.predefinedSummary(sub.callee.method) == null) {
             "A complete predefined target has no summary subscription"
@@ -60,6 +62,7 @@ class UnitRunner<A : RunActor> internal constructor(
     }
 
     override fun link(callee: MethodKey, ref: CallerRef, linkLayer: Layer, added: Facts) {
+        if (!org.opentaint.dataflow.bidi.ap.RuntimeDataDomain.packet(ref.premise, added)) return
         check(!run.ended && !closed.get()) { "The runner is closed" }
         shared.cancellation.checkpoint()
         val event = RunEvent.LinkIn(callee, ref, linkLayer, added)
@@ -67,11 +70,13 @@ class UnitRunner<A : RunActor> internal constructor(
         else send(event)
     }
 
-    override fun startInitials(callee: MethodKey, initials: Collection<InitialAp>) {
+    override fun startInitials(callee: MethodKey, initials: Collection<AdmittedInitial>) {
         check(!run.ended && !closed.get()) { "The runner is closed" }
         check(config.restricted) { "Completed initial delivery is for restricted runs" }
         shared.cancellation.checkpoint()
-        val event = RunEvent.InitialsIn(callee, initials)
+        val valid = initials.filter { org.opentaint.dataflow.bidi.ap.RuntimeDataDomain.initial(it.initial) }
+        if (valid.isEmpty()) return
+        val event = RunEvent.InitialsIn(callee, valid)
         if (shared.unitResolver.resolve(callee.method) == unit) handler.handle(event)
         else {
             val accepted = send(event)

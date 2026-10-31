@@ -3,11 +3,10 @@ package org.opentaint.dataflow.bidi
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.FixedLimits
-import org.opentaint.dataflow.bidi.driver.HandOff
-import org.opentaint.dataflow.bidi.driver.ReportBuilder
-import org.opentaint.dataflow.bidi.driver.ReportState
 import org.opentaint.dataflow.bidi.driver.Seed
-import org.opentaint.dataflow.bidi.engine.RunStatus
+import org.opentaint.dataflow.bidi.engine.*
+import org.opentaint.dataflow.bidi.engine.Target
+import org.opentaint.dataflow.bidi.driver.Report
 import org.opentaint.dataflow.bidi.fixtures.*
 import org.opentaint.dataflow.bidi.interp.*
 import org.opentaint.dataflow.bidi.interp.CallPoint.*
@@ -20,54 +19,47 @@ import kotlin.test.*
 class ConcreteDesignDifferentialTest {
     private val x = AccessPathBase.Argument(0)
     private val ret = AccessPathBase.Return
-    private data class DemandCell(val method: MethodKey, val entry: TestLocation, val exit: TestLocation?)
-
-    /** Decode actual public stores only. The expected side is the independently scanned raw barrier. */
-    private fun actualHandOff(f: DriverFixtures, keys: List<MethodKey>, handOff: HandOff,
-                              bases: List<AccessPathBase> = listOf(AccessPathBase.Zero, x, ret)): ProgramRunInputs {
-        val demand = keys.flatMap { key -> bases.flatMap { base ->
-            val probe = demandProbe(base)
-            val carry = if (handOff.demand.hasSharedStaticCarry && base == STATIC) DemandPattern(probe, probe) else null
-            handOff.demand.near(key, probe).filter { it != carry }.map { key to it }
-        } }.toSet().toList()
-        val seeds = keys.flatMap { key -> f.program.programMethod(key).successors.indices.flatMap { index ->
-            handOff.seeds.at(key, f.program.inst(key, index))
-        } }.toSet().toList()
-        val records = keys.flatMap { key -> bases.flatMap { base ->
-            f.records.byEntry(key, f.program.pattern(base, tail = Tail.ANY, mark = MarkSlot.STAR)).flatMap { record ->
-                f.ops.leaves(record.conclusion).map { leaf ->
-                    RawRecord(key, record.direction, record.premise.toPattern(), Conclusion(leaf.fact, leaf.exclusion, false))
-                }
-            }.toList()
-        } }.toSet().toList()
-        return ProgramRunInputs(emptyList(), demand, records, seeds,
-            hasSharedStaticCarry = handOff.demand.hasSharedStaticCarry)
-    }
-
-    private fun compareHandOff(expected: ProgramRunInputs, actual: ProgramRunInputs, universe: BoundedDenotation,
-                               diagnostic: String) {
-        fun demands(rows: List<Pair<MethodKey, DemandPattern>>): Set<DemandCell> = buildSet {
-            for ((key, d) in rows) {
-                // Zero without an exit is implicit at every method in the production store.
-                if (d.entry == ZERO_PATTERN && d.exit == null) continue
-                for (entry in universe.marked(d.entry)) {
-                    val exit = d.exit
-                    if (exit == null) add(DemandCell(key, entry, null))
-                    else for (value in universe.marked(exit)) add(DemandCell(key, entry, value))
-                }
+    /** The old reference has implicit ZERO and local candidate reports. Compare
+     * its unchanged run-1 AP transfer only; verify the new terminal contract
+     * directly instead of claiming report or later-handoff equivalence. */
+    private fun checkSelected(f: DriverFixtures, report: Report, expected: HistoricalIterationResult,
+                              universe: BoundedDenotation, diagnostic: String) {
+        assertEquals(RunStatus.COMPLETE, report.end.status, diagnostic)
+        val first = f.results.first()
+        val actualAp = first.analyzers.flatMap { actor -> actor.summaries.all().flatMap { (premise, value) ->
+            f.ops.leaves(value).map { leaf ->
+                ObservedEdge(actor.key, premise.members.map { it.toPattern() }.toSet(),
+                    Conclusion(leaf.fact, leaf.exclusion, value.layer == Layer.DEMAND))
             }
-        }
-        assertEquals(demands(expected.demand), demands(actual.demand), "Outgoing demand union: $diagnostic")
-        assertEquals(expected.seeds.toSet(), actual.seeds.toSet(), "Exact outgoing seeds: $diagnostic")
-        for (direction in Direction.entries) {
-            fun edges(rows: List<RawRecord>) = rows.filter { it.direction == direction }.mapTo(LinkedHashSet()) {
-                ObservedEdge(it.method, setOf(it.premise), it.conclusion)
-            }
-            try {
-                RunObservation(rawSummaries = edges(actual.records)).assertEquivalent(
-                    RunObservation(rawSummaries = edges(expected.records)), universe)
-            } catch (error: AssertionError) {
-                throw AssertionError("Raw native records direction=$direction: $diagnostic", error)
+        }.toList() }.toSet()
+        val expectedAp = expected.runs.first().observation.rawSummaries
+        // The bounded universe observes concrete full marks. A group-only identity
+        // outside that universe has empty denotation; an empty map bucket does not
+        // add a semantic cell. Do not claim raw group-token/storage equivalence.
+        val actualSemantic = RunObservation(rawSummaries = actualAp).semantic(universe).rawSummaries
+            .filterValues { it.isNotEmpty() }
+        val expectedSemantic = RunObservation(rawSummaries = expectedAp).semantic(universe).rawSummaries
+            .filterValues { it.isNotEmpty() }
+        assertEquals(expectedSemantic, actualSemantic,
+            "Run-1 full-mark AP denotation mismatch: actual-only=${actualAp - expectedAp}; " +
+                "reference-only=${expectedAp - actualAp}")
+        val reachedIds = f.results.filter { it.direction == Direction.FORWARD }.flatMap { result ->
+            val roots = f.configs.single { it.index == result.runIndex }.roots
+            result.analyzers.filter { it.key in roots }.flatMap { actor -> actor.targets.mapNotNull { row ->
+                (row.target as? Target.NormalTarget)?.id?.takeIf { row.premise.isZero }
+            } }
+        }.toSet()
+        assertEquals(reachedIds, report.entries.map { it.id }.toSet(), diagnostic)
+        for (entry in report.entries) assertEquals(f.shared.reportCatalog.descriptor(entry.id), entry.descriptor)
+        for (result in f.results) {
+            if (result.direction == Direction.BACKWARD)
+                assertTrue(result.analyzers.all { actor -> actor.targets.none { it.target is Target.NormalTarget } })
+            val next = f.configs.firstOrNull { it.index == result.runIndex + 1 } ?: continue
+            for (actor in result.analyzers) if (actor.outgoingTargets.isNotEmpty()) {
+                assertTrue(actor.outgoingTargets.all { it.target == Target.DemandTarget })
+                assertEquals(setOf(existingZeroAdmission(f.manager.zero)),
+                    emitRestrictedInitials(next, f.ops, actor.key, Reach.NORMAL).toSet(),
+                    "An outgoing terminal gives explicit ZERO admission in the next run: $diagnostic")
             }
         }
     }
@@ -77,30 +69,11 @@ class ConcreteDesignDifferentialTest {
                                 limits: List<Int> = listOf(1, 1, 2)): HistoricalIterationResult {
         val old = HistoricalConcreteIteration(f.program, listOf(root), limits).run()
         val expected = DirectCurrentIteration(f.program, listOf(root), limits).run()
-        val barriers = ArrayList<ProgramRunInputs>()
-        val reportBuilder = ReportBuilder()
-        val report = f.driver(FixedLimits(limits), run1MarkMode = MarkMode.GROUP, guardBarrier = { shared, body ->
-            val next = body()
-            val config = f.configs.last()
-            val result = f.results.last()
-            reportBuilder.add(config, result)
-            barriers += actualHandOff(f, keys, HandOff.of(config, result, reportBuilder, shared), bases)
-            next
-        }).analyze(listOf(root))
-        val actual = report.entries.associate { HistoricalFinding(it.key.rule, it.key.statement) to
-            if (it.state == ReportState.CONFIRMED) HistoricalState.CONFIRMED else HistoricalState.DEMAND }
-        val diagnostic = "version=${HistoricalF71.VERSION} program=${f.program.describe()} old=${old.runs} current=${expected.runs} actual=$actual"
-        assertEquals(RunStatus.COMPLETE, report.end.status, diagnostic)
-        assertEquals(expected.findings, actual, "Current direct report: $diagnostic")
-        assertEquals(expected.runs.size, barriers.size, "Complete barriers: $diagnostic")
+        val report = f.driver(FixedLimits(limits), run1MarkMode = MarkMode.GROUP).analyze(listOf(root))
+        val diagnostic = "version=${HistoricalF71.VERSION} program=${f.program.describe()} old=${old.runs} current=${expected.runs}"
         val universe = BoundedDenotation(bases, fields + f.program.field("fresh field"),
             marks + f.program.mark("fresh mark") + TaintMark.ZERO, 2)
-        for ((run, barrier) in expected.runs.zip(barriers)) compareHandOff(run.handOff, barrier, universe, diagnostic)
-        for ((key, state) in old.findings) {
-            assertNotNull(actual[key], "Historical finding lost: $diagnostic")
-            assertEquals(HistoricalState.DEMAND, actual[key],
-                "The current minimal policy retains this identity as an unproved candidate: $diagnostic")
-        }
+        checkSelected(f, report, expected, universe, diagnostic)
         return old
     }
 
@@ -383,7 +356,7 @@ class ConcreteDesignDifferentialTest {
     }
 
     @Test
-    fun `generated current iterations retain every finding of the labelled concrete design`(): Unit {
+    fun `generated run1 AP transfer matches the labelled reference and selected terminal routing stays paired`(): Unit {
         var historicalFindings = 0
         var historicalConfirmed = 0
         var alternatingCases = 0
@@ -422,41 +395,20 @@ class ConcreteDesignDifferentialTest {
             val limits = listOf(1, 1, 2)
             val old = HistoricalConcreteIteration(f.program, listOf(root), limits).run()
             val reference = DirectCurrentIteration(f.program, listOf(root), limits).run()
-            val actualBarriers = ArrayList<ProgramRunInputs>()
-            val actualReport = ReportBuilder()
-            val driver = f.driver(FixedLimits(limits), run1MarkMode = MarkMode.GROUP, guardBarrier = { shared, body ->
-                val next = body()
-                val config = f.configs.last()
-                val result = f.results.last()
-                actualReport.add(config, result)
-                actualBarriers += actualHandOff(f, listOf(root, callee), HandOff.of(config, result, actualReport, shared))
-                next
-            })
+            val driver = f.driver(FixedLimits(limits), run1MarkMode = MarkMode.GROUP)
             val actual = driver.analyze(listOf(root))
-            val actualStates = actual.entries.associate { HistoricalFinding(it.key.rule, it.key.statement) to
-                if (it.state == ReportState.CONFIRMED) HistoricalState.CONFIRMED else HistoricalState.DEMAND }
             val diagnostic = "seed=$seed version=${HistoricalF71.VERSION} limits=$limits path=$path read=$read " +
                 "changing=$changing program=${f.program.describe()} old=${old.runs} direct=${reference.runs} " +
-                "configs=${f.configs.map { it.index to it.fieldLimit }} actual=$actualStates"
-            assertEquals(RunStatus.COMPLETE, actual.end.status, diagnostic)
-            assertEquals(reference.findings, actualStates, "Current direct barriers and real driver differ: $diagnostic")
-            assertEquals(reference.runs.size, actualBarriers.size, "Complete barrier count: $diagnostic")
+                "configs=${f.configs.map { it.index to it.fieldLimit }}"
             val universe = BoundedDenotation(listOf(AccessPathBase.Zero, x, ret), fields + f.program.field("fresh field"),
                 listOf(t.mark, u.mark, f.program.mark("fresh mark"), TaintMark.ZERO), 2)
-            for ((run, barrier) in reference.runs.zip(actualBarriers))
-                compareHandOff(run.handOff, barrier, universe, "run=${run.index} $diagnostic")
-            for ((key, state) in old.findings) {
-                val current = actualStates[key]
-                assertNotNull(current, "A labelled concrete-design finding was lost: $diagnostic")
-                assertEquals(HistoricalState.DEMAND, current,
-                    "Current verification is deliberately unproved; the historical support policy remains labelled separately: $diagnostic")
-            }
+            checkSelected(f, actual, reference, universe, diagnostic)
             historicalFindings += old.findings.size
             historicalConfirmed += old.findings.values.count { it == HistoricalState.CONFIRMED }
-            if (reference.runs.size == 3) alternatingCases++
+            if (f.configs.size >= 3) alternatingCases++
         }
-        assertTrue(historicalFindings > 0, "The differential must compare actual findings")
-        assertTrue(historicalConfirmed > 0, "The differential must compare actual concrete confirmations")
-        assertTrue(alternatingCases > 0, "The differential must cross actual F→B→F barriers")
+        assertTrue(historicalFindings > 0, "The historical control must include actual findings")
+        assertTrue(historicalConfirmed > 0, "The historical control must include concrete confirmations")
+        assertTrue(alternatingCases > 0, "The selected checks must cross actual F→B→F barriers")
     }
 }

@@ -7,6 +7,7 @@ import org.opentaint.dataflow.bidi.store.AddedFactAccumulator
 import org.opentaint.dataflow.bidi.store.CallerRef
 import org.opentaint.dataflow.bidi.store.ConjunctionStore
 import org.opentaint.dataflow.bidi.store.NdBinding
+import org.opentaint.dataflow.bidi.store.KaryJoin
 import org.opentaint.dataflow.bidi.store.Record
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -32,6 +33,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
         override val size: Int get() = values.size
         override fun iterator(): MutableIterator<PlanFact> = values.values.iterator()
         override fun add(element: PlanFact): Boolean {
+            if (!RuntimeDataDomain.packet(element.premise, element.facts)) return false
             val old = values[element]
             if (old == null) {
                 values[element] = element
@@ -54,6 +56,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
 
     override fun process(item: EdgeDelta) {
         val core = active()
+        if (!RuntimeDataDomain.packet(item.premise, item.facts)) return
         val call = checkNotNull(core.context.callAt(item.node)) { "The delta is not at a call" }
         core.forms.withCall(core.key, item.node, call) { plan ->
             val ctx = CallContext(item.node, call, plan, item.facts.layer)
@@ -69,8 +72,10 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
     private fun flow(ctx: CallContext, point: CallPoint, facts: List<PlanFact>, pendingDemotion: Boolean = false) {
         val core = active()
         check(!pendingDemotion || core.forward) { "Native must-record demotion is only forward" }
+        val valid = facts.filter { RuntimeDataDomain.packet(it.premise, it.facts) }
+        if (valid.isEmpty()) return
         val stack = ArrayDeque<Frame>()
-        stack.addLast(Frame(point, facts, pendingDemotion))
+        stack.addLast(Frame(point, valid, pendingDemotion))
         while (stack.isNotEmpty()) {
             core.ap.cancellation.checkpoint()
             val frame = stack.peekLast()
@@ -157,9 +162,11 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
             is CallStage.Predefined -> for (fact in facts) {
                 for (edge in stage.summary.edges) {
                     core.ap.cancellation.checkpoint()
+                    if (!RuntimeDataDomain.packet(fact.premise, fact.facts) || !RuntimeDataDomain.producer(edge)) continue
                     core.ops.applyEdge(fact.facts, fact.premise, edge.edge, statementEdge = false,
                         mode = core.mode, out = object : ApOut {
                             override fun result(f: Facts) {
+                                if (!RuntimeDataDomain.packet(fact.premise, f)) return
                                 if (core.config.run1 && f.base == STATIC) core.routeStaticResultToExit(ctx.node, fact.premise, f)
                                 else out += planFact(fact.premise, f, true)
                             }
@@ -321,6 +328,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
         for (callee in stage.callees) {
             core.ap.cancellation.checkpoint()
             val part = Subscription(callee, ref, fact.facts.layer, fact.facts)
+            if (!RuntimeDataDomain.packet(ref.premise, fact.facts)) continue
             check(part.added.base !is AccessPathBase.CleanerTemporary) {
                 "A field-action temporary cannot enter an added link"
             }
@@ -336,6 +344,10 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
             statistics?.selectedCallOffered()
             // Saved NORMAL records apply to every offer, without standing input admission.
             replayPersistedSummaries(core.config, core.ops, part, core, statistics)
+            if (core.forward) for ((row, member) in core.config.normalTargets.candidates(callee, part, core.mode)) {
+                core.ap.cancellation.checkpoint()
+                if (!row.premise.isZero) applyTarget(part, row, member, saved = true)
+            }
             // Demand admission uses the complete original offer, never a live merge delta.
             val initials = emitRestrictedInitials(core.config, core.ops, callee, part.added, statistics)
             if (initials.isEmpty()) continue
@@ -364,9 +376,12 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
             ctx.plan.stages.indexOfFirst { it is CallStage.Callees }.coerceAtLeast(0))
         for (callee in ctx.plan.callees?.callees.orEmpty()) {
             core.ap.cancellation.checkpoint()
-            core.runnerPort.subscribe(Subscription(callee, ref, item.facts.layer, item.facts, zeroOnly = true))
+            val part = Subscription(callee, ref, item.facts.layer, item.facts, zeroOnly = true)
+            val initials = emitRestrictedInitials(core.config, core.ops, callee, part.added)
+            if (initials.isEmpty()) continue
+            core.runnerPort.subscribe(part)
             core.ap.cancellation.checkpoint()
-            core.runnerPort.send(RunEvent.ZeroIn(callee))
+            core.runnerPort.startInitials(callee, initials)
         }
         for (stage in ctx.plan.stages.filterIsInstance<CallStage.Predefined>()) {
             val results = applyStage(ctx, stage, listOf(planFact(item.premise, item.facts, null)), Triggers.NONE)
@@ -376,6 +391,8 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
 
     override fun applySummary(part: Subscription, pub: Publication, member: Int) {
         val core = active()
+        if (!RuntimeDataDomain.packet(part.ref.premise, part.added) ||
+            !RuntimeDataDomain.packet(pub.premise, pub.conclusion)) return
         if (core.erasesRun1StaticSummary(pub.premise, pub.conclusion)) return
         core.checkPremise(part.ref.premise)
         core.checkPremise(pub.premise)
@@ -396,6 +413,8 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
 
     override fun applyStaticSummary(part: Subscription, pub: Publication, member: Int) {
         val core = active()
+        if (!RuntimeDataDomain.packet(part.ref.premise, part.added) ||
+            !RuntimeDataDomain.packet(pub.premise, pub.conclusion)) return
         check(core.config.run1 && part.ref.premise.isZero && part.added is Reach && !part.zeroOnly)
         core.checkPremise(pub.premise)
         if (core.erasesRun1StaticSummary(pub.premise, pub.conclusion)) return
@@ -416,25 +435,24 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
                 val plain = core.ap.factsOf(leaf.fact, leaf.exclusion, pub.layer)
                 val scalar = if (plain is TaintTree && pub.conclusion is TaintTree)
                     plain.withProtection(pub.conclusion.nonSubsumable) else plain
-                applyStaticInput(part, pub, member, actual, scalar)
+                applyStaticInput(part, StaticCallResult.Ap(pub.copy(conclusion = scalar)), member, actual)
             }
-        } else core.staticCallInterest(part, pub, member)
+        } else core.staticCallInterest(part, StaticCallResult.Ap(pub), member)
     }
 
-    override fun staticSupply(part: Subscription, pub: Publication, member: Int, supply: RegionGroups) {
+    override fun staticSupply(part: Subscription, result: StaticCallResult, member: Int, supply: RegionGroups) {
         val core = active()
-        if (core.erasesRun1StaticSummary(pub.premise, pub.conclusion)) return
+        if (!RuntimeDataDomain.packet(part.ref.premise, part.added) || !RuntimeDataDomain.premise(result.premise)) return
+        if (result is StaticCallResult.Ap && core.erasesRun1StaticSummary(result.premise, result.publication.conclusion)) return
         core.checkPremise(part.ref.premise)
-        core.checkPremise(pub.premise)
-        val actual = core.staticFacts(supply)
-        applyStaticInput(part, pub, member, actual)
+        core.checkPremise(result.premise)
+        applyStaticInput(part, result, member, core.staticFacts(supply))
     }
 
-    /** Both pool replies and known-input activation use the same scalar AP application and suffix. */
-    private fun applyStaticInput(part: Subscription, pub: Publication, member: Int, actual: Facts,
-                                 conclusion: Facts = pub.conclusion) {
+    /** Known input and late pool replies share matching and STATIC origin selection. */
+    private fun applyStaticInput(part: Subscription, result: StaticCallResult, member: Int, actual: Facts) {
         val core = active()
-        val initial = pub.premise.member(member)
+        val initial = result.premise.member(member)
         val matched = core.ops.satisfying(actual, initial, core.mode) ?: return
         for (leaf in core.ops.leaves(matched)) {
             check(leaf.fact.path.size != 1 || leaf.fact.tail == Tail.EXACT) {
@@ -446,16 +464,74 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
             val ref = CallerRef(core.key, selected, part.ref.callerLayer, part.ref.call, part.ref.stageOrdinal)
             val selectedInput = core.forceRun1Layer(selected, core.ops.startFact(selected, core.mode))
             val input = part.copy(ref = ref, linkLayer = selectedInput.layer, added = selectedInput)
-            if (pub.premise is PremiseSet) ndMatch(input, pub, pub.premise, member)
-            else {
-                val statistics = core.context.shared.n2Statistics
-                val results = ArrayList<PlanFact>()
-                statistics?.staticGroupScalarApplied()
-                applyParts(input, initial, conclusion, results)
-                if (results.isNotEmpty()) statistics?.staticGroupSuffixEntered()
-                resumeCallees(ref, results)
+            when (result) {
+                is StaticCallResult.Terminal -> applyTarget(input, result.summary, member)
+                is StaticCallResult.Ap -> {
+                    val pub = result.publication
+                    if (pub.premise is PremiseSet) ndMatch(input, pub, pub.premise, member)
+                    else {
+                        val statistics = core.context.shared.n2Statistics
+                        val results = ArrayList<PlanFact>()
+                        statistics?.staticGroupScalarApplied()
+                        applyParts(input, initial, pub.conclusion, results)
+                        if (results.isNotEmpty()) statistics?.staticGroupSuffixEntered()
+                        resumeCallees(ref, results)
+                    }
+                }
             }
         }
+    }
+
+    private data class TargetJoinKey(val callee: MethodKey, val premise: PremiseKey, val target: Target,
+                                     val call: CommonInst, val stageOrdinal: Int, val saved: Boolean)
+    private data class TargetBinding(val ref: CallerRef, val layer: Layer)
+    private val targetJoins = HashMap<TargetJoinKey, KaryJoin<TargetBinding>>()
+
+    override fun applyTarget(part: Subscription, row: TargetSummary, member: Int) =
+        applyTarget(part, row, member, saved = false)
+
+    private fun applyTarget(part: Subscription, row: TargetSummary, member: Int, saved: Boolean) {
+        val core = active()
+        if (!core.forward && row.target is Target.NormalTarget) return
+        if (!RuntimeDataDomain.packet(part.ref.premise, part.added) || !RuntimeDataDomain.premise(row.premise)) return
+        val initial = row.premise.member(member)
+        if (part.zeroOnly && !initial.isZero) return
+        val selected = core.ops.satisfying(part.added, initial, core.mode,
+            record = saved && initial.tail != Tail.ANY_TAINT) ?: return
+        val layer = if (part.ref.callerLayer == Layer.DEMAND || selected.layer == Layer.DEMAND ||
+            part.linkLayer == Layer.DEMAND) Layer.DEMAND else Layer.NORMAL
+        if (row.target is Target.NormalTarget && layer != Layer.NORMAL) return
+        val binding = TargetBinding(part.ref, layer)
+        if (row.premise is InitialAp) emitTargetBinding(listOf(binding), row.target)
+        else {
+            val key = TargetJoinKey(part.callee, row.premise, row.target, part.ref.call, part.ref.stageOrdinal, saved)
+            val join = targetJoins.getOrPut(key) { KaryJoin(row.premise.size, core.ap.cancellation) }
+            for (bindings in join.add(member, binding)) emitTargetBinding(bindings, row.target)
+        }
+    }
+
+    private fun emitTargetBinding(bindings: List<TargetBinding>, target: Target) {
+        val core = active()
+        if (target is Target.NormalTarget && bindings.any { it.layer != Layer.NORMAL }) return
+        var premise = core.ap.zero as PremiseKey
+        for (binding in bindings) {
+            core.ap.cancellation.checkpoint()
+            premise = core.ap.union(premise, binding.ref.premise)
+        }
+        core.emitTarget(premise, target)
+    }
+
+    override fun applyStaticTarget(part: Subscription, row: TargetSummary, member: Int) {
+        val core = active()
+        check(core.config.run1 && part.ref.premise.isZero && part.added is Reach && !part.zeroOnly)
+        if (!RuntimeDataDomain.packet(part.ref.premise, part.added) || !RuntimeDataDomain.premise(row.premise)) return
+        val initial = row.premise.member(member)
+        check(initial.base == STATIC && initial.mark is MarkSlot.Concrete)
+        if (core.dropsStaticField(initial)) return
+        val result = StaticCallResult.Terminal(row)
+        if (core.hasKnownStaticGroupInput(row.premise))
+            applyStaticInput(part, result, member, core.knownStaticInput(row.premise as InitialAp))
+        else core.staticCallInterest(part, result, member)
     }
 
     override fun resumePoint(premise: PremiseKey, facts: Facts, site: ResumeSite, state: CallResumeState?) {
@@ -488,18 +564,24 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
 
     override fun applyRecord(part: Subscription, record: Record) {
         val core = active()
+        if (!RuntimeDataDomain.packet(part.ref.premise, part.added) ||
+            !RuntimeDataDomain.packet(record.premise, record.conclusion)) return
         val premise = record.premise
         val native = ArrayList<PlanFact>()
         val pending = ArrayList<PlanFact>()
-        if (premise.tail != Tail.ANY_TAINT) applyParts(part, premise, record.conclusion, native, run1Summary = false)
+        var applied = false
+        if (premise.tail != Tail.ANY_TAINT)
+            applied = applyParts(part, premise, record.conclusion, native, run1Summary = false)
         else {
             check(core.forward) { "A native must record is only forward" }
             val inside = core.ops.satisfying(part.added, premise, core.mode)
-            if (inside != null) applyParts(part.copy(added = inside), premise, record.conclusion, native, run1Summary = false)
+            if (inside != null)
+                applied = applyParts(part.copy(added = inside), premise, record.conclusion, native, run1Summary = false)
             val only = if (inside == null) part.added else core.ops.without(part.added, inside)
-            if (only != null) applyParts(part.copy(added = only), premise, record.conclusion, pending, run1Summary = false)
+            if (only != null)
+                applied = applyParts(part.copy(added = only), premise, record.conclusion, pending, run1Summary = false) || applied
         }
-        if (native.isNotEmpty() || pending.isNotEmpty()) core.countRecordCrossing()
+        if (applied) core.countRecordCrossing()
         resumeCallees(part.ref, native)
         val tagged = ArrayList<PlanFact>(pending.size)
         for (fact in pending) { core.ap.cancellation.checkpoint(); tagged += planFact(fact.premise, fact.facts, false) }
@@ -508,13 +590,26 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
 
     override fun applyRecordView(part: Subscription, view: RecordLeafView, nonSubsumable: Boolean) {
         val core = active()
+        if (!RuntimeDataDomain.packet(part.ref.premise, part.added) ||
+            !RuntimeDataDomain.base(view.premise.fact.base) || !RuntimeDataDomain.base(view.result.fact.base)) return
         val results = ArrayList<PlanFact>()
+        var applied = false
         val identity = recordLeafIdentity(view)
         core.ops.applyRecordLeaf(part.added, view, nonSubsumable, core.mode, core.collect(part.ref.premise, part.added) { premise, result ->
-            results += planFact(premise, result, identity)
+            applied = true
+            if (!completeBackwardSource(view.premise.fact.base == AccessPathBase.Zero, premise, result))
+                results += planFact(premise, result, identity)
         }, original = part.ref.premise)
-        if (results.isNotEmpty()) core.countRecordCrossing()
+        if (applied) core.countRecordCrossing()
         resumeCallees(part.ref, results)
+    }
+
+    /** Source discharge is terminal. ZERO-to-ZERO remains ordinary control flow. */
+    private fun completeBackwardSource(zeroPremise: Boolean, original: PremiseKey, result: Facts): Boolean {
+        val core = active()
+        if (core.forward || zeroPremise || result !is Reach) return false
+        core.emitTarget(original, Target.DemandTarget)
+        return true
     }
 
     private fun toDemand(facts: Facts): Facts {
@@ -539,17 +634,22 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
     }
 
     private fun applyParts(part: Subscription, premise: InitialAp, conclusion: Facts, results: MutableList<PlanFact>,
-                           run1Summary: Boolean = true) {
+                           run1Summary: Boolean = true): Boolean {
         val core = active()
+        var applied = false
         for ((group, identity) in summaryParts(premise, conclusion, run1Summary)) {
             core.ap.cancellation.checkpoint()
             val at = OperationInput(ResumeSite.CallStageInput(core.operation(part.ref.call, part.ref.stageOrdinal)),
                 part.ref.premise, part.added, CallResumeState(part.ref.callerLayer, identity))
             core.ops.applySummary(part.added, premise, group, core.mode, core.collect(at) { pr, result ->
-                if (core.config.run1 && result.base == STATIC) core.routeStaticResultToExit(part.ref.call, pr, result)
-                else results += planFact(pr, result, identity)
+                applied = true
+                if (!completeBackwardSource(premise.isZero, pr, result)) {
+                    if (core.config.run1 && result.base == STATIC) core.routeStaticResultToExit(part.ref.call, pr, result)
+                    else results += planFact(pr, result, identity)
+                }
             }, original = part.ref.premise)
         }
+        return applied
     }
 
     private fun summaryParts(premise: InitialAp, conclusion: Facts, run1Summary: Boolean): List<Pair<Facts, Boolean>> {
@@ -624,15 +724,19 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
     }
 
     override fun freeze() {
+        targetJoins.clear()
         observed = null
         owner = null
     }
 }
 
-/** Header-only gate. The FULL actor's existing mark-domain contract needs no trie census. */
+/** Header-only gate. NORMAL ZERO-origin exact source leaves are collector-fixed too.
+ * Keep NORMAL MUST/STAR on the scalar path: repeated partial cleaning can add
+ * redundant raw DEMAND exact rows, so it does not have the same raw callback image. */
 internal fun fullCleanupCollectorFixed(premise: PremiseKey, facts: Facts): Boolean {
     if (facts is FlowTree && facts.exclusion != ExclusionSet.Empty) return false
-    if (facts is TaintTree && (facts.exclusion != ExclusionSet.Empty || facts.layer != Layer.DEMAND)) return false
+    if (facts is TaintTree && (facts.exclusion != ExclusionSet.Empty ||
+            facts.layer != Layer.DEMAND && (!premise.isZero || facts.root.hasAny))) return false
     if ((facts.base == STATIC || Run1StaticService.hasStaticMember(premise)) && facts.layer != Layer.DEMAND) return false
     return true
 }

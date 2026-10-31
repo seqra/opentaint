@@ -157,38 +157,30 @@ class IterationDriver internal constructor(
             logger.info { "BIDI_FLOW_BACKED_CENSUS run=${config.index} raw=$raw selected=$selected" }
         }
         val forward = config.direction == Direction.FORWARD
-        if (forward) {
-            report.add(config, result)
-        }
+        val terminals = report.prepare(config, result, shared)
         shared.records.persist(config.direction, result.analyzers.asSequence().map { it.key to it.summaries })
-        val handOff = HandOff.of(config, result, report, shared)
-        val frontier = frontierOf(config, result, handOff, report)
+        val handOff = HandOff.of(config, result, shared)
+        val frontier = frontierOf(config, result, handOff, terminals.entries.size)
         frontierLog += frontier
         frontier.log()
-        if (forward && !report.hasDemandVulnerability())
-            return Next.End(RunStatus.COMPLETE, EndReason.STOP_RULE)
-        if (forward && !config.run1) {
-            check(!handOff.demand.hasStaticCompletion && !handOff.demand.hasSharedStaticCarry) {
-                "A restricted forward hand-off has local demand only"
-            }
-            logger.info {
-                "BIDI_STOP_INPUTS run=${config.index} outgoingDemandMethods=${handOff.demandEdges.size} " +
-                    "observedDemandObjects=${result.demandLayerEdges}"
-            }
-            if (handOff.demandEdges.isEmpty())
-                return Next.End(RunStatus.COMPLETE, EndReason.NO_DEMAND_EDGE)
+        val next = when {
+            forward && handOff.demandEdges.isEmpty() -> Next.End(RunStatus.COMPLETE, EndReason.NO_DEMAND_EDGE)
+            forward && !policy.continueAfter(config, result, frontiers) -> Next.End(RunStatus.COMPLETE, EndReason.POLICY)
+            else -> Next.Run(nextConfig(config, handOff, terminals.normal))
         }
-        if (forward && !policy.continueAfter(config, result, frontiers))
-            return Next.End(RunStatus.COMPLETE, EndReason.POLICY)
-        return Next.Run(nextConfig(config, handOff))
+        logger.info { "BIDI_TARGET_STATISTICS run=${config.index} raw=${result.analyzers.sumOf { it.targets.size }} outgoing=${result.analyzers.sumOf { it.outgoingTargets.size }} reports=${terminals.entries.size}" }
+        // All fallible preparation precedes this single terminal/report commit.
+        shared.cancellation.checkpoint()
+        report.commit(terminals)
+        return next
     }
 
-    private fun nextConfig(config: RunConfig, handOff: HandOff): RunConfig {
+    private fun nextConfig(config: RunConfig, handOff: HandOff, normalTargets: org.opentaint.dataflow.bidi.engine.NormalTargetView): RunConfig {
         val index = config.index + 1
         val limit = policy.fieldLimit(index)
         require(limit >= config.fieldLimit) { "ap.md W3: the field limit must not decrease" }
         return RunConfig(index, limit, handOff.demand, shared.records.view(), handOff.seeds, config.roots,
-            run1MarkMode = run1MarkMode, fieldLimitSchedule = fieldLimitSchedule)
+            run1MarkMode = run1MarkMode, fieldLimitSchedule = fieldLimitSchedule, normalTargets = normalTargets)
     }
 
     companion object : KLogging() {

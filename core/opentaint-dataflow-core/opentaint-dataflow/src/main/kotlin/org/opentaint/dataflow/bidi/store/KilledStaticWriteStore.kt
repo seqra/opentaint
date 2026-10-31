@@ -108,6 +108,7 @@ class KilledStaticWriteStore(
     fun observe(original: PremiseKey, result: Facts) {
         check(frozen == null) { "A completed static-write inventory cannot accept new observations" }
         ap.cancellation.checkpoint()
+        if (!RuntimeDataDomain.packet(original, result)) return
         check(original is InitialAp) { "Run-1 static-write candidates have one original" }
         if (result.base != STATIC) return
         val pending = checkNotNull(candidates)
@@ -128,6 +129,7 @@ class KilledStaticWriteStore(
         val survivors = HashSet<StaticGuidanceEdge>()
         for ((original, result) in common) {
             ap.cancellation.checkpoint()
+            if (!RuntimeDataDomain.packet(original, result)) continue
             check(original is InitialAp) { "Run-1 summaries have one original" }
             if (result.base != STATIC) continue
             for (leaf in ops.leaves(result)) {
@@ -138,6 +140,7 @@ class KilledStaticWriteStore(
         }
         for (row in privateB) {
             ap.cancellation.checkpoint()
+            if (!RuntimeDataDomain.base(row.from.fact.base) || !RuntimeDataDomain.base(row.to.fact.base)) continue
             val (from, to) = normalizeFlowSummaryPatterns(row.from, row.to)
             survivors += StaticGuidanceEdge.of(from, to)
         }

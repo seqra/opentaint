@@ -13,6 +13,7 @@ internal class Run1RequestPipelineFixtures(val steps: ProtocolSteps = ProtocolSt
     val events = ArrayDeque<RunEvent>()
     val sent = ArrayList<RunEvent>()
     val initialObservations = ArrayList<Pair<MethodKey, InitialAp>>()
+    val admissionObservations = ArrayList<Pair<MethodKey, AdmittedInitial>>()
     val initials = linkedSetOf<Pair<MethodKey, InitialAp>>()
     val climbs = linkedSetOf<Triple<MethodKey, Run1Slot, Int>>()
     val bases = LinkedHashMap<MethodKey, RequestRows>()
@@ -47,7 +48,9 @@ internal class Run1RequestPipelineFixtures(val steps: ProtocolSteps = ProtocolSt
     }
     val subscriptions = SubscriptionManager(port)
 
-    private fun observe(method: MethodKey, initial: InitialAp) {
+    private fun observe(method: MethodKey, seed: AdmittedInitial) {
+        admissionObservations += method to seed
+        val initial = seed.initial
         initialObservations += method to initial
         initials += method to initial
     }

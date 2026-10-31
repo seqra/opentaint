@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.*
 import org.opentaint.dataflow.bidi.engine.*
+import org.opentaint.dataflow.bidi.engine.Target
 import org.opentaint.dataflow.bidi.fixtures.*
 import org.opentaint.dataflow.bidi.interp.*
 import org.opentaint.dataflow.bidi.interp.CallPoint.*
@@ -53,6 +54,14 @@ class CurrentSequenceTest {
                 Conclusion(it.fact, it.exclusion, facts.layer == Layer.DEMAND) }
         }.toSet()
 
+    private fun terminalRules(f: DriverFixtures, result: RunResult<RunMethodAnalyzer>,
+                              catalog: ReportCatalog = f.shared.reportCatalog): Set<String> =
+        result.analyzers.flatMap { actor ->
+            actor.targets.mapNotNull { row -> (row.target as? Target.NormalTarget)?.let {
+                catalog.descriptor(it.id).key.ruleId
+            } } + actor.sinkSeeds.mapNotNull { (it as? Seed.Sink)?.rule?.id }
+        }.toSet()
+
     /** Negative control: remove only the backward conjunction demotion from the cached form. */
     private fun normalConjunctionReversal(f: DriverFixtures, method: MethodKey): SharedObjects {
         val original = f.shared
@@ -76,12 +85,12 @@ class CurrentSequenceTest {
             override fun graph(key: MethodKey, direction: Direction) = f.program.graph(key, direction)
         }
         return SharedObjects(original.ap, original.ops, original.interpreter, original.language,
-            MethodContextCache(original.interpreter, contextSource), original.records, original.vulnerabilities,
+            MethodContextCache(original.interpreter, contextSource), original.records,
             original.unitResolver, original.refManager, original.cancellation, threads = 1)
     }
 
     @Test
-    fun `WRAP reuses normal FLOW records and stops on the empty run3 outgoing snapshot`(): Unit {
+    fun `WRAP reuses normal FLOW records while Target demand guides the remaining refinements`(): Unit {
         DriverFixtures().use { f ->
             val p = f.program
             val root = p.method("WRAP root", straight(3), 2).key()
@@ -98,21 +107,21 @@ class CurrentSequenceTest {
             exit(f, root, 2, finding)
             val driver = f.driver(FixedLimits(listOf(1, 1, 2, 3, 4)))
             val report = driver.analyze(listOf(root))
-            assertEquals(listOf(1, 2, 3), f.configs.map { it.index })
-            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
-            assertEquals(ReportState.DEMAND, report.entries.single().state)
-            assertEquals(3, report.entries.single().run)
+            assertEquals(listOf(1, 2, 3, 4, 5), f.configs.map { it.index })
+            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 5, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
+            assertEquals(finding.rule.id, report.entries.single().descriptor.key.ruleId)
             val from = p.pattern(argument, tail = Tail.STAR, mark = MarkSlot.STAR)
             val to = Conclusion(PathFact(returned, listOf(field), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty, false)
             assertContains(raw(f, f.results[0], wrap), setOf(from) to to)
             assertTrue(selected(f, f.results[0], wrap).isEmpty(),
                 "Normal singleton FLOW summaries persist as records and are not selected demand")
             val scalar = DirectCurrentIteration(p, listOf(root), listOf(1, 1, 2, 3, 4)).run()
-            assertEquals(f.results.map { it.runIndex }, scalar.runs.map { it.index })
+            assertEquals(listOf(1, 2, 3), scalar.runs.map { it.index },
+                "The explicit old-reference control stops when AP guidance is empty")
             val bases = listOf(AccessPathBase.Zero, STATIC, argument, returned, x, r, z)
             val universe = BoundedDenotation(bases, listOf(a, b, c, field, p.field("fresh")),
                 listOf(mark.mark, p.mark("fresh"), TaintMark.ZERO), 4)
-            for ((actual, expected) in f.results.zip(scalar.runs)) {
+            for ((actual, expected) in f.results.take(1).zip(scalar.runs.take(1))) {
                 val actualRows = actual.analyzers.flatMap { actor -> raw(f, actual, actor.key).map { (premise, value) ->
                     ObservedEdge(actor.key, premise, value)
                 } }.toSet()
@@ -131,10 +140,10 @@ class CurrentSequenceTest {
                 }
             }
             assertTrue(f.configs[2].seeds.allowsSource(root, root.statement, source))
-            assertEquals(listOf(1, 0, 1), driver.frontiers.map { it.demandVulnerabilities })
+            assertTrue(driver.frontiers.first().targetDemand > 0)
+            assertEquals(0, driver.frontiers.last().targetDemand)
             assertTrue(driver.frontiers.last().demandEdges.isEmpty())
-            assertTrue(f.results[0].witnessesByKey().values.flatten().all { !it.confirmed })
-            assertTrue(f.results[2].witnessesByKey().values.flatten().all { !it.confirmed })
+            assertTrue(f.results[0].analyzers.any { it.outgoingTargets.isNotEmpty() })
             assertTrue(f.records.byEntry(wrap, from).any { record ->
                 record.direction == Direction.FORWARD && record.premise.toPattern() == from &&
                     record.conclusion.layer == Layer.NORMAL && f.ops.leaves(record.conclusion).any {
@@ -142,7 +151,9 @@ class CurrentSequenceTest {
                     }
             }, "The eligible F1 NORMAL FLOW row is retained by the ordinary writer")
             assertTrue(f.results.drop(1).all { result -> result.analyzers.none { it.key == wrap && it.nonZeroInitial } })
-            assertTrue(f.results.filter { it.direction == Direction.BACKWARD }.all { it.witnessesByKey().isEmpty() })
+            assertTrue(f.results.filter { it.direction == Direction.BACKWARD }.all { run ->
+                run.analyzers.flatMap { it.targets }.none { it.target is Target.NormalTarget }
+            })
         }
     }
 
@@ -174,8 +185,8 @@ class CurrentSequenceTest {
             val sinkSeeds = f.configs[1].seeds.at(worker, p.inst(worker, 1))
             assertTrue(sinkSeeds.any { it is Seed.Sink && it.rule === finding.rule &&
                 it.requirement == p.pattern(argument, mark = t) }, "F1 prepares the exact nonreturning-worker sink seed")
-            assertTrue(f.results[0].witnessesByKey().values.flatten().any { it.methodKey == worker &&
-                it.edges.any { edge -> edge.layer == Layer.DEMAND } }, "The group-valued source reaches the local sink")
+            assertTrue(f.results[0].analyzers.single { it.key == worker }.targets.any { it.target == Target.DemandTarget },
+                "The group-valued source reaches the local sink")
             assertTrue(f.processed.any { it.run == 2 && it.method == worker && it.delta.node == p.inst(worker, 1) },
                 "Backward ZERO discovers the sink through exceptional-only S11 wiring; " +
                     "B2workerNodes=${f.processed.filter { it.run == 2 && it.method == worker }.map { it.delta.node.location.index }} " +
@@ -183,9 +194,7 @@ class CurrentSequenceTest {
             assertContains(f.results[1].analyzers.flatMap { it.sourceHits!!.entries().toList() },
                 Triple(root, root.statement, source))
             assertTrue(f.configs[2].seeds.allowsSource(root, root.statement, source))
-            assertEquals(listOf(finding.rule), report.entries.map { it.key.rule })
-            assertEquals(ReportState.DEMAND, report.entries.single().state)
-            assertEquals(3, report.entries.single().run)
+            assertEquals(listOf(finding.rule.id), report.entries.map { it.descriptor.key.ruleId })
             val actor = f.results.first().analyzers.single { it.key == worker }
             assertTrue(actor.summaries.all().none(), "A nonreturning method has no fabricated normal-return summary")
             assertTrue(f.results.last().analyzers.single { it.key == worker }.summaries.all().none())
@@ -194,25 +203,25 @@ class CurrentSequenceTest {
             assertTrue(f.processed.none { it.run % 2 == 1 && it.method == worker &&
                 it.delta.node in listOf(p.inst(worker, 3), p.inst(worker, 4)) },
                 "Discovery wiring never adds a forward normal or exceptional return")
-            val scalar = DirectCurrentIteration(p, listOf(root), listOf(1, 1, 2)).run()
-            assertEquals(mapOf(HistoricalFinding(finding.rule, p.inst(worker, 1)) to HistoricalState.DEMAND), scalar.findings)
-            assertContains(scalar.runs[1].observation.sourceHits, ObservedSourceHit(root, root.statement, source))
-            assertTrue(scalar.runs.last().observation.rawSummaries.none { it.method == worker },
-                "The independent scalar discovery graph also produces no forward worker summary")
             assertContains(driver.frontiers.first().analysed, worker)
         }
     }
 
     @Test
-    fun `an incomplete third run preserves both candidates from the first complete forward report`(): Unit {
+    fun `an incomplete third run preserves a settled normal sink and does not commit demand candidates`(): Unit {
         for (status in listOf(RunStatus.TIMEOUT, RunStatus.OOM, RunStatus.FAILED)) DriverFixtures().use { f ->
             val confirmed = f.confirmed()
             val demand = f.persistentDemand()
+            val unconditional = SinkRule(confirmed.rule, 0, listOf(ZERO_PATTERN), emptyList())
+            f.program.exit(confirmed.root, 1, ExitRules(RuleStatement(StatementSummary.EMPTY,
+                StatementSummary.EMPTY, listOf(unconditional)), false, emptySet()))
             val visited = ArrayList<Int>()
+            var retainedBeforeFailure: NormalTargetView = NormalTargetView.EMPTY
             val driver = f.driver(FixedLimits(listOf(1, 1, 2)), invokeRun = { config, owner, timeout ->
                 visited += config.index
                 if (config.index < 3) f.run(config, owner, timeout)
                 else f.manager(config, owner).let { manager ->
+                    retainedBeforeFailure = config.normalTargets
                     manager.fail(status)
                     manager.run(timeout)
                 }
@@ -220,16 +229,15 @@ class CurrentSequenceTest {
             val report = driver.analyze(listOf(confirmed.root, demand.root))
             assertEquals(listOf(1, 2, 3), visited)
             assertEquals(AnalysisEnd(status, 3, Direction.FORWARD, EndReason.ABNORMAL), report.end)
-            assertEquals(mapOf(confirmed.rule to ReportState.DEMAND, demand.rule to ReportState.DEMAND),
-                report.entries.associate { it.key.rule to it.state })
-            assertTrue(report.entries.all { it.run == 1 && it.witnesses.all { it.run == 1 } })
+            assertEquals(listOf(confirmed.rule.id), report.entries.map { it.descriptor.key.ruleId })
+            assertTrue(retainedBeforeFailure.rows().any { it.id == report.entries.single().id })
             assertEquals(listOf(1, 2), driver.frontiers.map { it.run })
             assertFalse(f.cancellation.isActive())
         }
     }
 
     @Test
-    fun `empty end actions keep the original sink and refine its source without a reversed end trigger`(): Unit {
+    fun `empty end actions keep the original sink and settle its normal source in run1`(): Unit {
         DriverFixtures().use { f ->
             val p = f.program
             val root = p.method("END root", straight(3), 2).key()
@@ -262,28 +270,19 @@ class CurrentSequenceTest {
             exit(f, root, 2, later)
             val driver = f.driver(FixedLimits(listOf(1, 1, 2)))
             val report = driver.analyze(listOf(root))
-            val earlyKey = VulnerabilityKey(early.rule, m.method, p.inst(m, 1))
-            val laterKey = VulnerabilityKey(later.rule, root.method, p.inst(root, 2))
-            assertEquals(listOf(1, 2, 3), f.configs.map { it.index })
-            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
-            assertEquals(mapOf(earlyKey to ReportState.DEMAND),
-                report.entries.associate { it.key to it.state })
-            assertEquals(3, report.entries.single { it.key == earlyKey }.run)
-            assertEquals(listOf(Seed.Sink(early.rule, m, p.inst(m, 1), early.patterns.single())),
-                f.configs[1].seeds.at(m, p.inst(m, 1)))
-            assertTrue(f.configs[1].seeds.at(root, p.inst(root, 2)).isEmpty())
-            val backward = f.results[1].analyzers.single { it.key == m }
-            assertEquals(0L, backward.triggerSeeds)
-            assertEquals(listOf(Triple(root, root.statement, source)),
-                f.results[1].analyzers.flatMap { it.sourceHits!!.entries().toList() })
-            assertTrue(f.configs[2].seeds.allowsSource(root, root.statement, source))
-            assertContains(f.configs[2].demand!!.near(m, demandProbe(argument)), DemandPattern(p.pattern(argument, mark = t), null))
-            assertTrue(selected(f, f.results[2], m).none { it.second.fact.mark == u })
-            assertTrue(f.results[2].witnessesByKey().getValue(earlyKey).all { !it.confirmed })
-            assertFalse(laterKey in f.results[2].witnessesByKey())
-            assertTrue(f.results[1].witnessesByKey().isEmpty())
-            assertEquals(listOf(1, 1, 1), driver.frontiers.map { it.seeds })
-            assertEquals(listOf(0, 0, 0), driver.frontiers.map { it.confirmedVulnerabilities })
+            assertEquals(listOf(1), f.configs.map { it.index },
+                "The exact FULL source and unary sink path settle normally in run-1")
+            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 1, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
+            assertEquals(listOf(early.rule.id), report.entries.map { it.descriptor.key.ruleId })
+            val forward = f.results.single()
+            assertContains(terminalRules(f, forward), early.rule.id)
+            assertFalse(later.rule.id in terminalRules(f, forward), "Ignored END output must not reach the later sink")
+            assertTrue(f.processed.all { row -> f.ops.leaves(row.delta.facts).none { it.fact.mark == u } },
+                "No END action may produce U at any processed instruction")
+            assertTrue(forward.analyzers.all { actor -> actor.triggerSeeds == 0L && actor.sinkSeeds.isEmpty() })
+            assertTrue(forward.analyzers.flatMap { it.targets }.all { it.target is Target.NormalTarget })
+            assertEquals(listOf(0), driver.frontiers.map { it.seeds })
+            assertEquals(1, driver.frontiers.single().reportedSinks)
         }
     }
 
@@ -323,23 +322,38 @@ class CurrentSequenceTest {
             val badSink = sink(f, "CONJ missing second input", p.pattern(bad, mark = t))
             exit(f, root, 6, goodSink, badSink)
             val control = if (normalReversal) normalConjunctionReversal(f, m) else null
-            val driver = f.driver(FixedLimits(listOf(1, 1, 2)), run1MarkMode = MarkMode.GROUP, invokeRun = { config, owner, timeout ->
-                f.run(config, control ?: owner, timeout)
-            })
+            val driver = if (control == null) f.driver(FixedLimits(listOf(1, 1, 2)), run1MarkMode = MarkMode.GROUP)
+                else withRun1MarkMode(MarkMode.GROUP) {
+                    IterationDriver(FixedLimits(listOf(1, 1, 2)), control,
+                        kotlin.time.Duration.parse("5s"), f::run, { _, body -> body() })
+                }
             val report = try { driver.analyze(listOf(root)) } finally { control?.close() }
             assertEquals(listOf(1, 2, 3), f.configs.map { it.index })
+            assertEquals(setOf(goodSink.patterns.single(), badSink.patterns.single()),
+                f.configs[1].seeds.at(root, p.inst(root, 6)).filterIsInstance<Seed.Sink>()
+                    .map { it.requirement }.toSet(),
+                "GROUP run-1 retains full-mark sink seeds for the FULL backward run")
             assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD,
-                if (normalReversal) EndReason.NO_DEMAND_EDGE else EndReason.POLICY,
+                if (driver.frontiers.last().demandEdges.isEmpty()) EndReason.NO_DEMAND_EDGE else EndReason.POLICY,
                 run1MarkMode = MarkMode.GROUP), report.end)
-            assertEquals(normalReversal, driver.frontiers.last().demandEdges.isEmpty(),
-                "The complete NORMAL ND summary retains selected support; independent native records do not")
+            // Exact DEMAND admissions can retain guidance after the finding is proved.
+            // This bounded positive/negative control does not claim a global stop at run-3.
             assertEquals(if (normalReversal) setOf(goodSink.rule, badSink.rule) else setOf(goodSink.rule),
-                report.entries.map { it.key.rule }.toSet())
-            assertTrue(report.entries.all { it.state == ReportState.DEMAND && it.run == 3 })
-            assertEquals(setOf(goodSink.rule, badSink.rule), f.results[0].witnessesByKey().keys.map { it.rule }.toSet(),
+                report.entries.map { it.descriptor.rule }.toSet(),
+                "normalReversal=$normalReversal " + f.results.joinToString("\n") { run ->
+                    "run-${run.runIndex}: " + run.analyzers.joinToString { actor ->
+                        "${actor.key.method.name}: targets=" + actor.targets.map { it.premise.members.map { m -> m.toPattern() } to it.target } +
+                            "; AP=" + raw(f, run, actor.key) +
+                            "; processed=" + f.processed.filter { it.run == run.runIndex && it.method == actor.key }
+                                .map { it.delta.node.location.index to (it.delta.premise.members.map { m -> m.toPattern() } to f.ops.leaves(it.delta.facts).toList()) } +
+                            "; sourceHits=" + actor.sourceHits?.occurrences()?.toList()
+                    }
+                })
+            assertTrue(report.entries.all { it.descriptor.key.statement == p.inst(root, 6) })
+            assertEquals(setOf(goodSink.rule.id, badSink.rule.id), terminalRules(f, f.results[0], control?.reportCatalog ?: f.shared.reportCatalog),
                 "The run-1 singleton summary also permits the caller with only the selected input")
-            assertEquals(if (normalReversal) setOf(goodSink.rule, badSink.rule) else setOf(goodSink.rule),
-                f.results[2].witnessesByKey().keys.map { it.rule }.toSet(),
+            assertEquals(if (normalReversal) setOf(goodSink.rule.id, badSink.rule.id) else setOf(goodSink.rule.id),
+                terminalRules(f, f.results[2], control?.reportCatalog ?: f.shared.reportCatalog),
                 "FULL forward analysis keeps the original complete condition")
             val required = setOf(p.pattern(argument, mark = t1), p.pattern(arg1, mark = t2))
             fun grouped(pattern: Pattern): Pattern = pattern.copy(fact = pattern.fact.copy(mark =
@@ -352,20 +366,23 @@ class CurrentSequenceTest {
             assertTrue(literalRows.any { it.second.fact == required.first().fact && it.second.demand == !normalReversal })
             assertTrue(literalRows.any { it.second.fact == required.last().fact && it.second.demand == !normalReversal })
             assertTrue(backward.filter { it.second.fact.base != AccessPathBase.Zero }.all { it.second.demand })
-            assertContains(backward, setOf(ZERO_PATTERN) to Conclusion(ZERO_FACT, ExclusionSet.Empty, false))
+            if (f.configs[1].demand!!.initials(m, Reach.NORMAL, f.configs[1].admissionPolicy).isEmpty())
+                assertTrue(backward.none { it.first == setOf(ZERO_PATTERN) },
+                    "Admitting a concrete exact requirement cannot invent ZERO permission")
             val concreteReturn = p.pattern(returned, mark = t)
             assertEquals(normalReversal, f.records.byEntry(m, concreteReturn).any { it.direction == Direction.BACKWARD },
                 "Split literal branches cannot become independent normal records")
-            assertEquals(!normalReversal, f.configs[2].demand!!.near(m, demandProbe(argument)).any { it.entry == required.first() },
-                "DEMAND literal branches are selected; the normal-reversal control supplies native records only")
-            assertEquals(!normalReversal, f.configs[2].demand!!.near(m, demandProbe(arg1)).any { it.entry == required.last() })
+            assertTrue(f.configs[2].demand!!.near(m, demandProbe(argument)).any { it.entry == required.first() },
+                "The independent DEMAND admission retains guidance even when another lane produces native records")
+            assertTrue(f.configs[2].demand!!.near(m, demandProbe(arg1)).any { it.entry == required.last() })
             assertTrue(f.configs[2].seeds.allowsSource(root, root.statement, sa))
             assertTrue(f.configs[2].seeds.allowsSource(root, root.statement, sb))
-            assertTrue(f.results[2].witnessesByKey().values.flatten().all { !it.confirmed })
-            assertEquals(!normalReversal, f.links(3, m).asSequence().any { link ->
+            assertTrue(f.results[2].analyzers.flatMap { it.targets }.filter { it.target is Target.NormalTarget }.isNotEmpty())
+            assertTrue(f.links(3, m).asSequence().any { link ->
                 link.caller.call == p.inst(root, 5) && link.addedFact == required.first() && link.linkLayer == Layer.NORMAL
-            }, "A saved independent record bypasses an empty demand gate; only demanded input retains a live route")
-            assertEquals(listOf(2, 0, if (normalReversal) 2 else 1), driver.frontiers.map { it.demandVulnerabilities })
+            }, "Persisted replay does not suppress the live route when the current demand is also present")
+            assertTrue(driver.frontiers.first().targetDemand > 0)
+            assertEquals(if (normalReversal) 2 else 1, driver.frontiers.last().reportedSinks)
         }
     }
 }

@@ -16,6 +16,7 @@ import org.opentaint.ir.api.common.cfg.CommonInst
  *  It uses RawCurrentClosure and no production driver, demand/record index, Support or HandOff.
  *  Inputs admit positive bound source/sink conditions; END actions are ignored; aliases and ordered field actions
  *  remain outside this explicit test domain. This is a current oracle, not an F71 instance. */
+// Frozen pre-Targets control routing; this is not the selected Target driver oracle.
 class RawPredicateIteration(private val program: FiniteProgramFixtures, private val roots: List<MethodKey>,
                                   private val limits: List<Int>) {
     init {
@@ -56,7 +57,7 @@ class RawPredicateIteration(private val program: FiniteProgramFixtures, private 
                 run1MarkMode = MarkMode.GROUP)
             val inputs = ProgramRunInputs(roots.toList(), demand.toList(), records.toList(), seeds.toList())
             validateInputs(inputs)
-            var observation = RawCurrentClosure(program, config, inputs).run()
+            var observation = RawCurrentClosure(program, config, inputs, NaiveClosure.Semantics.PRE_TARGETS).run()
             if (config.direction == Direction.FORWARD) {
                 currentDemand = LinkedHashMap()
                 for (witness in observation.witnesses) {

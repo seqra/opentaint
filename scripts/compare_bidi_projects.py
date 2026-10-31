@@ -69,6 +69,8 @@ def log_evidence(log: str, summary: dict, side: str | None = None, log_available
     latest_started = None
     latest_complete = None
     latest_forward_report = None
+    forward_frontiers = {}
+    target_statistics = {}
     invalid_start_lines = []
     latest_start_invalid = False
     phase_markers = {
@@ -83,6 +85,14 @@ def log_evidence(log: str, summary: dict, side: str | None = None, log_available
         match = re.search(r"Bidi analysis: (\d+) CONFIRMED, (\d+) DEMAND vulnerabilities", line)
         if match:
             report_states.append({"confirmed": int(match[1]), "demand": int(match[2]), "line": line})
+        match = re.search(r"Bidi analysis: (\d+) reported sink identities", line)
+        if match:
+            report_states.append({"normal_targets": int(match[1]), "line": line})
+        match = re.search(r"BIDI_TARGET_STATISTICS run=(\d+) raw=(\d+) outgoing=(\d+) reports=(\d+)", line)
+        if match:
+            index, raw, outgoing, reports = map(int, match.groups())
+            target_statistics[index] = {"raw": raw, "outgoing": outgoing, "reports": reports, "line": line}
+            iterations.setdefault(index, {}).update(run=index, target_statistics=target_statistics[index])
         match = re.search(r"TraceGenerationStats\(([^)]*)\)", line)
         if match:
             trace_stats.append({**{key: int(value) for key, value in re.findall(r"(\w+)=(\d+)", match[1])},
@@ -164,11 +174,29 @@ def log_evidence(log: str, summary: dict, side: str | None = None, log_available
             # emitted in finally and is also present when the barrier fails.
             latest_forward_report = {**iterations.get(int(match[1]), {}), "run": int(match[1]),
                                      "direction": "FORWARD", "forward_frontier_line": line}
+            forward_frontiers[int(match[1])] = latest_forward_report
         match = ANALYSIS_END.search(line)
         if match:
             index, status, reason, elapsed = match.groups()
             analysis_ends.append({"run": int(index), "status": status, "reason": reason,
                                   "elapsed": elapsed, "seconds": duration_seconds(elapsed), "line": line})
+    # Target runs prepare the frontier before committing the terminal snapshot.
+    # A finally-marker alone cannot prove that commit. A subsequent run start or
+    # the completed driver return does prove it. Keep legacy evidence unchanged.
+    terminal_protocol = bool(target_statistics) or any(
+        "target demand " in frontier["forward_frontier_line"] for frontier in forward_frontiers.values()
+    ) or any("normal_targets" in row for row in report_states)
+    if terminal_protocol:
+        latest_forward_report = None
+        for index, frontier in forward_frontiers.items():
+            if index not in target_statistics:
+                continue
+            next_start = iterations.get(index + 1, {}).get("start_line")
+            completed_return = next((end for end in analysis_ends
+                                     if end["run"] == index and end["status"] == "COMPLETE"), None)
+            if next_start or completed_return:
+                latest_forward_report = {**frontier, "target_statistics": target_statistics[index],
+                                         "commit_evidence": next_start or completed_return["line"]}
     status = summary.get("status", "IN_PROGRESS_OR_UNKNOWN")
     unfinished = [dict(phase=phase, start=line) for phase, (_, line) in starts.items()]
     def progress_value(value, source, missing):
@@ -185,14 +213,20 @@ def log_evidence(log: str, summary: dict, side: str | None = None, log_available
                              if latest_start_invalid else "No valid BIDI_RUN_START is present; do not assume run-1.")
     completed = progress_value(latest_complete, "BIDI_RUN_END status=COMPLETE",
                                "No positive COMPLETE engine marker is present.")
-    accepted = progress_value(latest_forward_report, "Run N (FORWARD) frontier after report.add",
+    accepted = progress_value(latest_forward_report,
+                              "Terminal snapshot followed by next-run start or completed driver return" if terminal_protocol
+                              else "Run N (FORWARD) frontier after report.add",
+                              "No completed terminal/report commit is proven; BIDI_BARRIER_END alone does not prove it."
+                              if terminal_protocol else
                               "No compact forward frontier proves an accepted report; BIDI_BARRIER_END alone does not prove it.")
     progress = {"state": reached["state"], "latest_reached": reached,
                 "latest_complete_engine": completed, "latest_accepted_forward_report": accepted,
                 "invalid_run_start_lines": invalid_start_lines,
                 "limits": "Latest reached follows actual start-marker order, including failed or unfinished engines. "
-                          "Report updates are proven by compact forward frontiers; a report may update before a later barrier failure, "
-                          "so missing forward-frontier evidence is unavailable, not proof of an empty report."}
+                          + ("Target frontiers are prepared state. Accept them only after a following run starts or the driver completes. "
+                             if terminal_protocol else
+                             "Legacy report updates are proven by compact forward frontiers and may precede a later barrier failure. ") +
+                          "Missing report-commit evidence is unavailable, not proof of an empty report."}
     return {"terminal_status": status, "analysis_ends": analysis_ends,
             "latest_bidi_iteration": reached["label"], "latest_complete_bidi_iteration": completed["label"],
             "latest_accepted_forward_report": accepted["label"], "bidi_iteration_progress": progress,

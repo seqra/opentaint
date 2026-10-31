@@ -36,7 +36,7 @@ class RunFailureTest {
             assertEquals(RunStatus.TIMEOUT, run.terminalStatus)
             assertEquals(listOf(f.methodUnknown), resolved.toList())
             assertTrue(factory.ports.isEmpty() && factory.created.isEmpty())
-            assertTrue(result.analyzers.isEmpty() && result.witnessesByKey().isEmpty())
+            assertTrue(result.analyzers.isEmpty())
             assertEquals(0L, run.inFlight.pending)
             assertFalse(f.cancellation.isActive())
         }
@@ -65,7 +65,7 @@ class RunFailureTest {
             assertEquals(listOf(f.methodA), resolved.toList())
             assertTrue(events.isEmpty())
             assertTrue(factory.ports.isEmpty() && factory.created.isEmpty())
-            assertTrue(result.analyzers.isEmpty() && result.witnessesByKey().isEmpty())
+            assertTrue(result.analyzers.isEmpty())
             assertEquals(0L, run.inFlight.pending)
             assertFalse(f.cancellation.isActive())
         }
@@ -109,7 +109,7 @@ class RunFailureTest {
             assertEquals(listOf(f.a), factory.created.map { it.key })
             assertEquals(1, factory.ports.size)
             assertEquals(0, factory.created.single().freezeCount.get())
-            assertTrue(result.analyzers.isEmpty() && result.witnessesByKey().isEmpty())
+            assertTrue(result.analyzers.isEmpty())
             assertEquals(0L, run.inFlight.pending)
             assertFalse(f.cancellation.isActive())
         }
@@ -147,7 +147,7 @@ class RunFailureTest {
             assertEquals(0, handled.get())
             assertEquals(0, created.get())
             assertEquals(listOf(f.methodA), resolved.toList())
-            assertTrue(result.analyzers.isEmpty() && result.witnessesByKey().isEmpty())
+            assertTrue(result.analyzers.isEmpty())
             assertEquals(0L, run.inFlight.pending)
             assertFalse(f.cancellation.isActive())
         }
@@ -176,7 +176,7 @@ class RunFailureTest {
                 assertEquals(first, run.terminalStatus)
                 assertEquals(listOf(f.methodA), resolved.toList())
                 assertTrue(factory.ports.isEmpty() && factory.created.isEmpty())
-                assertTrue(result.analyzers.isEmpty() && result.witnessesByKey().isEmpty())
+                assertTrue(result.analyzers.isEmpty())
                 assertEquals(0L, run.inFlight.pending)
                 assertFalse(f.cancellation.isActive())
             }
@@ -203,7 +203,7 @@ class RunFailureTest {
                 assertEquals(RunStatus.TIMEOUT, result.status)
                 assertEquals(RunStatus.TIMEOUT, run.terminalStatus)
                 assertTrue(factory.ports.isEmpty() && factory.created.isEmpty())
-                assertTrue(result.analyzers.isEmpty() && result.witnessesByKey().isEmpty())
+                assertTrue(result.analyzers.isEmpty())
                 assertEquals(0L, run.inFlight.pending)
                 assertFalse(f.cancellation.isActive())
             }

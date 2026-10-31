@@ -40,7 +40,7 @@ class RunMethodHandlersTest {
             override fun subscribe(sub: Subscription) = (handler as SubscriptionHandler).subscribe(sub)
             override fun link(callee: MethodKey, ref: CallerRef, linkLayer: Layer, added: Facts) =
                 handler.handle(RunEvent.LinkIn(callee, ref, linkLayer, added))
-            override fun startInitials(callee: MethodKey, initials: Collection<InitialAp>) =
+            override fun startInitials(callee: MethodKey, initials: Collection<AdmittedInitial>) =
                 handler.handle(RunEvent.InitialsIn(callee, initials))
             override fun send(event: RunEvent): Boolean { events += event; return true }
             override fun post(event: RunEvent.Delivery): Boolean { events += event; return true }
@@ -131,16 +131,17 @@ class RunMethodHandlersTest {
         }
     }
 
-    @Test fun `zero input starts a backward callee and rejects a forward zero entry or Work dispatch`(): Unit {
+    @Test fun `explicit completed zero initial starts a restricted callee and rejects discovery delivery`(): Unit {
         val f = EngineShellFixtures()
         Harness(f, index = 2).use { h ->
-            h.handler.handle(RunEvent.ZeroIn(f.a))
+            h.handler.handle(RunEvent.InitialsIn(f.a, listOf(existingZeroAdmission(f.manager.zero))))
             assertTrue(h.actors.getValue(f.a).initials.all().any { it.isZero })
             assertTrue(h.enqueued.isNotEmpty())
             h.drain()
             assertFails { h.handler.handle(RunEvent.Work(h.actors.getValue(f.a))) }
         }
-        Harness(f).use { h -> assertFails { h.handler.handle(RunEvent.ZeroIn(f.a)) } }
+        Harness(f).use { h -> assertFails { h.handler.handle(RunEvent.InitialsIn(f.a,
+            listOf(existingZeroAdmission(f.manager.zero)))) } }
     }
 
     @Test fun `restricted completed keys start once without looking up the empty demand again`(): Unit {
@@ -148,8 +149,8 @@ class RunMethodHandlersTest {
         Harness(f, index = 3).use { h ->
             val key = f.key(context = "completed admission")
             val initial = f.manager.initial(f.pattern())
-            h.port.startInitials(key, listOf(initial))
-            h.port.startInitials(key, listOf(initial))
+            h.port.startInitials(key, listOf(AdmittedInitial(initial, Layer.NORMAL)))
+            h.port.startInitials(key, listOf(AdmittedInitial(initial, Layer.NORMAL)))
             assertEquals(setOf(key), h.actors.keys)
             assertEquals(listOf(initial), h.actors.getValue(key).initials.all().toList())
             assertEquals(1, h.enqueued.size)
@@ -157,7 +158,9 @@ class RunMethodHandlersTest {
         }
         Harness(f).use { h ->
             val initial = f.manager.initial(f.pattern())
-            assertFailsWith<IllegalStateException> { h.port.startInitials(f.a, listOf(initial)) }
+            assertFailsWith<IllegalStateException> {
+                h.port.startInitials(f.a, listOf(AdmittedInitial(initial, Layer.NORMAL)))
+            }
             assertTrue(h.actors.isEmpty(), "Run-1 must retain its raw request abstraction path")
         }
     }

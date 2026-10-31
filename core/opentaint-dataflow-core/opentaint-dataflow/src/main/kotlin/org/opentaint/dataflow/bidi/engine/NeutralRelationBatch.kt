@@ -81,6 +81,7 @@ class NeutralRelationBatch private constructor(
     fun applyPacked(ops: ApOps, summary: StatementSummary, mode: ApMode,
                     emit: (InitialAp, TaintTree, MarkSet) -> Unit,
                     untouched: (InitialAp, TaintTree, MarkSet) -> Unit = emit): Boolean {
+        if (!RuntimeDataDomain.initial(initialShape) || !RuntimeDataDomain.base(template.base)) return true
         if (ops.manager !== m || !mode.run1 || mode.markMode != MarkMode.FULL ||
             isEmpty || !certifies(summary)) return false
         if (template.base !in summary.touched) {
@@ -96,12 +97,14 @@ class NeutralRelationBatch private constructor(
         val output = object : ApOut {
             override fun markRequest(mark: TaintMark): Unit = error("A certified neutral form cannot request a mark")
             override fun result(f: Facts) {
+                if (!RuntimeDataDomain.base(f.base)) return
                 val filtered = summary.resultFilters[f.base]?.let { ops.filter(f, it) } ?: if (
                     summary.resultFilters.containsKey(f.base)) null else f
                 if (filtered == null) return
                 ops.limit(filtered, mode.fieldLimit, object : ApOut {
                     override fun markRequest(mark: TaintMark): Unit = error("Field limits cannot request a mark")
                     override fun result(bounded: Facts) {
+                        if (!RuntimeDataDomain.base(bounded.base)) return
                         check(bounded is TaintTree) { "Neutral transport preserves TAINT" }
                         emit(initialShape, bounded, marks)
                     }
@@ -110,6 +113,7 @@ class NeutralRelationBatch private constructor(
         }
         for (edge in summary.edgesOf(input.base)) {
             m.cancellation.checkpoint()
+            if (!RuntimeDataDomain.producer(edge)) continue
             ops.applyEdge(input, representative, edge.edge, statementEdge = true, mode = mode, out = output, may = edge.may)
         }
         return true
@@ -165,6 +169,7 @@ class NeutralRelationBatch private constructor(
         /** Scalar fallback, invoked only after packet/form admission has been classified. */
         fun decodePacked(m: ApManager, initialShape: InitialAp, packed: TaintTree, marks: MarkSet,
                          emit: (PremiseKey, Facts) -> Unit) {
+            if (!RuntimeDataDomain.initial(initialShape) || !RuntimeDataDomain.base(packed.base)) return
             check(initialShape.manager === m && initialShape.isFlow)
             for (id in marks.ids) {
                 m.cancellation.checkpoint()
@@ -184,7 +189,8 @@ class NeutralRelationBatch private constructor(
 
         /** A stored mask becomes one packed work value; no per-mark scalar input is built. */
         fun fromDiagonal(m: ApManager, delta: DiagonalDelta): NeutralRelationBatch? {
-            if (delta.initialShape.manager !== m || delta.base == STATIC ||
+            if (!RuntimeDataDomain.initial(delta.initialShape) || !RuntimeDataDomain.base(delta.base) ||
+                delta.initialShape.manager !== m || delta.base == STATIC ||
                 delta.base is AccessPathBase.CleanerTemporary || delta.marks.isEmpty ||
                 delta.marks.ids.any { m.marks.isGroup(TaintMark(it)) || it == TaintMark.ZERO.id }) return null
             val leaf = m.taintAlg.leafNode(m.taintLeaves(MarkSet.EMPTY, delta.marks))
@@ -196,7 +202,8 @@ class NeutralRelationBatch private constructor(
 
         /** Certify the packet cell before any scalar result decoder is called. */
         fun toDiagonal(m: ApManager, initialShape: InitialAp, packed: TaintTree, marks: MarkSet): DiagonalDelta? {
-            if (initialShape.manager !== m || initialShape.mark != MarkSlot.STAR || (initialShape.tail != Tail.STAR && initialShape.tail != Tail.ANY) || packed.base == STATIC ||
+            if (!RuntimeDataDomain.initial(initialShape) || !RuntimeDataDomain.base(packed.base) ||
+                initialShape.manager !== m || initialShape.mark != MarkSlot.STAR || (initialShape.tail != Tail.STAR && initialShape.tail != Tail.ANY) || packed.base == STATIC ||
                 packed.base is AccessPathBase.CleanerTemporary || (packed.anyTail != Tail.STAR && packed.anyTail != Tail.ANY) || marks.isEmpty ||
                 marks.ids.any { m.marks.isGroup(TaintMark(it)) || it == TaintMark.ZERO.id }) return null
             var uniform = true
@@ -214,6 +221,7 @@ class NeutralRelationBatch private constructor(
         }
 
         fun from(m: ApManager, premise: PremiseKey, facts: Facts): NeutralRelationBatch? {
+            if (!RuntimeDataDomain.packet(premise, facts)) return null
             val initial = premise as? InitialAp ?: return null
             val mark = (initial.mark as? MarkSlot.Concrete)?.mark ?: return null
             val f = facts as? TaintTree ?: return null

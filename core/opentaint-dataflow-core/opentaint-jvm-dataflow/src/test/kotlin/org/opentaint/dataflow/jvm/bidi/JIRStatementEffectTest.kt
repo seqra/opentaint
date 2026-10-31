@@ -446,7 +446,7 @@ class JIRStatementEffectTest : BasicTestUtils() {
             override fun conjunction(cj: ConjunctiveEdge, premise: Set<Pattern>, c: Facts, node: CommonInst,
                                      out: (Set<Pattern>, Facts) -> Unit) = error("No conjunction in these vectors")
             override fun allowsSource(node: CommonInst, me: MicroEdge) = true
-            override fun sourceHit(node: CommonInst, me: MicroEdge) = Unit
+            override fun acceptedSource(application: AcceptedSource<Set<Pattern>, Facts>) = Unit
         })
         val facts = m.factsOf(input.fact, input.exclusion, if (input.demand) Layer.DEMAND else Layer.NORMAL)
         applier.statement(summary, inputPremise, facts, at,

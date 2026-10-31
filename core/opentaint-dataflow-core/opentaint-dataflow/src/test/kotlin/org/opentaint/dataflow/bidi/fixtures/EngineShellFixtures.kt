@@ -153,7 +153,7 @@ class EngineShellFixtures(val cancellation: Cancellation = Cancellation(),
 
     fun shared(threads: Int = 1, unitResolver: UnitResolver<CommonMethod> = this.unitResolver,
                cancellationTimeout: Duration = 1.seconds, diagnostics: Boolean = false): SharedObjects =
-        SharedObjects(manager, ops, interpreter, language, contexts, records, vulnerabilities, unitResolver,
+        SharedObjects(manager, ops, interpreter, language, contexts, records, unitResolver,
             refManager, cancellation, threads, cancellationTimeout, diagnostics)
 
     fun config(index: Int = 1, L: Int = maxOf(1, index - 1), roots: List<MethodKey> = listOf(a),

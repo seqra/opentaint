@@ -127,8 +127,8 @@ class RequestBatchCycleTest {
             val result = second.run(5.seconds)
             assertEquals(RunStatus.COMPLETE, result.status)
             assertEquals(0L, second.inFlight.pending)
-            assertEquals(0L, result.analyzers.single().demandLayerEdges)
-            assertTrue(result.analyzers.single().summaries.all().all { it.first.isZero })
+            assertTrue(result.analyzers.isEmpty(),
+                "An empty explicit demand starts no restricted root and cannot replay failed request work")
         }
     }
 }

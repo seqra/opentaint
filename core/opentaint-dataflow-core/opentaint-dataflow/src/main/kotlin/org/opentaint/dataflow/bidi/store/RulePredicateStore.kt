@@ -115,6 +115,8 @@ class RulePredicateStore(private val manager: ApManager, private val statistics:
     fun addBinding(rule: RuleOccurrenceId, statement: CommonInst, predicate: RulePredicate, leaf: Int,
                    input: ConjunctionStore.Input, emit: (CompletePredicateBinding) -> Unit) {
         manager.cancellation.checkpoint()
+        if (!RuntimeDataDomain.premise(input.premise) ||
+            input.facts?.let { !RuntimeDataDomain.base(it.base) } == true) return
         require(leaf in predicate.leaves.indices)
         val state = states.getOrPut(Scope(rule, statement)) { State() }
         val queue = ArrayDeque<Pair<Int, Support>>()

@@ -37,7 +37,7 @@ class NormalizedHandOffTest {
             val result = f.result()
             val rawBefore = result.analyzers.single().summaries.all().toList()
             val selectedBefore = result.analyzers.single().summaries.demandEdges().toList()
-            val h = HandOff.of(f.config, result, f.report, f.shared)
+            val h = HandOff.of(f.config, result, f.shared)
             val entry = f.pattern(resultBase, listOf(c), Tail.ANY, MarkSlot.STAR)
             val expected = setOf(DemandPattern(entry, f.pattern(x, listOf(a), Tail.STAR, MarkSlot.STAR)))
             assertEquals(expected, stored(h, key, resultBase))
@@ -72,7 +72,7 @@ class NormalizedHandOffTest {
             f.raw(native, must, f.fact(resultBase, listOf(a), Tail.ANY_TAINT, t, ExclusionSet.of(a)))
             val result = f.result()
             val rawBefore = result.analyzers.associate { it.key to it.summaries.all().toList() }
-            val h = HandOff.of(f.config, result, f.report, f.shared)
+            val h = HandOff.of(f.config, result, f.shared)
             val expected = listOf(t, v).flatMap { mark ->
                 val entry = f.pattern(resultBase, listOf(a), Tail.ANY, mark)
                 listOf(DemandPattern(entry, f.pattern(x, listOf(a), Tail.ANY, t)),
@@ -103,7 +103,7 @@ class NormalizedHandOffTest {
             val concrete = f.initial(x, listOf(a), Tail.EXACT, t)
             f.raw(onlyRecord, concrete, f.fact(resultBase, listOf(a), Tail.EXACT, u))
             val result = f.result()
-            val h = HandOff.of(f.config, result, f.report, f.shared)
+            val h = HandOff.of(f.config, result, f.shared)
             val zero = f.manager.zero.toPattern()
             assertEquals(setOf(DemandPattern(f.pattern(resultBase, listOf(a), Tail.ANY, t), zero),
                 DemandPattern(f.pattern(resultBase, listOf(a), Tail.ANY, u), zero),
@@ -130,7 +130,7 @@ class NormalizedHandOffTest {
             f.selected(key, j, f.fact(y, listOf(b), Tail.ANY, mxU, layer = Layer.DEMAND))
             val result = f.result()
             val rawBefore = result.analyzers.single().summaries.all().toList()
-            val h = HandOff.of(f.config, result, f.report, f.shared)
+            val h = HandOff.of(f.config, result, f.shared)
             assertEquals(setOf(DemandPattern(f.pattern(y, listOf(b), Tail.ANY, MarkSlot.STAR),
                 f.pattern(x, listOf(a), Tail.STAR, MarkSlot.STAR))), stored(h, key, y))
             assertEquals(mapOf(key to 1), h.demandEdges)
@@ -155,7 +155,7 @@ class NormalizedHandOffTest {
             f.selected(key, j, f.fact(y, listOf(b), Tail.STAR, u, ExclusionSet.of(a), Layer.DEMAND))
             val result = f.result()
             val rawBefore = result.analyzers.single().summaries.all().toList()
-            val handOff = HandOff.of(f.config, result, f.report, f.shared)
+            val handOff = HandOff.of(f.config, result, f.shared)
             assertEquals(setOf(DemandPattern(f.pattern(y, listOf(b), Tail.STAR, u, ExclusionSet.of(a)),
                 j.toPattern())), stored(handOff, key, y))
             assertEquals(mapOf(key to 1), handOff.demandEdges)
@@ -167,7 +167,7 @@ class NormalizedHandOffTest {
     }
 
     @Test
-    fun `backward singleton and zero summaries count accepted patterns and never count implicit zero`(): Unit {
+    fun `backward singleton and zero summaries retain both paired endpoints`(): Unit {
         HandOffFixtures(index = 2, L = 1).use { f ->
             val key = f.key()
             val recordOnly = f.key("record only")
@@ -181,17 +181,17 @@ class NormalizedHandOffTest {
             f.selected(key, j, Reach.DEMAND)
             val normal = f.initial(y, listOf(a), Tail.EXACT, u)
             f.raw(recordOnly, normal, f.fact(x, listOf(a), Tail.EXACT, t))
-            val h = HandOff.of(f.config, f.result(), f.report, f.shared)
+            val h = HandOff.of(f.config, f.result(), f.shared)
             val zero = f.manager.zero.toPattern()
-            assertEquals(setOf(DemandPattern(f.pattern(x, listOf(a), Tail.EXACT, t), null)), stored(h, key, x))
-            assertEquals(setOf(DemandPattern(f.pattern(y, tail = Tail.ANY, mark = u), null)), stored(h, key, y))
-            assertEquals(setOf(DemandPattern(zero, null), DemandPattern(zero, f.pattern(y, listOf(a), Tail.ANY, u))),
+            assertEquals(setOf(DemandPattern(f.pattern(x, listOf(a), Tail.EXACT, t), zero)), stored(h, key, x))
+            assertEquals(setOf(DemandPattern(f.pattern(y, tail = Tail.ANY, mark = u), zero)), stored(h, key, y))
+            assertEquals(setOf(DemandPattern(zero, zero), DemandPattern(zero, f.pattern(y, listOf(a), Tail.ANY, u))),
                 stored(h, key, AccessPathBase.Zero))
-            assertEquals(listOf(DemandPattern(zero, f.pattern(y, listOf(a), Tail.ANY, u))),
-                h.demand.covering(key, f.manager.zero))
-            assertEquals(mapOf(key to 3), h.demandEdges)
+            assertEquals(setOf(DemandPattern(zero, zero), DemandPattern(zero, f.pattern(y, listOf(a), Tail.ANY, u))),
+                h.demand.covering(key, f.manager.zero).toSet())
+            assertEquals(mapOf(key to 4), h.demandEdges)
             assertTrue(stored(h, recordOnly, x).isEmpty())
-            assertEquals(setOf(DemandPattern(zero, null)), stored(h, recordOnly, AccessPathBase.Zero))
+            assertTrue(stored(h, recordOnly, AccessPathBase.Zero).isEmpty())
             assertTrue(h.demand.covering(recordOnly, f.manager.zero).isEmpty())
         }
     }
@@ -206,7 +206,7 @@ class NormalizedHandOffTest {
             f.selected(key, joint, f.fact(resultBase, tail = Tail.ANY, layer = Layer.DEMAND))
             val result = f.result()
             val selectedBefore = result.analyzers.single().summaries.demandEdges().toList()
-            assertFails { HandOff.of(f.config, result, f.report, f.shared) }
+            assertFails { HandOff.of(f.config, result, f.shared) }
             assertEquals(selectedBefore, result.analyzers.single().summaries.demandEdges().toList())
         }
     }
@@ -216,12 +216,12 @@ class NormalizedHandOffTest {
         for (index in listOf(1, 2, 3)) HandOffFixtures(index = index).use { f ->
             val result = f.result()
             f.cancellation.cancel()
-            assertFailsWith<Cancellation.Cancelled> { HandOff.of(f.config, result, f.report, f.shared) }
+            assertFailsWith<Cancellation.Cancelled> { HandOff.of(f.config, result, f.shared) }
             f.cancellation.activate()
-            val h = HandOff.of(f.config, result, f.report, f.shared)
+            val h = HandOff.of(f.config, result, f.shared)
             assertTrue(h.demandEdges.isEmpty())
             assertEquals(0, h.seeds.size)
-            assertEquals(setOf(DemandPattern(f.manager.zero.toPattern(), null)), stored(h, f.key(), AccessPathBase.Zero))
+            assertTrue(stored(h, f.key(), AccessPathBase.Zero).isEmpty())
         }
     }
 
@@ -238,9 +238,9 @@ class NormalizedHandOffTest {
             val result = f.result()
             val selectedBefore = result.analyzers.single().summaries.demandEdges().toList()
             f.cancellation.cancel()
-            assertFailsWith<Cancellation.Cancelled> { HandOff.of(f.config, result, f.report, f.shared) }
+            assertFailsWith<Cancellation.Cancelled> { HandOff.of(f.config, result, f.shared) }
             f.cancellation.activate()
-            val h = HandOff.of(f.config, result, f.report, f.shared)
+            val h = HandOff.of(f.config, result, f.shared)
             assertEquals(mapOf(key to 4), h.demandEdges)
             assertEquals(listOf(t, u).flatMap { mark ->
                 val entry = f.pattern(resultBase, tail = Tail.ANY, mark = mark)
@@ -260,14 +260,13 @@ class NormalizedHandOffTest {
             val result = f.result()
             val hitsBefore = result.analyzers.single().sourceHits!!.entries().toList()
             f.cancellation.cancel()
-            assertFailsWith<Cancellation.Cancelled> { HandOff.of(f.config, result, f.report, f.shared) }
+            assertFailsWith<Cancellation.Cancelled> { HandOff.of(f.config, result, f.shared) }
             f.cancellation.activate()
-            val h = HandOff.of(f.config, result, f.report, f.shared)
+            val h = HandOff.of(f.config, result, f.shared)
             assertEquals(mapOf(key to 2), h.demandEdges)
-            assertEquals(setOf(DemandPattern(f.manager.zero.toPattern(), null),
-                DemandPattern(f.manager.zero.toPattern(), f.pattern(x, tail = Tail.ANY, mark = t))),
+            assertEquals(setOf(DemandPattern(f.manager.zero.toPattern(), f.pattern(x, tail = Tail.ANY, mark = t))),
                 stored(h, key, AccessPathBase.Zero))
-            assertEquals(setOf(DemandPattern(f.pattern(y, mark = t), null)), stored(h, key, y))
+            assertEquals(setOf(DemandPattern(f.pattern(y, mark = t), f.manager.zero.toPattern())), stored(h, key, y))
             assertEquals(1, h.seeds.size)
             assertTrue(h.seeds.allowsSource(key, f.inst(1), forward))
             assertEquals(hitsBefore, result.analyzers.single().sourceHits!!.entries().toList())

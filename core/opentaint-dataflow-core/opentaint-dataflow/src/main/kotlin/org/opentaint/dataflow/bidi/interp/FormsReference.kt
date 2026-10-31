@@ -47,7 +47,7 @@ class ReferenceAlgebra(
                                  statementEdge: Boolean, out: ReferenceSink) =
         sourcePredicates.apply(source, premise, c, node, mode, statementEdge, ::applyEdge, onRequest, out)
     override fun allowsSource(node: CommonInst, me: MicroEdge) = seedAllows(node, me)
-    override fun sourceHit(node: CommonInst, me: MicroEdge) = onHit(node, me)
+    override fun acceptedSource(application: AcceptedSource<Set<Pattern>, Conclusion>) = onHit(application.at.node, application.edge)
 
     fun passes(filter: TypeFilter, c: Conclusion): Boolean {
         var may: FactTypeChecker.FactApFilter = filter.may

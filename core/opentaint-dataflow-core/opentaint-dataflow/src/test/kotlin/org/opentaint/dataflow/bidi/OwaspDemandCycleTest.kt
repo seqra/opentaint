@@ -95,11 +95,8 @@ class OwaspDemandCycleTest {
                 EndReason.NO_DEMAND_EDGE), report.end)
             assertEquals(0L, f.results.last().demandLayerEdges)
             assertTrue(selected(f, f.results.last()).isEmpty())
-            assertEquals(ReportState.DEMAND, report.entries.single().state)
-            assertEquals(3, report.entries.single().run)
-            assertEquals("OWASP model sink", report.entries.single().key.rule.id)
-            assertTrue(report.entries.single().witnesses.isNotEmpty(),
-                "The real source-to-sink path survives demand refinement")
+            assertEquals("OWASP model sink", report.entries.single().descriptor.key.ruleId,
+                "The real source-to-sink path settles a root NORMAL terminal after refinement")
 
             val runOne = f.results.first()
             assertTrue(selected(f, runOne).any { row ->
@@ -125,13 +122,13 @@ class OwaspDemandCycleTest {
             val driver = f.driver(FixedLimits(listOf(1, 1, 2, 3, 4, 5, 6, 7, 8)),
                 budget = 15.seconds, run1MarkMode = MarkMode.FULL)
             val report = driver.analyze(listOf(case.root))
-            assertEquals(listOf(1, 2, 3), f.configs.map { it.index })
+            assertEquals(listOf(1), f.configs.map { it.index })
             assertTrue(f.results.all { it.status == RunStatus.COMPLETE })
-            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
+            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 1, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
             assertEquals(0L, f.results.last().demandLayerEdges)
             assertTrue(selected(f, f.results.last()).isEmpty())
-            assertEquals(ReportState.DEMAND, report.entries.single().state,
-                "A candidate alone does not force another run after the work becomes normal")
+            assertEquals("OWASP model sink", report.entries.single().descriptor.key.ruleId,
+                "A settled NORMAL terminal does not force another run")
         }
     }
 
@@ -184,9 +181,7 @@ class OwaspDemandCycleTest {
             assertTrue(f.results.all { it.status == RunStatus.COMPLETE })
             assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD,
                 EndReason.NO_DEMAND_EDGE), report.end)
-            assertEquals("sibling overwrite sink", report.entries.single().key.rule.id)
-            assertEquals(3, report.entries.single().run)
-            assertTrue(report.entries.single().witnesses.isNotEmpty())
+            assertEquals("sibling overwrite sink", report.entries.single().descriptor.key.ruleId)
 
             val runOne = f.results.first().analyzers.single { it.key == helper }
             val flowInput = p.pattern(argument, tail = Tail.STAR, mark = MarkSlot.STAR)

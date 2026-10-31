@@ -41,7 +41,7 @@ class MethodWorkTest {
     @Test fun `identity cycles terminate across quanta and completed producers do not repeat`(): Unit {
         for (index in listOf(1, 2)) MethodAnalysisFixtures(listOf(listOf(1), listOf(1, 2), emptyList())).use { f ->
             val core = f.core(index = index)
-            core.addRootZero()
+            core.addInitial(f.manager.zero) // Already-admitted ZERO for this local transfer test.
             val attempts = f.drain(core, quantum = 1)
             assertTrue(attempts >= 3)
             assertEquals(setOf(0, 1, 2), f.processed.map { it.node.location.index }.toSet())
@@ -60,7 +60,7 @@ class MethodWorkTest {
     @Test fun `cancellation on an untouched statement stops the actor before successor propagation`(): Unit {
         MethodAnalysisFixtures().use { f ->
             val core = f.core()
-            core.addRootZero()
+            core.addInitial(f.manager.zero) // Already-admitted ZERO for this local transfer test.
             f.onProcess = { _, _ -> f.cancellation.cancel() }
             assertFailsWith<Cancellation.Cancelled> { core.work(1000) }
             assertEquals(1L, core.steps)
@@ -94,7 +94,7 @@ class MethodWorkTest {
             val core = f.core()
             assertFailsWith<IllegalArgumentException> { core.work(0) }
             assertFailsWith<IllegalArgumentException> { core.work(-1) }
-            core.addRootZero()
+            core.addInitial(f.manager.zero) // Already-admitted ZERO for this local transfer test.
             assertFails { core.freeze() }
             f.drain(core)
             core.freeze()

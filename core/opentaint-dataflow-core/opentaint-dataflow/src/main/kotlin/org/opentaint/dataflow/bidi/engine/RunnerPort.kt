@@ -2,7 +2,7 @@ package org.opentaint.dataflow.bidi.engine
 
 import org.opentaint.dataflow.bidi.ap.ApOps
 import org.opentaint.dataflow.bidi.ap.Facts
-import org.opentaint.dataflow.bidi.ap.InitialAp
+import org.opentaint.dataflow.bidi.ap.AdmittedInitial
 import org.opentaint.dataflow.bidi.ap.Layer
 import org.opentaint.dataflow.bidi.ap.MethodKey
 import org.opentaint.dataflow.bidi.interp.DirectedForms
@@ -18,6 +18,7 @@ interface RunnerPort<A : RunActor> {
     val staticService: Run1StaticService? get() = null
     fun sendStatic(effect: StaticOwnerEffect): Boolean = send(RunEvent.StaticOwner(effect))
     fun send(event: RunEvent): Boolean
+    fun post(event: RunEvent.TargetDelivery): Boolean = error("Terminal delivery needs its subscribed runner")
     fun post(event: RunEvent.Delivery): Boolean
     fun post(event: RunEvent.ChangedRequests): Boolean = error("Request delivery needs its subscribed runner")
     fun enqueue(analyzer: A): Boolean
@@ -25,7 +26,7 @@ interface RunnerPort<A : RunActor> {
     fun summaryStorage(key: MethodKey): SummaryStorage
     fun subscribe(sub: Subscription)
     fun link(callee: MethodKey, ref: CallerRef, linkLayer: Layer, added: Facts)
-    fun startInitials(callee: MethodKey, initials: Collection<InitialAp>)
+    fun startInitials(callee: MethodKey, initials: Collection<AdmittedInitial>)
 
     val onProcess: ((MethodKey, EdgeDelta) -> Unit)? get() = null
     val onCut: ((Cut, Facts) -> Unit)? get() = null

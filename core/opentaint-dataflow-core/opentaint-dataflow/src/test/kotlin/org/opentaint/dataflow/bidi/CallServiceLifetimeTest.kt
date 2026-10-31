@@ -43,7 +43,8 @@ class CallServiceLifetimeTest {
             lateinit var calls: RunMethodCallServices
             actor = RunMethodAnalyzer(f.key, port, PublicationSink { _, _ -> },
                 MethodLocalServicesFactory(::RunMethodLocalServices),
-                MethodCallServicesFactory { RunMethodCallServices(it).also { service -> calls = service } })
+                MethodCallServicesFactory { RunMethodCallServices(it).also { service -> calls = service } },
+                TargetPublicationSink { _, _ -> })
             f.onSubscribe = {}
             f.onLink = {}
             val initial = f.manager.initial(f.run1Pattern())

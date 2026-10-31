@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.Seed
@@ -200,7 +202,7 @@ class LocalConjunctionTest {
                 initial to Conclusion(PathFact(secondBase, emptyList(), Tail.EXACT, u), ExclusionSet.Empty, true)),
                 methodEntries(f.ops, core.summaries.all()))
             assertNull((core.localServices as RunMethodLocalServices).conjunctions)
-            assertTrue(f.vulnerabilities.witnessesOf(2).none())
+            assertTrue(core.targets.isEmpty())
             assertTrue(core.sourceHits!!.entries().none())
             assertTrue(f.events.isEmpty())
         }
@@ -253,7 +255,7 @@ class LocalConjunctionTest {
             val seeds = SeedIndex.of(listOf(Seed.Source(f.key, f.inst(0), source.forward)))
             val core = f.core(index = index, L = maxOf(1, index - 1), demand = demand, seeds = seeds,
                 localFactory = MethodLocalServicesFactory(::RunMethodLocalServices))
-            core.addRootZero()
+            core.addInitial(f.manager.zero) // This local transfer fixture supplies an already-admitted ZERO.
             f.admit(core, CallerRef(f.key, f.manager.zero, Layer.NORMAL, f.inst(1)), if (index == 1) Layer.DEMAND else Layer.NORMAL, if (index == 1) f.run1Fact(firstBase, full = t.mark) else f.fact(firstBase, mark = t))
             assertEquals(setOf(f.manager.zero, if (index == 1) policy else answer), core.initials.all().toSet())
             assertTrue(core.summaries.all().none())
@@ -267,15 +269,16 @@ class LocalConjunctionTest {
                 assertEquals(setOf(f.manager.zero, policy, answer), core.initials.all().toSet())
                 assertEquals(setOf(zero, answer to output(f, target, index)),
                     methodEntries(f.ops, core.summaries.all()))
-                val witness = f.vulnerabilities.witnessesOf(1).single().second
-                assertSame(answer, witness.edges.single().premise, "The zero-source contributor drops out of the union")
-                assertEquals(Layer.DEMAND, witness.edges.single().layer)
-                assertEquals(setOf(output(f, target, index)), methodLeaves(f.ops, listOf(witness.edges.single().facts)))
+                val terminal = core.targets.single()
+                assertSame(answer, terminal.premise, "The zero-source contributor drops out of the union")
+                assertEquals(Target.DemandTarget, terminal.target)
+                assertEquals(1, core.sinkSeeds.size)
             } else {
                 assertEquals(setOf(f.manager.zero, answer), core.initials.all().toSet())
                 assertEquals(setOf(zero, answer to output(f, target, index)),
                     methodEntries(f.ops, core.summaries.all()))
-                assertEquals(1, f.vulnerabilities.witnessesOf(3).count())
+                assertEquals(1, core.targets.size)
+                assertIs<Target.NormalTarget>(core.targets.single().target)
             }
             assertTrue(f.events.none { it is RunEvent.MarkRequestsIn })
             if (index == 1) assertTrue(f.events.any { it is RunEvent.InitialAnswersIn },

@@ -7,7 +7,7 @@ import org.opentaint.dataflow.bidi.store.*
  * supplier, question mirror, deferred answer, or completed-answer history. */
 internal class Run1Abstraction(
     private val ops: ApOps,
-    private val answer: (InitialAp) -> Unit,
+    private val answer: (AdmittedInitial) -> Unit,
     private val borrowRequests: (Facts) -> List<RequestedRow>,
     private val collectRequests: (Run1Slot, RequestMarkSelection) -> Unit,
     private val statistics: RequestBatchStatistics? = null,
@@ -25,10 +25,11 @@ internal class Run1Abstraction(
         check(!released)
         val ap = ops.manager
         ap.cancellation.checkpoint()
+        if (!RuntimeDataDomain.packet(ref.premise, input)) return
         validateRun1Supplier(ap, ref.premise, input)
         validateRun1Input(ap, input)
         if (input.base == STATIC) return // static reads/refinements are operation-local, never callee entry seeds
-        answer(ops.policy(input))
+        answer(AdmittedInitial(ops.policy(input), Layer.NORMAL))
         if (input is Reach) return
         if (input is TaintTree) {
             // Read after any synchronous abstraction starts; later P admission is

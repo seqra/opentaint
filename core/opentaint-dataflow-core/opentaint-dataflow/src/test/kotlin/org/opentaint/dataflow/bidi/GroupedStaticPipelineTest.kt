@@ -79,10 +79,10 @@ class GroupedStaticPipelineTest {
             val hits = backward.analyzers.flatMap { it.sourceHits?.occurrences()?.toList().orEmpty() }
             assertTrue(hits.any { it.method == setter && it.forward == source },
                 "Run-2 must find the full-mark source through the real caller CFG and static write")
-            assertTrue(report.entries.any { it.key.rule == sink.rule }, buildString {
+            assertTrue(report.entries.any { it.descriptor.rule == sink.rule }, buildString {
                 appendLine("Missing final sink. End: ${report.end}")
                 for (run in f.results) {
-                    appendLine("run-${run.runIndex}: witnesses=${run.witnessesByKey().keys}")
+                    appendLine("run-${run.runIndex}: targets=${run.analyzers.map { it.key to it.targets }}")
                     for (actor in run.analyzers) {
                         appendLine("  ${actor.key.method.name}: ${actor.sourceHits?.occurrences()?.toList()}")
                         appendLine("    ${actor.summaries.all().toList().map { (initial, value) -> initial to f.ops.leaves(value).toList() }}")

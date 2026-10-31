@@ -35,6 +35,34 @@ with the same runtime core.
 The latest referenced Thingsboard campaign reached **run-2**, completed
 **run-1**, and accepted **run-1**. No project was rerun for this design.
 
+## 31 October scope amendment
+
+The [selected Target/ZERO specification](../docs/design/bidirectional-constant-filter-target-zero-implementation-20261031.md#11-authorized-full-computed-layer-correction-31-october)
+supersedes the old blanket run-1 FULL-taint DEMAND override. Ordinary FULL
+TAINT keeps its computed AP layer for ZERO and nonzero originals. The
+initial ZERO-only release is historical. GROUP taint and the independent
+static approximation keep their DEMAND overrides. Real cuts and computed
+DEMAND are never promoted. Concrete EXACT initials can naturally be
+NORMAL; concrete STAR initials remain DEMAND. The unchanged run-1 ND
+weakening can expose NORMAL unary arms, so complete caller-context
+correctness needs its separate positive and negative controls. No ND
+repair is selected by the layer change.
+
+Accepted backward source-summary ZERO results become DemandTarget under
+the complete caller original. Balanced ZERO control remains AP. This
+creates no fake actual source hit. The same run-1 frozen static closure
+includes typed DemandTarget reader endpoints: `W ; B* ; R` can yield
+`ZERO -> DemandTarget`, projected as one `(Target,ZERO)` pair. It uses the
+existing local/inherited static lookup and mark rules. NormalTarget is
+not a seed, and later handoffs still use local demand only. Terminal C5
+uses the existing full intersection as a read-only ZERO-exit probe; this
+also finds ordinary AP virtual `(ret/T,ZERO)` pairs.
+
+No field transfer, C2/no-op rule, native matching or paired C5 rule changes.
+The selected boundary proofs do not establish complete FULL conditional-
+source/caller-context behavior or resolve known GROUP coverage issues.
+Keep the runtime controls; no admission fallback is selected here.
+
 ## 1. Original design, current implementation and selected changes
 
 “Original” below means the original AP demand protocol and ordinary

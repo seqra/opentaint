@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.bidi.ap.*
@@ -73,7 +75,7 @@ class GroupedDirectStaticsEngineTest {
             p.exit(main, 3, ExitRules(RuleStatement(checks, StatementSummary.EMPTY, listOf(sink)), false, emptySet()))
             val result = f.run(p.config(roots = listOf(main)), timeout = 20.seconds)
             assertEquals(RunStatus.COMPLETE, result.status)
-            return result.witnessesByKey().any { it.key.rule == sink.rule }
+            return result.observedSink(sink.rule, f.shared.reportCatalog)
         }
     }
 
@@ -135,17 +137,16 @@ class GroupedDirectStaticsEngineTest {
             if (!refine) {
                 val result = f.run(p.config(roots = listOf(main)), timeout = 20.seconds)
                 assertEquals(RunStatus.COMPLETE, result.status)
-                val candidate = result.witnessesByKey().any { it.key.rule == sink.rule }
-                assertTrue(result.witnessesByKey().filter { it.key.rule == sink.rule }.values.flatten()
-                    .flatMap { it.edges }.all { it.facts.layer == Layer.DEMAND })
+                val candidate = result.observedSink(sink.rule, f.shared.reportCatalog)
+                assertTrue(result.analyzers.flatMap { it.targets }.all { it.target == Target.DemandTarget })
                 return SpatialResult(candidate, false, false)
             }
             val report = withRun1MarkMode(MarkMode.GROUP) {
                 f.driver(FixedLimits(listOf(1, 1, 2)), 20.seconds)
             }.analyze(listOf(main))
             assertTrue(f.results.all { it.status == RunStatus.COMPLETE })
-            return SpatialResult(f.results.first().witnessesByKey().any { it.key.rule == sink.rule },
-                report.entries.any { it.key.rule == sink.rule }, f.results.any { it.runIndex > 1 })
+            return SpatialResult(f.results.first().observedSink(sink.rule, f.shared.reportCatalog),
+                report.entries.any { it.descriptor.rule == sink.rule }, f.results.any { it.runIndex > 1 })
         }
     }
 
@@ -191,15 +192,13 @@ class GroupedDirectStaticsEngineTest {
                 f.driver(FixedLimits(listOf(1, 1, 2)), 20.seconds)
             }.analyze(listOf(main))
             assertEquals(RunStatus.COMPLETE, report.end.status)
-            assertTrue(f.results.first().witnessesByKey().any { it.key.rule == sink.rule }, "F1 conditional static return reaches the sink")
+            assertTrue(f.results.first().observedSink(sink.rule, f.shared.reportCatalog), "F1 conditional static return reaches the sink")
             assertTrue(f.results.any { it.runIndex == 2 && it.analyzers.any { actor -> actor.sourceHits?.occurrences()?.any() == true } },
                 "B2 reaches the actual full source occurrence")
-            assertTrue(report.entries.any { it.key.rule == sink.rule })
-            assertTrue(f.results.any { result -> result.runIndex == 3 && result.witnessesByKey().any { (key, witnesses) ->
-                key.rule == sink.rule && witnesses.any { witness -> witness.edges.any { edge ->
-                    f.ops.leaves(edge.facts).any { it.fact.mark == MarkSlot.Concrete(full) }
-                } }
-            } }, "Later refinement checks the original full mark")
+            assertTrue(report.entries.any { it.descriptor.rule == sink.rule })
+            assertTrue(f.results.any { result -> result.runIndex == 3 && result.observedSink(sink.rule, f.shared.reportCatalog) &&
+                result.analyzers.any { actor -> actor.targets.any { it.target is Target.NormalTarget } }
+            }, "Later refinement checks the original full mark")
             assertTrue(f.processed.filter { it.run == 1 && it.delta.facts.base == STATIC }.all { it.delta.node in f.shared.contexts.directed(Direction.FORWARD).endNodes(it.method) })
             assertTrue(f.results.first().analyzers.flatMap { it.summaries.all() }.none { (initial, _) ->
                 initial.isFlow && initial.member(0).base == STATIC && initial.member(0).path == null
@@ -222,7 +221,7 @@ class GroupedDirectStaticsEngineTest {
             p.exit(m, 2, ExitRules(RuleStatement(StatementSummary.EMPTY, StatementSummary.EMPTY, listOf(sink)), false, emptySet()))
             val result = f.run(p.config(roots = listOf(m)))
             assertEquals(RunStatus.COMPLETE, result.status)
-            assertTrue(result.witnessesByKey().any { it.key.rule == sink.rule })
+            assertTrue(result.observedSink(sink.rule, f.shared.reportCatalog))
             assertTrue(f.processed.any { it.run == 1 && it.delta.premise.members.any { member -> member.base == STATIC } && it.delta.facts.base == local })
             assertTrue(f.processed.filter { it.run == 1 && it.delta.facts.base == STATIC }.all { it.delta.node in f.shared.contexts.directed(Direction.FORWARD).endNodes(it.method) }, "Static values never traverse ordinary successor queues")
             assertTrue(result.analyzers.flatMap { it.summaries.all() }.any { (premise, value) -> premise.isZero && value.base == STATIC && value.layer == Layer.DEMAND })
@@ -264,7 +263,7 @@ class GroupedDirectStaticsEngineTest {
             p.exit(m, 2, ExitRules(RuleStatement(StatementSummary.EMPTY, StatementSummary.EMPTY, listOf(sink)), false, emptySet()))
             val result = f.run(p.config(roots = listOf(m)))
             assertEquals(RunStatus.COMPLETE, result.status)
-            assertTrue(result.witnessesByKey().none { it.key.rule == sink.rule })
+            assertTrue(!result.observedSink(sink.rule, f.shared.reportCatalog))
             assertTrue(result.analyzers.flatMap { it.summaries.all() }.none { (_, value) -> value is TaintTree && value.base == STATIC })
         }
     }
@@ -303,7 +302,7 @@ class GroupedDirectStaticsEngineTest {
                 false, emptySet()))
             val result = f.run(p.config(roots = listOf(main)), timeout = 20.seconds)
             assertEquals(RunStatus.COMPLETE, result.status)
-            assertTrue(result.witnessesByKey().any { it.key.rule == sink.rule })
+            assertTrue(result.observedSink(sink.rule, f.shared.reportCatalog))
             assertTrue(result.analyzers.single { it.key == setter }.summaries.all().any { (original, value) ->
                 original.isFlow && original.member(0).base == arg && value.base == STATIC
             }, "The ordinary FLOW writer must be published")

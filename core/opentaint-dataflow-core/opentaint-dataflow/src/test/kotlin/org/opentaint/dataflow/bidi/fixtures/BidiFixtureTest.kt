@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi.fixtures
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals

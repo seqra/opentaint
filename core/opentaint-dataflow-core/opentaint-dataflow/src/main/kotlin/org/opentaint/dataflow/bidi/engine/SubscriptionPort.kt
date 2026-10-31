@@ -14,6 +14,7 @@ interface SubscriptionPort {
     val staticService: Run1StaticService? get() = null
     fun summaryStorage(key: MethodKey): SummaryStorage
     fun applier(key: MethodKey): SummaryApplier
+    fun post(event: RunEvent.TargetDelivery): Boolean = error("Terminal delivery needs its subscribed runner")
     fun post(event: RunEvent.Delivery): Boolean
     fun post(event: RunEvent.ChangedRequests): Boolean = error("Request delivery needs its subscribed runner")
     /** Must enqueue, including same-unit answers/climbs; never invoke an actor inline during a visit. */

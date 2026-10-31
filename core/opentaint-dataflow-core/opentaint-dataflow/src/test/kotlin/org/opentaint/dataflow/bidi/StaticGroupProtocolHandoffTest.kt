@@ -3,6 +3,7 @@ package org.opentaint.dataflow.bidi
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.bidi.ap.*
+import org.opentaint.dataflow.bidi.driver.Seed
 import org.opentaint.dataflow.bidi.driver.FixedLimits
 import org.opentaint.dataflow.bidi.engine.RunStatus
 import org.opentaint.dataflow.bidi.fixtures.DriverFixtures
@@ -81,8 +82,8 @@ class StaticGroupProtocolHandoffTest {
             val backward = f.results.single { it.runIndex == 2 }
             assertTrue(backward.analyzers.flatMap { it.sourceHits?.occurrences()?.toList().orEmpty() }
                 .any { it.method == setter && it.forward == source })
-            assertTrue(report.entries.any { it.key.rule == sink.rule })
-            assertTrue(run1.witnessesByKey().keys.any { it.rule == getterCheck.rule })
+            assertTrue(report.entries.any { it.descriptor.rule == sink.rule })
+            assertTrue(run1.analyzers.any { a -> a.sinkSeeds.any { it is Seed.Sink && it.rule == getterCheck.rule } })
         }
     }
 

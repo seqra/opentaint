@@ -51,8 +51,8 @@ class FrozenStaticCompletionTest {
             }.build()
             f.shared.releaseRun1CatalogCoverage()
             val result = RunResult<org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer>(RunStatus.COMPLETE,
-                emptyList(), 1, Direction.FORWARD, f.vulnerabilities, staticCompletion = completed)
-            val handOff = HandOff.of(f.config, result, f.report, f.shared)
+                emptyList(), 1, Direction.FORWARD, staticCompletion = completed)
+            val handOff = HandOff.of(f.config, result, f.shared)
             assertTrue(DemandPattern(ret, f.manager.zero.toPattern()) in handOff.demand.near(key, ret))
             assertTrue(handOff.demand.hasStaticCompletion)
             assertTrue(handOff.demandEdges.isEmpty(), "Virtual completed pairs are not ordinary selected publications")

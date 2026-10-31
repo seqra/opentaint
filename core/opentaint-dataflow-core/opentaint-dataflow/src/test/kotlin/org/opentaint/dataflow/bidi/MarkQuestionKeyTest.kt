@@ -39,14 +39,14 @@ class MarkQuestionKeyTest {
 
     @Test fun `concrete answers own their detached batch and target the full method key`(): Unit {
         PipelineFixtures(limit = 1).use { f ->
-            val initial = f.ap.initial(f.store.pattern())
+            val initial = AdmittedInitial(f.ap.initial(f.store.pattern()), Layer.DEMAND)
             val mutable = arrayListOf(initial)
             val event = RunEvent.InitialAnswersIn(f.callee, mutable)
             mutable.clear()
             assertEquals(listOf(initial), event.answers)
             assertEquals(f.callee, event.target())
             assertNotEquals(f.caller, event.target())
-            assertFails { (event.answers as MutableList<InitialAp>).clear() }
+            assertFails { (event.answers as MutableList<AdmittedInitial>).clear() }
         }
     }
 

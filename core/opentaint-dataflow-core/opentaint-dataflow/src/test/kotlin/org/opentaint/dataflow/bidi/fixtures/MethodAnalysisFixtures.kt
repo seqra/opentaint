@@ -156,7 +156,7 @@ class MethodAnalysisFixtures(
 
     private val sharedOwner = lazy {
         profileBound = true
-        SharedObjects(manager, ops, interpreter, language, contexts, records, vulnerabilities,
+        SharedObjects(manager, ops, interpreter, language, contexts, records,
             UnitResolver { UnknownUnit }, refManager, cancellation, threads = 1,
             abstractionStatistics = abstractionStatistics, requestBatchStatistics = requestBatchStatistics)
     }
@@ -302,7 +302,7 @@ class MethodAnalysisFixtures(
                 sentLinks += event
                 receive(event)
             }
-            override fun startInitials(callee: MethodKey, initials: Collection<InitialAp>) {
+            override fun startInitials(callee: MethodKey, initials: Collection<AdmittedInitial>) {
                 val event = RunEvent.InitialsIn(callee, initials)
                 sentInitials += event
                 onInitials?.invoke(event) ?: run {
@@ -332,7 +332,8 @@ class MethodAnalysisFixtures(
         }
         actor = RunMethodAnalyzer(key, port, publisher,
             localFactory ?: MethodLocalServicesFactory(::LocalServices),
-            callFactory ?: MethodCallServicesFactory { NoCalls })
+            callFactory ?: MethodCallServicesFactory { NoCalls },
+            TargetPublicationSink { _, _ -> }) // Standalone actor; tests inspect its owned terminal rows.
         lateinit var questions: SubscriptionManager
         questions = SubscriptionManager(object : SubscriptionPort {
             override val config = config

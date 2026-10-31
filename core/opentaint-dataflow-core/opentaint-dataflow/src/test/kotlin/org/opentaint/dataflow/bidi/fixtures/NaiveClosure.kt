@@ -17,8 +17,15 @@ class NaiveClosure(
     private val semantics: Semantics = Semantics.HISTORICAL,
     private val rawInputs: ProgramRunInputs? = null,
 ) {
-    enum class Semantics { HISTORICAL, SELECTED }
-    private val selected get() = semantics == Semantics.SELECTED
+    enum class Semantics {
+        HISTORICAL,
+        /** Previous selected AP transfer with implicit ZERO and the old backward-ZERO C5 exception.
+         *  Only the labelled local-candidate iteration drivers use this frozen control policy. */
+        PRE_TARGETS,
+        SELECTED,
+    }
+    private val selected get() = semantics != Semantics.HISTORICAL
+    private val targetControls get() = semantics == Semantics.SELECTED
 
     /** Keep the scalar Position oracle available unchanged. The selected run-1 constructor
      *  admits nonexact concrete answers as STAR before starting their analyses; this is not
@@ -37,7 +44,10 @@ class NaiveClosure(
     }
 
     private val inputs = rawInputs ?: program.inputs(config)
-    private val groups = if (selected && config.run1) GroupedScalarMarks(program.manager.marks) else null
+    // PRE_TARGETS is a labelled frozen snapshot. Only the current SELECTED
+    // oracle follows the configured mark mode instead of assuming GROUP.
+    private val groups = if (selected && config.run1 &&
+        (!targetControls || config.mode.markMode == MarkMode.GROUP)) GroupedScalarMarks(program.manager.marks) else null
     private val reached = LinkedHashSet<MethodKey>()
     private val admittedRequests = LinkedHashMap<MethodKey, MutableMap<Pattern, MutableSet<TaintMark>>>()
     private val forward = config.direction == Direction.FORWARD
@@ -63,7 +73,8 @@ class NaiveClosure(
     private val selectedReferences = HashMap<MethodKey, SelectedFormsReference>()
     private val run1Origins = RawRun1Origins()
     private val demandReference by lazy { SelectedDemandReference(config.index, config.fieldLimit,
-        config.direction, program.manager.marks, program.field("__admission_witness__")) }
+        config.direction, program.manager.marks, program.field("__admission_witness__"),
+        rejectMayForExact = targetControls) }
     private var invoked = false
 
     private data class Part(
@@ -84,7 +95,7 @@ class NaiveClosure(
     fun run(): RunObservation {
         check(!invoked) { "An oracle instance has one closure" }
         invoked = true
-        for (root in inputs.roots) if (program.isKnown(root)) addInitial(root, ZERO_PATTERN)
+        for (root in inputs.roots) if (program.isKnown(root) && (!targetControls || config.run1 || wantsZero(root))) addInitial(root, ZERO_PATTERN)
         while (work.isNotEmpty()) {
             program.manager.cancellation.checkpoint()
             work.removeFirst().invoke()
@@ -132,7 +143,9 @@ class NaiveClosure(
         if (!program.isKnown(method) || !initials.add(ObservedInitial(method, initial))) return
         check(initial.fact.tail != Tail.ANY_TAINT || (config.restricted && forward))
         work += {
-            val value = startFact(initial)
+            val rawStart = startFact(initial)
+            val value = if (targetControls && config.run1 && config.mode.markMode == MarkMode.FULL)
+                cover(rawStart, setOf(initial)) else rawStart
             val model = program.programMethod(method)
             val nodes = if (forward) listOf(method.statement) else buildList {
                 add(program.inst(method, model.normalExit))
@@ -152,7 +165,7 @@ class NaiveClosure(
     }
 
     private fun putEdge(method: MethodKey, node: CommonInst, premise: Set<Pattern>, conclusion: Conclusion) {
-        val edge = ObservedEdge(method, premise, cover(conclusion), node)
+        val edge = ObservedEdge(method, premise, cover(conclusion, premise), node)
         if (processed.add(edge)) work += { process(edge) }
     }
 
@@ -172,6 +185,7 @@ class NaiveClosure(
                             if (seeds.isNotEmpty()) walk(edge.method, node, plan, seeds,
                                 layer(edge.conclusion), from = CallPoint.BOUND)
                             for (callee in calleeStage(plan)?.callees.orEmpty()) {
+                                if (targetControls && !wantsZero(callee)) continue
                                 subscribe(Part(callee, edge.method, edge.premise, layer(edge.conclusion),
                                     node, edge.conclusion, zeroOnly = true))
                                 addInitial(callee, ZERO_PATTERN)
@@ -193,7 +207,7 @@ class NaiveClosure(
     }
 
     private fun emitAfter(method: MethodKey, node: CommonInst, premise: Set<Pattern>, conclusion: Conclusion) {
-        val value = cover(conclusion)
+        val value = cover(conclusion, premise)
         if (value != conclusion) { emitAfter(method, node, premise, value); return }
         val model = program.programMethod(method)
         val summaryEnd = if (forward) node.location.index == model.normalExit else node == method.statement
@@ -243,7 +257,7 @@ class NaiveClosure(
         val items = ArrayList<Pair<Set<Pattern>, Conclusion>>()
         val seen = HashSet<Pair<Set<Pattern>, Conclusion>>()
         val add: ReferenceSink = { pr, value ->
-            val item = pr to cover(limit(value, config.fieldLimit))
+            val item = pr to cover(limit(value, config.fieldLimit), pr)
             if (seen.add(item)) items += item
         }
         val applier = applier(method)
@@ -282,8 +296,8 @@ class NaiveClosure(
     }
 
     private fun publish(method: MethodKey, premise: Set<Pattern>, conclusion: Conclusion) {
-        val selected = conclusion.demand || premise.size > 1 || (!forward && isZero(premise))
-        val pieces = if (config.run1 || (!forward && isZero(premise))) setOf(conclusion) else buildSet {
+        val selectedForDemand = conclusion.demand || premise.size > 1 || (!forward && isZero(premise))
+        val pieces = if (config.run1 || (!targetControls && !forward && isZero(premise))) setOf(conclusion) else buildSet {
             for (member in premise) {
                 val guides = inputs.demand.filter { it.first == method }.map { it.second } + listOfNotNull(staticCarry(member))
                 for (demand in guides)
@@ -292,7 +306,7 @@ class NaiveClosure(
         }
         for (piece in pieces) {
             val pub = ObservedEdge(method, premise, piece)
-            if (selected) selectedDemand += pub
+            if (selectedForDemand) selectedDemand += pub
             if (publications.add(pub)) work += {
                 for (part in subscriptions.toList()) if (part.callee == method) match(part, pub)
             }
@@ -332,8 +346,8 @@ class NaiveClosure(
                 if (config.run1) result.request?.let { raise(method, item.premise, RequestKind.Mark(it)) }
                 result.facts.map { item.copy(c = it) }
             },
-            statementCut = { item -> item.copy(c = cover(limit(item.c, config.fieldLimit))) },
-            exit = { item -> item.copy(c = cover(limit(item.c, config.fieldLimit))) },
+            statementCut = { item -> item.copy(c = cover(limit(item.c, config.fieldLimit), item.premise)) },
+            exit = { item -> item.copy(c = cover(limit(item.c, config.fieldLimit), item.premise)) },
             trigger = { sink -> triggerSeeds(method, node, sink).map { PlanItem(it.first, it.second, null) } })
         for ((point, item) in runForms(method, plan, items, Place(node, config.run1, sources = false), hooks, from, pendingDemotion)) if (point == plan.exit)
             emitAfter(method, node, item.premise, item.c)
@@ -538,8 +552,12 @@ class NaiveClosure(
         }
     }
 
-    private fun cover(value: Conclusion): Conclusion {
-        val current = groups?.conclusion(value) ?: value
+    private fun cover(value: Conclusion, premise: Set<Pattern>): Conclusion {
+        var current = groups?.conclusion(value) ?: value
+        if (targetControls && config.run1 && config.mode.markMode == MarkMode.FULL) {
+            if (current.fact.base == STATIC || premise.any { it.fact.base == STATIC })
+                current = current.copy(demand = true)
+        }
         return if (selected && config.run1 && current.exclusion != ExclusionSet.Empty)
             current.copy(exclusion = ExclusionSet.Empty, demand = true) else current
     }
@@ -579,9 +597,14 @@ class NaiveClosure(
         // identity summaries. Static permission is a later shared demand view.
         admittedRequests[method] = linkedMapOf()
     }
+    /** Selected ZERO uses a stored local row, not virtual discovery permission. */
+    private fun wantsZero(method: MethodKey): Boolean = inputs.demand.any {
+        it.first == method && it.second.entry.fact.base == AccessPathBase.Zero
+    }
     /** Selected original AP protocol: input intersects fixed demand; there is no actual-query authority. */
     private fun currentInitials(method: MethodKey, actual: Pattern): Set<Pattern> {
-        if (actual.fact.base == AccessPathBase.Zero) return setOf(ZERO_PATTERN)
+        if (actual.fact.base == AccessPathBase.Zero)
+            return if (!targetControls || wantsZero(method)) setOf(ZERO_PATTERN) else emptySet()
         val input = limit(normalize(actual.fact, actual.exclusion, demand = actual.fact.tail == Tail.ANY), config.fieldLimit)
         val leaf = Pattern(input.fact, input.exclusion)
         val guides = inputs.demand.filter { it.first == method }.map { it.second } + listOfNotNull(staticCarry(leaf))

@@ -264,6 +264,55 @@ class CompareProjectsTest(unittest.TestCase):
         self.assertEqual("run-1", row["latest_accepted_forward_report"])
         self.assertEqual("NOT_APPLICABLE", row["main_bidi_iteration_progress"]["state"])
 
+    def test_target_frontier_preparation_does_not_prove_a_report_commit(self):
+        log = ("BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=20s\n"
+               "BIDI_RUN_END run=1 status=COMPLETE engineTime=2s\n"
+               "Run 1 (FORWARD) frontier: analysed 1, target demand 1, reports 0\n"
+               "BIDI_TARGET_STATISTICS run=1 raw=3 outgoing=1 reports=0\n"
+               "BIDI_BARRIER_END run=1 barrierTime=10ms iterationTime=2.01s\n"
+               "BIDI_ANALYSIS_END run=1 status=FAILED reason=ABNORMAL elapsed=3s\n")
+        result = log_evidence(log, {"status": "EXCEPTION"}, side="bidi")
+        self.assertIsNone(result["latest_accepted_forward_report"])
+        self.assertEqual("run-1", result["latest_complete_bidi_iteration"])
+        self.assertEqual(3, result["iterations"][0]["target_statistics"]["raw"])
+        # A policy can fail after the frontier but before statistics and commit.
+        # The new frontier labels must not be read as legacy report evidence.
+        no_statistics = log.replace("BIDI_TARGET_STATISTICS run=1 raw=3 outgoing=1 reports=0\n", "")
+        result = log_evidence(no_statistics, {"status": "EXCEPTION"}, side="bidi")
+        self.assertIsNone(result["latest_accepted_forward_report"])
+
+    def test_next_start_proves_preceding_target_snapshot_despite_later_failure(self):
+        log = ("BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=20s\n"
+               "BIDI_RUN_END run=1 status=COMPLETE engineTime=2s\n"
+               "Run 1 (FORWARD) frontier: analysed 1, target demand 1, reports 1\n"
+               "BIDI_TARGET_STATISTICS run=1 raw=3 outgoing=1 reports=1\n"
+               "BIDI_BARRIER_END run=1 barrierTime=10ms iterationTime=2.01s\n"
+               "BIDI_RUN_START run=2 direction=BACKWARD limit=1 timeout=17s\n"
+               "BIDI_RUN_END run=2 status=OOM engineTime=1s\n")
+        result = log_evidence(log, {"status": "OOM"}, side="bidi")
+        self.assertEqual("run-2", result["latest_bidi_iteration"])
+        self.assertEqual("run-1", result["latest_accepted_forward_report"])
+        accepted = result["bidi_iteration_progress"]["latest_accepted_forward_report"]
+        self.assertIn("BIDI_RUN_START run=2", accepted["commit_evidence"])
+
+    def test_completed_target_driver_and_compact_reader_keep_final_report_evidence(self):
+        log = ("BIDI_RUN_START run=3 direction=FORWARD limit=2 timeout=20s\n"
+               "BIDI_RUN_END run=3 status=COMPLETE engineTime=2s\n"
+               "Run 3 (FORWARD) frontier: analysed 1, target demand 0, reports 2\n"
+               "BIDI_TARGET_STATISTICS run=3 raw=2 outgoing=0 reports=2\n"
+               "BIDI_BARRIER_END run=3 barrierTime=10ms iterationTime=2.01s\n"
+               "BIDI_ANALYSIS_END run=3 status=COMPLETE reason=NO_DEMAND_EDGE elapsed=3s\n"
+               "Bidi analysis: 2 reported sink identities\n")
+        result = log_evidence(log, {"status": "OK"}, side="bidi")
+        self.assertEqual("run-3", result["latest_accepted_forward_report"])
+        self.assertEqual(2, result["reported_states"][0]["normal_targets"])
+        path = self.root / "target.log"
+        path.write_text(log)
+        compact = bidi_iteration_summary(path, "bidi", "OK")
+        self.assertEqual("run-3", compact["latest_accepted_forward_report"])
+        self.assertIn("BIDI_ANALYSIS_END", compact["bidi_iteration_progress"]
+                      ["latest_accepted_forward_report"]["commit_evidence"])
+
     def test_missing_log_does_not_recover_guessed_iteration_from_summary(self):
         self.bundle("main", [])
         directory = self.bundle("bidi", [], status="TIMEOUT")

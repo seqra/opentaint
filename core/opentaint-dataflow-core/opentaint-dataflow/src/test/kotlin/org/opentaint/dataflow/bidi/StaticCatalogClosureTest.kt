@@ -89,9 +89,10 @@ class StaticCatalogClosureTest {
                 val actual = compare(f, f.config(L = limit, roots = listOf(caller)), path, listOf(t.mark, u.mark),
                     sameUnit, policy, expectedRoot = expectedReturn)
                 assertContains(actual.rawSummaries, expectedReturn)
-                assertTrue(actual.witnesses.isNotEmpty())
-                assertTrue(actual.witnesses.all { it.rule === sink.rule && it.methodKey == getter &&
-                    it.edges.all { edge -> edge.layer == Layer.DEMAND && edge.premise == setOf(GroupedScalarMarks(f.ap.marks).pattern(f.pattern(STATIC, path, Tail.STAR, t))) } })
+                assertEquals(mapOf(sink.rule.id to setOf(Layer.DEMAND)), actual.observedSinkLayers())
+                val original = setOf(GroupedScalarMarks(f.ap.marks).pattern(f.pattern(STATIC, path, Tail.STAR, t)))
+                assertTrue(actual.targets.any { it.method == getter && !it.normal && it.premise == original },
+                    "The static sink keeps its selected concrete field origin")
                 assertTrue(actual.sourceHits.isEmpty())
             }
     }
@@ -165,7 +166,7 @@ class StaticCatalogClosureTest {
                 f.exit(callee, 2, ExitRules(RuleStatement(check, StatementSummary.EMPTY, listOf(sink)), false, emptySet()))
                 val actual = compare(f, f.config(L = limit, roots = listOf(caller)), listOf(cls, g, field),
                     listOf(t.mark), sameUnit, SchedulePolicy.SEEDED, seed)
-                assertTrue(actual.witnesses.isNotEmpty(), origin)
+                assertTrue(sink.rule.id in actual.observedSinkLayers(), origin)
                 val group = GroupedScalarMarks(f.ap.marks)
                 if (originalBase != STATIC) {
                     val basis = f.pattern(originalBase, tail = Tail.STAR, mark = MarkSlot.STAR)

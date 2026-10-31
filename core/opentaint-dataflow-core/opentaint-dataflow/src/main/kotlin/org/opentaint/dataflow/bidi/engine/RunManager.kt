@@ -263,7 +263,7 @@ class RunManager<A : RunActor>(
             if (joined) staticService?.clear()
         }
         failure?.let { throw it }
-        return RunResult(end, analyzers, config.index, config.direction, shared.vulnerabilities, config.mode.markMode,
+        return RunResult(end, analyzers, config.index, config.direction, config.mode.markMode,
             joinedStaticBindingTime, staticCompletion)
     }
 

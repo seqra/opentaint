@@ -131,7 +131,10 @@ class CutPointTest {
             // run, whose initial grammar permits the explicit x.g premise.
             val sourceSeeds = SeedIndex.of(listOf(Seed.Source(f.key, f.inst(0), short.forward),
                 Seed.Source(f.key, f.inst(0), deep.forward)))
-            val forward = f.core(index = 3, seeds = sourceSeeds)
+            val control = org.opentaint.dataflow.bidi.store.DemandStore.Builder(f.manager).apply {
+                add(f.key, DemandPattern(f.manager.zero.toPattern(), f.manager.zero.toPattern()))
+            }.build()
+            val forward = f.core(index = 3, demand = control, seeds = sourceSeeds)
             forward.addRootZero()
             forward.addInitial(initialX)
             f.drain(forward, quantum = 1)
@@ -181,7 +184,10 @@ class CutPointTest {
             }
             val requirement = f.pattern(y, listOf(field, g, h), Tail.EXACT, mt)
             val seeds = SeedIndex.of(listOf(Seed.Sink(rule, f.key, f.inst(2), requirement)))
-            val core = f.core(index = 2, L = 1, seeds = seeds)
+            val control = org.opentaint.dataflow.bidi.store.DemandStore.Builder(f.manager).apply {
+                add(f.key, DemandPattern(f.manager.zero.toPattern(), f.manager.zero.toPattern()))
+            }.build()
+            val core = f.core(index = 2, L = 1, demand = control, seeds = seeds)
             core.addRootZero()
             val seedCuts = f.cuts.filter { it.first == Cut.SEED }.map { it.second }
             assertEquals(setOf(Conclusion(requirement.fact, ExclusionSet.Empty, false)), methodLeaves(f.ops, seedCuts))

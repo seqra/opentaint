@@ -94,7 +94,7 @@ class RunConfigTest {
             assertSame(f.language, shared.language)
             assertSame(f.contexts, shared.contexts)
             assertSame(f.records, shared.records)
-            assertSame(f.vulnerabilities, shared.vulnerabilities)
+            assertNotNull(shared.reportCatalog)
             assertSame(f.refManager, shared.refManager)
             assertSame(f.refManager.softRefManager("bidi"), f.manager.softRefs)
             assertSame(f.unitResolver, shared.unitResolver)
@@ -125,7 +125,7 @@ class RunConfigTest {
             override fun reached(call: org.opentaint.ir.api.common.cfg.CommonCallExpr, position: AccessPathBase,
                                  plan: org.opentaint.dataflow.bidi.interp.CallPlan) { seen += position }
         }
-        SharedObjects(f.manager, f.ops, interpreter, f.language, f.contexts, f.records, f.vulnerabilities,
+        SharedObjects(f.manager, f.ops, interpreter, f.language, f.contexts, f.records,
             f.unitResolver, f.refManager, f.cancellation, threads = 1).use { shared ->
             val observer: UnresolvedCallObserver = interpreter
             assertSame(observer, shared.unresolvedObserver)

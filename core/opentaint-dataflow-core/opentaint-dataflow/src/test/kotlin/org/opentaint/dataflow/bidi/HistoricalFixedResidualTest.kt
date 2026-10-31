@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.*
 import org.opentaint.dataflow.bidi.engine.RunStatus
+import org.opentaint.dataflow.bidi.engine.Target
 import org.opentaint.dataflow.bidi.fixtures.*
 import org.opentaint.dataflow.bidi.interp.*
 import org.opentaint.dataflow.bidi.interp.CallPoint.*
@@ -25,9 +26,8 @@ class HistoricalFixedResidualTest {
         CallStage.Edges(REWRITTEN, AFTER, BIND_BACK, f.summary(ZERO_KEEP, starEdge(ret, emptyList(), r, emptyList()))),
     ), emptyList(), BEFORE, AFTER)
 
-    private fun states(report: Report): Map<HistoricalFinding, HistoricalState> = report.entries.associate {
-        HistoricalFinding(it.key.rule, it.key.statement) to if (it.state == ReportState.CONFIRMED)
-            HistoricalState.CONFIRMED else HistoricalState.DEMAND
+    private fun normalFindings(report: Report): Set<HistoricalFinding> = report.entries.mapTo(LinkedHashSet()) {
+        HistoricalFinding(it.descriptor.rule, it.descriptor.key.statement)
     }
 
     @Test
@@ -71,9 +71,9 @@ class HistoricalFixedResidualTest {
         val label = "F71 AP equations plus F67/F68 END interpreter rules; proof-history.md:1599 excludes END from Lean"
         assertEquals(expected, old.findings, label)
         val selected = mapOf(HistoricalFinding(early.rule, p.inst(m, 1)) to HistoricalState.DEMAND)
-        assertEquals(selected, direct.findings, "Selected policy ignores every END action")
-        assertEquals(selected, states(report), "The original sink still has its real source")
-        assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
+        assertEquals(selected, direct.findings, "The PRE_TARGETS reference ignores every END action")
+        assertEquals(selected.keys, normalFindings(report), "The original sink must reach a rooted NORMAL terminal")
+        assertEquals(AnalysisEnd(RunStatus.COMPLETE, 1, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
         assertEquals(listOf(1, 2, 3), old.runs.map { it.index }, label)
         assertEquals(setOf(Seed.Sink(later.rule, root, p.inst(root, 2), later.patterns.single())), old.runs[0].handOff.seeds.toSet(),
             "An already confirmed END trigger is absent from the ordinary demand seeds")
@@ -81,13 +81,13 @@ class HistoricalFixedResidualTest {
             "The reversed end fact fires its trigger, restoring the original T source path")
         assertContains(old.runs[1].handOff.seeds, Seed.Source(root, root.statement, source))
         assertTrue(old.runs[2].observation.witnesses.any { it.rule == later.rule && it.edges.all { edge -> edge.layer == Layer.DEMAND } })
-        for (offset in 1..2) {
-            val config = f.configs[offset]
-            val actualSeeds = listOf(root, m).flatMap { key -> p.programMethod(key).successors.indices.flatMap { index ->
-                config.seeds.at(key, p.inst(key, index))
-            } }.toSet()
-            assertEquals(direct.runs[offset].inputs.seeds.toSet(), actualSeeds, "Current direct incoming seeds at run ${offset + 1}")
-        }
+        assertEquals(listOf(1), f.configs.map { it.index },
+            "The selected exact FULL source reaches the original sink normally without a backward run")
+        val forward = f.results.single()
+        assertTrue(f.processed.all { row -> f.ops.leaves(row.delta.facts).none { it.fact.mark == u } },
+            "Selected processing must not execute the historical END output")
+        assertTrue(forward.analyzers.all { actor -> actor.triggerSeeds == 0L && actor.sinkSeeds.isEmpty() })
+        assertTrue(forward.analyzers.flatMap { it.targets }.all { it.target is Target.NormalTarget })
     }
 
     @Test
@@ -148,7 +148,7 @@ class HistoricalFixedResidualTest {
         val label = "F69 refined must/E plus F71 concrete hand-off, prior to F76 record views; ap-history.md F69 amendment R3"
         assertEquals(expected, old.findings, label)
         assertEquals(expected.mapValues { HistoricalState.DEMAND }, direct.findings, label)
-        assertEquals(expected.mapValues { HistoricalState.DEMAND }, states(report), label)
+        assertEquals(expected.keys, normalFindings(report), "Both actual source paths must reach rooted NORMAL terminals: $label")
         assertEquals(listOf(1, 2, 3), old.runs.map { it.index }, label)
         assertTrue(old.runs[1].observation.initials.any { it.method == factory && it.initial.fact.base != AccessPathBase.Zero },
             "A non-reversible must/E record forces old backward callee analysis")
@@ -166,13 +166,39 @@ class HistoricalFixedResidualTest {
         val sourceSeeds = setOf(Seed.Source(factory, factory.statement, sourceT),
             Seed.Source(factory, factory.statement, sourceU))
         assertEquals(sourceSeeds, direct.runs[1].handOff.seeds.toSet())
-        assertEquals(sourceSeeds, f.configs[2].seeds.at(factory, factory.statement).toSet())
+        val selectedSourceSeeds = f.configs[2].seeds.at(factory, factory.statement).toSet()
+        assertContains(selectedSourceSeeds, Seed.Source(factory, factory.statement, sourceT),
+            "T lost NORMAL status at the run-1 field writes and still needs a source permission")
+        assertTrue(sourceSeeds.containsAll(selectedSourceSeeds))
+        val run1Factory = f.results[0].analyzers.single { it.key == factory }
+        assertTrue(run1Factory.summaries.all().any { (premise, facts) ->
+            premise.isZero && facts.layer == Layer.NORMAL && f.ops.leaves(facts).any { leaf ->
+                leaf.fact == PathFact(ret, listOf(k), Tail.EXACT, u) && leaf.exclusion == ExclusionSet.Empty
+            }
+        }, "The frozen run-1 result already contains NORMAL ZERO -> ret.k/U")
+        val nativeU = f.configs[1].records.byEntry(factory, ZERO_PATTERN).filter {
+            it.direction == org.opentaint.dataflow.bidi.ap.Direction.FORWARD && it.premise.isZero
+        }.toList()
+        assertTrue(nativeU.any { record -> record.conclusion.layer == Layer.NORMAL &&
+            f.ops.leaves(record.conclusion).any { leaf ->
+                leaf.fact == PathFact(ret, listOf(k), Tail.EXACT, u) && leaf.exclusion == ExclusionSet.Empty
+            }
+        }, "The selected FULL run-1 persists the exact ZERO -> ret.k/U source effect")
+        assertTrue(f.results[2].recordCrossings > 0, "Saved source effects are applied before the current demand gate")
+        assertTrue(f.processed.any { processed ->
+            processed.run == 3 && processed.method == root && processed.delta.facts.layer == Layer.NORMAL &&
+                f.ops.leaves(processed.delta.facts).any { it.fact == PathFact(returned, listOf(k), Tail.EXACT, u) }
+        }, "The saved U source effect reaches the caller in run-3; no new U source seed is required")
         assertEquals(direct.runs.map { it.index }, f.configs.map { it.index })
         for ((offset, config) in f.configs.withIndex()) {
             val actualSeeds = listOf(root, factory).flatMap { key -> p.programMethod(key).successors.indices.flatMap { n ->
                 config.seeds.at(key, p.inst(key, n))
             } }.toSet()
-            assertEquals(direct.runs[offset].inputs.seeds.toSet(), actualSeeds,
+            if (config.index == 3) {
+                assertContains(actualSeeds, Seed.Source(factory, factory.statement, sourceT))
+                assertTrue(direct.runs[offset].inputs.seeds.toSet().containsAll(actualSeeds),
+                    "FULL native U replay can remove the older reference's U source permission")
+            } else assertEquals(direct.runs[offset].inputs.seeds.toSet(), actualSeeds,
                 "Exact selected incoming seeds at run ${offset + 1}")
         }
         assertTrue(direct.runs[0].observation.rawSummaries.any { it.method == factory && it.conclusion ==

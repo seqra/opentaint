@@ -14,6 +14,7 @@ class RunMethodAnalyzer(
     publisher: PublicationSink,
     localFactory: MethodLocalServicesFactory,
     callFactory: MethodCallServicesFactory,
+    targetPublisher: TargetPublicationSink,
 ) : RunActor, SummaryApplier {
     private var port: RunnerPort<RunMethodAnalyzer>? = port
     private var runContext: RunMethodContext? = RunMethodContext(key, port.forms, port.config, port.shared)
@@ -87,6 +88,28 @@ class RunMethodAnalyzer(
     private val worklist = DeltaWorklist(flowFirst = mode.run1 && mode.markMode == MarkMode.FULL,
         batchManager = ap.takeIf { mode.run1 && mode.markMode == MarkMode.FULL })
     private var pending = ArrayList<Publication>()
+    private var targetPublicationSink: TargetPublicationSink? = targetPublisher
+    private var pendingTargets = ArrayList<TargetSummary>()
+    private val rawTargetRows = LinkedHashSet<TargetSummary>()
+    val targets: Set<TargetSummary> get() = Collections.unmodifiableSet(rawTargetRows)
+    private val outgoingTargetRows = LinkedHashSet<TargetSummary>()
+    val outgoingTargets: Set<TargetSummary> get() = Collections.unmodifiableSet(outgoingTargetRows)
+    val sinkSeeds = LinkedHashSet<org.opentaint.dataflow.bidi.driver.Seed>()
+
+    internal fun emitTarget(premise: PremiseKey, target: Target) {
+        if (!RuntimeDataDomain.premise(premise)) return
+        if (!forward && target is Target.NormalTarget) return
+        premise.forEachMember { check(!it.isFlow) { "Target needs a concrete or ZERO origin" } }
+        if (target is Target.NormalTarget && config.normalTargets.contains(key, premise, target.id)) return
+        val row = TargetSummary(premise, target)
+        if (!rawTargetRows.add(row)) return
+        if (target is Target.NormalTarget || config.run1 ||
+            checkNotNull(config.demand).acceptsTarget(key, premise, config.admissionPolicy)) {
+            pendingTargets += row
+            if (target == Target.DemandTarget) outgoingTargetRows += row
+            requestWork()
+        }
+    }
 
     override var steps: Long = 0; private set
     override val hasZeroWork: Boolean get() = worklist.hasZeroWork
@@ -117,14 +140,13 @@ class RunMethodAnalyzer(
         // Static reads and effects start only at their reached operation.
     }
 
-    fun addRootZero(): Unit = addInitial(ap.zero)
-
-    fun addZeroEntry() {
-        check(!forward) { "Only a backward callee has a direct zero entry" }
-        addInitial(ap.zero)
+    fun addRootZero() {
+        if (config.run1) addInitial(ap.zero)
+        else for (initial in emitRestrictedInitials(config, ops, key, Reach.NORMAL)) addInitial(initial)
     }
 
     fun addLink(ref: CallerRef, linkLayer: Layer, added: Facts) {
+        if (!RuntimeDataDomain.packet(ref.premise, added)) return
         check(config.run1) { "Raw call inputs are for run-1 only" }
         checkPremise(ref.premise)
         ap.cancellation.checkpoint()
@@ -177,7 +199,11 @@ class RunMethodAnalyzer(
         }
     }
 
-    internal fun addInitial(initial: InitialAp) {
+    internal fun addInitial(initial: InitialAp) = addInitial(AdmittedInitial(initial, Layer.NORMAL))
+
+    internal fun addInitial(admitted: AdmittedInitial) {
+        val initial = admitted.initial
+        if (!RuntimeDataDomain.initial(initial)) return
         ap.cancellation.checkpoint()
         initialize()
         if (config.run1) {
@@ -185,11 +211,12 @@ class RunMethodAnalyzer(
             check(initial.base != STATIC) { "Run-1 static descriptors resume at an operation, not method entry" }
         }
         check(forward || initial.tail != Tail.ANY_TAINT) { "A backward run has no must premise" }
-        val fresh = initials.add(initial)
+        val intrinsic = ops.startFact(initial, mode)
+        val start = forceRun1Layer(initial, intrinsic.withLayer(intrinsic.layer or (admitted.layer == Layer.DEMAND)))
+        val fresh = initials.add(AdmittedInitial(initial, start.layer))
         context.shared.abstractionStatistics?.initial(fresh)
         if (!fresh) return
         if (!initial.isZero) nonZeroInitial = true
-        val start = forceRun1Layer(initial, ops.startFact(initial, mode))
         for (node in forms.startNodes(key, zero = initial.isZero)) {
             ap.cancellation.checkpoint()
             startAt(initial, node, start)
@@ -199,6 +226,7 @@ class RunMethodAnalyzer(
     internal fun collect(premise: PremiseKey, input: Facts, sink: ResultSink): ApOut {
         return object : ApOut {
             override fun result(f: Facts) {
+                if (!RuntimeDataDomain.packet(premise, input) || !RuntimeDataDomain.packet(premise, f)) return
                 val runtime = forceRun1Layer(premise, f)
                 if (config.run1) ops.run1Cover(runtime) { sink(premise, it) } else sink(premise, runtime)
             }
@@ -207,6 +235,7 @@ class RunMethodAnalyzer(
     }
 
     internal fun raiseMark(premise: PremiseKey, input: Facts, mark: TaintMark) {
+        if (!RuntimeDataDomain.packet(premise, input)) return
         check(config.run1) { "Requests exist only in run 1" }
         check(input is FlowTree && premise is InitialAp) { "A request needs a FLOW input premise" }
         check(premise.base != STATIC) { "A static-origin interest needs an exact operation input" }
@@ -218,14 +247,20 @@ class RunMethodAnalyzer(
 
     internal fun forceRun1Layer(premise: PremiseKey, value: Facts): Facts {
         if (!config.run1) return value
-        val runtime = ops.runtimeFact(value, mode)
-        return if (runtime is TaintTree || runtime.base == STATIC || Run1StaticService.hasStaticMember(premise))
-            runtime.withLayer(Layer.DEMAND) else runtime
+        return run1Layer(premise, ops.runtimeFact(value, mode))
+    }
+
+    /** FULL uses the ordinary AP layer. GROUP projection and the independent
+     * run-1 static approximation keep their DEMAND policy. */
+    private fun run1Layer(premise: PremiseKey, value: Facts): Facts {
+        return if ((value is TaintTree && mode.markMode == MarkMode.GROUP) || value.base == STATIC ||
+            Run1StaticService.hasStaticMember(premise)) value.withLayer(Layer.DEMAND) else value
     }
 
     internal fun collect(at: OperationInput, sink: ResultSink): ApOut {
         return object : ApOut {
             override fun result(f: Facts) {
+                if (!RuntimeDataDomain.packet(at.premise, at.facts) || !RuntimeDataDomain.packet(at.premise, f)) return
                 val value = forceRun1Layer(at.premise, f)
                 if (config.run1) ops.run1Cover(value) { sink(at.premise, it) } else sink(at.premise, value)
             }
@@ -238,8 +273,8 @@ class RunMethodAnalyzer(
     internal fun collectAfterRun1Policy(at: OperationInput, sink: ResultSink): ApOut {
         return object : ApOut {
             override fun result(f: Facts) {
-                val value = if (config.run1 && (f is TaintTree || f.base == STATIC || Run1StaticService.hasStaticMember(at.premise)))
-                    f.withLayer(Layer.DEMAND) else f
+                if (!RuntimeDataDomain.packet(at.premise, at.facts) || !RuntimeDataDomain.packet(at.premise, f)) return
+                val value = if (config.run1) run1Layer(at.premise, f) else f
                 if (config.run1) ops.run1Cover(value) { sink(at.premise, it) } else sink(at.premise, value)
             }
             override fun markRequest(mark: TaintMark) = needGroups(at, mark)
@@ -247,6 +282,7 @@ class RunMethodAnalyzer(
     }
 
     internal fun needGroups(at: OperationInput, mark: TaintMark) {
+        if (!RuntimeDataDomain.packet(at.premise, at.facts)) return
         if (!config.run1) return
         val original = at.premise as? InitialAp ?: return
         if (at.facts !is FlowTree || original.mark !is MarkSlot.Star) return
@@ -258,6 +294,7 @@ class RunMethodAnalyzer(
 
     /** FULL block requests share one immutable image and one raw suffix address. */
     internal fun needGroups(at: OperationInput, marks: MarkSet) {
+        if (!RuntimeDataDomain.packet(at.premise, at.facts)) return
         if (!config.run1 || marks.isEmpty) return
         val original = at.premise as? InitialAp ?: return
         if (at.facts !is FlowTree || original.mark !is MarkSlot.Star || dropsStaticField(original)) return
@@ -267,10 +304,12 @@ class RunMethodAnalyzer(
     }
 
     internal fun reachedOperations(summary: StatementSummary, at: OperationInput) {
+        if (!RuntimeDataDomain.packet(at.premise, at.facts)) return
         if (config.run1) checkNotNull(pointResumes).reached(summary, at)
     }
 
     internal fun emitOperationResult(at: OperationInput, operation: StaticOperation.Write?, value: Facts, sink: ResultSink) {
+        if (!RuntimeDataDomain.packet(at.premise, at.facts) || !RuntimeDataDomain.packet(at.premise, value)) return
         if (dropsStaticPremise(at.premise)) return
         val admitted = withoutDisabledStaticFields(value) ?: return
         val runtime = forceRun1Layer(at.premise, admitted)
@@ -309,12 +348,12 @@ class RunMethodAnalyzer(
 
     internal fun staticFacts(slice: RegionGroups): Facts = checkNotNull(runnerPort.staticService).facts(slice.region, slice.groups)
     internal fun staticSlices(facts: Facts): List<RegionGroups> = checkNotNull(runnerPort.staticService).slices(facts)
-    internal fun staticCallInterest(part: Subscription, pub: Publication, member: Int) {
-        if (!dropsStaticField(pub.premise.member(member)))
-            checkNotNull(pointResumes).callInterest(part, pub, member)
+    internal fun staticCallInterest(part: Subscription, result: StaticCallResult, member: Int) {
+        if (!dropsStaticField(result.premise.member(member)))
+            checkNotNull(pointResumes).callInterest(part, result, member)
     }
-    internal fun staticCallSupply(part: Subscription, pub: Publication, member: Int, supply: RegionGroups) =
-        callServices.staticSupply(part, pub, member, supply)
+    internal fun staticCallSupply(part: Subscription, result: StaticCallResult, member: Int, supply: RegionGroups) =
+        callServices.staticSupply(part, result, member, supply)
 
     /** These published run-1 originals have already received their canonical pool input. */
     internal fun hasKnownStaticGroupInput(premise: PremiseKey): Boolean =
@@ -368,6 +407,7 @@ class RunMethodAnalyzer(
     }
 
     internal fun installPoint(premise: PremiseKey, value: Facts, site: ResumeSite, state: CallResumeState? = null) {
+        if (!RuntimeDataDomain.packet(premise, value)) return
         check(config.run1)
         checkPremise(premise)
         if (dropsStaticPremise(premise)) return
@@ -381,6 +421,7 @@ class RunMethodAnalyzer(
     }
 
     internal fun cut(point: Cut, premise: PremiseKey, facts: Facts, sink: ResultSink) {
+        if (!RuntimeDataDomain.packet(premise, facts)) return
         runnerPort.onCut?.invoke(point, facts)
         val checkedSink: ResultSink = if (!checkRun2StaticAnchors) sink else { pr, bounded ->
             validateStaticFullAnchors(bounded)
@@ -447,7 +488,7 @@ class RunMethodAnalyzer(
             }
             flushPublications()
             ap.cancellation.checkpoint()
-            if (!worklist.isEmpty || pending.isNotEmpty()) continue
+            if (!worklist.isEmpty || pending.isNotEmpty() || pendingTargets.isNotEmpty()) continue
             commitRequests()
             if (config.run1 && !staticBatch.isEmpty) {
                 val committed = staticBatch
@@ -457,11 +498,12 @@ class RunMethodAnalyzer(
             }
             ap.cancellation.checkpoint()
             // Retain the counted Work reservation through P commit/replacement and sends.
-            if (worklist.isEmpty && pending.isEmpty() && !hasPendingAbstractionWork) return true
+            if (worklist.isEmpty && pending.isEmpty() && pendingTargets.isEmpty() && !hasPendingAbstractionWork) return true
         }
     }
 
     private fun process(item: EdgeDelta) {
+        if (!RuntimeDataDomain.packet(item.premise, item.facts)) return
         ap.cancellation.checkpoint()
         steps++
         runnerPort.onProcess?.invoke(key, item)
@@ -507,6 +549,7 @@ class RunMethodAnalyzer(
     }
 
     private fun emitPackedAfter(node: CommonInst, shape: InitialAp, facts: TaintTree, marks: MarkSet) {
+        if (!RuntimeDataDomain.packet(shape, facts)) return
         val offered = NeutralRelationBatch.toDiagonal(ap, shape, facts, marks)
         if (offered == null) {
             // Classify once, then use the exact decoder for an unsupported
@@ -550,6 +593,7 @@ class RunMethodAnalyzer(
     }
 
     internal fun emitAfter(premise: PremiseKey, node: CommonInst, value: Facts) {
+        if (!RuntimeDataDomain.packet(premise, value)) return
         checkPremise(premise)
         if (config.run1 && value.base == STATIC && !context.isEnd(node)) return
         if (config.run1) ops.run1Cover(forceRun1Layer(premise, value)) { emitCovered(premise, node, it) }
@@ -565,6 +609,7 @@ class RunMethodAnalyzer(
     }
 
     internal fun emitUnchanged(item: EdgeDelta) {
+        if (!RuntimeDataDomain.packet(item.premise, item.facts)) return
         checkPremise(item.premise)
         if (config.run1 && item.facts.base == STATIC && !context.isEnd(item.node)) return
         emitCovered(item.premise, item.node, item.facts)
@@ -578,6 +623,7 @@ class RunMethodAnalyzer(
     }
 
     private fun admitOutput(node: CommonInst, premise: PremiseKey, facts: Facts): Facts? {
+        if (!RuntimeDataDomain.packet(premise, facts)) return null
         checkKinds(premise, facts)
         val fresh = edges.add(node, premise, facts) ?: return null
         edgeDeltas++
@@ -590,6 +636,7 @@ class RunMethodAnalyzer(
     }
 
     private fun enqueueInput(node: CommonInst, premise: PremiseKey, facts: Facts) {
+        if (!RuntimeDataDomain.packet(premise, facts)) return
         checkKinds(premise, facts)
         worklist.add(EdgeDelta(premise, node, facts))
         requestWork()
@@ -648,6 +695,7 @@ class RunMethodAnalyzer(
     }
 
     private fun startAt(premise: PremiseKey, node: CommonInst, start: Facts) {
+        if (!RuntimeDataDomain.packet(premise, start)) return
         forms.withStartRules(key, node) { rules ->
             val work = RuleWorklist(rules, node,
                 if (forward) Cut.ENTRY_RULES else Cut.EXIT_RULES)
@@ -663,6 +711,7 @@ class RunMethodAnalyzer(
     }
 
     private fun endAt(premise: PremiseKey, node: CommonInst, facts: Facts, summary: Boolean) {
+        if (!RuntimeDataDomain.packet(premise, facts)) return
         if (config.run1 && summary) checkNotNull(staticWriteCandidates).observe(premise, facts)
         forms.withEndRules(key, node) { exit ->
             val work = RuleWorklist(exit.rules, node, if (forward) Cut.EXIT_RULES else Cut.ENTRY_RULES)
@@ -759,6 +808,7 @@ class RunMethodAnalyzer(
     }
 
     private fun retainSummary(rawPremise: PremiseKey, rawFacts: Facts) {
+        if (!RuntimeDataDomain.packet(rawPremise, rawFacts)) return
         val normalized = normalizeFlowSummary(ap, rawPremise, rawFacts)
         val premise = normalized.premise
         val facts = normalized.facts
@@ -800,11 +850,21 @@ class RunMethodAnalyzer(
     }
 
     private fun published(premise: PremiseKey, facts: Facts): Collection<Facts> = when {
-        config.run1 || (!forward && premise.isZero) -> listOf(facts)
+        config.run1 -> listOf(facts)
         else -> checkNotNull(config.demand).intersect(key, premise, facts, config.admissionPolicy)
     }
 
     private fun flushPublications() {
+        if (pendingTargets.isNotEmpty()) {
+            val detachedTargets = pendingTargets
+            pendingTargets = ArrayList()
+            try {
+                checkNotNull(targetPublicationSink).publishTargets(key, Collections.unmodifiableList(detachedTargets))
+            } catch (error: Throwable) {
+                pendingTargets.addAll(0, detachedTargets)
+                throw error
+            }
+        }
         if (pending.isEmpty()) return
         val detached = pending
         pending = ArrayList()
@@ -817,6 +877,10 @@ class RunMethodAnalyzer(
         }
     }
 
+    override fun applyTarget(part: Subscription, row: TargetSummary, member: Int): Unit =
+        callServices.applyTarget(part, row, member)
+    override fun applyStaticTarget(part: Subscription, row: TargetSummary, member: Int): Unit =
+        callServices.applyStaticTarget(part, row, member)
     override fun applySummary(part: Subscription, pub: Publication, member: Int): Unit =
         callServices.applySummary(part, pub, member)
     override fun applyStaticSummary(part: Subscription, pub: Publication, member: Int): Unit =
@@ -838,7 +902,7 @@ class RunMethodAnalyzer(
     internal fun countTriggerSeed() { triggerSeeds++ }
 
     override fun freeze() {
-        check(worklist.isEmpty && pending.isEmpty() && !hasPendingAbstractionWork) {
+        check(worklist.isEmpty && pending.isEmpty() && pendingTargets.isEmpty() && !hasPendingAbstractionWork) {
             "A method cannot freeze with unfinished work"
         }
         var failure: Throwable? = null
@@ -867,6 +931,7 @@ class RunMethodAnalyzer(
             local = null
             calls = null
             publicationSink = null
+            targetPublicationSink = null
             port = null
             runContext = null
             worklist.clear()
