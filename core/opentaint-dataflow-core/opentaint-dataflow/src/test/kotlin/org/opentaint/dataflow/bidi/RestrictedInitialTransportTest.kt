@@ -12,7 +12,7 @@ import kotlin.time.Duration.Companion.seconds
 class RestrictedInitialTransportTest {
     @Test fun `initial packet copies its keys and rejects empty delivery`(): Unit {
         val f = EngineShellFixtures()
-        val initial = f.manager.initial(f.pattern())
+        val initial = AdmittedInitial(f.manager.initial(f.pattern()), Layer.DEMAND)
         val mutable = arrayListOf(initial)
         val event = RunEvent.InitialsIn(f.b, mutable)
         mutable.clear()
@@ -25,7 +25,7 @@ class RestrictedInitialTransportTest {
     @Test fun `same unit delivery is immediate and cross unit delivery keeps a reservation`(): Unit {
         for (sameUnit in listOf(true, false)) {
             val f = EngineShellFixtures()
-            val initial = f.manager.initial(f.pattern())
+            val initial = AdmittedInitial(f.manager.initial(f.pattern()), Layer.DEMAND)
             val observed = CopyOnWriteArrayList<String>()
             lateinit var run: RunManager<ShellActor>
             val resolver = if (sameUnit) UnitResolver { _: org.opentaint.ir.api.common.CommonMethod -> f.unitA }
@@ -66,7 +66,7 @@ class RestrictedInitialTransportTest {
 
     @Test fun `cancelled initial delivery does not report successful completion`(): Unit {
         val f = EngineShellFixtures()
-        val initial = f.manager.initial(f.pattern())
+        val initial = AdmittedInitial(f.manager.initial(f.pattern()), Layer.DEMAND)
         f.shared().use { shared ->
             val factory = ShellHandlers({ port, event ->
                 check(event is RunEvent.Start)
@@ -82,7 +82,7 @@ class RestrictedInitialTransportTest {
 
     @Test fun `rejected initial delivery does not complete a run`(): Unit {
         val f = EngineShellFixtures()
-        val initial = f.manager.initial(f.pattern())
+        val initial = AdmittedInitial(f.manager.initial(f.pattern()), Layer.DEMAND)
         f.shared().use { shared ->
             val factory = ShellHandlers({ port, event ->
                 check(event is RunEvent.Start)

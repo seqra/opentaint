@@ -108,12 +108,15 @@ class StaticProducerGrammarTest {
             f.submitRestricted(owner, input)
             val exact = entry.copy(fact = entry.fact.copy(tail = Tail.EXACT), exclusion = ExclusionSet.Empty)
             assertEquals(listOf(f.manager.initial(exact)), owner.initials.all().toList())
+            val admitted = AdmittedInitial(f.manager.initial(exact), Layer.DEMAND)
+            assertEquals(listOf(admitted), owner.initials.admissions())
             f.drain(owner)
-            assertEquals(if (hasNextDemand) listOf(callee to listOf(f.manager.initial(exact))) else emptyList(),
+            assertEquals(if (hasNextDemand) listOf(callee to listOf(admitted)) else emptyList(),
                 f.sentInitials.map { it.callee to it.initials }, "The caller sends final exact roots only when the target has demand")
             assertTrue(f.sentLinks.isEmpty(), "Restricted calls do not send raw inputs")
             assertEquals(if (hasNextDemand) listOf(f.manager.initial(exact)) else emptyList(),
                 next.initials.all().toList(), "Accepted static inputs still need the callee's fixed demand")
+            assertEquals(if (hasNextDemand) listOf(admitted) else emptyList(), next.initials.admissions())
             assertEquals(Tail.ANY, f.ops.leaves(input).single().fact.tail, "The supplied value remains unchanged")
         }
     }

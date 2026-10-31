@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.*
 import org.opentaint.dataflow.bidi.engine.*
+import org.opentaint.dataflow.bidi.engine.Target
 import org.opentaint.dataflow.bidi.fixtures.*
 import org.opentaint.dataflow.bidi.interp.*
 import org.opentaint.dataflow.bidi.store.*
@@ -33,8 +34,8 @@ class CurrentModeActionsTest {
             }
         }
     }
-    private fun key(c: CurrentCase, index: Int): VulnerabilityKey =
-        VulnerabilityKey(c.rules[index], c.root.method, c.sinks)
+    private fun key(c: CurrentCase, index: Int): SinkKey =
+        SinkKey(c.root.method, c.sinks, c.rules[index].id)
     private fun native(f: CurrentModeFixtures, c: CurrentCase, entry: Pattern, output: Pattern): Unit {
         assertTrue(f.actual.records.byEntry(c.callee, entry).any { record ->
             record.direction == Direction.BACKWARD && record.premise.toPattern() == entry &&
@@ -80,10 +81,10 @@ class CurrentModeActionsTest {
             assertTrue(f.actual.results[2].recordCrossings > 0)
             assertTrue(f.links.any { it.run == 1 && it.callee == c.callee && it.layer == Layer.DEMAND &&
                 it.added == grouped.pattern(atArgument) })
-            assertTrue(f.actual.results[0].witnessesByKey().getValue(key(c, 0)).all { !it.confirmed &&
-                it.edges.all { edge -> edge.layer == Layer.DEMAND } })
-            assertEquals(ReportState.DEMAND, report.entries.single { it.key == key(c, 0) }.state)
-            assertEquals(3, report.entries.single { it.key == key(c, 0) }.run)
+            assertTrue(f.actual.results[0].analyzers.single { it.key == c.root }.outgoingTargets.any {
+                it.target == Target.DemandTarget
+            })
+            assertEquals(key(c, 0), report.entries.single().descriptor.key)
             assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE,
                 run1MarkMode = MarkMode.GROUP), report.end)
         }
@@ -158,10 +159,12 @@ class CurrentModeActionsTest {
             assertEquals(0L, f.actual.results[2].demandLayerEdges,
                 "Known child fields remove the former coarse partial-cleaner demand")
             val killed = key(c, 0)
-            assertTrue(killed !in f.actual.results[2].witnessesByKey())
-            assertTrue(report.entries.none { it.key == killed })
-            assertEquals(setOf(key(c, 1), key(c, 2)), report.entries.map { it.key }.toSet())
-            assertTrue(report.entries.all { it.state == ReportState.DEMAND && it.run == 3 })
+            val finalTargets = f.actual.results[2].analyzers.flatMap { it.targets }
+                .mapNotNull { (it.target as? Target.NormalTarget)?.id }
+                .map { f.actual.shared.reportCatalog.descriptor(it).key }
+            assertTrue(killed !in finalTargets)
+            assertTrue(report.entries.none { it.descriptor.key == killed })
+            assertEquals(setOf(key(c, 1), key(c, 2)), report.entries.map { it.descriptor.key }.toSet())
             assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE,
                 run1MarkMode = MarkMode.GROUP), report.end)
         }

@@ -73,30 +73,31 @@ internal class ExactDemandResults(private val ap: ApManager, private val ops: Ap
 
 /** Compare structural keys from the scalar emitter. This check never interns hypothetical APs. */
 internal class InitialDemandResults(private val ap: ApManager, private val policy: RestrictedInitialPolicy,
+                                    private val actualLayer: Layer,
                                     private val statistics: DemandQueryStatistics? = null) {
-    val initials = LinkedHashSet<InitialAp>()
-    private val keys = HashSet<Pattern>()
+    val initials = LinkedHashSet<AdmittedInitial>()
+    private val keys = HashSet<InitialEmission>()
     private val offered = HashSet<Pair<Pattern, Pattern>>()
-    private val missing = HashSet<Pattern>()
+    private val missing = HashSet<InitialEmission>()
     val fullyCovered: Boolean get() = missing.isEmpty()
 
     fun offer(entry: Pattern, actual: Pattern) {
         ap.cancellation.checkpoint()
         if (!offered.add(entry to actual)) return
-        val emitted = policy.emit(entry, actual)
-        statistics?.admission(entry, actual, emitted)
+        val emitted = policy.emitAdmission(entry, actual, actualLayer)
+        statistics?.admission(entry, actual, emitted?.pattern)
         if (emitted == null) return
-        if (keys.add(emitted)) initials += ap.initial(emitted)
+        if (keys.add(emitted)) initials += AdmittedInitial(ap.initial(emitted.pattern), emitted.layer)
         missing.remove(emitted)
     }
     fun has(entry: Pattern, actual: Pattern): Boolean {
         ap.cancellation.checkpoint()
-        val emitted = policy.emit(entry, actual) ?: return true
+        val emitted = policy.emitAdmission(entry, actual, actualLayer) ?: return true
         return emitted in keys
     }
     fun requireFamily(target: Pattern, flow: Boolean, actual: Pattern) {
         fun require(entry: Pattern) {
-            val potential = policy.emit(entry, actual) ?: return
+            val potential = policy.emitAdmission(entry, actual, actualLayer) ?: return
             if (potential !in keys) missing += potential
         }
         require(target)

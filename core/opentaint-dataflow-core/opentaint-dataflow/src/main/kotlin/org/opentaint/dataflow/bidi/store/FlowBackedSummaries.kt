@@ -15,7 +15,8 @@ internal class FlowBackedSummaries(private val m: ApManager,
     /** A method-point neutral continuation admits its mask before any scalar
      * materialization. Summary boundaries keep their existing producer hooks. */
     fun addDiagonal(offered: DiagonalDelta): List<DiagonalDelta>? =
-        if (replaceCovered) null else diagonal.addDiagonal(offered)
+        if (!RuntimeDataDomain.initial(offered.initialShape) || !RuntimeDataDomain.base(offered.base)) emptyList()
+        else if (replaceCovered) null else diagonal.addDiagonal(offered)
 
     fun census(): RelationCensus {
         m.cancellation.checkpoint()
@@ -30,6 +31,7 @@ internal class FlowBackedSummaries(private val m: ApManager,
 
     fun add(premise: PremiseKey, offered: Facts): Facts? {
         m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.packet(premise, offered)) return null
         if (offered is FlowTree) {
             val delta = groups.getOrPut(premise) { ConclusionGroup(m, interners) }.add(offered) ?: return null
             val initial = premise as InitialAp

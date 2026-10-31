@@ -12,7 +12,6 @@ import org.opentaint.dataflow.bidi.interp.Interpreter
 import org.opentaint.dataflow.bidi.interp.UnresolvedCallObserver
 import org.opentaint.dataflow.bidi.store.RecordStore
 import org.opentaint.dataflow.bidi.store.N1Statistics
-import org.opentaint.dataflow.bidi.store.VulnerabilityStore
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.RefManager
@@ -28,7 +27,6 @@ class SharedObjects(
     val language: LanguageManager,
     val contexts: MethodContextCache,
     val records: RecordStore,
-    val vulnerabilities: VulnerabilityStore,
     val unitResolver: UnitResolver<CommonMethod>,
     val refManager: RefManager,
     val cancellation: Cancellation,
@@ -46,6 +44,7 @@ class SharedObjects(
     staticCallGraph: org.opentaint.dataflow.bidi.store.DetachedStaticCallGraph =
         org.opentaint.dataflow.bidi.store.DetachedStaticCallGraph.EMPTY,
 ) : AutoCloseable {
+    val reportCatalog = ReportCatalog()
     val staticGuidanceInterner = org.opentaint.dataflow.bidi.store.StaticGuidanceInterner(ap)
     val staticWriteKeyInterner = org.opentaint.dataflow.bidi.store.StaticWriteKeyInterner(ap)
     var staticCallGraph = staticCallGraph

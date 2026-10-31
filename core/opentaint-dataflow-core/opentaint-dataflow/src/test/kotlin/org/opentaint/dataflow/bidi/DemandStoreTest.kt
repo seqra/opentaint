@@ -90,8 +90,7 @@ class DemandStoreTest {
         for (method in methods + missing) for (base in listOf(x, y, z, STATIC, AccessPathBase.Zero)) for (path in queries()) {
             val stored = data[method].orEmpty()
             val expectedNear = stored.filter { it.entry.fact.base == base &&
-                (pathPrefixes(it.entry.fact.path, path) || pathPrefixes(path, it.entry.fact.path)) }.toSet() +
-                if (base == AccessPathBase.Zero) setOf(zero) else emptySet()
+                (pathPrefixes(it.entry.fact.path, path) || pathPrefixes(path, it.entry.fact.path)) }.toSet()
             val expectedCovering = stored.filter { it.entry.fact.base == base && pathPrefixes(it.entry.fact.path, path) }.toSet()
             assertEquals(expectedNear, store.near(method, p(path, base = base)).toSet(), "near: $method, $base, $path")
             assertEquals(expectedCovering, store.covering(method, if (base == AccessPathBase.Zero) m.zero else m.initial(p(path, base = base))).toSet(), "covering: $method, $base, $path")
@@ -116,7 +115,7 @@ class DemandStoreTest {
         }
         added += m.zero.toPattern()
         for (method in methods + missing) for (a in added) {
-            val full = data[method].orEmpty() + zero
+            val full = data[method].orEmpty()
             val expected = full.mapNotNull { emit(it.entry, a) }.toSet()
             val candidates = store.near(method, a)
             val indexed = candidates.mapNotNull { emit(it.entry, a) }.toSet()
@@ -149,7 +148,7 @@ class DemandStoreTest {
         }
         conclusions += Conclusion(m.zero.toPattern().fact, empty, false)
         for (method in methods + missing) for (initial in initials) {
-            val full = data[method].orEmpty() + zero
+            val full = data[method].orEmpty()
             val candidates = store.covering(method, initial)
             for (conclusion in conclusions) {
                 val premise = initial.toPattern()
@@ -161,7 +160,7 @@ class DemandStoreTest {
     }
 
     @Test
-    fun `every method has implicit zero near and no implicit exit-bearing covering pattern`() {
+    fun `only an explicit local paired Zero entry admits Zero`() {
         val builder = DemandStore.Builder(m)
         for (method in methods + missing) assertFalse(builder.add(method, zero))
         val storedZero = DemandPattern(m.zero.toPattern(), p(listOf(f), Tail.EXACT, mt, base = y))
@@ -169,11 +168,14 @@ class DemandStoreTest {
         val store = builder.build()
         for (method in methods + missing) {
             val stored = if (method == methods[0]) setOf(storedZero) else emptySet()
-            assertEquals(stored + zero, store.near(method, m.zero.toPattern()).toSet())
-            assertEquals(stored + zero, store.near(method, Pattern(ZERO_FACT.copy(path = listOf(f)), empty)).toSet())
+            assertEquals(stored, store.near(method, m.zero.toPattern()).toSet())
+            assertEquals(stored, store.near(method, Pattern(ZERO_FACT.copy(path = listOf(f)), empty)).toSet())
             assertEquals(stored, store.covering(method, m.zero).toSet())
-            assertEquals(setOf(m.zero.toPattern()), store.near(method, m.zero.toPattern())
+            val expected = if (stored.isEmpty()) emptySet() else setOf(m.zero.toPattern())
+            assertEquals(expected, store.near(method, m.zero.toPattern())
                 .mapNotNull { emit(it.entry, m.zero.toPattern()) }.toSet())
+            assertEquals(if (stored.isEmpty()) emptySet() else setOf(existingZeroAdmission(m.zero)),
+                store.initials(method, Reach.NORMAL))
             assertTrue(store.near(method, p(base = z)).isEmpty())
         }
     }

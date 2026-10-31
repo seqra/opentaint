@@ -14,10 +14,11 @@ class Run1AbstractionTest {
     private class Harness {
         val f = StoreFixtures()
         val ap = f.manager
-        val answers = arrayListOf<InitialAp>()
+        val admitted = arrayListOf<AdmittedInitial>()
+        val answers get() = admitted.map { it.initial }
         val requests = arrayListOf<Pair<Run1Slot, RequestMarkSet>>()
         val storage = RequestStorage()
-        val emitter = Run1Abstraction(f.ops, answers::add, { storage.borrowMatchingRows(it, {}) },
+        val emitter = Run1Abstraction(f.ops, admitted::add, { storage.borrowMatchingRows(it, {}) },
             { slot, marks -> requests += slot to marks.minus(storage.borrow(slot)) })
         val slot = Run1Slot.Base(AccessPathBase.Argument(0))
         val ref get() = CallerRef(f.key("caller"), slot.initial(ap), Layer.NORMAL, f.inst(1))
@@ -87,6 +88,18 @@ class Run1AbstractionTest {
         h.emitter.requireMark(h.ap.zero, g)
         h.emitter.requireMark(h.ap.initial(h.slot.base, null, Tail.EXACT, ExclusionSet.Empty, MarkSlot.Concrete(g)), g)
         assertEquals(listOf<Pair<Run1Slot, RequestMarkSet>>(h.slot to RequestMarkSet.of(g)), h.requests)
+    }
+
+    @Test fun `exact concrete answers preserve the supplier layer and FLOW schema remains independent`() {
+        for (layer in Layer.entries) {
+            val h = Harness()
+            val t = h.f.mark("full T")
+            h.storage.addAll(h.slot, RequestMarkSet.of(t))
+            h.emitter.emit(h.zeroRef, h.f.fact(h.slot.base, mark = MarkSlot.Concrete(t), layer = layer))
+            assertEquals(AdmittedInitial(h.slot.initial(h.ap), Layer.NORMAL), h.admitted.first())
+            val exact = h.ap.initial(h.slot.base, null, Tail.EXACT, ExclusionSet.Empty, MarkSlot.Concrete(t))
+            assertEquals(AdmittedInitial(exact, layer), h.admitted.last())
+        }
     }
 
     @Test fun `kind validation precedes static exclusion from input admission`() {

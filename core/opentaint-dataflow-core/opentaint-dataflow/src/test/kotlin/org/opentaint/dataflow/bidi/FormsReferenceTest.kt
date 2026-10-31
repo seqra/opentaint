@@ -70,7 +70,7 @@ class FormsReferenceTest {
                 override fun conjunction(cj: ConjunctiveEdge, premise: Set<Pattern>, c: Facts, node: CommonInst,
                                          out: (Set<Pattern>, Facts) -> Unit) = error("No conjunction in this vector")
                 override fun allowsSource(node: CommonInst, me: MicroEdge) = true
-                override fun sourceHit(node: CommonInst, me: MicroEdge) = Unit
+                override fun acceptedSource(application: AcceptedSource<Set<Pattern>, Facts>) = Unit
             })
             val inputs = buildList<Facts> {
                 add(Reach.NORMAL); add(Reach.DEMAND)

@@ -26,7 +26,7 @@ sealed interface Run1Slot {
 
     companion object {
         fun fromInitial(initial: InitialAp): Run1Slot? {
-            if (initial.tail != Tail.STAR || initial.mark != MarkSlot.STAR ||
+            if (!RuntimeDataDomain.initial(initial) || initial.tail != Tail.STAR || initial.mark != MarkSlot.STAR ||
                 initial.exclusion != ExclusionSet.Empty) return null
             val path = initial.pathData
             return if (initial.base != STATIC && path.isEmpty() && !initial.isZero &&
@@ -107,6 +107,7 @@ class RequestStorage {
 
     internal fun addAll(slot: Run1Slot, offered: RequestMarkSelection, counts: RequestAdmissionCounts?,
                         checkpoint: () -> Unit): RequestMarkSet {
+        if (!RuntimeDataDomain.base(slot.base)) return RequestMarkSet.EMPTY
         val old = borrow(slot)
         val fresh = RequestMarkSetBuilder()
         val cursor = offered.cursor()
@@ -140,6 +141,7 @@ class RequestStorage {
 
     fun borrowMatchingRows(input: Facts, checkpoint: () -> Unit, counts: RequestMatchCounts?): List<RequestedRow> = buildList {
         checkpoint()
+        if (!RuntimeDataDomain.base(input.base)) return@buildList
         val root: TrieNode<*> = when (input) {
             is Reach -> return@buildList
             is FlowTree -> input.root

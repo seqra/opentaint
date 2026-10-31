@@ -30,14 +30,16 @@ class ReturnImageCollapseTest {
             }
             assertNotEquals(actuals[0].groupKey, actuals[1].groupKey)
             val initials = actuals.map { emitRestrictedInitials(config, f.ops, f.key, it).single() }
-            assertSame(initials[0], initials[1])
-            assertEquals(f.pattern(returned, listOf(field), Tail.STAR, MarkSlot.STAR), initials[0].toPattern())
+            assertEquals(initials[0], initials[1])
+            assertSame(initials[0].initial, initials[1].initial)
+            assertEquals(Layer.NORMAL, initials[0].layer, "FLOW admission keeps its existing intrinsic policy")
+            assertEquals(f.pattern(returned, listOf(field), Tail.STAR, MarkSlot.STAR), initials[0].initial.toPattern())
             val ref = CallerRef(f.store.key("caller"), f.manager.zero, Layer.DEMAND, f.inst(1), 0)
             val directory = CalleeSubscriptions(f.ops)
             val inputs = actuals.map { Subscription(f.key, ref, it.layer, it) }
             assertNotNull(directory.add(inputs[0]))
             assertNotNull(directory.add(inputs[1]), "Existing input dedup must keep these distinct headers")
-            val pub = Publication(initials[0], f.fact(argument, abc, Tail.ANY, MarkSlot.STAR, layer = Layer.DEMAND))
+            val pub = Publication(initials[0].initial, f.fact(argument, abc, Tail.ANY, MarkSlot.STAR, layer = Layer.DEMAND))
             val images = inputs.map { part ->
                 val matched = assertNotNull(matches(part, pub, 0, f.ops, config.mode))
                 val out = CollectingOut()

@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.engine.*
 import org.opentaint.dataflow.bidi.fixtures.EngineShellFixtures
@@ -39,10 +41,11 @@ class RunShellTest {
                     }
                     is RunEvent.ChangedRequests -> {
                         assertSame(question, event.rows)
-                        assertTrue(port.send(RunEvent.InitialAnswersIn(f.a, listOf(original))))
+                        assertTrue(port.send(RunEvent.InitialAnswersIn(f.a,
+                            listOf(AdmittedInitial(original, Layer.NORMAL)))))
                     }
                     is RunEvent.InitialAnswersIn -> {
-                        assertEquals(listOf(original), event.answers)
+                        assertEquals(listOf(AdmittedInitial(original, Layer.NORMAL)), event.answers)
                         port.analyzer(event.method).add(1)
                         assertTrue(port.enqueue(port.analyzer(event.method)))
                     }
@@ -160,6 +163,39 @@ class RunShellTest {
         }
     }
 
+    @Test fun `terminal delivery returns to the subscribed runner and remains counted through handling`() {
+        val f = EngineShellFixtures()
+        val caller = java.util.concurrent.atomic.AtomicReference<RunnerPort<ShellActor>>()
+        val seen = CopyOnWriteArrayList<TargetSummary>()
+        val row = TargetSummary(f.manager.zero, org.opentaint.dataflow.bidi.engine.Target.NormalTarget(ReportId(3)))
+        f.shared(threads = 2).use { shared ->
+            val factory = ShellHandlers({ port, event -> when (event) {
+                is RunEvent.Start -> {
+                    port.analyzer(event.root)
+                    if (event.root == f.a) {
+                        caller.set(port)
+                        assertTrue(port.send(RunEvent.Start(f.b)))
+                    } else assertTrue(caller.get().post(RunEvent.TargetDelivery(f.b, listOf(row))))
+                }
+                is RunEvent.TargetDelivery -> {
+                    assertSame(caller.get(), port)
+                    seen += event.rows
+                    val actor = port.analyzer(f.a)
+                    actor.add(1)
+                    assertTrue(port.enqueue(actor))
+                }
+                else -> error("Only terminal transport is used")
+            } })
+            val run = RunManager(f.config(), shared, factory, quantum = 1)
+            val result = run.run(5.seconds)
+            assertEquals(RunStatus.COMPLETE, result.status)
+            assertEquals(listOf(row), seen)
+            assertEquals(1L, result.analyzers.single { it.key == f.a }.steps)
+            assertEquals(0L, run.inFlight.pending)
+            assertEquals(5L, run.inFlight.handled)
+        }
+    }
+
     @Test fun `handlers send child link zero and request events while delivery returns to the known unit`(): Unit {
         val f = EngineShellFixtures()
         val ref = CallerRef(f.a, f.manager.zero, Layer.NORMAL, f.inst(f.methodA, 1))
@@ -178,9 +214,9 @@ class RunShellTest {
                         if (event.root == f.a) {
                             assertTrue(port.send(RunEvent.Start(f.b)))
                             assertTrue(port.send(RunEvent.LinkIn(f.b, ref, Layer.NORMAL, Reach.NORMAL)))
-                            assertTrue(port.send(RunEvent.ZeroIn(f.b)))
+                            assertTrue(port.send(RunEvent.InitialsIn(f.b, listOf(existingZeroAdmission(f.manager.zero)))))
                             assertTrue(port.send(RunEvent.MarkRequestsIn(f.b, mapOf(Run1Slot.Base(org.opentaint.dataflow.ap.ifds.AccessPathBase.Argument(0)) to RequestMarkSet.of(f.manager.marks.mark("T"))))))
-                            assertFalse(port.send(RunEvent.ZeroIn(f.unknown)))
+                            assertFalse(port.send(RunEvent.InitialsIn(f.unknown, listOf(existingZeroAdmission(f.manager.zero)))))
                             assertTrue(port.post(RunEvent.Delivery(f.b, listOf(publication))))
                         }
                     }
@@ -190,9 +226,9 @@ class RunShellTest {
                         port.analyzer(event.callee).add(2)
                         port.enqueue(port.analyzer(event.callee))
                     }
-                    is RunEvent.ZeroIn -> { port.analyzer(event.callee).add(1); port.enqueue(port.analyzer(event.callee)) }
+                    is RunEvent.InitialsIn -> { port.analyzer(event.callee).add(1); port.enqueue(port.analyzer(event.callee)) }
                     is RunEvent.MarkRequestsIn -> { port.analyzer(event.method).add(1); port.enqueue(port.analyzer(event.method)) }
-                    is RunEvent.InitialsIn, is RunEvent.InitialAnswersIn, is RunEvent.ChangedRequests -> error("This scalar shell control sends no question batch")
+                    is RunEvent.InitialAnswersIn, is RunEvent.ChangedRequests, is RunEvent.TargetDelivery -> error("This scalar shell control sends no question batch")
                     is RunEvent.Delivery -> {
                         assertEquals(f.b, event.callee)
                         assertSame(publication.conclusion, event.publications.single().conclusion)

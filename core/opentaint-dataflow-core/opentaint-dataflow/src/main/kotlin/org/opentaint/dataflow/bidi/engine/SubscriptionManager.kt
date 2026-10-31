@@ -7,6 +7,8 @@ import org.opentaint.dataflow.bidi.store.RequestMarkSetBuilder
 /** Replay and delivery use one complete AP predicate after their candidate scans. */
 fun matches(sub: Subscription, pub: Publication, member: Int, ops: ApOps, mode: ApMode): Facts? {
     ops.manager.cancellation.checkpoint()
+    if (!RuntimeDataDomain.packet(sub.ref.premise, sub.added) ||
+        !RuntimeDataDomain.packet(pub.premise, pub.conclusion)) return null
     return if (sub.zeroOnly) sub.added.takeIf { pub.premise.isZero }
     else ops.satisfying(sub.added, pub.premise.member(member), mode)
 }
@@ -22,6 +24,7 @@ class SubscriptionManager(port: SubscriptionPort) {
 
     fun subscribe(sub: Subscription) {
         val port = active()
+        if (!RuntimeDataDomain.packet(sub.ref.premise, sub.added)) return
         check(!port.config.run1 || sub.ref.premise is InitialAp) { "Run-1 subscriptions have one original premise" }
         val storage = port.summaryStorage(sub.callee)
         val entry = byCallee.getOrPut(sub.callee) {
@@ -54,6 +57,14 @@ class SubscriptionManager(port: SubscriptionPort) {
         for ((pub, member) in storage.candidates(part, port.config.mode)) {
             port.ops.manager.cancellation.checkpoint()
             applyMatch(part, pub, member)
+        }
+        for ((row, member) in storage.targetCandidates(part, port.config.mode)) {
+            port.ops.manager.cancellation.checkpoint()
+            port.applier(part.caller).applyTarget(part, row, member)
+        }
+        if (isStaticControl(part)) for ((row, member) in storage.staticTargetCandidates()) {
+            port.ops.manager.cancellation.checkpoint()
+            port.applier(part.caller).applyStaticTarget(part, row, member)
         }
         if (isStaticControl(part)) for ((pub, member) in storage.staticCandidates()) {
             port.ops.manager.cancellation.checkpoint()
@@ -98,7 +109,7 @@ class SubscriptionManager(port: SubscriptionPort) {
         val batchStatistics = port.requestBatchStatistics
         val batch = batchStatistics?.let { RequestBatchStatistics.Counts() }
         val started = if (statistics == null) 0L else System.nanoTime()
-        val answers = LinkedHashMap<MethodKey, LinkedHashSet<InitialAp>>()
+        val answers = LinkedHashMap<MethodKey, LinkedHashSet<AdmittedInitial>>()
         val climbs = LinkedHashMap<ClimbTarget, RequestMarkSetBuilder>()
         val staticPoints = LinkedHashMap<Subscription, RequestMarkSetBuilder>()
         try {
@@ -232,6 +243,34 @@ class SubscriptionManager(port: SubscriptionPort) {
         val accepted = port.post(RunEvent.Delivery(callee, pubs))
         port.ops.manager.cancellation.checkpoint()
         return accepted
+    }
+
+    fun notifyTargets(callee: MethodKey, rows: TargetBatch): Boolean {
+        val port = active()
+        val accepted = port.post(RunEvent.TargetDelivery(callee, rows))
+        port.ops.manager.cancellation.checkpoint()
+        check(accepted) { "An active run rejected a required terminal delivery" }
+        return accepted
+    }
+
+    fun onTargetDelivery(callee: MethodKey, rows: TargetBatch) {
+        val port = active()
+        val entry = byCallee[callee] ?: return
+        for (row in rows) {
+            port.ops.manager.cancellation.checkpoint()
+            for (member in 0 until row.premise.size) {
+                for (part in entry.candidates(row.premise, member, port.config.mode)) {
+                    port.ops.manager.cancellation.checkpoint()
+                    port.applier(part.caller).applyTarget(part, row, member)
+                }
+                if (port.config.run1 && row.premise.member(member).base == STATIC) {
+                    for (part in entry.staticControlCandidates()) {
+                        port.ops.manager.cancellation.checkpoint()
+                        port.applier(part.caller).applyStaticTarget(part, row, member)
+                    }
+                }
+            }
+        }
     }
 
     /** P6 queries the subscriptions present when the destination runner handles delivery. */

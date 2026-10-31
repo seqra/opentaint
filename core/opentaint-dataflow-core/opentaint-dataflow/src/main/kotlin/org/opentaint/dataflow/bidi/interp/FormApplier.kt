@@ -14,6 +14,11 @@ data class Place(val node: CommonInst, val statementEdge: Boolean, val sources: 
                  val completedAction: ActionId? = null,
                  val completedConjunction: ConjunctiveEdge? = null)
 
+/** Accepted raw source application, before downstream result filtering. */
+data class AcceptedSource<P,F>(val at: Place, val edge: MicroEdge,
+                               val original: P, val input: F,
+                               val resultPremise: P, val rawResult: F)
+
 /** One implementation of form application for tree and per-path fact algebras. */
 interface FactAlgebra<P, F> {
     fun base(c: F): AccessPathBase
@@ -39,7 +44,7 @@ interface FactAlgebra<P, F> {
                                  out: (P, F, ActionId?) -> Unit) =
         sourcePredicateAt(source, premise, c, at) { pr, result -> out(pr, result, null) }
     fun allowsSource(node: CommonInst, me: MicroEdge): Boolean
-    fun sourceHit(node: CommonInst, me: MicroEdge)
+    fun acceptedSource(application: AcceptedSource<P, F>)
 }
 
 class FormApplier<P, F>(private val alg: FactAlgebra<P, F>) {
@@ -109,7 +114,7 @@ class FormApplier<P, F>(private val alg: FactAlgebra<P, F>) {
         if (source && !alg.allowsSource(at.node, me)) return
         var hit = !source
         alg.applyEdgeAt(me, c, premise, at) { pr, result ->
-            if (!hit) { hit = true; alg.sourceHit(at.node, me) }
+            if (!hit) { hit = true; alg.acceptedSource(AcceptedSource(at, me, premise, c, pr, result)) }
             sink(pr, result)
         }
     }

@@ -12,7 +12,7 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import kotlin.test.*
 
-/** Specified one-run facts and witness layers, before driver support or report classification. */
+/** Specified one-run AP facts and terminal layers, before final root reporting. */
 class OneRunAcceptanceTest {
     private val x = AccessPathBase.Argument(0)
     private val y = AccessPathBase.Argument(1)
@@ -51,7 +51,7 @@ class OneRunAcceptanceTest {
         val universe = BoundedDenotation((listOf(AccessPathBase.Zero, x, y, z, returned) + extraBases).distinct(),
             (fields + f.field("fresh accessor")).distinct(),
             (marks + f.mark("fresh mark") + (marks + f.mark("fresh mark")).map { f.ap.marks.group(f.ap.marks.groupOf(it)) } + TaintMark.ZERO).distinct(), 2)
-        try { actual.assertEquivalent(expected, universe) }
+        try { actual.dataOnly().assertEquivalent(expected.dataOnly(), universe) }
         catch (failure: AssertionError) {
             throw AssertionError("index=${config.index} program=${f.describe()} trace=${schedule.trace}", failure)
         }
@@ -65,10 +65,7 @@ class OneRunAcceptanceTest {
         observation.rawSummaries.filter { it.method == method && it.conclusion.fact.base == base }
             .mapTo(LinkedHashSet()) { it.conclusion }
 
-    private fun witnesses(observation: RunObservation): Map<String, Set<Layer>> =
-        observation.witnesses.groupBy { it.rule.id }.mapValues { (_, rows) ->
-            rows.flatMap { it.edges.map { edge -> edge.layer } }.toSet()
-        }
+    private fun sinkLayers(observation: RunObservation): Map<String, Set<Layer>> = observation.observedSinkLayers()
 
     @Test
     fun `a dead local passes an unrelated statement and reaches the actual exit sink in either forward mode`(): Unit {
@@ -83,17 +80,23 @@ class OneRunAcceptanceTest {
             f.statement(key, 1, StatementSummary(setOf(other), emptyList(), emptyList(), emptyMap()))
             val reached = sink("dead local reached", f.pattern(dead, mark = t))
             f.exit(key, 2, exit(reached))
-            val actual = run(f, f.config(index = index, L = maxOf(1, index - 1), roots = listOf(key), seeds = listOf(seed)),
+            val actual = run(f, f.config(index = index, L = maxOf(1, index - 1), roots = listOf(key),
+                demand = listOf(key to DemandPattern(ZERO_PATTERN, ZERO_PATTERN)), seeds = listOf(seed)),
                 emptyList(), listOf(t.mark), listOf(dead, other))
             val conclusion = selected(f, index, Conclusion(target, ExclusionSet.Empty, false))
             assertContains(actual.processed, ObservedEdge(key, zero, conclusion, method.inst(1)))
             assertContains(actual.processed, ObservedEdge(key, zero, conclusion, method.inst(2)))
-            assertEquals(mapOf(reached.rule.id to setOf(if (index == 1) Layer.DEMAND else Layer.NORMAL)), witnesses(actual))
-            val witness = actual.witnesses.single()
-            assertSame(reached.rule, witness.rule)
-            assertEquals(method.inst(2), witness.statement)
-            assertEquals(listOf(ObservedSinkEdge(zero, if (index == 1) Layer.DEMAND else Layer.NORMAL, setOf(conclusion),
-                GroupKey(FactsKind.TAINT, if (index == 1) Layer.DEMAND else Layer.NORMAL, dead, tail = Tail.ANY_TAINT))), witness.edges)
+            assertEquals(mapOf(reached.rule.id to setOf(if (index == 1) Layer.DEMAND else Layer.NORMAL)), sinkLayers(actual))
+            val terminal = actual.targets.single()
+            assertEquals(key, terminal.method)
+            assertEquals(zero, terminal.premise)
+            assertEquals(index != 1, terminal.normal)
+            if (index == 1) {
+                val seed = assertIs<Seed.Sink>(actual.sinkSeeds.single())
+                assertEquals(reached.rule.id, seed.rule.id)
+                assertEquals(method.inst(2), seed.statement)
+                assertEquals(reached.patterns.single(), seed.requirement)
+            } else assertEquals(method.inst(2), checkNotNull(terminal.sink).statement)
             assertTrue(raw(actual, key, dead).isEmpty())
             assertTrue(actual.requests.isEmpty() && (index == 1 || actual.selectedDemand.none { it.conclusion.fact.base !in listOf(STATIC, AccessPathBase.Zero) }))
         }
@@ -124,7 +127,7 @@ class OneRunAcceptanceTest {
                 assertContains(raw(actual, key, x), cover)
                 assertTrue(raw(actual, key, x).all { it.exclusion == ExclusionSet.Empty && it.demand })
                 assertEquals(listOf(overwritten, sibling, rootSibling).associate { it.rule.id to setOf(Layer.DEMAND) },
-                    witnesses(actual), "The broad E-free cover requires refinement, unlike an exact destination kill")
+                    sinkLayers(actual), "The broad E-free cover requires refinement, unlike an exact destination kill")
                 assertTrue(actual.requests.isEmpty())
                 return@use
             }
@@ -132,10 +135,9 @@ class OneRunAcceptanceTest {
             val atField = Conclusion(PathFact(x, listOf(a), Tail.ANY_TAINT, t), ExclusionSet.of(b), false)
             assertEquals(setOf(atRoot, atField), raw(actual, key, x))
             assertEquals(mapOf(sibling.rule.id to setOf(Layer.NORMAL), rootSibling.rule.id to setOf(Layer.NORMAL)),
-                witnesses(actual))
-            assertEquals(setOf(atField), actual.witnesses.single { it.rule === sibling.rule }.edges.single().facts)
-            assertEquals(setOf(atRoot), actual.witnesses.single { it.rule === rootSibling.rule }.edges.single().facts)
-            assertTrue(actual.witnesses.all { it.edges.single().premise == zero && !it.confirmed })
+                sinkLayers(actual))
+            assertEquals(setOf(sibling.rule.id, rootSibling.rule.id), actual.targets.map { checkNotNull(it.sink).ruleId }.toSet())
+            assertTrue(actual.targets.all { it.premise == zero && it.normal })
             assertTrue(actual.selectedDemand.isEmpty() && actual.requests.isEmpty())
         }
     }
@@ -170,7 +172,7 @@ class OneRunAcceptanceTest {
                         ExclusionSet.Empty, true))), raw(actual, key, base))
                 }
                 assertEquals(mapOf(excluded.rule.id to setOf(Layer.DEMAND), admitted.rule.id to setOf(Layer.DEMAND)),
-                    witnesses(actual))
+                    sinkLayers(actual))
                 assertTrue(actual.requests.isEmpty())
                 return@use
             }
@@ -179,8 +181,9 @@ class OneRunAcceptanceTest {
             assertEquals(setOf(kept), raw(actual, key, x))
             assertTrue(raw(actual, key, y).isEmpty())
             assertEquals(setOf(read), raw(actual, key, z))
-            assertEquals(mapOf(admitted.rule.id to setOf(Layer.NORMAL)), witnesses(actual))
-            assertEquals(setOf(read), actual.witnesses.single().edges.single().facts)
+            assertEquals(mapOf(admitted.rule.id to setOf(Layer.NORMAL)), sinkLayers(actual))
+            assertEquals(admitted.rule.id, actual.targets.single().sink?.ruleId)
+            assertEquals(zero, actual.targets.single().premise)
             assertTrue(actual.processed.none { it.method == key && it.node == method.inst(3) && it.conclusion.fact.base == y })
             assertTrue(actual.selectedDemand.isEmpty() && actual.requests.isEmpty())
         }
@@ -214,8 +217,9 @@ class OneRunAcceptanceTest {
             if (index == 1) {
                 val cover = selected(f, index, Conclusion(PathFact(x, emptyList(), Tail.ANY_TAINT, t), ExclusionSet.Empty, true))
                 assertEquals(setOf(cover), raw(actual, key, x))
-                assertEquals(listOf(atField, belowField, elsewhere).associate { it.rule.id to setOf(Layer.DEMAND) }, witnesses(actual))
-                assertTrue(actual.witnesses.all { it.edges.single().facts == setOf(cover) && it.edges.single().premise == zero })
+                assertEquals(listOf(atField, belowField, elsewhere).associate { it.rule.id to setOf(Layer.DEMAND) }, sinkLayers(actual))
+                assertTrue(actual.targets.all { it.premise == zero && !it.normal })
+                assertEquals(1, actual.targets.size, "Anonymous terminals merge while exact sink seeds remain separate")
                 assertTrue(actual.requests.isEmpty() && actual.links.isEmpty())
                 return@use
             }
@@ -234,17 +238,10 @@ class OneRunAcceptanceTest {
                     belowField.rule.id to setOf(Layer.DEMAND), elsewhere.rule.id to setOf(Layer.DEMAND))
             }
             assertEquals(expectedFacts, raw(actual, key, x), "index=$index reach=$reach")
-            assertEquals(expectedSinks, witnesses(actual), "index=$index reach=$reach")
-            for (witness in actual.witnesses) {
-                val support = when {
-                    reach == CleanReach.EXACT -> demoted
-                    witness.rule === atField.rule -> exact
-                    else -> kept
-                }
-                assertEquals(setOf(support), witness.edges.single().facts)
-                assertEquals(zero, witness.edges.single().premise)
-                assertFalse(witness.confirmed)
-            }
+            assertEquals(expectedSinks, sinkLayers(actual), "index=$index reach=$reach")
+            assertTrue(actual.targets.all { it.premise == zero })
+            assertEquals(reach != CleanReach.EXACT, actual.targets.all { it.normal })
+
             val selectedData = actual.selectedDemand.filter { it.conclusion.fact.base == x }.toSet()
             assertEquals(if (reach == CleanReach.EXACT) setOf(ObservedEdge(key, zero, demoted)) else emptySet(),
                 selectedData)

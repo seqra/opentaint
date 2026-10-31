@@ -2,11 +2,18 @@
 
 Date: 31 October 2026. Status: implementation proposal. No runtime change.
 
-The specification is the final
+The base specification is the final
 [constant filtering and Target-guided ZERO proposal](bidirectional-constant-filter-target-zero-implementation-20261031.md).
 Its SHA-256 is
-`8ae901c30188e81a09030491291dbb86a749e017a6d0b4b3218664821494c21a`.
-This document replaces the implementation instructions in that document.
+`43fce6a3ff0adaac7361124dbe531ce2933e19437b743b22faf6d6c9b24a8a50`.
+The selected amendment is
+[exact initial facts on the DEMAND layer](../../spec/demand-layer-exact-initials.md),
+with its [proof dossier](../../spec/demand-layer-exact-initials-proofs.md).
+It supersedes the base specification's concrete MAY-to-EXACT rejection
+and its unchanged run-1 origin-arm layer policy. The user selected concrete
+marks only. FLOW keeps its existing behavior.
+
+This document replaces the implementation instructions in the base document.
 It repeats the selected contract, so implementation does not depend on
 earlier drafts or discussion.
 
@@ -15,8 +22,13 @@ Follow [impl-proposal-guide.md](../../spec/impl-proposal-guide.md) and
 models linked in section 15. Their scope and runtime adapter tests are
 separate. No classical choice, proof hole, or new axiom is permitted.
 
-Base runtime: `e090118e5f9603f1973c0578a3e04998035f4508`. Repository head
-`3d8116a1a131a96f8423ef96d2b4a5d643dc46fc` adds reports and controls.
+Base runtime: `e090118e5f9603f1973c0578a3e04998035f4508`. The original
+documentary head `3d8116a1a131a96f8423ef96d2b4a5d643dc46fc` added reports
+and controls. The current worktree contains the partial implementation
+described in the [validation report](../reports/bidirectional-target-zero-implementation-validation-20261031.md).
+The validation report separates the earlier split-NORMAL counterexample
+from the amended implementation results. This document states the
+selected contract; the report tracks its runtime validation status.
 No Gradle build, project analysis, or new performance measurement is made
 for this proposal.
 
@@ -29,15 +41,20 @@ abstract mark. T and U are full concrete marks. ZERO is control.
 **The changes below affect analyzer semantics.** Keep them explicit in
 the runtime PR and its tests.
 
-| Part | Current runtime | Selected next iteration |
+| Part | Behavior replaced in this iteration | Selected behavior |
 |---|---|---|
 | Constant-base data | Can propagate, trigger callbacks, and enter records/demand | Drop before runtime effects in every direction/run |
-| Exact C2 admission | `[any]` can create `$` initial | `$` demand rejects submitted `[any]`, including an ancestor MAY |
+| Concrete exact C2 admission | Rejects MAY after the earlier v2 correction | Matching same-prefix or ancestor MAY emits the requested exact key in DEMAND |
+| Concrete initial layer | Initial key delivery can lose DEMAND | Carry the admitted layer through delivery and start; later exact NORMAL input can discharge old guidance |
+| Initial deduplication | One membership per initial key | One membership per key and final starting layer |
 | Unanswered demand | Empty emission skips current-call admission | Keep the no-op, including when every offer fails during the iteration |
+| FULL TAINT | Latest narrow override preserves computed layer only for ZERO originals | Keep computed layer for ordinary ZERO and nonzero FULL; retain GROUP and independent static overrides |
+| Weakened run-1 source/sink arm | A NORMAL cube can publish unary NORMAL arms after dropping another required origin | Publish DEMAND arms unless one origin plus ZERO retains a complete NORMAL binding |
 | Sink observation | A local witness becomes a report candidate | A complete witness creates a typed terminal summary |
 | NORMAL terminal | No current type | `NormalTarget(id)`; forward application requires complete NORMAL support |
 | DEMAND terminal | No current type | Anonymous `DemandTarget`; paired C5 and handoff guide later ZERO |
 | Backward actual GEN | Records its source occurrence | Also emits DemandTarget under its original premise |
+| Backward source-summary result | Accepted nonzero-to-ZERO application dispatches AP REACH | Emit DemandTarget under complete caller original; balanced ZERO remains AP control |
 | Restricted ZERO | Virtual/direct admission and a backward C5 exception | Explicit local demand admission and ordinary paired restriction |
 | Final report | Local candidate replacement and confirmation flag | IDs reached by configured-root `ZERO -> NormalTarget(id)` |
 | NORMAL terminal reuse | No current record kind | Persist full owned keys; ignore backward and skip settled ZERO replay |
@@ -47,12 +64,16 @@ The final rules are:
 ```text
 Constant data or Constant premise member -> reject the whole runtime packet
 
-demand p.[any]/T + submitted p.$/T       -> initial p.$/T
-demand p.$/T     + submitted p.[any]/T   -> no initial
+demand p.[any]/T + submitted p.$/T,N     -> initial p.$/T,N
+demand p.$/T     + submitted p.[any]/T,D -> initial p.$/T,D
+demand p.f.$/T   + submitted p.[any]/T,D -> initial p.f.$/T,D
+demand p.$/T     + submitted p.$/T,D     -> initial p.$/T,D
+demand p.$/T     + submitted p.$/T,N     -> initial p.$/T,N
 no satisfying offer in this iteration  -> no extra action
 
-complete NORMAL sink binding -> NormalTarget(reportId)
+complete NORMAL sink binding with retained dependencies -> NormalTarget(reportId)
 complete DEMAND sink binding -> DemandTarget
+weakened run-1 source/sink arm -> DEMAND data / DemandTarget
 successful reverse actual GEN -> DemandTarget
 
 NormalTarget(id) + all-NORMAL valid support -> same NormalTarget(id)
@@ -67,12 +88,16 @@ report id <- configured-root ZERO -> NormalTarget(id)
 future Target guidance <- DemandTarget only
 ```
 
-Keep ordinary AP field transfer, mark semantics, exclusions, cleaner
+Except for the explicit layer corrections in sections 1.2 and 4, the
+source-summary dispatch in section 1.3, and the run-1 origin projection in
+sections 4.6 and 5.1, keep ordinary AP
+field transfer, mark semantics, exclusions, cleaner
 semantics, aliases, native record matching, source permissions, static
 pools and post-processing, predefined summaries, field limits, and the
-selected call policy. The only ordinary C2 change is the stated MAY-to-
-EXACT rejection. Do not change generic `inside`, `applicable`, `overlap`,
-`satisfying`, or AP C5 exit intersection to implement it.
+selected call policy. Concrete C2 adds provisional exact admission and
+retains its input layer. Do not change generic `inside`, `applicable`,
+`overlap`, `satisfying`, or AP C5 exit intersection to implement it. C5
+keeps the exact structural entry image and the raw result layer.
 
 Run-1 still emits atomic executable origins. It has no ND edge. Later
 FULL runs keep full same-call ND support. Do not add GroundingSupport,
@@ -88,7 +113,7 @@ build a second implementation of that operation.
 | Operation | Existing mechanism to use | Required addition |
 |---|---|---|
 | Complete sink condition | `RunMethodLocalServices.witness`, predicate and conjunction stores | Consume the complete binding as a Target |
-| Initial admission and start dedup | `emitRestrictedInitials`, `InitialFactStore`, counted Start events | Explicit ZERO/Target demand and the EXACT/ANY guard |
+| Initial admission and start dedup | `emitRestrictedInitials`, `InitialFactStore`, counted Start events | Explicit ZERO/Target demand, layered concrete admissions and two seen bits per key |
 | Premise indexing and candidate selection | `PublicationIndex`, `CalleeSubscriptions`, their PathTrie lookups | Typed Target memberships under the same premise postings |
 | Publication and replay | `SummaryStorage`, `SubscriptionManager`, `ProtocolSteps` | Typed Target payload and terminal result dispatch |
 | Pending batch flush and failure | `RunMethodAnalyzer.flushPublications`, existing in-flight accounting | Include the Target batch in the same flush and completion checks |
@@ -99,11 +124,301 @@ build a second implementation of that operation.
 | Iteration completion | Existing runner join, driver barrier and stop decision | Include Target demand and commit the selected retained/report state |
 
 The required new state is Target membership, retained NORMAL Target
-records, stable report IDs, and typed control demand. These values use
+records, stable report IDs, typed control demand, and two admission/result
+lane memberships per existing key. These values use
 the current actors, locks, queues and stores. There is no new static
 service, scheduler, receipt service, or join engine. The Lean protocol
 models state obligations on these existing operations; they do not
 require runtime classes for each model operation or certificate.
+
+### 1.2 Authorized FULL computed-layer correction
+
+This explicit user-selected change supersedes the earlier ZERO-only
+release. Ordinary FULL results keep the layer computed by AP transfer,
+for both ZERO and nonzero originals. Remove the blanket TAINT-kind test
+in FULL. Keep GROUP and the separately selected static approximation.
+
+```kotlin
+internal fun forceRun1Layer(premise: PremiseKey, value: Facts): Facts {
+    if (!config.run1) return value
+    return run1Layer(premise, ops.runtimeFact(value, mode))
+}
+
+private fun run1Layer(premise: PremiseKey, value: Facts): Facts =
+    if ((value is TaintTree && mode.markMode == MarkMode.GROUP) ||
+        value.base == STATIC || Run1StaticService.hasStaticMember(premise))
+        value.withLayer(Layer.DEMAND)
+    else value
+```
+
+Keep the intrinsic `initialFacts` table, field transfer, cleaners, CM checks,
+cuts, summary matching and source permissions. Join the admitted concrete
+layer at the actor's start boundary as specified in section 4. Existing
+concrete EXACT/MUST initials intrinsically compute NORMAL. Concrete
+STAR/MAY initials intrinsically compute DEMAND.
+Run1Abstraction can produce an exact empty-path concrete initial, so a
+nonzero run-1 FULL input can naturally be NORMAL. A computed DEMAND
+result remains DEMAND; the override never promotes it.
+
+Run-1 still waits for complete compatible conditions and emits unary arms.
+The selected amendment now corrects their layers: an arm that drops a
+required origin is DEMAND. Section 4.6 gives the factored support test.
+`FullComputedLayer.NDArmRisk` remains a historical counterexample to the
+uncorrected split-NORMAL implementation. Keep both its two-input positive
+and one-input negative runtime controls. Do not add an ND support label
+or an origin-product search to close this gap.
+
+Use the existing `PersistentRecordStore.persist` for eligible NORMAL
+singleton AP rows. `selectDemand` does not export the NORMAL forward
+singleton as demand. Do not add another record store or guidance row.
+
+```text
+F1 FULL: ZERO -> ret.$/U, NORMAL -> existing native record
+B2: ret.[any]/U -> existing reverse-record replay before C2
+    empty current demand -> no initial, subscription or callee actor
+F3: ZERO -> saved forward record -> ret.$/U, NORMAL
+    empty current demand -> keep the saved result, skip current analysis
+```
+
+The backward read is not C2 emission. Preserve its existing matching,
+uncertainty layer and caller support. Dispatch its accepted ZERO result
+as specified in section 1.3. Record reads do not invoke actual GEN
+callbacks. Forward native replay needs no new source permission.
+If current concrete demand exists, C2 can now admit an exact DEMAND
+initial from MAY. If it does not exist, saved replay alone remains enough;
+no unanswered-demand action is added. GROUP and static-dependent results keep DEMAND. Ordinary
+nonzero FULL results can now be NORMAL if AP transfer computes NORMAL.
+Native eligibility and complete guard support remain separate checks.
+A computed DEMAND producer still has no NORMAL native fallback. A saved
+backward identity does not replace a missing forward producer.
+
+The [FULL conditional-source regression](../reports/bidirectional-target-zero-nonzero-source-admission-gap-20261031.md)
+reached and completed run-3 without its positive finding under the old
+narrow policy. The broad computed-layer policy now completes run-3 with both the
+required two-input report and an invalid one-input report. Its positive
+is restored, and its negative control fails due to a NORMAL weakened arm. Do not keep the obsolete claim that every
+nonzero FULL producer is DEMAND. The amendment must make the negative
+control pass while preserving the positive finding. Its checked model
+does so by run-3; this is not yet a new JVM result. Paired C5 exit matching
+stays unchanged.
+
+One existing cleanup adapter needs the new collector-fixed header cell.
+Extend only NORMAL ZERO-origin TAINT whose leaves are all EXACT and
+whose field exclusion is Empty. Preserve its spatial scalar/bulk
+algorithm, selected-mark protection, block geometry and effect order:
+
+```kotlin
+internal fun fullCleanupCollectorFixed(premise: PremiseKey, facts: Facts): Boolean {
+    if (facts is FlowTree && facts.exclusion != ExclusionSet.Empty) return false
+    if (facts is TaintTree && (facts.exclusion != ExclusionSet.Empty ||
+        facts.layer != Layer.DEMAND && (!premise.isZero || facts.root.hasAny))) return false
+    if ((facts.base == STATIC || Run1StaticService.hasStaticMember(premise)) &&
+        facts.layer != Layer.DEMAND) return false
+    return true
+}
+```
+
+This function is already used only by the selected FULL run-1 cleanup
+schedule. NORMAL MUST/STAR inputs stay on the existing scalar fallback.
+Their partial-cleaning callback image can include additional DEMAND
+exact rows. Do not generalize the new header cell to them or to nonzero
+NORMAL inputs. For the all-EXACT cell, each leaf is kept or removed; no
+partial spatial split is needed. The existing protection upgrades must
+still be the same for scalar and bulk execution.
+
+The `FullComputedLayer` model proves the selected layer scope and the
+initial-layer distinctions. `FullZeroSourceReplay` retains the historical
+ZERO-only override and the unchanged exact
+NORMAL source/native route, and the bounded cleanup extension. It does
+not prove arbitrary AP geometry, all cleanup headers, or whole-project
+no-FN. Runtime controls must check FULL/GROUP, ZERO/nonzero, static
+current/origin, exact/MUST/cut layers, saved replay with empty demand,
+and scalar/bulk exact-leaf protection.
+
+### 1.3 Authorized backward source-summary result dispatch
+
+After existing matching accepts a source-summary result, use one result
+dispatch at `applyParts` and `applyRecordView`:
+
+```kotlin
+// Called only for an accepted, well-typed summary/record application.
+if (!core.forward && !summaryPremise.isZero && result is Reach) {
+    core.emitTarget(callerOriginal, DemandTarget)
+} else {
+    existingApResultDispatch(callerOriginal, result)
+}
+```
+
+`summaryPremise` is the matched callee premise, including the transient
+premise of a reversed record view. `callerOriginal` is the complete
+existing caller premise. Existing K6/domain checks exclude an abstract
+FLOW premise from this source-result case. Keep those checks; do not
+add a FLOW Target branch.
+
+Use the same dispatch for current summaries, same-direction backward
+native records, and reversed forward native records. A balanced
+`ZERO -> ZERO` summary stays AP control. Forward application and nonzero
+AP results keep their existing dispatch. Do not modify micro-edge
+transfer or the actual-GEN callback.
+
+The converted result goes directly to existing terminal emission; it
+does not resume the caller's call suffix. Keep exact ownership/dedup,
+counted delivery, and paired C5. It creates no fake SourceHit or source
+seed. Existing actual source/action occurrences remain separate.
+
+```text
+NORMAL saved source: ZERO -> ret.$/U
+backward MAY offer:  ret.[any]/U, under caller original P
+accepted native read result: ZERO
+selected caller result:      P -> DemandTarget, DEMAND
+current C2 remains empty:    no exact initial and no new callee actor
+```
+
+This example assumes empty current demand. With a matching concrete
+exact guide, the new C2 cell can also start the callee in DEMAND.
+
+The `SourceSummaryCompletion` model proves this dispatch after accepted
+matching, original preservation, balanced-ZERO control, no fabricated
+source hit, and native replay before the unchanged demand gate. Runtime
+matching, complete premise kind checks and terminal delivery remain
+adapter obligations. No blanket caller-terminal C5 permission is added.
+
+### 1.4 Authorized run-1 static Target completion
+
+This corrects a missing run-1-to-run-2 guidance route. It keeps paired C5.
+The completed virtual relation `ZERO -> DemandTarget` projects to one
+`(Target,ZERO)` row. It does not change the C5 table or permit a Target
+through separate reader-entry and writer-exit rows.
+
+Extend the existing frozen static completion with terminal reader seeds.
+Use a typed endpoint, not a fake Pattern, base, mark or report ID:
+
+```kotlin
+// Inside the existing FrozenStaticCompletion, separate from AP endpoints:
+private val terminalReaders: Map<MethodKey, List<Pattern>>
+
+// Existing view: the default keeps old small reference adapters valid.
+interface StaticDemandView {
+    fun targetInputs(): Sequence<Pattern> = emptySequence()
+}
+
+// During completeJoinedStaticGuidance, before builder.build() and release:
+for (actor in actors) for (row in actor.outgoingTargets) {
+    check(row.target == DemandTarget)
+    val initial = checkNotNull(row.premise as? InitialAp) // run-1 has no ND
+    builder.addTarget(actor.key, initial.toPattern())
+}
+```
+
+`addTarget` filters unsupported/nonstatic initials with the current
+static-anchor test. Keep the exact MethodKey and canonical input
+descriptor. Keep it as a
+typed extension of the frozen builder; it stores no live actor, fact or
+subscription. The synthetic handoff fallback freezes the same readers
+before build. NormalTarget contributes no reader seed.
+
+Reuse the current lookup stages and owner-visibility code:
+
+```text
+local complete rows
+  then own W/B/R composition
+  then visible inherited B composition, only if needed
+
+W: P -> C.f
+B*: C.f -> ... -> C.g      // each middle uses current AP/mark join
+R: C.g -> DemandTarget    // typed terminal endpoint
+result: P -> DemandTarget
+project: (Dc=Target, Dp=P), using typed Zero if P is ZERO
+```
+
+Static B ownership and label selection remain unchanged. W and R stay
+exact-context local. A query can start at a static vertex without W.
+FLOW preserves the selected mark; mapped labels require a compatible
+middle mark. Carry the reader's required FULL/GROUP input selector
+backward without giving Target an output selector. The finite Lean
+reference expands group selectors over known full marks; runtime lookup
+can keep the existing selector indexes.
+
+`StaticPairLookup.walkTargetOrigins` starts at `view.targetInputs()`.
+It follows the same compatible incoming W/B relations, uses the existing
+`composeMarks`, `staticAnchor` and `overlap`, and reports the actual
+source Pattern. A terminal mark relation has a typed missing output
+selector. This is not a runtime AP ZERO or a fake mark. Keep visited
+states per lookup view; restart them for inherited lookup so a local
+negative answer cannot hide an inherited bridge.
+
+`DemandStore.visitControlPairs` shares row lookup across all control
+clients. It first visits explicit local rows. If not covered and a
+run-2 completion exists, it asks local virtual lookup, then inherited
+virtual lookup. Convert each complete source endpoint once:
+
+```kotlin
+// Origin callback from walkTargetOrigins, not a published runtime edge:
+val exit = if (origin.fact.base == AccessPathBase.Zero) DemandExit.Zero
+    else DemandExit.Data(origin)
+visit(PairedDemand(DemandEntry.Target, exit))
+```
+
+C2 and C5 use this same complete derived control row:
+
+```text
+initials(M, actual ZERO):
+  use a local Zero/Target entry, or a witnessed run-2 Target-entry pair
+
+intersect(M, original ZERO, raw AP):
+  derive (Target, Data(exit)), then use existing AP exit restriction
+
+acceptsTarget(M, original ZERO):
+  derive (Target, Zero), then apply the unchanged paired Target C5
+```
+
+No Target has an initial or AP trie entry. No Zero or Target is a static
+middle. No lookup emits an executable summary, source hit, new source
+permission or copied runtime Target. A covered query stops through the
+existing coverage check. Only run-2 carries this frozen completion;
+run-3 and later use local demand.
+
+`StaticTargetClosure` extends the existing static factorization model.
+It constructively translates eager derivations to factored paths and
+back, and preserves actual source/target seed witnesses. Direct W/R and
+multibridge inherited examples give a paired `(Target,ZERO)` guide that
+passes ordinary C5. NormalTarget seeds are absent. The model does not
+solve complete FULL conditional-source and caller-context correctness. GROUP
+mode remains available with recorded issues; acceptance currently focuses
+on FULL mode.
+
+### 1.5 Read-only ZERO-exit probe for terminal C5
+
+The implementation of section 1.4 must also retain ordinary AP virtual
+rows whose paired exit is ZERO. For example, the existing composition
+`ZERO -> C.f/T ; C.f/FLOW -> ret/FLOW` supplies `(ret/T,ZERO)` to the
+backward getter or returning wrapper. Its source-completion terminal
+has original `ret/T`. That original passes the entry; Target passes the
+ZERO exit. A control-only scan misses this valid row.
+
+Reuse the full existing C5 query:
+
+```kotlin
+fun acceptsTarget(method: MethodKey, original: PremiseKey,
+                  policy: RestrictedInitialPolicy): Boolean =
+    intersect(method, original, Reach.DEMAND, policy).isNotEmpty()
+```
+
+This is a query-only ZERO exit probe. It does not encode Target as an AP
+fact, publish Reach, start a method, execute a rule, or create a source
+hit. Use the real original and the same policy. `intersect` already
+checks runtime domain, explicit controls, AP rows, own static closure
+and inherited static closure. It also reuses the typed terminal pairs
+from section 1.4. Each successful result comes from one complete pair.
+No new recursive path is added: `intersect` does not call `acceptsTarget`.
+
+`c5_target_equals_zero_probe` proves the per-pair equality for all paired
+exit kinds and any owner/original. `any_target_equals_any_zero_probe`
+lifts it to a row collection. ZERO exits accept both conclusions; AP
+exits accept neither. Owner and entry checks stay identical. This is an
+adapter correction, not a new demand or C5 policy. NormalTarget keeps
+its existing separate forward lane. The FULL conditional-source C2
+regression remains open.
 
 ## 2. Types, identity, and storage ownership
 
@@ -286,37 +601,49 @@ nonconstant. It does not assert equality with every old finding.
 
 ### 4.1 Exact demand correction
 
-Insert one guard in `RestrictedInitialPolicy.emit`, after normalized
-base/mark/budget checks and before both path branches:
+Keep `RestrictedInitialPolicy.emit` as the pure structural emitter. Replace
+the concrete EXACT/ANY rejection with the new directed exact cell. Keep
+the old FLOW cell:
 
 ```kotlin
+if (demand.fact.tail == Tail.EXACT && demand.fact.mark is MarkSlot.Concrete &&
+    demand.exclusion != ExclusionSet.Empty) return null
 val d = normalizeDemandFieldExclusion(demand)
 if (d.fact.base != actual.fact.base || !markSub(d.fact.mark, actual.fact.mark, catalog)) return null
 if (!fitsBudget(d) || !fitsBudget(actual)) return null
-if (d.fact.tail == Tail.EXACT && actual.fact.tail == Tail.ANY) return null
+if (d.fact.tail == Tail.EXACT && actual.fact.tail == Tail.ANY &&
+    d.fact.mark is MarkSlot.Star) return null // FLOW policy is unchanged
 // Continue with the existing path/tail cells.
 ```
 
 Use `== Tail.ANY`, not `isAny`: the latter also includes MUST. Apply this
-in both restricted directions. Run-1 abstraction remains unchanged.
+in both restricted directions. For an exact concrete demand, reject a
+nonempty demand exclusion before demand normalization. Keep actual
+exclusions and the static anchor/budget checks. MAY admits the requested
+point only when its path is equal to, or an ancestor of, that point.
+Apply the same invalid exact/E rejection to `canEmitInitial` and
+`canStoreInitial`. Do not let their normalization accept an illegal key.
 
 | Demand | Submitted | Result, with existing base/mark/budget guards |
 |---|---|---|
 | `p.[any]/T` | `p.$/T` | `p.$/T` |
-| `p.$/T` | `p.[any]/T` | none |
-| `p.f.$/T` | `p.[any]/T` | none |
-| `p.$/T` | `p.$/T` | existing exact initial |
+| `p.$/T` | `p.[any]/T, D` | `p.$/T, D` |
+| `p.f.$/T` | `p.[any]/T, D` | `p.f.$/T, D` |
+| `p.$/T` | `p.$/T, D` | `p.$/T, D` |
+| `p.$/T` | `p.$/T, N` | `p.$/T, N` |
 | `p.f.$/T` | `p.[any-taint]/T` | existing exact result if E admits f |
+| `p.$/T` | `p.f.$/T` or `p.f.[any]/T` | none |
 | `p.$/U` | T, U different from T | none |
 
 Keep STAR and other ANY-demand cells. `canEmitInitial`/`canStoreInitial`
 describe the structural image: an exact actual can still witness an exact
-initial. Keep that valid shape. A generic geometric meet is not C2
-permission after this correction.
+initial in either layer. Keep that valid shape and C5's raw result layer.
+The new MAY route adds an actual-input witness, not a new structural key.
+A generic geometric meet is not C2 permission.
 
 `InitialDemandResults.offer`, `has`, and `requireFamily` use the same
-corrected policy. A pair which cannot emit contributes no required family.
-Do not record it as unanswered work.
+geometry and canonical admission layer. A pair which cannot emit
+contributes no required family. Do not record it as unanswered work.
 
 ### 4.2 Typed control demand rows
 
@@ -340,41 +667,46 @@ the builder boundary. Every new handoff row has both endpoints. An entry
 Target contains no report ID.
 
 ```kotlin
-fun controlInitials(method: MethodKey, actual: Facts): Set<InitialAp> {
+fun controlInitials(method: MethodKey, actual: Facts): Set<AdmittedInitial> {
     if (actual !is Reach) return emptySet()
-    return if (localRows(method).any {
-        it.entry == DemandEntry.Zero || it.entry == DemandEntry.Target
-    })
-        setOf(ap.zero) else emptySet()
+    var admitted = false
+    visitControlPairs(method, policy) { pair ->
+        admitted = pair.entry == DemandEntry.Zero || pair.entry == DemandEntry.Target
+        !admitted
+    }
+    return if (admitted) setOf(existingZeroAdmission(ap.zero)) else emptySet()
 }
 ```
 
 The ordinary entry index and existing run-2 static completion keep their
-current lookup. Add the local control result for actual ZERO only. Remove
+current lookup. For actual ZERO, `visitControlPairs` checks explicit local
+rows, then the run-2 witnessed terminal rows in section 1.4 if needed.
+Later it visits local rows only. Remove
 the virtual `zeroDemand` permission. Do not turn a nonzero actual into ZERO.
 
 ### 4.3 Starts and no-op behavior
 
 ```kotlin
 fun startRoot(root: MethodKey) {
-    val keys = if (config.run1) setOf(ap.zero)
+    val seeds = if (config.run1) setOf(existingZeroAdmission(ap.zero))
         else config.demand.initials(root, Reach.NORMAL, config.admissionPolicy)
-    if (keys.isEmpty()) return
+    if (seeds.isEmpty()) return
     val actor = port.analyzer(root)
-    for (initial in keys) actor.addInitial(initial)
+    for (seed in seeds) actor.addInitial(seed)
 }
 
 fun admitCurrentCall(part: Subscription) {
-    val keys = emitRestrictedInitials(config, ops, part.callee, part.added)
-    if (keys.isEmpty()) return
+    val seeds = emitRestrictedInitials(config, ops, part.callee, part.added)
+    if (seeds.isEmpty()) return
     port.subscribe(part) // registration precedes replay and any same-unit start
-    port.startInitials(part.callee, keys)
+    port.startInitials(part.callee, seeds)
 }
 ```
 
 The existing counted Start event executes this receiver-side helper.
 Do not create the actor before an empty query or apply a second lookup.
-InitialFactStore still starts each key once.
+InitialFactStore starts each canonical `(key, layer)` once. Section 4.5
+specifies its two memberships.
 Delete unconditional backward `ZeroIn/addZeroEntry`. Backward ZERO calls
 use the explicit query/subscribe/start arm in section 8.4, with
 `zeroOnly=true` only for canonical caller ZERO. Preserve the
@@ -385,6 +717,191 @@ An empty emission creates no current subscription, initial packet,
 Target, seed, retry, demand copy, or forced iteration. An all-unsatisfied
 iteration needs no special completion action. Saved replay already done
 before this gate retains its legitimate results.
+
+### 4.4 Layered delivery without a new premise type
+
+Add one immutable command value in `ap`. Keep Layer outside InitialAp:
+
+```kotlin
+data class AdmittedInitial(val initial: InitialAp, val layer: Layer)
+data class InitialEmission(val pattern: Pattern, val layer: Layer)
+
+// Pseudocode: join is the existing NORMAL/DEMAND disjunction.
+fun admissionLayer(emitted: Pattern, actual: Pattern, supplied: Layer): Layer {
+    val intrinsic = existingIntrinsicLayer(emitted)
+    if (isCanonicalZero(emitted)) return intrinsic // existing ZERO policy
+    if (emitted.fact.mark is MarkSlot.Star) return intrinsic // FLOW unchanged
+    val loss = if (emitted.fact.tail == EXACT && actual.fact.tail == ANY) DEMAND else NORMAL
+    return join(intrinsic, supplied, loss)
+}
+```
+
+The demand row's old layer is not an operand. An exact NORMAL actual can
+start NORMAL even if the guide came from a DEMAND edge. Demand rows are
+permissions for the next analysis, not permanent approximation labels.
+
+`RestrictedInitialPolicy.emitAdmission` returns a transient InitialEmission
+without interning an AP. `InitialDemandResults` uses this value for its
+emitted and missing sets. Its offered pairs include the actual layer, or
+the accumulator fixes that layer for the whole query. Reuse its current
+structural emitter and coverage algorithm:
+
+```kotlin
+fun offer(entry: Pattern, actual: Pattern, actualLayer: Layer) {
+    val pattern = policy.emit(entry, actual) ?: return
+    val layer = admissionLayer(pattern, actual, actualLayer)
+    val emission = InitialEmission(pattern, layer)
+    if (emitted.add(emission))
+        admitted.add(AdmittedInitial(ap.initial(pattern), layer))
+    missing.remove(emission)
+}
+// has and requireFamily compute the same transient emission, with no AP interning.
+```
+
+Carry `Collection<AdmittedInitial>` through all these existing boundaries:
+
+```text
+DemandStore.initials -> emitRestrictedInitials -> caller startInitials
+InitialsIn -> runner handler -> RunMethodAnalyzer.addInitial
+forEachConcreteAnswer -> Run1Abstraction.answer
+SubscriptionManager answer accumulator -> InitialAnswersIn -> addInitial
+```
+
+`forEachConcreteAnswer` attaches the concrete input layer to its answer.
+Keep its current EXACT/STAR shape policy. An exact DEMAND answer cannot
+start NORMAL. Keep the abstract run-1 STAR/FLOW schema seed unchanged.
+ZERO uses `existingZeroAdmission`: its current permission and starting
+policy are separate from data coercion. No data descriptor creates ZERO.
+
+Keep the caller's actual Facts in its Subscription. Do not replace MAY
+input by the canonical exact hypothesis. Saved replay still occurs before
+the C2 query. Existing selected-input, caller and link layers govern
+summary application. Legal MAY offers already have DEMAND layer.
+
+### 4.5 Canonical start and two membership bits
+
+Use the existing intrinsic fact constructor and run-1 mode/static policy
+before entry deduplication. Do not change the intrinsic table:
+
+```kotlin
+fun addInitial(offered: AdmittedInitial) {
+    val intrinsic = ops.startFact(offered.initial, mode)
+    val started = forceRun1Layer(offered.initial,
+        intrinsic.withLayer(join(intrinsic.layer, offered.layer)))
+    val canonical = AdmittedInitial(offered.initial, started.layer)
+    if (!initials.add(canonical)) return
+    emitAtEntry(offered.initial, started) // existing entry/CFG delivery
+}
+
+class InitialFactStore {
+    private val seen = HashMap<InitialAp, Int>()
+    fun add(seed: AdmittedInitial): Boolean {
+        if (!RuntimeDataDomain.initial(seed.initial)) return false
+        val bit = if (seed.layer == NORMAL) 1 else 2
+        val old = seen[seed.initial] ?: 0
+        if (old and bit != 0) return false
+        seen[seed.initial] = old or bit
+        return true
+    }
+}
+```
+
+Canonicalize before query coverage and before actor admission. In
+particular, supplied STAR/N and STAR/D both start as D and count once.
+Do not add a fictitious NORMAL lane for static/GROUP initials which the
+selected run-1 policy always demotes. Applying the same canonicalization
+at both boundaries is idempotent and does not perform a second lookup.
+
+For an exact key, both `D -> N` and `N -> D` arrival orders start two
+jobs. Same-layer repeats start none. NORMAL cannot suppress DEMAND:
+`check(p) { sinkT(p); }` can need a DemandTarget for a MAY caller after a
+NORMAL caller already created NormalTarget. Existing edge storage keeps
+post-statement N/D deduplication. Do not change InitialAp equality, ND
+member identity, or report identity.
+
+### 4.6 Factored run-1 source projection
+
+Keep complete predicate/header matching and the current factored origin
+domains. The rule owner computes the output arm's layer. MethodEdgeStore
+does not inspect support and receives no GroundingSupport label.
+
+For one complete compatible proof/header partition:
+
+```kotlin
+fun armLayer(origin: InitialAp, cubeLayer: Layer,
+             columns: Collection<OriginDomain>): Layer {
+    if (cubeLayer == DEMAND) return DEMAND
+    val complete = columns.all { column ->
+        column.contains(origin) || column.contains(ap.zero)
+    }
+    return if (complete) NORMAL else DEMAND
+}
+
+// Only after a complete condition is available:
+for (origin in existingOriginUnion) {
+    if (origin.isZero) continue
+    val layer = armLayer(origin, completeHeaderLayer, columns)
+    emitArm(origin, layer, existingProtection(origin))
+}
+if (columns.all { it.contains(ap.zero) })
+    emitArm(ap.zero, completeHeaderLayer, existingZeroProtection())
+```
+
+The union must contain the origin. Do not invent an arm merely because
+every column has ZERO. A partial condition produces no arm. Compatibility
+partitions and repeated canonical-leaf intersections stay unchanged.
+Source rules with one retained origin plus ZERO can stay NORMAL. Two
+distinct necessary origins produce separate DEMAND arms. Later forward
+runs retain their existing full ND premise and same-call binding.
+
+Extend `ReadyCube.emitProtectedOrigins` to provide `(InitialAp, Layer,
+Boolean)`. Its result membership is `(action, origin, outputLayer)` with
+the existing monotone protection bit. A later complete NORMAL arm must
+not be hidden by a prior DEMAND arm with the same action and origin.
+Apply the same rule to `Run1OriginConjunctionStore`.
+
+An update can make a previously emitted D origin complete in N. Retest
+affected origins when domains grow. Keep the existing incremental scan:
+
+```kotlin
+when {
+    !consecutiveVersion || protectionGrew || ap.zero in addedOrigins -> revisitAllOrigins()
+    else -> for (origin in addedOrigins) offer(origin)
+}
+```
+
+A new nonzero P can change only P's membership test. A new ZERO can
+change that test for every existing origin. Thus ZERO growth must revisit
+the current union. Header changes use their separate existing partitions.
+Keep per-lane result deduplication and do not enumerate origin tuples.
+
+### 4.7 C5 and concrete exact demand storage
+
+Keep concrete exact DEMAND summaries legal through summary admission,
+paired intersection, handoff, and the next C2 query. They are not NORMAL
+native records. Keep exact field exclusion empty. Do not normalize their
+`$` into STAR or MAY as a new behavior.
+
+For each accepted C5 exact entry `(I,L)`, the constructive C2 witness is
+the exact actual at I with layer L. Thus the structural image stays the
+same. C5 preserves the raw output layer and uses the existing paired
+exit test. The new MAY-to-EXACT route supplies an additional D witness;
+it does not grant a fallback entry permission or broaden AP exit matching.
+
+### 4.8 Target safety and convergence limit
+
+A dependent D chain stays D. Its sink produces DemandTarget and its full
+physical seed. It cannot produce NormalTarget. A cached NormalTarget
+rejects D caller support; do not downgrade it to an anonymous target.
+Admission itself creates no source permission. Only real reverse actions
+and existing native replay perform their respective source operations.
+
+The intrinsic-MAY counterexample remains provisional at every field
+limit. It can repeat DemandTarget and the same frontier indefinitely.
+Keep existing time/iteration policy; do not stop on equal counts or
+promote a provisional result. The fixed finite entry universe admits at
+most two canonical start jobs per key in one run. This local bound does
+not prove convergence across runs.
 
 ## 5. Local terminal producers
 
@@ -398,22 +915,27 @@ or condition evaluator is needed. Replace the local report insertion:
 ```kotlin
 // In the existing completed witness callback:
 if (edges.any { !runtimePacket(it.premise, checkNotNull(it.facts)) }) return
-val layer = if (edges.any { it.layer == DEMAND }) DEMAND else NORMAL
-val target = if (layer == NORMAL) {
-    NormalTarget(catalog.intern(SinkKey(key.method, node, sink.rule.id), sink.rule, key))
-} else {
-    sinkSeeds.addAll(sinkSeedsFor(sink, key, node))
-    DemandTarget
-}
-
 val origins = edges.map { it.premise }.distinct()
+val cubeLayer = if (edges.any { it.layer == DEMAND }) DEMAND else NORMAL
+fun emitSinkArm(p: PremiseKey, layer: Layer) {
+    val target = if (layer == NORMAL) {
+        NormalTarget(catalog.intern(SinkKey(key.method, node, sink.rule.id), sink.rule, key))
+    } else {
+        sinkSeeds.addAll(sinkSeedsFor(sink, key, node)) // full physical predicate
+        DemandTarget
+    }
+    emitTarget(p, target)
+}
 if (config.run1) {
     val nonzero = origins.filterNot { it.isZero }
-    for (p in nonzero.ifEmpty { listOf(ap.zero) }) emitTarget(p, target)
+    for (p in nonzero.ifEmpty { listOf(ap.zero) }) {
+        val keptWholeBinding = origins.all { it.isZero || it == p }
+        emitSinkArm(p, if (keptWholeBinding) cubeLayer else DEMAND)
+    }
 } else {
     var original: PremiseKey = ap.zero
     for (p in origins) original = ap.union(original, p)
-    emitTarget(original, target)
+    emitSinkArm(original, cubeLayer)
 }
 ```
 
@@ -424,6 +946,12 @@ Never project a later ND premise to independently sufficient members.
 `ap.union` uses the current ZERO-drop/full-premise rules. Predicate and
 conjunction stores keep their existing complete-binding enumeration.
 The TRUE/unconditional callback includes the existing ZERO/REACH input.
+
+This callback sees a concrete complete witness. Classify its arms from
+that witness. Do not compute NormalTarget once from the cube and then
+reuse it for weakened arms. Source output uses the equivalent factored
+test in section 4.6. Both owners preserve each arm's result layer and its
+full seed. No field-sensitive writer validation is added.
 
 Capture each DEMAND sink's existing Seed values before anonymous Target
 dedup. Two sinks can share one DemandTarget membership and still need
@@ -472,8 +1000,10 @@ Guard input, active producer and raw result before this callback. Preserve
 the existing source permission and callback-before-result-filter ordering.
 `isSource` means forward ZERO to nonzero AP. Conditional mark transforms
 keep their ordinary backward prerequisites and SourceHit action permission;
-they create no terminal GEN Target. Opposite/native record application
-creates neither an actual GEN hit nor this Target.
+they create no terminal merely because they assign a mark. Summary and
+record application does not invoke this actual-GEN callback or create
+its source hit. Its accepted backward nonzero-to-ZERO result instead
+uses the source-summary Target dispatch in section 1.3.
 
 Do not use `SourceHitStore.add`'s fresh Boolean as Target permission. The
 same source/action can be hit under several original premises.
@@ -522,9 +1052,7 @@ fun entryAccepts(dc: DemandEntry, member: InitialAp): Boolean = when (dc) {
 }
 
 fun acceptsTarget(method: MethodKey, original: PremiseKey): Boolean =
-    localRowsWithZeroExit(method).any { pair ->
-        original.members.any { member -> entryAccepts(pair.entry, member) }
-    }
+    intersect(method, original, Reach.DEMAND, policy).isNotEmpty()
 ```
 
 Keep the full original premise after a per-member entry query, as AP C5
@@ -546,8 +1074,11 @@ only. Target/Zero entries can admit only original ZERO. Remove the backward
 ZERO C5 bypass. NORMAL terminals use their selected raw forward lane;
 the structural table does not enable backward NORMAL processing.
 
-The existing AP static completion is consulted only by its existing
-ordinary lookup paths. Do not add graph lookup for control Target rows.
+Extend the existing run-2 static completion with the typed terminal
+reader lookup from section 1.4. The read-only ZERO-exit probe in section
+1.5 tests derived control and ordinary AP pairs through the same complete
+C5 query. AP endpoints retain their existing lookup and restriction.
+Later snapshots have no static completion.
 
 ## 7. Terminal publication and delivery
 
@@ -729,7 +1260,7 @@ fun offerCalleeInput(part: Subscription) {
 Keep the original complete offer for all three steps. Do not admit live
 inputs or subscribe because a saved record happens to match. Do not add
 a compatibility query for hypothetical current summary premises. The
-callee receives final canonical initial keys and performs no second query.
+callee receives layered admitted initials and performs no second query.
 
 Retained NORMAL lookup skips backward and ZERO rows before matching. It
 does not republish the callee's old row. A resulting caller row is offered
@@ -812,8 +1343,9 @@ For a terminal result, retain the selected STATIC original and emit the
 caller's Target summary directly. All run-1 static support remains
 DEMAND. Preserve late-supply wakeup, known-input activation, class
 markers, and disableRun1Statics. No method-entry static propagation or
-static write registration is added. Targets do not enter frozen static
-AP composition.
+static write registration is added. Targets remain outside AP Patterns.
+Anonymous terminal reader endpoints enter frozen static completion as
+specified in section 1.4.
 
 The existing K6 and held REACH/TAINT producer checks imply that Target
 premise members are ZERO or concrete non-FLOW values. Use that existing
@@ -947,7 +1479,9 @@ For AP rows, preserve current selection: DEMAND, NORMAL ND, and NORMAL
 backward-ZERO guidance. Remove only the backward-ZERO C5 bypass and
 unpaired handoff. Keep the separate exclusion of backward-ZERO AP rows
 from native records. Target selection precedes ordinary AP exceptions;
-NormalTarget is never exported as refinement demand.
+NormalTarget is never exported as refinement demand. At the completed
+run-1 barrier, freeze outgoing static-premise DemandTarget readers before
+actor release and builder finalization, as in section 1.4.
 
 ### 11.2 Seeds independent of reports and Target deltas
 
@@ -1085,16 +1619,61 @@ One catalog ID, two full relations. NORMAL actuals can apply each at its
 own call. A DEMAND actual produces no NORMAL terminal effect. Two final
 root ZERO paths collapse to one report ID.
 
-### 13.3 Directed admission and unanswered iteration
+### 13.3 Directed layered admission and unanswered iteration
 
 ```text
-Dc=p.[any]/T, actual=p.$/T -> p.$/T initial
-Dc=p.$/T, actual=p.[any]/T -> no initial, no current subscription
+Dc=p.[any]/T, actual=p.$/T,N -> p.$/T,N initial
+Dc=p.$/T, actual=p.[any]/T,D -> p.$/T,D initial
+Dc=p.f.$/T, actual=p.[any]/T,D -> p.f.$/T,D initial
+Dc=p.$/T, actual=p.$/T,D -> p.$/T,D initial
+Dc=p.$/T, actual=p.$/T,N -> p.$/T,N initial, even after D guidance
+Dc=p.$/T, actual=p.f.[any]/T,D -> no initial
+Dc=p.$/U, actual=p.[any]/T,D, T!=U -> no initial
 every offer fails Dc -> no completion action for that demand
 ```
 
 Saved replay still precedes the current gate. It is not rolled back.
 There is no blocked-demand store or fallback Target.
+
+### 13.3.1 Conditional producer and Target control
+
+```java
+// sourceA assigns T1; sourceB assigns T2.
+// make: CM(p,T1) AND CM(q,T2) -> assign U at ret.$.
+// sinkU: CM(value,U).
+void main() {
+    Object a = sourceA(), b = sourceB();
+    Object r = make(a,b);
+    Box z = new Box(); z.g = r;
+    Box y = new Box(); y.f = z;
+    Object bad = make(a,new Object());
+    sinkU(y.f.g); // positive
+    sinkU(bad);   // negative
+}
+```
+
+```text
+run-1, forward, limit 1:
+  complete make witness: {p/T1,q/T2}, N
+  summaries: p/T1 -> ret.$/U,D; q/T2 -> ret.$/U,D
+  good cut result and bad provisional result -> DemandTarget, never NT
+
+run-2, backward, limit 1:
+  good physical sink seed is cut to ret.[any]/U,D
+  exact return demand admits ret.$/U,D; the reverse rule runs
+  bad uncut physical sink seed can admit ret.$/U,N
+  both start lanes run; actual reverse actions keep source permissions
+
+run-3, forward, limit 2:
+  actual exact N inputs can start N despite prior D guidance
+  complete ND relation binds only the good call -> NormalTarget(good)
+  bad call lacks T2 -> no U and no NormalTarget(bad)
+```
+
+The checked model reaches the good report by run-3. It does not prove a
+global stop at run-3. Use the same positive/negative runtime test. Also
+test a direct joint sink with two crossed incomplete callers; its run-1
+arms must be DemandTarget and retain the full physical predicate seed.
 
 ### 13.4 DEMAND sink cycle with a ZERO pair
 
@@ -1168,17 +1747,22 @@ Use the existing BIDI main Kotlin root unless a JVM path is stated.
 | Part | Required edits |
 |---|---|
 | new RuntimeDataDomain | One active-base/packet/producer rule; no IR adapter change |
-| RestrictedInitialPolicy | Exact/MAY guard only; shared policy clients retained |
+| RestrictedInitialPolicy | Concrete exact MAY admission, transient InitialEmission layer; unchanged FLOW and structural C5 image |
+| new AdmittedInitial, InitialFacts | Immutable layer-bearing command, canonical two-bit entry membership; unchanged InitialAp identity |
+| DemandResultCoverage, StaticEntryLookup, RestrictedInitialEmission | Layer-aware result/missing memberships, caller-owned query result, no hypothetical AP interning |
 | FormApplier, FactAlgebra, EngineAlgebra | Typed AcceptedSource context, constant guards before hooks |
-| RunMethodLocalServices | Complete sink consumer, local seed set, preserved condition checks |
-| RunMethodAnalyzer | Raw/pending Target store, C5 branch, explicit root ZERO lookup and work checks |
+| RunMethodLocalServices | Per-origin source layer, per-origin sink Target, full local seed set, preserved condition checks |
+| Run1OriginPredicateStore, Run1OriginConjunctionStore | Complete-support arm layer, per-layer result/protection membership, ZERO-growth candidate rescan; no origin tuples |
+| RunMethodAnalyzer | Raw/pending Target store, C5 branch, explicit root ZERO lookup and work checks; ordinary FULL computed-layer policy and canonical layered starts |
 | PublicationIndex | Typed terminal memberships; shared existing premise postings and candidate lookup |
 | SummaryStorage, SubscriptionManager, CalleeSubscriptions | Typed replay/delivery using existing subscription ownership |
-| RunEvent, RunnerPort, SubscriptionPort, UnitRunner, handlers | Immutable counted TargetDelivery, required-send failure handling |
-| MethodServices, RunMethodCallServices | Typed terminal dispatch and existing static-supply payload, KaryJoin use, saved replay, guided backward ZERO |
+| RunEvent, RunnerPort, SubscriptionPort, UnitRunner, handlers | Immutable counted TargetDelivery and layered initial commands, required-send failure handling |
+| MethodServices, RunMethodCallServices | Typed terminal dispatch and existing static-supply payload, KaryJoin use, saved replay, guided backward ZERO; bounded NORMAL ZERO all-EXACT cleanup header |
 | Run1PointResume | Extend the existing call continuation's result payload; keep its directory and pool-reply procedure |
+| Run1RequestMatching, Run1Abstraction, SubscriptionManager answers | Preserve exact concrete supplier layer in answer batches; abstract schema seed unchanged |
 | new NormalTargetStore and ReportCatalog | Exact retained keys and stable immutable descriptors |
-| DemandStore and handoff | Typed controls, paired ZERO exit, no virtual/bypass ZERO |
+| DemandStore and handoff | Typed controls, paired ZERO exit, no unconditional ZERO permission or C5 bypass; run-2 typed terminal closure lookup |
+| JoinedStaticGuidance, FrozenStaticCompletion | Freeze local static DemandTarget readers; query W/B/R composition with the existing visibility and mark rules |
 | IterationDriver, Report, Frontier | Completed terminal/report snapshot, outgoing-demand stop/counts |
 | packed, predefined, joined static, record/seed builders | All constant-domain funnels from section 3 |
 | JVM JIRBidiAnalysis | Descriptor export and final report logging |
@@ -1195,6 +1779,9 @@ ReportBuilder local-candidate replacement and confirmed flags/states
 persistent ConcurrentVulnerabilityStore wiring in SharedObjects/RunResult
 mandatory final witness lists and witnesses.first() exporter
 hasDemandVulnerability stop and old frontier confirmation counts
+concrete-only EXACT/ANY rejection in RestrictedInitialPolicy
+shape-only initial/result seen membership which hides the other layer
+cube-global NORMAL target reused for weakened run-1 sink arms
 ```
 
 Move any still-used RuleId alias to a small type file instead of retaining
@@ -1205,26 +1792,40 @@ static pool semantics, and the selected call policy.
 
 Implement in proof-first/TDD order:
 
-1. Run the v2 constructive models. Add failing runtime domain/C2 tests.
+1. Run both constructive packages. Add failing runtime concrete exact-D,
+   layer delivery, two-lane, weak-source and weak-sink controls.
 2. Add constant funnels, including rejected-packed-batch consumption.
 3. Add catalog/raw/retained Target stores and exact owned-key tests.
 4. Add typed producers, callbacks, publication/receipt and caller matching.
 5. Extend the existing static result dispatch and test it with Target;
    use KaryJoin for complete same-call Target ND tests.
-6. Replace ZERO admission/C5/handoff and seed source. Test no-op rejection.
-7. Add the completed terminal/report commit and export migration.
-8. Remove old paths. Run complete core/JVM suites and source-delta audit.
-9. Commit the implemented change, then run the configured project campaign.
+6. Replace ZERO admission/C5/handoff and seed source. Keep its explicit
+   control policy. Implement layered C2/query/request-answer delivery.
+7. Add canonical entry lanes and per-arm source/sink projection. Test
+   ZERO-growth upgrades, result protection, and both start arrival orders.
+8. Add the completed terminal/report commit and export migration.
+9. Remove old paths. Run complete core/JVM suites and source-delta audit.
+10. Commit the implemented change, then run the configured project campaign.
 
 Required tests include:
 
 ```text
 RuntimeDataDomainTest: all tails/layers, Constant input/output/producer,
   full ND rejection, static final positive, literal overwrite effect.
-InitialEmissionContractTest: ANY cannot answer EXACT at equal/ancestor
-  paths; EXACT/MUST positive; marks/E/budgets; all other cells unchanged.
+InitialEmissionContractTest: concrete ANY answers EXACT only in D at
+  equal/ancestor paths; exact D stays D, later exact N stays N;
+  descendant/sibling/mark/base/E/budget negatives; FLOW unchanged.
+InitialDeliveryTest: query result reused, caller keeps actual input,
+  Start and request-answer events preserve layer, no second lookup.
+InitialLaneTest: N then D and D then N both run, same-layer duplicate
+  suppression, canonical STAR collapse, coverage does not hide a lane.
+Run1OriginProjectionTest: P+Q becomes D, same P and P+ZERO can stay N,
+  complete all-ZERO only, no partial emission, ZERO-growth D-to-N replay,
+  per-lane protection upgrades, factored/eager result equivalence.
 SourceApplicationTest: original premise retained; callback before result
-  filter; Constant creates no hit; conditional and record reads no GEN Target.
+  filter; Constant creates no hit; conditional transforms keep prerequisites;
+  record reads create no actual-GEN hit; accepted backward source-summary
+  ZERO results use Target dispatch, with balanced ZERO unchanged.
 TargetStoreTest: same/different id, full P, full MethodKey, retained/current
   dedup and earlier pending send not erased by duplicate rediscovery.
 TargetProtocolTest: publication before/after registration; same/cross unit;
@@ -1235,6 +1836,23 @@ StaticTargetTest: ZERO control candidate, known input, late pool supply,
   class marker, disableRun1Statics, original static premise preserved.
 TargetHandoffTest: both paired ZERO cycles, NORMAL backward-ZERO AP row,
   C5 same-pair test, Target count in stop, no-op rejected/all-rejected offers.
+FullZeroSource controls: computed NORMAL exact/MUST sources remain NORMAL;
+  computed cuts/DEMAND, GROUP and static dependencies remain DEMAND;
+  exact nonzero FULL retains its admitted/computed layer; weak-ND arms
+  are D while unary complete exact N stays N;
+  native backward MAY replay and forward ZERO replay precede empty C2;
+  exact empty-E ZERO cleanup matches scalar/bulk, including protection;
+  normal MUST/STAR cleanup uses scalar fallback.
+ConcreteConditionalSourceTest: proposed F1/B2/F3 trace reports good only
+  by run-3, source permissions from actual reverse actions, no fake hits.
+DirectNDSinkTest: crossed partial callers do not report, full sink seed
+  preserved, mixed N/D admission produces both terminal constructors.
+IntrinsicMayTest: repeated frontier stays provisional, no false normal
+  report and no claim of general cross-run convergence.
+StaticTargetClosure: direct ZERO writer plus terminal reader, inherited B
+  chains, class markers, exact full-mark/group mismatch, no NormalTarget
+  seed, paired AP exit and paired ZERO exit, run-2-only control lookup,
+  ordinary AP virtual ZERO-exit acceptance through getter/wrapper chains.
 TargetReportTest: root+ZERO only, stable catalog context-independent IDs,
   kept IDs after ZERO replay skip, failed barrier no partial snapshot,
   every retained ZERO id already reported.
@@ -1248,9 +1866,11 @@ code used by AP summaries. Do not create a second delivery test harness.
 
 ## 15. Proof package and implementation evidence
 
-The new [proof package](../../spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/README.md)
+The base [proof package](../../spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/README.md)
 is under `spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/`.
-It contains selected rules only. It does not import the old hypothetical
+It contains reusable Target/domain rules and labeled historical admission
+and layer comparisons. Those comparisons do not select their superseded
+concrete MAY rejection or old nonzero demotion policy. The package does not import the old hypothetical
 NORMAL-to-DEMAND promotion controls or the withdrawn source-permission
 workaround as an implementation requirement.
 
@@ -1261,15 +1881,17 @@ Lean modules, and reviewed runtime source bytes. Run:
 python3 spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/check.py
 ```
 
-The check passes for 12 modules and 193 theorems. It audits 369 public
-declarations, including 174 executable definitions and 2 abbreviations.
+The checker covers 16 modules and 293 theorems. It audits 543 public
+declarations, including 248 executable definitions and 2 abbreviations.
+The amended receipt binds the selected source snapshot after runtime
+source freeze. These hashes do not verify Kotlin implementation behavior.
 Only `propext` and `Quot.sound` occur. The final theorem map and input hashes
 are in the package's README and receipt. The models establish:
 
 | Obligation | Model/evidence |
 |---|---|
 | Constant-free packets, stores and safe-route preservation | ConstantBoundary |
-| Directed MAY/EXACT C2 and all-unsatisfied no-op | InitialEmissionExact, UnansweredDemand |
+| Historical concrete MAY rejection; reusable generic empty-emission no-op | InitialEmissionExact, UnansweredDemand; MAY-specific rejection controls are superseded |
 | Control C2/C5, paired handoff, source scope, normal-only application | SelectedCore, SelectedTargetApplication |
 | Stable report IDs and complete ND layer/origin rules | TargetZeroRegistry, TargetZeroND |
 | Arbitrary-arity complete Target tuples and full origins | TargetJoin |
@@ -1277,6 +1899,35 @@ are in the package's README and receipt. The models establish:
 | Register/replay/start, counted accepted delivery and completion | TerminalProtocol |
 | Finite rooted ZERO settlement and complete-barrier report invariant | ZeroSettlement |
 | Non-FLOW Target producer kind and unchanged static descriptors | ProducerDomain |
+| Historical ZERO-only boundary and MAY rejection; reusable native replay order and bounded exact cleanup | FullZeroSourceReplay |
+| Ordinary FULL computed layer and static/GROUP overrides; historical weak-ND-arm counterexample corrected by the amendment | FullComputedLayer |
+| Accepted backward source-summary ZERO becomes Target under the caller original; historical rejection-only current-C2 controls | SourceSummaryCompletion |
+| Typed static Target W/B/R completion, eager/factored equivalence, complete paired C2/C5, ZERO-exit probe equivalence and precise mark labels | StaticTargetClosure |
+
+The selected [exact-DEMAND package](../../spec/lean/proposals/demand-layer-exact-initials-20261031/README.md)
+supersedes those concrete admission and projected-arm slices. Run it too:
+
+```sh
+python3 spec/lean/proposals/demand-layer-exact-initials-20261031/check.py
+```
+
+| Amendment obligation | Model |
+|---|---|
+| Directed exact C2, actual-layer preservation, nonsticky guide, exclusion/budget/mark guards | ExactAdmission |
+| Constructive exact C2/C5 image witness, raw layer preservation | C2C5Image |
+| Separate N/D membership, canonical start, finite per-run key bound | AdmissionStore, AdmissionBounds |
+| Complete source/sink arm support, ZERO precision, full physical seed | NDProjection |
+| Factored support equals eager existence; executable choice and work bound | FactoredOrigins |
+| Result layers and protection upgrades remain distinct | ResultLanes |
+| Demand cannot produce a normal report; normal-only cached Target application | TargetLayers |
+| Actual source permissions and same-call positive/negative coverage by run-3 | Pipeline |
+| Repeated finite intrinsic-MAY frontier; no general convergence guarantee | IntrinsicMayCycle |
+
+The new package's receipt binds this proposal and its concrete-only spec.
+Its README gives the exact audited inventory. Both receipts certify model
+laws, not complete conformance of the Kotlin worktree. Keep historical
+kernels as regression evidence. Do not rewrite their assumptions to make
+them appear to prove the amended contract.
 
 No proof assumes a fresh nonroot ZERO row was already reported. It needs
 an executable finite admission/receipt route to a root or a prior settled
@@ -1287,17 +1938,35 @@ identity, coroutines and cancellation are runtime adapters. Test them at
 the listed boundaries; finite Boolean examples alone do not verify them.
 The selected domain, admission and reporting changes are not a theorem
 of equality with the old report set. Do not claim whole-program no-FN,
-convergence or a measured speedup from the model check.
+convergence or a measured speedup from the model check. The receipt records
+`kernelSelectedLaws=PASS` separately from
+`composedRuntimeCoverage=NOT_ESTABLISHED`. The supplementary package proves
+the selected finite FULL conditional-source model. Runtime delivery,
+source/caller-context adapters and known GROUP routes remain separate
+coverage obligations. FULL is the campaign acceptance scope. Record GROUP
+failures as known issues; do not remove GROUP or change its semantics.
+The static C5 counterexample is a control for the missing closure: the
+new static Target completion must supply its complete paired row. Runtime
+closure adapters and whole-program coverage still need validation. Binding a positive red regression's source hash does not
+claim that the regression passes.
 
-This review changes implementation structure only. The selected contract
-and Lean transfer laws are unchanged. The shared PublicationIndex,
+The earlier sharing review changed implementation structure only.
+Sections 1.2 through 1.4 add the explicit user-selected FULL computed-layer
+correction, its bounded cleanup adapter, backward source-summary
+result dispatch, and typed static Target completion in section 1.4.
+Section 1.5 corrects the adapter by reusing the existing full paired C5
+query; it adds no new semantic rule. Section 4 and the sink-arm amendment
+add the explicit concrete admission and support-layer changes. FLOW,
+field transfer, cleaner semantics and static writer validation do not
+change with that amendment. The shared PublicationIndex,
 KaryJoin, static call continuations, publication flush and Seed values
 must satisfy the same existing proof obligations. No model certificate
 requires a new runtime store or service.
 
 ## 16. Project validation and measurements
 
-The latest campaign remains:
+The last recorded pre-change campaign is historical. It does not measure
+this amended implementation:
 
 | Project | Reached | Complete | Accepted forward | Result |
 |---|---|---|---|---|
@@ -1321,6 +1990,8 @@ explicit ZERO offers/admission/rejection and ZERO-only method/edge counts
 raw/published/retained Target memberships, stable IDs and final report IDs
 retained-key suppression, same-run suppression, pending publications/receipts
 NORMAL support rejections, backward ignores, persisted ZERO replay skips
+concrete exact MAY admissions, N/D start memberships and canonical duplicates
+weak run-1 arm counts, complete NORMAL arm upgrades, full sink-seed counts
 AP vs DemandTarget outgoing memberships and owners; sink/source seed counts
 current and saved summary application counts; static Target activation counts
 ```

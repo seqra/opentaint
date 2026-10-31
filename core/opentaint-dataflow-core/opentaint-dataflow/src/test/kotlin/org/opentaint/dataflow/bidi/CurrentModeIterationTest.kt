@@ -71,7 +71,8 @@ class CurrentModeIterationTest {
             assertTrue(f.patterns(3, c.callee, ret).isEmpty())
             assertTrue(f.premises(3, c.callee).isEmpty(),
                 "No selected demand remains; native records answer the actual marks")
-            assertFalse(f.actor(3, c.callee).nonZeroInitial)
+            assertTrue(f.actual.results[2].analyzers.none { it.key == c.callee },
+                "With no current demand the callee has no actor")
             assertContains(driver.frontiers[1].analysed, c.callee)
             assertTrue(c.callee !in driver.frontiers[2].analysed)
             assertTrue(f.actual.results[2].recordCrossings >= 2)
@@ -80,15 +81,14 @@ class CurrentModeIterationTest {
                     it.added == f.p(arg, tail = Tail.ANY_TAINT,
                         mark = GroupedScalarMarks(f.manager.marks).slot(MarkSlot.Concrete(mark))) })
             }
-            assertEquals(2, driver.frontiers[0].demandVulnerabilities)
-            assertEquals(0, driver.frontiers[2].confirmedVulnerabilities)
-            assertEquals(2, driver.frontiers[2].demandVulnerabilities)
+            assertEquals(1, driver.frontiers[0].targetDemand, "Anonymous terminal origins merge across sinks")
+            assertEquals(2, driver.frontiers[2].reportedSinks)
+            assertEquals(0, driver.frontiers[2].targetDemand)
             for (i in c.rules.indices) {
-                val key = reportKey(c, i)
-                assertTrue(f.actual.results[0].witnessesByKey().getValue(key).all { !it.confirmed &&
-                    it.edges.all { edge -> edge.layer == Layer.DEMAND } })
-                assertEquals(ReportState.DEMAND, report.entries.single { it.key == key }.state)
-                assertEquals(3, report.entries.single { it.key == key }.run)
+                val sink = c.rules[i]
+                assertTrue(f.actual.results[0].analyzers.flatMap { it.sinkSeeds }
+                    .filterIsInstance<Seed.Sink>().any { it.rule == sink })
+                assertEquals(c.sinks, report.entries.single { it.descriptor.rule == sink }.descriptor.key.statement)
             }
             assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE,
                 run1MarkMode = MarkMode.GROUP), report.end)
@@ -135,12 +135,14 @@ class CurrentModeIterationTest {
                 "The retained FLOW record passes U and excludes T without a new actual-input query")
             assertTrue(f.actual.results[2].recordCrossings > 0)
             assertEquals(setOf(CurrentRequest(1, c.callee, input, RequestKind.Mark(groupT.mark))), f.requests)
-            val blocked = reportKey(c, 0)
-            assertTrue(blocked in f.actual.results[0].witnessesByKey(),
-                "A selected-mark cleaner retains the provisional Group candidate")
-            assertTrue(f.actual.results.drop(1).all { blocked !in it.witnessesByKey() })
-            assertTrue(report.entries.none { it.key == blocked })
-            assertEquals(ReportState.DEMAND, report.entries.single { it.key == reportKey(c, 1) }.state)
+            val blocked = c.rules[0]
+            assertTrue(f.actual.results[0].analyzers.flatMap { it.sinkSeeds }
+                .filterIsInstance<Seed.Sink>().any { it.rule == blocked },
+                "A selected-mark cleaner keeps the run-1 group requirement")
+            assertTrue(f.actual.results.drop(1).flatMap { it.analyzers }.flatMap { it.sinkSeeds }
+                .filterIsInstance<Seed.Sink>().none { it.rule == blocked })
+            assertTrue(report.entries.none { it.descriptor.rule == blocked })
+            assertEquals(c.sinks, report.entries.single { it.descriptor.rule == c.rules[1] }.descriptor.key.statement)
             assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE,
                 run1MarkMode = MarkMode.GROUP), report.end)
         }

@@ -74,7 +74,7 @@ class FrontierSeedIndexTest {
         }
     }
 
-    @Test fun `implicit zero builder insertion never increases explicit demand while a zero entry with an exit is retained`(): Unit {
+    @Test fun `unpaired zero creates no permission while a paired zero entry is retained`(): Unit {
         HandOffFixtures().use { f ->
             val keys = listOf(f.key("left"), f.key("right"))
             val builder = DemandStore.Builder(f.manager)
@@ -91,7 +91,7 @@ class FrontierSeedIndexTest {
             val snapshot = builder.build()
             for (key in keys) {
                 assertEquals(listOf(explicit), snapshot.covering(key, f.manager.zero))
-                assertEquals(setOf(explicit, implicit), snapshot.near(key, f.manager.zero.toPattern()).toSet())
+                assertEquals(setOf(explicit), snapshot.near(key, f.manager.zero.toPattern()).toSet())
             }
             builder.add(keys.first(), DemandPattern(f.pattern(y), f.pattern(x)))
             assertTrue(snapshot.near(keys.first(), demandProbe(y)).isEmpty(), "A demand snapshot owns its builder contents")
@@ -107,25 +107,15 @@ class FrontierSeedIndexTest {
             val sinks = listOf(SinkRule(id, 0, listOf(px, px), emptyList()),
                 SinkRule(id, 1, listOf(px, py), emptyList()), SinkRule(id, 2, listOf(ZERO_PATTERN), emptyList()))
             f.finite.exitRules(2, ExitRules(RuleStatement(StatementSummary.EMPTY, StatementSummary.EMPTY, sinks), false, emptySet()))
-            for (key in keys) {
-                f.core(key)
-                val edge = SinkEdge(f.manager.zero, Layer.DEMAND, f.fact(x, layer = Layer.DEMAND))
-                val witness = SinkWitness(0, key, listOf(edge, edge), f.index)
-                f.vulnerabilities.add(VulnerabilityKey(id, key.method, f.inst(2)), witness)
-                f.vulnerabilities.add(VulnerabilityKey(id, key.method, f.inst(2)),
-                    SinkWitness(1, key, listOf(edge,
-                        SinkEdge(f.manager.zero, Layer.DEMAND, f.fact(y, mark = py.fact.mark, layer = Layer.DEMAND))), f.index))
-            }
+            for (key in keys) for (sink in sinks)
+                f.core(key).sinkSeeds.addAll(sinkSeedsFor(sink, key, f.inst(2)))
             val result = f.result()
-            f.report.add(f.config, result)
-            assertEquals(1, f.report.demandEntries().size)
-            assertEquals(4, f.report.demandEntries().single().witnesses.size)
             val rawInputs = keys.flatMap { key -> listOf(px, px, px, py).map { Seed.Sink(id, key, f.inst(2), it) } }
             val direct = SeedIndex.of(rawInputs)
             assertEquals(8, direct.size)
             for (key in keys) assertEquals(listOf(px, px, px, py),
                 direct.at(key, f.inst(2)).map { (it as Seed.Sink).requirement })
-            val handOff = HandOff.of(f.config, result, f.report, f.shared)
+            val handOff = HandOff.of(f.config, result, f.shared)
             val expected = keys.flatMap { key -> listOf(px, py).map { Seed.Sink(id, key, f.inst(2), it) } }.toSet()
             val actual = keys.flatMap { handOff.seeds.at(it, f.inst(2)) }.toSet()
             assertEquals(expected, actual)
@@ -133,7 +123,7 @@ class FrontierSeedIndexTest {
             assertEquals(keys.toSet(), handOff.seeds.sinkMethods())
             assertTrue(actual.all { (it as Seed.Sink).rule === id })
             assertTrue(actual.none { (it as Seed.Sink).requirement == ZERO_PATTERN }, "An unconditional alternative has no positive seed")
-            assertEquals(4, frontierOf(f.config, result, handOff, f.report).seeds)
+            assertEquals(4, frontierOf(f.config, result, handOff, f.report.reportCount).seeds)
         }
     }
 

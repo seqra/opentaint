@@ -72,8 +72,8 @@ class GeneratedCurrentProgramTest {
                 (marks + all.mapNotNull { (it.mark as? MarkSlot.Concrete)?.mark } + f.mark("fresh mark") + TaintMark.ZERO).distinct(),
                 2)
             try {
-                if (catalogRefinement) expected.assertCatalogRefinement(actual, universe, config.roots, initialAdmission)
-                else actual.assertEquivalent(expected, universe)
+                if (catalogRefinement) expected.dataOnly().assertCatalogRefinement(actual.dataOnly(), universe, config.roots, initialAdmission)
+                else actual.dataOnly().assertEquivalent(expected.dataOnly(), universe)
             }
             catch (failure: AssertionError) {
                 throw AssertionError("generated seed=$seed run=${config.index} sameUnit=$sameUnit " +
@@ -173,7 +173,8 @@ class GeneratedCurrentProgramTest {
                 f.pattern(ret, tail = if (abstract) Tail.ANY else Tail.EXACT,
                     mark = if (abstract) MarkSlot.STAR else u))
             val config = f.config(index, L = maxOf(1, index - 1), roots = listOf(caller),
-                demand = if (index == 1) emptyList() else listOf(callee to d),
+                demand = if (index == 1) emptyList() else listOf(callee to d,
+                    caller to DemandPattern(ZERO_PATTERN, f.pattern(ret, tail = Tail.ANY, mark = if (abstract) MarkSlot.STAR else u))),
                 seeds = listOf(Seed.Source(caller, root.inst(0), source)))
             // Direct F1 effects have their own operation-point contract. Later Full runs still
             // compare the entire ordinary scalar closure with actual query admission.
@@ -219,7 +220,8 @@ class GeneratedCurrentProgramTest {
             val config = f.config(index, L = maxOf(1, index - 1), roots = listOf(caller),
                 demand = if (index == 1) emptyList() else listOf(
                     callee to DemandPattern(literals[0], f.pattern(ret, out, Tail.ANY, t)),
-                    callee to DemandPattern(literals[1], f.pattern(ret, out, Tail.ANY, t))),
+                    callee to DemandPattern(literals[1], f.pattern(ret, out, Tail.ANY, t)),
+                    caller to DemandPattern(ZERO_PATTERN, f.pattern(ret, out, Tail.ANY, t))),
                 seeds = listOf(Seed.Source(caller, root.inst(0), sx), Seed.Source(caller, root.inst(0), sy)))
             val actual = compare(f, config, seed + 200L, fields, listOf(t.mark, u.mark))
             if (index == 1) {

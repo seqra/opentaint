@@ -10,6 +10,9 @@ import org.opentaint.dataflow.bidi.interp.SinkRule
 import org.opentaint.dataflow.bidi.store.DemandStore
 import org.opentaint.dataflow.bidi.store.FrozenStaticCompletion
 import org.opentaint.dataflow.bidi.store.guidancePattern
+import org.opentaint.dataflow.bidi.store.DemandEntry
+import org.opentaint.dataflow.bidi.store.DemandExit
+import org.opentaint.dataflow.bidi.store.PairedDemand
 import org.opentaint.ir.api.common.cfg.CommonInst
 import java.util.Collections
 import mu.KotlinLogging
@@ -25,13 +28,12 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
 
     companion object {
         private val logger = KotlinLogging.logger {}
-        fun of(config: RunConfig, result: RunResult<RunMethodAnalyzer>, report: ReportBuilder,
-               shared: SharedObjects): HandOff {
+        fun of(config: RunConfig, result: RunResult<RunMethodAnalyzer>, shared: SharedObjects): HandOff {
             check(result.status == RunStatus.COMPLETE) { "A hand-off needs a complete run" }
             shared.cancellation.checkpoint()
             val counts = LinkedHashMap<MethodKey, Int>()
             val (demand, seeds) = if (config.direction == Direction.FORWARD)
-                toBackward(result, report, shared, counts, config.run1) else toForward(result, shared, counts)
+                toBackward(result, shared, counts, config.run1) else toForward(result, shared, counts)
             return HandOff(demand, seeds, counts)
         }
 
@@ -53,7 +55,7 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
             }
         }
 
-        private fun toBackward(result: RunResult<RunMethodAnalyzer>, report: ReportBuilder, shared: SharedObjects,
+        private fun toBackward(result: RunResult<RunMethodAnalyzer>, shared: SharedObjects,
                                counts: MutableMap<MethodKey, Int>, run1: Boolean): Pair<DemandStore, SeedIndex> {
             val demand = DemandStore.Builder(shared.ap)
             val completionStart = TimeSource.Monotonic.markNow()
@@ -78,6 +80,12 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
                         shared.cancellation.checkpoint()
                         completion.addSeed(actor.key, key.original.toPattern(), key.result)
                     }
+                    for (terminal in actor.outgoingTargets) {
+                        shared.cancellation.checkpoint()
+                        check(terminal.target == org.opentaint.dataflow.bidi.engine.Target.DemandTarget)
+                        val original = checkNotNull(terminal.premise as? InitialAp) { "Run-1 cannot retain an ND original" }
+                        completion.addTarget(actor.key, original.toPattern())
+                    }
                 }
             }
             val seedCaptureTime = completionStart.elapsedNow()
@@ -99,44 +107,21 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
                 demand.withCompletion(frozen)
                 logger.info { "BIDI_STATIC_CLOSURE_FREEZE run=1 source=LOCAL_FROZEN_INPUT freezeTime=${completionStart.elapsedNow()} seedTime=$seedCaptureTime projectionTime=$projectionTime indexTime=${indexStart.elapsedNow()} ${frozen.statistics()}" }
             }
-            val seeds = LinkedHashSet<Seed>()
-            for (entry in report.demandEntries()) {
-                shared.cancellation.checkpoint()
-                val methods = LinkedHashSet<MethodKey>()
-                for (witness in entry.witnesses) {
-                    shared.cancellation.checkpoint()
-                    methods += witness.methodKey
-                }
-                for (method in methods) {
-                    shared.cancellation.checkpoint()
-                    withSinksAt(shared, method, entry.key.statement) { sinks ->
-                        for (sink in sinks) {
-                            shared.cancellation.checkpoint()
-                            if (sink.rule != entry.key.rule) continue
-                            if (sink.predicate != null) {
-                                if (!sink.unconditional)
-                                    seeds += Seed.PredicateSink(checkNotNull(sink.occurrenceId), method, entry.key.statement)
-                                continue
-                            }
-                            for (literal in sink.seedPatterns()) {
-                                shared.cancellation.checkpoint()
-                                seeds += Seed.Sink(entry.key.rule, method, entry.key.statement, literal)
-                            }
-                        }
-                    }
-                }
-            }
-            return demand.build() to SeedIndex.of(seeds.toList())
+            projectTargets(result, shared, demand, counts)
+            val seeds = result.analyzers.flatMap { it.sinkSeeds }
+            return demand.build() to SeedIndex.of(seeds)
         }
 
-        private fun withSinksAt(shared: SharedObjects, key: MethodKey, statement: CommonInst,
-                                use: (List<SinkRule>) -> Unit) {
-            val forms = shared.contexts.forms(key)
-            val call = shared.language.getCallExpr(statement)
-            if (call != null) {
-                forms.withCall(Direction.FORWARD, statement, call) { use(it.sinks) }
-            } else if (shared.interpreter.exitNodes(key).any { shared.cancellation.checkpoint(); it.node == statement }) {
-                forms.withExitRules(Direction.FORWARD, statement) { use(it.rules.sinks) }
+        private fun projectTargets(result: RunResult<RunMethodAnalyzer>, shared: SharedObjects,
+                                   demand: DemandStore.Builder, counts: MutableMap<MethodKey, Int>) {
+            for (actor in result.analyzers) for (row in actor.outgoingTargets) {
+                shared.cancellation.checkpoint()
+                for (member in row.premise.members) {
+                    val exit = if (member.isZero) DemandExit.Zero
+                        else DemandExit.Data(guidancePattern(member.toPattern()))
+                    if (demand.add(actor.key, PairedDemand(DemandEntry.Target, exit)))
+                        counts.merge(actor.key, 1, Int::plus)
+                }
             }
         }
 
@@ -146,11 +131,12 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
             forEachDemandPiece(result, shared) { method, premise, piece ->
                 val pattern = when (premise) {
                     is InitialAp -> DemandPattern(guidancePattern(piece),
-                        if (premise.isZero) null else guidancePattern(premise.toPattern()))
+                        guidancePattern(premise.toPattern()))
                     is PremiseSet -> error("The backward run has no multi-premise summary (ap.md §9.2)")
                 }
                 if (demand.add(method, pattern)) counts.merge(method, 1, Int::plus)
             }
+            projectTargets(result, shared, demand, counts)
             val seeds = ArrayList<Seed>()
             for (actor in result.analyzers) {
                 shared.cancellation.checkpoint()
@@ -162,4 +148,37 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
             return demand.build() to SeedIndex.of(seeds)
         }
     }
+}
+
+/** Use the same predicate handle and literal seeds as the previous handoff. */
+internal fun sinkSeedsFor(sink: SinkRule, method: MethodKey, at: CommonInst): List<Seed> = when {
+    sink.predicate != null && !sink.unconditional ->
+        listOf(Seed.PredicateSink(checkNotNull(sink.occurrenceId), method, at))
+    sink.predicate != null -> emptyList()
+    else -> sink.seedPatterns().map { Seed.Sink(sink.rule, method, at, it) }
+}
+
+/** GROUP evaluation must retain the original FULL seed patterns, as before.
+ * Read the existing full form; do not keep a second seed or rule cache. */
+internal fun fullSinkSeedsFor(shared: SharedObjects, sink: SinkRule,
+                              method: MethodKey, at: CommonInst): List<Seed> {
+    val seeds = LinkedHashSet<Seed>()
+    withSinksAt(shared, method, at) { sinks ->
+        for (full in sinks) {
+            shared.cancellation.checkpoint()
+            if (full.rule == sink.rule) seeds += sinkSeedsFor(full, method, at)
+        }
+    }
+    return seeds.toList()
+}
+
+/** Existing full-form lookup used by sink handoff before terminal reporting. */
+private fun withSinksAt(shared: SharedObjects, key: MethodKey, statement: CommonInst,
+                       use: (List<SinkRule>) -> Unit) {
+    val forms = shared.contexts.forms(key)
+    val call = shared.language.getCallExpr(statement)
+    if (call != null) forms.withCall(Direction.FORWARD, statement, call) { use(it.sinks) }
+    else if (shared.interpreter.exitNodes(key).any {
+        shared.cancellation.checkpoint(); it.node == statement
+    }) forms.withExitRules(Direction.FORWARD, statement) { use(it.rules.sinks) }
 }

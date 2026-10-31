@@ -195,7 +195,7 @@ class StaticConditionalRequestJoinTest {
             assertEquals(replies, service.statistics().ownerReplies)
             actor.freeze()
             val handOff = HandOff.of(f.config(), RunResult(RunStatus.COMPLETE, listOf(actor), 1,
-                Direction.FORWARD, f.vulnerabilities), ReportBuilder(), f.shared)
+                Direction.FORWARD), f.shared)
             val target = org.opentaint.dataflow.bidi.store.guidancePattern(f.ops.leaves(value).single())
             val guides = handOff.demand.near(f.key, target).toSet()
             for (origin in expectedOrigins) assertTrue(DemandPattern(target,

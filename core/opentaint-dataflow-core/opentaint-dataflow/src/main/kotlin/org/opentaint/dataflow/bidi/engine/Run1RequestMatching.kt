@@ -33,7 +33,7 @@ internal fun slotMatches(slot: Run1Slot, input: Facts): Boolean = input !is Reac
  * Exact and nonexact alternatives remain distinct; every nonexact answer is STAR. */
 internal fun forEachConcreteAnswer(
     ap: ApManager, input: Facts, rows: List<RequestedRow>,
-    statistics: RequestBatchStatistics.Counts? = null, emit: (InitialAp) -> Unit,
+    statistics: RequestBatchStatistics.Counts? = null, emit: (AdmittedInitial) -> Unit,
 ) {
     if (input !is TaintTree || rows.isEmpty()) return
     val stack = ArrayDeque<Pair<TaintNode, IntArray>>()
@@ -57,7 +57,9 @@ internal fun forEachConcreteAnswer(
                     val mark = TaintMark(id)
                     if (mark !in row.marks) continue
                     if (!prepared) { canonicalPath = ap.path(slot.pathData); prepared = true }
-                    emit(ap.initial(slot.base, canonicalPath, tail, ExclusionSet.Empty, MarkSlot.Concrete(mark)))
+                    val initial = ap.initial(slot.base, canonicalPath, tail, ExclusionSet.Empty, MarkSlot.Concrete(mark))
+                    val layer = input.layer or (tail != Tail.EXACT)
+                    emit(AdmittedInitial(initial, layer))
                 }
             }
         }

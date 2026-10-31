@@ -184,7 +184,7 @@ class ModesTest {
             // A later forward run admits this generic non-root FLOW initial.
             val core = f.core(index = 3)
             val initial = f.manager.initial(f.pattern(x, listOf(f.field("f")), Tail.STAR, MarkSlot.STAR))
-            core.addRootZero()
+            core.addInitial(f.manager.zero) // Already-admitted ZERO for this local transfer test.
             core.addInitial(initial)
             f.drain(core, quantum = 1)
             assertEquals(setOf(f.manager.zero, initial), core.initials.all().toSet())

@@ -7,7 +7,6 @@ import org.opentaint.dataflow.bidi.engine.MethodContextCache
 import org.opentaint.dataflow.bidi.engine.RunConfig
 import org.opentaint.dataflow.bidi.engine.RunMethodContext
 import org.opentaint.dataflow.bidi.engine.SharedObjects
-import org.opentaint.dataflow.bidi.store.ConcurrentVulnerabilityStore
 import org.opentaint.dataflow.bidi.store.DemandStore
 import org.opentaint.dataflow.bidi.store.PersistentRecordStore
 import org.opentaint.dataflow.ifds.SingletonUnit
@@ -71,7 +70,7 @@ class JIRMethodContextCacheTest : BidiJIRTestUtils() {
         val key = key(method)
         val records = PersistentRecordStore(manager)
         val cache = MethodContextCache(interp, source())
-        SharedObjects(manager, ops, interp, languageManager, cache, records, ConcurrentVulnerabilityStore(manager),
+        SharedObjects(manager, ops, interp, languageManager, cache, records,
             UnitResolver<CommonMethod> { SingletonUnit }, RefManager(), manager.cancellation, threads = 1).use { shared ->
             val forward = RunConfig(1, 1, null, records, SeedIndex.EMPTY, listOf(key))
             val f = RunMethodContext(key, cache.directed(Direction.FORWARD), forward, shared)
@@ -91,7 +90,7 @@ class JIRMethodContextCacheTest : BidiJIRTestUtils() {
         val key = key(method)
         val cache = MethodContextCache(interp, source())
         val records = PersistentRecordStore(manager)
-        SharedObjects(manager, ops, interp, languageManager, cache, records, ConcurrentVulnerabilityStore(manager),
+        SharedObjects(manager, ops, interp, languageManager, cache, records,
             UnitResolver<CommonMethod> { SingletonUnit }, RefManager(), manager.cancellation, threads = 1).use { shared ->
             val context = RunMethodContext(key, cache.directed(Direction.FORWARD),
                 RunConfig(1, 1, null, records, SeedIndex.EMPTY, listOf(key)), shared)

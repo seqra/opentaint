@@ -50,7 +50,7 @@ class RunJoinOverrideTest {
                 assertEquals(RunStatus.FAILED, result.status)
                 assertEquals(index, result.runIndex)
                 assertTrue(result.analyzers.isEmpty())
-                assertTrue(result.witnessesByKey().isEmpty())
+                assertTrue(result.analyzers.isEmpty())
                 assertEquals(0L, result.demandLayerEdges)
                 assertEquals(0L, result.recordCrossings)
                 assertEquals(0, factory.created.single().freezeCount.get())

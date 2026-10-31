@@ -4,8 +4,9 @@ Date: 31 October 2026. Status: proposal for the selected next iteration.
 No runtime change is made here.
 
 This proposal follows [impl-proposal-guide.md](../../spec/impl-proposal-guide.md)
-and [proof-guide.md](../../spec/proof-guide.md). It includes both selected
-changes. It does not include the alias or call-context fixes from the latest
+and [proof-guide.md](../../spec/proof-guide.md). It includes the selected
+changes and the explicit 31 October layer, source-summary, and static
+Target-completion corrections. It does not include the alias or call-context fixes from the latest
 investigation.
 
 Base runtime: `e090118e5f9603f1973c0578a3e04998035f4508`. Repository head
@@ -48,16 +49,22 @@ implementation.
 | Constant-base AP facts | Can enter backward work, summaries and demand | Reject them at runtime boundaries in every run | Constant-free store closure; state the restricted equivalence scope |
 | Exact-demand C2 | MAY `[any]` can create an exact initial | Reject MAY actuals for exact demands, including ancestor MAY actuals | No invented exact initial or helper witness; preserve other emission cells |
 | Unsatisfied C2 | An empty query skips current-call admission | Keep that no-op; no blocked-offer store, copied demand or forced continuation | Rejected offers and all-rejected batches create no admission work |
-| Restricted ZERO admission | Roots and backward callees can start ZERO without a local demand; demand lookup supplies a virtual ZERO row | Admit actual ZERO through explicit local demand only | No unguided restricted ZERO start; retain selected control routes |
+| FULL TAINT layer | Latest correction preserves computed layer only for ordinary ZERO origins | Preserve ordinary FULL computed layer for ZERO and nonzero origins; keep GROUP and independent static overrides | No DEMAND promotion; exact/STAR initial distinction; expose NORMAL weakened-ND-arm risk |
+| Restricted ZERO admission | Roots and backward callees can start ZERO without a local demand; demand lookup supplies a virtual ZERO row | Admit actual ZERO through an explicit paired row, including run-2 static completion | No unguided restricted ZERO start; retain selected control routes |
 | Sink observation | Store a local witness as a report candidate | Emit `NormalTarget(id)` or anonymous `DemandTarget` from a complete binding | Preserve complete support and layer; never report a partial binding |
 | Final report | Replace unconfirmed local candidates at each complete forward run | Collect IDs from `ZERO -> NormalTarget(id)` at configured roots | Exact root/premise/constructor test; stable IDs |
 | NORMAL terminal application | Target has no current implementation | Apply NormalTarget only with all-NORMAL complete support; otherwise no terminal result | No report ID or synthetic DemandTarget from a failed NORMAL application |
 | Retained NORMAL terminals | No current Target record kind | Ignore in backward; skip persisted ZERO rows on replay; suppress re-emission of every persisted exact owned row | Forward-only reuse, settled report IDs, complete-key deduplication |
 | Backward actual GEN | Record a source occurrence | Also emit anonymous DEMAND Target at the successful reverse-GEN point | Keep occurrence identity and existing source permission |
+| Backward source-summary result | Accepted nonzero-to-ZERO summaries dispatch REACH to the caller | Emit DemandTarget under the complete caller original; balanced ZERO stays AP control | Accepted-match scope, original preservation, no fake source hit, unchanged C5 |
+| Run-1 static demand completion | AP-only frozen closure omits `C.f/T -> DemandTarget` readers | Include anonymous terminal readers in the same lazy `W;B*;R` closure; project complete paired demand | Eager/factored route equivalence, typed endpoints, unchanged C5 |
 | Backward ZERO result | Bypasses C5; handoff can remove its paired exit | Apply C5; preserve the paired ZERO exit | Both directional Target cycles; no unpaired permission |
 | Continuation | Uses report candidates and outgoing AP demand | Count outgoing AP demand and DemandTarget; do not count NormalTarget | No stop while an outgoing Target obligation exists |
 
-Except for the explicit C2 correction, keep these mechanisms as they are:
+Except for the explicit C2 correction, the FULL computed-layer correction
+in section 1.1, source-summary dispatch in section 1.2, and static Target
+completion in section 1.3, keep these
+mechanisms as they are:
 AP field transfer, tails, exclusions,
 mark matching, FULL/GROUP configuration, field limits, cleaners, FLOW-backed
 relations, non-subsumable flags, alias analysis, static pools, static
@@ -68,6 +75,274 @@ storage change.
 Run-1 still has no executable ND edge. Keep its selected per-contributing-
 origin approximation and its all-ZERO test. Later FULL runs keep complete
 same-call ND joins.
+
+### 1.1 Authorized FULL computed-layer correction, 31 October
+
+**This is an additional semantic correction.** The earlier 31 October
+policy released only ordinary ZERO-origin FULL taint from the blanket
+DEMAND override. That narrow policy is now superseded. The user selects
+ordinary FULL processing as in the other iterations: keep the layer
+computed by AP transfer for both ZERO and nonzero originals. Do not
+force an ordinary FULL taint result to DEMAND because of its mark kind
+or original alone.
+
+| Run-1 packet | Selected layer |
+|---|---|
+| Ordinary FULL TAINT, any original | Keep the layer computed by ordinary AP transfer |
+| Ordinary FULL result after a cut or other DEMAND transfer | Keep DEMAND |
+| GROUP TAINT, including a ZERO original | Keep the GROUP DEMAND override |
+| Static result or any static premise member, including FULL | Keep the independent static DEMAND override |
+| Independent ordinary FLOW | Keep its prior layer policy |
+
+The complete original still matters for the independent static test.
+No field read/write, cleaner, exclusion, mark check, cut, initial-emission
+cell or summary-matching operation changes. A computed DEMAND result
+never becomes NORMAL through this correction. An exact concrete initial
+naturally starts NORMAL; a concrete STAR or MAY initial naturally starts
+DEMAND. Run1Abstraction can emit an exact empty-path concrete initial.
+Do not assume that every nonzero run-1 mark initial is STAR.
+
+The weakened run-1 ND handling is unchanged by this layer correction.
+It still waits for a complete cube, then emits each contributing origin
+as a separate unary arm. If all contributing inputs are NORMAL, the
+computed cube layer is NORMAL. Removing the blanket override can expose
+NORMAL weakened arms. A later one-input caller can then apply one arm
+without the other guard input. The constructive model records this
+reporting counterexample. Do not add an ND mitigation, promote a DEMAND
+input, or weaken C2 without a separate selected rule. The implementation
+must keep the positive two-input and negative one-input controls. The
+focused control now completes run-3 and reports both findings: the real
+two-input flow is restored, but the one-input report is a false positive.
+The computed-layer proof does not establish composed source/sink
+correctness, and no ND repair is selected here.
+
+A precise FULL source relation such as `ZERO -> ret.$/U`, NORMAL, uses
+the existing native-record mechanism:
+
+```text
+run-1:
+  retain NORMAL ZERO -> ret.$/U
+  persist the eligible singleton at the completed barrier
+  do not export it as a DEMAND row
+
+run-2, actual ret.[any]/U:
+  first replay the saved NORMAL relation in its backward read view
+  then perform the unchanged current-demand lookup
+  no current demand -> no current initial or method start
+
+run-3, actual ZERO:
+  first apply the saved forward ZERO -> ret.$/U, NORMAL
+  then perform the unchanged current-demand lookup
+  no current demand -> keep the saved effect and skip current analysis
+```
+
+The backward record read is not exact initial emission. It does not make
+`[any]` satisfy a `$` demand. Keep existing native matching and layer
+composition; an uncertain backward read can produce DEMAND. A record
+read does not execute a fresh source action and creates no actual-GEN
+source hit. Its accepted backward ZERO result uses the
+source-summary Target dispatch in section 1.2. The later forward replay
+needs no new source permission:
+it uses the already retained NORMAL summary. Actual source actions that
+must execute again still use their existing permissions.
+
+Keep the call order: saved summaries, current demand, current summaries
+and subscription. Do not add an exact demand for the retained NORMAL
+producer, an unanswered-demand retry, copied guidance or a new source
+permission path. C2, paired C5, and the no-op rule remain unchanged.
+
+The exact ZERO-origin native route above remains valid under the broader
+policy. Nonzero FULL relations can now remain NORMAL when their ordinary
+transfer computes NORMAL; native eligibility and complete guard support
+must still be checked. GROUP sources and static-dependent relations keep
+DEMAND. A computed DEMAND source result still has no NORMAL producer
+fallback. The former blanket nonzero no-native argument is not a current
+invariant. A retained backward identity does not replace a missing forward
+producer or its guard dependencies.
+
+The existing FULL return-cleanup batch may accept the new NORMAL ZERO
+header only when all leaves are EXACT and E is Empty. It must keep the
+same leaf membership, spatial decisions and protection as scalar cleaning.
+NORMAL MUST/STAR inputs retain the scalar fallback. This is a bounded
+adapter compatibility change, not a new cleaner or field rule.
+
+### 1.2 Authorized backward source-summary completion, 31 October
+
+**This is an additional semantic change.** After an accepted backward
+source-summary application, replace its ZERO result with an anonymous
+DemandTarget. Keep the complete caller original as the new terminal
+premise. The current implementation dispatches that result as ordinary
+REACH; it can then lose the caller's source-completion guidance.
+
+```text
+accepted backward source-summary relation: I -> ZERO, I nonzero concrete
+actual caller original:                   P
+old result:                               P -> ZERO, AP control
+selected result:                          P -> DemandTarget, DEMAND
+```
+
+Apply this rule to current summaries, same-direction backward native
+records, and reversed forward native records. The accepted relation is
+the authority; no source-action identifier is inferred from it. Existing
+kind checks require a concrete nonzero summary premise for this case.
+Do not enable a FLOW-premise Target producer.
+
+A balanced `ZERO -> ZERO` summary stays ordinary AP control. Forward
+applications and nonzero AP results also keep their existing dispatch.
+Run the existing matcher and domain checks before this conversion. A
+rejected application emits no Target.
+
+Use the existing `emitTarget` procedure. The terminal skips the caller's
+remaining instructions and return suffix. It keeps the existing owned
+key, deduplication, publication and paired C5 rules. This change does not
+allow a Target to bypass C5 or replace a nonzero caller original with
+ZERO.
+
+Summary application is not actual reverse GEN. Do not add a source hit,
+source action, source seed, or new source permission for this conversion.
+Actual reverse GEN keeps its separate existing occurrence callback.
+Forward saved-summary replay still uses the retained NORMAL AP record,
+not a fabricated source-action permission.
+
+The exact FULL example in section 1.1 therefore has this complete native
+route:
+
+```text
+F1: ZERO -> ret.$/U, NORMAL, persisted by the existing native store
+B2: actual ret.[any]/U reads its accepted reversed native view
+    raw accepted ZERO result -> P -> DemandTarget, DEMAND
+    unchanged C2 can still emit no current initial
+F3: actual ZERO first applies the saved forward NORMAL source record
+    no current callee demand -> keep that result and skip current analysis
+```
+
+This closes the selected summary-dispatch boundary. It does not prove
+that every produced Target passes the caller's paired C5 row, or that
+all FULL, GROUP and static source paths have complete
+admission guidance. Retain those composed-coverage checks.
+
+The [conditional FULL-source regression](../reports/bidirectional-target-zero-nonzero-source-admission-gap-20261031.md)
+records a two-input source and a one-input negative control. The old narrow
+policy reached run-3 without the required positive finding. The broader
+FULL layer correction completes run-3 with the positive finding and the
+invalid one-input finding. This confirms the NORMAL weakened-arm false
+positive. Retain both controls. Do not describe an
+old DEMAND-only trace as the new policy's invariant, and do not close the
+issue until the complete source and caller-context behavior is checked.
+MAY-to-EXACT C2, paired C5, and the unsatisfied-demand no-op stay unchanged.
+
+### 1.3 Authorized static Target demand completion, 31 October
+
+**This is a semantic correction to run-1 handoff guidance.** Keep paired
+C5. Extend the existing run-1 static completion to include anonymous
+DemandTarget as a terminal reader endpoint. Do not grant entry-only Target
+publication or combine the entry from one demand row with another row's
+exit. Do not add executable static summaries during this completion.
+
+```text
+Frozen run-1 forward relations in method M:
+  W: ZERO -> C.f.$/T
+  R: C.f.*/T -> DemandTarget
+
+Old backward demand in M:
+  (Dc=C.f.$/T, Dp=ZERO)
+  (Dc=Target, Dp=C.f.*/T)
+  Neither row accepts a backward ZERO -> DemandTarget.
+
+New additional virtual relation and its paired projection:
+  W ; R: ZERO -> DemandTarget
+  demand: (Dc=Target, Dp=ZERO)
+  This one complete row accepts backward ZERO -> DemandTarget.
+```
+
+Use the existing lazy static closure. A required route has the form
+`W ; B* ; R`, where each middle endpoint is a compatible named static
+field or supported EXACT class marker. `B*` can be empty. W starts
+at ZERO or a nonstatic AP. A query can also start at a supported static
+AP and use `B* ; R`. R ends at an
+ordinary AP as before, or at DemandTarget under this correction.
+Keep the complete source endpoint. The new terminal has no AP, field
+path, mark, report ID or exclusion. ZERO and Target cannot be internal
+static vertices.
+
+Freeze the terminal reader before actor state is released. Its input
+uses the existing canonical static descriptor and actual FULL or GROUP
+mark selector. Keep W and R under their exact MethodKey. Only static B
+relations use the existing prescan call-graph visibility. A typed terminal
+reader is not an extra live pool subscription and is not copied to every
+method. NormalTarget is not a completion seed. Its forward NORMAL-only
+application and backward-ignore rules remain unchanged.
+
+Compose geometry and mark labels with the existing static rules. FLOW
+is diagonal: it carries the same selected full mark. A mapped join needs
+a compatible middle mark. GROUP selectors retain their existing full-mark
+expansion in the finite reference; the implementation can use group
+metadata without materializing that expansion. An unrelated field,
+full mark, group or invisible bridge gives no route. A Target endpoint
+has no output mark; keep the required reader input mark while walking
+back through B and W. Do not invent a runtime mark for Target or ZERO.
+
+The run-2 demand store uses local rows first, then local static
+composition, then the existing inherited B lookup if needed. Query the
+same completed pair for C2 or C5; never mix separate paths. The projection
+of `P -> DemandTarget` is `(Target,P)`, with typed ZERO when P is ZERO.
+A Target entry admits actual ZERO through the normal control C2 rule.
+A Target conclusion still requires a paired ZERO exit under normal C5.
+An AP conclusion uses the paired AP exit and existing AP restriction.
+Stop a query when the provided fact or result is fully covered. Later
+handoffs have local demand only; this closure is present only at the
+run-1 to run-2 boundary.
+
+The constructive model extends the existing static factorization proof
+with ZERO and Target vertices. It gives executable translations between
+eager closure derivations and factored paths, an actual seed witness for
+each endpoint, and direct and inherited `W ; B* ; R` witnesses. It also
+proves the paired ZERO/Target C2 and C5 cells and precise mark-label
+expansion. AP geometry and runtime owner visibility are adapters. These
+proofs do not establish whole-program findings or solve the separate
+nonzero-origin FULL source-admission gap in section 1.2. GROUP mode stays
+available with its recorded coverage issues; current acceptance focuses
+on FULL mode.
+
+### 1.4 Adapter correction: reuse all paired ZERO-exit queries
+
+This is an implementation correction within the selected paired C5
+contract. It adds no demand row and changes no intersection rule. A
+Target query must inspect every relevant paired ZERO exit, including
+rows found by the existing ordinary AP static completion. Looking only
+at explicit control rows and typed terminal readers is insufficient.
+
+```text
+Existing run-1 static completion in a getter or returning wrapper:
+  W: ZERO -> C.f/T
+  R: C.f/FLOW -> ret/FLOW
+  derived relation: ZERO -> ret/T
+  backward guide: (Dc=ret/T, Dp=ZERO)
+
+Accepted backward source completion in that method:
+  original ret/T -> DemandTarget
+
+Old adapter: acceptsTarget inspects only explicit controls and terminal
+            reader paths; it misses the ordinary AP guide above.
+Correct adapter: query the usual C5 with the same original and a ZERO
+                 exit probe. It finds the complete (ret/T,ZERO) row.
+```
+
+For any demand row and the same original, C5 accepts Target if and only
+if it accepts ZERO: a ZERO exit accepts both; an AP exit accepts neither.
+The entry test and method owner are identical. Reuse
+`intersect(method, original, Reach.DEMAND, policy).isNotEmpty()` as the
+read-only acceptance query. Keep all current AP/static query stages,
+mark checks, geometry and paired restriction. The probe is never stored,
+enqueued, published or delivered. It does not convert a runtime Target
+to Reach, execute GEN, create a source hit, or admit a new initial.
+NormalTarget keeps its separate forward NORMAL-only path.
+
+The constructive model proves per-row Boolean equality for every paired
+exit kind, then lifts it to any complete row list. This covers explicit
+rows, ordinary AP virtual rows, and typed terminal virtual rows under
+the same C5 interface. It does not fix the separate exact-producer C2
+admission gap.
 
 ## 2. Types and identity
 
@@ -581,7 +856,9 @@ without an admitted route. Do not add a fresh unconditional ZERO in each
 callee after a caller's demand lookup rejected it.
 
 Remove the virtual `(ZERO, no-exit)` permission from `DemandStore.initials`.
-Explicit `(ZERO, ZERO)` rows remain valid.
+Explicit `(ZERO, ZERO)` rows remain valid. Run-2 can also use a complete
+Target-entry row from the static closure in section 1.3; that row keeps
+its paired exit. Later runs use local rows only.
 
 ### 8.2 Summary intersection
 
@@ -1011,20 +1288,59 @@ Required model claims:
     cannot produce a new NORMAL emission/publication; a different caller
     key remains eligible for saved conditional replay.
 
+12. The FULL layer correction preserves the computed layer for ordinary
+    ZERO and nonzero origins. Never promote computed DEMAND. Keep GROUP
+    and static-dependent DEMAND overrides. Model exact NORMAL and concrete
+    STAR DEMAND initial layers separately from the actor override.
+13. An eligible exact NORMAL FULL source has a reusable native record.
+    Saved replay precedes current admission and retains its result when
+    current demand emits no initial. Do not infer new C2 permission.
+14. Accepted backward concrete source-summary ZERO becomes DemandTarget
+    under the complete caller original. Balanced ZERO, forward dispatch
+    and nonzero results stay ordinary AP. No fake source hit is created.
+15. The bounded NORMAL ZERO all-EXACT empty-E cleanup cell has the same
+    leaf membership and protection under scalar and bulk execution.
+    NORMAL MUST/STAR remain outside that new cell.
+16. Keep the original static C5 counterexample as a pre-completion control: `(APa,ZERO)` and
+    `(Target,APa)` both reject `ZERO -> DemandTarget`. Do not assume that
+    source-summary dispatch alone closes this composed-coverage gap. The
+    new static completion supplies a third, complete `(Target,ZERO)` row.
+17. Keep the explicit no-native admission control for a source whose
+    ordinary transfer computed DEMAND. It has no NORMAL producer candidate.
+    With no matching saved producer and only an exact current guide, a
+    backward MAY offer produces no effect, initial, source hit or start.
+    This proves the local rejection, not whole-program coverage. Keep the
+    positive FULL conditional-source and negative caller-context controls
+    as open composed-coverage obligations.
+18. For static Target completion, prove eager/factored closure equivalence
+    with typed ZERO/Target endpoints. Produce `ZERO -> DemandTarget` from
+    the direct and multibridge `W ; B* ; R` witnesses, then use the same
+    paired C5. Keep FLOW diagonal, precise mark/group compatibility, local
+    W/R ownership, inherited B visibility, and no NormalTarget seed.
+19. For the read-only ZERO-exit probe, prove that C5 Target acceptance
+    equals C5 ZERO acceptance for the same owner, original and complete
+    pair, for every exit kind. Lift equality to any row list. Query the
+    existing full C5, including ordinary AP virtual static pairs.
+20. Prove the conditional NORMAL weak-arm counterexample. The layer proof
+    does not prove that per-origin ND arms retain the complete guard.
+    Preserve the separate runtime positive and negative controls; no ND
+    semantic repair is selected by this correction.
+
 Run the maintained proof package with:
 
 ```sh
-python3 spec/lean/proposals/constant-filter-target-zero-20261031/check.py
+python3 spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/check.py
 ```
 
-The [proof README](../../spec/lean/proposals/constant-filter-target-zero-20261031/README.md)
+The [proof README](../../spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/README.md)
 maps the checked claims and their limits. The receipt binds the proposal
 and model bytes. A PASS is a kernel-check result, not a verification of
 the future Kotlin implementation or a whole-project no-FN result.
 
 No whole-program equivalence or convergence claim follows from a finite
-control table. The constant restriction and root-normal reporting are
-explicit selected semantic changes. The retained AP algorithm and runtime
+control table. The constant restriction, directed C2, root-normal reporting, narrow FULL
+layer correction, and source-summary dispatch are explicit selected
+semantic changes. The retained AP algorithm and runtime
 adapters still need executable tests.
 
 ### Implementation order
@@ -1034,7 +1350,8 @@ adapters still need executable tests.
 2. Add failing boundary tests for constant admission, ND packets and packed paths.
 3. Add the constant filter; run the focused core tests.
 4. Add typed Target storage, catalog, publication and retained NORMAL records.
-5. Add full sink/actual-GEN hooks and caller/ND terminal application tests.
+5. Add full sink/actual-GEN hooks, source-summary dispatch and caller/ND tests.
+   Test the scoped FULL ZERO layer and native replay before empty current demand.
 6. Replace restricted ZERO admission, C5, handoff and seed routing.
 7. Replace final report collection/export and continuation inputs.
 8. Run the full core and JVM suites; audit unchanged AP semantics and keys.
@@ -1042,7 +1359,7 @@ adapters still need executable tests.
 10. Write the new report with reached/complete/accepted iterations and regressions.
 ```
 
-Test the two changes separately before their combined sequence. Add a
+Test each selected change separately before the combined sequence. Add a
 negative test for each former bypass, not only a positive Target test.
 Include exact, ANY, STAR, concrete, FLOW, exclusions, NORMAL/DEMAND,
 FULL/GROUP run-1, run-2 and later limits at the existing AP adapter seam.

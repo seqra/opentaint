@@ -20,7 +20,7 @@ internal class SelectedReferenceAlgebra(
     override fun base(c: Conclusion) = c.fact.base
     override fun filter(c: Conclusion, filter: TypeFilter) = c.takeIf { filters.passes(filter, c) }
     override fun allowsSource(node: CommonInst, me: MicroEdge) = allows(node, me)
-    override fun sourceHit(node: CommonInst, me: MicroEdge) = hit(node, me)
+    override fun acceptedSource(application: AcceptedSource<Set<Pattern>, Conclusion>) = hit(application.at.node, application.edge)
     override fun conjunction(cj: ConjunctiveEdge, premise: Set<Pattern>, c: Conclusion,
                              node: CommonInst, out: ReferenceSink) = join(cj, premise, c, node, out)
     override fun sourcePredicate(source: SourceRuleOccurrence, premise: Set<Pattern>, c: Conclusion,

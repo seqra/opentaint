@@ -60,6 +60,12 @@ internal fun completeJoinedStaticGuidance(
             checkpoint()
             builder.addSeed(actor.key, bridge)
         }
+        for (terminal in actor.outgoingTargets) {
+            checkpoint()
+            check(terminal.target == Target.DemandTarget)
+            val original = checkNotNull(terminal.premise as? InitialAp) { "Run-1 cannot retain an ND original" }
+            builder.addTarget(actor.key, original.toPattern())
+        }
         for ((original, facts) in actor.summaries.demandEdges()) {
             checkpoint()
             check(original is InitialAp) { "Run-1 cannot retain an ND original" }

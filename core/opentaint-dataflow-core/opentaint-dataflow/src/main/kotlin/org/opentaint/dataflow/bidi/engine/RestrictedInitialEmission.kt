@@ -9,10 +9,10 @@ internal fun emitRestrictedInitials(
     callee: MethodKey,
     actual: Facts,
     statistics: N2Statistics? = null,
-): List<InitialAp> {
+): List<AdmittedInitial> {
     check(config.restricted)
     val ap = ops.manager
-    val result = LinkedHashSet<InitialAp>()
+    val result = LinkedHashSet<AdmittedInitial>()
     ops.limit(actual, config.fieldLimit, object : ApOut {
         override fun markRequest(mark: TaintMark): Nothing = error("A field cut cannot request a mark")
         override fun result(bounded: Facts) {

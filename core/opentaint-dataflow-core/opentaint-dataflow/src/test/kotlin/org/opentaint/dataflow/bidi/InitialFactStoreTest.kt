@@ -35,5 +35,37 @@ class InitialFactStoreTest {
             assertFalse(store.add(m.initial(i.toPattern())))
         }
         assertEquals(initials.toSet(), store.all().toSet())
+        for (i in initials) assertEquals(ApOps(m).startFact(i).layer, intrinsicInitialLayer(i))
+    }
+
+    @Test fun `same key starts each canonical layer once in either arrival order`() {
+        val f = StoreFixtures()
+        val i = f.manager.initial(f.pattern(mark = MarkSlot.Concrete(f.mark("T")), tail = Tail.EXACT))
+        for (order in listOf(listOf(Layer.NORMAL, Layer.DEMAND), listOf(Layer.DEMAND, Layer.NORMAL))) {
+            val store = InitialFactStore()
+            for (layer in order) {
+                assertTrue(store.add(AdmittedInitial(i, layer)))
+                assertFalse(store.add(AdmittedInitial(i, layer)))
+            }
+            assertEquals(setOf(i), store.all().toSet())
+            assertEquals(setOf(AdmittedInitial(i, Layer.NORMAL), AdmittedInitial(i, Layer.DEMAND)), store.admissions().toSet())
+        }
+    }
+
+    @Test fun `intrinsic STAR and run1 GROUP floors have no fictitious NORMAL membership and ZERO stays NORMAL`() {
+        val f = StoreFixtures()
+        val m = f.manager
+        val mark = MarkSlot.Concrete(f.mark("T"))
+        val star = m.initial(f.pattern(mark = mark, tail = Tail.STAR))
+        val store = InitialFactStore()
+        assertTrue(store.add(AdmittedInitial(star, Layer.NORMAL)))
+        assertFalse(store.add(AdmittedInitial(star, Layer.DEMAND)))
+        assertEquals(listOf(AdmittedInitial(star, Layer.DEMAND)), store.admissions())
+        val groupMode = ApMode(true, Direction.FORWARD, 1, MarkMode.GROUP)
+        val exact = m.initial(f.pattern(mark = mark, tail = Tail.EXACT))
+        assertEquals(AdmittedInitial(exact, Layer.DEMAND), canonicalAdmission(exact, Layer.NORMAL, groupMode))
+        assertEquals(existingZeroAdmission(m.zero), canonicalAdmission(m.zero, Layer.NORMAL, groupMode))
+        assertEquals(existingZeroAdmission(m.zero), canonicalAdmission(m.zero, Layer.NORMAL,
+            ApMode(true, Direction.FORWARD, 1, MarkMode.FULL)))
     }
 }

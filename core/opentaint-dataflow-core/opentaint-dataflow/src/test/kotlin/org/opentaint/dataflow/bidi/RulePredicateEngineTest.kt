@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.Seed
@@ -11,7 +13,7 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import kotlin.test.*
 
-/** Exercise the real actor services, AP operations, persistent witnesses and managed form payload. */
+/** Exercise real actor services, AP operations, terminal summaries and managed form payload. */
 class RulePredicateEngineTest {
     private val owner = FormOwner()
     private val reportRule = object : CommonTaintConfigurationSink {
@@ -140,9 +142,9 @@ class RulePredicateEngineTest {
         }
     }
 
-    @Test fun `sink supports do not cross rule occurrences and witnesses keep observed proof scopes`() {
+    @Test fun `sink supports do not cross rule occurrences and anonymous targets keep both seed handles`() {
         MethodAnalysisFixtures().use { f ->
-            val (_, services) = core(f)
+            val (actor, services) = core(f)
             val predicate = predicate(f) { b, l -> b.and(listOf(l[0], l[1])) }
             val first = sink(f, predicate)
             val second = sink(f, predicate, ordinal = 1)
@@ -150,10 +152,13 @@ class RulePredicateEngineTest {
             assertTrue(services.checkSinks(f.manager.zero, f.inst(2), f.fact(AccessPathBase.Argument(1)), listOf(second)).fired.isEmpty())
             assertEquals(1, services.checkSinks(f.manager.zero, f.inst(2), f.fact(AccessPathBase.Argument(1)), listOf(first)).fired.size)
             assertEquals(1, services.checkSinks(f.manager.zero, f.inst(2), f.fact(), listOf(second)).fired.size)
-            val witnesses = f.vulnerabilities.witnessesOf(1).map { it.second }.toList()
-            assertEquals(2, witnesses.size)
-            assertNotEquals(witnesses[0].proof, witnesses[1].proof)
-            assertTrue(witnesses.all { it.edges.size == 2 })
+            // Each occurrence completes independently. GROUP run-1 retains
+            // one anonymous relation and both exact predicate seed handles.
+            val terminal = actor.targets.single()
+            assertSame(f.manager.zero, terminal.premise)
+            assertEquals(Target.DemandTarget, terminal.target)
+            assertEquals(setOf(first.occurrenceId, second.occurrenceId),
+                actor.sinkSeeds.filterIsInstance<Seed.PredicateSink>().map { it.occurrence }.toSet())
         }
     }
 

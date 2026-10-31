@@ -141,13 +141,16 @@ class ReturnFullCleanupEngineTest {
         for (kind in 0..3) assertEquals(run(false, kind), run(true, kind), "input kind=$kind")
     }
 
-    @Test fun `collector fixed gate rejects E and normal taint without changing fields`() = MethodAnalysisFixtures().use { f ->
+    @Test fun `collector fixed gate admits only exact normal ZERO taint and rejects E or other nonfixed inputs`() = MethodAnalysisFixtures().use { f ->
         val original = f.manager.initial(f.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR))
         val field = f.field("f")
         assertTrue(fullCleanupCollectorFixed(original, f.fact(x, tail = Tail.STAR, mark = MarkSlot.STAR)))
         assertFalse(fullCleanupCollectorFixed(original, f.fact(x, tail = Tail.STAR, mark = MarkSlot.STAR,
             exclusion = ExclusionSet.of(field))))
         assertFalse(fullCleanupCollectorFixed(original, f.fact(x)))
+        assertTrue(fullCleanupCollectorFixed(f.manager.zero, f.fact(x)))
+        assertFalse(fullCleanupCollectorFixed(f.manager.zero, f.fact(x, tail = Tail.ANY_TAINT)))
+        assertFalse(fullCleanupCollectorFixed(f.manager.zero, f.fact(x, tail = Tail.STAR)))
         assertTrue(fullCleanupCollectorFixed(original, f.fact(x, layer = Layer.DEMAND)))
         val staticOriginal = f.manager.initial(f.pattern(STATIC,
             listOf(f.manager.accessors.index(ClassStaticAccessor("C")), field), Tail.STAR, MarkSlot.STAR))

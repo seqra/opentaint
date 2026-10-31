@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.Seed
@@ -16,7 +18,7 @@ class EndFactTriggerTest {
     private val argument = AccessPathBase.Argument(0)
     private val result = AccessPathBase.Return
 
-    @Test fun `an ignored reversed end action cannot seed a confirmed trigger without a handoff seed`(): Unit {
+    @Test fun `an ignored reversed end action cannot seed a trigger without a handoff seed`(): Unit {
         MethodAnalysisFixtures().use { f ->
             val t = MarkSlot.Concrete(f.mark("T"))
             val u = MarkSlot.Concrete(f.mark("end"))
@@ -25,10 +27,6 @@ class EndFactTriggerTest {
             val end = MicroEdge.of(PathEdge(ZERO_FACT, target, ExclusionSet.Empty))
             val sink = localSink(listOf(requirement), listOf(end))
             f.exitRules(2, ExitRules(localRules(listOf(sink)), false, emptySet()))
-            val known = SinkWitness(sink.alternative, f.key,
-                listOf(SinkEdge(f.manager.zero, Layer.NORMAL, f.fact(argument, requirement.fact.path, mark = t))),
-                1, emptyList()).also { it.confirmed = true }
-            f.vulnerabilities.add(VulnerabilityKey(sink.rule, f.key.method, f.inst(2)), known)
             val core = localCore(f, index = 2)
             val initial = f.manager.initial(f.pattern(result, mark = u))
             core.addInitial(initial)
@@ -37,8 +35,7 @@ class EndFactTriggerTest {
             assertNull((core.localServices as RunMethodLocalServices).conjunctions)
             assertEquals(setOf(initial to Conclusion(target, ExclusionSet.Empty, false)),
                 methodEntries(f.ops, core.summaries.all()))
-            assertTrue(f.vulnerabilities.witnessesOf(2).none())
-            assertTrue(f.vulnerabilities.witnessesOf(1).single().second.confirmed)
+            assertTrue(core.targets.isEmpty())
             assertTrue(core.sourceHits!!.entries().none(), "An end fact is not an unconditional source")
             assertTrue(f.events.isEmpty())
         }
@@ -68,7 +65,7 @@ class EndFactTriggerTest {
                 any to Conclusion(target.copy(tail = Tail.ANY), ExclusionSet.Empty, true)),
                 methodEntries(f.ops, core.summaries.all()))
             assertEquals(0, f.cuts.count { it.first == Cut.SEED })
-            assertTrue(f.vulnerabilities.witnessesOf(2).none())
+            assertTrue(core.targets.isEmpty())
             assertTrue(core.sourceHits!!.entries().none())
         }
     }
@@ -119,7 +116,7 @@ class EndFactTriggerTest {
             assertTrue(f.cuts.none { it.first == Cut.SEED })
             assertEquals(setOf(initial to Conclusion(input, ExclusionSet.Empty, false)), methodEntries(f.ops, core.summaries.all()))
             assertTrue(core.sourceHits!!.entries().none())
-            assertTrue(f.vulnerabilities.witnessesOf(2).none())
+            assertTrue(core.targets.isEmpty())
         }
     }
 
@@ -147,7 +144,8 @@ class EndFactTriggerTest {
             assertEquals(setOf(initial to Conclusion(initial.toPattern().fact, ExclusionSet.Empty, true),
                 initial to Conclusion(ZERO_FACT, ExclusionSet.Empty, true)),
                 methodEntries(f.ops, core.summaries.all()))
-            assertTrue(f.vulnerabilities.witnessesOf(2).none())
+            assertEquals(setOf(TargetSummary(initial, Target.DemandTarget)), core.targets,
+                "Actual reverse GEN records its terminal source permission")
         }
     }
 
@@ -166,7 +164,7 @@ class EndFactTriggerTest {
                 Seed.Sink(rule, f.key, f.inst(1), elsewhere)))
             val core = f.core(index = 2, L = 1, seeds = seeds,
                 localFactory = MethodLocalServicesFactory(::RunMethodLocalServices))
-            core.addRootZero()
+            core.addInitial(f.manager.zero) // This local transfer fixture supplies an already-admitted ZERO.
             val expected = setOf(Conclusion(ZERO_FACT, ExclusionSet.Empty, false),
                 Conclusion(PathFact(argument, path.take(1), Tail.ANY, t), ExclusionSet.Empty, true),
                 Conclusion(any.fact, ExclusionSet.Empty, true))
@@ -178,7 +176,7 @@ class EndFactTriggerTest {
             assertEquals(expected.map { f.manager.zero to it }.toSet(), methodEntries(f.ops, core.summaries.all()))
             assertEquals(0L, core.triggerSeeds)
             assertTrue(core.sourceHits!!.entries().none())
-            assertTrue(f.vulnerabilities.witnessesOf(2).none())
+            assertTrue(core.targets.isEmpty())
         }
     }
 
@@ -196,7 +194,7 @@ class EndFactTriggerTest {
             assertEquals(0L, core.triggerSeeds)
             assertTrue(f.cuts.none { it.first == Cut.SEED })
             assertTrue(core.sourceHits!!.entries().none())
-            assertTrue(f.vulnerabilities.witnessesOf(2).none())
+            assertTrue(core.targets.isEmpty())
         }
     }
 }

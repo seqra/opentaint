@@ -19,6 +19,7 @@ import org.opentaint.ir.api.common.cfg.CommonInst
  * typed store. The generated domain and explicitly enabled END/must extensions are checked by
  * HistoricalF71 to match the historical comparison scope. The current raw selector and unverified report policy are coded here.
  */
+// Frozen pre-Targets control routing; this is not the selected Target driver oracle.
 class DirectCurrentIteration(private val program: FiniteProgramFixtures, private val roots: List<MethodKey>,
                                   private val limits: List<Int>,
                                   private val allowEndFacts: Boolean = false,
@@ -60,7 +61,7 @@ class DirectCurrentIteration(private val program: FiniteProgramFixtures, private
                     check(record.direction != Direction.BACKWARD || p.fact.tail != Tail.ANY_TAINT)
                 } else check(c.fact.mark is MarkSlot.Concrete)
             }
-            var observation = RawCurrentClosure(program, config, inputs).run()
+            var observation = RawCurrentClosure(program, config, inputs, NaiveClosure.Semantics.PRE_TARGETS).run()
             if (config.direction == Direction.FORWARD) {
                 currentDemand = LinkedHashMap()
                 for (witness in observation.witnesses) {

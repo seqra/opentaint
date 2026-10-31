@@ -41,7 +41,7 @@ class FormApplierTest {
             calls += "allows"
             return allow
         }
-        override fun sourceHit(node: CommonInst, me: MicroEdge) { calls += "hit" }
+        override fun acceptedSource(application: AcceptedSource<String, Value>) { calls += "hit" }
         fun typeFilter(name: String, admitted: Boolean = true): TypeFilter =
             TypeFilter(object : FactTypeChecker.FactApFilter {
                 override fun check(accessor: org.opentaint.dataflow.ap.ifds.Accessor) = FactTypeChecker.FilterResult.Accept

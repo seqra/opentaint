@@ -28,7 +28,7 @@ import kotlin.time.Duration.Companion.seconds
 /** A nonempty real prescan is copied, released, and consumed by the actual JVM driver. */
 class JIRBidiRealEntryTest : BidiJIRTestUtils() {
     @Test
-    fun `copied rules and root produce an unproved exact exit candidate after prescan owners are released`(): Unit {
+    fun `copied rules and root produce a settled exit report after prescan owners are released`(): Unit {
         val root = method("normal", JIRPrescanFixtures.SAMPLE)
         val mark = TaintMark("real entry T")
         val source = TaintEntryPointSource(root, mkTrue(), listOf(AssignMark(mark, Argument(0))),
@@ -81,42 +81,27 @@ class JIRBidiRealEntryTest : BidiJIRTestUtils() {
             val report = entry.run(10.seconds)
             assertEquals(mark.name, assertNotNull(runtimeShared).ap.marks.let { it.name(it.full(mark.name)) })
             assertEquals(listOf(copiedIds), selected)
-            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
+            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 1, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
             val frontiers = assertNotNull(actualDriver).frontiers
-            assertEquals(listOf(1, 2, 3), frontiers.map { it.run }, "The NORMAL F1 candidate still requires B2/F3 refinement")
-            assertEquals(listOf(Direction.FORWARD, Direction.BACKWARD, Direction.FORWARD), frontiers.map { it.direction })
-            assertTrue(frontiers.all { it.confirmedVulnerabilities == 0 })
-            assertEquals(1, frontiers.first().demandVulnerabilities)
-            assertTrue(frontiers.first().demandEdges.isNotEmpty(), "NORMAL F1 publications remain guidance")
-            assertEquals(0L, frontiers[1].recordCrossings, "B2 does not read an executable F1 record")
+            assertEquals(listOf(1), frontiers.map { it.run }, "The ordinary FULL ZERO source has an exact NORMAL result")
+            assertEquals(listOf(Direction.FORWARD), frontiers.map { it.direction })
+            assertEquals(listOf(1), frontiers.map { it.reportedSinks })
+            assertEquals(0, frontiers.first().targetDemand)
+            assertTrue(frontiers.first().demandEdges.isEmpty(), "The exact NORMAL source needs no refinement demand")
             val item = report.entries.single()
-            assertEquals(ReportState.DEMAND, item.state)
-            assertEquals(3, item.run)
-            assertSame(sink, item.key.rule)
-            assertSame(root, item.key.method)
-            assertSame(normalExit(root), item.key.statement)
-            assertTrue(item.witnesses.all { !it.confirmed }, "Normal root facts alone are not a confirmation certificate")
-            for (witness in item.witnesses) {
-                assertSame(root, witness.methodKey.method)
-                assertEquals(EmptyMethodContext, witness.methodKey.context)
-                for (edge in witness.edges) {
-                    assertTrue(edge.premise.isZero)
-                    assertEquals(Layer.NORMAL, edge.layer)
-                    val exact = assertIs<TaintTree>(edge.facts)
-                    assertEquals(AccessPathBase.Return, exact.base)
-                    assertEquals(Layer.NORMAL, exact.layer)
-                    assertEquals(1, exact.root.leaf.exact.ids.size)
-                    assertTrue(exact.root.leaf.any.isEmpty)
-                    assertNull(exact.root.accessors)
-                }
-            }
+            assertSame(sink, item.descriptor.rule)
+            assertSame(root, item.descriptor.key.method)
+            assertSame(normalExit(root), item.descriptor.key.statement)
+            assertSame(root, item.descriptor.representativeMethodKey.method)
+            assertEquals(EmptyMethodContext, item.descriptor.representativeMethodKey.context)
+            assertSame(item.descriptor, assertNotNull(runtimeShared).reportCatalog.descriptor(item.id))
             val output = entry.toVulnerabilities(report).single()
             assertSame(sink, output.vulnerability.rule)
-            assertSame(item.key.statement, output.vulnerability.statement)
+            assertSame(item.descriptor.key.statement, output.vulnerability.statement)
             assertSame(TracePathGenerationResult.Simple, output.trace)
             val node = assertIs<TaintSinkTracker.TaintVulnerabilityRuleNode.Unconditional>(
                 output.vulnerability.vulnerabilityRules.getValue(sink))
-            assertSame(item.witnesses.first().methodKey, node.methodEntryPoint)
+            assertSame(item.descriptor.representativeMethodKey, node.methodEntryPoint)
             assertEquals(TaintAnalysisUnitRunnerManager.Status.OK, entry.status(report))
         }
     }

@@ -20,6 +20,7 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 class HistoricalSupport(input: HistoricalSupportInput, roots: List<MethodKey>,
               private val mode: ApMode, private val shared: SharedObjects) {
     private val result = input.result
+    private val witnesses = input.witnesses
     private data class Site(val callee: MethodKey, val caller: MethodKey, val call: CommonInst)
     private val roots = roots.toHashSet()
     private val ap = shared.ap
@@ -87,7 +88,7 @@ class HistoricalSupport(input: HistoricalSupportInput, roots: List<MethodKey>,
 
     fun confirm() {
         shared.cancellation.checkpoint()
-        for ((_, witness) in result.vulnerabilities.witnessesOf(result.runIndex)) {
+        for ((_, witness) in witnesses?.witnessesOf(result.runIndex).orEmpty()) {
             shared.cancellation.checkpoint()
             witness.confirmed = witness.edges.all {
                 shared.cancellation.checkpoint()

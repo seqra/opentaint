@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.*
 import org.opentaint.dataflow.bidi.engine.*
+import org.opentaint.dataflow.bidi.engine.Target
 import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
 import org.opentaint.dataflow.bidi.interp.ExitRules
 import org.opentaint.dataflow.bidi.interp.RuleStatement
@@ -63,22 +64,25 @@ class OutgoingDemandStopTest {
         }, f.shared, 5.seconds, { config, _, _ ->
             configs += config
             if (config.index == 3 && failed != null) {
-                RunResult<RunMethodAnalyzer>(failed, emptyList(), config.index, config.direction,
-                    f.vulnerabilities)
+                RunResult<RunMethodAnalyzer>(failed, emptyList(), config.index, config.direction)
             } else {
                 val actor = f.core(config)
                 // A raw NORMAL relation must be persisted before the stop decision.
                 actor.summaries.add(flowInitial, flowResult)
+                if (config.direction == Direction.FORWARD) {
+                    // Run-1 has independent refinement work and a settled report.
+                    if (config.index == 1) actor.emitTarget(f.manager.zero, Target.DemandTarget)
+                    if (config.index == 1 || reportAtRun3) {
+                        val id = f.shared.reportCatalog.intern(SinkKey(key.method, f.inst(2), rule.id), rule, key)
+                        actor.emitTarget(f.manager.zero, Target.NormalTarget(id))
+                    }
+                    // Seed capture is independent of whether terminal C5 publishes a row.
+                    actor.sinkSeeds += Seed.Sink(rule, key, f.inst(2), input)
+                }
                 prescribe(config, actor)
                 f.drain(actor)
                 actor.freeze()
-                if (config.direction == Direction.FORWARD && (config.index != 3 || reportAtRun3)) {
-                    val witness = SinkWitness(0, key,
-                        listOf(SinkEdge(f.manager.zero, Layer.DEMAND, Reach.DEMAND)), config.index)
-                    f.vulnerabilities.add(VulnerabilityKey(rule, key.method, f.inst(2)), witness)
-                }
-                RunResult(RunStatus.COMPLETE, listOf(actor), config.index, config.direction,
-                    f.vulnerabilities)
+                RunResult(RunStatus.COMPLETE, listOf(actor), config.index, config.direction)
             }.also(results::add)
         }, guard)
 
@@ -107,8 +111,7 @@ class OutgoingDemandStopTest {
                 "A sink seed does not override the empty outgoing-demand stop")
             assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD,
                 EndReason.NO_DEMAND_EDGE), report.end)
-            assertEquals(ReportState.DEMAND, report.entries.single().state)
-            assertEquals(3, report.entries.single().run)
+            assertEquals(c.rule.id, report.entries.single().descriptor.key.ruleId)
             assertEquals(listOf(1, 2, 3), driver.frontiers.map { it.run })
             assertTrue(c.f.records.byEntry(c.key, c.flowInitial.toPattern()).any { record ->
                 record.direction == Direction.FORWARD && record.conclusion == c.flowResult
@@ -117,12 +120,12 @@ class OutgoingDemandStopTest {
     }
 
     @Test
-    fun `an empty forward report keeps precedence over empty outgoing demand`() {
+    fun `a skipped later normal observation retains its earlier report and stops on empty demand`() {
         StopCase().use { c ->
             val driver = c.driver(reportAtRun3 = false)
             val report = driver.analyze(listOf(c.key))
-            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.STOP_RULE), report.end)
-            assertTrue(report.entries.isEmpty())
+            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
+            assertEquals(c.rule.id, report.entries.single().descriptor.key.ruleId)
             assertTrue(driver.frontiers.last().demandEdges.isEmpty())
             assertEquals(listOf(1), c.policyCalls)
             assertEquals(listOf(1, 2, 3), driver.frontiers.map { it.run })
@@ -150,7 +153,7 @@ class OutgoingDemandStopTest {
             assertEquals(listOf(1, 3), c.policyCalls)
             assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD,
                 EndReason.POLICY), report.end)
-            assertEquals(ReportState.DEMAND, report.entries.single().state)
+            assertEquals(c.rule.id, report.entries.single().descriptor.key.ruleId)
         }
     }
 
@@ -161,7 +164,7 @@ class OutgoingDemandStopTest {
             val report = driver.analyze(listOf(c.key))
             assertEquals(AnalysisEnd(status, 3, Direction.FORWARD, EndReason.ABNORMAL), report.end)
             assertEquals(listOf(1, 2), driver.frontiers.map { it.run })
-            assertEquals(1, report.entries.single().run)
+            assertEquals(c.rule.id, report.entries.single().descriptor.key.ruleId)
             assertEquals(listOf(1), c.policyCalls)
         }
     }
@@ -178,8 +181,8 @@ class OutgoingDemandStopTest {
             val report = driver.analyze(listOf(c.key))
             assertEquals(AnalysisEnd(RunStatus.OOM, 3, Direction.FORWARD, EndReason.ABNORMAL), report.end)
             assertEquals(listOf(1, 2, 3), driver.frontiers.map { it.run })
-            assertEquals(3, report.entries.single().run)
-            assertEquals(ReportState.DEMAND, report.entries.single().state)
+            assertEquals(c.rule.id, report.entries.single().descriptor.key.ruleId)
+            assertEquals(c.rule.id, report.entries.single().descriptor.key.ruleId)
         }
     }
 
@@ -197,7 +200,7 @@ class OutgoingDemandStopTest {
             val report = driver.analyze(listOf(c.key))
             assertEquals(AnalysisEnd(RunStatus.OOM, 3, Direction.FORWARD, EndReason.ABNORMAL), report.end)
             assertEquals(listOf(1, 2), driver.frontiers.map { it.run })
-            assertEquals(1, report.entries.single().run)
+            assertEquals(c.rule.id, report.entries.single().descriptor.key.ruleId)
             assertFalse(c.f.cancellation.isActive())
             assertFailsWith<Cancellation.Cancelled> { c.f.cancellation.checkpoint() }
         }

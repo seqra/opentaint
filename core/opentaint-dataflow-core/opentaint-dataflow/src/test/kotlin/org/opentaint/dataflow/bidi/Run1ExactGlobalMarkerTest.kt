@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.bidi.ap.*
@@ -75,7 +77,7 @@ class Run1ExactGlobalMarkerTest {
             val actor = f.core(localFactory = MethodLocalServicesFactory(::RunMethodLocalServices))
             actor.addRootZero()
             f.drain(actor, quantum = 1)
-            assertTrue(f.vulnerabilities.witnessesOf(1).any { it.first.rule == sink.rule })
+            assertTrue(actor.targets.any { it.target == Target.DemandTarget })
             val staticInitials = f.processed.flatMap { row -> row.premise.members.filter { it.base == STATIC } }
             assertTrue(staticInitials.isNotEmpty())
             assertTrue(staticInitials.all { it.pathData.contentEquals(path.toIntArray()) &&
@@ -104,7 +106,7 @@ class Run1ExactGlobalMarkerTest {
                 f.exitRules(2, ExitRules(RuleStatement(StatementSummary.EMPTY, StatementSummary.EMPTY, listOf(sink)), false, emptySet()))
                 val actor = f.core(localFactory = MethodLocalServicesFactory(::RunMethodLocalServices))
                 actor.addRootZero(); f.drain(actor, quantum = 1)
-                assertTrue(f.vulnerabilities.witnessesOf(1).any { it.first.rule == sink.rule },
+                assertTrue(actor.targets.any { it.target == Target.DemandTarget },
                     "ANY keeps its empty-suffix meaning and also selects field supplies")
                 val classInitials = f.processed.flatMap { it.premise.members }.filter {
                     it.base == STATIC && it.pathData.size == 1

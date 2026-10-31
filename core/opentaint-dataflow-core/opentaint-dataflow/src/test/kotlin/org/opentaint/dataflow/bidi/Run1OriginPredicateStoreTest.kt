@@ -29,7 +29,7 @@ class Run1OriginPredicateStoreTest {
                                                 id: RuleOccurrenceId = rule, action: Any = "action"): List<Arm> =
         ArrayList<Arm>().also { arms ->
             add(id, statement, predicate, ordinal(predicate, leaf), value) { cube ->
-                cube.emitOrigins(action) { arms += Arm(cube.proof, cube.layer, it) }
+                cube.emitLayeredOrigins(action) { initial, layer -> arms += Arm(cube.proof, layer, initial) }
             }
         }
 
@@ -65,13 +65,23 @@ class Run1OriginPredicateStoreTest {
                 }
             }
         }
-        return eval(predicate.root).flatMapTo(HashSet()) { binding ->
+        data class Partition(val proof: ProofKey, val headers: Map<Int, Pair<Layer, GroupKey?>>)
+        return eval(predicate.root).groupBy { binding ->
             val proof = ProofKey(rule, binding.inputs.keys.sorted(), binding.choices
                 .sortedWith(compareBy<Pair<Int, Int>> { it.first }.thenBy { it.second })
                 .flatMap { listOf(it.first, it.second) })
-            val layer = if (binding.inputs.values.any { it.layer == Layer.DEMAND }) Layer.DEMAND else Layer.NORMAL
-            val nonzero = binding.inputs.values.map { it.premise as InitialAp }.filterNot { it.isZero }.toSet()
-            (nonzero.ifEmpty { setOf(manager.zero) }).map { Arm(proof, layer, it) }
+            Partition(proof, binding.inputs.mapValues { (_, input) -> input.layer to input.facts?.groupKey })
+        }.flatMapTo(HashSet()) { (partition, bindings) ->
+            val layer = if (partition.headers.values.any { it.first == Layer.DEMAND }) Layer.DEMAND else Layer.NORMAL
+            val nonzero = bindings.flatMap { it.inputs.values }.map { it.premise as InitialAp }.filterNot { it.isZero }.toSet()
+            val arms = nonzero.map { origin ->
+                val complete = layer == Layer.NORMAL && bindings.any { binding ->
+                    binding.inputs.values.all { it.premise.isZero || it.premise == origin }
+                }
+                Arm(partition.proof, if (complete) Layer.NORMAL else Layer.DEMAND, origin)
+            }
+            if (bindings.any { binding -> binding.inputs.values.all { it.premise.isZero } })
+                arms + Arm(partition.proof, layer, manager.zero) else arms
         }
     }
 
@@ -94,12 +104,14 @@ class Run1OriginPredicateStoreTest {
             val store = Run1OriginPredicateStore(manager)
             val pool = HashMap<Int, MutableList<ConjunctionStore.Input>>()
             val observed = HashSet<Arm>()
+            val expected = HashSet<Arm>()
             for ((leaf, value) in events) {
                 pool.getOrPut(leaf) { ArrayList() }.add(value)
                 store.add(rule, statement, predicate, leaf, value) { cube ->
-                    cube.emitOrigins("action") { observed.add(Arm(cube.proof, cube.layer, it)) }
+                    cube.emitLayeredOrigins("action") { initial, layer -> observed.add(Arm(cube.proof, layer, initial)) }
                 }
-                assertEquals(scalar(predicate, pool), observed, "predicate=$predicateIndex order=$order leaf=$leaf")
+                expected += scalar(predicate, pool)
+                assertEquals(expected, observed, "predicate=$predicateIndex order=$order leaf=$leaf")
             }
         }
     }
@@ -131,8 +143,10 @@ class Run1OriginPredicateStoreTest {
         assertTrue(store.accept(predicate, 0, a).isEmpty())
         assertEquals(afterGrowth, statistics.snapshot(), "Unchanged accepted input cannot reschedule parents")
         assertEquals(listOf(origin(2)), store.accept(predicate, 0, a.copy(premise = origin(2))).map { it.initial })
-        assertTrue(store.accept(predicate, 0, a.copy(premise = manager.zero)).isEmpty())
-        assertEquals(listOf(manager.zero), store.accept(predicate, 1, b.copy(premise = manager.zero)).map { it.initial })
+        assertEquals(listOf(origin(1) to Layer.NORMAL), store.accept(predicate, 0, a.copy(premise = manager.zero))
+            .map { it.initial to it.layer }, "A new ZERO choice completes the older second origin")
+        assertEquals(setOf(origin(0) to Layer.NORMAL, origin(2) to Layer.NORMAL, manager.zero to Layer.NORMAL),
+            store.accept(predicate, 1, b.copy(premise = manager.zero)).map { it.initial to it.layer }.toSet())
     }
 
     @Test fun `result action scopes and statement scopes do not share origin admission`() {
@@ -177,14 +191,16 @@ class Run1OriginPredicateStoreTest {
         val predicate = build { b, l -> b.and(l) }
         val statistics = FormCacheStatistics()
         val store = Run1OriginPredicateStore(manager, statistics)
-        val observed = HashSet<InitialAp>()
+        val observed = HashSet<Pair<InitialAp, Layer>>()
         val count = 64
         for (leaf in predicate.leaves.indices) repeat(count) { index ->
             store.add(rule, statement, predicate, leaf, input(index)) { cube ->
-                cube.emitOrigins("action") { assertTrue(observed.add(it)) }
+                cube.emitLayeredOrigins("action") { initial, layer -> assertTrue(observed.add(initial to layer)) }
             }
         }
-        assertEquals((0 until count).map(::origin).toSet(), observed)
+        assertEquals((0 until count).map(::origin).toSet(), observed.map { it.first }.toSet())
+        assertEquals((0 until count).map { origin(it) to Layer.NORMAL }.toSet(),
+            observed.filter { it.second == Layer.NORMAL }.toSet())
         val counts = statistics.snapshot()
         assertEquals(5L, counts.observedSupportShapes, "Four leaf domains plus their AND root")
         assertEquals(5L, counts.observedProofRecords)

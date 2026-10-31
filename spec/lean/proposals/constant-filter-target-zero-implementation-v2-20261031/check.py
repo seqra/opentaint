@@ -17,11 +17,14 @@ ROOT = next(p for p in HERE.parents if (p / "spec/lean/lean-toolchain").is_file(
 TOOLCHAIN = "leanprover/lean4:v4.33.1"
 MODULES = ["SelectedCore", "ConstantBoundary", "TargetZeroRegistry", "InitialEmissionExact",
            "UnansweredDemand", "TargetZeroND", "SelectedTargetApplication", "TargetJoin",
-           "OwnedDelta", "TerminalProtocol", "ZeroSettlement", "ProducerDomain"]
+           "OwnedDelta", "TerminalProtocol", "ZeroSettlement", "ProducerDomain",
+           "FullZeroSourceReplay", "FullComputedLayer", "SourceSummaryCompletion", "StaticTargetClosure"]
 ALLOWED_AXIOMS = {"propext", "Quot.sound"}
 SPEC = ROOT / "docs/design/bidirectional-constant-filter-target-zero-implementation-20261031.md"
-SPEC_SHA256 = "8ae901c30188e81a09030491291dbb86a749e017a6d0b4b3218664821494c21a"
+SPEC_SHA256 = "43fce6a3ff0adaac7361124dbe531ce2933e19437b743b22faf6d6c9b24a8a50"
 PROPOSAL = ROOT / "docs/design/bidirectional-constant-filter-target-zero-implementation-v2-20261031.md"
+AMENDMENT = ROOT / "spec/demand-layer-exact-initials.md"
+AMENDMENT_PROOFS = ROOT / "spec/demand-layer-exact-initials-proofs.md"
 
 
 def sha(path: Path) -> str:
@@ -101,18 +104,33 @@ def main() -> None:
     source_paths = [HERE / (m + ".lean") for m in MODULES]
     runtime = ROOT / "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi"
     runtime_paths = [runtime / name for name in [
-        "ap/RestrictedInitialPolicy.kt", "ap/Demand.kt", "ap/Reference.kt", "ap/Summary.kt",
+        "ap/RestrictedInitialPolicy.kt", "ap/RuntimeDataDomain.kt", "ap/Demand.kt", "ap/Reference.kt", "ap/Summary.kt",
+        "ap/ApManager.kt", "ap/ApOps.kt", "ap/ApOut.kt", "ap/Clean.kt",
         "interp/FormApplier.kt", "interp/MicroEdge.kt", "interp/MicroEdgeBuilder.kt",
         "engine/RunMethodAnalyzer.kt", "engine/RunMethodLocalServices.kt", "engine/RunMethodCallServices.kt", "engine/MethodServices.kt",
         "engine/EngineAlgebra.kt", "engine/Run1PointResume.kt", "engine/SummaryStorage.kt",
+        "engine/Target.kt", "engine/NormalTargetStore.kt", "engine/ReportCatalog.kt", "engine/RunConfig.kt",
+        "engine/RunEvent.kt", "engine/RunStatus.kt", "engine/SharedObjects.kt",
         "engine/PublicationIndex.kt", "engine/CalleeSubscriptions.kt", "engine/SubscriptionManager.kt",
         "engine/UnitRunner.kt", "engine/RunMethodHandlers.kt", "engine/RunManager.kt",
-        "engine/PersistedSummaryReplay.kt", "store/RecordStore.kt", "store/DemandStore.kt",
-        "store/ConjunctionStore.kt", "store/KaryJoin.kt", "store/SourceHitStore.kt",
+        "engine/PersistedSummaryReplay.kt", "engine/JoinedStaticGuidance.kt", "store/RecordStore.kt", "store/DemandStore.kt",
+        "store/StaticGuidance.kt", "store/StaticEntryLookup.kt", "store/StaticPairLookup.kt",
+        "store/C5StaticDemandView.kt", "store/StaticSelectorIndex.kt",
+        "store/ConjunctionStore.kt", "store/KaryJoin.kt", "store/SourceHitStore.kt", "store/ControlDemand.kt", "store/SinkEdge.kt",
         "driver/HandOff.kt", "driver/Seeds.kt", "driver/IterationDriver.kt", "driver/Report.kt",
     ]]
     runtime_paths.append(ROOT / "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/JIRBidiAnalysis.kt")
-    input_paths = source_paths + [Path(__file__).resolve(), SPEC, PROPOSAL, HERE / "README.md"] + runtime_paths
+    tests = ROOT / "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi"
+    test_paths = [tests / name for name in [
+        "ExactDemandMaySourcePermissionTest.kt", "TargetCallTest.kt", "TargetProtocolTest.kt",
+        "BarrierFailureTest.kt", "ReturnFullCleanupEngineTest.kt", "ReturnFullCleanupTest.kt", "Run1MarkModeTest.kt",
+        "Run1FullLayerPolicyTest.kt", "BackwardSourceSummaryTargetTest.kt", "CallSourceHitTest.kt",
+        "FullConditionalSourceDemandTest.kt", "StaticTargetRefinementTraceTest.kt",
+        "StaticTargetClosureTest.kt", "ControlDemandTest.kt", "VirtualZeroExitTargetTest.kt",
+        "Run1StaticExitRoutingTest.kt", "StaticCatalogIterationTest.kt", "StaticCatalogClosureTest.kt",
+        "fixtures/StaticCatalogAssertions.kt",
+    ]]
+    input_paths = source_paths + [Path(__file__).resolve(), SPEC, PROPOSAL, AMENDMENT, AMENDMENT_PROOFS, HERE / "README.md"] + runtime_paths + test_paths
     before = {str(p.relative_to(ROOT)): sha(p) for p in input_paths}
     expected, theorem_count = [], 0
     for path in source_paths:
@@ -165,8 +183,22 @@ def main() -> None:
     receipt = {
         "status": "PASS" if all(checks.values()) else "FAILED",
         "runtimeVerifiedByThisChecker": False,
-        "proposalReadyForImplementation": True,
-        "openDecision": None,
+        "kernelScope": "RETAINED_PROTOCOL_PLUS_HISTORICAL_ADMISSION",
+        "currentProposalConformance": "NOT_VERIFIED_BY_THIS_PACKAGE",
+        "historicalSlices": [
+            "InitialEmissionExact concrete MAY rejection; UnansweredDemand old-exact-emitter controls.",
+            "FullZeroSourceReplay.admitExact and MAY-empty-current-gate comparisons.",
+            "SourceSummaryCompletion call/no-native controls composed with the old exact emitter.",
+            "FullComputedLayer.NORMAL weakened-ND-arm reporting is a pre-repair counterexample.",
+        ],
+        "kernelSelectedLaws": "PASS" if all(checks.values()) else "FAILED",
+        "composedRuntimeCoverage": "NOT_ESTABLISHED",
+        "openCoverage": [
+            "Complete FULL conditional-source/caller-context behavior and known GROUP source-admission issues remain runtime obligations.",
+            "The concrete amendment selects an ND repair; the pre-amendment runtime regression is not repaired by this kernel package.",
+            "Static Target closure is modeled with paired C5; actual geometry/visibility/index adapters require runtime validation.",
+            "Whole-project findings, convergence and performance have not been established by this kernel check.",
+        ],
         "specificationSha256": SPEC_SHA256,
         "baseRuntime": "e090118e5f9603f1973c0578a3e04998035f4508",
         "utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -174,7 +206,7 @@ def main() -> None:
         "inputHashes": before, "theoremCount": theorem_count,
         "auditedDeclarationCount": len(expected), "auditedDeclarations": expected,
         "axiomDependencies": sorted(axioms), "checks": checks, "runs": runs,
-        "scope": "Clean v2 selected protocol models only. Directed C2, no-op unsatisfied admission, constant-free boundaries and conditional route preservation, exact report registry and root extraction, paired C5/handoff, selected NORMAL-only forward terminal application, arbitrary-arity complete Target joins, owned retained/seen delta equivalence, durable required publication/receipt, constructive rooted ZERO settlement and completed snapshots. AP/JVM geometry, actual static/input binding, Kotlin synchronization/cancellation/fairness, whole-project findings, convergence and performance remain runtime/test obligations. No superseded promotion or source-permission workaround is imported.",
+        "scope": "Retained protocol kernels with labeled historical concrete C2 rejection, old exact-emitter call/no-native comparisons, and ZERO-only layer history. Generic truly-empty admission remains a no-op; matching concrete MAY is admitted in D by the separate amendment. This package does not verify the amended whole implementation proposal. Constant-free boundaries and conditional route preservation, exact report registry and root extraction, paired C5/handoff, selected NORMAL-only forward terminal application, arbitrary-arity complete Target joins, owned retained/seen delta equivalence, durable required publication/receipt, constructive rooted ZERO settlement and completed snapshots. The explicit amendments add ordinary FULL computed-layer preservation under ZERO and nonzero origins without promoting DEMAND; independent static/GROUP overrides; exact NORMAL source native replay before current demand, all-EXACT empty-E ZERO cleanup equivalence, and accepted backward source-summary ZERO-to-DemandTarget dispatch with preserved original and no fake source hit. The typed static Target extension proves eager/factored W/B/R closure equivalence, endpoint provenance, direct/inherited Target guides, paired ZERO C2/C5, Target/ZERO read-only exit-probe equivalence for every complete row, and finite full/group mark labels. Residual controls retain the pre-completion static paired-C5 rejection and the computed-DEMAND no-native exact/MAY admission cell and conditional NORMAL weakened-ND-arm reporting counterexample; they do not establish composed coverage. AP/JVM geometry, actual static/input binding, Kotlin synchronization/cancellation/fairness, whole-project findings, convergence and performance remain runtime/test obligations. The old concrete-MAY rejection and NORMAL weakened-ND-arm controls are historical, superseded by the new concrete exact-DEMAND package. The old ZERO-only override remains a historical comparison; its nonzero demotion is not a selected current law. No superseded source-permission workaround is imported.",
     }
     (HERE / "checks.json").write_text(json.dumps(receipt, indent=2) + "\n")
     print(json.dumps({k: receipt[k] for k in ["status", "theoremCount", "auditedDeclarationCount", "axiomDependencies", "checks"]}, indent=2))

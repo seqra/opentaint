@@ -2,7 +2,8 @@ package org.opentaint.dataflow.bidi.store
 
 import org.opentaint.dataflow.bidi.ap.*
 
-/** C2 needs a marked output witness, not all its source/mark products. */
+/** C2 needs a marked output witness, not all its source/mark products.
+ * The result accumulator keeps this query's actual layer through local and inherited paths. */
 internal class StaticEntryLookup(
     private val ap: ApManager,
     private val method: MethodKey,

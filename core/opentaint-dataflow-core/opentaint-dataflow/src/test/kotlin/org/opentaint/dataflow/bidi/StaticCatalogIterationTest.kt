@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.junit.jupiter.api.Test
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
@@ -90,7 +92,6 @@ class StaticCatalogIterationTest {
         sourceHits = result.analyzers.flatMap { actor -> actor.sourceHits?.entries()?.map { (method, node, edge) ->
             ObservedSourceHit(method, node, edge)
         }?.toList().orEmpty() }.toSet(),
-        witnesses = result.witnessesByKey().flatMap { (key, values) -> values.map { observedWitness(ops, key, it) } }.toSet(),
     )
 
     /** Additional field FLOW records can refine the root policy without changing its complete
@@ -148,11 +149,8 @@ class StaticCatalogIterationTest {
                 val actual = ProductionSchedule(f.program, forward, sameUnit, policy, quantum = 1,
                     duplicateDeliveries = true).run()
                 assertDirectStaticProtocol(actual, f.program)
-                assertEquals(setOf(p.sink.rule), actual.witnesses.map { it.rule }.toSet())
-                assertEquals(setOf(1, 2), actual.witnesses.map { it.edges.size }.toSet())
-                assertEquals(2, actual.witnesses.map { it.proof }.toSet().size)
-                assertTrue(actual.witnesses.all { it.methodKey == p.callee && it.statement == f.program.inst(p.callee, 1) &&
-                    it.edges.all { edge -> edge.layer == Layer.DEMAND } })
+                assertTrue(actual.targets.any { !it.normal && it.method == p.callee })
+                assertTrue(actual.targets.all { it.premise.size == 1 }, "Run-1 emits each atomic origin")
                 assertTrue(actual.rawSummaries.none { it.conclusion.fact.mark == MarkSlot.Concrete(p.marks.last()) ||
                     it.conclusion.fact.mark == GroupedScalarMarks(f.manager.marks).slot(MarkSlot.Concrete(p.marks.last())) },
                     "Ignored END actions never create either Group or Full data")
@@ -167,7 +165,7 @@ class StaticCatalogIterationTest {
             val fresh = f.program.mark("fresh")
             val universe = BoundedDenotation(listOf(AccessPathBase.Zero, STATIC, returned, result, AccessPathBase.Argument(17)),
                 p.fields + f.program.field("fresh"), (p.marks + fresh + (p.marks + fresh).map { f.manager.marks.group(f.manager.marks.groupOf(it)) } + TaintMark.ZERO).distinct(), 3)
-            f.program.freshShared(sameUnit, freshVulnerabilities = true).use { owner ->
+            f.program.freshShared(sameUnit).use { owner ->
                 val configs = ArrayList<RunConfig>()
                 val replayInputs = LinkedHashMap<Int, ProgramRunInputs>()
                 val report = IterationDriver(FixedLimits(limits), owner, 20.seconds,
@@ -181,26 +179,50 @@ class StaticCatalogIterationTest {
                     guardBarrier = { _, body -> body() }).analyze(p.roots)
                 assertEquals(RunStatus.COMPLETE, report.end.status)
                 assertEquals(listOf(1, 2, 3), f.results.map { it.runIndex })
-                assertEquals(setOf(p.sink.rule), report.entries.map { it.key.rule }.toSet())
-                assertEquals(setOf(ReportState.DEMAND), report.entries.map { it.state }.toSet(),
-                    "A complete Full binding is checked below; the minimal driver supplies no confirmation certificate")
-                assertTrue(f.results.last().witnessesByKey().values.flatten().none { it.confirmed })
+                val expectedReports = if (crossed) emptySet() else setOf(p.sink.rule)
+                assertEquals(expectedReports, report.entries.map { it.descriptor.rule }.toSet(),
+                    buildString {
+                        appendLine("crossed=$crossed sameUnit=$sameUnit end=${report.end}")
+                        for (config in configs) {
+                            appendLine("run-${config.index} ${config.direction} mode=${config.mode.markMode}")
+                            for (owner in p.roots + p.callee) {
+                                appendLine("demand ${owner.method.name}: ${config.demand?.explicitRows(owner)}")
+                                appendLine("ZERO ${owner.method.name}: ${config.demand?.initials(owner, Reach.NORMAL, config.admissionPolicy)}")
+                            }
+                            for (actor in f.results.single { it.runIndex == config.index }.analyzers) {
+                                appendLine("actor ${actor.key}: targets=${actor.targets} selected=${actor.outgoingTargets}")
+                                appendLine("hits=${actor.sourceHits?.occurrences()?.toList()}")
+                                appendLine("summaries=${actor.summaries.all().map { (origin, facts) -> origin to f.ops.leaves(facts).toList() }.toList()}")
+                            }
+                        }
+                    })
+                if (crossed) {
+                    // Run-1 may combine the global static supplies. A later NORMAL
+                    // terminal keeps both origins and needs one complete caller binding.
+                    val last = f.results.single { it.runIndex == 3 }
+                    val callee = last.analyzers.single { it.key == p.callee }
+                    val expectedOrigins = setOf(
+                        f.program.pattern(STATIC, listOf(p.fields[0], p.fields[1]),
+                            mark = MarkSlot.Concrete(p.marks[0])),
+                        f.program.pattern(STATIC, listOf(p.fields[0], p.fields[2]),
+                            mark = MarkSlot.Concrete(p.marks[1])),
+                    )
+                    assertTrue(callee.targets.any { row -> row.target is Target.NormalTarget &&
+                        row.premise.members.map { it.toPattern() }.toSet() == expectedOrigins },
+                        "The local NORMAL sink must retain both exact static requirements")
+                    assertTrue(last.analyzers.filter { it.key in p.roots }.none { actor ->
+                        actor.targets.any { it.premise.isZero && it.target is Target.NormalTarget }
+                    }, "Separate roots cannot complete the two-premise NORMAL terminal")
+                }
                 assertEquals(1, configs[1].seeds.size)
                 val physical = assertIs<Seed.PredicateSink>(configs[1].seeds.at(p.callee, f.program.inst(p.callee, 1)).single())
                 assertEquals(p.sink.occurrenceId, physical.occurrence)
-                val expectedRecords = checkNotNull(first).rawSummaries.filter {
-                    !it.conclusion.demand && it.premise.size == 1
-                }.mapTo(ArrayList()) { RawRecord(it.method, Direction.FORWARD, it.premise.single(), it.conclusion) }
-                for (index in 1 until configs.size) {
-                    val config = configs[index]
-                    val input = replayInputs.getValue(config.index)
-                    val scalar = RawCurrentClosure(f.program, config, input).run()
-                    val actual = retained(f.results[index], f.ops)
-                    RunObservation(rawSummaries = scalar.rawSummaries, selectedDemand = scalar.selectedDemand,
-                        sourceHits = scalar.sourceHits, witnesses = scalar.witnesses).assertEquivalent(actual, universe)
-                    for (row in scalar.rawSummaries) if (!row.conclusion.demand && row.premise.size == 1 &&
-                        !(config.direction == Direction.BACKWARD && row.premise.single().fact.base == AccessPathBase.Zero))
-                        expectedRecords += RawRecord(row.method, config.direction, row.premise.single(), row.conclusion)
+                // The historical scalar closure has unconditional ZERO. It is not
+                // an oracle for the selected Target-gated admission/report lanes.
+                for (run in f.results) for (actor in run.analyzers) {
+                    assertTrue(actor.targets.all { row -> row.premise.members.none { it.isFlow } })
+                    if (run.direction == Direction.BACKWARD)
+                        assertTrue(actor.targets.none { it.target is org.opentaint.dataflow.bidi.engine.Target.NormalTarget })
                 }
                 val backward = f.results[1].analyzers.flatMap { it.sourceHits!!.occurrences().toList() }
                 for (source in p.sources) assertTrue(backward.any { it.forward == source && it.method in p.roots })
@@ -213,8 +235,7 @@ class StaticCatalogIterationTest {
                     configs[2].seeds.at(key, f.program.inst(key, node)).filterIsInstance<Seed.Source>()
                 } }
                 assertEquals(backward.map { Seed.Source(it.method, it.statement, it.forward, it.action) }.toSet(), forwarded.toSet())
-                val records = phaseInputs(f, p, RunConfig(3, 2, configs[2].demand, f.records, configs[2].seeds, p.roots), universe).records
-                assertEquals(nativeRelations(expectedRecords, universe), nativeRelations(records, universe))
+
             }
         }
     }

@@ -703,7 +703,7 @@ class JIRCallTransferTest : BasicTestUtils() {
                 }
             }
             override fun allowsSource(node: CommonInst, me: MicroEdge) = true
-            override fun sourceHit(node: CommonInst, me: MicroEdge) { hits++ }
+            override fun acceptedSource(application: AcceptedSource<Set<Pattern>, Facts>) { hits++ }
         })
         fun cut(i: TreeItem): List<TreeItem> = buildList { ops.limit(i.facts, mode.fieldLimit, apOut { add(i.copy(facts = it)) }) }
         fun finish(i: TreeItem): List<TreeItem> {

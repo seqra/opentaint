@@ -11,7 +11,7 @@ import org.opentaint.dataflow.bidi.interp.StageKind.*
 import kotlin.test.*
 import kotlin.time.Duration.Companion.seconds
 
-/** Each run-1 original must guide recovery through actual FULL backward inputs. */
+/** GROUP run-1 origins guide recovery through ordinary FULL backward and forward runs. */
 class RepresentativeRefinementTest {
     @Test fun `B2 recovers both FULL inputs after R1 emits both argument origins`() {
         DriverFixtures().use { f ->
@@ -48,7 +48,7 @@ class RepresentativeRefinementTest {
             val sink = SinkRule(f.rule("representative result"), 0, listOf(p.pattern(ret, mark = v)), emptyList())
             p.exit(main, 2, ExitRules(RuleStatement(StatementSummary.EMPTY, StatementSummary.EMPTY, listOf(sink)), false, emptySet()))
 
-            val report = f.driver(FixedLimits(listOf(1, 1, 2)), 20.seconds).analyze(listOf(main))
+            val report = f.driver(FixedLimits(listOf(1, 1, 2)), 20.seconds, run1MarkMode = MarkMode.GROUP).analyze(listOf(main))
             assertTrue(f.results.all { it.status == RunStatus.COMPLETE })
             val run1 = f.results.single { it.runIndex == 1 }
             val outputs = run1.analyzers.single { it.key == callee }.summaries.all().toList()
@@ -60,7 +60,7 @@ class RepresentativeRefinementTest {
             val recovered = backward.analyzers.flatMap { it.sourceHits?.entries()?.toList().orEmpty() }
             assertTrue(recovered.any { it.first == main && it.third == first }, "The first input has its real source")
             assertTrue(recovered.any { it.first == main && it.third == second }, "The second input also has its real source")
-            assertTrue(report.entries.any { it.key.rule == sink.rule })
+            assertTrue(report.entries.any { it.descriptor.rule == sink.rule })
             val run3 = f.results.single { it.runIndex == 3 }
             assertTrue(run3.analyzers.single { it.key == callee }.summaries.all().any { (premise, result) ->
                 premise is PremiseSet && premise.members.map { it.base }.toSet() == setOf(a, b) && result.base == ret

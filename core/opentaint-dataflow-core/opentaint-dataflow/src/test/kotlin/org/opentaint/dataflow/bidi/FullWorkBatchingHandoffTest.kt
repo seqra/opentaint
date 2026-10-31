@@ -89,8 +89,11 @@ class FullWorkBatchingHandoffTest {
                 actor.sourceHits?.occurrences()?.any { it.method == setter && it.forward == source } == true
             }
             assertTrue(sourceHit, "Run-1 demand must guide run-2 to the marked static source")
-            assertTrue(report.entries.any { it.key.rule == sink.rule }, "The child survives an EXACT root clean")
-            Observation(rows, report.entries.map { it.key.rule.id }.toSet(), sourceHit, f.results.map { it.runIndex })
+            assertTrue(report.entries.any { it.descriptor.rule == sink.rule }, f.results.joinToString("\n") { run -> "run-${run.runIndex}: " + run.analyzers.joinToString { actor ->
+                "${actor.key.method.name}: targets=" + actor.targets.map { row -> row.premise.members.map { it.toPattern() } to row.target } +
+                    "; AP=" + actor.summaries.all().flatMap { (p, facts) -> f.ops.leaves(facts).map { p.members.map { it.toPattern() } to (it to facts.layer) } }.toList()
+            } })
+            Observation(rows, report.entries.map { it.descriptor.rule.id }.toSet(), sourceHit, f.results.map { it.runIndex })
         }
     }
 

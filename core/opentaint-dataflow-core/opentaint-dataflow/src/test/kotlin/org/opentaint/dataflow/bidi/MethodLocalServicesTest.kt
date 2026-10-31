@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.Seed
@@ -55,7 +57,7 @@ class MethodLocalServicesTest {
             val answer = service.checkSinks(premise, f.inst(1), input, listOf(sink))
             assertTrue(answer.parts.isEmpty())
             assertTrue(answer.fired.isEmpty())
-            assertTrue(f.vulnerabilities.witnessesOf(2).none())
+            assertTrue(actor.targets.isEmpty())
             val edge = ConjunctiveEdge(listOf(f.pattern(), f.pattern()), f.pattern(result).fact)
             assertFails { service.conjunction(edge, premise, input, f.inst(1)) { _, _ ->
                 fail("A backward form has independent branches rather than a conjunction")
@@ -88,7 +90,7 @@ class MethodLocalServicesTest {
             assertFalse(abstraction.hasPending)
             assertTrue(mapFields(abstraction).all { it.isEmpty() }, "A cancelled demand did not install interest")
             assertTrue(actor.initials.all().none())
-            assertTrue(f.vulnerabilities.witnessesOf(1).none())
+            assertTrue(actor.targets.isEmpty())
             val other = f.run1Fact(result)
             val otherPremise = f.manager.initial(f.run1Pattern(result))
             service.conjunction(conjunction, otherPremise, other, f.inst(1)) { _, _ ->
@@ -112,8 +114,26 @@ class MethodLocalServicesTest {
                 "The cancelled input must not block either origin of the later complete literal join")
             assertEquals(2, joins.size)
             assertEquals(listOf(sink to Layer.DEMAND), service.checkSinks(premise, f.inst(1), input, listOf(sink)).fired)
-            assertEquals(1, f.vulnerabilities.witnessesOf(1).count(),
-                "A cancelled sink check must not poison the later actual witness")
+            assertEquals(setOf(TargetSummary(premise, Target.DemandTarget)), actor.targets,
+                "A cancelled sink check must not poison the later complete Target")
+            assertEquals(1, actor.sinkSeeds.size)
+        }
+    }
+
+    @Test fun `full sink patterns need no conversion and projected group patterns use the existing full form`() {
+        for (projected in listOf(false, true)) MethodAnalysisFixtures().use { f ->
+            val full = sink(listOf(f.pattern()))
+            val grouped = full.patterns.map { pattern -> pattern.copy(fact = pattern.fact.copy(mark = f.groupMark())) }
+            val selected = if (projected) SinkRule(full.rule, full.alternative, grouped, emptyList()) else full
+            if (projected) f.exitRules(2, ExitRules(RuleStatement(StatementSummary.EMPTY,
+                StatementSummary.EMPTY, listOf(full)), false, emptySet()))
+            val (actor, service) = core(f)
+            val premise = f.manager.initial(f.run1Pattern())
+            service.checkSinks(premise, f.inst(2), f.run1Fact(), listOf(selected))
+            val seed = assertIs<Seed.Sink>(actor.sinkSeeds.single())
+            assertEquals(full.patterns.single(), seed.requirement)
+            assertSame(full.rule, seed.rule)
+            assertEquals(setOf(TargetSummary(premise, Target.DemandTarget)), actor.targets)
         }
     }
 
@@ -244,7 +264,7 @@ class MethodLocalServicesTest {
                     else -> listOf(Seed.Source(f.key, f.inst(boundary), source.forward))
                 }
                 val (actor, _) = core(f, 3, SeedIndex.of(seed))
-                actor.addRootZero()
+                actor.addInitial(f.manager.zero) // This local transfer fixture supplies an already-admitted ZERO.
                 f.drain(actor)
                 val expected = buildSet {
                     add(f.manager.zero to Conclusion(ZERO_FACT, ExclusionSet.Empty, false))

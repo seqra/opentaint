@@ -9,7 +9,6 @@ internal fun DemandStore.near(method: MethodKey, actual: Pattern): List<DemandPa
     val stored = explicitRows(method).filter { nearLocation(it.entry, actual, false) }
     val completed = completion?.near(method, actual)?.toList().orEmpty()
     val implicit = when {
-        actual.fact.base == AccessPathBase.Zero -> listOf(zeroDemand)
         hasSharedStaticCarry && actual.fact.base == STATIC -> guidancePattern(actual).let { listOf(DemandPattern(it, it)) }
         else -> emptyList()
     }

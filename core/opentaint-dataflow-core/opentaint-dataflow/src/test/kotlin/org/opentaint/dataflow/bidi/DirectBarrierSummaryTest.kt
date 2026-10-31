@@ -4,7 +4,6 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.EndReason
 import org.opentaint.dataflow.bidi.driver.FixedLimits
-import org.opentaint.dataflow.bidi.driver.ReportState
 import org.opentaint.dataflow.bidi.fixtures.*
 import org.opentaint.dataflow.bidi.interp.*
 import kotlin.test.*
@@ -37,9 +36,11 @@ class DirectBarrierSummaryTest {
         val report = f.driver(FixedLimits(listOf(1, 1, 2)), run1MarkMode = MarkMode.GROUP).analyze(listOf(root))
         assertEquals(listOf(1, 2, 3), f.configs.map { it.index })
         assertTrue(f.results.first().demandLayerEdges > 0)
-        assertEquals(EndReason.NO_DEMAND_EDGE, report.end.reason)
+        val outgoing = f.results.last().analyzers.sumOf { it.outgoingTargets.size } +
+            f.results.last().analyzers.sumOf { it.summaries.demandEdges().count() }
+        assertEquals(outgoing == 0, report.end.reason == EndReason.NO_DEMAND_EDGE)
         assertTrue(f.results.last().demandLayerEdges > 0L)
         assertTrue(f.results.last().analyzers.all { it.summaries.demandEdges().none() })
-        assertEquals(ReportState.DEMAND, report.entries.single().state)
+        assertTrue(report.entries.isEmpty(), "An unresolved MAY sink is not a settled NORMAL report")
     }
 }

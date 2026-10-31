@@ -9,7 +9,6 @@ import org.opentaint.dataflow.bidi.interp.RuleView
 import org.opentaint.dataflow.bidi.interp.DirectedForms
 import org.opentaint.dataflow.bidi.interp.Interpreter
 import org.opentaint.dataflow.bidi.interp.MethodForms
-import org.opentaint.dataflow.bidi.store.VulnerabilityStore
 import org.opentaint.dataflow.graph.MethodInstGraph
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -56,7 +55,6 @@ class RunMethodContext(
     val mode: ApMode get() = config.mode
     val ops: ApOps get() = shared.ops
     val ap: ApManager get() = shared.ap
-    val vulnerabilities: VulnerabilityStore get() = shared.vulnerabilities
     /** The frontend's one post-return normal boundary, never a return transfer. */
     val normalExit: CommonInst get() {
         check(config.direction == Direction.FORWARD) { "Static shortcut is forward-only" }

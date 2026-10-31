@@ -7,6 +7,40 @@ import org.opentaint.dataflow.bidi.ap.*
 internal class StaticPairLookup(private val ap: ApManager, private val completion: FrozenCompletion,
                                 private val stats: DemandQueryStatistics?,
                                 private val canStoreInitial: (Pattern, InitialAp) -> Boolean) {
+    /** The terminal has no AP output. Each visited input is one complete path's origin. */
+    fun walkTargetOrigins(method: MethodKey, visible: Boolean, offer: (Pattern) -> Boolean): Boolean {
+        if (visible) stats?.add(11)
+        val view = if (visible) completion.visible(method) else completion.local(method)
+        val pending = ArrayDeque<Pattern>()
+        val seen = HashSet<Pattern>()
+        fun admit(input: Pattern) {
+            ap.cancellation.checkpoint()
+            if (seen.add(input)) { stats?.add(8); pending.addLast(input) } else stats?.add(13)
+        }
+        for (input in view.targetInputs()) admit(input)
+        val keep = StaticCandidateFilter { _, _, _ -> true }
+        while (pending.isNotEmpty()) {
+            ap.cancellation.checkpoint()
+            val input = pending.removeFirst()
+            stats?.add(14)
+            if (!offer(input)) return false
+            if (input.fact.base != STATIC) continue
+            // The null output belongs to the typed terminal, not to an AP ZERO sentinel.
+            val right = GuidanceMarks.Mapped((input.fact.mark as MarkSlot.Concrete).mark, null)
+            val query = StaticRowQuery(outputComposable(right.input, ap.marks))
+            stats?.add(15)
+            for (left in view.selectedIncoming(input, query, keep)) {
+                ap.cancellation.checkpoint()
+                stats?.add(16)
+                if (!joins(left.to, input)) continue
+                val marks = composeMarks(left.marks, right) ?: continue
+                stats?.add(17)
+                admit(endpoint(left.from, (marks as GuidanceMarks.Mapped).input, marks))
+            }
+        }
+        return true
+    }
+
     fun walk(method: MethodKey, original: PremiseKey, outputs: List<Pattern>, visible: Boolean,
              offer: (InitialAp, DemandPattern) -> Unit, covered: () -> Boolean) {
         if (visible) stats?.add(11)
@@ -76,14 +110,18 @@ internal class StaticPairLookup(private val ap: ApManager, private val completio
     }
 
     private fun compose(left: StaticGuidanceEdge, right: StaticGuidanceEdge): StaticGuidanceEdge? {
-        if (staticAnchor(ap, left.to) != staticAnchor(ap, right.from) || !overlap(left.to, right.from)) return null
+        if (!joins(left.to, right.from)) return null
         val relation = composeMarks(left.marks, right.marks) ?: return null
-        fun endpoint(p: Pattern, mark: TaintMark?): Pattern = when {
-            p.fact.base == AccessPathBase.Zero -> p // genuine ZERO, never a new full-mark sentinel
-            relation == GuidanceMarks.Flow -> p.copy(fact = p.fact.copy(mark = MarkSlot.STAR))
-            else -> p.copy(fact = p.fact.copy(mark = MarkSlot.Concrete(checkNotNull(mark))))
-        }
         val mapped = relation as? GuidanceMarks.Mapped
-        return StaticGuidanceEdge(endpoint(left.from, mapped?.input), endpoint(right.to, mapped?.output), relation)
+        return StaticGuidanceEdge(endpoint(left.from, mapped?.input, relation), endpoint(right.to, mapped?.output, relation), relation)
+    }
+
+    private fun joins(output: Pattern, input: Pattern): Boolean =
+        staticAnchor(ap, output) == staticAnchor(ap, input) && overlap(output, input)
+
+    private fun endpoint(p: Pattern, mark: TaintMark?, relation: GuidanceMarks): Pattern = when {
+        p.fact.base == AccessPathBase.Zero -> p // genuine ZERO, never a new full-mark sentinel
+        relation == GuidanceMarks.Flow -> p.copy(fact = p.fact.copy(mark = MarkSlot.STAR))
+        else -> p.copy(fact = p.fact.copy(mark = MarkSlot.Concrete(checkNotNull(mark))))
     }
 }

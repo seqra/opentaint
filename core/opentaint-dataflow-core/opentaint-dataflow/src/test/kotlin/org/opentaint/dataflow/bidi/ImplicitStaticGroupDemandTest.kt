@@ -83,7 +83,8 @@ class ImplicitStaticGroupDemandTest {
         val nonstatic = pattern(MarkSlot.Concrete(fulls[0]), base = AccessPathBase.Argument(0))
         assertTrue(store.near(method, nonstatic).isEmpty())
         assertTrue(store.covering(method, m.initial(nonstatic)).isEmpty())
-        assertEquals(listOf(DemandPattern(m.zero.toPattern(), null)), store.near(unvisited, m.zero.toPattern()))
+        assertTrue(store.near(unvisited, m.zero.toPattern()).isEmpty())
+        assertTrue(store.initials(unvisited, Reach.NORMAL).isEmpty())
         assertTrue(store.covering(unvisited, m.zero).isEmpty())
     }
 

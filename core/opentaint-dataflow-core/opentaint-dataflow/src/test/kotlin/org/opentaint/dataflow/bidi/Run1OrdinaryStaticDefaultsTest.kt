@@ -54,9 +54,9 @@ class Run1OrdinaryStaticDefaultsTest {
                 "A clear with no tainted RHS does not create a new static value or root default")
             assertTrue(f.processed.filter { it.delta.facts.base == STATIC }.all { it.delta.node in f.shared.contexts.directed(Direction.FORWARD).endNodes(it.method) },
                 "The global writer pool replaces static CFG relay through the call")
-            assertTrue(result.witnessesByKey().any { it.key.rule == sink.rule })
-            val report = ReportBuilder().also { it.add(config, result) }
-            val handoff = HandOff.of(config, result, report, f.shared)
+            assertTrue(result.analyzers.any { a -> a.sinkSeeds.any { it is Seed.Sink && it.rule == sink.rule } })
+            val report = ReportBuilder()
+            val handoff = HandOff.of(config, result, f.shared)
             val expected = DemandPattern(Pattern(actual, ExclusionSet.Empty), Pattern(actual, ExclusionSet.Empty))
             for (method in listOf(root, callee, unseen)) {
                 assertContains(handoff.demand.near(method, Pattern(actual, ExclusionSet.Empty)), expected)
@@ -67,14 +67,14 @@ class Run1OrdinaryStaticDefaultsTest {
     @Test fun `group-valued run-1 candidate enters exact refinement without a normal taint record`() {
         DriverFixtures().use { f ->
             val c = f.confirmed()
-            val report = f.driver(FixedLimits(listOf(1, 1, 2))).analyze(listOf(c.root))
+            val report = f.driver(FixedLimits(listOf(1, 1, 2)), run1MarkMode = MarkMode.GROUP).analyze(listOf(c.root))
             assertEquals(RunStatus.COMPLETE, report.end.status)
             assertTrue(f.configs.size >= 2, "Normal run-1 work is still a refinement candidate")
             val backwards = f.configs.single { it.index == 2 }
             val fact = Pattern(c.source.to, ExclusionSet.Empty)
             assertTrue(backwards.records.byEntry(c.root, fact).none())
             assertTrue(backwards.records.byExit(c.root, fact).none())
-            assertTrue(report.entries.any { it.key.rule == c.rule })
+            assertTrue(report.entries.any { it.descriptor.rule == c.rule })
         }
     }
 }

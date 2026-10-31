@@ -88,8 +88,13 @@ class DemandStorageDifferentialTest {
                 rows
             }
         }
-        fun initials(pairs: Collection<DemandPattern>, actual: Facts): Set<InitialAp> =
-            pairs.flatMap { ops.emit(it, actual) }.toSet()
+        fun initials(pairs: Collection<DemandPattern>, actual: Facts): Set<AdmittedInitial> =
+            pairs.flatMap { ops.emit(it, actual) }.mapTo(linkedSetOf()) { initial ->
+                val intrinsic = if (startFact(initial.toPattern()).demand) Layer.DEMAND else Layer.NORMAL
+                val layer = if (initial.isZero || initial.isFlow) intrinsic
+                    else intrinsic or (actual.layer == Layer.DEMAND)
+                AdmittedInitial(initial, layer)
+            }
         fun restrict(pairs: Collection<DemandPattern>, original: PremiseKey, raw: Facts): List<Facts> =
             original.members.flatMap { j -> pairs.flatMap { ops.restrict(j, raw, it) } }
         fun payload(values: List<Facts>): Set<Conclusion> = values.flatMap { value ->
@@ -126,8 +131,7 @@ class DemandStorageDifferentialTest {
             val store = f.storage(calls, seeds)
             val reference = f.closure(calls, seeds)
             for (m in f.methods) {
-                val pairs = reference.getValue(m).map { DemandPattern(it.to, it.from) } +
-                    DemandPattern(f.ap.zero.toPattern(), null)
+                val pairs = reference.getValue(m).map { DemandPattern(it.to, it.from) }
                 for (actual in actuals) {
                     assertEquals(f.initials(pairs, actual), store.initials(m, actual),
                         "C2 graph=$mask method=$m actual=${f.ops.leaves(actual).toList()}")
@@ -180,7 +184,7 @@ class DemandStorageDifferentialTest {
         fun count() = (directory.get(f.ap) as Map<*, *>).size
         val before = count()
         val result = store.initials(f.f.a, actual)
-        assertEquals(setOf(f.ap.initial(f.ret.copy(fact=f.ret.fact.copy(tail=Tail.EXACT)))), result)
+        assertEquals(setOf(AdmittedInitial(f.ap.initial(f.ret.copy(fact=f.ret.fact.copy(tail=Tail.EXACT))), Layer.NORMAL)), result)
         assertEquals(before + 1, count(), "The potential ret/T key must not be interned by coverage or a negative search")
     }
 
@@ -221,7 +225,7 @@ class DemandStorageDifferentialTest {
             other to f.row(f.c(0), f.c(1)),
         ))
         val actual = f.facts(f.p(AccessPathBase.Return, f.t))
-        assertEquals(setOf(f.ap.initial(f.ret.copy(fact=f.ret.fact.copy(tail=Tail.EXACT))), f.ap.initial(f.p(AccessPathBase.Return, f.t).let { it.copy(fact=it.fact.copy(tail=Tail.EXACT)) })),
+        assertEquals(setOf(AdmittedInitial(f.ap.initial(f.ret.copy(fact=f.ret.fact.copy(tail=Tail.EXACT))), Layer.NORMAL), AdmittedInitial(f.ap.initial(f.p(AccessPathBase.Return, f.t).let { it.copy(fact=it.fact.copy(tail=Tail.EXACT)) }), Layer.DEMAND)),
             store.initials(f.f.a, actual))
         assertTrue(store.initials(other, actual).isEmpty(), "A different context has no local reader attachment")
     }

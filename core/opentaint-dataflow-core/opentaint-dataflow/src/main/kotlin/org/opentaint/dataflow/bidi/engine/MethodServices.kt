@@ -71,7 +71,7 @@ interface MethodCallServices : SummaryApplier {
     fun resumePoint(premise: PremiseKey, facts: Facts, site: ResumeSite, state: CallResumeState?) {
         error("These call services cannot resume a static point")
     }
-    fun staticSupply(part: Subscription, pub: Publication, member: Int, supply: RegionGroups) {
+    fun staticSupply(part: Subscription, result: StaticCallResult, member: Int, supply: RegionGroups) {
         error("These call services cannot join static supply")
     }
     fun freeze()

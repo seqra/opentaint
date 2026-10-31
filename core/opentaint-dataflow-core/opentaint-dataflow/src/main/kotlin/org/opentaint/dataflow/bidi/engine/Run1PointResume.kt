@@ -47,32 +47,47 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
     private val conditionalKeys = HashMap<WriterKey, Long>()
     private val conditional = HashMap<Long, ConditionalJoin>()
     private val joinInputs = HashMap<Long, JoinInput>()
+    private sealed interface CallResultKey {
+        data class Ap(val output: Pattern, val layer: Layer) : CallResultKey
+        data class Terminal(val target: Target) : CallResultKey
+    }
     private data class CallKey(val callee: MethodKey, val ref: org.opentaint.dataflow.bidi.store.CallerRef,
-                               val linkLayer: Layer, val premise: PremiseKey, val result: Pattern,
-                               val layer: Layer, val member: Int)
-    private class CallContinuation(val key: CallKey, var part: Subscription, var publication: Publication, val member: Int) { var waiting = MarkSet.EMPTY }
+                               val linkLayer: Layer, val premise: PremiseKey, val result: CallResultKey, val member: Int)
+    private class CallContinuation(val key: CallKey, var part: Subscription, var result: StaticCallResult,
+                                   val member: Int) { var waiting = MarkSet.EMPTY }
     private val callKeys = HashMap<CallKey, Long>()
     private val calls = HashMap<Long, CallContinuation>()
 
-    fun callInterest(part: Subscription, pub: Publication, member: Int) {
-        val initial = pub.premise.member(member)
+    fun callInterest(part: Subscription, result: StaticCallResult, member: Int) {
+        if (!RuntimeDataDomain.packet(part.ref.premise, part.added) || !RuntimeDataDomain.premise(result.premise)) return
+        val initial = result.premise.member(member)
         val atom = (initial.mark as? MarkSlot.Concrete)?.mark ?: return
         val statistics = core.context.shared.n2Statistics
-        for (leaf in core.ops.leaves(pub.conclusion)) {
+        val pieces = when (result) {
+            is StaticCallResult.Ap -> {
+                val pub = result.publication
+                if (!RuntimeDataDomain.packet(pub.premise, pub.conclusion)) return
+                core.ops.leaves(pub.conclusion).map { leaf ->
+                    val plain = core.ap.factsOf(leaf.fact, leaf.exclusion, pub.layer)
+                    val conclusion = if (plain is TaintTree && pub.conclusion is TaintTree)
+                        plain.withProtection(pub.conclusion.nonSubsumable) else plain
+                    CallResultKey.Ap(leaf, pub.layer) to StaticCallResult.Ap(pub.copy(conclusion = conclusion))
+                }.toList()
+            }
+            is StaticCallResult.Terminal -> listOf(CallResultKey.Terminal(result.summary.target) to result)
+        }
+        for ((resultKey, piece) in pieces) {
             statistics?.staticGroupCallOffered()
-            val plain = core.ap.factsOf(leaf.fact, leaf.exclusion, pub.layer)
-            val conclusion = if (plain is TaintTree && pub.conclusion is TaintTree)
-                plain.withProtection(pub.conclusion.nonSubsumable) else plain
-            val piece = pub.copy(conclusion = conclusion)
-            val key = CallKey(part.callee, part.ref, part.linkLayer, pub.premise, leaf, pub.layer, member)
+            val key = CallKey(part.callee, part.ref, part.linkLayer, result.premise, resultKey, member)
             val id = callKeys.getOrPut(key) {
                 (++next).also { calls[it] = CallContinuation(key, part, piece, member) }
             }
             val row = calls.getValue(id)
-            // An ordinary duplicate may add protection while the pool reply
-            // is pending. The resumed composition must see the current flags.
-            row.publication = row.publication.copy(conclusion =
-                core.ap.mergeAddDelta(row.publication.conclusion, piece.conclusion).first)
+            // AP equality retains the current per-leaf key and protection refresh.
+            val previous = row.result
+            if (previous is StaticCallResult.Ap && piece is StaticCallResult.Ap)
+                row.result = StaticCallResult.Ap(previous.publication.copy(conclusion =
+                    core.ap.mergeAddDelta(previous.publication.conclusion, piece.publication.conclusion).first))
             row.part = row.part.copy(added = core.ap.mergeAddDelta(row.part.added, part.added).first)
             val fresh = MarkSet.of(core.ap.marks.runtimeAtom(atom, core.mode.markMode)) - row.waiting
             if (fresh.isEmpty) continue
@@ -84,6 +99,7 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
     }
 
     fun reached(summary: StatementSummary, at: OperationInput) {
+        if (!RuntimeDataDomain.packet(at.premise, at.facts)) return
         if (at.facts !is Reach || !at.premise.isZero) return
         for (operation in summary.staticOperations) {
             if (core.config.disableRun1Statics && when (operation) {
@@ -130,6 +146,7 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
     }
 
     fun request(at: OperationInput, groups: MarkSet) {
+        if (!RuntimeDataDomain.packet(at.premise, at.facts)) return
         val original = at.premise as? InitialAp ?: return
         val flow = at.facts as? FlowTree ?: return
         if (original.base != STATIC || original.mark !is MarkSlot.Star) return
@@ -157,6 +174,7 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
     /** Only an executed local producer reaches this boundary. Its bounded
      * scalar relation belongs to the writer, independently of summary deltas. */
     fun localWrite(premise: PremiseKey, value: Facts) {
+        if (!RuntimeDataDomain.packet(premise, value)) return
         check(value.base == STATIC)
         // A completed local write already has its permitted concrete input.
         // Supply the actual bounded output here, independently of outgoing exit
@@ -183,6 +201,7 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
     /** A computed result can supply the pool before its summary is erased.
      * Promotion never admits a new write point or FLOW writer. */
     fun computedGroups(premise: PremiseKey, value: Facts) {
+        if (!RuntimeDataDomain.packet(premise, value)) return
         check(value.base == STATIC)
         if (value !is TaintTree) return
         if (core.hasKnownStaticGroupInput(premise)) {
@@ -238,7 +257,7 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
                 calls[effect.id]?.let { call ->
                     call.waiting -= effect.supply.groups
                     if (call.waiting.isEmpty) { callKeys.remove(call.key); calls.remove(effect.id) }
-                    core.staticCallSupply(call.part, call.publication, call.member, effect.supply)
+                    core.staticCallSupply(call.part, call.result, call.member, effect.supply)
                     return
                 }
                 writerInputs[effect.id]?.let { input ->

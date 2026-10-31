@@ -34,6 +34,8 @@ class ConjunctionStore(private val m: ApManager, private val statistics: N2Stati
     /** Witness consumers keep the entire checked binding without constructing an executable premise. */
     fun addBinding(rule: Any, statement: CommonInst, arity: Int, literal: Int, input: Input): List<CompleteBinding> {
         m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.premise(input.premise) ||
+            input.facts?.let { !RuntimeDataDomain.base(it.base) } == true) return emptyList()
         require(arity >= 2) { "A conjunction needs at least two literals" }
         require(literal in 0 until arity) { "A literal index must be within the conjunction's arity" }
         val key = rule to statement
@@ -137,6 +139,7 @@ class NdSummaryJoin<S : Any>(private val m: ApManager, arity: Int, private val s
     /** T4 applies the new part, or a whole T2 merged value, to every standing combination. */
     fun addConclusion(g: TaintTree): List<Pair<List<S>, TaintTree>> {
         m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.base(g.base)) return emptyList()
         val delta = conclusion.getOrPut(g.base) { TaintGroup(m, interners.taint) }.add(g) ?: return emptyList()
         val out = ArrayList<Pair<List<S>, TaintTree>>(full.size)
         for (combination in full) {

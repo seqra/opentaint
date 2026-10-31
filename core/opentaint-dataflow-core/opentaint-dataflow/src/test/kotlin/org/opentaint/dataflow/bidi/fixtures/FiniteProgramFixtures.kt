@@ -291,14 +291,13 @@ class FiniteProgramFixtures(val cancellation: Cancellation = Cancellation(), thr
         if (methodData.any { it.method === method }) ProgramUnit(method.name) else UnknownUnit
     }
     private val sharedOwner = lazy {
-        SharedObjects(ap, ops, interpreter, language, contexts, records, vulnerabilities, unitResolver,
+        SharedObjects(ap, ops, interpreter, language, contexts, records, unitResolver,
             refManager, cancellation, threads, staticCallGraph = staticCallGraph())
     }
     val shared: SharedObjects get() = sharedOwner.value
-    fun freshShared(sameUnit: Boolean = false, freshVulnerabilities: Boolean = true, threads: Int = 1,
+    fun freshShared(sameUnit: Boolean = false, threads: Int = 1,
                     useStaticCatalog: Boolean = true): SharedObjects =
         SharedObjects(ap, ops, interpreter, language, contexts, records,
-            if (freshVulnerabilities) ConcurrentVulnerabilityStore(ap) else vulnerabilities,
             if (sameUnit) UnitResolver<CommonMethod> { if (methodData.any { m -> m.method === it }) ProgramUnit("all") else UnknownUnit }
             else unitResolver, refManager, cancellation, threads, staticCallGraph = staticCallGraph())
 

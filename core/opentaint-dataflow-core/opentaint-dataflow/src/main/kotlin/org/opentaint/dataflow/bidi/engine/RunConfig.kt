@@ -22,6 +22,7 @@ class RunConfig(
     disableRun1Statics: Boolean = java.lang.Boolean.getBoolean("opentaint.bidi.disableRun1Statics"),
     val run1MarkMode: MarkMode = readRun1MarkMode(),
     val fieldLimitSchedule: FieldLimitSchedule = FieldLimitSchedule.REPEAT_RUN1,
+    val normalTargets: NormalTargetView = NormalTargetView.EMPTY,
 ) {
     init {
         require(index >= 1) { "The run index must be positive" }

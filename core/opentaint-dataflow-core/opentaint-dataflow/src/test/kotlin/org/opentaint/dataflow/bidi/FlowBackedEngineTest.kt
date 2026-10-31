@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.SeedIndex
@@ -46,7 +48,8 @@ class FlowBackedEngineTest {
             actor.addInitial(flow)
             actor.addInitial(marked)
             f.drain(actor, quantum = 1)
-            assertEquals(1, f.vulnerabilities.witnessesOf(1).count(), "CM must observe the real marked local arrival")
+            assertEquals(setOf(TargetSummary(marked, Target.DemandTarget)), actor.targets,
+                "CM must observe the real marked local arrival")
             assertTrue(f.processed.any { it.premise == marked && it.facts is TaintTree })
             assertTrue(markedSummary(actor, marked).isEmpty(), "Pure diagonal output has FLOW guidance")
             assertTrue(actor.summaries.demandEdges().any { it.first == flow && it.second is FlowTree && it.second.base == ret })
@@ -115,7 +118,10 @@ class FlowBackedEngineTest {
             assertTrue(f.results.single { it.runIndex == 2 }.analyzers.any { actor ->
                 actor.sourceHits?.occurrences()?.any { it.method == main && it.forward == producer } == true
             }, "Run-2 must retain the concrete left source path")
-            assertTrue(report.entries.any { it.key.rule == sink.rule })
+            val final = f.results.last().analyzers.single { it.key == main }
+            assertTrue(final.targets.any { it.target == org.opentaint.dataflow.bidi.engine.Target.DemandTarget },
+                "The explicit ret.[any]/T rule result remains DEMAND after the exact left input is recovered")
+            assertTrue(report.entries.isEmpty(), "An intrinsic MAY result is not a settled NORMAL report")
         }
     }
 
@@ -169,13 +175,13 @@ class FlowBackedEngineTest {
             actor.addInitial(marked)
             f.drain(actor, quantum = 1)
             assertNull(markedSummary(actor, marked).single().nonSubsumable)
-            val reports = f.vulnerabilities.witnessesOf(1).map { it.first }.toSet()
+            val terminals = actor.targets.toSet()
             val input = f.ops.startFact(marked, actor.mode) as TaintTree
             actor.emitAfter(marked, f.inst(0), input.withProtection(input.root))
             f.drain(actor, quantum = 1)
             assertNotNull(markedSummary(actor, marked).single().nonSubsumable)
-            assertEquals(reports, f.vulnerabilities.witnessesOf(1).map { it.first }.toSet())
-            assertEquals(1, f.vulnerabilities.witnessesOf(1).count())
+            assertEquals(terminals, actor.targets)
+            assertEquals(1, actor.targets.size)
         }
     }
 

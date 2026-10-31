@@ -3,6 +3,7 @@ package org.opentaint.dataflow.bidi
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.bidi.ap.*
+import org.opentaint.dataflow.bidi.driver.Seed
 import org.opentaint.dataflow.bidi.driver.SeedIndex
 import org.opentaint.dataflow.bidi.engine.*
 import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
@@ -240,7 +241,7 @@ class Run1StaticSummaryErasureTest {
             val result = f.run(RunConfig(1, 1, null, f.records, SeedIndex.EMPTY, roots,
                 run1MarkMode = mode), timeout = 20.seconds)
             assertEquals(RunStatus.COMPLETE, result.status)
-            assertTrue(result.witnessesByKey().any { it.key.rule == sink.rule },
+            assertTrue(result.analyzers.any { a -> a.sinkSeeds.any { it is Seed.Sink && it.rule == sink.rule } },
                 "Counted static replies must reach the local sink before COMPLETE")
             val copyActor = result.analyzers.single { it.key == writer }
             assertTrue(copyActor.summaries.all().none(),

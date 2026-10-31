@@ -14,6 +14,7 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.SeedIndex
 import org.opentaint.dataflow.bidi.engine.*
+import org.opentaint.dataflow.bidi.engine.Target
 import org.opentaint.dataflow.bidi.interp.*
 import org.opentaint.dataflow.bidi.store.*
 import org.opentaint.dataflow.graph.MethodInstGraph
@@ -313,7 +314,7 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
                     }
                 }
                 override fun allowsSource(node: CommonInst, me: MicroEdge) = true
-                override fun sourceHit(node: CommonInst, me: MicroEdge) = Unit
+                override fun acceptedSource(application: AcceptedSource<PremiseKey, Facts>) = Unit
             })
             val facts = manager.factsOf(input.fact, input.exclusion,
                 if (input.demand) Layer.DEMAND else Layer.NORMAL)
@@ -447,7 +448,7 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
             val observed = executeBoundary(i, m, node, input, normal)
             assertEquals(input.map { it.second }.toSet(), observed.beforeDrop)
             assertEquals(if (normal) input.toSet() else emptySet(), observed.summaries)
-            assertTrue(observed.witnesses.isEmpty())
+            assertTrue(observed.targets.isEmpty())
             assertTrue(observed.requests.isEmpty())
             assertTrue(observed.beforeDrop.none { (it.fact.mark as? MarkSlot.Concrete)?.mark in setOf(outMark, w) })
         }
@@ -480,12 +481,12 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
             val zeroStatic = executeBoundary(i, m, node, listOf(setOf(ZERO_PATTERN) to static), normal)
             assertEquals(setOf(static), zeroStatic.beforeDrop)
             assertTrue(zeroStatic.summaries.isEmpty())
-            assertTrue(zeroStatic.witnesses.isEmpty())
+            assertTrue(zeroStatic.targets.isEmpty())
             assertTrue(zeroStatic.requests.isEmpty())
             // The same static conclusion with a complete nonzero caller set survives G2.
             val callerStatic = executeBoundary(i, m, node, listOf(caller to static), normal)
             assertEquals(if (normal) setOf(caller to static) else emptySet(), callerStatic.summaries)
-            assertTrue(callerStatic.witnesses.isEmpty())
+            assertTrue(callerStatic.targets.isEmpty())
             // Both supported proofs retain their original literals. Ignored end actions add no output.
             for (staticPremise in listOf(setOf(ZERO_PATTERN), caller)) {
                 val observed = executeBoundary(i, m, node, listOf(staticPremise to static, caller to state), normal)
@@ -495,18 +496,11 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
                 }
                 assertEquals(if (normal) expected else emptySet(), observed.summaries)
                 assertEquals(setOf(static, state), observed.beforeDrop)
-                assertEquals(2, observed.witnesses.size, "The A and A/AND/B proofs retain distinct support shapes")
-                val supports = observed.witnesses.map { witness ->
-                    assertEquals(key(m), witness.methodKey)
-                    assertEquals(3, witness.run)
-                    assertTrue(witness.endFacts.isEmpty())
-                    witness.edges.map { edge ->
-                        assertEquals(Layer.NORMAL, edge.layer)
-                        edge.premise.members.map { it.toPattern() }.toSet() to
-                            FormsReference(ops).conclusions(edge.facts).single()
-                    }.toSet()
-                }.toSet()
-                assertEquals(setOf(setOf(caller to state), setOf(caller to state, staticPremise to static)), supports)
+                assertEquals(1, observed.targets.size,
+                    "The complete OR proofs collapse to one owned terminal membership")
+                val (origin, terminal) = observed.targets.single()
+                assertEquals(caller, origin, "Both complete proofs keep the full caller premise")
+                assertIs<Target.NormalTarget>(terminal)
                 assertTrue(observed.requests.isEmpty())
             }
         }
@@ -515,7 +509,7 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
     private data class BoundarySnapshot(
         val beforeDrop: Set<Conclusion>,
         val summaries: Set<Pair<Set<Pattern>, Conclusion>>,
-        val witnesses: List<SinkWitness>,
+        val targets: Set<Pair<Set<Pattern>, Target>>,
         val requests: List<Pair<InitialAp, RequestKind>>,
     )
 
@@ -524,12 +518,11 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
                                 input: List<Pair<Set<Pattern>, Conclusion>>, normal: Boolean): BoundarySnapshot {
         val method = key(m)
         val records = PersistentRecordStore(manager)
-        val vulnerabilities = ConcurrentVulnerabilityStore(manager)
         val contexts = MethodContextCache(i, object : MethodContextSource {
             override fun forms(key: MethodKey): MethodForms = i.forms(key)
             override fun graph(key: MethodKey, direction: Direction): MethodInstGraph = i.entries[key].graph(direction)
         })
-        SharedObjects(manager, ops, i, languageManager, contexts, records, vulnerabilities,
+        SharedObjects(manager, ops, i, languageManager, contexts, records,
             UnitResolver<CommonMethod> { UnknownUnit }, RefManager(), manager.cancellation, threads = 1).use { shared ->
             val demand = DemandStore.Builder(manager).apply {
                 // This direct FULL boundary helper bypasses query admission.
@@ -572,7 +565,7 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
                 override fun subscribe(sub: Subscription): Unit = error("No boundary call subscription")
                 override fun link(callee: MethodKey, ref: CallerRef, linkLayer: Layer, added: Facts): Unit =
                     error("No boundary call link")
-                override fun startInitials(callee: MethodKey, initials: Collection<InitialAp>): Unit =
+                override fun startInitials(callee: MethodKey, initials: Collection<AdmittedInitial>): Unit =
                     error("No boundary call initial delivery")
             }
             core = RunMethodAnalyzer(method, port, PublicationSink { key, batch ->
@@ -586,7 +579,7 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
                         actual.addMarkRequest(premise, mark)
                     }
                 }
-            }, MethodCallServicesFactory(::RunMethodCallServices))
+            }, MethodCallServicesFactory(::RunMethodCallServices), TargetPublicationSink { _, _ -> })
             // endAt is private to the common module; no public production API is added for this test.
             val endAt = RunMethodAnalyzer::class.java.getDeclaredMethod("endAt", PremiseKey::class.java,
                 CommonInst::class.java, Facts::class.java, Boolean::class.javaPrimitiveType).apply { isAccessible = true }
@@ -603,7 +596,9 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
             assertEquals(summaries, published.flatMap { publication -> decoder.conclusions(publication.conclusion).map {
                 publication.premise.members.map { it.toPattern() }.toSet() to it
             } }.toSet())
-            val result = BoundarySnapshot(beforeDrop, summaries, vulnerabilities.witnessesOf(3).map { it.second }.toList(), requests)
+            val result = BoundarySnapshot(beforeDrop, summaries, core.targets.map {
+                it.premise.members.map { member -> member.toPattern() }.toSet() to it.target
+            }.toSet(), requests)
             core.freeze()
             return result
         }

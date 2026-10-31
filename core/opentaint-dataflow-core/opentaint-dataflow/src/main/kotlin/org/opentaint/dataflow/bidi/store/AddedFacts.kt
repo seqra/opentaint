@@ -8,6 +8,7 @@ import org.opentaint.dataflow.bidi.ap.GroupKey
 import org.opentaint.dataflow.bidi.ap.Layer
 import org.opentaint.dataflow.bidi.ap.MethodKey
 import org.opentaint.dataflow.bidi.ap.PremiseKey
+import org.opentaint.dataflow.bidi.ap.RuntimeDataDomain
 import org.opentaint.dataflow.bidi.ap.groupKey
 import org.opentaint.dataflow.bidi.ap.mergeAddDelta
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -33,6 +34,7 @@ internal class AddedFactAccumulator(private val m: ApManager) {
     fun add(ref: CallerRef, linkLayer: Layer, added: Facts,
             beforeChange: ((Int, Snapshot) -> Unit)? = null): Update? {
         m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.packet(ref.premise, added)) return null
         check(added.base !is AccessPathBase.CleanerTemporary) { "A field-action temporary cannot enter an added link" }
         check(linkLayer == added.layer) { "The link layer must be the added fact's layer" }
         // Exact-only deltas can clear E. The key belongs to the admitted input, never to its delta.

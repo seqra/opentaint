@@ -8,7 +8,8 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.ir.api.common.cfg.CommonInst
 
-data class HistoricalSupportInput(val result: RunResult<RunMethodAnalyzer>, val links: Map<MethodKey, List<Link>>)
+data class HistoricalSupportInput(val result: RunResult<RunMethodAnalyzer>, val links: Map<MethodKey, List<Link>>,
+                                  val witnesses: VulnerabilityStore? = null)
 
 /** Explicit ghost input history for historical support laws; never installed in a runtime actor. */
 class SupportFixtures(val index: Int = 1) : AutoCloseable {
@@ -59,7 +60,7 @@ class SupportFixtures(val index: Int = 1) : AutoCloseable {
         override fun subscribe(sub: Subscription): Unit = error("Support fixtures never subscribe")
         override fun link(callee: MethodKey, ref: CallerRef, linkLayer: Layer, added: Facts): Unit =
             error("Support fixtures insert actual added links directly")
-        override fun startInitials(callee: MethodKey, initials: Collection<InitialAp>): Unit =
+        override fun startInitials(callee: MethodKey, initials: Collection<AdmittedInitial>): Unit =
             error("Support fixtures insert support directly")
     }
 
@@ -67,7 +68,8 @@ class SupportFixtures(val index: Int = 1) : AutoCloseable {
         check(!frozen) { "A frozen support fixture cannot construct another actor" }
         return actors.getOrPut(key) {
             RunMethodAnalyzer(key, port, PublicationSink { _, _ -> error("Support fixtures never publish") },
-                MethodLocalServicesFactory(::RunMethodLocalServices), MethodCallServicesFactory(::RunMethodCallServices))
+                MethodLocalServicesFactory(::RunMethodLocalServices), MethodCallServicesFactory(::RunMethodCallServices),
+                TargetPublicationSink { _, _ -> error("Historical support fixtures never publish terminals") })
         }
     }
 
@@ -84,14 +86,14 @@ class SupportFixtures(val index: Int = 1) : AutoCloseable {
 
     fun result(status: RunStatus = RunStatus.COMPLETE, direction: Direction = config.direction,
                order: List<MethodKey>? = null): HistoricalSupportInput {
-        if (status != RunStatus.COMPLETE) return HistoricalSupportInput(RunResult(status, emptyList(), index, direction, vulnerabilities), emptyMap())
+        if (status != RunStatus.COMPLETE) return HistoricalSupportInput(RunResult(status, emptyList(), index, direction), emptyMap())
         if (!frozen) {
             actors.values.forEach { it.freeze() }
             frozen = true
         }
         val keys = order ?: actors.keys.toList()
         check(keys.toSet() == actors.keys) { "A result permutation must contain every actor key" }
-        return HistoricalSupportInput(RunResult(status, keys.map(actors::getValue), index, direction, vulnerabilities), inputs.mapValues { it.value.toList() })
+        return HistoricalSupportInput(RunResult(status, keys.map(actors::getValue), index, direction), inputs.mapValues { it.value.toList() }, vulnerabilities)
     }
 
     fun rule(id: String = "sink"): RuleId = object : CommonTaintConfigurationSink {

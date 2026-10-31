@@ -2,8 +2,10 @@ package org.opentaint.dataflow.bidi.fixtures
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
+import org.opentaint.dataflow.bidi.driver.Seed
 import org.opentaint.dataflow.bidi.ap.ReferenceRequestKind as RequestKind
 import org.opentaint.dataflow.bidi.store.*
+import org.opentaint.dataflow.bidi.engine.SinkKey
 import org.opentaint.dataflow.bidi.interp.ProofKey
 import org.opentaint.ir.api.common.cfg.CommonInst
 
@@ -21,6 +23,11 @@ data class ObservedWitness(val rule: RuleId, val methodKey: MethodKey, val state
                            val alternative: Int, val run: Int, val edges: List<ObservedSinkEdge>,
                            val endFacts: Set<PathFact>, val confirmed: Boolean = false, val proof: ProofKey? = null)
 
+/** null sink means anonymous DEMAND; a non-null key means NORMAL. */
+data class ObservedTarget(val method: MethodKey, val premise: Set<Pattern>, val sink: SinkKey?) {
+    val normal: Boolean get() = sink != null
+}
+
 data class RunObservation(
     val processed: Set<ObservedEdge> = emptySet(),
     val initials: Set<ObservedInitial> = emptySet(),
@@ -31,6 +38,8 @@ data class RunObservation(
     val requests: Set<ObservedRequest> = emptySet(),
     val sourceHits: Set<ObservedSourceHit> = emptySet(),
     val witnesses: Set<ObservedWitness> = emptySet(),
+    val targets: Set<ObservedTarget> = emptySet(),
+    val sinkSeeds: Set<Seed> = emptySet(),
 ) {
     fun rawAt(method: MethodKey, premise: Set<Pattern>): Set<Conclusion> =
         rawSummaries.filter { it.method == method && it.premise == premise }.mapTo(LinkedHashSet()) { it.conclusion }
@@ -39,7 +48,7 @@ data class RunObservation(
     fun semantic(universe: BoundedDenotation): SemanticRunObservation = SemanticRunObservation(
         normalizeEdges(processed, universe), initials, normalizeEdges(rawSummaries, universe),
         normalizeEdges(publications, universe), normalizeEdges(selectedDemand, universe),
-        normalizeLinks(links, universe), requests, sourceHits, normalizeWitnesses(witnesses, universe))
+        normalizeLinks(links, universe), requests, sourceHits, normalizeWitnesses(witnesses, universe), targets)
 
     fun assertEquivalent(other: RunObservation, universe: BoundedDenotation) {
         val expected = semantic(universe)
@@ -75,6 +84,8 @@ data class SemanticRunObservation(
     val requests: Set<ObservedRequest>,
     val sourceHits: Set<ObservedSourceHit>,
     val witnesses: Map<SemanticWitnessHeader, SemanticWitness>,
+    val targets: Set<ObservedTarget> = emptySet(),
+    val sinkSeeds: Set<Seed> = emptySet(),
 )
 
 private fun Conclusion.observationGroup(): GroupKey {

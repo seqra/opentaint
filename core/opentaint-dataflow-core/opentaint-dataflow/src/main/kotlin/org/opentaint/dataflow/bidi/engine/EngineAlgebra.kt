@@ -2,6 +2,7 @@ package org.opentaint.dataflow.bidi.engine
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
+import org.opentaint.dataflow.bidi.interp.AcceptedSource
 import org.opentaint.dataflow.bidi.interp.FactAlgebra
 import org.opentaint.dataflow.bidi.interp.MicroEdge
 import org.opentaint.dataflow.bidi.interp.SourceRuleOccurrence
@@ -27,13 +28,13 @@ internal class EngineAlgebra(private val core: RunMethodAnalyzer) : FactAlgebra<
     override fun filter(c: Facts, filter: TypeFilter): Facts? = core.ops.filter(c, filter)
     override fun applyEdge(me: MicroEdge, c: Facts, premise: PremiseKey, statementEdge: Boolean,
                            out: ResultSink) {
-        if (disabledStaticEdge(me)) return
+        if (!RuntimeDataDomain.packet(premise, c) || !RuntimeDataDomain.producer(me) || disabledStaticEdge(me)) return
         core.ops.applyEdge(c, premise, me.edge, statementEdge, core.mode,
             core.collect(premise, c, out), may = me.may, ruleAssignment = me.isSource || me.actionId != null)
     }
 
     override fun applyEdgeAt(me: MicroEdge, c: Facts, premise: PremiseKey, at: Place, out: ResultSink) {
-        if (disabledStaticEdge(me)) return
+        if (!RuntimeDataDomain.packet(premise, c) || !RuntimeDataDomain.producer(me) || disabledStaticEdge(me)) return
         core.ops.applyEdge(c, premise, me.edge, at.statementEdge, core.mode,
             core.collect(input(at, premise, c), out), may = me.may, ruleAssignment = me.isSource || me.actionId != null)
     }
@@ -44,6 +45,7 @@ internal class EngineAlgebra(private val core: RunMethodAnalyzer) : FactAlgebra<
             me.actionId?.occurrence?.kind == RuleKind.FIELD_SOURCE)
 
     override fun operationResult(me: MicroEdge?, premise: PremiseKey, input: Facts, result: Facts, at: Place, out: ResultSink) {
+        if (!RuntimeDataDomain.packet(premise, input) || !RuntimeDataDomain.packet(premise, result)) return
         val operationInput = input(at, premise, input)
         val write = at.staticOperations.filterIsInstance<StaticOperation.Write>().firstOrNull {
             if (me != null) (it.transfer != null && (it.transfer == me.forward || it.transfer == me.edge)) ||
@@ -81,8 +83,13 @@ internal class EngineAlgebra(private val core: RunMethodAnalyzer) : FactAlgebra<
     override fun allowsSource(node: CommonInst, me: MicroEdge): Boolean =
         !core.config.seededSources || core.config.seeds.allowsSource(core.key, node, me.forward, me.actionId)
 
-    override fun sourceHit(node: CommonInst, me: MicroEdge) {
+    override fun acceptedSource(application: AcceptedSource<PremiseKey, Facts>) {
+        if (!RuntimeDataDomain.packet(application.original, application.input) ||
+            !RuntimeDataDomain.packet(application.resultPremise, application.rawResult) ||
+            !RuntimeDataDomain.producer(application.edge)) return
         core.ap.cancellation.checkpoint()
-        core.sourceHits?.add(core.key, node, me.forward, me.actionId)
+        if (core.forward) return
+        core.sourceHits?.add(core.key, application.at.node, application.edge.forward, application.edge.actionId)
+        if (application.edge.isSource) core.emitTarget(application.original, Target.DemandTarget)
     }
 }

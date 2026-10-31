@@ -43,6 +43,7 @@ class StaticSupplies internal constructor(
     private val merged = if (profile == SupplyProfile.CANONICAL_RUN1_FULL) LinkedHashMap<Pattern, MarkSet>() else null
 
     operator fun plusAssign(supply: RegionGroups) {
+        if (!RuntimeDataDomain.base(supply.region.fact.base)) return
         if (ordered != null) {
             ordered += supply
             return
@@ -179,6 +180,7 @@ class Run1StaticService(private val ap: ApManager, private val markMode: MarkMod
         ap.cancellation.checkpoint()
         val out = ArrayList<StaticOwnerEffect>()
         for (read in batch.reads) {
+            if (!RuntimeDataDomain.base(read.region.fact.base)) continue
             val key = Key(read.owner, read.id)
             if (key in reads) continue
             val row = ReadRow(read)
@@ -194,13 +196,16 @@ class Run1StaticService(private val ap: ApManager, private val markMode: MarkMod
         // Every FLOW writer uses this route, including static-origin summaries.
         // Complete fixed-mark bindings are pending actor state, not writer rows.
         for (writer in batch.writers) {
+            if (!RuntimeDataDomain.premise(writer.premise) || !RuntimeDataDomain.base(writer.region.fact.base)) continue
             check(writer.premise is InitialAp && writer.premise.mark is MarkSlot.Star)
             check(writer.premise.base == STATIC) { "Only all-static summaries subscribe to pool values" }
             registerWriter(FlowWriterRow(writer.owner, writer.id, writer.region, true), out)
         }
-        for (writer in batch.flowWriters)
+        for (writer in batch.flowWriters) {
+            if (!RuntimeDataDomain.base(writer.region.fact.base)) continue
             registerWriter(FlowWriterRow(writer.owner, writer.id, writer.region, false), out)
-        for (write in batch.writes) admitWrite(region(write), out)
+        }
+        for (write in batch.writes) if (RuntimeDataDomain.base(write.fact.base)) admitWrite(region(write), out)
         for (supply in batch.supplies) {
             if (supply.groups.isEmpty) continue
             val position = region(supply.region)

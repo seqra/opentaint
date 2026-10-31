@@ -2,6 +2,7 @@ package org.opentaint.dataflow.bidi
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
+import org.opentaint.dataflow.bidi.driver.Seed
 import org.opentaint.dataflow.bidi.fixtures.*
 import org.opentaint.dataflow.bidi.interp.*
 import org.opentaint.dataflow.bidi.interp.CallPoint.*
@@ -94,46 +95,43 @@ class ClosureUnionObservationTest {
                 assertEquals(setOf(ObservedInitial(callee, f.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR))),
                     observation.initials.filter { it.method == callee && it.initial.fact.base == x }.toSet(),
                     "Run1 uses one canonical policy initial, independently of the concrete exclusions")
-                if (!withSink) assertTrue(observation.witnesses.isEmpty()) else {
-                    assertTrue(observation.witnesses.isNotEmpty(), "The root EXACT literal remains candidate support after demand cover")
-                    for (witness in observation.witnesses) {
-                        assertSame(rule, witness.rule)
-                        assertEquals(caller, witness.methodKey)
-                        assertSame(callerMethod.inst(2), witness.statement)
-                        assertEquals(3, witness.alternative)
-                        assertEquals(1, witness.run)
-                        assertFalse(witness.confirmed)
-                        assertTrue(witness.endFacts.isEmpty())
-                        val edge = witness.edges.single()
-                        assertEquals(zero, edge.premise)
-                        assertEquals(Layer.DEMAND, edge.layer)
-                        assertTrue(edge.facts.isNotEmpty())
-                        for (fact in edge.facts) {
-                            assertEquals(result, fact.fact)
-                            assertTrue(fact.demand)
-                        }
-                    }
-                    assertEquals(locations(result, ExclusionSet.Empty), observation.witnesses.flatMap { witness ->
-                        witness.edges.single().facts.flatMap { locations(it.fact, it.exclusion) }
-                    }.toSet(), "Root-literal support preserves the independent must union")
-                }
             }
+
             checkHeaders(expected)
             checkHeaders(actual)
+            if (!withSink) {
+                assertTrue(actual.targets.isEmpty() && actual.sinkSeeds.isEmpty())
+            } else {
+                // Keep the historical witness denotation as an independent
+                // union control. Current production retains terminal/seed values.
+                assertTrue(expected.witnesses.isNotEmpty())
+                assertEquals(locations(result, ExclusionSet.Empty), expected.witnesses.flatMap { witness ->
+                    witness.edges.single().facts.flatMap { locations(it.fact, it.exclusion) }
+                }.toSet())
+                assertEquals(setOf(ObservedTarget(caller, zero, null)), actual.targets)
+                val seed = assertIs<Seed.Sink>(actual.sinkSeeds.single())
+                assertEquals(rule.id, seed.rule.id)
+                assertEquals(caller, seed.method)
+                assertEquals(callerMethod.inst(2), seed.statement)
+                assertEquals(f.pattern(y, tail = Tail.EXACT, mark = mark), seed.requirement)
+                assertEquals(locations(result, ExclusionSet.Empty), actual.rawSummaries.filter {
+                    it.method == caller && it.conclusion.fact.base == y
+                }.flatMap { locations(it.conclusion.fact, it.conclusion.exclusion) }.toSet())
+            }
             assertEquals(setOf(ExclusionSet.Empty), expected.links.filter {
                 it.callee == callee && it.added.fact.base == x
             }.map { it.added.exclusion }.toSet(), "The selected reference covers each E-producing result with EmptyE demand")
             assertTrue(actual.links.any { it.callee == callee && it.added.fact.base == x &&
                 it.added.exclusion == ExclusionSet.Empty }, "Selected EmptyE cover is exercised before the call")
 
-            try { expected.assertEquivalent(actual, universe) } catch (failure: AssertionError) {
+            try { expected.dataOnly().assertEquivalent(actual.dataOnly(), universe) } catch (failure: AssertionError) {
                 val expectedSemantic = expected.semantic(universe)
                 val actualSemantic = actual.semantic(universe)
                 failures += "sameUnit=$sameUnit policy=$policy withSink=$withSink\n" +
                     "link shapes expected=${expected.links.filter { it.added.fact.base == x }} " +
                     "actual=${actual.links.filter { it.added.fact.base == x }}\n" +
                     "witness support exclusions expected=${expected.witnesses.flatMap { it.edges.single().facts }.map { it.exclusion }.toSet()} " +
-                    "actual=${actual.witnesses.flatMap { it.edges.single().facts }.map { it.exclusion }.toSet()}\n" +
+                    "actualTargets=${actual.targets} actualSinkSeeds=${actual.sinkSeeds}\n" +
                     "other stored unions equal=${expectedSemantic.copy(links = emptyMap(), witnesses = emptyMap()) == actualSemantic.copy(links = emptyMap(), witnesses = emptyMap())}\n" +
                     "program=${f.describe()} trace=${schedule.trace}"
             }

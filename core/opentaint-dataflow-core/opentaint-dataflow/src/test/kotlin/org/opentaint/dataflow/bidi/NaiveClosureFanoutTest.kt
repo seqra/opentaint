@@ -87,7 +87,7 @@ class NaiveClosureFanoutTest {
                 listOf(good, bad, f.field("fresh accessor")),
                 listOf(t.mark, u.mark, v.mark, f.mark("fresh mark"), TaintMark.ZERO), 2)
             try {
-                actual.assertEquivalent(expected, universe)
+                actual.dataOnly().assertEquivalent(expected.dataOnly(), universe)
                 val wanted = buildSet {
                     add(ObservedEdge(consumerKeys.first(), zero, Conclusion(ZERO_FACT, ExclusionSet.Empty, false)))
                     add(ObservedEdge(consumerKeys.first(), zero,

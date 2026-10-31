@@ -130,14 +130,15 @@ class RestrictedDemandProtocolTest {
         }
     }
 
-    @Test fun `original backward ZERO seed return bypasses paired restriction only for ZERO original`() {
+    @Test fun `backward Zero raw results require paired restriction before publication`() {
         MethodAnalysisFixtures().use { f ->
             val actor = f.core(index = 2)
             val result = f.fact(mark = MarkSlot.Concrete(f.mark("T")))
             actor.summaryDelta(f.manager.zero, result)
             actor.summaryDelta(f.manager.initial(f.pattern(mark = MarkSlot.Concrete(f.mark("U")))), result)
             f.drain(actor)
-            assertEquals(setOf<PremiseKey>(f.manager.zero), f.publications.flatten().map { it.premise }.toSet())
+            assertTrue(f.publications.flatten().isEmpty())
+            assertEquals(2, actor.summaries.all().count(), "Raw NORMAL data remains separate from selected publication")
         }
     }
 }

@@ -49,7 +49,6 @@ class RunLifetimeTest {
             assertEquals(RunStatus.COMPLETE, result.status)
             assertEquals(2, result.runIndex)
             assertEquals(Direction.BACKWARD, result.direction)
-            assertSame(f.vulnerabilities, result.vulnerabilities)
             assertEquals(setOf(f.a, f.b), result.analyzers.map { it.key }.toSet())
             assertTrue(result.analyzers.all { it.freezeCount.get() == 1 && it.steps == 3L })
             assertEquals(12L, result.demandLayerEdges)
@@ -72,7 +71,6 @@ class RunLifetimeTest {
                 val result = run.run(5.seconds)
                 assertEquals(RunStatus.FAILED, result.status)
                 assertTrue(result.analyzers.isEmpty())
-                assertTrue(result.witnessesByKey().isEmpty())
                 assertEquals(0, factory.created.single().freezeCount.get())
                 assertFalse(f.cancellation.isActive())
             }
@@ -173,7 +171,6 @@ class RunLifetimeTest {
             assertEquals(RunStatus.TIMEOUT, result.status)
             assertEquals(RunStatus.TIMEOUT, run.terminalStatus)
             assertTrue(result.analyzers.isEmpty())
-            assertTrue(result.witnessesByKey().isEmpty())
             assertEquals(0, factory.created.single().freezeCount.get())
             assertFalse(f.cancellation.isActive())
         }
@@ -253,7 +250,6 @@ class RunLifetimeTest {
             val result = future.get(5, TimeUnit.SECONDS)
             assertEquals(RunStatus.FAILED, result.status)
             assertTrue(result.analyzers.isEmpty())
-            assertTrue(result.witnessesByKey().isEmpty())
             assertEquals(1L, exited.count, "A failed join must not masquerade as a completed barrier")
             assertEquals(0, factory.created.single().freezeCount.get())
         } finally {
@@ -328,7 +324,6 @@ class RunLifetimeTest {
             assertEquals(3L, firstRun.inFlight.handled)
             assertEquals(3L, secondRun.inFlight.handled)
             assertEquals(0L, secondRun.inFlight.pending)
-            assertSame(first.vulnerabilities, second.vulnerabilities)
         }
     }
 }

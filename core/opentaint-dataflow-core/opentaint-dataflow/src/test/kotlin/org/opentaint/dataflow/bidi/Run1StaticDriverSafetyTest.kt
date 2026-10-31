@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.bidi.fixtures.demandProbe
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
@@ -85,8 +87,7 @@ class Run1StaticDriverSafetyTest {
                 // demand comes from F3; the R1-to-B2 completion policy does not
                 // belong to B4. Keep the explicit sink seeds for this forced replay.
                 val forward = seen.configs.single { it.index == 3 }
-                val laterDemand = HandOff.of(forward, seen.results.single { it.runIndex == 3 },
-                    ReportBuilder(), owner).demand
+                val laterDemand = HandOff.of(forward, seen.results.single { it.runIndex == 3 }, owner).demand
                 invoke(RunConfig(4, 3, laterDemand,
                     owner.records.view(), backward.seeds, listOf(root)), owner, 20.seconds)
             }
@@ -138,11 +139,11 @@ class Run1StaticDriverSafetyTest {
 
     private fun hasGroupWitness(f: DriverFixtures, seen: Observation, rule: SinkRule): Boolean {
         val first = seen.results.first()
-        return first.witnessesByKey().any { (key, witnesses) -> key.rule == rule.rule && witnesses.any { witness ->
-            witness.edges.any { edge -> edge.layer == Layer.DEMAND && f.ops.leaves(edge.facts).any { leaf ->
-                (leaf.fact.mark as? MarkSlot.Concrete)?.let { f.manager.marks.isGroup(it.mark) } == true
-            } }
-        } }
+        assertEquals(MarkMode.GROUP, first.markMode)
+        return first.analyzers.any { actor ->
+            actor.sinkSeeds.any { it is Seed.Sink && it.rule.id == rule.rule.id } &&
+                actor.targets.any { it.target == Target.DemandTarget }
+        }
     }
 
     private fun hasTaint(f: DriverFixtures, rows: Collection<Processed>, run: Int, method: MethodKey,
@@ -168,12 +169,12 @@ class Run1StaticDriverSafetyTest {
             val removed = sink(f,"removed T",path,t); val kept = sink(f,"kept U",path,u)
             p.exit(root,2,staticExit(f,root,2,removed,kept))
             val (report,seen) = execute(f,root,listOf(1,1,2))
-            assertFalse(report.entries.any { it.key.rule == removed.rule })
-            assertTrue(report.entries.any { it.key.rule == kept.rule })
+            assertFalse(report.entries.any { it.descriptor.rule == removed.rule })
+            assertTrue(report.entries.any { it.descriptor.rule == kept.rule })
             assertTrue(hasGroupWitness(f, seen, removed), "F1 selected-mark cleaning preserves the Group candidate")
             assertFalse(hasTaint(f,seen.processed,3,root,2,path,t))
             assertTrue(hasTaint(f,seen.processed,3,root,2,path,u))
-            assertTrue(seen.results.first().witnessesByKey().any { it.key.rule == removed.rule })
+            assertTrue(seen.results.first().observedSink(removed.rule, f.shared.reportCatalog))
             assertTrue(seen.processed.none { it.run == 1 && it.delta.premise is InitialAp &&
                 isSpecialStaticRoot(it.delta.premise as InitialAp) }, "A stored default is not a root analysis")
         }
@@ -198,12 +199,12 @@ class Run1StaticDriverSafetyTest {
             val killed = sink(f,"written f",fp,t); val preserved = sink(f,"untouched g",gp,t)
             p.exit(root,2,staticExit(f,root,2,killed,preserved))
             val (report,seen) = execute(f,root,listOf(1,1,2))
-            assertFalse(report.entries.any { it.key.rule == killed.rule })
-            assertTrue(report.entries.any { it.key.rule == preserved.rule })
+            assertFalse(report.entries.any { it.descriptor.rule == killed.rule })
+            assertTrue(report.entries.any { it.descriptor.rule == preserved.rule })
             assertTrue(hasGroupWitness(f, seen, killed), "F1 global static supply is provisional across an overwrite")
             assertFalse(hasTaint(f,seen.processed,3,root,2,fp,t))
             assertTrue(hasTaint(f,seen.processed,3,root,2,gp,t))
-            assertTrue(seen.results.first().witnessesByKey().any { it.key.rule == killed.rule })
+            assertTrue(seen.results.first().observedSink(killed.rule, f.shared.reportCatalog))
             assertTrue(checkNotNull(seen.configs.single { it.index == 2 }.demand)
                 .near(callee, demandProbe(STATIC, fp, MarkSlot.Concrete(t))).any {
                     it.entry.fact.path == fp && it.entry.fact.mark == MarkSlot.Concrete(t) && it.exit == it.entry
@@ -228,9 +229,9 @@ class Run1StaticDriverSafetyTest {
             val removed = sink(f,"removed point T",path,t); val kept = sink(f,"kept point U",path,u)
             p.exit(root,2,staticExit(f,root,2,removed,kept))
             val (report,seen) = execute(f,root,listOf(1,1,2))
-            assertFalse(report.entries.any { it.key.rule == removed.rule },
+            assertFalse(report.entries.any { it.descriptor.rule == removed.rule },
                 "Strong class-point execution cannot regain cleaned T from a provisional F1 default")
-            assertTrue(report.entries.any { it.key.rule == kept.rule },
+            assertTrue(report.entries.any { it.descriptor.rule == kept.rule },
                 "Direct class starts must include actual U although only T is named by the cleaner")
             assertTrue(hasGroupWitness(f, seen, removed), "F1 selected-mark cleaning preserves the Group candidate")
             assertFalse(hasTaint(f,seen.processed,3,root,2,path,t))
@@ -255,8 +256,7 @@ class Run1StaticDriverSafetyTest {
             val residual = sink(f,"broad point T candidate",path,t); val kept = sink(f,"broad point U",path,u)
             p.exit(root,2,staticExit(f,root,2,residual,kept))
             val (report,seen) = execute(f,root,listOf(1))
-            assertEquals(ReportState.DEMAND, report.entries.single { it.key.rule == residual.rule }.state)
-            assertEquals(ReportState.DEMAND, report.entries.single { it.key.rule == kept.rule }.state)
+            assertTrue(report.entries.isEmpty(), "Run-1 group candidates are DEMAND terminals, not final reports")
             assertTrue(hasGroupWitness(f, seen, residual) && hasGroupWitness(f, seen, kept))
             assertTrue(seen.processed.filter { it.run == 1 && it.delta.facts.base == STATIC }.all { it.delta.node in f.shared.contexts.directed(Direction.FORWARD).endNodes(it.method) })
             assertTrue(seen.processed.none { it.run == 1 && it.delta.node.location.index == 0 &&
@@ -285,16 +285,16 @@ class Run1StaticDriverSafetyTest {
             val after = sink(f,"after nonreturn",path,t)
             p.exit(root,2,staticExit(f,root,2,after))
             val (report,seen) = execute(f,root,listOf(1,1,2))
-            assertFalse(report.entries.any { it.key.rule == after.rule })
+            assertFalse(report.entries.any { it.descriptor.rule == after.rule })
             assertEquals(listOf(1, 2, 3), seen.invoked)
             assertTrue(hasGroupWitness(f, seen, after),
                 "Baseline ZERO discovery reaches the operation, so the global F1 supply is provisional")
-            assertTrue(seen.results.drop(1).all { it.witnessesByKey().isEmpty() },
+            assertTrue(seen.results.drop(1).all { run -> run.analyzers.all { it.targets.isEmpty() } },
                 "Full refinement must not preserve the provisional after-call candidate")
             assertTrue(seen.results.first().analyzers.single { it.key == root }.summaries.all().any { (premise, facts) ->
                 premise.isZero && facts.base == STATIC && facts.layer == Layer.DEMAND
             }, "The source effect is published before the nonreturning call")
-            assertTrue(seen.results.all { run -> run.analyzers.single { it.key == callee }.summaries.all().none() },
+            assertTrue(seen.results.all { run -> run.analyzers.filter { it.key == callee }.all { it.summaries.all().none() } },
                 "ZERO discovery never supplies a normal callee-return summary")
         }
     }
@@ -328,9 +328,9 @@ class Run1StaticDriverSafetyTest {
                 result.analyzers.single { it.key == callee }.nonZeroInitial
             }, "Actual callee queries are independent of missing F1 static field summaries")
             val exact = p.pattern(STATIC, gp + deeper, mark = MarkSlot.Concrete(t))
-            assertTrue(seen.views.any { it.run == 4 && it.part.callee == callee &&
-                it.view.premise == exact && it.view.result == Conclusion(exact.fact, ExclusionSet.Empty, false) },
-                "B4 reuses the exact NORMAL F3 record through its ordinary reversed read view")
+            assertTrue(seen.results.single { it.runIndex == 4 }.analyzers.isEmpty(),
+                "The settled F3 report has no outgoing refinement; forced B4 has no explicit ZERO admission")
+            assertTrue(seen.views.none { it.run == 4 }, "No submitted input means no saved-record application")
             assertTrue(seen.configs.single { it.index == 4 }.records.byEntry(callee, exact).any { record ->
                 record.direction == Direction.FORWARD && record.premise.toPattern() == exact &&
                     record.conclusion.layer == Layer.NORMAL && exact in f.ops.leaves(record.conclusion).toSet()
@@ -340,7 +340,7 @@ class Run1StaticDriverSafetyTest {
                 method == root && node == p.inst(root, 0) && edge.to == exact.fact
             }, "The coarse B2 query still finds the exact primitive source edge")
             assertTrue(hasTaint(f,seen.processed,3,root,2,gp+deeper,t))
-            assertTrue(report.entries.any { it.key.rule == target.rule })
+            assertTrue(report.entries.any { it.descriptor.rule == target.rule })
         }
     }
 
@@ -409,7 +409,7 @@ class Run1StaticDriverSafetyTest {
             // Keep the source-hit, exact source gate and final marked result checks.
 
             assertTrue(hasTaint(f, seen.processed, 3, root, 4, gp, t))
-            assertTrue(report.entries.any { it.key.rule == target.rule })
+            assertTrue(report.entries.any { it.descriptor.rule == target.rule })
         }
     }
 }

@@ -7,6 +7,7 @@ import org.opentaint.dataflow.bidi.driver.HandOff
 import org.opentaint.dataflow.bidi.driver.ReportBuilder
 import org.opentaint.dataflow.bidi.driver.SeedIndex
 import org.opentaint.dataflow.bidi.engine.*
+import org.opentaint.dataflow.bidi.engine.Target
 import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
 import org.opentaint.dataflow.bidi.interp.*
 import org.opentaint.dataflow.bidi.store.CallerRef
@@ -72,6 +73,36 @@ class Run1StaticGroupProtocolRemovalTest {
         override fun close() = f.close()
     }
 
+    @Test fun `Target uses the same known descriptor and late exact-field continuation`() {
+        for (known in listOf(false, true)) Fixture().use { t ->
+            // Canonical STAR field descriptors already carry the accepted input
+            // by invariant. The exact-field fallback uses the existing pool wait.
+            val initial = if (known) t.initial else t.f.manager.initial(t.initial.toPattern().copy(
+                fact = t.initial.toPattern().fact.copy(tail = Tail.EXACT)))
+            val row = TargetSummary(initial, Target.DemandTarget)
+            t.actor.applyStaticTarget(t.subscription(), row, 0)
+            if (!known) {
+                assertTrue(t.actor.targets.isEmpty())
+                assertEquals(1, t.actor.staticBatch.interests.size)
+                t.actor.staticBatch.supplies += RegionGroups(t.region, t.f.manager.marks.atomsFor(GroupSet.of(t.group)))
+            } else assertTrue(t.actor.staticBatch.interests.isEmpty())
+            t.f.drain(t.actor, quantum = 1)
+            assertEquals(setOf(TargetSummary(t.initial, Target.DemandTarget)), t.actor.targets)
+            assertTrue(t.actor.summaries.all().none(), "Terminal delivery skips the return suffix")
+            assertTrue(t.f.processed.isEmpty())
+        }
+    }
+
+    @Test fun `static Target keeps the diagnostic field drop and exact class exception`() {
+        for (exactClass in listOf(false, true)) Fixture(exactClass, disabled = true).use { t ->
+            t.ground()
+            val row = TargetSummary(t.initial, Target.DemandTarget)
+            t.actor.applyStaticTarget(t.subscription(), row, 0)
+            assertEquals(if (exactClass) setOf(row) else emptySet(), t.actor.targets)
+            assertTrue(t.actor.staticBatch.interests.isEmpty())
+        }
+    }
+
     @Test fun `selected field STAR input differs from independent pool ANY and preserves fixed summary targets`() {
         for (exactClass in listOf(false, true)) Fixture(exactClass).use { t ->
             val supply = t.ground()
@@ -110,7 +141,7 @@ class Run1StaticGroupProtocolRemovalTest {
             val publications = listOf(Publication(t.initial, exact), Publication(t.initial, may))
             val part = t.subscription()
             val before = t.service.statistics().ownerReplies
-            publications.forEach { t.actor.staticCallInterest(part, it, 0) }
+            publications.forEach { t.actor.staticCallInterest(part, StaticCallResult.Ap(it), 0) }
             assertEquals(2, t.actor.staticBatch.interests.size, "Exercise the retained reference protocol")
             t.f.drain(t.actor, quantum = 1)
             val referenceRaw = t.decoded(t.actor.summaries.all())
@@ -137,8 +168,8 @@ class Run1StaticGroupProtocolRemovalTest {
                 "A genuine raw static-to-return effect still enables the alias arm")
 
             t.actor.freeze(); candidate.freeze()
-            val result = RunResult(RunStatus.COMPLETE, listOf(t.actor, candidate), 1, Direction.FORWARD, t.f.vulnerabilities)
-            val handOff = HandOff.of(t.config, result, ReportBuilder(), t.f.shared)
+            val result = RunResult(RunStatus.COMPLETE, listOf(t.actor, candidate), 1, Direction.FORWARD)
+            val handOff = HandOff.of(t.config, result, t.f.shared)
             for (actor in listOf(t.actor, candidate)) {
                 val observed = expected.flatMap { (_, value) ->
                     handOff.demand.near(actor.key, Pattern(value.fact, value.exclusion))

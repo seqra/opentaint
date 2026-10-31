@@ -57,7 +57,7 @@ interface ProtocolSteps {
 }
 
 /** Native records and opposite-direction leaf views have separate application boundaries. */
-interface SummaryApplier {
+interface SummaryApplier : TargetApplier {
     fun requestStaticGroups(part: Subscription, marks: org.opentaint.dataflow.bidi.store.RequestMarkSelection) {
         error("This summary applier does not support static point requests")
     }

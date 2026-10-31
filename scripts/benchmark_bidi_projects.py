@@ -115,7 +115,9 @@ def bidi_iteration_summary(log_path, side, status):
                     line = tail + piece
                     if not discarded and len(line) <= 4096 and (
                             'BIDI_RUN_START' in line or 'BIDI_RUN_END' in line or
-                            'BIDI_BARRIER_END' in line or 'BIDI_STATIC_WRITER_BIND' in line or ') frontier:' in line):
+                            'BIDI_BARRIER_END' in line or 'BIDI_STATIC_WRITER_BIND' in line or
+                            'BIDI_TARGET_STATISTICS' in line or 'BIDI_ANALYSIS_END' in line or
+                            'reported sink identities' in line or ') frontier:' in line):
                         controls.append(line)
                     tail, discarded = '', False
                 last = pieces[-1]

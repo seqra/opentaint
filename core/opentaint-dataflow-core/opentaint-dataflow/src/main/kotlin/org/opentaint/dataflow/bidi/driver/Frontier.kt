@@ -18,8 +18,8 @@ class Frontier(
     analysed: Set<MethodKey>,
     demandEdges: Map<MethodKey, Int>,
     val recordCrossings: Long,
-    val demandVulnerabilities: Int,
-    val confirmedVulnerabilities: Int,
+    val targetDemand: Int,
+    val reportedSinks: Int,
     val seeds: Int,
     zeroOnly: Set<MethodKey>,
     val zeroOnlyEdges: Long,
@@ -35,7 +35,7 @@ class Frontier(
 
 /** The barrier reads counters only after all method owners have joined and frozen. */
 fun frontierOf(config: RunConfig, result: RunResult<RunMethodAnalyzer>, handOff: HandOff,
-               report: ReportBuilder): Frontier {
+               reportedSinks: Int): Frontier {
     check(result.status == RunStatus.COMPLETE) { "A frontier needs a complete run" }
     val analysed = LinkedHashSet<MethodKey>()
     val zeroOnly = LinkedHashSet<MethodKey>()
@@ -59,8 +59,8 @@ fun frontierOf(config: RunConfig, result: RunResult<RunMethodAnalyzer>, handOff:
     cancellation?.checkpoint()
     val forward = config.direction == Direction.FORWARD
     return Frontier(config.index, config.direction, analysed, counts, recordCrossings,
-        if (forward) report.demandEntries().size else 0,
-        if (forward) report.confirmedCount else 0, handOff.seeds.size, zeroOnly, zeroOnlyEdges)
+        result.analyzers.sumOf { it.outgoingTargets.size },
+        reportedSinks, handOff.seeds.size, zeroOnly, zeroOnlyEdges)
 }
 
 private val frontierLogger = object : KLogging() {}.logger
@@ -69,8 +69,8 @@ fun Frontier.log() {
     frontierLogger.info {
         "Run $run ($direction) frontier: analysed ${analysed.size}, demand edges ${demandEdges.values.sum()} " +
             "in ${demandEdges.size} method keys, left ${(analysed - demandEdges.keys).size}, " +
-            "record crossings $recordCrossings, DEMAND $demandVulnerabilities, CONFIRMED " +
-            "$confirmedVulnerabilities, seeds $seeds, zero only ${zeroOnly.size} ($zeroOnlyEdges edges)"
+            "record crossings $recordCrossings, target demand $targetDemand, reports " +
+            "$reportedSinks, seeds $seeds, zero only ${zeroOnly.size} ($zeroOnlyEdges edges)"
     }
     frontierLogger.debug { "Run $run frontier: analysed $analysed; demand edges $demandEdges" }
     demandByCause?.let { frontierLogger.info { "Run $run demand-layer results per cause: $it" } }

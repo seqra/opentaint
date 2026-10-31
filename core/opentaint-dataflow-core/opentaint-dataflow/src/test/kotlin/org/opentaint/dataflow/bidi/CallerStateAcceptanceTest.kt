@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi
 
+import org.opentaint.dataflow.bidi.engine.Target
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.bidi.ap.*
@@ -59,6 +61,8 @@ class CallerStateAcceptanceTest {
             f.program.call(root, 3, call(after))
 
             val demand = DemandStore.Builder(f.manager).also { builder ->
+                for (method in listOf(root, acquire, release, after))
+                    builder.add(method, DemandPattern(ZERO_PATTERN, ZERO_PATTERN))
                 builder.add(acquire, DemandPattern(f.manager.zero.toPattern(), state))
                 builder.add(release, DemandPattern(state, state))
                 builder.add(after, DemandPattern(state, state))
@@ -95,24 +99,18 @@ class CallerStateAcceptanceTest {
                         premise.isZero && facts.layer == Layer.NORMAL && f.ops.leaves(facts).any { it.fact == returned.fact }
                     }, "Each callee's zero source supplies its independent Result literal")
                 }
-                val witnesses = result.witnessesByKey()
-                assertEquals(setOf(releaseSink.rule, afterSink.rule), witnesses.keys.map { it.rule }.toSet())
-                for ((key, rows) in witnesses) {
-                    val expectedCallee = if (key.rule === releaseSink.rule) release else after
-                    assertEquals(f.program.inst(expectedCallee, 1), key.statement)
-                    assertTrue(rows.any { witness ->
-                        witness.methodKey == expectedCallee && witness.edges.size == 2 &&
-                            witness.edges.map { it.premise } == listOf(initial, f.manager.zero) &&
-                            witness.edges.all { it.layer == Layer.NORMAL && it.facts.layer == Layer.NORMAL } &&
-                            witness.edges.map { f.ops.leaves(it.facts).map { leaf -> leaf.fact }.toSet() } ==
-                                listOf(setOf(state.fact), setOf(returned.fact)) &&
-                            witness.supportPremise(f.manager) == initial
-                    }, "Both sinks must receive the normal state in run $index")
+                for ((callee, sink) in listOf(release to releaseSink, after to afterSink)) {
+                    val terminal = actors.getValue(callee).targets.single()
+                    assertSame(initial, terminal.premise)
+                    val id = assertIs<Target.NormalTarget>(terminal.target).id
+                    assertEquals(SinkKey(callee.method, f.program.inst(callee, 1), sink.rule.id),
+                        f.shared.reportCatalog.descriptor(id).key)
                 }
-                val report = ReportBuilder().also { it.add(config, result) }
-                assertTrue(report.hasDemandVulnerability())
-                assertTrue(witnesses.values.flatten().all { !it.confirmed },
-                    "Caller-owned state is exact, but this run supplied no confirmation certificate")
+                val report = ReportBuilder().also { it.commit(it.prepare(config, result, f.shared)) }
+                    .build(org.opentaint.dataflow.bidi.driver.AnalysisEnd(RunStatus.COMPLETE,
+                        index, Direction.FORWARD, org.opentaint.dataflow.bidi.driver.EndReason.POLICY))
+                assertEquals(setOf(releaseSink.rule.id, afterSink.rule.id),
+                    report.entries.map { it.descriptor.key.ruleId }.toSet())
                 if (index == 3) {
                     assertTrue(actors.getValue(release).summaries.demandEdges().none())
                     assertTrue(actors.getValue(after).summaries.demandEdges().none())

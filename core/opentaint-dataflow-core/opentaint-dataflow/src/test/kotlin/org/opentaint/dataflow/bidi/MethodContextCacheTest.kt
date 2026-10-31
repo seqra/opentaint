@@ -82,7 +82,7 @@ class MethodContextCacheTest {
             assertSame(config.mode, context.mode)
             assertSame(f.ops, context.ops)
             assertSame(f.manager, context.ap)
-            assertSame(f.vulnerabilities, context.vulnerabilities)
+            assertSame(shared, context.shared)
             assertTrue(context.isEnd(f.inst(f.methodA, 3)))
             assertFalse(context.isEnd(f.inst(f.methodA, 4)))
             assertTrue(context.isExceptionalExit(f.inst(f.methodA, 4)))

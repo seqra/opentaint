@@ -2,6 +2,7 @@ package org.opentaint.dataflow.bidi.engine
 
 import org.opentaint.dataflow.bidi.ap.ApManager
 import org.opentaint.dataflow.bidi.ap.FlowTree
+import org.opentaint.dataflow.bidi.ap.RuntimeDataDomain
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 /** Ordinary input queues. Completed output deduplication belongs to MethodEdgeStore. */
@@ -16,6 +17,7 @@ class DeltaWorklist(private val flowFirst: Boolean = false, batchManager: ApMana
     val size: Int get() = zero.size + flow.size + other.size
 
     fun add(delta: EdgeDelta) {
+        if (!RuntimeDataDomain.packet(delta.premise, delta.facts)) return
         when {
             delta.zeroToZero -> zero += delta
             flowFirst && delta.facts is FlowTree -> flow += delta

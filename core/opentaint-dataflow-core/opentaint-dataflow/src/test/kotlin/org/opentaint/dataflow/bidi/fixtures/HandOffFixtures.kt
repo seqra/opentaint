@@ -67,7 +67,7 @@ class HandOffFixtures(val index: Int = 1, val L: Int = maxOf(1, index - 1)) : Au
 
     /** Full method closure and actor freeze precede the retained result used by the barrier. */
     fun result(status: RunStatus = RunStatus.COMPLETE, order: List<MethodKey>? = null): RunResult<RunMethodAnalyzer> {
-        if (status != RunStatus.COMPLETE) return RunResult(status, emptyList(), index, config.direction, vulnerabilities)
+        if (status != RunStatus.COMPLETE) return RunResult(status, emptyList(), index, config.direction)
         if (!frozen) {
             actors.values.forEach { drain(it) }
             actors.values.forEach { it.freeze() }
@@ -75,7 +75,7 @@ class HandOffFixtures(val index: Int = 1, val L: Int = maxOf(1, index - 1)) : Au
         }
         val keys = order ?: actors.keys.toList()
         check(keys.toSet() == actors.keys && keys.size == actors.size) { "A result order contains every actor exactly once" }
-        return RunResult(status, keys.map(actors::getValue), index, config.direction, vulnerabilities)
+        return RunResult(status, keys.map(actors::getValue), index, config.direction)
     }
 
     override fun close(): Unit = finite.close()

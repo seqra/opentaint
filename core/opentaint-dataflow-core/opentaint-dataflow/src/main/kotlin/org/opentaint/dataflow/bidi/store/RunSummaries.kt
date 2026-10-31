@@ -15,6 +15,7 @@ class RunSummaryStore(private val m: ApManager, flowBacked: Boolean = false) {
     /** Raw delta. R1 persistence reads this collection at the barrier. */
     fun add(premise: PremiseKey, g: Facts): Facts? {
         m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.packet(premise, g)) return null
         checkShape(premise, g)
         backed?.let { return it.add(premise, g) }
         return groups.getOrPut(premise) { ConclusionGroup(m, interners) }.add(g)
@@ -23,6 +24,7 @@ class RunSummaryStore(private val m: ApManager, flowBacked: Boolean = false) {
     /** Publication delta. The caller has selected the raw group before restriction. */
     fun addDemand(premise: PremiseKey, piece: Facts): Facts? {
         m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.packet(premise, piece)) return null
         checkShape(premise, piece)
         backedDemand?.let { return it.add(premise, piece) }
         return demand.getOrPut(premise) { ConclusionGroup(m, interners) }.add(piece)

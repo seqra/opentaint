@@ -55,6 +55,7 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
     override fun conjunctionAt(edge: ConjunctiveEdge, premise: PremiseKey, facts: Facts, node: CommonInst,
                                at: OperationInput, sink: (PremiseKey, Facts) -> Unit) {
         val core = activeCore()
+        if (!RuntimeDataDomain.packet(premise, facts) || !RuntimeDataDomain.base(edge.target.base)) return
         val store = checkNotNull(conjunctionStore) { "A backward form has independent conjunction branches" }
         for ((index, literal) in edge.literals.withIndex()) {
             core.ap.cancellation.checkpoint()
@@ -102,13 +103,14 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
                                           statementEdge: Boolean, at: OperationInput,
                                           sink: (PremiseKey, Facts, ActionId?) -> Unit) {
         val core = activeCore()
+        if (!RuntimeDataDomain.packet(premise, facts)) return
         if (source.actions.isEmpty()) return
         val predicate = source.predicate
         fun transfer(pattern: Pattern, multi: Boolean) {
             for (action in source.actions) {
                 core.ap.cancellation.checkpoint()
                 val edge = source.transfer(pattern, action, multi)
-                if (edge.edge.from.base != facts.base) continue
+                if (!RuntimeDataDomain.producer(edge) || edge.edge.from.base != facts.base) continue
                 if (core.config.seededSources && !core.config.seeds.allowsSource(core.key, node, edge.forward, action.id)) continue
                 core.ops.applyEdge(facts, premise, edge.edge, statementEdge, core.mode,
                     core.collectAfterRun1Policy(at) { _, result ->
@@ -136,13 +138,15 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
                         ConjunctionStore.Input(premise, checked.facts.layer, checked.facts)) { cube ->
                         if (allowSingle || cube.leaves.size >= 2) for (action in source.actions) {
                             core.ap.cancellation.checkpoint()
+                            if (!RuntimeDataDomain.base(action.target.base)) continue
                             if (core.config.seededSources && cube.leaves.none { index ->
                                 core.config.seeds.allowsSource(core.key, node,
                                     source.transfer(selected.leaves[index], action, multi = true).forward, action.id)
                             }) continue
-                            val result = core.ops.targetTree(action.target, cube.layer, core.mode)
+                            val results = HashMap<Layer, Facts>()
                             val assigned = runtimeAtom(core, (action.target.mark as? MarkSlot.Concrete)?.mark)
-                            cube.emitProtectedOrigins(action.id, assigned) { initial, nonSubsumable ->
+                            cube.emitProtectedOrigins(action.id, assigned) { initial, layer, nonSubsumable ->
+                                val result = results.getOrPut(layer) { core.ops.targetTree(action.target, layer, core.mode) }
                                 sink(initial, core.forceRun1Layer(initial, protectTarget(result, nonSubsumable)), action.id)
                             }
                         }
@@ -152,6 +156,7 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
                     // GROUP folding can leave one accepted leaf in an original MULTI transfer.
                     if (allowSingle || combination.leaves.size >= 2) for (action in source.actions) {
                         core.ap.cancellation.checkpoint()
+                        if (!RuntimeDataDomain.base(action.target.base)) continue
                         if (core.config.seededSources && combination.leaves.none { index ->
                             core.config.seeds.allowsSource(core.key, node,
                                 source.transfer(selected.leaves[index], action, multi = true).forward, action.id)
@@ -214,6 +219,7 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
 
     override fun checkSinksAt(premise: PremiseKey, node: CommonInst, facts: Facts, sinks: List<SinkRule>, at: OperationInput): Triggers {
         val core = activeCore()
+        if (!RuntimeDataDomain.packet(premise, facts)) return Triggers(emptyList(), emptyList())
         if (!core.forward || sinks.isEmpty()) return Triggers.NONE
         val fired = ArrayList<Pair<SinkRule, Layer>>()
         val parts = ArrayList<Facts>()
@@ -289,10 +295,39 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
 
     private fun witness(core: RunMethodAnalyzer, sink: SinkRule, node: CommonInst, edges: List<SinkEdge>, proof: ProofKey? = null) {
         core.ap.cancellation.checkpoint()
-        val endFacts = emptyList<PathFact>() // selected policy ignores sink end actions in every run
-        val scopedProof = proof ?: sink.occurrenceId?.let { ProofKey(it, emptyList()) }
-        core.context.vulnerabilities.add(VulnerabilityKey(sink.rule, core.key.method, node),
-            SinkWitness(sink.alternative, core.key, edges, core.config.index, endFacts, scopedProof))
+        if (edges.any { !RuntimeDataDomain.packet(it.premise, it.facts) }) return
+        val origins = edges.map { it.premise }.distinct()
+        val cubeLayer = if (edges.any { it.layer == Layer.DEMAND }) Layer.DEMAND else Layer.NORMAL
+        var demandSeedCaptured = false
+        fun emitArm(premise: PremiseKey, layer: Layer) {
+            val target = if (layer == Layer.NORMAL) {
+                Target.NormalTarget(core.context.shared.reportCatalog.intern(
+                    SinkKey(core.key.method, node, sink.rule.id), sink.rule, core.key))
+            } else {
+                if (!demandSeedCaptured) {
+                    val projected = sink.predicate == null && sink.patterns.any {
+                        (it.fact.mark as? MarkSlot.Concrete)?.mark?.let(core.ap.marks::isGroup) == true
+                    }
+                    core.sinkSeeds.addAll(if (projected)
+                        org.opentaint.dataflow.bidi.driver.fullSinkSeedsFor(core.context.shared, sink, core.key, node)
+                    else org.opentaint.dataflow.bidi.driver.sinkSeedsFor(sink, core.key, node))
+                    demandSeedCaptured = true
+                }
+                Target.DemandTarget
+            }
+            core.emitTarget(premise, target)
+        }
+        if (core.config.run1) {
+            val nonzero = origins.filterNot { it.isZero }
+            for (origin in nonzero.ifEmpty { listOf(core.ap.zero) }) {
+                val complete = origins.all { it.isZero || it == origin }
+                emitArm(origin, if (complete) cubeLayer else Layer.DEMAND)
+            }
+        } else {
+            var original: PremiseKey = core.ap.zero
+            for (origin in origins) original = core.ap.union(original, origin)
+            emitArm(original, cubeLayer)
+        }
     }
 
     override fun fireSinkSeeds(node: CommonInst, emit: (Facts) -> Unit) {
@@ -324,6 +359,7 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
     }
 
     private fun seedFact(core: RunMethodAnalyzer, requirement: Pattern, emit: (Facts) -> Unit) {
+        if (!RuntimeDataDomain.base(requirement.fact.base)) return
         core.ap.cancellation.checkpoint()
         core.cut(Cut.SEED, core.ap.zero, core.ops.targetTree(requirement.fact, Layer.NORMAL)) { _, facts ->
             if (core.config.index == 2) {

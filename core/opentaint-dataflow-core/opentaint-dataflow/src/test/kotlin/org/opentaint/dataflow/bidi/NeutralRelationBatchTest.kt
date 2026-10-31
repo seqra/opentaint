@@ -209,7 +209,7 @@ class NeutralRelationBatchTest {
             }
             override fun conjunction(cj: ConjunctiveEdge, premise: PremiseKey, c: Facts, node: CommonInst, out: (PremiseKey, Facts) -> Unit) = fail("No conjunction")
             override fun allowsSource(node: CommonInst, me: MicroEdge) = false
-            override fun sourceHit(node: CommonInst, me: MicroEdge) = fail("No source")
+            override fun acceptedSource(application: AcceptedSource<PremiseKey, Facts>) = fail("No source")
         }
         val applier = FormApplier(algebra)
         for ((pr, facts) in values) applier.statement(summary, pr, facts, Place(node, true, false),

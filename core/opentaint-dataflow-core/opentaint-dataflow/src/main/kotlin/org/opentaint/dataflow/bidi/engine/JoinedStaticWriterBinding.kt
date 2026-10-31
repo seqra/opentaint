@@ -31,6 +31,7 @@ internal class JoinedStaticWriterBinding(
     fun offer(owner: MethodKey, id: Int) {
         checkpoint()
         val row = keys.row(id)
+        if (!RuntimeDataDomain.initial(row.original) || !RuntimeDataDomain.base(row.result.fact.base)) return
         check(row.result.fact.base == STATIC)
         check(row.original.base != STATIC) { "Static originals enter B, never BIND-W" }
         offers++
@@ -49,6 +50,7 @@ internal class JoinedStaticWriterBinding(
             processed++
             borrow(writer.owner, publication) { part ->
                 checkpoint()
+                if (!RuntimeDataDomain.packet(part.ref.premise, part.added)) return@borrow
                 check(part.callee == writer.owner) { "A writer can bind only its complete callee key" }
                 check(part.ref.premise is InitialAp) { "Run-1 caller originals are singleton" }
                 check((part.added is FlowTree) == part.ref.premise.isFlow)

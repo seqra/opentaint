@@ -19,10 +19,13 @@ class Run1OriginConjunctionStoreTest {
         val tuples = slots.fold(listOf(emptyList<ConjunctionStore.Input>())) { rows, slot ->
             rows.flatMap { row -> slot.map { row + it } }
         }
-        return tuples.flatMap { row ->
-            val nonzero = row.map { it.premise as InitialAp }.filterNot { it.isZero }.toSet()
-            val layer = if (row.any { it.layer == Layer.DEMAND }) Layer.DEMAND else Layer.NORMAL
-            nonzero.ifEmpty { setOf(m.zero) }.map { it to layer }
+        return tuples.groupBy { row -> row.map { it.layer to it.facts?.groupKey } }.values.flatMap { bindings ->
+            val layer = if (bindings.first().any { it.layer == Layer.DEMAND }) Layer.DEMAND else Layer.NORMAL
+            val nonzero = bindings.flatMap { row -> row.map { it.premise as InitialAp } }.filterNot { it.isZero }.toSet()
+            val arms = nonzero.map { origin -> origin to if (layer == Layer.NORMAL && bindings.any { row ->
+                row.all { it.premise.isZero || it.premise == origin }
+            }) Layer.NORMAL else Layer.DEMAND }
+            if (bindings.any { row -> row.all { it.premise.isZero } }) arms + (m.zero to layer) else arms
         }.toSet()
     }
 
@@ -35,10 +38,12 @@ class Run1OriginConjunctionStoreTest {
             val rule = Any()
             val slots = List(2) { arrayListOf<ConjunctionStore.Input>() }
             val seen = linkedSetOf<Pair<InitialAp, Layer>>()
+            val expected = linkedSetOf<Pair<InitialAp, Layer>>()
             for ((slot, value) in order) {
                 slots[slot] += value
                 store.addOrigins(rule, node, 2, slot, value) { i, layer -> seen += i to layer }
-                assertEquals(oracle(slots), seen)
+                expected += oracle(slots)
+                assertEquals(expected, seen)
                 val delta = arrayListOf<InitialAp>()
                 store.addOrigins(rule, node, 2, slot, value) { i, _ -> delta += i }
                 assertTrue(delta.isEmpty())

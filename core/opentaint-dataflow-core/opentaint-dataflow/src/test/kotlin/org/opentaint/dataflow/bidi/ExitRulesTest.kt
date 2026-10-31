@@ -70,7 +70,7 @@ class ExitRulesTest {
     fun `backward zero starts at both exits while a nonzero requirement starts only at normal exits`(): Unit {
         val f = MethodAnalysisFixtures(listOf(listOf(1, 2), emptyList(), emptyList()), normalExit = 1, exceptionalExit = 2)
         val core = f.core(index = 2)
-        core.addZeroEntry()
+        core.addInitial(f.manager.zero)
         f.drain(core)
         assertEquals(setOf(0, 1, 2), f.processed.map { it.node.location.index }.toSet())
         assertEquals(setOf(f.manager.zero to Conclusion(ZERO_FACT, ExclusionSet.Empty, demand = false)), raw(core))
@@ -89,7 +89,7 @@ class ExitRulesTest {
         val f = MethodAnalysisFixtures(listOf(listOf(1, 2), emptyList(), listOf(3), emptyList()),
             normalExit = 1, exceptionalExit = 3)
         val core = f.core(index = 2)
-        core.addZeroEntry()
+        core.addInitial(f.manager.zero)
         f.drain(core)
         assertEquals(setOf(0, 1, 2, 3), f.processed.map { it.node.location.index }.toSet())
         f.processed.clear()
@@ -231,7 +231,7 @@ class ExitRulesTest {
     }
 
     @Test
-    fun `run one and backward zero publication bypass demand reduction without changing raw selection`(): Unit {
+    fun `run one publishes directly while backward Zero requires paired guidance`(): Unit {
         for (index in listOf(1, 2)) {
             val f = MethodAnalysisFixtures()
             val t = if (index == 1) groupMark(f, "T") else mark(f, "T")
@@ -243,8 +243,9 @@ class ExitRulesTest {
             f.drain(core)
             val expected = decode(target).map { f.manager.zero to it }.toSet()
             assertEquals(expected, raw(core))
-            assertEquals(expected, f.publications.flatten().flatMap { pub -> decode(pub.conclusion).map { pub.premise to it } }.toSet())
-            assertEquals(expected, selected(core), "F1 normal guidance and backward ZERO are both retained")
+            val accepted = if (index == 1) expected else emptySet()
+            assertEquals(accepted, f.publications.flatten().flatMap { pub -> decode(pub.conclusion).map { pub.premise to it } }.toSet())
+            assertEquals(accepted, selected(core), "Backward ZERO has no implicit C5 permission")
         }
     }
 

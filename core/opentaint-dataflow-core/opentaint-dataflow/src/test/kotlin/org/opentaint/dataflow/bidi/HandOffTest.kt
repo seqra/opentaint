@@ -17,7 +17,7 @@ import kotlin.test.*
 class HandOffTest {
     @Test fun `static carry and frozen completion are attached only at the run1 to run2 boundary`(): Unit {
         for (index in listOf(1, 2, 3, 4)) HandOffFixtures(index).use { f ->
-            val handOff = HandOff.of(f.config, f.result(), f.report, f.shared)
+            val handOff = HandOff.of(f.config, f.result(), f.shared)
             assertEquals(index == 1, handOff.demand.hasSharedStaticCarry, "Completed run-$index handoff")
             assertEquals(index == 1, handOff.demand.hasStaticCompletion, "Completed run-$index handoff")
             assertTrue(handOff.demandEdges.isEmpty(), "The policy creates no explicit demand pairs")
@@ -52,13 +52,16 @@ class HandOffTest {
         RuleStatement(summary, StatementSummary(emptySet(), sinks.flatMap { it.endFacts }, emptyList(), emptyMap()), sinks)
 
     private fun witness(f: HandOffFixtures, key: MethodKey, rule: RuleId, statement: Int,
-                        alternative: Int = 0, confirmed: Boolean = false): SinkWitness =
-        SinkWitness(alternative, key, listOf(SinkEdge(f.manager.zero, Layer.NORMAL, Reach.NORMAL)), f.index)
-            .also {
-                f.core(key)
-                it.confirmed = confirmed
-                f.vulnerabilities.add(VulnerabilityKey(rule, key.method, f.inst(statement)), it)
-            }
+                        alternative: Int = 0, confirmed: Boolean = false) {
+        val core = f.core(key)
+        if (confirmed) return // NORMAL observations create no backward seed.
+        val forms = f.shared.contexts.forms(key)
+        val node = f.inst(statement)
+        val sinks = f.shared.language.getCallExpr(node)?.let { forms.call(Direction.FORWARD, node, it).sinks }
+            ?: forms.exitRules(Direction.FORWARD, node).rules.sinks
+        for (sink in sinks.filter { it.rule == rule && it.alternative == alternative })
+            core.sinkSeeds.addAll(sinkSeedsFor(sink, key, node))
+    }
 
     private fun decoded(ops: ApOps, rows: Sequence<Pair<PremiseKey, Facts>>): Set<Pair<PremiseKey, Conclusion>> =
         rows.flatMap { (premise, facts) ->
@@ -79,7 +82,7 @@ class HandOffTest {
                 f.raw(key, origin, fact)
                 f.selected(key, origin, fact)
             }
-            val handOff = HandOff.of(f.config, f.result(), f.report, f.shared)
+            val handOff = HandOff.of(f.config, f.result(), f.shared)
             val normalizedStatic = static.toPattern().let { it.copy(fact = it.fact.copy(tail = Tail.STAR)) }
             val expected = setOf(DemandPattern(target, local.toPattern()), DemandPattern(target, normalizedStatic))
             assertEquals(expected, explicit(f, handOff, key))
@@ -103,7 +106,7 @@ class HandOffTest {
             f.selected(key, initial, selectedFact)
             val result = f.result()
             val before = result.analyzers.single().summaries.all().toList()
-            val handOff = HandOff.of(f.config, result, f.report, f.shared)
+            val handOff = HandOff.of(f.config, result, f.shared)
             val expected = DemandPattern(f.pattern(returned, listOf(b), Tail.ANY, u), initial.toPattern())
             assertEquals(setOf(expected), explicit(f, handOff, key))
             assertEquals(mapOf(key to 1), handOff.demandEdges)
@@ -133,7 +136,7 @@ class HandOffTest {
             f.raw(key, premise, normal)
             f.selected(key, premise, normal)
             val result = f.result()
-            val handOff = HandOff.of(f.config, result, f.report, f.shared)
+            val handOff = HandOff.of(f.config, result, f.shared)
             assertEquals(setOf(DemandPattern(target, a.toPattern()), DemandPattern(target, b.toPattern())),
                 explicit(f, handOff, key))
             assertEquals(mapOf(key to 2), handOff.demandEdges)
@@ -165,12 +168,12 @@ class HandOffTest {
             f.raw(key, f.manager.zero, Reach.NORMAL)
             f.selected(key, f.manager.zero, Reach.NORMAL)
             val result = f.result()
-            val handOff = HandOff.of(f.config, result, f.report, f.shared)
-            assertEquals(setOf(DemandPattern(demandPattern, initial.toPattern()), DemandPattern(seedPattern, null)),
-                explicit(f, handOff, key))
-            assertEquals(mapOf(key to 2), handOff.demandEdges)
-            assertEquals(setOf(DemandPattern(f.manager.zero.toPattern(), null)),
-                handOff.demand.near(f.key("not analysed"), f.manager.zero.toPattern()).toSet())
+            val handOff = HandOff.of(f.config, result, f.shared)
+            val zero = f.manager.zero.toPattern()
+            assertEquals(setOf(DemandPattern(demandPattern, initial.toPattern()), DemandPattern(seedPattern, zero),
+                DemandPattern(zero, zero)), explicit(f, handOff, key))
+            assertEquals(mapOf(key to 3), handOff.demandEdges)
+            assertTrue(handOff.demand.near(f.key("not analysed"), zero).isEmpty())
             assertEquals(0, handOff.seeds.size)
             f.records.persist(Direction.BACKWARD, result.analyzers.asSequence().map { it.key to it.summaries })
             val record = f.records.byEntry(key, initial.toPattern()).single()
@@ -198,7 +201,7 @@ class HandOffTest {
             f.raw(recordOnly, native, f.fact(x, mark = t))
             val result = f.result()
             f.records.persist(Direction.BACKWARD, result.analyzers.asSequence().map { it.key to it.summaries })
-            val handOff = HandOff.of(f.config, result, f.report, f.shared)
+            val handOff = HandOff.of(f.config, result, f.shared)
             val expected = setOf(Seed.Source(a, f.inst(0), first), Seed.Source(a, f.inst(1), first),
                 Seed.Source(a, f.inst(0), other), Seed.Source(b, f.inst(0), first))
             val actual = listOf(a, b, recordOnly).flatMap { key -> (0..2).flatMap { handOff.seeds.at(key, f.inst(it)) } }
@@ -246,8 +249,7 @@ class HandOffTest {
             witness(f, b, demandRule, 2, alternative = 0)
             witness(f, a, confirmedRule, 2, confirmed = true)
             val result = f.result()
-            f.report.add(f.config, result)
-            val handOff = HandOff.of(f.config, result, f.report, f.shared)
+            val handOff = HandOff.of(f.config, result, f.shared)
             val expected = setOf(Seed.Sink(demandRule, a, f.inst(2), p), Seed.Sink(demandRule, a, f.inst(2), q),
                 Seed.Sink(demandRule, b, f.inst(2), p), Seed.Sink(demandRule, b, f.inst(2), q))
             assertEquals(expected, (handOff.seeds.at(a, f.inst(2)) + handOff.seeds.at(b, f.inst(2))).toSet())
@@ -272,14 +274,9 @@ class HandOffTest {
             val id = RuleOccurrenceId(FormKey(FormOwner(), witnessed.method, null, f.inst(2)), RuleKind.EXIT_SINK, 0)
             val sink = SinkRule(reportRule, 0, predicate.leaves, emptyList(), id, predicate)
             f.finite.exitRules(2, ExitRules(rules(listOf(sink)), false, emptySet()))
-            val support = SinkWitness(0, witnessed,
-                listOf(SinkEdge(f.manager.zero, Layer.DEMAND, f.fact(x, layer = Layer.DEMAND))), f.index,
-                proof = ProofKey(id, listOf(predicate.leaves.indexOf(first))))
-            f.core(witnessed)
-            f.vulnerabilities.add(VulnerabilityKey(reportRule, witnessed.method, f.inst(2)), support)
+            f.core(witnessed).sinkSeeds.addAll(sinkSeedsFor(sink, witnessed, f.inst(2)))
             val result = f.result()
-            f.report.add(f.config, result)
-            val handOff = HandOff.of(f.config, result, f.report, f.shared)
+            val handOff = HandOff.of(f.config, result, f.shared)
             assertEquals(listOf(Seed.PredicateSink(id, witnessed, f.inst(2))), handOff.seeds.at(witnessed, f.inst(2)))
             assertEquals(1, handOff.seeds.size)
             val handle = handOff.seeds.at(witnessed, f.inst(2)).single() as Seed.PredicateSink
@@ -305,8 +302,7 @@ class HandOffTest {
             f.finite.exitRules(2, ExitRules(rules(listOf(exitSink)), false, emptySet()))
             witness(f, key, rule, 1)
             val result = f.result()
-            f.report.add(f.config, result)
-            val handOff = HandOff.of(f.config, result, f.report, f.shared)
+            val handOff = HandOff.of(f.config, result, f.shared)
             assertEquals(listOf(Seed.Sink(rule, key, f.inst(1), called)), handOff.seeds.at(key, f.inst(1)))
             assertTrue(handOff.seeds.at(key, f.inst(2)).isEmpty())
             assertEquals(1, handOff.seeds.size)
@@ -328,9 +324,7 @@ class HandOffTest {
             witness(f, key, call.rule, 1)
             witness(f, key, exit.rule, 2)
             val result = f.result()
-            f.report.add(f.config, result)
-            assertEquals(3, f.report.demandEntries().size)
-            val handOff = HandOff.of(f.config, result, f.report, f.shared)
+            val handOff = HandOff.of(f.config, result, f.shared)
             assertEquals(0, handOff.seeds.size)
             assertTrue(handOff.seeds.sinkMethods().isEmpty())
             assertTrue((0..2).all { handOff.seeds.at(key, f.inst(it)).isEmpty() })
@@ -345,7 +339,7 @@ class HandOffTest {
                 val key = f.key()
                 f.selected(key, f.manager.zero, f.fact(returned, tail = Tail.ANY, layer = Layer.DEMAND))
                 assertFails("index=$index status=$status") {
-                    HandOff.of(f.config, f.result(status), f.report, f.shared)
+                    HandOff.of(f.config, f.result(status), f.shared)
                 }
             }
         }
@@ -382,8 +376,8 @@ class HandOffTest {
             assertEquals(forwardExpected, decoded(f.ops, forward.summaries.all()))
             assertEquals(forwardExpected, decoded(f.ops, forward.summaries.demandEdges()))
             val report = ReportBuilder()
-            val forwardResult = RunResult(RunStatus.COMPLETE, listOf(forward), 3, Direction.FORWARD, f.vulnerabilities)
-            val forwardHandOff = HandOff.of(forwardConfig, forwardResult, report, f.shared)
+            val forwardResult = RunResult(RunStatus.COMPLETE, listOf(forward), 3, Direction.FORWARD)
+            val forwardHandOff = HandOff.of(forwardConfig, forwardResult, f.shared)
             assertEquals(setOf(DemandPattern(targetPattern, a.toPattern()), DemandPattern(targetPattern, b.toPattern())),
                 forwardHandOff.demand.near(f.key, demandProbe(returned)).toSet())
             assertEquals(mapOf(f.key to 2), forwardHandOff.demandEdges, "One backward guide per conjunction member")
@@ -406,8 +400,8 @@ class HandOffTest {
             f.records.persist(Direction.BACKWARD, sequenceOf(f.key to backward.summaries))
             assertTrue(f.records.byExit(f.key, a.toPattern()).none(), "A reversed literal is not a normal one-literal record")
             assertTrue(f.records.byExit(f.key, b.toPattern()).none(), "Each literal branch keeps its DEMAND layer")
-            val backwardResult = RunResult(RunStatus.COMPLETE, listOf(backward), 4, Direction.BACKWARD, f.vulnerabilities)
-            val backwardHandOff = HandOff.of(backwardConfig, backwardResult, report, f.shared)
+            val backwardResult = RunResult(RunStatus.COMPLETE, listOf(backward), 4, Direction.BACKWARD)
+            val backwardHandOff = HandOff.of(backwardConfig, backwardResult, f.shared)
             assertEquals(setOf(DemandPattern(a.toPattern(), targetPattern)),
                 backwardHandOff.demand.near(f.key, demandProbe(x)).toSet())
             assertEquals(setOf(DemandPattern(b.toPattern(), targetPattern)),
