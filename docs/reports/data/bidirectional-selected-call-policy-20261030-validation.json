@@ -1,0 +1,31 @@
+{
+  "status": "PASS",
+  "utc": "2026-10-31T00:35:51.985517+00:00",
+  "runtime": "e090118e5f9603f1973c0578a3e04998035f4508",
+  "checks": {
+    "runtimeBound": true,
+    "productionSourceUnchanged": true,
+    "allCommandsClosed": true,
+    "bothFullInputAuditsPass": true,
+    "strictIdentitiesAndMultiplicitiesEqualPrevious": true,
+    "noBaselineRerun": true,
+    "fourProjectScope": true,
+    "allEighteenEngineRecordsEmbedded": true,
+    "nextKernelsPass": true,
+    "nextProposalHashCurrent": true,
+    "fullSupplementalTestsPass": true,
+    "sevenProposalControls": true,
+    "portableControlMatchesExecutedSource": true,
+    "documentationLinksResolve": true,
+    "documentationFencesBalanced": true,
+    "latestIterationsAgree": true,
+    "noRawCaptureEmbedded": true,
+    "finalEvidenceState": true,
+    "reportHasNoOpenReaderGate": true
+  },
+  "missingLinks": [],
+  "dataBytes": 31097964,
+  "dataSha256": "c8896b7c3545e1346d62235a25da25117967f6137aa75b183ecf1a3be3d1461a",
+  "reportSha256": "fab18bd2d44a13c91f5481b44349b0510fbbcb4339831952550206896b9340a7",
+  "scope": "Report data and source-binding validation; no analyzer or test run."
+}

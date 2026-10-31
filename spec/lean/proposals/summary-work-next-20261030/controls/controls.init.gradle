@@ -1,0 +1,15 @@
+// External proposal controls. This file adds no production source.
+def explicitInit = gradle.startParameter.initScripts.find { it.name == 'controls.init.gradle' }
+if (explicitInit == null) throw new GradleException('Pass controls.init.gradle with --init-script')
+def proposalSource = new File(explicitInit.canonicalFile.parentFile, 'src').canonicalFile
+if (!proposalSource.isDirectory()) throw new GradleException("Missing proposal controls: $proposalSource")
+gradle.projectsEvaluated {
+    if (rootProject.name != 'opentaint-dataflow-core') return
+    def target = rootProject.findProject(':opentaint-dataflow')
+    if (target == null) throw new GradleException('Missing :opentaint-dataflow project')
+    target.extensions.getByName('kotlin').sourceSets.getByName('test').kotlin.srcDir(proposalSource)
+    target.tasks.withType(org.gradle.api.tasks.testing.Test).configureEach {
+        maxHeapSize = '1g'
+        maxParallelForks = 1
+    }
+}

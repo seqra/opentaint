@@ -1,8 +1,8 @@
 {
   "status": "PASS",
-  "utc": "2026-10-30T22:44:56.551557+00:00",
+  "utc": "2026-10-30T22:45:13.011322+00:00",
   "baseRuntime": "edb2e06cdb17eecafbe03415236bf56c57910239",
-  "observedHead": "12281a1c1c3fb0803457662c8b1635de2ca771b0",
+  "observedHead": "e090118e5f9603f1973c0578a3e04998035f4508",
   "checkerSha256": "14096756655a4ee93f015adc9f304aed8158c12983eef397bc06304fa9af9a08",
   "checks": {
     "apKeysTransfersStoresAndProtocolUnchanged": true,
