@@ -156,7 +156,15 @@ Only a complete barrier exposes a new record/report snapshot.
    verify Kotlin `KaryJoin` internals or permit removing a missing slot.
 9. Keep the selected run-1 static known-input/pool-interest route. Carry
    its selected STATIC original into terminal matching. Do not replace
-   it with ZERO or introduce an abstract FLOW Target branch.
+   it with ZERO or introduce an abstract FLOW Target branch. Use the
+   existing static call continuation, waiting set, PointReady dispatch,
+   and staticSupply callback with a typed result payload. No separate
+   terminal waiting directory is required.
+
+Use the existing PublicationIndex premise postings, KaryJoin products,
+publication flush/failure procedure, and Seed values. The protocol model
+does not require separate runtime receipt, retry, or settlement services.
+Sharing these implementations changes no selected transfer law.
 
 This is a constructive protocol and boundary proof package. It does not
 prove whole-Kotlin refinement, unchanged findings for constant-bearing
