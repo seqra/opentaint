@@ -1,0 +1,2054 @@
+{
+  "project": "Stirling-PDF",
+  "baseline_revision": "f945f92c5ae554ff4f5fc7696ee5a269210478bb",
+  "runtime_revision": "c4a71246519ee5432879ce82518823f1703f3aa4",
+  "mark_mode": "FULL",
+  "heap": "16g",
+  "field_limit_schedule": "REPEAT_RUN1",
+  "assessment": "INCOMPLETE_OR_INVALID_INPUT_COMPARISON",
+  "finding_assessment": "FOURTEEN_EXACT_IDENTITIES_RETAINED_TWO_EXIT_REATTRIBUTION_CANDIDATES_ONE_UNMATCHED_REMOVAL_SIX_OTHER_ADDITIONS",
+  "counts": {
+    "main_unique": 17,
+    "bidi_unique": 22,
+    "unchanged_unique": 14,
+    "removed_unique": 3,
+    "added_unique": 8,
+    "main_occurrences": 17,
+    "bidi_occurrences": 22,
+    "unchanged_occurrences": 14,
+    "removed_occurrences": 3,
+    "added_occurrences": 8
+  },
+  "input_differences": [
+    {
+      "field": "config.memory",
+      "main": "8g",
+      "bidi": "16g"
+    }
+  ],
+  "input_qualification": "Frozen baseline used 8g and completed. Current authorized 16g experiment timed out during backward run-8 and retains the accepted forward run-7 report. Model SHA and test revision match.",
+  "both_complete_without_prescan_error": false,
+  "baseline": {
+    "directory": "/drive-testcomp/opentaint-go-rules/constant-filter-target-zero-20261031/projects/Stirling-PDF/main",
+    "status": "OK",
+    "sarif_sha256": "68bcaf341b15c8f485fc9afb8f8333271b3d5ad35760036ddd628afc4e9835af",
+    "heap": "8g",
+    "timeout_seconds": 1080,
+    "wall_seconds": 145.6249698996544,
+    "peak_rss_bytes": 8359645184
+  },
+  "current": {
+    "directory": "/drive-testcomp/opentaint-go-rules/constant-filter-target-zero-20261031/projects/Stirling-PDF/bidi",
+    "status": "TIMEOUT",
+    "sarif_sha256": "9d5c8abe5f80ee0a113453695060fce69511eba4d6b8ff1c44f33abe83e83beb",
+    "heap": "16g",
+    "timeout_seconds": 1080,
+    "wall_seconds": 1108.7121442258358,
+    "peak_rss_bytes": 19243573248
+  },
+  "removed": [
+    {
+      "rule_id": "java.security.os-command-injection",
+      "path": "stirling/software/common/util/ProcessExecutor",
+      "occurrences": 1,
+      "unique_sinks": 1,
+      "findings": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.os-command-injection",
+            "wY2lI7b1TEw2RC154xc+UyLWgRr7oi07c8cEICJI+QM=",
+            "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling(java.util.List, java.io.File)"
+          ],
+          "rule_id": "java.security.os-command-injection",
+          "sink_fingerprint": "wY2lI7b1TEw2RC154xc+UyLWgRr7oi07c8cEICJI+QM=",
+          "method_signature": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling(java.util.List, java.io.File)",
+          "instruction_index": 8,
+          "instruction": "processBuilder.<init>(command)",
+          "path": "stirling/software/common/util/ProcessExecutor",
+          "region": {
+            "startLine": 183
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling(java.util.List, java.io.File):8:(processBuilder.<init>(command))",
+                "fullyQualifiedName": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "stirling/software/common/util/ProcessExecutor",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "startLine": 183
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "wY2lI7b1TEw2RC154xc+UyLWgRr7oi07c8cEICJI+QM=",
+            "vulnerabilityWithTraceHash/v1": "FCa6XVV+8EMD+6mMnFLRY89lxMPwFwiZOFFdytslEAQ=",
+            "vulnerabilitySourceSinkHash/v1": "UzeD9IxMW0sEXji1fB5zbiYlsZURjAPcgSvehYrZRuk="
+          },
+          "message": {
+            "text": "OS command injection: command line depends on a user provided value"
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 3,
+          "location_index": 0
+        }
+      ]
+    },
+    {
+      "rule_id": "java.security.xss#sink#1",
+      "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+      "occurrences": 1,
+      "unique_sinks": 1,
+      "findings": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.xss#sink#1",
+            "PQLoBIezs1hooJgNROGqqMItTCrK3e4M30qb7Nc47I8=",
+            "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)"
+          ],
+          "rule_id": "java.security.xss#sink#1",
+          "sink_fingerprint": "PQLoBIezs1hooJgNROGqqMItTCrK3e4M30qb7Nc47I8=",
+          "method_signature": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)",
+          "instruction_index": 103,
+          "instruction": "return %54",
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+          "region": {
+            "endColumn": 77,
+            "endLine": 134,
+            "startColumn": 17,
+            "startLine": 133
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):103:(return %54)",
+                "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 77,
+                "endLine": 134,
+                "startColumn": 17,
+                "startLine": 133
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "PQLoBIezs1hooJgNROGqqMItTCrK3e4M30qb7Nc47I8=",
+            "vulnerabilityWithTraceHash/v1": "grIKj26OnPY+GxxvzFwZhPP0ruTbo2w/BzhpWgUX4bA=",
+            "vulnerabilitySourceSinkHash/v1": "lseGFSkMQoU5H9x3TGPoODmdc9RU9TYA4VWG3wp1tak="
+          },
+          "message": {
+            "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 7,
+          "location_index": 0
+        }
+      ]
+    },
+    {
+      "rule_id": "java.security.xss#sink#1",
+      "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+      "occurrences": 1,
+      "unique_sinks": 1,
+      "findings": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.xss#sink#1",
+            "06ygLUfQlHncy8dVaxT/0Sr5FENRUrFXg+b9LTuYQTE=",
+            "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)"
+          ],
+          "rule_id": "java.security.xss#sink#1",
+          "sink_fingerprint": "06ygLUfQlHncy8dVaxT/0Sr5FENRUrFXg+b9LTuYQTE=",
+          "method_signature": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)",
+          "instruction_index": 50,
+          "instruction": "return %104",
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+          "region": {
+            "endColumn": 93,
+            "endLine": 91,
+            "startColumn": 17,
+            "startLine": 90
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):50:(return %104)",
+                "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 93,
+                "endLine": 91,
+                "startColumn": 17,
+                "startLine": 90
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "06ygLUfQlHncy8dVaxT/0Sr5FENRUrFXg+b9LTuYQTE=",
+            "vulnerabilityWithTraceHash/v1": "L8shxEzjCv0228I93BGPeqcOM8/uqndRmSLNuGUASdU=",
+            "vulnerabilitySourceSinkHash/v1": "+6PoN1c+oYt5lA7F2v/XF3L+vjVS4FbZPvgqZIU+W64="
+          },
+          "message": {
+            "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 8,
+          "location_index": 0
+        }
+      ]
+    }
+  ],
+  "added": [
+    {
+      "rule_id": "java.security.xss#sink#1",
+      "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+      "occurrences": 1,
+      "unique_sinks": 1,
+      "findings": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.xss#sink#1",
+            "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE=",
+            "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)"
+          ],
+          "rule_id": "java.security.xss#sink#1",
+          "sink_fingerprint": "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE=",
+          "method_signature": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)",
+          "instruction_index": 126,
+          "instruction": "return %89",
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+          "region": {
+            "endColumn": 84,
+            "endLine": 149,
+            "startColumn": 13,
+            "startLine": 148
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):126:(return %89)",
+                "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 84,
+                "endLine": 149,
+                "startColumn": 13,
+                "startLine": 148
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE=",
+            "vulnerabilityWithTraceHash/v1": "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE=",
+            "vulnerabilitySourceSinkHash/v1": "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE="
+          },
+          "message": {
+            "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+          },
+          "properties": null,
+          "code_flow_count": 0,
+          "run_index": 0,
+          "result_index": 10,
+          "location_index": 0
+        }
+      ]
+    },
+    {
+      "rule_id": "java.security.xss#sink#1",
+      "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+      "occurrences": 4,
+      "unique_sinks": 4,
+      "findings": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.xss#sink#1",
+            "7gt1O0QYSkcjv5es6/QCrsi2pvkexTTpuOhjxPBfFMw=",
+            "stirling.software.SPDF.controller.api.filters.FilterController#pageRotation(stirling.software.SPDF.model.api.filter.PageRotationRequest)"
+          ],
+          "rule_id": "java.security.xss#sink#1",
+          "sink_fingerprint": "7gt1O0QYSkcjv5es6/QCrsi2pvkexTTpuOhjxPBfFMw=",
+          "method_signature": "stirling.software.SPDF.controller.api.filters.FilterController#pageRotation(stirling.software.SPDF.model.api.filter.PageRotationRequest)",
+          "instruction_index": 44,
+          "instruction": "return null",
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+          "region": {
+            "endColumn": 20,
+            "endLine": 210,
+            "startColumn": 9,
+            "startLine": 210
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "stirling.software.SPDF.controller.api.filters.FilterController#pageRotation(stirling.software.SPDF.model.api.filter.PageRotationRequest):44:(return null)",
+                "fullyQualifiedName": "stirling.software.SPDF.controller.api.filters.FilterController#pageRotation"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 20,
+                "endLine": 210,
+                "startColumn": 9,
+                "startLine": 210
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "7gt1O0QYSkcjv5es6/QCrsi2pvkexTTpuOhjxPBfFMw=",
+            "vulnerabilityWithTraceHash/v1": "7gt1O0QYSkcjv5es6/QCrsi2pvkexTTpuOhjxPBfFMw=",
+            "vulnerabilitySourceSinkHash/v1": "7gt1O0QYSkcjv5es6/QCrsi2pvkexTTpuOhjxPBfFMw="
+          },
+          "message": {
+            "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+          },
+          "properties": null,
+          "code_flow_count": 0,
+          "run_index": 0,
+          "result_index": 16,
+          "location_index": 0
+        },
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.xss#sink#1",
+            "B9cw+mG7uGw0Jk9Soh6hDPvFGVpT3cX0QljmgerSVbE=",
+            "stirling.software.SPDF.controller.api.filters.FilterController#pageSize(stirling.software.SPDF.model.api.filter.PageSizeRequest)"
+          ],
+          "rule_id": "java.security.xss#sink#1",
+          "sink_fingerprint": "B9cw+mG7uGw0Jk9Soh6hDPvFGVpT3cX0QljmgerSVbE=",
+          "method_signature": "stirling.software.SPDF.controller.api.filters.FilterController#pageSize(stirling.software.SPDF.model.api.filter.PageSizeRequest)",
+          "instruction_index": 54,
+          "instruction": "return null",
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+          "region": {
+            "endColumn": 20,
+            "endLine": 146,
+            "startColumn": 9,
+            "startLine": 146
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "stirling.software.SPDF.controller.api.filters.FilterController#pageSize(stirling.software.SPDF.model.api.filter.PageSizeRequest):54:(return null)",
+                "fullyQualifiedName": "stirling.software.SPDF.controller.api.filters.FilterController#pageSize"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 20,
+                "endLine": 146,
+                "startColumn": 9,
+                "startLine": 146
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "B9cw+mG7uGw0Jk9Soh6hDPvFGVpT3cX0QljmgerSVbE=",
+            "vulnerabilityWithTraceHash/v1": "B9cw+mG7uGw0Jk9Soh6hDPvFGVpT3cX0QljmgerSVbE=",
+            "vulnerabilitySourceSinkHash/v1": "B9cw+mG7uGw0Jk9Soh6hDPvFGVpT3cX0QljmgerSVbE="
+          },
+          "message": {
+            "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+          },
+          "properties": null,
+          "code_flow_count": 0,
+          "run_index": 0,
+          "result_index": 17,
+          "location_index": 0
+        },
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.xss#sink#1",
+            "Z157Ih7g5r+BWSwddTYdLc/CDINspsBHRLbddod9lcQ=",
+            "stirling.software.SPDF.controller.api.filters.FilterController#fileSize(stirling.software.SPDF.model.api.filter.FileSizeRequest)"
+          ],
+          "rule_id": "java.security.xss#sink#1",
+          "sink_fingerprint": "Z157Ih7g5r+BWSwddTYdLc/CDINspsBHRLbddod9lcQ=",
+          "method_signature": "stirling.software.SPDF.controller.api.filters.FilterController#fileSize(stirling.software.SPDF.model.api.filter.FileSizeRequest)",
+          "instruction_index": 44,
+          "instruction": "return null",
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+          "region": {
+            "endColumn": 20,
+            "endLine": 175,
+            "startColumn": 9,
+            "startLine": 175
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "stirling.software.SPDF.controller.api.filters.FilterController#fileSize(stirling.software.SPDF.model.api.filter.FileSizeRequest):44:(return null)",
+                "fullyQualifiedName": "stirling.software.SPDF.controller.api.filters.FilterController#fileSize"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 20,
+                "endLine": 175,
+                "startColumn": 9,
+                "startLine": 175
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "Z157Ih7g5r+BWSwddTYdLc/CDINspsBHRLbddod9lcQ=",
+            "vulnerabilityWithTraceHash/v1": "Z157Ih7g5r+BWSwddTYdLc/CDINspsBHRLbddod9lcQ=",
+            "vulnerabilitySourceSinkHash/v1": "Z157Ih7g5r+BWSwddTYdLc/CDINspsBHRLbddod9lcQ="
+          },
+          "message": {
+            "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+          },
+          "properties": null,
+          "code_flow_count": 0,
+          "run_index": 0,
+          "result_index": 14,
+          "location_index": 0
+        },
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.xss#sink#1",
+            "tueynlQXoUtjWW7bVZZDWSTYp/FC63U8t3BQWuyGTs8=",
+            "stirling.software.SPDF.controller.api.filters.FilterController#pageCount(stirling.software.SPDF.model.api.PDFComparisonAndCount)"
+          ],
+          "rule_id": "java.security.xss#sink#1",
+          "sink_fingerprint": "tueynlQXoUtjWW7bVZZDWSTYp/FC63U8t3BQWuyGTs8=",
+          "method_signature": "stirling.software.SPDF.controller.api.filters.FilterController#pageCount(stirling.software.SPDF.model.api.PDFComparisonAndCount)",
+          "instruction_index": 43,
+          "instruction": "return null",
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+          "region": {
+            "endColumn": 20,
+            "endLine": 107,
+            "startColumn": 9,
+            "startLine": 107
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "stirling.software.SPDF.controller.api.filters.FilterController#pageCount(stirling.software.SPDF.model.api.PDFComparisonAndCount):43:(return null)",
+                "fullyQualifiedName": "stirling.software.SPDF.controller.api.filters.FilterController#pageCount"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 20,
+                "endLine": 107,
+                "startColumn": 9,
+                "startLine": 107
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "tueynlQXoUtjWW7bVZZDWSTYp/FC63U8t3BQWuyGTs8=",
+            "vulnerabilityWithTraceHash/v1": "tueynlQXoUtjWW7bVZZDWSTYp/FC63U8t3BQWuyGTs8=",
+            "vulnerabilitySourceSinkHash/v1": "tueynlQXoUtjWW7bVZZDWSTYp/FC63U8t3BQWuyGTs8="
+          },
+          "message": {
+            "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+          },
+          "properties": null,
+          "code_flow_count": 0,
+          "run_index": 0,
+          "result_index": 15,
+          "location_index": 0
+        }
+      ]
+    },
+    {
+      "rule_id": "java.security.xss#sink#1",
+      "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+      "occurrences": 1,
+      "unique_sinks": 1,
+      "findings": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.xss#sink#1",
+            "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q=",
+            "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)"
+          ],
+          "rule_id": "java.security.xss#sink#1",
+          "sink_fingerprint": "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q=",
+          "method_signature": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)",
+          "instruction_index": 109,
+          "instruction": "return null",
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+          "region": {
+            "endColumn": 24,
+            "endLine": 130,
+            "startColumn": 13,
+            "startLine": 130
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):109:(return null)",
+                "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 24,
+                "endLine": 130,
+                "startColumn": 13,
+                "startLine": 130
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q=",
+            "vulnerabilityWithTraceHash/v1": "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q=",
+            "vulnerabilitySourceSinkHash/v1": "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q="
+          },
+          "message": {
+            "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+          },
+          "properties": null,
+          "code_flow_count": 0,
+          "run_index": 0,
+          "result_index": 19,
+          "location_index": 0
+        }
+      ]
+    },
+    {
+      "rule_id": "java.security.xss#sink#1",
+      "path": "stirling/software/common/util/WebResponseUtils",
+      "occurrences": 2,
+      "unique_sinks": 2,
+      "findings": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.xss#sink#1",
+            "LZxeIEoeW+xBfvuqYnRMdJGMPXkNIZeKgsL7wEYrP7Y=",
+            "stirling.software.common.util.WebResponseUtils#multiPartFileToWebResponse(org.springframework.web.multipart.MultipartFile)"
+          ],
+          "rule_id": "java.security.xss#sink#1",
+          "sink_fingerprint": "LZxeIEoeW+xBfvuqYnRMdJGMPXkNIZeKgsL7wEYrP7Y=",
+          "method_signature": "stirling.software.common.util.WebResponseUtils#multiPartFileToWebResponse(org.springframework.web.multipart.MultipartFile)",
+          "instruction_index": 6,
+          "instruction": "return %8",
+          "path": "stirling/software/common/util/WebResponseUtils",
+          "region": {
+            "startLine": 42
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "stirling.software.common.util.WebResponseUtils#multiPartFileToWebResponse(org.springframework.web.multipart.MultipartFile):6:(return %8)",
+                "fullyQualifiedName": "stirling.software.common.util.WebResponseUtils#multiPartFileToWebResponse"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "stirling/software/common/util/WebResponseUtils",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "startLine": 42
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "LZxeIEoeW+xBfvuqYnRMdJGMPXkNIZeKgsL7wEYrP7Y=",
+            "vulnerabilityWithTraceHash/v1": "LZxeIEoeW+xBfvuqYnRMdJGMPXkNIZeKgsL7wEYrP7Y=",
+            "vulnerabilitySourceSinkHash/v1": "LZxeIEoeW+xBfvuqYnRMdJGMPXkNIZeKgsL7wEYrP7Y="
+          },
+          "message": {
+            "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+          },
+          "properties": null,
+          "code_flow_count": 0,
+          "run_index": 0,
+          "result_index": 13,
+          "location_index": 0
+        },
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.xss#sink#1",
+            "rB2LXbBTw0ZVhye0Vtyno7EDbg1o3AmYG49wfWKfZq4=",
+            "stirling.software.common.util.WebResponseUtils#bytesToWebResponse(byte[], java.lang.String, org.springframework.http.MediaType)"
+          ],
+          "rule_id": "java.security.xss#sink#1",
+          "sink_fingerprint": "rB2LXbBTw0ZVhye0Vtyno7EDbg1o3AmYG49wfWKfZq4=",
+          "method_signature": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse(byte[], java.lang.String, org.springframework.http.MediaType)",
+          "instruction_index": 16,
+          "instruction": "return %11",
+          "path": "stirling/software/common/util/WebResponseUtils",
+          "region": {
+            "startLine": 58
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse(byte[], java.lang.String, org.springframework.http.MediaType):16:(return %11)",
+                "fullyQualifiedName": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "stirling/software/common/util/WebResponseUtils",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "startLine": 58
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "rB2LXbBTw0ZVhye0Vtyno7EDbg1o3AmYG49wfWKfZq4=",
+            "vulnerabilityWithTraceHash/v1": "rB2LXbBTw0ZVhye0Vtyno7EDbg1o3AmYG49wfWKfZq4=",
+            "vulnerabilitySourceSinkHash/v1": "rB2LXbBTw0ZVhye0Vtyno7EDbg1o3AmYG49wfWKfZq4="
+          },
+          "message": {
+            "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+          },
+          "properties": null,
+          "code_flow_count": 0,
+          "run_index": 0,
+          "result_index": 9,
+          "location_index": 0
+        }
+      ]
+    }
+  ],
+  "removed_classifications": [
+    {
+      "identity": [
+        "sink_fingerprint_and_signature",
+        "java.security.os-command-injection",
+        "wY2lI7b1TEw2RC154xc+UyLWgRr7oi07c8cEICJI+QM=",
+        "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling(java.util.List, java.io.File)"
+      ],
+      "rule_id": "java.security.os-command-injection",
+      "path": "stirling/software/common/util/ProcessExecutor",
+      "line": 183,
+      "method": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling(java.util.List, java.io.File)",
+      "latest_reached_iteration": "run-8",
+      "latest_completed_iteration": "run-7",
+      "latest_accepted_forward_report": "run-7",
+      "suppressed": false,
+      "baseline_traces": [
+        {
+          "code_flow": 0,
+          "steps": 11,
+          "source_method": "stirling.software.SPDF.controller.api.converters.ConvertWebsiteToPDF#urlToPdf(stirling.software.SPDF.model.api.converters.UrlToPdfRequest)",
+          "source_message": "Method entry marks \"request\" as $UNTRUSTED",
+          "last_steps": [
+            {
+              "step": 3,
+              "method": "stirling.software.SPDF.model.api.converters.UrlToPdfRequest#getUrlInput()",
+              "instruction_index": 1,
+              "instruction": "return %0",
+              "message": "Exiting \"getUrlInput\""
+            },
+            {
+              "step": 4,
+              "method": "stirling.software.SPDF.controller.api.converters.ConvertWebsiteToPDF#urlToPdf(stirling.software.SPDF.model.api.converters.UrlToPdfRequest)",
+              "instruction_index": 0,
+              "instruction": "URL = request.getUrlInput()",
+              "message": "Method \"getUrlInput\" propagates $UNTRUSTED data from \"request\" to \"URL\""
+            },
+            {
+              "step": 5,
+              "method": "stirling.software.SPDF.controller.api.converters.ConvertWebsiteToPDF#urlToPdf(stirling.software.SPDF.model.api.converters.UrlToPdfRequest)",
+              "instruction_index": 55,
+              "instruction": "%41 = command.add(URL)",
+              "message": "Method \"add\" starts with $UNTRUSTED at \"URL\", then puts $ARGS data to \"command\""
+            },
+            {
+              "step": 6,
+              "method": "stirling.software.SPDF.controller.api.converters.ConvertWebsiteToPDF#urlToPdf(stirling.software.SPDF.model.api.converters.UrlToPdfRequest)",
+              "instruction_index": 61,
+              "instruction": "%47 = %46.runCommandWithOutputHandling(command)",
+              "message": "Calling \"runCommandWithOutputHandling\" with $ARGS data at \"command\""
+            },
+            {
+              "step": 7,
+              "method": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling(java.util.List)",
+              "instruction_index": 0,
+              "instruction": "%0 = this.runCommandWithOutputHandling(command, null)",
+              "message": "Entering \"runCommandWithOutputHandling\" with $ARGS data at \"command\""
+            },
+            {
+              "step": 8,
+              "method": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling(java.util.List)",
+              "instruction_index": 0,
+              "instruction": "%0 = this.runCommandWithOutputHandling(command, null)",
+              "message": "Calling \"runCommandWithOutputHandling\" with $ARGS data at \"command\""
+            },
+            {
+              "step": 9,
+              "method": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling(java.util.List, java.io.File)",
+              "instruction_index": 0,
+              "instruction": "messages = \"\"",
+              "message": "Entering \"runCommandWithOutputHandling\" with $ARGS data at \"command\""
+            },
+            {
+              "step": 10,
+              "method": "stirling.software.common.util.ProcessExecutor#runCommandWithOutputHandling(java.util.List, java.io.File)",
+              "instruction_index": 8,
+              "instruction": "processBuilder.<init>(command)",
+              "message": "OS command injection: command line depends on a user provided value"
+            }
+          ]
+        }
+      ],
+      "method_outgoing_guidance_by_completed_run": {
+        "1": 1,
+        "2": 59,
+        "3": 7,
+        "4": 4,
+        "5": 3,
+        "6": 3,
+        "7": 4
+      },
+      "guidance_qualification": "Method counts are not per-rule AP demand facts; recovery of this specific original sink flow is not proved.",
+      "classification": "MISSING_BASELINE_FINDING_UNDER_TIMEOUT",
+      "semantic_false_negative_status": "UNRESOLVED_INCOMPLETE_ANALYSIS",
+      "eventual_recovery": "NOT_PROVED",
+      "baseline_or_model_issue": "NO_SUPPORTED_DISMISSAL",
+      "explanation": "The baseline trace carries request URL into a command-list argument and then ProcessBuilder(command). The source uses a configured executable and a separated URL argument, with URL checks, so exploitability is not established by that trace alone; the selected rule nevertheless explicitly covers tainted ProcessBuilder arguments. No source/model change proves this configured finding should disappear. Run-7 still has method-level demand and backward run-8 did not complete.",
+      "source_evidence": [
+        {
+          "path": "app/common/src/main/java/stirling/software/common/util/ProcessExecutor.java",
+          "start_line": 171,
+          "end_line": 190,
+          "text": "            throws IOException, InterruptedException {\n        return runCommandWithOutputHandling(command, null);\n    }\n\n    public ProcessExecutorResult runCommandWithOutputHandling(\n            List<String> command, File workingDirectory) throws IOException, InterruptedException {\n        String messages = \"\";\n        int exitCode = 1;\n        semaphore.acquire();\n        try {\n\n            log.info(\"Running command: {}\", String.join(\" \", command));\n            ProcessBuilder processBuilder = new ProcessBuilder(command);\n\n            // Use the working directory if it's set\n            if (workingDirectory != null) {\n                processBuilder.directory(workingDirectory);\n            }\n            Process process = processBuilder.start();\n",
+          "file_sha256": "2d5263756b242bd3b8e8bdb36fe7f51c9c68f763a0a13ed97641c6563bc23f7a"
+        },
+        {
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertWebsiteToPDF.java",
+          "start_line": 53,
+          "end_line": 88,
+          "text": "        String URL = request.getUrlInput();\n        UriComponentsBuilder uriComponentsBuilder =\n                ServletUriComponentsBuilder.fromCurrentContextPath().path(\"/url-to-pdf\");\n        URI location = null;\n        HttpStatus status = HttpStatus.SEE_OTHER;\n\n        if (!applicationProperties.getSystem().getEnableUrlToPDF()) {\n            location =\n                    uriComponentsBuilder\n                            .queryParam(\"error\", \"error.endpointDisabled\")\n                            .build()\n                            .toUri();\n        } else {\n            // Validate the URL format (relaxed: only invalid if BOTH checks fail)\n            boolean patternValid =\n                    RegexPatternUtils.getInstance().getHttpUrlPattern().matcher(URL).matches();\n            boolean generalValid = GeneralUtils.isValidURL(URL);\n            if (!patternValid && !generalValid) {\n                location =\n                        uriComponentsBuilder\n                                .queryParam(\"error\", \"error.invalidUrlFormat\")\n                                .build()\n                                .toUri();\n            } else if (!GeneralUtils.isURLReachable(URL)) {\n                // validate the URL is reachable\n                location =\n                        uriComponentsBuilder\n                                .queryParam(\"error\", \"error.urlNotReachable\")\n                                .build()\n                                .toUri();\n            }\n        }\n\n        if (location != null) {\n            log.info(\"Redirecting to: {}\", location.toString());\n            return ResponseEntity.status(status).location(location).build();",
+          "file_sha256": "30e8d899bf5886d117d36b5a960840b471c7a3bb9bb6c97d4f1f29dcb0d2d0de"
+        },
+        {
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertWebsiteToPDF.java",
+          "start_line": 96,
+          "end_line": 106,
+          "text": "\n            // Prepare the WeasyPrint command\n            List<String> command = new ArrayList<>();\n            command.add(runtimePathConfig.getWeasyPrintPath());\n            command.add(URL);\n            command.add(\"--pdf-forms\");\n            command.add(tempOutputFile.toString());\n\n            ProcessExecutor.getInstance(ProcessExecutor.Processes.WEASYPRINT)\n                    .runCommandWithOutputHandling(command);\n",
+          "file_sha256": "30e8d899bf5886d117d36b5a960840b471c7a3bb9bb6c97d4f1f29dcb0d2d0de"
+        }
+      ],
+      "timeout_evidence": [
+        "22:57:47.759 |I| IterationDriver - BIDI_RUN_END run=8 status=TIMEOUT engineTime=11m 56.924828649s",
+        "22:57:47.762 |I| IterationDriver - BIDI_ANALYSIS_END run=8 status=TIMEOUT reason=ABNORMAL elapsed=17m 44.939080824s"
+      ]
+    },
+    {
+      "identity": [
+        "sink_fingerprint_and_signature",
+        "java.security.xss#sink#1",
+        "PQLoBIezs1hooJgNROGqqMItTCrK3e4M30qb7Nc47I8=",
+        "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)"
+      ],
+      "rule_id": "java.security.xss#sink#1",
+      "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+      "line": 133,
+      "method": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)",
+      "latest_reached_iteration": "run-8",
+      "latest_completed_iteration": "run-7",
+      "latest_accepted_forward_report": "run-7",
+      "suppressed": false,
+      "baseline_traces": [
+        {
+          "code_flow": 0,
+          "steps": 17,
+          "source_method": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)",
+          "source_message": "Potential $UNTRUSTED data at \"request\" at the method entry",
+          "last_steps": [
+            {
+              "step": 9,
+              "method": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#buildErrorMessage(java.lang.Exception, java.lang.String)",
+              "instruction_index": 22,
+              "instruction": "errorMessage = %str",
+              "message": "\"errorMessage\" is assigned a value with marked data"
+            },
+            {
+              "step": 10,
+              "method": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#buildErrorMessage(java.lang.Exception, java.lang.String)",
+              "instruction_index": 19,
+              "instruction": "return %13",
+              "message": "The returning value is assigned a value with marked data"
+            },
+            {
+              "step": 11,
+              "method": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#buildErrorMessage(java.lang.Exception, java.lang.String)",
+              "instruction_index": 19,
+              "instruction": "return %13",
+              "message": "Exiting \"buildErrorMessage\""
+            },
+            {
+              "step": 12,
+              "method": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)",
+              "instruction_index": 91,
+              "instruction": "errorMessage = stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF.buildErrorMessage(e, originalFilename)",
+              "message": "Method \"buildErrorMessage\" propagates $UNTRUSTED data from \"originalFilename\" to \"errorMessage\""
+            },
+            {
+              "step": 13,
+              "method": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)",
+              "instruction_index": 99,
+              "instruction": "%51 = org.springframework.http.ResponseEntity.status(%50)",
+              "message": "Method \"status\" puts $X data to a local variable"
+            },
+            {
+              "step": 14,
+              "method": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)",
+              "instruction_index": 102,
+              "instruction": "%54 = %51.body(%53)",
+              "message": "Takes $UNTRUSTED data at \"errorMessage\" and ends up with marked data at a local variable"
+            },
+            {
+              "step": 15,
+              "method": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)",
+              "instruction_index": 103,
+              "instruction": "return %54",
+              "message": "The returning value is assigned a value with marked data"
+            },
+            {
+              "step": 16,
+              "method": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)",
+              "instruction_index": 103,
+              "instruction": "return %54",
+              "message": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+            }
+          ]
+        }
+      ],
+      "method_outgoing_guidance_by_completed_run": {
+        "1": 110,
+        "2": 34,
+        "3": 16,
+        "4": 10,
+        "5": 7,
+        "6": 8,
+        "7": 9
+      },
+      "guidance_qualification": "Method counts are not per-rule AP demand facts; recovery of this specific original sink flow is not proved.",
+      "classification": "METHOD_EXIT_LOCATION_ONLY_REPORT_REPLACEMENT",
+      "semantic_false_negative_status": "FLOW_EQUIVALENCE_UNRESOLVED_PRIMARY_ID_CHANGED",
+      "matched_added_identities": [
+        [
+          "sink_fingerprint_and_signature",
+          "java.security.xss#sink#1",
+          "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE=",
+          "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)"
+        ]
+      ],
+      "explanation": "The current report retains the same rule and full method at a different return instruction. Simple Target output has no preceding return witness, so normal-exit export uses the last return instruction. This explains the new physical anchor; it does not prove preservation of the original baseline flow or justify silently merging sink identities.",
+      "engine_evidence_refs": [
+        "simple_target_output",
+        "boundary_return_fallback"
+      ],
+      "source_evidence": [
+        {
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+          "start_line": 124,
+          "end_line": 150,
+          "text": "                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)\n                        .body(\"Conversion was interrupted\".getBytes(StandardCharsets.UTF_8));\n            } catch (IllegalArgumentException e) {\n                String errorMessage = buildErrorMessage(e, originalFilename);\n                log.error(\n                        \"EML to PDF conversion failed for {}: {}\",\n                        originalFilename,\n                        errorMessage,\n                        e);\n                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)\n                        .body(errorMessage.getBytes(StandardCharsets.UTF_8));\n            } catch (RuntimeException e) {\n                String errorMessage = buildErrorMessage(e, originalFilename);\n                log.error(\n                        \"EML to PDF conversion failed for {}: {}\",\n                        originalFilename,\n                        errorMessage,\n                        e);\n                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)\n                        .body(errorMessage.getBytes(StandardCharsets.UTF_8));\n            }\n\n        } catch (IOException e) {\n            log.error(\"File processing error for EML to PDF: {}\", originalFilename, e);\n            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)\n                    .body(\"File processing error\".getBytes(StandardCharsets.UTF_8));\n        }",
+          "file_sha256": "e17848e840895bb7cba78774a7b004bf54d9abe39da282483d7be972e9dcdc27"
+        }
+      ]
+    },
+    {
+      "identity": [
+        "sink_fingerprint_and_signature",
+        "java.security.xss#sink#1",
+        "06ygLUfQlHncy8dVaxT/0Sr5FENRUrFXg+b9LTuYQTE=",
+        "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)"
+      ],
+      "rule_id": "java.security.xss#sink#1",
+      "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+      "line": 90,
+      "method": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)",
+      "latest_reached_iteration": "run-8",
+      "latest_completed_iteration": "run-7",
+      "latest_accepted_forward_report": "run-7",
+      "suppressed": false,
+      "baseline_traces": [
+        {
+          "code_flow": 0,
+          "steps": 41,
+          "source_method": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)",
+          "source_message": "Potential $UNTRUSTED data at \"request\" at the method entry",
+          "last_steps": [
+            {
+              "step": 33,
+              "method": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)",
+              "instruction_index": 49,
+              "instruction": "%104 = stirling.software.common.util.WebResponseUtils.bytesToWebResponse(bytes, %102, %103)",
+              "message": "Calling \"bytesToWebResponse\" with $UNTRUSTED data at \"bytes\""
+            },
+            {
+              "step": 34,
+              "method": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse(byte[], java.lang.String, org.springframework.http.MediaType)",
+              "instruction_index": 0,
+              "instruction": "headers = new org.springframework.http.HttpHeaders",
+              "message": "Entering \"bytesToWebResponse\" with $UNTRUSTED data at \"bytes\""
+            },
+            {
+              "step": 35,
+              "method": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse(byte[], java.lang.String, org.springframework.http.MediaType)",
+              "instruction_index": 1,
+              "instruction": "headers.<init>()",
+              "message": "\"HttpHeaders\" initializer puts $H data to \"headers\""
+            },
+            {
+              "step": 36,
+              "method": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse(byte[], java.lang.String, org.springframework.http.MediaType)",
+              "instruction_index": 15,
+              "instruction": "%11.<init>(bytes, headers, %12)",
+              "message": "\"ResponseEntity\" initializer starts with $H at \"headers\"; $UNTRUSTED at \"bytes\", then puts marked data to a local variable"
+            },
+            {
+              "step": 37,
+              "method": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse(byte[], java.lang.String, org.springframework.http.MediaType)",
+              "instruction_index": 16,
+              "instruction": "return %11",
+              "message": "The returning value is assigned a value with marked data"
+            },
+            {
+              "step": 38,
+              "method": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse(byte[], java.lang.String, org.springframework.http.MediaType)",
+              "instruction_index": 16,
+              "instruction": "return %11",
+              "message": "Exiting \"bytesToWebResponse\""
+            },
+            {
+              "step": 39,
+              "method": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)",
+              "instruction_index": 50,
+              "instruction": "return %104",
+              "message": "The returning value is assigned marked data from \"bytesToWebResponse\" call"
+            },
+            {
+              "step": 40,
+              "method": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)",
+              "instruction_index": 50,
+              "instruction": "return %104",
+              "message": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+            }
+          ]
+        }
+      ],
+      "method_outgoing_guidance_by_completed_run": {
+        "1": 96,
+        "2": 23,
+        "3": 16,
+        "4": 11,
+        "5": 11,
+        "6": 6,
+        "7": 8
+      },
+      "guidance_qualification": "Method counts are not per-rule AP demand facts; recovery of this specific original sink flow is not proved.",
+      "classification": "METHOD_EXIT_LOCATION_ONLY_REPORT_REPLACEMENT",
+      "semantic_false_negative_status": "FLOW_EQUIVALENCE_UNRESOLVED_PRIMARY_ID_CHANGED",
+      "matched_added_identities": [
+        [
+          "sink_fingerprint_and_signature",
+          "java.security.xss#sink#1",
+          "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q=",
+          "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)"
+        ]
+      ],
+      "explanation": "The current report retains the same rule and full method at a different return instruction. Simple Target output has no preceding return witness, so normal-exit export uses the last return instruction. This explains the new physical anchor; it does not prove preservation of the original baseline flow or justify silently merging sink identities.",
+      "engine_evidence_refs": [
+        "simple_target_output",
+        "boundary_return_fallback"
+      ],
+      "source_evidence": [
+        {
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+          "start_line": 84,
+          "end_line": 96,
+          "text": "                Resource singleFile = outputFiles.get(0);\n                InputStream is = singleFile.getInputStream();\n                byte[] bytes = new byte[(int) singleFile.contentLength()];\n                is.read(bytes);\n                is.close();\n                log.info(\"Returning single file response...\");\n                return WebResponseUtils.bytesToWebResponse(\n                        bytes, singleFile.getFilename(), MediaType.APPLICATION_OCTET_STREAM);\n            } else if (outputFiles == null) {\n                return null;\n            }\n            // Create a ByteArrayOutputStream to hold the zip\n            ByteArrayOutputStream baos = new ByteArrayOutputStream();",
+          "file_sha256": "a78ccc6c311c4ade3274c4e66b592b6278e60505b7cf7a67d874f1389b4fd2ca"
+        },
+        {
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+          "start_line": 124,
+          "end_line": 132,
+          "text": "            zipOut.close();\n            log.info(\"Returning zipped file response...\");\n            return WebResponseUtils.baosToWebResponse(\n                    baos, \"output.zip\", MediaType.APPLICATION_OCTET_STREAM);\n        } catch (Exception e) {\n            log.error(\"Error handling data: \", e);\n            return null;\n        }\n    }",
+          "file_sha256": "a78ccc6c311c4ade3274c4e66b592b6278e60505b7cf7a67d874f1389b4fd2ca"
+        }
+      ]
+    }
+  ],
+  "added_classifications": [
+    {
+      "identity": [
+        "sink_fingerprint_and_signature",
+        "java.security.xss#sink#1",
+        "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE=",
+        "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)"
+      ],
+      "rule_id": "java.security.xss#sink#1",
+      "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+      "line": 148,
+      "method": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)",
+      "instruction": "return %89",
+      "code_flow_count": 0,
+      "latest_reached_iteration": "run-8",
+      "latest_accepted_forward_report": "run-7",
+      "suppressed": false,
+      "false_positive_status": "NOT_ESTABLISHED_UNTRACED_OUTPUT",
+      "method_outgoing_guidance_by_completed_run": {
+        "1": 110,
+        "2": 34,
+        "3": 16,
+        "4": 10,
+        "5": 7,
+        "6": 8,
+        "7": 9
+      },
+      "engine_evidence_refs": [
+        "simple_target_output",
+        "boundary_return_fallback"
+      ],
+      "classification": "METHOD_EXIT_LOCATION_ONLY_REPORT_REPLACEMENT",
+      "matched_removed_identities": [
+        [
+          "sink_fingerprint_and_signature",
+          "java.security.xss#sink#1",
+          "PQLoBIezs1hooJgNROGqqMItTCrK3e4M30qb7Nc47I8=",
+          "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)"
+        ]
+      ],
+      "explanation": "Same-rule/full-method baseline finding exists at another return site. The current Simple method-exit result is mapped to the last return. The changed primary identity is retained in the comparison, not automatically merged or called a new validated flow.",
+      "source_evidence": [
+        {
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+          "start_line": 124,
+          "end_line": 150,
+          "text": "                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)\n                        .body(\"Conversion was interrupted\".getBytes(StandardCharsets.UTF_8));\n            } catch (IllegalArgumentException e) {\n                String errorMessage = buildErrorMessage(e, originalFilename);\n                log.error(\n                        \"EML to PDF conversion failed for {}: {}\",\n                        originalFilename,\n                        errorMessage,\n                        e);\n                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)\n                        .body(errorMessage.getBytes(StandardCharsets.UTF_8));\n            } catch (RuntimeException e) {\n                String errorMessage = buildErrorMessage(e, originalFilename);\n                log.error(\n                        \"EML to PDF conversion failed for {}: {}\",\n                        originalFilename,\n                        errorMessage,\n                        e);\n                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)\n                        .body(errorMessage.getBytes(StandardCharsets.UTF_8));\n            }\n\n        } catch (IOException e) {\n            log.error(\"File processing error for EML to PDF: {}\", originalFilename, e);\n            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)\n                    .body(\"File processing error\".getBytes(StandardCharsets.UTF_8));\n        }",
+          "file_sha256": "e17848e840895bb7cba78774a7b004bf54d9abe39da282483d7be972e9dcdc27"
+        }
+      ]
+    },
+    {
+      "identity": [
+        "sink_fingerprint_and_signature",
+        "java.security.xss#sink#1",
+        "7gt1O0QYSkcjv5es6/QCrsi2pvkexTTpuOhjxPBfFMw=",
+        "stirling.software.SPDF.controller.api.filters.FilterController#pageRotation(stirling.software.SPDF.model.api.filter.PageRotationRequest)"
+      ],
+      "rule_id": "java.security.xss#sink#1",
+      "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+      "line": 210,
+      "method": "stirling.software.SPDF.controller.api.filters.FilterController#pageRotation(stirling.software.SPDF.model.api.filter.PageRotationRequest)",
+      "instruction": "return null",
+      "code_flow_count": 0,
+      "latest_reached_iteration": "run-8",
+      "latest_accepted_forward_report": "run-7",
+      "suppressed": false,
+      "false_positive_status": "NOT_ESTABLISHED_UNTRACED_OUTPUT",
+      "method_outgoing_guidance_by_completed_run": {
+        "1": 61,
+        "2": 25,
+        "3": 16,
+        "4": 10,
+        "5": 7,
+        "6": 8,
+        "7": 9
+      },
+      "engine_evidence_refs": [
+        "simple_target_output",
+        "boundary_return_fallback"
+      ],
+      "classification": "ADDITIONAL_UNTRACED_METHOD_EXIT_REPORT_WITH_NULL_FALLBACK_LOCATION",
+      "explanation": "This method has a branch that returns the uploaded file through multiPartFileToWebResponse and a final return null. The new location is the latter because Simple exit export has no branch witness. The report must not be read as taint on the literal null. The helper copies file bytes and takes content type from the uploaded file, so the method-level finding cannot be dismissed from the null location alone. Which actual branch and HTML content-type evidence supported the finding is not available in this SARIF.",
+      "source_evidence": [
+        {
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+          "start_line": 207,
+          "end_line": 211,
+          "text": "                };\n\n        if (valid) return WebResponseUtils.multiPartFileToWebResponse(inputFile);\n        return null;\n    }",
+          "file_sha256": "f0b9b6d0c0f85be570ad314beb884122e2f8ffdec330b0aa53dacbd40042ab8d"
+        },
+        {
+          "path": "app/common/src/main/java/stirling/software/common/util/WebResponseUtils.java",
+          "start_line": 35,
+          "end_line": 43,
+          "text": "    public static ResponseEntity<byte[]> multiPartFileToWebResponse(MultipartFile file)\n            throws IOException {\n        String fileName = Filenames.toSimpleFileName(file.getOriginalFilename());\n        MediaType mediaType = MediaType.parseMediaType(file.getContentType());\n\n        byte[] bytes = file.getBytes();\n\n        return bytesToWebResponse(bytes, fileName, mediaType);\n    }",
+          "file_sha256": "9be35a48670e91a7fc87f676b3d86b3ed1dc4341a7c941246bbee69030449dbb"
+        }
+      ]
+    },
+    {
+      "identity": [
+        "sink_fingerprint_and_signature",
+        "java.security.xss#sink#1",
+        "B9cw+mG7uGw0Jk9Soh6hDPvFGVpT3cX0QljmgerSVbE=",
+        "stirling.software.SPDF.controller.api.filters.FilterController#pageSize(stirling.software.SPDF.model.api.filter.PageSizeRequest)"
+      ],
+      "rule_id": "java.security.xss#sink#1",
+      "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+      "line": 146,
+      "method": "stirling.software.SPDF.controller.api.filters.FilterController#pageSize(stirling.software.SPDF.model.api.filter.PageSizeRequest)",
+      "instruction": "return null",
+      "code_flow_count": 0,
+      "latest_reached_iteration": "run-8",
+      "latest_accepted_forward_report": "run-7",
+      "suppressed": false,
+      "false_positive_status": "NOT_ESTABLISHED_UNTRACED_OUTPUT",
+      "method_outgoing_guidance_by_completed_run": {
+        "1": 61,
+        "2": 25,
+        "3": 16,
+        "4": 10,
+        "5": 7,
+        "6": 8,
+        "7": 9
+      },
+      "engine_evidence_refs": [
+        "simple_target_output",
+        "boundary_return_fallback"
+      ],
+      "classification": "ADDITIONAL_UNTRACED_METHOD_EXIT_REPORT_WITH_NULL_FALLBACK_LOCATION",
+      "explanation": "This method has a branch that returns the uploaded file through multiPartFileToWebResponse and a final return null. The new location is the latter because Simple exit export has no branch witness. The report must not be read as taint on the literal null. The helper copies file bytes and takes content type from the uploaded file, so the method-level finding cannot be dismissed from the null location alone. Which actual branch and HTML content-type evidence supported the finding is not available in this SARIF.",
+      "source_evidence": [
+        {
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+          "start_line": 143,
+          "end_line": 147,
+          "text": "                };\n\n        if (valid) return WebResponseUtils.multiPartFileToWebResponse(inputFile);\n        return null;\n    }",
+          "file_sha256": "f0b9b6d0c0f85be570ad314beb884122e2f8ffdec330b0aa53dacbd40042ab8d"
+        },
+        {
+          "path": "app/common/src/main/java/stirling/software/common/util/WebResponseUtils.java",
+          "start_line": 35,
+          "end_line": 43,
+          "text": "    public static ResponseEntity<byte[]> multiPartFileToWebResponse(MultipartFile file)\n            throws IOException {\n        String fileName = Filenames.toSimpleFileName(file.getOriginalFilename());\n        MediaType mediaType = MediaType.parseMediaType(file.getContentType());\n\n        byte[] bytes = file.getBytes();\n\n        return bytesToWebResponse(bytes, fileName, mediaType);\n    }",
+          "file_sha256": "9be35a48670e91a7fc87f676b3d86b3ed1dc4341a7c941246bbee69030449dbb"
+        }
+      ]
+    },
+    {
+      "identity": [
+        "sink_fingerprint_and_signature",
+        "java.security.xss#sink#1",
+        "Z157Ih7g5r+BWSwddTYdLc/CDINspsBHRLbddod9lcQ=",
+        "stirling.software.SPDF.controller.api.filters.FilterController#fileSize(stirling.software.SPDF.model.api.filter.FileSizeRequest)"
+      ],
+      "rule_id": "java.security.xss#sink#1",
+      "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+      "line": 175,
+      "method": "stirling.software.SPDF.controller.api.filters.FilterController#fileSize(stirling.software.SPDF.model.api.filter.FileSizeRequest)",
+      "instruction": "return null",
+      "code_flow_count": 0,
+      "latest_reached_iteration": "run-8",
+      "latest_accepted_forward_report": "run-7",
+      "suppressed": false,
+      "false_positive_status": "NOT_ESTABLISHED_UNTRACED_OUTPUT",
+      "method_outgoing_guidance_by_completed_run": {
+        "1": 60,
+        "2": 24,
+        "3": 16,
+        "4": 10,
+        "5": 5,
+        "6": 6,
+        "7": 8
+      },
+      "engine_evidence_refs": [
+        "simple_target_output",
+        "boundary_return_fallback"
+      ],
+      "classification": "ADDITIONAL_UNTRACED_METHOD_EXIT_REPORT_WITH_NULL_FALLBACK_LOCATION",
+      "explanation": "This method has a branch that returns the uploaded file through multiPartFileToWebResponse and a final return null. The new location is the latter because Simple exit export has no branch witness. The report must not be read as taint on the literal null. The helper copies file bytes and takes content type from the uploaded file, so the method-level finding cannot be dismissed from the null location alone. Which actual branch and HTML content-type evidence supported the finding is not available in this SARIF.",
+      "source_evidence": [
+        {
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+          "start_line": 172,
+          "end_line": 176,
+          "text": "                };\n\n        if (valid) return WebResponseUtils.multiPartFileToWebResponse(inputFile);\n        return null;\n    }",
+          "file_sha256": "f0b9b6d0c0f85be570ad314beb884122e2f8ffdec330b0aa53dacbd40042ab8d"
+        },
+        {
+          "path": "app/common/src/main/java/stirling/software/common/util/WebResponseUtils.java",
+          "start_line": 35,
+          "end_line": 43,
+          "text": "    public static ResponseEntity<byte[]> multiPartFileToWebResponse(MultipartFile file)\n            throws IOException {\n        String fileName = Filenames.toSimpleFileName(file.getOriginalFilename());\n        MediaType mediaType = MediaType.parseMediaType(file.getContentType());\n\n        byte[] bytes = file.getBytes();\n\n        return bytesToWebResponse(bytes, fileName, mediaType);\n    }",
+          "file_sha256": "9be35a48670e91a7fc87f676b3d86b3ed1dc4341a7c941246bbee69030449dbb"
+        }
+      ]
+    },
+    {
+      "identity": [
+        "sink_fingerprint_and_signature",
+        "java.security.xss#sink#1",
+        "tueynlQXoUtjWW7bVZZDWSTYp/FC63U8t3BQWuyGTs8=",
+        "stirling.software.SPDF.controller.api.filters.FilterController#pageCount(stirling.software.SPDF.model.api.PDFComparisonAndCount)"
+      ],
+      "rule_id": "java.security.xss#sink#1",
+      "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+      "line": 107,
+      "method": "stirling.software.SPDF.controller.api.filters.FilterController#pageCount(stirling.software.SPDF.model.api.PDFComparisonAndCount)",
+      "instruction": "return null",
+      "code_flow_count": 0,
+      "latest_reached_iteration": "run-8",
+      "latest_accepted_forward_report": "run-7",
+      "suppressed": false,
+      "false_positive_status": "NOT_ESTABLISHED_UNTRACED_OUTPUT",
+      "method_outgoing_guidance_by_completed_run": {
+        "1": 61,
+        "2": 24,
+        "3": 16,
+        "4": 10,
+        "5": 7,
+        "6": 8,
+        "7": 9
+      },
+      "engine_evidence_refs": [
+        "simple_target_output",
+        "boundary_return_fallback"
+      ],
+      "classification": "ADDITIONAL_UNTRACED_METHOD_EXIT_REPORT_WITH_NULL_FALLBACK_LOCATION",
+      "explanation": "This method has a branch that returns the uploaded file through multiPartFileToWebResponse and a final return null. The new location is the latter because Simple exit export has no branch witness. The report must not be read as taint on the literal null. The helper copies file bytes and takes content type from the uploaded file, so the method-level finding cannot be dismissed from the null location alone. Which actual branch and HTML content-type evidence supported the finding is not available in this SARIF.",
+      "source_evidence": [
+        {
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/filters/FilterController.java",
+          "start_line": 104,
+          "end_line": 108,
+          "text": "                };\n\n        if (valid) return WebResponseUtils.multiPartFileToWebResponse(inputFile);\n        return null;\n    }",
+          "file_sha256": "f0b9b6d0c0f85be570ad314beb884122e2f8ffdec330b0aa53dacbd40042ab8d"
+        },
+        {
+          "path": "app/common/src/main/java/stirling/software/common/util/WebResponseUtils.java",
+          "start_line": 35,
+          "end_line": 43,
+          "text": "    public static ResponseEntity<byte[]> multiPartFileToWebResponse(MultipartFile file)\n            throws IOException {\n        String fileName = Filenames.toSimpleFileName(file.getOriginalFilename());\n        MediaType mediaType = MediaType.parseMediaType(file.getContentType());\n\n        byte[] bytes = file.getBytes();\n\n        return bytesToWebResponse(bytes, fileName, mediaType);\n    }",
+          "file_sha256": "9be35a48670e91a7fc87f676b3d86b3ed1dc4341a7c941246bbee69030449dbb"
+        }
+      ]
+    },
+    {
+      "identity": [
+        "sink_fingerprint_and_signature",
+        "java.security.xss#sink#1",
+        "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q=",
+        "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)"
+      ],
+      "rule_id": "java.security.xss#sink#1",
+      "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+      "line": 130,
+      "method": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)",
+      "instruction": "return null",
+      "code_flow_count": 0,
+      "latest_reached_iteration": "run-8",
+      "latest_accepted_forward_report": "run-7",
+      "suppressed": false,
+      "false_positive_status": "NOT_ESTABLISHED_UNTRACED_OUTPUT",
+      "method_outgoing_guidance_by_completed_run": {
+        "1": 96,
+        "2": 23,
+        "3": 16,
+        "4": 11,
+        "5": 11,
+        "6": 6,
+        "7": 8
+      },
+      "engine_evidence_refs": [
+        "simple_target_output",
+        "boundary_return_fallback"
+      ],
+      "classification": "METHOD_EXIT_LOCATION_ONLY_REPORT_REPLACEMENT",
+      "matched_removed_identities": [
+        [
+          "sink_fingerprint_and_signature",
+          "java.security.xss#sink#1",
+          "06ygLUfQlHncy8dVaxT/0Sr5FENRUrFXg+b9LTuYQTE=",
+          "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)"
+        ]
+      ],
+      "explanation": "Same-rule/full-method baseline finding exists at another return site. The current Simple method-exit result is mapped to the last return. The changed primary identity is retained in the comparison, not automatically merged or called a new validated flow.",
+      "source_evidence": [
+        {
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+          "start_line": 84,
+          "end_line": 96,
+          "text": "                Resource singleFile = outputFiles.get(0);\n                InputStream is = singleFile.getInputStream();\n                byte[] bytes = new byte[(int) singleFile.contentLength()];\n                is.read(bytes);\n                is.close();\n                log.info(\"Returning single file response...\");\n                return WebResponseUtils.bytesToWebResponse(\n                        bytes, singleFile.getFilename(), MediaType.APPLICATION_OCTET_STREAM);\n            } else if (outputFiles == null) {\n                return null;\n            }\n            // Create a ByteArrayOutputStream to hold the zip\n            ByteArrayOutputStream baos = new ByteArrayOutputStream();",
+          "file_sha256": "a78ccc6c311c4ade3274c4e66b592b6278e60505b7cf7a67d874f1389b4fd2ca"
+        },
+        {
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+          "start_line": 124,
+          "end_line": 132,
+          "text": "            zipOut.close();\n            log.info(\"Returning zipped file response...\");\n            return WebResponseUtils.baosToWebResponse(\n                    baos, \"output.zip\", MediaType.APPLICATION_OCTET_STREAM);\n        } catch (Exception e) {\n            log.error(\"Error handling data: \", e);\n            return null;\n        }\n    }",
+          "file_sha256": "a78ccc6c311c4ade3274c4e66b592b6278e60505b7cf7a67d874f1389b4fd2ca"
+        }
+      ]
+    },
+    {
+      "identity": [
+        "sink_fingerprint_and_signature",
+        "java.security.xss#sink#1",
+        "LZxeIEoeW+xBfvuqYnRMdJGMPXkNIZeKgsL7wEYrP7Y=",
+        "stirling.software.common.util.WebResponseUtils#multiPartFileToWebResponse(org.springframework.web.multipart.MultipartFile)"
+      ],
+      "rule_id": "java.security.xss#sink#1",
+      "path": "stirling/software/common/util/WebResponseUtils",
+      "line": 42,
+      "method": "stirling.software.common.util.WebResponseUtils#multiPartFileToWebResponse(org.springframework.web.multipart.MultipartFile)",
+      "instruction": "return %8",
+      "code_flow_count": 0,
+      "latest_reached_iteration": "run-8",
+      "latest_accepted_forward_report": "run-7",
+      "suppressed": false,
+      "false_positive_status": "NOT_ESTABLISHED_UNTRACED_OUTPUT",
+      "method_outgoing_guidance_by_completed_run": {
+        "1": 39,
+        "2": 111,
+        "3": 31,
+        "4": 20,
+        "5": 16,
+        "6": 16,
+        "7": 19
+      },
+      "engine_evidence_refs": [
+        "simple_target_output",
+        "boundary_return_fallback"
+      ],
+      "classification": "ADDITIONAL_UNTRACED_RESPONSE_HELPER_REPORT",
+      "explanation": "The helper returns dynamic bytes and a dynamic content type (from MultipartFile metadata or a caller parameter). Its Simple report contains no source-to-sink codeFlow; a validated HTML-context flow and the contributing caller cannot be recovered from this artifact. This is additional modeled coverage, not an automatically confirmed new vulnerability or false positive.",
+      "source_evidence": [
+        {
+          "path": "app/common/src/main/java/stirling/software/common/util/WebResponseUtils.java",
+          "start_line": 35,
+          "end_line": 58,
+          "text": "    public static ResponseEntity<byte[]> multiPartFileToWebResponse(MultipartFile file)\n            throws IOException {\n        String fileName = Filenames.toSimpleFileName(file.getOriginalFilename());\n        MediaType mediaType = MediaType.parseMediaType(file.getContentType());\n\n        byte[] bytes = file.getBytes();\n\n        return bytesToWebResponse(bytes, fileName, mediaType);\n    }\n\n    public static ResponseEntity<byte[]> bytesToWebResponse(\n            byte[] bytes, String docName, MediaType mediaType) throws IOException {\n\n        // Return the PDF as a response\n        HttpHeaders headers = new HttpHeaders();\n        headers.setContentType(mediaType);\n        headers.setContentLength(bytes.length);\n        String encodedDocName =\n                RegexPatternUtils.getInstance()\n                        .getPlusSignPattern()\n                        .matcher(URLEncoder.encode(docName, StandardCharsets.UTF_8))\n                        .replaceAll(\"%20\");\n        headers.setContentDispositionFormData(\"attachment\", encodedDocName);\n        return new ResponseEntity<>(bytes, headers, HttpStatus.OK);",
+          "file_sha256": "9be35a48670e91a7fc87f676b3d86b3ed1dc4341a7c941246bbee69030449dbb"
+        }
+      ]
+    },
+    {
+      "identity": [
+        "sink_fingerprint_and_signature",
+        "java.security.xss#sink#1",
+        "rB2LXbBTw0ZVhye0Vtyno7EDbg1o3AmYG49wfWKfZq4=",
+        "stirling.software.common.util.WebResponseUtils#bytesToWebResponse(byte[], java.lang.String, org.springframework.http.MediaType)"
+      ],
+      "rule_id": "java.security.xss#sink#1",
+      "path": "stirling/software/common/util/WebResponseUtils",
+      "line": 58,
+      "method": "stirling.software.common.util.WebResponseUtils#bytesToWebResponse(byte[], java.lang.String, org.springframework.http.MediaType)",
+      "instruction": "return %11",
+      "code_flow_count": 0,
+      "latest_reached_iteration": "run-8",
+      "latest_accepted_forward_report": "run-7",
+      "suppressed": false,
+      "false_positive_status": "NOT_ESTABLISHED_UNTRACED_OUTPUT",
+      "method_outgoing_guidance_by_completed_run": {
+        "1": 77,
+        "2": 86,
+        "3": 42,
+        "4": 19,
+        "5": 8,
+        "6": 8,
+        "7": 10
+      },
+      "engine_evidence_refs": [
+        "simple_target_output",
+        "boundary_return_fallback"
+      ],
+      "classification": "ADDITIONAL_UNTRACED_RESPONSE_HELPER_REPORT",
+      "explanation": "The helper returns dynamic bytes and a dynamic content type (from MultipartFile metadata or a caller parameter). Its Simple report contains no source-to-sink codeFlow; a validated HTML-context flow and the contributing caller cannot be recovered from this artifact. This is additional modeled coverage, not an automatically confirmed new vulnerability or false positive.",
+      "source_evidence": [
+        {
+          "path": "app/common/src/main/java/stirling/software/common/util/WebResponseUtils.java",
+          "start_line": 35,
+          "end_line": 58,
+          "text": "    public static ResponseEntity<byte[]> multiPartFileToWebResponse(MultipartFile file)\n            throws IOException {\n        String fileName = Filenames.toSimpleFileName(file.getOriginalFilename());\n        MediaType mediaType = MediaType.parseMediaType(file.getContentType());\n\n        byte[] bytes = file.getBytes();\n\n        return bytesToWebResponse(bytes, fileName, mediaType);\n    }\n\n    public static ResponseEntity<byte[]> bytesToWebResponse(\n            byte[] bytes, String docName, MediaType mediaType) throws IOException {\n\n        // Return the PDF as a response\n        HttpHeaders headers = new HttpHeaders();\n        headers.setContentType(mediaType);\n        headers.setContentLength(bytes.length);\n        String encodedDocName =\n                RegexPatternUtils.getInstance()\n                        .getPlusSignPattern()\n                        .matcher(URLEncoder.encode(docName, StandardCharsets.UTF_8))\n                        .replaceAll(\"%20\");\n        headers.setContentDispositionFormData(\"attachment\", encodedDocName);\n        return new ResponseEntity<>(bytes, headers, HttpStatus.OK);",
+          "file_sha256": "9be35a48670e91a7fc87f676b3d86b3ed1dc4341a7c941246bbee69030449dbb"
+        }
+      ]
+    }
+  ],
+  "by_rule": [
+    {
+      "rule": "java.security.format-string-external-manipulation",
+      "main": 1,
+      "bidi": 1,
+      "removed": 0,
+      "added": 0
+    },
+    {
+      "rule": "java.security.hardcoded-password",
+      "main": 1,
+      "bidi": 1,
+      "removed": 0,
+      "added": 0
+    },
+    {
+      "rule": "java.security.os-command-injection",
+      "main": 1,
+      "bidi": 0,
+      "removed": 1,
+      "added": 0
+    },
+    {
+      "rule": "java.security.path-traversal",
+      "main": 7,
+      "bidi": 7,
+      "removed": 0,
+      "added": 0
+    },
+    {
+      "rule": "java.security.ssrf",
+      "main": 2,
+      "bidi": 2,
+      "removed": 0,
+      "added": 0
+    },
+    {
+      "rule": "java.security.stacktrace-printing-in-error-message",
+      "main": 1,
+      "bidi": 1,
+      "removed": 0,
+      "added": 0
+    },
+    {
+      "rule": "java.security.use-of-md5",
+      "main": 2,
+      "bidi": 2,
+      "removed": 0,
+      "added": 0
+    },
+    {
+      "rule": "java.security.xss#sink#1",
+      "main": 2,
+      "bidi": 8,
+      "removed": 2,
+      "added": 8
+    }
+  ],
+  "engine_evidence": {
+    "simple_target_output": {
+      "path": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/JIRBidiAnalysis.kt",
+      "start_line": 166,
+      "end_line": 175,
+      "text": "    override fun toVulnerabilities(report: Report): List<VulnerabilityWithTrace> {\n        logger.info { \"Bidi analysis: ${report.entries.size} reported sink identities\" }\n        return report.entries.map { entry ->\n            val descriptor = entry.descriptor\n            val rule = descriptor.rule\n            val node = TaintSinkTracker.TaintVulnerabilityRuleNode.Unconditional(descriptor.representativeMethodKey)\n            VulnerabilityWithTrace(TaintSinkTracker.TaintVulnerability(descriptor.key.statement, rule.id,\n                hashMapOf(rule to node)), TracePathGenerationResult.Simple)\n        }\n    }",
+      "file_sha256": "548ef8601fca7644282b3e1cc2576ab9d979aeff4ecffccc322ca0b965bfd21a"
+    },
+    "boundary_return_fallback": {
+      "path": "core/src/main/kotlin/org/opentaint/jvm/sast/sarif/JirSarifGenerator.kt",
+      "start_line": 241,
+      "end_line": 256,
+      "text": "    private fun TracePathNode.unwrapBoundary(previous: TracePathNode?): TracePathNode {\n        val statement = statement\n        if (statement !is JMethodBoundaryInst) return this\n\n        val instructions = statement.location.method.instList.instructions\n        val previousStatement = previous?.statement?.takeIf { it.location.method == statement.location.method }\n        val real = when (statement) {\n            is JMethodEnterInst -> instructions.first()\n            is JMethodExitNormalInst -> previousStatement as? JIRReturnInst\n                ?: instructions.lastOrNull { it is JIRReturnInst }\n            is JMethodExitExceptionalInst -> previousStatement as? JIRThrowInst\n                ?: instructions.lastOrNull { it is JIRThrowInst }\n        } ?: return this\n\n        return copy(statement = real)\n    }",
+      "file_sha256": "db4ea0e073bda6f487f094b22ddb38109935547c930e7edbddfdc2ca2f4dacaa"
+    }
+  },
+  "current_rule_evidence": [
+    "22:39:35.740 |I| SemgrepTraceLogger - command-injection.yaml/os-command-injection | Generate 29 rules from java/security/command-injection.yaml:os-command-injection",
+    "22:39:35.881 |I| SemgrepTraceLogger - xss.yaml/xss | Generate 4178 rules from java/security/xss.yaml:xss"
+  ],
+  "multiplicity_changes": [],
+  "equal_identity_location_changes": [],
+  "possible_same_logical_sink": [],
+  "method_exit_location_candidates": [
+    {
+      "main": {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java.security.xss#sink#1",
+          "06ygLUfQlHncy8dVaxT/0Sr5FENRUrFXg+b9LTuYQTE=",
+          "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)"
+        ],
+        "rule_id": "java.security.xss#sink#1",
+        "sink_fingerprint": "06ygLUfQlHncy8dVaxT/0Sr5FENRUrFXg+b9LTuYQTE=",
+        "method_signature": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)",
+        "instruction_index": 50,
+        "instruction": "return %104",
+        "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+        "region": {
+          "endColumn": 93,
+          "endLine": 91,
+          "startColumn": 17,
+          "startLine": 90
+        },
+        "raw_location": {
+          "logicalLocations": [
+            {
+              "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):50:(return %104)",
+              "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+            }
+          ],
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "endColumn": 93,
+              "endLine": 91,
+              "startColumn": 17,
+              "startLine": 90
+            }
+          }
+        },
+        "partial_fingerprints": {
+          "vulnerabilitySinkHash/v1": "06ygLUfQlHncy8dVaxT/0Sr5FENRUrFXg+b9LTuYQTE=",
+          "vulnerabilityWithTraceHash/v1": "L8shxEzjCv0228I93BGPeqcOM8/uqndRmSLNuGUASdU=",
+          "vulnerabilitySourceSinkHash/v1": "+6PoN1c+oYt5lA7F2v/XF3L+vjVS4FbZPvgqZIU+W64="
+        },
+        "message": {
+          "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+        },
+        "properties": null,
+        "code_flow_count": 1,
+        "run_index": 0,
+        "result_index": 8,
+        "location_index": 0
+      },
+      "bidi_candidates": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.xss#sink#1",
+            "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q=",
+            "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)"
+          ],
+          "rule_id": "java.security.xss#sink#1",
+          "sink_fingerprint": "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q=",
+          "method_signature": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)",
+          "instruction_index": 109,
+          "instruction": "return null",
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+          "region": {
+            "endColumn": 24,
+            "endLine": 130,
+            "startColumn": 13,
+            "startLine": 130
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest):109:(return null)",
+                "fullyQualifiedName": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/pipeline/PipelineController.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 24,
+                "endLine": 130,
+                "startColumn": 13,
+                "startLine": 130
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q=",
+            "vulnerabilityWithTraceHash/v1": "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q=",
+            "vulnerabilitySourceSinkHash/v1": "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q="
+          },
+          "message": {
+            "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+          },
+          "properties": null,
+          "code_flow_count": 0,
+          "run_index": 0,
+          "result_index": 19,
+          "location_index": 0
+        }
+      ],
+      "note": "Same rule and full method at different return sites. A Simple method-exit location can select the last return. This is review evidence, not an automatic identity or flow match."
+    },
+    {
+      "main": {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java.security.xss#sink#1",
+          "PQLoBIezs1hooJgNROGqqMItTCrK3e4M30qb7Nc47I8=",
+          "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)"
+        ],
+        "rule_id": "java.security.xss#sink#1",
+        "sink_fingerprint": "PQLoBIezs1hooJgNROGqqMItTCrK3e4M30qb7Nc47I8=",
+        "method_signature": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)",
+        "instruction_index": 103,
+        "instruction": "return %54",
+        "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+        "region": {
+          "endColumn": 77,
+          "endLine": 134,
+          "startColumn": 17,
+          "startLine": 133
+        },
+        "raw_location": {
+          "logicalLocations": [
+            {
+              "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):103:(return %54)",
+              "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+            }
+          ],
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "endColumn": 77,
+              "endLine": 134,
+              "startColumn": 17,
+              "startLine": 133
+            }
+          }
+        },
+        "partial_fingerprints": {
+          "vulnerabilitySinkHash/v1": "PQLoBIezs1hooJgNROGqqMItTCrK3e4M30qb7Nc47I8=",
+          "vulnerabilityWithTraceHash/v1": "grIKj26OnPY+GxxvzFwZhPP0ruTbo2w/BzhpWgUX4bA=",
+          "vulnerabilitySourceSinkHash/v1": "lseGFSkMQoU5H9x3TGPoODmdc9RU9TYA4VWG3wp1tak="
+        },
+        "message": {
+          "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+        },
+        "properties": null,
+        "code_flow_count": 1,
+        "run_index": 0,
+        "result_index": 7,
+        "location_index": 0
+      },
+      "bidi_candidates": [
+        {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java.security.xss#sink#1",
+            "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE=",
+            "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)"
+          ],
+          "rule_id": "java.security.xss#sink#1",
+          "sink_fingerprint": "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE=",
+          "method_signature": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)",
+          "instruction_index": 126,
+          "instruction": "return %89",
+          "path": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+          "region": {
+            "endColumn": 84,
+            "endLine": 149,
+            "startColumn": 13,
+            "startLine": 148
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest):126:(return %89)",
+                "fullyQualifiedName": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "app/core/src/main/java/stirling/software/SPDF/controller/api/converters/ConvertEmlToPDF.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 84,
+                "endLine": 149,
+                "startColumn": 13,
+                "startLine": 148
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE=",
+            "vulnerabilityWithTraceHash/v1": "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE=",
+            "vulnerabilitySourceSinkHash/v1": "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE="
+          },
+          "message": {
+            "text": "Cross-site scripting (XSS): untrusted input is written to an HTTP response with text/html content type, so injected scripts will execute in the browser."
+          },
+          "properties": null,
+          "code_flow_count": 0,
+          "run_index": 0,
+          "result_index": 10,
+          "location_index": 0
+        }
+      ],
+      "note": "Same rule and full method at different return sites. A Simple method-exit location can select the last return. This is review evidence, not an automatic identity or flow match."
+    }
+  ],
+  "issues": {
+    "baseline": [],
+    "current": [
+      "The run is not complete: TIMEOUT."
+    ]
+  },
+  "comparison_json": "/drive-testcomp/opentaint-go-rules/constant-filter-target-zero-20261031/comparison/Stirling-PDF.json",
+  "comparison_json_sha256": "859c927aea4543416eff018d90154850f79789a525b7a95a84a71cf8fb7d7348",
+  "interpretation": "Primary counts remain 3 removed and 8 added. Two pairs share rule and full method but have different return-site identities; export code explains the changed anchor without proving equal underlying flows. One ProcessBuilder baseline finding remains an operational omission during incomplete refinement. Six other added method/helper reports have no codeFlows and need semantic validation; none is suppressed or automatically labelled a false positive.",
+  "latest_bidi_iteration": "run-8",
+  "latest_complete_bidi_iteration": "run-7",
+  "latest_accepted_forward_report": "run-7",
+  "bidi_iteration_progress": {
+    "state": "AVAILABLE",
+    "latest_reached": {
+      "state": "AVAILABLE",
+      "label": "run-8",
+      "source": "BIDI_RUN_START",
+      "engine_end_seen": true,
+      "engine_status": "TIMEOUT",
+      "run": 8,
+      "direction": "BACKWARD",
+      "limit": 7,
+      "timeout": "11m 56.912767389s markMode=FULL",
+      "timeout_seconds": 716.912767389,
+      "start_line": "22:45:50.834 |I| IterationDriver - BIDI_RUN_START run=8 direction=BACKWARD limit=7 timeout=11m 56.912767389s markMode=FULL",
+      "status": "TIMEOUT",
+      "engine_time": "11m 56.924828649s",
+      "engine_seconds": 716.924828649,
+      "end_line": "22:57:47.759 |I| IterationDriver - BIDI_RUN_END run=8 status=TIMEOUT engineTime=11m 56.924828649s"
+    },
+    "latest_complete_engine": {
+      "state": "AVAILABLE",
+      "label": "run-7",
+      "source": "BIDI_RUN_END status=COMPLETE",
+      "engine_end_seen": true,
+      "engine_status": "COMPLETE",
+      "run": 7,
+      "direction": "FORWARD",
+      "limit": 6,
+      "timeout": "12m 0.607708761s markMode=FULL",
+      "timeout_seconds": 720.607708761,
+      "start_line": "22:45:47.139 |I| IterationDriver - BIDI_RUN_START run=7 direction=FORWARD limit=6 timeout=12m 0.607708761s markMode=FULL",
+      "status": "COMPLETE",
+      "engine_time": "3.527585819s",
+      "engine_seconds": 3.527585819,
+      "end_line": "22:45:50.666 |I| IterationDriver - BIDI_RUN_END run=7 status=COMPLETE engineTime=3.527585819s"
+    },
+    "latest_accepted_forward_report": {
+      "state": "AVAILABLE",
+      "label": "run-7",
+      "source": "Terminal snapshot followed by next-run start or completed driver return",
+      "engine_end_seen": true,
+      "engine_status": "COMPLETE",
+      "run": 7,
+      "direction": "FORWARD",
+      "limit": 6,
+      "timeout": "12m 0.607708761s markMode=FULL",
+      "timeout_seconds": 720.607708761,
+      "start_line": "22:45:47.139 |I| IterationDriver - BIDI_RUN_START run=7 direction=FORWARD limit=6 timeout=12m 0.607708761s markMode=FULL",
+      "status": "COMPLETE",
+      "engine_time": "3.527585819s",
+      "engine_seconds": 3.527585819,
+      "end_line": "22:45:50.666 |I| IterationDriver - BIDI_RUN_END run=7 status=COMPLETE engineTime=3.527585819s",
+      "forward_frontier_line": "22:45:50.815 |I| FrontierKt$frontierLogger$1 - Run 7 (FORWARD) frontier: analysed 3581, demand edges 12895 in 3582 method keys, left 0, record crossings 438848, target demand 73, reports 22, seeds 55, zero only 1 (2281 edges)",
+      "target_statistics": {
+        "raw": 77,
+        "outgoing": 73,
+        "reports": 22,
+        "line": "22:45:50.834 |I| IterationDriver - BIDI_TARGET_STATISTICS run=7 raw=77 outgoing=73 reports=22"
+      },
+      "commit_evidence": "22:45:50.834 |I| IterationDriver - BIDI_RUN_START run=8 direction=BACKWARD limit=7 timeout=11m 56.912767389s markMode=FULL"
+    },
+    "invalid_run_start_lines": [],
+    "limits": "Latest reached follows actual start-marker order, including failed or unfinished engines. Target frontiers are prepared state. Accept them only after a following run starts or the driver completes. Missing report-commit evidence is unavailable, not proof of an empty report."
+  },
+  "identity_change_summary": {
+    "raw_removed_identities": 3,
+    "raw_added_identities": 8,
+    "location_only_rule_method_report_replacements": [
+      {
+        "rule_id": "java.security.xss#sink#1",
+        "method": "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)",
+        "baseline_identity": [
+          "sink_fingerprint_and_signature",
+          "java.security.xss#sink#1",
+          "PQLoBIezs1hooJgNROGqqMItTCrK3e4M30qb7Nc47I8=",
+          "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)"
+        ],
+        "current_identity": [
+          "sink_fingerprint_and_signature",
+          "java.security.xss#sink#1",
+          "6Jk9vRaNLFqnvRbJnI04BX+6v6gViiHL4wACO4UbctE=",
+          "stirling.software.SPDF.controller.api.converters.ConvertEmlToPDF#convertEmlToPdf(stirling.software.common.model.api.converters.EmlToPdfRequest)"
+        ],
+        "qualification": "Location-only replacement at rule/full-method report granularity; the Simple current output does not prove the exact baseline source-flow path survives."
+      },
+      {
+        "rule_id": "java.security.xss#sink#1",
+        "method": "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)",
+        "baseline_identity": [
+          "sink_fingerprint_and_signature",
+          "java.security.xss#sink#1",
+          "06ygLUfQlHncy8dVaxT/0Sr5FENRUrFXg+b9LTuYQTE=",
+          "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)"
+        ],
+        "current_identity": [
+          "sink_fingerprint_and_signature",
+          "java.security.xss#sink#1",
+          "XJZK3xYsWT0rHLNMZAAHSgLtC+jwGDwliolwIil166Q=",
+          "stirling.software.SPDF.controller.api.pipeline.PipelineController#handleData(stirling.software.SPDF.model.api.HandleDataRequest)"
+        ],
+        "qualification": "Location-only replacement at rule/full-method report granularity; the Simple current output does not prove the exact baseline source-flow path survives."
+      }
+    ],
+    "unmatched_removed_identities": 1,
+    "other_added_rule_method_reports": 6,
+    "all_added_code_flow_counts_zero": true,
+    "identity_policy": "Keep all original identities and raw 3/8 counts; do not silently merge the two report-location replacements or assert source-flow equivalence."
+  },
+  "source_links": [
+    {
+      "label": "Simple Target output",
+      "path": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/JIRBidiAnalysis.kt",
+      "line": 166
+    },
+    {
+      "label": "Normal-exit return-site fallback",
+      "path": "core/src/main/kotlin/org/opentaint/jvm/sast/sarif/JirSarifGenerator.kt",
+      "line": 249
+    }
+  ],
+  "run_frontiers": [
+    {
+      "run": 1,
+      "direction": "FORWARD",
+      "analysed": 2185,
+      "demand_edges": 23973,
+      "demand_method_keys": 1904,
+      "left": 682,
+      "record_crossings": 0,
+      "target_demand": 2887,
+      "reports": 7,
+      "seeds": 1008,
+      "zero_only": 5072,
+      "zero_only_edges": 151039
+    },
+    {
+      "run": 2,
+      "direction": "BACKWARD",
+      "analysed": 4184,
+      "demand_edges": 115158,
+      "demand_method_keys": 4205,
+      "left": 4,
+      "record_crossings": 12901,
+      "target_demand": 344,
+      "reports": 7,
+      "seeds": 1790,
+      "zero_only": 25,
+      "zero_only_edges": 3082
+    },
+    {
+      "run": 3,
+      "direction": "FORWARD",
+      "analysed": 3696,
+      "demand_edges": 48028,
+      "demand_method_keys": 3691,
+      "left": 6,
+      "record_crossings": 42701,
+      "target_demand": 96,
+      "reports": 21,
+      "seeds": 75,
+      "zero_only": 4,
+      "zero_only_edges": 2510
+    },
+    {
+      "run": 4,
+      "direction": "BACKWARD",
+      "analysed": 3673,
+      "demand_edges": 26134,
+      "demand_method_keys": 3672,
+      "left": 2,
+      "record_crossings": 148461,
+      "target_demand": 80,
+      "reports": 21,
+      "seeds": 728,
+      "zero_only": 1,
+      "zero_only_edges": 1249
+    },
+    {
+      "run": 5,
+      "direction": "FORWARD",
+      "analysed": 3584,
+      "demand_edges": 9848,
+      "demand_method_keys": 3582,
+      "left": 3,
+      "record_crossings": 247924,
+      "target_demand": 66,
+      "reports": 22,
+      "seeds": 55,
+      "zero_only": 1,
+      "zero_only_edges": 2061
+    },
+    {
+      "run": 6,
+      "direction": "BACKWARD",
+      "analysed": 3573,
+      "demand_edges": 9286,
+      "demand_method_keys": 3582,
+      "left": 0,
+      "record_crossings": 2846169,
+      "target_demand": 55,
+      "reports": 22,
+      "seeds": 573,
+      "zero_only": 9,
+      "zero_only_edges": 1333
+    },
+    {
+      "run": 7,
+      "direction": "FORWARD",
+      "analysed": 3581,
+      "demand_edges": 12895,
+      "demand_method_keys": 3582,
+      "left": 0,
+      "record_crossings": 438848,
+      "target_demand": 73,
+      "reports": 22,
+      "seeds": 55,
+      "zero_only": 1,
+      "zero_only_edges": 2281
+    }
+  ],
+  "iteration_times": [
+    {
+      "run": 1,
+      "direction": "FORWARD",
+      "limit": 1,
+      "status": "COMPLETE",
+      "engine_seconds": 12.307535103,
+      "joined_static_binding_seconds": 0.225297558,
+      "barrier_seconds": 0.383873135,
+      "iteration_seconds": 12.93573533
+    },
+    {
+      "run": 2,
+      "direction": "BACKWARD",
+      "limit": 1,
+      "status": "COMPLETE",
+      "engine_seconds": 6.503558877,
+      "barrier_seconds": 0.30469077099999997,
+      "iteration_seconds": 6.815346759
+    },
+    {
+      "run": 3,
+      "direction": "FORWARD",
+      "limit": 2,
+      "status": "COMPLETE",
+      "engine_seconds": 3.900120467,
+      "barrier_seconds": 0.32237832400000005,
+      "iteration_seconds": 4.227504448
+    },
+    {
+      "run": 4,
+      "direction": "BACKWARD",
+      "limit": 3,
+      "status": "COMPLETE",
+      "engine_seconds": 4.353827969,
+      "barrier_seconds": 0.132638604,
+      "iteration_seconds": 4.49210808
+    },
+    {
+      "run": 5,
+      "direction": "FORWARD",
+      "limit": 4,
+      "status": "COMPLETE",
+      "engine_seconds": 3.496004238,
+      "barrier_seconds": 0.16290543,
+      "iteration_seconds": 3.662297121
+    },
+    {
+      "run": 6,
+      "direction": "BACKWARD",
+      "limit": 5,
+      "status": "COMPLETE",
+      "engine_seconds": 312.047055011,
+      "barrier_seconds": 0.12984796,
+      "iteration_seconds": 312.180682997
+    },
+    {
+      "run": 7,
+      "direction": "FORWARD",
+      "limit": 6,
+      "status": "COMPLETE",
+      "engine_seconds": 3.527585819,
+      "barrier_seconds": 0.164722168,
+      "iteration_seconds": 3.694927676
+    },
+    {
+      "run": 8,
+      "direction": "BACKWARD",
+      "limit": 7,
+      "status": "TIMEOUT",
+      "engine_seconds": 716.924828649
+    }
+  ],
+  "runtime_budgets": {
+    "main": {
+      "status": "OK",
+      "heap": "8g",
+      "timeout_seconds": 1080,
+      "wall_seconds": 145.6249698996544,
+      "peak_rss_bytes": 8359645184
+    },
+    "bidi": {
+      "status": "TIMEOUT",
+      "heap": "16g",
+      "timeout_seconds": 1080,
+      "wall_seconds": 1108.7121442258358,
+      "peak_rss_bytes": 19243573248
+    }
+  }
+}
