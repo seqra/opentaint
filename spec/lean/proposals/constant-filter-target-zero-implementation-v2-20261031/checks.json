@@ -5,7 +5,7 @@
   "openDecision": null,
   "specificationSha256": "8ae901c30188e81a09030491291dbb86a749e017a6d0b4b3218664821494c21a",
   "baseRuntime": "e090118e5f9603f1973c0578a3e04998035f4508",
-  "utc": "2026-10-31T09:34:35.585368+00:00",
+  "utc": "2026-10-31T13:56:09.325826+00:00",
   "toolchain": "leanprover/lean4:v4.33.1",
   "leanVersion": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
   "inputHashes": {
@@ -23,8 +23,8 @@
     "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/ProducerDomain.lean": "d57435db2ffdbb48aadc8dfd4a3e276898442ade4dc63968507029dd8966cd01",
     "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/check.py": "8676941c53d02dd1e5a10247480884bd6fb7bcf531cf3fa18f40dc19af71cb01",
     "docs/design/bidirectional-constant-filter-target-zero-implementation-20261031.md": "8ae901c30188e81a09030491291dbb86a749e017a6d0b4b3218664821494c21a",
-    "docs/design/bidirectional-constant-filter-target-zero-implementation-v2-20261031.md": "034721981ea6aeb1639ffebb0df9c5086898c4e54819a7066a92c25ea069f6ce",
-    "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/README.md": "1b584bccdb81457596fda24182fd53553ca24d7f140e802f0436cf13d2579d4b",
+    "docs/design/bidirectional-constant-filter-target-zero-implementation-v2-20261031.md": "3d33a38a8a97988334d188a82ffd658fd9450b5b20564406c6068b6c98e250ad",
+    "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/README.md": "a0eb03104bc29a96863ba202f6e3752668e923336c9dcf505eda60ec81343d7d",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/RestrictedInitialPolicy.kt": "85c0afc84e4f9759961d98a5d57eaf82a87cdaf80d3380044046cc43325bc14d",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Demand.kt": "dc710f793ac72104c76232bfe5ce93f6d4dedde269088a1f8872faa21fbfebf1",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": "c4a2547aeb7e03d2daf13bc8fe811b3a4bc8026d74bd162a6cd3f06a9bbc90f0",
@@ -453,13 +453,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/SelectedCore.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/SelectedCore.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/SelectedCore.lean"
       ],
       "exitCode": 0,
-      "wallSeconds": 0.840485617518425,
+      "wallSeconds": 0.8737283051013947,
       "cwd": "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031",
-      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/SelectedCore.log",
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/SelectedCore.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -470,13 +470,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/ConstantBoundary.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/ConstantBoundary.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/ConstantBoundary.lean"
       ],
       "exitCode": 0,
-      "wallSeconds": 0.7075933516025543,
+      "wallSeconds": 0.6722538024187088,
       "cwd": "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031",
-      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/ConstantBoundary.log",
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/ConstantBoundary.log",
       "logSha256": "4777c0ff58b12ada4b0546b466745dbe4c4244868d7de9cf6f4589ac5b4cc71d"
     },
     {
@@ -487,13 +487,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/TargetZeroRegistry.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/TargetZeroRegistry.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/TargetZeroRegistry.lean"
       ],
       "exitCode": 0,
-      "wallSeconds": 0.224333718419075,
+      "wallSeconds": 0.2723337262868881,
       "cwd": "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031",
-      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/TargetZeroRegistry.log",
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/TargetZeroRegistry.log",
       "logSha256": "7885fc5918bfc6f314be0c5b33563461b9be2c0f4289cf8d78ddb549cca8b241"
     },
     {
@@ -504,13 +504,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/InitialEmissionExact.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/InitialEmissionExact.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/InitialEmissionExact.lean"
       ],
       "exitCode": 0,
-      "wallSeconds": 0.37653298676013947,
+      "wallSeconds": 0.3750649690628052,
       "cwd": "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031",
-      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/InitialEmissionExact.log",
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/InitialEmissionExact.log",
       "logSha256": "d645b1421283badf2e6b51a3a0078a290392d88f3ad0f61015aa1e8240e63b6a"
     },
     {
@@ -521,13 +521,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/UnansweredDemand.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/UnansweredDemand.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/UnansweredDemand.lean"
       ],
       "exitCode": 0,
-      "wallSeconds": 0.34853197634220123,
+      "wallSeconds": 0.35258007049560547,
       "cwd": "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031",
-      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/UnansweredDemand.log",
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/UnansweredDemand.log",
       "logSha256": "6e0d5f6dc894160709bb917e7fb11064ed275bb19de264470f87d99d97b65b93"
     },
     {
@@ -538,13 +538,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/TargetZeroND.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/TargetZeroND.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/TargetZeroND.lean"
       ],
       "exitCode": 0,
-      "wallSeconds": 0.5057781040668488,
+      "wallSeconds": 0.5211570262908936,
       "cwd": "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031",
-      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/TargetZeroND.log",
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/TargetZeroND.log",
       "logSha256": "e255196d9dcc6022772b206986dae4553bc276a9ba5d69d6a53c6667ba9f1ad3"
     },
     {
@@ -555,13 +555,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/SelectedTargetApplication.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/SelectedTargetApplication.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/SelectedTargetApplication.lean"
       ],
       "exitCode": 0,
-      "wallSeconds": 0.2843804955482483,
+      "wallSeconds": 0.2882244288921356,
       "cwd": "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031",
-      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/SelectedTargetApplication.log",
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/SelectedTargetApplication.log",
       "logSha256": "9ce9149e7ea39c142fbd15fdfeb4ea2910ae17ce28af68eb1903cdea5882af28"
     },
     {
@@ -572,13 +572,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/TargetJoin.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/TargetJoin.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/TargetJoin.lean"
       ],
       "exitCode": 0,
-      "wallSeconds": 0.4975539594888687,
+      "wallSeconds": 0.5180238485336304,
       "cwd": "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031",
-      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/TargetJoin.log",
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/TargetJoin.log",
       "logSha256": "60005f94c5f49f728fa9c8206008895e04fbc82c49c601c1264aacdbfc80c51d"
     },
     {
@@ -589,13 +589,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/OwnedDelta.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/OwnedDelta.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/OwnedDelta.lean"
       ],
       "exitCode": 0,
-      "wallSeconds": 0.4022299647331238,
+      "wallSeconds": 0.4227851331233978,
       "cwd": "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031",
-      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/OwnedDelta.log",
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/OwnedDelta.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -606,13 +606,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/TerminalProtocol.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/TerminalProtocol.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/TerminalProtocol.lean"
       ],
       "exitCode": 0,
-      "wallSeconds": 0.393391877412796,
+      "wallSeconds": 0.37873320281505585,
       "cwd": "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031",
-      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/TerminalProtocol.log",
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/TerminalProtocol.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -623,13 +623,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/ZeroSettlement.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/ZeroSettlement.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/ZeroSettlement.lean"
       ],
       "exitCode": 0,
-      "wallSeconds": 0.47372664511203766,
+      "wallSeconds": 0.5014723837375641,
       "cwd": "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031",
-      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/ZeroSettlement.log",
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/ZeroSettlement.log",
       "logSha256": "da319b759ad80463470e2df2b221fd04e7be4141822c64b3b64a6be8af9b2f42"
     },
     {
@@ -640,13 +640,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/ProducerDomain.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/ProducerDomain.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031/ProducerDomain.lean"
       ],
       "exitCode": 0,
-      "wallSeconds": 0.22347064316272736,
+      "wallSeconds": 0.2364751696586609,
       "cwd": "spec/lean/proposals/constant-filter-target-zero-implementation-v2-20261031",
-      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/ProducerDomain.log",
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/ProducerDomain.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -656,12 +656,12 @@
         "1",
         "-M",
         "768",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/Audit.lean"
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/Audit.lean"
       ],
       "exitCode": 0,
-      "wallSeconds": 0.1672891080379486,
-      "cwd": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z",
-      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T093430098414Z/Audit.log",
+      "wallSeconds": 0.1742773801088333,
+      "cwd": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z",
+      "log": "spec/lean/.lake/verification/constant-filter-target-zero-implementation-v2-20261031/20261031T135603697876Z/Audit.log",
       "logSha256": "1e0657e0065efb0d72ab0dfea59abba04c01d789e163eff71f86e9cb0103e0b1"
     }
   ],

@@ -79,6 +79,32 @@ FULL runs keep full same-call ND support. Do not add GroundingSupport,
 IR changes, rejected-offer history, late no-demand subscriptions, copied
 incoming demand, forced continuation, or backward NormalTarget lookup.
 
+### 1.1 Reuse existing mechanisms
+
+Use the existing implementation when it already performs the required
+operation. Add the Target value or branch at its current owner. Do not
+build a second implementation of that operation.
+
+| Operation | Existing mechanism to use | Required addition |
+|---|---|---|
+| Complete sink condition | `RunMethodLocalServices.witness`, predicate and conjunction stores | Consume the complete binding as a Target |
+| Initial admission and start dedup | `emitRestrictedInitials`, `InitialFactStore`, counted Start events | Explicit ZERO/Target demand and the EXACT/ANY guard |
+| Premise indexing and candidate selection | `PublicationIndex`, `CalleeSubscriptions`, their PathTrie lookups | Typed Target memberships under the same premise postings |
+| Publication and replay | `SummaryStorage`, `SubscriptionManager`, `ProtocolSteps` | Typed Target payload and terminal result dispatch |
+| Pending batch flush and failure | `RunMethodAnalyzer.flushPublications`, existing in-flight accounting | Include the Target batch in the same flush and completion checks |
+| Complete same-call products | `KaryJoin` | A Target result key and immutable matched headers |
+| Run-1 static premise resolution | `applyStaticSummary`, `applyStaticInput`, `Run1PointResume.callInterest`, `staticSupply`, PointReady | Carry Target through the same continuation and dispatch its terminal result |
+| Backward sink seeds | Existing `Seed.Sink`, `Seed.PredicateSink`, `SeedIndex` and seed evaluator | Collect these values at complete DEMAND sink observation |
+| Forward source seeds | Existing `HandOff.toForward` and `SourceHitStore` | No new conversion or seed type |
+| Iteration completion | Existing runner join, driver barrier and stop decision | Include Target demand and commit the selected retained/report state |
+
+The required new state is Target membership, retained NORMAL Target
+records, stable report IDs, and typed control demand. These values use
+the current actors, locks, queues and stores. There is no new static
+service, scheduler, receipt service, or join engine. The Lean protocol
+models state obligations on these existing operations; they do not
+require runtime classes for each model operation or certificate.
+
 ## 2. Types, identity, and storage ownership
 
 ### 2.1 Keep AP and terminal results separate
@@ -101,10 +127,11 @@ data class OwnedNormalTarget(
     val id: ReportId,
 )
 
-class TargetBatch(rows: Collection<TargetSummary>) {
-    val rows = Collections.unmodifiableList(ArrayList(rows))
-}
+typealias TargetBatch = List<TargetSummary>
 ```
+
+Freeze a detached Target batch with the existing immutable-list
+convention before publishing or posting it. No batch wrapper is needed.
 
 Target has no AP base, path, tail, mark, exclusion, or protection mask.
 It never becomes an initial or premise. Do not put it in a trie leaf,
@@ -164,14 +191,14 @@ that its method is the sink method.
 | Store | Owner/life | Contents and use |
 |---|---|---|
 | ReportCatalog | Shared; whole analysis | Stable sink keys and immutable descriptors |
-| MethodTargetStore | One method actor; one run | Exact raw terminal memberships |
+| Raw Target set | Existing method actor; one run | Exact raw terminal memberships |
 | Pending Target batches | Same actor | Accepted publications which still require a send |
-| TargetPublicationIndex | SummaryStorage lock; one run | Published premise/Target pairs and premise-member postings |
+| Target memberships in PublicationIndex | Existing SummaryStorage lock; one run | Published premise/Target pairs using the existing premise-member postings |
 | Existing CalleeSubscriptions | Caller runner; one run | Only offers admitted by the selected call policy |
 | Target ND joins | Caller service; one run | Header bindings for known full terminal premises at one call |
-| Static Target continuations | Run1PointResume actor | Existing static-interest IDs with typed terminal payload |
+| Existing Run1PointResume call continuations | Same actor; one run | Existing static-interest IDs; the result payload can also be Target |
 | NormalTargetView | Immutable run input | Persisted full owned NORMAL keys; forward conditional replay |
-| SinkSeedStore | Method actor; one run | Complete DEMAND sink occurrence descriptors |
+| Sink seed set | Existing method actor; one run | Existing Seed values for complete DEMAND sink observations |
 | Existing SourceHitStore | Backward actor; one run | Exact source/action permissions |
 | DemandStore | Immutable next-run input | AP pairs plus typed ZERO/Target entry and ZERO exit cells |
 | Committed terminal state | Driver barrier | NormalTargetView and accumulated root report IDs together |
@@ -364,21 +391,29 @@ before this gate retains its legitimate results.
 ### 5.1 Complete sinks
 
 Keep the existing predicate/condition evaluator and all mark requests.
-Change only the complete witness consumer:
+Use its existing `witness(core, sink, node, edges, proof)` callback.
+`edges` is the existing complete `List<SinkEdge>`; no new binding type
+or condition evaluator is needed. Replace the local report insertion:
 
 ```kotlin
-fun completedSink(sink: SinkRule, at: CommonInst, binding: CompleteSinkBinding) {
-    if (!runtimeBinding(binding)) return
-    val target = if (binding.layer == Layer.NORMAL) {
-        NormalTarget(catalog.intern(SinkKey(key.method, at, sink.rule.id), sink.rule, key))
-    } else {
-        for (descriptor in buildSinkSeedDescriptors(sink, key, at))
-            sinkSeeds.add(descriptor)
-        DemandTarget
-    }
+// In the existing completed witness callback:
+if (edges.any { !runtimePacket(it.premise, checkNotNull(it.facts)) }) return
+val layer = if (edges.any { it.layer == DEMAND }) DEMAND else NORMAL
+val target = if (layer == NORMAL) {
+    NormalTarget(catalog.intern(SinkKey(key.method, node, sink.rule.id), sink.rule, key))
+} else {
+    sinkSeeds.addAll(sinkSeedsFor(sink, key, node))
+    DemandTarget
+}
 
-    if (config.run1) for (p in run1Origins(binding)) emitTarget(p, target)
-    else emitTarget(fullPremise(binding), target)
+val origins = edges.map { it.premise }.distinct()
+if (config.run1) {
+    val nonzero = origins.filterNot { it.isZero }
+    for (p in nonzero.ifEmpty { listOf(ap.zero) }) emitTarget(p, target)
+} else {
+    var original: PremiseKey = ap.zero
+    for (p in origins) original = ap.union(original, p)
+    emitTarget(original, target)
 }
 ```
 
@@ -386,41 +421,18 @@ Use the existing full compatible binding and aggregate layer. A partial
 cube, one literal, or a request is not a sink witness. In run-1, retain
 the current full-binding/all-ZERO test and atomic nonzero-origin emission.
 Never project a later ND premise to independently sufficient members.
+`ap.union` uses the current ZERO-drop/full-premise rules. Predicate and
+conjunction stores keep their existing complete-binding enumeration.
+The TRUE/unconditional callback includes the existing ZERO/REACH input.
 
-The adapter to the existing complete sink callback is:
-
-```kotlin
-fun runtimeBinding(b: CompleteSinkBinding): Boolean = b.inputs.all { input ->
-    RuntimeDataDomain.packet(input.premise, checkNotNull(input.facts))
-}
-fun fullPremise(b: CompleteSinkBinding): PremiseKey {
-    var result: PremiseKey = ap.zero
-    for (input in b.inputs) result = ap.union(result, input.premise)
-    return result
-}
-fun run1Origins(b: CompleteSinkBinding): List<InitialAp> {
-    val origins = b.inputs.map { it.premise as InitialAp }.distinct()
-    val nonzero = origins.filterNot { it.isZero }
-    return if (nonzero.isEmpty()) listOf(ap.zero) else nonzero
-}
-```
-
-Call this only for one complete accepted binding, never for pooled partial
-OR alternatives. `ap.union` uses the current ZERO-drop/full-premise rules.
-The aggregate layer is NORMAL only if every checked input is NORMAL.
-Predicate and conjunction stores keep their existing complete-binding
-enumeration; this proposal does not change their rule semantics.
-The current TRUE/unconditional callback includes a ZERO/REACH input.
-The total ZERO-fold helper does not create a new callback for an empty
-partial binding.
-
-Capture each DEMAND sink descriptor before anonymous Target dedup. Two
-sinks can share one DemandTarget membership and still need different
-backward seeds. A NORMAL sink creates no backward seed.
-Install the consumer at the existing completed `witness(...)` callback,
-including local sinks and exceptional boundary checks. Do not put it only
-at normal summary exit. `trackFactsReachAnalysisEnd` stays ignored; Target
-does not restore the old sink end-action GEN outputs.
+Capture each DEMAND sink's existing Seed values before anonymous Target
+dedup. Two sinks can share one DemandTarget membership and still need
+different backward seeds. A NORMAL sink creates no backward seed.
+Install the consumer at all existing completed witness call sites,
+including local sinks and exceptional boundary checks. Keep the
+transient binding/proof inputs used by the current condition checks.
+`trackFactsReachAnalysisEnd` stays ignored; Target does not restore the
+old sink end-action GEN outputs.
 
 ### 5.2 Actual reverse GEN
 
@@ -470,12 +482,11 @@ same source/action can be hit under several original premises.
 
 ### 6.1 Method-owned raw and pending state
 
+Add raw Target membership to the existing method actor as an ordinary
+set. It needs no store wrapper:
+
 ```kotlin
-class MethodTargetStore {
-    private val seen = HashSet<TargetSummary>()
-    fun add(row: TargetSummary): Boolean = seen.add(row)
-    fun rows(): Sequence<TargetSummary> = seen.asSequence()
-}
+private val rawTargets = LinkedHashSet<TargetSummary>()
 
 fun emitTarget(p: PremiseKey, target: Target) {
     if (!RuntimeDataDomain.premise(p)) return
@@ -540,9 +551,10 @@ ordinary lookup paths. Do not add graph lookup for control Target rows.
 
 ## 7. Terminal publication and delivery
 
-### 7.1 Separate typed event
+### 7.1 Typed payload in the existing delivery protocol
 
-Add a parallel protocol, rather than changing AP publication equality:
+Keep existing AP publication equality. Add only its typed Target payload
+and dispatch:
 
 ```kotlin
 interface TargetPublicationSink {
@@ -551,85 +563,67 @@ interface TargetPublicationSink {
 interface TargetApplier {
     fun applyTarget(part: Subscription, row: TargetSummary, member: Int)
     fun applyStaticTarget(part: Subscription, row: TargetSummary, member: Int)
-    fun staticTargetSupply(part: Subscription, row: TargetSummary,
-                           member: Int, supply: RegionGroups)
 }
-class TargetDelivery(val callee: MethodKey, batch: TargetBatch) : RunEvent {
-    val rows = batch.rows // detached immutable membership list
-}
+class TargetDelivery(val callee: MethodKey, val rows: TargetBatch) : RunEvent
 ```
 
-Extend RunnerPort/SubscriptionPort post methods, RunMethodHandlers and
-RunEvent dispatch. TargetDelivery is addressed to its subscribed runner,
-like Delivery. Count it with the existing in-flight protocol and queue
-priority; it is not an uncounted callback or a method-owner start event.
-Inject TargetPublicationSink as a parallel required constructor service;
-keep the existing AP PublicationSink fun interface. Have MethodCallServices
-also implement TargetApplier. The actor dispatches Target calls through
-its configured call-service interface, as it dispatches AP calls today.
-SubscriptionPort exposes that actor as TargetApplier. Migrate decorators
-and fixtures explicitly; do not bypass them with a cast to the concrete
-RunMethodCallServices or add a default silent-drop implementation.
+Wire the TargetPublicationSink adapter beside the existing PublicationSink
+in RunMethodHandlers. It calls the same method's SummaryStorage. Keep
+PublicationSink's existing AP function interface. Use the existing
+RunnerPort/SubscriptionPort, RunEvent dispatch, ProtocolSteps, queue
+priority and in-flight counter for TargetDelivery. A typed event does
+not require another scheduler or publication service.
 
-### 7.2 Locked publisher, runner-owned subscriber
+Have MethodCallServices also implement TargetApplier. The actor delegates
+through that existing injected interface, as for AP summaries. Extend
+decorators and fixtures for the required methods. Static supply uses
+the existing `staticSupply` callback with a typed result payload, as
+specified in section 9.
 
-SummaryStorage gains a `TargetPublicationIndex` behind its existing lock.
-It maps full premise to a set of exact Target constructors. Index each
-premise member once. No conclusion Facts, mark tree or fake Publication
-is constructed.
+### 7.2 Existing index, lock, subscriptions and replay
+
+Extend PublicationIndex with a map from full premise to exact Target
+constructors. Reuse its current `indexed` and `byMember` premise postings;
+do not create a second TargetPublicationIndex or a second premise trie.
+Extract the existing premise insertion and candidate selection bodies
+into local helpers so AP and Target readers call the same code. Keep
+the prefix/extension rules unchanged. Target-only premises return no AP
+publication; AP-only premises return no Target row.
+
+Reuse SummaryStorage's existing lock, subscribers and publish procedure:
 
 ```kotlin
-fun publishTargets(batch: TargetBatch) {
-    val (delta, recipients) = synchronized(lock) {
-        targetIndex.addAll(batch.rows) to subscribers.toList()
-    }
-    if (delta.isEmpty()) return
-    steps.notify {
-        for (subscriber in recipients) {
-            cancellation.checkpoint()
-            check(subscriber.notifyTargets(method, TargetBatch(delta)))
-        }
-    }
+// Target counterpart of SummaryStorage.publish, using the same fields:
+val (delta, recipients) = synchronized(lock) {
+    published.addTargets(batch) to subscribers.toList()
 }
+// Use the existing steps.notify and required-post handling for delta.
 ```
 
-`notifyTargets` posts only. On TargetDelivery, the caller runner queries
-its current CalleeSubscriptions and invokes its actor TargetApplier.
-Do not inspect caller-owned directories on the publisher thread.
+`notifyTargets` is a typed post through the existing protocol. On receipt,
+SubscriptionManager uses its existing CalleeSubscriptions and candidate
+selection to dispatch the Target result on the caller runner. Extract
+the premise-only lookup from its current AP entry point. Keep ownership
+and snapshot timing unchanged.
 
-Extract premise-position candidate lookup from PublicationIndex and
-CalleeSubscriptions into helpers which accept `(PremiseKey,member)`.
-Have existing AP functions delegate to them without changing the selected
-prefix/extension rules. Terminal matching uses the same candidates and
-full AP predicate. Add a run-1 static candidate arm in section 9.
+Use SubscriptionManager.subscribe's existing register, admit and replay
+sequence. Include typed Target rows in the replay. Keep the existing
+register-before-replay/start order and output deduplication. The run-1
+static-control arm also uses the existing procedure in section 9.
 
-SubscriptionManager.subscribe must replay both AP and Target candidates
-after recording the accepted input. Keep register-before-replay/start.
-If publication precedes registration, replay finds it. If registration
-precedes publication, delivery finds it. Both paths can occur; exact
-caller-owned output dedup handles that duplicate.
+### 7.3 Existing pending-batch flush and failure handling
 
-### 7.3 No lost pending send
+Use `RunMethodAnalyzer.flushPublications`' current detach, immutable batch,
+publish and restore-on-exception procedure for pending Target rows. Add
+the Target batch to that existing flush service opportunity and to the
+actor's existing work/freeze checks. There is no separate retry queue,
+receipt registry, or durable outbox service.
 
-```kotlin
-fun flushTargetPublications() {
-    if (pendingTargets.isEmpty()) return
-    val detached = pendingTargets
-    pendingTargets = ArrayList()
-    try {
-        targetSink.publishTargets(key, TargetBatch(detached))
-    } catch (failure: Throwable) {
-        pendingTargets.addAll(0, detached)
-        throw failure
-    }
-}
-```
-
-Include pendingTargets in actor work/freeze checks. A seen row still owns
-its pending obligation until publication is accepted. Required delivery
-rejection fails/cancels the run. Never select COMPLETE or commit retained
-rows after a lost delivery. Do not remove seen membership and invent a
-second semantic row to recover a failed send.
+A duplicate seen membership must not erase a pending send. Keep the
+existing required-post failure/cancellation path: a rejected send fails
+the run, and an incomplete run cannot commit new retained/report state.
+The Lean pending/receipt model describes these obligations on the
+existing actor queues and in-flight accounting.
 
 ## 8. Caller matching, ND, and retained replay
 
@@ -681,7 +675,9 @@ binding and complete premise satisfaction still apply.
 
 ### 8.2 Complete same-call ND
 
-Use a terminal-specific header join, not NdSummaryJoin's TaintTree cast:
+Use the existing `KaryJoin` directly. Only its result key and matched
+header are new. `NdSummaryJoin`'s growing TAINT-conclusion archive is
+not needed for an immutable terminal result.
 
 ```kotlin
 data class TargetJoinKey(
@@ -690,10 +686,15 @@ data class TargetJoinKey(
 )
 data class TargetBinding(val ref: CallerRef, val layer: Layer)
 
-class TargetCallJoin(arity: Int, cancellation: Cancellation) {
-    private val members = KaryJoin<TargetBinding>(arity, cancellation)
-    fun add(slot: Int, binding: TargetBinding): List<List<TargetBinding>> =
-        members.add(slot, binding)
+private val targetJoins = HashMap<TargetJoinKey, KaryJoin<TargetBinding>>()
+
+fun targetJoin(part: Subscription, row: TargetSummary,
+               saved: Boolean): KaryJoin<TargetBinding> {
+    val key = TargetJoinKey(part.callee, row.premise, row.target,
+        part.ref.call, part.ref.stageOrdinal, saved)
+    return targetJoins.getOrPut(key) {
+        KaryJoin(row.premise.size, ap.cancellation)
+    }
 }
 ```
 
@@ -704,9 +705,9 @@ complete join. Do not pool different calls or reduce the arity.
 
 Payloads are immutable. A new ID uses a new exact join key and is replayed
 against current eligible member inputs. A new member creates new complete
-tuples through KaryJoin. No full-result product archive or protection-
-upgrade mechanism is needed for Target payloads. Retained ND replay stores
-only matched headers for known records, not all rejected input facts.
+tuples through the existing KaryJoin. No TargetCallJoin wrapper or new
+product algorithm is needed. Retained ND replay stores only matched
+headers for known records, not all rejected input facts.
 
 ### 8.3 Selected call order
 
@@ -761,132 +762,62 @@ ZERO-to-ZERO, already covered by the existing pass-through. NormalTarget
 is ignored backward. No marked saved data transfer is removed by keeping
 the existing zeroOnly saved-replay exclusion.
 
-## 9. Run-1 STATIC-premise delivery
+## 9. Reuse run-1 static summary delivery
 
-Ordinary AP member lookup is not the whole run-1 call protocol. A genuine
-caller ZERO/REACH port also activates conditional static summaries today.
-Extend that path to typed Target rows; do not silently lose static sinks.
+Use the existing run-1 static-summary procedure for `S.C.f -> Target`,
+as for `S.C.f ->` an AP conclusion. Static premise resolution is unchanged.
 
-The typed producer invariant is useful here: a held sink input is Reach
-or TAINT, not FLOW; existing K6 ties that input to a non-FLOW origin.
-Actual reverse GEN also requires a concrete marked input. Thus valid
-Target support has canonical ZERO or concrete non-FLOW AP members.
-Check that invariant at the producer adapter. It is not permission to
-reinterpret a FLOW request as a held sink condition.
+| Step | Existing code to use |
+|---|---|
+| Find static rows for a ZERO/REACH call port | `SubscriptionManager.isStaticControl`, PublicationIndex's static premise postings, `CalleeSubscriptions.staticControlCandidates` |
+| Resolve an already known concrete static input | `RunMethodCallServices.applyStaticSummary`, `hasKnownStaticGroupInput`, `knownStaticInput` |
+| Wait for a later pool supply | `Run1PointResume.callInterest`, its existing call directory, waiting mark set and resume-ID allocator |
+| Receive the supply | Existing PointReady dispatch, actor forwarding, and `MethodCallServices.staticSupply` |
+| Match and select the caller original | `RunMethodCallServices.applyStaticInput`, including its exact class-marker check, field anchor and `forceRun1Layer` |
+
+Extend the existing static call continuation's result payload to include
+a typed TargetSummary. Keep the same directory, waiting-set updates,
+PointReady path and service owner. Its semantic key must distinguish
+the AP result from the terminal result and include the exact Target
+constructor/ID. Keep all current callee, caller, call, stage, full-premise
+and member key fields. Existing AP keys keep their current equality.
+The payload wrapper itself is not the key. AP results keep the current
+per-leaf Pattern/layer key and its existing protection-upgrade behavior.
 
 ```kotlin
-fun applyStaticTarget(part: Subscription, row: TargetSummary, member: Int) {
-    check(config.run1 && part.ref.premise.isZero && part.added is Reach && !part.zeroOnly)
-    val initial = row.premise.member(member)
-    check(initial.base == STATIC && initial.mark is MarkSlot.Concrete)
-    if (core.dropsStaticField(initial)) return
+// Payload of the existing static call continuation:
+sealed interface StaticCallResult {
+    data class Ap(val publication: Publication) : StaticCallResult
+    data class Terminal(val summary: TargetSummary) : StaticCallResult
+}
 
-    if (core.hasKnownStaticGroupInput(row.premise)) {
-        applyStaticTargetInput(part, row, member, core.knownStaticInput(initial))
-    } else {
-        pointResumes.targetCallInterest(part, row, member)
-    }
+// At the existing applyStaticInput completion point, after the common
+// matcher constructs the subscription with its selected STATIC original:
+when (result) {
+    is StaticCallResult.Ap -> applyExistingApResult(selectedInput, result.publication, member)
+    is StaticCallResult.Terminal -> applyTarget(selectedInput, result.summary, member, saved = false)
 }
 ```
 
-Add typed Target candidates to the existing run-1 static-control scans in
-SubscriptionManager replay and delivery. A direct static input or a pool
-reply must use the same selected-original constructor as AP static input:
+`applyExistingApResult` names the current AP application/continuation
+body at this point; it is unchanged. `selectedInput` is the existing
+Subscription after static original/input selection. The new code is
+the typed result branch, not a new resolver. `applyStaticTarget` enters
+this shared procedure. Extend `callInterest` and the existing
+`staticSupply` payload type to carry either result; add no separate
+staticTargetSupply callback or terminal waiting directory. Keep AP leaf
+splitting and protection upgrades in their existing AP branch.
 
-```kotlin
-fun applyStaticTargetInput(part: Subscription, row: TargetSummary,
-                           member: Int, actual: Facts) {
-    val initial = row.premise.member(member)
-    val matched = ops.satisfying(actual, initial, mode) ?: return
-    for (leaf in ops.leaves(matched)) {
-        val path = leaf.fact.path.take(2)
-        val selected = ap.initial(Pattern(leaf.fact.copy(
-            path = path,
-            tail = if (leaf.fact.tail == EXACT && leaf.fact.path.size <= 2) EXACT else STAR,
-        ), ExclusionSet.Empty))
-        val selectedInput = core.forceRun1Layer(selected, ops.startFact(selected, mode))
-        val ref = part.ref.copy(premise = selected)
-        applyTarget(part.copy(ref = ref, linkLayer = selectedInput.layer, added = selectedInput),
-            row, member, saved = false)
-    }
-}
-```
+For a terminal result, retain the selected STATIC original and emit the
+caller's Target summary directly. All run-1 static support remains
+DEMAND. Preserve late-supply wakeup, known-input activation, class
+markers, and disableRun1Statics. No method-entry static propagation or
+static write registration is added. Targets do not enter frozen static
+AP composition.
 
-Keep the exact global-class marker checks and field anchors from
-`applyStaticInput`; extract their shared constructor instead of copying
-and later changing one branch. All run-1 static support remains DEMAND.
-No new STATIC fact initial is delivered to a method entry.
-
-For a late supply, add a typed row to Run1PointResume:
-
-```kotlin
-data class StaticTargetKey(
-    val callee: MethodKey, val ref: CallerRef, val linkLayer: Layer,
-    val row: TargetSummary, val member: Int,
-)
-class StaticTargetContinuation(val key: StaticTargetKey,
-                               val part: Subscription,
-                               val row: TargetSummary, val member: Int) {
-    var waiting = MarkSet.EMPTY
-}
-
-private val terminalCallIds = HashMap<StaticTargetKey, Long>()
-private val terminalCalls = HashMap<Long, StaticTargetContinuation>()
-
-fun targetCallInterest(part: Subscription, row: TargetSummary, member: Int) {
-    val initial = row.premise.member(member)
-    val key = StaticTargetKey(part.callee, part.ref, part.linkLayer, row, member)
-    val id = terminalCallIds.getOrPut(key) {
-        nextResumeId().also { terminalCalls[it] = StaticTargetContinuation(key, part, row, member) }
-    }
-    val continuation = terminalCalls.getValue(id)
-    val atom = (initial.mark as MarkSlot.Concrete).mark
-    val requested = MarkSet.of(core.ap.marks.runtimeAtom(atom, core.mode.markMode))
-    val fresh = requested - continuation.waiting
-    if (fresh.isEmpty) return
-    continuation.waiting += fresh
-    core.staticBatch.interests += StaticInterest(core.key, id, initial.toPattern(), fresh)
-    core.requestWork()
-}
-```
-
-Use the existing unique resume-ID allocator. Add this arm to actor-owned
-PointReady dispatch, after the service lock is released:
-
-```kotlin
-terminalCalls[effect.id]?.let { continuation ->
-    continuation.waiting -= effect.supply.groups
-    if (continuation.waiting.isEmpty) {
-        terminalCallIds.remove(continuation.key)
-        terminalCalls.remove(effect.id)
-    }
-    core.staticTargetCallSupply(continuation.part, continuation.row,
-        continuation.member, effect.supply)
-    return
-}
-
-// RunMethodAnalyzer forwards through the injected MethodCallServices:
-internal fun staticTargetCallSupply(part: Subscription, row: TargetSummary,
-                                    member: Int, supply: RegionGroups) =
-    callServices.staticTargetSupply(part, row, member, supply)
-
-// RunMethodCallServices implements the required TargetApplier operation:
-override fun staticTargetSupply(part: Subscription, row: TargetSummary,
-                                member: Int, supply: RegionGroups) {
-    val core = active()
-    if (core.dropsStaticField(row.premise.member(member))) return
-    val actual = core.staticFacts(supply)
-    if (!runtimePacket(part.ref.premise, actual)) return
-    applyStaticTargetInput(part, row, member, actual)
-}
-```
-
-Migrate MethodCallServices decorators and fixtures for this required
-callback as well. Do not call the private concrete service from
-Run1PointResume. Other
-AP/static continuations retain their behavior. No fake AP conclusion,
-extra static write point, new static request kind, or static return suffix
-is introduced. Targets do not enter frozen static AP composition.
+The existing K6 and held REACH/TAINT producer checks imply that Target
+premise members are ZERO or concrete non-FLOW values. Use that existing
+invariant; no abstract FLOW Target branch is needed.
 
 ## 10. Retained NORMAL storage and replay suppression
 
@@ -1020,57 +951,38 @@ NormalTarget is never exported as refinement demand.
 
 ### 11.2 Seeds independent of reports and Target deltas
 
-```kotlin
-data class SinkSeedDescriptor(val seed: Seed) {
-    init { require(seed is Seed.Sink || seed is Seed.PredicateSink) }
-    val method get() = seed.method
-    val statement get() = seed.statement
-}
-```
+Reuse the existing `Seed.Sink`, `Seed.PredicateSink`, `SeedIndex`, and
+seed evaluator. Store their existing Seed values in the actor's sink
+seed set. No SinkSeedDescriptor wrapper or new seed store class is
+needed. Capture each complete local DEMAND sink observation before
+Target dedup.
 
-SinkSeedStore is a set of those descriptors. It has no witness AP trees.
-Capture on complete local DEMAND sink observation, before Target dedup.
-Freeze full predicate handles as `Seed.PredicateSink`; use existing exact
-`Seed.Sink` patterns for the legacy nonpredicate form. Resolve through
-DirectedForms at the reached seed statement, preserving full condition
-and all selected positive requirements. Constant-based materializations
-are rejected by RuntimeDataDomain.
-
-Construct the descriptors at the observation point, using existing owned
-Seed types instead of retaining a bound SinkRule or compiled form:
+Extract the current sink-to-seed conversion from `HandOff.toBackward`
+without changing it, and call it at that observation point:
 
 ```kotlin
-fun buildSinkSeedDescriptors(sink: SinkRule, method: MethodKey,
-                             at: CommonInst): List<SinkSeedDescriptor> = (when {
+fun sinkSeedsFor(sink: SinkRule, method: MethodKey,
+                  at: CommonInst): List<Seed> = when {
     sink.predicate != null && !sink.unconditional ->
         listOf(Seed.PredicateSink(checkNotNull(sink.occurrenceId), method, at))
     sink.predicate != null -> emptyList() // existing unconditional predicate rule
     else -> sink.seedPatterns().map { Seed.Sink(sink.rule, method, at, it) }
-}).map(::SinkSeedDescriptor)
-```
+}
 
-The descriptor holds the predicate handle or owned pattern seed directly.
-The actor owns its frozen seed set through the
-driver barrier. Do not clear it in RunMethodLocalServices.freeze. Raw
-Target rows likewise survive actor freeze; subscription indexes and
-transient caller joins can be released after required deliveries join.
-
-```kotlin
 fun toBackwardSeeds(result: CompleteForwardRun): SeedIndex =
-    SeedIndex.of(result.actors.flatMap { it.sinkSeeds }.map { it.seed })
-
-fun toForwardSeeds(result: CompleteBackwardRun): SeedIndex =
-    SeedIndex.of(result.actors.flatMap { actor ->
-        actor.sourceHits.occurrences().map { hit ->
-            Seed.Source(hit.method, hit.statement, hit.forward, hit.action)
-        }
-    })
+    SeedIndex.of(result.actors.flatMap { it.sinkSeeds })
 ```
 
-No final report entry is used to build seeds. A stored descriptor does not
-start its method: actual admitted ZERO must reach that statement. NormalTarget
-replay creates no sink descriptor. Existing action identity and conditional
-source permission remain unchanged.
+Use `HandOff.toForward`'s current SourceHitStore-to-Seed.Source conversion
+unchanged. Resolve predicate handles at the reached seed statement with
+the current DirectedForms/seed evaluator. Constant-domain checks still
+apply at their selected boundaries.
+
+The actor retains its seed set and raw Target rows through the existing
+driver barrier. No final report entry is used to build seeds. A saved
+Seed does not start its method; admitted ZERO must reach its statement.
+NORMAL Target replay creates no sink seed. Existing source/action
+identity and conditional source permission remain unchanged.
 
 ### 11.3 Completed barriers and stopping
 
@@ -1222,7 +1134,7 @@ one input DEMAND or a missing member -> no NORMAL result
 inputs from different calls -> no complete tuple
 
 sink A and sink B each produce same P -> DemandTarget
-raw Target has one membership; SinkSeedStore retains A and B
+raw Target has one membership; the existing Seed values retain A and B
 ```
 
 ### 13.7 Run-1 static sink
@@ -1260,11 +1172,11 @@ Use the existing BIDI main Kotlin root unless a JVM path is stated.
 | FormApplier, FactAlgebra, EngineAlgebra | Typed AcceptedSource context, constant guards before hooks |
 | RunMethodLocalServices | Complete sink consumer, local seed set, preserved condition checks |
 | RunMethodAnalyzer | Raw/pending Target store, C5 branch, explicit root ZERO lookup and work checks |
-| new TargetPublicationIndex | Premise-only postings and typed terminal memberships |
+| PublicationIndex | Typed terminal memberships; shared existing premise postings and candidate lookup |
 | SummaryStorage, SubscriptionManager, CalleeSubscriptions | Typed replay/delivery using existing subscription ownership |
 | RunEvent, RunnerPort, SubscriptionPort, UnitRunner, handlers | Immutable counted TargetDelivery, required-send failure handling |
-| MethodServices, RunMethodCallServices | Required terminal and static-supply interface, singleton/ND Target matching, saved replay, guided backward ZERO |
-| Run1PointResume | Typed static Target continuation on existing pool mechanism |
+| MethodServices, RunMethodCallServices | Typed terminal dispatch and existing static-supply payload, KaryJoin use, saved replay, guided backward ZERO |
+| Run1PointResume | Extend the existing call continuation's result payload; keep its directory and pool-reply procedure |
 | new NormalTargetStore and ReportCatalog | Exact retained keys and stable immutable descriptors |
 | DemandStore and handoff | Typed controls, paired ZERO exit, no virtual/bypass ZERO |
 | IterationDriver, Report, Frontier | Completed terminal/report snapshot, outgoing-demand stop/counts |
@@ -1297,7 +1209,8 @@ Implement in proof-first/TDD order:
 2. Add constant funnels, including rejected-packed-batch consumption.
 3. Add catalog/raw/retained Target stores and exact owned-key tests.
 4. Add typed producers, callbacks, publication/receipt and caller matching.
-5. Add the static adapter and complete same-call Target ND tests.
+5. Extend the existing static result dispatch and test it with Target;
+   use KaryJoin for complete same-call Target ND tests.
 6. Replace ZERO admission/C5/handoff and seed source. Test no-op rejection.
 7. Add the completed terminal/report commit and export migration.
 8. Remove old paths. Run complete core/JVM suites and source-delta audit.
@@ -1329,6 +1242,9 @@ TargetReportTest: root+ZERO only, stable catalog context-independent IDs,
 
 Use historical expected results only in explicitly named old-reference
 controls. They are not the selected new admission/reporting contract.
+For static delivery and protocol tests, extend the existing fixtures
+with a Target result. Exercise the same matching, waiting and completion
+code used by AP summaries. Do not create a second delivery test harness.
 
 ## 15. Proof package and implementation evidence
 
@@ -1372,6 +1288,12 @@ the listed boundaries; finite Boolean examples alone do not verify them.
 The selected domain, admission and reporting changes are not a theorem
 of equality with the old report set. Do not claim whole-program no-FN,
 convergence or a measured speedup from the model check.
+
+This review changes implementation structure only. The selected contract
+and Lean transfer laws are unchanged. The shared PublicationIndex,
+KaryJoin, static call continuations, publication flush and Seed values
+must satisfy the same existing proof obligations. No model certificate
+requires a new runtime store or service.
 
 ## 16. Project validation and measurements
 
