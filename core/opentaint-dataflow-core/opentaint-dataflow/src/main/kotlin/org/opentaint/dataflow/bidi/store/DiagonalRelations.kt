@@ -86,18 +86,23 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
     /** Scan exact masks without constructing their scalar decoded trees. */
     fun census(): RelationCensus = census(RelationCensusCounter(m.cancellation))
 
-    internal fun census(counter: RelationCensusCounter): RelationCensus {
+    internal fun census(counter: RelationCensusCounter,
+                        include: (PremiseKey, Layer) -> Boolean = { _, _ -> true }): RelationCensus {
         m.cancellation.checkpoint()
         var result = RelationCensus.ZERO
-        for ((_, rows) in allRows()) for ((shape, masks) in rows) {
-            m.cancellation.checkpoint()
-            val outputs = counter.flowAnnotations(shape)
-            result += RelationCensus(
-                concreteOutputMemberships = Math.multiplyExact(outputs, masks.marks.size.toLong()),
-                protectedOutputMemberships = Math.multiplyExact(outputs, masks.protected.size.toLong()),
-                diagonalGeometryRows = 1,
-                diagonalMarkRows = masks.marks.size.toLong(),
-            )
+        for ((header, rows) in allRows()) {
+            // Diagonal scopes are nonzero singleton premises. Selection does not decode a mark.
+            if (!include(header.initial, header.layer)) continue
+            for ((shape, masks) in rows) {
+                m.cancellation.checkpoint()
+                val outputs = counter.flowAnnotations(shape)
+                result += RelationCensus(
+                    concreteOutputMemberships = Math.multiplyExact(outputs, masks.marks.size.toLong()),
+                    protectedOutputMemberships = Math.multiplyExact(outputs, masks.protected.size.toLong()),
+                    diagonalGeometryRows = 1,
+                    diagonalMarkRows = masks.marks.size.toLong(),
+                )
+            }
         }
         return result
     }

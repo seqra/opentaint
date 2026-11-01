@@ -148,7 +148,7 @@ class AbstractDemandExclusionTest {
         val conclusion = p(exclusion = e(g), base = ret)
         val initial = m.initial(original)
         val summaries = RunSummaryStore(m)
-        assertNotNull(summaries.add(initial, pack(conclusion)))
+        assertNotNull(summaries.addAdmitted(initial, pack(conclusion)))
         val records = PersistentRecordStore(m)
         records.persist(Direction.FORWARD, sequenceOf(fixture.method to summaries))
         val record = records.byEntry(fixture.method, original).single()

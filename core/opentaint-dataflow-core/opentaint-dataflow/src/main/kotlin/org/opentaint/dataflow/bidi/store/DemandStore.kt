@@ -44,6 +44,7 @@ class DemandStore private constructor(
         " entryRows=${byMethod.values.sumOf { it.entryCount.toLong() }}" +
         " pairRows=${byMethod.values.sumOf { it.rows.size.toLong() } + controls.values.sumOf { it.size.toLong() }}" +
         (statistics?.let { " $it" } ?: "")
+    internal fun diagnosticC5Samples(): List<String> = statistics?.rowSamples().orEmpty()
 
     /** C2 uses an entry-only index and never materializes origin products. */
     fun admissionPolicy(run: Int, fieldLimit: Int, direction: Direction): RestrictedInitialPolicy =
@@ -99,7 +100,9 @@ class DemandStore private constructor(
         ap.cancellation.checkpoint()
         if (!RuntimeDataDomain.packet(original, raw)) return emptyList()
         val ops = ApOps(ap)
-        val result = ExactDemandResults(ap, ops)
+        val result = ExactDemandResults(ap)
+        // Reach has one possible result. DATA must exhaust rows with different exit budgets.
+        fun saturated(): Boolean = raw is Reach && result.hasResults
         val local = byMethod[method]
         val outputLeaves = ops.leaves(raw).toList()
         // A control pair is tested as one row. Entry and exit permissions cannot mix.
@@ -112,16 +115,19 @@ class DemandStore private constructor(
                     // Data/Data rows use the AP index. A control entry admitted ZERO;
                     // use the existing AP restriction, including protection transport.
                     val dataPair = DemandPattern(ap.zero.toPattern(), exit.pattern)
-                    for (kept in ops.restrict(ap.zero, raw, dataPair, policy)) result.add(kept)
+                    offerDataPair(method, ops, ap.zero, raw, dataPair, policy, result, route = 2)
                 }
             }
-            !result.covers(raw)
+            !saturated()
         }
-        fun offer(member: InitialAp, pair: DemandPattern) {
+        fun offer(member: InitialAp, pair: DemandPattern, route: Int = 0) {
             statistics?.add(7)
-            if (pair.exit == null) return
+            val exit = pair.exit ?: return
             statistics?.add(9)
-            for (kept in ops.restrict(member, raw, pair, policy)) result.add(kept)
+            if (exit.fact.base == AccessPathBase.Zero) {
+                // The static walker can expose a typed ZERO through its legacy AP view.
+                if (raw is Reach) for (kept in ops.restrict(member, raw, pair, policy)) result.add(kept)
+            } else offerDataPair(method, ops, member, raw, pair, policy, result, route)
         }
         val outputIds = HashSet<Int>()
         if (local != null) for (leaf in outputLeaves)
@@ -132,22 +138,53 @@ class DemandStore private constructor(
                     member.path?.toIntArray() ?: EMPTY_PATH)) {
                 if (id in outputIds) offer(member, local.rows[id])
             }
-            staticCarry(member.toPattern())?.let { offer(member, it) }
+            staticCarry(member.toPattern())?.let { offer(member, it, route = 3) }
         }
         val skipped = completion ?: return result.all() // later snapshots have no graph lookup
         // Primitive seed pairs use the same complete source/target row. They do not form a product.
         val primitive = skipped.local(method)
         original.forEachMember { member ->
             for (edge in primitive.pairs(member, outputLeaves))
-                offer(member, DemandPattern(edge.to, edge.from))
+                offer(member, DemandPattern(edge.to, edge.from), route = 1)
         }
-        if (result.covers(raw)) { statistics?.add(10); return result.all() }
+        if (saturated()) { statistics?.add(10); return result.all() }
         val query = StaticPairLookup(ap, skipped, statistics) { entry, member -> policy.canStoreInitial(entry, member.toPattern()) }
-        query.walk(method, original, outputLeaves, visible = false, ::offer) { result.covers(raw) }
-        if (result.covers(raw)) { statistics?.add(10); return result.all() }
+        val offerVirtual: (InitialAp, DemandPattern) -> Unit = { member, pair -> offer(member, pair, route = 1) }
+        query.walk(method, original, outputLeaves, visible = false, offerVirtual, ::saturated)
+        if (saturated()) { statistics?.add(10); return result.all() }
         if (!skipped.mayNeedInheritedPairs(method)) return result.all()
-        query.walk(method, original, outputLeaves, visible = true, ::offer) { result.covers(raw) }
+        query.walk(method, original, outputLeaves, visible = true, offerVirtual, ::saturated)
         return result.all()
+    }
+
+    /** Exact C5 must precede the cut, and each complete row supplies its own exit depth. */
+    private fun offerDataPair(method: MethodKey, ops: ApOps, member: InitialAp, raw: Facts, pair: DemandPattern,
+                              policy: RestrictedInitialPolicy, result: ExactDemandResults, route: Int) {
+        ap.cancellation.checkpoint()
+        val exit = pair.exit ?: return
+        val depth = exit.fact.path.count { it.isCounted() }
+        val global = policy.fieldLimit
+        check(global >= 1)
+        // Clamp before adding: the default public policy uses Int.MAX_VALUE.
+        val budget = if (depth >= global) global else depth + 1
+        statistics?.dataRow(raw, exit, budget, route)
+        val sampledRow = statistics?.sampleRow(method, member, raw, pair, budget, route)
+        val selected = ops.restrict(member, raw, pair, policy)
+        if (selected.isEmpty()) {
+            statistics?.rejectedRow()
+            statistics?.sampleResult(sampledRow, null, null)
+        }
+        for (kept in selected) {
+            statistics?.selected(kept, budget)
+            ops.limit(kept, budget, object : ApOut {
+                override fun result(f: Facts) {
+                    statistics?.limited(kept, f)
+                    statistics?.sampleResult(sampledRow, kept, f)
+                    result.add(f)
+                }
+                override fun markRequest(mark: TaintMark) = error("A field cut must not emit a mark request")
+            })
+        }
     }
 
     /** Immutable seed inspection for the finite explicit reference in tests. No closure is retained. */

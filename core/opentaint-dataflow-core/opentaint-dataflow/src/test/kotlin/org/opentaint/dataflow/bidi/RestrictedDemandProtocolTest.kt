@@ -11,6 +11,46 @@ import kotlin.test.*
 
 /** Demand admits execution and paired publications. Actual input is not permission. */
 class RestrictedDemandProtocolTest {
+    @Test fun `restricted normal candidate with no exit permission creates no semantic state`() {
+        MethodAnalysisFixtures().use { f ->
+            val mark = MarkSlot.Concrete(f.mark("T"))
+            val entry = f.pattern(mark = mark)
+            val demand = DemandStore.Builder(f.manager).apply { add(f.key, DemandPattern(entry, null)) }.build()
+            val actor = f.core(index = 3, demand = demand)
+            val initial = f.manager.initial(entry)
+            repeat(2) { actor.summaryDelta(initial, f.fact(AccessPathBase.Return, mark = mark)) }
+            f.drain(actor)
+            assertTrue(actor.summaries.all().none())
+            assertTrue(f.publications.flatten().isEmpty())
+            f.records.persist(Direction.FORWARD, sequenceOf(f.key to actor.summaries))
+            assertTrue(f.records.byEntry(f.key, entry).none())
+        }
+    }
+
+    @Test fun `normal candidate is capped before storage publication persistence and handoff`() {
+        MethodAnalysisFixtures().use { f ->
+            val mark = MarkSlot.Concrete(f.mark("T"))
+            val entry = f.pattern(AccessPathBase.Return, tail = Tail.ANY, mark = mark)
+            val exit = f.pattern(tail = Tail.ANY, mark = mark)
+            val demand = DemandStore.Builder(f.manager).apply { add(f.key, DemandPattern(entry, exit)) }.build()
+            val actor = f.core(index = 6, L = 5, demand = demand)
+            val initial = f.manager.initial(entry)
+            val path = listOf(f.field("a"), f.field("b"), f.field("c"))
+            val raw = f.fact(path = path, mark = mark)
+            actor.summaryDelta(initial, raw)
+            actor.summaryDelta(initial, raw)
+            f.drain(actor)
+            val stored = actor.summaries.all().toList()
+            assertEquals(1, stored.size)
+            val result = stored.single().second
+            assertEquals(Layer.DEMAND, result.layer)
+            assertEquals(listOf(f.pattern(path = path.take(1), tail = Tail.ANY, mark = mark)), f.ops.leaves(result).toList())
+            assertEquals(listOf(Publication(initial, result)), f.publications.flatten())
+            f.records.persist(Direction.BACKWARD, sequenceOf(f.key to actor.summaries))
+            assertTrue(f.records.byEntry(f.key, entry).none())
+        }
+    }
+
     private fun arrive(f: MethodAnalysisFixtures, actor: RunMethodAnalyzer, value: Facts) {
         f.submitRestricted(actor, value)
     }
@@ -76,9 +116,9 @@ class RestrictedDemandProtocolTest {
             actor.summaryDelta(initial, raw)
             arrive(f, actor, f.fact(mark = entry.fact.mark))
             f.drain(actor)
-            assertTrue(actor.summaries.all().any { it.first === initial && it.second == raw })
+            assertTrue(actor.summaries.all().none())
             assertTrue(f.publications.flatten().isEmpty())
-            assertTrue(actor.summaries.demandEdges().none())
+            assertTrue(actor.summaries.demandEdges(Direction.FORWARD).none())
         }
     }
 
@@ -91,7 +131,7 @@ class RestrictedDemandProtocolTest {
             val actor = f.core(index = 3, demand = demand)
             val initial = f.manager.initial(entry)
             actor.summaryDelta(initial, f.fact(AccessPathBase.Return, mark = u, layer = Layer.DEMAND))
-            assertTrue(actor.summaries.demandEdges().none())
+            assertTrue(actor.summaries.demandEdges(Direction.FORWARD).none())
             actor.summaryDelta(initial, f.fact(AccessPathBase.Return, mark = t, layer = Layer.DEMAND))
             f.drain(actor)
             assertTrue(f.publications.flatten().any { it.premise === initial })
@@ -115,7 +155,7 @@ class RestrictedDemandProtocolTest {
         }
     }
 
-    @Test fun `run1 normal singleton stays raw and record eligible but is not selected demand`() {
+    @Test fun `run1 normal singleton stays admitted and record eligible but is not selected demand`() {
         MethodAnalysisFixtures().use { f ->
             val actor = f.core()
             val initial = f.manager.initial(f.pattern(AccessPathBase.Argument(0), tail = Tail.STAR, mark = MarkSlot.STAR))
@@ -123,14 +163,14 @@ class RestrictedDemandProtocolTest {
             actor.summaryDelta(initial, raw)
             f.drain(actor)
             assertEquals(listOf(initial to raw), actor.summaries.all().toList())
-            assertTrue(actor.summaries.demandEdges().none())
+            assertTrue(actor.summaries.demandEdges(Direction.FORWARD).none())
             assertTrue(f.publications.flatten().isNotEmpty())
             f.records.persist(Direction.FORWARD, sequenceOf(f.key to actor.summaries))
             assertTrue(f.records.byEntry(f.key, initial.toPattern()).any())
         }
     }
 
-    @Test fun `backward Zero raw results require paired restriction before publication`() {
+    @Test fun `backward Zero candidates require paired restriction before storage and publication`() {
         MethodAnalysisFixtures().use { f ->
             val actor = f.core(index = 2)
             val result = f.fact(mark = MarkSlot.Concrete(f.mark("T")))
@@ -138,7 +178,7 @@ class RestrictedDemandProtocolTest {
             actor.summaryDelta(f.manager.initial(f.pattern(mark = MarkSlot.Concrete(f.mark("U")))), result)
             f.drain(actor)
             assertTrue(f.publications.flatten().isEmpty())
-            assertEquals(2, actor.summaries.all().count(), "Raw NORMAL data remains separate from selected publication")
+            assertTrue(actor.summaries.all().none(), "Rejected NORMAL candidates leave no summary state")
         }
     }
 }

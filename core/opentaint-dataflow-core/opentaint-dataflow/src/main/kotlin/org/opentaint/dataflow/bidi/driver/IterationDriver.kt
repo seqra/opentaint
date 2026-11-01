@@ -4,6 +4,7 @@ import mu.KLogging
 import org.opentaint.dataflow.bidi.ap.Direction
 import org.opentaint.dataflow.bidi.ap.MethodKey
 import org.opentaint.dataflow.bidi.ap.MarkMode
+import org.opentaint.dataflow.bidi.ap.TaintMark
 import org.opentaint.dataflow.bidi.engine.MethodCallServicesFactory
 import org.opentaint.dataflow.bidi.engine.MethodLocalServicesFactory
 import org.opentaint.dataflow.bidi.engine.RunConfig
@@ -98,6 +99,37 @@ class IterationDriver internal constructor(
             }
         }
         if (shared.n2Statistics != null) {
+            val measured = result.analyzers.mapNotNull { actor -> actor.bodyWorkSnapshot?.let { actor.key to it } }
+            logger.info {
+                "BIDI_BODY_WORK_STATISTICS run=${config.index} scope=packet-events " +
+                    "snapshotActors=${measured.size} unavailableActors=${result.analyzers.size - measured.size} " +
+                    "processed=${measured.sumOf { it.second.processedPackets }} " +
+                    "freshPostS=${measured.sumOf { it.second.freshPackets }} " +
+                    "candidateOffers=${measured.sumOf { it.second.candidatePackets }} " +
+                    "cyclicProcessed=${measured.sumOf { it.second.cyclicProcessedPackets }} " +
+                    "cyclicFreshPostS=${measured.sumOf { it.second.cyclicFreshPackets }} " +
+                    "sampledPackets=${(0..2).map { stage -> measured.sumOf { it.second.sampledPackets[stage] } }} " +
+                    "sampledMemberships=${(0..2).map { stage -> measured.sumOf { it.second.sampledMemberships[stage] } }} " +
+                    "droppedSamples=${measured.sumOf { it.second.droppedSamples }}"
+            }
+            val hot = (measured.sortedByDescending { it.second.processedPackets }.take(12) +
+                measured.sortedByDescending { it.second.candidatePackets }.take(12)).distinctBy { it.first }
+            for ((method, snapshot) in hot) logger.info {
+                "BIDI_BODY_WORK_METHOD run=${config.index} method=$method snapshot=$snapshot"
+            }
+            // Only copied IDs from bounded hot-method samples enter this read-only dictionary.
+            val fieldIds = hot.asSequence().flatMap { it.second.samples.asSequence() }.flatMap { sample ->
+                (sample.firstPath + sample.initials.flatMap { it.path }).asSequence()
+            }.distinct().take(256).toList()
+            val markIds = hot.asSequence().flatMap { it.second.samples.asSequence() }.flatMap { sample ->
+                (sample.exampleMarkIds + sample.initials.mapNotNull { it.concreteMark }).asSequence()
+            }.distinct().take(256).toList()
+            for (id in fieldIds) logger.info {
+                "BIDI_BODY_FIELD run=${config.index} id=$id accessor=${shared.ap.accessors.accessor(id)}"
+            }
+            for (id in markIds) logger.info {
+                "BIDI_BODY_MARK run=${config.index} id=$id name=${shared.ap.marks.name(TaintMark(id))} key=${shared.ap.marks.key(TaintMark(id))}"
+            }
             // These are scalar-store end-state gauges, not cumulative edge work.
             // Cancelled/live actors need a heap census; absent snapshots are not zero.
             val snapshots = result.analyzers.mapNotNull { it.scalarIdentityStatistics }
@@ -119,6 +151,9 @@ class IterationDriver internal constructor(
         logOptimizationStatistics(config, "END")
         config.demand?.staticCompletionStatistics()?.let {
             logger.info { "BIDI_STATIC_CLOSURE_LOOKUP run=${config.index} $it" }
+        }
+        config.demand?.diagnosticC5Samples()?.forEach { sample ->
+            logger.info { "BIDI_C5_ROW_SAMPLE run=${config.index} $sample" }
         }
         if (result.status != RunStatus.COMPLETE) return Next.End(result.status)
         val barrierStart = TimeSource.Monotonic.markNow()
@@ -151,10 +186,11 @@ class IterationDriver internal constructor(
     }
 
     private fun barrier(config: RunConfig, result: RunResult<RunMethodAnalyzer>, report: ReportBuilder): Next {
-        if (config.run1 && config.mode.markMode == MarkMode.FULL && shared.n2Statistics != null) {
-            val raw = result.analyzers.fold(RelationCensus()) { counts, actor -> counts + actor.summaries.census() }
-            val selected = result.analyzers.fold(RelationCensus()) { counts, actor -> counts + actor.summaries.demandCensus() }
-            logger.info { "BIDI_FLOW_BACKED_CENSUS run=${config.index} raw=$raw selected=$selected" }
+        if (shared.n2Statistics != null) {
+            val censusStart = TimeSource.Monotonic.markNow()
+            val admitted = result.analyzers.fold(RelationCensus()) { counts, actor -> counts + actor.summaries.census() }
+            val outgoing = result.analyzers.fold(RelationCensus()) { counts, actor -> counts + actor.summaries.demandCensus(config.direction) }
+            logger.info { "BIDI_FLOW_BACKED_CENSUS run=${config.index} admitted=$admitted outgoing=$outgoing scanTime=${censusStart.elapsedNow()}" }
         }
         val forward = config.direction == Direction.FORWARD
         val terminals = report.prepare(config, result, shared)

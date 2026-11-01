@@ -68,7 +68,7 @@ class OutgoingDemandStopTest {
             } else {
                 val actor = f.core(config)
                 // A raw NORMAL relation must be persisted before the stop decision.
-                actor.summaries.add(flowInitial, flowResult)
+                actor.summaries.addAdmitted(flowInitial, flowResult)
                 if (config.direction == Direction.FORWARD) {
                     // Run-1 has independent refinement work and a settled report.
                     if (config.index == 1) actor.emitTarget(f.manager.zero, Target.DemandTarget)
@@ -141,8 +141,7 @@ class OutgoingDemandStopTest {
                     val second = c.f.manager.initial(c.f.pattern(AccessPathBase.Argument(1), mark = c.mark))
                     val joint = c.f.manager.premiseOf(listOf(first, second))
                     val target = c.f.fact(returned, mark = c.mark)
-                    actor.summaries.add(joint, target)
-                    actor.summaries.addDemand(joint, target)
+                    actor.summaries.addAdmitted(joint, target)
                 }
             })
             val report = driver.analyze(listOf(c.key))

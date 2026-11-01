@@ -279,10 +279,12 @@ class OneRunAcceptanceTest {
             )
             val actual = run(f, f.config(index = index, L = maxOf(1, index - 1), roots = listOf(caller),
                 demand = demand, seeds = listOf(seed)), listOf(field), listOf(t.mark, u.mark))
-            assertContains(actual.rawSummaries, expectedRaw)
+            val publishes = index == 1 || matchingExit
+            assertContains(actual.processed, expectedRaw.copy(node = calleeMethod.inst(1)))
+            assertEquals(if (publishes) setOf(expectedRaw) else emptySet(),
+                actual.rawSummaries.filter { it.method == callee && it.conclusion.fact.base == returned }.toSet())
             if (index == 1) assertContains(actual.selectedDemand, expectedRaw)
             else assertTrue(actual.selectedDemand.none { it.method == callee })
-            val publishes = index == 1 || matchingExit
             assertEquals(if (publishes) setOf(expectedRaw) else emptySet(),
                 actual.publications.filter { it.method == callee && it.conclusion.fact.base == returned }.toSet())
             assertEquals(if (publishes) setOf(selected(f, index, Conclusion(PathFact(y, listOf(field), Tail.EXACT, t),

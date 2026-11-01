@@ -232,7 +232,7 @@ class NdJoinAdapterTest {
                         target, e, demand))
                 }
             }
-            assertEquals(expected, methodEntries(f.ops, actor.summaries.all()))
+            assertEquals(expected, methodEntries(f.ops, f.completedBoundary(actor)))
             assertEquals(4, f.cuts.count { it.first == Cut.CALL })
             assertEquals(0L, actor.recordCrossings)
         }
@@ -321,13 +321,13 @@ class NdJoinAdapterTest {
             f.drain(actor)
             assertEquals(setOf(Conclusion(PathFact(result, path, Tail.ANY_TAINT, t), e, false)),
                 methodLeaves(f.ops, f.cuts.filter { it.first == Cut.CALL }.map { it.second }))
-            assertEquals(setOf(premise to Conclusion(PathFact(result, path.take(2), Tail.ANY, t), ExclusionSet.Empty, true)),
+            assertEquals(setOf(premise to Conclusion(PathFact(result, path.take(1), Tail.ANY, t), ExclusionSet.Empty, true)),
                 methodEntries(f.ops, actor.summaries.all()))
             val next = Publication(premise, f.fact(result, mark = t))
             actor.applySummary(first, next, premise.members.indexOf(j1))
             f.drain(actor)
             assertEquals(setOf(
-                premise to Conclusion(PathFact(result, path.take(2), Tail.ANY, t), ExclusionSet.Empty, true),
+                premise to Conclusion(PathFact(result, path.take(1), Tail.ANY, t), ExclusionSet.Empty, true),
                 premise to Conclusion(PathFact(result, emptyList(), Tail.EXACT, t), ExclusionSet.Empty, false)),
                 methodEntries(f.ops, actor.summaries.all()))
             assertEquals(2, f.cuts.count { it.first == Cut.CALL })

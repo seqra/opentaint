@@ -311,8 +311,13 @@ class Run1StaticFieldAblationTest {
 
     @Test fun `an injected true setting has no effect on later FULL static summaries`() {
         for (index in 2..3) MethodAnalysisFixtures().use { f ->
-            val core = actor(f, true, index)
             val value = f.fact(STATIC, field(f))
+            val demand = DemandStore.Builder(f.manager).apply {
+                add(f.key, DemandPattern(f.manager.zero.toPattern(), f.pattern(STATIC, field(f))))
+            }.build()
+            val run = RunConfig(index, maxOf(1, index - 1), demand, f.records, SeedIndex.EMPTY,
+                listOf(f.key), disableRun1Statics = true)
+            val core = f.core(run)
             core.summaryDelta(f.manager.zero, value)
             assertEquals(listOf(f.manager.zero to value), core.summaries.all().toList())
             assertNull(core.runnerPort.staticService)

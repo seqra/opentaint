@@ -21,7 +21,7 @@ class FlowBackedOwnersTest {
         val root = m.taintAlg.mergeAdd(m.taintAlg.mergeAdd(any.root, exact.root), other.root)
         val mixed = m.taintTree(y, Layer.DEMAND, root, anyTail = Tail.ANY, nonSubsumable = exact.root)
         val store = RunSummaryStore(m, flowBacked = true)
-        assertNotNull(store.add(key, mixed))
+        assertNotNull(store.addAdmitted(key, mixed))
         assertEquals(setOf(leaf(p(f), Tail.ANY, mt, Layer.DEMAND, base = y),
             leaf(p(f, h), Tail.EXACT, mt, Layer.DEMAND, base = y),
             leaf(p(g), Tail.ANY, mu, Layer.DEMAND, base = y)),
@@ -30,7 +30,7 @@ class FlowBackedOwnersTest {
             store.borrow(key).filterIsInstance<TaintTree>().mapNotNull { it.protectedPart() }
                 .flatMap { decoded(it).asSequence() }.toSet())
         val flowKey = premise(tail = Tail.STAR, mark = MarkSlot.STAR)
-        store.add(flowKey, pack(leaf(p(), Tail.ANY, MarkSlot.STAR, Layer.DEMAND, base = y)))
+        store.addAdmitted(flowKey, pack(leaf(p(), Tail.ANY, MarkSlot.STAR, Layer.DEMAND, base = y)))
         assertEquals(setOf(leaf(p(f, h), Tail.EXACT, mt, Layer.DEMAND, base = y),
             leaf(p(g), Tail.ANY, mu, Layer.DEMAND, base = y)),
             store.borrow(key).flatMap { decoded(it).asSequence() }.toSet())
@@ -69,14 +69,14 @@ class FlowBackedOwnersTest {
             (pack(leaf(p(f), Tail.STAR, mt, Layer.DEMAND, base = y)) as TaintTree).root, anyTail = Tail.STAR)
         val markedDemand = markedNormal.withLayer(Layer.DEMAND)
         val store = RunSummaryStore(m, flowBacked = true)
-        store.add(key, markedNormal)
-        store.add(key, markedDemand)
-        store.add(otherKey, markedDemand)
-        store.add(flowKey, pack(leaf(p(f), Tail.STAR, MarkSlot.STAR, Layer.DEMAND, base = y)))
+        store.addAdmitted(key, markedNormal)
+        store.addAdmitted(key, markedDemand)
+        store.addAdmitted(otherKey, markedDemand)
+        store.addAdmitted(flowKey, pack(leaf(p(f), Tail.STAR, MarkSlot.STAR, Layer.DEMAND, base = y)))
         assertEquals(setOf(Layer.NORMAL), store.borrow(key).map { it.layer }.toSet())
         val normalFlow = m.flowTree(y, Layer.NORMAL, ExclusionSet.Empty, MarkSet.EMPTY,
             FlowAlgebra.prepend(m, m.path(p(f)), FlowAlgebra.LEAF_NODE), Tail.STAR)
-        store.add(flowKey, normalFlow)
+        store.addAdmitted(flowKey, normalFlow)
         assertTrue(store.borrow(key).none())
         assertTrue(store.borrow(otherKey).any())
     }

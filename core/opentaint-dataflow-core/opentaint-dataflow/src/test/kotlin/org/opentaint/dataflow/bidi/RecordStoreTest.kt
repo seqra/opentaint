@@ -176,7 +176,7 @@ class RecordStoreTest {
     }
 
     @Test
-    fun `R1 persists only raw normal singleton groups and skips backward zero and every publication`(): Unit = with(v) {
+    fun `R1 persists admitted normal singleton groups and skips backward zero and demand`(): Unit = with(v) {
         for (direction in Direction.entries) {
             val store = PersistentRecordStore(m)
             val raw = RunSummaryStore(m)
@@ -192,13 +192,12 @@ class RecordStoreTest {
             for (key in keys) {
                 val normal = if (key.isFlow) flow(p(g), e = ex(h)) else leaf(p(g), base = y)
                 val demand = if (key.isFlow) flow(p(h), Layer.DEMAND) else leaf(p(h), layer = Layer.DEMAND, base = y)
-                raw.add(key, pack(normal))
-                raw.add(key, pack(demand))
-                raw.addDemand(key, pack(if (key.isFlow) flow(p(f), e = ex(g)) else leaf(p(f), base = y)))
+                raw.addAdmitted(key, pack(normal))
+                raw.addAdmitted(key, pack(demand))
                 if (key is InitialAp && !(direction == Direction.BACKWARD && key.isZero)) expected += key to normal
             }
             val publicationOnly = premise(p(g, h))
-            raw.addDemand(publicationOnly, pack(leaf(p(h), base = y)))
+            raw.addAdmitted(publicationOnly, pack(leaf(p(h), layer = Layer.DEMAND, base = y)))
             store.persist(direction, sequenceOf(fixture.method to raw))
             val records = allAtEntry(store)
             assertEquals(expected, records.flatMap { record -> decoded(record.conclusion).map { record.premise to it } }.toSet())
@@ -220,7 +219,7 @@ class RecordStoreTest {
         for ((direction, key, leaf) in bad) {
             val store = PersistentRecordStore(m)
             val raw = RunSummaryStore(m)
-            raw.add(key, pack(leaf))
+            raw.addAdmitted(key, pack(leaf))
             assertFails { store.persist(direction, sequenceOf(fixture.method to raw)) }
             assertTrue(allAtEntry(store).isEmpty())
         }
@@ -242,10 +241,10 @@ class RecordStoreTest {
         )
         for ((key, native, _) in cases) {
             val facts = pack(native)
-            raw.add(key, facts)
+            raw.addAdmitted(key, facts)
             assertNull(ops.demandPart(key, facts, Direction.FORWARD))
             assertNull(ops.demandPart(key, facts, Direction.BACKWARD))
-            raw.addDemand(key, pack(leaf(p(h), layer = Layer.DEMAND, base = y)))
+            raw.addAdmitted(key, pack(leaf(p(h), layer = Layer.DEMAND, base = y)))
         }
         store.persist(Direction.FORWARD, sequenceOf(fixture.method to raw))
         val records = store.byExit(fixture.method, fixture.pattern(base = y, path = p(g))).toList()
@@ -277,7 +276,7 @@ class RecordStoreTest {
             val order = if (forwardOrder) listOf(left, right) else listOf(right, left)
             for (leaves in order) {
                 val raw = RunSummaryStore(m)
-                raw.add(key, pack(*leaves.toTypedArray()))
+                raw.addAdmitted(key, pack(*leaves.toTypedArray()))
                 store.persist(Direction.FORWARD, sequenceOf(fixture.method to raw))
             }
             val records = allAtEntry(store)
@@ -292,7 +291,7 @@ class RecordStoreTest {
                 assertEquals(found.size, found.toSet().size)
             }
             val repeated = RunSummaryStore(m)
-            repeated.add(key, pack(*(left + right).toTypedArray()))
+            repeated.addAdmitted(key, pack(*(left + right).toTypedArray()))
             store.persist(Direction.FORWARD, sequenceOf(fixture.method to repeated))
             records.forEach(store::add)
             assertEquals(records.toSet(), allAtEntry(store).toSet())
@@ -315,7 +314,7 @@ class RecordStoreTest {
             val store = PersistentRecordStore(m)
             for (leaves in order) {
                 val raw = RunSummaryStore(m)
-                raw.add(case.key, pack(*leaves.toTypedArray()))
+                raw.addAdmitted(case.key, pack(*leaves.toTypedArray()))
                 store.persist(Direction.FORWARD, sequenceOf(fixture.method to raw))
             }
             val records = allAtEntry(store)
@@ -328,7 +327,7 @@ class RecordStoreTest {
             }
             for (leaves in listOf(case.left, case.right)) {
                 val raw = RunSummaryStore(m)
-                raw.add(case.key, pack(*leaves.toTypedArray()))
+                raw.addAdmitted(case.key, pack(*leaves.toTypedArray()))
                 store.persist(Direction.FORWARD, sequenceOf(fixture.method to raw))
             }
             assertEquals(records.toSet(), allAtEntry(store).toSet())
@@ -343,14 +342,14 @@ class RecordStoreTest {
         val methods = listOf(fixture.method, fixture.key("other-context"), fixture.key(entry = 1))
         for (method in methods) for (direction in Direction.entries) {
             val raw = RunSummaryStore(m)
-            raw.add(key, pack(first))
+            raw.addAdmitted(key, pack(first))
             store.persist(direction, sequenceOf(method to raw))
         }
         val otherKey = premise(p(h))
         val later = leaf(p(h), mark = mu, base = y)
         val raw = RunSummaryStore(m)
-        raw.add(key, pack(later))
-        raw.add(otherKey, pack(first))
+        raw.addAdmitted(key, pack(later))
+        raw.addAdmitted(otherKey, pack(first))
         store.persist(Direction.FORWARD, sequenceOf(fixture.method to raw))
         for (method in methods) {
             val records = allAtEntry(store, method)
@@ -372,7 +371,7 @@ class RecordStoreTest {
         val key = premise(path)
         val target = leaf(path, Tail.ANY_TAINT, mu, e = ex(g), base = y)
         val raw = RunSummaryStore(m)
-        raw.add(key, pack(target))
+        raw.addAdmitted(key, pack(target))
         val store = PersistentRecordStore(m)
         store.persist(Direction.FORWARD, sequenceOf(fixture.method to raw))
         val record = allAtEntry(store).single()
@@ -386,11 +385,11 @@ class RecordStoreTest {
         m.softRefs.cleanup()
         m.softRefs.enable()
         val rebuilt = RunSummaryStore(m)
-        rebuilt.add(key, pack(target))
+        rebuilt.addAdmitted(key, pack(target))
         store.persist(Direction.FORWARD, sequenceOf(fixture.method to rebuilt))
         assertEquals(listOf(record), allAtEntry(store))
         val next = leaf(path.dropLast(1) + g, mark = mu, base = y)
-        rebuilt.add(key, pack(next))
+        rebuilt.addAdmitted(key, pack(next))
         store.persist(Direction.FORWARD, sequenceOf(fixture.method to rebuilt))
         assertEquals(setOf(target, next), allAtEntry(store).flatMap { decoded(it.conclusion) }.toSet())
         assertEquals(2, allAtEntry(store).size)
@@ -403,7 +402,7 @@ class RecordStoreTest {
         store.add(item.record)
         val next = row(premise(p(h)), listOf(leaf(p(h), base = y)))
         val raw = RunSummaryStore(m)
-        raw.add(next.record.premise, next.record.conclusion)
+        raw.addAdmitted(next.record.premise, next.record.conclusion)
         fixture.cancellation.cancel()
         try {
             assertFailsWith<Cancellation.Cancelled> { store.add(next.record) }
@@ -445,8 +444,8 @@ class RecordStoreTest {
         val firstKey = premise(p(f))
         val secondKey = premise(p(h))
         val firstLeaf = leaf(p(g), base = y)
-        first.add(firstKey, pack(firstLeaf))
-        second.add(secondKey, pack(leaf(p(h), base = y)))
+        first.addAdmitted(firstKey, pack(firstLeaf))
+        second.addAdmitted(secondKey, pack(leaf(p(h), base = y)))
         val summaries = sequence {
             yield(fixture.method to first)
             fixture.cancellation.cancel()

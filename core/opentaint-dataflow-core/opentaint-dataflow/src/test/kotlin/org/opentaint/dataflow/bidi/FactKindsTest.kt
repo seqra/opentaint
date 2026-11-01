@@ -82,7 +82,7 @@ class FactKindsTest {
             flowValues.forEach { core.emitAfter(flowPremise, f.inst(0), it) }
             assertEquals(methodLeaves(f.ops, flowValues),
                 methodLeaves(f.ops, core.edges.edgesAt(f.inst(0), flowPremise).map { it.second }.toList()))
-            assertEquals(4L, core.demandLayerEdges)
+            assertEquals(3L, core.demandLayerEdges)
         }
     }
 
@@ -109,7 +109,7 @@ class FactKindsTest {
             assertEquals(4L, core.edgeDeltas, "Three producer results and the raw summary")
             val expected = Conclusion(PathFact(y, emptyList(), Tail.ANY, mt), ExclusionSet.Empty, true)
             assertEquals(setOf(initial to expected), methodEntries(f.ops, core.summaries.all()))
-            assertEquals(setOf(initial to expected), methodEntries(f.ops, core.summaries.demandEdges()))
+            assertEquals(setOf(initial to expected), methodEntries(f.ops, core.summaries.demandEdges(core.mode.direction)))
             assertEquals(setOf(initial to expected), methodEntries(f.ops, f.publications.flatten().asSequence()
                 .map { it.premise to it.conclusion }))
             f.admit(core, ref, Layer.DEMAND, added)
@@ -139,7 +139,7 @@ class FactKindsTest {
         }
     }
 
-    @Test fun `restriction narrows publication without rewriting the raw summary or raw selection`(): Unit {
+    @Test fun `restriction narrows storage and publication while retaining post-statement state`(): Unit {
         val f = MethodAnalysisFixtures()
         f.shared.use {
             val field = f.field("f")
@@ -156,15 +156,16 @@ class FactKindsTest {
             f.drain(core, quantum = 1)
             val raw = Conclusion(PathFact(y, emptyList(), Tail.ANY, mt), ExclusionSet.Empty, true)
             val piece = Conclusion(PathFact(y, listOf(field), Tail.EXACT, mt), ExclusionSet.Empty, true)
-            assertEquals(setOf(initial to raw), methodEntries(f.ops, core.summaries.all()))
-            assertEquals(setOf(initial to piece), methodEntries(f.ops, core.summaries.demandEdges()))
+            assertEquals(setOf(initial to raw), methodEntries(f.ops, core.edges.edgesAt(f.inst(2))))
+            assertEquals(setOf(initial to piece), methodEntries(f.ops, core.summaries.all()))
+            assertEquals(setOf(initial to piece), methodEntries(f.ops, core.summaries.demandEdges(core.mode.direction)))
             assertEquals(setOf(initial to piece), methodEntries(f.ops, f.publications.flatten().asSequence()
                 .map { it.premise to it.conclusion }))
             assertEquals(3L, core.demandLayerEdges)
         }
     }
 
-    @Test fun `raw demand summaries remain when missing exit demand or wrong exit mark rejects every publication`(): Unit {
+    @Test fun `missing exit demand or wrong mark leaves no admitted summary`(): Unit {
         for (missingExit in listOf(false, true)) {
             val f = MethodAnalysisFixtures()
             f.shared.use {
@@ -182,10 +183,11 @@ class FactKindsTest {
                 core.addInitial(initial)
                 f.drain(core)
                 assertEquals(setOf(initial to Conclusion(PathFact(y, emptyList(), Tail.ANY, mt), ExclusionSet.Empty, true)),
-                    methodEntries(f.ops, core.summaries.all()))
-                assertTrue(core.summaries.demandEdges().none())
+                    methodEntries(f.ops, core.edges.edgesAt(f.inst(2))))
+                assertTrue(core.summaries.all().none())
+                assertTrue(core.summaries.demandEdges(core.mode.direction).none())
                 assertTrue(f.publications.isEmpty())
-                assertEquals(3L, core.demandLayerEdges)
+                assertEquals(2L, core.demandLayerEdges)
             }
         }
     }
@@ -209,7 +211,7 @@ class FactKindsTest {
             f.drain(core)
             val expected = Conclusion(PathFact(y, emptyList(), Tail.EXACT, mt), ExclusionSet.Empty, false)
             assertEquals(setOf(premise to expected), methodEntries(f.ops, core.summaries.all()))
-            assertEquals(setOf(premise to expected), methodEntries(f.ops, core.summaries.demandEdges()))
+            assertEquals(setOf(premise to expected), methodEntries(f.ops, core.summaries.demandEdges(core.mode.direction)))
             assertTrue(f.publications.flatten().all { it.premise === premise && it.layer == Layer.NORMAL })
             assertEquals(0L, core.demandLayerEdges)
 
@@ -222,8 +224,9 @@ class FactKindsTest {
             back.emitAfter(first, f.inst(0), f.fact(x, mark = mt))
             f.drain(back)
             val backwards = Conclusion(PathFact(x, emptyList(), Tail.EXACT, mt), ExclusionSet.Empty, false)
-            assertEquals(setOf(f.manager.zero to backwards, first to backwards), methodEntries(f.ops, back.summaries.all()))
-            assertEquals(setOf(f.manager.zero to backwards), methodEntries(f.ops, back.summaries.demandEdges()))
+            assertEquals(setOf(f.manager.zero to backwards, first to backwards), methodEntries(f.ops, back.edges.edgesAt(f.inst(0))))
+            assertEquals(setOf(f.manager.zero to backwards), methodEntries(f.ops, back.summaries.all()))
+            assertEquals(setOf(f.manager.zero to backwards), methodEntries(f.ops, back.summaries.demandEdges(back.mode.direction)))
             assertEquals(setOf(f.manager.zero to backwards), methodEntries(f.ops, f.publications.flatten().asSequence()
                 .map { it.premise to it.conclusion }))
             assertEquals(0L, back.demandLayerEdges)
@@ -248,7 +251,7 @@ class FactKindsTest {
             val initials = core.initials.all().toSet()
             val processed = f.processed.toList()
             val raw = methodEntries(f.ops, core.summaries.all())
-            val selected = methodEntries(f.ops, core.summaries.demandEdges())
+            val selected = methodEntries(f.ops, core.summaries.demandEdges(core.mode.direction))
             val publications = f.publications.toList()
             val previousSteps = core.steps
             val previousEdges = core.edgeDeltas
@@ -261,7 +264,7 @@ class FactKindsTest {
             assertEquals(initials, core.initials.all().toSet())
             assertEquals(processed, f.processed)
             assertEquals(raw, methodEntries(f.ops, core.summaries.all()))
-            assertEquals(selected, methodEntries(f.ops, core.summaries.demandEdges()))
+            assertEquals(selected, methodEntries(f.ops, core.summaries.demandEdges(core.mode.direction)))
             assertEquals(publications, f.publications)
             assertEquals(listOf(first, second), f.addedLinks.map { it.first })
             assertEquals(setOf(first, second), f.links(core).asSequence().map { it.caller }.toSet())

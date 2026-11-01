@@ -89,7 +89,6 @@ class NaiveClosureFanoutTest {
             try {
                 actual.dataOnly().assertEquivalent(expected.dataOnly(), universe)
                 val wanted = buildSet {
-                    add(ObservedEdge(consumerKeys.first(), zero, Conclusion(ZERO_FACT, ExclusionSet.Empty, false)))
                     add(ObservedEdge(consumerKeys.first(), zero,
                         Conclusion(PathFact(y, emptyList(), Tail.EXACT, u), ExclusionSet.Empty, mayConsumers)))
                     if (mayConsumers) add(ObservedEdge(consumerKeys.first(), zero,
@@ -97,6 +96,9 @@ class NaiveClosureFanoutTest {
                 }
                 for (caller in consumerKeys) assertEquals(wanted.map { it.copy(method = caller) }.toSet(),
                     actual.rawSummaries.filter { it.method == caller }.toSet(), "consumer=$caller")
+                for (caller in consumerKeys) assertContains(actual.processed,
+                    ObservedEdge(caller, zero, Conclusion(ZERO_FACT, ExclusionSet.Empty, false), callerMethod.inst(2)),
+                    "ZERO still traverses the body; its DATA-only exit demand does not admit a Reach summary")
                 assertEquals(setOf(u, v), actual.rawSummaries.filter { it.method == producer &&
                     it.conclusion.fact.base == y && !it.conclusion.demand }.map { it.conclusion.fact.mark }.toSet())
                 val parts = schedule.subscriptions.filter { it.callee == callee && it.caller in consumerKeys &&

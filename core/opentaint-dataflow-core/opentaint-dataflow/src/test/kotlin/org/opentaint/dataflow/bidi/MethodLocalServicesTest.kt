@@ -270,7 +270,8 @@ class MethodLocalServicesTest {
                     add(f.manager.zero to Conclusion(ZERO_FACT, ExclusionSet.Empty, false))
                     if (seedKind == "matching") add(f.manager.zero to Conclusion(source.edge.to, ExclusionSet.Empty, false))
                 }
-                assertEquals(expected, methodEntries(f.ops, actor.summaries.all()), "boundary=$boundary, $seedKind")
+                assertEquals(expected, methodEntries(f.ops, f.completedBoundary(actor)), "boundary=$boundary, $seedKind")
+                assertTrue(actor.summaries.all().none(), "No complete current exit demand exists")
                 assertNull(actor.sourceHits)
                 assertTrue(f.events.none { it is RunEvent.MarkRequestsIn || it is RunEvent.MarkRequestsIn })
             }

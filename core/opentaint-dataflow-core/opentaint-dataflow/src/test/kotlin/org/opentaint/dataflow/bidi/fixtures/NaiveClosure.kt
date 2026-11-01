@@ -290,6 +290,12 @@ class NaiveClosure(
         val key = premise.mapTo(linkedSetOf(), ::endpoint)
         val result = if (flow && conclusion.fact.tail == Tail.EXACT)
             conclusion.copy(fact = conclusion.fact.copy(tail = Tail.STAR)) else conclusion
+        if (targetControls) {
+            // The current oracle has one admitted relation. Frozen historical
+            // controls below keep their original raw/selected split.
+            publish(method, key, result)
+            return
+        }
         val raw = ObservedEdge(method, key, result)
         if (!rawSummaries.add(raw)) return
         publish(method, key, result)
@@ -301,16 +307,38 @@ class NaiveClosure(
             for (member in premise) {
                 val guides = inputs.demand.filter { it.first == method }.map { it.second } + listOfNotNull(staticCarry(member))
                 for (demand in guides)
-                    demandReference.restrict(member, conclusion, demand)?.let { add(it) }
+                    demandReference.restrict(member, conclusion, demand)?.let {
+                        add(if (targetControls) limitSelectedSummary(it, demand.exit) else it)
+                    }
             }
         }
         for (piece in pieces) {
             val pub = ObservedEdge(method, premise, piece)
-            if (selectedForDemand) selectedDemand += pub
+            if (targetControls) rawSummaries += pub
+            val finalSelected = if (targetControls)
+                piece.demand || premise.size > 1 || (!forward && isZero(premise)) else selectedForDemand
+            if (finalSelected) selectedDemand += pub
             if (publications.add(pub)) work += {
                 for (part in subscriptions.toList()) if (part.callee == method) match(part, pub)
             }
         }
+    }
+
+    /** Independent scalar cut after exact C5. No production DemandStore or packed limit is used. */
+    private fun limitSelectedSummary(value: Conclusion, exit: Pattern?): Conclusion {
+        val endpoint = exit ?: return value
+        if (endpoint.fact.base == AccessPathBase.Zero || value.fact.base == AccessPathBase.Zero) return value
+        val depth = endpoint.fact.path.count { it.isCounted() }
+        val budget = if (depth >= config.fieldLimit) config.fieldLimit else depth + 1
+        var used = 0
+        val prefix = ArrayList<Int>()
+        for (accessor in value.fact.path) {
+            if (accessor.isCounted() && used++ == budget)
+                return value.copy(fact = value.fact.copy(path = prefix, tail = Tail.ANY),
+                    exclusion = ExclusionSet.Empty, demand = true)
+            prefix += accessor
+        }
+        return value
     }
 
     private fun walk(method: MethodKey, node: CommonInst, plan: CallPlan, items: List<PlanItem>,

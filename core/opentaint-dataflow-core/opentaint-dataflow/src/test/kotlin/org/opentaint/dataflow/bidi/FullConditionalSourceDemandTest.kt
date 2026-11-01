@@ -73,7 +73,7 @@ class FullConditionalSourceDemandTest {
             "Definite exact FULL request answers retain NORMAL")
         assertTrue(run1.summaries.all().none { (_, facts) -> facts.layer == Layer.NORMAL &&
             exact in f.ops.leaves(facts).toList() }, "A split arm cannot keep the other required input as an implicit NORMAL assumption")
-        assertTrue(run1.summaries.demandEdges().any { (_, facts) -> exact in f.ops.leaves(facts).toList() },
+        assertTrue(run1.summaries.demandEdges(run1.mode.direction).any { (_, facts) -> exact in f.ops.leaves(facts).toList() },
             "The source waits for its full condition, then marks each weakened arm DEMAND")
         val nativeCandidates = f.records.byExit(helper, exact).toList()
         assertTrue(nativeCandidates.none { it.direction == Direction.FORWARD &&

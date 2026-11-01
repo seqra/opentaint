@@ -80,7 +80,7 @@ class ExactDemandMaySourcePermissionTest {
             val run1 = f.results.first().analyzers.single { it.key == c.factory }
             assertTrue(run1.summaries.all().any { (p, facts) -> p.isZero && facts.layer == Layer.NORMAL &&
                 exact in f.ops.leaves(facts).toList() })
-            assertTrue(run1.summaries.demandEdges().none { (p, facts) -> p.isZero && exact in f.ops.leaves(facts).toList() },
+            assertTrue(run1.summaries.demandEdges(run1.mode.direction).none { (p, facts) -> p.isZero && exact in f.ops.leaves(facts).toList() },
                 "A known exact FULL source is not a demand")
             assertTrue(f.records.byExit(c.factory, exact).any { it.direction == Direction.FORWARD &&
                 it.premise.isZero && it.conclusion.layer == Layer.NORMAL && exact in f.ops.leaves(it.conclusion).toList() })
@@ -125,7 +125,7 @@ class ExactDemandMaySourcePermissionTest {
         assertEquals(listOf(1, 2, 3), f.configs.map { it.index })
         val exact = f.program.pattern(AccessPathBase.Return, mark = c.u)
         val run1 = f.results.first().analyzers.single { it.key == c.factory }
-        assertTrue(run1.summaries.demandEdges().any { (_, facts) -> facts.layer == Layer.DEMAND &&
+        assertTrue(run1.summaries.demandEdges(run1.mode.direction).any { (_, facts) -> facts.layer == Layer.DEMAND &&
             exact in f.ops.leaves(facts).toList() }, "An exact conclusion does not remove uncertainty in its guard")
         assertTrue(f.records.byExit(c.factory, exact).none(), "There is no NORMAL exact producer to replay")
         val incoming = checkNotNull(f.configs[1].demand)

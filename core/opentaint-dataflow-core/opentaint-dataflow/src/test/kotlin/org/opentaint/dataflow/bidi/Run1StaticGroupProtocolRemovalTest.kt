@@ -145,7 +145,7 @@ class Run1StaticGroupProtocolRemovalTest {
             assertEquals(2, t.actor.staticBatch.interests.size, "Exercise the retained reference protocol")
             t.f.drain(t.actor, quantum = 1)
             val referenceRaw = t.decoded(t.actor.summaries.all())
-            val referenceSelected = t.decoded(t.actor.summaries.demandEdges())
+            val referenceSelected = t.decoded(t.actor.summaries.demandEdges(t.actor.mode.direction))
             assertEquals(2, t.service.statistics().ownerReplies - before)
 
             // A fresh caller actor has no old suffix results to mask an omitted result.
@@ -158,13 +158,13 @@ class Run1StaticGroupProtocolRemovalTest {
             t.f.drain(candidate, quantum = 1)
             assertEquals(priorReplies, t.service.statistics().ownerReplies)
             assertEquals(referenceRaw, t.decoded(candidate.summaries.all()))
-            assertEquals(referenceSelected, t.decoded(candidate.summaries.demandEdges()))
+            assertEquals(referenceSelected, t.decoded(candidate.summaries.demandEdges(candidate.mode.direction)))
             val expected = setOf(argument, alias).flatMap { base -> listOf(
                 t.initial to Conclusion(t.f.pattern(base, listOf(left), Tail.EXACT, t.f.groupMark()).fact,
                     ExclusionSet.Empty, true),
                 t.initial to Conclusion(t.f.pattern(base, listOf(right), Tail.ANY, other).fact,
                     ExclusionSet.Empty, true)) }.toSet()
-            assertEquals(expected, t.decoded(candidate.summaries.demandEdges()),
+            assertEquals(expected, t.decoded(candidate.summaries.demandEdges(candidate.mode.direction)),
                 "A genuine raw static-to-return effect still enables the alias arm")
 
             t.actor.freeze(); candidate.freeze()
@@ -187,12 +187,12 @@ class Run1StaticGroupProtocolRemovalTest {
         val part = t.subscription()
         t.actor.applyStaticSummary(part, pub, 0); t.f.drain(t.actor)
         val raw = t.decoded(t.actor.summaries.all())
-        val demand = t.decoded(t.actor.summaries.demandEdges())
+        val demand = t.decoded(t.actor.summaries.demandEdges(t.actor.mode.direction))
         repeat(4) { t.actor.applyStaticSummary(part, pub, 0) }
         assertTrue(t.actor.staticBatch.interests.isEmpty())
         t.f.drain(t.actor, quantum = 1)
         assertEquals(raw, t.decoded(t.actor.summaries.all()))
-        assertEquals(demand, t.decoded(t.actor.summaries.demandEdges()))
+        assertEquals(demand, t.decoded(t.actor.summaries.demandEdges(t.actor.mode.direction)))
     }
 
     @Test fun `computed output erases its method pair and only the output first request wakes writers`() {
@@ -204,7 +204,7 @@ class Run1StaticGroupProtocolRemovalTest {
             assertTrue(t.actor.staticBatch.interests.isEmpty(), "An answered original needs no unary input join")
             assertTrue(t.actor.staticBatch.supplies.isNotEmpty())
             val expected = emptySet<Pair<PremiseKey, Conclusion>>()
-            assertEquals(expected, t.decoded(t.actor.summaries.demandEdges()))
+            assertEquals(expected, t.decoded(t.actor.summaries.demandEdges(t.actor.mode.direction)))
             val before = t.service.statistics().ownerReplies
             t.f.drain(t.actor, quantum = 1)
             assertEquals(before, t.service.statistics().ownerReplies)
@@ -226,7 +226,7 @@ class Run1StaticGroupProtocolRemovalTest {
                 flowWriters += StaticFlowWriter(t.observer, 23, target)
             })
             assertEquals(listOf(23L), late.filterIsInstance<StaticOwnerEffect.WriterInterest>().map { it.id })
-            assertEquals(expected, t.decoded(t.actor.summaries.demandEdges()))
+            assertEquals(expected, t.decoded(t.actor.summaries.demandEdges(t.actor.mode.direction)))
         }
     }
 
@@ -234,10 +234,10 @@ class Run1StaticGroupProtocolRemovalTest {
         val store = RunSummaryStore(t.f.manager)
         val exact = t.f.run1Fact(STATIC, t.target)
         val selected = t.f.ops.leaves(exact).single()
-        assertNotNull(store.add(t.initial, exact))
+        assertNotNull(store.addAdmitted(t.initial, exact))
         for (value in listOf(t.f.run1Fact(STATIC, t.target, full = t.f.mark("output")),
             t.f.run1Fact(STATIC, t.target, Tail.ANY_TAINT), t.f.run1Fact(STATIC, t.target, Tail.ANY))) {
-            store.add(t.initial, value)
+            store.addAdmitted(t.initial, value)
             assertTrue(store.borrow(t.initial).any { current -> t.f.ops.leaves(current).any { it == selected } },
                 "Incoming subsumption and delta subtraction cannot remove the accepted exact leaf")
         }
@@ -257,7 +257,7 @@ class Run1StaticGroupProtocolRemovalTest {
             t.ground(); t.callPlan()
             t.actor.applyStaticSummary(t.subscription(), Publication(t.initial, t.f.run1Fact(returned)), 0)
             t.f.drain(t.actor)
-            assertEquals(exactClass, t.actor.summaries.demandEdges().any(),
+            assertEquals(exactClass, t.actor.summaries.demandEdges(t.actor.mode.direction).any(),
                 "The diagnostic drops field premises but keeps exact global markers")
             assertTrue(t.actor.staticBatch.interests.isEmpty())
         }

@@ -19,11 +19,10 @@ class FlowBackedSummaryStoreTest {
             val store = RunSummaryStore(m, flowBacked = true)
             for ((initial, facts) in if (flowFirst) listOf(flowInitial to flow, markedInitial to marked)
                 else listOf(markedInitial to marked, flowInitial to flow)) {
-                store.add(initial, facts)
-                store.addDemand(initial, facts)
+                store.addAdmitted(initial, facts)
             }
             assertEquals(listOf(flowInitial to flow), store.all().toList())
-            assertEquals(listOf(flowInitial to flow), store.demandEdges().toList())
+            assertEquals(listOf(flowInitial to flow), store.demandEdges(Direction.FORWARD).toList())
             assertTrue(store.borrow(markedInitial).none())
         }
     }
@@ -34,12 +33,12 @@ class FlowBackedSummaryStoreTest {
         val marked = pack(leaf(p(f), Tail.ANY, layer = Layer.DEMAND, base = y)) as TaintTree
         val flow = pack(leaf(p(), Tail.ANY, MarkSlot.STAR, Layer.DEMAND, base = y))
         val store = RunSummaryStore(m, flowBacked = true)
-        store.add(flowInitial, flow)
-        assertNull(store.add(markedInitial, marked))
-        val restored = assertNotNull(store.add(markedInitial, marked.withProtection(marked.root))) as TaintTree
+        store.addAdmitted(flowInitial, flow)
+        assertNull(store.addAdmitted(markedInitial, marked))
+        val restored = assertNotNull(store.addAdmitted(markedInitial, marked.withProtection(marked.root))) as TaintTree
         assertNotNull(restored.nonSubsumable)
         assertEquals(2, store.all().count())
-        assertNull(store.add(markedInitial, marked.withProtection(marked.root)))
+        assertNull(store.addAdmitted(markedInitial, marked.withProtection(marked.root)))
     }
 
     @Test fun `partial output and cross mark relations keep their guidance`(): Unit = with(v) {
@@ -50,8 +49,8 @@ class FlowBackedSummaryStoreTest {
             leaf(p(f), Tail.ANY, mu, Layer.DEMAND, base = y))
         val flow = pack(leaf(p(f), Tail.ANY, MarkSlot.STAR, Layer.DEMAND, base = y))
         val store = RunSummaryStore(m, flowBacked = true)
-        store.add(flowInitial, flow)
-        val delta = assertNotNull(store.add(markedInitial, marked))
+        store.addAdmitted(flowInitial, flow)
+        val delta = assertNotNull(store.addAdmitted(markedInitial, marked))
         assertEquals(setOf(leaf(p(g), Tail.ANY, mt, Layer.DEMAND, base = y),
             leaf(p(f), Tail.ANY, mu, Layer.DEMAND, base = y)), decoded(delta))
     }
@@ -60,11 +59,11 @@ class FlowBackedSummaryStoreTest {
         val initial = premise(tail = Tail.STAR)
         val flowInitial = premise(tail = Tail.STAR, mark = MarkSlot.STAR)
         val store = RunSummaryStore(m, flowBacked = true)
-        store.add(flowInitial, pack(leaf(p(), Tail.ANY, MarkSlot.STAR, Layer.DEMAND)))
+        store.addAdmitted(flowInitial, pack(leaf(p(), Tail.ANY, MarkSlot.STAR, Layer.DEMAND)))
         val sameBase = pack(leaf(p(), Tail.ANY, layer = Layer.DEMAND))
-        assertNull(store.add(initial, sameBase))
+        assertNull(store.addAdmitted(initial, sameBase))
         val exact = pack(leaf(p(), Tail.EXACT, layer = Layer.DEMAND, base = y))
-        store.add(flowInitial, pack(leaf(p(), Tail.ANY, MarkSlot.STAR, Layer.DEMAND, base = y)))
-        assertNotNull(store.add(initial, exact))
+        store.addAdmitted(flowInitial, pack(leaf(p(), Tail.ANY, MarkSlot.STAR, Layer.DEMAND, base = y)))
+        assertNotNull(store.addAdmitted(initial, exact))
     }
 }

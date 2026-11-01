@@ -39,7 +39,7 @@ class CorrelatedConcreteEngineTest {
         val initial = premise(tail = Tail.STAR, mark = MarkSlot.STAR, e = ex(f))
         val output = fixture.fact(base = y, tail = Tail.STAR, mark = MarkSlot.STAR, exclusion = ex(g))
         val summaries = RunSummaryStore(m, flowBacked = true)
-        assertNotNull(summaries.add(initial, output))
+        assertNotNull(summaries.addAdmitted(initial, output))
         val records = PersistentRecordStore(m)
         records.persist(Direction.FORWARD, sequenceOf(fixture.method to summaries))
         val record = records.byEntry(fixture.method, initial.toPattern()).single()

@@ -186,7 +186,7 @@ class StaticConditionalRequestJoinTest {
             assertEquals(0, service.statistics().writerRows)
             assertEquals(0, service.statistics().flowWriterRows)
             assertTrue(actor.summaries.all().none())
-            assertTrue(actor.summaries.demandEdges().none())
+            assertTrue(actor.summaries.demandEdges(actor.mode.direction).none())
             assertTrue(f.publications.flatten().isEmpty())
             val replies = service.statistics().ownerReplies
             for (index in order) actor.localServices.conjunction(edge, members[index],

@@ -48,11 +48,10 @@ class FlowBackedSameBaseTest {
             val offers = if (flowFirst) listOf(abstract to cover, concrete to taint)
                 else listOf(concrete to taint, abstract to cover)
             for ((key, value) in offers) {
-                store.add(key, value)
-                store.addDemand(key, value)
+                store.addAdmitted(key, value)
             }
             assertTrue(store.borrow(concrete).none())
-            assertTrue(store.demandEdges().none { it.first === concrete })
+            assertTrue(store.demandEdges(Direction.FORWARD).none { it.first === concrete })
             assertTrue(store.all().any { it.first === abstract && it.second is FlowTree })
         }
     }
@@ -64,9 +63,9 @@ class FlowBackedSameBaseTest {
         val taint = marked(listOf(listOf(f, g), listOf(h)))
         for (flowFirst in listOf(false, true)) {
             val store = RunSummaryStore(m, flowBacked = true)
-            if (flowFirst) store.add(abstract, flow())
-            store.add(concrete, taint)
-            if (!flowFirst) store.add(abstract, flow())
+            if (flowFirst) store.addAdmitted(abstract, flow())
+            store.addAdmitted(concrete, taint)
+            if (!flowFirst) store.addAdmitted(abstract, flow())
             assertTrue(store.borrow(concrete).none())
         }
     }
@@ -91,9 +90,9 @@ class FlowBackedSameBaseTest {
         val taint = marked(listOf(emptyList(), listOf(f, h), listOf(g)))
         for (flowFirst in listOf(false, true)) {
             val store = RunSummaryStore(m, flowBacked = true)
-            if (flowFirst) store.add(abstract, flow(listOf(listOf(f))))
-            store.add(concrete, taint)
-            if (!flowFirst) store.add(abstract, flow(listOf(listOf(f))))
+            if (flowFirst) store.addAdmitted(abstract, flow(listOf(listOf(f))))
+            store.addAdmitted(concrete, taint)
+            if (!flowFirst) store.addAdmitted(abstract, flow(listOf(listOf(f))))
             assertEquals(setOf(emptyList(), listOf(g)), paths(store.borrow(concrete)))
         }
     }
@@ -103,12 +102,12 @@ class FlowBackedSameBaseTest {
         val concrete = initial()
         val abstract = initial(mark = MarkSlot.STAR)
         val store = RunSummaryStore(m, flowBacked = true)
-        store.add(abstract, flow())
+        store.addAdmitted(abstract, flow())
         val exact = m.factsOf(PathFact(base, listOf(f), Tail.EXACT, MarkSlot.Concrete(t)),
             ExclusionSet.Empty, Layer.DEMAND)
-        assertNotNull(store.add(concrete, exact))
+        assertNotNull(store.addAdmitted(concrete, exact))
         val protected = marked(listOf(listOf(g))).let { it.withProtection(it.root) }
-        assertNotNull(store.add(concrete, protected))
+        assertNotNull(store.addAdmitted(concrete, protected))
         assertEquals(setOf(listOf(f), listOf(g)), paths(store.borrow(concrete)))
         assertTrue(store.borrow(concrete).filterIsInstance<TaintTree>().any { it.nonSubsumable != null })
     }

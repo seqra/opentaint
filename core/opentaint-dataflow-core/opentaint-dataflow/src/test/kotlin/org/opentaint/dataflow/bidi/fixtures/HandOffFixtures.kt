@@ -6,7 +6,7 @@ import org.opentaint.dataflow.bidi.driver.ReportBuilder
 import org.opentaint.dataflow.bidi.engine.*
 import org.opentaint.ir.api.common.cfg.CommonInst
 
-/** Real frozen method actors with explicitly stated raw and selected barrier inputs. */
+/** Real frozen method actors with explicitly stated admitted barrier inputs. */
 class HandOffFixtures(val index: Int = 1, val L: Int = maxOf(1, index - 1)) : AutoCloseable {
     val finite = MethodAnalysisFixtures()
     val manager get() = finite.manager
@@ -50,14 +50,10 @@ class HandOffFixtures(val index: Int = 1, val L: Int = maxOf(1, index - 1)) : Au
 
     fun drain(core: RunMethodAnalyzer, quantum: Int = 1000): Int = finite.drain(core, quantum)
 
-    /** These two methods prescribe the stored inputs; neither computes demand selection. */
-    fun raw(key: MethodKey, premise: PremiseKey, facts: Facts): Facts? {
+    /** Prescribe an admitted row. The outgoing view computes final-header selection. */
+    fun summary(key: MethodKey, premise: PremiseKey, facts: Facts): Facts? {
         check(!frozen)
-        return core(key).summaries.add(premise, facts)
-    }
-    fun selected(key: MethodKey, premise: PremiseKey, facts: Facts): Facts? {
-        check(!frozen)
-        return core(key).summaries.addDemand(premise, facts)
+        return core(key).summaries.addAdmitted(premise, facts)
     }
     fun hit(key: MethodKey, statement: CommonInst, forward: PathEdge): Boolean {
         check(!frozen)

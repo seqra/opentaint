@@ -76,7 +76,7 @@ class OwaspDemandCycleTest {
     }
 
     private fun selected(f: DriverFixtures, result: RunResult<RunMethodAnalyzer>): Set<Selected> =
-        result.analyzers.flatMap { actor -> actor.summaries.demandEdges().flatMap { (premise, facts) ->
+        result.analyzers.flatMap { actor -> actor.summaries.demandEdges(actor.mode.direction).flatMap { (premise, facts) ->
             f.ops.leaves(facts).map { Selected(actor.key, premise.members.map { it.toPattern() }.toSet(),
                 Conclusion(it.fact, it.exclusion, facts.layer == Layer.DEMAND)) }
         } }.toSet()
@@ -186,7 +186,7 @@ class OwaspDemandCycleTest {
             val runOne = f.results.first().analyzers.single { it.key == helper }
             val flowInput = p.pattern(argument, tail = Tail.STAR, mark = MarkSlot.STAR)
             val flowReturn = p.pattern(returned, tail = Tail.STAR, mark = MarkSlot.STAR)
-            assertTrue(runOne.summaries.demandEdges().any { (premise, facts) ->
+            assertTrue(runOne.summaries.demandEdges(runOne.mode.direction).any { (premise, facts) ->
                 premise.members.singleOrNull()?.toPattern() == flowInput &&
                     flowReturn in f.ops.leaves(facts).toList()
             }, "The actual field write creates the run-1 STAR return demand")

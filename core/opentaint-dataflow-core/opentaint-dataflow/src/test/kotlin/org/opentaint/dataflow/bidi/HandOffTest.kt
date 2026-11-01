@@ -79,8 +79,7 @@ class HandOffTest {
             val target = f.pattern(returned, tail = Tail.ANY, mark = group)
             val fact = f.fact(returned, tail = Tail.ANY, mark = group, layer = Layer.DEMAND)
             for (origin in listOf(local, static)) {
-                f.raw(key, origin, fact)
-                f.selected(key, origin, fact)
+                f.summary(key, origin, fact)
             }
             val handOff = HandOff.of(f.config, f.result(), f.shared)
             val normalizedStatic = static.toPattern().let { it.copy(fact = it.fact.copy(tail = Tail.STAR)) }
@@ -91,7 +90,7 @@ class HandOffTest {
     }
 
     @Test
-    fun `forward handoff reads selected demand pieces and leaves normal singleton records and raw summaries separate`(): Unit {
+    fun `forward handoff filters admitted demand pieces and persists normal singleton rows`(): Unit {
         for (index in listOf(1, 3)) HandOffFixtures(index).use { f ->
             val key = f.key()
             val a = f.field("a")
@@ -101,9 +100,8 @@ class HandOffTest {
             val initial = f.initial(x, listOf(a), mark = t)
             val recordFact = f.fact(returned, listOf(b), mark = u)
             val selectedFact = f.fact(returned, listOf(b), Tail.ANY, u, layer = Layer.DEMAND)
-            f.raw(key, initial, recordFact)
-            f.raw(key, initial, selectedFact)
-            f.selected(key, initial, selectedFact)
+            f.summary(key, initial, recordFact)
+            f.summary(key, initial, selectedFact)
             val result = f.result()
             val before = result.analyzers.single().summaries.all().toList()
             val handOff = HandOff.of(f.config, result, f.shared)
@@ -112,7 +110,7 @@ class HandOffTest {
             assertEquals(mapOf(key to 1), handOff.demandEdges)
             assertEquals(0, handOff.seeds.size)
             assertEquals(before, result.analyzers.single().summaries.all().toList())
-            assertTrue(f.records.byEntry(key, initial.toPattern()).none(), "Hand-off does not persist raw records")
+            assertTrue(f.records.byEntry(key, initial.toPattern()).none(), "Hand-off does not persist records")
             f.records.persist(f.config.direction, result.analyzers.asSequence().map { it.key to it.summaries })
             val record = f.records.byEntry(key, initial.toPattern()).single()
             assertSame(initial, record.premise)
@@ -133,14 +131,13 @@ class HandOffTest {
             val premise = f.premise(a, b)
             val target = f.pattern(returned, listOf(f.field("result")), mark = v)
             val normal = f.fact(target.fact.base, target.fact.path, target.fact.tail, target.fact.mark)
-            f.raw(key, premise, normal)
-            f.selected(key, premise, normal)
+            f.summary(key, premise, normal)
             val result = f.result()
             val handOff = HandOff.of(f.config, result, f.shared)
             assertEquals(setOf(DemandPattern(target, a.toPattern()), DemandPattern(target, b.toPattern())),
                 explicit(f, handOff, key))
             assertEquals(mapOf(key to 2), handOff.demandEdges)
-            assertEquals(listOf(premise to normal), result.analyzers.single().summaries.demandEdges().toList())
+            assertEquals(listOf(premise to normal), result.analyzers.single().summaries.demandEdges(result.direction).toList())
             f.records.persist(Direction.FORWARD, result.analyzers.asSequence().map { it.key to it.summaries })
             assertTrue(f.records.byEntry(key, a.toPattern()).none())
             assertTrue(f.records.byEntry(key, b.toPattern()).none())
@@ -148,7 +145,7 @@ class HandOffTest {
     }
 
     @Test
-    fun `backward handoff separates zero seed paths nonzero selected requirements and normal raw records`(): Unit {
+    fun `backward handoff separates zero seed paths nonzero selected requirements and admitted normal records`(): Unit {
         HandOffFixtures(index = 2).use { f ->
             val key = f.key()
             val t = MarkSlot.Concrete(f.mark("T"))
@@ -160,13 +157,10 @@ class HandOffTest {
             val demandFact = f.fact(demandPattern.fact.base, demandPattern.fact.path, mark = t, layer = Layer.DEMAND)
             val seedPattern = f.pattern(y, listOf(f.field("seed")), mark = v)
             val seedFact = f.fact(seedPattern.fact.base, seedPattern.fact.path, mark = v)
-            f.raw(key, initial, recordFact)
-            f.raw(key, initial, demandFact)
-            f.selected(key, initial, demandFact)
-            f.raw(key, f.manager.zero, seedFact)
-            f.selected(key, f.manager.zero, seedFact)
-            f.raw(key, f.manager.zero, Reach.NORMAL)
-            f.selected(key, f.manager.zero, Reach.NORMAL)
+            f.summary(key, initial, recordFact)
+            f.summary(key, initial, demandFact)
+            f.summary(key, f.manager.zero, seedFact)
+            f.summary(key, f.manager.zero, Reach.NORMAL)
             val result = f.result()
             val handOff = HandOff.of(f.config, result, f.shared)
             val zero = f.manager.zero.toPattern()
@@ -198,7 +192,7 @@ class HandOffTest {
             assertTrue(f.hit(a, f.inst(0), other))
             assertTrue(f.hit(b, f.inst(0), first))
             val native = f.initial(returned, mark = t)
-            f.raw(recordOnly, native, f.fact(x, mark = t))
+            f.summary(recordOnly, native, f.fact(x, mark = t))
             val result = f.result()
             f.records.persist(Direction.BACKWARD, result.analyzers.asSequence().map { it.key to it.summaries })
             val handOff = HandOff.of(f.config, result, f.shared)
@@ -337,7 +331,7 @@ class HandOffTest {
         for (index in listOf(1, 2, 3)) for (status in listOf(RunStatus.TIMEOUT, RunStatus.OOM, RunStatus.FAILED)) {
             HandOffFixtures(index).use { f ->
                 val key = f.key()
-                f.selected(key, f.manager.zero, f.fact(returned, tail = Tail.ANY, layer = Layer.DEMAND))
+                f.summary(key, f.manager.zero, f.fact(returned, tail = Tail.ANY, layer = Layer.DEMAND))
                 assertFails("index=$index status=$status") {
                     HandOff.of(f.config, f.result(status), f.shared)
                 }
@@ -374,7 +368,7 @@ class HandOffTest {
             val normalTarget = Conclusion(target, ExclusionSet.Empty, false)
             val forwardExpected = setOf<Pair<PremiseKey, Conclusion>>(premise to normalTarget)
             assertEquals(forwardExpected, decoded(f.ops, forward.summaries.all()))
-            assertEquals(forwardExpected, decoded(f.ops, forward.summaries.demandEdges()))
+            assertEquals(forwardExpected, decoded(f.ops, forward.summaries.demandEdges(forward.mode.direction)))
             val report = ReportBuilder()
             val forwardResult = RunResult(RunStatus.COMPLETE, listOf(forward), 3, Direction.FORWARD)
             val forwardHandOff = HandOff.of(forwardConfig, forwardResult, f.shared)
@@ -395,8 +389,10 @@ class HandOffTest {
             val aRequirement = Conclusion(a.toPattern().fact, ExclusionSet.Empty, true)
             val bRequirement = Conclusion(b.toPattern().fact, ExclusionSet.Empty, true)
             val independent = setOf<Pair<PremiseKey, Conclusion>>(requirement to aRequirement, requirement to bRequirement)
-            assertEquals(independent + (requirement to normalTarget), decoded(f.ops, backward.summaries.all()))
-            assertEquals(independent, decoded(f.ops, backward.summaries.demandEdges()))
+            // The identity candidate has no paired exit permission and must
+            // leave no unrestricted NORMAL summary behind.
+            assertEquals(independent, decoded(f.ops, backward.summaries.all()))
+            assertEquals(independent, decoded(f.ops, backward.summaries.demandEdges(backward.mode.direction)))
             f.records.persist(Direction.BACKWARD, sequenceOf(f.key to backward.summaries))
             assertTrue(f.records.byExit(f.key, a.toPattern()).none(), "A reversed literal is not a normal one-literal record")
             assertTrue(f.records.byExit(f.key, b.toPattern()).none(), "Each literal branch keeps its DEMAND layer")

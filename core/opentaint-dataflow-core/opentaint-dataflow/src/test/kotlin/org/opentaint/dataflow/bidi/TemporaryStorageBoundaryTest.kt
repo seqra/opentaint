@@ -7,6 +7,7 @@ import org.opentaint.dataflow.bidi.store.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -56,20 +57,20 @@ class TemporaryStorageBoundaryTest {
     }
 
     @Test
-    fun `raw and publication summaries reject temporary conclusions before either collection changes`(): Unit {
+    fun `admitted summaries reject temporary conclusions before storage changes`(): Unit {
         val store = RunSummaryStore(m)
         for (flow in listOf(false, true)) for (layer in Layer.entries) {
             val bad = facts(temp, flow, layer)
-            assertFailsWith<IllegalStateException> { store.add(premise(flow), bad) }
-            assertFailsWith<IllegalStateException> { store.addDemand(premise(flow), bad) }
+            assertFailsWith<IllegalStateException> { store.addAdmitted(premise(flow), bad) }
             assertTrue(store.all().none())
-            assertTrue(store.demandEdges().none())
+            assertTrue(store.demandEdges(Direction.FORWARD).none())
         }
         val good = facts(AccessPathBase.Return, false, Layer.NORMAL)
-        assertNotNull(store.add(m.zero, good))
-        assertNotNull(store.addDemand(m.zero, good))
+        assertNotNull(store.addAdmitted(m.zero, good))
+        assertNull(store.addAdmitted(m.zero, good))
         assertEquals(listOf(m.zero to good), store.all().toList())
-        assertEquals(listOf(m.zero to good), store.demandEdges().toList())
+        assertTrue(store.demandEdges(Direction.FORWARD).none())
+        assertEquals(listOf(m.zero to good), store.demandEdges(Direction.BACKWARD).toList())
     }
 
     @Test

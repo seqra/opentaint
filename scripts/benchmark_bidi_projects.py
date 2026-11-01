@@ -28,6 +28,34 @@ def heap_memory(value):
     return value.lower()
 
 
+def positive_iteration(value):
+    if not re.fullmatch(r'[1-9][0-9]*', value):
+        raise argparse.ArgumentTypeError('Use a positive run number such as 4')
+    return int(value)
+
+
+def iteration_profile_windows(targets, latest_run, engine_active, started):
+    """A target is eligible only while its observed engine is still active."""
+    if not engine_active or latest_run not in targets or latest_run not in started:
+        return []
+    return [(f'run-{latest_run}-normal', started[latest_run], 60)]
+
+
+def dump_jfr(pid, directory, stem, elapsed, latest_run):
+    """Preserve a completed phase before the bounded recording rolls it out."""
+    before = time.monotonic()
+    try:
+        result = subprocess.run(
+            [str(Path(os.environ['JAVA_HOME']) / 'bin/jcmd'), str(pid),
+             'JFR.dump', f'filename={directory}/{stem}.jfr'],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=30)
+        return dict(returncode=result.returncode, output=result.stdout, elapsed=elapsed,
+                    latest_run=latest_run, capture_wall_seconds=time.monotonic() - before)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return dict(error=str(error), elapsed=elapsed, latest_run=latest_run,
+                    capture_wall_seconds=time.monotonic() - before)
+
+
 def analyzer_jvm_args(args, directory, side, memory):
     values = [f'-Xmx{memory}', '-Dorg.opentaint.ir.impl.storage.defaultBatchSize=2000',
               '-Djdk.util.jar.enableMultiRelease=false', '-XX:FlightRecorderOptions=stackdepth=256',
@@ -174,6 +202,7 @@ def run(args, project, side, config):
                 'optimization_statistics': optimization_statistics,
                 'run1_mark_mode': args.run1_mark_mode if side == 'bidi' else None,
                 'field_limit_schedule': getattr(args, 'field_limit_schedule', 'REPEAT_RUN1') if side == 'bidi' else None,
+                'profile_runs': getattr(args, 'profile_runs', []) if side == 'bidi' else [],
                 'analyzer_jvm_args': jvm_args,
                 'started_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}
     (directory / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
@@ -191,7 +220,9 @@ def run(args, project, side, config):
     log_tail = ''
     latest_run = None
     latest_run_active = False
+    run_started = {}
     run1_recording = None
+    run_recordings = {}
     with (directory / 'console.log').open('w') as console, (directory / 'resources.jsonl').open('w') as resources:
         process = subprocess.Popen(command, cwd=checkout / 'core', stdout=console,
                                    stderr=subprocess.STDOUT, start_new_session=True)
@@ -209,20 +240,20 @@ def run(args, project, side, config):
                 for marker in re.finditer(r'BIDI_RUN_(START|END) run=(\d+)', log_tail):
                     latest_run = int(marker[2])
                     latest_run_active = marker[1] == 'START'
+                    if latest_run_active:
+                        run_started.setdefault(latest_run, now)
                 if (pid and side == 'bidi' and run1_recording is None
                         and 'BIDI_RUN_END run=1 ' in log_tail):
                     # Preserve the early recording before a later run rolls it out.
                     # This runs after the engine end marker, without a GC request.
-                    try:
-                        dump = subprocess.run(
-                            [str(Path(os.environ['JAVA_HOME']) / 'bin/jcmd'), str(pid),
-                             'JFR.dump', f'filename={directory}/run1.jfr'],
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=30)
-                        run1_recording = {'returncode': dump.returncode, 'output': dump.stdout,
-                                          'elapsed': now - start, 'latest_run': latest_run}
-                    except (OSError, subprocess.TimeoutExpired) as error:
-                        run1_recording = {'error': str(error), 'elapsed': now - start,
-                                          'latest_run': latest_run}
+                    run1_recording = dump_jfr(pid, directory, 'run1', now - start, latest_run)
+                if pid and side == 'bidi':
+                    completed = {int(run) for run in re.findall(r'BIDI_RUN_END run=(\d+) ', log_tail)}
+                    for run_index in sorted(completed.intersection(getattr(args, 'profile_runs', []))):
+                        if run_index == 1 or run_index in run_recordings:
+                            continue
+                        run_recordings[run_index] = dump_jfr(pid, directory, f'run-{run_index}-end',
+                                                           now - start, latest_run)
                 if analysis_start is None and 'Start IFDS analysis' in lines:
                     analysis_start = now
                 if full_start is None and ('BIDI_RUN_START run=1 ' in lines or 'Start full scan phase' in lines):
@@ -251,11 +282,18 @@ def run(args, project, side, config):
                 except OSError:
                     pass
                 windows = [('normal', full_start, 60), ('near-limit', analysis_start, timeout - 60)]
+                if side == 'bidi':
+                    windows += iteration_profile_windows(getattr(args, 'profile_runs', []),
+                                                         latest_run, latest_run_active, run_started)
                 for label, anchor, delay in windows:
                     if anchor and not workload_finished and now >= anchor + delay and label not in profiles:
                         if label == 'normal' and side == 'bidi' and not (latest_run == 1 and latest_run_active):
                             profiles[label] = {'skipped': True, 'reason': 'Run-1 engine already ended',
                                                'latest_run': latest_run, 'elapsed': now - start}
+                            continue
+                        # async-profiler has one active session per process. Keep
+                        # a due window pending until the preceding capture ends.
+                        if any(job.poll() is None for _, job, _ in profile_jobs):
                             continue
                         output = directory / f'{label}.collapsed'
                         profile_log = (directory / f'{label}-profiler.log').open('w')
@@ -263,7 +301,7 @@ def run(args, project, side, config):
                                                 '-f', str(output), str(pid)], stdout=profile_log, stderr=subprocess.STDOUT)
                         profiles[label] = {'start_elapsed': now - start, 'duration_requested': 30,
                                            'requested_delay_seconds': delay,
-                                           'anchor': 'run-1-engine' if side == 'bidi' and label == 'normal' else 'full-analysis' if label == 'normal' else 'ifds',
+                                           'anchor': f'run-{latest_run}-engine' if label.startswith('run-') else 'run-1-engine' if side == 'bidi' and label == 'normal' else 'full-analysis' if label == 'normal' else 'ifds',
                                            'latest_run': latest_run, 'engine_active': latest_run_active}
                         profile_jobs.append((label, job, profile_log))
                 for label, job, _ in profile_jobs:
@@ -317,6 +355,9 @@ def run(args, project, side, config):
                'full_started_elapsed': full_start - start if full_start else None,
                'profiles': profiles, 'continuous_jfr': (directory / 'continuous.jfr').exists(),
                'run1_recording': run1_recording,
+               'run_recordings': run_recordings,
+               'observer_jfr_dump_wall_seconds': sum(record.get('capture_wall_seconds', 0.)
+                   for record in [run1_recording or {}, *run_recordings.values()]),
                'sarif': (directory / 'reports/report-ifds.sarif').exists()}
     summary.update(bidi_iteration_summary(directory / 'analyzer.log', side, status))
     (directory / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
@@ -337,6 +378,8 @@ def main():
                         help='Record aggregate bidi form/cache counters without per-event logging')
     parser.add_argument('--optimization-statistics', action='store_true',
                         help='Record bounded N1/N2 counters with run, direction and limit attribution')
+    parser.add_argument('--profile-runs', type=positive_iteration, nargs='+', default=[],
+                        help='Capture after60 engine seconds and dump JFR at observed completion for these runs')
     parser.add_argument('--run1-mark-mode', choices=['GROUP', 'FULL'], default='FULL',
                         help='Select run-1 mark precision in the analyzer JVM; later runs remain FULL')
     parser.add_argument('--field-limit-schedule', choices=['REPEAT_RUN1', 'RUN_INDEX'], default='REPEAT_RUN1',

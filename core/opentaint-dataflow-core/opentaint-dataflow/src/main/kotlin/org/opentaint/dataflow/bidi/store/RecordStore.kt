@@ -3,7 +3,7 @@ package org.opentaint.dataflow.bidi.store
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 
-/** A raw normal singleton summary, retained in the direction in which it was derived. */
+/** An admitted normal singleton summary, retained in the direction in which it was derived. */
 class Record(
     val method: MethodKey,
     val direction: Direction,
@@ -105,7 +105,7 @@ class PersistentRecordStore(private val m: ApManager) : RecordStore {
         override fun view(): RecordStore = this
     }
 
-    /** R1 reads raw summaries, merges eligible native values and indexes their propagation delta. */
+    /** R1 reads admitted summaries, merges eligible native values and indexes their propagation delta. */
     override fun persist(direction: Direction, summaries: Sequence<Pair<MethodKey, RunSummaryStore>>) {
         m.cancellation.checkpoint()
         for ((method, store) in summaries) {

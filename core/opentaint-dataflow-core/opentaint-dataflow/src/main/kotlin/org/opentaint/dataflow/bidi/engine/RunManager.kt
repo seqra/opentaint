@@ -239,6 +239,22 @@ class RunManager<A : RunActor>(
         }
         val end = checkNotNull(status.get())
         val analyzers = if (end == RunStatus.COMPLETE) joinedActors else emptyList()
+        if (joined && end != RunStatus.COMPLETE && shared.n2Statistics != null) {
+            // Failed runs export no actors. Read only stopped-owner diagnostics,
+            // while the joined actors still exist, before releasing their runners.
+            val measured = joinedActors.filterIsInstance<RunMethodAnalyzer>()
+            logger.info {
+                "BIDI_BODY_WORK_ABORTED run=${config.index} status=$end scope=joined-packet-events " +
+                    "actors=${measured.size} steps=${measured.sumOf { it.steps }} " +
+                    "candidateOffers=${measured.sumOf { it.diagnosticCandidateOffers }}"
+            }
+            // Copy bounded samples for the hot owners only, especially after an OOM.
+            val hot = (measured.sortedByDescending { it.steps }.take(12) +
+                measured.sortedByDescending { it.diagnosticCandidateOffers }.take(12)).distinctBy { it.key }
+            for (actor in hot) logger.info {
+                "BIDI_BODY_WORK_ABORTED_METHOD run=${config.index} status=$end method=${actor.key} snapshot=${actor.stoppedBodyWorkSnapshot()}"
+            }
+        }
         staticService?.let { logger.info { "BIDI_STATIC_STATISTICS run=${config.index} status=$end totals=${it.statistics()} requests=${it.requestStatistics()}" } }
         var failure: Throwable? = null
         fun release(action: () -> Unit) {

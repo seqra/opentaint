@@ -57,7 +57,7 @@ class SinkEndFactTest {
             assertEquals(SinkKey(f.key.method, f.inst(2), sink.rule.id), descriptor.key)
             assertEquals(f.key, descriptor.representativeMethodKey)
             assertTrue(core.sinkSeeds.isEmpty())
-            assertEquals(setOf(initial to Conclusion(PathFact(argument, emptyList(), Tail.EXACT, t), ExclusionSet.Empty, false)), methodEntries(f.ops, core.summaries.all()))
+            assertEquals(setOf(initial to Conclusion(PathFact(argument, emptyList(), Tail.EXACT, t), ExclusionSet.Empty, false)), methodEntries(f.ops, f.completedBoundary(core)))
             assertTrue(f.events.isEmpty())
             assertEquals(0L, core.triggerSeeds)
         }
@@ -109,7 +109,7 @@ class SinkEndFactTest {
             f.drain(core)
             val tail = Tail.ANY_TAINT
             assertEquals(setOf(initial to Conclusion(initial.toPattern().fact, ExclusionSet.Empty, layer == Layer.DEMAND)),
-                methodEntries(f.ops, core.summaries.all()))
+                methodEntries(f.ops, f.completedBoundary(core)))
             val terminal = core.targets.single()
             assertSame(initial, terminal.premise)
             if (layer == Layer.NORMAL) assertIs<Target.NormalTarget>(terminal.target)
@@ -143,7 +143,7 @@ class SinkEndFactTest {
             assertEquals(2, core.sinkSeeds.size)
             assertEquals(setOf(j1 to Conclusion(j1.toPattern().fact, ExclusionSet.Empty, false),
                 j2 to Conclusion(j2.toPattern().fact, ExclusionSet.Empty, true)),
-                methodEntries(f.ops, core.summaries.all()))
+                methodEntries(f.ops, f.completedBoundary(core)))
         }
     }
 
@@ -178,14 +178,14 @@ class SinkEndFactTest {
             assertTrue(core.targets.isEmpty())
             val expectedStatic = if (zeroPremise) setOf(Conclusion(retained, e, false))
                 else setOf(Conclusion(consumed, ExclusionSet.Empty, false), Conclusion(retained, e, false))
-            assertEquals(expectedStatic.map { premise to it }.toSet(), methodEntries(f.ops, core.summaries.all()))
+            assertEquals(expectedStatic.map { premise to it }.toSet(), methodEntries(f.ops, f.completedBoundary(core)))
             core.emitAfter(second, f.inst(2), f.fact(argument, mark = v))
             f.drain(core)
             val terminal = core.targets.single()
             assertSame(if (zeroPremise) second else f.manager.union(callerInitial, second), terminal.premise)
             assertIs<Target.NormalTarget>(terminal.target)
             assertEquals(expectedStatic.map { premise to it }.toSet() + setOf(
-                second to Conclusion(second.toPattern().fact, ExclusionSet.Empty, false)), methodEntries(f.ops, core.summaries.all()))
+                second to Conclusion(second.toPattern().fact, ExclusionSet.Empty, false)), methodEntries(f.ops, f.completedBoundary(core)))
         }
     }
 
@@ -214,9 +214,9 @@ class SinkEndFactTest {
             val id = assertIs<Target.NormalTarget>(leftTarget.target).id
             assertEquals(SinkKey(f.key.method, f.inst(2), first.rule.id), f.shared.reportCatalog.descriptor(id).key)
             assertEquals(setOf(Conclusion(leftFact, ExclusionSet.Empty, false)),
-                methodLeaves(f.ops, left.summaries.all().map { it.second }.toList()))
+                methodLeaves(f.ops, f.completedBoundary(left).map { it.second }.toList()))
             assertEquals(setOf(Conclusion(rightFact, ExclusionSet.Empty, false)),
-                methodLeaves(f.ops, right.summaries.all().map { it.second }.toList()))
+                methodLeaves(f.ops, f.completedBoundary(right).map { it.second }.toList()))
         }
     }
 
@@ -234,7 +234,7 @@ class SinkEndFactTest {
             f.drain(core)
             assertTrue(f.cuts.none { it.first == Cut.EXIT_RULES && it.second.base == result })
             assertEquals(setOf(initial to Conclusion(initial.toPattern().fact, ExclusionSet.Empty, false)),
-                methodEntries(f.ops, core.summaries.all()))
+                methodEntries(f.ops, f.completedBoundary(core)))
             assertIs<Target.NormalTarget>(core.targets.single().target)
             assertTrue(core.sinkSeeds.isEmpty())
             assertEquals(0L, core.demandLayerEdges)
@@ -259,7 +259,7 @@ class SinkEndFactTest {
             assertSame(initial, byRule.getValue(repeated.rule.id).premise)
             assertSame(f.manager.zero, byRule.getValue(unconditional.rule.id).premise)
             assertEquals(setOf(f.manager.zero to Conclusion(ZERO_FACT, ExclusionSet.Empty, false),
-                initial to Conclusion(initial.toPattern().fact, ExclusionSet.Empty, false)), methodEntries(f.ops, core.summaries.all()))
+                initial to Conclusion(initial.toPattern().fact, ExclusionSet.Empty, false)), methodEntries(f.ops, f.completedBoundary(core)))
         }
     }
 
@@ -287,14 +287,14 @@ class SinkEndFactTest {
             val flow = policy to Conclusion(PathFact(argument, emptyList(), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty, false)
             if (index == 1) {
                 assertEquals(setOf(policy, answer), core.initials.all().toSet())
-                assertEquals(setOf(flow, answer to Conclusion(answer.toPattern().fact, ExclusionSet.Empty, true)), methodEntries(f.ops, core.summaries.all()))
+                assertEquals(setOf(flow, answer to Conclusion(answer.toPattern().fact, ExclusionSet.Empty, true)), methodEntries(f.ops, f.completedBoundary(core)))
                 assertEquals(setOf(TargetSummary(answer, Target.DemandTarget)), core.targets)
                 assertEquals(1, core.sinkSeeds.size)
             } else {
                 assertEquals(setOf(answer), core.initials.all().toSet(), "The matching concrete demand carries T")
                 assertTrue(f.processed.none { it.facts is FlowTree })
                 assertEquals(setOf(answer to Conclusion(answer.toPattern().fact, ExclusionSet.Empty, false)),
-                    methodEntries(f.ops, core.summaries.all()))
+                    methodEntries(f.ops, f.completedBoundary(core)))
                 assertEquals(1, core.targets.size)
                 assertIs<Target.NormalTarget>(core.targets.single().target)
             }

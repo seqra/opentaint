@@ -34,7 +34,7 @@ class EndFactTriggerTest {
             assertEquals(0L, core.triggerSeeds)
             assertNull((core.localServices as RunMethodLocalServices).conjunctions)
             assertEquals(setOf(initial to Conclusion(target, ExclusionSet.Empty, false)),
-                methodEntries(f.ops, core.summaries.all()))
+                methodEntries(f.ops, f.completedBoundary(core)))
             assertTrue(core.targets.isEmpty())
             assertTrue(core.sourceHits!!.entries().none(), "An end fact is not an unconditional source")
             assertTrue(f.events.isEmpty())
@@ -63,7 +63,7 @@ class EndFactTriggerTest {
             assertEquals(0L, core.triggerSeeds, "End actions do not create alternative triggers")
             assertEquals(setOf(exact to Conclusion(target, ExclusionSet.Empty, false),
                 any to Conclusion(target.copy(tail = Tail.ANY), ExclusionSet.Empty, true)),
-                methodEntries(f.ops, core.summaries.all()))
+                methodEntries(f.ops, f.completedBoundary(core)))
             assertEquals(0, f.cuts.count { it.first == Cut.SEED })
             assertTrue(core.targets.isEmpty())
             assertTrue(core.sourceHits!!.entries().none())
@@ -92,7 +92,7 @@ class EndFactTriggerTest {
             assertEquals(0, f.cuts.count { it.first == Cut.SEED })
             assertEquals(setOf(exact to Conclusion(target, ExclusionSet.Empty, false),
                 any to Conclusion(target.copy(tail = Tail.ANY), ExclusionSet.Empty, true)),
-                methodEntries(f.ops, core.summaries.all()))
+                methodEntries(f.ops, f.completedBoundary(core)))
         }
     }
 
@@ -114,7 +114,7 @@ class EndFactTriggerTest {
             f.drain(core)
             assertEquals(0L, core.triggerSeeds)
             assertTrue(f.cuts.none { it.first == Cut.SEED })
-            assertEquals(setOf(initial to Conclusion(input, ExclusionSet.Empty, false)), methodEntries(f.ops, core.summaries.all()))
+            assertEquals(setOf(initial to Conclusion(input, ExclusionSet.Empty, false)), methodEntries(f.ops, f.completedBoundary(core)))
             assertTrue(core.sourceHits!!.entries().none())
             assertTrue(core.targets.isEmpty())
         }
@@ -143,7 +143,7 @@ class EndFactTriggerTest {
             assertEquals(0L, core.triggerSeeds)
             assertEquals(setOf(initial to Conclusion(initial.toPattern().fact, ExclusionSet.Empty, true),
                 initial to Conclusion(ZERO_FACT, ExclusionSet.Empty, true)),
-                methodEntries(f.ops, core.summaries.all()))
+                methodEntries(f.ops, f.completedBoundary(core)))
             assertEquals(setOf(TargetSummary(initial, Target.DemandTarget)), core.targets,
                 "Actual reverse GEN records its terminal source permission")
         }
@@ -173,7 +173,7 @@ class EndFactTriggerTest {
                 methodLeaves(f.ops, f.cuts.filter { it.first == Cut.SEED }.map { it.second }))
             f.drain(core, quantum = 1)
             assertEquals(expected, methodLeaves(f.ops, core.edges.edgesAt(f.inst(2), f.manager.zero).map { it.second }.toList()))
-            assertEquals(expected.map { f.manager.zero to it }.toSet(), methodEntries(f.ops, core.summaries.all()))
+            assertEquals(expected.map { f.manager.zero to it }.toSet(), methodEntries(f.ops, f.completedBoundary(core)))
             assertEquals(0L, core.triggerSeeds)
             assertTrue(core.sourceHits!!.entries().none())
             assertTrue(core.targets.isEmpty())
@@ -190,7 +190,7 @@ class EndFactTriggerTest {
             val core = localCore(f, index = 2)
             core.addInitial(initial)
             f.drain(core)
-            assertEquals(setOf(initial to Conclusion(target, ExclusionSet.Empty, false)), methodEntries(f.ops, core.summaries.all()))
+            assertEquals(setOf(initial to Conclusion(target, ExclusionSet.Empty, false)), methodEntries(f.ops, f.completedBoundary(core)))
             assertEquals(0L, core.triggerSeeds)
             assertTrue(f.cuts.none { it.first == Cut.SEED })
             assertTrue(core.sourceHits!!.entries().none())

@@ -27,6 +27,13 @@ class RunMethodAnalyzer(
     internal val mode: ApMode = port.config.mode
     internal val forward: Boolean = port.config.direction == Direction.FORWARD
     private val limit = port.config.fieldLimit
+    private var bodyWork = context.bodyWorkStatistics()
+    internal var bodyWorkSnapshot: BodyWorkSnapshot? = null; private set
+    /** The run manager may call this only after all runner jobs have joined.
+     * It copies numeric diagnostics; it does not export an incomplete run store. */
+    internal fun stoppedBodyWorkSnapshot(): BodyWorkSnapshot? = bodyWorkSnapshot ?: bodyWork?.snapshot()
+    internal val diagnosticCandidateOffers: Long get() =
+        bodyWorkSnapshot?.candidatePackets ?: bodyWork?.candidatePackets ?: 0L
 
     private var edgeStore: MethodEdgeStore? = MethodEdgeStore(ap, key, port.shared.language, limit,
         flowBacked = mode.run1 && mode.markMode == MarkMode.FULL,
@@ -506,6 +513,7 @@ class RunMethodAnalyzer(
         if (!RuntimeDataDomain.packet(item.premise, item.facts)) return
         ap.cancellation.checkpoint()
         steps++
+        bodyWork?.processed(context.shared.language.getInstIndex(item.node), item.premise, item.facts)
         runnerPort.onProcess?.invoke(key, item)
         if (config.run1 && item.facts.base == STATIC && context.isEnd(item.node))
             endAt(item.premise, item.node, item.facts, summary = true)
@@ -626,6 +634,7 @@ class RunMethodAnalyzer(
         if (!RuntimeDataDomain.packet(premise, facts)) return null
         checkKinds(premise, facts)
         val fresh = edges.add(node, premise, facts) ?: return null
+        bodyWork?.fresh(context.shared.language.getInstIndex(node), premise, fresh)
         edgeDeltas++
         if (fresh.layer == Layer.DEMAND) demandLayerEdges++
         return fresh
@@ -812,6 +821,7 @@ class RunMethodAnalyzer(
         val normalized = normalizeFlowSummary(ap, rawPremise, rawFacts)
         val premise = normalized.premise
         val facts = normalized.facts
+        bodyWork?.candidate(premise, facts)
         assertCanonicalFlowSummary(premise, facts)
         if (!config.run1 && facts is FlowTree && facts.layer == Layer.DEMAND)
             check(facts.tail == Tail.ANY && facts.exclusion == ExclusionSet.Empty) {
@@ -827,32 +837,22 @@ class RunMethodAnalyzer(
             staticGuidanceSeeds.add(premise, facts)
             return
         }
-        val delta = summaries.add(premise, facts)
-        if (delta == null) return
-        edgeDeltas++
-        if (delta.layer == Layer.DEMAND) demandLayerEdges++
-        queuePublications(premise, delta)
+        val admitted = if (config.run1) listOf(facts) else
+            checkNotNull(config.demand).intersect(key, premise, facts, config.admissionPolicy)
+        for (piece in admitted) {
+            ap.cancellation.checkpoint()
+            checkKinds(premise, piece)
+            val delta = summaries.addAdmitted(premise, piece) ?: continue
+            edgeDeltas++
+            if (delta.layer == Layer.DEMAND) demandLayerEdges++
+            pending += Publication(premise, delta)
+        }
+        if (pending.isNotEmpty()) requestWork()
     }
 
     internal fun erasesRun1StaticSummary(premise: PremiseKey, facts: Facts): Boolean =
         config.run1 && facts.base == STATIC && !premise.isZero &&
             (0 until premise.size).all { premise.member(it).base == STATIC }
-
-    private fun queuePublications(premise: PremiseKey, facts: Facts) {
-        val selected = ops.demandPart(premise, facts, config.direction) != null
-        val publications = published(premise, facts)
-        for (piece in publications) {
-            ap.cancellation.checkpoint()
-            pending += Publication(premise, piece)
-            if (selected) summaries.addDemand(premise, piece)
-        }
-        if (publications.isNotEmpty()) requestWork()
-    }
-
-    private fun published(premise: PremiseKey, facts: Facts): Collection<Facts> = when {
-        config.run1 -> listOf(facts)
-        else -> checkNotNull(config.demand).intersect(key, premise, facts, config.admissionPolicy)
-    }
 
     private fun flushPublications() {
         if (pendingTargets.isNotEmpty()) {
@@ -937,6 +937,8 @@ class RunMethodAnalyzer(
             worklist.clear()
             pending = ArrayList()
             release { scalarIdentityStatistics = edgeStore?.scalarStatisticsSnapshot() }
+            release { bodyWorkSnapshot = bodyWork?.snapshot() }
+            bodyWork = null
             edgeStore = null
             initialStore = null
             temporary = RequestStorage()

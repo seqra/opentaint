@@ -4,7 +4,7 @@ import org.opentaint.dataflow.bidi.ap.*
 import java.util.IdentityHashMap
 
 /** One summary endpoint owns this normalized relation. No old marked payloads are retained.
- * Raw, selected and published endpoints each use the same admission law. */
+ * Each endpoint keeps one authoritative relation with its existing admission law. */
 internal class FlowBackedSummaries(private val m: ApManager,
                                    private val replaceCovered: Boolean = true,
                                    private val interners: StoreInterners = m.newInterners()) {
@@ -18,13 +18,13 @@ internal class FlowBackedSummaries(private val m: ApManager,
         if (!RuntimeDataDomain.initial(offered.initialShape) || !RuntimeDataDomain.base(offered.base)) emptyList()
         else if (replaceCovered) null else diagonal.addDiagonal(offered)
 
-    fun census(): RelationCensus {
+    fun census(include: (PremiseKey, Layer) -> Boolean = { _, _ -> true }): RelationCensus {
         m.cancellation.checkpoint()
         val counter = RelationCensusCounter(m.cancellation)
-        var result = diagonal.census(counter)
-        for (group in groups.values) for (facts in group.all()) {
+        var result = diagonal.census(counter, include)
+        for ((premise, group) in groups) for (facts in group.all()) {
             m.cancellation.checkpoint()
-            result += counter.scalar(facts)
+            if (include(premise, facts.layer)) result += counter.scalar(facts)
         }
         return result
     }

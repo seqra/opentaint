@@ -12,7 +12,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class DriverIntegrationTest {
     @Test
-    fun `limits one one two carry selected demand sink seed source hit and final raw record through joined barriers`(): Unit {
+    fun `limits one one two carry admitted demand sink seed source hit and final report through joined barriers`(): Unit {
         DriverFixtures().use { f ->
             val program = f.refining()
             val driver = f.driver(FixedLimits(listOf(1, 1, 2)), run1MarkMode = MarkMode.GROUP)
@@ -29,7 +29,7 @@ class DriverIntegrationTest {
             assertTrue(f.results.all { it.status == RunStatus.COMPLETE })
             assertEquals(listOf(1, 2, 3), driver.frontiers.map { it.run })
             assertEquals(setOf(Conclusion(coarse.fact, ExclusionSet.Empty, true)),
-                f.results[0].analyzers.single().summaries.demandEdges().filter { (_, facts) -> facts.base == AccessPathBase.Return }.flatMap { (_, facts) ->
+                f.results[0].analyzers.single().summaries.demandEdges(Direction.FORWARD).filter { (_, facts) -> facts.base == AccessPathBase.Return }.flatMap { (_, facts) ->
                     f.ops.leaves(facts).map { Conclusion(it.fact, it.exclusion, facts.layer == Layer.DEMAND) }
                 }.toSet())
             assertEquals(setOf(DemandPattern(coarse, zero)),
@@ -49,11 +49,12 @@ class DriverIntegrationTest {
             val finalRaw = f.results[2].analyzers.single().summaries.all().flatMap { (_, facts) ->
                 f.ops.leaves(facts).map { Conclusion(it.fact, it.exclusion, facts.layer == Layer.DEMAND) }
             }.toSet()
-            assertContains(finalRaw, Conclusion(precise.fact, ExclusionSet.Empty, false))
-            assertTrue(f.results[2].analyzers.single().summaries.demandEdges().none())
-            assertTrue(f.records.byEntry(program.root, zero).any { record ->
+            assertFalse(finalRaw.contains(Conclusion(precise.fact, ExclusionSet.Empty, false)),
+                "The final ZERO-only exit guide admits no new DATA summary")
+            assertTrue(f.results[2].analyzers.single().summaries.demandEdges(Direction.FORWARD).none())
+            assertFalse(f.records.byEntry(program.root, zero).any { record ->
                 record.direction == Direction.FORWARD && f.ops.leaves(record.conclusion).any { it == precise }
-            }, "The final completed barrier persists the native normal source summary")
+            }, "A body source result without paired DATA exit permission is not a new native record")
             val entry = report.entries.single()
             assertEquals(program.rule, entry.descriptor.rule)
             assertEquals(program.sink, entry.descriptor.key.statement)
