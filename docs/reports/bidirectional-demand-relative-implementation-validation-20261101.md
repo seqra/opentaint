@@ -57,10 +57,11 @@ views. They do not prove the Kotlin implementation, all packed AP adapters,
 whole-program convergence, report equivalence, or performance improvement.
 A runtime hash is correspondence evidence, not a Kotlin proof.
 
-After the implementation commit, bind the same checks with
-`--runtime-commit <implementation-commit>`. Keep that receipt with the
-implementation and test results. Do not use the old baseline byte check
-as proof that the new implementation was checked.
+The same checker passed after implementation with
+`--runtime-commit 0ffa5ed8b42dbe193973b4fb4701af28b35716b3`. It binds the
+reviewed implementation bytes and the same 182 theorems. The updated
+[receipt](../../spec/lean/proposals/demand-relative-summary-restriction-implementation-20261101/checks.json)
+explicitly states that source binding does not prove Kotlin correctness.
 
 ## 3. Production TDD evidence
 
@@ -166,6 +167,7 @@ cd core
   :opentaint-dataflow-core:opentaint-jvm-dataflow:test --console=plain
 ```
 
+Implementation commit: `0ffa5ed8b42dbe193973b4fb4701af28b35716b3`.
 The final full run passed on fixed source bytes:
 
 | Suite | Tests | Failures | Errors | Skipped |

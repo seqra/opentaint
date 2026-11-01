@@ -18,6 +18,9 @@ saturation, TDD gates, and the post-implementation blow-up experiment.
 Its [adapter dossier](demand-relative-summary-restriction-implementation-proofs.md)
 and [checker](lean/proposals/demand-relative-summary-restriction-implementation-20261101/check.py)
 pass 182 theorems, including 20 new adapter laws. The runtime is unchanged.
+The [implementation validation](../docs/reports/bidirectional-demand-relative-implementation-validation-20261101.md)
+records the source-bound kernel check and passing common/JVM tests. Project
+performance and finding acceptance remain separate.
 
 ## Implemented; project measurements pending: concrete relations backed by FLOW
 
