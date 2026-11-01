@@ -66,6 +66,9 @@ class CallerStateAcceptanceTest {
                 builder.add(acquire, DemandPattern(f.manager.zero.toPattern(), state))
                 builder.add(release, DemandPattern(state, state))
                 builder.add(after, DemandPattern(state, state))
+                // These independent ZERO sources have explicit summary exit permission.
+                builder.add(release, DemandPattern(ZERO_PATTERN, returned))
+                builder.add(after, DemandPattern(ZERO_PATTERN, returned))
             }.build()
             // Run-1 has no class-root initials or static call-chain relays.
             // GroupedStaticPipelineTest covers its operation-local pool path.
@@ -89,7 +92,7 @@ class CallerStateAcceptanceTest {
                         premise == initial && f.ops.leaves(facts).any {
                             Conclusion(it.fact, it.exclusion, facts.layer == Layer.DEMAND) == expected
                         }
-                    }, "Caller-owned state must remain in $callee's nonzero raw summary in run $index")
+                    }, "Caller-owned state must remain in $callee's nonzero admitted summary in run $index")
                     val link = f.links(index, actor.key).asSequence().single { it.addedFact == state && it.caller.caller == root }
                     assertEquals(Layer.NORMAL, link.linkLayer)
                     assertEquals(Layer.NORMAL, link.caller.callerLayer)
@@ -112,8 +115,8 @@ class CallerStateAcceptanceTest {
                 assertEquals(setOf(releaseSink.rule.id, afterSink.rule.id),
                     report.entries.map { it.descriptor.key.ruleId }.toSet())
                 if (index == 3) {
-                    assertTrue(actors.getValue(release).summaries.demandEdges().none())
-                    assertTrue(actors.getValue(after).summaries.demandEdges().none())
+                    assertTrue(actors.getValue(release).summaries.demandEdges(Direction.FORWARD).none())
+                    assertTrue(actors.getValue(after).summaries.demandEdges(Direction.FORWARD).none())
                 }
             }
         }

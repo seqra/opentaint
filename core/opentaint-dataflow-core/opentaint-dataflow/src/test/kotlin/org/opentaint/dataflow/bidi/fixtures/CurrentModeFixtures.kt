@@ -94,7 +94,7 @@ class CurrentModeFixtures : AutoCloseable {
         actual.results.single { it.runIndex == run }.analyzers.single { it.key == method }
     fun summaries(run: Int, method: MethodKey, selected: Boolean = false): Set<CurrentSummary> {
         val store = actor(run, method).summaries
-        val values = if (selected) store.demandEdges() else store.all()
+        val values = if (selected) store.demandEdges(actor(run, method).mode.direction) else store.all()
         return values.flatMap { (premise, facts) ->
             val members = premise.members.map { it.toPattern() }.toSet()
             ops.leaves(facts).map { CurrentSummary(members, Conclusion(it.fact, it.exclusion, facts.layer == Layer.DEMAND)) }

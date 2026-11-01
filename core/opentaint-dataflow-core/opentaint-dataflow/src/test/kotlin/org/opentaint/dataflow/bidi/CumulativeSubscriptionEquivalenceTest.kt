@@ -214,7 +214,7 @@ class CumulativeSubscriptionEquivalenceTest {
                     Place(f.inst(1), statementEdge = false, sources = false), hooks, from = CallPoint.RETURNED)
                     .filter { it.first == CallPoint.AFTER }.map { it.second.c }
             }
-            val actual = actor.summaries.all().filter { it.first === callerPremise }.map { it.second }.toList()
+            val actual = f.completedBoundary(actor).filter { it.first === callerPremise }.map { it.second }.toList()
             assertEquals(oracle.denotation(header, expected), oracle.denotation(header, conclusions(f.ops, actual)),
                 "run=$run L=$fieldLimit")
             assertEquals(expectedRequests, f.requests.map { setOf(it.first.toPattern()) to it.second }.toSet())

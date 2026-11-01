@@ -86,7 +86,7 @@ class StaticCatalogIterationTest {
         rawSummaries = result.analyzers.flatMap { actor -> actor.summaries.all().flatMap { (pr, facts) ->
             observedEdges(ops, actor.key, pr, facts).asSequence()
         }.toList() }.toSet(),
-        selectedDemand = result.analyzers.flatMap { actor -> actor.summaries.demandEdges().flatMap { (pr, facts) ->
+        selectedDemand = result.analyzers.flatMap { actor -> actor.summaries.demandEdges(actor.mode.direction).flatMap { (pr, facts) ->
             observedEdges(ops, actor.key, pr, facts).asSequence()
         }.toList() }.toSet(),
         sourceHits = result.analyzers.flatMap { actor -> actor.sourceHits?.entries()?.map { (method, node, edge) ->

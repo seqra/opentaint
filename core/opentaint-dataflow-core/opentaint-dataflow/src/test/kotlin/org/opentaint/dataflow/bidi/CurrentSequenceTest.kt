@@ -49,7 +49,7 @@ class CurrentSequenceTest {
                 Conclusion(it.fact, it.exclusion, facts.layer == Layer.DEMAND) }
         }.toSet()
     private fun selected(f: DriverFixtures, result: RunResult<RunMethodAnalyzer>, key: MethodKey): Set<Pair<Set<Pattern>, Conclusion>> =
-        result.analyzers.single { it.key == key }.summaries.demandEdges().flatMap { (premise, facts) ->
+        result.analyzers.single { it.key == key }.summaries.demandEdges(result.direction).flatMap { (premise, facts) ->
             f.ops.leaves(facts).map { premise.members.map { it.toPattern() }.toSet() to
                 Conclusion(it.fact, it.exclusion, facts.layer == Layer.DEMAND) }
         }.toSet()

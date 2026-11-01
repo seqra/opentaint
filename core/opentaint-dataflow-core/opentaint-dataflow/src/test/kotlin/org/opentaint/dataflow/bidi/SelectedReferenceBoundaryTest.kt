@@ -44,8 +44,10 @@ class SelectedReferenceBoundaryTest {
             val selected = NaiveClosure(f, config, semantics = NaiveClosure.Semantics.SELECTED).run()
             val old = NaiveClosure(f, config, semantics = NaiveClosure.Semantics.PRE_TARGETS).run()
             val zero = ObservedEdge(key, setOf(ZERO_PATTERN), Conclusion(ZERO_FACT, ExclusionSet.Empty, false))
-            assertContains(selected.rawSummaries, zero)
+            assertContains(selected.processed, zero.copy(node = key.statement))
+            assertFalse(zero in selected.rawSummaries, "Rejected ZERO leaves no admitted summary")
             assertFalse(zero in selected.publications, "ZERO does not match the paired AP exit demand")
+            assertContains(old.rawSummaries, zero, "The explicitly old reference keeps its raw summary")
             assertContains(old.publications, zero, "Only the explicitly old reference has this exception")
         }
 }

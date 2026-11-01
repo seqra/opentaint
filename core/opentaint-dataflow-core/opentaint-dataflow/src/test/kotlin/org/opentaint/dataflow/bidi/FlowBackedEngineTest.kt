@@ -52,8 +52,8 @@ class FlowBackedEngineTest {
                 "CM must observe the real marked local arrival")
             assertTrue(f.processed.any { it.premise == marked && it.facts is TaintTree })
             assertTrue(markedSummary(actor, marked).isEmpty(), "Pure diagonal output has FLOW guidance")
-            assertTrue(actor.summaries.demandEdges().any { it.first == flow && it.second is FlowTree && it.second.base == ret })
-            assertTrue(actor.summaries.demandEdges().none { it.first == marked && it.second.base == ret })
+            assertTrue(actor.summaries.demandEdges(actor.mode.direction).any { it.first == flow && it.second is FlowTree && it.second.base == ret })
+            assertTrue(actor.summaries.demandEdges(actor.mode.direction).none { it.first == marked && it.second.base == ret })
 
             // Invoke the original AP emission/restriction path directly. No StrongQueries owner
             // or concrete-query permission participates in this transport replacement.
@@ -111,7 +111,7 @@ class FlowBackedEngineTest {
             assertEquals(RunStatus.COMPLETE, report.end.status)
             assertTrue(f.results.any { it.runIndex == 2 && it.status == RunStatus.COMPLETE })
             val run1 = f.results.first()
-            val markedGuides = run1.analyzers.single { it.key == callee }.summaries.demandEdges()
+            val markedGuides = run1.analyzers.single { it.key == callee }.summaries.demandEdges(Direction.FORWARD)
                 .filter { (it.first as? InitialAp)?.mark == t && it.second.base == ret }.toList()
             assertTrue(markedGuides.isNotEmpty(), "The coarse right FLOW must not erase the left-dependent rule guide")
             assertTrue(markedGuides.all { (it.second as TaintTree).nonSubsumable != null })
@@ -138,7 +138,7 @@ class FlowBackedEngineTest {
             f.drain(actor, quantum = 1)
             val result = markedSummary(actor, marked).single()
             assertNotNull(result.nonSubsumable)
-            assertTrue(actor.summaries.demandEdges().any { it.first == marked && it.second.base == ret })
+            assertTrue(actor.summaries.demandEdges(actor.mode.direction).any { it.first == marked && it.second.base == ret })
             assertTrue(actor.summaries.all().any { it.first == flow && it.second.base == ret && it.second is FlowTree })
         }
     }
@@ -159,7 +159,7 @@ class FlowBackedEngineTest {
             val restored = markedSummary(actor, marked).single()
             assertNotNull(restored.nonSubsumable)
             assertEquals(t.mark, (f.ops.leaves(restored).single().fact.mark as MarkSlot.Concrete).mark)
-            assertTrue(actor.summaries.demandEdges().any { it.first == marked && it.second.base == ret })
+            assertTrue(actor.summaries.demandEdges(actor.mode.direction).any { it.first == marked && it.second.base == ret })
         }
     }
 
@@ -229,7 +229,7 @@ class FlowBackedEngineTest {
             f.drain(actor, quantum = 1)
             for (origin in listOf(first, second)) {
                 assertNotNull(markedSummary(actor, origin).single().nonSubsumable)
-                assertTrue(actor.summaries.demandEdges().any { it.first == origin && it.second.base == ret })
+                assertTrue(actor.summaries.demandEdges(actor.mode.direction).any { it.first == origin && it.second.base == ret })
             }
             val steps = actor.steps
             actor.emitAfter(first, f.inst(0), input.withProtection(input.root))
@@ -255,7 +255,7 @@ class FlowBackedEngineTest {
             actor.emitAfter(marked, f.inst(0), exact)
             f.drain(actor, quantum = 1)
             assertNotNull(markedSummary(actor, marked).single().nonSubsumable)
-            assertTrue(actor.summaries.demandEdges().any { it.first == marked && it.second.base == ret })
+            assertTrue(actor.summaries.demandEdges(actor.mode.direction).any { it.first == marked && it.second.base == ret })
         }
     }
 
@@ -309,7 +309,7 @@ class FlowBackedEngineTest {
             val result = markedSummary(actor, marked)
             assertTrue(result.isNotEmpty(), "Alias-result deduplication must retain the protected marked guide")
             assertTrue(result.all { it.nonSubsumable != null })
-            assertTrue(actor.summaries.demandEdges().any { it.first == marked && it.second.base == ret })
+            assertTrue(actor.summaries.demandEdges(actor.mode.direction).any { it.first == marked && it.second.base == ret })
         }
     }
 }

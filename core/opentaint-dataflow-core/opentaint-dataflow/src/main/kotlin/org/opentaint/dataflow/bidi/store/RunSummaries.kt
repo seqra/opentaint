@@ -4,16 +4,14 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import java.util.IdentityHashMap
 
-/** Raw exit conclusions and selected publications are separate collections. */
+/** One admitted relation. Outgoing demand is a filtered view of the final stored headers. */
 class RunSummaryStore(private val m: ApManager, flowBacked: Boolean = false) {
     private val groups = IdentityHashMap<PremiseKey, ConclusionGroup>()
-    private val demand = IdentityHashMap<PremiseKey, ConclusionGroup>()
     private val interners = m.newInterners()
     private val backed = if (flowBacked) FlowBackedSummaries(m) else null
-    private val backedDemand = if (flowBacked) FlowBackedSummaries(m) else null
 
-    /** Raw delta. R1 persistence reads this collection at the barrier. */
-    fun add(premise: PremiseKey, g: Facts): Facts? {
+    /** Add a candidate only after the actor has completed demand restriction. */
+    fun addAdmitted(premise: PremiseKey, g: Facts): Facts? {
         m.cancellation.checkpoint()
         if (!RuntimeDataDomain.packet(premise, g)) return null
         checkShape(premise, g)
@@ -21,35 +19,29 @@ class RunSummaryStore(private val m: ApManager, flowBacked: Boolean = false) {
         return groups.getOrPut(premise) { ConclusionGroup(m, interners) }.add(g)
     }
 
-    /** Publication delta. The caller has selected the raw group before restriction. */
-    fun addDemand(premise: PremiseKey, piece: Facts): Facts? {
-        m.cancellation.checkpoint()
-        if (!RuntimeDataDomain.packet(premise, piece)) return null
-        checkShape(premise, piece)
-        backedDemand?.let { return it.add(premise, piece) }
-        return demand.getOrPut(premise) { ConclusionGroup(m, interners) }.add(piece)
-    }
-
     fun all(): Sequence<Pair<PremiseKey, Facts>> = backed?.all() ?: entries(groups)
-    fun demandEdges(): Sequence<Pair<PremiseKey, Facts>> = backedDemand?.all() ?: entries(demand)
 
-    /** Raw owner only. Demand publication state has a separate census, so a
-     * caller cannot accidentally count both collections as one relation. */
-    fun census(): RelationCensus = backed?.census() ?: census(groups)
-    fun demandCensus(): RelationCensus = backedDemand?.census() ?: census(demand)
+    fun demandEdges(direction: Direction): Sequence<Pair<PremiseKey, Facts>> =
+        all().filter { (premise, facts) -> selectedForHandoff(premise, facts.layer, direction) }
 
-    private fun census(source: IdentityHashMap<PremiseKey, ConclusionGroup>): RelationCensus {
+    fun census(): RelationCensus = census { _, _ -> true }
+
+    fun demandCensus(direction: Direction): RelationCensus =
+        census { premise, layer -> selectedForHandoff(premise, layer, direction) }
+
+    private fun census(include: (PremiseKey, Layer) -> Boolean): RelationCensus {
         m.cancellation.checkpoint()
+        backed?.let { return it.census(include) }
         val counter = RelationCensusCounter(m.cancellation)
         var result = RelationCensus.ZERO
-        for (group in source.values) for (facts in group.all()) {
+        for ((premise, group) in groups) for (facts in group.all()) {
             m.cancellation.checkpoint()
-            result += counter.scalar(facts)
+            if (include(premise, facts.layer)) result += counter.scalar(facts)
         }
         return result
     }
 
-    /** Borrow the current raw relation on its actor owner. Consume this view
+    /** Borrow the current admitted relation on its actor owner. Consume this view
      * before mutating the store; do not retain a historical Facts snapshot. */
     fun borrow(premise: PremiseKey): Sequence<Facts> {
         m.cancellation.checkpoint()

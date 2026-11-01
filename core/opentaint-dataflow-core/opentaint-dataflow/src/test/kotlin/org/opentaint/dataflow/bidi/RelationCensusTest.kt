@@ -50,15 +50,14 @@ class RelationCensusTest {
             arrayOf(m.taintAlg.leafNode(m.taintLeaves(m.markSetOf(t), MarkSet.EMPTY))))
         val facts = m.taintTree(output, Layer.DEMAND, root, anyTail = Tail.ANY, nonSubsumable = protected)
         val store = RunSummaryStore(m)
-        store.add(initial(), facts)
+        store.addAdmitted(initial(), facts)
         val flowLeaf = FlowAlgebra.LEAF_NODE
         val flowRoot = FlowAlgebra.node(FlowLeaf.NONE, intArrayOf(f, g).sortedArray(), arrayOf(flowLeaf, flowLeaf))
-        store.add(initial(MarkSlot.STAR), m.flowTree(output, Layer.DEMAND, ExclusionSet.Empty, MarkSet.EMPTY, flowRoot, Tail.ANY))
-        store.add(m.zero, Reach.NORMAL)
-        store.addDemand(initial(), any(u))
+        store.addAdmitted(initial(MarkSlot.STAR), m.flowTree(output, Layer.DEMAND, ExclusionSet.Empty, MarkSet.EMPTY, flowRoot, Tail.ANY))
+        store.addAdmitted(m.zero, Reach.NORMAL)
         assertEquals(RelationCensus(concreteOutputMemberships = 8, protectedOutputMemberships = 2,
             scalarConcreteRows = 1, flowOutputAnnotations = 2), store.census())
-        assertEquals(RelationCensus(concreteOutputMemberships = 1, scalarConcreteRows = 1), store.demandCensus())
+        assertEquals(store.census(), store.demandCensus(Direction.FORWARD))
     }
 
     @Test
@@ -70,15 +69,34 @@ class RelationCensusTest {
         val mixedRoot = m.taintAlg.mergeAdd(m.taintAlg.mergeAdd(plain.root, exact.root), cross.root)
         val mixed = m.taintTree(output, Layer.DEMAND, mixedRoot, anyTail = Tail.ANY, nonSubsumable = exact.root)
         val store = RunSummaryStore(m, flowBacked = true)
-        store.add(initial(), mixed)
-        store.add(initial(MarkSlot.Concrete(u)), any(u))
+        store.addAdmitted(initial(), mixed)
+        store.addAdmitted(initial(MarkSlot.Concrete(u)), any(u))
         assertEquals(RelationCensus(concreteOutputMemberships = 4, protectedOutputMemberships = 1,
             diagonalGeometryRows = 1, diagonalMarkRows = 2, scalarConcreteRows = 1), store.census())
-        store.add(initial(MarkSlot.STAR), m.flowTree(output, Layer.DEMAND, ExclusionSet.Empty, MarkSet.EMPTY,
+        store.addAdmitted(initial(MarkSlot.STAR), m.flowTree(output, Layer.DEMAND, ExclusionSet.Empty, MarkSet.EMPTY,
             FlowAlgebra.prepend(m, m.path(listOf(f)), FlowAlgebra.LEAF_NODE), Tail.ANY))
         assertEquals(RelationCensus(concreteOutputMemberships = 2, protectedOutputMemberships = 1,
             scalarConcreteRows = 1, flowOutputAnnotations = 1), store.census())
-        assertEquals(RelationCensus.ZERO, store.demandCensus())
+        assertEquals(store.census(), store.demandCensus(Direction.FORWARD))
+    }
+
+    @Test
+    fun `outgoing census selects final diagonal layers without decoding marks`() {
+        val store = RunSummaryStore(m, flowBacked = true)
+        for (layer in Layer.entries) for (mark in listOf(t, u)) {
+            val facts = m.factsOf(PathFact(output, listOf(if (layer == Layer.NORMAL) g else f),
+                if (layer == Layer.NORMAL) Tail.STAR else Tail.ANY, MarkSlot.Concrete(mark)),
+                ExclusionSet.Empty, layer) as TaintTree
+            store.addAdmitted(initial(MarkSlot.Concrete(mark)),
+                if (mark == t) facts.withProtection(facts.root) else facts)
+        }
+        assertEquals(RelationCensus(concreteOutputMemberships = 4, protectedOutputMemberships = 2,
+            diagonalGeometryRows = 2, diagonalMarkRows = 4), store.census())
+        for (direction in Direction.entries) {
+            assertEquals(RelationCensus(concreteOutputMemberships = 2, protectedOutputMemberships = 1,
+                diagonalGeometryRows = 1, diagonalMarkRows = 2), store.demandCensus(direction))
+            assertTrue(store.demandEdges(direction).all { it.second.layer == Layer.DEMAND })
+        }
     }
 
     @Test

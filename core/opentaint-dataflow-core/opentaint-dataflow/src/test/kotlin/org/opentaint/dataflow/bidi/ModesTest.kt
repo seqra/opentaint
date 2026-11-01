@@ -197,7 +197,7 @@ class ModesTest {
             }
             assertTrue(f.processed.none { it.node === f.inst(2) })
             assertTrue(core.summaries.all().none())
-            assertTrue(core.summaries.demandEdges().none())
+            assertTrue(core.summaries.demandEdges(core.mode.direction).none())
             assertTrue(f.publications.isEmpty())
             assertTrue(f.requests.isEmpty())
             assertTrue(f.cuts.none { it.first == Cut.STATEMENT || it.first == Cut.EXIT_RULES })

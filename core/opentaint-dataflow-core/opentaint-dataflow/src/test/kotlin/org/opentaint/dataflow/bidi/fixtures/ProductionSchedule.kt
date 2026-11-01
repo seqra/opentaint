@@ -255,7 +255,7 @@ class ProductionSchedule(
             sinkSeeds.addAll(actor.sinkSeeds)
             actor.initials.all().mapTo(initials) { ObservedInitial(method, it.toPattern()) }
             for ((premise, facts) in actor.summaries.all()) raw += observedEdges(shared.ops, method, premise, facts)
-            for ((premise, facts) in actor.summaries.demandEdges())
+            for ((premise, facts) in actor.summaries.demandEdges(actor.mode.direction))
                 selected += observedEdges(shared.ops, method, premise, facts)
             for (row in actor.targets) targets += ObservedTarget(method, observedPremise(row.premise),
                 (row.target as? Target.NormalTarget)?.let { shared.reportCatalog.descriptor(it.id).key })

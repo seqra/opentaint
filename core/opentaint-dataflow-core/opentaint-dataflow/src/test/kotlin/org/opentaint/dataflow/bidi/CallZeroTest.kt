@@ -78,7 +78,8 @@ class CallZeroTest {
             actor.emitAfter(premise, f.inst(2), Reach.of(layer))
             f.drain(actor, quantum = 1)
             assertEquals(setOf(premise to Conclusion(ZERO_FACT, ExclusionSet.Empty, layer == Layer.DEMAND)),
-                methodEntries(f.ops, actor.summaries.all()))
+                methodEntries(f.ops, actor.edges.edgesAt(f.inst(if (actor.forward) 2 else 0))))
+            assertTrue(actor.summaries.all().none(), "The caller has no complete demand row")
             assertTrue(f.sentInitials.isEmpty())
             assertTrue(f.subscriptions.isEmpty())
             for (subscription in f.subscriptions) {
@@ -128,7 +129,8 @@ class CallZeroTest {
                     add(f.manager.zero to Conclusion(PathFact(result, returnPath.take(1), Tail.ANY, u), ExclusionSet.Empty, true))
                 }
             }
-            assertEquals(expected, methodEntries(f.ops, actor.summaries.all()))
+            assertEquals(expected, methodEntries(f.ops, actor.edges.edgesAt(f.inst(if (actor.forward) 2 else 0))))
+            assertTrue(actor.summaries.all().none(), "Callee permission does not authorize a caller summary")
             assertEquals(if (zero) 1 else 0, f.cuts.count { it.first == Cut.SEED })
             assertEquals(if (zero) 2 else 0, f.cuts.count { it.first == Cut.CALL })
             assertEquals(if (zero) 1 else 0, f.subscriptions.size)
@@ -159,8 +161,9 @@ class CallZeroTest {
                 add(f.manager.zero to Conclusion(ZERO_FACT, ExclusionSet.Empty, false))
                 if (admission == "matching") add(f.manager.zero to Conclusion(target, ExclusionSet.Empty, false))
             }
-            assertEquals(expected, methodEntries(f.ops, actor.summaries.all()), admission)
+            assertEquals(expected, methodEntries(f.ops, actor.edges.edgesAt(f.inst(if (actor.forward) 2 else 0))), admission)
             assertEquals(if (admission == "matching") 1 else 0, f.cuts.count { it.first == Cut.CALL }, admission)
+            assertTrue(actor.summaries.all().none(), "Restricted admission requires demand")
             assertTrue(f.publications.isEmpty(), "Restricted publication still requires demand")
             assertTrue(f.events.none { it is RunEvent.MarkRequestsIn })
         }

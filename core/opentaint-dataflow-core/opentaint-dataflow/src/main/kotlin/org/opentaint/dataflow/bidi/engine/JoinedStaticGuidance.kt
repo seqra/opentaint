@@ -66,7 +66,7 @@ internal fun completeJoinedStaticGuidance(
             val original = checkNotNull(terminal.premise as? InitialAp) { "Run-1 cannot retain an ND original" }
             builder.addTarget(actor.key, original.toPattern())
         }
-        for ((original, facts) in actor.summaries.demandEdges()) {
+        for ((original, facts) in actor.summaries.demandEdges(Direction.FORWARD)) {
             checkpoint()
             check(original is InitialAp) { "Run-1 cannot retain an ND original" }
             for (piece in shared.ops.leaves(facts)) {

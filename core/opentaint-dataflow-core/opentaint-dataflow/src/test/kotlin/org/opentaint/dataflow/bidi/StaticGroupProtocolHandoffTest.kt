@@ -69,7 +69,7 @@ class StaticGroupProtocolHandoffTest {
             val backwardEntry = output // STAR correlation survives handoff; no widening to ANY.
             for (method in listOf(getter, wrapper)) {
                 val actor = run1.analyzers.single { it.key == method }
-                val selected = actor.summaries.demandEdges().flatMap { (premise, facts) ->
+                val selected = actor.summaries.demandEdges(actor.mode.direction).flatMap { (premise, facts) ->
                     f.ops.leaves(facts).map { premise.toPatternForTest() to it }
                 }.toSet()
                 assertTrue(original to output in selected, "The retained FLOW keeps this method original and correlated image")

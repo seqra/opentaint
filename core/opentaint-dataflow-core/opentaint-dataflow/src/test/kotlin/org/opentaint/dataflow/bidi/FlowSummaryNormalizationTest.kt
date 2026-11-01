@@ -40,8 +40,8 @@ class FlowSummaryNormalizationTest {
         assertEquals(ExclusionSet.of(f), s.facts.exclusion)
         assertSame(s.premise, normalizeFlowSummary(m, s.premise, s.facts).premise)
         val store = RunSummaryStore(m)
-        assertFails { store.add(m.initial(pattern()), written) }
-        assertNotNull(store.add(s.premise, s.facts))
+        assertFails { store.addAdmitted(m.initial(pattern()), written) }
+        assertNotNull(store.addAdmitted(s.premise, s.facts))
     }
 
     @Test fun `nested write retains outer exclusion and inner ANY demand`() {

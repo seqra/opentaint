@@ -43,6 +43,10 @@ class RunMethodContext(
         isEnd(node) || isExceptionalExit(node) || forms.isBaseRelevant(key, node, base)
     }
 
+    /** Optional measurements use this run's oriented CFG. They cannot change delivery. */
+    internal fun bodyWorkStatistics(): BodyWorkStatistics? =
+        if (shared.n2Statistics == null) null else BodyWorkStatistics(graph.graph, shared.cancellation)
+
     internal fun forEachDeliveryTarget(start: CommonInst,
         base: org.opentaint.dataflow.ap.ifds.AccessPathBase, body: (CommonInst) -> Unit) {
         if (base == org.opentaint.dataflow.ap.ifds.AccessPathBase.Zero) { body(start); return }

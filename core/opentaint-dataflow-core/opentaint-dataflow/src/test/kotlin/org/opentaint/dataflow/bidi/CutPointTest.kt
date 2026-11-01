@@ -56,7 +56,7 @@ class CutPointTest {
             f.drain(core, quantum = 1)
             val expected = Conclusion(PathFact(y, listOf(field), Tail.EXACT, mt), ExclusionSet.Empty, false)
             assertEquals(setOf(expected), methodLeaves(f.ops, f.cuts.filter { it.first == Cut.STATEMENT }.map { it.second }))
-            assertEquals(setOf(premise to expected), methodEntries(f.ops, core.summaries.all()))
+            assertEquals(setOf(premise to expected), methodEntries(f.ops, f.completedBoundary(core)))
             assertEquals(0L, core.demandLayerEdges)
             assertTrue(f.requests.isEmpty())
         }
@@ -81,8 +81,8 @@ class CutPointTest {
             }
             assertTrue(f.cuts.none { it.first == Cut.STATEMENT })
             assertEquals(setOf(premise to Conclusion(PathFact(x, listOf(field), Tail.EXACT, mt), ExclusionSet.Empty, false)),
-                methodEntries(f.ops, core.summaries.all()))
-            assertEquals(4L, core.edgeDeltas, "Three post-statement identity results and one accepted summary")
+                methodEntries(f.ops, f.completedBoundary(core)))
+            assertEquals(3L, core.edgeDeltas, "Three completed outputs; empty demand admits no summary")
         }
     }
 
@@ -146,7 +146,7 @@ class CutPointTest {
             ), methodLeaves(f.ops, entryCuts))
             assertEquals(setOf(f.manager.zero to Conclusion(ZERO_FACT, ExclusionSet.Empty, false),
                 f.manager.zero to Conclusion(PathFact(y, listOf(field), Tail.EXACT, mt), ExclusionSet.Empty, false)),
-                methodEntries(f.ops, forward.summaries.all()))
+                methodEntries(f.ops, f.completedBoundary(forward)))
 
             f.cuts.clear()
             f.processed.clear()
@@ -161,7 +161,7 @@ class CutPointTest {
                 initialY to Conclusion(PathFact(y, listOf(field, g), Tail.EXACT, mt), ExclusionSet.Empty, false),
                 initialX to Conclusion(PathFact(x, listOf(g), Tail.EXACT, mt), ExclusionSet.Empty, false),
             )
-            assertEquals(backExpected, methodEntries(f.ops, backward.summaries.all()))
+            assertEquals(backExpected, methodEntries(f.ops, f.completedBoundary(backward)))
             assertEquals(setOf(Triple(f.key, f.inst(0), deep.forward)), assertNotNull(backward.sourceHits).entries().toSet())
             assertTrue(f.cuts.any { it.first == Cut.ENTRY_RULES && it.second === Reach.NORMAL })
             assertTrue(f.requests.isEmpty())
@@ -197,8 +197,8 @@ class CutPointTest {
             f.drain(core, quantum = 1)
             assertEquals(expected, methodLeaves(f.ops, core.edges.edgesAt(f.inst(2), f.manager.zero).map { it.second }.toList()))
             assertEquals(setOf(f.manager.zero), core.initials.all().toSet())
-            assertEquals(expected.map { f.manager.zero to it }.toSet(), methodEntries(f.ops, core.summaries.all()))
-            assertEquals(4L, core.demandLayerEdges, "The seed has three completed point results and one summary")
+            assertEquals(expected.map { f.manager.zero to it }.toSet(), methodEntries(f.ops, f.completedBoundary(core)))
+            assertEquals(3L, core.demandLayerEdges, "Three DEMAND point results; the ZERO-only exit rejects the DATA summary")
             assertTrue(f.requests.isEmpty())
         }
     }
@@ -223,9 +223,9 @@ class CutPointTest {
                 f.manager.zero to Conclusion(ZERO_FACT, ExclusionSet.Empty, false),
                 f.manager.zero to Conclusion(PathFact(y, listOf(field), Tail.ANY, grouped), ExclusionSet.Empty, true),
             )
-            assertEquals(expected, methodEntries(f.ops, core.summaries.all()))
+            assertEquals(expected, methodEntries(f.ops, f.completedBoundary(core)))
             assertEquals(expected, methodEntries(f.ops, f.publications.flatten().asSequence().map { it.premise to it.conclusion }))
-            assertEquals(expected.filter { it.second.demand }.toSet(), methodEntries(f.ops, core.summaries.demandEdges()),
+            assertEquals(expected.filter { it.second.demand }.toSet(), methodEntries(f.ops, core.summaries.demandEdges(core.mode.direction)),
                 "Only DEMAND rows are run-1 guidance; normal singletons remain record-only")
             assertEquals(2L, core.demandLayerEdges, "The exit stores its completed result and its summary; no successor output is stored")
             assertTrue(f.cuts.none { it.first == Cut.STATEMENT })

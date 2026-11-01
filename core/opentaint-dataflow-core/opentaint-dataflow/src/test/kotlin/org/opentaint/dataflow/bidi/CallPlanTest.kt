@@ -479,7 +479,8 @@ class CallPlanTest {
                 assertTrue(f.cuts.none { it.first == Cut.CALL })
             }
             f.drain(core)
-            assertTrue(core.summaries.all().any())
+            assertTrue(f.completedBoundary(core).any())
+            if (index > 1) assertTrue(core.summaries.all().none(), "Empty demand admits no summary")
         }
     }
 

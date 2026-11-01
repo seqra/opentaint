@@ -73,7 +73,7 @@ class ExitRulesTest {
         core.addInitial(f.manager.zero)
         f.drain(core)
         assertEquals(setOf(0, 1, 2), f.processed.map { it.node.location.index }.toSet())
-        assertEquals(setOf(f.manager.zero to Conclusion(ZERO_FACT, ExclusionSet.Empty, demand = false)), raw(core))
+        assertEquals(setOf(f.manager.zero to Conclusion(ZERO_FACT, ExclusionSet.Empty, demand = false)), post(core))
         f.processed.clear()
         val t = mark(f, "requirement")
         val j = initial(f, result, emptyList(), Tail.EXACT, t)
@@ -122,8 +122,8 @@ class ExitRulesTest {
                 f.drain(core)
                 val drop = zeroPremise && (base == AccessPathBase.This || base is AccessPathBase.Argument)
                 val expected = decode(input).filter { !drop || it.fact.mark != entry }.map { premise to it }.toSet()
-                assertEquals(expected, raw(core), "$base, zero=$zeroPremise")
-                assertEquals(if (expected.isEmpty()) emptySet() else setOf(e), core.summaries.all()
+                assertEquals(expected, post(core), "$base, zero=$zeroPremise")
+                assertEquals(if (expected.isEmpty()) emptySet() else setOf(e), core.edges.edgesAt(f.inst(if (core.forward) 2 else 0))
                     .map { (it.second as TaintTree).exclusion }.toSet(), "$base, zero=$zeroPremise")
             }
         }
@@ -166,13 +166,13 @@ class ExitRulesTest {
             f.drain(core)
             assertEquals(1, evaluations)
             val expected = if (zeroPremise) setOf(Conclusion(retained, e, demand = false)) else decode(input)
-            assertEquals(expected.map { premise to it }.toSet(), raw(core), "zero=$zeroPremise")
-            assertEquals(e, (core.summaries.all().single().second as TaintTree).exclusion)
+            assertEquals(expected.map { premise to it }.toSet(), post(core), "zero=$zeroPremise")
+            assertEquals(e, (core.edges.edgesAt(f.inst(if (core.forward) 2 else 0)).single().second as TaintTree).exclusion)
         }
     }
 
     @Test
-    fun `raw summaries survive when current demand publishes no piece`(): Unit {
+    fun `rejected summaries leave only post-statement state`(): Unit {
         val f = MethodAnalysisFixtures()
         val t = mark(f, "T")
         val j = initial(f, argument, emptyList(), Tail.EXACT, t)
@@ -180,10 +180,11 @@ class ExitRulesTest {
         val core = f.core(index = 3)
         core.emitAfter(j, f.inst(2), target)
         f.drain(core)
-        assertEquals(decode(target).map { j to it }.toSet(), raw(core))
+        assertEquals(decode(target).map { j to it }.toSet(), post(core))
+        assertTrue(raw(core).isEmpty())
         assertTrue(selected(core).isEmpty())
         assertTrue(f.publications.isEmpty())
-        assertEquals(2L, core.demandLayerEdges)
+        assertEquals(1L, core.demandLayerEdges)
     }
 
     @Test
@@ -202,8 +203,9 @@ class ExitRulesTest {
         val core = f.core(index = 3, demand = demand)
         core.emitAfter(premise, f.inst(2), target)
         f.drain(core)
-        assertEquals(decode(target).map { premise to it }.toSet(), raw(core))
+        assertEquals(decode(target).map { premise to it }.toSet(), post(core))
         val expected = setOf(premise to Conclusion(PathFact(result, listOf(a), Tail.EXACT, t), ExclusionSet.Empty, demand = false))
+        assertEquals(expected, raw(core))
         assertEquals(expected, selected(core))
         assertEquals(expected, f.publications.flatten().flatMap { pub -> decode(pub.conclusion).map { pub.premise to it } }.toSet())
         assertTrue(f.publications.flatten().all { it.premise === premise && it.layer == Layer.NORMAL })
@@ -242,8 +244,9 @@ class ExitRulesTest {
             core.emitAfter(f.manager.zero, end, target)
             f.drain(core)
             val expected = decode(target).map { f.manager.zero to it }.toSet()
-            assertEquals(expected, raw(core))
+            assertEquals(expected, post(core))
             val accepted = if (index == 1) expected else emptySet()
+            assertEquals(accepted, raw(core))
             assertEquals(accepted, f.publications.flatten().flatMap { pub -> decode(pub.conclusion).map { pub.premise to it } }.toSet())
             assertEquals(accepted, selected(core), "Backward ZERO has no implicit C5 permission")
         }
@@ -295,7 +298,7 @@ class ExitRulesTest {
             val expected = setOf(argument, result).map {
                 j to Conclusion(PathFact(it, listOf(a), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty, demand = false)
             }.toSet()
-            assertEquals(expected, raw(core), "run $index")
+            assertEquals(expected, post(core), "run $index")
         }
     }
 
@@ -304,8 +307,11 @@ class ExitRulesTest {
         for (index in listOf(1, 2)) {
             val f = MethodAnalysisFixtures()
             val t = mark(f, "T")
-            val core = f.core(index = index)
             val j = initial(f, argument, emptyList(), Tail.EXACT, t)
+            val demand = if (index == 1) null else DemandStore.Builder(f.manager).apply {
+                add(f.key, DemandPattern(j.toPattern(), j.toPattern()))
+            }.build()
+            val core = f.core(index = index, demand = demand)
             core.addInitial(j)
             val added = fact(f, argument, emptyList(), Tail.EXACT, t)
             val ref = CallerRef(f.key, f.manager.zero, Layer.NORMAL, f.inst(1))
@@ -414,8 +420,14 @@ class ExitRulesTest {
         }
     }
 
+    /** Post-exit transfer state is independent of summary admission. */
+    private fun post(core: RunMethodAnalyzer): Set<Pair<PremiseKey, Conclusion>> =
+        core.forms.endNodes(core.key).asSequence().flatMap { core.edges.edgesAt(it) }.flatMap { (premise, facts) ->
+            decode(facts).asSequence().map { premise to it }
+        }.toSet()
+
     private fun raw(core: RunMethodAnalyzer): Set<Pair<PremiseKey, Conclusion>> =
         core.summaries.all().flatMap { (premise, facts) -> decode(facts).asSequence().map { premise to it } }.toSet()
     private fun selected(core: RunMethodAnalyzer): Set<Pair<PremiseKey, Conclusion>> =
-        core.summaries.demandEdges().flatMap { (premise, facts) -> decode(facts).asSequence().map { premise to it } }.toSet()
+        core.summaries.demandEdges(core.mode.direction).flatMap { (premise, facts) -> decode(facts).asSequence().map { premise to it } }.toSet()
 }

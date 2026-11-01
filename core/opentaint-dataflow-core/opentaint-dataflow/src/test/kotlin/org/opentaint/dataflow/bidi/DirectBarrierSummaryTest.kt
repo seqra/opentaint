@@ -37,10 +37,10 @@ class DirectBarrierSummaryTest {
         assertEquals(listOf(1, 2, 3), f.configs.map { it.index })
         assertTrue(f.results.first().demandLayerEdges > 0)
         val outgoing = f.results.last().analyzers.sumOf { it.outgoingTargets.size } +
-            f.results.last().analyzers.sumOf { it.summaries.demandEdges().count() }
+            f.results.last().analyzers.sumOf { it.summaries.demandEdges(it.mode.direction).count() }
         assertEquals(outgoing == 0, report.end.reason == EndReason.NO_DEMAND_EDGE)
         assertTrue(f.results.last().demandLayerEdges > 0L)
-        assertTrue(f.results.last().analyzers.all { it.summaries.demandEdges().none() })
+        assertTrue(f.results.last().analyzers.all { it.summaries.demandEdges(it.mode.direction).none() })
         assertTrue(report.entries.isEmpty(), "An unresolved MAY sink is not a settled NORMAL report")
     }
 }

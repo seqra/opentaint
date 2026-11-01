@@ -46,8 +46,8 @@ class FrontierPropertyTest {
             val result = f.result()
             assertEquals(RunStatus.COMPLETE, result.status)
             assertEquals(3L, f.core(zero).steps)
-            assertEquals(4L, f.core(zero).edgeDeltas,
-                "Three completed statement results and a summary count")
+            assertEquals(3L, f.core(zero).edgeDeltas,
+                "Three completed statement results; empty demand admits no summary")
             assertFalse(f.core(zero).nonZeroInitial)
             assertTrue(f.core(concrete).nonZeroInitial)
             assertTrue(f.core(flow).nonZeroInitial)
@@ -57,7 +57,7 @@ class FrontierPropertyTest {
             assertEquals(f.config.direction, frontier.direction)
             assertEquals(setOf(concrete, flow), frontier.analysed)
             assertEquals(setOf(zero), frontier.zeroOnly)
-            assertEquals(4L, frontier.zeroOnlyEdges)
+            assertEquals(3L, frontier.zeroOnlyEdges)
             assertEquals(emptyMap(), frontier.demandEdges)
             assertEquals(0L, frontier.recordCrossings)
             assertEquals(0, frontier.seeds)
@@ -82,12 +82,12 @@ class FrontierPropertyTest {
             f.admit(actor, second, Layer.DEMAND, added)
             f.admit(actor, second, Layer.DEMAND, added)
             val result = f.result()
-            assertEquals(3L, actor.demandLayerEdges,
-                "Restricted inputs are keys: two completed demand results and one demand summary delta")
-            assertEquals(3L, result.demandLayerEdges)
-            assertEquals(4L, actor.edgeDeltas)
+            assertEquals(2L, actor.demandLayerEdges,
+                "Two completed demand results; no admitted summary delta")
+            assertEquals(2L, result.demandLayerEdges)
+            assertEquals(3L, actor.edgeDeltas)
             assertEquals(setOf(first, second), f.links(actor).asSequence().map { it.caller }.toSet())
-            assertEquals(0, actor.summaries.demandEdges().count(), "Raw demand without paired exit permission is not published")
+            assertEquals(0, actor.summaries.demandEdges(actor.mode.direction).count(), "Raw demand without paired exit permission is not published")
             val handOff = HandOff.of(f.config, result, f.shared)
             val frontier = frontierOf(f.config, result, handOff, f.report.reportCount)
             assertEquals(setOf(actor.key), frontier.analysed)
@@ -122,12 +122,12 @@ class FrontierPropertyTest {
             assertEquals(2L, actor.recordCrossings, "The wrong-mark record has no admitted native result")
             assertEquals(2L, result.recordCrossings)
             assertFalse(actor.nonZeroInitial, "Concrete effects of the zero premise are not nonzero initial facts")
-            assertEquals(6L, actor.edgeDeltas)
+            assertEquals(4L, actor.edgeDeltas)
             val frontier = frontierOf(f.config, result, emptyHandOff(f), f.report.reportCount)
             assertEquals(2L, frontier.recordCrossings)
             assertTrue(frontier.analysed.isEmpty())
             assertEquals(setOf(actor.key), frontier.zeroOnly)
-            assertEquals(6L, frontier.zeroOnlyEdges)
+            assertEquals(4L, frontier.zeroOnlyEdges)
         }
     }
 
@@ -149,15 +149,15 @@ class FrontierPropertyTest {
                     for (path in listOf(listOf(a), listOf(b))) for ((bit, exclusions) in markExclusions.withIndex()) {
                         if ((mask and (1 shl bit)) == 0) continue
                         val facts = f.fact(y, path, Tail.ANY, MarkSlot.Star(exclusions), layer = Layer.DEMAND)
-                        f.selected(key, initial, facts) // An earlier stored union may already cover this attempt.
-                        assertNull(f.selected(key, initial, facts), "Repeated selected-store inputs have no second delta")
+                        f.summary(key, initial, facts) // An earlier stored union may already cover this attempt.
+                        assertNull(f.summary(key, initial, facts), "Repeated selected-store inputs have no second delta")
                         // This expected set comes from the declared raw inputs, never from HandOff or an index query.
                         expected += key to DemandPattern(f.pattern(y, path, Tail.ANY, MarkSlot.STAR), initial.toPattern())
                     }
                 }
                 if (index == 2) {
-                    f.selected(key, f.manager.zero, Reach.NORMAL)
-                    f.selected(key, f.manager.zero, Reach.NORMAL)
+                    f.summary(key, f.manager.zero, Reach.NORMAL)
+                    f.summary(key, f.manager.zero, Reach.NORMAL)
                     expected += key to DemandPattern(f.manager.zero.toPattern(), f.manager.zero.toPattern())
                 }
             }
@@ -202,7 +202,7 @@ class FrontierPropertyTest {
             assertFailsWith<UnsupportedOperationException> { (frontier.analysed as MutableSet).clear() }
             assertFailsWith<UnsupportedOperationException> { (frontier.zeroOnly as MutableSet).clear() }
             assertEquals(mapOf(nonzero to 2), frontier.demandEdges)
-            assertEquals(4L, frontier.zeroOnlyEdges)
+            assertEquals(3L, frontier.zeroOnlyEdges)
         }
     }
 

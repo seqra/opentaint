@@ -60,7 +60,7 @@ class Run1OperationStaticWriterTest {
         assertTrue(t.actor.staticBatch.writers.isEmpty())
         assertTrue(t.actor.staticBatch.flowWriters.isEmpty())
         assertTrue(t.actor.summaries.all().none())
-        assertTrue(t.actor.summaries.demandEdges().none())
+        assertTrue(t.actor.summaries.demandEdges(t.actor.mode.direction).none())
         t.f.drain(t.actor)
         assertEquals(0, t.service.statistics().writerRows)
         assertEquals(0, t.service.statistics().flowWriterRows)

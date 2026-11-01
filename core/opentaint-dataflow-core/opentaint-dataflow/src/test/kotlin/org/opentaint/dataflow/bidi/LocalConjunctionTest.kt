@@ -50,11 +50,11 @@ class LocalConjunctionTest {
             val order = if (reverse) listOf(j2, j1) else listOf(j1, j2)
             core.addInitial(order[0])
             f.drain(core, quantum = 1)
-            assertTrue(core.summaries.all().none())
+            assertTrue(f.completedBoundary(core).none())
             core.addInitial(order[1])
             f.drain(core, quantum = 1)
             assertEquals(setOf(j1 to output(f, target), j2 to output(f, target)),
-                methodEntries(f.ops, core.summaries.all()))
+                methodEntries(f.ops, f.completedBoundary(core)))
             assertTrue(f.publications.flatten().all { it.premise in setOf(j1, j2) && it.layer == Layer.DEMAND })
             assertNotNull((core.localServices as RunMethodLocalServices).conjunctions)
             assertTrue(core.demandLayerEdges > 0L)
@@ -75,13 +75,13 @@ class LocalConjunctionTest {
             if (allZero) core.emitAfter(f.manager.zero, f.inst(0), f.fact(firstBase, mark = t))
             else core.addInitial(first)
             f.drain(core)
-            assertTrue(core.summaries.all().none())
+            assertTrue(f.completedBoundary(core).none())
             core.emitAfter(f.manager.zero, f.inst(0), f.fact(secondBase, mark = u))
             f.drain(core)
             val premise = if (allZero) f.manager.zero else first
             assertEquals(setOf(premise to output(f, edge.target)),
-                methodEntries(f.ops, core.summaries.all()))
-            assertSame(premise, core.summaries.all().single().first)
+                methodEntries(f.ops, f.completedBoundary(core)))
+            assertSame(premise, f.completedBoundary(core).single().first)
         }
     }
 
@@ -107,8 +107,8 @@ class LocalConjunctionTest {
             assertEquals(setOf(beforeCut), methodLeaves(f.ops, f.cuts.filter { it.first == Cut.STATEMENT && it.second.base == result }
                 .map { it.second }))
             assertEquals(setOf(premise to Conclusion(PathFact(result, path.take(2), Tail.ANY, v), ExclusionSet.Empty, true)),
-                methodEntries(f.ops, core.summaries.all()))
-            assertTrue(core.summaries.all().all { it.second.layer == Layer.DEMAND })
+                methodEntries(f.ops, f.completedBoundary(core)))
+            assertTrue(f.completedBoundary(core).all { it.second.layer == Layer.DEMAND })
             assertTrue(core.demandLayerEdges >= 2L)
         }
     }
@@ -124,7 +124,7 @@ class LocalConjunctionTest {
             val core = localCore(f)
             core.addInitial(j)
             f.drain(core, quantum = 1)
-            assertEquals(setOf(j to output(f, edge.target)), methodEntries(f.ops, core.summaries.all()))
+            assertEquals(setOf(j to output(f, edge.target)), methodEntries(f.ops, f.completedBoundary(core)))
             val publications = f.publications.toList()
             val cuts = f.cuts.size
             core.emitAfter(j, f.inst(0), f.fact(firstBase, mark = t))
@@ -152,11 +152,11 @@ class LocalConjunctionTest {
             core.addInitial(second)
             f.drain(core)
             val firstResults = setOf(first to output(f, a.target), second to output(f, a.target))
-            assertEquals(firstResults, methodEntries(f.ops, core.summaries.all()))
+            assertEquals(firstResults, methodEntries(f.ops, f.completedBoundary(core)))
             core.addInitial(other)
             f.drain(core)
             assertEquals(firstResults + setOf(first to output(f, b.target), other to output(f, b.target)),
-                methodEntries(f.ops, core.summaries.all()))
+                methodEntries(f.ops, f.completedBoundary(core)))
         }
     }
 
@@ -175,13 +175,13 @@ class LocalConjunctionTest {
             right.addInitial(second)
             f.drain(left)
             f.drain(right)
-            assertTrue(left.summaries.all().none())
-            assertTrue(right.summaries.all().none())
+            assertTrue(f.completedBoundary(left).none())
+            assertTrue(f.completedBoundary(right).none())
             right.addInitial(first)
             f.drain(right)
-            assertTrue(left.summaries.all().none())
+            assertTrue(f.completedBoundary(left).none())
             assertEquals(setOf(first to output(f, edge.target), second to output(f, edge.target)),
-                methodEntries(f.ops, right.summaries.all()))
+                methodEntries(f.ops, f.completedBoundary(right)))
         }
     }
 
@@ -200,7 +200,7 @@ class LocalConjunctionTest {
             assertEquals(setOf(initial to Conclusion(PathFact(result, emptyList(), Tail.EXACT, v), ExclusionSet.Empty, false),
                 initial to Conclusion(PathFact(firstBase, emptyList(), Tail.EXACT, t), ExclusionSet.Empty, true),
                 initial to Conclusion(PathFact(secondBase, emptyList(), Tail.EXACT, u), ExclusionSet.Empty, true)),
-                methodEntries(f.ops, core.summaries.all()))
+                methodEntries(f.ops, f.completedBoundary(core)))
             assertNull((core.localServices as RunMethodLocalServices).conjunctions)
             assertTrue(core.targets.isEmpty())
             assertTrue(core.sourceHits!!.entries().none())
@@ -225,7 +225,7 @@ class LocalConjunctionTest {
             core.addInitial(second)
             f.drain(core)
             val expected = if (blocked) emptySet() else setOf(f.manager.union(first, second) to output(f, edge.target, index = 3))
-            assertEquals(expected, methodEntries(f.ops, core.summaries.all()))
+            assertEquals(expected, methodEntries(f.ops, f.completedBoundary(core)))
             assertEquals(e, first.exclusion)
             assertEquals(0L, core.demandLayerEdges)
             assertTrue(f.events.isEmpty())
@@ -258,7 +258,7 @@ class LocalConjunctionTest {
             core.addInitial(f.manager.zero) // This local transfer fixture supplies an already-admitted ZERO.
             f.admit(core, CallerRef(f.key, f.manager.zero, Layer.NORMAL, f.inst(1)), if (index == 1) Layer.DEMAND else Layer.NORMAL, if (index == 1) f.run1Fact(firstBase, full = t.mark) else f.fact(firstBase, mark = t))
             assertEquals(setOf(f.manager.zero, if (index == 1) policy else answer), core.initials.all().toSet())
-            assertTrue(core.summaries.all().none())
+            assertTrue(f.completedBoundary(core).none())
             f.drain(core, quantum = 1)
             assertTrue(f.processed.any { it.premise === f.manager.zero && it.node === f.inst(1) && it.facts.base == secondBase },
                 "The source contributes in both modes, including the restricted control")
@@ -268,7 +268,7 @@ class LocalConjunctionTest {
             if (index == 1) {
                 assertEquals(setOf(f.manager.zero, policy, answer), core.initials.all().toSet())
                 assertEquals(setOf(zero, answer to output(f, target, index)),
-                    methodEntries(f.ops, core.summaries.all()))
+                    methodEntries(f.ops, f.completedBoundary(core)))
                 val terminal = core.targets.single()
                 assertSame(answer, terminal.premise, "The zero-source contributor drops out of the union")
                 assertEquals(Target.DemandTarget, terminal.target)
@@ -276,7 +276,7 @@ class LocalConjunctionTest {
             } else {
                 assertEquals(setOf(f.manager.zero, answer), core.initials.all().toSet())
                 assertEquals(setOf(zero, answer to output(f, target, index)),
-                    methodEntries(f.ops, core.summaries.all()))
+                    methodEntries(f.ops, f.completedBoundary(core)))
                 assertEquals(1, core.targets.size)
                 assertIs<Target.NormalTarget>(core.targets.single().target)
             }

@@ -13,16 +13,18 @@ import kotlin.test.*
 
 class DemandLinkTest {
     @Test
-    fun `DLINK retains provisional run3 sink guidance and refines its normal report by run5`(): Unit {
+    fun `DLINK retains provisional sink guidance and refines its normal report by run7`(): Unit {
         DriverFixtures().use { f ->
             val program = f.demandLink()
             val driver = f.driver(FixedLimits(listOf(1, 1, 2, 3, 4, 5, 6)))
             val report = driver.analyze(listOf(program.root))
+            println("DLINK_RELATIVE runs=${f.configs.map { it.index }} end=${report.end} findings=${report.entries.size} " +
+                "frontiers=${driver.frontiers.map { listOf(it.run, it.demandEdges.values.sum(), it.targetDemand, it.seeds) }}")
             val argument = AccessPathBase.Argument(0)
             val mark = MarkSlot.Concrete(program.mark)
             val coarseLink = Pattern(PathFact(argument, emptyList(), Tail.ANY_TAINT, mark), ExclusionSet.Empty)
-            assertEquals(listOf(1, 2, 3, 4, 5), f.configs.map { it.index })
-            assertEquals(listOf(1, 1, 2, 3, 4), f.configs.map { it.fieldLimit })
+            assertEquals(listOf(1, 2, 3, 4, 5, 6, 7), f.configs.map { it.index })
+            assertEquals(listOf(1, 1, 2, 3, 4, 5, 6), f.configs.map { it.fieldLimit })
             assertTrue(f.results.all { it.status == RunStatus.COMPLETE })
             val runThree = f.results[2]
             val stored = f.processed.filter { it.run == 3 }
@@ -49,8 +51,8 @@ class DemandLinkTest {
             assertTrue(driver.frontiers.last().demandEdges.isEmpty())
             assertEquals(program.rule, report.entries.single().descriptor.rule,
                 "The source taints descendants; cleaning only the root must not lose the g.h finding")
-            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 5, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
-            assertEquals(listOf(1, 2, 3, 4, 5), driver.frontiers.map { it.run })
+            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 7, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
+            assertEquals(listOf(1, 2, 3, 4, 5, 6, 7), driver.frontiers.map { it.run })
             assertTrue(driver.frontiers[2].targetDemand > 0)
             assertTrue(driver.frontiers[2].seeds > 0)
             assertEquals(0, driver.frontiers.last().targetDemand)

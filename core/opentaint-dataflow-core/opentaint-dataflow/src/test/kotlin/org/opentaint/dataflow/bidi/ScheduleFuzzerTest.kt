@@ -32,6 +32,11 @@ class ScheduleFuzzerTest {
         CallStage.Edges(REWRITTEN, AFTER, BIND_BACK, bindBack),
     ), emptyList(), BEFORE, AFTER)
 
+    private fun atExit(actual: RunObservation, f: FiniteProgramFixtures, key: MethodKey): Set<ObservedEdge> {
+        val exit = f.inst(key, f.programMethod(key).normalExit)
+        return actual.processed.filter { it.method == key && it.node == exit }.map { it.copy(node = null) }.toSet()
+    }
+
     private fun rule(id: String): CommonTaintConfigurationSink = object : CommonTaintConfigurationSink {
         override val id = id
         override val meta = object : CommonTaintConfigurationSinkMeta {
@@ -246,9 +251,15 @@ class ScheduleFuzzerTest {
                 listOf(key to DemandPattern(ZERO_PATTERN, f.pattern(x, tail = Tail.ANY, mark = u))),
                 seeds = listOf(Seed.Source(key, method.inst(0), must), Seed.Source(key, method.inst(0), deep)))
             compareSeed(f, config, listOf(a, b), listOf(t.mark, u.mark), seed) { actual ->
-                assertContains(actual.rawSummaries, selectedExpectedEdge(f.ap.marks, index, ObservedEdge(key, zero,
-                    Conclusion(PathFact(x, emptyList(), Tail.ANY_TAINT, t), if (index == 1) ExclusionSet.Empty else ExclusionSet.of(intArrayOf(a, b)), index == 1))))
-                val cut = selectedExpectedEdge(f.ap.marks, index, ObservedEdge(key, zero, Conclusion(PathFact(x, if (index == 1) listOf(a) else listOf(a, b), Tail.ANY, u), ExclusionSet.Empty, true)))
+                val mustResult = selectedExpectedEdge(f.ap.marks, index, ObservedEdge(key, zero,
+                    Conclusion(PathFact(x, emptyList(), Tail.ANY_TAINT, t), if (index == 1) ExclusionSet.Empty else ExclusionSet.of(intArrayOf(a, b)), index == 1)))
+                assertContains(atExit(actual, f, key), mustResult)
+                if (index == 1) assertContains(actual.rawSummaries, mustResult)
+                else assertTrue(actual.rawSummaries.none { it.conclusion.fact.mark == t })
+                val bodyCut = selectedExpectedEdge(f.ap.marks, index, ObservedEdge(key, zero,
+                    Conclusion(PathFact(x, if (index == 1) listOf(a) else listOf(a, b), Tail.ANY, u), ExclusionSet.Empty, true)))
+                assertContains(atExit(actual, f, key), bodyCut)
+                val cut = bodyCut.copy(conclusion = bodyCut.conclusion.copy(fact = bodyCut.conclusion.fact.copy(path = listOf(a))))
                 assertContains(actual.rawSummaries, cut)
                 assertContains(actual.selectedDemand, cut)
                 assertEquals(index == 1, actual.selectedDemand.any { it.conclusion.fact.mark == (if (index == 1) GroupedScalarMarks(f.ap.marks).slot(t) else t) })
@@ -385,9 +396,11 @@ class ScheduleFuzzerTest {
                         if (!identity) add(ObservedEdge(caller, zero, Conclusion(output.copy(base = alias), ExclusionSet.Empty, false)))
                     }
                 }
-                assertEquals(expected, actual.rawSummaries.filter {
+                assertEquals(expected, atExit(actual, f, caller).filter { it.conclusion.fact.mark == output.mark }.toSet(),
+                    "Memory-effect aliases remain in point storage")
+                assertEquals(expected.filter { it.conclusion.fact.base == y }.toSet(), actual.rawSummaries.filter {
                     it.method == caller && it.conclusion.fact.mark == output.mark
-                }.toSet())
+                }.toSet(), "Only the demanded output is an admitted summary")
                 assertTrue(actual.requests.isEmpty() && actual.sourceHits.isEmpty())
                 assertEquals(pending && !blocked, actual.selectedDemand.any { it.method == caller && it.conclusion.fact.mark == output.mark })
             }

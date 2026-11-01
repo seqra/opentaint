@@ -47,7 +47,8 @@ class RestrictedDemandPipelineTest {
             actor.addInitial(actual)
             f.drain(actor)
             val expected = f.pattern(ret, mark = MarkSlot.Concrete(t))
-            assertTrue(actor.summaries.all().any { (_, facts) -> expected in f.ops.leaves(facts).toList() })
+            assertTrue(f.completedBoundary(actor).any { (_, facts) -> expected in f.ops.leaves(facts).toList() })
+            assertTrue(actor.summaries.all().none(), "A rejected candidate is not retained")
             assertTrue(f.publications.isEmpty(), "No prior/current exit permission existed yet")
             val processed = actor.steps
             val input = f.fact(arg, mark = MarkSlot.Concrete(t))

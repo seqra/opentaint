@@ -38,7 +38,7 @@ class Run1StaticSummaryErasureTest {
 
         fun assertNoRows() {
             assertTrue(actor.summaries.all().none())
-            assertTrue(actor.summaries.demandEdges().none())
+            assertTrue(actor.summaries.demandEdges(actor.mode.direction).none())
             assertTrue(f.publications.flatten().isEmpty())
         }
 
@@ -118,7 +118,7 @@ class Run1StaticSummaryErasureTest {
             t.actor.applySummary(part, Publication(formal, t.value(atom = t.input)), 0)
             assertTrue(t.actor.staticBatch.supplies.any { it.groups == MarkSet.of(t.input) })
             assertTrue(t.actor.summaries.all().none { it.first == callerInitial })
-            assertTrue(t.actor.summaries.demandEdges().none { it.first == callerInitial })
+            assertTrue(t.actor.summaries.demandEdges(t.actor.mode.direction).none { it.first == callerInitial })
             assertTrue(t.actor.staticBatch.writers.isEmpty())
             assertTrue(t.actor.staticBatch.flowWriters.isEmpty())
             t.f.drain(t.actor)
@@ -176,7 +176,7 @@ class Run1StaticSummaryErasureTest {
             assertTrue(t.actor.summaries.all().none(), "The summary waits for NormalExit")
             t.f.drain(t.actor)
             assertEquals(setOf(localInitial), t.actor.summaries.all().map { it.first }.toSet())
-            assertEquals(setOf(localInitial), t.actor.summaries.demandEdges().map { it.first }.toSet())
+            assertEquals(setOf(localInitial), t.actor.summaries.demandEdges(t.actor.mode.direction).map { it.first }.toSet())
             assertTrue(t.actor.summaries.all().none { it.first.isZero || it.first is PremiseSet })
             assertTrue(t.actor.staticGuidanceSeeds.frozenRows().any())
             assertEquals(setOf(localInitial), t.f.publications.flatten().map { it.premise }.toSet())
@@ -190,7 +190,10 @@ class Run1StaticSummaryErasureTest {
             val mark = MarkSlot.Concrete(f.mark("T"))
             val initial = f.manager.initial(f.pattern(STATIC, from, Tail.EXACT, mark))
             val output = f.fact(STATIC, target, Tail.EXACT, mark)
-            val config = RunConfig(2, 1, DemandStore.Builder(f.manager).build(), f.records,
+            val demand = DemandStore.Builder(f.manager).apply {
+                add(f.key, DemandPattern(initial.toPattern(), f.pattern(STATIC, target, Tail.EXACT, mark)))
+            }.build()
+            val config = RunConfig(2, 1, demand, f.records,
                 SeedIndex.EMPTY, listOf(f.key))
             val actor = f.core(config)
             actor.summaryDelta(initial, output)
@@ -246,7 +249,7 @@ class Run1StaticSummaryErasureTest {
             val copyActor = result.analyzers.single { it.key == writer }
             assertTrue(copyActor.summaries.all().none(),
                 "The copy cannot return and every static/static result is erased")
-            assertTrue(copyActor.summaries.demandEdges().none())
+            assertTrue(copyActor.summaries.demandEdges(copyActor.mode.direction).none())
             assertTrue(result.analyzers.single { it.key == reader }.summaries.all().none { (original, _) ->
                 original.members.any { it.base == STATIC }
             }, "The local value is not exported as a reader method summary")

@@ -87,11 +87,14 @@ private fun restrictPlainFacts(ops: ApOps, j: InitialAp, g: Facts, d: DemandPatt
     return values.values.toList()
 }
 
-/** Selection reads raw headers only. A transient native read view does not change them. */
+/** The existing handoff truth table, applied to final admitted headers. */
+internal fun selectedForHandoff(premise: PremiseKey, layer: Layer, direction: Direction): Boolean {
+    if (layer == Layer.DEMAND) return true
+    val single = premise as? InitialAp ?: return true
+    return direction == Direction.BACKWARD && single.isZero
+}
+
 internal fun selectDemand(m: ApManager, premise: PremiseKey, g: Facts, direction: Direction): Facts? {
     m.cancellation.checkpoint()
-    if (g.layer == Layer.DEMAND) return g
-    val j = premise as? InitialAp ?: return g
-    if (direction == Direction.BACKWARD && j.isZero) return g
-    return null
+    return g.takeIf { selectedForHandoff(premise, it.layer, direction) }
 }

@@ -6,7 +6,7 @@ import org.opentaint.dataflow.bidi.store.RunSummaryStore
 import kotlin.test.*
 
 class RunSummaryBorrowTest {
-    @Test fun `raw borrowing sees the current T2 annotation replacement`() {
+    @Test fun `admitted borrowing sees the current T2 annotation replacement`() {
         val f = StoreFixtures()
         val summaries = RunSummaryStore(f.manager)
         val initial = f.manager.initial(f.pattern(tail = Tail.STAR, mark = MarkSlot.STAR))
@@ -15,23 +15,23 @@ class RunSummaryBorrowTest {
             MarkExclusions.of(f.manager.marks, mark), flow.root, flow.tail)
         assertTrue(summaries.borrow(initial).none())
         val first = excluding(f.mark("T"))
-        assertNotNull(summaries.add(initial, first))
+        assertNotNull(summaries.addAdmitted(initial, first))
         assertEquals(first.markExclusion, assertIs<FlowTree>(summaries.borrow(initial).single()).markExclusion)
-        assertNotNull(summaries.add(initial, excluding(f.mark("U"))))
+        assertNotNull(summaries.addAdmitted(initial, excluding(f.mark("U"))))
         assertTrue(assertIs<FlowTree>(summaries.borrow(initial).single()).markExclusion.isEmpty)
-        assertNull(summaries.add(initial, first))
+        assertNull(summaries.addAdmitted(initial, first))
         assertEquals(1, summaries.borrow(initial).count())
     }
 
-    @Test fun `selected guidance does not replace the borrowed raw relation`() {
+    @Test fun `borrow and outgoing view share admitted rows`() {
         val f = StoreFixtures()
         val summaries = RunSummaryStore(f.manager)
         val initial = f.manager.initial(f.pattern())
         val raw = f.fact()
-        val guidance = f.fact(path = listOf(f.field("f")))
-        assertNotNull(summaries.add(initial, raw))
-        assertNotNull(summaries.addDemand(initial, guidance))
-        assertEquals(listOf(raw), summaries.borrow(initial).toList())
-        assertEquals(listOf(guidance), summaries.demandEdges().map { it.second }.toList())
+        val guidance = f.fact(path = listOf(f.field("f")), layer = Layer.DEMAND)
+        assertNotNull(summaries.addAdmitted(initial, raw))
+        assertNotNull(summaries.addAdmitted(initial, guidance))
+        assertEquals(setOf(raw, guidance), summaries.borrow(initial).toSet())
+        assertEquals(listOf(guidance), summaries.demandEdges(Direction.FORWARD).map { it.second }.toList())
     }
 }

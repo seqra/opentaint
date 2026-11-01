@@ -61,9 +61,9 @@ class GeneralFlowCoverageTest {
             assertEquals(tail, counterpart.tail)
             assertEquals(inputE, counterpart.exclusion)
             val store = RunSummaryStore(m, flowBacked = true)
-            if (flowFirst) store.add(counterpart, flow())
-            store.add(i, marked(atom = atom))
-            if (!flowFirst) store.add(counterpart, flow())
+            if (flowFirst) store.addAdmitted(counterpart, flow())
+            store.addAdmitted(i, marked(atom = atom))
+            if (!flowFirst) store.addAdmitted(counterpart, flow())
             assertTrue(store.borrow(i).none())
         }
     }

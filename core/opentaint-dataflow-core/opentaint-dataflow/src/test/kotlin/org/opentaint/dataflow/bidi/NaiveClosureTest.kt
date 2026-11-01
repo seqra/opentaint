@@ -68,6 +68,11 @@ class NaiveClosureTest {
         return actual
     }
 
+    private fun atExit(actual: RunObservation, f: FiniteProgramFixtures, key: MethodKey): Set<ObservedEdge> {
+        val exit = f.inst(key, f.programMethod(key).normalExit)
+        return actual.processed.filter { it.method == key && it.node == exit }.map { it.copy(node = null) }.toSet()
+    }
+
     private fun rule(id: String): CommonTaintConfigurationSink = object : CommonTaintConfigurationSink {
         override val id = id
         override val meta = object : CommonTaintConfigurationSinkMeta {
@@ -228,7 +233,7 @@ class NaiveClosureTest {
     }
 
     @Test
-    fun `paired restriction preserves raw E and applies exit exclusions only to publications`(): Unit {
+    fun `paired restriction preserves body E and stores the same exit restriction as publication`(): Unit {
         for (sameUnit in listOf(false, true)) FiniteProgramFixtures().use { f ->
             val main = f.method("mustCaller", listOf(listOf(1), listOf(2), listOf(3), emptyList()), 3)
             val getter = f.method("excludedGetter", listOf(listOf(1), emptyList()), 1)
@@ -252,13 +257,15 @@ class NaiveClosureTest {
             val actual = check(f, config, listOf(a, b), listOf(t.mark), sameUnit)
             val initial = f.pattern(x, tail = Tail.ANY_TAINT, mark = t)
             assertContains(actual.initials, ObservedInitial(callee, initial))
-            assertContains(actual.rawSummaries, ObservedEdge(callee, setOf(initial),
+            assertContains(atExit(actual, f, callee), ObservedEdge(callee, setOf(initial),
                 Conclusion(PathFact(returned, emptyList(), Tail.ANY_TAINT, t), ExclusionSet.of(b), false)))
-            // C5 narrows the published must region by the exit guard. Raw body
-            // storage above retains its own E without that exit-only exclusion.
+            // C5 narrows both admitted storage and publication. Point storage
+            // keeps the instruction result with its own E.
             val outputExclusion = ExclusionSet.of(intArrayOf(a, b))
-            assertContains(actual.publications, ObservedEdge(callee, setOf(initial),
-                Conclusion(PathFact(returned, emptyList(), Tail.ANY_TAINT, t), outputExclusion, false)))
+            val admitted = ObservedEdge(callee, setOf(initial),
+                Conclusion(PathFact(returned, emptyList(), Tail.ANY_TAINT, t), outputExclusion, false))
+            assertContains(actual.rawSummaries, admitted)
+            assertContains(actual.publications, admitted)
             assertContains(actual.rawSummaries, ObservedEdge(caller, zero,
                 Conclusion(PathFact(y, emptyList(), Tail.ANY_TAINT, t), outputExclusion, false)))
             assertTrue(actual.requests.isEmpty() && actual.sourceHits.isEmpty() && actual.selectedDemand.isEmpty())
@@ -527,9 +534,14 @@ class NaiveClosureTest {
             val must = selectedExpectedEdge(f.ap.marks, index, ObservedEdge(key, zero, Conclusion(PathFact(x, emptyList(), Tail.ANY_TAINT, t),
                 if (index == 1) ExclusionSet.Empty else ExclusionSet.of(intArrayOf(a, b)), index == 1)))
             val may = selectedExpectedEdge(f.ap.marks, index, ObservedEdge(key, zero, Conclusion(PathFact(x, if (index == 1) listOf(a) else listOf(a, b), Tail.ANY, u), ExclusionSet.Empty, true)))
-            assertContains(actual.rawSummaries, must)
-            assertContains(actual.rawSummaries, may)
-            assertContains(actual.selectedDemand, may)
+            assertContains(atExit(actual, f, key), must)
+            assertContains(atExit(actual, f, key), may)
+            if (index == 1) assertContains(actual.rawSummaries, must)
+            else assertTrue(actual.rawSummaries.none { it.conclusion.fact.mark == t })
+            val admittedMay = if (index == 1) may else may.copy(conclusion = may.conclusion.copy(
+                fact = may.conclusion.fact.copy(path = listOf(a))))
+            assertContains(actual.rawSummaries, admittedMay)
+            assertContains(actual.selectedDemand, admittedMay)
             assertEquals(index == 1, actual.selectedDemand.any { it.conclusion.fact.mark == (if (index == 1) GroupedScalarMarks(f.ap.marks).slot(t) else t) })
             assertTrue(actual.requests.isEmpty())
         }
@@ -568,7 +580,9 @@ class NaiveClosureTest {
                 if (!blocked) add(ObservedEdge(caller, zero,
                     Conclusion(PathFact(y, emptyList(), Tail.ANY_TAINT, u), ExclusionSet.Empty, true)))
             }
-            assertEquals(wanted, outputs)
+            assertEquals(wanted, atExit(actual, f, caller).filter { it.conclusion.fact.mark == u }.toSet())
+            assertEquals(wanted.filter { it.conclusion.fact.base == y }.toSet(), outputs,
+                "The alias is still evaluated, but only the demanded output is an admitted summary")
             assertTrue(actual.sourceHits.isEmpty() && actual.requests.isEmpty())
         }
     }
@@ -607,9 +621,11 @@ class NaiveClosureTest {
                 if (!identity) add(ObservedEdge(caller, zero,
                     Conclusion(output.copy(base = alias), ExclusionSet.Empty, false)))
             }
-            assertEquals(expected, actual.rawSummaries.filter {
+            assertEquals(expected, atExit(actual, f, caller).filter { it.conclusion.fact.mark == output.mark }.toSet(),
+                "A normal identity return suppresses memory aliases; an effect retains them in point storage")
+            assertEquals(expected.filter { it.conclusion.fact.base == y }.toSet(), actual.rawSummaries.filter {
                 it.method == caller && it.conclusion.fact.mark == output.mark
-            }.toSet(), "A normal identity return suppresses memory aliases; an effect retains them")
+            }.toSet(), "Only the demanded output is an admitted summary")
             assertContains(actual.links, ObservedLink(callee, caller, zero, Layer.NORMAL, main.inst(1), Layer.NORMAL,
                 f.pattern(x, listOf(a), Tail.EXACT, t)))
             assertTrue(actual.requests.isEmpty() && actual.sourceHits.isEmpty() && actual.selectedDemand.isEmpty())

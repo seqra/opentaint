@@ -7,6 +7,7 @@ import org.opentaint.dataflow.bidi.fixtures.EngineShellFixtures
 import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
 import org.opentaint.dataflow.bidi.interp.ZERO_FACT
 import org.opentaint.dataflow.bidi.store.CallerRef
+import org.opentaint.dataflow.bidi.store.DemandStore
 import org.opentaint.dataflow.ifds.UnitType
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.CopyOnWriteArrayList
@@ -204,7 +205,11 @@ class RunCleanupTest {
             val freezes = ArrayList<String>()
             val first = IllegalStateException("local service freeze")
             val second = AssertionError("call service freeze")
-            val core = f.core(index = index,
+            val initial = f.manager.initial(f.pattern())
+            val incomingDemand = if (index == 1) null else DemandStore.Builder(f.manager).apply {
+                add(f.key, DemandPattern(initial.toPattern(), initial.toPattern()))
+            }.build()
+            val core = f.core(index = index, demand = incomingDemand,
                 localFactory = MethodLocalServicesFactory { owner ->
                     val delegate = RunMethodLocalServices(owner)
                     object : MethodLocalServices by delegate {
@@ -217,7 +222,6 @@ class RunCleanupTest {
                         override fun freeze() { freezes += "call"; delegate.freeze(); throw second }
                     }
                 })
-            val initial = f.manager.initial(f.pattern())
             core.addInitial(initial)
             val ref = CallerRef(f.key, f.manager.zero, Layer.NORMAL, f.inst(1))
             f.admit(core, ref, Layer.NORMAL, f.fact())
@@ -227,7 +231,7 @@ class RunCleanupTest {
             core.countRecordCrossing()
             core.countTriggerSeed()
             val raw = core.summaries.all().toList()
-            val demand = core.summaries.demandEdges().toList()
+            val demand = core.summaries.demandEdges(core.mode.direction).toList()
             val stats = listOf(core.steps, core.edgeDeltas, core.demandLayerEdges, core.recordCrossings, core.triggerSeeds)
             assertTrue(raw.isNotEmpty())
             assertTrue(core.nonZeroInitial)
@@ -245,7 +249,7 @@ class RunCleanupTest {
             assertFailsWith<IllegalStateException> { core.edges }
             assertFailsWith<IllegalStateException> { core.initials }
             assertEquals(raw, core.summaries.all().toList())
-            assertEquals(demand, core.summaries.demandEdges().toList())
+            assertEquals(demand, core.summaries.demandEdges(core.mode.direction).toList())
             assertEquals(stats, listOf(core.steps, core.edgeDeltas, core.demandLayerEdges, core.recordCrossings, core.triggerSeeds))
             assertTrue(core.nonZeroInitial)
             assertTrue(core.javaClass.declaredFields.none { it.name == "linkStore" },

@@ -3,6 +3,7 @@ from unittest.mock import patch
 import argparse
 from pathlib import Path
 from types import SimpleNamespace
+import os
 
 from benchmark_bidi_projects import analyzer_jvm_args
 import benchmark_bidi_projects
@@ -100,6 +101,31 @@ class AnalyzerConfigurationTest(unittest.TestCase):
             with self.assertRaises(argparse.ArgumentTypeError):
                 benchmark_bidi_projects.heap_memory(value)
         self.assertEqual('16g', benchmark_bidi_projects.heap_memory('16G'))
+
+    def test_iteration_profile_is_eligible_only_in_requested_active_run(self):
+        windows = benchmark_bidi_projects.iteration_profile_windows
+        self.assertEqual([('run-4-normal', 123.0, 60)], windows([4, 6, 8], 4, True, {4: 123.0}))
+        self.assertEqual([], windows([4, 6, 8], 4, False, {4: 123.0}))
+        self.assertEqual([], windows([4, 6, 8], 3, True, {3: 123.0}))
+        self.assertEqual([], windows([4], 4, True, {}))
+
+    def test_invalid_iteration_targets_fail_before_starting_analysis(self):
+        for value in ['0', '-1', 'run-4', '4.0', '4;true']:
+            with self.assertRaises(argparse.ArgumentTypeError):
+                benchmark_bidi_projects.positive_iteration(value)
+        self.assertEqual(4, benchmark_bidi_projects.positive_iteration('4'))
+
+    def test_phase_snapshot_records_external_capture_cost_and_actual_latest_run(self):
+        result = SimpleNamespace(returncode=0, stdout='Recording written')
+        with patch.dict(os.environ, {'JAVA_HOME': '/jdk'}), \
+                patch.object(benchmark_bidi_projects.subprocess, 'run', return_value=result) as command, \
+                patch.object(benchmark_bidi_projects.time, 'monotonic', side_effect=[10., 10.25]):
+            receipt = benchmark_bidi_projects.dump_jfr(123, Path('/capture'), 'run-7-end', 100., 8)
+        self.assertEqual(8, receipt['latest_run'], 'The next engine can already be active at capture')
+        self.assertEqual(.25, receipt['capture_wall_seconds'])
+        self.assertEqual(0, receipt['returncode'])
+        self.assertEqual(['/jdk/bin/jcmd', '123', 'JFR.dump', 'filename=/capture/run-7-end.jfr'],
+                         command.call_args.args[0])
 
 
 if __name__ == '__main__':

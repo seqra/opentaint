@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import argparse
 import hashlib
 import json
 import os
@@ -86,6 +87,12 @@ def limited_child() -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--runtime-commit", default=RUNTIME_COMMIT,
+                        help="Bind the reviewed runtime bytes to this commit; this does not prove Kotlin correctness")
+    args = parser.parse_args()
+    runtime_commit = subprocess.check_output(
+        ["git", "rev-parse", args.runtime_commit + "^{commit}"], cwd=ROOT, text=True).strip()
     if (ROOT / "spec/lean/lean-toolchain").read_text().strip() != TOOLCHAIN:
         raise RuntimeError("Pinned toolchain changed")
     if sha(SPEC) != SPEC_SHA256:
@@ -109,6 +116,7 @@ def main() -> None:
         "ap/RestrictedInitialPolicy.kt", "ap/AdmittedInitial.kt", "ap/Reference.kt", "ap/Limit.kt",
         "ap/Demand.kt", "ap/ApOps.kt", "ap/ApOut.kt", "engine/RunMethodAnalyzer.kt", "engine/RunMethodCallServices.kt",
         "engine/RunMethodLocalServices.kt", "engine/Run1Abstraction.kt", "engine/Target.kt",
+        "engine/MethodContextCache.kt", "engine/BodyWorkStatistics.kt", "engine/RunManager.kt",
         "store/RunSummaries.kt", "store/RecordStore.kt", "store/DemandStore.kt",
         "store/DemandResultCoverage.kt", "ap/FlowBackedCoverage.kt", "store/FlowBackedSummaries.kt",
         "store/MethodEdges.kt", "driver/HandOff.kt", "store/StaticPairLookup.kt",
@@ -121,7 +129,7 @@ def main() -> None:
     before = {str(p.relative_to(ROOT)): sha(p) for p in inputs}
     for path in reference_paths:
         relative = str(path.relative_to(ROOT))
-        reviewed = subprocess.check_output(["git", "show", RUNTIME_COMMIT + ":" + relative], cwd=ROOT)
+        reviewed = subprocess.check_output(["git", "show", runtime_commit + ":" + relative], cwd=ROOT)
         if hashlib.sha256(reviewed).hexdigest() != sha(path):
             raise RuntimeError("Reviewed runtime source changed: " + relative)
     expected, theorem_count = [], 0
@@ -179,15 +187,18 @@ def main() -> None:
     receipt = {
         "status": "PASS" if passed else "FAILED",
         "kernelSelectedLaws": "PASS" if passed else "FAILED",
-        "runtimeImplementation": "UNCHANGED_NOT_VERIFIED_BY_KERNEL",
+        "runtimeImplementation": ("UNCHANGED_NOT_VERIFIED_BY_KERNEL" if runtime_commit == RUNTIME_COMMIT
+                                  else "IMPLEMENTATION_SOURCE_BOUND_NOT_VERIFIED_BY_KERNEL"),
         "runtimeVerifiedByThisChecker": False,
         "wholeAnalyzerFindingEquivalence": "NOT_ESTABLISHED",
         "generalCrossIterationTermination": "NOT_CLAIMED",
         "projectPerformance": "NOT_MEASURED_FOR_THIS_POLICY",
-        "reviewedRuntimeCommit": RUNTIME_COMMIT,
+        "reviewedRuntimeCommit": runtime_commit,
+        "designBaselineRuntimeCommit": RUNTIME_COMMIT,
         "specificationSha256": SPEC_SHA256,
         "implementationProposalSha256": PROPOSAL_SHA256,
-        "implementationProposalStatus": "DESIGN_ONLY_NOT_IMPLEMENTED",
+        "implementationProposalStatus": ("DESIGN_ONLY_NOT_IMPLEMENTED" if runtime_commit == RUNTIME_COMMIT
+                                         else "IMPLEMENTATION_REQUIRES_RUNTIME_TEST_EVIDENCE"),
         "adapterTheoremCount": sum(declarations(p.read_text())[1] for p in sources if p.parent == HERE),
         "utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "toolchain": TOOLCHAIN, "leanVersion": version,

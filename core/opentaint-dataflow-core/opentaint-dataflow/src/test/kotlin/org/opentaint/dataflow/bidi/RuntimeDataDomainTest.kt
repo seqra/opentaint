@@ -63,12 +63,11 @@ class RuntimeDataDomainTest {
         for ((premise, value) in listOf(invalid to normal, initial() to constant,
             m.premiseOf(listOf(initial(), invalid)) to normal)) {
             assertNull(edges.add(fixture.inst(1), premise, value))
-            assertNull(summaries.add(premise, value))
-            assertNull(summaries.addDemand(premise, value))
+            assertNull(summaries.addAdmitted(premise, value))
         }
         assertTrue(edges.edgesAt(fixture.inst(1)).none())
         assertTrue(summaries.all().none())
-        assertTrue(summaries.demandEdges().none())
+        assertTrue(summaries.demandEdges(Direction.FORWARD).none())
         val records = PersistentRecordStore(m)
         records.add(Record(fixture.method, Direction.FORWARD, invalid, normal))
         records.add(Record(fixture.method, Direction.FORWARD, initial(), constant))
@@ -84,7 +83,7 @@ class RuntimeDataDomainTest {
         val facts = fixture.fact(STATIC, listOf(cls, field), mark = mark)
         assertTrue(RuntimeDataDomain.packet(premise, facts))
         val store = RunSummaryStore(m)
-        assertNotNull(store.add(premise, facts))
+        assertNotNull(store.addAdmitted(premise, facts))
         assertEquals(1, store.all().count())
     }
 

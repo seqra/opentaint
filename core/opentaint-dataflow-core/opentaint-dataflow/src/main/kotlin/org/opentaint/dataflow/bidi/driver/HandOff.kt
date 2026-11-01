@@ -38,10 +38,11 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
         }
 
         private inline fun forEachDemandPiece(result: RunResult<RunMethodAnalyzer>, shared: SharedObjects,
+                                             direction: Direction,
                                              body: (MethodKey, PremiseKey, Pattern) -> Unit) {
             for (actor in result.analyzers) {
                 shared.cancellation.checkpoint()
-                for ((premise, facts) in actor.summaries.demandEdges()) {
+                for ((premise, facts) in actor.summaries.demandEdges(direction)) {
                     shared.cancellation.checkpoint()
                     if (!actor.mode.run1 && facts is FlowTree && facts.layer == Layer.DEMAND)
                         check(facts.tail == Tail.ANY && facts.exclusion == ExclusionSet.Empty) {
@@ -90,7 +91,7 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
             }
             val seedCaptureTime = completionStart.elapsedNow()
             val projectionStart = TimeSource.Monotonic.markNow()
-            forEachDemandPiece(result, shared) { method, premise, piece ->
+            forEachDemandPiece(result, shared, Direction.FORWARD) { method, premise, piece ->
                 val entry = guidancePattern(piece)
                 premise.forEachMember { member ->
                     shared.cancellation.checkpoint()
@@ -128,7 +129,7 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
         private fun toForward(result: RunResult<RunMethodAnalyzer>, shared: SharedObjects,
                               counts: MutableMap<MethodKey, Int>): Pair<DemandStore, SeedIndex> {
             val demand = DemandStore.Builder(shared.ap)
-            forEachDemandPiece(result, shared) { method, premise, piece ->
+            forEachDemandPiece(result, shared, Direction.BACKWARD) { method, premise, piece ->
                 val pattern = when (premise) {
                     is InitialAp -> DemandPattern(guidancePattern(piece),
                         guidancePattern(premise.toPattern()))

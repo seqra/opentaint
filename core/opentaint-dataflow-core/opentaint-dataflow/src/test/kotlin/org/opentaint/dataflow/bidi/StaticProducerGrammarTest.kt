@@ -57,7 +57,7 @@ class StaticProducerGrammarTest {
             val condition = f.pattern(STATIC, path, if (shape == 2) Tail.ANY else Tail.EXACT)
             val actor = backwardSource(f, condition)
             f.drain(actor)
-            val leaves = actor.summaries.all().filter { it.second.base == STATIC }
+            val leaves = f.completedBoundary(actor).filter { it.second.base == STATIC }
                 .flatMap { f.ops.leaves(it.second) }.toList()
             val expected = if (shape == 3) f.pattern(STATIC, listOf(cls, field), Tail.ANY,
                 condition.fact.mark) else condition
@@ -72,8 +72,11 @@ class StaticProducerGrammarTest {
             val mark = MarkSlot.Concrete(f.mark("T"))
             val input = f.fact(STATIC, path, Tail.ANY_TAINT, mark,
                 exclusion = ExclusionSet.of(f.field("excluded")))
-            val actor = f.core(f.config(index = 3, demand = demand(f)))
             val premise = f.manager.initial(f.pattern(mark = mark))
+            val complete = DemandStore.Builder(f.manager).apply {
+                add(f.key, DemandPattern(premise.toPattern(), f.pattern(STATIC, path, Tail.ANY, mark)))
+            }.build()
+            val actor = f.core(f.config(index = 3, demand = complete))
             val bounded = ArrayList<Facts>()
             actor.cut(Cut.CALL, premise, input) { _, value -> bounded += value }
             assertEquals(listOf(input), bounded, "Current facts use anchor checks, not strict initial-header checks")

@@ -60,14 +60,15 @@ class CallSourceHitTest {
             assertTrue(actor.sourceHits!!.entries().any { it.third === root.forward })
             assertTrue(actor.sourceHits!!.entries().any { it.third === field.forward })
             assertEquals(setOf(premise to Conclusion(premise.toPattern().fact, ExclusionSet.Empty, true),
-                premise to Conclusion(ZERO_FACT, ExclusionSet.Empty, true)), methodEntries(f.ops, actor.summaries.all()))
-            val summaries = methodEntries(f.ops, actor.summaries.all())
+                premise to Conclusion(ZERO_FACT, ExclusionSet.Empty, true)), methodEntries(f.ops, actor.edges.edgesAt(f.inst(0))))
+            val summaries = methodEntries(f.ops, actor.edges.edgesAt(f.inst(0)))
             actor.emitAfter(premise, f.inst(2), f.fact(result, tail = Tail.ANY, mark = t, layer = Layer.DEMAND))
             f.drain(actor, quantum = 1)
             assertEquals(expectedHits, actor.sourceHits!!.entries().toSet())
-            assertEquals(summaries, methodEntries(f.ops, actor.summaries.all()))
+            assertEquals(summaries, methodEntries(f.ops, actor.edges.edgesAt(f.inst(0))))
             assertEquals(0L, actor.recordCrossings)
             assertEquals(0L, actor.triggerSeeds)
+            assertTrue(actor.summaries.all().none(), "No current demand admits these post-statement results")
         }
     }
 
@@ -89,8 +90,9 @@ class CallSourceHitTest {
                 add(premise to Conclusion(premise.toPattern().fact, ExclusionSet.Empty, false))
                 if (matching) add(premise to Conclusion(ZERO_FACT, ExclusionSet.Empty, false))
             }
-            assertEquals(expected, methodEntries(f.ops, actor.summaries.all()))
+            assertEquals(expected, methodEntries(f.ops, actor.edges.edgesAt(f.inst(0))))
             assertEquals(0L, actor.triggerSeeds)
+            assertTrue(actor.summaries.all().none(), "No current demand admits these post-statement results")
         }
     }
 
@@ -125,9 +127,10 @@ class CallSourceHitTest {
                 assertTrue(f.cuts.none { it.first == Cut.CALL }, "The source terminal skips the call suffix")
             } else {
                 assertEquals(setOf(initial to Conclusion(PathFact(argument, emptyList(), Tail.EXACT, u),
-                    ExclusionSet.Empty, false)), methodEntries(f.ops, actor.summaries.all()))
+                    ExclusionSet.Empty, false)), methodEntries(f.ops, actor.edges.edgesAt(f.inst(0))))
                 assertTrue(actor.targets.isEmpty(), "An ordinary nonzero data result remains an AP result")
             }
+            assertTrue(actor.summaries.all().none(), "Saved replay does not bypass caller summary admission")
             assertEquals(1L, actor.recordCrossings)
             assertTrue(actor.sourceHits!!.entries().none(), "Neither persisted callee edge nor caller source is executed by a record reader")
             replayPersistedSummaries(actor.config, f.ops, part, actor)
