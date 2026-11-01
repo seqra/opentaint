@@ -40,5 +40,16 @@
     ],
     "property": "org.opentaint.bidi.optimizationStatistics=true",
     "logSha256": "d960da9e749be1e8f589c2a59c9e8ba536375ba60b1f59d72d2a107b8a1ba077"
+  },
+  "implementationCommit": "0ffa5ed8b42dbe193973b4fb4701af28b35716b3",
+  "kernel": {
+    "status": "PASS",
+    "theorems": 182,
+    "adapterTheorems": 20,
+    "auditedDeclarations": 303,
+    "reviewedRuntimeCommit": "0ffa5ed8b42dbe193973b4fb4701af28b35716b3",
+    "receipt": "spec/lean/proposals/demand-relative-summary-restriction-implementation-20261101/checks.json",
+    "receiptSha256": "6d9816d8f6509441d0ab998344101172d78432b71188293530535df5948f58cd",
+    "runtimeVerifiedByKernel": false
   }
 }
