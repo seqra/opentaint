@@ -41,6 +41,39 @@ def iteration_profile_windows(targets, latest_run, engine_active, started):
     return [(f'run-{latest_run}-normal', started[latest_run], 60)]
 
 
+class CaptureControlLines:
+    """Stream complete capture controls without retaining large diagnostic lines."""
+    line_limit = 4096
+    prefixes = ('BIDI_RUN_START ', 'BIDI_RUN_END ', 'BIDI_ANALYSIS_END ',
+                'Start IFDS analysis', 'Finish IFDS analysis',
+                'Start full scan phase', 'Finish full scan phase')
+
+    def __init__(self):
+        self.pending = ''
+        self.discarding = False
+
+    def feed(self, chunk):
+        pieces = chunk.split('\n')
+        for index, piece in enumerate(pieces):
+            if not self.discarding:
+                if len(self.pending) + len(piece) > self.line_limit:
+                    self.pending = ''
+                    self.discarding = True
+                else:
+                    self.pending += piece
+            if index == len(pieces) - 1:
+                continue  # A marker split across polls is not complete yet.
+            if not self.discarding:
+                # Real log messages follow the logger's first " - ". A nested
+                # marker in a method/key diagnostic must not become a control.
+                _, separator, message = self.pending.partition(' - ')
+                message = message if separator else self.pending
+                if message.startswith(self.prefixes):
+                    yield message
+            self.pending = ''
+            self.discarding = False
+
+
 def dump_jfr(pid, directory, stem, elapsed, latest_run):
     """Preserve a completed phase before the bounded recording rolls it out."""
     before = time.monotonic()
@@ -217,7 +250,8 @@ def run(args, project, side, config):
     profile_jobs = []
     hard_timeout = False
     log_offset = 0
-    log_tail = ''
+    capture_controls = CaptureControlLines()
+    completed_runs = set()
     latest_run = None
     latest_run_active = False
     run_started = {}
@@ -232,35 +266,41 @@ def run(args, project, side, config):
             pid = pid or analyzer_pid(directory)
             analyzer_log = directory / 'analyzer.log'
             if analyzer_log.exists():
-                with analyzer_log.open() as stream:
+                with analyzer_log.open(errors='replace') as stream:
                     stream.seek(log_offset)
-                    lines = stream.read()
+                    while True:
+                        chunk = stream.read(65536)
+                        if not chunk:
+                            break
+                        for line in capture_controls.feed(chunk):
+                            marker = re.match(r'BIDI_RUN_(START|END) run=([1-9][0-9]*)(?:\s|$)', line)
+                            if marker:
+                                latest_run = int(marker[2])
+                                latest_run_active = marker[1] == 'START'
+                                if latest_run_active:
+                                    run_started.setdefault(latest_run, now)
+                                else:
+                                    completed_runs.add(latest_run)
+                            if analysis_start is None and line.startswith('Start IFDS analysis'):
+                                analysis_start = now
+                            if full_start is None and (line.startswith('BIDI_RUN_START run=1 ')
+                                                       or line.startswith('Start full scan phase')):
+                                full_start = now
+                            if line.startswith(('Finish full scan phase', 'BIDI_ANALYSIS_END ',
+                                                'Finish IFDS analysis')):
+                                workload_finished = True
                     log_offset = stream.tell()
-                log_tail = (log_tail + lines)[-65536:]
-                for marker in re.finditer(r'BIDI_RUN_(START|END) run=(\d+)', log_tail):
-                    latest_run = int(marker[2])
-                    latest_run_active = marker[1] == 'START'
-                    if latest_run_active:
-                        run_started.setdefault(latest_run, now)
                 if (pid and side == 'bidi' and run1_recording is None
-                        and 'BIDI_RUN_END run=1 ' in log_tail):
+                        and 1 in completed_runs):
                     # Preserve the early recording before a later run rolls it out.
                     # This runs after the engine end marker, without a GC request.
                     run1_recording = dump_jfr(pid, directory, 'run1', now - start, latest_run)
                 if pid and side == 'bidi':
-                    completed = {int(run) for run in re.findall(r'BIDI_RUN_END run=(\d+) ', log_tail)}
-                    for run_index in sorted(completed.intersection(getattr(args, 'profile_runs', []))):
+                    for run_index in sorted(completed_runs.intersection(getattr(args, 'profile_runs', []))):
                         if run_index == 1 or run_index in run_recordings:
                             continue
                         run_recordings[run_index] = dump_jfr(pid, directory, f'run-{run_index}-end',
                                                            now - start, latest_run)
-                if analysis_start is None and 'Start IFDS analysis' in lines:
-                    analysis_start = now
-                if full_start is None and ('BIDI_RUN_START run=1 ' in lines or 'Start full scan phase' in lines):
-                    full_start = now
-                if ('Finish full scan phase' in lines or 'BIDI_ANALYSIS_END ' in lines
-                        or 'Finish IFDS analysis' in lines):
-                    workload_finished = True
             if pid:
                 try:
                     if 'analyzer_executable' not in manifest:
