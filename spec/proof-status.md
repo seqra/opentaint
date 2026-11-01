@@ -1,6 +1,20 @@
 # Current proof status
 
-## Design only: demand-relative summary restriction, 1 November 2026
+## Checked future candidate: exact call-stage result merging, 1 November 2026
+
+The [local proof dossier](call-stage-result-merging-analysis-proofs.md) and
+[constructive package](lean/proposals/call-stage-result-merging-analysis-20261101/README.md)
+check complete finite keys, explicit fact-kind/mark-symbol separation,
+protection OR, and fixed deterministic OR-preserving suffix set equivalence.
+The [receipt](lean/proposals/call-stage-result-merging-analysis-20261101/checks.json)
+passes 44 theorems and audits 76 public declarations; its only axiom
+dependency is `propext`. Executable local controls give 64 -> 1 equal alias
+continuations and 65 -> 2 with a distinct identity branch, with an explicit
+collection-cost condition. This is a future design candidate, not a selected
+or implemented optimization. Stateful runtime effect ordering, arbitrary
+packed Kotlin refinement, whole-project findings and speedup remain unproved.
+
+## Implemented and measured: demand-relative summary restriction, 1 November 2026
 
 The [specification](demand-relative-summary-restriction.md) selects a
 per-pair `FL(Dp)+1` conclusion cut after exact C5, followed by admitted-only
@@ -17,10 +31,19 @@ adds a concrete code map, frozen-safe admitted views, proved Reach
 saturation, TDD gates, and the post-implementation blow-up experiment.
 Its [adapter dossier](demand-relative-summary-restriction-implementation-proofs.md)
 and [checker](lean/proposals/demand-relative-summary-restriction-implementation-20261101/check.py)
-pass 182 theorems, including 20 new adapter laws. The runtime is unchanged.
+pass 182 theorems, including 20 new adapter laws. The final receipt binds
+implementation `0ffa5ed8b42dbe193973b4fb4701af28b35716b3`; source binding
+does not prove Kotlin correctness.
 The [implementation validation](../docs/reports/bidirectional-demand-relative-implementation-validation-20261101.md)
 records the source-bound kernel check and passing common/JVM tests. Project
-performance and finding acceptance remain separate.
+performance and finding acceptance remain separate. The
+[completed campaign](../docs/reports/bidirectional-demand-relative-summary-restriction-performance-20261101.md)
+measures byte-identical analyzer code at `86ad3b70b` in FULL/16 GiB mode.
+Latest reached/completed/accepted runs are OWASP **run-5/5/5**, Conductor
+**run-6/5/5**, Thingsboard **run-2/1/1**, and Stirling-PDF **run-8/7/7**.
+No project OOM occurred. OWASP retains all 4,112 baseline identities;
+Conductor retains all seven. Thingsboard and Stirling keep their prior
+baseline gaps, so whole-project no-FN acceptance is not established.
 
 ## Implemented; project measurements pending: concrete relations backed by FLOW
 

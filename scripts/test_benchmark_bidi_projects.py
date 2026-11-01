@@ -128,5 +128,64 @@ class AnalyzerConfigurationTest(unittest.TestCase):
                          command.call_args.args[0])
 
 
+class CaptureControlLinesTest(unittest.TestCase):
+    def parser(self):
+        return benchmark_bidi_projects.CaptureControlLines()
+
+    def test_end_marker_survives_a_large_body_dump_in_the_same_poll(self):
+        reader = self.parser()
+        end = '18:00:00 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=2s'
+        body = '18:00:00 |I| IterationDriver - BIDI_BODY_WORK_METHOD ' + 'x' * (1024 * 1024)
+        data = end + '\n' + body + '\n'
+        observed = []
+        for offset in range(0, len(data), 65536):
+            observed.extend(reader.feed(data[offset:offset + 65536]))
+            self.assertLessEqual(len(reader.pending), reader.line_limit)
+        self.assertEqual(['BIDI_RUN_END run=1 status=COMPLETE engineTime=2s'], observed)
+        self.assertEqual([], list(reader.feed('')), 'Previously consumed markers are not replayed')
+
+    def test_marker_and_run_number_split_across_polls_wait_for_complete_line(self):
+        reader = self.parser()
+        self.assertEqual([], list(reader.feed('18:00:00 |I| IterationDriver - BIDI_RUN_STA')))
+        self.assertEqual([], list(reader.feed('RT run=1')))
+        self.assertEqual([], list(reader.feed('2 direction=BACKWARD limit=11')))
+        self.assertEqual(['BIDI_RUN_START run=12 direction=BACKWARD limit=11'], list(reader.feed('\n')))
+
+    def test_oversized_unrelated_line_is_discarded_until_newline_then_markers_resume(self):
+        reader = self.parser()
+        self.assertEqual([], list(reader.feed('BIDI_BODY_WORK_METHOD ' + 'x' * 10000)))
+        self.assertEqual('', reader.pending)
+        observed = list(reader.feed('BIDI_RUN_END run=99 status=COMPLETE\n'
+                                    'BIDI_RUN_END run=2 status=COMPLETE engineTime=3s\n'))
+        self.assertEqual(['BIDI_RUN_END run=2 status=COMPLETE engineTime=3s'], observed)
+        self.assertEqual('', reader.pending)
+
+    def test_small_diagnostic_message_cannot_supply_a_nested_marker(self):
+        reader = self.parser()
+        data = ('18:00:00 |I| IterationDriver - BIDI_BODY_WORK_METHOD method='
+                'java.lang.OutOfMemoryError#x - BIDI_RUN_END run=99 status=OOM\n'
+                '18:00:00 |I| IterationDriver - BIDI_RUN_START run=3 direction=FORWARD limit=2\n')
+        self.assertEqual(['BIDI_RUN_START run=3 direction=FORWARD limit=2'], list(reader.feed(data)))
+
+    def test_ordered_phase_and_run_controls_survive_every_character_boundary(self):
+        reader = self.parser()
+        expected = ['Start IFDS analysis', 'BIDI_RUN_START run=1 direction=FORWARD limit=1',
+                    'BIDI_RUN_END run=1 status=COMPLETE engineTime=1s',
+                    'BIDI_RUN_START run=2 direction=BACKWARD limit=1',
+                    'BIDI_ANALYSIS_END run=2 status=TIMEOUT reason=ABNORMAL elapsed=2s',
+                    'Finish IFDS analysis']
+        observed = []
+        for char in '\n'.join(expected) + '\n':
+            observed.extend(reader.feed(char))
+        self.assertEqual(expected, observed)
+
+    def test_line_limit_is_inclusive_and_does_not_leak_an_oversized_prefix(self):
+        reader = self.parser()
+        marker = 'BIDI_RUN_END run=8 status=COMPLETE '
+        at_limit = marker + 'x' * (reader.line_limit - len(marker))
+        self.assertEqual([at_limit], list(reader.feed(at_limit + '\n')))
+        self.assertEqual([], list(reader.feed(at_limit + 'x\n')))
+
+
 if __name__ == '__main__':
     unittest.main()

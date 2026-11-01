@@ -252,9 +252,10 @@ counts alone cannot identify the root cause. Use per-method body data,
 profiles, bounded captured examples, and reduced production controls as
 required by the implementation proposal.
 
-No project run of the new implementation is claimed in this note yet.
-Latest previous-campaign reached/completed/accepted iterations were:
-Stirling-PDF **run-8/7/7**, conductor **run-4/3/3**, thingsboard
-**run-2/1/1**, and OWASP **run-5/5/5**. Those measurements use the old runtime
-and are comparison data only. The new report must state its own latest
-reached, completed, and accepted run for every project.
+The [completed project report](bidirectional-demand-relative-summary-restriction-performance-20261101.md)
+measures identical analyzer bytes at `86ad3b70b`. Latest reached/completed/
+accepted iterations are Stirling-PDF **run-8/7/7**, Conductor **run-6/5/5**,
+Thingsboard **run-2/1/1**, and OWASP **run-5/5/5**. No project reports OOM.
+All current-runtime finding identities remain, and two Conductor baseline
+findings return. The pre-existing Thingsboard/Stirling baseline gaps remain
+open; test success does not establish their full project acceptance.
