@@ -1,5 +1,12 @@
 # Access paths and storages — specification
 
+Next-iteration summary restriction is specified in
+[Demand-relative summary restriction](demand-relative-summary-restriction.md).
+It selects exact paired C5 followed by an exit-relative field cut and
+admitted-only summary storage/persistence for both layers. It is a design
+target; the runtime remains unchanged. Its scope does not change C2 or the
+selected typed Target protocol.
+
 Selected restricted-call integration: use the
 [implementation contract](../docs/design/bidirectional-selected-call-policy-implementation-20261030.md).
 The caller applies persisted records on every original offer before current

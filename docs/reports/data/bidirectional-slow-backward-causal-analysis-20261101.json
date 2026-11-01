@@ -1,0 +1,1749 @@
+{
+  "date": "2026-11-01",
+  "runtime_revision": "c4a71246519ee5432879ce82518823f1703f3aa4",
+  "read_only_runtime": true,
+  "purpose": "Trace why slow backward work differs from adjacent fast forward runs. Quantify source-backed mechanisms without attributing unrecorded fact values to the projects.",
+  "projects": {
+    "Stirling-PDF": {
+      "latest_reached": "run-8",
+      "latest_complete": "run-7",
+      "latest_accepted_forward_report": "run-7",
+      "status": "TIMEOUT",
+      "revision": "c4a71246519ee5432879ce82518823f1703f3aa4",
+      "phases": {
+        "run-5": {
+          "status": "COMPLETE",
+          "engine_seconds": 3.496004238,
+          "java_samples": 752,
+          "categories_disjoint": {
+            "current_delivery": {
+              "samples": 30,
+              "percent": 3.989
+            },
+            "direct_call_processing_outside_saved_replay": {
+              "samples": 442,
+              "percent": 58.777
+            },
+            "ordinary_statement_with_callbacks": {
+              "samples": 134,
+              "percent": 17.819
+            },
+            "other": {
+              "samples": 19,
+              "percent": 2.527
+            },
+            "saved_replay_with_callbacks": {
+              "samples": 127,
+              "percent": 16.888
+            }
+          },
+          "method_storage_sample_categories": {
+            "current_delivery": {
+              "samples": 3,
+              "percent_all_java_samples": 0.399,
+              "percent_store_samples": 5.0
+            },
+            "direct_call_processing_outside_saved_replay": {
+              "samples": 20,
+              "percent_all_java_samples": 2.66,
+              "percent_store_samples": 33.333
+            },
+            "ordinary_statement_with_callbacks": {
+              "samples": 32,
+              "percent_all_java_samples": 4.255,
+              "percent_store_samples": 53.333
+            },
+            "saved_replay_with_callbacks": {
+              "samples": 5,
+              "percent_all_java_samples": 0.665,
+              "percent_store_samples": 8.333
+            }
+          },
+          "anchors_inclusive": {
+            "FlowBackedProtectionKt.transportProtection": {
+              "samples": 182,
+              "percent": 24.202
+            },
+            "FlowGroup.add": {
+              "samples": 31,
+              "percent": 4.122
+            },
+            "FormApplier.stage": {
+              "samples": 150,
+              "percent": 19.947
+            },
+            "FormApplier.statement": {
+              "samples": 129,
+              "percent": 17.154
+            },
+            "MethodEdgeStore.add": {
+              "samples": 60,
+              "percent": 7.979
+            },
+            "PersistedSummaryReplayKt.replayPersistedSummaries": {
+              "samples": 127,
+              "percent": 16.888
+            },
+            "RunMethodAnalyzer.runStatement": {
+              "samples": 134,
+              "percent": 17.819
+            },
+            "RunMethodCallServices.applyRecord": {
+              "samples": 36,
+              "percent": 4.787
+            },
+            "RunMethodCallServices.applyRecordView": {
+              "samples": 32,
+              "percent": 4.255
+            },
+            "RunMethodCallServices.applyStage": {
+              "samples": 304,
+              "percent": 40.426
+            },
+            "RunMethodCallServices.cleanChain": {
+              "samples": 16,
+              "percent": 2.128
+            },
+            "RunMethodCallServices.process": {
+              "samples": 569,
+              "percent": 75.665
+            },
+            "RunMethodCallServices.resumeCallees": {
+              "samples": 83,
+              "percent": 11.037
+            },
+            "SubscriptionManager.onDelivery": {
+              "samples": 30,
+              "percent": 3.989
+            },
+            "SubscriptionManager.replay": {
+              "samples": 38,
+              "percent": 5.053
+            },
+            "TaintGroup.add": {
+              "samples": 15,
+              "percent": 1.995
+            }
+          },
+          "stack_depth_histogram": {
+            "12": 2,
+            "13": 2,
+            "15": 2,
+            "16": 4,
+            "17": 5,
+            "18": 6,
+            "19": 9,
+            "20": 21,
+            "21": 5,
+            "22": 17,
+            "23": 21,
+            "24": 29,
+            "25": 32,
+            "26": 31,
+            "27": 28,
+            "28": 27,
+            "29": 29,
+            "30": 41,
+            "31": 20,
+            "32": 35,
+            "33": 27,
+            "34": 32,
+            "35": 31,
+            "36": 27,
+            "37": 29,
+            "38": 22,
+            "39": 18,
+            "40": 21,
+            "41": 18,
+            "42": 11,
+            "43": 10,
+            "44": 21,
+            "45": 11,
+            "46": 6,
+            "47": 4,
+            "48": 8,
+            "49": 4,
+            "50": 10,
+            "51": 5,
+            "52": 6,
+            "53": 7,
+            "54": 2,
+            "55": 3,
+            "56": 4,
+            "57": 3,
+            "58": 1,
+            "59": 2,
+            "6": 1,
+            "60": 4,
+            "61": 2,
+            "63": 3,
+            "64": 6,
+            "65": 3,
+            "66": 3,
+            "67": 9,
+            "68": 6,
+            "69": 1,
+            "70": 1,
+            "72": 1,
+            "73": 1,
+            "78": 1,
+            "9": 1
+          },
+          "truncated_samples": 0,
+          "protection": {
+            "transport_scope_samples": 182,
+            "transport_scope_percent": 24.202,
+            "nearest_intersectTaintMask_allocation": null,
+            "whole_vs_partial_masks": "NOT_CAPTURED",
+            "note": "Scope includes the underlying transfer and callbacks; it is not direct flag-processing cost."
+          },
+          "allocation_bytes_estimate": 22485970000,
+          "per_run_counter_increments": {
+            "initial_and_request": {
+              "initialCandidates": 72401,
+              "newInitials": 15602
+            },
+            "call_and_subscription": {
+              "acceptedDeltas": 57386,
+              "createdGroups": 37599,
+              "createdIndexPostings": 51203,
+              "e6Bindings": 108,
+              "e6AvoidedBindings": 1,
+              "e6Combinations": 56,
+              "selectedCallOffers": 120742,
+              "persistedReplayInvocations": 120742,
+              "persistedReplayCandidates": 1261282,
+              "persistedReplayMatches": 248037,
+              "demandLookupInvocations": 120742,
+              "demandLookupEmpty": 50511,
+              "demandLookupEligible": 70231,
+              "initialPackets": 70231,
+              "offeredInitialKeys": 72377
+            }
+          },
+          "cfg_delivery": {
+            "hits": 518492,
+            "searches": 38207,
+            "visitedNodes": 216070,
+            "destinations": 47817,
+            "maxWidth": 84
+          },
+          "storage_census": {
+            "marker": "22:40:34.794 |I| IterationDriver - BIDI_IDENTITY_STORAGE_STATISTICS run=5 scope=frozen-scalar-stores snapshotActors=3585 unavailableActors=0 compactPoints=71880 compactNormal=68776 compactDemand=66081 compactFlow=5949 compactTaint=128908 protectedNormal=0 protectedDemand=0 fullPoints=49195 promotedPoints=11091 firstFullPoints=38104 bitWords=18967 fullArrayCapacity=144167 fallbackReasons={different-base=4733, different-typed-header=13989, nonliteral-tree-or-mask=29267, unsupported-premise=1206}",
+            "snapshotActors": 3585,
+            "unavailableActors": 0,
+            "compactPoints": 71880,
+            "compactNormal": 68776,
+            "compactDemand": 66081,
+            "compactFlow": 5949,
+            "compactTaint": 128908,
+            "protectedNormal": 0,
+            "protectedDemand": 0,
+            "fullPoints": 49195,
+            "promotedPoints": 11091,
+            "firstFullPoints": 38104,
+            "bitWords": 18967,
+            "fullArrayCapacity": 144167,
+            "base": 4733,
+            "header": 13989,
+            "mask": 29267,
+            "premise": 1206
+          },
+          "representative_full_hot_stacks": [
+            {
+              "samples": 7,
+              "truncated": false,
+              "frames": [
+                "java.lang.invoke.DirectMethodHandle.allocateInstance:520",
+                "java.lang.invoke.LambdaForm$DMH+0x00007f2264743c00.216945168.newInvokeSpecial:-1",
+                "java.lang.invoke.LambdaForm$MH+0x00007f2264748400.884999208.linkToTargetMethod:-1",
+                "org.opentaint.dataflow.bidi.engine.RunMethodLocalServices.checkSinksAt:230",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer$RuleWorklist.drain:686",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.endAt$lambda$62:719",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer$$Lambda$1597+0x00007f2264729778.525004664.invoke:-1",
+                "org.opentaint.dataflow.bidi.interp.FormsCache.withForm:100",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withExitRules:130",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withExitRules:125",
+                "org.opentaint.dataflow.bidi.interp.DirectedForms.withExit:178",
+                "org.opentaint.dataflow.bidi.interp.DirectedForms.withEndRules:190",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.endAt:716",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.emitCovered:605",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.emitUnchanged$opentaint_dataflow:615",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.runStatement$lambda$44$lambda$43:591",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer$$Lambda$1568+0x00007f2264724b60.164897826.invoke:-1",
+                "org.opentaint.dataflow.bidi.interp.FormApplier.statement:58",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.runStatement$lambda$44:587",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer$$Lambda$1530+0x00007f2264719860.931911807.invoke:-1",
+                "org.opentaint.dataflow.bidi.interp.FormsCache.withForm:100",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withStatement:82",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withStatement:77",
+                "org.opentaint.dataflow.bidi.interp.DirectedForms.withStatement:184",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.runStatement:586",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.process:512",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.work:486",
+                "org.opentaint.dataflow.bidi.engine.UnitRunner$runLoop$2.invokeSuspend:126",
+                "kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith:33",
+                "kotlinx.coroutines.DispatchedTask.run:100",
+                "java.util.concurrent.Executors$RunnableAdapter.call:539",
+                "java.util.concurrent.FutureTask.run:264",
+                "java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run:304",
+                "java.util.concurrent.ThreadPoolExecutor.runWorker:1136",
+                "java.util.concurrent.ThreadPoolExecutor$Worker.run:635",
+                "java.lang.Thread.run:840"
+              ]
+            },
+            {
+              "samples": 2,
+              "truncated": false,
+              "frames": [
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.flow:85",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.resumeCallees$lambda$43:632",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices$$Lambda$1688+0x00007f22647552c8.1977885357.invoke:-1",
+                "org.opentaint.dataflow.bidi.interp.FormsCache.withForm:100",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withCall:104",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withCall:99",
+                "org.opentaint.dataflow.bidi.interp.DirectedForms.withCall:187",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.resumeCallees:628",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.resumeCallees$default:624",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.applyRecordView:604",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.applyRecordView:900",
+                "org.opentaint.dataflow.bidi.engine.PersistedSummaryReplayKt.replayPersistedSummaries$lambda$0:44",
+                "org.opentaint.dataflow.bidi.engine.PersistedSummaryReplayKt$$Lambda$1950+0x00007f22647c6298.35629074.invoke:-1",
+                "org.opentaint.dataflow.bidi.store.Record.forEachReversedAt:44",
+                "org.opentaint.dataflow.bidi.engine.PersistedSummaryReplayKt.replayPersistedSummaries:36",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.enterCallees:346",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.applyStage:160",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.flow:107",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.flow$default:72",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.process$lambda$4:66",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices$$Lambda$1583+0x00007f2264726de0.92812599.invoke:-1",
+                "org.opentaint.dataflow.bidi.interp.FormsCache.withForm:100",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withCall:104",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withCall:99",
+                "org.opentaint.dataflow.bidi.interp.DirectedForms.withCall:187",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.process:61",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.process:512",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.work:486",
+                "org.opentaint.dataflow.bidi.engine.UnitRunner$runLoop$2.invokeSuspend:126",
+                "kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith:33",
+                "kotlinx.coroutines.DispatchedTask.run:100",
+                "java.util.concurrent.Executors$RunnableAdapter.call:539",
+                "java.util.concurrent.FutureTask.run:264",
+                "java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run:304",
+                "java.util.concurrent.ThreadPoolExecutor.runWorker:1136",
+                "java.util.concurrent.ThreadPoolExecutor$Worker.run:635",
+                "java.lang.Thread.run:840"
+              ]
+            }
+          ]
+        },
+        "run-6": {
+          "status": "COMPLETE",
+          "engine_seconds": 312.047055011,
+          "java_samples": 17812,
+          "categories_disjoint": {
+            "current_delivery": {
+              "samples": 13,
+              "percent": 0.073
+            },
+            "direct_call_processing_outside_saved_replay": {
+              "samples": 14484,
+              "percent": 81.316
+            },
+            "ordinary_statement_with_callbacks": {
+              "samples": 502,
+              "percent": 2.818
+            },
+            "other": {
+              "samples": 87,
+              "percent": 0.488
+            },
+            "saved_replay_with_callbacks": {
+              "samples": 2726,
+              "percent": 15.304
+            }
+          },
+          "method_storage_sample_categories": {
+            "current_delivery": {
+              "samples": 1,
+              "percent_all_java_samples": 0.006,
+              "percent_store_samples": 0.016
+            },
+            "direct_call_processing_outside_saved_replay": {
+              "samples": 4794,
+              "percent_all_java_samples": 26.914,
+              "percent_store_samples": 79.005
+            },
+            "ordinary_statement_with_callbacks": {
+              "samples": 259,
+              "percent_all_java_samples": 1.454,
+              "percent_store_samples": 4.268
+            },
+            "saved_replay_with_callbacks": {
+              "samples": 1014,
+              "percent_all_java_samples": 5.693,
+              "percent_store_samples": 16.711
+            }
+          },
+          "anchors_inclusive": {
+            "FlowBackedProtectionKt.transportProtection": {
+              "samples": 15855,
+              "percent": 89.013
+            },
+            "FlowGroup.add": {
+              "samples": 32,
+              "percent": 0.18
+            },
+            "FormApplier.stage": {
+              "samples": 5812,
+              "percent": 32.63
+            },
+            "FormApplier.statement": {
+              "samples": 647,
+              "percent": 3.632
+            },
+            "MethodEdgeStore.add": {
+              "samples": 6068,
+              "percent": 34.067
+            },
+            "PersistedSummaryReplayKt.replayPersistedSummaries": {
+              "samples": 2726,
+              "percent": 15.304
+            },
+            "RunMethodAnalyzer.runStatement": {
+              "samples": 502,
+              "percent": 2.818
+            },
+            "RunMethodCallServices.applyRecord": {
+              "samples": 9,
+              "percent": 0.051
+            },
+            "RunMethodCallServices.applyRecordView": {
+              "samples": 2203,
+              "percent": 12.368
+            },
+            "RunMethodCallServices.applyStage": {
+              "samples": 10570,
+              "percent": 59.342
+            },
+            "RunMethodCallServices.cleanChain": {
+              "samples": 2562,
+              "percent": 14.384
+            },
+            "RunMethodCallServices.process": {
+              "samples": 17210,
+              "percent": 96.62
+            },
+            "RunMethodCallServices.resumeCallees": {
+              "samples": 1848,
+              "percent": 10.375
+            },
+            "SubscriptionManager.onDelivery": {
+              "samples": 13,
+              "percent": 0.073
+            },
+            "SubscriptionManager.replay": {
+              "samples": 3,
+              "percent": 0.017
+            },
+            "TaintGroup.add": {
+              "samples": 5965,
+              "percent": 33.489
+            }
+          },
+          "stack_depth_histogram": {
+            "10": 3,
+            "11": 1,
+            "12": 32,
+            "13": 3,
+            "14": 8,
+            "15": 6,
+            "16": 9,
+            "17": 16,
+            "18": 16,
+            "19": 29,
+            "20": 153,
+            "21": 34,
+            "22": 96,
+            "23": 90,
+            "24": 132,
+            "25": 205,
+            "26": 116,
+            "27": 199,
+            "28": 137,
+            "29": 327,
+            "30": 440,
+            "31": 469,
+            "32": 645,
+            "33": 711,
+            "34": 483,
+            "35": 663,
+            "36": 854,
+            "37": 1375,
+            "38": 711,
+            "39": 766,
+            "40": 788,
+            "41": 596,
+            "42": 755,
+            "43": 710,
+            "44": 1374,
+            "45": 770,
+            "46": 1027,
+            "47": 179,
+            "48": 290,
+            "49": 393,
+            "50": 73,
+            "51": 270,
+            "52": 41,
+            "53": 44,
+            "54": 172,
+            "55": 76,
+            "56": 50,
+            "57": 116,
+            "58": 44,
+            "59": 96,
+            "60": 123,
+            "61": 206,
+            "62": 167,
+            "63": 239,
+            "64": 26,
+            "65": 48,
+            "66": 104,
+            "67": 7,
+            "68": 72,
+            "69": 65,
+            "70": 38,
+            "71": 40,
+            "72": 26,
+            "73": 7,
+            "74": 11,
+            "75": 18,
+            "76": 8,
+            "77": 6,
+            "78": 6,
+            "9": 2
+          },
+          "truncated_samples": 0,
+          "protection": {
+            "transport_scope_samples": 15855,
+            "transport_scope_percent": 89.013,
+            "nearest_intersectTaintMask_allocation": {
+              "name": "org.opentaint.dataflow.bidi.ap.FlowBackedProtectionKt.intersectTaintMask",
+              "weight": 123733853008,
+              "percent": 12.121
+            },
+            "whole_vs_partial_masks": "NOT_CAPTURED",
+            "note": "Scope includes the underlying transfer and callbacks; it is not direct flag-processing cost."
+          },
+          "allocation_bytes_estimate": 1020808983200,
+          "per_run_counter_increments": {
+            "initial_and_request": {
+              "initialCandidates": 36547,
+              "newInitials": 9151
+            },
+            "call_and_subscription": {
+              "acceptedDeltas": 25859,
+              "createdGroups": 24829,
+              "createdZeroOnlyEntries": 66,
+              "createdIndexPostings": 26648,
+              "selectedCallOffers": 2734302,
+              "persistedReplayInvocations": 2734302,
+              "persistedReplayCandidates": 5942118,
+              "persistedReplayMatches": 2846347,
+              "demandLookupInvocations": 2734302,
+              "demandLookupEmpty": 2704176,
+              "demandLookupEligible": 30126,
+              "initialPackets": 30126,
+              "offeredInitialKeys": 36455
+            }
+          },
+          "cfg_delivery": {
+            "hits": 7333906,
+            "searches": 36395,
+            "visitedNodes": 95631,
+            "destinations": 41141,
+            "maxWidth": 23
+          },
+          "storage_census": {
+            "marker": "22:45:47.008 |I| IterationDriver - BIDI_IDENTITY_STORAGE_STATISTICS run=6 scope=frozen-scalar-stores snapshotActors=3582 unavailableActors=0 compactPoints=18832 compactNormal=12948 compactDemand=18591 compactFlow=386 compactTaint=31153 protectedNormal=0 protectedDemand=0 fullPoints=46292 promotedPoints=4824 firstFullPoints=41468 bitWords=10554 fullArrayCapacity=133691 fallbackReasons={different-base=3564, different-typed-header=22957, nonliteral-tree-or-mask=19058, unsupported-premise=713}",
+            "snapshotActors": 3582,
+            "unavailableActors": 0,
+            "compactPoints": 18832,
+            "compactNormal": 12948,
+            "compactDemand": 18591,
+            "compactFlow": 386,
+            "compactTaint": 31153,
+            "protectedNormal": 0,
+            "protectedDemand": 0,
+            "fullPoints": 46292,
+            "promotedPoints": 4824,
+            "firstFullPoints": 41468,
+            "bitWords": 10554,
+            "fullArrayCapacity": 133691,
+            "base": 3564,
+            "header": 22957,
+            "mask": 19058,
+            "premise": 713
+          },
+          "representative_full_hot_stacks": [
+            {
+              "samples": 210,
+              "truncated": false,
+              "frames": [
+                "org.opentaint.dataflow.bidi.ap.FlowBackedProtectionKt.intersectTaintMask:136",
+                "org.opentaint.dataflow.bidi.ap.FlowBackedProtectionKt.withProtection:8",
+                "org.opentaint.dataflow.bidi.ap.ProtectionOutputs.attach:99",
+                "org.opentaint.dataflow.bidi.ap.FlowBackedProtectionKt$transportProtection$1.result:109",
+                "org.opentaint.dataflow.bidi.ap.Results.flush:56",
+                "org.opentaint.dataflow.bidi.ap.ApOps.applyCompiledEdgeRaw:62",
+                "org.opentaint.dataflow.bidi.ap.ApOps.applyCompiledEdge$lambda$8:46",
+                "org.opentaint.dataflow.bidi.ap.ApOps$$Lambda$1477+0x00007f2264714c80.1254803357.invoke:-1",
+                "org.opentaint.dataflow.bidi.ap.FlowBackedProtectionKt.transportProtection:108",
+                "org.opentaint.dataflow.bidi.ap.ApOps.applyCompiledEdge$opentaint_dataflow:45",
+                "org.opentaint.dataflow.bidi.ap.ApOps.applyEdge:32",
+                "org.opentaint.dataflow.bidi.ap.ApOps.applyEdge$default:14",
+                "org.opentaint.dataflow.bidi.engine.EngineAlgebra.applyEdgeAt:38",
+                "org.opentaint.dataflow.bidi.engine.EngineAlgebra.applyEdgeAt:17",
+                "org.opentaint.dataflow.bidi.interp.FormApplier.micro:116",
+                "org.opentaint.dataflow.bidi.interp.FormApplier.stage:70",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.applyStage:141",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.flow:107",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.flow$default:72",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.process$lambda$4:66",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices$$Lambda$1583+0x00007f2264726de0.92812599.invoke:-1",
+                "org.opentaint.dataflow.bidi.interp.FormsCache.withForm:100",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withCall:104",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withCall:99",
+                "org.opentaint.dataflow.bidi.interp.DirectedForms.withCall:187",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.process:61",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.process:512",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.work:486",
+                "org.opentaint.dataflow.bidi.engine.UnitRunner$runLoop$2.invokeSuspend:126",
+                "kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith:33",
+                "kotlinx.coroutines.DispatchedTask.run:100",
+                "java.util.concurrent.Executors$RunnableAdapter.call:539",
+                "java.util.concurrent.FutureTask.run:264",
+                "java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run:304",
+                "java.util.concurrent.ThreadPoolExecutor.runWorker:1136",
+                "java.util.concurrent.ThreadPoolExecutor$Worker.run:635",
+                "java.lang.Thread.run:840"
+              ]
+            }
+          ]
+        },
+        "run-7": {
+          "status": "COMPLETE",
+          "engine_seconds": 3.527585819,
+          "java_samples": 683,
+          "categories_disjoint": {
+            "current_delivery": {
+              "samples": 39,
+              "percent": 5.71
+            },
+            "direct_call_processing_outside_saved_replay": {
+              "samples": 371,
+              "percent": 54.319
+            },
+            "ordinary_statement_with_callbacks": {
+              "samples": 84,
+              "percent": 12.299
+            },
+            "other": {
+              "samples": 39,
+              "percent": 5.71
+            },
+            "saved_replay_with_callbacks": {
+              "samples": 150,
+              "percent": 21.962
+            }
+          },
+          "method_storage_sample_categories": {
+            "current_delivery": {
+              "samples": 1,
+              "percent_all_java_samples": 0.146,
+              "percent_store_samples": 2.5
+            },
+            "direct_call_processing_outside_saved_replay": {
+              "samples": 12,
+              "percent_all_java_samples": 1.757,
+              "percent_store_samples": 30.0
+            },
+            "ordinary_statement_with_callbacks": {
+              "samples": 16,
+              "percent_all_java_samples": 2.343,
+              "percent_store_samples": 40.0
+            },
+            "saved_replay_with_callbacks": {
+              "samples": 11,
+              "percent_all_java_samples": 1.611,
+              "percent_store_samples": 27.5
+            }
+          },
+          "anchors_inclusive": {
+            "FlowBackedProtectionKt.transportProtection": {
+              "samples": 124,
+              "percent": 18.155
+            },
+            "FlowGroup.add": {
+              "samples": 2,
+              "percent": 0.293
+            },
+            "FormApplier.stage": {
+              "samples": 76,
+              "percent": 11.127
+            },
+            "FormApplier.statement": {
+              "samples": 73,
+              "percent": 10.688
+            },
+            "MethodEdgeStore.add": {
+              "samples": 40,
+              "percent": 5.857
+            },
+            "PersistedSummaryReplayKt.replayPersistedSummaries": {
+              "samples": 150,
+              "percent": 21.962
+            },
+            "RunMethodAnalyzer.runStatement": {
+              "samples": 84,
+              "percent": 12.299
+            },
+            "RunMethodCallServices.applyRecord": {
+              "samples": 56,
+              "percent": 8.199
+            },
+            "RunMethodCallServices.applyRecordView": {
+              "samples": 18,
+              "percent": 2.635
+            },
+            "RunMethodCallServices.applyStage": {
+              "samples": 326,
+              "percent": 47.731
+            },
+            "RunMethodCallServices.cleanChain": {
+              "samples": 24,
+              "percent": 3.514
+            },
+            "RunMethodCallServices.process": {
+              "samples": 521,
+              "percent": 76.281
+            },
+            "RunMethodCallServices.resumeCallees": {
+              "samples": 81,
+              "percent": 11.859
+            },
+            "SubscriptionManager.onDelivery": {
+              "samples": 39,
+              "percent": 5.71
+            },
+            "SubscriptionManager.replay": {
+              "samples": 55,
+              "percent": 8.053
+            },
+            "TaintGroup.add": {
+              "samples": 29,
+              "percent": 4.246
+            }
+          },
+          "stack_depth_histogram": {
+            "10": 1,
+            "11": 1,
+            "12": 2,
+            "13": 4,
+            "14": 4,
+            "15": 4,
+            "16": 6,
+            "17": 7,
+            "18": 10,
+            "19": 11,
+            "20": 27,
+            "21": 15,
+            "22": 18,
+            "23": 28,
+            "24": 30,
+            "25": 28,
+            "26": 28,
+            "27": 20,
+            "28": 31,
+            "29": 23,
+            "30": 30,
+            "31": 14,
+            "32": 19,
+            "33": 21,
+            "34": 28,
+            "35": 29,
+            "36": 30,
+            "37": 34,
+            "38": 17,
+            "39": 12,
+            "40": 12,
+            "41": 20,
+            "42": 19,
+            "43": 6,
+            "44": 10,
+            "45": 6,
+            "46": 6,
+            "47": 10,
+            "48": 9,
+            "49": 4,
+            "50": 4,
+            "51": 4,
+            "52": 3,
+            "53": 5,
+            "54": 4,
+            "55": 2,
+            "56": 4,
+            "57": 5,
+            "58": 1,
+            "59": 3,
+            "60": 2,
+            "61": 1,
+            "63": 2,
+            "67": 4,
+            "68": 1,
+            "69": 2,
+            "73": 1,
+            "9": 1
+          },
+          "truncated_samples": 0,
+          "protection": {
+            "transport_scope_samples": 124,
+            "transport_scope_percent": 18.155,
+            "nearest_intersectTaintMask_allocation": null,
+            "whole_vs_partial_masks": "NOT_CAPTURED",
+            "note": "Scope includes the underlying transfer and callbacks; it is not direct flag-processing cost."
+          },
+          "allocation_bytes_estimate": 16596377048,
+          "per_run_counter_increments": {
+            "initial_and_request": {
+              "initialCandidates": 138696,
+              "newInitials": 21159
+            },
+            "call_and_subscription": {
+              "acceptedDeltas": 83280,
+              "createdGroups": 52757,
+              "createdIndexPostings": 73412,
+              "peakQueuedReplays": 3,
+              "e6Bindings": 104,
+              "e6Combinations": 56,
+              "selectedCallOffers": 163695,
+              "persistedReplayInvocations": 163695,
+              "persistedReplayCandidates": 2412451,
+              "persistedReplayMatches": 438948,
+              "demandLookupInvocations": 163695,
+              "demandLookupEmpty": 62963,
+              "demandLookupEligible": 100732,
+              "initialPackets": 100732,
+              "offeredInitialKeys": 138682
+            }
+          },
+          "cfg_delivery": {
+            "hits": 440157,
+            "searches": 37141,
+            "visitedNodes": 120629,
+            "destinations": 46174,
+            "maxWidth": 84
+          },
+          "storage_census": {
+            "marker": "22:45:50.668 |I| IterationDriver - BIDI_IDENTITY_STORAGE_STATISTICS run=7 scope=frozen-scalar-stores snapshotActors=3582 unavailableActors=0 compactPoints=77350 compactNormal=69518 compactDemand=76289 compactFlow=1167 compactTaint=144640 protectedNormal=0 protectedDemand=0 fullPoints=76560 promotedPoints=14929 firstFullPoints=61631 bitWords=25986 fullArrayCapacity=213618 fallbackReasons={different-base=2645, different-typed-header=28376, nonliteral-tree-or-mask=44722, unsupported-premise=817}",
+            "snapshotActors": 3582,
+            "unavailableActors": 0,
+            "compactPoints": 77350,
+            "compactNormal": 69518,
+            "compactDemand": 76289,
+            "compactFlow": 1167,
+            "compactTaint": 144640,
+            "protectedNormal": 0,
+            "protectedDemand": 0,
+            "fullPoints": 76560,
+            "promotedPoints": 14929,
+            "firstFullPoints": 61631,
+            "bitWords": 25986,
+            "fullArrayCapacity": 213618,
+            "base": 2645,
+            "header": 28376,
+            "mask": 44722,
+            "premise": 817
+          },
+          "representative_full_hot_stacks": [
+            {
+              "samples": 14,
+              "truncated": false,
+              "frames": [
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.flow:107",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.flow$default:72",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.process$lambda$4:66",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices$$Lambda$1583+0x00007f2264726de0.92812599.invoke:-1",
+                "org.opentaint.dataflow.bidi.interp.FormsCache.withForm:100",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withCall:104",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withCall:99",
+                "org.opentaint.dataflow.bidi.interp.DirectedForms.withCall:187",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.process:61",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.process:512",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.work:486",
+                "org.opentaint.dataflow.bidi.engine.UnitRunner$runLoop$2.invokeSuspend:126",
+                "kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith:33",
+                "kotlinx.coroutines.DispatchedTask.run:100",
+                "java.util.concurrent.Executors$RunnableAdapter.call:539",
+                "java.util.concurrent.FutureTask.run:264",
+                "java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run:304",
+                "java.util.concurrent.ThreadPoolExecutor.runWorker:1136",
+                "java.util.concurrent.ThreadPoolExecutor$Worker.run:635",
+                "java.lang.Thread.run:840"
+              ]
+            },
+            {
+              "samples": 5,
+              "truncated": false,
+              "frames": [
+                "java.lang.StringLatin1.hashCode:196",
+                "java.lang.String.hashCode:2344",
+                "org.opentaint.ir.impl.bytecode.JIRDeclarationImpl.hashCode:44",
+                "org.opentaint.ir.impl.bytecode.JIRClassOrInterfaceImpl.hashCode:130",
+                "org.opentaint.ir.impl.bytecode.JIRMethodImpl.hashCode:94",
+                "org.opentaint.ir.impl.cfg.JIRInstLocationImpl.hashCode:222",
+                "org.opentaint.ir.api.jvm.cfg.AbstractJIRInst.hashCode:61",
+                "org.opentaint.dataflow.ap.ifds.MethodEntryPoint.hashCode:-1",
+                "java.util.HashMap.hash:338",
+                "java.util.HashMap.getNode:568",
+                "java.util.HashMap.get:556",
+                "org.opentaint.dataflow.bidi.store.PersistentRecordStore$byEntry$1.invokeSuspend:82",
+                "kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith:33",
+                "kotlin.sequences.SequenceBuilderIterator.hasNext:129",
+                "org.opentaint.dataflow.bidi.engine.PersistedSummaryReplayKt.replayPersistedSummaries:24",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.enterCallees:346",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.applyStage:160",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.flow:107",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.flow$default:72",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.process$lambda$4:66",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices$$Lambda$1583+0x00007f2264726de0.92812599.invoke:-1",
+                "org.opentaint.dataflow.bidi.interp.FormsCache.withForm:100",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withCall:104",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withCall:99",
+                "org.opentaint.dataflow.bidi.interp.DirectedForms.withCall:187",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.process:61",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.process:512",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.work:486",
+                "org.opentaint.dataflow.bidi.engine.UnitRunner$runLoop$2.invokeSuspend:126",
+                "kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith:33",
+                "kotlinx.coroutines.DispatchedTask.run:100",
+                "java.util.concurrent.Executors$RunnableAdapter.call:539",
+                "java.util.concurrent.FutureTask.run:264",
+                "java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run:304",
+                "java.util.concurrent.ThreadPoolExecutor.runWorker:1136",
+                "java.util.concurrent.ThreadPoolExecutor$Worker.run:635",
+                "java.lang.Thread.run:840"
+              ]
+            }
+          ]
+        },
+        "run-8": {
+          "status": "TIMEOUT",
+          "engine_seconds": 716.924828649,
+          "java_samples": 37762,
+          "categories_disjoint": {
+            "current_delivery": {
+              "samples": 16,
+              "percent": 0.042
+            },
+            "direct_call_processing_outside_saved_replay": {
+              "samples": 31697,
+              "percent": 83.939
+            },
+            "ordinary_statement_with_callbacks": {
+              "samples": 986,
+              "percent": 2.611
+            },
+            "other": {
+              "samples": 158,
+              "percent": 0.418
+            },
+            "saved_replay_with_callbacks": {
+              "samples": 4905,
+              "percent": 12.989
+            }
+          },
+          "method_storage_sample_categories": {
+            "current_delivery": {
+              "samples": 2,
+              "percent_all_java_samples": 0.005,
+              "percent_store_samples": 0.016
+            },
+            "direct_call_processing_outside_saved_replay": {
+              "samples": 10646,
+              "percent_all_java_samples": 28.192,
+              "percent_store_samples": 83.387
+            },
+            "ordinary_statement_with_callbacks": {
+              "samples": 455,
+              "percent_all_java_samples": 1.205,
+              "percent_store_samples": 3.564
+            },
+            "other": {
+              "samples": 1,
+              "percent_all_java_samples": 0.003,
+              "percent_store_samples": 0.008
+            },
+            "saved_replay_with_callbacks": {
+              "samples": 1663,
+              "percent_all_java_samples": 4.404,
+              "percent_store_samples": 13.026
+            }
+          },
+          "anchors_inclusive": {
+            "FlowBackedProtectionKt.transportProtection": {
+              "samples": 33872,
+              "percent": 89.699
+            },
+            "FlowGroup.add": {
+              "samples": 959,
+              "percent": 2.54
+            },
+            "FormApplier.stage": {
+              "samples": 11811,
+              "percent": 31.277
+            },
+            "FormApplier.statement": {
+              "samples": 1292,
+              "percent": 3.421
+            },
+            "MethodEdgeStore.add": {
+              "samples": 12767,
+              "percent": 33.809
+            },
+            "PersistedSummaryReplayKt.replayPersistedSummaries": {
+              "samples": 4905,
+              "percent": 12.989
+            },
+            "RunMethodAnalyzer.runStatement": {
+              "samples": 986,
+              "percent": 2.611
+            },
+            "RunMethodCallServices.applyRecord": {
+              "samples": 8,
+              "percent": 0.021
+            },
+            "RunMethodCallServices.applyRecordView": {
+              "samples": 3930,
+              "percent": 10.407
+            },
+            "RunMethodCallServices.applyStage": {
+              "samples": 21802,
+              "percent": 57.735
+            },
+            "RunMethodCallServices.cleanChain": {
+              "samples": 6223,
+              "percent": 16.48
+            },
+            "RunMethodCallServices.process": {
+              "samples": 36602,
+              "percent": 96.928
+            },
+            "RunMethodCallServices.resumeCallees": {
+              "samples": 3175,
+              "percent": 8.408
+            },
+            "SubscriptionManager.onDelivery": {
+              "samples": 16,
+              "percent": 0.042
+            },
+            "SubscriptionManager.replay": {
+              "samples": 8,
+              "percent": 0.021
+            },
+            "TaintGroup.add": {
+              "samples": 11598,
+              "percent": 30.713
+            }
+          },
+          "stack_depth_histogram": {
+            "1": 1,
+            "10": 8,
+            "11": 3,
+            "12": 44,
+            "13": 6,
+            "14": 15,
+            "15": 6,
+            "16": 17,
+            "17": 34,
+            "18": 35,
+            "19": 64,
+            "2": 1,
+            "20": 352,
+            "21": 76,
+            "22": 167,
+            "23": 173,
+            "24": 253,
+            "25": 409,
+            "26": 212,
+            "27": 429,
+            "28": 291,
+            "29": 659,
+            "30": 892,
+            "31": 1135,
+            "32": 1451,
+            "33": 1538,
+            "34": 1140,
+            "35": 1288,
+            "36": 1720,
+            "37": 3026,
+            "38": 1472,
+            "39": 1958,
+            "40": 2458,
+            "41": 1481,
+            "42": 1733,
+            "43": 1914,
+            "44": 2413,
+            "45": 1499,
+            "46": 1996,
+            "47": 341,
+            "48": 589,
+            "49": 509,
+            "50": 138,
+            "51": 497,
+            "52": 95,
+            "53": 108,
+            "54": 282,
+            "55": 154,
+            "56": 151,
+            "57": 327,
+            "58": 152,
+            "59": 226,
+            "60": 247,
+            "61": 258,
+            "62": 208,
+            "63": 322,
+            "64": 54,
+            "65": 85,
+            "66": 98,
+            "67": 32,
+            "68": 117,
+            "69": 106,
+            "70": 71,
+            "71": 61,
+            "72": 43,
+            "73": 32,
+            "74": 12,
+            "75": 19,
+            "76": 13,
+            "77": 9,
+            "78": 19,
+            "79": 1,
+            "80": 7,
+            "9": 10
+          },
+          "truncated_samples": 0,
+          "protection": {
+            "transport_scope_samples": 33872,
+            "transport_scope_percent": 89.699,
+            "nearest_intersectTaintMask_allocation": {
+              "name": "org.opentaint.dataflow.bidi.ap.FlowBackedProtectionKt.intersectTaintMask",
+              "weight": 269972945176,
+              "percent": 11.638
+            },
+            "whole_vs_partial_masks": "NOT_CAPTURED",
+            "note": "Scope includes the underlying transfer and callbacks; it is not direct flag-processing cost."
+          },
+          "allocation_bytes_estimate": 2319758264320,
+          "per_run_counter_increments": {
+            "initial_and_request": {
+              "initialCandidates": 41901,
+              "newInitials": 9825
+            },
+            "call_and_subscription": {
+              "acceptedDeltas": 28753,
+              "createdGroups": 27650,
+              "createdZeroOnlyEntries": 66,
+              "createdIndexPostings": 32903,
+              "selectedCallOffers": 6455872,
+              "persistedReplayInvocations": 6455872,
+              "persistedReplayCandidates": 13494307,
+              "persistedReplayMatches": 6564500,
+              "demandLookupInvocations": 6455872,
+              "demandLookupEmpty": 6422511,
+              "demandLookupEligible": 33361,
+              "initialPackets": 33361,
+              "offeredInitialKeys": 41809
+            }
+          },
+          "cfg_delivery": null,
+          "storage_census": {
+            "marker": "22:57:47.759 |I| IterationDriver - BIDI_IDENTITY_STORAGE_STATISTICS run=8 scope=frozen-scalar-stores snapshotActors=0 unavailableActors=0 compactPoints=0 compactNormal=0 compactDemand=0 compactFlow=0 compactTaint=0 protectedNormal=0 protectedDemand=0 fullPoints=0 promotedPoints=0 firstFullPoints=0 bitWords=0 fullArrayCapacity=0 fallbackReasons={}",
+            "snapshotActors": 0,
+            "unavailableActors": 0,
+            "compactPoints": 0,
+            "compactNormal": 0,
+            "compactDemand": 0,
+            "compactFlow": 0,
+            "compactTaint": 0,
+            "protectedNormal": 0,
+            "protectedDemand": 0,
+            "fullPoints": 0,
+            "promotedPoints": 0,
+            "firstFullPoints": 0,
+            "bitWords": 0,
+            "fullArrayCapacity": 0
+          },
+          "representative_full_hot_stacks": [
+            {
+              "samples": 572,
+              "truncated": false,
+              "frames": [
+                "org.opentaint.dataflow.bidi.ap.TrieOpsKt.subtract:491",
+                "org.opentaint.dataflow.bidi.ap.TaintGroup.subtract:180",
+                "org.opentaint.dataflow.bidi.ap.TaintGroup.subtractSubsumed:157",
+                "org.opentaint.dataflow.bidi.ap.TaintGroup.add:135",
+                "org.opentaint.dataflow.bidi.ap.ConclusionGroup.add:203",
+                "org.opentaint.dataflow.bidi.store.MethodEdgeStore.add:107",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.admitOutput:628",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.completeOutput:620",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.emitCovered:607",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.emitAfter$opentaint_dataflow:600",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.flow$lambda$7:88",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices$$Lambda$1707+0x00007f226475f2a0.1584571234.invoke:-1",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer$collect$1.result:231",
+                "org.opentaint.dataflow.bidi.ap.FlowBackedProtectionKt$transportProtection$1.result:109",
+                "org.opentaint.dataflow.bidi.ap.LimitKt.limitFacts:16",
+                "org.opentaint.dataflow.bidi.ap.ApOps.limit$lambda$22:156",
+                "org.opentaint.dataflow.bidi.ap.ApOps$$Lambda$1505+0x00007f226471d9c8.501397739.invoke:-1",
+                "org.opentaint.dataflow.bidi.ap.FlowBackedProtectionKt.transportProtection:108",
+                "org.opentaint.dataflow.bidi.ap.ApOps.limit:155",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.cut$opentaint_dataflow:432",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.flow:88",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.flow$default:72",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.process$lambda$4:66",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices$$Lambda$1583+0x00007f2264726de0.92812599.invoke:-1",
+                "org.opentaint.dataflow.bidi.interp.FormsCache.withForm:100",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withCall:104",
+                "org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms.withCall:99",
+                "org.opentaint.dataflow.bidi.interp.DirectedForms.withCall:187",
+                "org.opentaint.dataflow.bidi.engine.RunMethodCallServices.process:61",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.process:512",
+                "org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer.work:486",
+                "org.opentaint.dataflow.bidi.engine.UnitRunner$runLoop$2.invokeSuspend:126",
+                "kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith:33",
+                "kotlinx.coroutines.DispatchedTask.run:100",
+                "java.util.concurrent.Executors$RunnableAdapter.call:539",
+                "java.util.concurrent.FutureTask.run:264",
+                "java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run:304",
+                "java.util.concurrent.ThreadPoolExecutor.runWorker:1136",
+                "java.util.concurrent.ThreadPoolExecutor$Worker.run:635",
+                "java.lang.Thread.run:840"
+              ]
+            }
+          ]
+        }
+      },
+      "external_full_ranked_stacks": "/drive-testcomp/opentaint-go-rules/constant-filter-target-zero-20261031/projects/Stirling-PDF/bidi/backward-full-stacks-20261101.tsv",
+      "source_sha256": {
+        "continuous.jfr": "36661bf81d17e01651fd8611a97bcd95846e0cda23de5783c694d3bc5c4d88d3",
+        "full_stacks.tsv": "14e681783babfb96d2ba585b241be88eaefb9668edf8891bdcf1e49ab75ad346"
+      }
+    },
+    "conductor": {
+      "latest_reached": "run-4",
+      "latest_complete": "run-3",
+      "latest_accepted_forward_report": "run-3",
+      "status": "TIMEOUT",
+      "revision": "c4a71246519ee5432879ce82518823f1703f3aa4",
+      "phases": {
+        "run-4": {
+          "status": "TIMEOUT",
+          "engine_seconds": 1009.020535511,
+          "java_samples": 14278,
+          "categories_disjoint": {
+            "current_delivery": {
+              "samples": 10328,
+              "percent": 72.335
+            },
+            "direct_call_processing_outside_saved_replay": {
+              "samples": 2423,
+              "percent": 16.97
+            },
+            "ordinary_statement_with_callbacks": {
+              "samples": 222,
+              "percent": 1.555
+            },
+            "other": {
+              "samples": 95,
+              "percent": 0.665
+            },
+            "saved_replay_with_callbacks": {
+              "samples": 1210,
+              "percent": 8.475
+            }
+          },
+          "method_storage_sample_categories": {
+            "current_delivery": {
+              "samples": 1628,
+              "percent_all_java_samples": 11.402,
+              "percent_store_samples": 68.146
+            },
+            "direct_call_processing_outside_saved_replay": {
+              "samples": 463,
+              "percent_all_java_samples": 3.243,
+              "percent_store_samples": 19.38
+            },
+            "ordinary_statement_with_callbacks": {
+              "samples": 59,
+              "percent_all_java_samples": 0.413,
+              "percent_store_samples": 2.47
+            },
+            "saved_replay_with_callbacks": {
+              "samples": 239,
+              "percent_all_java_samples": 1.674,
+              "percent_store_samples": 10.004
+            }
+          },
+          "anchors_inclusive": {
+            "FlowBackedProtectionKt.transportProtection": {
+              "samples": 5132,
+              "percent": 35.943
+            },
+            "FlowGroup.add": {
+              "samples": 817,
+              "percent": 5.722
+            },
+            "FormApplier.stage": {
+              "samples": 1899,
+              "percent": 13.3
+            },
+            "FormApplier.statement": {
+              "samples": 200,
+              "percent": 1.401
+            },
+            "MethodEdgeStore.add": {
+              "samples": 2389,
+              "percent": 16.732
+            },
+            "PersistedSummaryReplayKt.replayPersistedSummaries": {
+              "samples": 1210,
+              "percent": 8.475
+            },
+            "RunMethodAnalyzer.runStatement": {
+              "samples": 222,
+              "percent": 1.555
+            },
+            "RunMethodCallServices.applyRecord": {
+              "samples": 166,
+              "percent": 1.163
+            },
+            "RunMethodCallServices.applyRecordView": {
+              "samples": 581,
+              "percent": 4.069
+            },
+            "RunMethodCallServices.applyStage": {
+              "samples": 4416,
+              "percent": 30.929
+            },
+            "RunMethodCallServices.cleanChain": {
+              "samples": 160,
+              "percent": 1.121
+            },
+            "RunMethodCallServices.process": {
+              "samples": 3633,
+              "percent": 25.445
+            },
+            "RunMethodCallServices.resumeCallees": {
+              "samples": 5603,
+              "percent": 39.242
+            },
+            "SubscriptionManager.onDelivery": {
+              "samples": 10328,
+              "percent": 72.335
+            },
+            "SubscriptionManager.replay": {
+              "samples": 885,
+              "percent": 6.198
+            },
+            "TaintGroup.add": {
+              "samples": 294,
+              "percent": 2.059
+            }
+          },
+          "stack_depth_histogram": {
+            "10": 3,
+            "11": 9,
+            "12": 27,
+            "13": 29,
+            "14": 873,
+            "15": 81,
+            "16": 226,
+            "17": 139,
+            "18": 542,
+            "19": 461,
+            "2": 1,
+            "20": 1191,
+            "21": 272,
+            "22": 347,
+            "23": 556,
+            "24": 749,
+            "25": 930,
+            "26": 430,
+            "27": 344,
+            "28": 525,
+            "29": 303,
+            "3": 3,
+            "30": 342,
+            "31": 285,
+            "32": 172,
+            "33": 212,
+            "34": 158,
+            "35": 182,
+            "36": 285,
+            "37": 719,
+            "38": 432,
+            "39": 401,
+            "4": 1,
+            "40": 1021,
+            "41": 212,
+            "42": 249,
+            "43": 166,
+            "44": 147,
+            "45": 105,
+            "46": 104,
+            "47": 111,
+            "48": 49,
+            "49": 33,
+            "5": 1,
+            "50": 43,
+            "51": 91,
+            "52": 25,
+            "53": 47,
+            "54": 83,
+            "55": 28,
+            "56": 61,
+            "57": 51,
+            "58": 50,
+            "59": 25,
+            "60": 41,
+            "61": 34,
+            "62": 53,
+            "63": 29,
+            "64": 18,
+            "65": 37,
+            "66": 18,
+            "67": 9,
+            "68": 18,
+            "69": 75,
+            "7": 1,
+            "70": 4,
+            "71": 1,
+            "73": 5,
+            "74": 1,
+            "9": 2
+          },
+          "truncated_samples": 0,
+          "protection": {
+            "transport_scope_samples": 5132,
+            "transport_scope_percent": 35.943,
+            "nearest_intersectTaintMask_allocation": null,
+            "whole_vs_partial_masks": "NOT_CAPTURED",
+            "note": "Scope includes the underlying transfer and callbacks; it is not direct flag-processing cost."
+          },
+          "allocation_bytes_estimate": 2860169708624,
+          "per_run_counter_increments": {
+            "initial_and_request": {
+              "initialCandidates": 2056696,
+              "newInitials": 12493
+            },
+            "call_and_subscription": {
+              "acceptedDeltas": 798070,
+              "createdGroups": 51427,
+              "createdZeroOnlyEntries": 245,
+              "createdIndexPostings": 875749,
+              "selectedCallOffers": 4373189,
+              "persistedReplayInvocations": 4373189,
+              "persistedReplayCandidates": 27019728,
+              "persistedReplayMatches": 7978859,
+              "demandLookupInvocations": 4373189,
+              "demandLookupEmpty": 3330099,
+              "demandLookupEligible": 1043090,
+              "initialPackets": 1043090,
+              "offeredInitialKeys": 2056361
+            }
+          },
+          "cfg_delivery": null,
+          "storage_census": {
+            "marker": "22:20:37.359 |I| IterationDriver - BIDI_IDENTITY_STORAGE_STATISTICS run=4 scope=frozen-scalar-stores snapshotActors=0 unavailableActors=0 compactPoints=0 compactNormal=0 compactDemand=0 compactFlow=0 compactTaint=0 protectedNormal=0 protectedDemand=0 fullPoints=0 promotedPoints=0 firstFullPoints=0 bitWords=0 fullArrayCapacity=0 fallbackReasons={}",
+            "snapshotActors": 0,
+            "unavailableActors": 0,
+            "compactPoints": 0,
+            "compactNormal": 0,
+            "compactDemand": 0,
+            "compactFlow": 0,
+            "compactTaint": 0,
+            "protectedNormal": 0,
+            "protectedDemand": 0,
+            "fullPoints": 0,
+            "promotedPoints": 0,
+            "firstFullPoints": 0,
+            "bitWords": 0,
+            "fullArrayCapacity": 0
+          },
+          "representative_full_hot_stacks": [
+            {
+              "samples": 791,
+              "truncated": false,
+              "frames": [
+                "org.opentaint.dataflow.bidi.engine.CalleeSubscriptions$candidates$1.invokeSuspend:99",
+                "kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith:33",
+                "kotlin.sequences.SequenceBuilderIterator.hasNext:129",
+                "org.opentaint.dataflow.bidi.engine.SubscriptionManager.onDelivery:284",
+                "org.opentaint.dataflow.bidi.engine.RunMethodHandlers$Handler.handle:83",
+                "org.opentaint.dataflow.bidi.engine.UnitRunner$runLoop$2.invokeSuspend:128",
+                "kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith:33",
+                "kotlinx.coroutines.DispatchedTask.run:100",
+                "java.util.concurrent.Executors$RunnableAdapter.call:539",
+                "java.util.concurrent.FutureTask.run:264",
+                "java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run:304",
+                "java.util.concurrent.ThreadPoolExecutor.runWorker:1136",
+                "java.util.concurrent.ThreadPoolExecutor$Worker.run:635",
+                "java.lang.Thread.run:840"
+              ]
+            }
+          ]
+        }
+      },
+      "external_full_ranked_stacks": "/drive-testcomp/opentaint-go-rules/constant-filter-target-zero-20261031/projects/conductor/bidi/backward-full-stacks-20261101.tsv",
+      "source_sha256": {
+        "continuous.jfr": "79ada9ddbda107f9289bc02ca8e0ec5bda4b81c16e1e45ceac13713bbc339a51",
+        "full_stacks.tsv": "7c1329bc5236c6e0e6486d623bfdc7c95f265ed8d775f8464fde132b71c5399c"
+      }
+    }
+  },
+  "stirling_directional_work_ratios": {
+    "run-6_vs_run-5": {
+      "engine_time_ratio": 89.25820272732747,
+      "call_offer_ratio": 22.645823325768994,
+      "allocation_ratio": 45.397596065457705,
+      "allocated_bytes_per_offer_forward": 186231.551572775,
+      "allocated_bytes_per_offer_backward": 373334.3951033938,
+      "bytes_per_offer_ratio": 2.0046785410446595,
+      "note": "Descriptive decomposition, not a causal speedup estimate. Opposite directions receive different facts/layers/tails and field limits."
+    },
+    "run-8_vs_run-7": {
+      "engine_time_ratio": 203.23384474094348,
+      "call_offer_ratio": 39.43841901096552,
+      "allocation_ratio": 139.7749796603681,
+      "allocated_bytes_per_offer_forward": 101385.97420813098,
+      "allocated_bytes_per_offer_backward": 359325.3187671627,
+      "bytes_per_offer_ratio": 3.54413242634054,
+      "note": "Descriptive decomposition, not a causal speedup estimate. Opposite directions receive different facts/layers/tails and field limits."
+    }
+  },
+  "category_definitions": {
+    "precedence": [
+      "current_delivery",
+      "saved_replay_with_callbacks",
+      "ordinary_statement_with_callbacks",
+      "direct_call_processing_outside_saved_replay",
+      "other"
+    ],
+    "current_delivery": "Stack contains SubscriptionManager.onDelivery.",
+    "saved_replay_with_callbacks": "Stack contains PersistedSummaryReplayKt.replayPersistedSummaries and no asynchronous current-delivery frame.",
+    "ordinary_statement_with_callbacks": "Stack contains RunMethodAnalyzer.runStatement, outside the previous categories.",
+    "direct_call_processing_outside_saved_replay": "Stack contains RunMethodCallServices.process, but not saved replay or asynchronous current delivery. Can include call-entry/bypass stages, immediate current replay and their callbacks. It cannot distinguish ALIASES versus BIND_BACK versus PASS_OVER stage.kind.",
+    "other": "None of the named anchors.",
+    "limits": [
+      "Samples are Java execution samples, not elapsed or total CPU shares.",
+      "Categories are disjoint by precedence; individual anchor scopes overlap.",
+      "Stirling native same-direction applyRecord anchor matches exact method name, avoiding the applyRecordView prefix.",
+      "Full sampled stacks are not truncated in these selected phases. No actual MethodKey, field-tree size, stage.kind, mark values or complete mask values are present in the samples."
+    ]
+  },
+  "causal_findings": [
+    {
+      "status": "MEASURED_PROJECT_LANE",
+      "finding": "The dominant Stirling backward lane is call processing outside saved replay, not ordinary field statements or native leaf replay alone.",
+      "evidence": "B6 direct call81.316%, saved replay15.304%, ordinary statement2.818%; B8 direct call83.939%, saved replay12.989%, ordinary statement2.611%. Most MethodEdgeStore.add samples are in the direct-call category.",
+      "limit": "The direct category includes pre-callee and bypass call stages, but samples do not reveal stage.kind. Do not attribute all81/84% specifically to aliases."
+    },
+    {
+      "status": "MEASURED_DIRECTIONAL_WORK_INCREASE",
+      "finding": "Backward run6/run8 execute many more call offers and allocate more per offer than adjacent forward runs.",
+      "evidence": {
+        "run-6_vs_run-5": {
+          "engine_time_ratio": 89.25820272732747,
+          "call_offer_ratio": 22.645823325768994,
+          "allocation_ratio": 45.397596065457705,
+          "allocated_bytes_per_offer_forward": 186231.551572775,
+          "allocated_bytes_per_offer_backward": 373334.3951033938,
+          "bytes_per_offer_ratio": 2.0046785410446595,
+          "note": "Descriptive decomposition, not a causal speedup estimate. Opposite directions receive different facts/layers/tails and field limits."
+        },
+        "run-8_vs_run-7": {
+          "engine_time_ratio": 203.23384474094348,
+          "call_offer_ratio": 39.43841901096552,
+          "allocation_ratio": 139.7749796603681,
+          "allocated_bytes_per_offer_forward": 101385.97420813098,
+          "allocated_bytes_per_offer_backward": 359325.3187671627,
+          "bytes_per_offer_ratio": 3.54413242634054,
+          "note": "Descriptive decomposition, not a causal speedup estimate. Opposite directions receive different facts/layers/tails and field limits."
+        }
+      },
+      "limit": "Few demand rows do not bound the number of interior path/mark/protection memberships under an admitted initial."
+    },
+    {
+      "status": "SOURCE_AND_EXECUTABLE_CONTROL",
+      "finding": "Reverse call plans permit convergent alias branches before callee matching and have no per-point item-set admission in production flow.",
+      "evidence": "Forward ALIASES is after callee/rewriter and guarded. Reversal moves it before the callee, removes the guard, extends touched alias bases and adds independent PASS_OVER. Production applyStage appends every result to ArrayList and flow executes every branch, so identical images reach cleaners/callee/suffix repeatedly before authoritative post-statement deduplication.",
+      "why_forward_can_be_fast": "A later NORMAL identity result fails forward MemoryEffect, and forward reads remove prefixes instead of growing inverse requirements. Later DEMAND forward identities can still admit aliases; this is not an all-forward suppression claim.",
+      "control": "Width64 reverse aliases:65call finishes/2stored leaves; forward NORMAL identity:1finish/1stored leaf. Exact external control receipt is cited below.",
+      "project_attribution": "Mechanism reproduced, but actual alias widths and duplicate stage-image ratios were not recorded."
+    },
+    {
+      "status": "SOURCE_AND_EXECUTABLE_CONTROL",
+      "finding": "Inverse field-read loops create an expanding path language behind one boundary demand.",
+      "evidence": "Production-AP control has one admitted exact-DEMAND initial and one selected exit demand. At limits1/3/5/7, raw summary leaves3/15/63/255 and processed items21/81/321/1281; forward uniform NORMAL control processes17items and has2leaves.",
+      "tails": "Backward exact leaves occur at every depth0..L-1 (2^depth each); cut ANY leaves occur at depthL (2^L). The exact ancestor does not subsume all descendant positions.",
+      "why_forward_can_be_fast": "A forward field read consumes a known prefix. A uniform input can retain a broad image, while reversing the same read prepends a new field to a precise requirement. C2 admission and final C5 do not restrict every interior AP.",
+      "project_attribution": "The campaign does not capture per-cell path-language sizes. Do not claim the full model distribution exists in the actual hot method."
+    },
+    {
+      "status": "SOURCE_AND_EXECUTABLE_CONTROL_SECONDARY",
+      "finding": "Opposite-direction packed records scalarize and resume each view separately, even when results converge.",
+      "evidence": "A normal FLOW record p.*\u2192{ret.a.*,ret.b.*} plus one packed DEMAND actual ret.{a.h.[any],b.h.[any]}/T gives2applyRecordView calls,2caller finishes and1stored output. Forward same-direction replay invokes1applyRecord/1finish and retains2output paths. Protected and unprotected controls pass.",
+      "scope": "Saved replay with callbacks is~15% of B6 and13% of B8 Java samples. This proven multiplier is secondary to direct reversed-plan work in the captured phases.",
+      "extra_source_cost": "For each of L actual leaves, reversedLeavesAt enumerates all M record-conclusion leaves before prefix filtering: up to L\u00d7M leaf visits. Same-direction replay uses seen<Record> across the offer and applies its packed conclusion once.",
+      "project_attribution": "Successful-offer and record-width counts were not captured; average matches/offer alone does not determine concentrated fanout."
+    },
+    {
+      "status": "RULED_OUT_EXPLANATION",
+      "finding": "The implementation already deduplicates post-statement outputs and memoizes distinct nodes in DAG mapping.",
+      "evidence": "completeOutput calls edges.add before CFG delivery. TaintGroup/mergeAddDelta emit ordinary/protection deltas, not the complete merged value for every mask change. TrieOps.walkNodes/mapLeaves memoize distinct input nodes.",
+      "limit": "The7.33M B6 CFG hits therefore cannot all be identical rejected post-statement outputs. Fresh geometry/mark/protection growth and CFG successor fanout remain possible."
+    },
+    {
+      "status": "MEASURED_SEPARATE_CONDUCTOR_LANE",
+      "finding": "Conductor run4 is dominated by current summary delivery, unlike Stirling.",
+      "evidence": "Current-delivery category72.335%; direct call16.970%; saved replay8.475%; ordinary statement1.555%.",
+      "interpretation": "A backward direction does not identify one universal hotspot. Retained current-input/publication products dominate Conductor, while reversed call-plan processing dominates Stirling."
+    }
+  ],
+  "source_evidence": [
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/CallPlan.kt",
+      "line": 36,
+      "sha256": "d1404263101a0a189bb932afff3c5ad602010efe500de6977b16707c4e892875",
+      "meaning": "Later forward MemoryEffect admits DEMAND or nonidentity results; reverse edges remove guards."
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/CallPlan.kt",
+      "line": 175,
+      "sha256": "d1404263101a0a189bb932afff3c5ad602010efe500de6977b16707c4e892875",
+      "meaning": "CallStage.Edges.reversed sets guard=null."
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/CallPlan.kt",
+      "line": 296,
+      "sha256": "d1404263101a0a189bb932afff3c5ad602010efe500de6977b16707c4e892875",
+      "meaning": "CallPlan.reversed extends touched alias bases and adds independent PASS_OVER identities."
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodCallServices.kt",
+      "line": 72,
+      "sha256": "17dadf2addc71e9a7f82e9518503af03454ca470a3ca114846f7d5f7470ffb14",
+      "meaning": "Production flow walks every branch via frames; there is no global (point,PlanFact) visited set."
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodCallServices.kt",
+      "line": 115,
+      "sha256": "17dadf2addc71e9a7f82e9518503af03454ca470a3ca114846f7d5f7470ffb14",
+      "meaning": "Each stage uses ArrayList outputs. Cleaner-local PlanFacts does not deduplicate all incoming stage facts."
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/PersistedSummaryReplay.kt",
+      "line": 20,
+      "sha256": "50378507fb19ece0d77e4a3536db84cfc614db60e4b81bbdc855798cceb305a7",
+      "meaning": "Same-direction records are seen once; opposite-direction leaf views are selected individually."
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RecordStore.kt",
+      "line": 20,
+      "sha256": "84ecc7732f20556a8c4347800a9f2e830e3344966fde42e6a621fc8266883c3a",
+      "meaning": "Each reversedLeavesAt invocation enumerates the complete conclusion before filtering by the provided leaf."
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodCallServices.kt",
+      "line": 591,
+      "sha256": "17dadf2addc71e9a7f82e9518503af03454ca470a3ca114846f7d5f7470ffb14",
+      "meaning": "Each accepted reverse view calls resumeCallees immediately."
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodCallServices.kt",
+      "line": 624,
+      "sha256": "17dadf2addc71e9a7f82e9518503af03454ca470a3ca114846f7d5f7470ffb14",
+      "meaning": "resumeCallees starts the complete caller suffix for that callback."
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt",
+      "line": 615,
+      "sha256": "684f1287dc27b428d63fb0f54b1c3817f3fec811e694ed411ad693f82fdad618",
+      "meaning": "completeOutput gates successor delivery on fresh MethodEdgeStore output."
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Groups.kt",
+      "line": 147,
+      "sha256": "4acac35dc174c5e07596f5de84f5d6b38a26837cbc81879bb22b80b0183298fa",
+      "meaning": "TAINT storage constructs ordinary and protection deltas, not unconditional whole snapshots."
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/TrieOps.kt",
+      "line": 253,
+      "sha256": "610b7b4ef0a7567ed0bd073c3addfcf084529fb7d00046d0920976dd3a568375",
+      "meaning": "walkNodes memoizes each distinct node in a shared DAG."
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/FlowBackedProtection.kt",
+      "line": 102,
+      "sha256": "babe4411354ceeaa06c169602c8bae726ae29b83ad979fb8febaa95a70f37d62",
+      "meaning": "A protected input executes a shadow AP transfer and a full AP transfer; full/partial-mask population was not measured."
+    }
+  ],
+  "native_example": {
+    "code": "Box dup(Box p) { Box r = new Box(); r.a=p; r.b=p; return r; }",
+    "derived_forward_normal_record": "arg0.*/FLOW \u2192 {ret.a.*/FLOW, ret.b.*/FLOW}, NORMAL",
+    "caller_original": "One complete concrete caller original I; it is unchanged through both views.",
+    "backward_bound_actual": "{ret.a.h.[any]/T, ret.b.h.[any]/T}, DEMAND. This is an actual image, not an emitted MAY initial.",
+    "ordered_trace": [
+      "byExit finds the same forward record for actual leaf ret.a.h. reversedLeavesAt exposes ret.a.*/FLOW\u2192arg0.*/FLOW.",
+      "seenViews admits this view. satisfying selects ret.a.h.[any]/T. applyRecordView emits arg0.h.[any]/T DEMAND under I.",
+      "applyRecordView immediately calls resumeCallees: caller cleaning, reverse binding, field cut and emitAfter run; the first I\u2192x.h.[any]/T is stored.",
+      "Actual leaf ret.b.h exposes the distinct view ret.b.*/FLOW\u2192arg0.*/FLOW, which seenViews also admits.",
+      "Its selected actual yields the same arg0.h.[any]/T under I. resumeCallees executes the same suffix again.",
+      "MethodEdgeStore.add finally rejects the identical second I\u2192x.h.[any]/T when no new protection annotation is added."
+    ],
+    "protection_variant": "The control also protects only the first backward actual path. The merged final output retains protection. Ordinary fact equality alone is not a valid optimization key."
+  },
+  "diagnostic_controls": {
+    "source": "/drive-testcomp/opentaint-go-rules/constant-filter-target-zero-20261031/analysis-tools/backward-design-controls/src/org/opentaint/dataflow/bidi/BackwardDesignWorkProbeTest.kt",
+    "source_sha256": "959dc74f35b71382d22477b62a829db0c58b18e5340d36e534423def05f43432",
+    "log": "/drive-testcomp/opentaint-go-rules/constant-filter-target-zero-20261031/analysis-tools/backward-design-controls/test.log",
+    "repo_receipt": "docs/reports/data/bidirectional-backward-design-controls-20261101.json",
+    "tests": 6,
+    "status": "PASS_VERIFIED_EMBEDDED_RECEIPT",
+    "repo_receipt_sha256": "390e0a09fafd856d7e924d9ecdba966d61aebdd60eec7eb72abe937da8eebad5",
+    "test_counts": {
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "0.222"
+    },
+    "no_full_project_rerun": true
+  },
+  "remaining_evidence_gaps": [
+    "Actual hot MethodKey and complete original premises for the dominant worker.",
+    "Stage.kind and per-stage full-item equality/new-membership counts in the actual project.",
+    "Per-cell field-tree node count, expanded path count, mark population and full/partial protection-mask classification.",
+    "Opposite saved-record widths, successful-offer count and distinct post-suffix image count.",
+    "None of the source controls proves that one reproduced multiplier accounts for every expensive project operation."
+  ],
+  "constraints": [
+    "No analyzer runtime source was changed by this investigation.",
+    "No full project rerun or analyzer configuration change was performed.",
+    "Closed JFR was read offline with bounded reader memory; no profiler attachment or heap capture.",
+    "This file does not authorize semantic pruning, changing forward/backward guards, dropping alias branches, or skipping saved replay."
+  ]
+}

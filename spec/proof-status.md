@@ -1,5 +1,17 @@
 # Current proof status
 
+## Design only: demand-relative summary restriction, 1 November 2026
+
+The [specification](demand-relative-summary-restriction.md) selects a
+per-pair `FL(Dp)+1` conclusion cut after exact C5, followed by admitted-only
+summary storage, publication, and NORMAL persistence. No raw summary
+collection or new demand-save operation is required. The
+[dossier](demand-relative-summary-restriction-proofs.md) and
+[constructive checker](lean/proposals/demand-relative-summary-restriction-20261101/check.py)
+cover local laws and finite progress/work witnesses. Kotlin implementation,
+general convergence, full finding equivalence, and project improvement
+are not established by this package.
+
 ## Implemented; project measurements pending: concrete relations backed by FLOW
 
 The [complete specification](run1-flow-backed-concrete-relations.md) and
