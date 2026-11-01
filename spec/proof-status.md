@@ -12,6 +12,13 @@ cover local laws and finite progress/work witnesses. Kotlin implementation,
 general convergence, full finding equivalence, and project improvement
 are not established by this package.
 
+The [implementation proposal](../docs/design/bidirectional-demand-relative-summary-restriction-implementation-20261101.md)
+adds a concrete code map, frozen-safe admitted views, proved Reach
+saturation, TDD gates, and the post-implementation blow-up experiment.
+Its [adapter dossier](demand-relative-summary-restriction-implementation-proofs.md)
+and [checker](lean/proposals/demand-relative-summary-restriction-implementation-20261101/check.py)
+pass 182 theorems, including 20 new adapter laws. The runtime is unchanged.
+
 ## Implemented; project measurements pending: concrete relations backed by FLOW
 
 The [complete specification](run1-flow-backed-concrete-relations.md) and
