@@ -4,7 +4,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/seqra/opentaint/internal/testapprox"
+	"github.com/seqra/opentaint/internal/testmodel"
 	"github.com/spf13/cobra"
 )
 
@@ -21,16 +21,16 @@ var testModelRunCmd = &cobra.Command{
 	Long: `Run the samples specified in rule-test.yaml with the supplied dataflow models applied.
 
 A built-in source-to-sink harness rule is applied automatically; positive samples reference the
-approximation-rule.yaml rule with id "approximation-rule".
+model-rule.yaml rule with id "model-rule".
 
 ` + testExitCodesHelp("All model tests passed"),
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		ruleDir, err := os.MkdirTemp("", "opentaint-approx-rule-*")
+		ruleDir, err := os.MkdirTemp("", "opentaint-model-rule-*")
 		if err != nil {
 			out.Fatalf("Failed to create temp dir for harness rule: %s", err)
 		}
-		if _, err := testapprox.WriteFixedRule(ruleDir); err != nil {
+		if _, err := testmodel.WriteFixedRule(ruleDir); err != nil {
 			out.Fatalf("Failed to materialize harness rule: %s", err)
 		}
 

@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/seqra/opentaint/internal/approximation"
+	"github.com/seqra/opentaint/internal/models"
 	"github.com/seqra/opentaint/internal/utils/log"
 	"github.com/spf13/cobra"
 )
@@ -46,13 +46,13 @@ nothing about the project under analysis, decide what the models compile against
 
 		// Init replaces the build file but keeps the model sources.
 		// Warn the user because this removes dependency pins that they added manually.
-		existing := approximation.IsProject(projectPath)
+		existing := models.IsProject(projectPath)
 		if existing {
 			out.Warnf("Replacing the build file of the existing model project at %s; "+
 				"pass every dependency the models need, not only the new ones", projectPath)
 		}
 
-		if err := approximation.Scaffold(projectPath, initModelDeps, analyzerJarPath); err != nil {
+		if err := models.Scaffold(projectPath, initModelDeps, analyzerJarPath); err != nil {
 			out.Fatalf("Failed to create model project: %s", err)
 		}
 

@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/seqra/opentaint/internal/approximation"
 	"github.com/seqra/opentaint/internal/autobuilder"
 	"github.com/seqra/opentaint/internal/globals"
+	"github.com/seqra/opentaint/internal/models"
 	"github.com/seqra/opentaint/internal/output"
 )
 
@@ -18,7 +18,7 @@ type modelBuilder struct {
 	apiJar          []byte
 }
 
-func newModelBuilder(analyzerJarPath string) approximation.Builder {
+func newModelBuilder(analyzerJarPath string) models.Builder {
 	return &modelBuilder{analyzerJarPath: analyzerJarPath}
 }
 
@@ -44,13 +44,13 @@ func (b *modelBuilder) Fingerprint() (string, error) {
 // The builder reads the jar from the analyzer only once.
 func (b *modelBuilder) Prepare(projectDir string) error {
 	if b.apiJar == nil {
-		apiJar, err := approximation.ExtractApiJar(b.analyzerJarPath)
+		apiJar, err := models.ExtractApiJar(b.analyzerJarPath)
 		if err != nil {
 			return err
 		}
 		b.apiJar = apiJar
 	}
-	return approximation.WriteApiJar(projectDir, b.apiJar)
+	return models.WriteApiJar(projectDir, b.apiJar)
 }
 
 func (b *modelBuilder) Compile(projectDir, projectModelDir string) error {

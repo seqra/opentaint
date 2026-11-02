@@ -1,4 +1,4 @@
-package approximation
+package models
 
 import (
 	"fmt"
@@ -34,7 +34,7 @@ func writeDescriptor(outputDir string, d descriptor) error {
 	}
 	body, err := yaml.Marshal(d)
 	if err != nil {
-		return fmt.Errorf("failed to render the approximation descriptor: %w", err)
+		return fmt.Errorf("failed to render the model descriptor: %w", err)
 	}
 	path := filepath.Join(outputDir, descriptorName)
 	if err := os.WriteFile(path, append([]byte(descriptorHeader), body...), 0o644); err != nil {

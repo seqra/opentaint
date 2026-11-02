@@ -1,9 +1,9 @@
 rules:
-  - id: approximation-rule
+  - id: model-rule
     severity: ERROR
-    message: Tainted value from Taint.source() reached Taint.sink() through an approximated method
+    message: Tainted value from Taint.source() reached Taint.sink() through a modeled method
     metadata:
-      short-description: Approximation test source-to-sink flow
+      short-description: Model test source-to-sink flow
     languages:
       - java
     mode: taint

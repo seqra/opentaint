@@ -1,4 +1,4 @@
-package approximation
+package models
 
 import (
 	"fmt"
@@ -59,7 +59,7 @@ func checkClasspathAgrees(classDirs []string) error {
 				return fmt.Errorf(
 					"%s is offered with different content by %s and by %s; which one an analysis "+
 						"reads is not defined.\nDrop one of the copies, or pass only one of these "+
-						"approximation paths",
+						"model paths",
 					class, previous, dir)
 			}
 		}
@@ -77,10 +77,10 @@ func checkClasspathAgrees(classDirs []string) error {
 func Resolve(path string, builder Builder) ([]string, error) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return nil, fmt.Errorf("approximation path does not exist: %w", err)
+		return nil, fmt.Errorf("model path does not exist: %w", err)
 	}
 	if !info.IsDir() {
-		return nil, fmt.Errorf("approximation path %s is not a directory", path)
+		return nil, fmt.Errorf("model path %s is not a directory", path)
 	}
 
 	classDirs, err := resolveDir(path, builder)
@@ -118,7 +118,7 @@ func resolveDir(dir string, builder Builder) ([]string, error) {
 	// order the filesystem happens to hand them back.
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read approximation directory %s: %w", dir, err)
+		return nil, fmt.Errorf("failed to read model directory %s: %w", dir, err)
 	}
 
 	// Descending past classes this directory holds itself would leave them unused.
@@ -141,12 +141,12 @@ func resolveDir(dir string, builder Builder) ([]string, error) {
 }
 
 // ambiguousDirError reports a directory that is neither a class directory nor a
-// directory of approximation paths.
+// directory of model paths.
 func ambiguousDirError(dir, classFile string) error {
 	return fmt.Errorf(
-		"%s holds compiled classes of its own (e.g. %s) and an approximation project or build "+
+		"%s holds compiled classes of its own (e.g. %s) and a model project or build "+
 			"output below it, so it is neither a class directory nor a directory of them.\n"+
-			"Move the classes into a directory of their own, or pass each approximation path to "+
+			"Move the classes into a directory of their own, or pass each model path to "+
 			"--dataflow-models separately",
 		dir, classFile)
 }
@@ -155,12 +155,12 @@ func ambiguousDirError(dir, classFile string) error {
 func emptyPathError(path string) error {
 	if source, found := firstJavaSource(path); found {
 		return fmt.Errorf(
-			"%s holds approximation sources (e.g. %s) but no approximation project: nothing declares "+
+			"%s holds model sources (e.g. %s) but no model project: nothing declares "+
 				"the dependencies to compile the models against.\n"+
 				"Create a project per model directory with 'opentaint model init <dir> "+
 				"--dependency <group:artifact:version>' and move its sources under <dir>/src/main/java",
 			path, source,
 		)
 	}
-	return fmt.Errorf("%s contains no approximation project, build output or compiled classes", path)
+	return fmt.Errorf("%s contains no model project, build output or compiled classes", path)
 }

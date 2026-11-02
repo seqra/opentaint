@@ -1,4 +1,4 @@
-package approximation
+package models
 
 import (
 	"os"
@@ -486,7 +486,7 @@ func TestBuildRefusesToOverwriteUnrelatedDirectory(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected a build into an unrelated directory to be refused")
 	}
-	if !strings.Contains(err.Error(), "not an approximation build output") {
+	if !strings.Contains(err.Error(), "not a model build output") {
 		t.Errorf("unexpected error: %v", err)
 	}
 	if content, readErr := os.ReadFile(precious); readErr != nil || string(content) != "important user data" {
@@ -542,7 +542,7 @@ func TestBuildRejectsCollidingModelClasses(t *testing.T) {
 
 	err := Build(project, BuildDir(project), builder)
 	if err == nil {
-		t.Fatal("expected colliding approximation classes to fail the build")
+		t.Fatal("expected colliding model classes to fail the build")
 	}
 	if !strings.Contains(err.Error(), "exactly one target class") {
 		t.Errorf("unexpected error: %v", err)

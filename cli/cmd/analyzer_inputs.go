@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/seqra/opentaint/internal/approximation"
+	"github.com/seqra/opentaint/internal/models"
 	"github.com/seqra/opentaint/internal/utils/log"
 	"github.com/spf13/cobra"
 )
@@ -30,7 +30,7 @@ func addDataflowModels(b *AnalyzerBuilder, paths []string, analyzerJarPath strin
 		absPaths = append(absPaths, log.AbsPathOrExit(modelPath, "dataflow-models"))
 	}
 
-	classDirs, err := approximation.ResolveAll(absPaths, newModelBuilder(analyzerJarPath))
+	classDirs, err := models.ResolveAll(absPaths, newModelBuilder(analyzerJarPath))
 	if err != nil {
 		out.Fatalf("Failed to apply dataflow models: %s", err)
 	}

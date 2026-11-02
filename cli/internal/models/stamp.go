@@ -1,4 +1,4 @@
-package approximation
+package models
 
 import (
 	"crypto/sha256"
@@ -43,7 +43,7 @@ func computeSourceDigest(projectDir string) (string, error) {
 		return nil
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to read approximation project %s: %w", projectDir, err)
+		return "", fmt.Errorf("failed to read model project %s: %w", projectDir, err)
 	}
 	sort.Strings(paths)
 
