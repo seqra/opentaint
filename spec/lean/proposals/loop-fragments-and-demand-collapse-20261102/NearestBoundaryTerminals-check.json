@@ -1,0 +1,43 @@
+{
+  "status": "PASS",
+  "scope": "CONSTRUCTIVE_LOCAL_MODEL_ONLY",
+  "module": "NearestBoundaryTerminals",
+  "selectedContracts": [
+    "Nearest terminal/static publication with ordinary complete ancestor application",
+    "Both paired ports, true original, annotations, all-ancestor collection, NT NORMAL-only guard",
+    "Internal S-S retained; only public root erases to a complete static seed",
+    "Shared normal join retains accepted branch-union false positive; complete ND still required",
+    "Non-normal scopes do not gain a normal alias",
+    "Typed STATIC_SHORTCUT output survives ancestors; only raw phase invokes real exit; completed ROOT_EXIT is metadata-only and exact handoff keeps phases distinct"
+  ],
+  "runtimeAdapterVerified": false,
+  "registeredInMainChecker": true,
+  "productionVerified": false,
+  "runtimeSourcePinsChecked": false,
+  "dateUTC": "2026-11-02T20:00:03.249969+00:00",
+  "leanVersion": "4.33.1",
+  "threads": 1,
+  "exitCode": 0,
+  "command": [
+    "lean",
+    "-j1",
+    "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/NearestBoundaryTerminals.lean"
+  ],
+  "source": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/NearestBoundaryTerminals.lean",
+  "sourceSHA256": "6b96a85248d9561c84f43961b9b9bc15999b353a5bbd3d365b00f27116daa1bd",
+  "auditLog": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/NearestBoundaryTerminals-audit.txt",
+  "auditLogSHA256": "45e29aae2cd233700e5cd845649c611dd46894d1e8f27f3cd6c1a48eb3dddc95",
+  "theorems": 54,
+  "auditedPublicDefinitionsAndTheorems": 115,
+  "axioms": [
+    "propext"
+  ],
+  "notProved": [
+    "Kotlin storage/runtime source correspondence",
+    "Full AP matching/materialization/protection/native representations",
+    "Actual rule evaluation or root-origin-dependent metadata",
+    "Kotlin graph search, decomposition and nearest postdominator selection",
+    "Whole-program convergence or project-quality equivalence"
+  ],
+  "nativeStatus": "Native exit-once regression and final full source gate are separate; this receipt verifies no production adapter."
+}

@@ -1,8 +1,10 @@
 # Loop fragments and demand-guided feedback
 
 Date: 2 November 2026. Status: selected design with scoped local proofs.
-No analyzer implementation is changed. Section 10 states the integration
-proofs required before runtime implementation.
+The boundary-span and nearest-publication corrections pass the complete
+native suites: 2,369 common and 453 JVM tests. A fresh project campaign is
+still required. Section 10 states the required integration proofs; see
+also the implementation proof dossier.
 
 Use [proof-guide.md](proof-guide.md). The constructive models are in
 [the proof package](lean/proposals/loop-fragments-and-demand-collapse-20261102/README.md).
@@ -90,6 +92,16 @@ Keep:
 Real method entry/exit rules execute only at the original boundaries.
 Internal block entry, completion and loop dispatch do not execute another
 copy of those rules. There are no synthetic configured call sites.
+The adjacent-region summaries must nevertheless cover those transfers
+when their span reaches the real boundary. Use the true pre-rule original
+and both genuine control ports. A saved BL row that starts after entry
+rules, or an AL probe that stops before exit rules, is not a complete
+observer. See the selected
+[boundary-span correction](method-owned-loop-blocks.md#61-required-coverage-of-an-original-method-boundary).
+Targets and run-1 static results publish first at the nearest block
+boundary, then use ordinary ancestor composition. Keep internal
+static/static relations; their public erasure stays at the method root.
+See [nearest-boundary publication](method-owned-loop-blocks.md#62-selected-nearest-boundary-publication).
 
 Do not add grounding support, a new field-validity test, a raw-summary
 fallback, a hidden cross-layer merge, or a new permission for ZERO.
@@ -303,6 +315,8 @@ onLoopOutput(summaryArm, F, actualPort):
     images = after.demand.emitInitials(F.conclusion)
 
     // Test 2: use existing application and complete paired C5.
+    // Saved regions cover the actual boundary transfer when their span
+    // reaches that boundary; no new rule execution occurs in this probe.
     for saved in after.persistedSummaries:
         for fullB in composeAtOriginalBindings(F, saved):
             images += B.demand.intersect(fullB)

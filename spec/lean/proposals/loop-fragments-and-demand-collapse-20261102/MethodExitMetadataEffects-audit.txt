@@ -1,0 +1,48 @@
+'MethodExitMetadataEffects.matchingLeaves' does not depend on any axioms
+'MethodExitMetadataEffects.selectedLiterals' does not depend on any axioms
+'MethodExitMetadataEffects.literalOrder' does not depend on any axioms
+'MethodExitMetadataEffects.checkMark' does not depend on any axioms
+'MethodExitMetadataEffects.orderedScan' does not depend on any axioms
+'MethodExitMetadataEffects.oldScan' does not depend on any axioms
+'MethodExitMetadataEffects.pureParts' does not depend on any axioms
+'MethodExitMetadataEffects.an_arbitrary_immutable_check_has_the_same_ordered_parts_despite_state_updates' depends on axioms: [propext]
+'MethodExitMetadataEffects.old_parts_equal_the_pure_ordered_parts_for_every_join_state' depends on axioms: [propext]
+'MethodExitMetadataEffects.different_old_join_or_report_states_do_not_change_the_parts' depends on axioms: [propext]
+'MethodExitMetadataEffects.orderedWithout' does not depend on any axioms
+'MethodExitMetadataEffects.identical_ordered_parts_give_identical_existing_fold' does not depend on any axioms
+'MethodExitMetadataEffects.withMembership' does not depend on any axioms
+'MethodExitMetadataEffects.without' does not depend on any axioms
+'MethodExitMetadataEffects.withoutEntryMark' does not depend on any axioms
+'MethodExitMetadataEffects.finishWithParts' does not depend on any axioms
+'MethodExitMetadataEffects.oldFinish' does not depend on any axioms
+'MethodExitMetadataEffects.pureFinish' does not depend on any axioms
+'MethodExitMetadataEffects.the_restored_complete_method_original_preserves_the_entire_finalizer' depends on axioms: [propext]
+'MethodExitMetadataEffects.backward_global_drop_has_no_forward_sink_mask_effect' depends on axioms: [propext]
+'MethodExitMetadataEffects.mixed' does not depend on any axioms
+'MethodExitMetadataEffects.onlyAny' does not depend on any axioms
+'MethodExitMetadataEffects.onlyExact' does not depend on any axioms
+'MethodExitMetadataEffects.childLiteral' does not depend on any axioms
+'MethodExitMetadataEffects.rootLiteral' does not depend on any axioms
+'MethodExitMetadataEffects.absentLiteral' does not depend on any axioms
+'MethodExitMetadataEffects.mixedInput' does not depend on any axioms
+'MethodExitMetadataEffects.ndSink' does not depend on any axioms
+'MethodExitMetadataEffects.updateJoin' does not depend on any axioms
+'MethodExitMetadataEffects.an_incomplete_ND_guard_still_appends_its_positive_Holds_part' does not depend on any axioms
+'MethodExitMetadataEffects.a_prior_ND_binding_changes_firing_but_not_the_ordered_parts' does not depend on any axioms
+'MethodExitMetadataEffects.TRUE_predicates_use_the_legacy_pattern_branch' does not depend on any axioms
+'MethodExitMetadataEffects.indexed_predicates_keep_mark_then_leaf_order_instead_of_scanning_all_leaves' does not depend on any axioms
+'MethodExitMetadataEffects.repeated_legacy_patterns_keep_both_Holds_parts' does not depend on any axioms
+'MethodExitMetadataEffects.all_masks_are_selected_from_the_original_mixed_input' does not depend on any axioms
+'MethodExitMetadataEffects.removing_the_last_ANY_normalizes_the_surviving_EXACT_header_and_protection' does not depend on any axioms
+'MethodExitMetadataEffects.the_original_ordered_fold_keeps_the_EXACT_survivor' does not depend on any axioms
+'MethodExitMetadataEffects.reversing_the_masks_changes_the_result' does not depend on any axioms
+'MethodExitMetadataEffects.replacing_masks_with_their_union_changes_the_result' does not depend on any axioms
+'MethodExitMetadataEffects.a_mask_from_another_layer_is_not_reused' does not depend on any axioms
+'MethodExitMetadataEffects.entryInput' does not depend on any axioms
+'MethodExitMetadataEffects.entryMetadata' does not depend on any axioms
+'MethodExitMetadataEffects.using_a_nonzero_local_initial_instead_of_method_ZERO_changes_entry_removal' does not depend on any axioms
+'MethodExitMetadataEffects.using_local_ZERO_instead_of_a_nonzero_method_original_changes_global_drop' does not depend on any axioms
+'MethodExitMetadataEffects.the_existing_run1_entry_mark_removal_exception_is_unchanged' does not depend on any axioms
+'MethodExitMetadataEffects.backward_can_still_apply_the_existing_entry_mark_metadata' does not depend on any axioms
+'MethodExitMetadataEffects.a_ZERO_literal_does_not_select_a_static_global_drop_part' does not depend on any axioms
+'MethodExitMetadataEffects.an_empty_FALSE_index_does_not_fall_back_to_legacy_patterns' does not depend on any axioms

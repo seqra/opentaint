@@ -1,0 +1,44 @@
+{
+  "status": "PASS",
+  "scope": "FINITE_INTERFACE_MODEL_ONLY",
+  "selectedContract": "Boundary-inclusive summaries at the genuine original method entry and exit",
+  "runtimeAdapterSelectedByModel": false,
+  "registeredInMainChecker": true,
+  "productionVerified": false,
+  "runtimeSourcePinsChecked": false,
+  "dateUTC": "2026-11-02T19:31:35.851552+00:00",
+  "leanVersion": "4.33.1",
+  "threads": 1,
+  "exitCode": 0,
+  "command": [
+    "lean",
+    "-j1",
+    "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/EntryPrefixNativeRecords.lean"
+  ],
+  "source": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/EntryPrefixNativeRecords.lean",
+  "sourceSHA256": "431b1eceed397e441d42f0bd915891e7a6a52f53dd31cc8b162a87e4ca9a5a0a",
+  "auditLog": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/EntryPrefixNativeRecords-audit.txt",
+  "auditLogSHA256": "71d83606e8c594b8f30feaca7e959b46c4725f03a5827012dd16a74afae63fa9",
+  "theorems": 54,
+  "auditedPublicDefinitionsAndTheorems": 105,
+  "axioms": [
+    "propext"
+  ],
+  "checkedScope": [
+    "Genuine NORMAL pre-rule entry GEN and saved BL FLOW composition at exact ports",
+    "Native prefix reversal to ZERO/DEMAND Target and forward replay without a new source hit",
+    "Wrong post-rule premise/port counterexamples and non-NORMAL native rejection",
+    "Whole-method exit mark removal and public-base filtering cannot replace the internal prefix",
+    "Finite bounded DEMAND and group producer guidance with ordinary same-prefix MAY C2 and complete Target C5",
+    "Existing backward ZERO NORMAL suffix handoff and concrete uniform input C2 before the actual exit sink"
+  ],
+  "notProved": [
+    "Kotlin adapter or storage source correspondence",
+    "Run-1 scoped Target ownership and its paired demand-interface projection",
+    "Recursive ancestor boundary coverage",
+    "Full AP MUST residue, exclusions or aliases",
+    "Actual deep-source execution or general C2 matching",
+    "Complete ND rules, whole GROUP-mode coverage or convergence"
+  ],
+  "nativeStatus": "Historical pre-correction native controls reproduced the gap; current adapter native acceptance is separate and incomplete."
+}

@@ -1,0 +1,42 @@
+'StaticBoundaryInputRelay.IdentityPath.scope' does not depend on any axioms
+'StaticBoundaryInputRelay.IdentityPath.field' does not depend on any axioms
+'StaticBoundaryInputRelay.validPath' does not depend on any axioms
+'StaticBoundaryInputRelay.IdentityPath.rootLink' does not depend on any axioms
+'StaticBoundaryInputRelay.IdentityPath.replyScopes' does not depend on any axioms
+'StaticBoundaryInputRelay.request' depends on axioms: [propext]
+'StaticBoundaryInputRelay.queries' depends on axioms: [propext]
+'StaticBoundaryInputRelay.every_successful_request_names_the_true_original_link' depends on axioms: [propext]
+'StaticBoundaryInputRelay.a_checked_identity_hop_strictly_decreases_scope_depth' depends on axioms: [propext]
+'StaticBoundaryInputRelay.a_checked_identity_chain_preserves_its_actual_image_field' depends on axioms: [propext]
+'StaticBoundaryInputRelay.existingPointInterest' depends on axioms: [propext]
+'StaticBoundaryInputRelay.collectEffects' depends on axioms: [propext]
+'StaticBoundaryInputRelay.the_existing_point_interest_and_writer_directory_are_unchanged' depends on axioms: [propext]
+'StaticBoundaryInputRelay.answer' depends on axioms: [propext]
+'StaticBoundaryInputRelay.a_supply_at_another_field_never_answers_the_original' depends on axioms: [propext]
+'StaticBoundaryInputRelay.applyLeaf' does not depend on any axioms
+'StaticBoundaryInputRelay.rootScope' does not depend on any axioms
+'StaticBoundaryInputRelay.firstScope' does not depend on any axioms
+'StaticBoundaryInputRelay.middleScope' does not depend on any axioms
+'StaticBoundaryInputRelay.pointScope' does not depend on any axioms
+'StaticBoundaryInputRelay.outerLink' does not depend on any axioms
+'StaticBoundaryInputRelay.middleLink' does not depend on any axioms
+'StaticBoundaryInputRelay.innerLink' does not depend on any axioms
+'StaticBoundaryInputRelay.path' does not depend on any axioms
+'StaticBoundaryInputRelay.point' does not depend on any axioms
+'StaticBoundaryInputRelay.the_actual_point_requests_only_the_original_root_field' depends on axioms: [propext]
+'StaticBoundaryInputRelay.a_reached_image_group_does_not_answer_the_original_request' depends on axioms: [propext]
+'StaticBoundaryInputRelay.a_genuine_original_supply_keeps_both_original_and_canonical_inner_basis' depends on axioms: [propext]
+'StaticBoundaryInputRelay.the_existing_leaf_relation_composes_back_to_the_true_root_original' depends on axioms: [propext]
+'StaticBoundaryInputRelay.the_outer_field_cannot_be_used_as_the_inner_canonical_initial' depends on axioms: [propext]
+'StaticBoundaryInputRelay.no_actual_mark_request_means_no_relay' depends on axioms: [propext]
+'StaticBoundaryInputRelay.concrete_inputs_and_other_operation_sites_do_not_use_this_relay' depends on axioms: [propext]
+'StaticBoundaryInputRelay.another_scope_or_static_field_is_not_a_matching_point_input' depends on axioms: [propext]
+'StaticBoundaryInputRelay.another_mark_does_not_answer_the_request' depends on axioms: [propext]
+'StaticBoundaryInputRelay.no_parent_links_preserves_the_original_Cg_interest_without_a_root_request' depends on axioms: [propext]
+'StaticBoundaryInputRelay.secondOuter' does not depend on any axioms
+'StaticBoundaryInputRelay.secondPath' does not depend on any axioms
+'StaticBoundaryInputRelay.submitInput' does not depend on any axioms
+'StaticBoundaryInputRelay.firstSnapshot' does not depend on any axioms
+'StaticBoundaryInputRelay.a_late_input_is_registered_before_its_genuine_point_request' depends on axioms: [propext]
+'StaticBoundaryInputRelay.an_old_initial_does_not_suppress_the_new_point_processing' does not depend on any axioms
+'StaticBoundaryInputRelay.repeated_paths_need_only_one_existing_original_interest_per_call' depends on axioms: [propext]

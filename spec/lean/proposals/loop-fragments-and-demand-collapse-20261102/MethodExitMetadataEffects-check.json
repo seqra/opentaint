@@ -1,0 +1,36 @@
+{
+  "status": "PASS",
+  "scope": "CONSTRUCTIVE_LOCAL_MODEL_ONLY",
+  "module": "MethodExitMetadataEffects",
+  "productionVerified": false,
+  "notProved": [
+    "Full AP matching/representation and Kotlin callback correspondence",
+    "Whole-program convergence or project-quality equivalence"
+  ],
+  "registeredInMainChecker": true,
+  "runtimeSourcePinsChecked": false,
+  "dateUTC": "2026-11-02T19:31:39.592129+00:00",
+  "leanVersion": "4.33.1",
+  "threads": 1,
+  "exitCode": 0,
+  "command": [
+    "lean",
+    "-j1",
+    "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/MethodExitMetadataEffects.lean"
+  ],
+  "source": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/MethodExitMetadataEffects.lean",
+  "sourceSHA256": "55e51522119f795cb4066e8a697ac75b02817e7ad3a208041a13c5c993e2d4a8",
+  "auditLog": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/MethodExitMetadataEffects-audit.txt",
+  "auditLogSHA256": "59a0cad515b283d88f9658b4b5260cf0063657b6b4ba0c0ccda91461fd9ec6e5",
+  "theorems": 23,
+  "auditedPublicDefinitionsAndTheorems": 48,
+  "axioms": [
+    "propext"
+  ],
+  "selectedContracts": [
+    "Generic arbitrary immutable check/state law preserves complete ordered Holds list",
+    "Same ordered existing without fold and later entry mark removal under complete method original",
+    "FULL/valid-TAINT indexed and legacy selection, incomplete ND part, annotations, EXACT/ANY header counterexample",
+    "Unchanged backward global-drop and run1 entry-mark-removal behavior"
+  ]
+}

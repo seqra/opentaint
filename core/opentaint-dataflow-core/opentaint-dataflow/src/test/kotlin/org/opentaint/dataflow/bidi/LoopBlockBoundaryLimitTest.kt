@@ -5,6 +5,7 @@ import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
 import org.opentaint.dataflow.bidi.interp.MicroEdgeBuilder
 import org.opentaint.dataflow.bidi.store.*
+import org.opentaint.dataflow.graph.PortId
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -23,10 +24,10 @@ class LoopBlockBoundaryLimitTest {
             f.statement(2, MicroEdgeBuilder().apply { move(x, x) }.build())
             val layout = f.contexts.blockLayout(f.key)
             val tree = layout[layout.root]
-            val blEntry = layout.port(0, 1)!!.id
+            val blEntry = PortId.ROOT_ENTRY
             val loopEntry = layout.port(1, 2)!!.id
             val repeat = layout.port(2, 2)!!.id
-            val leave = layout.port(2, 3)!!.id
+            val leave = layout.normalExitForRoute(layout.port(2, 3)!!.id)!!.id
             val identity = f.manager.initial(f.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR))
             val identityImage = f.fact(x, tail = Tail.STAR, mark = MarkSlot.STAR)
             // The prior run-3 limit 2 can retain this NORMAL field-write row.
@@ -38,7 +39,7 @@ class LoopBlockBoundaryLimitTest {
                 f.records.add(Record(f.key, Direction.FORWARD, identity, identityImage,
                     BlockScope(tree.loop!!, entry), exit))
             f.records.add(Record(f.key, Direction.FORWARD, identity, identityImage,
-                BlockScope(tree.after!!, leave), leave))
+                BlockScope(tree.after!!, leave), PortId.ROOT_EXIT))
             val need = f.pattern(x, List(3) { field }, Tail.ANY, t)
             val actual = f.fact(x, List(4) { field }, Tail.EXACT, t)
             val original = f.manager.initial(f.pattern(x, List(4) { field }, Tail.EXACT, t))

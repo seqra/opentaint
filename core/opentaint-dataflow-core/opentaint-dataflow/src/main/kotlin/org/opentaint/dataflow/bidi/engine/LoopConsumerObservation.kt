@@ -31,6 +31,7 @@ internal class LoopConsumerViews(
     val hasSavedEnclosingTarget: (PremiseKey, ReportId) -> Boolean,
     val isPublicSummaryBase: (AccessPathBase) -> Boolean,
     val labelledAdmissions: (Facts) -> Collection<LoopLabelledAdmission> = { emptyList() },
+    val adjustEnclosingData: (PremiseKey, Facts) -> Facts? = { _, value -> value },
 )
 
 /** Complete three-family observer. All scratch is local to one query invocation. */
@@ -49,8 +50,9 @@ internal class LoopConsumerObservation(
         fun sink(exit: PortId): LocalRelationOut = object : LocalRelationOut {
             override fun data(original: PremiseKey, value: Facts) {
                 ap.cancellation.checkpoint()
-                if (views.enclosingIsRoot && !views.isPublicSummaryBase(value.base)) return
-                val normalized = normalizeFlowSummary(ap, original, value)
+                val adjusted = views.adjustEnclosingData(original, value) ?: return
+                if (views.enclosingIsRoot && !views.isPublicSummaryBase(adjusted.base)) return
+                val normalized = normalizeFlowSummary(ap, original, adjusted)
                 for (kept in views.intersectEnclosing(exit, normalized.premise, normalized.facts))
                     full.addData(views.enclosingScope, exit, normalized.premise, kept)
             }

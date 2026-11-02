@@ -53,7 +53,10 @@ class JIRMethodEntry internal constructor(val method: JIRMethod, internal val sh
     private val forwardGraph by lazy { MethodInstGraph.build(shared.languageManager, common, method) }
     val blockLayout by lazy {
         val entry = shared.graph.methodGraph(method).entryPoints().single()
-        MethodBlockLayoutBuilder.build(forwardGraph, listOf(index(entry)))
+        val exits = shared.graph.methodGraph(method).exitPoints().toList()
+        MethodBlockLayoutBuilder.build(forwardGraph, listOf(index(entry)),
+            exits.filterIsInstance<JMethodExitExceptionalInst>().map(::index),
+            exits.filter { it !is JMethodExitExceptionalInst }.map(::index))
     }
     private val backwardGraph by lazy {
         MethodInstGraph.build(shared.languageManager, JIRExitWiredGraph(common).reversed, method)

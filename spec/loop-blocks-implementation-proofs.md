@@ -1,6 +1,11 @@
 # Loop-block implementation: proof dossier
 
-Date: 2 November 2026. Implementation and native validation are complete.
+Date: 2 November 2026. The selected boundary corrections have checked local
+models and pass 2,369 common and 453 JVM tests. The source-pinned receipt
+records this native gate; it does not prove the Kotlin/AP adapters or project
+quality. The latest project campaign is historical: OWASP completed
+**run-5** before these corrections with 51 missing baseline sink identities.
+A fresh project campaign is required.
 Proposal section 6.1 uses existing exceptional-exit backward discovery.
 The selected compatibility hack also lets a reached backward exceptional
 ZERO apply the normal-exit paired control demand. It adds no new start.
@@ -197,8 +202,8 @@ This adapter uses the existing static shortcut, not the exceptional-ZERO
 admission rule. The complete witness is a registered run-1 local W row:
 
 ```text
-producer: (block, entry=p), ZERO -> C.f.[any]/T, exit=ROOT_EXIT
-reverse:  (block, entry=ROOT_EXIT), C.f.[any]/T -> ZERO, exit=p
+producer: (block, entry=p), ZERO -> C.f.[any]/T, exit=STATIC_SHORTCUT
+reverse:  (block, entry=STATIC_SHORTCUT), C.f.[any]/T -> ZERO, exit=p
 actual:   reached run-2 STATIC original C.f.[any]/T -> DemandTarget
 ```
 
@@ -227,6 +232,248 @@ later-run lookup, create a forward edge or change NormalTarget behavior.
 The existing normal Target-to-ZERO control view can then admit the next
 forward invocation from the selected outgoing terminal row.
 
+### 3.3 Selected boundary-span coverage correction
+
+The complete observer must use a summary of the actual adjacent span.
+[Ownership section 6.1](method-owned-loop-blocks.md#61-required-coverage-of-an-original-method-boundary)
+requires that span to include the original entry or exit transfer when it
+reaches that boundary. The pre-correction adapter omitted this transfer. Thus the
+kernel results conditional on a complete observer do not establish this
+adapter's completeness. Native entry-prefix and exit-suffix controls
+reproduced that gap; their no-feedback controls passed. The array-element and
+named-field prefix controls fail alike. See the
+[gap report](../docs/reports/bidirectional-loop-boundary-source-gap-20261102.md).
+
+The required entry relation has the genuine pre-rule original and both
+control ports. For a NORMAL entry source `ZERO -> request/MUST/T`, ordinary
+composition with the before-region FLOW relation gives
+`ZERO -> cookies/MUST/T`. Its eligible native reverse can discharge an
+actual marked suffix to ZERO and use the existing backward ZERO-to-Target
+typing. Its native forward replay needs no fresh source hit: it reuses an
+already inferred NORMAL producer. This does not authorize a new source.
+
+The symmetric requirement is important. A reverse suffix that includes
+the actual exit sink can infer a NORMAL `ZERO -> x.f.$/T`. The existing
+backward-ZERO exception selects this row as forward guidance, rather than
+persisting it as a native backward record. Forward C2 then has the real
+suffix consumer before the actual exit sink executes. A correction that
+retains only NORMAL entry records does not cover this suffix or a DEMAND
+entry producer.
+
+The standalone
+[EntryPrefixNativeRecords model](lean/proposals/loop-fragments-and-demand-collapse-20261102/EntryPrefixNativeRecords.lean)
+has 54 constructive theorems. Its separate
+[receipt](lean/proposals/loop-fragments-and-demand-collapse-20261102/EntryPrefixNativeRecords-check.json)
+records a direct Lean check and the axiom audit. The module is registered
+in the main model checker. Its model-only result does not verify current
+production source pins or the native adapter.
+
+| Finite law | Model result |
+|---|---|
+| Genuine span composition | Entry GEN followed by BL FLOW equals its pre-entry-to-loop relation; native forward and reverse replay agree with the two-segment transfer |
+| Native cached producer | NORMAL replay preserves the actual waiting original and creates no new source hit |
+| Wrong interface | A relabelled post-rule premise, disconnected port or unrelated control boundary cannot stand for the entry source |
+| Whole-method difference | Real exit mark removal and public-base filtering can remove a result that belongs in the shorter internal prefix |
+| DEMAND producer | A deep bounded or grouped producer stays DEMAND, is not a native NORMAL record, and uses its complete ordinary handoff pair |
+| Existing finite C2/C5 cells | A same-prefix concrete MAY carrier remains DEMAND; the full mark, actual original and both ports remain required at terminal publication |
+| Symmetric suffix | A backward ZERO-origin NORMAL suffix uses the existing handoff exception; its definite forward carrier can reach the actual NORMAL exit sink |
+
+This model is finite and unary. It covers named and element field paths,
+one finite group binding, the stated concrete C2/C5 cells and ordinary
+native replay. It does not prove the full AP MUST residue, exclusions,
+aliases, actual deep-source execution, complete ND rule execution, whole
+GROUP coverage or Kotlin correspondence. Its suffix law assumes that the
+genuine eligible suffix row exists. It does not establish run-1 scoped
+Target ownership, the paired guidance interface for a new boundary span,
+or complete recursive ancestor coverage. A root-completion export alone
+does not discharge those obligations. Complete ND execution remains
+the unchanged runtime contract; unary restriction guidance is not its proof.
+The correction adds no evaluator, raw snapshot, source permission, field
+policy, C2 rule or boundary alias. Native end-to-end controls and a final
+source-pinned correspondence review remain required before accepting it.
+
+### 3.4 Selected nearest-boundary terminal ownership
+
+Publish the reached Target or run-1 static result at its nearest block
+boundary, then use ordinary complete parent application. Keep an admitted
+row at every selected ancestor. This supplies local handoff guidance at
+the scope where the following run needs it. A root-only terminal does
+not supply that local permission. Retain internal static/static rows and
+apply their existing public erasure only at the method root; the complete
+static seed remains there.
+
+The constructive
+[NearestBoundaryTerminals model](lean/proposals/loop-fragments-and-demand-collapse-20261102/NearestBoundaryTerminals.lean)
+checks this composition contract. Its per-module
+[receipt](lean/proposals/loop-fragments-and-demand-collapse-20261102/NearestBoundaryTerminals-check.json)
+is also included by the registered model checker. Its kernel result is
+separate from the source-pinned implementation/native receipt. The model
+uses supplied, already matched bindings from the ordinary applicator.
+It does not replace AP matching by independent unary execution.
+
+| Obligation | Constructive result |
+|---|---|
+| Nearest ownership | The first row has the actual nearest scope, original and both control ports |
+| Adjacent composition | Every successful step has one complete matching interface and the actual immediate parent |
+| Ancestor coverage | A Type-valued `Lift` contains each actual application; its executable row list retains nearest and final rows for every finite chain |
+| Semantic payload | Every step and finite chain keep the Target/report ID, static payload and annotations |
+| NORMAL discipline | Any DEMAND member or offered DEMAND rejects NormalTarget application; complete NORMAL bindings can produce the method ZERO report |
+| Complete ND | All distinct required members must match; a missing or repeated single member cannot replace another member; every contributing original is retained |
+| Exact handoff | Selected DEMAND handoff reverses both genuine ports and keeps the complete paired payload |
+| Root-only erasure | Internal static/static rows remain available to parents; only the public row becomes a complete static seed |
+| Static phase | Raw `STATIC_SHORTCUT` survives every adjacent ancestor application; only it invokes the real exit; a completed `ROOT_EXIT` row uses metadata-only finalization |
+
+The typed static-phase laws separate raw `STATIC_SHORTCUT` output from
+completed `ROOT_EXIT` output. The raw row reaches root through the same
+ordinary complete bindings. The actual exit handler supplies the semantic
+result and changes only its output phase to completed. That result cannot
+select the handler again, regardless of its STATIC base or local initial.
+Exact handoff reverses the typed raw pair; it does not alias that port to
+the operation-local `ROOT_EXIT` input or to an ordinary AL/J output. This
+finite dispatch/transport model does not prove the physical handler's
+implementation. The native exit-once control must establish that mapping.
+
+The earlier per-physical-ingress alternative that removed the root
+branch-union false positive is withdrawn. The selected common normal
+loop exit and AL ingress retain that accepted false positive. The finite
+model keeps every actual contribution and canonicalizes its normal join
+owner only. It accepts the complete mixed normal-leave example, still
+requires all ND members, and keeps exceptional, return, feedback and
+discovery contributions outside this normal alias. Ordinary non-normal
+scope rules remain in force.
+
+[CanonicalLoopExit](lean/proposals/loop-fragments-and-demand-collapse-20261102/CanonicalLoopExit.lean)
+adds 41 constructive control laws, checked by its separate
+[receipt](lean/proposals/loop-fragments-and-demand-collapse-20261102/CanonicalLoopExit-check.json).
+Its labelled shared-exit split erases to the original physical edge.
+Stored rows keep their actual route when their join identity is shared;
+opposite-direction native/demand reads reverse both physical endpoints.
+Reverse refinement retains all real normal predecessors of the actual
+boundary, while excluding other continuations and non-normal routes.
+This is a control contract, not proof that a representative port alone
+contains enough information. The runtime must preserve or reconstruct
+these labels; a blind all-target dispatch is not justified by it.
+
+The module also checks an executable normal-tail extension certificate.
+It retains the original graph, headers and feedback edges, keeps the real
+join outside L, checks exact normal reachability before that join and
+rejects another normal exit inside the body. Every checked normal outlet
+targets J. A supplied rank strictly increases on each internal edge after
+the original feedback cuts. A Type-valued path therefore cannot form a
+new cycle, and the checked instruction set has no duplicates. The branch
+fixture expands SCC `{1,7}` by `{2,3,4,5}`, leaves J=`6` in AL and retains
+both actual incoming tail edges in reverse. The finite negative controls
+reject an extra cycle and two unmerged normal exits; the no-normal-leave
+control adds no edge.
+
+These laws verify the certificate, not the Kotlin postdominator search,
+Tarjan implementation or the search's nearest-candidate ordering. The
+runtime builder must check that correspondence and report a missing
+certificate rather than introduce an unselected control approximation.
+
+The context certificate also permits a real enclosing header outside the
+current recursive region as J. Inner own feedback is still a repeat;
+ancestor feedback can be normal relative to that inner loop. Only the
+classification view changes. Actual ports, endpoints and feedback owner
+remain intact, so the parent restores its outer repeat role. The finite
+witness expands inner `{2,3}` by `{4,5,6}` up to outer header `1`, keeps
+header `2` and repeat `3 -> 2`, and has an empty inner AL. A native reverse
+still uses the original outer-feedback edge. Exceptions, returns and
+discovery remain outside this normal alias.
+
+This proof covers terminal ownership, matched application and collection
+on a supplied ancestor chain with finite AP payload representatives.
+It does not verify the AP applicator, physical boundary rule order,
+root-original-dependent metadata, arbitrary CFG decomposition, the
+Kotlin adapter or whole-program convergence. Existing entry-prefix,
+exit-suffix, complete same-entry ND and nearest-static native controls
+remain required. Their source-pinned result must be refreshed after the
+adapter is complete.
+
+### 3.5 Static-boundary input correlation
+
+The reserved run-1 normal-exit continuation can have an outer
+`C.f/FLOW -> C.g/FLOW` link and an inner canonical C.g initial. Its actual
+C.g/T mark request must reach that original input through the registered
+identity continuation chain. The existing input request service then
+materializes the actual C.f/T answer. Forward that marked C.g/T value
+through the existing continuation path under a C.g/T local initial;
+retain C.f/T at the waiting outer link. The ordinary C.g/T-to-ret/U row
+can then compose to C.f/T-to-ret/U. This is not evidence that C.f has T
+merely because another writer supplied C.g/T.
+
+The
+[StaticBoundaryInputRelay model](lean/proposals/loop-fragments-and-demand-collapse-20261102/StaticBoundaryInputRelay.lean)
+has 18 checked theorems in its separate
+[receipt](lean/proposals/loop-fragments-and-demand-collapse-20261102/StaticBoundaryInputRelay-check.json).
+Successful requests name the actual root link and original field. A
+checked identity hop strictly decreases the scope depth and keeps the
+same image field. The finite reply witness retains the outer original
+and canonical inner basis, rejects another field or mark, and composes
+the existing leaf relation without evaluating another rule. Concrete
+inputs, missing mark requests, other scopes and other operation sites
+do not use this relay. The original point pool interest remains present
+and writer registrations do not change.
+
+The late-input witness registers a new root link before queuing the real
+point. Its fresh request snapshot therefore sees both old and new links,
+even when the initial was already admitted. No seen/history set crosses
+calls. This formalizes the event-order requirement; it does not verify a
+Kotlin callback or scheduler. Existing native static materialization,
+exact geometry matching, protection and layer transport remain adapter
+obligations. The nearest-static native control must establish the genuine
+C.f/T-to-ret/U dependency before any explicit root replay.
+
+The full driver control also requires complete existing exit-rule
+lowering: static `ContainsMark` has its MarkInput operation and keep
+transfers. A real ZERO-reached normal exit in AL/J creates an ordinary
+static consumer and a genuine J-to-ROOT_EXIT reader/source row. That
+row reverses to a paired ROOT_EXIT-to-J obligation. The private
+ROOT_EXIT-to-ROOT_EXIT operation row alone cannot satisfy that full-span
+obligation; rejecting its mismatched port is correct. No model authorizes
+port aliasing, a C5 bypass or a new seed to repair incomplete metadata.
+The focused faithful driver control completes **run-3** with the required
+NORMAL caller Target. Full-suite/native source-pin acceptance remains
+separate from that focused result.
+
+### 3.6 Existing ordered method-exit metadata
+
+[MethodExitMetadataEffects](lean/proposals/loop-fragments-and-demand-collapse-20261102/MethodExitMetadataEffects.lean)
+has 23 constructive theorems in its separate
+[receipt](lean/proposals/loop-fragments-and-demand-collapse-20261102/MethodExitMetadataEffects-check.json).
+An abstract ordered scanner appends every Holds part and updates an
+arbitrary join/report state. Induction proves that its full annotated
+part list equals the pure `filterMap` of the same immutable check in the
+same literal order, for every prior state. An incomplete ND guard can
+therefore change report firing without changing the parts. The model
+also checks the legacy TRUE branch, the base/mark-index order, repeated
+patterns and the empty FALSE index.
+
+Equality of the ordered part lists gives equality of the existing
+`without` fold. Applying the same later entry-mark removal proves the
+same DATA result under the restored complete method original. The
+finite examples show both wrong-original directions: a non-ZERO local
+initial misses a real method-ZERO removal, and local ZERO can remove a
+value whose true method original is non-ZERO. Backward adds no forward
+global-drop mask; its existing entry-mark metadata still applies when
+present. Run-1 keeps its existing entry-mark-removal exception.
+
+The legal mixed EXACT/ANY witness has DEMAND layer, empty E and ANY
+header, with both memberships at C.f. The original checks at C.f.g and
+C.f select `[ANY]` and `[EXACT,ANY]`. Removing the first mask leaves an
+EXACT-only tree whose header is canonical MUST. The second original ANY
+mask then has a different header and cannot remove that survivor. Reversing
+the masks or replacing them by their union instead removes everything.
+The model keeps protection coordinates and layer checks explicitly.
+
+The ordered-list theorem is generic in the part and state types. The
+checkMark and header examples are finite FULL/valid-TAINT projections;
+they do not prove the complete AP tree algebra or Kotlin callbacks.
+Actual primitive matching, selection from the post-composition value,
+fully annotated masks and root-original binding remain correspondence
+obligations. No mask-distribution law, boundary rule evaluator or extra
+report/source/request effect is selected.
+
 ## 4. Builder and native adapter correspondence
 
 The proposal gives a finite SCC builder and a certificate checker. For a
@@ -246,6 +493,11 @@ The native full-AP correspondence tests must establish:
    block conclusions can name original local registers.
 2. Saved application uses current native/reversed/MUST and typed-Target
    laws, without hypothetical source/rule/static/report effects.
+   Its adjacent span includes the original entry/exit transfer when that
+   span reaches the real boundary, as section 3.3 requires. Neither an
+   after-rule record with a relabelled original nor a full public method
+   record is a substitute for that span. Test both directions and both
+   NORMAL-record and selected guidance paths.
 3. The observation includes all independent images, full annotations and
    exact consumer scopes. Ordinary Facts equality omits protection; the
    observation signature must carry it explicitly. No first-success shortcut
@@ -267,7 +519,7 @@ The native full-AP correspondence tests must establish:
 7. Static joined binding traverses valid local parents before real callers,
    before release. The run-2 shared carry and lazy completion reach internal
    scopes. Later demand lookup is local. No raw closure is retained.
-   A run-1 static shortcut W row ending at logical ROOT_EXIT retains its
+   A raw run-1 static shortcut W row ending at STATIC_SHORTCUT retains its
    reverse Target-result permission at its exact former entry port. The
    adapter must find a registered ZERO-origin W/B derivation and apply the
    existing complete paired restriction. It must reject another output,

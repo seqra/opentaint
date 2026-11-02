@@ -44,17 +44,25 @@ class MethodWorkTest {
             core.addInitial(f.manager.zero) // Already-admitted ZERO for this local transfer test.
             val attempts = f.drain(core, quantum = 1)
             assertTrue(attempts >= if (index == 1) 3 else 1)
-            val expected = if (index == 1) setOf(0, 1, 2) else setOf(2)
+            val expected = if (index == 1) setOf(0, 1, 2) else emptySet()
             assertEquals(expected, f.processed.map { it.node.location.index }.toSet(),
                 "A manually admitted restricted root ZERO grants no empty-demand child entry")
             assertTrue(f.cuts.none { it.first == Cut.STATEMENT })
-            val previousSteps = core.steps
-            val previousDeltas = core.edgeDeltas
-            val first = f.processed.first()
-            core.emitUnchanged(first)
-            f.drain(core, quantum = 1)
-            assertEquals(previousSteps, core.steps)
-            assertEquals(previousDeltas, core.edgeDeltas)
+            if (f.processed.isNotEmpty()) {
+                val previousSteps = core.steps
+                val previousDeltas = core.edgeDeltas
+                val first = f.processed.first()
+                val owner = f.shared.contexts.blockLayout(f.key).ownerOf(first.node.location.index)
+                val producer = core.joinedBlockStates().map { it.second }.single { state ->
+                    state.scope.block == owner && state.edges.edgesAt(first.node, first.premise).any {
+                        it.second == first.facts
+                    }
+                }
+                producer.emitUnchanged(first)
+                f.drain(core, quantum = 1)
+                assertEquals(previousSteps, core.steps)
+                assertEquals(previousDeltas, core.edgeDeltas)
+            }
             assertTrue(core.work(1))
         }
     }

@@ -12,6 +12,7 @@ import org.opentaint.dataflow.bidi.store.BlockScope
 import org.opentaint.dataflow.bidi.store.CallerRef
 import org.opentaint.dataflow.bidi.store.Record
 import org.opentaint.dataflow.bidi.store.AddedFactAccumulator
+import org.opentaint.dataflow.graph.PortId
 import kotlin.test.*
 
 /** Production controls separate body growth, call-stage repeats, and boundary compression. */
@@ -110,12 +111,14 @@ class DemandRelativeWorkloadControlsTest {
         val loop = checkNotNull(body.loop)
         val after = checkNotNull(body.after)
         fun port(from: Int, to: Int) = checkNotNull(layout.port(from, to)).id
-        val methodEntry = port(0, 1)
+        // The prefix includes real entry rules and operation 0. The suffix
+        // includes the actual normal-exit handler at 6, in either direction.
+        val methodEntry = PortId.ROOT_ENTRY
         val beforeLoop = port(1, 2)
         val leftRepeat = port(3, 2)
         val rightRepeat = port(4, 2)
-        val afterLoop = port(2, 5)
-        val methodExit = port(5, 6)
+        val afterLoop = assertNotNull(layout.normalExitForRoute(port(2, 5))).id
+        val methodExit = PortId.ROOT_EXIT
         fun may(base: AccessPathBase) = f.pattern(base, tail = Tail.ANY, mark = mark)
         val builder = DemandStore.Builder(f.manager).apply { add(f.key, root) }
         if (direction == Direction.BACKWARD) {
@@ -176,16 +179,18 @@ class DemandRelativeWorkloadControlsTest {
 
             // Independent flat witness: each reversed read prepends left or
             // right. Every word has an executable choice of physical read 3/4.
-            // Exact proper prefixes and MAY words at the global bound are the
-            // old retained binary language, before the one-field exit cap.
+            // Exact words THROUGH the bound remain exact: Reference.limit
+            // cuts only a strictly longer chain. One more read supplies the
+            // overflow MAY words before the one-field exit cap.
             var words=setOf(emptyList<Int>())
             val flat=linkedSetOf<Conclusion>()
-            repeat(limit) {
+            repeat(limit+1) {
                 for (word in words) flat += Conclusion(PathFact(p,word,Tail.EXACT,t),ExclusionSet.Empty,true)
                 words=words.flatMap { word -> listOf(listOf(left)+word,listOf(right)+word) }.toSet()
             }
-            for (word in words) flat += Conclusion(PathFact(p,word,Tail.ANY,t),ExclusionSet.Empty,true)
-            assertEquals(1 shl limit,words.size)
+            for (word in words) flat += org.opentaint.dataflow.bidi.ap.limit(
+                Conclusion(PathFact(p,word,Tail.ANY,t),ExclusionSet.Empty,true),limit)
+            assertEquals(1 shl (limit+1),words.size)
             assertTrue(flat.size >= (1 shl limit), "The independent flat path-language witness is still exponential")
             val referenceCap=flat.map { org.opentaint.dataflow.bidi.ap.limit(it,1) }.toSet()
             val expected=referenceCap.filterTo(linkedSetOf()) { candidate ->
@@ -196,7 +201,18 @@ class DemandRelativeWorkloadControlsTest {
                 Conclusion(f.pattern(p,listOf(left),Tail.ANY,t).fact,ExclusionSet.Empty,true),
                 Conclusion(f.pattern(p,listOf(right),Tail.ANY,t).fact,ExclusionSet.Empty,true),
             ),expected)
-            assertEquals(expected,selected,"The new body boundaries must retain the same selected flat union")
+            // This cleaner-free, single-mark, Empty-E reference compares
+            // semantic unions, not arrival-order-dependent store identity.
+            // It does NOT authorize runtime compaction: mixed EXACT/ANY can
+            // affect ordered metadata masks or C2 images in other programs.
+            val selectedUnion=selected.filterTo(linkedSetOf()) { candidate ->
+                selected.none { it!=candidate && subsumes(it,candidate) }
+            }
+            assertEquals(expected,selectedUnion,"The scoped and independent flat semantic unions must be equal")
+            assertTrue(selected.all { it in referenceCap },
+                "Every raw representative needs an explicit finite flat-path witness")
+            assertTrue((selected-expected).all { extra -> expected.any { subsumes(it,extra) } },
+                "Every raw extra must be covered by the exact expected reference union")
             assertEquals(selected,raw)
 
             val layout=f.contexts.blockLayout(f.key)
@@ -212,6 +228,34 @@ class DemandRelativeWorkloadControlsTest {
             if(limit==7) assertTrue(physical.size<flat.size,
                 "The high-limit scoped body must remove work from the independent binary witness")
             println("FIELD_LOOP_BACKWARD limit=$limit processed=${core.steps} edgeDeltas=${core.edgeDeltas} admittedLeaves=${raw.size} selectedLeaves=${selected.size} pointLeaves=${physical.size} flatReferenceLeaves=${flat.size} bodyMaxDepth=${physical.maxOf { it.fact.path.size }} blocks=${core.blockDiagnostics()}")
+        }
+    }
+
+    @Test fun `EXACT before ANY can retain a covered stored representative without changing this simple union`() {
+        MethodAnalysisFixtures().use { f ->
+            val t=MarkSlot.Concrete(f.mark("T"))
+            val premise=f.manager.initial(f.pattern(AccessPathBase.Return,mark=t))
+            val base=AccessPathBase.Argument(0)
+            val path=listOf(f.field("f"))
+            val exact=f.fact(base,path,Tail.EXACT,t,layer=Layer.DEMAND)
+            val any=f.fact(base,path,Tail.ANY,t,layer=Layer.DEMAND)
+            fun stored(values:List<Facts>):Set<Conclusion> {
+                val store=org.opentaint.dataflow.bidi.store.RunSummaryStore(f.manager)
+                values.forEach { store.addAdmitted(premise,it) }
+                return store.all().flatMap { (_,facts) -> f.ops.leaves(facts).map {
+                    Conclusion(it.fact,it.exclusion,facts.layer==Layer.DEMAND)
+                } }.toSet()
+            }
+            val exactFirst=stored(listOf(exact,any))
+            val anyFirst=stored(listOf(any,exact))
+            assertEquals(2,exactFirst.size,"A later broad input does not evict an older stored header")
+            assertEquals(1,anyFirst.size,"A broad row can suppress an incoming covered narrow row")
+            fun union(rows:Set<Conclusion>)=rows.filterTo(linkedSetOf()) { candidate ->
+                rows.none { it!=candidate && subsumes(it,candidate) }
+            }
+            assertEquals(union(anyFirst),union(exactFirst))
+            // No rule, cleaner, metadata or downstream C2 is executed here.
+            // This is a representation witness, not a global compaction law.
         }
     }
 

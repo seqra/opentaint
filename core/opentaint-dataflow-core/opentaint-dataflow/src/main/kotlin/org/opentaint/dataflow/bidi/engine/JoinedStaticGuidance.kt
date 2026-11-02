@@ -34,7 +34,7 @@ internal fun completeJoinedStaticGuidance(
     val builder = FrozenStaticCompletion.Builder(shared.ap, shared.staticCallGraph)
     val keys = shared.staticWriteKeyInterner
     val byMethod = actors.associateBy { it.key }
-    fun seed(owner: OwnedScope, original: Pattern, output: Pattern, exit: PortId = PortId.ROOT_EXIT) {
+    fun seed(owner: OwnedScope, original: Pattern, output: Pattern, exit: PortId = PortId.STATIC_SHORTCUT) {
         if (owner.local == BlockScope.ROOT) builder.addSeed(owner.method, original, output)
         else builder.addScopedSeed(ScopedSummaryKey(owner.method, owner.local, exit), original, output)
     }
@@ -60,7 +60,7 @@ internal fun completeJoinedStaticGuidance(
     for (actor in actors) for ((scope, state) in actor.joinedBlockStates()) {
         checkpoint()
         val owner = OwnedScope(actor.key, scope)
-        val shortcut = ScopedSummaryKey(actor.key, scope, PortId.ROOT_EXIT)
+        val shortcut = ScopedSummaryKey(actor.key, scope, PortId.STATIC_SHORTCUT)
         if (scope != BlockScope.ROOT) builder.addScopedBoundary(shortcut)
         val pruneStarted = TimeSource.Monotonic.markNow()
         val writes = state.freezeStaticWriteCandidates()
@@ -88,7 +88,7 @@ internal fun completeJoinedStaticGuidance(
             check(terminal.target == Target.DemandTarget)
             val original = checkNotNull(terminal.premise as? InitialAp) { "Run-1 cannot retain an ND original" }
             if (scope == BlockScope.ROOT) builder.addTarget(actor.key, original.toPattern())
-            else builder.addScopedTarget(shortcut, original.toPattern())
+            else builder.addScopedTarget(ScopedSummaryKey(actor.key, scope, PortId.ROOT_EXIT), original.toPattern())
         }
         val stores = if (scope == BlockScope.ROOT) sequenceOf(PortId.ROOT_EXIT to state.summaries)
             else state.portSummaries.entries()

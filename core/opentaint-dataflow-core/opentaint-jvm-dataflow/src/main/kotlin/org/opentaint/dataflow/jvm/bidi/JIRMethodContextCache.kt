@@ -14,5 +14,6 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 class JIRMethodContextCache(private val interp: JIRInterpreter, private val entries: JIRMethodEntries) : MethodContextSource {
     override fun forms(key: MethodKey): MethodForms = entries.forms(interp, key)
     override fun graph(key: MethodKey, direction: Direction): MethodInstGraph = entries[key].graph(direction)
-    override fun blockLayout(key: MethodKey, entryNode: CommonInst): MethodBlockLayout = entries[key].blockLayout
+    override fun blockLayout(key: MethodKey, entryNode: CommonInst,
+                             exits: List<org.opentaint.dataflow.bidi.interp.ExitNode>): MethodBlockLayout = entries[key].blockLayout
 }

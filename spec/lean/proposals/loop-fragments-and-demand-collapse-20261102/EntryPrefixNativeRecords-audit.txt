@@ -1,0 +1,105 @@
+'EntryPrefixNativeRecords.entrySource' does not depend on any axioms
+'EntryPrefixNativeRecords.beforePass' does not depend on any axioms
+'EntryPrefixNativeRecords.persistable' does not depend on any axioms
+'EntryPrefixNativeRecords.flowImage' does not depend on any axioms
+'EntryPrefixNativeRecords.sourceCovers' does not depend on any axioms
+'EntryPrefixNativeRecords.replayForward' does not depend on any axioms
+'EntryPrefixNativeRecords.replayBackward' does not depend on any axioms
+'EntryPrefixNativeRecords.composePrefix' does not depend on any axioms
+'EntryPrefixNativeRecords.prefixRecord' does not depend on any axioms
+'EntryPrefixNativeRecords.rootZero' does not depend on any axioms
+'EntryPrefixNativeRecords.cookieAt' does not depend on any axioms
+'EntryPrefixNativeRecords.sequentialBackward' depends on axioms: [propext]
+'EntryPrefixNativeRecords.sequentialForward' depends on axioms: [propext]
+'EntryPrefixNativeRecords.entry_and_before_are_native_NORMAL' does not depend on any axioms
+'EntryPrefixNativeRecords.true_prefix_composes_the_entry_source' does not depend on any axioms
+'EntryPrefixNativeRecords.composition_keeps_the_true_pre_rule_premise_and_ports' does not depend on any axioms
+'EntryPrefixNativeRecords.backward_array_uses_existing_native_ZERO_discharge' does not depend on any axioms
+'EntryPrefixNativeRecords.ordinary_field_has_the_same_native_discharge' does not depend on any axioms
+'EntryPrefixNativeRecords.backward_composed_and_two_segment_replay_agree_for_array' depends on axioms: [propext]
+'EntryPrefixNativeRecords.backward_composed_and_two_segment_replay_agree_for_named_field' depends on axioms: [propext]
+'EntryPrefixNativeRecords.backward_composition_preserves_every_exact_field_suffix' depends on axioms: [propext]
+'EntryPrefixNativeRecords.native_prefix_discharge_preserves_the_waiting_original' does not depend on any axioms
+'EntryPrefixNativeRecords.forward_prefix_replay_is_the_actual_two_segment_transfer' depends on axioms: [propext]
+'EntryPrefixNativeRecords.cached_NORMAL_source_needs_no_new_source_hit' does not depend on any axioms
+'EntryPrefixNativeRecords.relabelledAfterRule' does not depend on any axioms
+'EntryPrefixNativeRecords.wrong_post_rule_premise_cannot_replay_on_method_ZERO' does not depend on any axioms
+'EntryPrefixNativeRecords.wrong_post_rule_premise_does_not_discharge_the_source' does not depend on any axioms
+'EntryPrefixNativeRecords.disconnected_control_interfaces_do_not_compose' does not depend on any axioms
+'EntryPrefixNativeRecords.prefix_replay_does_not_alias_an_unrelated_entry' does not depend on any axioms
+'EntryPrefixNativeRecords.prefix_reverse_does_not_alias_an_unrelated_exit' does not depend on any axioms
+'EntryPrefixNativeRecords.demandEntry' does not depend on any axioms
+'EntryPrefixNativeRecords.nonNORMAL_entry_cannot_be_persisted_or_promoted' does not depend on any axioms
+'EntryPrefixNativeRecords.nonNORMAL_prefix_cannot_be_replayed_as_native' does not depend on any axioms
+'EntryPrefixNativeRecords.actualEntryGEN' does not depend on any axioms
+'EntryPrefixNativeRecords.admittedPrefix' does not depend on any axioms
+'EntryPrefixNativeRecords.normal_prefix_has_a_real_configured_entry_derivation' does not depend on any axioms
+'EntryPrefixNativeRecords.no_actual_entry_source_means_no_source_prefix' does not depend on any axioms
+'EntryPrefixNativeRecords.demand_actual_entry_is_not_a_NORMAL_source_prefix' does not depend on any axioms
+'EntryPrefixNativeRecords.wholeMethodArgumentCandidate' does not depend on any axioms
+'EntryPrefixNativeRecords.wholeMethodLocalCandidate' does not depend on any axioms
+'EntryPrefixNativeRecords.exitMarkRemoval' does not depend on any axioms
+'EntryPrefixNativeRecords.wholeMethodExport' does not depend on any axioms
+'EntryPrefixNativeRecords.whole_method_exit_removal_does_not_replace_the_entry_segment' does not depend on any axioms
+'EntryPrefixNativeRecords.public_local_base_filter_does_not_replace_the_scoped_prefix' does not depend on any axioms
+'EntryPrefixNativeRecords.exit_removal_does_not_run_at_the_entry_segment' does not depend on any axioms
+'EntryPrefixNativeRecords.refinedRead' does not depend on any axioms
+'EntryPrefixNativeRecords.replayWithExistingPrefix' depends on axioms: [propext]
+'EntryPrefixNativeRecords.normalSinkHit' depends on axioms: [propext]
+'EntryPrefixNativeRecords.cached_prefix_and_refined_read_retain_the_forward_finding' depends on axioms: [propext]
+'EntryPrefixNativeRecords.cached_NORMAL_producer_does_not_need_a_fresh_permission' depends on axioms: [propext]
+'EntryPrefixNativeRecords.cached_prefix_and_read_do_not_synthesize_source_hits' depends on axioms: [propext]
+'EntryPrefixNativeRecords.demand_input_cannot_be_promoted_to_a_NORMAL_prefix_result' does not depend on any axioms
+'EntryPrefixNativeRecords.summarizeActualPrefix' does not depend on any axioms
+'EntryPrefixNativeRecords.deepRawEntry' does not depend on any axioms
+'EntryPrefixNativeRecords.globalFieldOneCut' does not depend on any axioms
+'EntryPrefixNativeRecords.deepBoundedEntry' does not depend on any axioms
+'EntryPrefixNativeRecords.deepDemandPrefix' does not depend on any axioms
+'EntryPrefixNativeRecords.groupedEntry' does not depend on any axioms
+'EntryPrefixNativeRecords.groupedDemandPrefix' does not depend on any axioms
+'EntryPrefixNativeRecords.deep_entry_uses_the_existing_global_cut_before_storage' does not depend on any axioms
+'EntryPrefixNativeRecords.ordinary_prefix_composition_keeps_deep_entry_DEMAND' does not depend on any axioms
+'EntryPrefixNativeRecords.ordinary_prefix_composition_keeps_grouped_entry_DEMAND' does not depend on any axioms
+'EntryPrefixNativeRecords.deep_and_grouped_producers_are_not_native_NORMAL_records' does not depend on any axioms
+'EntryPrefixNativeRecords.normal_only_boundary_record_completion_misses_the_DEMAND_prefix' does not depend on any axioms
+'EntryPrefixNativeRecords.guidanceFact' does not depend on any axioms
+'EntryPrefixNativeRecords.demandHandoff' does not depend on any axioms
+'EntryPrefixNativeRecords.markCompatible' does not depend on any axioms
+'EntryPrefixNativeRecords.existingSamePrefixMayC2' does not depend on any axioms
+'EntryPrefixNativeRecords.existingSamePrefixMayTargetC5' does not depend on any axioms
+'EntryPrefixNativeRecords.deepReversePair' does not depend on any axioms
+'EntryPrefixNativeRecords.deepCarrier' does not depend on any axioms
+'EntryPrefixNativeRecords.groupReversePair' does not depend on any axioms
+'EntryPrefixNativeRecords.fullCarrierForGroup' does not depend on any axioms
+'EntryPrefixNativeRecords.deep_prefix_exports_the_actual_bounded_DEMAND_pair' does not depend on any axioms
+'EntryPrefixNativeRecords.grouped_prefix_exports_group_guidance_without_native_persistence' does not depend on any axioms
+'EntryPrefixNativeRecords.same_prefix_concrete_MAY_carrier_is_admitted_only_as_DEMAND' does not depend on any axioms
+'EntryPrefixNativeRecords.complete_deep_prefix_pair_permits_its_actual_terminal_result' does not depend on any axioms
+'EntryPrefixNativeRecords.group_request_binds_the_full_mark_and_keeps_the_DEMAND_layer' does not depend on any axioms
+'EntryPrefixNativeRecords.grouped_complete_pair_keeps_the_existing_full_mark_terminal' does not depend on any axioms
+'EntryPrefixNativeRecords.wrong_mark_does_not_use_the_deep_prefix_pair' does not depend on any axioms
+'EntryPrefixNativeRecords.wrong_control_entry_does_not_use_the_DEMAND_pair' does not depend on any axioms
+'EntryPrefixNativeRecords.complete_DEMAND_pair_does_not_alias_another_terminal_exit' does not depend on any axioms
+'EntryPrefixNativeRecords.NORMAL_prefix_uses_native_records_instead_of_a_fake_DEMAND_row' does not depend on any axioms
+'EntryPrefixNativeRecords.bindChildTarget' does not depend on any axioms
+'EntryPrefixNativeRecords.fullMethodZeroTargetC5' does not depend on any axioms
+'EntryPrefixNativeRecords.deep_prefix_terminal_reaches_the_exact_waiting_method_original' does not depend on any axioms
+'EntryPrefixNativeRecords.another_child_original_cannot_supply_the_waiting_method_Target' does not depend on any axioms
+'EntryPrefixNativeRecords.parent_binding_does_not_change_the_terminal_port' does not depend on any axioms
+'EntryPrefixNativeRecords.nativePersistInDirection' does not depend on any axioms
+'EntryPrefixNativeRecords.selectedSummaryHandoff' does not depend on any axioms
+'EntryPrefixNativeRecords.backwardExitSuffix' does not depend on any axioms
+'EntryPrefixNativeRecords.forwardSuffixPair' does not depend on any axioms
+'EntryPrefixNativeRecords.uniformFieldCarrier' does not depend on any axioms
+'EntryPrefixNativeRecords.existingExactFromUniformC2' does not depend on any axioms
+'EntryPrefixNativeRecords.suffixRead' does not depend on any axioms
+'EntryPrefixNativeRecords.actualNormalExitSinkMatch' depends on axioms: [propext]
+'EntryPrefixNativeRecords.ordinarySuffixFinding' depends on axioms: [propext]
+'EntryPrefixNativeRecords.backward_ZERO_NORMAL_suffix_is_not_a_native_record' does not depend on any axioms
+'EntryPrefixNativeRecords.backward_ZERO_NORMAL_suffix_uses_existing_handoff_guidance' does not depend on any axioms
+'EntryPrefixNativeRecords.normal_forward_prefix_still_uses_native_persistence' does not depend on any axioms
+'EntryPrefixNativeRecords.suffix_C2_admits_the_definite_uniform_field_at_NORMAL' does not depend on any axioms
+'EntryPrefixNativeRecords.ordinary_exit_inclusive_suffix_reaches_the_actual_NORMAL_sink' depends on axioms: [propext]
+'EntryPrefixNativeRecords.DEMAND_carrier_cannot_create_a_NORMAL_exit_finding' depends on axioms: [propext]
+'EntryPrefixNativeRecords.suffix_C2_does_not_alias_a_wrong_control_interface' does not depend on any axioms
+'EntryPrefixNativeRecords.existing_backward_ZERO_exception_does_not_select_an_ordinary_NORMAL_flow_row' does not depend on any axioms

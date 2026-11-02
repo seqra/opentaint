@@ -194,7 +194,8 @@ class LoopBlocksIntegrationTest {
             assertTrue(layout[checkNotNull(top.before)].instructions.isEmpty())
             val loop = checkNotNull(top.loop)
             val repeat = checkNotNull(layout.port(1, 0)).id
-            val breakPort = checkNotNull(layout.port(0, 2)).id
+            val breakPhysical = checkNotNull(layout.port(0, 2)).id
+            val breakPort = checkNotNull(layout.normalExitForRoute(breakPhysical)).id
             val throwPort = checkNotNull(layout.port(0, 6)).id
             assertEquals(setOf(repeat), layout[loop].repeatPorts.toSet())
 
@@ -207,7 +208,7 @@ class LoopBlocksIntegrationTest {
             val rows = first.blockSummaries().filter { it.key.scope.block == loop }.toList()
             assertTrue(rows.isNotEmpty(), "The original method actor must own actual loop snapshots")
             assertTrue(setOf(repeat, breakPort, throwPort).all { port -> rows.any { it.key.exit == port } },
-                "Stored traversal rows keep separate repeat, break and exceptional ports")
+                "Stored traversal rows keep the feedback, shared normal interface and typed exceptional port")
             assertTrue(first.summaries.all().none { (_, facts) -> facts.base == returned &&
                 f.ops.leaves(facts).any { it.fact.mark == mark } },
                 "The thrown T path cannot create a normal return summary; the break path clears it")
