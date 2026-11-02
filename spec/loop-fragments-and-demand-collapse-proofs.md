@@ -125,6 +125,17 @@ check rejects exactly when all reject, and retains every old positive
 two-family answer. This is an exact-path reference counterexample and
 repair, not a complete outlined-driver theorem.
 
+`Decomposition` constructs an ordered-region tree. It splits at the first
+loop, retains the prefix as BL, and recursively places the complete
+remaining sequence under AL. Structural induction proves that flattening
+the tree gives the exact original segment list, preserving order and
+multiplicity. An arbitrary supplied ordered interpretation therefore
+stays equal. The model handles empty prefixes and proves that AL depth
+accounts for every successive loop. Its executable two-loop example is
+`(prefix, loop1, ({}, loop2, suffix))`. Loop atoms are opaque selected
+regions; general CFG detection, inner-body extraction and AP summary
+composition remain outside this local theorem.
+
 `Blocks` models a supplied containment layout under one method owner.
 Its parent-depth certificate rules out every positive containment cycle.
 Each instruction has one lowest owner. Blocks address identical original

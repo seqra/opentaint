@@ -17,7 +17,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = next(p for p in HERE.parents if (p / "spec/lean/lean-toolchain").is_file())
 TOOLCHAIN = "leanprover/lean4:v4.33.1"
 MODULES = ["Control", "Geometry", "Admission", "Guidance", "Shape",
-           "Protocol", "Restriction", "Feedback", "Blocks", "Usefulness"]
+           "Protocol", "Restriction", "Feedback", "Blocks", "Decomposition", "Usefulness"]
 ALLOWED_AXIOMS = {"propext", "Quot.sound"}
 
 

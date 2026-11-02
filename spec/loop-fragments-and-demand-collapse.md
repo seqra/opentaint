@@ -106,8 +106,15 @@ Sequential B
   Sequential BL
   Loop L
     iteration region, recursively decomposed when needed
-  Sequential AL
+  AL: remaining region, recursively decomposed
 ```
+
+AL can contain a deep hierarchy. For `prefix; loop1; loop2; suffix`, the
+root is `B1 = (prefix, loop1, AL1)` and
+`AL1 = B2 = ({}, loop2, suffix)`. Thus loop2 is under AL1, not a sibling
+of loop1 and not inside loop1's iteration body. Every continuation check
+uses the complete AL region's demand and saved summaries. See the exact
+tree and per-level checks in [the ownership spec](method-owned-loop-blocks.md#3-the-block-tree-and-the-control-graph).
 
 The tree describes containment. Original CFG ports describe execution.
 The method analyzer routes a loop result to L or AL in forward analysis,
