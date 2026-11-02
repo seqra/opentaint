@@ -1,0 +1,12 @@
+def loopControlDir = gradle.startParameter.projectProperties.get('loopControlDir')
+assert loopControlDir != null : 'Set -PloopControlDir to the controls directory'
+gradle.beforeProject { project ->
+ if (project.name == 'opentaint-dataflow' && project.projectDir.parentFile.name == 'opentaint-dataflow-core') {
+  project.plugins.withId('org.jetbrains.kotlin.jvm') {
+   project.extensions.getByName('kotlin').sourceSets.getByName('test').kotlin.srcDir(loopControlDir)
+  }
+  project.tasks.withType(org.gradle.api.tasks.testing.Test).configureEach { test ->
+   test.testLogging.showStandardStreams = true
+  }
+ }
+}
