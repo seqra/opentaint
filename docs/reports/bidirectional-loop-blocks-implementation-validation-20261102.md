@@ -1,7 +1,8 @@
 # Loop blocks: implementation validation
 
 Date: 2 November 2026. **Status: implementation and native validation complete.**
-Project measurements have not started. This file is not a performance report.
+A first project attempt exposed a work-accounting defect. Its correction passes
+the complete native suites. This file is not a performance report.
 The [native receipt](data/bidirectional-loop-blocks-validation-20261102.json)
 records the exact tested source hashes, commands, test-class counts and log hashes.
 The implementation commit will contain this receipt.
@@ -66,7 +67,7 @@ block, output, run, nonstatic input, nonzero writer and unregistered write.
 
 ## 3. Native results and finite witnesses
 
-The final serial command passes **2,334 core tests and 453 JVM tests**, with no
+The corrected complete serial command passes **2,335 core tests and 453 JVM tests**, with no
 failure or skipped test. The benchmark, comparison and profile helpers pass
 **60 Python tests**. The native receipt records the final source set. Earlier
 failed commands are intermediate evidence, not final acceptance receipts.
@@ -104,8 +105,18 @@ adapter, general cross-run convergence, or measured project improvement. See the
 
 ## 5. Fixed project campaign
 
-The campaign is prepared in `../loop-blocks-restriction-20261102`. It has not yet
-started. Run OWASP, Conductor, Thingsboard and Stirling-PDF through the direct
+The first attempt at `a992d9afa` is retained in
+`../loop-blocks-restriction-20261102`. OWASP reached **run-1**, completed none,
+and failed freeze because a late static boundary reply queued fresh local
+delivery without counted method Work when its child initial already existed.
+The regression test reproduces this failure before the correction and passes
+after the conditional enqueue. This changes work accounting, not analysis rules.
+The remaining campaign was stopped: Conductor reached **run-3**, completed
+**run-2** and accepted **run-1**. No OOM occurred. This interrupted attempt is
+not the final quality or performance result.
+
+The replacement is prepared in `../loop-blocks-restriction-fixed-20261102`.
+Run OWASP, Conductor, Thingsboard and Stirling-PDF through the direct
 `runProjectAnalyzer` Gradle task. Keep FULL, 16 GiB, limits `1,1,2,3,...`, statics
 and aliases enabled, and the selected timeout for each project. Reuse the fixed
 `f945f92c5` finding baseline; do not rerun it.
@@ -115,4 +126,5 @@ size of 2,671,483,748 bytes. Reports, logs and baseline bundles remain. The laun
 requires committed runtime source and checks source, model and baseline hashes.
 
 The project performance report and the measurement-based next-iteration proposal
-remain required deliverables. There is no new project run iteration to report yet.
+remain required deliverables. The replacement measurement must use the committed
+correction and the same configuration.
