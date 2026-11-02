@@ -1,6 +1,6 @@
 ### 1. Classify propagation
 
-Take the members from the plan's `scopes`, judge each one, and write the verdict to the batch file `.opentaint/tracking/approximations/<batch>.yaml` — `<batch>` is your plan's filename stem, the batch id, reused for the coverage check below.
+Take the members from the plan's `scopes`, judge each one, and write the verdict to the batch file `.opentaint/tracking/models/<batch>.yaml` — `<batch>` is your plan's filename stem, the batch id, reused for the coverage check below.
 
 Always classify from the method's real code, never from its name. Start by reading the method's source — `<skill-dir>/references/<language>.md` describes how to get it. Then answer, for each method: where does its input data go? Data that arrives on the receiver or an argument — does it come back out, through the return value, an argument the method writes into, the receiver, or an object or field it stores the data in? That answer picks the bucket:
 

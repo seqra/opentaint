@@ -1,4 +1,4 @@
-# Builtin dataflow approximations
+# Builtin dataflow models
 
 Code-based models of how taint moves through methods the analyzer cannot see into. Each
 directory here is an independent Gradle module compiled against **its own pinned
@@ -38,7 +38,7 @@ inside the analyzer jar, which `DataFlowApproximationLoader` unpacks at analysis
 
 2. Put the models under
    `src/main/java/org/opentaint/jvm/dataflow/approximations/<module>/`. The per-module
-   package keeps approximation class names globally unique: an approximation FQCN maps to
+   package keeps model class names globally unique: a model FQCN maps to
    exactly one target class, and a collision between two modules fails the build during
    `processResources`.
 
@@ -47,10 +47,10 @@ discovers every directory here that has a `build.gradle.kts`.
 
 ## Writing a model
 
-Same form as a custom model, so the reference in `skills/create-dataflow-approximation`
+Same form as a custom model, so the reference in `skills/create-dataflow-model`
 applies here too. In short: `@Approximate(TargetClass.class)` on one class per target,
 reach the real receiver with `(TargetClass) (Object) this`, put functional-interface
 parameters behind `@ArgumentTypeContext`, branch with `OpentaintNdUtil.nextBool()`, and
-never leave a body empty. Approximation bodies are analyzed, never executed, and must not
+never leave a body empty. Model bodies are analyzed, never executed, and must not
 introduce synthetic classes (lambdas, anonymous subclasses) — their constructors surface as
 dropped methods and carry no taint.

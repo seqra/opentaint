@@ -5,15 +5,15 @@ Use this ownership map to route work and scan errors:
   project/             MAIN build
   results/             MAIN scan
   rules/               sources or sinks stage
-  pass-through/        approximation stage
-  dataflow/            approximation stage
+  pass-through/        model stage
+  dataflow/            model stage
   tracking/state.yaml  MAIN run knobs
   tracking/            stage agents, leaves, and join scripts otherwise
   vulnerabilities.md   triage / PoC stage
   issues/               escalation stage
 ```
 
-The tree is long-lived. On resume, reuse `DONE` artifacts; `get_status.py` derives the next phase from disk. Existing rules and approximations apply to every scan.
+The tree is long-lived. On resume, reuse `DONE` artifacts; `get_status.py` derives the next phase from disk. Existing rules and models apply to every scan.
 
 `state.yaml` shape:
 

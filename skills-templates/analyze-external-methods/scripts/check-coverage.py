@@ -16,7 +16,7 @@ from pathlib import Path
 import yaml
 
 DROPPED = Path(".opentaint/results/dropped-external-methods.yaml")
-APPROX_DIR = Path(".opentaint/tracking/approximations")
+MODELS_DIR = Path(".opentaint/tracking/models")
 
 # classification buckets + skipped.yaml lists; build.done is read separately (nested)
 CLASSIFIED_KEYS = {"passthrough", "dataflow", "skipped", "methods", "engine_issues"}
@@ -39,7 +39,7 @@ def dropped_methods():
 def classified_methods():
     # every method+signature in a classification bucket, build.done, or skipped.yaml
     out = set()
-    for p in sorted(glob.glob(str(APPROX_DIR / "*.yaml"))):
+    for p in sorted(glob.glob(str(MODELS_DIR / "*.yaml"))):
         doc = yaml.safe_load(Path(p).read_text(encoding="utf-8")) or {}
         for key in CLASSIFIED_KEYS:
             for item in doc.get(key, []) or []:
@@ -55,7 +55,7 @@ def batch_methods(batch_arg):
     # the members a batch plan assigned (scopes: {class: [{method, signature}]}); id or path
     p = Path(batch_arg)
     if not p.is_file():
-        p = APPROX_DIR / "plans" / f"{batch_arg}.yaml"
+        p = MODELS_DIR / "plans" / f"{batch_arg}.yaml"
     if not p.is_file():
         return None
     doc = yaml.safe_load(p.read_text(encoding="utf-8")) or {}

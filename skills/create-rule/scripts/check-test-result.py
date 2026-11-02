@@ -5,7 +5,7 @@
 Summarize an OpenTaint test-result.json so the agent never parses it by hand.
 Prints pass/fail counts and names every failing sample by verdict.
 Exit 0 when all samples pass, 1 when any fail, 2 on a bad/missing file.
-Works for both `test rule run` and `test approximation run` outputs (same shape).
+Works for both `test rule run` and `test model run` outputs (same shape).
 """
 import json
 import sys
@@ -33,7 +33,7 @@ def names(v):
 
 def resolve(arg):
     # accept either a full path to a test-result.json or a shorthand id under
-    # .opentaint/test-results/: a rule `<unit>/<side>` or an approximation `<batch>`
+    # .opentaint/test-results/: a rule `<unit>/<side>` or a model `<batch>`
     if arg.endswith("test-result.json"):
         return Path(arg)
     return Path(".opentaint/test-results") / arg / "test-result.json"

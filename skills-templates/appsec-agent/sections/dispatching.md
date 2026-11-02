@@ -3,15 +3,15 @@ Dispatch exactly one stage-orchestrator subagent for each stage invocation:
 ```
 Invoke the Skill orchestrate-stage first, then follow its instructions precisely
 Inputs:
-  stage: <sources|approx-round|sinks|triage|poc|escalation>
+  stage: <sources|model-round|sinks|triage|poc|escalation>
 ```
 
-For a `deep` approximation round, also pass `sinks: true`. A subagent inherits the project-root working directory, so omit `project-root`.
+For a `deep` model round, also pass `sinks: true`. A subagent inherits the project-root working directory, so omit `project-root`.
 
 Stage context:
 
 - `sources` — discover dependency sources and author tag-grouped source rules
-- `approx-round` — classify and build one dropped-method frontier; use a fresh agent for each new frontier
+- `model-round` — classify and build one dropped-method frontier; use a fresh agent for each new frontier
 - `sinks` — author classified sink rules and wire the joins
 - `triage` — classify the latest findings and refresh the vulnerability report
 - `poc` — reproduce confirmed findings and add the outcomes to the report
