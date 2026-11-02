@@ -16,6 +16,7 @@ import issues.issue94
 import issues.issue95
 import issues.issue96
 import issues.issue97
+import issues.issue98
 import issues.issueChain
 import issues.issueChainSplitBuilder
 import org.junit.jupiter.api.AfterAll
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.opentaint.semgrep.util.SampleBasedTest
+import org.opentaint.semgrep.util.TestAnalysisRunner
 import kotlin.test.Test
 
 @TestInstance(PER_CLASS)
@@ -112,6 +114,9 @@ class IssuesTest : SampleBasedTest() {
 
     @Test
     fun `issue chain-pattern split builder`() = runTest<issueChainSplitBuilder>(EXPECT_STATE_VAR)
+
+    @Test
+    fun `issue 98`() = runTest<issue98>(unrollStrategy = TestAnalysisRunner.AnyAccessorEnabled)
 
     @AfterAll
     fun close() {
