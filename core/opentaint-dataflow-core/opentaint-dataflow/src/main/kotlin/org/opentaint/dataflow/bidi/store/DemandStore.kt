@@ -256,8 +256,8 @@ class DemandStore private constructor(
         return intersect(method, original, Reach.DEMAND, policy).isNotEmpty()
     }
 
-    /** A run-1 static write used the logical normal-exit shortcut, not a
-     * physical loop leave. Its reverse W row therefore has ROOT_EXIT as its
+    /** A run-1 static write used the typed raw-write shortcut, not a
+     * completed normal exit or physical loop leave. Its reverse W row therefore has STATIC_SHORTCUT as its
      * entry. An actually reached run-2 static initial can finish at a source
      * through that same shortcut, while its live DATA scope stays physical.
      * Only complete W/B paths with a genuine ZERO origin can admit Target;
@@ -267,7 +267,7 @@ class DemandStore private constructor(
         if (policy.run != 2 || policy.direction != Direction.BACKWARD) return false
         val member = original as? InitialAp ?: return false
         if (member.base != STATIC || member.mark !is MarkSlot.Concrete) return false
-        val owner = OwnedScope(method, BlockScope(block, PortId.ROOT_EXIT))
+        val owner = OwnedScope(method, BlockScope(block, PortId.STATIC_SHORTCUT))
         val skipped = scopedCompletions[owner]?.selectExit(exit) ?: return false
         val ops = ApOps(ap)
         val outputs = listOf(ap.zero.toPattern())

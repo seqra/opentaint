@@ -1,0 +1,100 @@
+'CanonicalLoopExit.joinKey' does not depend on any axioms
+'CanonicalLoopExit.storeRoute' does not depend on any axioms
+'CanonicalLoopExit.directedEdge' does not depend on any axioms
+'CanonicalLoopExit.refineNative' does not depend on any axioms
+'CanonicalLoopExit.reverseDirection' does not depend on any axioms
+'CanonicalLoopExit.reverseRow' does not depend on any axioms
+'CanonicalLoopExit.enterPoint' does not depend on any axioms
+'CanonicalLoopExit.leavePoint' does not depend on any axioms
+'CanonicalLoopExit.eraseSplit' does not depend on any axioms
+'CanonicalLoopExit.shared_exit_has_the_original_source_and_target' does not depend on any axioms
+'CanonicalLoopExit.split_erasure_constructs_an_existing_physical_edge' does not depend on any axioms
+'CanonicalLoopExit.shared_interface_does_not_erase_the_actual_route' does not depend on any axioms
+'CanonicalLoopExit.native_refinement_keeps_the_same_forward_CFG_edge' does not depend on any axioms
+'CanonicalLoopExit.native_refinement_keeps_the_same_reverse_CFG_edge' does not depend on any axioms
+'CanonicalLoopExit.reversal_keeps_the_complete_row_payload' does not depend on any axioms
+'CanonicalLoopExit.double_native_or_demand_reversal_restores_the_exact_row' does not depend on any axioms
+'CanonicalLoopExit.candidates' does not depend on any axioms
+'CanonicalLoopExit.reverseAt' does not depend on any axioms
+'CanonicalLoopExit.every_reverse_refinement_is_an_existing_edge' depends on axioms: [propext]
+'CanonicalLoopExit.every_actual_predecessor_with_the_same_key_is_retained' depends on axioms: [propext]
+'CanonicalLoopExit.left' does not depend on any axioms
+'CanonicalLoopExit.right' does not depend on any axioms
+'CanonicalLoopExit.differentTarget' does not depend on any axioms
+'CanonicalLoopExit.feedback' does not depend on any axioms
+'CanonicalLoopExit.exceptional' does not depend on any axioms
+'CanonicalLoopExit.returned' does not depend on any axioms
+'CanonicalLoopExit.discovery' does not depend on any axioms
+'CanonicalLoopExit.exampleGraph' does not depend on any axioms
+'CanonicalLoopExit.normal_leave_paths_have_one_shared_join_identity' does not depend on any axioms
+'CanonicalLoopExit.actual_forward_destinations_remain_distinct_after_normalization' does not depend on any axioms
+'CanonicalLoopExit.the_reverse_shared_boundary_retains_both_real_normal_predecessors' does not depend on any axioms
+'CanonicalLoopExit.a_different_continuation_does_not_join_that_reverse_route' depends on axioms: [propext]
+'CanonicalLoopExit.feedback_exception_return_and_discovery_remain_separate' does not depend on any axioms
+'CanonicalLoopExit.reversing_a_stored_normal_entry_keeps_its_physical_exit_refinement' does not depend on any axioms
+'CanonicalLoopExit.body' does not depend on any axioms
+'CanonicalLoopExit.inside' does not depend on any axioms
+'CanonicalLoopExit.normalOutlet' does not depend on any axioms
+'CanonicalLoopExit.internalNonFeedback' does not depend on any axioms
+'CanonicalLoopExit.outletCheck' does not depend on any axioms
+'CanonicalLoopExit.rankCheck' does not depend on any axioms
+'CanonicalLoopExit.advanceBeforeJoin' does not depend on any axioms
+'CanonicalLoopExit.closeBeforeJoin' does not depend on any axioms
+'CanonicalLoopExit.computedTails' does not depend on any axioms
+'CanonicalLoopExit.sameNodes' does not depend on any axioms
+'CanonicalLoopExit.validExtension' does not depend on any axioms
+'CanonicalLoopExit.certify' does not depend on any axioms
+'CanonicalLoopExit.expand' does not depend on any axioms
+'CanonicalLoopExit.extension_keeps_the_original_graph_headers_and_feedback' does not depend on any axioms
+'CanonicalLoopExit.every_checked_normal_outlet_reaches_the_real_common_join' depends on axioms: [propext, Quot.sound]
+'CanonicalLoopExit.every_checked_internal_nonfeedback_edge_increases_rank' depends on axioms: [propext, Quot.sound]
+'CanonicalLoopExit.oldFeedback' does not depend on any axioms
+'CanonicalLoopExit.a_typed_exception_return_or_discovery_route_keeps_its_exact_identity' does not depend on any axioms
+'CanonicalLoopExit.edge' does not depend on any axioms
+'CanonicalLoopExit.branchGraph' does not depend on any axioms
+'CanonicalLoopExit.branchRank' does not depend on any axioms
+'CanonicalLoopExit.branchPlan' does not depend on any axioms
+'CanonicalLoopExit.branchCertificate' does not depend on any axioms
+'CanonicalLoopExit.branch_tail_extension_is_executable_and_certified' does not depend on any axioms
+'CanonicalLoopExit.all_branch_operations_belong_to_L_and_the_join_belongs_to_AL' does not depend on any axioms
+'CanonicalLoopExit.the_branch_extension_keeps_the_original_header_and_only_feedback_edge' does not depend on any axioms
+'CanonicalLoopExit.extended_normal_outlets_have_one_actual_AL_target' does not depend on any axioms
+'CanonicalLoopExit.reverse_shared_exit_refines_to_both_exact_original_tail_edges' does not depend on any axioms
+'CanonicalLoopExit.an_alternative_normal_exit_cannot_be_absorbed_as_an_acyclic_tail' does not depend on any axioms
+'CanonicalLoopExit.a_new_nonfeedback_cycle_cannot_pass_the_extension_certificate' does not depend on any axioms
+'CanonicalLoopExit.the_original_SCC_alone_does_not_yet_have_a_single_normal_exit' does not depend on any axioms
+'CanonicalLoopExit.expanded_loop_instruction_membership_has_no_duplicates' depends on axioms: [propext]
+'CanonicalLoopExit.every_nonempty_cut_body_path_strictly_increases_rank' depends on axioms: [propext, Quot.sound]
+'CanonicalLoopExit.a_checked_extension_has_no_new_cycle_after_the_original_feedback_cuts' depends on axioms: [propext,
+ Quot.sound]
+'CanonicalLoopExit.noLeavePlan' does not depend on any axioms
+'CanonicalLoopExit.a_nonreturning_loop_needs_no_new_normal_exit_edge' does not depend on any axioms
+'CanonicalLoopExit.twoExitGraph' does not depend on any axioms
+'CanonicalLoopExit.two_unmerged_normal_exits_fail_the_common_join_certificate' does not depend on any axioms
+'CanonicalLoopExit.relativeNormal' does not depend on any axioms
+'CanonicalLoopExit.classifyFor' does not depend on any axioms
+'CanonicalLoopExit.storeAtLoop' does not depend on any axioms
+'CanonicalLoopExit.relative_classification_keeps_both_endpoints_port_and_original_owner' does not depend on any axioms
+'CanonicalLoopExit.stored_inner_control_keeps_the_exact_original_physical_route' does not depend on any axioms
+'CanonicalLoopExit.contextView' does not depend on any axioms
+'CanonicalLoopExit.validContext' does not depend on any axioms
+'CanonicalLoopExit.checkedView' depends on axioms: [propext]
+'CanonicalLoopExit.contextAL' does not depend on any axioms
+'CanonicalLoopExit.physicalContextGraph' does not depend on any axioms
+'CanonicalLoopExit.ownContextFeedback' does not depend on any axioms
+'CanonicalLoopExit.a_context_extension_keeps_the_complete_original_graph' does not depend on any axioms
+'CanonicalLoopExit.every_context_normal_outlet_reaches_its_real_join' depends on axioms: [propext, Quot.sound]
+'CanonicalLoopExit.outerContinue4' does not depend on any axioms
+'CanonicalLoopExit.outerContinue5' does not depend on any axioms
+'CanonicalLoopExit.outerContinue6' does not depend on any axioms
+'CanonicalLoopExit.ownInnerRepeat' does not depend on any axioms
+'CanonicalLoopExit.innerEdge' does not depend on any axioms
+'CanonicalLoopExit.outerContinueGraph' does not depend on any axioms
+'CanonicalLoopExit.outerContinueRank' does not depend on any axioms
+'CanonicalLoopExit.outerContinuePlan' does not depend on any axioms
+'CanonicalLoopExit.outerContinueCertificate' does not depend on any axioms
+'CanonicalLoopExit.a_real_enclosing_header_can_be_the_inner_normal_join_outside_its_region' does not depend on any axioms
+'CanonicalLoopExit.inner_normal_tail_extension_preserves_the_inner_header_and_own_repeat' depends on axioms: [propext]
+'CanonicalLoopExit.the_same_actual_edge_is_inner_normal_and_outer_feedback' does not depend on any axioms
+'CanonicalLoopExit.an_inner_native_reverse_still_refines_the_original_outer_feedback_edge' does not depend on any axioms
+'CanonicalLoopExit.own_feedback_exceptions_returns_and_discovery_are_not_inner_normal_leaves' does not depend on any axioms

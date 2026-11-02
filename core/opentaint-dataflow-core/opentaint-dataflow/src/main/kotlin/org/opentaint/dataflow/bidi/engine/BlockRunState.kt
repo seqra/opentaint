@@ -254,7 +254,7 @@ open class BlockRunState internal constructor(
         }
         for (node in forms.startNodes(key, zero = initial.isZero)) {
             ap.cancellation.checkpoint()
-            startAt(initial, node, start)
+            rootRouting?.start(node, initial, start) ?: startAt(initial, node, start)
         }
     }
 
@@ -323,8 +323,10 @@ open class BlockRunState internal constructor(
         if (at.facts !is FlowTree || original.mark !is MarkSlot.Star) return
         if (dropsStaticField(original)) return
         val atom = ap.marks.runtimeAtom(mark, mode.markMode)
-        if (original.base == STATIC) checkNotNull(pointResumes).request(at, MarkSet.of(atom))
-        else addMarkRequest(original, atom)
+        if (original.base == STATIC) {
+            checkNotNull(pointResumes).request(at, MarkSet.of(atom))
+            binding?.staticMarkRequest(original, atom)
+        } else addMarkRequest(original, atom)
     }
 
     /** FULL block requests share one immutable image and one raw suffix address. */
@@ -334,8 +336,10 @@ open class BlockRunState internal constructor(
         val original = at.premise as? InitialAp ?: return
         if (at.facts !is FlowTree || original.mark !is MarkSlot.Star || dropsStaticField(original)) return
         check(mode.markMode == MarkMode.FULL)
-        if (original.base == STATIC) checkNotNull(pointResumes).request(at, marks)
-        else addMarkRequests(original, RequestMarkSet.fromIds(marks.ids))
+        if (original.base == STATIC) {
+            checkNotNull(pointResumes).request(at, marks)
+            for (id in marks.ids) binding?.staticMarkRequest(original, TaintMark(id))
+        } else addMarkRequests(original, RequestMarkSet.fromIds(marks.ids))
     }
 
     internal fun reachedOperations(summary: StatementSummary, at: OperationInput) {
@@ -751,7 +755,9 @@ open class BlockRunState internal constructor(
         }
     }
 
-    internal fun startAt(premise: PremiseKey, node: CommonInst, start: Facts) {
+    internal fun startAt(premise: PremiseKey, node: CommonInst, start: Facts,
+                         deliver: (PremiseKey, Facts) -> Unit = { pr, value ->
+                             binding?.startResult(this, node, pr, value) ?: deliverAt(node, pr, value) }) {
         if (!RuntimeDataDomain.packet(premise, start)) return
         forms.withStartRules(key, node) { rules ->
             val work = RuleWorklist(rules, node,
@@ -762,7 +768,7 @@ open class BlockRunState internal constructor(
             work.forEachResult { pr, facts ->
                 ap.cancellation.checkpoint()
                 if (config.run1 && facts.base == STATIC) return@forEachResult
-                deliverAt(node, pr, facts)
+                deliver(pr, facts)
             }
         }
     }
@@ -777,29 +783,42 @@ open class BlockRunState internal constructor(
                 if (!summary) {
                     // Exceptional rules and observations still run, but normal
                     // summary adjustment and killed-write guidance do not.
-                    admitOutput(node, pr, value)
+                    val fresh = admitOutput(node, pr, value)
+                    if (fresh != null && binding != null) retainBlockSummary(PortId(-4), pr, fresh)
                     return@drain
                 }
                 if (config.run1) checkNotNull(staticWriteCandidates).observe(pr, value)
-                var result: Facts? = value
-                if (exit.globalStateDrop && pr.isZero && value.base == AccessPathBase.ClassStatic)
-                    for (part in triggers.parts) {
-                        ap.cancellation.checkpoint()
-                        result = result?.let { ops.without(it, part) }
-                    }
-                // Entry removal selects marks. Run-1 groups cannot be cleaned;
-                // this actual group branch already carries its DEMAND repair.
-                // A ZERO original has no ordinary Base request to propagate.
-                if (!config.run1 && pr.isZero && value is TaintTree)
-                    exit.entryMarkRemoval(value.base)?.let { marks -> result = result?.let { ops.withoutMarks(it, marks) } }
+                // Local span rows include the real boundary rules. G2 and entry-mark
+                // metadata use the complete method origin after parent binding.
+                val result = if (isRootScope) finishMethodData(ops, mode, pr, value, exit, triggers.parts) else value
                 result?.let { completed ->
                     boundedSummaryResult(pr, completed) { boundedPremise, bounded ->
                         val fresh = admitOutput(node, boundedPremise, bounded)
-                        if (fresh != null) retainSummary(boundedPremise, fresh)
+                        if (fresh != null) retainSummary(boundedPremise, fresh, binding?.terminalExit ?: PortId.ROOT_EXIT)
                     }
                 }
             }
         }
+    }
+
+    /** Complete method-origin metadata only. The real boundary rules already ran in a leaf. */
+    internal fun finishBoundMethodBoundary(premise: PremiseKey, node: CommonInst, value: Facts, summary: Boolean) {
+        if (!summary) return
+        if (config.run1) checkNotNull(staticWriteCandidates).observe(premise, value)
+        forms.withEndRules(key, node) { exit ->
+            adjustMethodExitMetadata(premise, value, exit)?.let { summaryDelta(premise, it) }
+        }
+    }
+
+    internal fun adjustMethodExitMetadata(premise: PremiseKey, value: Facts, exit: ExitRules): Facts? =
+        finishMethodData(ops, mode, premise, value, exit)
+
+    /** Query adapter for the same ordered metadata, with no rule actions or joins. */
+    internal fun adjustObservedMethodExit(premise: PremiseKey, value: Facts): Facts? {
+        var result: Facts? = null
+        val node = if (forward) context.normalExit else context.shared.interpreter.entryNode(key)
+        forms.withEndRules(key, node) { exit -> result = adjustMethodExitMetadata(premise, value, exit) }
+        return result
     }
 
     internal fun dropsStaticField(fact: PathFact): Boolean =
@@ -885,7 +904,7 @@ open class BlockRunState internal constructor(
         // effects. Pending fixed-mark joins own their scalar payload without
         // retaining a static/static method summary.
         if (config.run1 && facts.base == STATIC) checkNotNull(pointResumes).computedGroups(premise, facts)
-        if (erasesRun1StaticSummary(premise, facts)) {
+        if (isRootScope && erasesRun1StaticSummary(premise, facts)) {
             staticGuidanceSeeds.add(premise, facts)
             return
         }

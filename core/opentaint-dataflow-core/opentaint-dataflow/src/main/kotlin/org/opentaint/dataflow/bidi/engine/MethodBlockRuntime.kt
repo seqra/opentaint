@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.bidi.engine
 
 import org.opentaint.dataflow.bidi.ap.*
+import org.opentaint.dataflow.bidi.interp.ResumeSite
 import org.opentaint.dataflow.bidi.driver.ScopedTargetRows
 import org.opentaint.dataflow.bidi.store.*
 import org.opentaint.dataflow.graph.*
@@ -35,19 +36,19 @@ internal class MethodBlockRuntime(
     private val entries = LinkedHashMap<BlockScope, Entry>()
     private val ready = LinkedHashSet<BlockScope>()
     private val pending = ArrayDeque<() -> Unit>()
+    private val staticBoundaryRequests by lazy {
+        StaticBoundaryInputRequests(ops, mode, ::forEachLocalInput, ::onRequest)
+    }
     private var boundaryLimitOffers = 0L
     private var boundaryLimitCuts = 0L
     private val methodExit = if (forward) PortId.ROOT_EXIT else PortId.ROOT_ENTRY
     private val controlEntry = if (forward) PortId.ROOT_ENTRY else PortId.ROOT_EXIT
     private val exceptionExit = PortId(-4)
-    private val rootStarts = context.forms.startNodes(key, zero = true).toHashSet()
     private val normalEndpoints = port.shared.interpreter.exitNodes(key).filter { !it.exceptional }
         .mapTo(HashSet()) { port.shared.language.getInstIndex(it.node) }
     private val exceptionalEndpoints = port.shared.interpreter.exitNodes(key).filter { it.exceptional }
         .mapTo(HashSet()) { port.shared.language.getInstIndex(it.node) }
     private val originalEntry = port.shared.language.getInstIndex(port.shared.interpreter.entryNode(key))
-    private val rootEndpoints = (port.shared.interpreter.exitNodes(key).map { it.node } +
-        port.shared.interpreter.entryNode(key)).mapTo(HashSet(), port.shared.language::getInstIndex)
     private var released = false
 
     private data class ChildPoint(val child: BlockId, val exit: PortId)
@@ -55,6 +56,7 @@ internal class MethodBlockRuntime(
         var stateOrNull: BlockRunState? = null
         val state: BlockRunState get() = checkNotNull(stateOrNull) { "A saved-only offer has no mutable block state" }
         val starts = LinkedHashSet<Int>()
+        val methodStarts = LinkedHashSet<Int>()
         val requests = RequestStorage()
         val completions = LinkedHashMap<ChildPoint, ScopedEdgeStore<ChildPoint>>()
         var borrowedExceptionalNormalZero = false
@@ -69,7 +71,7 @@ internal class MethodBlockRuntime(
         private val cacheValue = lazy {
             if (layout[scope.block].instructions.isEmpty()) null else
                 BlockCfgDeliveryCache(layout, graph.graph, scope.block, !forward, ap.cancellation,
-                    directedView = directed, boundaryTarget = ::isRootEnd) { index, base ->
+                    directedView = directed) { index, base ->
                     val node = graph.instructions[index]
                     context.isEnd(node) || context.isExceptionalExit(node) || context.forms.isBaseRelevant(key, node, base)
                 }
@@ -118,29 +120,29 @@ internal class MethodBlockRuntime(
         }
     }
 
+    override fun start(node: CommonInst, original: InitialAp, value: Facts) {
+        check(!released)
+        if (!forward && port.shared.language.getInstIndex(node) in exceptionalEndpoints) {
+            // Selected HACK: the already admitted original ZERO follows the
+            // real exceptional boundary and its actual discovery successors.
+            root.startAt(original, node, value) { pr, result -> root.enqueueInput(node, pr, result) }
+        } else routeInside(entries.getValue(BlockScope.ROOT), port.shared.language.getInstIndex(node),
+            original, value, controlEntry, methodStart = true)
+    }
+
     override fun enter(node: CommonInst, original: PremiseKey, value: Facts) = enterRoot(node, original, value)
     fun enterRoot(node: CommonInst, original: PremiseKey, value: Facts) {
         check(!released)
-        // These are the original method boundary operations. The root has
-        // already applied their start rules. In particular, backward ZERO must
-        // follow the exceptional boundary's existing discovery successors
-        // before a body block's local admission is considered.
-        if (node in rootStarts || context.isEnd(node) || context.isExceptionalExit(node)) {
+        if (!forward && port.shared.language.getInstIndex(node) in exceptionalEndpoints)
             root.enqueueInput(node, original, value)
-            return
-        }
-        routeInside(entries.getValue(BlockScope.ROOT), port.shared.language.getInstIndex(node), original, value, controlEntry)
+        else routeInside(entries.getValue(BlockScope.ROOT), port.shared.language.getInstIndex(node), original, value, controlEntry)
     }
     override fun successors(node: CommonInst, original: PremiseKey, value: Facts) = successorsRoot(node, original, value)
     fun successorsRoot(node: CommonInst, original: PremiseKey, value: Facts) {
         val from = port.shared.language.getInstIndex(node)
         graph.forEachSuccessor(port.shared.language, node) { next ->
-            if (next in rootStarts || context.isEnd(next) || context.isExceptionalExit(next))
-                root.enqueueInput(next, original, value)
-            else {
-                val to = port.shared.language.getInstIndex(next)
-                routeInside(entries.getValue(BlockScope.ROOT), to, original, value, directed.route(from, to).port)
-            }
+            val to = port.shared.language.getInstIndex(next)
+            routeInside(entries.getValue(BlockScope.ROOT), to, original, value, directed.route(from, to).port)
         }
     }
 
@@ -170,10 +172,15 @@ internal class MethodBlockRuntime(
 
     private fun admitTarget(e: Entry, target: Int, original: PremiseKey, value: Facts): Boolean {
         if (target in e.starts) return false
-        if (e.scope.entry.ordinal >= 0)
+        val normal = layout.normalExit(e.scope.entry)
+        if (normal != null) {
+            check(if (forward) target == normal.target else normal.routes.any { directedRoute(it).to == target }) {
+                "A canonical normal interface keeps its certified real targets"
+            }
+        } else if (e.scope.entry.ordinal >= 0)
             check(directedRoute(e.scope.entry).to == target) { "A physical entry port has one actual target" }
         if (e.starts.isNotEmpty()) {
-            check(e.scope.entry.ordinal < 0 && original.isZero && value is Reach &&
+            check(normal != null || e.scope.entry.ordinal < 0 && original.isZero && value is Reach &&
                 e.stateOrNull?.initials?.all().orEmpty().all { it.isZero }) {
                 "Distinct logical control targets cannot share ordinary DATA initials"
             }
@@ -204,12 +211,19 @@ internal class MethodBlockRuntime(
         override val demand get() = e.demand
         override fun schedule() { ready += scope; port.enqueue(root) }
         override fun start(state: BlockRunState, original: InitialAp, value: Facts) {
+            check(original.isZero || e.starts.size <= 1 || layout.normalExit(scope.entry) != null) { "A DATA initial has one exact entry target" }
             if (isEmptyBlock(scope.block)) {
-                state.retainBlockSummary(scope.entry, original, value)
-            } else {
-                check(original.isZero || e.starts.size <= 1) { "A DATA initial has one exact entry target" }
-                for (target in e.starts.toList()) queue { routeInside(e, target, original, value, scope.entry) }
+                val start = e.starts.singleOrNull()
+                if (start != null && start in e.methodStarts)
+                    state.startAt(original, graph.instructions[start], value)
+                else state.retainBlockSummary(scope.entry, original, value)
+                return
             }
+            for (target in e.starts.toList()) queue { startEntryTarget(e, state, target, original, value) }
+        }
+        override fun startResult(state: BlockRunState, node: CommonInst, original: PremiseKey, value: Facts) {
+            if (isEmptyBlock(scope.block)) state.retainBlockSummary(scope.entry, original, value)
+            else routeInside(e, port.shared.language.getInstIndex(node), original, value, scope.entry)
         }
         override fun successors(state: BlockRunState, node: CommonInst, original: PremiseKey, value: Facts) {
             val from = port.shared.language.getInstIndex(node)
@@ -234,20 +248,30 @@ internal class MethodBlockRuntime(
             if (fresh.isEmpty()) return
             e.links.forEachInput { link, value -> applyRequests(e, link, value, fresh) }
         }
+        override fun staticMarkRequest(initial: InitialAp, mark: TaintMark) {
+            if (config.run1 && forward && scope.entry == PortId.ROOT_EXIT)
+                staticBoundaryRequests.request(scope, initial, mark)
+        }
         override fun staticTicket(): Long = root.allocateStaticTicket(scope)
         override fun routeStaticToExit(state: BlockRunState, node: CommonInst, original: PremiseKey, value: Facts) {
-            state.retainBlockSummary(PortId.ROOT_EXIT, original, value)
+            state.retainBlockSummary(PortId.STATIC_SHORTCUT, original, value)
         }
         override fun methodBoundary(state: BlockRunState, node: CommonInst, original: PremiseKey, value: Facts, summary: Boolean) {
-            state.retainBlockSummary(if (summary) methodExit else exceptionExit, original, value)
+            state.endAt(original, node, value, summary)
         }
         override fun deliveryStatistics(): BlockDeliveryStatistics? = e.existingCache()?.let {
             BlockDeliveryStatistics(it.hits, it.searches, it.visitedNodes, it.destinations, it.maxWidth)
         }
     }
 
+    private fun startEntryTarget(e: Entry, state: BlockRunState, target: Int, original: PremiseKey, value: Facts) {
+        if (target in e.methodStarts && layout[e.scope.block].isLeaf)
+            state.startAt(original, graph.instructions[target], value)
+        else routeInside(e, target, original, value, e.scope.entry, methodStart = target in e.methodStarts)
+    }
+
     private fun routeInside(parent: Entry, target: Int, original: PremiseKey, value: Facts,
-                            arrival: PortId, passedEmpty: Boolean = false) {
+                            arrival: PortId, passedEmpty: Boolean = false, methodStart: Boolean = false) {
         ap.cancellation.checkpoint()
         val block = layout[parent.scope.block]
         if (block.isLeaf) {
@@ -257,26 +281,29 @@ internal class MethodBlockRuntime(
         }
         val next = block.children.single { layout.contains(it, target) }
         val emptyPrefix = if (forward) block.before else block.after
-        val arrivalRoute = if (arrival.ordinal < 0) null else directedRoute(arrival)
+        val arrivalRoute = routesByPort[arrival]
         if (!passedEmpty && next == block.loop && emptyPrefix != null &&
             isEmptyBlock(emptyPrefix) && arrivalRoute?.feedbackLoop != next && arrivalRoute?.discovery != true) {
-            offerChild(parent, emptyPrefix, target, original, value, arrival)
-        } else offerChild(parent, next, target, original, value, arrival)
+            offerChild(parent, emptyPrefix, target, original, value, arrival, methodStart)
+        } else offerChild(parent, next, target, original, value, arrival, methodStart)
     }
 
     private fun dispatch(e: Entry, target: BlockDeliveryTarget, original: PremiseKey, value: Facts) {
         when (target) {
             is BlockDeliveryTarget.Statement -> e.state.enqueueInput(graph.instructions[target.index], original, value)
-            is BlockDeliveryTarget.Boundary -> e.state.retainBlockSummary(target.route.port, original, value)
+            is BlockDeliveryTarget.Boundary -> e.state.retainBlockSummary(outputPort(target.route.port, e.scope.block), original, value)
         }
     }
 
-    private fun offerChild(parent: Entry, child: BlockId, target: Int, original: PremiseKey, value: Facts, arrival: PortId) {
+    private fun offerChild(parent: Entry, child: BlockId, target: Int, original: PremiseKey, value: Facts, arrival: PortId,
+                           methodStart: Boolean = false) {
         // DATA/native rows keep the actual ingress, including ZERO identity
         // relations. A typed terminal endpoint is not a replacement for it.
-        val scope = BlockScope(child, arrival)
+        val logical = inputPort(arrival, parent.scope.block, child)
+        val scope = BlockScope(child, logical)
         val childEntry = entry(scope)
-        val link = LocalLink(parent.scope, arrival, original, value.layer, scope)
+        if (methodStart) childEntry.methodStarts += target
+        val link = LocalLink(parent.scope, logical, original, value.layer, scope)
         replaySaved(childEntry, link, value)
         val admission = if (config.run1) null else childEntry.demand!!.admission(value, config.admissionPolicy)
         val initials = admission?.initials
@@ -284,8 +311,17 @@ internal class MethodBlockRuntime(
         if (admission?.borrowedExceptionalNormalZero == true) childEntry.borrowedExceptionalNormalZero = true
         val state = childEntry.ensureState()
         val admittedTarget = admitTarget(childEntry, target, original, value)
-        if (admittedTarget && state.initials.all().any { it.isZero } && original.isZero && value is Reach)
-            queue { routeInside(childEntry, target, ap.zero, state.forceRun1Layer(ap.zero, ops.startFact(ap.zero, mode)), scope.entry) }
+        if (admittedTarget && layout.normalExit(scope.entry) != null) {
+            // All these targets are true reverse predecessors of the SAME
+            // original normal join. A previously admitted fact reaches each.
+            for (initial in state.initials.admissions()) {
+                val intrinsic = ops.startFact(initial.initial, mode)
+                val start = state.forceRun1Layer(initial.initial,
+                    intrinsic.withLayer(intrinsic.layer or (initial.layer == Layer.DEMAND)))
+                queue { startEntryTarget(childEntry, state, target, initial.initial, start) }
+            }
+        } else if (admittedTarget && state.initials.all().any { it.isZero } && original.isZero && value is Reach)
+            queue { startEntryTarget(childEntry, state, target, ap.zero, state.forceRun1Layer(ap.zero, ops.startFact(ap.zero, mode))) }
         childEntry.links.offer(link, value)
         if (config.run1) {
             checkNotNull(state.abstraction).emit(original, value)
@@ -304,7 +340,15 @@ internal class MethodBlockRuntime(
         // counted method Work reservation for those deliveries independently
         // of initial admission.
         if (child.links.hasPending) port.enqueue(root)
-        checkNotNull(child.state.abstraction).emit(original, value)
+        if (forward && child.scope.entry == PortId.ROOT_EXIT && value.base == STATIC) {
+            // The selected outer link retains CF/T -> CG/T. The local span's
+            // own initial is CG/T; propagate this real supplied operation input
+            // through the same identity continuations used by the raw write.
+            for (scalar in annotatedLoopScalars(ops, value)) {
+                val initial = concreteStaticResumeInitial(ap, ops.leaves(scalar).single())
+                routeStaticBoundaryInput(child, initial, scalar)
+            }
+        } else checkNotNull(child.state.abstraction).emit(original, value)
     }
 
     private fun applyRequests(child: Entry, link: LocalLink, actual: Facts, rows: RequestRows) {
@@ -417,41 +461,53 @@ internal class MethodBlockRuntime(
     private fun routeCompleted(parent: Entry, child: MethodBlock, link: LocalLink, exit: PortId,
                                original: PremiseKey, value: Facts) {
         if (isEmptyBlock(child.id)) {
-            for (target in if (link.point.ordinal >= 0) listOf(directedRoute(link.point).to)
-                    else entries.getValue(link.child).starts.toList()) {
-                if (isRootEnd(target)) finishAtRootBoundary(parent, link.point, target, original, value)
-                else if (layout.contains(parent.scope.block, target))
+            if (link.point.ordinal >= 0) for (route in deliveryRoutes(link.point)) {
+                if (route.feedbackLoop == parent.scope.block)
+                    parent.state.retainBlockSummary(route.port, original, value)
+                else if (layout.contains(parent.scope.block, route.to))
+                    routeInside(parent, route.to, original, value, link.point, passedEmpty = true)
+                else parent.state.retainBlockSummary(outputPort(route.port, parent.scope.block), original, value)
+            } else for (target in entries.getValue(link.child).starts.toList()) {
+                if (layout.contains(parent.scope.block, target))
                     routeInside(parent, target, original, value, link.point, passedEmpty = true)
                 else parent.state.retainBlockSummary(link.point, original, value)
             }
+            return
+        }
+        if (exit == PortId.STATIC_SHORTCUT) {
+            check(config.run1 && forward && value.base == STATIC) {
+                "Only an unprocessed run-1 static output uses the shortcut channel"
+            }
+            if (parent.scope == BlockScope.ROOT) routeStaticBoundaryInput(parent, original, value)
+            else parent.state.retainBlockSummary(PortId.STATIC_SHORTCUT, original, value)
             return
         }
         if (exit.ordinal < 0) {
             if (parent.scope == BlockScope.ROOT) {
                 val node = if (exit == exceptionExit) port.shared.interpreter.exitNodes(key).single { it.exceptional }.node
                     else if (forward) context.normalExit else port.shared.interpreter.entryNode(key)
-                root.endAt(original, node, value, summary = exit != exceptionExit)
+                // ROOT_EXIT comes from an actual completed handler, whether
+                // its input used normal J or the private operation continuation.
+                root.finishBoundMethodBoundary(original, node, value, summary = exit != exceptionExit)
             } else parent.state.retainBlockSummary(exit, original, value)
             return
         }
-        val route = directedRoute(exit)
-        if (isRootEnd(route.to) && layout.contains(child.id, route.to)) {
-            finishAtRootBoundary(parent, exit, route.to, original, value)
-            return
-        }
-        if (layout.contains(parent.scope.block, route.to) && route.feedbackLoop != parent.scope.block)
-            routeInside(parent, route.to, original, value, exit)
-        else if (parent.scope == BlockScope.ROOT) error("An original CFG edge cannot leave its method layout")
-        else {
-            val suffixId = if (forward) layout[parent.scope.block].after else layout[parent.scope.block].before
-            val suffix = suffixId?.let { layout[it] }
-            if (suffix != null && isEmptyBlock(suffix.id) && child.id != suffix.id)
-                offerChild(parent, suffix.id, route.to, original, value, exit)
-            else parent.state.retainBlockSummary(exit, original, value)
+        for (route in deliveryRoutes(exit)) {
+            if (layout.contains(parent.scope.block, route.to) && route.feedbackLoop != parent.scope.block)
+                routeInside(parent, route.to, original, value, exit)
+            else if (parent.scope == BlockScope.ROOT) error("An original CFG edge cannot leave its method layout")
+            else {
+                val suffixId = if (forward) layout[parent.scope.block].after else layout[parent.scope.block].before
+                val suffix = suffixId?.let { layout[it] }
+                if (suffix != null && isEmptyBlock(suffix.id) && child.id != suffix.id)
+                    offerChild(parent, suffix.id, route.to, original, value, exit)
+                else parent.state.retainBlockSummary(outputPort(route.port, parent.scope.block), original, value)
+            }
         }
     }
 
     private fun entryRole(scope: BlockScope): BlockEntryRole {
+        if (layout.normalExit(scope.entry) != null) return BlockEntryRole.NORMAL_INTERFACE
         val route = routesByPort[scope.entry] ?: return BlockEntryRole.MID_BLOCK
         if (route.discovery || !forward && route.from in exceptionalEndpoints || forward && route.to in exceptionalEndpoints)
             return BlockEntryRole.EXCEPTIONAL_INTERFACE
@@ -463,14 +519,14 @@ internal class MethodBlockRuntime(
 
     private fun normalOutputs(scope: BlockScope): Set<PortId> = buildSet {
         if (isEmptyBlock(scope.block)) {
-            if (scope.entry in routesByPort) add(scope.entry)
+            if (scope.entry in routesByPort || layout.normalExit(scope.entry) != null) add(scope.entry)
             return@buildSet
         }
         for (route in routesByPort.values) {
             if (route.discovery || forward && route.to in exceptionalEndpoints) continue
             if (layout.contains(scope.block, route.from) &&
                 (!layout.contains(scope.block, route.to) || route.feedbackLoop == scope.block || isRootEnd(route.to)))
-                add(route.port)
+                add(outputPort(route.port, scope.block))
         }
     }
 
@@ -478,18 +534,76 @@ internal class MethodBlockRuntime(
         context.isEnd(it) || context.isExceptionalExit(it)
     }
 
-    /** Original endpoint transfers execute at the root, so a sequential region
-     * with only those endpoints has an identity local interface. A loop is never
-     * elided merely because its body is also the method's entry instruction. */
+    /** An empty prefix still has a genuine identity/rule interface. Physical endpoints own transfers. */
     private fun isEmptyBlock(block: BlockId): Boolean = layout[block].let {
-        it.isLeaf && !it.isLoop && it.instructions.all { index -> index in rootEndpoints }
+        it.isLeaf && !it.isLoop && it.instructions.isEmpty()
     }
 
-    private fun finishAtRootBoundary(parent: Entry, exit: PortId, target: Int,
-                                     original: PremiseKey, value: Facts) {
-        if (parent.rootEntry) root.enqueueInput(graph.instructions[target], original, value)
-        else parent.state.retainBlockSummary(exit, original, value)
+    /** Continue a real run-1 write shortcut at its original normal-exit operation.
+     * ROOT_EXIT is the selected operation-local static continuation address, not
+     * a method-entry seed. Its local rows therefore include the real exit rules.
+     */
+    private fun routeStaticBoundaryInput(parent: Entry, original: PremiseKey, value: Facts) {
+        check(config.run1 && forward && value.base == STATIC)
+        val target = port.shared.language.getInstIndex(context.normalExit)
+        val block = layout[parent.scope.block]
+        if (block.isLeaf) {
+            for (scalar in annotatedLoopScalars(ops, value)) {
+                val leaf = ops.leaves(scalar).single()
+                val initial = if (value is TaintTree) concreteStaticResumeInitial(ap, leaf) else {
+                    check(leaf.fact.path.size >= 2) { "A static FLOW continuation names a field" }
+                    ap.initial(Pattern(leaf.fact.copy(path = leaf.fact.path.take(2),
+                        tail = Tail.STAR, mark = MarkSlot.STAR), ExclusionSet.Empty))
+                }
+                parent.state.installPoint(initial, scalar,
+                    ResumeSite.BoundaryInput(parent.state.operation(context.normalExit), atStart = false), null)
+            }
+            return
+        }
+        val childId = block.children.single { layout.contains(it, target) }
+        val child = entry(BlockScope(childId, PortId.ROOT_EXIT))
+        val link = LocalLink(parent.scope, PortId.ROOT_EXIT, original, value.layer, child.scope)
+        replaySaved(child, link, value)
+        child.ensureState()
+        admitTarget(child, target, original, value)
+        child.links.offer(link, value)
+        if (child.links.hasPending) port.enqueue(root)
+        // A local operation input keeps its own initial, exactly as an existing
+        // physical static-read reply. It does not enter Run1Abstraction.
+        for (scalar in annotatedLoopScalars(ops, value)) {
+            val leaf = ops.leaves(scalar).single()
+            val initial = if (value is TaintTree) concreteStaticResumeInitial(ap, leaf) else
+                ap.initial(Pattern(leaf.fact.copy(path = leaf.fact.path.take(2),
+                    tail = Tail.STAR, mark = MarkSlot.STAR), ExclusionSet.Empty))
+            routeStaticBoundaryInput(child, initial, scalar)
+        }
     }
+
+    /** Only the interface currently being crossed changes the port view.
+     * An inner normal completion can retain an enclosing loop's repeat role.
+     */
+    private fun outputPort(actual: PortId, block: BlockId): PortId =
+        layout.normalExitsForRoute(actual).filter { normal ->
+            val adjacent = layout[normal.loop].parent?.let { layout[it].after }
+            layout.isAncestor(normal.loop, block) || adjacent?.let { layout.isAncestor(it, block) } == true
+        }.maxByOrNull { layout[it.loop].depth }?.id ?: actual
+
+    private fun inputPort(actual: PortId, parent: BlockId, child: BlockId): PortId {
+        if (layout.normalExit(actual) != null) return actual
+        return layout.normalExitsForRoute(actual).filter { normal ->
+            layout.isAncestor(normal.loop, child) ||
+                layout[normal.loop].parent == parent && layout[parent].after == child
+        }.maxByOrNull { layout[it.loop].depth }?.id ?: actual
+    }
+
+    /** Same actual output adapter for live delivery and the pure paired observer. */
+    private fun enclosingPorts(exit: PortId, parent: BlockId): List<PortId> =
+        if (exit.ordinal < 0) listOf(exit) else deliveryRoutes(exit)
+            .map { outputPort(it.port, parent) }.distinct()
+
+    /** Forward has one certified target; reverse restores EVERY real predecessor. */
+    private fun deliveryRoutes(portId: PortId): List<MethodBlockRoute> =
+        layout.normalExit(portId)?.routes?.map(::directedRoute) ?: listOf(directedRoute(portId))
 
     private fun directedRoute(portId: PortId): MethodBlockRoute =
         routesByPort[portId] ?: error("Unknown directed block port $portId")
@@ -502,8 +616,8 @@ internal class MethodBlockRuntime(
         val adjacentScopes = routesByPort.values.asSequence().filter { route ->
             layout.contains(loop.id, route.from) &&
                 (layout.contains(adjacentId, route.to) || isEmptyBlock(adjacent.id) &&
-                    !layout.contains(parent.scope.block, route.to))
-        }.map { BlockScope(adjacentId, it.port) }.toSet()
+                    (!layout.contains(parent.scope.block, route.to) || route.feedbackLoop == parent.scope.block))
+        }.map { BlockScope(adjacentId, inputPort(it.port, parent.scope.block, adjacentId)) }.toSet()
         val repeatScopes = loop.repeatPorts.map { BlockScope(loop.id, it) }.toSet()
         val adjacentDemands = adjacentScopes.associateWith { checkNotNull(config.demand).scope(key, it) }
         val repeatDemands = repeatScopes.associateWith { checkNotNull(config.demand).scope(key, it) }
@@ -518,7 +632,8 @@ internal class MethodBlockRuntime(
             { actual -> adjacentDemands.values.flatMap { it.initials(actual, config.admissionPolicy) }.toSet() },
             { actual -> repeatDemands.values.flatMap { it.initials(actual, config.admissionPolicy) }.toSet() },
             { actual -> adjacentScopes.asSequence().flatMap { scope -> savedRows(scope, actual) }
-                .map { LoopObservedRecord(it, checkNotNull(it.exitIn(config.direction))) } },
+                .flatMap { record -> enclosingPorts(checkNotNull(record.exitIn(config.direction)), parent.scope.block)
+                    .asSequence().map { LoopObservedRecord(record, it) } } },
             { pr, actual -> adjacentScopes.asSequence().flatMap { scope ->
                 config.normalTargets.candidates(key, scope, pr, actual, mode).asSequence()
             }.map { (row, member) -> LoopObservedTarget(row, member, methodExit) } },
@@ -527,7 +642,8 @@ internal class MethodBlockRuntime(
             { portId, pr -> if (parent.rootEntry) checkNotNull(config.demand).acceptsTarget(key, pr, config.admissionPolicy)
                 else checkNotNull(enclosingDemand).acceptsTarget(portId, pr, config.admissionPolicy) },
             { pr, id -> config.normalTargets.contains(key, if (parent.rootEntry) null else parent.scope, pr, id) },
-            port.shared.interpreter::isSummaryBase, ::labelled)
+            port.shared.interpreter::isSummaryBase, ::labelled,
+            { pr, actual -> if (parent.rootEntry) root.adjustObservedMethodExit(pr, actual) else actual })
         LoopConsumerObservation(ops, mode, views)
         }
         return observer.observe(original, value)
@@ -536,7 +652,12 @@ internal class MethodBlockRuntime(
     /** Barrier-only scalar census. It retains no edge, premise or form snapshot. */
     fun diagnosticStatistics(): String {
         val counts = restriction.statistics
+        val gapDetails = if (layout.normalExitGaps.isEmpty()) "" else " normalGapDetails=" +
+            layout.normalExitGaps.joinToString("|") {
+                "${it.loop.ordinal}:headers[${it.headers.joinToString(",")}]:continuations[${it.continuations.joinToString(",")}]"
+            }
         return "layoutBlocks=${layout.blocks.size} loops=${layout.blocks.count { it.isLoop }} " +
+            "normalExitGaps=${layout.normalExitGaps.size} " +
             "maxDepth=${layout.blocks.maxOfOrNull { it.depth } ?: 0} entryScopes=${entries.size} " +
             "instantiatedStates=${entries.values.count { it.stateOrNull != null }} " +
             "liveInputGroups=${entries.values.sumOf { it.links.inputGroups.toLong() }} " +
@@ -544,7 +665,7 @@ internal class MethodBlockRuntime(
             "boundaryLimitOffers=$boundaryLimitOffers boundaryLimitCuts=$boundaryLimitCuts " +
             "offers=${counts.offers} bypasses=${counts.bypasses} scalars=${counts.scalarQueries} " +
             "observations=${counts.observations} trials=${counts.trials} drops=${counts.drops} " +
-            "cuts=${counts.cuts} rawFallbacks=${counts.rawFallbacks}"
+            "cuts=${counts.cuts} rawFallbacks=${counts.rawFallbacks}" + gapDetails
     }
 
     /** Numeric-only snapshots at the owner barrier; no completion facts escape. */

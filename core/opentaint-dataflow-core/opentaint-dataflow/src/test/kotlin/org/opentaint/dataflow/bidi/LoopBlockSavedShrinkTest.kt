@@ -38,11 +38,11 @@ class LoopBlockSavedShrinkTest {
             val before = checkNotNull(top.before)
             val loop = checkNotNull(top.loop)
             val after = checkNotNull(top.after)
-            val entry = checkNotNull(layout.port(0, 1)).id
+            val entry = PortId.ROOT_ENTRY
             val loopInput = checkNotNull(layout.port(1, 2)).id
             val repeat = checkNotNull(layout.port(3, 2)).id
-            val leave = checkNotNull(layout.port(2, 4)).id
-            val normal = checkNotNull(layout.port(4, 5)).id
+            val leave = layout.normalExitForRoute(checkNotNull(layout.port(2, 4)).id)!!.id
+            val normal = PortId.ROOT_EXIT
             assertEquals(listOf(repeat), layout[loop].repeatPorts)
 
             fun flow(base: AccessPathBase, path: List<Int> = emptyList()) =

@@ -87,17 +87,23 @@ class ScopedStaticCompletionTest {
     }
 
     @Test
-    fun `logical shortcut and terminal ports reverse without a physical leave edge`() {
-        val shortcut = ScopedSummaryKey(method, first.scope, PortId.ROOT_EXIT)
+    fun `raw static shortcut and completed terminal reverse into distinct exact ports`() {
+        val shortcut = ScopedSummaryKey(method, first.scope, PortId.STATIC_SHORTCUT)
+        val terminal = shortcut.copy(exit = PortId.ROOT_EXIT)
         val frozen = FrozenStaticCompletion.Builder(ap, DetachedStaticCallGraph.EMPTY).apply {
             addScopedSeed(shortcut, ap.zero.toPattern(), c(f))
-            addScopedTarget(shortcut, c(f))
+            addScopedTarget(terminal, c(f))
         }.build()
-        val owner = OwnedScope(method, BlockScope(block, PortId.ROOT_EXIT))
-        val scoped = frozen.scopedViews().toMap().getValue(owner)
-        assertEquals(listOf(c(f)), scoped.local(method).targetInputs().toList())
-        assertTrue(scoped.selectExit(PortId(10)).local(method).targetInputs().any())
-        assertTrue(scoped.selectExit(PortId(11)).local(method).targetInputs().none())
+        val views = frozen.scopedViews().toMap()
+        val raw = views.getValue(OwnedScope(method, BlockScope(block, PortId.STATIC_SHORTCUT)))
+        val completed = views.getValue(OwnedScope(method, BlockScope(block, PortId.ROOT_EXIT)))
+        assertTrue(raw.local(method).targetInputs().none(), "A raw write is not an already completed exit")
+        assertTrue(raw.local(method).entries(c(f)).any())
+        assertEquals(listOf(c(f)), completed.local(method).targetInputs().toList())
+        assertTrue(completed.selectExit(PortId(10)).local(method).targetInputs().any())
+        assertTrue(completed.selectExit(PortId(11)).local(method).targetInputs().none())
+        assertEquals(PortId.STATIC_SHORTCUT, shortcut.reversed().scope.entry)
+        assertEquals(PortId.ROOT_EXIT, terminal.reversed().scope.entry)
     }
 
     @Test
@@ -134,7 +140,7 @@ class ScopedStaticCompletionTest {
 
     @Test
     fun `backward source Target uses its registered static write shortcut and exact paired output`() {
-        val producer = first.copy(exit = PortId.ROOT_EXIT)
+        val producer = first.copy(exit = PortId.STATIC_SHORTCUT)
         val demand = shortcutDemand(producer to StaticGuidanceEdge.of(ap.zero.toPattern(), c(f).copy(
             fact = c(f).fact.copy(tail = Tail.ANY))))
         val original = ap.initial(c(f).copy(fact = c(f).fact.copy(tail = Tail.ANY)))
@@ -165,11 +171,15 @@ class ScopedStaticCompletionTest {
 
     @Test
     fun `static shortcut Target requires a ZERO writer derivation rather than carry or arbitrary normal demand`() {
-        val producer = first.copy(exit = PortId.ROOT_EXIT)
+        val producer = first.copy(exit = PortId.STATIC_SHORTCUT)
         val original = ap.initial(c(f).copy(fact = c(f).fact.copy(tail = Tail.EXACT)))
         val policy = RestrictedInitialPolicy(2, 1, Direction.BACKWARD, ap.marks)
         val nonZeroWriter = shortcutDemand(producer to StaticGuidanceEdge.of(local(x), c(f)))
         assertFalse(nonZeroWriter.acceptsStaticShortcutTarget(method, block, first.scope.entry, original, policy))
+        val completedWriter = shortcutDemand(producer.copy(exit = PortId.ROOT_EXIT) to
+            StaticGuidanceEdge.of(ap.zero.toPattern(), c(f)))
+        assertFalse(completedWriter.acceptsStaticShortcutTarget(method, block, first.scope.entry, original, policy),
+            "An already completed normal endpoint must not authorize a raw write shortcut")
         val ordinaryOnly = DemandStore.Builder(ap).apply {
             withSharedStaticCarry()
             add(method, BlockScope(block, PortId.ROOT_EXIT), first.scope.entry,
@@ -182,7 +192,7 @@ class ScopedStaticCompletionTest {
 
     @Test
     fun `static shortcut Target reuses a registered W and lazy static bridge path without terminal authority`() {
-        val producer = first.copy(exit = PortId.ROOT_EXIT)
+        val producer = first.copy(exit = PortId.STATIC_SHORTCUT)
         val demand = shortcutDemand(
             producer to StaticGuidanceEdge.of(ap.zero.toPattern(), c(f)),
             producer to StaticGuidanceEdge.of(c(f), c(g)),

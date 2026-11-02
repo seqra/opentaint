@@ -1,0 +1,42 @@
+{
+  "status": "PASS",
+  "scope": "CONSTRUCTIVE_LOCAL_MODEL_ONLY",
+  "module": "CanonicalLoopExit",
+  "selectedContracts": [
+    "Exact normal-exit labels, native/demand reversal and context-relative feedback",
+    "Certified SCC plus acyclic leave-tail extension with unchanged original graph, headers and feedback",
+    "Real enclosing-header join outside current recursive region with empty AL and restored outer repeat",
+    "Strict rank forbids a new cut-body cycle; extra normal exits reject; nonreturn adds no edge"
+  ],
+  "runtimeAdapterVerified": false,
+  "registeredInMainChecker": true,
+  "productionVerified": false,
+  "runtimeSourcePinsChecked": false,
+  "dateUTC": "2026-11-02T19:31:38.158562+00:00",
+  "leanVersion": "4.33.1",
+  "threads": 1,
+  "exitCode": 0,
+  "command": [
+    "lean",
+    "-j1",
+    "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/CanonicalLoopExit.lean"
+  ],
+  "source": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/CanonicalLoopExit.lean",
+  "sourceSHA256": "19219097c60328b0641eb1ee89027ac94e86d25e3c2be2011c24865b5114a606",
+  "auditLog": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/CanonicalLoopExit-audit.txt",
+  "auditLogSHA256": "874f5b60fd4a32c969d3d40eb9f3de490f9df5a662d2816d57e11b5cf3114e14",
+  "theorems": 41,
+  "auditedPublicDefinitionsAndTheorems": 99,
+  "axioms": [
+    "Quot.sound",
+    "propext"
+  ],
+  "notProved": [
+    "Kotlin storage/runtime source correspondence",
+    "Full AP matching/materialization/protection/native representations",
+    "Actual rule evaluation or root-origin-dependent metadata",
+    "Kotlin graph search, decomposition and nearest postdominator selection",
+    "Whole-program convergence or project-quality equivalence"
+  ],
+  "nativeStatus": "Separate native acceptance is in progress; this receipt verifies no production adapter."
+}

@@ -49,6 +49,26 @@ class MethodBlockLayoutTest {
         assertEquals(listOf(3, 4, 5, 6, 7), layout.instructions(al1.id).sorted().toList())
     }
 
+    @Test fun `acyclic break tails remain in the loop traversal before one normal join`() {
+        // while (...) { if (a) { sourceP(); break; } else { sourceQ(); break; } }
+        // The cyclic core is only {1,7}; both acyclic branch tails belong to
+        // this complete traversal, and meet at the one actual continuation 6.
+        val g = graph(9, 0 to 1, 1 to 2, 1 to 4, 1 to 7, 7 to 1,
+            2 to 3, 3 to 6, 4 to 5, 5 to 6)
+        val layout = MethodBlockLayoutBuilder.build(g, listOf(0))
+        val root = layout[layout.root]
+        val loop = layout[checkNotNull(root.loop)]
+        for (tail in listOf(2, 3, 4, 5)) assertTrue(layout.contains(loop.id, tail),
+            "The complete loop traversal must contain acyclic break tail $tail")
+        assertFalse(layout.contains(loop.id, 6), "The common continuation belongs to AL")
+        assertTrue(layout.contains(checkNotNull(root.after), 6))
+        assertEquals(loop.id, layout.route(7, 1).feedbackLoop)
+        assertEquals(null, layout.route(3, 6).feedbackLoop)
+        assertEquals(null, layout.route(5, 6).feedbackLoop)
+        assertNotEquals(layout.route(3, 6).port, layout.route(5, 6).port,
+            "Canonical normal interfaces must retain both original CFG routes")
+    }
+
     @Test fun `nested loops belong below an outer loop iteration`() {
         val g = graph(7, 0 to 1, 1 to 2, 2 to 3, 3 to 2, 2 to 4, 4 to 1, 1 to 5)
         val layout = MethodBlockLayoutBuilder.build(g, listOf(0))
@@ -61,6 +81,53 @@ class MethodBlockLayoutTest {
         assertEquals(outer.id, layout.route(4, 1).feedbackLoop)
         assertEquals(inner.id, layout.route(3, 2).feedbackLoop)
         assertNotEquals(layout.route(4, 1).port, layout.route(3, 2).port)
+    }
+
+    @Test fun `nested break to an ancestor stays typed and ordinary normal interfaces are unique`() {
+        // outer: while (...) { while (...) { if (stop()) break outer; } afterInner(); }
+        val g = graph(9, 0 to 1, 1 to 2, 1 to 6, 2 to 3, 3 to 2,
+            2 to 4, 4 to 1, 2 to 6, 6 to 7)
+        val layout = MethodBlockLayoutBuilder.build(g, listOf(0), listOf(8), listOf(7))
+        val outer = layout[checkNotNull(layout[layout.root].loop)]
+        val inner = layout[checkNotNull(outer.loop)]
+        assertTrue(layout.normalExitGaps.isEmpty(), layout.normalExitGaps.toString())
+        assertEquals(4, layout.normalExits.single { it.loop == inner.id }.target)
+        assertEquals(6, layout.normalExits.single { it.loop == outer.id }.target)
+        assertEquals(layout.normalExits.flatMap { it.routes }.size,
+            layout.normalExits.flatMap { it.routes }.distinct().size)
+        val ancestorBreak = layout.route(2, 6)
+        assertEquals(outer.id, layout.normalExitForRoute(ancestorBreak.port)?.loop)
+        assertEquals(outer.id, layout.route(4, 1).feedbackLoop)
+        assertEquals(null, layout.normalExitForRoute(layout.route(4, 1).port),
+            "An inherited repeat stays a feedback port, not a normal interface")
+    }
+
+    @Test fun `inner continue outer tails share their actual enclosing header without merging outer feedback`() {
+        // outer: while (a()) {
+        //   while (b()) { if (c()) continue outer; }
+        //   afterInner();
+        // }
+        val g = graph(10, 0 to 1, 1 to 2, 1 to 8, 2 to 3, 3 to 2,
+            2 to 4, 4 to 6, 2 to 5, 5 to 1, 6 to 1)
+        val layout = MethodBlockLayoutBuilder.build(g, listOf(0), listOf(9), listOf(8))
+        val outer = layout[checkNotNull(layout[layout.root].loop)]
+        val inner = layout[checkNotNull(outer.loop)]
+        assertTrue(layout.normalExitGaps.isEmpty(), layout.normalExitGaps.toString())
+        for (tail in listOf(4, 5, 6)) assertTrue(layout.contains(inner.id, tail))
+        assertFalse(layout.contains(inner.id, 1), "The enclosing header remains outside the inner traversal")
+        val normal = layout.normalExits.single { it.loop == inner.id }
+        assertEquals(1, normal.target)
+        val outerRepeats = setOf(layout.port(5, 1)!!.id, layout.port(6, 1)!!.id)
+        assertEquals(outerRepeats, normal.routes.toSet())
+        for (port in outerRepeats) {
+            val physical = layout.ports[port.ordinal]
+            assertEquals(outer.id, layout.route(physical.from, physical.to).feedbackLoop,
+                "A normal inner completion retains its original outer feedback role")
+        }
+        assertEquals(inner.id, layout.route(3, 2).feedbackLoop)
+        assertFalse(layout.port(3, 2)!!.id in normal.routes)
+        assertTrue(layout[checkNotNull(outer.after)].instructions.isEmpty(),
+            "All local normal leave tails end at the already existing enclosing boundary")
     }
 
     @Test fun `self loop and irreducible multi entry retain all physical ports`() {
@@ -76,6 +143,8 @@ class MethodBlockLayoutTest {
         assertEquals(loop.id, layout.route(1, 2).feedbackLoop)
         assertEquals(loop.id, layout.route(2, 1).feedbackLoop)
         assertEquals(2, loop.repeatPorts.size)
+        assertTrue(layout.normalExitGaps.isNotEmpty(),
+            "Untyped distinct terminal continuations must be reported explicitly")
     }
 
     @Test fun `bypass break return throw and handler edges retain exact endpoints`() {

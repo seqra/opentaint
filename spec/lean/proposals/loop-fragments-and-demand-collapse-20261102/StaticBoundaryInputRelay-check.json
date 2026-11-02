@@ -1,0 +1,42 @@
+{
+  "status": "PASS",
+  "scope": "CONSTRUCTIVE_LOCAL_MODEL_ONLY",
+  "module": "StaticBoundaryInputRelay",
+  "selectedContracts": [
+    "Actual operation-local FLOW mark request only; exact registered identity path to original root input",
+    "Successful requests name actual root link/field; strict-parent depth and image-field preservation",
+    "No C.f/T inferred from C.g/T; genuine original reply uses canonical C.g/T inner basis",
+    "Existing leaf composition returns true outer C.f/T dependency",
+    "Existing point pool interest/writer directory unchanged; late input registered before real point request; no persistent history"
+  ],
+  "runtimeAdapterVerified": false,
+  "registeredInMainChecker": true,
+  "productionVerified": false,
+  "runtimeSourcePinsChecked": false,
+  "dateUTC": "2026-11-02T19:31:38.831742+00:00",
+  "leanVersion": "4.33.1",
+  "threads": 1,
+  "exitCode": 0,
+  "command": [
+    "lean",
+    "-j1",
+    "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/StaticBoundaryInputRelay.lean"
+  ],
+  "source": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/StaticBoundaryInputRelay.lean",
+  "sourceSHA256": "c35f28a7d744ee884067e3cebdfd2ce218bc6f5238c7cb03fecbd6e745b274f4",
+  "auditLog": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/StaticBoundaryInputRelay-audit.txt",
+  "auditLogSHA256": "b3b8abd1e42d1da2cf2492a64b152ab58f83918d4ce24f026b055b77d46ead55",
+  "theorems": 18,
+  "auditedPublicDefinitionsAndTheorems": 42,
+  "axioms": [
+    "propext"
+  ],
+  "notProved": [
+    "Kotlin storage/runtime source correspondence",
+    "Full AP matching/materialization/protection/native representations",
+    "Actual rule evaluation or root-origin-dependent metadata",
+    "Kotlin graph search, decomposition and nearest postdominator selection",
+    "Whole-program convergence or project-quality equivalence"
+  ],
+  "nativeStatus": "Separate native acceptance is in progress; this receipt verifies no production adapter."
+}

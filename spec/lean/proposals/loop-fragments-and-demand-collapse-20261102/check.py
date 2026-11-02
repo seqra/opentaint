@@ -19,7 +19,10 @@ ROOT = next(p for p in HERE.parents if (p / "spec/lean/lean-toolchain").is_file(
 TOOLCHAIN = "leanprover/lean4:v4.33.1"
 MODULES = ["Control", "Geometry", "Admission", "Guidance", "Shape",
            "Protocol", "Restriction", "Feedback", "Blocks", "Decomposition", "Implementation", "Discovery",
-           "ExceptionalControlDemand", "Usefulness"]
+           "ExceptionalControlDemand", "Usefulness", "EntryPrefixNativeRecords", "NearestBoundaryTerminals",
+           "CanonicalLoopExit", "StaticBoundaryInputRelay", "MethodExitMetadataEffects"]
+BOUNDARY_MODULES = ["EntryPrefixNativeRecords", "NearestBoundaryTerminals", "CanonicalLoopExit",
+                    "StaticBoundaryInputRelay", "MethodExitMetadataEffects"]
 ALLOWED_AXIOMS = {"propext", "Quot.sound"}
 
 
@@ -45,6 +48,17 @@ def main() -> None:
     module_spec.loader.exec_module(scanner)
 
     sources = [HERE / f"{name}.lean" for name in MODULES]
+    standalone_inputs = []
+    for name in BOUNDARY_MODULES:
+        source = HERE / (name + ".lean")
+        receipt_path = HERE / (name + "-check.json")
+        standalone = json.loads(receipt_path.read_text())
+        audit_path = ROOT / standalone["auditLog"]
+        if (standalone["status"] != "PASS" or standalone["productionVerified"] is not False or
+                standalone.get("registeredInMainChecker") is not True or
+                sha(source) != standalone["sourceSHA256"] or sha(audit_path) != standalone["auditLogSHA256"]):
+            raise RuntimeError("Standalone boundary-model receipt differs from its exact inputs: " + name)
+        standalone_inputs += [receipt_path, audit_path]
     spec_path = ROOT / "spec/loop-fragments-and-demand-collapse.md"
     pins_path = HERE / "implementation-source-pins.json"
     pins = json.loads(pins_path.read_text())
@@ -85,7 +99,7 @@ def main() -> None:
             if entry["sourceSetSha256"] != native_validation["sourceSetSha256"]:
                 raise RuntimeError("Native source-set receipt changed")
     runtime_inputs = [] if args.model_only else [ROOT / source for source in pins["sources"]]
-    inputs = sources + [pins_path] + runtime_inputs + historical_inputs + [HERE / "README.md", HERE / "check.py", HERE / "controls.md",
+    inputs = sources + standalone_inputs + [pins_path] + runtime_inputs + historical_inputs + [HERE / "README.md", HERE / "check.py", HERE / "controls.md",
                         HERE / "controls/LoopGrowingDemandControlTest.kt",
                         HERE / "controls/LoopNoLeaveDiscoveryControlTest.kt",
                         HERE / "controls/control.init.gradle", scanner_path,
@@ -157,6 +171,7 @@ def main() -> None:
         "onlyAllowedAxioms": axioms <= ALLOWED_AXIOMS,
         "noChoiceOrUnprovedAxioms": not ({"Classical.choice", "sorryAx"} & axioms),
         "inputsStable": before == {str(path.relative_to(ROOT)): sha(path) for path in inputs},
+        "standaloneBoundaryModelReceiptHashesMatch": True,
     }
     if not args.model_only:
         checks.update(sourceScopeMembershipComplete=True, historicalReceiptPreserved=True,
@@ -195,6 +210,11 @@ def main() -> None:
             "Usefulness is a reference investigation only; no NORMAL reachability service is selected.",
             "The AP composition-to-projection adapter and whole-driver refinement must still be closed.",
             "Feedback proves an exact-path counterexample to the AL/B-end-only gate, not an outlined runtime regression.",
+            "EntryPrefixNativeRecords covers the stated finite FULL/MUST and DEMAND cells, not the full AP boundary adapter.",
+            "NearestBoundaryTerminals assumes complete already-matched applications; it does not verify Kotlin matching or scheduling.",
+            "CanonicalLoopExit verifies supplied finite extension certificates and context roles, not Kotlin postdominator search or nearestness.",
+            "StaticBoundaryInputRelay checks registered identity paths, original-input replies and event order, not the full AP materializer or Kotlin traversal.",
+            "MethodExitMetadataEffects has a generic immutable ordered-check law and finite FULL/TAINT header examples, not a full AP or Kotlin proof.",
         ],
     }
     receipt_path = HERE / ("model-checks.json" if args.model_only else "checks.json")

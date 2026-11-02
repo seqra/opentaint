@@ -188,11 +188,11 @@ class ModesTest {
             core.addInitial(initial)
             f.drain(core, quantum = 1)
             assertEquals(setOf(f.manager.zero, initial), core.initials.all().toSet())
-            assertEquals(setOf(0), f.processed.map { it.node.location.index }.toSet())
-            assertEquals(2L, core.steps, "Root admission does not grant an internal loop C2 permission")
+            assertTrue(f.processed.isEmpty(), "Root admission does not grant current analysis of the before-region span")
+            assertEquals(0L, core.steps)
             for (premise in listOf(f.manager.zero, initial)) {
-                assertEquals(listOf(0), f.processed.filter { it.premise === premise }.map { it.node.location.index })
-                assertEquals(1, core.edges.edgesAt(f.inst(0), premise).count())
+                assertTrue(f.processed.none { it.premise === premise })
+                assertEquals(0, core.edges.edgesAt(f.inst(0), premise).count())
                 assertEquals(0, core.edges.edgesAt(f.inst(1), premise).count())
             }
             assertTrue(f.processed.none { it.node === f.inst(2) })
@@ -201,7 +201,7 @@ class ModesTest {
             assertTrue(f.publications.isEmpty())
             assertTrue(f.requests.isEmpty())
             assertTrue(f.cuts.none { it.first == Cut.STATEMENT || it.first == Cut.EXIT_RULES })
-            assertEquals(2L, core.edgeDeltas, "Only the entered root boundary stores these results")
+            assertEquals(0L, core.edgeDeltas, "The physical entry now belongs to the unadmitted before-region span")
             assertEquals(0L, core.demandLayerEdges)
             assertTrue(core.work(1))
         }

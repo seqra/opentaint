@@ -13,10 +13,24 @@ value class PortId(val ordinal: Int) {
     companion object {
         val ROOT_ENTRY = PortId(-1)
         val ROOT_EXIT = PortId(-2)
+        /** Run-1 raw static output: the real normal-exit rules have not run yet. */
+        val STATIC_SHORTCUT = PortId(-5)
     }
 }
 
 enum class MethodBlockKind { SEQUENTIAL, LOOP }
+
+/** One logical normal interface. Every route remains an original CFG edge. */
+class MethodBlockNormalExit internal constructor(val id: PortId, val loop: BlockId, val target: Int,
+                                                routes: List<PortId>) {
+    val routes: List<PortId> = Collections.unmodifiableList(routes.toList())
+}
+class MethodBlockNormalExitGap internal constructor(val loop: BlockId, headers: List<Int>,
+                                                   continuations: List<Int>) {
+    val headers: List<Int> = Collections.unmodifiableList(headers.toList())
+    val continuations: List<Int> = Collections.unmodifiableList(continuations.toList())
+    override fun toString(): String = "NormalExitGap(loop=$loop, headers=$headers, continuations=$continuations)"
+}
 
 /** A CFG edge is between the transfer at [from] and the transfer at [to]. */
 data class MethodBlockPort(val id: PortId, val from: Int, val to: Int)
@@ -73,9 +87,21 @@ class MethodBlockLayout internal constructor(
     private val localIndices: IntArray,
     private val edgePorts: Map<Long, PortId>,
     private val feedback: Map<PortId, BlockId>,
+    normalExits: List<MethodBlockNormalExit> = emptyList(),
+    normalExitGaps: List<MethodBlockNormalExitGap> = emptyList(),
 ) {
     val blocks: List<MethodBlock> = Collections.unmodifiableList(blocks.toList())
     val ports: List<MethodBlockPort> = Collections.unmodifiableList(ports.toList())
+    val normalExits: List<MethodBlockNormalExit> = Collections.unmodifiableList(normalExits.toList())
+    val normalExitGaps: List<MethodBlockNormalExitGap> = Collections.unmodifiableList(normalExitGaps.toList())
+    val firstDiscoveryPort: Int get() = ports.size + normalExits.size
+    private val normalById = normalExits.associateBy { it.id }
+    private val normalByRoute = normalExits.flatMap { normal -> normal.routes.map { it to normal } }
+        .groupBy({ it.first }, { it.second })
+    fun normalExit(port: PortId): MethodBlockNormalExit? = normalById[port]
+    fun normalExitsForRoute(port: PortId): List<MethodBlockNormalExit> = normalByRoute[port].orEmpty()
+    fun normalExitForRoute(port: PortId): MethodBlockNormalExit? =
+        normalExitsForRoute(port).maxByOrNull { get(it.loop).depth }
     val root: BlockId get() = BlockId.ROOT
     val instructionCount: Int get() = owners.size
     val hasLoops: Boolean = blocks.any { it.isLoop }
@@ -110,7 +136,7 @@ class MethodBlockLayout internal constructor(
     fun directed(graph: CompactGraph, backward: Boolean): DirectedMethodBlockLayout {
         require(graph.size == instructionCount)
         val routes = HashMap<Long, MethodBlockRoute>()
-        var nextPort = ports.size
+        var nextPort = firstDiscoveryPort
         for (from in 0 until graph.size) graph.forEachSuccessor(from) { to ->
             val physical = if (backward) port(to, from) else port(from, to)
             if (physical == null) {

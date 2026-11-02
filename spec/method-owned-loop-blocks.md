@@ -1,6 +1,11 @@
 # Method-owned loop blocks
 
-Date: 2 November 2026. Status: selected design; implementation and native validation complete.
+Date: 2 November 2026. Status: selected design. The boundary corrections
+pass 2,369 common and 453 JVM tests. These native controls do not prove all
+AP adapters or project quality. The latest project campaign is historical:
+OWASP completed **run-5** before these corrections and had 51 missing baseline
+sink identities. A fresh campaign is required. See the
+[boundary coverage report](../docs/reports/bidirectional-loop-boundary-source-gap-20261102.md).
 
 This document defines ownership and execution for
 [loop fragments and demand-guided feedback](loop-fragments-and-demand-collapse.md).
@@ -18,6 +23,11 @@ Blocks are internal analysis regions. They are not generated methods.
 | Loop restriction | Feedback transition | Loop-block output transition, for both repeat and leave routes |
 | External analysis | Potential synthetic method/call-graph entries | Only the original method remains externally visible |
 | Backward exceptional ZERO | Demand lookup at the reached exceptional boundary only | Also apply complete normal-exit control demand; its outgoing ZERO DemandTarget uses the borrowed normal invocation in handoff metadata only; section 3.1 |
+| Boundary coverage | The current block adapter excludes the real entry/exit transfer from its adjacent-region records | Adjacent-region summaries cover that transfer when their span reaches the real boundary; section 6.1 |
+| Target and run-1 static output | Some original boundary results belong only to the public method | Publish first at the nearest block boundary, then compose through every ancestor; section 6.2 |
+| Normal loop exit | Separate physical leave ports can partition AL rule joins | Use one logical normal exit and AL ingress; keep actual routes and the accepted branch-union false positive; section 6.3 |
+| Static shortcut input refinement | A rebased exit input can request C.g/T without refining its waiting C.f/FLOW origin | Relay the actual request through existing identity continuation links, then reuse the original-input materializer and forward its genuine answer; section 8 |
+| Static exit phase | A STATIC conclusion and child entry can cause a completed exit to run again | Carry raw output as `STATIC_SHORTCUT`; only it runs the real exit, and completed `ROOT_EXIT` rows use metadata-only finalization; section 8 |
 
 This replaces the generated-function mechanism in the earlier proposal.
 It keeps the selected approximation rules: strict body-summary growth,
@@ -28,7 +38,8 @@ transition.
 
 Keep original field transfer, cleaners, mark handling, layers, exclusions,
 real call handling, source permissions, static effects and typed Targets,
-except the explicit backward exceptional-ZERO demand lookup in section 3.1.
+except the explicit backward exceptional-ZERO demand lookup in section 3.1
+and the explicit normal-exit control interface in section 6.3.
 Keep original instruction and rule identities. Do not add a mark, field,
 register pack, output-binding protocol or alias model for block routing.
 A no-loop method keeps its existing transfer and summary behavior.
@@ -138,6 +149,9 @@ AL regions are valid identity boundaries. For general CFGs, keep the
 original entry and exit ports rather than forcing a linear sequence.
 An irreducible region can have several entry ports. The tree must not
 merge distinct entries, duplicate instructions or invent a control edge.
+The shared normal loop-exit interface in section 6.3 is a logical join.
+It retains the original physical route labels; it does not erase this
+CFG contract or merge irreducible loop entries.
 
 The two principal loop routes are:
 
@@ -404,6 +418,201 @@ The physical method/call-site identity stays unchanged.
 For an ND row, actual execution still needs every member; the unary view
 is only loop-restriction metadata.
 
+### 6.1 Required coverage of an original method boundary
+
+This amendment corrects an implementation gap in the complete observer.
+It does not change field transfer, C2, source permission or rule semantics.
+The pre-correction adapter did not satisfy this contract. Its before-region
+record started after the real entry rules. Its after-region probe reached
+enclosing C5 before the real exit rules. Both omissions can drop a useful
+growing loop output.
+
+A region summary must cover the complete program span that its control
+ports name. If BL reaches the real method entry, its relation includes the
+actual entry rules and the original entry instruction, in their existing
+handler order. Its original is the input before that transfer. If AL
+reaches a real method exit, its relation includes the existing exit
+transfer, exit rules and metadata effects before the enclosing B C5 test.
+The same span rule applies in backward analysis.
+
+```text
+Entry-inclusive prefix:
+  true pre-entry input -> actual entry transfer -> BL body -> L entry
+
+Exit-inclusive suffix:
+  L output -> AL body -> actual exit transfer -> B C5
+```
+
+This requirement is recursive. An adjacent region below a nested AL must
+cover the boundary transfers in its own declared span. Composition toward
+an ancestor must not skip an intervening boundary transfer. A root-only
+cached prefix does not establish coverage for every nested region.
+
+Use the same original boundary handler once on actual execution. A local
+block entry or completion does not execute a second copy. Reuse its genuine
+summary relation for saved replay and guidance. Do not add a hypothetical
+boundary evaluator, raw-fact fallback, source hit, seed or lookup rule.
+An otherwise empty BL is not an identity relation when its span includes
+an actual entry rule.
+
+Keep the true original, entry port and exit port on every composed row.
+Do not relabel an after-rule BL row as a pre-rule row. For example, the
+two existing NORMAL transfers below have this composed relation:
+
+```text
+ZERO -> request.[any-taint]/T   // Actual entry source.
+request.*/FLOW -> cookies.*/FLOW
+----------------------------------------------------
+ZERO -> cookies.[any-taint]/T  // True entry-inclusive BL.
+```
+
+`request.*/FLOW -> cookies.*/FLOW` alone does not encode that source.
+The full public method summary is not a substitute for this shorter span:
+its real exit can remove entry marks, and its public-base filter can
+reject local results. Keep those existing exit effects at their real span.
+
+Use ordinary row classification. Eligible NORMAL relations use native
+record persistence and replay. DEMAND relations use the existing selected
+handoff and C2/C5 guidance. A field-limit cut or a GROUP producer does not
+become NORMAL to make it persistable. The existing backward ZERO-origin
+NORMAL handoff exception also remains in force: an exit-inclusive reverse
+suffix can provide forward guidance through that exception even when it
+is not a native backward record.
+
+Complete ND execution within the selected block-entry scope, normalization, exclusions, protection, mark
+binding, native reversal and typed Target handling stay unchanged. A
+unary restriction arm does not prove an entry or exit rule. Saved replay
+applies only an eligible, already inferred relation at its genuine ports;
+it creates no fresh source hit. Actual unresolved sources still use the
+existing source-permission mechanism.
+
+The boundary relation also needs the correct current-run ownership and
+paired guidance interface. Exporting a root completion snapshot alone
+does not establish this property. For example, a root Target with no
+corresponding scoped AL row can leave that AL's later paired restriction
+empty. The implementation must establish the genuine boundary-inclusive
+relation and its ordinary demand interface; it must not bypass C5 to
+populate a missing row. This adapter remains a design and test obligation.
+
+### 6.2 Selected nearest-boundary publication
+
+Publish a Target or a run-1 static result first at its nearest block
+boundary. Apply that summary through the existing waiting parent links.
+Each internal ancestor retains its own admitted relation. Continue until
+ordinary composition reaches the method boundary. Do not publish only at
+root and then construct missing child guidance from that root row.
+
+```text
+Physical sink/write, with local original I:
+  nearest block: I -> Target/static
+  parent:        P -> Target/static   // Existing complete application.
+  ancestor:      Q -> Target/static
+  method:        A -> Target/static
+```
+
+Every step keeps its genuine entry and exit ports, complete waiting
+original, layer, mark, exclusions, protection and physical report identity.
+No step changes an ND row into independent executable arms. All members
+must match under the existing full binding. NormalTarget still composes
+only with NORMAL inputs and is ignored backward. Its persisted-row
+suppression stays unchanged. DemandTarget and run-1 static outputs retain
+their DEMAND classification.
+
+The method entry and exit transfers belong to their genuine region spans.
+Use the existing boundary handler and original physical operation once.
+Forward entry rules run before the original entry operation. The real
+exit transfer and exit rules retain their existing order. This ownership
+does not make every block completion a method exit.
+
+Apply any existing method-original-dependent exit adjustment after the
+parent composition has supplied that complete method original. In
+particular, `globalStateDrop` and entry mark removal must not test a
+non-ZERO local I in place of a true ZERO method A. The selected boundary
+rule joins use the shared normal interface in section 6.3. Keep the accepted
+root branch-union false positive; do not use a per-ingress partition to remove it.
+
+These local rows use ordinary restriction, persistence and handoff. A
+DEMAND Target therefore gives its own paired guidance to every selected
+ancestor and to its nearest block in the next run. A NORMAL producer uses
+native replay where eligible. The existing backward-ZERO NORMAL handoff
+exception remains in force. There is no boundary actor, new source seed,
+guidance closure, hypothetical rule evaluator or unrestricted snapshot.
+
+### 6.3 Selected single normal loop exit
+
+Use one logical normal exit for a loop and one corresponding AL ingress.
+Keep the actual physical route as control metadata. Ordinary rule joins
+at that shared normal interface can combine its normal-leave inputs.
+Complete ND execution remains required; unary restriction metadata cannot
+satisfy a multi-condition rule.
+
+An SCC alone is not always that complete loop region. Extend its normal
+leave paths with their reachable acyclic tails up to the nearest common
+real normal postdominator J. Keep J outside L. If J is in the current
+region, AL begins there. Keep the original SCC headers
+and feedback edges. This moves the existing tail operations into L; it
+does not copy an operation or add a CFG edge. Check that the extended
+iteration graph is acyclic after the original feedback cuts and that
+every ordinary normal outlet reaches J. A second normal exit cannot be
+absorbed as a tail. If actual normal leaves have no certified common
+join, detect and report that layout gap; do not dispatch to all targets.
+A loop with no ordinary normal leaves needs no new join or exit edge.
+
+```text
+Original SCC:     {1, 7}, header 1, feedback 7 -> 1
+Normal tails:    1 -> 2 -> 3 -> 6
+                 1 -> 4 -> 5 -> 6
+Extended L:      {1, 7, 2, 3, 4, 5}
+AL begins at J:  6
+Normal outlets:  3 -> 6 and 5 -> 6, one logical exit
+```
+
+Build this partition and its normal-interface directory deterministically
+from the original graph. Reuse it in both directions and all runs.
+Canonical join IDs belong to that directory; they do not collide with
+physical ports or the existing backward discovery overlay.
+
+The earlier proposal to remove the cross-entry branch-union false
+positive is withdrawn. That false positive is accepted. For example:
+
+```text
+while (again()) {
+    choose {
+        a = sourceT(); break;
+        b = sourceU(); break;
+        continue;
+    }
+}
+normalExit: sink if CM(a,T) AND CM(b,U);
+```
+
+No concrete execution in this example supplies both marks. The old root
+join could merge its NORMAL ZERO-origin contributions and emit
+NormalTarget. The common normal interface permits that result too.
+It must also retain a complete witness whose inputs come from one path.
+
+The common join identity is not a new physical CFG edge. Forward DATA
+delivery keeps the actual continuation. Native and demand handoff must
+retain or refine its physical route labels when the direction reverses.
+If several leaves reach the same physical AL boundary, its reverse view
+can visit every original normal predecessor. It cannot choose only one
+representative edge and lose the others. If continuations differ, do not
+route a value to another continuation merely because the normal join
+identity is shared. Establish the exact route correspondence explicitly.
+
+Feedback is relative to the current loop. Its own feedback stays a repeat.
+An edge to an enclosing header can be an inner normal leave and an outer
+feedback edge. It can use that real enclosing header as J even when J is
+outside the current recursive region; the inner AL is then an empty
+logical continuation. Keep the original route, port and outer feedback
+owner. On reaching the outer interface, restore its outer repeat role.
+The classification view does not change the physical graph or its
+feedback directory.
+
+Exceptional, discovery and method-return routes keep their existing ports
+and policies. Do not fold them into the common normal exit. No change to conditions, actions,
+fields, cleaners, mark checks or complete ND binding is selected here.
+
 A loop summary describes one traversal to a labelled repeat or leave
 boundary. It does not stand for an arbitrary number of iterations with
 an unlabelled exit. Repetition is an internal transition through the same
@@ -495,17 +704,19 @@ They do not execute copies of method entry/exit rules, resolve new
 configured calls or get new source/sink identities.
 
 A static write supplies its mark at the original write point. A sink
-creates its Target at the original sink and publishes its conclusion at
-the logical normal exit. These observations do not wait
+creates its Target at the original sink and publishes it at the owning
+block's logical normal boundary. These observations do not wait
 for a loop to exit normally. Static callbacks keep their original method and instruction identity; the
 layout selects the owning block for a point resume. Request, local initial
-and parent-prefix scopes remain distinct. Existing static shortcuts go to
-the original method's exit-rule/summary path; a block exit is not graph.exitInst.
+and parent-prefix scopes remain distinct. A run-1 static shortcut first
+publishes at the nearest block boundary. Ordinary parent composition then
+reaches the original method's exit-rule/summary path; a block exit is not graph.exitInst.
 A shortcut does not create a normal CFG exit from an infinite loop.
 
 Actual method return instructions and handlers retain their physical
-ports. Apply real method exit rules once at the method's real exit path.
-Block summary admission applies its own C5 without those real rules.
+ports. Apply real method exit rules once at their real physical boundary
+within its owning region. Other block summary admissions apply their own
+C5 without those real rules.
 A run-1 static shortcut first lifts its block-local dependency through
 the existing parent links to the original method scope. It then uses the
 original exit-rule/summary handler. Do not insert a block-local initial
@@ -514,9 +725,103 @@ does not wait for a loop leave and does not invent a normal CFG return.
 These existing effect channels are separate from the two ordinary loop
 output routes.
 
+Retain internal static/static rows. For example, a local `C.f -> C.g`
+relation must reach its internal parent and ancestor through ordinary
+summary application. Erase static/static summaries only at the public
+method boundary, after the existing real exit processing. Keep the
+existing complete static-guidance seed at that public erasure. Erasing
+the nearest row first can hide a real exit rule on `C.g`. Applying an
+internal or public summary does not register another physical write
+point; immediate writer supply still occurs only at the original write.
+
+Use distinct output ports for the two static phases:
+
+```text
+raw nearest static-write row:     exit = STATIC_SHORTCUT (-5)
+completed real-exit row:          exit = ROOT_EXIT
+private real-exit operation input: entry = ROOT_EXIT
+```
+
+Carry `STATIC_SHORTCUT` unchanged through ordinary ancestor application.
+Only that typed output invokes the original real-exit handler at root.
+That handler publishes its completed rows with `ROOT_EXIT`. An ordinary
+AL/J result with `ROOT_EXIT` has already executed the real exit rules,
+including when its conclusion is STATIC. Apply metadata-only root
+finalization to it. Do not infer the phase from the fact base or the
+child entry. Otherwise a surviving static result can execute an exit
+source or cleaner twice.
+
+`STATIC_SHORTCUT` is not a CFG route or an input permission. It is an
+internal output discriminator. Raw run-1 static rows are DEMAND and do
+not become native NORMAL records. Their selected handoff reverses the
+whole pair exactly: entry `p`, exit `STATIC_SHORTCUT` becomes entry
+`STATIC_SHORTCUT`, exit `p`. Only the existing narrow run-2 static Target
+result check reads that W/completion pair. Do not create a C2 alias or an
+initial at the typed port. The actual private operation still uses its
+existing `ROOT_EXIT` input. Completed AL/J rows, public method ports and
+ordinary DATA/native scope reversal stay unchanged.
+
+The operation-local static exit continuation must also keep its input
+correlation. For example, its outer input can be `C.f/FLOW -> C.g/FLOW`,
+while the inner exit-rule initial is canonical `C.g/FLOW`. A real
+`CM(C.g,T)` request must refine that waiting outer input too:
+
+```text
+Actual FLOW mark check at the normal-exit operation:
+    keep existing C.g/T pool interest
+    follow registered ROOT_EXIT identity input links: C.g -> C.g
+    at the outer C.f -> C.g link, use the existing input request service
+    request C.f/T from the actual pool
+
+Genuine reply C.f/T -> C.g/T:
+    retain C.f/T as the outer waiting original
+    enter each inner continuation under canonical C.g/T
+    apply existing C.g/T -> ret/U to obtain C.f/T -> ret/U
+```
+
+A reached `C.g/T` alone is not evidence for `C.f/T`. Follow only the
+existing matching identity continuation inputs, with exact scope and
+initial matching. Do not trace instructions backward, add a static
+RequestStorage row, register a writer or create another source. Use a
+per-request visited set and cancellation checks; do not keep a global
+answered/seen history. With no matching parent input, the existing C.g
+point interest still runs.
+
+Register a new local input before enqueuing its actual boundary operation.
+That operation performs its mark check before ordinary output deduplication.
+Thus a late C.h/FLOW input can request C.h/T even if the canonical C.g
+initial and point were handled earlier. An already admitted initial must
+not suppress this delivery. A genuine marked reply uses the existing
+static-boundary delivery path; ordinary Run1Abstraction still ignores
+STATIC inputs. Keep the operation-local canonical C.g/T basis distinct
+from the complete outer C.f/T original.
+
+Keep complete existing rule lowering. A static condition at the real exit
+has its existing `StaticOperation.MarkInput` and keep transfers. Actual
+ZERO control reaching that exit in ordinary AL/J registers the static
+consumer there. Its actual pool reply and exit rule can infer the ordinary
+`(AL,J) -> ROOT_EXIT` relation. That row guides reverse AL execution to J.
+The reserved `(AL,ROOT_EXIT) -> ROOT_EXIT` shortcut row describes only the
+exit operation; it is not a replacement for the ordinary AL span. Do not
+relabel it, ignore a paired port or add an initial to compensate for
+missing form metadata. Both paths use the existing static-condition
+machinery and the same original rule/action identity.
+
+The DATA-only method exit adjustment uses the complete method original.
+For forward global static drop, select each positive `ContainsMark`
+Holds part from the same immutable post-composition value, in the old
+sink/mark/leaf order. Append a part even if the ND rule has no complete
+witness. Apply the existing `without` fold in that order, then the existing
+entry-mark removal. Do not union or reorder masks: removing the last ANY
+membership can change the remaining tree's header. Backward adds no
+forward static-drop mask. The existing run-1 entry-mark-removal exception
+is unchanged. This selector emits no report, source hit, request or join
+update; the actual boundary handler already performs those effects.
+
 Keep the reverse publication permission for this shortcut at run-2. A
-run-1 local writer `ZERO -> C.f/T` with entry `p` and logical exit
-`ROOT_EXIT` gives a paired run-2 shortcut demand with entry `ROOT_EXIT`,
+run-1 local raw writer `ZERO -> C.f/T` with entry `p` and typed exit
+`STATIC_SHORTCUT` gives a paired run-2 shortcut demand with entry
+`STATIC_SHORTCUT`,
 static input `C.f/T`, ZERO output and exit `p`. If an actual run-2 static
 initial reaches the source, its `C.f/T -> DemandTarget` result can use
 that exact W/completion pair at output `p`. Use the same native paired

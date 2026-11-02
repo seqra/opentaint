@@ -18,12 +18,14 @@ internal interface BlockRuntimeBinding {
         PortId.ROOT_EXIT else PortId.ROOT_ENTRY
     fun schedule()
     fun start(state: BlockRunState, original: InitialAp, value: Facts)
+    fun startResult(state: BlockRunState, node: CommonInst, original: PremiseKey, value: Facts)
     fun successors(state: BlockRunState, node: CommonInst, original: PremiseKey, value: Facts)
     fun publish(state: BlockRunState, exit: PortId, publications: List<Publication>)
     fun publishTargets(state: BlockRunState, targets: TargetBatch)
     fun borrowRequests(input: Facts): List<RequestedRow>
     fun borrowRequest(slot: Run1Slot): RequestRowView
     fun commitRequests(state: BlockRunState, temporary: RequestStorage)
+    fun staticMarkRequest(initial: InitialAp, mark: TaintMark)
     fun staticTicket(): Long
     fun routeStaticToExit(state: BlockRunState, node: CommonInst, original: PremiseKey, value: Facts)
     fun methodBoundary(state: BlockRunState, node: CommonInst, original: PremiseKey, value: Facts,
@@ -34,8 +36,9 @@ internal interface BlockRuntimeBinding {
 internal data class BlockDeliveryStatistics(val hits: Long, val searches: Long, val visited: Long,
                                           val destinations: Long, val maxWidth: Int)
 
-/** The real method entry/exit stays at the root; physical work descends through local links. */
+/** The method actor routes the original boundary stages into their genuine local spans. */
 internal interface MethodRootRouting {
+    fun start(node: CommonInst, original: InitialAp, value: Facts)
     fun enter(node: CommonInst, original: PremiseKey, value: Facts)
     fun successors(node: CommonInst, original: PremiseKey, value: Facts)
 }
