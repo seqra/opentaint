@@ -29,17 +29,18 @@ Conductor's remaining run-6 and Stirling's run-6/run-8 are dominated by
 calls and saved replay. These measurements motivate this design; they do
 not prove that every path was created by a local loop.
 
-The design has three parts:
+The design has four parts:
 
-1. Split a function into a before fragment, a loop controller and an after
-   fragment. The controller calls a body function and dispatches its status.
-   Apply the same split recursively to fragments with more loops.
+1. Let the method analyzer build a transparent tree of sequential and loop
+   blocks. It owns all block stores and routing. Blocks share the original
+   method registers; they are not generated methods. Apply decomposition
+   recursively for nested and multiple loops.
 2. Replay persisted summaries with the existing call machinery. Do not
    add a separate NORMAL reachability service.
 3. Classify the applied body summary. Check demand only if its conclusion
    has more counted fields than its premise. Use `FL(Zero) = 0`. Equal
    and shrinking summaries propagate their results without this new gate.
-4. For a growing summary, check after-block demand, enclosing-function
+4. For a growing summary, check after-block demand, enclosing-B
    demand after saved after-block composition, and next-body demand.
    Keep the union of their needed bounded images. Drop a result only if
    all three consumer families reject it.
@@ -48,14 +49,14 @@ These are explicit major changes:
 
 | Part | Current behavior | Proposed behavior |
 |---|---|---|
-| Analysis units | One owner for the original method body | Stable fragment owners and continuation ports |
-| Loop state | Distinct paths circulate through the original body | Body transfer is shared through function summaries |
-| Cyclic admission | Ordinary global limit and post-S deduplication | Growing body summaries use the new feedback gate; other summaries bypass it |
-| Usefulness | Persisted replay, then demand and current subscriptions | Reuse that machinery; use AL admission and full-B exit intersection for growing feedback |
-| Precision | Existing real-method C5 boundaries | Additional fragment boundaries and feedback cuts can create DEMAND earlier |
+| Analysis units | One owner and one set of method stores | One method owner with a tree of block-local stores and continuation ports |
+| Loop state | Distinct paths circulate through the original body | Traversal transfer is shared through internal block summaries |
+| Cyclic admission | Ordinary global limit and post-S deduplication | Growing body summaries use the loop-output gate on repeat and leave; other summaries bypass it |
+| Usefulness | Persisted replay, then demand and current subscriptions | Reuse that machinery; use AL admission and full-B exit intersection for growing loop outputs |
+| Precision | Existing real-method C5 boundaries | Additional block boundaries and loop-output cuts can create DEMAND earlier |
 
 Exact CFG splitting is not a proof that the bounded analyzer is invariant
-under splitting. New C5 and feedback boundaries can postpone a NORMAL
+under splitting. New C5 and loop-output boundaries can postpone a NORMAL
 record or finding. They must retain the refinement needed to resolve the
 path later. No same-run finding-set equality or general convergence claim
 is made solely from control equivalence.
@@ -64,9 +65,9 @@ is made solely from control equivalence.
 
 Keep:
 
-- Existing mutable-argument summary semantics: an edge represents the
-  input-to-output update. Do not add a state object or an output-binding
-  protocol.
+- Existing AP input-to-output summary semantics. All internal blocks use
+  the original method register IDs. Do not add a state object, private
+  argument registers or an output-binding protocol.
 - Original instructions, locations, rules, rule occurrences, GeneratedMark
   identities, alias information and semantic method context.
 - Field reads/writes, cleaners, exclusions, mark transfer, primitive
@@ -84,118 +85,100 @@ Keep:
   and the schedule `1,1,2,3,…`.
 
 Real method entry/exit rules execute only at the original boundaries.
-Artificial block entry, body return and status dispatch do not execute
-another copy of those rules. The same restriction applies to generic
-configured call rules: a synthetic call is not a new configured call site.
+Internal block entry, completion and loop dispatch do not execute another
+copy of those rules. There are no synthetic configured call sites.
 
 Do not add grounding support, a new field-validity test, a raw-summary
 fallback, a hidden cross-layer merge, or a new permission for ZERO.
 
-## 3. Function splitting
+## 3. Method-owned decomposition
 
-### 3.1 Basic form
+[Method-owned loop blocks](method-owned-loop-blocks.md) defines the complete
+ownership, storage and transition protocol. It replaces generated functions
+and synthetic calls in the earlier proposal.
 
-```text
-original(args):
-    before(args)
-    loop(args)
-    after(args)
-
-loop(args):
-l1:
-    status = body(args)       // args can be changed by its summaries
-    switch status:
-        NEXT -> jump l1
-        OUT  -> return
-```
-
-The body contains the original operations for one iteration. The
-controller contains the repeated call and dispatch. Out-of-loop labels
-remain controller/parent continuations; they do not become recursive
-calls inside the body.
-
-The display is schematic. A branch can bypass a loop, a body can return
-from the original method, and several exits can have different targets.
-The actual split preserves the original edges rather than forcing every
-program into one unconditional three-call sequence.
-
-Apply the split recursively to additional or nested loops. Every cycle
-must cross a controller feedback boundary. Each generated body must have
-an acyclic internal graph after its selected feedback edges are removed.
-A one-node self-loop also crosses such a boundary. Merely moving an
-unchanged cyclic CFG into a helper does not satisfy this requirement.
-
-### 3.2 Stable identities and ports
+The method analyzer initializes an immutable block layout before its first
+input. If the graph has no loop, keep one sequential root and the existing
+execution path. Otherwise, build a tree:
 
 ```text
-FragmentId = original method + deterministic region/entry identity
-AnalysisKey = FragmentId + original semantic context
-Port = original source + original destination + exit kind
+Sequential B
+  Sequential BL
+  Loop L
+    iteration region, recursively decomposed when needed
+  Sequential AL
 ```
 
-A port distinguishes ordinary transfer, next iteration, break, original
-method return, handler transfer and throw. For a multi-entry SCC, retain
-its entry ports. Do not merge them into an unlabelled common entry.
+The tree describes containment. Original CFG ports describe execution.
+The method analyzer routes a loop result to L or AL in forward analysis,
+and to L or BL in backward analysis. It restricts growing results at the
+loop output before either route. Equal/shrinking results bypass that new
+gate. The actual exit port remains attached; a successful consumer check
+does not change repeat into leave.
 
-Status is control metadata. It is not a taint mark, AP accessor, literal
-fact, or extra field in a synthetic object. A summary's return channel
-retains the exact port. Rows for different ports cannot deduplicate into
-one unlabelled row even if their AP payloads are equal.
+Sequential regions can contain branches. For general CFGs, retain all
+original entry/exit ports and return/throw/handler destinations. The two
+principal route categories are not a limit of two physical edges. Keep
+multi-entry and nested-loop ports distinct. Every local cycle crosses a
+loop boundary, including a one-node self-loop.
 
-Backward routing reverses these same labelled edges. It does not guess
-an exit kind from the direction. Preserve finally/handler paths and the
-existing backward discovery route for nonreturning code.
+Block IDs are deterministic paths under the original method. Reuse one
+layout across directions and runs. They are not new MethodKeys or prescan
+call-graph nodes. Each original instruction belongs to one lowest block;
+its ancestors neither execute nor retain a second copy of it.
 
-All fragment identities, ports and synthetic call-graph edges exist
-before run-1 prescan completes. A restricted run must not introduce a
-new unit with no previous guidance and then invent demand to start it.
-
-### 3.3 Why port correlation is required
+Port correlation remains necessary:
 
 ```java
 while (true) {
     if (chooseExit()) {
         c.v = clean();
-        break;                  // OUT
+        break;                  // Leave port.
     }
-    c.v = sourceT();             // NEXT only
+    c.v = sourceT();             // Repeat port only.
 }
 sinkT(c.v);
 ```
 
-The source result belongs to NEXT. The concrete field write on OUT kills
-that value before the loop exits. Applying an unlabelled body summary to
-both dispatch successors would create an incorrect NORMAL sink result.
-Port correlation prevents it without changing field-write semantics.
+The source result cannot be applied to the leave port. The physical write
+on that path still kills it under the existing field-write rules.
 
 ## 4. Ownership and storage
 
-The original method keeps a semantic envelope. It owns real entry/exit
-rules and its public method summaries. Generated fragments own their
-ordinary worklists, post-S stores, initials, inferred summaries and
-current subscriptions. Do not also retain the same internal-point facts
-in the envelope.
+One original method analyzer owns all block states, drains their tagged
+work, performs local summary delivery and exposes the original method's
+public summaries. A block has no independent method actor or runner.
 
-Fragment boundary transfer uses existing AP operations and mutable
-argument positions. Moving between positions must not add a counted field.
-Alias queries use the original instruction and original method context.
+Each block maintains:
 
-| Store | Owner and contents |
-|---|---|
-| Fragment graph directory | Stable partitions, original instructions, ports and feedback edges |
-| Fragment post-S store | Current results after the processed instruction; complete originals and existing annotations |
-| Current summary store | Admitted inferred rows, separated by continuation port |
-| Current subscriptions | Existing owner and delta rules; growing feedback is restricted before its next subscription |
-| Demand snapshot | Frozen per-run fragment C2/C5 rows and typed control rows |
-| Persisted summary store | The existing admitted NORMAL records; replay each original offer with the existing bindings |
-| Restriction scratch | Current C2/C5 results for this feedback check; no retained rejected-input history |
+```text
+in-block edge storage: results after its own processed points
+summary storage:      admitted local relations, labelled by entry/exit ports
+demand mechanism:     frozen local C2/C5 guidance and typed rows
+saved NORMAL rows:    persisted local transfers for replay
+local continuations:  parent-prefix composition with child results
+```
 
-Statics retain their existing effect protocol. The prescan/call-graph
-adapter must account for synthetic fragment calls when it builds static
-visibility and binds writers. The original configured exit rules run at
-the semantic envelope's real exit, not at each helper return. A static
-shortcut or Target publication must not manufacture a normal control
-return from a nonreturning body.
+A composite stores child-completion results, not copies of child-internal
+instruction facts. Root state is the original method boundary. All blocks
+use the same method registers and original alias queries. A transition
+needs no argument projection, bind-back rewrite or extra AP field. Shared
+register access does not make another block's facts automatically visible.
+
+Block summaries keep local initials. Parent composition keeps the parent's
+complete original separately. The public root interface still uses the
+original method positions. Local registers do not become public method
+arguments merely because they can occur in a block-local initial.
+
+CFG fast delivery stops at block boundaries, so it cannot bypass the loop
+gate. Deduplication still stores a result at its processed point before
+successor delivery. Pending local summary work contributes to the method's
+existing work reservation and barrier.
+
+At handoff, persist NORMAL and selected demand rows in their block scopes,
+with stable IDs and ports. Keep internal guidance as well as root guidance.
+Statics, rules and real method exits keep their original method ownership;
+block exits do not run copies of real method exit rules.
 
 ## 5. Body-summary shape
 
@@ -215,7 +198,7 @@ become a DATA root or a wildcard. Targets and other typed control outputs
 keep their existing protocol; they are not DATA paths to cut to MAY.
 
 ```text
-Body summary                 Shape              New feedback check
+Body summary                 Shape              Loop-output check
 Zero -> x.f.$/T              0 -> 1             required
 Zero -> x.$/T                0 -> 0             bypass
 x.f.*/FLOW -> x.*/FLOW       1 -> 0             bypass
@@ -266,17 +249,17 @@ each guidance pair with the existing entry/exit rule.
 
 ## 6. Existing replay and the three selected consumer tests
 
-In the analysis direction, write the body as:
+In source order, write the enclosing body as:
 
 ```text
 B := BL ; L ; AL
 ```
 
-For a backward run, AL denotes the continuation after L in that direction.
-It is the source-order before fragment. Ports still identify the actual
-continuation; reversing direction does not merge them.
+Use `after = AL` forward and `after = BL` backward. Reverse the same
+physical ports; do not build a new unrelated hierarchy for backward work.
 
-Call the body through the existing call policy:
+Enter L through the existing saved-replay/demand policy, as an internal
+block transition rather than a generated method call:
 
 ```text
 onBodyOffer(input):
@@ -291,46 +274,48 @@ onBodyOffer(input):
 Run-1 keeps its existing first-run policy. It has no prior demand. Empty
 first-run guidance cannot be used to drop all facts.
 
-For each resulting body summary application, dispatch by its actual port.
-An ordinary OUT result enters the next fragment. A feedback result goes
-through the new shape test:
+For each resulting body summary application, retain its actual port.
+Both repeat and leave outputs go through the new shape test before their
+selected destination is entered:
 
 ```text
-onFeedback(summaryArm, F):
+onLoopOutput(summaryArm, F, actualPort):
     if FL(summaryArm.conclusion) <= FL(summaryArm.premise):
-        propagate F unchanged
+        propagate F unchanged through actualPort
         return
 
-    // Test 1: use existing C2 at the after fragment.
-    images = AL.demand.emitInitials(F.conclusion)
+    // after = AL forward, BL backward.
+    // Test 1: use existing C2 at the adjacent region.
+    images = after.demand.emitInitials(F.conclusion)
 
     // Test 2: use existing application and complete paired C5.
-    for saved in AL.persistedSummaries:
+    for saved in after.persistedSummaries:
         for fullB in composeAtOriginalBindings(F, saved):
             images += B.demand.intersect(fullB)
 
     // Test 3: the next iteration can contain a required observation.
     images += L.demand.emitInitials(F.conclusion)
 
-    restrict F to the union of all three image families
     if there is no selected image:
         drop F
+        return
+    restrict F to the union of all three image families
+    route each retained value through actualPort
 ```
 
-Each consumer first uses the existing value bindings for its entry port.
-In particular, `L.demand` is admission at the next body entry for the actual
-feedback port and direction. Bind the value into L's canonical formal
-positions for C2. Keep F's complete B original separately for composed
-C5; do not pass that original as L's local initial. L demand is not a new
-demand invented from the result.
+Every consumer uses the same original method register IDs. L C2 is scoped
+to the actual next-entry port and direction, with no argument remapping.
+Keep F's complete B original separately for composed C5; it is not L's
+local initial. L demand is not invented from the result.
+
 The third check is required even when AL has no DATA consumer and B
 has only typed Target guidance. Section 8 shows the reason. A positive
 result from one family must not hide a different image from another.
 An early stop is valid only when no unvisited family can add an image.
 
-`F` contains the complete B-entry-to-current-point dependency after the
-existing BL and partial-L compositions. The AL composition therefore
-produces a full B edge. A local L formal premise is not a replacement for
+`F` contains the complete enclosing-B-entry-to-current-point dependency
+after the existing prefix and partial-L compositions. The adjacent-region
+composition therefore produces a full B edge. A local L initial premise is not a replacement for
 B's original premise. Keep whole ND originals, layers, protection and
 semantic context through the ordinary compositions.
 
@@ -339,7 +324,7 @@ entry permission of one row with the exit permission of another. The
 conclusion limit is the existing demand-relative C5 limit for that row.
 A successful geometry test is not summary-publication permission.
 
-A test that hypothetically composes F with AL is guidance only. It emits
+A test that hypothetically composes F with AL/BL is guidance only. It emits
 no B summary, executes no rule, supplies no static mark and produces no
 report. Actual control must take OUT before AL executes. In particular,
 a NEXT-only source result cannot report through an exit path whose write
@@ -393,7 +378,8 @@ the DEMAND layer, with empty field exclusion for the cut
 A result that is not cut keeps its existing tail, layer and exclusions.
 Do not add a field absent from the current value. Do not replace the
 actual T payload by FLOW merely because a FLOW consumer selected it.
-The receiving function emits its canonical initial through ordinary C2.
+The receiving block emits its local initial through ordinary C2 on the
+same method register namespace.
 Keep statics' named anchors indivisible and their existing legal grammar.
 
 For a direct concrete consumer, a scoped demand-prefix trie can keep the
@@ -429,7 +415,7 @@ Correct no-match:  drop, if no other selected consumer
 Rejected fallback: x.f.[any]/T, DEMAND  // adds a provisional g initial
 ```
 
-The loop gate runs after a full body step, not between its original
+The loop gate runs at a full traversal output, not between its original
 instructions. Ordinary reads can cancel fields written within that step.
 The existing global limit still applies inside the body.
 
@@ -487,8 +473,8 @@ to carry that image, as stated in section 10.
 ## 9. Storage, publication and handoff invariants
 
 Keep results in the store of the processed statement, not its successors.
-Apply the feedback restriction before retaining a new feedback membership
-or creating the next current subscription. Existing exact deduplication
+Apply the loop-output restriction before retaining a new repeat/leave
+membership or creating the next current subscription. Existing exact deduplication
 remains the final admission test; a different field path is not a duplicate.
 
 Producer effects at original instructions stay before the value gate.
@@ -496,28 +482,30 @@ Actual publication still requires ordinary complete C5. All admitted
 summaries, NORMAL and DEMAND, use the existing summary restriction. Do not
 retain unrestricted candidates or bypass C5 because a loop image is MAY.
 
-Needed uncertainty must reach the fragment summary or typed Target
+Needed uncertainty must reach the block summary or typed Target
 frontier. A local MAY value alone does not keep the driver alive. The
 proof must account for each relevant cut until its observation is resolved
 or rejected. It must not force another iteration for an irrelevant cut.
 The next-body case must be included in that argument, rather than treated
-as an enclosing function-exit demand.
+as an enclosing B-exit demand.
 
 ## 10. Proof scope and validation
 
 The constructive package proves exact finite control routing; explicit
 feedback handling; scalar bounded projection; finite concrete C2 cells;
+method-owned block isolation and shared-register transport;
 whole-original/port retention; separate complete-row publication; ND
 metadata separation; the strict summary-shape classifier with ZERO
-at depth zero; and the next-body counterexample and its selected repair. The dossier states each model's scope. A local-model PASS
-is not a proof of all AP tails, packed trees, the Kotlin extractor or
+at depth zero; and the next-body counterexample and its selected repair. The dossier
+states each model's scope. A local-model PASS
+is not a proof of all AP tails, packed trees, the Kotlin block-layout builder or
 whole-driver progress.
 
 The old finite NORMAL reachability model is a reference investigation
 only. It is not a selected runtime service. There is no pending decision
 about frozen versus growing NORMAL-query graphs in this design.
 
-Before runtime implementation, close the extraction,
+Before runtime implementation, close the decomposition,
 mutable-argument, AP projection, typed-control and refinement-handoff
 adapters. Test binary path growth, balanced write/read bodies, repeated
 shrinking reads, internal source/sink observations, complete ND binding,

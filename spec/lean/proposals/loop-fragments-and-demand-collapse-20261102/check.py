@@ -17,7 +17,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = next(p for p in HERE.parents if (p / "spec/lean/lean-toolchain").is_file())
 TOOLCHAIN = "leanprover/lean4:v4.33.1"
 MODULES = ["Control", "Geometry", "Admission", "Guidance", "Shape",
-           "Protocol", "Restriction", "Feedback", "Usefulness"]
+           "Protocol", "Restriction", "Feedback", "Blocks", "Usefulness"]
 ALLOWED_AXIOMS = {"propext", "Quot.sound"}
 
 
@@ -43,7 +43,8 @@ def main() -> None:
     inputs = sources + [HERE / "README.md", HERE / "check.py", HERE / "controls.md",
                         HERE / "controls/LoopGrowingDemandControlTest.kt",
                         HERE / "controls/control.init.gradle", scanner_path,
-                        spec_path, ROOT / "spec/loop-fragments-and-demand-collapse-proofs.md",
+                        spec_path, ROOT / "spec/method-owned-loop-blocks.md",
+                        ROOT / "spec/loop-fragments-and-demand-collapse-proofs.md",
                         ROOT / "spec/proof-guide.md", ROOT / "spec/lean/lean-toolchain"]
     if (ROOT / "spec/lean/lean-toolchain").read_text().strip() != TOOLCHAIN:
         raise RuntimeError("Pinned Lean toolchain changed")
@@ -113,6 +114,7 @@ def main() -> None:
         "specificationStatus": "DRAFT_DECISIONS_PENDING" if draft else "SEE_SPECIFICATION_SCOPE",
         "runtimeChanged": False,
         "runtimeVerifiedByKernel": False,
+        "MethodOwnedBlockLayoutBuilderVerified": False,
         "APThreeConsumerAndProjectionAdapterVerified": False,
         "NORMALRouteRuntimeServiceSelected": False,
         "generalCrossRunConvergenceProved": False,
@@ -124,7 +126,7 @@ def main() -> None:
         "axiomDependencies": sorted(axioms), "checks": checks,
         "inputHashes": before, "runs": runs,
         "limits": [
-            "Control assumes a supplied finite CFG/partition/feedback classifier, not a Kotlin extractor.",
+            "Control and Blocks assume a supplied finite valid partition/layout, not a Kotlin decomposition pass.",
             "Geometry is scalar FULL EXACT/MAY with counted paths and a protection bit.",
             "C2 adapter certificates cover stated finite binary-path cells, not arbitrary Kotlin AP payloads.",
             "Usefulness is a reference investigation only; no NORMAL reachability service is selected.",
