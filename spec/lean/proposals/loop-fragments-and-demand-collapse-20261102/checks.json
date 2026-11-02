@@ -8,12 +8,12 @@
   "NORMALRouteRuntimeServiceSelected": false,
   "generalCrossRunConvergenceProved": false,
   "projectSpeedupMeasured": false,
-  "utc": "2026-11-02T12:13:08.442806+00:00",
+  "utc": "2026-11-02T12:26:56.762937+00:00",
   "toolchain": "leanprover/lean4:v4.33.1",
   "leanVersion": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
-  "moduleCount": 10,
-  "theoremCount": 308,
-  "auditedDeclarationCount": 431,
+  "moduleCount": 11,
+  "theoremCount": 321,
+  "auditedDeclarationCount": 451,
   "declarations": [
     "LoopFragments.ControlGraph.port",
     "LoopFragments.ControlGraph.boundary",
@@ -404,6 +404,26 @@
     "LoopFragments.Blocks.methodFrontier",
     "LoopFragments.Blocks.every_selected_internal_row_is_in_method_frontier",
     "LoopFragments.Blocks.empty_method_frontier_has_no_selected_internal_row",
+    "LoopFragments.Decomposition.prepend",
+    "LoopFragments.Decomposition.build",
+    "LoopFragments.Decomposition.flatten",
+    "LoopFragments.Decomposition.prepend_preserves_first_sequential_operation",
+    "LoopFragments.Decomposition.exact_source_sequence",
+    "LoopFragments.Decomposition.split_at_first_loop",
+    "LoopFragments.Decomposition.no_loop_region_is_sequential",
+    "LoopFragments.Decomposition.immediate_next_loop_has_empty_before",
+    "LoopFragments.Decomposition.successor_loop_is_in_after",
+    "LoopFragments.Decomposition.loopCount",
+    "LoopFragments.Decomposition.afterDepth",
+    "LoopFragments.Decomposition.prepend_keeps_after_depth",
+    "LoopFragments.Decomposition.after_hierarchy_accounts_for_every_successive_loop",
+    "LoopFragments.Decomposition.empty_region_has_no_operations",
+    "LoopFragments.Decomposition.evaluate",
+    "LoopFragments.Decomposition.decomposition_preserves_supplied_ordered_semantics",
+    "LoopFragments.Decomposition.twoLoops",
+    "LoopFragments.Decomposition.user_two_loop_shape",
+    "LoopFragments.Decomposition.user_two_loop_source_order",
+    "LoopFragments.Decomposition.user_two_loop_after_is_composite",
     "LoopFragments.Usefulness.Route.vertices",
     "LoopFragments.Usefulness.Route.hops",
     "LoopFragments.Usefulness.Route.reaches",
@@ -468,16 +488,17 @@
     "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Restriction.lean": "c7dabcb0c18df1697445f8b46a0a8fab665308c3f1da3c3b3a7ccb6c4d0bd896",
     "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Feedback.lean": "6c2c46b3d97b46a6485b2869f5788d950b1510b638b6b87982f04cebbbda48cd",
     "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Blocks.lean": "7a7f74d6abb1cd32a20b062ebba203a9fff6d4c74b335a060e1389f075d95404",
+    "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Decomposition.lean": "289ad97a516bd33eda7380ebc5a9595832004c7012ab762985b508ff41ae63df",
     "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Usefulness.lean": "e8f44c416a891120c4c1268552bd3b89134e5d76d1bc5ee09ad137a5a90c8776",
-    "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/README.md": "64ae9417b517c56c65a8f55359f3a72ff0336d69e5fad1690de4be8c52fa8c98",
-    "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/check.py": "a4e12d2f03f4911de29f9f26740e034ef935c8ed38535235948f0cd0f2883778",
+    "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/README.md": "7efdfc845c840f6938e3933bf55c22ec50eeb38474e2c3781c3bbfc59efd02d5",
+    "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/check.py": "1a4ab2732a89fa346ad5100089672c1483e91afbda69eee6c671ca59c083fe62",
     "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/controls.md": "1f2b89a2806b60b14bfde8e7d6497c426edbc9559fada703fbdf0bf0a61bfe16",
     "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/controls/LoopGrowingDemandControlTest.kt": "b8b6f13bab6190eaf82ad6060baea509761aae4d1e83fec640e623bc8602da30",
     "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/controls/control.init.gradle": "16a9489ea4c1c139c7409d99f1f652484a51fa7a9028315db0a7c3bea72d1f52",
     "spec/lean/proposals/call-stage-result-merging-analysis-20261101/check.py": "817d1ab500b65240cdedeed4c741bcb24470b60e047d5ac3d5dd30eaf951f4dc",
-    "spec/loop-fragments-and-demand-collapse.md": "bb6990893b498c6bfe9edc4399d6760c942114469f4fe6457944c575816bd92d",
-    "spec/method-owned-loop-blocks.md": "8d3ade5b8993e3758e305c2d4bccda019c2e4639b2c1f7bb970fad1988e666e6",
-    "spec/loop-fragments-and-demand-collapse-proofs.md": "f9facf4b9f33b6686970f3b58a7f7085585c05f5701fbbbc9a18607020f3a302",
+    "spec/loop-fragments-and-demand-collapse.md": "4b3584571f9b8d780663569749b810cd0f0afcc1f2439c1f0fc17783dedb8ef0",
+    "spec/method-owned-loop-blocks.md": "14dd5b345704f70207a20012ecd9c97513e1854f8e296987a096a95438f86752",
+    "spec/loop-fragments-and-demand-collapse-proofs.md": "5fe1862d578dceba50e693dd2d408d7dcf0939a2dabd04ec9cea3bba837bff8b",
     "spec/proof-guide.md": "c51296c2773f7a09bc96e3a4679c0b97610c38baf792b39e0de7ef2bf4787dcd",
     "spec/lean/lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71"
   },
@@ -490,13 +511,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Control.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Control.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Control.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.7134998887777328,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Control.log",
+      "wallSeconds": 0.6838854104280472,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Control.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -507,13 +528,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Geometry.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Geometry.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Geometry.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.8955818265676498,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Geometry.log",
+      "wallSeconds": 0.9130385220050812,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Geometry.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -524,13 +545,13 @@
         "-M",
         "2048",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Admission.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Admission.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Admission.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 65.89283072948456,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Admission.log",
+      "wallSeconds": 65.08092048764229,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Admission.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -541,13 +562,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Guidance.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Guidance.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Guidance.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.6072374582290649,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Guidance.log",
+      "wallSeconds": 0.6063280999660492,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Guidance.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -558,13 +579,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Shape.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Shape.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Shape.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.27785933017730713,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Shape.log",
+      "wallSeconds": 0.29140542447566986,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Shape.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -575,13 +596,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Protocol.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Protocol.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Protocol.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.36990323662757874,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Protocol.log",
+      "wallSeconds": 0.3668832778930664,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Protocol.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -592,13 +613,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Restriction.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Restriction.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Restriction.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.5888906717300415,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Restriction.log",
+      "wallSeconds": 0.58981953561306,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Restriction.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -609,13 +630,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Feedback.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Feedback.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Feedback.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.22675348818302155,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Feedback.log",
+      "wallSeconds": 0.2270829826593399,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Feedback.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -626,13 +647,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Blocks.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Blocks.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Blocks.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.4797215163707733,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Blocks.log",
+      "wallSeconds": 0.5060326904058456,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Blocks.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -643,13 +664,30 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Usefulness.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Decomposition.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Decomposition.lean"
+      ],
+      "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
+      "exitCode": 0,
+      "wallSeconds": 0.37722139060497284,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Decomposition.log",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "/home/sobol/.elan/bin/lean",
+        "-j",
+        "1",
+        "-M",
+        "768",
+        "-o",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Usefulness.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Usefulness.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.6960252523422241,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Usefulness.log",
+      "wallSeconds": 0.6684067696332932,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Usefulness.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -659,13 +697,13 @@
         "1",
         "-M",
         "2048",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Audit.lean"
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Audit.lean"
       ],
-      "cwd": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z",
+      "cwd": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z",
       "exitCode": 0,
-      "wallSeconds": 0.2841794788837433,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T121157408094Z/Audit.log",
-      "logSha256": "071dff2bcbe7b1bc2462bedb1c08e72d42fb1f1df2644bc1267efc772df3f571"
+      "wallSeconds": 0.2567128986120224,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261102T122546192648Z/Audit.log",
+      "logSha256": "e924b12c10e39dd131b1bc76ad18e80869f99c541be5f161b46c0d1a4c0ab1dc"
     }
   ],
   "limits": [

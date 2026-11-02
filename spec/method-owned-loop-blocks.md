@@ -82,14 +82,48 @@ Sequential B
   BL: sequential before region
   L:  loop region
       sequential iteration body, with nested block trees if needed
-  AL: sequential after region
+  AL: after region, recursively decomposed
 ```
 
 Both kinds can contain children. A sequential region has no cycle after
-its child loop regions are contracted. It can contain branches. A loop
-region has explicit repeat and leave ports. Recursive decomposition puts
-nested loops below their enclosing loop. Multiple loops are sibling or
-nested regions in one method tree.
+its child loop regions are contracted. It can contain branches. Its
+descendants can contain loops. A loop region has explicit repeat and leave
+ports. Decompose its iteration body recursively for loops inside that body.
+
+For an ordered region, split at its first outermost loop. BL contains the
+prefix, L contains that loop, and AL contains the complete remaining
+region. Recursively decompose AL. AL is not required to be a leaf or a
+loop-free suffix. It can contain an arbitrarily deep hierarchy.
+
+```text
+Source:
+    prefix
+    loop1
+    loop2
+    suffix
+
+Block tree:
+    B1 = Sequential {
+        BL1 = prefix
+        L1  = loop1
+        AL1 = B2 = Sequential {
+            BL2 = {}       // Empty identity region.
+            L2  = loop2
+            AL2 = suffix
+        }
+    }
+```
+
+Thus L2 is below AL1 in the containment tree. It is not another child
+beside L1, and it is not inside the body of loop1. A loop inside the body
+of loop1 would instead occur below L1's iteration region. These two
+hierarchies describe different source control flow.
+
+Apply this rule recursively to every remaining ordered region. The
+empty BL2 executes no physical operation and adds no method boundary
+rule. Original instructions retain their order and occur once in the
+leaf partition. The existing multi-entry/exit-port contract still applies
+to a general CFG; this ordered example does not add a new CFG edge.
 
 An original instruction belongs to exactly one lowest block. An ancestor
 contains that instruction through its child; it does not execute or store
@@ -306,6 +340,19 @@ In backward order they are:
 3. C2 against L demand at the actual reversed re-entry port.
 ```
 
+AL and BL in these checks denote their complete regions, including all
+nested children. In the two-loop example, L1 checks AL1 demand and saved
+AL1 summaries. It must not substitute AL2 or jump directly to the suffix,
+since loop2 belongs to AL1. AL1 has its own entry demand, summaries and
+paired restriction; entering it routes work through BL2, L2 and AL2.
+
+For L2, the enclosing B is B2, which is AL1. Its composition check uses
+AL2 summaries and B2 demand. Parent composition then carries a completed
+B2 result to B1. Do not use B1's exit permission in place of B2's local
+paired row. The same tree is traversed backward: AL2, L2, empty BL2,
+then the enclosing continuation toward L1 and BL1. Do not flatten those
+scopes when BL2 is empty.
+
 B is the enclosing composition for this decomposition level. At the top
 level it is the method root. At a nested level it is an internal parent
 region with its own demand. Normal parent composition carries results
@@ -412,6 +459,11 @@ alias mapping is required. The port still determines whether a result
 repeats or leaves; equal AP payloads do not collapse the two routes.
 
 ## 11. Proof and validation boundary
+
+The constructive ordered-region model preserves the exact source segment
+sequence and gives the recursive AL shape for the two-loop example. It
+also covers arbitrarily many successive loops. It treats each selected
+loop region as an opaque segment; it is not a general CFG loop detector.
 
 The constructive block model proves one method owner, unchanged shared
 payload transport, separation of block stores, labelled direction-symmetric

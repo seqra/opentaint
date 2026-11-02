@@ -28,6 +28,7 @@ noncomputable source and native evaluation proofs.
 | Protocol | Whole original, port/context, producer effects and separate complete-row publication |
 | Restriction | Fixed complete AL/B/L observer, finite shortest-safe-cut reference and image preservation |
 | Feedback | Missing internal consumer under AL/B-only gate; selected L check preserves the example |
+| Decomposition | Exact ordered-region sequence, recursive AL hierarchy, empty prefix and successive-loop example |
 | Blocks | One method owner, shared registers, separate post-S stores, repeat/leave gates, parent dependencies and local frontier collection |
 | Usefulness | Reference investigation only; no runtime NORMAL reachability service is selected |
 
