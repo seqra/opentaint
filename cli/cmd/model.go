@@ -3,28 +3,28 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/seqra/opentaint/internal/approximation"
+	"github.com/seqra/opentaint/internal/models"
 	"github.com/seqra/opentaint/internal/utils/log"
 	"github.com/spf13/cobra"
 )
 
-var initApproximationDeps []string
+var initModelDeps []string
 
-var approximationCmd = &cobra.Command{
-	Use:   "approximation",
-	Short: "Create dataflow approximation projects",
-	Long: `A dataflow approximation project holds code-based models of how taint moves through
+var modelCmd = &cobra.Command{
+	Use:   "model",
+	Short: "Create dataflow model projects",
+	Long: `A dataflow model project holds code-based models of how taint moves through
 methods the analyzer cannot see into, together with the exact dependency versions those
 models are written against.
 
-Compile one with 'opentaint compile approximations', and apply it with the
---dataflow-approximations flag of 'opentaint scan' or 'opentaint test approximation run'.`,
+Compile one with 'opentaint compile models', and apply it with the
+--dataflow-models flag of 'opentaint scan' or 'opentaint test model run'.`,
 }
 
-var approximationInitCmd = &cobra.Command{
+var modelInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
-	Short: "Create a dataflow approximation project",
-	Long: `Create a Gradle project for OpenTaint dataflow approximation models.
+	Short: "Create a dataflow model project",
+	Long: `Create a Gradle project for OpenTaint dataflow models.
 
 The project includes:
   - build.gradle.kts with compile-only dependencies, settings.gradle.kts
@@ -46,29 +46,37 @@ nothing about the project under analysis, decide what the models compile against
 
 		// Init replaces the build file but keeps the model sources.
 		// Warn the user because this removes dependency pins that they added manually.
-		existing := approximation.IsProject(projectPath)
+		existing := models.IsProject(projectPath)
 		if existing {
-			out.Warnf("Replacing the build file of the existing approximation project at %s; "+
+			out.Warnf("Replacing the build file of the existing model project at %s; "+
 				"pass every dependency the models need, not only the new ones", projectPath)
 		}
 
-		if err := approximation.Scaffold(projectPath, initApproximationDeps, analyzerJarPath); err != nil {
-			out.Fatalf("Failed to create approximation project: %s", err)
+		if err := models.Scaffold(projectPath, initModelDeps, analyzerJarPath); err != nil {
+			out.Fatalf("Failed to create model project: %s", err)
 		}
 
 		if existing {
-			fmt.Printf("Approximation project updated at %s\n", projectPath)
+			fmt.Printf("Model project updated at %s\n", projectPath)
 		} else {
-			fmt.Printf("Approximation project initialized at %s\n", projectPath)
+			fmt.Printf("Model project initialized at %s\n", projectPath)
 		}
-		suggest("To compile the models run", fmt.Sprintf("opentaint compile approximations %s", args[0]))
+		suggest("To compile the models run", fmt.Sprintf("opentaint compile models %s", args[0]))
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(approximationCmd)
-	approximationCmd.AddCommand(approximationInitCmd)
+	rootCmd.AddCommand(modelCmd)
+	modelCmd.AddCommand(modelInitCmd)
 
-	approximationInitCmd.Flags().StringArrayVar(&initApproximationDeps, "dependency", nil,
+	modelInitCmd.Flags().StringArrayVar(&initModelDeps, "dependency", nil,
 		"Compile-only Maven dependency coordinates the models are written against (repeatable)")
+
+	approximationCmd := &cobra.Command{
+		Use:        "approximation",
+		Short:      modelCmd.Short,
+		Deprecated: "use 'opentaint model' instead",
+	}
+	approximationCmd.AddCommand(deprecatedCommand(modelInitCmd, "init", "opentaint model init"))
+	rootCmd.AddCommand(approximationCmd)
 }

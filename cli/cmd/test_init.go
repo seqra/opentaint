@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/seqra/opentaint/internal/testapprox"
+	"github.com/seqra/opentaint/internal/testmodel"
 	"github.com/seqra/opentaint/internal/testproject"
 	"github.com/seqra/opentaint/internal/testrule"
 	"github.com/spf13/cobra"
 )
 
 var initRuleProjectDeps []string
-var initApproxProjectDeps []string
+var initModelProjectDeps []string
 var initRuleSinksOnly bool
 var initRuleSourcesOnly bool
 
@@ -55,32 +55,32 @@ Use --dependency to add compile-only Maven dependencies for the samples.`,
 	},
 }
 
-var testApproximationInitCmd = &cobra.Command{
+var testModelInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
-	Short: "Create a dataflow approximation test project",
-	Long: `Create a minimal Gradle project for testing OpenTaint dataflow approximations.
+	Short: "Create a dataflow model test project",
+	Long: `Create a minimal Gradle project for testing OpenTaint dataflow models.
 
 The project includes:
   - build.gradle.kts with compile-only dependencies
   - settings.gradle.kts
-  - approximation-rule.yaml, the fixed source-to-sink rule the samples are checked against
+  - model-rule.yaml, the fixed source-to-sink rule the samples are checked against
   - src/main/java/test/ with Taint.java (the fixed source() and sink()) for test sample sources
 
 Positive and negative samples are specified via rule-test.yaml.
 
-The approximation under test is supplied separately at test time with
---dataflow-approximations.
+The model under test is supplied separately at test time with
+--dataflow-models.
 
 Use --dependency to add compile-only Maven dependencies for the samples.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := testproject.Bootstrap(args[0], "approximation-test-project", initApproxProjectDeps); err != nil {
+		if err := testproject.Bootstrap(args[0], "model-test-project", initModelProjectDeps); err != nil {
 			out.Fatalf("Failed to bootstrap test project: %s", err)
 		}
-		if err := testapprox.Scaffold(args[0]); err != nil {
-			out.Fatalf("Failed to scaffold approximation project: %s", err)
+		if err := testmodel.Scaffold(args[0]); err != nil {
+			out.Fatalf("Failed to scaffold model test project: %s", err)
 		}
-		fmt.Printf("Approximation test project initialized at %s\n", args[0])
+		fmt.Printf("Model test project initialized at %s\n", args[0])
 	},
 }
 
@@ -93,7 +93,8 @@ func init() {
 	testRuleInitCmd.Flags().BoolVar(&initRuleSourcesOnly, "sources-only", false,
 		"Create only the sources test project")
 
-	testApproximationCmd.AddCommand(testApproximationInitCmd)
-	testApproximationInitCmd.Flags().StringArrayVar(&initApproxProjectDeps, "dependency", nil,
+	testModelCmd.AddCommand(testModelInitCmd)
+	testModelInitCmd.Flags().StringArrayVar(&initModelProjectDeps, "dependency", nil,
 		"Compile-only Maven dependency coordinates for generated samples (repeatable)")
+	testApproximationCmd.AddCommand(deprecatedCommand(testModelInitCmd, "init", "opentaint test model init"))
 }

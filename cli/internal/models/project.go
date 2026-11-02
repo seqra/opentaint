@@ -1,8 +1,8 @@
-// Package approximation manages Gradle projects for dataflow models.
+// Package models manages Gradle projects for dataflow models.
 //
 // Each project specifies the library versions that its models use.
 // The scanned project does not supply these compile dependencies.
-package approximation
+package models
 
 import (
 	"bytes"

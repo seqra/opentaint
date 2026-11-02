@@ -1,4 +1,4 @@
-package approximation
+package models
 
 import (
 	"errors"
@@ -144,9 +144,9 @@ func build(projectDir, outputDir string, inputs stamp, builder Builder) error {
 	}
 	sweepStaging(outputDir)
 
-	buildTempDir, err := os.MkdirTemp("", "opentaint-approximation-build-*")
+	buildTempDir, err := os.MkdirTemp("", "opentaint-model-build-*")
 	if err != nil {
-		return fmt.Errorf("failed to create temp directory for approximation build: %w", err)
+		return fmt.Errorf("failed to create temp directory for model build: %w", err)
 	}
 	defer func() { _ = os.RemoveAll(buildTempDir) }()
 
@@ -164,7 +164,7 @@ func build(projectDir, outputDir string, inputs stamp, builder Builder) error {
 		return fmt.Errorf("failed to clear %s: %w", staging, err)
 	}
 	if err := os.MkdirAll(ClassesDir(staging), 0o755); err != nil {
-		return fmt.Errorf("failed to create approximation build output %s: %w", staging, err)
+		return fmt.Errorf("failed to create model build output %s: %w", staging, err)
 	}
 
 	dependencies, err := collectClasses(projectModelDir, ClassesDir(staging))
@@ -172,7 +172,7 @@ func build(projectDir, outputDir string, inputs stamp, builder Builder) error {
 		return err
 	}
 	if !containsClassFiles(ClassesDir(staging)) {
-		return fmt.Errorf("approximation project %s compiled to no classes; it has no models under src/main/java", projectDir)
+		return fmt.Errorf("model project %s compiled to no classes; it has no models under src/main/java", projectDir)
 	}
 
 	if err := writeDescriptor(staging, descriptor{
@@ -216,7 +216,7 @@ func checkOutputDir(outputDir string) error {
 	}
 	if !empty {
 		return fmt.Errorf(
-			"output directory %s already exists and is not an approximation build output; "+
+			"output directory %s already exists and is not a model build output; "+
 				"remove it or choose another --output path", outputDir)
 	}
 	return nil
@@ -270,7 +270,7 @@ func isEmptyDir(dir string) (bool, error) {
 func collectClasses(projectModelDir, destDir string) ([]string, error) {
 	config, err := project.LoadConfig(projectModelDir)
 	if err != nil {
-		return nil, fmt.Errorf("approximation build produced no readable project model: %w", err)
+		return nil, fmt.Errorf("model build produced no readable project model: %w", err)
 	}
 
 	for _, module := range config.AllModules() {
@@ -310,7 +310,7 @@ func copyTree(srcDir, destDir string) error {
 		}
 		if _, err := os.Stat(target); err == nil {
 			return fmt.Errorf(
-				"two approximation modules produce %s; an approximation class maps to exactly one target class",
+				"two model modules produce %s; a model class maps to exactly one target class",
 				filepath.ToSlash(rel),
 			)
 		}

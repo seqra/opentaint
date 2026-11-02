@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -60,6 +62,17 @@ func TestAppendVerbosityFlagPreservesExistingFlags(t *testing.T) {
 	want := []string{"--project", "foo.yaml", "--verbosity=debug"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("appendVerbosityFlag did not preserve prior flags: got %v, want %v", got, want)
+	}
+}
+
+// The analyzer log path is reported after an analyzer exception, so it must be the one the command writes.
+func TestAnalyzerBuilderReportsItsLogsFile(t *testing.T) {
+	b := NewAnalyzerBuilder().SetProject("/project/project.yaml").SetOutputDir("/output")
+	cmd := b.BuildNativeCommand()
+	t.Cleanup(func() { _ = os.RemoveAll(filepath.Dir(b.LogsFile())) })
+
+	if filepath.Base(b.LogsFile()) != "analyzer.log" || !containsFlagPair(cmd, "--logs-file", b.LogsFile()) {
+		t.Fatalf("LogsFile() = %q, command was %v", b.LogsFile(), cmd)
 	}
 }
 
