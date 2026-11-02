@@ -2,6 +2,7 @@ package org.opentaint.ir.go.test.features
 
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.opentaint.ir.go.api.GoIRApproximatedFunction
@@ -38,6 +39,113 @@ import java.nio.file.Path
 
 @ExtendWith(GoIRTestExtension::class)
 class ModelTests {
+    @Test
+    fun `GitHub MCP server accepts bundled MCP model`(builder: GoIRTestBuilder) {
+        val checkout = System.getenv("GITHUB_MCP_SERVER_DIR")
+        assumeTrue(checkout != null, "GITHUB_MCP_SERVER_DIR is not set")
+        checkNotNull(checkout)
+        val modelRoot = Path.of(System.getProperty("opentaint.go.models.root"))
+            .resolve("modelcontextprotocol-go-sdk-v1")
+
+        val program = builder.buildFromDir(
+            Path.of(checkout),
+            GoIRLoadConfig(
+                mode = GoIRLoadMode.PROJECT,
+                patterns = listOf("./..."),
+                modelDirs = listOf(modelRoot),
+            ),
+        )
+        val inventory = program.findPackage("github.com/github/github-mcp-server/pkg/inventory")!!
+        val register = inventory.functions.single { it.name == "RegisterFunc" }
+        val addTool = program.findPackage("github.com/modelcontextprotocol/go-sdk/mcp")!!
+            .functions.single {
+                it.name == "AddTool" && it.isMethod &&
+                    it.receiverType?.toString()?.contains("Server") == true
+            }
+
+        assertThat(register.findInstructions<GoIRCall>())
+            .anyMatch { it.call.target?.displayName == addTool.fullName }
+        assertThat(addTool).isInstanceOf(GoIRApproximatedFunction::class.java)
+        assertThat(addTool.findInstructions<GoIRCall>())
+            .anyMatch { it.call.target is GoIRCallTarget.Dynamic }
+    }
+
+    @Test
+    fun `bundled MCP model exposes server callbacks`(builder: GoIRTestBuilder) {
+        val project = project(
+            "example.com/mcpapp",
+            """
+            package mcpapp
+
+            import (
+                "context"
+                "github.com/modelcontextprotocol/go-sdk/mcp"
+            )
+
+            type Input struct { Value string }
+            type Output struct { Value string }
+
+            func rawHandler(context.Context, *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+                return nil, nil
+            }
+
+            func typedHandler(context.Context, *mcp.CallToolRequest, Input) (*mcp.CallToolResult, Output, error) {
+                return nil, Output{}, nil
+            }
+
+            func Register(server *mcp.Server) {
+                server.AddTool(&mcp.Tool{Name: "raw", InputSchema: map[string]any{"type": "object"}}, rawHandler)
+                mcp.AddTool(server, &mcp.Tool{Name: "typed"}, typedHandler)
+            }
+            """.trimIndent(),
+        )
+        val modelRoot = Path.of(System.getProperty("opentaint.go.models.root"))
+            .resolve("modelcontextprotocol-go-sdk-v1")
+        project.resolve("go.mod").write(
+            Files.readString(modelRoot.resolve("go.mod"))
+                .replaceFirst("module opentaint", "module example.com/mcpapp"),
+        )
+        Files.copy(modelRoot.resolve("go.sum"), project.resolve("go.sum"))
+
+        val program = builder.buildFromDir(project, modelConfig(modelRoot))
+        val mcp = program.findPackage("github.com/modelcontextprotocol/go-sdk/mcp")!!
+        val modeledNames = mcp.functions
+            .filter { it.bodyAvailable }
+            .mapTo(mutableSetOf()) { it.name }
+
+        assertThat(modeledNames).contains(
+            "NewServer",
+            "AddTool",
+            "AddPrompt",
+            "AddResource",
+            "AddResourceTemplate",
+            "AddReceivingMiddleware",
+            "AddSendingMiddleware",
+            "NewStreamableHTTPHandler",
+        )
+        val rawAddTool = mcp.functions.single {
+            it.name == "AddTool" && it.isMethod && it.receiverType?.toString()?.contains("Server") == true
+        }
+        val newServer = mcp.functions.single { it.name == "NewServer" }
+        assertThat(newServer.findInstructions<GoIRCall>())
+            .anyMatch { it.call.target is GoIRCallTarget.Dynamic }
+        assertThat(rawAddTool).isInstanceOf(GoIRApproximatedFunction::class.java)
+        assertThat(rawAddTool.findInstructions<GoIRCall>())
+            .anyMatch { it.call.target is GoIRCallTarget.Dynamic }
+        val genericAddTool = mcp.functions.single {
+            it.name == "AddTool" && !it.isMethod && it.parent == null
+        }
+        assertThat(genericAddTool.bodyAvailable).isTrue()
+        assertThat(genericAddTool.findInstructions<GoIRCall>())
+            .anyMatch { it.call.target is GoIRCallTarget.Dynamic }
+        val instantiatedAddTool = mcp.functions.single {
+            it.fullName.startsWith("github.com/modelcontextprotocol/go-sdk/mcp.AddTool[")
+        }
+        assertThat(instantiatedAddTool).isInstanceOf(GoIRApproximatedFunction::class.java)
+        assertThat(instantiatedAddTool.findInstructions<GoIRCall>())
+            .anyMatch { it.call.target is GoIRCallTarget.Dynamic }
+    }
+
     @Test
     fun `model body replaces dependency body after client deserialization`(builder: GoIRTestBuilder) {
         val project = Files.createTempDirectory("goir-model-project")
@@ -628,6 +736,25 @@ class ModelTests {
     }
 
     @Test
+    fun `bundled models accept an unrelated Go project`(builder: GoIRTestBuilder) {
+        val project = project("example.com/unrelated", "package unrelated\nfunc Target() {}\n")
+        val modelRoot = Path.of(System.getProperty("opentaint.go.models.root"))
+        val models = Files.list(modelRoot).use { paths ->
+            paths.iterator().asSequence().filter { Files.isRegularFile(it.resolve("go.mod")) }.toList()
+        }
+        assertThat(models).isNotEmpty()
+
+        val program = builder.buildFromDir(
+            project,
+            GoIRLoadConfig(mode = GoIRLoadMode.PROJECT, modelDirs = models),
+        )
+
+        val withoutModels = builder.buildFromDir(project, GoIRLoadConfig(mode = GoIRLoadMode.PROJECT))
+        assertThat(program.findPackage("example.com/unrelated")).isNotNull()
+        assertThat(program.packages.keys).containsExactlyInAnyOrderElementsOf(withoutModels.packages.keys)
+    }
+
+    @Test
     fun `unrelated model does not add packages to the analyzed project`(builder: GoIRTestBuilder) {
         val project = project("example.com/unrelated", "package unrelated\nfunc Target() {}\n")
         val model = model(
@@ -689,6 +816,39 @@ class ModelTests {
         assertThat(builder.buildFromDir(project, GoIRLoadConfig(mode = GoIRLoadMode.PROJECT)).findPackage("net/url")).isNull()
         assertThat(program.findPackage("net/url")).isNotNull()
         assertThat(call.call.target?.displayName).isEqualTo("net/url.QueryEscape")
+    }
+
+    @Test
+    fun `model field access uses imported target declarations`(builder: GoIRTestBuilder) {
+        val project = project(
+            "example.com/options",
+            """
+            package options
+            type Options struct { Name string; Handler func(string) string }
+            func Register(options *Options, value string) string { return "original" }
+            """.trimIndent(),
+        )
+        val model = model(
+            "example.com/options",
+            """
+            package options
+            import target "example.com/options"
+            func Register(options *target.Options, value string) string {
+                return options.Handler(value)
+            }
+            """.trimIndent(),
+        )
+
+        val program = builder.buildFromDir(project, modelConfig(model))
+        val targetPackage = program.findPackage("example.com/options")!!
+        val register = targetPackage.functions.single { it.name == "Register" }
+        val handler = register.findExpressions<GoIRFieldAddrExpr>().single { it.fieldName == "Handler" }
+
+        assertThat(handler.fieldIndex).isEqualTo(1)
+        assertThat(register.findInstructions<GoIRCall>())
+            .anyMatch { it.call.target is GoIRCallTarget.Dynamic }
+        assertThat(targetPackage.findNamedType("Options")!!.fields.map { it.name })
+            .containsExactly("Name", "Handler")
     }
 
     @Test
