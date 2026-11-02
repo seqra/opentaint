@@ -114,12 +114,87 @@ these distinctions when selecting the repair.
 To repeat the finite controls from the repository root:
 
 ```sh
-./gradlew :opentaint-dataflow-core:opentaint-dataflow:test \
+./core/gradlew -p core :opentaint-dataflow-core:opentaint-dataflow:test \
   --tests org.opentaint.dataflow.bidi.LoopGrowingDemandControlTest \
-  -I spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/controls/control.init.gradle \
-  -PloopControlDir="$PWD/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/controls"
+  -I "$PWD/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/controls/control.init.gradle" \
+  -DloopControlDir="$PWD/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/controls"
 ```
 
-The archived init script takes the source directory as a property. The
+The archived init script takes the source directory as a JVM system
+property, so included Gradle builds see the same value. The
 original execution used the same source-set hook with the external
 absolute directory. Project performance measurements were not repeated.
+
+## Existing backward discovery with no loop leave
+
+Date: 2 November 2026. Runtime is still
+`8213756108af9cd278668db871fc77428caec64a`; documentation baseline is
+`7b59054efa6c010780fa79c3e9357a4b1b54679e`.
+
+The current JVM `JIRMethodEntry` already builds backward graphs using
+`JIRExitWiredGraph(...).reversed`. That wrapper wires a node unable to
+reach an original exit to the exceptional exit before reversal. Backward
+ZERO starts at normal and exceptional exits. The forward graph remains
+raw. This is interpreter I11(e)/AP S11, not a new loop policy.
+
+```java
+void B(Node p) {
+    Node x = p;
+    while (true) {
+        sourceFF(x); // Assign T at x.f.f.$ only.
+        x = x.f;
+        sinkRootT(x); // CM(x.$, T).
+    }
+}
+```
+
+The [FULL control source](controls/LoopNoLeaveDiscoveryControlTest.kt)
+uses CFG `0 -> 1 -> 2 -> 3 -> 4 -> 5 -> 2`, normal exit 6 and exceptional
+exit 7. Neither exit has a forward predecessor. Its fixture explicitly
+selects the existing JVM-style backward-discovery contract. Backward
+wiring adds `7 -> 0,1,2,3,4,5`. It adds no forward edge.
+
+Four native checks passed:
+
+| Check | Result |
+|---|---|
+| Existing BackwardDiscoveryGraphTest: selected exceptional wiring | PASS; exact independent edge reference |
+| Existing BackwardDiscoveryGraphTest: no fallback to normal exit | PASS |
+| Existing CurrentSequenceTest: nonreturning worker with a real caller | PASS; GROUP completes run-3 |
+| New LoopNoLeaveDiscoveryControlTest | PASS; FULL completes run-3 with one report |
+
+The FULL trace has:
+
+```text
+run-1, limit 1, forward:  ZERO -> DemandTarget
+run-2, limit 1, backward:
+    ZERO reaches points 3,4,5 through exceptional discovery
+    the second inverse read reaches the source requirement
+    sourceFF is permitted for run-3
+    ZERO -> DemandTarget
+run-3, limit 2, forward:
+    x.f.f.$/T -> x.f.$/T -> x.$/T through two iterations
+    ZERO -> NormalTarget(0)
+    outgoing refinement: empty
+    status: COMPLETE, reason: NO_DEMAND_EDGE
+
+forward visits to normal exit 6:      0
+forward visits to exceptional exit 7: 0
+reports:                             1
+```
+
+This verifies reuse of the current discovery mechanism. It is not a
+block-decomposition runtime test. The method-owned block view must retain
+the same backward-only edges and the actual destination instruction,
+with its local control C2 and complete paired gates.
+
+Repeat these four checks from the repository root:
+
+```sh
+./core/gradlew -p core :opentaint-dataflow-core:opentaint-dataflow:test \
+  --tests 'org.opentaint.dataflow.bidi.BackwardDiscoveryGraphTest' \
+  --tests 'org.opentaint.dataflow.bidi.CurrentSequenceTest.a nonreturning worker loop reports its sink without waiting for a normal summary' \
+  --tests 'org.opentaint.dataflow.bidi.LoopNoLeaveDiscoveryControlTest' \
+  -I "$PWD/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/controls/control.init.gradle" \
+  -DloopControlDir="$PWD/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/controls"
+```

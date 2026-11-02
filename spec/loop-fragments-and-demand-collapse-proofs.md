@@ -159,6 +159,13 @@ NORMAL reachability. The selected design instead reuses native saved
 replay. Do not infer an AP graph service, cache or pending graph-scope
 decision from this retained model.
 
+The implementation extension also checks `Discovery`: the existing
+exceptional-exit backward overlay supplies nonreturning reachability.
+Its Type-valued witnesses preserve all raw reversed paths and add no
+route from a normal backward start. It adds no forward return path.
+See [the implementation proof dossier](loop-blocks-implementation-proofs.md)
+for this separate adapter scope and the four passing native controls.
+
 ## 3. Native evidence for the next-body case
 
 The [native control record](lean/proposals/loop-fragments-and-demand-collapse-20261102/controls.md)

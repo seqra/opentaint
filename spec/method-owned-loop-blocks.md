@@ -147,6 +147,13 @@ Backward:  L -> L       repeat in the reversed CFG
            L -> BL      leave toward the original before region
 ```
 
+The backward view also retains the existing exceptional-exit discovery
+edges required by interpreter I11(e)/AP S11. The hierarchy uses the original
+forward CFG, but its directed view comes from the existing backend graph,
+which can have this backward-only overlay. Discovery is not a new forward
+edge or a normal loop leave. See the implementation proposal's existing
+backward-discovery adapter.
+
 These are route categories, not a limit of two physical CFG edges. Keep
 each original source/destination pair and its exit kind. Original return,
 throw and handler transfers can leave to an ancestor continuation. They

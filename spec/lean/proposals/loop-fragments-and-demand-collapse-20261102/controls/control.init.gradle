@@ -1,5 +1,5 @@
-def loopControlDir = gradle.startParameter.projectProperties.get('loopControlDir')
-assert loopControlDir != null : 'Set -PloopControlDir to the controls directory'
+def loopControlDir = System.getProperty('loopControlDir')
+assert loopControlDir != null : 'Set -DloopControlDir to the controls directory'
 gradle.beforeProject { project ->
  if (project.name == 'opentaint-dataflow' && project.projectDir.parentFile.name == 'opentaint-dataflow-core') {
   project.plugins.withId('org.jetbrains.kotlin.jvm') {
