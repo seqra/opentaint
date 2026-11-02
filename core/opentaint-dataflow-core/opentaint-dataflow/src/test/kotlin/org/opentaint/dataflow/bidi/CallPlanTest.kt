@@ -422,7 +422,7 @@ class CallPlanTest {
             f.call(1, straight())
             val (core, calls) = service(f)
             calls.freeze()
-            val owner = calls.javaClass.declaredFields.single { it.type == RunMethodAnalyzer::class.java }
+            val owner = calls.javaClass.declaredFields.single { it.type == BlockRunState::class.java }
                 .apply { isAccessible = true }
             assertNull(owner.get(calls))
             val initial = initial(f,f.pattern())

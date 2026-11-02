@@ -59,7 +59,8 @@ fun frontierOf(config: RunConfig, result: RunResult<RunMethodAnalyzer>, handOff:
     cancellation?.checkpoint()
     val forward = config.direction == Direction.FORWARD
     return Frontier(config.index, config.direction, analysed, counts, recordCrossings,
-        result.analyzers.sumOf { it.outgoingTargets.size },
+        result.analyzers.sumOf { it.outgoingTargets.size } +
+            result.analyzers.asSequence().flatMap { it.blockOutgoingTargets() }.sumOf { it.rows.size },
         reportedSinks, handOff.seeds.size, zeroOnly, zeroOnlyEdges)
 }
 

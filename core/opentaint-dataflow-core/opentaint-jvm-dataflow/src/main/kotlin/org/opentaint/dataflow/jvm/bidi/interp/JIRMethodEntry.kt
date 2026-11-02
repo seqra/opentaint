@@ -9,6 +9,7 @@ import org.opentaint.dataflow.bidi.interp.ExitRules
 import org.opentaint.dataflow.bidi.interp.FormsCache
 import org.opentaint.dataflow.bidi.interp.StatementSummary
 import org.opentaint.dataflow.graph.MethodInstGraph
+import org.opentaint.dataflow.graph.MethodBlockLayoutBuilder
 import org.opentaint.dataflow.graph.reversed
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
@@ -50,6 +51,10 @@ class JIRMethodEntry internal constructor(val method: JIRMethod, internal val sh
     val lambdas: Int2ObjectMap<Set<JIRMethod>> = shared.prescanLambdas[method] ?: Int2ObjectMaps.emptyMap()
 
     private val forwardGraph by lazy { MethodInstGraph.build(shared.languageManager, common, method) }
+    val blockLayout by lazy {
+        val entry = shared.graph.methodGraph(method).entryPoints().single()
+        MethodBlockLayoutBuilder.build(forwardGraph, listOf(index(entry)))
+    }
     private val backwardGraph by lazy {
         MethodInstGraph.build(shared.languageManager, JIRExitWiredGraph(common).reversed, method)
     }

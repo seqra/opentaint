@@ -63,7 +63,7 @@ class CfgDeliveryEngineTest {
         }
     }
 
-    @Test fun `closed neutral component has a cached empty frontier and no invented exit`() {
+    @Test fun `closed neutral loop uses local boundary delivery and has no invented exit`() {
         MethodAnalysisFixtures(listOf(listOf(1), listOf(1), emptyList())).use { f ->
             f.baseRelevance = { _, s, _, _ -> s.location.index == 0 }
             val core = f.core()
@@ -71,8 +71,9 @@ class CfgDeliveryEngineTest {
             f.drain(core, 1)
             assertEquals(listOf(0), f.processed.map { it.node.location.index })
             assertTrue(core.summaries.all().none())
-            assertTrue(core.context.delivery.targets(1, x).isEmpty())
-            assertEquals(1L, core.context.delivery.hits)
+            assertNotNull(core.blockRuntime, "This cyclic CFG must use the local boundary cache")
+            assertEquals(0L, core.context.delivery.searches, "The flat method cache cannot cross local boundaries")
+            assertTrue(core.context.delivery.targets(1, x).isEmpty(), "The original neutral CFG still has no physical exit")
         }
     }
 

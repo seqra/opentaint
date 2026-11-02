@@ -14,6 +14,7 @@ class DeltaWorklist(private val flowFirst: Boolean = false, batchManager: ApMana
 
     val isEmpty: Boolean get() = zero.isEmpty() && flow.isEmpty() && other.isEmpty()
     val hasZeroWork: Boolean get() = zero.isNotEmpty()
+    internal val hasFlowWork: Boolean get() = flow.isNotEmpty()
     val size: Int get() = zero.size + flow.size + other.size
 
     fun add(delta: EdgeDelta) {

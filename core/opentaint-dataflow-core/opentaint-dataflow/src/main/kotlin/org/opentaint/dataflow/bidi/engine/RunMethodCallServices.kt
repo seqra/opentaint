@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.interp.*
 import org.opentaint.dataflow.bidi.store.AddedFactAccumulator
+import org.opentaint.dataflow.bidi.store.BlockScope
 import org.opentaint.dataflow.bidi.store.CallerRef
 import org.opentaint.dataflow.bidi.store.ConjunctionStore
 import org.opentaint.dataflow.bidi.store.NdBinding
@@ -14,12 +15,12 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import java.util.ArrayDeque
 
 /** Call walks and suspended return batches belong to one method actor. */
-class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
-    private var owner: RunMethodAnalyzer? = core
+class RunMethodCallServices(core: BlockRunState) : MethodCallServices {
+    private var owner: BlockRunState? = core
     // Keep semantic unresolved observations once per qualified current input.
     private var observed: AddedFactAccumulator? = if (core.config.run1) AddedFactAccumulator(core.ap) else null
 
-    private fun active(): RunMethodAnalyzer = checkNotNull(owner) { "The call services were released" }.also {
+    private fun active(): BlockRunState = checkNotNull(owner) { "The call services were released" }.also {
         it.ap.cancellation.checkpoint()
     }
 
@@ -315,7 +316,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
         for (fact in facts) {
             core.ap.cancellation.checkpoint()
             if (fact.facts !is TaintTree) continue
-            val ref = CallerRef(core.key, fact.premise, ctx.callerLayer, ctx.node)
+            val ref = CallerRef(core.key, fact.premise, ctx.callerLayer, ctx.node, scope = core.scope)
             if (observed.add(ref, fact.facts.layer, fact.facts) == null) continue
             observer.reached(ctx.call, fact.facts.base, ctx.plan)
             core.ap.cancellation.checkpoint()
@@ -324,7 +325,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
 
     private fun enterCallees(ctx: CallContext, stage: CallStage.Callees, fact: PlanFact) {
         val core = active()
-        val ref = CallerRef(core.key, fact.premise, ctx.callerLayer, ctx.node, ctx.plan.stages.indexOf(stage))
+        val ref = CallerRef(core.key, fact.premise, ctx.callerLayer, ctx.node, ctx.plan.stages.indexOf(stage), core.scope)
         for (callee in stage.callees) {
             core.ap.cancellation.checkpoint()
             val part = Subscription(callee, ref, fact.facts.layer, fact.facts)
@@ -373,7 +374,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
         core.localServices.fireSinkSeeds(item.node) { seeds += planFact(core.ap.zero, it, null) }
         if (seeds.isNotEmpty()) flow(ctx, CallPoint.BOUND, seeds)
         val ref = CallerRef(core.key, core.ap.zero, ctx.callerLayer, item.node,
-            ctx.plan.stages.indexOfFirst { it is CallStage.Callees }.coerceAtLeast(0))
+            ctx.plan.stages.indexOfFirst { it is CallStage.Callees }.coerceAtLeast(0), core.scope)
         for (callee in ctx.plan.callees?.callees.orEmpty()) {
             core.ap.cancellation.checkpoint()
             val part = Subscription(callee, ref, item.facts.layer, item.facts, zeroOnly = true)
@@ -461,7 +462,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
             val path = leaf.fact.path.take(2)
             val selected = core.ap.initial(Pattern(leaf.fact.copy(path = path,
                 tail = if (leaf.fact.tail == Tail.EXACT && leaf.fact.path.size <= 2) Tail.EXACT else Tail.STAR), ExclusionSet.Empty))
-            val ref = CallerRef(core.key, selected, part.ref.callerLayer, part.ref.call, part.ref.stageOrdinal)
+            val ref = part.ref.copy(premise = selected)
             val selectedInput = core.forceRun1Layer(selected, core.ops.startFact(selected, core.mode))
             val input = part.copy(ref = ref, linkLayer = selectedInput.layer, added = selectedInput)
             when (result) {
@@ -483,7 +484,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
     }
 
     private data class TargetJoinKey(val callee: MethodKey, val premise: PremiseKey, val target: Target,
-                                     val call: CommonInst, val stageOrdinal: Int, val saved: Boolean)
+                                     val call: CommonInst, val stageOrdinal: Int, val saved: Boolean, val scope: BlockScope)
     private data class TargetBinding(val ref: CallerRef, val layer: Layer)
     private val targetJoins = HashMap<TargetJoinKey, KaryJoin<TargetBinding>>()
 
@@ -504,7 +505,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
         val binding = TargetBinding(part.ref, layer)
         if (row.premise is InitialAp) emitTargetBinding(listOf(binding), row.target)
         else {
-            val key = TargetJoinKey(part.callee, row.premise, row.target, part.ref.call, part.ref.stageOrdinal, saved)
+            val key = TargetJoinKey(part.callee, row.premise, row.target, part.ref.call, part.ref.stageOrdinal, saved, part.ref.scope)
             val join = targetJoins.getOrPut(key) { KaryJoin(row.premise.size, core.ap.cancellation) }
             for (bindings in join.add(member, binding)) emitTargetBinding(bindings, row.target)
         }
@@ -570,16 +571,10 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
         val native = ArrayList<PlanFact>()
         val pending = ArrayList<PlanFact>()
         var applied = false
-        if (premise.tail != Tail.ANY_TAINT)
-            applied = applyParts(part, premise, record.conclusion, native, run1Summary = false)
-        else {
-            check(core.forward) { "A native must record is only forward" }
-            val inside = core.ops.satisfying(part.added, premise, core.mode)
-            if (inside != null)
-                applied = applyParts(part.copy(added = inside), premise, record.conclusion, native, run1Summary = false)
-            val only = if (inside == null) part.added else core.ops.without(part.added, inside)
-            if (only != null)
-                applied = applyParts(part.copy(added = only), premise, record.conclusion, pending, run1Summary = false) || applied
+        for (lane in nativeRecordLanes(core.ops, core.mode, part.added, premise)) {
+            val results = if (lane.pendingDemotion) pending else native
+            applied = applyParts(part.copy(added = lane.actual), premise, record.conclusion, results,
+                run1Summary = false) || applied
         }
         if (applied) core.countRecordCrossing()
         resumeCallees(part.ref, native)
@@ -672,7 +667,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
         check(matched is TaintTree) { "An E6 member input is TAINT" }
         check(part.linkLayer == matched.layer) { "The matched fact and link have the same layer" }
         val store = checkNotNull(core.localServices.conjunctions) { "Forward calls need their local conjunction store" }
-        val join = store.ndJoin<NdBinding>(ConjunctionStore.NdKey(part.callee, premise, pub.layer, part.ref.call, part.ref.stageOrdinal))
+        val join = store.ndJoin<NdBinding>(ConjunctionStore.NdKey(part.callee, premise, pub.layer, part.ref.call, part.ref.stageOrdinal, part.ref.scope))
         val binding = NdBinding(part.ref, matched.layer).also {
             it.triggering = (premise.member(member).mark as? MarkSlot.Concrete)?.mark
                 ?.let { mark -> core.ap.marks.runtimeAtom(mark, core.mode.markMode) }

@@ -39,6 +39,8 @@ class MethodAnalysisFixtures(
         if (java.lang.Boolean.getBoolean("org.opentaint.bidi.optimizationStatistics")) Run1AbstractionStatistics() else null,
     requestBatchStatistics: RequestBatchStatistics? =
         if (java.lang.Boolean.getBoolean("org.opentaint.bidi.optimizationStatistics")) RequestBatchStatistics() else null,
+    n2Statistics: N2Statistics? =
+        if (java.lang.Boolean.getBoolean("org.opentaint.bidi.optimizationStatistics")) N2Statistics() else null,
 ) : AutoCloseable {
     val cancellation = Cancellation()
     val refManager = RefManager()
@@ -158,7 +160,8 @@ class MethodAnalysisFixtures(
         profileBound = true
         SharedObjects(manager, ops, interpreter, language, contexts, records,
             UnitResolver { UnknownUnit }, refManager, cancellation, threads = 1,
-            abstractionStatistics = abstractionStatistics, requestBatchStatistics = requestBatchStatistics)
+            abstractionStatistics = abstractionStatistics, requestBatchStatistics = requestBatchStatistics,
+            n2Statistics = n2Statistics)
     }
     val shared: SharedObjects get() = sharedOwner.value
 
@@ -180,21 +183,21 @@ class MethodAnalysisFixtures(
     val cuts = ArrayList<Pair<Cut, Facts>>()
     val requests = ArrayList<Pair<InitialAp, RequestKind>>()
     val addedLinks = ArrayList<Triple<CallerRef, Layer, Facts>>()
-    private val inputRows = IdentityHashMap<RunMethodAnalyzer, MutableList<Link>>()
+    private val inputRows = IdentityHashMap<BlockRunState, MutableList<Link>>()
     private val staticServices = IdentityHashMap<RunConfig, Run1StaticService>()
-    private val questionManagers = IdentityHashMap<RunMethodAnalyzer, SubscriptionManager>()
+    private val questionManagers = IdentityHashMap<BlockRunState, SubscriptionManager>()
     private val questionQueue = ArrayDeque<() -> Unit>()
     private val summaryStores = LinkedHashMap<MethodKey, SummaryStorage>()
     var onRequestNotification: ((RunEvent.ChangedRequests) -> Unit)? = null
 
-    fun requestRow(core: RunMethodAnalyzer, slot: Run1Slot): RequestRowView =
+    fun requestRow(core: BlockRunState, slot: Run1Slot): RequestRowView =
         summaryStores.getValue(core.key).borrowRequest(slot)
 
     /** Test-owned arrival observations; actors retain none of this input history. */
-    fun links(core: RunMethodAnalyzer): List<Link> = inputRows[core].orEmpty().distinct()
+    fun links(core: BlockRunState): List<Link> = inputRows[core].orEmpty().distinct()
 
     /** Admit the original caller subscription before delivering its callee input, as real call routing does. */
-    fun admit(core: RunMethodAnalyzer, ref: CallerRef, layer: Layer, facts: Facts) {
+    fun admit(core: BlockRunState, ref: CallerRef, layer: Layer, facts: Facts) {
         cancellation.checkpoint()
         addedLinks += Triple(ref, layer, facts)
         inputRows.getOrPut(core, ::ArrayList).addAll(ops.leaves(facts).map { Link(it, layer, ref) })
@@ -206,7 +209,7 @@ class MethodAnalysisFixtures(
     }
 
     /** Caller-side complete admission followed by the existing callee start gate. */
-    fun submitRestricted(core: RunMethodAnalyzer, facts: Facts) {
+    fun submitRestricted(core: BlockRunState, facts: Facts) {
         for (initial in emitRestrictedInitials(core.config, ops, core.key, facts)) core.addInitial(initial)
     }
 
@@ -220,7 +223,7 @@ class MethodAnalysisFixtures(
         return count != 0
     }
 
-    fun flushRequests(core: RunMethodAnalyzer, quantum: Int = 3) {
+    fun flushRequests(core: BlockRunState, quantum: Int = 3) {
         // F78 submits only after actual method fact/publication work empties.
         drain(core, quantum)
     }
@@ -355,7 +358,7 @@ class MethodAnalysisFixtures(
         return actor
     }
 
-    private inner class LocalServices(private val core: RunMethodAnalyzer) : MethodLocalServices {
+    private inner class LocalServices(private val core: BlockRunState) : MethodLocalServices {
         private val key get() = core.key
         override val conjunctions: ConjunctionStore? get() =
             error("Standing conjunction storage requires an explicit test service")
@@ -425,7 +428,7 @@ class MethodAnalysisFixtures(
     }
 
     /** Each completed item remains in the actor until its real work method processes it. */
-    fun drain(core: RunMethodAnalyzer, quantum: Int = 1000): Int {
+    fun drain(core: BlockRunState, quantum: Int = 1000): Int {
         var attempts = 0
         while (true) {
             cancellation.checkpoint()

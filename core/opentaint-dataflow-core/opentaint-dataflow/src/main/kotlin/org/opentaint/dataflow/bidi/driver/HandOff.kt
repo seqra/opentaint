@@ -66,6 +66,8 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
             if (run1) demand.withSharedStaticCarry()
             if (joinedCompletion != null) {
                 demand.withCompletion(joinedCompletion)
+                for ((owner, view) in joinedCompletion.scopedViews())
+                    demand.withCompletion(owner.method, owner.local, view)
                 logger.info { "BIDI_STATIC_CLOSURE_HANDOFF run=1 source=JOINED ${joinedCompletion.statistics()}" }
             }
             // Synthetic frozen RunResults in small tests have no runner-owned
@@ -101,14 +103,16 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
                     if (demand.add(method, pattern)) counts.merge(method, 1, Int::plus)
                 }
             }
+            projectTargets(result, shared, demand, counts)
+            projectBlocks(result, shared, Direction.FORWARD, run1, demand, counts, completion)
             if (completion != null) {
                 val projectionTime = projectionStart.elapsedNow()
                 val indexStart = TimeSource.Monotonic.markNow()
                 val frozen = completion.build()
                 demand.withCompletion(frozen)
+                for ((owner, view) in frozen.scopedViews()) demand.withCompletion(owner.method, owner.local, view)
                 logger.info { "BIDI_STATIC_CLOSURE_FREEZE run=1 source=LOCAL_FROZEN_INPUT freezeTime=${completionStart.elapsedNow()} seedTime=$seedCaptureTime projectionTime=$projectionTime indexTime=${indexStart.elapsedNow()} ${frozen.statistics()}" }
             }
-            projectTargets(result, shared, demand, counts)
             val seeds = result.analyzers.flatMap { it.sinkSeeds }
             return demand.build() to SeedIndex.of(seeds)
         }
@@ -126,6 +130,22 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
             }
         }
 
+        private fun projectBlocks(result: RunResult<RunMethodAnalyzer>, shared: SharedObjects,
+                                  direction: Direction, run1: Boolean,
+                                  demand: DemandStore.Builder, counts: MutableMap<MethodKey, Int>,
+                                  completion: FrozenStaticCompletion.Builder? = null) {
+            projectBlockHandOff(shared.ap, direction, run1,
+                result.analyzers.asSequence().flatMap { it.blockSummaries() },
+                result.analyzers.asSequence().flatMap { it.blockOutgoingTargets() }, demand, counts,
+                onBoundary = { key, from, to -> completion?.addScopedSeed(key, from, to) })
+            if (run1 && completion != null) for (actor in result.analyzers)
+                for (terminal in actor.blockOutgoingTargets()) for (row in terminal.rows) {
+                    val original = checkNotNull(row.premise as? InitialAp) { "Run-1 cannot retain an ND original" }
+                    completion.addScopedTarget(org.opentaint.dataflow.bidi.store.ScopedSummaryKey(
+                        terminal.method, terminal.scope, terminal.exit), original.toPattern())
+                }
+        }
+
         private fun toForward(result: RunResult<RunMethodAnalyzer>, shared: SharedObjects,
                               counts: MutableMap<MethodKey, Int>): Pair<DemandStore, SeedIndex> {
             val demand = DemandStore.Builder(shared.ap)
@@ -138,6 +158,7 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
                 if (demand.add(method, pattern)) counts.merge(method, 1, Int::plus)
             }
             projectTargets(result, shared, demand, counts)
+            projectBlocks(result, shared, Direction.BACKWARD, false, demand, counts)
             val seeds = ArrayList<Seed>()
             for (actor in result.analyzers) {
                 shared.cancellation.checkpoint()

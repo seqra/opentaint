@@ -1,6 +1,6 @@
 # Method-owned loop blocks
 
-Date: 2 November 2026. Status: selected design; no runtime changes.
+Date: 2 November 2026. Status: selected design; implementation and native validation complete.
 
 This document defines ownership and execution for
 [loop fragments and demand-guided feedback](loop-fragments-and-demand-collapse.md).
@@ -17,6 +17,7 @@ Blocks are internal analysis regions. They are not generated methods.
 | Summaries | Function-like fragment relations | Internal block relations, scoped by block and control ports |
 | Loop restriction | Feedback transition | Loop-block output transition, for both repeat and leave routes |
 | External analysis | Potential synthetic method/call-graph entries | Only the original method remains externally visible |
+| Backward exceptional ZERO | Demand lookup at the reached exceptional boundary only | Also apply complete normal-exit control demand; its outgoing ZERO DemandTarget uses the borrowed normal invocation in handoff metadata only; section 3.1 |
 
 This replaces the generated-function mechanism in the earlier proposal.
 It keeps the selected approximation rules: strict body-summary growth,
@@ -26,7 +27,8 @@ must not become a gate on every instruction or every sequential-block
 transition.
 
 Keep original field transfer, cleaners, mark handling, layers, exclusions,
-real call handling, source permissions, static effects and typed Targets.
+real call handling, source permissions, static effects and typed Targets,
+except the explicit backward exceptional-ZERO demand lookup in section 3.1.
 Keep original instruction and rule identities. Do not add a mark, field,
 register pack, output-binding protocol or alias model for block routing.
 A no-loop method keeps its existing transfer and summary behavior.
@@ -159,6 +161,114 @@ each original source/destination pair and its exit kind. Original return,
 throw and handler transfers can leave to an ancestor continuation. They
 keep their existing control and observation policy. An inner break must
 not become an outer break merely because both use the word "leave".
+
+### 3.1 Selected exception: normal demand at a backward exceptional ZERO
+
+This is a selected semantic change. It is a narrow compatibility hack.
+A sink Target keeps the logical normal exit as its conclusion boundary,
+including a sink in a loop that has no normal leave. In backward analysis,
+the existing exceptional discovery route can reach that loop. Its reached
+ZERO must also use the normal-exit control demand.
+
+```text
+lookup(invocation, ordinaryRows, normalExitRows):
+    rows = ordinaryRows
+    if invocation.direction == BACKWARD
+       and invocation.input == ZERO
+       and invocation.actualBoundary == EXCEPTIONAL_EXIT:
+        rows += normalExitRows     // Keep each complete row unchanged.
+    return existingTypedLookup(rows, invocation)
+```
+
+The invocation must have an actual reach witness in the supplied directed
+CFG. For an original method exit, this can be the existing configured
+backward ZERO start. For a block boundary, it must come from the existing
+method-owned route. This rule does not start a block, create another seed,
+scan demand to find a start, or create a CFG edge. Continue from the
+actual exceptional boundary through the supplied backward graph.
+
+Borrow only rows that admit ZERO under the existing typed matching law.
+In particular, a paired Target row retains its own other endpoint. If
+the normal row is `(Target, p/T)`, admission does not turn it into
+`(Target, q/U)` or an unpaired ZERO permission. Later publication must
+still satisfy that same complete pair. Union two row lists; do not make
+an entry/exit product.
+
+The rule does not alias Target demand to every physical entry. Forward
+lookups, non-ZERO inputs, other boundaries, DATA lookup, and native record
+ports keep their existing behavior. A DATA result derived from admitted
+ZERO still uses its complete paired control row; it does not obtain an
+independent DATA input permission from this exception.
+
+```java
+void work() {
+    while (true) {
+        sourceTAtFFFF(x); // Assign T at x.f.f.f.f.$; preserve other positions.
+        x = x.f;
+        sinkRootT(x);   // DEMAND witness; Target uses logical normal exit.
+    }
+}                      // No normal CFG return is required for Target.
+```
+
+The run-1 field limit is 1.
+
+The existing backward graph has exceptional discovery for this body.
+When its exceptional ZERO is reached, the normal Target demand can admit
+that ZERO. The analyzer then follows the actual backward routes. The
+forward graph still has no path from this loop to the normal return.
+Only selected DEMAND Target rows guide this next run. NormalTarget rows
+remain ignored in backward analysis.
+This admission is not evidence that a NORMAL finding exists. Layers,
+source permissions, complete bindings and Target publication remain
+separate checks.
+
+#### Required continuation law for the borrowed control demand
+
+An existing exceptional discovery edge can have a backward-only physical
+port `d`. That port is valid for the live backward invocation. It is not
+a forward entry. Thus an outgoing backward `ZERO -> DemandTarget` from
+this admitted invocation must carry the borrowed normal invocation in
+its handoff metadata.
+
+```text
+Actual backward state:
+    scope = (block, d), ZERO -> DemandTarget, logical exit = ROOT_ENTRY
+
+Outgoing handoff metadata only, with a normal-borrow witness:
+    scope = (block, ROOT_EXIT), ZERO -> DemandTarget, exit = ROOT_ENTRY
+
+Reversed forward control demand:
+    scope = (block, ROOT_ENTRY), (Target, ZERO), exit = ROOT_EXIT
+```
+
+Apply this address change only when all conditions hold:
+
+```text
+direction == BACKWARD
+an actual exceptional/discovery ZERO invocation borrowed normal demand
+the outgoing premise is ZERO
+the outgoing target is DemandTarget
+```
+
+The witness must come from successful admission by one complete normal
+control row. Preserve that row's paired payload and all annotations.
+Do not use a broad flag that merely says this block has an exceptional
+edge. Ordinary C5 still validates the published result.
+
+Do not change live subscriptions, current Target storage, DATA rows,
+native records, NormalTarget rows or non-ZERO Target rows. They keep their
+physical scopes and ports. This is a control-demand handoff address,
+not another AP projection, seed or direct-start policy.
+
+In the four-field example above, run-1 (limit 1) and run-3 (limit 2) can
+retain only a DEMAND candidate. Run-5 (limit 4) can resolve the exact
+source path through four ordinary reads. A handoff that still names
+backward-only `d` can stop this continuation at run-3. The normal-invocation
+metadata keeps the required forward control route. The finite model
+checks this witness; whole-driver/native correspondence remains a test
+obligation.
+
+The scoped proof dossier gives the constructive model and its limits.
 
 ## 4. Shared registers and alias access
 
@@ -385,7 +495,8 @@ They do not execute copies of method entry/exit rules, resolve new
 configured calls or get new source/sink identities.
 
 A static write supplies its mark at the original write point. A sink
-creates its Target at the original sink. These observations do not wait
+creates its Target at the original sink and publishes its conclusion at
+the logical normal exit. These observations do not wait
 for a loop to exit normally. Static callbacks keep their original method and instruction identity; the
 layout selects the owning block for a point resume. Request, local initial
 and parent-prefix scopes remain distinct. Existing static shortcuts go to
@@ -402,6 +513,19 @@ directly into the root public store. Terminal/side-effect summary delivery
 does not wait for a loop leave and does not invent a normal CFG return.
 These existing effect channels are separate from the two ordinary loop
 output routes.
+
+Keep the reverse publication permission for this shortcut at run-2. A
+run-1 local writer `ZERO -> C.f/T` with entry `p` and logical exit
+`ROOT_EXIT` gives a paired run-2 shortcut demand with entry `ROOT_EXIT`,
+static input `C.f/T`, ZERO output and exit `p`. If an actual run-2 static
+initial reaches the source, its `C.f/T -> DemandTarget` result can use
+that exact W/completion pair at output `p`. Use the same native paired
+restriction and lazy static composition. A registered ZERO-origin writer
+derivation is required. Shared static carry or an unrelated normal
+demand is not sufficient. This is a result check for the existing static
+shortcut, not another DATA input permission or a DATA/native port alias.
+It applies only in run-2 backward mode. It does not remap live scopes,
+Target handoff metadata or ordinary AP outputs.
 
 Only root public summaries enter the original inter-method publication
 interface. Internal Target rows use the same selected typed rules and

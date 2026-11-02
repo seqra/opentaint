@@ -277,7 +277,7 @@ class RunMethodHandlersTest {
     }
 
     private companion object {
-        fun finiteCalls(core: RunMethodAnalyzer,
+        fun finiteCalls(core: BlockRunState,
                         applications: MutableList<Triple<Subscription, Publication, Int>> = arrayListOf(),
                         frozen: () -> Unit = {}): MethodCallServices = object : MethodCallServices {
             override fun process(item: EdgeDelta) = core.emitUnchanged(item)

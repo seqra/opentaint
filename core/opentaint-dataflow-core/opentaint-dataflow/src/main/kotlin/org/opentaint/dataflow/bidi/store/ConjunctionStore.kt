@@ -74,7 +74,8 @@ class ConjunctionStore(private val m: ApManager, private val statistics: N2Stati
     }
 
     /** An E6 join belongs to one callee context, premise set, publication layer and caller call. */
-    data class NdKey(val callee: MethodKey, val premise: PremiseKey, val layer: Layer, val call: CommonInst, val stageOrdinal: Int = 0)
+    data class NdKey(val callee: MethodKey, val premise: PremiseKey, val layer: Layer, val call: CommonInst,
+                     val stageOrdinal: Int = 0, val scope: BlockScope = BlockScope.ROOT)
     private val ndJoins = HashMap<NdKey, NdSummaryJoin<*>>()
 
     @Suppress("UNCHECKED_CAST")

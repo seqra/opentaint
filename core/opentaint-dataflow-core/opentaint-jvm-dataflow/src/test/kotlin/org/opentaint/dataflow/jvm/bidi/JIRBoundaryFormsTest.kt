@@ -580,9 +580,11 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
                     }
                 }
             }, MethodCallServicesFactory(::RunMethodCallServices), TargetPublicationSink { _, _ -> })
-            // endAt is private to the common module; no public production API is added for this test.
-            val endAt = RunMethodAnalyzer::class.java.getDeclaredMethod("endAt", PremiseKey::class.java,
-                CommonInst::class.java, Facts::class.java, Boolean::class.javaPrimitiveType).apply { isAccessible = true }
+            // The transfer state owns this module-internal boundary handler.
+            val endAt = BlockRunState::class.java.declaredMethods.single {
+                it.name.substringBefore('$') == "endAt" && it.parameterTypes.toList() == listOf(
+                    PremiseKey::class.java, CommonInst::class.java, Facts::class.java, Boolean::class.javaPrimitiveType)
+            }.apply { isAccessible = true }
             for ((premise, c) in input) {
                 val key = manager.premiseOf(premise.map(manager::initial))
                 val facts = manager.factsOf(c.fact, c.exclusion, if (c.demand) Layer.DEMAND else Layer.NORMAL)

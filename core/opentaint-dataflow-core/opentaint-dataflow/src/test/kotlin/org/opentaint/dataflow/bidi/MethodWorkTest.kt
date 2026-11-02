@@ -43,8 +43,10 @@ class MethodWorkTest {
             val core = f.core(index = index)
             core.addInitial(f.manager.zero) // Already-admitted ZERO for this local transfer test.
             val attempts = f.drain(core, quantum = 1)
-            assertTrue(attempts >= 3)
-            assertEquals(setOf(0, 1, 2), f.processed.map { it.node.location.index }.toSet())
+            assertTrue(attempts >= if (index == 1) 3 else 1)
+            val expected = if (index == 1) setOf(0, 1, 2) else setOf(2)
+            assertEquals(expected, f.processed.map { it.node.location.index }.toSet(),
+                "A manually admitted restricted root ZERO grants no empty-demand child entry")
             assertTrue(f.cuts.none { it.first == Cut.STATEMENT })
             val previousSteps = core.steps
             val previousDeltas = core.edgeDeltas

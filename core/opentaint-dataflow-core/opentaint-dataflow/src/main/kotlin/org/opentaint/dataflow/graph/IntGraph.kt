@@ -8,6 +8,7 @@ import org.opentaint.dataflow.util.printer.PrintableGraph
 import org.opentaint.dataflow.util.toBitSet
 import org.opentaint.dataflow.util.toSet
 import java.util.BitSet
+import java.util.ArrayDeque
 
 class IntGraph {
     private val successors = Int2ObjectOpenHashMap<BitSet>()
@@ -47,39 +48,53 @@ class IntGraph {
         val stack = IntArrayList()
         val result = mutableListOf<BitSet>()
 
-        fun strongConnect(v: Int) {
+        // Keep Tarjan's visit and component order, but put suspended DFS calls
+        // on an explicit stack. A long CFG must not consume the JVM call stack.
+        class Frame(val vertex: Int, val edges: BitSet?) {
+            var next: Int = edges?.nextSetBit(0) ?: -1
+        }
+        val dfs = ArrayDeque<Frame>()
+
+        fun enter(v: Int) {
             nodeIndex[v] = index
             nodeLowLink[v] = index
             index++
             stack.add(v)
             onStack.set(v)
-
-            val vSuccessors = successors[v]
-            vSuccessors?.forEach { w ->
-                val indexed = nodeIndex[w]
-                if (indexed == NO_VALUE) {
-                    strongConnect(w)
-                    nodeLowLink[v] = minOf(nodeLowLink[v], nodeLowLink[w])
-                } else if (onStack.get(w)) {
-                    nodeLowLink[v] = minOf(nodeLowLink[v], indexed)
-                }
-            }
-
-            if (nodeLowLink[v] == nodeIndex[v]) {
-                val component = BitSet()
-                do {
-                    val w = stack.removeInt(stack.lastIndex)
-                    onStack.clear(w)
-                    component.set(w)
-                } while (w != v)
-
-                result.add(component)
-            }
+            dfs.addLast(Frame(v, successors[v]))
         }
 
-        allNodes.forEach { node ->
-            if (nodeIndex[node] == NO_VALUE) {
-                strongConnect(node)
+        allNodes.forEach { root ->
+            if (nodeIndex[root] != NO_VALUE) return@forEach
+            enter(root)
+            while (dfs.isNotEmpty()) {
+                val frame = dfs.peekLast()
+                val v = frame.vertex
+                val w = frame.next
+                if (w >= 0) {
+                    frame.next = frame.edges!!.nextSetBit(w + 1)
+                    if (nodeIndex[w] == NO_VALUE) {
+                        enter(w)
+                    } else if (onStack[w]) {
+                        nodeLowLink[v] = minOf(nodeLowLink[v], nodeIndex[w])
+                    }
+                    continue
+                }
+
+                dfs.removeLast()
+                if (nodeLowLink[v] == nodeIndex[v]) {
+                    val component = BitSet()
+                    do {
+                        val member = stack.removeInt(stack.lastIndex)
+                        onStack.clear(member)
+                        component.set(member)
+                    } while (member != v)
+                    result.add(component)
+                }
+                if (dfs.isNotEmpty()) {
+                    val parent = dfs.peekLast().vertex
+                    nodeLowLink[parent] = minOf(nodeLowLink[parent], nodeLowLink[v])
+                }
             }
         }
 

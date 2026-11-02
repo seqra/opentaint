@@ -12,8 +12,7 @@ data class OperationInput(val site: ResumeSite, val premise: PremiseKey, val fac
                           val callState: CallResumeState? = null)
 
 /** Actor-owned resume directory. Service replies name these rows; they never carry callbacks. */
-internal class Run1PointResume(private val core: RunMethodAnalyzer) {
-    private var next = 0L
+internal class Run1PointResume(private val core: BlockRunState) {
     private data class PointKey(val site: ResumeSite, val initial: InitialAp, val base: AccessPathBase,
                                 val tail: Tail, val fieldExclusion: ExclusionSet, val layer: Layer,
                                 val state: CallResumeState?)
@@ -80,7 +79,7 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
             statistics?.staticGroupCallOffered()
             val key = CallKey(part.callee, part.ref, part.linkLayer, result.premise, resultKey, member)
             val id = callKeys.getOrPut(key) {
-                (++next).also { calls[it] = CallContinuation(key, part, piece, member) }
+                (core.nextStaticTicket()).also { calls[it] = CallContinuation(key, part, piece, member) }
             }
             val row = calls.getValue(id)
             // AP equality retains the current per-leaf key and protection refresh.
@@ -110,7 +109,7 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
                 }) continue
             val key = ReadKey(at.site, operation)
             val id = readKeys.getOrPut(key) {
-                (++next).also { reads[it] = at to operation }
+                (core.nextStaticTicket()).also { reads[it] = at to operation }
             }
             when (operation) {
                 is StaticOperation.Read -> core.staticBatch.reads += StaticReadRegistration(core.key, id,
@@ -127,7 +126,7 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
                             core.staticBatch.reads += StaticReadRegistration(core.key, id, operation.position)
                         if (exact || operation.includeBase) {
                             val directId = directKeys.getOrPut(key) {
-                                (++next).also { direct[it] = DirectRow(key, at, MarkSet.EMPTY) }
+                                (core.nextStaticTicket()).also { direct[it] = DirectRow(key, at, MarkSet.EMPTY) }
                             }
                             val row = direct.getValue(directId)
                             val fresh = groups - row.waiting
@@ -153,7 +152,7 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
         if (groups.isEmpty) return
         val key = PointKey(at.site, original, flow.base, flow.tail, flow.exclusion, flow.layer, at.callState)
         val id = pointKeys.getOrPut(key) {
-            (++next).also { points[it] = PointRow(it, key) }
+            (core.nextStaticTicket()).also { points[it] = PointRow(it, key) }
         }
         val row = points.getValue(id)
         var subscribe = MarkSet.EMPTY
@@ -188,7 +187,7 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
             check(premise is InitialAp && !premise.isZero && premise.mark is MarkSlot.Star)
             val key = WriterKey(premise, leaf, value.layer)
             if (key in writerKeys) continue
-            val id = ++next
+            val id = core.nextStaticTicket()
             writerKeys[key] = id
             writers[id] = key
             if (premise.base == STATIC)
@@ -223,13 +222,13 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
                 // A fixed-group conditional is a pending complete binding, not a
                 // permanent summary archive or a service-side Cartesian join.
                 // Its immutable scalar survives erasure of the method row.
-                val joinId = ++next
+                val joinId = core.nextStaticTicket()
                 conditionalKeys[key] = joinId
                 conditional[joinId] = ConditionalJoin(key)
                 repeat(premise.size) { member ->
                     val initial = premise.member(member)
                     val atom = (initial.mark as MarkSlot.Concrete).mark
-                    val inputId = ++next
+                    val inputId = core.nextStaticTicket()
                     joinInputs[inputId] = JoinInput(joinId, member)
                     core.staticBatch.interests += StaticInterest(core.key, inputId, initial.toPattern(),
                         MarkSet.of(core.ap.marks.runtimeAtom(atom, core.mode.markMode)))
@@ -297,7 +296,7 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
                 val original = writer.premise as? InitialAp ?: return
                 check(!original.isZero && original.mark is MarkSlot.Star && writer.output.fact.mark is MarkSlot.Star)
                 if (original.base == STATIC) {
-                    val inputId = ++next
+                    val inputId = core.nextStaticTicket()
                     writerInputs[inputId] = WriterInput(writer, effect.groups)
                     core.staticBatch.interests += StaticInterest(core.key, inputId, original.toPattern(), effect.groups)
                 } else {
@@ -331,18 +330,12 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
 
     private fun materializeScalarImages(key: PointKey, images: FlowNode, supply: RegionGroups) {
         val actual = core.staticFacts(supply)
-        FlowAlgebra.forEachLeaf(images, EMPTY_PATH, core.ap.cancellation) { path, _ ->
-            val scalarRoot = FlowAlgebra.prepend(core.ap, core.ap.path(path), FlowAlgebra.LEAF_NODE)
-            val relation = core.ap.flowTree(key.base, key.layer, key.fieldExclusion,
-                MarkExclusions.EMPTY, scalarRoot, key.tail)
-            for (leaf in core.ops.leaves(actual)) {
-                core.ap.cancellation.checkpoint()
-                val premise = concreteInitial(leaf)
-                core.ops.applySummary(core.ops.startFact(premise, core.mode), key.initial, relation,
-                    core.mode, object : ApOut {
-                        override fun result(f: Facts) = core.installPoint(premise, f, key.site, key.state)
-                        override fun markRequest(mark: TaintMark) = Unit // materialization clears mx only
-                    })
+        for (leaf in core.ops.leaves(actual)) {
+            core.ap.cancellation.checkpoint()
+            val premise = concreteInitial(leaf)
+            materializeStaticFlowImages(core.ops, core.mode, key.initial, premise, images,
+                key.base, key.tail, key.fieldExclusion, key.layer) { value ->
+                core.installPoint(premise, value, key.site, key.state)
             }
         }
     }
@@ -356,16 +349,7 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
         }
     }
 
-    private fun concreteInitial(leaf: Pattern): InitialAp {
-        val path = leaf.fact.path
-        check(path.size != 1 || leaf.fact.tail == Tail.EXACT) {
-            "A global class-marker reply must remain exact"
-        }
-        val exact = leaf.fact.tail == Tail.EXACT
-        val originalPath = if (path.size > 2) path.take(2) else path
-        return core.ap.initial(Pattern(leaf.fact.copy(path = originalPath,
-            tail = if (exact && path.size <= 2) Tail.EXACT else Tail.STAR), ExclusionSet.Empty))
-    }
+    private fun concreteInitial(leaf: Pattern): InitialAp = concreteStaticResumeInitial(core.ap, leaf)
 
     fun clear() { pointKeys.clear(); points.clear(); readKeys.clear(); reads.clear(); writerKeys.clear(); writers.clear(); direct.clear(); directKeys.clear(); callKeys.clear(); calls.clear(); writerInputs.clear(); conditionalKeys.clear(); conditional.clear(); joinInputs.clear() }
 }

@@ -66,17 +66,17 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
         return Collections.unmodifiableList(fresh)
     }
 
-    private fun candidateMembers(part: Subscription, mode: ApMode): Set<Member> {
+    private fun candidateMembers(original: PremiseKey, actual: Facts, mode: ApMode, zeroOnly: Boolean): Set<Member> {
         ap.cancellation.checkpoint()
-        if (!RuntimeDataDomain.packet(part.ref.premise, part.added)) return emptySet()
+        if (!RuntimeDataDomain.packet(original, actual)) return emptySet()
         val members = LinkedHashSet<Member>()
-        if (part.zeroOnly) {
+        if (zeroOnly) {
             for (member in byMember.lookupExtensions(AccessPathBase.Zero, EMPTY_PATH)) {
                 ap.cancellation.checkpoint()
                 if (member.premise.isZero) members += member
             }
         } else {
-            for (leaf in ops.leaves(part.added)) {
+            for (leaf in ops.leaves(actual)) {
                 ap.cancellation.checkpoint()
                 val path = leaf.fact.path.toIntArray()
                 if (mode.run1) {
@@ -100,18 +100,26 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
         return members
     }
 
-    fun candidates(part: Subscription, mode: ApMode): List<Pair<Publication, Int>> {
+    fun candidates(part: Subscription, mode: ApMode): List<Pair<Publication, Int>> =
+        candidates(part.ref.premise, part.added, mode, part.zeroOnly)
+
+    fun candidates(original: PremiseKey, actual: Facts, mode: ApMode,
+                   zeroOnly: Boolean = false): List<Pair<Publication, Int>> {
         val out = ArrayList<Pair<Publication, Int>>()
-        for (member in candidateMembers(part, mode)) {
+        for (member in candidateMembers(original, actual, mode, zeroOnly)) {
             ap.cancellation.checkpoint()
             for (publication in publications(member.premise)) out += publication to member.index
         }
         return Collections.unmodifiableList(out)
     }
 
-    fun targetCandidates(part: Subscription, mode: ApMode): List<Pair<TargetSummary, Int>> {
+    fun targetCandidates(part: Subscription, mode: ApMode): List<Pair<TargetSummary, Int>> =
+        targetCandidates(part.ref.premise, part.added, mode, part.zeroOnly)
+
+    fun targetCandidates(original: PremiseKey, actual: Facts, mode: ApMode,
+                         zeroOnly: Boolean = false): List<Pair<TargetSummary, Int>> {
         val out = ArrayList<Pair<TargetSummary, Int>>()
-        for (member in candidateMembers(part, mode)) {
+        for (member in candidateMembers(original, actual, mode, zeroOnly)) {
             ap.cancellation.checkpoint()
             for (target in targets[member.premise].orEmpty()) out += TargetSummary(member.premise, target) to member.index
         }

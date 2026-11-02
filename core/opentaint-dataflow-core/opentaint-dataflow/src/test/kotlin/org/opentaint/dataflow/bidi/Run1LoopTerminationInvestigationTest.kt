@@ -64,12 +64,23 @@ class Run1LoopTerminationInvestigationTest {
         graph(loopSource = true, plainCopy = plainCopy, nonZero = nonZero,
             duplicateInitial = duplicateInitial) { f, actor ->
             closeWithinBound(f, actor)
-            val seen = f.processed.filter { it.node.location.index == 2 && it.facts.base == y }
-            assertTrue(seen.isNotEmpty(), "The actual loop body must run")
-            assertEquals(1, seen.map { it.premise }.distinct().size)
-            assertEquals(1, seen.map { f.ops.leaves(it.facts).toList() }.distinct().size)
+            // Block admission adds an abstract FLOW companion and gives the
+            // entry and repeat traversals independent post-statement stores.
+            // Those are different relations, not reopening one marked cell.
+            val seen = f.processed.filter { it.node.location.index == 2 && it.facts.base == y && it.facts is TaintTree }
+            assertTrue(seen.isNotEmpty(), "The actual marked loop body must run")
+            assertEquals(1, seen.map { f.ops.leaves(it.facts).toList() }.distinct().size,
+                "Every marked traversal has the same concrete GROUP image")
             assertTrue(seen.all { it.facts.layer == Layer.DEMAND })
-            assertEquals(1, actor.edges.edgesAt(f.inst(2), seen.first().premise).count { it.second.base == y })
+            val runtime = assertNotNull(actor.blockRuntime)
+            val owner = runtime.layout.ownerOf(2)
+            val cells = runtime.states().filter { it.first.block == owner }.flatMap { (scope, state) ->
+                state.edges.edgesAt(f.inst(2)).map { (premise, facts) -> Triple(scope, premise, facts) }.toList()
+            }
+            assertTrue(cells.any { it.third.base == y && it.third is TaintTree })
+            val keys = cells.map { (scope, premise, facts) -> Triple(scope, premise, facts.groupKey) }
+            assertEquals(keys.size, keys.toSet().size,
+                "One final packet per scope, post-S point, local initial and group")
             val processed = f.processed.size
             repeat(4) { assertTrue(actor.work(1)); f.pumpQuestions() }
             assertEquals(processed, f.processed.size, "An unchanged closed relation must remain quiescent")
@@ -85,11 +96,18 @@ class Run1LoopTerminationInvestigationTest {
 
     private fun closeWithinBound(f: MethodAnalysisFixtures, actor: RunMethodAnalyzer) {
         var complete = false
-        repeat(32) {
-            if (!complete) complete = actor.work(1)
-            f.pumpQuestions()
+        var quanta = 0
+        while (!complete && quanta < 512) {
+            quanta++
+            val drained = actor.work(1)
+            val delivered = f.pumpQuestions()
+            complete = drained && !delivered
         }
-        assertTrue(complete, "The finite one-group CFG must close in 32 bounded work quanta")
-        assertTrue(actor.work(1))
+        val detail = "quanta=$quanta physicalEvents=${f.processed.size} " +
+            actor.blockRuntime?.diagnosticStatistics().orEmpty()
+        println("LOOP_FIXED_POINT_CONTROL $detail")
+        assertTrue(complete, "The finite GROUP relation must close within 512 counted work quanta; $detail")
+        assertTrue(f.processed.size <= 64, "Local dispatch must not repeat unbounded physical work; $detail")
+        assertTrue(actor.work(1), "The closed method remains idle; $detail")
     }
 }

@@ -1,947 +1,164 @@
 package org.opentaint.dataflow.bidi.engine
 
-import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
-import org.opentaint.dataflow.bidi.interp.*
-import org.opentaint.dataflow.bidi.store.*
-import org.opentaint.ir.api.common.cfg.CommonInst
-import java.util.Collections
+import org.opentaint.dataflow.bidi.driver.ScopedTargetRows
+import org.opentaint.dataflow.bidi.store.ScopedRunSummary
+import org.opentaint.dataflow.bidi.store.BlockScope
+import org.opentaint.dataflow.bidi.store.Record
 
-/** One runner owns this method's work and stores for one fresh run. */
+/** The only scheduled actor for an original method. Block state is owned here. */
 class RunMethodAnalyzer(
-    override val key: MethodKey,
+    key: MethodKey,
     port: RunnerPort<RunMethodAnalyzer>,
     publisher: PublicationSink,
     localFactory: MethodLocalServicesFactory,
     callFactory: MethodCallServicesFactory,
     targetPublisher: TargetPublicationSink,
-) : RunActor, SummaryApplier {
-    private var port: RunnerPort<RunMethodAnalyzer>? = port
-    private var runContext: RunMethodContext? = RunMethodContext(key, port.forms, port.config, port.shared)
-    internal val runnerPort: RunnerPort<RunMethodAnalyzer> get() = checkNotNull(port) { "The method is frozen" }
-    internal val context: RunMethodContext get() = checkNotNull(runContext) { "The method is frozen" }
-    internal val config: RunConfig get() = context.config
-    internal val forms: DirectedForms get() = context.forms
-    internal val ap: ApManager = port.shared.ap
-    internal val ops: ApOps = port.shared.ops
-    internal val mode: ApMode = port.config.mode
-    internal val forward: Boolean = port.config.direction == Direction.FORWARD
-    private val limit = port.config.fieldLimit
-    private var bodyWork = context.bodyWorkStatistics()
-    internal var bodyWorkSnapshot: BodyWorkSnapshot? = null; private set
-    /** The run manager may call this only after all runner jobs have joined.
-     * It copies numeric diagnostics; it does not export an incomplete run store. */
-    internal fun stoppedBodyWorkSnapshot(): BodyWorkSnapshot? = bodyWorkSnapshot ?: bodyWork?.snapshot()
-    internal val diagnosticCandidateOffers: Long get() =
-        bodyWorkSnapshot?.candidatePackets ?: bodyWork?.candidatePackets ?: 0L
-
-    private var edgeStore: MethodEdgeStore? = MethodEdgeStore(ap, key, port.shared.language, limit,
-        flowBacked = mode.run1 && mode.markMode == MarkMode.FULL,
-        collectStatistics = port.shared.n2Statistics != null)
-    private var initialStore: InitialFactStore? = InitialFactStore()
-    val edges: MethodEdgeStore get() = checkNotNull(edgeStore) { "The method edges were released" }
-    val initials: InitialFactStore get() = checkNotNull(initialStore) { "The initial facts were released" }
-    val summaries = RunSummaryStore(ap, flowBacked = true)
-    val sourceHits: SourceHitStore? = if (forward) null else SourceHitStore()
-    val staticGuidanceSeeds = StaticGuidanceSeedStore(ap, ops, port.shared.staticGuidanceInterner)
-    private val staticWriteCandidates = if (mode.run1)
-        KilledStaticWriteStore(key, ap, ops, port.shared.staticWriteKeyInterner) else null
-
-    /** Joined guidance completion only; raw observed rows still support ordinary call binding.
-     * This also works after actor freeze for existing synthetic handoff fixtures. */
-    fun freezeStaticWriteCandidates(): FrozenStaticWrites {
-        check(mode.run1) { "Static-write candidate guidance exists only for run-1" }
-        return checkNotNull(staticWriteCandidates).freeze(summaries.all(), staticGuidanceSeeds.frozenRows())
-    }
-    private val checkRun2StaticAnchors = config.index == 2
-    private var temporary = RequestStorage()
-    private var temporarySinceNanos = 0L
-    private val staticSupplyProfile = if (config.run1 && config.direction == Direction.FORWARD &&
-        mode.markMode == MarkMode.FULL) SupplyProfile.CANONICAL_RUN1_FULL else SupplyProfile.ORDERED_REFERENCE
-    internal var staticBatch = StaticBatch(staticSupplyProfile, ap.cancellation, context.shared.n2Statistics); private set
-    private val pointResumes = if (config.run1) Run1PointResume(this) else null
-    private data class PointWork(val premise: PremiseKey, val facts: Facts,
-                                 val site: ResumeSite, val state: CallResumeState?)
-    private data class RuleItem(val premise: PremiseKey, val facts: Facts)
-    private val resumeQueue = java.util.ArrayDeque<PointWork>()
-    private val operationOwner = FormOwner()
-    internal var abstraction: Run1Abstraction? = if (config.run1) Run1Abstraction(
-        ops,
-        answer = ::addInitial,
-        borrowRequests = { input -> runnerPort.summaryStorage(key).borrowMatchingRequests(input) },
-        collectRequests = ::collectRequests,
-        statistics = context.shared.requestBatchStatistics,
-        policyStatistics = context.shared.abstractionStatistics,
-        owner = key,
-    ) else null
+) : BlockRunState(key, port, publisher, localFactory, callFactory, targetPublisher), RunActor {
+    internal var blockRuntime: MethodBlockRuntime? = null
         private set
-    internal fun releaseAbstraction() {
-        abstraction?.release(); abstraction = null
-        if (!temporary.isEmpty) {
-            context.shared.abstractionStatistics?.temporaryChanged(-temporary.dynamicRows.toLong(), -temporary.dynamicMembers)
-            temporary = RequestStorage()
-        }
-        temporarySinceNanos = 0L
-    }
-    internal fun unchangedStaticInitial(premise: PremiseKey): InitialAp? =
-        null // The selected design has no inherited static request suppression.
+    private val staticTicketScopes = HashMap<Long, BlockScope>()
+    private val localStaticRequests = if (!config.run1) null else LocalStaticInputRequests(ops, mode, key,
+        ticket = ::nextStaticTicket,
+        interest = { staticBatch.interests += it; requestWork() },
+        resume = { link, original, value ->
+            checkNotNull(blockRuntime).offerStaticAnswer(link, original as InitialAp, value)
+        })
+    private var scopedSummaries: List<ScopedRunSummary> = emptyList()
+    private var scopedTargets: List<ScopedTargetRows> = emptyList()
+    private var scopedOutgoingTargets: List<ScopedTargetRows> = emptyList()
+    private var frozenChildCounters = LongArray(10)
+    private var frozenBlockDiagnostics: String? = null
+    internal fun blockDiagnostics(): String? = blockRuntime?.diagnosticStatistics() ?: frozenBlockDiagnostics
 
-    private var publicationSink: PublicationSink? = publisher
-    private var local: MethodLocalServices? = localFactory.create(this)
-    private var calls: MethodCallServices? = callFactory.create(this)
-    internal val localServices: MethodLocalServices get() = checkNotNull(local) { "The local services were released" }
-    private val callServices: MethodCallServices get() = checkNotNull(calls) { "The call services were released" }
-    internal val applier = FormApplier(EngineAlgebra(this))
-    private val worklist = DeltaWorklist(flowFirst = mode.run1 && mode.markMode == MarkMode.FULL,
-        batchManager = ap.takeIf { mode.run1 && mode.markMode == MarkMode.FULL })
-    private var pending = ArrayList<Publication>()
-    private var targetPublicationSink: TargetPublicationSink? = targetPublisher
-    private var pendingTargets = ArrayList<TargetSummary>()
-    private val rawTargetRows = LinkedHashSet<TargetSummary>()
-    val targets: Set<TargetSummary> get() = Collections.unmodifiableSet(rawTargetRows)
-    private val outgoingTargetRows = LinkedHashSet<TargetSummary>()
-    val outgoingTargets: Set<TargetSummary> get() = Collections.unmodifiableSet(outgoingTargetRows)
-    val sinkSeeds = LinkedHashSet<org.opentaint.dataflow.bidi.driver.Seed>()
-
-    internal fun emitTarget(premise: PremiseKey, target: Target) {
-        if (!RuntimeDataDomain.premise(premise)) return
-        if (!forward && target is Target.NormalTarget) return
-        premise.forEachMember { check(!it.isFlow) { "Target needs a concrete or ZERO origin" } }
-        if (target is Target.NormalTarget && config.normalTargets.contains(key, premise, target.id)) return
-        val row = TargetSummary(premise, target)
-        if (!rawTargetRows.add(row)) return
-        if (target is Target.NormalTarget || config.run1 ||
-            checkNotNull(config.demand).acceptsTarget(key, premise, config.admissionPolicy)) {
-            pendingTargets += row
-            if (target == Target.DemandTarget) outgoingTargetRows += row
-            requestWork()
+    init {
+        if (port.shared.contexts.blockLayout(key).hasLoops) {
+            val runtime = MethodBlockRuntime(this, port, localFactory, callFactory)
+            blockRuntime = runtime
+            rootRouting = runtime
         }
     }
 
-    override var steps: Long = 0; private set
-    override val hasZeroWork: Boolean get() = worklist.hasZeroWork
-    var edgeDeltas: Long = 0; private set
-    override var demandLayerEdges: Long = 0; private set
-    var nonZeroInitial: Boolean = false; private set
-    override var recordCrossings: Long = 0; private set
-    var triggerSeeds: Long = 0; private set
-    var neutralBatchApplications: Long = 0; private set
-    var neutralBatchMemberships: Long = 0; private set
-    var neutralBulkStorePackets: Long = 0; private set
-    var neutralBulkStoreMemberships: Long = 0; private set
-    var neutralScalarFallbackMemberships: Long = 0; private set
-    var cfgDeliveryHits: Long = 0; private set
-    var cfgDeliverySearches: Long = 0; private set
-    var cfgDeliveryVisitedNodes: Long = 0; private set
-    var cfgDeliveryDestinations: Long = 0; private set
-    var cfgDeliveryMaxWidth: Int = 0; private set
-    /** Scalar gauges copied before release. No premise, fact or actor is retained. */
-    var scalarIdentityStatistics: ScalarIdentityStatistics? = null; private set
+    private fun children(): Sequence<BlockRunState> = blockRuntime?.states()?.asSequence()
+        ?.map { it.second }?.filter { it !== this } ?: emptySequence()
+    private fun childCount(slot: Int, count: (BlockRunState) -> Long): Long =
+        frozenChildCounters[slot] + children().sumOf(count)
 
-    private var initialized = false
+    override val steps get() = super.steps + childCount(0) { it.steps }
+    override val edgeDeltas get() = super.edgeDeltas + childCount(1) { it.edgeDeltas }
+    override val demandLayerEdges get() = super.demandLayerEdges + childCount(2) { it.demandLayerEdges }
+    override val recordCrossings get() = super.recordCrossings + childCount(3) { it.recordCrossings }
+    override val triggerSeeds get() = super.triggerSeeds + childCount(4) { it.triggerSeeds }
+    override val neutralBatchApplications get() = super.neutralBatchApplications + childCount(5) { it.neutralBatchApplications }
+    override val neutralBatchMemberships get() = super.neutralBatchMemberships + childCount(6) { it.neutralBatchMemberships }
+    override val neutralBulkStorePackets get() = super.neutralBulkStorePackets + childCount(7) { it.neutralBulkStorePackets }
+    override val neutralBulkStoreMemberships get() = super.neutralBulkStoreMemberships + childCount(8) { it.neutralBulkStoreMemberships }
+    override val neutralScalarFallbackMemberships get() = super.neutralScalarFallbackMemberships + childCount(9) { it.neutralScalarFallbackMemberships }
+    override val hasZeroWork get() = super.hasZeroWork || children().any { it.localHasZeroWork }
 
-    /** Called only by the registered actor's owner; use the ordinary publication path. */
-    private fun initialize() {
-        if (initialized) return
-        initialized = true
-        // Static reads and effects start only at their reached operation.
+    internal fun blockSummaries(): Sequence<ScopedRunSummary> = scopedSummaries.asSequence()
+    internal fun blockTargets(): Sequence<ScopedTargetRows> = scopedTargets.asSequence()
+    internal fun blockOutgoingTargets(): Sequence<ScopedTargetRows> = scopedOutgoingTargets.asSequence()
+    internal fun joinedBlockStates(): List<Pair<BlockScope, BlockRunState>> =
+        blockRuntime?.states() ?: listOf(BlockScope.ROOT to this)
+    internal fun forEachJoinedLocalInput(scope: BlockScope, visit: (LocalLink, Facts) -> Unit) {
+        blockRuntime?.forEachLocalInput(scope, visit)
     }
 
-    fun addRootZero() {
-        if (config.run1) addInitial(ap.zero)
-        else for (initial in emitRestrictedInitials(config, ops, key, Reach.NORMAL)) addInitial(initial)
+    internal fun allocateStaticTicket(scope: BlockScope): Long = nextStaticTicket().also {
+        check(staticTicketScopes.put(it, scope) == null)
     }
 
-    fun addLink(ref: CallerRef, linkLayer: Layer, added: Facts) {
-        if (!RuntimeDataDomain.packet(ref.premise, added)) return
-        check(config.run1) { "Raw call inputs are for run-1 only" }
-        checkPremise(ref.premise)
-        ap.cancellation.checkpoint()
-        initialize()
-        check(added.base !is AccessPathBase.CleanerTemporary) { "A field-action temporary cannot enter an added link" }
-        check(linkLayer == added.layer) { "The link layer must be the added fact's layer" }
-        context.shared.abstractionStatistics?.arrival()
-        // Diagnostic input presence; this is not selected outgoing demand or a retained-group count.
-        if (added.layer == Layer.DEMAND && !sawDemandInput) { sawDemandInput = true; demandLayerEdges++ }
-        checkNotNull(abstraction).emit(ref, added)
+    internal fun requestLocalStaticInput(link: LocalLink, input: Facts, mark: TaintMark) {
+        checkNotNull(localStaticRequests).request(link, input as FlowTree, mark)
     }
 
-    private var sawDemandInput = false
-
-    fun addMarkRequest(premise: InitialAp, mark: TaintMark) {
-        check(config.run1) { "Requests exist only in run 1" }
-        localServices.addMarkRequest(premise, mark)
+    override fun requestWork() {
+        blockRuntime?.scheduleRoot()
+        super.requestWork()
     }
 
-    fun addMarkRequests(premise: InitialAp, marks: RequestMarkSet) {
-        check(config.run1) { "Requests exist only in run 1" }
-        localServices.addMarkRequests(premise, marks)
+    override fun work(quantum: Int): Boolean = blockRuntime?.work(quantum) ?: super.work(quantum)
+
+    override fun releaseAbstraction() {
+        for (state in children()) state.releaseAbstraction()
+        super.releaseAbstraction()
     }
 
-    fun addMarkRequests(rows: RequestRows) {
-        check(config.run1) { "Requests exist only in run 1" }
-        for ((slot, marks) in rows) { ap.cancellation.checkpoint(); collectRequests(slot, marks) }
+    private fun waiting(scope: BlockScope): BlockRunState =
+        if (scope == BlockScope.ROOT) this else checkNotNull(blockRuntime).state(scope)
+
+    override fun applySummary(part: Subscription, pub: Publication, member: Int) {
+        if (part.ref.scope == BlockScope.ROOT) super.applySummary(part, pub, member)
+        else waiting(part.ref.scope).applySummary(part, pub, member)
+    }
+    override fun applyStaticSummary(part: Subscription, pub: Publication, member: Int) {
+        if (part.ref.scope == BlockScope.ROOT) super.applyStaticSummary(part, pub, member)
+        else waiting(part.ref.scope).applyStaticSummary(part, pub, member)
+    }
+    override fun applyTarget(part: Subscription, row: TargetSummary, member: Int) {
+        if (part.ref.scope == BlockScope.ROOT) super.applyTarget(part, row, member)
+        else waiting(part.ref.scope).applyTarget(part, row, member)
+    }
+    override fun applyStaticTarget(part: Subscription, row: TargetSummary, member: Int) {
+        if (part.ref.scope == BlockScope.ROOT) super.applyStaticTarget(part, row, member)
+        else waiting(part.ref.scope).applyStaticTarget(part, row, member)
+    }
+    override fun requestStaticGroups(part: Subscription, marks: org.opentaint.dataflow.bidi.store.RequestMarkSelection) {
+        if (part.ref.scope == BlockScope.ROOT) super.requestStaticGroups(part, marks)
+        else waiting(part.ref.scope).requestStaticGroups(part, marks)
+    }
+    override fun applyRecord(part: Subscription, record: Record) {
+        if (part.ref.scope == BlockScope.ROOT) super.applyRecord(part, record)
+        else waiting(part.ref.scope).applyRecord(part, record)
+    }
+    override fun applyRecordView(part: Subscription, view: RecordLeafView, nonSubsumable: Boolean) {
+        if (part.ref.scope == BlockScope.ROOT) super.applyRecordView(part, view, nonSubsumable)
+        else waiting(part.ref.scope).applyRecordView(part, view, nonSubsumable)
     }
 
-    internal fun collectRequests(slot: Run1Slot, offered: RequestMarkSelection) {
-        initialize()
-        check(config.run1) { "Requests exist only in run 1" }
-        val statistics = context.shared.abstractionStatistics
-        val counts = statistics?.let { RequestAdmissionCounts() }
-        val beforeRows = temporary.dynamicRows
-        val beforeMembers = temporary.dynamicMembers
-        try {
-            val fresh = offered.minus(runnerPort.summaryStorage(key).borrowRequest(slot), counts, ap.cancellation::checkpoint)
-            if (fresh.isEmpty) return
-            val delta = temporary.addAll(slot, fresh, counts, ap.cancellation::checkpoint)
-            if (!delta.isEmpty && temporarySinceNanos == 0L && context.shared.requestBatchStatistics != null)
-                temporarySinceNanos = System.nanoTime()
-            requestWork() // also schedules request-only actors; producers never read P
-        } finally {
-            if (counts != null) {
-                counts.freshTemporaryMembers = temporary.dynamicMembers - beforeMembers
-                statistics?.temporaryChanged((temporary.dynamicRows - beforeRows).toLong(), counts.freshTemporaryMembers)
-                statistics?.requestOffer(counts)
-            }
+    override fun onStaticEffect(effect: StaticOwnerEffect) {
+        if (localStaticRequests?.answer(effect) == true) return
+        val ticket = when (effect) {
+            is StaticOwnerEffect.ReadReady -> effect.id
+            is StaticOwnerEffect.PointReady -> effect.id
+            is StaticOwnerEffect.WriterInterest -> effect.id
         }
+        val scope = staticTicketScopes[ticket]
+        if (scope == null) super.onStaticEffect(effect)
+        else checkNotNull(blockRuntime).state(scope).onStaticEffect(effect)
     }
-
-    internal fun addInitial(initial: InitialAp) = addInitial(AdmittedInitial(initial, Layer.NORMAL))
-
-    internal fun addInitial(admitted: AdmittedInitial) {
-        val initial = admitted.initial
-        if (!RuntimeDataDomain.initial(initial)) return
-        ap.cancellation.checkpoint()
-        initialize()
-        if (config.run1) {
-            validateRun1Initial(initial, limit)
-            check(initial.base != STATIC) { "Run-1 static descriptors resume at an operation, not method entry" }
-        }
-        check(forward || initial.tail != Tail.ANY_TAINT) { "A backward run has no must premise" }
-        val intrinsic = ops.startFact(initial, mode)
-        val start = forceRun1Layer(initial, intrinsic.withLayer(intrinsic.layer or (admitted.layer == Layer.DEMAND)))
-        val fresh = initials.add(AdmittedInitial(initial, start.layer))
-        context.shared.abstractionStatistics?.initial(fresh)
-        if (!fresh) return
-        if (!initial.isZero) nonZeroInitial = true
-        for (node in forms.startNodes(key, zero = initial.isZero)) {
-            ap.cancellation.checkpoint()
-            startAt(initial, node, start)
-        }
-    }
-
-    internal fun collect(premise: PremiseKey, input: Facts, sink: ResultSink): ApOut {
-        return object : ApOut {
-            override fun result(f: Facts) {
-                if (!RuntimeDataDomain.packet(premise, input) || !RuntimeDataDomain.packet(premise, f)) return
-                val runtime = forceRun1Layer(premise, f)
-                if (config.run1) ops.run1Cover(runtime) { sink(premise, it) } else sink(premise, runtime)
-            }
-            override fun markRequest(mark: TaintMark): Unit = raiseMark(premise, input, mark)
-        }
-    }
-
-    internal fun raiseMark(premise: PremiseKey, input: Facts, mark: TaintMark) {
-        if (!RuntimeDataDomain.packet(premise, input)) return
-        check(config.run1) { "Requests exist only in run 1" }
-        check(input is FlowTree && premise is InitialAp) { "A request needs a FLOW input premise" }
-        check(premise.base != STATIC) { "A static-origin interest needs an exact operation input" }
-        addMarkRequest(premise, mark)
-    }
-
-    internal fun operation(node: CommonInst, ordinal: Int = 0): OperationId =
-        OperationId(FormKey(operationOwner, key.method, key, node), ordinal)
-
-    internal fun forceRun1Layer(premise: PremiseKey, value: Facts): Facts {
-        if (!config.run1) return value
-        return run1Layer(premise, ops.runtimeFact(value, mode))
-    }
-
-    /** FULL uses the ordinary AP layer. GROUP projection and the independent
-     * run-1 static approximation keep their DEMAND policy. */
-    private fun run1Layer(premise: PremiseKey, value: Facts): Facts {
-        return if ((value is TaintTree && mode.markMode == MarkMode.GROUP) || value.base == STATIC ||
-            Run1StaticService.hasStaticMember(premise)) value.withLayer(Layer.DEMAND) else value
-    }
-
-    internal fun collect(at: OperationInput, sink: ResultSink): ApOut {
-        return object : ApOut {
-            override fun result(f: Facts) {
-                if (!RuntimeDataDomain.packet(at.premise, at.facts) || !RuntimeDataDomain.packet(at.premise, f)) return
-                val value = forceRun1Layer(at.premise, f)
-                if (config.run1) ops.run1Cover(value) { sink(at.premise, it) } else sink(at.premise, value)
-            }
-            override fun markRequest(mark: TaintMark) = needGroups(at, mark)
-        }
-    }
-
-    /** Only for the immediate callback from this actor's ops.applyEdge run1Policy.
-     * That policy already projected and covered each result with this AP manager. */
-    internal fun collectAfterRun1Policy(at: OperationInput, sink: ResultSink): ApOut {
-        return object : ApOut {
-            override fun result(f: Facts) {
-                if (!RuntimeDataDomain.packet(at.premise, at.facts) || !RuntimeDataDomain.packet(at.premise, f)) return
-                val value = if (config.run1) run1Layer(at.premise, f) else f
-                if (config.run1) ops.run1Cover(value) { sink(at.premise, it) } else sink(at.premise, value)
-            }
-            override fun markRequest(mark: TaintMark) = needGroups(at, mark)
-        }
-    }
-
-    internal fun needGroups(at: OperationInput, mark: TaintMark) {
-        if (!RuntimeDataDomain.packet(at.premise, at.facts)) return
-        if (!config.run1) return
-        val original = at.premise as? InitialAp ?: return
-        if (at.facts !is FlowTree || original.mark !is MarkSlot.Star) return
-        if (dropsStaticField(original)) return
-        val atom = ap.marks.runtimeAtom(mark, mode.markMode)
-        if (original.base == STATIC) checkNotNull(pointResumes).request(at, MarkSet.of(atom))
-        else addMarkRequest(original, atom)
-    }
-
-    /** FULL block requests share one immutable image and one raw suffix address. */
-    internal fun needGroups(at: OperationInput, marks: MarkSet) {
-        if (!RuntimeDataDomain.packet(at.premise, at.facts)) return
-        if (!config.run1 || marks.isEmpty) return
-        val original = at.premise as? InitialAp ?: return
-        if (at.facts !is FlowTree || original.mark !is MarkSlot.Star || dropsStaticField(original)) return
-        check(mode.markMode == MarkMode.FULL)
-        if (original.base == STATIC) checkNotNull(pointResumes).request(at, marks)
-        else addMarkRequests(original, RequestMarkSet.fromIds(marks.ids))
-    }
-
-    internal fun reachedOperations(summary: StatementSummary, at: OperationInput) {
-        if (!RuntimeDataDomain.packet(at.premise, at.facts)) return
-        if (config.run1) checkNotNull(pointResumes).reached(summary, at)
-    }
-
-    internal fun emitOperationResult(at: OperationInput, operation: StaticOperation.Write?, value: Facts, sink: ResultSink) {
-        if (!RuntimeDataDomain.packet(at.premise, at.facts) || !RuntimeDataDomain.packet(at.premise, value)) return
-        if (dropsStaticPremise(at.premise)) return
-        val admitted = withoutDisabledStaticFields(value) ?: return
-        val runtime = forceRun1Layer(at.premise, admitted)
-        if (config.run1 && runtime.base == STATIC) {
-            val boundary = at.site as? ResumeSite.BoundaryInput
-            if (operation != null) {
-                boundedSummaryResult(at.premise, runtime) { premise, bounded ->
-                    if (boundary != null && !boundary.atStart &&
-                        context.isEnd(boundary.operation.form.statement) &&
-                        !context.isExceptionalExit(boundary.operation.form.statement)) {
-                        // The next exit-rule continuation can kill this executed
-                        // write before the final boundary result is available.
-                        checkNotNull(staticWriteCandidates).observe(premise, bounded)
-                    }
-                    // A real write becomes globally visible at the producer,
-                    // independently of its later exit rules and summary.
-                    checkNotNull(pointResumes).localWrite(premise, bounded)
-                    if (boundary != null && !boundary.atStart) sink(premise, bounded)
-                    else routeBoundedRun1StaticToExit(at.site.operation.form.statement, premise, bounded)
-                }
-            } else if (boundary != null && !boundary.atStart) {
-                // This value already belongs to an exit-rule pipeline. Finish
-                // its remaining rules; never schedule NormalExit again.
-                sink(at.premise, runtime)
-            }
-            return
-        }
-
-        sink(at.premise, runtime)
-    }
-
-    fun onStaticEffect(effect: StaticOwnerEffect) {
-        check(config.run1 && effect.owner == key)
-        checkNotNull(pointResumes).onEffect(effect)
-    }
-
-    internal fun staticFacts(slice: RegionGroups): Facts = checkNotNull(runnerPort.staticService).facts(slice.region, slice.groups)
-    internal fun staticSlices(facts: Facts): List<RegionGroups> = checkNotNull(runnerPort.staticService).slices(facts)
-    internal fun staticCallInterest(part: Subscription, result: StaticCallResult, member: Int) {
-        if (!dropsStaticField(result.premise.member(member)))
-            checkNotNull(pointResumes).callInterest(part, result, member)
-    }
-    internal fun staticCallSupply(part: Subscription, result: StaticCallResult, member: Int, supply: RegionGroups) =
-        callServices.staticSupply(part, result, member, supply)
-
-    /** These published run-1 originals have already received their canonical pool input. */
-    internal fun hasKnownStaticGroupInput(premise: PremiseKey): Boolean =
-        config.run1 && premise is InitialAp &&
-            premise.base == STATIC && premise.mark is MarkSlot.Concrete &&
-            premise.exclusion == ExclusionSet.Empty &&
-            ((premise.pathData.size == 2 && premise.tail == Tail.STAR) ||
-                (premise.pathData.size == 1 && premise.tail == Tail.EXACT))
-
-    internal fun knownStaticInput(initial: InitialAp): Facts {
-        check(hasKnownStaticGroupInput(initial))
-        return ops.startFact(initial, mode)
-    }
-
-    private fun boundedStaticSummaryOut(premise: PremiseKey, emit: (Facts) -> Unit): ApOut = object : ApOut {
-        override fun result(f: Facts) {
-            if (f is TaintTree) {
-                // Static effects leave the ordinary call suffix early. Apply
-                // the same field limit that suffix would apply to its result.
-                ops.limit(forceRun1Layer(premise, f), limit, collect(premise, f) { _, bounded -> emit(bounded) })
-            }
-        }
-        override fun markRequest(mark: TaintMark) = Unit // summary application is not rule execution
-    }
-
-    internal fun composeStaticSummaryWithActualInput(initial: InitialAp, value: Facts, actual: Facts,
-                                                    emit: (Facts) -> Unit) {
-        checkPremise(initial)
-        val matched = ops.satisfying(actual, initial, mode) ?: return
-        ops.applySummary(matched, initial, value, mode, boundedStaticSummaryOut(initial, emit))
-    }
-
-    /** Apply a complete static tuple on this owner after releasing the service lock. */
-    internal fun composeStaticSummary(premise: PremiseKey, value: Facts, inputs: List<RegionGroups>, emit: (Facts) -> Unit) {
-        checkPremise(premise)
-        when (premise) {
-            is InitialAp -> if (premise.isZero) { if (value is TaintTree) emit(value.withLayer(Layer.DEMAND)) }
-                else if (inputs.size == 1) {
-                    composeStaticSummaryWithActualInput(premise, value, staticFacts(inputs.single()), emit)
-                }
-            is PremiseSet -> if (inputs.size == premise.size && value is TaintTree) {
-                val parts = inputs.mapIndexed { i, slice ->
-                    ap.cancellation.checkpoint()
-                    val initial = premise.member(i)
-                    val matched = ops.satisfying(staticFacts(slice), initial, mode) ?: return
-                    matched to initial
-                }
-                ops.applyCombination(parts, value, mode, boundedStaticSummaryOut(premise, emit))
-            }
-        }
-    }
-
-    internal fun installPoint(premise: PremiseKey, value: Facts, site: ResumeSite, state: CallResumeState? = null) {
-        if (!RuntimeDataDomain.packet(premise, value)) return
-        check(config.run1)
-        checkPremise(premise)
-        if (dropsStaticPremise(premise)) return
-        val admitted = withoutDisabledStaticFields(value) ?: return
-        premise.forEachMember { validateRun1Initial(it, limit) }
-        val runtime = forceRun1Layer(premise, admitted)
-        checkKinds(premise, runtime)
-        nonZeroInitial = nonZeroInitial || !premise.isZero
-        resumeQueue.addLast(PointWork(premise, runtime, site, state))
-        requestWork()
-    }
-
-    internal fun cut(point: Cut, premise: PremiseKey, facts: Facts, sink: ResultSink) {
-        if (!RuntimeDataDomain.packet(premise, facts)) return
-        runnerPort.onCut?.invoke(point, facts)
-        val checkedSink: ResultSink = if (!checkRun2StaticAnchors) sink else { pr, bounded ->
-            validateStaticFullAnchors(bounded)
-            sink(pr, bounded)
-        }
-        val out = collect(premise, facts, checkedSink)
-        if (config.run1) ops.run1Cover(facts) { ops.limit(it, limit, out) }
-        else ops.limit(facts, limit, out)
-    }
-
-    /** Current result headers stay unchanged. Only query/seed admission requires
-     * EXACT/ANY with empty E; other bounded field facts can retain MUST/E. */
-    private fun validateStaticFullAnchors(facts: Facts) {
-        if (facts !is TaintTree || facts.base != STATIC) return
-        for (leaf in ops.leaves(facts)) validateRun2StaticFullAnchor(ap, leaf)
-    }
-
-    private val hasPendingAbstractionWork: Boolean get() =
-        !temporary.isEmpty || !staticBatch.isEmpty || resumeQueue.isNotEmpty()
-
-    private fun commitRequests() {
-        if (!config.run1 || temporary.isEmpty) return
-        if (temporarySinceNanos != 0L)
-            context.shared.requestBatchStatistics?.serviceDelay(System.nanoTime() - temporarySinceNanos)
-        runnerPort.summaryStorage(key).commit(temporary)
-        context.shared.abstractionStatistics?.temporaryChanged(-temporary.dynamicRows.toLong(), -temporary.dynamicMembers)
-        temporary = RequestStorage() // replace only after synchronous commit and secured sends
-        temporarySinceNanos = 0L
-    }
-
-    override fun work(quantum: Int): Boolean {
-        require(quantum > 0) { "The work quantum must be positive" }
-        checkNotNull(port) { "The method is frozen" }
-        val zeroAtStart = worklist.hasZeroWork
-        var processed = 0
-        while (true) {
-            ap.cancellation.checkpoint()
-            while (resumeQueue.isNotEmpty()) {
-                if (processed >= quantum) return false
-                processed++
-                val resume = resumeQueue.removeFirst()
-                when (val site = resume.site) {
-                    is ResumeSite.StatementInput -> runStatement(EdgeDelta(resume.premise, site.operation.form.statement, resume.facts))
-                    is ResumeSite.BoundaryInput -> if (site.atStart) startAt(resume.premise, site.operation.form.statement, resume.facts)
-                        else endAt(resume.premise, site.operation.form.statement, resume.facts,
-                            summary = !context.isExceptionalExit(site.operation.form.statement))
-                    is ResumeSite.ReadOutput -> installPoint(resume.premise, resume.facts, site.input, resume.state)
-                    is ResumeSite.CallStageInput, is ResumeSite.CleanerInput -> callServices.resumePoint(resume.premise, resume.facts, site, resume.state)
-                }
-            }
-            while (!worklist.isEmpty) {
-                // Keep the zero phase separate. A quantum yield retains P without publishing it;
-                // only the method fact-queue-empty boundary commits request memberships.
-                if (worklist.hasZeroWork != zeroAtStart) return false
-                if (processed >= quantum) {
-                    return false
-                }
-                if (mode.run1 && mode.markMode == MarkMode.FULL)
-                    processed += processPending(worklist.removeNextBatch(), quantum - processed)
-                else {
-                    processed++
-                    process(worklist.removeNext())
-                }
-            }
-            flushPublications()
-            ap.cancellation.checkpoint()
-            if (!worklist.isEmpty || pending.isNotEmpty() || pendingTargets.isNotEmpty()) continue
-            commitRequests()
-            if (config.run1 && !staticBatch.isEmpty) {
-                val committed = staticBatch
-                val effects = checkNotNull(runnerPort.staticService) { "Run-1 needs its static service" }.commit(committed)
-                staticBatch = StaticBatch(staticSupplyProfile, ap.cancellation, context.shared.n2Statistics)
-                for (effect in effects) check(runnerPort.sendStatic(effect)) { "Static effect delivery was rejected" }
-            }
-            ap.cancellation.checkpoint()
-            // Retain the counted Work reservation through P commit/replacement and sends.
-            if (worklist.isEmpty && pending.isEmpty() && pendingTargets.isEmpty() && !hasPendingAbstractionWork) return true
-        }
-    }
-
-    private fun process(item: EdgeDelta) {
-        if (!RuntimeDataDomain.packet(item.premise, item.facts)) return
-        ap.cancellation.checkpoint()
-        steps++
-        bodyWork?.processed(context.shared.language.getInstIndex(item.node), item.premise, item.facts)
-        runnerPort.onProcess?.invoke(key, item)
-        if (config.run1 && item.facts.base == STATIC && context.isEnd(item.node))
-            endAt(item.premise, item.node, item.facts, summary = true)
-        else if (context.callAt(item.node) != null) callServices.process(item) else runStatement(item)
-    }
-
-    /** A batch can cross only a certified plain statement. Keep a remainder
-     * counted as work before any successor, yield or request/static barrier. */
-    private fun processPending(work: PendingWork, budget: Int): Int {
-        if (work is PendingWork.Scalar) {
-            process(work.delta)
-            return 1
-        }
-        work as PendingWork.MarkedBatch
-        val node = work.node
-        var used = 0
-        val plainPoint = context.callAt(node) == null && !context.isEnd(node) &&
-            !context.isExceptionalExit(node) && runnerPort.onProcess == null && runnerPort.onCut == null &&
-            !dropsStaticField(work.batch.initialShape)
-        if (plainPoint) forms.withStatement(key, node) { summary ->
-            if (!NeutralRelationBatch.certifies(summary)) return@withStatement
-            val chunk = work.batch.take(budget)
-            used = chunk.size
-            worklist.addBatch(node, work.batch)
-            steps += used
-            neutralBatchApplications++
-            neutralBatchMemberships += used
-            check(chunk.applyPacked(ops, summary, mode,
-                emit = { shape, facts, marks -> emitPackedAfter(node, shape, facts, marks) },
-                untouched = { shape, facts, marks ->
-                    NeutralRelationBatch.decodePacked(ap, shape, facts, marks) { premise, value ->
-                        emitUnchanged(EdgeDelta(premise, node, value))
-                    }
-                }))
-        }
-        if (used != 0) return used
-        val (premise, facts) = work.batch.removeFirst()
-        worklist.addBatch(node, work.batch)
-        process(EdgeDelta(premise, node, facts))
-        return 1
-    }
-
-    private fun emitPackedAfter(node: CommonInst, shape: InitialAp, facts: TaintTree, marks: MarkSet) {
-        if (!RuntimeDataDomain.packet(shape, facts)) return
-        val offered = NeutralRelationBatch.toDiagonal(ap, shape, facts, marks)
-        if (offered == null) {
-            // Classify once, then use the exact decoder for an unsupported
-            // tail or partial-protection cell. No scalar tree is built first.
-            neutralScalarFallbackMemberships += marks.size
-            NeutralRelationBatch.decodePacked(ap, shape, facts, marks) { premise, value -> emitAfter(premise, node, value) }
-            return
-        }
-        check(!context.isEnd(node) && !context.isExceptionalExit(node))
-        val fresh = edges.addDiagonal(node, offered)
-        if (fresh == null) {
-            // Decode once at the producer, before successor fan-out.
-            neutralScalarFallbackMemberships += marks.size
-            NeutralRelationBatch.decodePacked(ap, shape, facts, marks) { premise, value ->
-                completeOutput(premise, node, value)
-            }
-        } else for (delta in fresh) {
-            ap.cancellation.checkpoint()
-            neutralBulkStorePackets++
-            neutralBulkStoreMemberships += delta.marks.size
-            edgeDeltas += delta.marks.size
-            if (delta.layer == Layer.DEMAND) demandLayerEdges += delta.marks.size
-            context.forEachSuccessor(node) { successor ->
-                context.forEachDeliveryTarget(successor, delta.base) { target ->
-                    // Each queued destination owns its mutable remaining-mark wrapper.
-                    worklist.addBatch(target, checkNotNull(NeutralRelationBatch.fromDiagonal(ap, delta)))
-                    requestWork()
-                }
-            }
-        }
-    }
-
-    private fun runStatement(item: EdgeDelta) {
-        forms.withStatement(key, item.node) { summary ->
-            applier.statement(summary, item.premise, item.facts,
-                Place(item.node, config.run1, sources = true, site = ResumeSite.StatementInput(operation(item.node))),
-                sink = { premise, result ->
-                    cut(Cut.STATEMENT, premise, result) { pr, facts -> emitAfter(pr, item.node, facts) }
-                }, untouched = { _, _ -> emitUnchanged(item) })
-        }
-    }
-
-    internal fun emitAfter(premise: PremiseKey, node: CommonInst, value: Facts) {
-        if (!RuntimeDataDomain.packet(premise, value)) return
-        checkPremise(premise)
-        if (config.run1 && value.base == STATIC && !context.isEnd(node)) return
-        if (config.run1) ops.run1Cover(forceRun1Layer(premise, value)) { emitCovered(premise, node, it) }
-        else emitCovered(premise, node, value)
-    }
-
-    private fun emitCovered(premise: PremiseKey, node: CommonInst, facts: Facts) {
-        when {
-            context.isEnd(node) -> endAt(premise, node, facts, summary = true)
-            context.isExceptionalExit(node) -> endAt(premise, node, facts, summary = false)
-            else -> completeOutput(premise, node, facts)
-        }
-    }
-
-    internal fun emitUnchanged(item: EdgeDelta) {
-        if (!RuntimeDataDomain.packet(item.premise, item.facts)) return
-        checkPremise(item.premise)
-        if (config.run1 && item.facts.base == STATIC && !context.isEnd(item.node)) return
-        emitCovered(item.premise, item.node, item.facts)
-    }
-
-    /** One durable result row per producer. Identity output uses this gate too. */
-    private fun completeOutput(premise: PremiseKey, node: CommonInst, facts: Facts) {
-        val fresh = admitOutput(node, premise, facts) ?: return
-        // Complete fan-out while the current Work reservation is held.
-        context.forEachSuccessor(node) { deliverAt(it, premise, fresh) }
-    }
-
-    private fun admitOutput(node: CommonInst, premise: PremiseKey, facts: Facts): Facts? {
-        if (!RuntimeDataDomain.packet(premise, facts)) return null
-        checkKinds(premise, facts)
-        val fresh = edges.add(node, premise, facts) ?: return null
-        bodyWork?.fresh(context.shared.language.getInstIndex(node), premise, fresh)
-        edgeDeltas++
-        if (fresh.layer == Layer.DEMAND) demandLayerEdges++
-        return fresh
-    }
-
-    private fun deliverAt(start: CommonInst, premise: PremiseKey, facts: Facts) {
-        context.forEachDeliveryTarget(start, facts.base) { enqueueInput(it, premise, facts) }
-    }
-
-    private fun enqueueInput(node: CommonInst, premise: PremiseKey, facts: Facts) {
-        if (!RuntimeDataDomain.packet(premise, facts)) return
-        checkKinds(premise, facts)
-        worklist.add(EdgeDelta(premise, node, facts))
-        requestWork()
-    }
-
-    internal fun checkPremise(premise: PremiseKey) {
-        check(!config.run1 || premise is InitialAp) { "Run-1 executable edges have one original premise" }
-    }
-
-    internal fun checkKinds(premise: PremiseKey, facts: Facts) {
-        checkPremise(premise)
-        check((facts is FlowTree) == premise.isFlow) { "K6: the conclusion kind follows its premise" }
-        check(premise !is PremiseSet || facts is TaintTree) { "A multi-premise edge must be TAINT" }
-        if (config.run1) when (facts) {
-            is FlowTree -> check(facts.exclusion == ExclusionSet.Empty) { "Run-1 FLOW has Empty field E" }
-            is TaintTree -> check(facts.exclusion == ExclusionSet.Empty) { "Run-1 TAINT has Empty field E" }
-            is Reach -> Unit
-        }
-    }
-
-    internal fun requestWork() { runnerPort.enqueue(this) }
-
-    private inner class RuleWorklist(
-        private val rules: RuleStatement,
-        private val node: CommonInst,
-        private val point: Cut,
-    ) {
-        private val items = LinkedHashMap<Pair<PremiseKey, Facts>, RuleItem>()
-        private val add: ResultSink = { premise, facts ->
-            cut(point, premise, facts) { pr, result ->
-                val key = pr to result
-                val old = items[key]
-                val merged = if (old == null) result else ap.mergeAddDelta(old.facts, result).first
-                items[key] = RuleItem(pr, merged)
-            }
-        }
-
-        fun input(premise: PremiseKey, facts: Facts) {
-            applier.statement(rules.summary, premise, facts, Place(node, config.run1, sources = true,
-                site = ResumeSite.BoundaryInput(operation(node), point == Cut.ENTRY_RULES)), sink = add)
-        }
-
-        fun drain(after: (PremiseKey, Facts, Triggers) -> Unit = { _, _, _ -> }) {
-            for (item in items.values) {
-                ap.cancellation.checkpoint()
-                val premise = item.premise; val facts = item.facts
-                val triggers = localServices.checkSinksAt(premise, node, facts, rules.sinks,
-                    OperationInput(ResumeSite.BoundaryInput(operation(node), point == Cut.ENTRY_RULES), premise, facts))
-                after(premise, facts, triggers)
-            }
-        }
-
-        fun forEachResult(visit: (PremiseKey, Facts) -> Unit) {
-            for (item in items.values) { visit(item.premise, item.facts) }
-        }
-    }
-
-    private fun startAt(premise: PremiseKey, node: CommonInst, start: Facts) {
-        if (!RuntimeDataDomain.packet(premise, start)) return
-        forms.withStartRules(key, node) { rules ->
-            val work = RuleWorklist(rules, node,
-                if (forward) Cut.ENTRY_RULES else Cut.EXIT_RULES)
-            work.input(premise, start)
-            if (!forward && premise.isZero) localServices.fireSinkSeeds(node) { seed -> work.input(ap.zero, seed) }
-            work.drain()
-            work.forEachResult { pr, facts ->
-                ap.cancellation.checkpoint()
-                if (config.run1 && facts.base == STATIC) return@forEachResult
-                deliverAt(node, pr, facts)
-            }
-        }
-    }
-
-    private fun endAt(premise: PremiseKey, node: CommonInst, facts: Facts, summary: Boolean) {
-        if (!RuntimeDataDomain.packet(premise, facts)) return
-        if (config.run1 && summary) checkNotNull(staticWriteCandidates).observe(premise, facts)
-        forms.withEndRules(key, node) { exit ->
-            val work = RuleWorklist(exit.rules, node, if (forward) Cut.EXIT_RULES else Cut.ENTRY_RULES)
-            work.input(premise, facts)
-            work.drain { pr, value, triggers ->
-                if (!summary) {
-                    // Exceptional rules and observations still run, but normal
-                    // summary adjustment and killed-write guidance do not.
-                    admitOutput(node, pr, value)
-                    return@drain
-                }
-                if (config.run1) checkNotNull(staticWriteCandidates).observe(pr, value)
-                var result: Facts? = value
-                if (exit.globalStateDrop && pr.isZero && value.base == AccessPathBase.ClassStatic)
-                    for (part in triggers.parts) {
-                        ap.cancellation.checkpoint()
-                        result = result?.let { ops.without(it, part) }
-                    }
-                // Entry removal selects marks. Run-1 groups cannot be cleaned;
-                // this actual group branch already carries its DEMAND repair.
-                // A ZERO original has no ordinary Base request to propagate.
-                if (!config.run1 && pr.isZero && value is TaintTree)
-                    exit.entryMarkRemoval(value.base)?.let { marks -> result = result?.let { ops.withoutMarks(it, marks) } }
-                result?.let { completed ->
-                    boundedSummaryResult(pr, completed) { boundedPremise, bounded ->
-                        val fresh = admitOutput(node, boundedPremise, bounded)
-                        if (fresh != null) retainSummary(boundedPremise, fresh)
-                    }
-                }
-            }
-        }
-    }
-
-    internal fun dropsStaticField(fact: PathFact): Boolean =
-        config.disableRun1Statics && fact.base == STATIC && fact.path.size >= 2
-
-    internal fun dropsStaticField(initial: InitialAp): Boolean =
-        config.disableRun1Statics && initial.base == STATIC && initial.pathData.size >= 2
-
-    private fun dropsStaticPremise(premise: PremiseKey): Boolean = config.disableRun1Statics &&
-        (0 until premise.size).any { dropsStaticField(premise.member(it)) }
-
-    /** The diagnostic gate runs before summary/index/publication or writer effects.
-     * A packed STATIC tree can also contain exact global class markers. Keep them. */
-    private fun withoutDisabledStaticFields(value: Facts): Facts? {
-        if (!config.disableRun1Statics || value.base != STATIC) return value
-        var kept: Facts? = null
-        for (leaf in ops.leaves(value)) {
-            if (leaf.fact.path.size != 1 || leaf.fact.tail != Tail.EXACT) continue
-            val exact = ap.factsOf(leaf.fact, leaf.exclusion, value.layer)
-            kept = kept?.let { ap.mergeAddDelta(it, exact).first } ?: exact
-        }
-        return kept
-    }
-
-    /** A call result supplies its computed mark, but is not a new local writer. */
-    internal fun routeStaticResultToExit(node: CommonInst, premise: PremiseKey, value: Facts) {
-        check(config.run1 && value.base == STATIC) { "Static exit routing needs a run-1 static result" }
-        boundedSummaryResult(premise, value) { pr, bounded ->
-            checkNotNull(pointResumes).computedGroups(pr, bounded)
-            routeBoundedRun1StaticToExit(node, pr, bounded)
-        }
-    }
-
-    private fun routeBoundedRun1StaticToExit(node: CommonInst, premise: PremiseKey, bounded: Facts) {
-        check(config.run1 && bounded.base == STATIC)
-        val fresh = admitOutput(node, premise, bounded) ?: return
-        enqueueInput(context.normalExit, premise, fresh)
-    }
-
-    internal fun summaryDelta(premise: PremiseKey, value: Facts) =
-        boundedSummaryResult(premise, value, ::retainSummary)
-
-    private fun boundedSummaryResult(premise: PremiseKey, value: Facts, sink: ResultSink) {
-        checkPremise(premise)
-        if (dropsStaticPremise(premise)) return
-        val admitted = withoutDisabledStaticFields(value) ?: return
-        val runtime = if (config.run1) forceRun1Layer(premise, admitted).let {
-            // A nonstatic FLOW original does not itself force a static result
-            // to DEMAND. Preserve the explicit static boundary assignment.
-            if (it.base == STATIC) it.withLayer(Layer.DEMAND) else it
-        } else admitted
-        if (config.run1) ops.run1Cover(runtime) { covered ->
-            // Static producer routing bypasses the ordinary successor cut.
-            // Preserve the same bounded AP value at that boundary.
-            ops.limit(covered, limit, collect(premise, covered, sink))
-        }
-        else {
-            // Native/summary producers can reach this boundary without a new
-            // successor cut. Keep the producer's existing bound and annotations.
-            if (checkRun2StaticAnchors) validateStaticFullAnchors(admitted)
-            sink(premise, admitted)
-        }
-    }
-
-    private fun retainSummary(rawPremise: PremiseKey, rawFacts: Facts) {
-        if (!RuntimeDataDomain.packet(rawPremise, rawFacts)) return
-        val normalized = normalizeFlowSummary(ap, rawPremise, rawFacts)
-        val premise = normalized.premise
-        val facts = normalized.facts
-        bodyWork?.candidate(premise, facts)
-        assertCanonicalFlowSummary(premise, facts)
-        if (!config.run1 && facts is FlowTree && facts.layer == Layer.DEMAND)
-            check(facts.tail == Tail.ANY && facts.exclusion == ExclusionSet.Empty) {
-                "Restricted FLOW DEMAND must have an uncertain ANY tail"
-            }
-        checkKinds(premise, facts)
-        if (!context.shared.interpreter.isSummaryBase(facts.base)) return
-        // Existing computed summary supplies are independent of local write
-        // effects. Pending fixed-mark joins own their scalar payload without
-        // retaining a static/static method summary.
-        if (config.run1 && facts.base == STATIC) checkNotNull(pointResumes).computedGroups(premise, facts)
-        if (erasesRun1StaticSummary(premise, facts)) {
-            staticGuidanceSeeds.add(premise, facts)
-            return
-        }
-        val admitted = if (config.run1) listOf(facts) else
-            checkNotNull(config.demand).intersect(key, premise, facts, config.admissionPolicy)
-        for (piece in admitted) {
-            ap.cancellation.checkpoint()
-            checkKinds(premise, piece)
-            val delta = summaries.addAdmitted(premise, piece) ?: continue
-            edgeDeltas++
-            if (delta.layer == Layer.DEMAND) demandLayerEdges++
-            pending += Publication(premise, delta)
-        }
-        if (pending.isNotEmpty()) requestWork()
-    }
-
-    internal fun erasesRun1StaticSummary(premise: PremiseKey, facts: Facts): Boolean =
-        config.run1 && facts.base == STATIC && !premise.isZero &&
-            (0 until premise.size).all { premise.member(it).base == STATIC }
-
-    private fun flushPublications() {
-        if (pendingTargets.isNotEmpty()) {
-            val detachedTargets = pendingTargets
-            pendingTargets = ArrayList()
-            try {
-                checkNotNull(targetPublicationSink).publishTargets(key, Collections.unmodifiableList(detachedTargets))
-            } catch (error: Throwable) {
-                pendingTargets.addAll(0, detachedTargets)
-                throw error
-            }
-        }
-        if (pending.isEmpty()) return
-        val detached = pending
-        pending = ArrayList()
-        val batch: List<Publication> = Collections.unmodifiableList(detached)
-        try {
-            checkNotNull(publicationSink).publish(key, batch)
-        } catch (error: Throwable) {
-            pending.addAll(0, detached)
-            throw error
-        }
-    }
-
-    override fun applyTarget(part: Subscription, row: TargetSummary, member: Int): Unit =
-        callServices.applyTarget(part, row, member)
-    override fun applyStaticTarget(part: Subscription, row: TargetSummary, member: Int): Unit =
-        callServices.applyStaticTarget(part, row, member)
-    override fun applySummary(part: Subscription, pub: Publication, member: Int): Unit =
-        callServices.applySummary(part, pub, member)
-    override fun applyStaticSummary(part: Subscription, pub: Publication, member: Int): Unit =
-        callServices.applyStaticSummary(part, pub, member)
-    override fun requestStaticGroups(part: Subscription, marks: RequestMarkSelection) {
-        check(config.run1 && part.ref.premise.isFlow && part.added is FlowTree)
-        val at = OperationInput(ResumeSite.CallStageInput(operation(part.ref.call, part.ref.stageOrdinal)),
-            part.ref.premise, part.added, CallResumeState(part.ref.callerLayer))
-        val cursor = marks.cursor()
-        while (!cursor.isComplete) {
-            ap.cancellation.checkpoint()
-            cursor.step(256) { needGroups(at, it) }
-        }
-    }
-    override fun applyRecord(part: Subscription, record: Record): Unit = callServices.applyRecord(part, record)
-    override fun applyRecordView(part: Subscription, view: RecordLeafView, nonSubsumable: Boolean): Unit =
-        callServices.applyRecordView(part, view, nonSubsumable)
-    internal fun countRecordCrossing() { recordCrossings++ }
-    internal fun countTriggerSeed() { triggerSeeds++ }
 
     override fun freeze() {
-        check(worklist.isEmpty && pending.isEmpty() && pendingTargets.isEmpty() && !hasPendingAbstractionWork) {
-            "A method cannot freeze with unfinished work"
+        val runtime = blockRuntime
+        check(!hasLocalWork) { "A method cannot freeze with unfinished root work" }
+        runtime?.requireIdle() // An unfinished freeze must not destroy live work.
+        val closedChildren = children().toList()
+        val completionStatistics = runtime?.completionScalarStatistics()?.toList().orEmpty()
+        if (runtime != null) {
+            if (context.shared.n2Statistics != null) frozenBlockDiagnostics = runtime.diagnosticStatistics()
+            scopedSummaries = runtime.scopedSummaries().toList()
+            scopedTargets = runtime.scopedTargets().toList()
+            scopedOutgoingTargets = runtime.scopedOutgoingTargets().toList()
+            val all = closedChildren
+            frozenChildCounters = longArrayOf(all.sumOf { it.steps }, all.sumOf { it.edgeDeltas },
+                all.sumOf { it.demandLayerEdges }, all.sumOf { it.recordCrossings }, all.sumOf { it.triggerSeeds },
+                all.sumOf { it.neutralBatchApplications }, all.sumOf { it.neutralBatchMemberships },
+                all.sumOf { it.neutralBulkStorePackets }, all.sumOf { it.neutralBulkStoreMemberships },
+                all.sumOf { it.neutralScalarFallbackMemberships })
         }
         var failure: Throwable? = null
-        fun release(action: () -> Unit) {
-            try { action() }
-            catch (error: Throwable) {
-                val first = failure
-                if (first == null) failure = error
-                else if (error !== first) first.addSuppressed(error)
+        try { runtime?.freezeChildren() } catch (error: Throwable) { failure = error }
+        finally {
+            blockRuntime = null
+            localStaticRequests?.clear()
+            staticTicketScopes.clear()
+            try { super.freeze() } catch (error: Throwable) {
+                if (failure == null) failure = error else if (failure !== error) failure.addSuppressed(error)
             }
-        }
-        try {
-            release { releaseAbstraction() }
-            release { localServices.freeze() }
-            release { callServices.freeze() }
-            release { pointResumes?.clear() }
-
-        } finally {
-            context.delivery.let {
-                cfgDeliveryHits = it.hits
-                cfgDeliverySearches = it.searches
-                cfgDeliveryVisitedNodes = it.visitedNodes
-                cfgDeliveryDestinations = it.destinations
-                cfgDeliveryMaxWidth = it.maxWidth
+            try { includeClosedBlockMeasurements(closedChildren, completionStatistics) } catch (error: Throwable) {
+                if (failure == null) failure = error else if (failure !== error) failure.addSuppressed(error)
             }
-            local = null
-            calls = null
-            publicationSink = null
-            targetPublicationSink = null
-            port = null
-            runContext = null
-            worklist.clear()
-            pending = ArrayList()
-            release { scalarIdentityStatistics = edgeStore?.scalarStatisticsSnapshot() }
-            release { bodyWorkSnapshot = bodyWork?.snapshot() }
-            bodyWork = null
-            edgeStore = null
-            initialStore = null
-            temporary = RequestStorage()
         }
         failure?.let { throw it }
     }

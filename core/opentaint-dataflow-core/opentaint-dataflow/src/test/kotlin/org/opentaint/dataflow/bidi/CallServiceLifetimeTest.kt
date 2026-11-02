@@ -110,7 +110,7 @@ class CallServiceLifetimeTest {
             val steps = core.steps
             assertTrue(steps > 0)
             core.freeze()
-            val ownerFields = service.javaClass.declaredFields.filter { it.type == RunMethodAnalyzer::class.java }
+            val ownerFields = service.javaClass.declaredFields.filter { it.type == BlockRunState::class.java }
             assertTrue(ownerFields.isNotEmpty(), "The service explicitly owns its live method")
             for (field in ownerFields) {
                 field.isAccessible = true

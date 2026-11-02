@@ -14,7 +14,7 @@ import org.opentaint.dataflow.bidi.interp.RuleKind
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 /** All application modes use the same AP operations and source hooks. */
-internal class EngineAlgebra(private val core: RunMethodAnalyzer) : FactAlgebra<PremiseKey, Facts> {
+internal class EngineAlgebra(private val core: BlockRunState) : FactAlgebra<PremiseKey, Facts> {
     private fun input(at: Place, premise: PremiseKey, facts: Facts): OperationInput =
         OperationInput(at.site ?: ResumeSite.StatementInput(core.operation(at.node)), premise, facts,
             at.callerLayer?.let { CallResumeState(it, at.identityCandidate, at.pendingDemotion) })

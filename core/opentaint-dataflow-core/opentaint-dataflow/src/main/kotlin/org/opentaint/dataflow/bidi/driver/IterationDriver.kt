@@ -99,6 +99,11 @@ class IterationDriver internal constructor(
             }
         }
         if (shared.n2Statistics != null) {
+            val loopMethods = result.analyzers.mapNotNull { actor -> actor.blockDiagnostics()?.let { actor to it } }
+            logger.info { "BIDI_LOOP_BLOCK_STATISTICS run=${config.index} methods=${loopMethods.size}" }
+            for ((actor, summary) in loopMethods.sortedByDescending { it.first.steps }.take(24)) logger.info {
+                "BIDI_LOOP_BLOCK_METHOD run=${config.index} method=${actor.key} $summary"
+            }
             val measured = result.analyzers.mapNotNull { actor -> actor.bodyWorkSnapshot?.let { actor.key to it } }
             logger.info {
                 "BIDI_BODY_WORK_STATISTICS run=${config.index} scope=packet-events " +
@@ -106,6 +111,8 @@ class IterationDriver internal constructor(
                     "processed=${measured.sumOf { it.second.processedPackets }} " +
                     "freshPostS=${measured.sumOf { it.second.freshPackets }} " +
                     "candidateOffers=${measured.sumOf { it.second.candidatePackets }} " +
+                    "methodCandidateOffers=${measured.sumOf { it.second.methodCandidatePackets }} " +
+                    "blockCandidateOffers=${measured.sumOf { it.second.blockCandidatePackets }} " +
                     "cyclicProcessed=${measured.sumOf { it.second.cyclicProcessedPackets }} " +
                     "cyclicFreshPostS=${measured.sumOf { it.second.cyclicFreshPackets }} " +
                     "sampledPackets=${(0..2).map { stage -> measured.sumOf { it.second.sampledPackets[stage] } }} " +
@@ -188,13 +195,20 @@ class IterationDriver internal constructor(
     private fun barrier(config: RunConfig, result: RunResult<RunMethodAnalyzer>, report: ReportBuilder): Next {
         if (shared.n2Statistics != null) {
             val censusStart = TimeSource.Monotonic.markNow()
-            val admitted = result.analyzers.fold(RelationCensus()) { counts, actor -> counts + actor.summaries.census() }
-            val outgoing = result.analyzers.fold(RelationCensus()) { counts, actor -> counts + actor.summaries.demandCensus(config.direction) }
-            logger.info { "BIDI_FLOW_BACKED_CENSUS run=${config.index} admitted=$admitted outgoing=$outgoing scanTime=${censusStart.elapsedNow()}" }
+            val publicAdmitted = result.analyzers.fold(RelationCensus()) { counts, actor -> counts + actor.summaries.census() }
+            val publicOutgoing = result.analyzers.fold(RelationCensus()) { counts, actor -> counts + actor.summaries.demandCensus(config.direction) }
+            val blockAdmitted = result.analyzers.asSequence().flatMap { it.blockSummaries() }
+                .fold(RelationCensus()) { counts, block -> counts + block.summaries.census() }
+            val blockOutgoing = result.analyzers.asSequence().flatMap { it.blockSummaries() }
+                .fold(RelationCensus()) { counts, block -> counts + block.summaries.demandCensus(config.direction) }
+            val admitted = publicAdmitted + blockAdmitted
+            val outgoing = publicOutgoing + blockOutgoing
+            logger.info { "BIDI_FLOW_BACKED_CENSUS run=${config.index} admitted=$admitted outgoing=$outgoing blockAdmitted=$blockAdmitted blockOutgoing=$blockOutgoing scanTime=${censusStart.elapsedNow()}" }
         }
         val forward = config.direction == Direction.FORWARD
         val terminals = report.prepare(config, result, shared)
         shared.records.persist(config.direction, result.analyzers.asSequence().map { it.key to it.summaries })
+        shared.records.persistScoped(config.direction, result.analyzers.asSequence().flatMap { it.blockSummaries() })
         val handOff = HandOff.of(config, result, shared)
         val frontier = frontierOf(config, result, handOff, terminals.entries.size)
         frontierLog += frontier
@@ -204,7 +218,7 @@ class IterationDriver internal constructor(
             forward && !policy.continueAfter(config, result, frontiers) -> Next.End(RunStatus.COMPLETE, EndReason.POLICY)
             else -> Next.Run(nextConfig(config, handOff, terminals.normal))
         }
-        logger.info { "BIDI_TARGET_STATISTICS run=${config.index} raw=${result.analyzers.sumOf { it.targets.size }} outgoing=${result.analyzers.sumOf { it.outgoingTargets.size }} reports=${terminals.entries.size}" }
+        logger.info { "BIDI_TARGET_STATISTICS run=${config.index} raw=${result.analyzers.sumOf { it.targets.size }} outgoing=${result.analyzers.sumOf { it.outgoingTargets.size }} reports=${terminals.entries.size} blockRaw=${result.analyzers.asSequence().flatMap { it.blockTargets() }.sumOf { it.rows.size }} blockOutgoing=${result.analyzers.asSequence().flatMap { it.blockOutgoingTargets() }.sumOf { it.rows.size }}" }
         // All fallible preparation precedes this single terminal/report commit.
         shared.cancellation.checkpoint()
         report.commit(terminals)

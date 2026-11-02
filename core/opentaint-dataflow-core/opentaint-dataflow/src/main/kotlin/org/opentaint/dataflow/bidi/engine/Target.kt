@@ -2,6 +2,7 @@ package org.opentaint.dataflow.bidi.engine
 
 import org.opentaint.dataflow.bidi.ap.MethodKey
 import org.opentaint.dataflow.bidi.ap.PremiseKey
+import org.opentaint.dataflow.bidi.store.BlockScope
 
 @JvmInline value class ReportId(val value: Int)
 
@@ -12,7 +13,8 @@ sealed interface Target {
 }
 
 data class TargetSummary(val premise: PremiseKey, val target: Target)
-data class OwnedNormalTarget(val method: MethodKey, val premise: PremiseKey, val id: ReportId)
+data class OwnedNormalTarget(val method: MethodKey, val premise: PremiseKey, val id: ReportId,
+                             val scope: BlockScope? = null)
 typealias TargetBatch = List<TargetSummary>
 
 /** The existing static continuation can carry an AP image or a terminal result. */

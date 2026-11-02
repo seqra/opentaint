@@ -48,6 +48,22 @@ class JIRMethodContextCacheTest : BidiJIRTestUtils() {
         assertNotSame(source.graph(a, Direction.FORWARD), source.graph(key(method("copy")), Direction.FORWARD))
     }
 
+    @Test fun `loop topology belongs to the original JVM form across contexts and directions`(): Unit {
+        val method = method("fieldRead")
+        val a = key(method)
+        val b = key(method, JIRArgumentTypeMethodContext(0, TypeConstraintInfo(method.enclosingClass, exactType = false)))
+        val cache = MethodContextCache(interp, source())
+        val layout = cache.blockLayout(a)
+        assertSame(entries[method].blockLayout, layout)
+        assertSame(layout, cache.blockLayout(b))
+        for (direction in Direction.entries) {
+            cache.graph(a, direction)
+            assertSame(layout, cache.blockLayout(a))
+        }
+        assertEquals(method.instList.instructions.size, layout.instructionCount)
+        assertFalse(layout.hasLoops)
+    }
+
     @Test fun `common cache reads actual JVM cached statement and call reversals`(): Unit {
         val cache = MethodContextCache(interp, source())
         val copy = method("copy")
