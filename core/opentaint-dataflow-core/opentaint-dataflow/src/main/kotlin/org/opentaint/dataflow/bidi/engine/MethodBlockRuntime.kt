@@ -298,6 +298,12 @@ internal class MethodBlockRuntime(
         val selected = link.copy(original = original, layer = value.layer)
         replaySaved(child, selected, value)
         child.links.offer(selected, value)
+        // This callback can run in a StaticOwner event while the method is
+        // idle. A fresh link can queue current-summary deliveries even when
+        // abstraction.emit finds only initials which already exist. Keep a
+        // counted method Work reservation for those deliveries independently
+        // of initial admission.
+        if (child.links.hasPending) port.enqueue(root)
         checkNotNull(child.state.abstraction).emit(original, value)
     }
 

@@ -276,6 +276,11 @@ The native full-AP correspondence tests must establish:
 8. Freeze exports all selected scoped rows. Method frontier aggregation
    cannot hide internal refinement, and no raw local MAY is an extra stop
    permission.
+   Every external owner callback that adds local delivery work must secure
+   the original method's counted Work reservation, including a static
+   boundary reply whose concrete initial is already admitted. A duplicate
+   initial is not evidence that no fresh link delivery exists. Joined
+   static guidance remains read-only with respect to live actor queues.
 9. The exceptional-ZERO adapter applies only at an actually reached
    exceptional boundary. It borrows complete normal control rows and keeps
    their paired publication test. It adds no direct start, demand scan,

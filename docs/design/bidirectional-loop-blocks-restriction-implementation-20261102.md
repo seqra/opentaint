@@ -322,6 +322,12 @@ method work quantum:
 Keep the method's existing Work reservation through commits and local or
 external sends. A local delivery uses the owner queue and can make the
 method ready again. It never waits for an external runner to wake it.
+An external static-boundary reply must secure that reservation when it
+adds a fresh local input or replay delivery. The child may already have
+the same concrete initial. Initial deduplication therefore cannot replace
+the enqueue required for new link work. The post-join static-guidance
+phase only borrows inputs and builds frozen rows; it must not create live
+deliveries after runner completion.
 
 ## 5. Scoped demand and persistence adapters
 
