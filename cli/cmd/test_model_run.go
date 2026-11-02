@@ -9,10 +9,11 @@ import (
 )
 
 var (
-	testModelOutputDir string
-	testModelTimeout   time.Duration
-	testModelMaxMemory string
-	testModelDataflow  []string
+	testModelOutputDir   string
+	testModelTimeout     time.Duration
+	testModelMaxMemory   string
+	testModelDataflow    []string
+	testModelPassthrough []string
 )
 
 var testModelRunCmd = &cobra.Command{
@@ -35,19 +36,20 @@ model-rule.yaml rule with id "model-rule".
 		}
 
 		runTestProject(args[0], testProjectOptions{
-			label:          "Model tests",
-			tempDir:        "opentaint-test-models-*",
-			rulesets:       []string{ruleDir},
-			outputDir:      testModelOutputDir,
-			timeout:        testModelTimeout,
-			maxMemory:      testModelMaxMemory,
-			dataflowModels: testModelDataflow,
+			label:             "Model tests",
+			tempDir:           "opentaint-test-models-*",
+			rulesets:          []string{ruleDir},
+			outputDir:         testModelOutputDir,
+			timeout:           testModelTimeout,
+			maxMemory:         testModelMaxMemory,
+			dataflowModels:    testModelDataflow,
+			passthroughModels: testModelPassthrough,
 		})
 	},
 }
 
 func init() {
 	testModelCmd.AddCommand(testModelRunCmd)
-	addTestRunFlags(testModelRunCmd, &testModelOutputDir, &testModelTimeout, &testModelMaxMemory, &testModelDataflow)
+	addTestRunFlags(testModelRunCmd, &testModelOutputDir, &testModelTimeout, &testModelMaxMemory, &testModelDataflow, &testModelPassthrough)
 	testApproximationCmd.AddCommand(deprecatedCommand(testModelRunCmd, "run", "opentaint test model run"))
 }

@@ -171,7 +171,6 @@ func init() {
 	testRuleCmd.AddCommand(testRuleRunCmd)
 
 	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleset, "ruleset", nil, "Ruleset file or directory to test (repeatable)")
-	addTestRunFlags(testRuleRunCmd, &testRulesOutputDir, &testRulesTimeout, &testRulesMaxMemory, &testRulesDataflow)
+	addTestRunFlags(testRuleRunCmd, &testRulesOutputDir, &testRulesTimeout, &testRulesMaxMemory, &testRulesDataflow, &testRulesPassthrough)
 	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleID, "rule-id", nil, "Run only rules with this ID (repeatable)")
-	addPassthroughModelsFlag(testRuleRunCmd, &testRulesPassthrough)
 }

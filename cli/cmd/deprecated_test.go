@@ -70,7 +70,7 @@ func TestDeprecatedFlagAliasesFeedTheNewFlag(t *testing.T) {
 }
 
 func TestModelFlagsOnAnalyzerCommands(t *testing.T) {
-	for _, command := range []*cobra.Command{scanCmd, testRuleRunCmd} {
+	for _, command := range []*cobra.Command{scanCmd, testRuleRunCmd, testModelRunCmd} {
 		for _, name := range []string{"dataflow-models", "dataflow-approximations", "passthrough-models", "passthrough-approximations"} {
 			if command.Flags().Lookup(name) == nil {
 				t.Errorf("%s has no --%s", command.CommandPath(), name)
