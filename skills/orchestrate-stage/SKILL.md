@@ -17,7 +17,7 @@ Match the stage keyword to its reference and read it fully:
 
 ```
 sources      → <skill-dir>/references/sources.md
-approx-round → <skill-dir>/references/approx-round.md
+model-round → <skill-dir>/references/model-round.md
 sinks        → <skill-dir>/references/sinks.md
 triage       → <skill-dir>/references/triage.md
 poc          → <skill-dir>/references/poc.md
@@ -51,11 +51,11 @@ Universal rules:
 - trust the returned summary; open an artifact only when the summary does not resolve the result
 - don't read a leaf skill's contents unless genuinely needed
 - never bundle multiple steps into one dispatch
-- when a rule or approximation does not converge after its leaf's retries, load `<skill-dir>/references/escalation.md`, settle that item, and continue. Only a blocker shared by every remaining item stops the stage
+- when a rule or model does not converge after its leaf's retries, load `<skill-dir>/references/escalation.md`, settle that item, and continue. Only a blocker shared by every remaining item stops the stage
 
 Fan-out and caps:
 
-- `get_status.py --full` prints `global` and `heavy` caps; the heavy leaves in these stages are `create-rule` and `create-dataflow-approximation`. Never exceed either cap; reduce `global` by 1 for the rest of the stage when a leaf is rate-limited
+- `get_status.py --full` prints `global` and `heavy` caps; the heavy leaves in these stages are `create-rule` and `create-dataflow-model`. Never exceed either cap; reduce `global` by 1 for the rest of the stage when a leaf is rate-limited
 - fan out independent units and dispatch the next queued unit as each slot frees
 - block on native agent completion. Never use Monitor, a background command, or resume-polling to wait inside this agent
 

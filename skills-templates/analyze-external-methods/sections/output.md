@@ -2,7 +2,7 @@ Short and concise report of what was done
 
 ### Artifacts:
 
-- `.opentaint/tracking/approximations/<batch>.yaml` — the batch classification (per Tracking)
+- `.opentaint/tracking/models/<batch>.yaml` — the batch classification (per Tracking)
 - `.opentaint/tracking/rules/sinks/<package-kebab>.yaml` — the per-package sink units, when `sinks` was set (per Tracking)
 
 ### Summary:

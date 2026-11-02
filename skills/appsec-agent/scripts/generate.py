@@ -9,10 +9,10 @@ from the project root: `uv run scripts/generate.py <cmd>`.
 
   init                bootstrap the .opentaint tree + state.yaml from the workflow flags
   tags                refresh tracking/rules/tags.yaml from the active lib rules
-  partition analyze   dropped external methods -> per-root batch plans (approximations)
+  partition analyze   dropped external methods -> per-root batch plans (models)
   partition discover  coverage.yaml's used members -> balanced discover plans
   mark-safe           discover plans' verdicts -> classification.yaml ledger (+prune plans)
-  merge-skipped       batch skipped/engine_issues -> approximations/skipped.yaml (+prune plans)
+  merge-skipped       batch skipped/engine_issues -> models/skipped.yaml (+prune plans)
   findings            results/report.sarif -> per-rule finding tracking files (idempotent)
 """
 import argparse
@@ -27,7 +27,7 @@ from pathlib import Path
 
 import yaml
 
-from _common import (APPROX, DATAFLOW, DROPPED,
+from _common import (MODELS_TR, DATAFLOW, DROPPED,
                      FINDINGS_TR, MODEL, PASS_THROUGH, RESULTS, RULES, RULES_TR,
                      SARIF, SINKS_TR, SOURCES_TR, TAGS, TRACKING,
                      builtin_rules_root, class_of, classified_keys,
@@ -35,20 +35,20 @@ from _common import (APPROX, DATAFLOW, DROPPED,
                      git_head, ledger_verdicted_keys, load_yaml, member_key,
                      package_of, strip_quotes)
 
-ANALYZE_BUDGET = 20                       # methods per approximation batch
+ANALYZE_BUDGET = 20                       # methods per model batch
 ANALYZE_MISC = 6                          # roots with <= this many methods pool into one misc batch
 ROOT_DEPTH = 2                            # library root = first 2 dotted segments
 DISCOVER_TARGET, DISCOVER_BAND = 50, 15   # project-used members per discover plan (~50, loose)
 
 DISCOVER_PLANS = RULES_TR / "plans"
-APPROX_PLANS = APPROX / "plans"
+MODEL_PLANS = MODELS_TR / "plans"
 
 
 # ---- init: bootstrap the working tree + state.yaml ----
 
 # the durable directories a run writes into; the leaves/scripts mkdir on write, but seeding
 # them up front gives every stage a place to land and makes the empty tree self-describing.
-INIT_DIRS = [TRACKING, APPROX, SOURCES_TR, SINKS_TR, FINDINGS_TR,
+INIT_DIRS = [TRACKING, MODELS_TR, SOURCES_TR, SINKS_TR, FINDINGS_TR,
              RESULTS, RULES, PASS_THROUGH, DATAFLOW]
 STATE_DERIVED = ("model_commit", "build_jdk", "max_memory")   # build/scan fill these, init preserves
 
@@ -202,7 +202,7 @@ def _root_next_index(prefix):
     # owns, or the new plan's analyze agent would overwrite that batch. Continue past the highest
     # index any existing batch OR leftover plan already claims for this root.
     mx = 0
-    for d in (APPROX, APPROX_PLANS):
+    for d in (MODELS_TR, MODEL_PLANS):
         for p in glob.glob(str(d / f"{prefix}-*.yaml")):
             m = re.match(rf"^{re.escape(prefix)}-(\d+)\.yaml$", Path(p).name)
             if m:
@@ -211,7 +211,7 @@ def _root_next_index(prefix):
 
 
 def cmd_analyze(args):
-    regen_plans(APPROX_PLANS)
+    regen_plans(MODEL_PLANS)
     classified = classified_keys()
     rows = [r for r in dropped_entries() if member_key(r) not in classified]
     if not rows:
@@ -243,7 +243,7 @@ def cmd_analyze(args):
             norm = {cls: sorted(v, key=lambda x: (x["method"], x.get("signature", "")))
                     for cls, v in sorted(scopes.items())}
             pid = f"{prefix}-{start + i:03d}"
-            path = APPROX_PLANS / f"{pid}.yaml"
+            path = MODEL_PLANS / f"{pid}.yaml"
             path.write_text(dump_yaml({"scopes": norm}), encoding="utf-8")
             paths.append(str(path))
     for p in paths:
@@ -448,17 +448,17 @@ def cmd_merge_skipped(args):
     # collects the `skipped` and `engine_issues` buckets of every batch into skipped.yaml, keeping
     # them as two separate groups — regular skips under `methods`, engine issues under `engine_issues`.
     docs = [load_yaml(p, {}) or {} for p in
-            (Path(x) for x in sorted(glob.glob(str(APPROX / "*.yaml"))))
+            (Path(x) for x in sorted(glob.glob(str(MODELS_TR / "*.yaml"))))
             if p.name != "skipped.yaml"]
     out = {"methods": _collect(docs, "skipped"), "engine_issues": _collect(docs, "engine_issues")}
-    (APPROX / "skipped.yaml").write_text(dump_yaml(out), encoding="utf-8")
+    (MODELS_TR / "skipped.yaml").write_text(dump_yaml(out), encoding="utf-8")
     print(f"skipped.yaml: {len(out['methods'])} methods, {len(out['engine_issues'])} engine_issues")
-    if not args.keep and APPROX_PLANS.is_dir():
-        pruned = [p for p in glob.glob(str(APPROX_PLANS / "*.yaml"))]
+    if not args.keep and MODEL_PLANS.is_dir():
+        pruned = [p for p in glob.glob(str(MODEL_PLANS / "*.yaml"))]
         for p in pruned:
             Path(p).unlink()
         if pruned:
-            print(f"pruned {len(pruned)} consumed approximation plan(s)")
+            print(f"pruned {len(pruned)} consumed model plan(s)")
     return 0
 
 
@@ -630,8 +630,8 @@ def main():
     m.add_argument("--keep", action="store_true", help="keep the reconciled discover plans")
     m.set_defaults(func=cmd_mark_safe)
 
-    s = sub.add_parser("merge-skipped", help="rebuild approximations/skipped.yaml from batches")
-    s.add_argument("--keep", action="store_true", help="keep the consumed approximation plans")
+    s = sub.add_parser("merge-skipped", help="rebuild models/skipped.yaml from batches")
+    s.add_argument("--keep", action="store_true", help="keep the consumed model plans")
     s.set_defaults(func=cmd_merge_skipped)
 
     f = sub.add_parser("findings", help="seed per-rule finding files from results/report.sarif")

@@ -8,7 +8,7 @@ When a positive won't pass and the suspicion is a library method on its flow dro
 opentaint scan --project-model .opentaint/test-compiled/<unit>/<side> \
   -o .opentaint/test-results/<unit>/<side>/diag.sarif \
   --ruleset builtin --ruleset .opentaint/rules --ruleset .opentaint/test-projects/<unit>/<side>/test-rules \
-  --passthrough-approximations .opentaint/pass-through \
+  --passthrough-models .opentaint/pass-through \
   --track-external-methods
 ```
 

@@ -4,7 +4,7 @@ The run is one fixed pipeline; the selected levels determine which phases are in
 build                       → MAIN: build
 discover / source_rules     → stage subagent: sources
 scan                        → MAIN: scan
-approximations              → stage subagent: approx-round, then MAIN: rescan; repeat
+models              → stage subagent: model-round, then MAIN: rescan; repeat
 sink_rules                  → stage subagent: sinks, then MAIN: rescan
 triage                      → stage subagent: triage
 poc                         → stage subagent: poc
@@ -20,8 +20,8 @@ After a successful build, write the language-specific build fields named by the 
 
 When status reports `scan`, or a stage returns with a rescan pending, load and follow the `run-scan` skill in this main session. Start the scan with the harness's main-session background-command facility, keep the engine's self-timeout, add a 1200-second outer backstop, and wait for the process completion event.
 
-A valid `.opentaint/results/report.sarif` means the scan completed, including exit 254 after an engine timeout. Record `max_memory: 16G` when the scan had to bump memory and reuse it on later scans. If no SARIF exists after the allowed retry/backstop, follow the repair path below for a malformed rule/approximation; otherwise dispatch `orchestrate-stage` with `stage: escalation` and the scan `setup` to write the scan-wide resource issue, then stop.
+A valid `.opentaint/results/report.sarif` means the scan completed, including exit 254 after an engine timeout. Record `max_memory: 16G` when the scan had to bump memory and reuse it on later scans. If no SARIF exists after the allowed retry/backstop, follow the repair path below for a malformed rule/model; otherwise dispatch `orchestrate-stage` with `stage: escalation` and the scan `setup` to write the scan-wide resource issue, then stop.
 
-When a scan or later stage reports a malformed approximation, unloadable created rule, ineffective join, or a created rule's false positive/negative, route the exact diagnosis and artifact path/id to the responsible stage agent per Dispatching, then scan again in MAIN.
+When a scan or later stage reports a malformed model, unloadable created rule, ineffective join, or a created rule's false positive/negative, route the exact diagnosis and artifact path/id to the responsible stage agent per Dispatching, then scan again in MAIN.
 
 After every build, scan, or stage return, run `uv run <skill-dir>/scripts/get_status.py` once to choose the next action. Use `--full` at run start, on resume, or when the brief output does not settle the question.

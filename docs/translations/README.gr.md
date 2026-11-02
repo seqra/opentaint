@@ -173,7 +173,7 @@ npx skills add https://github.com/seqra/opentaint
 
 - **Σάρωση και διαλογή:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
 - **Επέκταση κάλυψης:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
-- **Μοντελοποίηση ροής δεδομένων:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+- **Μοντελοποίηση ροής δεδομένων:** `analyze-external-methods`, `create-pass-through-model`, `create-dataflow-model`, `debug-rule`, `report-analyzer-issue`
 
 ---
 

@@ -173,7 +173,7 @@ De inkluderede skills dækker den almindelige sikkerhedsanalyse-løkke:
 
 - **Scan og triage:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
 - **Udvidelse af dækning:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
-- **Dataflow-modellering:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
+- **Dataflow-modellering:** `analyze-external-methods`, `create-pass-through-model`, `create-dataflow-model`, `debug-rule`, `report-analyzer-issue`
 
 ---
 
