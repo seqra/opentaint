@@ -1,11 +1,12 @@
 # Loop-block implementation: proof dossier
 
 Date: 2 November 2026. The selected boundary corrections have checked local
-models and pass 2,369 common and 453 JVM tests. The source-pinned receipt
+models and pass 2,372 common and 453 JVM tests. The source-pinned receipt
 records this native gate; it does not prove the Kotlin/AP adapters or project
-quality. The latest project campaign is historical: OWASP completed
-**run-5** before these corrections with 51 missing baseline sink identities.
-A fresh project campaign is required.
+quality. The latest attempted campaign (`3750b73a`) reached OWASP
+**run-1 FAILED**, with no completed or accepted iteration, then stopped
+conductor during prescan. The earlier `10957156` campaign completed OWASP
+**run-5** with 51 missing baseline sink identities. A fresh campaign is required.
 Proposal section 6.1 uses existing exceptional-exit backward discovery.
 The selected compatibility hack also lets a reached backward exceptional
 ZERO apply the normal-exit paired control demand. It adds no new start.
@@ -533,6 +534,17 @@ The native full-AP correspondence tests must establish:
    boundary reply whose concrete initial is already admitted. A duplicate
    initial is not evidence that no fresh link delivery exists. Joined
    static guidance remains read-only with respect to live actor queues.
+   This also applies to delayed real-call summary suffixes: an already stored
+   ZERO result can trigger a selected static cleaner whose reached operation
+   appends pending static reads outside child `workLocal`. The reached callback
+   must reserve method Work for that batch before output deduplication can
+   suppress the duplicate ZERO. This is the same reservation law, not another
+   AP rule. The native late-call control must drain the read once and freeze idle.
+   Saved NormalTarget-only replay can also queue a local delivery outside
+   method Work before an empty C2 result returns. If the local link has
+   pending delivery, reserve Work even though no initial is admitted. The
+   delivery can later fail its ordinary layer/Target guard; scheduling it
+   creates no initial, seed or extra Target permission.
 9. The exceptional-ZERO adapter applies only at an actually reached
    exceptional boundary. It borrows complete normal control rows and keeps
    their paired publication test. It adds no direct start, demand scan,

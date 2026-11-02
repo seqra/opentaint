@@ -1,10 +1,11 @@
 # Method-owned loop blocks
 
 Date: 2 November 2026. Status: selected design. The boundary corrections
-pass 2,369 common and 453 JVM tests. These native controls do not prove all
-AP adapters or project quality. The latest project campaign is historical:
-OWASP completed **run-5** before these corrections and had 51 missing baseline
-sink identities. A fresh campaign is required. See the
+pass 2,372 common and 453 JVM tests. These native controls do not prove all
+AP adapters or project quality. The latest attempted project campaign (`3750b73a`) reached OWASP **run-1 FAILED**,
+with no completed or accepted iteration, then stopped conductor during prescan.
+The earlier `10957156` campaign completed OWASP **run-5** with 51 missing
+baseline sink identities. A fresh campaign is required. See the
 [boundary coverage report](../docs/reports/bidirectional-loop-boundary-source-gap-20261102.md).
 
 This document defines ownership and execution for
