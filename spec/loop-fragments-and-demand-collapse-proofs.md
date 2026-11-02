@@ -4,13 +4,16 @@ Date: 2 November 2026. Status: scoped local proofs for the selected design.
 No runtime implementation is changed.
 
 Read [the specification](loop-fragments-and-demand-collapse.md),
+[method-owned loop blocks](method-owned-loop-blocks.md),
 [the model package](lean/proposals/loop-fragments-and-demand-collapse-20261102/README.md),
 and [proof-guide.md](proof-guide.md). The receipt lists the exact checked
 sources, theorem inventory, hashes and allowed logical dependencies.
 
 ## 1. Selected rule
 
-For one applied body-summary arm `I -> C`:
+One method analyzer owns an internal tree of sequential/loop blocks.
+They share method registers, not edge stores. For one applied traversal
+summary arm `I -> C`, at either repeat or leave output:
 
 ```text
 FL(Zero) = 0
@@ -38,7 +41,7 @@ physical trace. Reversing those transitions gives the backward theorem.
 A rank certificate excludes positive closed internal body walks. A
 same-owner one-node self-loop uses ports and has an acyclic body.
 Composition of exact-factorization contracts supports recursive splitting.
-These results do not construct or verify a JVM extraction pass.
+These results do not construct or verify the Kotlin block decomposition.
 
 `Geometry` uses finite field/base/full-mark namespaces and scalar EXACT/MAY
 values with a layer and protection bit. Demand paths denote a trie. The
@@ -122,6 +125,23 @@ check rejects exactly when all reject, and retains every old positive
 two-family answer. This is an exact-path reference counterexample and
 repair, not a complete outlined-driver theorem.
 
+`Blocks` models a supplied containment layout under one method owner.
+Its parent-depth certificate rules out every positive containment cycle.
+Each instruction has one lowest owner. Blocks address identical original
+register IDs, and identity boundary transport keeps the entire opaque AP
+payload. An alias request retains the same method, original instruction
+and value. Indexed updates change only the selected block and processed
+point, not another block or a successor's store. Direction-labelled
+repeat/leave routing is symmetric. Both loop output categories invoke the
+strict shape gate; sequential output bypasses it. Retained results keep
+the actual port and destination. Child composition keeps the parent
+original, and only root rows use the public summary interface. Every
+selected internal refinement row appears in the method's tagged frontier;
+an empty collected frontier cannot hide an admitted internal row.
+These are local ownership/transport laws for supplied valid metadata.
+They do not implement the decomposition, actual alias query, AP C5 or
+counted-work scheduler.
+
 `Usefulness` is an earlier reference investigation, not a selected runtime
 component. For a supplied finite graph it proves executable certified
 NORMAL reachability. The selected design instead reuses native saved
@@ -141,7 +161,7 @@ One test uses the real driver and source/sink call stages to establish the
 internal two-iteration path. A separate test uses production DemandStore
 C2/C5 to establish a legal growing body result. The separate pair is not
 claimed to be a recorded synthetic-body handoff from the first test.
-No outlined runtime or new gate has been executed. These controls support
+No method-owned block runtime or new gate has been executed. These controls support
 the counterexample's premises without presenting local checks as an
 end-to-end implementation proof.
 
@@ -149,13 +169,17 @@ end-to-end implementation proof.
 
 Before runtime implementation, establish:
 
-1. The extraction pass constructs the finite partition, exact ports and
-   body rank certificate, including nested, self and irreducible loops.
+1. The method-owned layout builder constructs the finite block tree,
+   instruction partition, exact ports and body rank certificate, including
+   nested, self and irreducible loops. It reuses stable IDs across runs.
 2. Original instruction/rule identities, aliases, mutable arguments and
    exceptional/nonreturning observations implement the control contract.
    Original boundary rules execute once at the real method boundary.
+   Blocks use original register IDs and original alias queries; internal
+   transitions do not add call bindings or alias expansion.
 3. Three consumer adapters use the correct direction, port and complete
-   original. AL composition constructs a full B edge. L guidance includes
+   original. The direction-appropriate AL/BL composition constructs a
+   full enclosing-B edge. L guidance includes
    the required next-body admission; it is not replaced by B exit demand.
 4. Precision transport preserves each selected C2/composed-C5 image.
    A prefix-trie geometry match alone is not that proof. Every actual
@@ -165,7 +189,10 @@ Before runtime implementation, establish:
 6. Every relevant cut has the ordinary summary/Target handoff needed for
    later refinement. Local finite feedback does not prove a driver
    iteration will occur, or prove general convergence.
-7. Production tests cover the selected rule before fixed project
+7. Method work and handoff collect pending internal delivery and selected
+   block refinement. Local summary rows do not leak into the external
+   method interface; CFG delivery cannot bypass a block-output gate.
+8. Production tests cover the selected rule before fixed project
    measurements. Report the latest reached/completed/accepted iteration.
 
 The proof package deliberately reports local-model PASS. It does not claim
