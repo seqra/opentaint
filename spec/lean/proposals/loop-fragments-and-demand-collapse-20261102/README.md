@@ -5,7 +5,10 @@ Date: 2 November 2026. Selected design; no runtime implementation.
 Read [the spec](../../../loop-fragments-and-demand-collapse.md),
 [method-owned blocks](../../../method-owned-loop-blocks.md),
 [the proof dossier](../../../loop-fragments-and-demand-collapse-proofs.md),
-and [the proof guide](../../../proof-guide.md).
+and [the proof guide](../../../proof-guide.md). The
+[implementation proposal](../../../../docs/design/bidirectional-loop-blocks-restriction-implementation-20261102.md)
+and [implementation proof dossier](../../../loop-blocks-implementation-proofs.md)
+define the proposed production mapping.
 
 ```sh
 python3 spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/check.py
@@ -30,11 +33,15 @@ noncomputable source and native evaluation proofs.
 | Feedback | Missing internal consumer under AL/B-only gate; selected L check preserves the example |
 | Decomposition | Exact ordered-region sequence, recursive AL hierarchy, empty prefix and successive-loop example |
 | Blocks | One method owner, shared registers, separate post-S stores, repeat/leave gates, parent dependencies and local frontier collection |
+| Discovery | Existing exceptional-exit backward overlay, explicit path witnesses and no new normal-start route |
+| Implementation | Shape/projection/publication composition, scope retention, nonempty-image witness and local-delivery barrier |
 | Usefulness | Reference investigation only; no runtime NORMAL reachability service is selected |
 
 The [native control record](controls.md) embeds the code and traces for the
 next-body case. Its finite FULL driver control completes **run-3**, with
-one report. Native controls are separate from the kernel proof receipt.
+one report. Four further native discovery checks pass, including a FULL
+loop with no leave that also completes run-3. Native controls are separate
+from the kernel proof receipt.
 
 The [receipt](checks.json) hashes the exact inputs and records kernel and
 audit results. A local-model PASS is not a proof of Kotlin block decomposition,

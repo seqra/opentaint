@@ -17,7 +17,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = next(p for p in HERE.parents if (p / "spec/lean/lean-toolchain").is_file())
 TOOLCHAIN = "leanprover/lean4:v4.33.1"
 MODULES = ["Control", "Geometry", "Admission", "Guidance", "Shape",
-           "Protocol", "Restriction", "Feedback", "Blocks", "Decomposition", "Usefulness"]
+           "Protocol", "Restriction", "Feedback", "Blocks", "Decomposition", "Implementation", "Discovery", "Usefulness"]
 ALLOWED_AXIOMS = {"propext", "Quot.sound"}
 
 
@@ -40,10 +40,18 @@ def main() -> None:
 
     sources = [HERE / f"{name}.lean" for name in MODULES]
     spec_path = ROOT / "spec/loop-fragments-and-demand-collapse.md"
-    inputs = sources + [HERE / "README.md", HERE / "check.py", HERE / "controls.md",
+    pins_path = HERE / "implementation-source-pins.json"
+    pins = json.loads(pins_path.read_text())
+    for source, expected in pins["sources"].items():
+        if sha(ROOT / source) != expected:
+            raise RuntimeError("Reviewed implementation source changed: " + source)
+    inputs = sources + [pins_path] + [ROOT / source for source in pins["sources"]] + [HERE / "README.md", HERE / "check.py", HERE / "controls.md",
                         HERE / "controls/LoopGrowingDemandControlTest.kt",
+                        HERE / "controls/LoopNoLeaveDiscoveryControlTest.kt",
                         HERE / "controls/control.init.gradle", scanner_path,
                         spec_path, ROOT / "spec/method-owned-loop-blocks.md",
+                        ROOT / "spec/loop-blocks-implementation-proofs.md",
+                        ROOT / "docs/design/bidirectional-loop-blocks-restriction-implementation-20261102.md",
                         ROOT / "spec/loop-fragments-and-demand-collapse-proofs.md",
                         ROOT / "spec/proof-guide.md", ROOT / "spec/lean/lean-toolchain"]
     if (ROOT / "spec/lean/lean-toolchain").read_text().strip() != TOOLCHAIN:
@@ -113,8 +121,13 @@ def main() -> None:
         "status": "LOCAL_MODELS_PASS" if passed else "FAILED",
         "specificationStatus": "DRAFT_DECISIONS_PENDING" if draft else "SEE_SPECIFICATION_SCOPE",
         "runtimeChanged": False,
+        "implementationProposalStatus": ("DRAFT_DECISION_PENDING"
+            if "Status: draft" in (ROOT / "docs/design/bidirectional-loop-blocks-restriction-implementation-20261102.md").read_text()
+            else "SEE_PROPOSAL_SCOPE"),
         "runtimeVerifiedByKernel": False,
         "MethodOwnedBlockLayoutBuilderVerified": False,
+        "reviewedImplementationSourcesMatch": True,
+        "implementationSources": pins,
         "APThreeConsumerAndProjectionAdapterVerified": False,
         "NORMALRouteRuntimeServiceSelected": False,
         "generalCrossRunConvergenceProved": False,

@@ -123,6 +123,10 @@ loop output before either route. Equal/shrinking results bypass that new
 gate. The actual exit port remains attached; a successful consumer check
 does not change repeat into leave.
 
+Ordinary backward edges reverse physical forward ports. Keep the existing
+exceptional-exit discovery overlay too; it does not change the forward
+CFG or create a normal return. Both directions use the same hierarchy.
+
 Sequential regions can contain branches. For general CFGs, retain all
 original entry/exit ports and return/throw/handler destinations. The two
 principal route categories are not a limit of two physical edges. Keep
