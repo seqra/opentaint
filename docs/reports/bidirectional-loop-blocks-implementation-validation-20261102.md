@@ -91,9 +91,27 @@ receipt embeds the red message, log/XML hashes and the tested runtime hashes.
 The raw port reverses only in the existing narrow run-2 static Target check;
 it adds no ordinary DATA ingress or NORMAL native record.
 
+A second scheduling regression covers the first delayed callee ZERO summary.
+Its call suffix registers a static selected-cleaner interest, while its final
+ZERO output is already stored. The static batch needs its own owner Work
+reservation. `Run1PointResume.reached` now secures that reservation when its
+batch is nonempty. The test reproduces pending child work with no enqueue
+before the correction, then checks actual read registration and an idle freeze
+after it. Duplicate output does not cancel a real pending effect.
+
+Two local-delivery controls cover the same ownership law. Saved NORMAL Target
+replay can queue a delivery before empty local C2 returns. A new input can also
+match current FLOW summaries while its child initial is already known. Each
+producer now secures method Work whenever its link queue is pending. The first
+control keeps the complete genuine prior public and local Target store; it
+admits no local initial and suppresses repeated public output. The second
+transports a new concrete input through real current FLOW summaries without
+new concrete child analysis. Both failed at the missing reservation before the
+guards and pass afterward. These guards add no demand or initial permission.
+
 ## 3. Native results and finite witnesses
 
-The corrected complete clean serial command passes **2,369 core tests and 453 JVM tests**, with no
+The corrected complete clean serial command passes **2,372 core tests and 453 JVM tests**, with no
 failure or skipped test. The benchmark, comparison and profile helpers pass
 **60 Python tests**. The native receipt records the final source set. Earlier
 failed commands are intermediate evidence, not final acceptance receipts.
@@ -152,8 +170,15 @@ Conductor reached **run-4** and completed/accepted **run-3** before the campaign
 was stopped. Thingsboard and Stirling-PDF did not start. No OOM occurred.
 These results do not measure the corrected implementation.
 
-The corrected campaign is prepared in
-`../loop-blocks-restriction-verified-20261102`.
+The third attempt at `3750b73a0` is retained in
+`../loop-blocks-restriction-verified-20261102`. OWASP reached **run-1** and
+failed freeze after 76.980 seconds of engine time. No iteration completed or
+was accepted. Nineteen method freezes found pending block work. The native
+delayed-call regression above reproduces the missing reservation. Conductor
+was stopped before run-1 started. The other projects did not start. No OOM
+occurred. These interrupted commands do not measure the scheduling correction.
+
+The next campaign is prepared in `../loop-blocks-restriction-retry-20261102`.
 Run OWASP, Conductor, Thingsboard and Stirling-PDF through the direct
 `runProjectAnalyzer` Gradle task. Keep FULL, 16 GiB, limits `1,1,2,3,...`, statics
 and aliases enabled, and the selected timeout for each project. Reuse the fixed

@@ -2,7 +2,7 @@
 
 Date: 2 November 2026. Status: selected design with scoped local proofs.
 The boundary-span and nearest-publication corrections pass the complete
-native suites: 2,369 common and 453 JVM tests. A fresh project campaign is
+native suites: 2,372 common and 453 JVM tests. A fresh project campaign is
 still required. Section 10 states the required integration proofs; see
 also the implementation proof dossier.
 

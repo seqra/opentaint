@@ -4,7 +4,7 @@
   "baselineRole": "Historical pre-implementation sources and local-model receipt. These are not the current runtime.",
   "runtimeChanged": true,
   "sourceState": "Native-tested implementation worktree; content hashes identify the source before its commit.",
-  "sourcePinBaseRevision": "10957156a4359321cdbc60f0fac375d8d8ba9a5e",
+  "sourcePinBaseRevision": "3750b73a07c598c7edd5c1e7e84637f3b774af83",
   "sourceScopes": [
     {
       "directory": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi",
@@ -33,10 +33,10 @@
   ],
   "nativeValidation": {
     "path": "docs/reports/data/bidirectional-loop-blocks-validation-20261102.json",
-    "sha256": "2c4fe5abd695ceb1352a3b49a57ce7470d4fd4c3dc5824115b89c1daea378784",
-    "sourceSetSha256": "b18073370a60471eb618cf60a8f8232636cd6ecd61ad67f34f87c06581f39e1b",
+    "sha256": "e4ff48b55f66a831cae5bcd85e7e8122bf2c13c8d43dd780977555c895a00e11",
+    "sourceSetSha256": "d83af9a1f17f3e34f2e04342ee1c2db2c4cfb94f7f4c8cc0f52b03c7d0f6f75a",
     "tests": {
-      "common": 2369,
+      "common": 2372,
       "jvm": 453
     },
     "pythonTests": 60
@@ -117,7 +117,7 @@
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LocalStaticInputRequests.kt": "510baaa5184665619493016fe3d7a49966e5989acf80da285df142ed8e05faac",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LoopConsumerObservation.kt": "87ebfcdbdf6ddec4a26ecf3965255f075f183ff274e577869ee9059b8354ac2b",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LoopOutputRestriction.kt": "7b44a1303a0151e363e46264e39d58e19e930ff114839b9946b1a2da34ccbc9c",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/MethodBlockRuntime.kt": "cfeddc4c5c11fa0caaeaf84ac1b3b0bbf2da8d8a21eeaca7168d4ae6c43f9eb6",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/MethodBlockRuntime.kt": "437c77c7740ccb114b06a52e0b48c66bf633f15e927d78ac716961b89536b3dd",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/MethodContextCache.kt": "98c42a5c8b50e8d0ddf2e3332d0c5c922cef70558b37e6c75d54a1261cfa0e9a",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/MethodExitMetadata.kt": "53cb229b8305a1172b33db46d0947289969efd2522ce551aca4a4669c380fc65",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/MethodServices.kt": "4540c1e10eab61a42251e3eaa1d1e686f67443bbb814a5228e77822b7b3ddb01",
@@ -134,7 +134,7 @@
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RestrictedInitialEmission.kt": "a80c1ed83f7b17efc321e855ef04316ee337509c97aeee02ea44f3a44d921659",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Run1Abstraction.kt": "e66424d651f4457902367bf30aaa1a427be0532a183b519c2ccdea4bf3514e31",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Run1AbstractionStatistics.kt": "70a3d50502f9c01b94a653346b5dd604aa15c24ad4e9a1f7373e7dc027a49fc1",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Run1PointResume.kt": "7ebf42ccc8189301bc07508f5668b6461e02cc97ed8a9c454a948e7189d148b7",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Run1PointResume.kt": "b0a09d8d49ba81ec1a42092f24c0cf8bb1a9a7ebe2dde57dce5168eaa11a5cec",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Run1RequestMatching.kt": "fd000a5b854212685b79d7a9979fe885081eee375bd72f16108d7d586afeaf80",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Run1Requests.kt": "aa938ad8742862603093a4a821505fa4b3c992b27cc3ebd5040066c4eec8eff5",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Run1StaticService.kt": "e9b972a5d8beab9c5455a2185f4a35784e7b71872273f8813cc9f113d0d687e3",
@@ -364,7 +364,9 @@
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockBoundaryLimitTest.kt": "030299ed9db1c3201a7cbaf6a372fbe9fa82fa7a3414f3794fd50a7799b71f1e",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockBoundaryNdScopeTest.kt": "63b2801582b5c94b8e51c2631e05ada12628ed45bbb677c74b98a455692e74e0",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockBreakFindingTest.kt": "0d0e208ff48049234889ddaf2f5781cc4858ff6df992226968cae31b2a4fca28",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockCallSuffixWorkTest.kt": "409822d27ac8e79bdf04832f4dc1665f7e412e0c21fe7c4cc41da2512f26d3de",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockCallsAndEntriesTest.kt": "30fbab0fbeed1acdcc123098665d75aeab656f643efda44cda8df8a0c788275a",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockCurrentOfferWorkTest.kt": "050f9c820a9646af13984c623b1d2ef39d3107fe16b28dcfb5dcfdba9d0603c0",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockCyclicEntryTest.kt": "5a66b3df43177d305d86d8b03c2720896a6606217d7f91728323130bfdcd53a5",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockDeepNoLeaveTest.kt": "812640abb7d3ed21ca930ab9d98f71c983152b8b73bc611b440a9bd37e6931e0",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockExitBoundaryFindingTest.kt": "d174188088359b3ba42be9a4c1f449ad6a488c81b4ff36e56d05d0d607f5d2c5",
@@ -375,6 +377,7 @@
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockNormalFlowTest.kt": "327d905b0eebfc167d397f79e5e249d4b8b6588901fbd7e3253cda494829ddf6",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockSavedIdentityTest.kt": "93cab8f84f20ef002fd89bcf96a4247e128c3829578b3cc3dac845ca53da7a27",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockSavedShrinkTest.kt": "9d6248a473a9ffe80415009003f55495cb84be1617397b441b98ecbab42c85be",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockSavedTargetWorkTest.kt": "bcb3f32846244b5930f95611f2a5884345963386bb8a5e39d92681bb61658af3",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockStaticExitRulesOnceTest.kt": "2f76757afcb37646c2d29415c3c3097d5b8f1d2985c16cb1572183516094849c",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockStaticExitSourceTransitionTest.kt": "185bd4ddf60cea574b3457249549939fdae34d504e24c3885affa4b0543892b7",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockStaticReplyWorkTest.kt": "759fc0544e3d949566fec20c98ea0879e6dd0f80f8db0e06a495ec0a15d6d507",
@@ -688,7 +691,7 @@
     "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/test/kotlin/org/opentaint/dataflow/jvm/bidi/fixtures/JvmTestMarks.kt": "4a55997c5f24e8775494a9e3dac332a2d5c50eeeb2c67302282a774e8ed70fa1",
     "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/test/kotlin/org/opentaint/dataflow/jvm/bidi/interp/HistoricalJIRCallPlanBuilder.kt": "10fc610aed63ecf5e7f491f8ec8ca1b740784f0b201e2066a43cc13923d48afd",
     "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/test/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRStaticMetadata.kt": "31fdc2f9402b33e68c93eaaf8577fcda96e44d511daa28b52edab9c8789d5a94",
-    "docs/reports/data/bidirectional-loop-blocks-validation-20261102.json": "2c4fe5abd695ceb1352a3b49a57ce7470d4fd4c3dc5824115b89c1daea378784",
+    "docs/reports/data/bidirectional-loop-blocks-validation-20261102.json": "e4ff48b55f66a831cae5bcd85e7e8122bf2c13c8d43dd780977555c895a00e11",
     "scripts/benchmark_bidi_projects.py": "3856ef82bc88a1f755c4582d532471dae71e0bff43fcc85f53d9a990d85a6dce",
     "scripts/compare_bidi_projects.py": "5fb815655ff7be9faa3edd43201ca9b53ca6da67460c9f7a5215f3fd587ef18d",
     "scripts/summarize_bidi_profiles.py": "c61ebbd24156cd2eb60320c9d8cb1b7082f0a702960f92ca3a64809d2b74c749",

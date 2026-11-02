@@ -404,6 +404,66 @@ the enqueue required for new link work. The post-join static-guidance
 phase only borrows inputs and builds frozen rows; it must not create live
 deliveries after runner completion.
 
+### 4.1 Static operation effects need their own work reservation
+
+A current or persisted summary callback can execute a real call suffix
+outside the receiving block's `workLocal`. The ZERO pass at that call can
+already be stored after S. A selected static cleaner then registers a
+MarkInput, while the repeated final ZERO output is correctly deduplicated.
+That output cannot reserve the work needed to commit the static batch.
+
+```kotlin
+// Run1PointResume.reached, after offering the original read/mark operations:
+if (!core.staticBatch.isEmpty) core.requestWork()
+```
+
+Keep this reservation independent of initial admission and post-S output
+freshness. Reuse the existing method-owner queue and static batch commit;
+do not scan other states to discover unreserved work, weaken `requireIdle`,
+change matching, or emit a duplicate fact. The native regression applies
+the first actual delayed ZERO summary to an already completed call with a
+static selected-cleaner suffix. It requires a counted method wakeup, the
+committed original read registration, and a clean idle/freeze barrier.
+
+### 4.2 Counted local-work producer ledger
+
+Every active local queue producer secures method-owner Work before the
+current event can release its reservation. Initial/output freshness is
+not a substitute for this obligation.
+
+| Pending work | Producer | Existing reservation path |
+|---|---|---|
+| Physical statement delta | `BlockRunState.enqueueInput` | `requestWork()` |
+| Physical/static/call continuation | `installPoint` -> `resumeQueue` | `requestWork()` |
+| Admitted AP publication | `retainSummary` -> method/local publication buffer | `requestWork()` when buffered |
+| Sink/source Target publication | `emitTarget` -> `pendingTargets` | `requestWork()` |
+| Temporary mark-request membership | `collectRequests` | `requestWork()` |
+| Static reads, interests, writers or supplies | `Run1PointResume.reached`, `request`, `localWrite`, `computedGroups`, `callInterest`, and effect handlers | `requestWork()` for the pending batch; a duplicate post-S result does not suppress it |
+| Root static-boundary interest | `LocalStaticInputRequests` interest callback | Root batch insertion plus `requestWork()` |
+| Local routed continuation | `MethodBlockRuntime.queue` | `port.enqueue(root)` |
+| New current-summary input delivery | `offerChild` -> `child.links.offer` | If local deliveries are pending, `port.enqueue(root)`, independently of duplicate child initials |
+| Saved NormalTarget delivery | End of `replaySaved` | If local deliveries are pending, `port.enqueue(root)`, before an empty current C2 can return |
+| Late static-answer input delivery | `offerStaticAnswer` -> `child.links.offer` | The same pending-delivery guard |
+| Private exit-operation input delivery | `routeStaticBoundaryInput` -> `child.links.offer` | The same pending-delivery guard, plus counted point installation |
+| Current local AP/Target publication | `Binding.publish` / `Binding.publishTargets` | `port.enqueue(root)` after local delivery insertion |
+| Ready physical block | `Binding.schedule` | Add ready scope and `port.enqueue(root)` together |
+| Ready original root | Root `requestWork` | `scheduleRoot` plus the original `requestWork` enqueue |
+| Quantum remainder | `work` / `workLocal` return incomplete | Retain the current Work reservation |
+
+Saved DATA replay already calls the counted `onApplied`/routing path. A
+saved Target instead first appends a local delivery, including candidates
+which will later be rejected. It must secure Work even if current C2 is
+empty. A current input can similarly queue existing summaries while its
+canonical child initial is already present. Both cases need their own
+producer guard.
+
+Future-only incomplete ND joins and unanswered mark/static subscriptions
+are not active local queues. Their later answer/delivery events are
+counted by the original runner protocol. The joined static-completion
+phase remains read-only with respect to all actor work queues. Keep the
+strict `requireIdle` assertion; do not discover missing reservations by
+scanning all states or drain queues after runner completion.
+
 ## 5. Scoped demand and persistence adapters
 
 ```kotlin

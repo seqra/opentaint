@@ -266,8 +266,8 @@ source permission. The fixture uses the same MarkInput/KEEP lowering as the
 production method form; a private static operation row alone is not guidance
 for the ordinary AL span.
 
-The clean complete suites pass **2,369 common tests and 453 JVM tests**, with
+The clean complete suites pass **2,372 common tests and 453 JVM tests**, with
 no failure or skipped test. See the [validation record](bidirectional-loop-blocks-implementation-validation-20261102.md)
 and its source hashes. This establishes the native controls, not recovery of
 all 51 project identities. That recovery must be measured on the committed
-correction in `../loop-blocks-restriction-verified-20261102`.
+correction in `../loop-blocks-restriction-retry-20261102`.

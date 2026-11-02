@@ -142,6 +142,10 @@ internal class Run1PointResume(private val core: BlockRunState) {
                 is StaticOperation.Write -> Unit
             }
         }
+        // A late call-summary suffix can reach this operation outside this
+        // state's workLocal call. Its final post-S output can be a duplicate,
+        // so output admission alone does not reserve work for these effects.
+        if (!core.staticBatch.isEmpty) core.requestWork()
     }
 
     fun request(at: OperationInput, groups: MarkSet) {

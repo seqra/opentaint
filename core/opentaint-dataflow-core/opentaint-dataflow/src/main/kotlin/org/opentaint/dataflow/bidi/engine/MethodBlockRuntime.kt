@@ -323,6 +323,7 @@ internal class MethodBlockRuntime(
         } else if (admittedTarget && state.initials.all().any { it.isZero } && original.isZero && value is Reach)
             queue { startEntryTarget(childEntry, state, target, ap.zero, state.forceRun1Layer(ap.zero, ops.startFact(ap.zero, mode))) }
         childEntry.links.offer(link, value)
+        if (childEntry.links.hasPending) port.enqueue(root)
         if (config.run1) {
             checkNotNull(state.abstraction).emit(original, value)
             if (value is FlowTree) applyRequests(childEntry, link, value, childEntry.requests.pendingRows())
@@ -401,6 +402,7 @@ internal class MethodBlockRuntime(
         }
         for ((row, member) in config.normalTargets.candidates(key, child.scope, link.original, actual, mode))
             child.links.replaySavedTarget(link, actual, row, member)
+        if (child.links.hasPending) port.enqueue(root)
     }
 
     private fun applySaved(child: Entry, link: LocalLink, actual: Facts, exit: PortId,
