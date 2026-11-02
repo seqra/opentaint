@@ -254,6 +254,9 @@ class RunManager<A : RunActor>(
             for (actor in hot) logger.info {
                 "BIDI_BODY_WORK_ABORTED_METHOD run=${config.index} status=$end method=${actor.key} snapshot=${actor.stoppedBodyWorkSnapshot()}"
             }
+            for (actor in hot) actor.blockDiagnostics()?.let { summary -> logger.info {
+                "BIDI_LOOP_BLOCK_ABORTED run=${config.index} status=$end method=${actor.key} $summary"
+            } }
         }
         staticService?.let { logger.info { "BIDI_STATIC_STATISTICS run=${config.index} status=$end totals=${it.statistics()} requests=${it.requestStatistics()}" } }
         var failure: Throwable? = null

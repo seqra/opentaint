@@ -7,14 +7,27 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import java.util.BitSet
 import java.util.IdentityHashMap
 
-/** One writer owns completed post-statement results for a run. A row at S is
- * the output of S, never its incoming input or the output of a predecessor. */
-class MethodEdgeStore(private val m: ApManager, private val method: MethodKey, private val lm: LanguageManager,
-                      private val fieldLimit: Int, flowBacked: Boolean = false,
-                      collectStatistics: Boolean = false) {
-    init { require(fieldLimit >= 1) { "The field limit must be positive" } }
+/** A dense directory belongs to one block. Equal AP facts in different
+ * directories do not share a post-statement admission cell. */
+interface PointDirectory<P> {
+    val size: Int
+    fun index(point: P): Int
+}
 
-    private val size = lm.getMaxInstIndex(method.method) + 1
+/** One writer owns completed post-point results for a run. A row at S is
+ * the output of S, never its incoming input or the output of a predecessor. */
+open class ScopedEdgeStore<P>(private val m: ApManager, private val points: PointDirectory<P>,
+                             private val fieldLimit: Int, flowBacked: Boolean = false,
+                             collectStatistics: Boolean = false) {
+    init {
+        require(fieldLimit >= 1) { "The field limit must be positive" }
+        require(points.size >= 0) { "A point directory cannot have negative size" }
+    }
+
+    private val size = points.size
+    private fun pointIndex(point: P): Int = points.index(point).also {
+        require(it in 0 until size) { "A point must belong to this block directory: $it of $size" }
+    }
     private val reach = IdentityHashMap<PremiseKey, Array<BitSet>>()
     private val groups = IdentityHashMap<PremiseKey, ScalarPremiseRows>()
     private val statistics = if (collectStatistics) ScalarCounters() else null
@@ -65,27 +78,27 @@ class MethodEdgeStore(private val m: ApManager, private val method: MethodKey, p
 
     /** Null selects the exact scalar fallback; an empty result is a duplicate.
      * The packet decoder, not its FLOW-shaped storage key, determines K6. */
-    fun addDiagonal(node: CommonInst, offered: DiagonalDelta): List<DiagonalDelta>? {
+    fun addDiagonal(node: P, offered: DiagonalDelta): List<DiagonalDelta>? {
         m.cancellation.checkpoint()
         if (!RuntimeDataDomain.initial(offered.initialShape) || !RuntimeDataDomain.base(offered.base)) return emptyList()
         val statements = packed ?: return null
         check(offered.initialShape.manager === m) { "A diagonal packet needs an owned initial shape" }
         check(offered.base !is AccessPathBase.CleanerTemporary && offered.base != AccessPathBase.Zero)
         assert(offered.geometry.boundedDepth <= fieldLimit) { "W3: a stored conclusion must be within the field limit" }
-        val index = lm.getInstIndex(node)
+        val index = pointIndex(node)
         val owner = statements[index] ?: FlowBackedSummaries(m, replaceCovered = false, interners = interners)
             .also { statements[index] = it }
         return owner.addDiagonal(offered)
     }
 
     /** T4: new leaves, or the whole merged value when a T2 annotation changes. */
-    fun add(node: CommonInst, premise: PremiseKey, f: Facts): Facts? {
+    fun add(node: P, premise: PremiseKey, f: Facts): Facts? {
         m.cancellation.checkpoint()
         if (!RuntimeDataDomain.packet(premise, f)) return null
         check(f.base !is AccessPathBase.CleanerTemporary) { "A field-action temporary cannot enter method storage" }
         check((f is FlowTree) == premise.isFlow) { "K6: the conclusion kind follows the premise" }
         check(premise !is PremiseSet || f is TaintTree) { "A multi-premise edge must be TAINT" }
-        val index = lm.getInstIndex(node)
+        val index = pointIndex(node)
         when (f) {
             is Reach -> {
                 val bits = reach.getOrPut(premise) { arrayOf(BitSet(size), BitSet(size)) }[f.layer.ordinal]
@@ -192,9 +205,9 @@ class MethodEdgeStore(private val m: ApManager, private val method: MethodKey, p
     }
 
     /** Test view of all complete stored values at a statement. */
-    fun edgesAt(node: CommonInst, premise: PremiseKey? = null): Sequence<Pair<PremiseKey, Facts>> = sequence {
+    fun edgesAt(node: P, premise: PremiseKey? = null): Sequence<Pair<PremiseKey, Facts>> = sequence {
         m.cancellation.checkpoint()
-        val index = lm.getInstIndex(node)
+        val index = pointIndex(node)
         packed?.get(index)?.let { owner ->
             if (premise == null) yieldAll(owner.all())
             else for (facts in owner.borrow(premise)) yield(premise to facts)
@@ -226,7 +239,7 @@ class MethodEdgeStore(private val m: ApManager, private val method: MethodKey, p
     }
 
     /** Full leaf matching returns the whole stored value, including its off-query leaves. */
-    fun edgesAt(node: CommonInst, pattern: Pattern): Sequence<Pair<PremiseKey, Facts>> = sequence {
+    fun edgesAt(node: P, pattern: Pattern): Sequence<Pair<PremiseKey, Facts>> = sequence {
         m.cancellation.checkpoint()
         val path = pattern.fact.path.toIntArray()
         val ops = ApOps(m)
@@ -257,4 +270,16 @@ data class ScalarIdentityStatistics(
     val bitWords: Long,
     val fullArrayCapacity: Long,
     val fallbackReasons: Map<String, Long>,
+)
+
+/** Compatibility directory for the unchanged no-loop method path. */
+class MethodEdgeStore(m: ApManager, method: MethodKey, lm: LanguageManager,
+                      fieldLimit: Int, flowBacked: Boolean = false,
+                      collectStatistics: Boolean = false) : ScopedEdgeStore<CommonInst>(
+    m,
+    object : PointDirectory<CommonInst> {
+        override val size = lm.getMaxInstIndex(method.method) + 1
+        override fun index(point: CommonInst): Int = lm.getInstIndex(point)
+    },
+    fieldLimit, flowBacked, collectStatistics,
 )

@@ -12,8 +12,8 @@ import org.opentaint.dataflow.bidi.store.*
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 /** Rule joins use the method abstraction for completed mark-demand deliveries. */
-class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
-    private var owner: RunMethodAnalyzer? = core
+class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
+    private var owner: BlockRunState? = core
     private var conjunctionStore: ConjunctionStore? = if (core.forward) ConjunctionStore(core.ap, core.context.shared.n2Statistics) else null
     private var predicateStore: RulePredicateStore? =
         if (core.forward) RulePredicateStore(core.ap, core.context.shared.formStatistics) else null
@@ -25,7 +25,7 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
     private var triggered: HashSet<Pair<CommonInst, Any>>? = HashSet()
     override val hasPendingRequests: Boolean get() = owner?.abstraction?.hasPending == true
 
-    private fun activeCore(): RunMethodAnalyzer =
+    private fun activeCore(): BlockRunState =
         checkNotNull(owner) { "The local services were frozen" }.also { it.ap.cancellation.checkpoint() }
 
     override fun addMarkRequest(premise: InitialAp, mark: TaintMark) {
@@ -189,11 +189,11 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
         }
     }
 
-    private fun runtimeAtom(core: RunMethodAnalyzer, atom: TaintMark?): TaintMark? =
+    private fun runtimeAtom(core: BlockRunState, atom: TaintMark?): TaintMark? =
         atom?.let { core.ap.marks.runtimeAtom(it, core.mode.markMode) }
 
     /** All accepted contributors remain in the exact ND premise. */
-    private fun ruleProtection(core: RunMethodAnalyzer, inputs: List<ConjunctionStore.Input>,
+    private fun ruleProtection(core: BlockRunState, inputs: List<ConjunctionStore.Input>,
                                premise: PremiseKey, assigned: TaintMark?): Boolean {
         if (assigned == null) return false
         val triggers = ArrayList<TaintMark>()
@@ -277,7 +277,7 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
         return Triggers(fired.distinct(), parts)
     }
 
-    private fun matchingLeaves(core: RunMethodAnalyzer, predicate: RulePredicate, facts: Facts,
+    private fun matchingLeaves(core: BlockRunState, predicate: RulePredicate, facts: Facts,
                                visit: (Int, Pattern) -> Unit) {
         when (facts) {
             is FlowTree -> predicate.matchingLeaves(facts.base, mark = null, visit)
@@ -293,7 +293,7 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
         }
     }
 
-    private fun witness(core: RunMethodAnalyzer, sink: SinkRule, node: CommonInst, edges: List<SinkEdge>, proof: ProofKey? = null) {
+    private fun witness(core: BlockRunState, sink: SinkRule, node: CommonInst, edges: List<SinkEdge>, proof: ProofKey? = null) {
         core.ap.cancellation.checkpoint()
         if (edges.any { !RuntimeDataDomain.packet(it.premise, it.facts) }) return
         val origins = edges.map { it.premise }.distinct()
@@ -358,7 +358,7 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
         }
     }
 
-    private fun seedFact(core: RunMethodAnalyzer, requirement: Pattern, emit: (Facts) -> Unit) {
+    private fun seedFact(core: BlockRunState, requirement: Pattern, emit: (Facts) -> Unit) {
         if (!RuntimeDataDomain.base(requirement.fact.base)) return
         core.ap.cancellation.checkpoint()
         core.cut(Cut.SEED, core.ap.zero, core.ops.targetTree(requirement.fact, Layer.NORMAL)) { _, facts ->

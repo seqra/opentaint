@@ -1,6 +1,7 @@
 # Loop fragments and demand collapse: local models
 
-Date: 2 November 2026. Selected design; no runtime implementation.
+Date: 2 November 2026. Implementation and native validation are complete.
+Project measurements are pending.
 
 Read [the spec](../../../loop-fragments-and-demand-collapse.md),
 [method-owned blocks](../../../method-owned-loop-blocks.md),
@@ -8,10 +9,12 @@ Read [the spec](../../../loop-fragments-and-demand-collapse.md),
 and [the proof guide](../../../proof-guide.md). The
 [implementation proposal](../../../../docs/design/bidirectional-loop-blocks-restriction-implementation-20261102.md)
 and [implementation proof dossier](../../../loop-blocks-implementation-proofs.md)
-define the proposed production mapping.
+define the production mapping and its proof scope.
 
 ```sh
 python3 spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/check.py
+# During implementation, without a claim that the runtime source pins match:
+python3 spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/check.py --model-only
 ```
 
 The checker uses pinned Lean `leanprover/lean4:v4.33.1`, one worker and
@@ -34,6 +37,7 @@ noncomputable source and native evaluation proofs.
 | Decomposition | Exact ordered-region sequence, recursive AL hierarchy, empty prefix and successive-loop example |
 | Blocks | One method owner, shared registers, separate post-S stores, repeat/leave gates, parent dependencies and local frontier collection |
 | Discovery | Existing exceptional-exit backward overlay, explicit path witnesses and no new normal-start route |
+| ExceptionalControlDemand | Reached backward exceptional ZERO borrows complete normal control demand; only its ZERO DemandTarget handoff address uses the normal invocation; paired payloads, DATA/native/live scopes and forward graph stay unchanged; finite four-field run-5 continuation witness |
 | Implementation | Shape/projection/publication composition, scope retention, nonempty-image witness and local-delivery barrier |
 | Usefulness | Reference investigation only; no runtime NORMAL reachability service is selected |
 
@@ -46,6 +50,17 @@ from the kernel proof receipt.
 The [receipt](checks.json) hashes the exact inputs and records kernel and
 audit results. A local-model PASS is not a proof of Kotlin block decomposition,
 all AP application/projection adapters, whole-driver convergence or a
-project speedup. The dossier lists the correspondence checks required
-before implementation. No new runtime service or AP semantic exception
-is implied by a local model.
+project speedup. The [native validation report](../../../../docs/reports/bidirectional-loop-blocks-implementation-validation-20261102.md)
+and its embedded source/result receipt record the current implementation checks.
+The exceptional-ZERO lookup is selected explicitly
+in the ownership spec; its model does not authorize a broader control alias.
+The separate `model-checks.json` receipt does not validate runtime source
+pins. It cannot replace the final source-pinned check.
+
+The strict receipt has `runtimeChanged=true`. It checks the complete selected
+runtime/test source directories and the embedded native validation summary.
+It does not read temporary test logs or XML files. The exact
+[pre-implementation source pins](implementation-source-pins-before-implementation.json)
+and [339-theorem historical receipt](checks-before-implementation.json) remain
+separate historical evidence. Their `runtimeChanged=false` value describes
+that earlier proposal state, not the implementation now in this checkout.

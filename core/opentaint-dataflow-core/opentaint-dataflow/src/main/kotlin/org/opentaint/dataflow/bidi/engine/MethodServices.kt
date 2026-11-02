@@ -62,7 +62,7 @@ interface MethodLocalServices {
 }
 
 fun interface MethodLocalServicesFactory {
-    fun create(core: RunMethodAnalyzer): MethodLocalServices
+    fun create(core: BlockRunState): MethodLocalServices
 }
 
 /** Call processing and resume operations are supplied by the call engine. */
@@ -78,5 +78,5 @@ interface MethodCallServices : SummaryApplier {
 }
 
 fun interface MethodCallServicesFactory {
-    fun create(core: RunMethodAnalyzer): MethodCallServices
+    fun create(core: BlockRunState): MethodCallServices
 }

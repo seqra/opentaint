@@ -45,7 +45,14 @@ class ReportBuilder {
                 (row.target as? Target.NormalTarget)?.let { OwnedNormalTarget(actor.key, row.premise, it.id) }
             }
         }
-        val normal = NormalTargetStore(shared.ap, state.normal.rows() + fresh)
+        val local = result.analyzers.asSequence().flatMap { it.blockTargets() }.flatMap { block ->
+            block.rows.asSequence().mapNotNull { row ->
+                (row.target as? Target.NormalTarget)?.let {
+                    OwnedNormalTarget(block.method, row.premise, it.id, block.scope)
+                }
+            }
+        }
+        val normal = NormalTargetStore(shared.ap, state.normal.rows() + fresh + local)
         check(normal.zeroRows().all { it.id in entries }) {
             "Every retained ZERO terminal must reach a configured root before the barrier"
         }

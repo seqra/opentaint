@@ -3,6 +3,7 @@ package org.opentaint.dataflow.bidi.store
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import java.util.IdentityHashMap
+import org.opentaint.dataflow.graph.PortId
 
 /** One admitted relation. Outgoing demand is a filtered view of the final stored headers. */
 class RunSummaryStore(private val m: ApManager, flowBacked: Boolean = false) {
@@ -63,6 +64,27 @@ class RunSummaryStore(private val m: ApManager, flowBacked: Boolean = false) {
                 m.cancellation.checkpoint()
                 yield(premise to facts)
             }
+        }
+    }
+}
+
+/** Allocate only exits which actually publish a completed traversal. The owner
+ * keeps one instance per entry scope; AP admission remains RunSummaryStore's law. */
+class PortSummaryStores(private val m: ApManager, private val flowBacked: Boolean = false) {
+    private val byExit = LinkedHashMap<PortId, RunSummaryStore>()
+
+    fun at(exit: PortId): RunSummaryStore {
+        m.cancellation.checkpoint()
+        return byExit.getOrPut(exit) { RunSummaryStore(m, flowBacked) }
+    }
+
+    fun existing(exit: PortId): RunSummaryStore? = byExit[exit]
+
+    /** Borrow only on the method owner; a frozen handoff must copy admitted rows. */
+    fun entries(): Sequence<Pair<PortId, RunSummaryStore>> = sequence {
+        for ((exit, rows) in byExit) {
+            m.cancellation.checkpoint()
+            yield(exit to rows)
         }
     }
 }

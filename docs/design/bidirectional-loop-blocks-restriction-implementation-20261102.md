@@ -1,7 +1,8 @@
 # Implementation proposal: method-owned loop blocks and loop restriction
 
-Date: 2 November 2026. Status: implementation proposal; runtime unchanged.
-Section 6.1 reuses the existing backward discovery contract.
+Date: 2 November 2026. Status: selected implementation proposal; implementation and native validation complete.
+Section 6.1 uses the existing discovery graph and the selected narrow
+exceptional-ZERO demand lookup.
 Language: ASD-STE100 Simplified Technical English.
 
 Implement [method-owned-loop-blocks.md](../../spec/method-owned-loop-blocks.md)
@@ -56,6 +57,7 @@ These are selected semantic changes:
 | Loop output | Global field limit and post-S deduplication | The selected three-family restriction before repeat and leave delivery |
 | Refinement scope | Method-owned rows | Method-owned collection of separately scoped block rows |
 | Summary bases | Public method interface only | Internal rows can conclude at original locals; the root keeps the public filter |
+| Backward ZERO at an exceptional block exit | No separate scoped normal-exit lookup | Apply unchanged normal control demand; address its outgoing ZERO DemandTarget by the borrowed normal invocation in handoff metadata only; section 6.1 |
 
 Additional cuts can delay a NORMAL record or finding. This is not a
 claim of equal per-run findings. Every relevant cut must retain its
@@ -72,7 +74,8 @@ AP C2, paired C5, demand-relative C5 limits and FLOW normalization
 complete ND execution; unary ND arms are restriction metadata only
 actual-call alias handling and the original alias query context
 saved NORMAL replay before demand; no new standing raw-input history
-run-1 static effects, static shortcut and typed Target policies
+run-1 static effects, static shortcut and typed Target policies,
+except the explicit exceptional-ZERO lookup in section 6.1
 ignored END_FACTS stages; actual method entry/exit rules only at the root
 FULL acceptance, known GROUP limitations, schedule 1,1,2,3,…
 ```
@@ -295,6 +298,12 @@ index their own physical points. Composites index their child completions
 and boundaries. The no-loop root directory maps existing instruction
 indexes directly, so its current fast path stays available.
 
+Allocate a child-completion payload store only after that completion is
+reached. Use a one-point `ScopedEdgeStore` for each reached `ChildResult`.
+This reuses the existing global field cap, packed rows, protection transport
+and output deduplication. Do not replace these laws with a separate map of
+unbounded AP payloads.
+
 The method schedules ready scopes. Preserve the existing ZERO-first and
 configured FLOW-first lanes across ready scopes. Batches include scope
 and point in their key; equal AP packets from different entries must not
@@ -411,6 +420,14 @@ a shared AP relation applicator. The internal result sink replaces only
 the physical-call suffix; it runs no BIND_IN/BIND_BACK or extra alias pass.
 Apply existing pending MUST demotion before committing the block result,
 since an internal boundary has no call-action suffix to execute first.
+Apply the existing global field limit to the actual composed result before
+it enters the parent's `ChildResult` store or another local input link.
+Native application can append the caller's suffix to a stored row and thus
+exceed that limit even when the stored row itself is bounded. This is the
+existing W3 bound; it is not an extra loop-specific field policy. Classify
+growth from the stored applied row before this cap. The read-only observer
+in section 8 still composes a saved row exactly and then applies enclosing
+paired C5; it does not add an actual-delivery cap to that observation.
 
 A loop row ends one traversal at a labelled repeat or leave port. The
 waiting parent prefix and this row produce `F = P -> result`. Keep P;
@@ -424,7 +441,7 @@ conservative; an equal/shrinking arm can retain the complete valid result.
 Do not enumerate origin products for this metadata or execute a unary
 arm as if it were the ND rule.
 
-### 6.1 Reuse existing exceptional-exit backward discovery
+### 6.1 Existing discovery and selected exceptional-ZERO demand lookup
 
 The current backend already handles a loop without a normal leave.
 `JIRMethodEntry.graph(BACKWARD)` returns the reverse of
@@ -447,30 +464,77 @@ set. Store that classification in layout/view metadata. It is not an AP
 mark, extra forward edge or normal loop leave. The tree and register
 namespace remain the same in both views.
 
+Keep Target conclusions at the logical normal exit. Publish them through
+the current terminal channel without waiting for a normal loop leave.
+The selected compatibility hack is a demand lookup exception:
+
+```kotlin
+fun controlDemand(at: ReachedBoundary, input: Facts): PairedRows {
+    val own = demand.at(at.actualPort)
+    return if (!forward && input is Reach && at.isExceptionalExit)
+        own.unionCompleteRows(demand.atNormalExit())
+    else own
+}
+```
+
+`ReachedBoundary` must come from the existing start/routing operation.
+It is not a scan of stored demand. Keep each borrowed row's complete
+entry, exit and annotations. The existing typed matcher must admit ZERO;
+later publication still tests that row's paired exit. Do not turn
+normal Target guidance into an unpaired ZERO permission.
+
 When a reached discovery edge enters a block, preserve its actual target
-instruction. Use the block's existing ZERO/Target control-admission rows
-for the ZERO entry; those typed rows are separate from DATA physical-return
-matching. Apply the same C2/paired-control laws as the existing method
-view. A discovery entry is not required to have a preceding normal leave
-summary. It runs no copied method entry/exit rules. Keep ordinary DATA
-admission and the existing exceptional-start policy unchanged.
+instruction and route through the supplied backward CFG. The exception
+does not alias Target control rows to all physical entries. It does not
+change DATA admission or native record entry/exit ports. Forward lookup,
+non-ZERO packets and non-exceptional boundaries use their ordinary view.
+The existing exceptional-start set is unchanged. No copied method
+entry/exit rule is added.
 
 ```text
-B: while (true) { sourceFF(x); x=x.f; sinkRootT(x); }
+B: while (true) { sourceFFFF(x); x=x.f; sinkRootT(x); }
 
 forward view:     the body repeats; no edge to either original exit
 backward view:    exceptional exit -> original non-exiting body points
 run-2 ZERO:       admitted by Target guidance; visits the sink/source
-run-3 FULL:       exact source/read path reports the sink
+run-3 FULL:       limit 2 can still leave a DEMAND candidate
+run-5 FULL:       limit 4 can represent the exact four-field source path
 ```
 
 Do not start every locally demanded block through a new direct-start
 scan. Do not put discovery edges into the forward view or turn them into
 NORMAL return summaries. Reuse the supplied oriented graph and its
-existing policy. This existing route requires no new backward-ZERO start policy.
+existing policy. The new lookup borrows normal demand at an already
+reached exceptional ZERO; it adds no backward-ZERO start policy.
+
+Keep a witness when that ZERO is admitted by a normal control row. A
+backward-only discovery port must not become a required forward address.
+Normalize only the outgoing ZERO DemandTarget handoff metadata:
+
+```kotlin
+fun targetHandoffScope(actual: BlockScope, original: PremiseKey,
+                       target: Target, normalBorrowed: Boolean): BlockScope =
+    if (!forward && normalBorrowed && original.isZero && target == DemandTarget)
+        actual.copy(entry = ROOT_EXIT) // Borrowed normal invocation.
+    else actual
+```
+
+`normalBorrowed` records actual admission by one complete normal control
+row at the exceptional/discovery ZERO route. It is not graph membership
+or a scan result. Keep the row's complete pair, actual logical exit and
+annotations. Only the later handoff address changes. Current/live scopes,
+DATA/native physical ports, persisted NormalTarget and non-ZERO Target
+rows remain unchanged.
+
+For example, backward `(entry=d, ZERO -> DemandTarget, exit=ROOT_ENTRY)`
+is handoff-addressed as `(entry=ROOT_EXIT, ZERO -> DemandTarget,
+exit=ROOT_ENTRY)`. Reversal gives the next forward normal control pair.
+Keeping backward-only `d` loses the run-3 continuation before run-5 can
+resolve `sourceFFFF`. This law closes the continuation of the same
+borrowed normal demand; it creates no new initial or source permission.
 
 The [native control record](../../spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/controls.md#existing-backward-discovery-with-no-loop-leave)
-records four passing checks. The new FULL control completes **run-3**,
+records four historical passing checks. Its two-field FULL control completes **run-3**,
 with one report and no forward visit to either exit. The `Discovery` model
 constructs the exceptional reachability witness and proves that normal
 backward starts gain no new route.
@@ -733,6 +797,21 @@ Only original static-read micro-edges register read interests, and only
 original write micro-edges register write points. Derived supplied values
 retain the current publication rules. Keep disabled-static measurement
 mode effective inside all blocks.
+
+The run-2 reverse of a run-1 write shortcut must also keep its paired
+publication permission. For example, a stored local writer with producer
+`(entry=p, ZERO -> C.f.[any]/T, exit=ROOT_EXIT)` supplies the reverse pair
+`(entry=ROOT_EXIT, C.f.[any]/T -> ZERO, exit=p)`. A run-2 static initial
+which actually reaches this block through the CFG can reach its source
+and produce `C.f.[any]/T -> DemandTarget`. Its Target check must consult
+that exact registered shortcut pair at output `p`, even though its live
+DATA ingress is a physical port. Use the existing lazy W/B lookup and
+paired restriction for this check. Require run-2 backward mode, a concrete
+STATIC original, a registered W derivation with a ZERO origin, and the
+exact output port. Shared carry alone grants no such permission. This
+result check changes no C2 lookup, DATA/native port, ordinary AP
+publication, live scope or Target handoff address. Do not alias arbitrary
+normal-entry DATA demand into the physical invocation.
 
 Block publication follows:
 

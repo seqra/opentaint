@@ -15,7 +15,8 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 
 /** The exact caller side of a link. */
 data class CallerRef(val caller: MethodKey, val premise: PremiseKey, val callerLayer: Layer,
-                     val call: CommonInst, val stageOrdinal: Int = 0) {
+                     val call: CommonInst, val stageOrdinal: Int = 0,
+                     val scope: BlockScope = BlockScope.ROOT) {
     init { require(stageOrdinal >= 0) }
 }
 

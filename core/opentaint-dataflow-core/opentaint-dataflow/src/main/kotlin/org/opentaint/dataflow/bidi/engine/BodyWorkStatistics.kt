@@ -22,11 +22,16 @@ internal class BodyWorkStatistics(graph: CompactGraph, private val cancellation:
     private val samples = ArrayDeque<BodyWorkSample>()
     private var dropped = 0L
     private var saturated = false
+    private var methodCandidates = 0L
+    private var blockCandidates = 0L
     val candidatePackets: Long get() = counts[2]
 
     fun processed(index: Int, premise: PremiseKey, facts: Facts) = observe(0, index, premise, facts)
     fun fresh(index: Int, premise: PremiseKey, facts: Facts) = observe(1, index, premise, facts)
-    fun candidate(premise: PremiseKey, facts: Facts) = observe(2, -1, premise, facts)
+    fun candidate(premise: PremiseKey, facts: Facts, internalBlock: Boolean = false) {
+        if (internalBlock) blockCandidates++ else methodCandidates++
+        observe(2, -1, premise, facts)
+    }
 
     private fun observe(stage: Int, index: Int, premise: PremiseKey, facts: Facts) {
         val ordinal = ++counts[stage]
@@ -106,7 +111,7 @@ internal class BodyWorkStatistics(graph: CompactGraph, private val cancellation:
         points[1].indices.filter { components.second[it] }.sumOf { points[1][it] },
         points[0].indices.sortedByDescending { points[0][it] + points[1][it] }.take(12).map { index ->
             BodyWorkPoint(index, components.first[index], components.second[index], points[0][index], points[1][index])
-        }, samples.toList())
+        }, samples.toList(), methodCandidates, blockCandidates)
 }
 
 internal data class BodyWorkPoint(val point: Int, val component: Int, val cyclic: Boolean,
@@ -121,7 +126,8 @@ internal data class BodyWorkSnapshot(val packets: List<Long>, val maximumDepthBi
     val kindPackets: List<List<Long>>, val sampledPackets: List<Long>, val sampledMemberships: List<Long>,
     val sampledProtected: List<Long>, val droppedSamples: Long, val saturated: Boolean,
     val cyclicProcessedPackets: Long, val cyclicFreshPackets: Long,
-    val topPoints: List<BodyWorkPoint>, val samples: List<BodyWorkSample>) {
+    val topPoints: List<BodyWorkPoint>, val samples: List<BodyWorkSample>,
+    val methodCandidatePackets: Long, val blockCandidatePackets: Long) {
     val processedPackets: Long get() = packets[0]
     val freshPackets: Long get() = packets[1]
     val candidatePackets: Long get() = packets[2]

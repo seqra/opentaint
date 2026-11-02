@@ -331,12 +331,13 @@ class MethodLocalServicesTest {
             field.get(owner) as? Collection<*> ?: emptyList<Any>()
         }
 
-    private fun fieldNamed(owner: Any, name: String): Any? = owner.javaClass.getDeclaredField(name).let {
+    private fun fieldNamed(owner: Any, name: String): Any? = (if (owner is BlockRunState) BlockRunState::class.java else owner.javaClass).getDeclaredField(name).let {
         it.isAccessible = true
         it.get(owner)
     }
 
-    private fun fieldOfType(owner: Any, type: Class<*>): Any? = owner.javaClass.declaredFields
+    private fun fieldOfType(owner: Any, type: Class<*>): Any? =
+        (if (owner is BlockRunState) BlockRunState::class.java else owner.javaClass).declaredFields
         .single { it.type == type }.let { field -> field.isAccessible = true; field.get(owner) }
 
     private fun sink(patterns: List<Pattern>): SinkRule = SinkRule(object : CommonTaintConfigurationSink {

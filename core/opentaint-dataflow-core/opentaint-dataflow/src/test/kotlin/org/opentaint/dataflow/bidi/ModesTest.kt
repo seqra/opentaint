@@ -179,7 +179,7 @@ class ModesTest {
         }
     }
 
-    @Test fun `forward identity component drains without summarizing a detached normal exit`(): Unit {
+    @Test fun `an admitted root input cannot bypass empty loop demand or summarize a detached exit`(): Unit {
         MethodAnalysisFixtures(listOf(listOf(1), listOf(1), emptyList())).use { f ->
             // A later forward run admits this generic non-root FLOW initial.
             val core = f.core(index = 3)
@@ -188,12 +188,12 @@ class ModesTest {
             core.addInitial(initial)
             f.drain(core, quantum = 1)
             assertEquals(setOf(f.manager.zero, initial), core.initials.all().toSet())
-            assertEquals(setOf(0, 1), f.processed.map { it.node.location.index }.toSet())
-            assertEquals(6L, core.steps, "Each initial processes entry, loop, and one repeated loop input before post-S dedup")
+            assertEquals(setOf(0), f.processed.map { it.node.location.index }.toSet())
+            assertEquals(2L, core.steps, "Root admission does not grant an internal loop C2 permission")
             for (premise in listOf(f.manager.zero, initial)) {
-                assertEquals(listOf(0, 1, 1), f.processed.filter { it.premise === premise }.map { it.node.location.index })
+                assertEquals(listOf(0), f.processed.filter { it.premise === premise }.map { it.node.location.index })
                 assertEquals(1, core.edges.edgesAt(f.inst(0), premise).count())
-                assertEquals(1, core.edges.edgesAt(f.inst(1), premise).count())
+                assertEquals(0, core.edges.edgesAt(f.inst(1), premise).count())
             }
             assertTrue(f.processed.none { it.node === f.inst(2) })
             assertTrue(core.summaries.all().none())
@@ -201,7 +201,7 @@ class ModesTest {
             assertTrue(f.publications.isEmpty())
             assertTrue(f.requests.isEmpty())
             assertTrue(f.cuts.none { it.first == Cut.STATEMENT || it.first == Cut.EXIT_RULES })
-            assertEquals(4L, core.edgeDeltas, "Two producers each store one result for each initial")
+            assertEquals(2L, core.edgeDeltas, "Only the entered root boundary stores these results")
             assertEquals(0L, core.demandLayerEdges)
             assertTrue(core.work(1))
         }

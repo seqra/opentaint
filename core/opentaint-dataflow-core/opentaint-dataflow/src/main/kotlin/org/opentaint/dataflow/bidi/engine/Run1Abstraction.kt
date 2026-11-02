@@ -22,11 +22,16 @@ internal class Run1Abstraction(
     internal val pendingAnswerMarkCount: Long get() = 0
 
     fun emit(ref: CallerRef, input: Facts) {
+        emit(ref.premise, input)
+    }
+
+    /** A local link has an original premise, but no physical call instruction. */
+    fun emit(original: PremiseKey, input: Facts) {
         check(!released)
         val ap = ops.manager
         ap.cancellation.checkpoint()
-        if (!RuntimeDataDomain.packet(ref.premise, input)) return
-        validateRun1Supplier(ap, ref.premise, input)
+        if (!RuntimeDataDomain.packet(original, input)) return
+        validateRun1Supplier(ap, original, input)
         validateRun1Input(ap, input)
         if (input.base == STATIC) return // static reads/refinements are operation-local, never callee entry seeds
         answer(AdmittedInitial(ops.policy(input), Layer.NORMAL))

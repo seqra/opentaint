@@ -348,7 +348,7 @@ class RunCleanupTest {
 
     @Suppress("UNCHECKED_CAST")
     private fun <T> field(owner: Any, name: String): T =
-        owner.javaClass.getDeclaredField(name).apply { isAccessible = true }.get(owner) as T
+        (if (owner is BlockRunState) BlockRunState::class.java else owner.javaClass).getDeclaredField(name).apply { isAccessible = true }.get(owner) as T
 
     private class CleanupActor(
         override val key: MethodKey,

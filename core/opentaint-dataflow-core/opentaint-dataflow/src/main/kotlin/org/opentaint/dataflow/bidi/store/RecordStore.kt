@@ -2,6 +2,8 @@ package org.opentaint.dataflow.bidi.store
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
+import org.opentaint.dataflow.graph.PortId
+import org.opentaint.dataflow.graph.BlockId
 
 /** An admitted normal singleton summary, retained in the direction in which it was derived. */
 class Record(
@@ -9,7 +11,18 @@ class Record(
     val direction: Direction,
     val premise: InitialAp,
     val conclusion: Facts,
+    val scope: BlockScope? = null,
+    val exit: PortId? = null,
 ) {
+    init { require((scope == null) == (exit == null)) { "A scoped native record keeps both control ports" } }
+
+    /** AP reversal is below; reverse the control ports independently. */
+    fun scopeIn(direction: Direction): BlockScope? = scope?.let {
+        if (direction == this.direction) it else BlockScope(it.block, checkNotNull(exit))
+    }
+    fun exitIn(direction: Direction): PortId? = scope?.let {
+        if (direction == this.direction) exit else it.entry
+    }
     /** Transient opposite-direction reads retain their actual premise and result layer. */
     private fun reversedLeavesAt(a: Pattern): Sequence<Pair<RecordLeafView, Boolean>> = sequence {
         val m = premise.manager
@@ -53,26 +66,43 @@ interface RecordStore {
     fun add(record: Record)
     fun byEntry(method: MethodKey, addedFact: Pattern): Sequence<Record>
     fun byExit(method: MethodKey, fact: Pattern): Sequence<Record>
+    fun byEntry(method: MethodKey, scope: BlockScope, addedFact: Pattern): Sequence<Record> = emptySequence()
+    fun byExit(method: MethodKey, scope: BlockScope, fact: Pattern): Sequence<Record> = emptySequence()
     fun view(): RecordStore
     fun persist(direction: Direction, summaries: Sequence<Pair<MethodKey, RunSummaryStore>>)
+    fun persistScoped(direction: Direction, summaries: Sequence<ScopedRunSummary>) {
+        check(!summaries.iterator().hasNext()) { "This record store does not support scoped persistence" }
+    }
 }
+
+data class ScopedRunSummary(val key: ScopedSummaryKey, val summaries: RunSummaryStore)
 
 /** The driver writes only at a barrier; the next run reads the published indexes. */
 class PersistentRecordStore(private val m: ApManager) : RecordStore {
     private val entry = HashMap<MethodKey, PathTrie<Record>>()
     private val exit = HashMap<MethodKey, PathTrie<Record>>()
-    private val merged = HashMap<Triple<MethodKey, Direction, InitialAp>, ConclusionGroup>()
+    private data class ScopedIndexKey(val method: MethodKey, val block: BlockId, val port: PortId)
+    private data class MergeKey(val method: MethodKey, val direction: Direction, val premise: InitialAp,
+                                val scope: BlockScope?, val exit: PortId?)
+    private val scopedEntry = HashMap<ScopedIndexKey, PathTrie<Record>>()
+    private val scopedExit = HashMap<ScopedIndexKey, PathTrie<Record>>()
+    private val merged = HashMap<MergeKey, ConclusionGroup>()
     private val interners = m.newInterners()
 
     override fun add(record: Record) {
         m.cancellation.checkpoint()
         if (!RuntimeDataDomain.packet(record.premise, record.conclusion)) return
         checkNativeRecord(record.direction, record.premise, record.conclusion)
-        entry.getOrPut(record.method) { PathTrie(m.cancellation) }
-            .add(record.premise.base, record.premise.pathArray, record)
-        m.forEachLeafPosition(record.conclusion) { base, path ->
-            exit.getOrPut(record.method) { PathTrie(m.cancellation) }.add(base, path, record)
-        }
+        val input = if (record.scope == null) entry.getOrPut(record.method) { PathTrie(m.cancellation) }
+            else scopedEntry.getOrPut(ScopedIndexKey(record.method, record.scope.block, record.scope.entry)) {
+                PathTrie(m.cancellation)
+            }
+        input.add(record.premise.base, record.premise.pathArray, record)
+        val output = if (record.scope == null) exit.getOrPut(record.method) { PathTrie(m.cancellation) }
+            else scopedExit.getOrPut(ScopedIndexKey(record.method, record.scope.block, checkNotNull(record.exit))) {
+                PathTrie(m.cancellation)
+            }
+        m.forEachLeafPosition(record.conclusion) { base, path -> output.add(base, path, record) }
     }
 
     /** R2 candidates; the caller tests applicable or inside on the full native premise. */
@@ -98,28 +128,54 @@ class PersistentRecordStore(private val m: ApManager) : RecordStore {
         }
     }
 
+    override fun byEntry(method: MethodKey, scope: BlockScope, addedFact: Pattern): Sequence<Record> =
+        scopedCandidates(scopedEntry[ScopedIndexKey(method, scope.block, scope.entry)], addedFact)
+
+    override fun byExit(method: MethodKey, scope: BlockScope, fact: Pattern): Sequence<Record> =
+        scopedCandidates(scopedExit[ScopedIndexKey(method, scope.block, scope.entry)], fact)
+
+    private fun scopedCandidates(index: PathTrie<Record>?, fact: Pattern): Sequence<Record> = sequence {
+        m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.base(fact.fact.base)) return@sequence
+        val seen = HashSet<Record>()
+        for (record in index?.around(fact.fact.base, fact.fact.path.toIntArray()).orEmpty()) {
+            m.cancellation.checkpoint()
+            if (seen.add(record)) yield(record)
+        }
+    }
+
     override fun view(): RecordStore = object : RecordStore by this {
         override fun add(record: Record) = error("Read-only during a run (analyzer-core.md A4)")
         override fun persist(direction: Direction, summaries: Sequence<Pair<MethodKey, RunSummaryStore>>) =
+            error("Read-only during a run (analyzer-core.md A4)")
+        override fun persistScoped(direction: Direction, summaries: Sequence<ScopedRunSummary>): Unit =
             error("Read-only during a run (analyzer-core.md A4)")
         override fun view(): RecordStore = this
     }
 
     /** R1 reads admitted summaries, merges eligible native values and indexes their propagation delta. */
     override fun persist(direction: Direction, summaries: Sequence<Pair<MethodKey, RunSummaryStore>>) {
+        for ((method, store) in summaries) persistOne(direction, method, null, null, store)
+    }
+
+    override fun persistScoped(direction: Direction, summaries: Sequence<ScopedRunSummary>) {
+        for ((key, store) in summaries)
+            persistOne(direction, key.method, key.scope, key.exit, store)
+    }
+
+    private fun persistOne(direction: Direction, method: MethodKey, scope: BlockScope?, exit: PortId?,
+                           store: RunSummaryStore) {
         m.cancellation.checkpoint()
-        for ((method, store) in summaries) {
+        for ((premise, facts) in store.all()) {
             m.cancellation.checkpoint()
-            for ((premise, facts) in store.all()) {
-                m.cancellation.checkpoint()
-                if (!RuntimeDataDomain.packet(premise, facts) || facts.layer == Layer.DEMAND) continue
-                val initial = premise as? InitialAp ?: continue
-                if (direction == Direction.BACKWARD && initial.isZero) continue
-                checkNativeRecord(direction, initial, facts)
-                val delta = merged.getOrPut(Triple(method, direction, initial)) { ConclusionGroup(m, interners) }
-                    .add(facts) ?: continue
-                add(Record(method, direction, initial, delta))
-            }
+            if (!RuntimeDataDomain.packet(premise, facts) || facts.layer == Layer.DEMAND) continue
+            val initial = premise as? InitialAp ?: continue
+            if (direction == Direction.BACKWARD && initial.isZero) continue
+            checkNativeRecord(direction, initial, facts)
+            val delta = merged.getOrPut(MergeKey(method, direction, initial, scope, exit)) {
+                ConclusionGroup(m, interners)
+            }.add(facts) ?: continue
+            add(Record(method, direction, initial, delta, scope, exit))
         }
     }
 }

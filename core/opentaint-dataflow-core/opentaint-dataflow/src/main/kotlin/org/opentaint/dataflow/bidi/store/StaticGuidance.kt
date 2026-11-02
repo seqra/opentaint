@@ -8,6 +8,7 @@ import it.unimi.dsi.fastutil.longs.LongArrayList
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.bidi.ap.*
+import org.opentaint.dataflow.graph.PortId
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.common.CommonMethod
 import java.util.Collections
@@ -16,6 +17,9 @@ import java.util.concurrent.atomic.AtomicLongArray
 /** Virtual demand only. A lookup neither starts a query nor changes publication permission. */
 interface FrozenCompletion {
     fun statistics(): String = "unavailable"
+    /** Scope adapters share this snapshot's bridge graph. C2 unions exits; C5 selects one. */
+    fun scopedViews(): Sequence<Pair<OwnedScope, FrozenCompletion>> = emptySequence()
+    fun selectExit(exit: PortId?): FrozenCompletion = this
 
     /** Immutable primitive seed indexes. LOCAL has own common-method B plus exact-context W/R. */
     fun local(method: MethodKey): StaticDemandView
@@ -220,6 +224,9 @@ class FrozenStaticCompletion private constructor(
     private val bridgeEntries: EntryDirectory,
     private val locals: Map<MethodKey, Attachments>,
     private val terminalReaders: Map<MethodKey, List<Pattern>>,
+    private val scopedLocals: Map<ScopedSummaryKey, Attachments>,
+    private val scopedTerminals: Map<ScopedSummaryKey, List<Pattern>>,
+    private val scopedPorts: Set<ScopedSummaryKey>,
     private val ownerVisibility: FrozenOwnerVisibility,
     val seedMemberships: Long,
     val writerAttachments: Long,
@@ -232,7 +239,8 @@ class FrozenStaticCompletion private constructor(
     val seedGeometries: Int get() = bridges.size
     override fun statistics(): String = "seedKeys=$seedKeys seedEntryKeys=${bridgeEntryRows.size} seedGeometries=$seedGeometries ownerMemberships=$seedMemberships " +
         "writerAttachments=$writerAttachments readerAttachments=$readerAttachments " +
-        "terminalAttachments=${terminalReaders.values.sumOf { it.size.toLong() }} " +
+        "terminalAttachments=${terminalReaders.values.sumOf { it.size.toLong() } + scopedTerminals.values.sumOf { it.size.toLong() }} " +
+        "scopedAttachmentPairs=${scopedLocals.size} scopedControlPairs=${scopedPorts.size} " +
         "callMethods=${graph.methodCount} callEdges=${graph.edgeCount} " +
         "ownBridgeMemberships=${ownBridges.values.sumOf { it.size.toLong() }} ownerFamilies=${ownerVisibility.familyCount} " +
         ownerVisibility.statistics.let {
@@ -353,14 +361,25 @@ class FrozenStaticCompletion private constructor(
     }
 
 
+    private val scopedKeys: Map<OwnedScope, List<ScopedSummaryKey>> =
+        (scopedPorts + scopedLocals.keys + scopedTerminals.keys).distinct().groupBy {
+            OwnedScope(it.method, it.reversed().scope)
+        }
+
+    override fun scopedViews(): Sequence<Pair<OwnedScope, FrozenCompletion>> = scopedKeys.asSequence().map { (owner, keys) ->
+        owner to ScopedView(owner, keys)
+    }
+
     override fun local(method: MethodKey): StaticDemandView = View(method, false)
     override fun visible(method: MethodKey): StaticDemandView = View(method, true)
     override fun mayNeedInheritedPairs(method: MethodKey): Boolean =
         bridgeOwners.isNotEmpty() && !(bridgeOwners.size == 1 && method.method in bridgeOwners)
 
-    override fun mayNeedInheritedEntries(method: MethodKey, actual: List<Pattern>): Boolean {
+    override fun mayNeedInheritedEntries(method: MethodKey, actual: List<Pattern>): Boolean =
+        mayNeedInheritedEntries(method, actual, locals[method])
+
+    private fun mayNeedInheritedEntries(method: MethodKey, actual: List<Pattern>, local: Attachments?): Boolean {
         if (bridgeOwners.isEmpty() || bridgeOwners.size == 1 && method.method in bridgeOwners) return false
-        val local = locals[method]
         for (leaf in actual) {
             ap.cancellation.checkpoint()
             if (leaf.fact.base == STATIC) {
@@ -374,25 +393,63 @@ class FrozenStaticCompletion private constructor(
         return false
     }
 
-    override fun visitPossibleTargets(method: MethodKey, actual: Pattern, visit: (Pattern, Boolean) -> Boolean): Boolean {
-        val local = locals[method]
+    override fun visitPossibleTargets(method: MethodKey, actual: Pattern, visit: (Pattern, Boolean) -> Boolean): Boolean =
+        visitPossibleTargets(actual, locals[method], includeBridges = true, visit)
+
+    private fun visitPossibleTargets(actual: Pattern, local: Attachments?, includeBridges: Boolean,
+                                     visit: (Pattern, Boolean) -> Boolean): Boolean {
         val localIndex = if (actual.fact.base == STATIC) local?.writerEntries else local?.readerEntries
         val selection = outputCovering(actual, ap.marks)
         if (localIndex != null && !localIndex.visit(actual, selection) { entry, _ ->
                 ap.cancellation.checkpoint()
                 visit(entry, entry.fact.mark is MarkSlot.Star)
             }) return false
-        if (actual.fact.base != STATIC) return true
+        if (!includeBridges || actual.fact.base != STATIC) return true
         return bridgeEntries.visit(actual, selection) { entry, _ ->
             ap.cancellation.checkpoint()
             visit(entry, entry.fact.mark is MarkSlot.Star)
         }
     }
 
-    private inner class View(private val method: MethodKey, private val inherited: Boolean) : C5StaticDemandView {
-        override fun targetInputs(): Sequence<Pattern> = terminalReaders[method].orEmpty().asSequence()
+    private inner class ScopedView(private val owner: OwnedScope,
+                                   private val keys: List<ScopedSummaryKey>) : FrozenCompletion {
+        override fun statistics(): String = "scopedRows=${keys.size} shared=true ${this@FrozenStaticCompletion.statistics()}"
+
+        override fun selectExit(exit: PortId?): FrozenCompletion = if (exit == null) this
+            else ScopedView(owner, keys.filter { it.scope.entry == exit })
+
+        private fun view(method: MethodKey, inherited: Boolean): StaticDemandView {
+            require(method == owner.method) { "A scoped completion retains its original method key" }
+            val selected = keys.map { View(method, inherited, scopedLocals[it], scopedTerminals[it].orEmpty()) }
+            return if (selected.isEmpty()) View(method, inherited, null, emptyList())
+                else unionStaticDemandViews(selected)
+        }
+
+        override fun local(method: MethodKey): StaticDemandView = view(method, false)
+        override fun visible(method: MethodKey): StaticDemandView = view(method, true)
+        override fun mayNeedInheritedPairs(method: MethodKey): Boolean =
+            this@FrozenStaticCompletion.mayNeedInheritedPairs(method)
+
+        override fun mayNeedInheritedEntries(method: MethodKey, actual: List<Pattern>): Boolean {
+            require(method == owner.method)
+            if (keys.isEmpty()) return this@FrozenStaticCompletion.mayNeedInheritedEntries(method, actual, null)
+            return keys.any { this@FrozenStaticCompletion.mayNeedInheritedEntries(method, actual, scopedLocals[it]) }
+        }
+
+        override fun visitPossibleTargets(method: MethodKey, actual: Pattern,
+                                          visit: (Pattern, Boolean) -> Boolean): Boolean {
+            require(method == owner.method)
+            for (key in keys) if (!this@FrozenStaticCompletion.visitPossibleTargets(actual, scopedLocals[key],
+                    includeBridges = false, visit)) return false
+            return this@FrozenStaticCompletion.visitPossibleTargets(actual, null, includeBridges = true, visit)
+        }
+    }
+
+    private inner class View(private val method: MethodKey, private val inherited: Boolean,
+                             private val local: Attachments? = locals[method],
+                             private val terminalInputs: List<Pattern> = terminalReaders[method].orEmpty()) : C5StaticDemandView {
+        override fun targetInputs(): Sequence<Pattern> = terminalInputs.asSequence()
         private val ownId = graph.id(method.method)
-        private val local = locals[method]
         private val ownRows = ownBridges[method.method] ?: LongArray(0)
         private fun eligible(owners: Owners): Boolean {
             ap.cancellation.checkpoint()
@@ -608,6 +665,39 @@ class FrozenStaticCompletion private constructor(
         private val bridges = LinkedHashMap<GuidanceGeometry, Long2ObjectLinkedOpenHashMap<MutableSet<CommonMethod>>>()
         private val localRows = LinkedHashMap<MethodKey, Pair<MutableSet<StaticGuidanceEdge>, MutableSet<StaticGuidanceEdge>>>()
         private val terminalReaders = LinkedHashMap<MethodKey, MutableSet<Pattern>>()
+        private val scopedLocalRows = LinkedHashMap<ScopedSummaryKey, Pair<MutableSet<StaticGuidanceEdge>, MutableSet<StaticGuidanceEdge>>>()
+        private val scopedTerminals = LinkedHashMap<ScopedSummaryKey, MutableSet<Pattern>>()
+        private val scopedPorts = LinkedHashSet<ScopedSummaryKey>()
+
+        /** An entered scope can borrow shared B/carry even without local W/R attachments. */
+        fun addScopedBoundary(producer: ScopedSummaryKey) {
+            ap.cancellation.checkpoint()
+            scopedPorts += producer
+        }
+
+        /** Producer ports stay paired. The run-2 view reverses them without copying the graph. */
+        fun addScopedSeed(producer: ScopedSummaryKey, from: Pattern, to: Pattern) {
+            ap.cancellation.checkpoint()
+            addScopedBoundary(producer)
+            if (!RuntimeDataDomain.base(from.fact.base) || !RuntimeDataDomain.base(to.fact.base)) return
+            val fromStatic = staticAnchor(ap, from) != null
+            val toStatic = staticAnchor(ap, to) != null
+            if (fromStatic && toStatic) addBridge(producer.method, StaticGuidanceEdge.of(from, to))
+            else {
+                if (fromStatic == toStatic || !fromStatic && from.fact.base == STATIC || !toStatic && to.fact.base == STATIC) return
+                val rows = scopedLocalRows.getOrPut(producer) { LinkedHashSet<StaticGuidanceEdge>() to LinkedHashSet() }
+                val edge = StaticGuidanceEdge.of(from, to)
+                if (toStatic) rows.first += edge else rows.second += edge
+            }
+        }
+
+        fun addScopedTarget(producer: ScopedSummaryKey, from: Pattern) {
+            ap.cancellation.checkpoint()
+            addScopedBoundary(producer)
+            if (!RuntimeDataDomain.base(from.fact.base) || staticAnchor(ap, from) == null) return
+            check(from.fact.mark is MarkSlot.Concrete)
+            scopedTerminals.getOrPut(producer) { LinkedHashSet() }.add(guidancePattern(from))
+        }
 
         /** Only an anonymous DEMAND terminal is an endpoint of this guidance graph. */
         fun addTarget(method: MethodKey, from: Pattern) {
@@ -701,8 +791,7 @@ class FrozenStaticCompletion private constructor(
                 starts.add(STATIC, geometry.from.fact.path.toIntArray(), frozenBridges.size)
                 frozenBridges += BridgeRows(geometry, labels, owners, ordinals.build())
             }
-            val locals = LinkedHashMap<MethodKey, Attachments>()
-            for ((method, rows) in localRows) {
+            fun freezeAttachments(rows: Pair<Set<StaticGuidanceEdge>, Set<StaticGuidanceEdge>>): Attachments {
                 ap.cancellation.checkpoint()
                 val writerSources = PathTrie<Int>(ap.cancellation)
                 val colors = SelectorRows(ap)
@@ -718,11 +807,13 @@ class FrozenStaticCompletion private constructor(
                     readerSources.add(row.from.fact.base, row.from.fact.path.toIntArray(), id)
                     if (row.marks == GuidanceMarks.Flow) flowReaders.add(row.to.fact.base, row.to.fact.path.toIntArray(), id)
                 }
-                locals[method] = Attachments(writerRows, BoundaryDirectory.build(ap, writerRows), writerSources,
+                return Attachments(writerRows, BoundaryDirectory.build(ap, writerRows), writerSources,
                     readerRows, BoundaryDirectory.build(ap, readerRows), colors,
                     EntryDirectory.build(ap, writerRows.map { it.to }.distinct()),
                     EntryDirectory.build(ap, readerRows.map { it.to }.distinct()), flowReaders, readerSources)
             }
+            val locals = localRows.mapValues { (_, rows) -> ap.cancellation.checkpoint(); freezeAttachments(rows) }
+            val scoped = scopedLocalRows.mapValues { (_, rows) -> ap.cancellation.checkpoint(); freezeAttachments(rows) }
             val entryRows = ArrayList<EntryRows>()
             for ((entry, methods) in projectedEntries) {
                 ap.cancellation.checkpoint()
@@ -739,9 +830,12 @@ class FrozenStaticCompletion private constructor(
                 Collections.unmodifiableSet(bridgeOwners), own.mapValues { it.value.toLongArray() },
                 entryRows, EntryDirectory.build(ap, entryRows.map { it.entry }),
                 Collections.unmodifiableMap(locals),
-                Collections.unmodifiableMap(terminalReaders.mapValues { Collections.unmodifiableList(it.value.toList()) }), visibility,
-                memberships, localRows.values.sumOf { it.first.size.toLong() },
-                localRows.values.sumOf { it.second.size.toLong() })
+                Collections.unmodifiableMap(terminalReaders.mapValues { Collections.unmodifiableList(it.value.toList()) }),
+                Collections.unmodifiableMap(scoped),
+                Collections.unmodifiableMap(scopedTerminals.mapValues { Collections.unmodifiableList(it.value.toList()) }),
+                Collections.unmodifiableSet(LinkedHashSet(scopedPorts)), visibility,
+                memberships, localRows.values.sumOf { it.first.size.toLong() } + scopedLocalRows.values.sumOf { it.first.size.toLong() },
+                localRows.values.sumOf { it.second.size.toLong() } + scopedLocalRows.values.sumOf { it.second.size.toLong() })
         }
     }
 }

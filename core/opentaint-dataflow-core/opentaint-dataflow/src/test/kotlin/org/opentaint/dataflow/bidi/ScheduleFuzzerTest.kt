@@ -274,9 +274,15 @@ class ScheduleFuzzerTest {
             val mixed = seed % 2 != 0L
             val producerMethod = f.method("seededSplitProducer", listOf(listOf(1), listOf(2), emptyList()), 2)
             val sourceNode = 18
+            // This E6 scheduler model has a hand-seeded run-3 method demand only.
+            // Use an acyclic delayed path, not an incidental CFG loop that needs
+            // a prior scoped handoff. Dedicated loop controls test that contract.
+            // The short A path and the late B path meet at one physical call.
             val consumerMethod = f.method("seededSplitConsumer", (0..(sourceNode + 1)).map { index ->
                 when (index) {
-                    sourceNode -> listOf(1, sourceNode + 1)
+                    0 -> listOf(1, 2)
+                    1 -> listOf(sourceNode + 1)
+                    sourceNode -> listOf(1)
                     sourceNode + 1 -> emptyList()
                     else -> listOf(index + 1)
                 }
@@ -300,7 +306,9 @@ class ScheduleFuzzerTest {
             assertFalse(MicroEdge.of(delayedB).isSource)
             f.entry(producer, RuleStatement(summary(ZERO_KEEP, sourceA, sourceB), StatementSummary.EMPTY, emptyList()))
             f.entry(consumer, RuleStatement(summary(ZERO_KEEP, sourceSignal, sourceA), StatementSummary.EMPTY, emptyList()))
-            f.statement(consumer, 2, StatementSummary(setOf(AccessPathBase.Zero), emptyList(), emptyList(), emptyMap()))
+            // The long branch carries the delay signal, not a second A offer.
+            // The former first-call prefix consumed A before reaching this path.
+            f.statement(consumer, 2, StatementSummary(setOf(AccessPathBase.Zero, x), emptyList(), emptyList(), emptyMap()))
             f.statement(consumer, sourceNode, summary(delayedB))
             val callPlan = CallPlan(setOf(x, y, returned), listOf(
                 CallStage.Edges(BEFORE, BOUND, BIND_IN, summary(keepEdge(x), keepEdge(y), ZERO_KEEP)),

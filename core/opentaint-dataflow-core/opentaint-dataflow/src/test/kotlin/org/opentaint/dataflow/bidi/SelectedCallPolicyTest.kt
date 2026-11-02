@@ -14,7 +14,7 @@ import java.util.IdentityHashMap
 class SelectedCallPolicyTest {
     private val argument = AccessPathBase.Argument(0)
     private val result = AccessPathBase.Return
-    private val calls = IdentityHashMap<RunMethodAnalyzer, RunMethodCallServices>()
+    private val calls = IdentityHashMap<BlockRunState, RunMethodCallServices>()
 
     private fun install(f: MethodAnalysisFixtures, callee: MethodKey) {
         f.call(1, CallPlan(setOf(argument, result), listOf(

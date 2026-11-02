@@ -10,6 +10,8 @@ import org.opentaint.dataflow.bidi.interp.DirectedForms
 import org.opentaint.dataflow.bidi.interp.Interpreter
 import org.opentaint.dataflow.bidi.interp.MethodForms
 import org.opentaint.dataflow.graph.MethodInstGraph
+import org.opentaint.dataflow.graph.MethodBlockLayout
+import org.opentaint.dataflow.graph.MethodBlockLayoutBuilder
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
 
@@ -17,11 +19,19 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 interface MethodContextSource {
     fun forms(key: MethodKey): MethodForms
     fun graph(key: MethodKey, direction: Direction): MethodInstGraph
+    /** Production form owners override this to share topology through their lifecycle. */
+    fun blockLayout(key: MethodKey, entryNode: CommonInst): MethodBlockLayout {
+        val forward = graph(key, Direction.FORWARD)
+        val entry = forward.instructions.indexOf(entryNode)
+        check(entry >= 0) { "Method entry is not in its forward graph: $key" }
+        return MethodBlockLayoutBuilder.build(forward, listOf(entry))
+    }
 }
 
 class MethodContextCache(val interpreter: Interpreter, private val source: MethodContextSource) {
     fun forms(key: MethodKey): MethodForms = source.forms(key)
     fun graph(key: MethodKey, direction: Direction): MethodInstGraph = source.graph(key, direction)
+    fun blockLayout(key: MethodKey): MethodBlockLayout = source.blockLayout(key, interpreter.entryNode(key))
     fun directed(direction: Direction, view: RuleView = RuleView.FULL): DirectedForms =
         DirectedForms(interpreter, direction, ::forms, view)
 }

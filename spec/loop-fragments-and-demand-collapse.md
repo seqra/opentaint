@@ -78,6 +78,9 @@ Keep:
 - FLOW normalization, FLOW-backed replacement and protection transport.
 - NormalTarget's NORMAL-only forward application, backward exclusion and
   already-persisted row suppression; DemandTarget's existing protocol.
+  The explicit exceptional-ZERO control-demand exception in
+  [the ownership spec](method-owned-loop-blocks.md#31-selected-exception-normal-demand-at-a-backward-exceptional-zero)
+  is the sole additional lookup rule. It does not change DATA/native ports.
 - Immediate source/sink/static operation effects at their original points.
   A normal function return is not required to observe an in-loop sink or
   supply a mark at a static write.
