@@ -361,7 +361,7 @@ func TestResolveLooseSourcesReportsMigration(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected loose .java sources to be rejected")
 	}
-	if !strings.Contains(err.Error(), "approximation init") {
+	if !strings.Contains(err.Error(), "opentaint model init") {
 		t.Errorf("error should point at the migration command, got: %v", err)
 	}
 }

@@ -147,7 +147,7 @@ func ambiguousDirError(dir, classFile string) error {
 		"%s holds compiled classes of its own (e.g. %s) and an approximation project or build "+
 			"output below it, so it is neither a class directory nor a directory of them.\n"+
 			"Move the classes into a directory of their own, or pass each approximation path to "+
-			"--dataflow-approximations separately",
+			"--dataflow-models separately",
 		dir, classFile)
 }
 
@@ -157,7 +157,7 @@ func emptyPathError(path string) error {
 		return fmt.Errorf(
 			"%s holds approximation sources (e.g. %s) but no approximation project: nothing declares "+
 				"the dependencies to compile the models against.\n"+
-				"Create a project per model directory with 'opentaint approximation init <dir> "+
+				"Create a project per model directory with 'opentaint model init <dir> "+
 				"--dependency <group:artifact:version>' and move its sources under <dir>/src/main/java",
 			path, source,
 		)

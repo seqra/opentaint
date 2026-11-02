@@ -39,8 +39,8 @@ compiled project model.
 			timeout:             testRulesTimeout,
 			maxMemory:           testRulesMaxMemory,
 			ruleIDs:             testRulesRuleID,
-			dataflowApprox:      testRulesDataflow,
-			passthroughApprox:   testRulesPassthrough,
+			dataflowModels:      testRulesDataflow,
+			passthroughModels:   testRulesPassthrough,
 			includeBuiltinRules: true,
 		})
 	},
@@ -54,8 +54,8 @@ type testProjectOptions struct {
 	timeout             time.Duration
 	maxMemory           string
 	ruleIDs             []string
-	dataflowApprox      []string
-	passthroughApprox   []string
+	dataflowModels      []string
+	passthroughModels   []string
 	includeBuiltinRules bool
 }
 
@@ -128,8 +128,8 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	}
 	builder.SetJarPath(analyzerJarPath)
 
-	addDataflowApproximations(builder, opts.dataflowApprox, analyzerJarPath)
-	addPassthroughApproximations(builder, opts.passthroughApprox)
+	addDataflowModels(builder, opts.dataflowModels, analyzerJarPath)
+	addPassthroughModels(builder, opts.passthroughModels)
 
 	javaRunner := newAnalyzerJavaRunner()
 	if _, err := javaRunner.EnsureJava(); err != nil {
@@ -173,5 +173,5 @@ func init() {
 	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleset, "ruleset", nil, "Ruleset file or directory to test (repeatable)")
 	addTestRunFlags(testRuleRunCmd, &testRulesOutputDir, &testRulesTimeout, &testRulesMaxMemory, &testRulesDataflow)
 	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleID, "rule-id", nil, "Run only rules with this ID (repeatable)")
-	testRuleRunCmd.Flags().StringArrayVar(&testRulesPassthrough, "passthrough-approximations", nil, "Pass-through approximation YAML file or directory (repeatable)")
+	addPassthroughModelsFlag(testRuleRunCmd, &testRulesPassthrough)
 }

@@ -34,8 +34,8 @@ type ScanConfig struct {
 	Recompile                 bool
 	LogFile                   string
 	RuleID                    []string
-	PassthroughApproximations []string
-	DataflowApproximations    []string
+	PassthroughModels         []string
+	DataflowModels            []string
 	TrackExternalMethods      bool
 	IterationLimit            int
 
@@ -142,9 +142,9 @@ func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&scanFlags.ProjectModelPath, "project-model", "", "Path to a pre-compiled project model (skips compilation)")
 	cmd.Flags().StringVar(&scanFlags.LogFile, "log-file", "", "Path to the log file (default: <cache-dir>/logs/<timestamp>.log)")
 
-	cmd.Flags().StringArrayVar(&scanFlags.PassthroughApproximations, "passthrough-approximations", nil, "Pass-through approximation YAML file or directory (repeatable)")
+	addPassthroughModelsFlag(cmd, &scanFlags.PassthroughModels)
 
-	cmd.Flags().StringArrayVar(&scanFlags.DataflowApproximations, "dataflow-approximations", nil, "Dataflow approximation project, build output, or class directory (repeatable)")
+	addDataflowModelsFlag(cmd, &scanFlags.DataflowModels)
 
 	cmd.Flags().BoolVar(&scanFlags.TrackExternalMethods, "track-external-methods", false, "Write external-method coverage files next to the SARIF report")
 
@@ -159,8 +159,8 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 		WithRuleset(cfg.Ruleset).
 		WithSemgrepCompatibility(cfg.SemgrepCompatibilitySarif).
 		WithRuleID(cfg.RuleID).
-		WithPassthroughApproximations(cfg.PassthroughApproximations).
-		WithDataflowApproximations(cfg.DataflowApproximations).
+		WithPassthroughModels(cfg.PassthroughModels).
+		WithDataflowModels(cfg.DataflowModels).
 		WithTrackExternalMethods(cfg.TrackExternalMethods).
 		WithIterationLimit(cfg.IterationLimit)
 	if !isDefaultSeverity(cfg.Severity) {
@@ -388,7 +388,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	for _, ruleID := range ruleIDs {
 		nativeBuilder.AddRuleID(ruleID)
 	}
-	addPassthroughApproximations(nativeBuilder, cfg.PassthroughApproximations)
+	addPassthroughModels(nativeBuilder, cfg.PassthroughModels)
 	if cfg.TrackExternalMethods {
 		nativeBuilder.SetTrackExternalMethods(true)
 	}
@@ -408,7 +408,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 	nativeBuilder.SetJarPath(analyzerJarPath)
 
-	addDataflowApproximations(nativeBuilder, cfg.DataflowApproximations, analyzerJarPath)
+	addDataflowModels(nativeBuilder, cfg.DataflowModels, analyzerJarPath)
 
 	analyzerJavaRunner := newAnalyzerJavaRunner()
 	if _, err := analyzerJavaRunner.EnsureJava(); err != nil {
