@@ -6,6 +6,8 @@ import org.opentaint.ir.go.type.GoIRAnonymousInterfaceType
  * Top-level entity: a loaded Go program with all its packages.
  */
 interface GoIRProgram {
+    val lookup: GoIRLookup get() = GoIRProgramLookup(this)
+
     val packages: Map<String, GoIRPackage>  // keyed by import path
     val anonymousInterfaces: Map<Int, GoIRAnonymousInterfaceType>
 
