@@ -361,7 +361,7 @@ class JIRMethodCallFlowFunction(
             return
         }
 
-        analysisContext.aliasAnalysis?.forEachAliasAfterCallStatement(statement, this) { aliased ->
+        analysisContext.aliasAnalysis?.forEachHeapAliasBeforeStatement(statement, this) { aliased ->
             body(aliased)
         }
     }
