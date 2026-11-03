@@ -62,11 +62,8 @@ class JIRClassTypeImpl(
         }
         val outer = outerType
         val name = if (outer != null) {
-            if (jIRClass.isAnonymous) {
-                outer.typeName + "$" + jIRClass.simpleName.substringAfter("\$")
-            } else {
-                outer.typeName + "." + jIRClass.simpleName.substringAfter("\$")
-            }
+            val innerName = this.name.removePrefix(outer.name + '$')
+            outer.typeName + '$' + innerName
         } else {
             jIRClass.name
         }
