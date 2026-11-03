@@ -68,6 +68,8 @@ class MethodAnalysisFixtures(
     private val reversedExits = IdentityHashMap<ExitRules, ExitRules>()
     private val reversedCalls = IdentityHashMap<CallPlan, CallPlan>()
     var baseRelevance: ((Direction, CommonInst, AccessPathBase, RuleView) -> Boolean)? = null
+    /** Explicit raw instruction metadata; never inferred from configured rules. */
+    var instructionLocalAccess: List<org.opentaint.dataflow.graph.LocalAccess>? = null
     val unresolvedCalls = ArrayList<Triple<CommonCallExpr, AccessPathBase, CallPlan>>()
 
     init {
@@ -138,9 +140,14 @@ class MethodAnalysisFixtures(
         override fun isSummaryBase(base: AccessPathBase): Boolean =
             base !is AccessPathBase.LocalVar && base !is AccessPathBase.CleanerTemporary
     }
-    val contexts = MethodContextCache(interpreter, object : MethodContextSource {
+    val contexts: MethodContextCache = MethodContextCache(interpreter, object : MethodContextSource {
         override fun forms(key: MethodKey): MethodForms = forms
         override fun graph(key: MethodKey, direction: Direction): MethodInstGraph = graph(direction)
+        override fun blockLiveLocals(key: MethodKey): org.opentaint.dataflow.graph.BlockLiveLocals? =
+            instructionLocalAccess?.let { metadata ->
+                org.opentaint.dataflow.graph.BlockLiveLocals.build(contexts.blockLayout(key),
+                    graph(Direction.FORWARD).graph, graph(Direction.BACKWARD).graph, metadata, cancellation)
+            }
     })
     private var profileBound = false
     private val staticDomain = LinkedHashSet<HistoricalRun1Slot.StaticField>()

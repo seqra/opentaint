@@ -19,6 +19,8 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 interface MethodContextSource {
     fun forms(key: MethodKey): MethodForms
     fun graph(key: MethodKey, direction: Direction): MethodInstGraph
+    /** Unsupported language adapters keep the native boundary path. */
+    fun blockLiveLocals(key: MethodKey): org.opentaint.dataflow.graph.BlockLiveLocals? = null
     /** Production form owners override this to share topology through their lifecycle. */
     fun blockLayout(key: MethodKey, entryNode: CommonInst,
                     exits: List<org.opentaint.dataflow.bidi.interp.ExitNode> = emptyList()): MethodBlockLayout {
@@ -34,6 +36,7 @@ interface MethodContextSource {
 class MethodContextCache(val interpreter: Interpreter, private val source: MethodContextSource) {
     fun forms(key: MethodKey): MethodForms = source.forms(key)
     fun graph(key: MethodKey, direction: Direction): MethodInstGraph = source.graph(key, direction)
+    fun blockLiveLocals(key: MethodKey): org.opentaint.dataflow.graph.BlockLiveLocals? = source.blockLiveLocals(key)
     fun blockLayout(key: MethodKey): MethodBlockLayout = source.blockLayout(key, interpreter.entryNode(key), interpreter.exitNodes(key))
     fun directed(direction: Direction, view: RuleView = RuleView.FULL): DirectedForms =
         DirectedForms(interpreter, direction, ::forms, view)

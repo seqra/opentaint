@@ -32,6 +32,9 @@ internal class LoopConsumerViews(
     val isPublicSummaryBase: (AccessPathBase) -> Boolean,
     val labelledAdmissions: (Facts) -> Collection<LoopLabelledAdmission> = { emptyList() },
     val adjustEnclosingData: (PremiseKey, Facts) -> Facts? = { _, value -> value },
+    val admissionBundle: ((Facts) -> LoopAdmissionBundle)? = null,
+    val keepEnclosingData: (PortId, Facts) -> Boolean = { _, _ -> true },
+    val skipEmptyDataReplay: (PremiseKey, Facts, LoopObservedRecord) -> Boolean = { _, _, _ -> false },
 )
 
 /** Complete three-family observer. All scratch is local to one query invocation. */
@@ -45,12 +48,14 @@ internal class LoopConsumerObservation(
     fun observe(original: PremiseKey, value: Facts): LoopObservation<LoopEnclosingResult> {
         val ap = ops.manager
         ap.cancellation.checkpoint()
-        val adjacent = views.adjacentInitials(value)
+        val bundle = views.admissionBundle?.invoke(value)
+        val adjacent = bundle?.adjacent() ?: views.adjacentInitials(value)
         val full = EnclosingResults(ops)
         fun sink(exit: PortId): LocalRelationOut = object : LocalRelationOut {
             override fun data(original: PremiseKey, value: Facts) {
                 ap.cancellation.checkpoint()
                 val adjusted = views.adjustEnclosingData(original, value) ?: return
+                if (!views.keepEnclosingData(exit, adjusted)) return
                 if (views.enclosingIsRoot && !views.isPublicSummaryBase(adjusted.base)) return
                 val normalized = normalizeFlowSummary(ap, original, adjusted)
                 for (kept in views.intersectEnclosing(exit, normalized.premise, normalized.facts))
@@ -75,6 +80,7 @@ internal class LoopConsumerObservation(
         for (saved in views.savedRecords(value)) {
             ap.cancellation.checkpoint()
             if (!seen.add(saved)) continue
+            if (views.skipEmptyDataReplay(original, value, saved)) continue
             val record = saved.record
             val output = sink(saved.enclosingExit)
             if (record.direction == mode.direction) application.applyRecord(value, original, record, output)
@@ -96,8 +102,8 @@ internal class LoopConsumerObservation(
             if (saved.row.target is Target.NormalTarget && layer != Layer.NORMAL) continue
             sink(saved.enclosingExit).target(original, saved.row.target)
         }
-        val repeat = views.repeatInitials(value)
-        return LoopObservation(adjacent, full.freeze(), repeat, views.labelledAdmissions(value))
+        val repeat = bundle?.repeat() ?: views.repeatInitials(value)
+        return LoopObservation(adjacent, full.freeze(), repeat, bundle?.labelled() ?: views.labelledAdmissions(value))
     }
 }
 
