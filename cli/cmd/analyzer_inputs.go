@@ -8,13 +8,13 @@ import (
 
 func addDataflowModelsFlag(cmd *cobra.Command, paths *[]string) {
 	cmd.Flags().StringArrayVar(paths, "dataflow-models", nil,
-		"Dataflow model project, build output, or class directory (repeatable)")
+		"Dataflow models: a model project, build output, or class directory (repeatable)")
 	addDeprecatedFlagAlias(cmd.Flags(), "dataflow-models", "dataflow-approximations")
 }
 
 func addPassthroughModelsFlag(cmd *cobra.Command, paths *[]string) {
 	cmd.Flags().StringArrayVar(paths, "passthrough-models", nil,
-		"Pass-through model YAML file or directory (repeatable)")
+		"Pass-through models: a YAML file or a directory of them (repeatable)")
 	addDeprecatedFlagAlias(cmd.Flags(), "passthrough-models", "passthrough-approximations")
 }
 
