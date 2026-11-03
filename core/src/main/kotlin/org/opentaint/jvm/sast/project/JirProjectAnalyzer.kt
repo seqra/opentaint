@@ -44,6 +44,9 @@ class JirProjectAnalyzer(
     override fun ProjectAnalysisContext.selectProjectEntryPoints() =
         selectProjectEntryPoints(jirOptions)
 
+    override fun ProjectAnalysisContext.selectProjectPrescanRoots() =
+        projectPrescanRoots()
+
     override fun ruleStrategy() = JavaLanguageStrategy()
     override fun defaultConfigLoader() = JavaDefaultConfigLoader
     override fun configLoader() = JavaConfigurationLoader()

@@ -14,6 +14,11 @@ class GoSampleBasedTest: GoSampleBasedTestBase("GO_SAMPLES_DIR") {
 
     @Test fun methodInterfaceSourceAliasReboxing() = runSample("MethodInterfaceSourceAliasReboxing")
 
+    @Test fun dynamicFactoryCallResolution() = runSample(
+        "DynamicFactoryCallResolution",
+        wholePackagePrescan = true,
+    )
+
     @Test fun sanitizer() = runSample("Sanitizer")
 
     @Test fun multiArgSink() = runSample("MultiArgSink")
