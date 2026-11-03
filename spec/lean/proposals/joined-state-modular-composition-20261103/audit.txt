@@ -1,0 +1,12 @@
+'JoinedStateComposition.referenceOracle' does not depend on any axioms
+'JoinedStateComposition.selectedOracle' does not depend on any axioms
+'JoinedStateComposition.release_preserves_complete_source_stream' does not depend on any axioms
+'JoinedStateComposition.release_and_packing_preserve_complete_oracle' depends on axioms: [propext, Quot.sound]
+'JoinedStateComposition.referenceObservation' does not depend on any axioms
+'JoinedStateComposition.selectedObservation' does not depend on any axioms
+'JoinedStateComposition.combined_complete_observer_port_equal' depends on axioms: [propext, Quot.sound]
+'JoinedStateComposition.combined_finite_restriction_program_equal' depends on axioms: [propext, Quot.sound]
+'JoinedStateComposition.combined_handoff_and_report_projection_equal' depends on axioms: [propext, Quot.sound]
+'JoinedStateComposition.combined_static_callback_trace_equal' depends on axioms: [propext]
+'JoinedStateComposition.NORMAL_and_DEMAND_Target_export_ids_equal' does not depend on any axioms
+'JoinedStateComposition.packed_oracle_preserves_finite_recursive_compositions' depends on axioms: [propext, Quot.sound]

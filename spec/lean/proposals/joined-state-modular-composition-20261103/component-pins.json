@@ -1,0 +1,41 @@
+{
+  "selection": "SELECTED_DESIGN_COMPOSITION",
+  "baselineRevision": "050b83cfb7b2e75856ea113c44d0a2d6b707250d",
+  "components": [
+    {
+      "package": "joined-state-release-selected-design-20261103",
+      "module": "JoinedStateRelease",
+      "theorems": 87,
+      "declarations": 117,
+      "files": {
+        "spec/lean/proposals/joined-state-release-selected-design-20261103/checks.json": "4f0d0d48fe8207fcf5e16665551d63484e6f724eb2114353870f13b900023c7b",
+        "spec/lean/proposals/joined-state-release-selected-design-20261103/audit.txt": "80c16ce1daf6d40ec21a3538ba27886ad32a83e8e0464a8d5a6502581c4689b3",
+        "spec/lean/proposals/joined-state-release-selected-design-20261103/JoinedStateRelease.lean": "62c3e7de47555d4b3e0ba6401c0bcb61164f41d9a034d828f0f628e26256b638"
+      }
+    },
+    {
+      "package": "loop-consumer-query-reuse-20261103",
+      "module": "LoopQueryReuse",
+      "theorems": 71,
+      "declarations": 127,
+      "files": {
+        "spec/lean/proposals/loop-consumer-query-reuse-20261103/checks.json": "da3f3870c7ae08b3e29565eddd86b1fa5f58b4128baa6a8917331f878b6ba498",
+        "spec/lean/proposals/loop-consumer-query-reuse-20261103/audit.txt": "96d1ae9069324550ac3e3d4cc47abf25fff1885281d4bc0b64c27602cad8c84c",
+        "spec/lean/proposals/loop-consumer-query-reuse-20261103/LoopQueryReuse.lean": "9d53972136791d96d25f59e5ae3395b0d11709ff5a5364a50c644cbad48d1323"
+      }
+    },
+    {
+      "package": "packed-static-guidance-20261103",
+      "module": "PackedStaticGuidance",
+      "theorems": 48,
+      "declarations": 84,
+      "files": {
+        "spec/lean/proposals/packed-static-guidance-20261103/checks.json": "6299d22b523232b5b31b715f6bca6fe6efc6f2127bc51e87843f27e06ac82437",
+        "spec/lean/proposals/packed-static-guidance-20261103/audit.txt": "86f195c32c1ca48d5503251780f26ff6f4e1ead5d483e54bffd803b67ec0f444",
+        "spec/lean/proposals/packed-static-guidance-20261103/PackedStaticGuidance.lean": "1267d882c7a3f7a69c40f80450e3b6896e7fc2c6e3de280fdf894fe4a5def5e8"
+      }
+    }
+  ],
+  "kotlinVerified": false,
+  "gcVerified": false
+}

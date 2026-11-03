@@ -1,0 +1,84 @@
+'PackedStaticGuidance.markCode' does not depend on any axioms
+'PackedStaticGuidance.decodeMarkCode' does not depend on any axioms
+'PackedStaticGuidance.mark_code_roundtrip' does not depend on any axioms
+'PackedStaticGuidance.pairWord' does not depend on any axioms
+'PackedStaticGuidance.decodeWord' does not depend on any axioms
+'PackedStaticGuidance.packed_pair_roundtrip' depends on axioms: [propext, Quot.sound]
+'PackedStaticGuidance.packed_word_bound' depends on axioms: [propext, Quot.sound]
+'PackedStaticGuidance.colored_word_not_flow' depends on axioms: [propext, Quot.sound]
+'PackedStaticGuidance.rowRelation' does not depend on any axioms
+'PackedStaticGuidance.lookup' does not depend on any axioms
+'PackedStaticGuidance.intern' does not depend on any axioms
+'PackedStaticGuidance.intern_finds' depends on axioms: [propext]
+'PackedStaticGuidance.intern_keeps' depends on axioms: [propext]
+'PackedStaticGuidance.intern_length' depends on axioms: [propext, Quot.sound]
+'PackedStaticGuidance.compileFrom' does not depend on any axioms
+'PackedStaticGuidance.compile' does not depend on any axioms
+'PackedStaticGuidance.compile_geometry_bound' depends on axioms: [propext, Quot.sound]
+'PackedStaticGuidance.empty_start_geometry_bound' depends on axioms: [propext, Quot.sound]
+'PackedStaticGuidance.decodeRef' does not depend on any axioms
+'PackedStaticGuidance.decodeRefs' does not depend on any axioms
+'PackedStaticGuidance.decode' does not depend on any axioms
+'PackedStaticGuidance.compile_keeps_geometry' depends on axioms: [propext]
+'PackedStaticGuidance.compileFrom_decode' depends on axioms: [propext]
+'PackedStaticGuidance.complete_ordered_decode' depends on axioms: [propext]
+'PackedStaticGuidance.ref_count_preserved' depends on axioms: [propext]
+'PackedStaticGuidance.atRows' does not depend on any axioms
+'PackedStaticGuidance.query' does not depend on any axioms
+'PackedStaticGuidance.catalogQuery' does not depend on any axioms
+'PackedStaticGuidance.all_query_streams_equal' depends on axioms: [propext]
+'PackedStaticGuidance.visitUntil' does not depend on any axioms
+'PackedStaticGuidance.callback_trace_equal' depends on axioms: [propext]
+'PackedStaticGuidance.index_plan_equal' depends on axioms: [propext]
+'PackedStaticGuidance.oldOracle' does not depend on any axioms
+'PackedStaticGuidance.newOracle' does not depend on any axioms
+'PackedStaticGuidance.complete_oracle_equal' depends on axioms: [propext, Quot.sound]
+'PackedStaticGuidance.iterate' does not depend on any axioms
+'PackedStaticGuidance.all_composition_prefixes_equal' depends on axioms: [propext, Quot.sound]
+'PackedStaticGuidance.estimate_count_equal' depends on axioms: [propext]
+'PackedStaticGuidance.existence_equal' depends on axioms: [propext]
+'PackedStaticGuidance.execute' does not depend on any axioms
+'PackedStaticGuidance.complete_composition_step_equal' depends on axioms: [propext]
+'PackedStaticGuidance.ownerRows' does not depend on any axioms
+'PackedStaticGuidance.complete_owner_equal' depends on axioms: [propext]
+'PackedStaticGuidance.normalized_ingestion_equal' depends on axioms: [propext]
+'PackedStaticGuidance.added_extras_equal' depends on axioms: [propext]
+'PackedStaticGuidance.all_geometry_metadata_equal' depends on axioms: [propext]
+'PackedStaticGuidance.derived_relations_equal' depends on axioms: [propext]
+'PackedStaticGuidance.exact_mark_relations_equal' depends on axioms: [propext]
+'PackedStaticGuidance.node' does not depend on any axioms
+'PackedStaticGuidance.own' does not depend on any axioms
+'PackedStaticGuidance.geo' does not depend on any axioms
+'PackedStaticGuidance.zeroGeo' does not depend on any axioms
+'PackedStaticGuidance.termGeo' does not depend on any axioms
+'PackedStaticGuidance.markedRows' does not depend on any axioms
+'PackedStaticGuidance.no_cartesian_mark_pairs' does not depend on any axioms
+'PackedStaticGuidance.zero_is_not_terminal' does not depend on any axioms
+'PackedStaticGuidance.actual_zero_slot_derived_as_null_relation' does not depend on any axioms
+'PackedStaticGuidance.actual_zero_slot_is_nonzero_word' depends on axioms: [propext, Quot.sound]
+'PackedStaticGuidance.full_context_kept' does not depend on any axioms
+'PackedStaticGuidance.producer_exit_kept' does not depend on any axioms
+'PackedStaticGuidance.no_fabricated_mark_pair' does not depend on any axioms
+'PackedStaticGuidance.reverseOwner' does not depend on any axioms
+'PackedStaticGuidance.producer_ports_reverse_exactly' depends on axioms: [propext]
+'PackedStaticGuidance.reverse_owner_twice' does not depend on any axioms
+'PackedStaticGuidance.empty_entered_boundary_rows' does not depend on any axioms
+'PackedStaticGuidance.eagerBuild' does not depend on any axioms
+'PackedStaticGuidance.packedBuild' does not depend on any axioms
+'PackedStaticGuidance.richCount' depends on axioms: [propext]
+'PackedStaticGuidance.rich_count_append' depends on axioms: [propext, Quot.sound]
+'PackedStaticGuidance.eager_materializes_all' depends on axioms: [propext]
+'PackedStaticGuidance.geometry_save_not_rich' depends on axioms: [propext]
+'PackedStaticGuidance.primitive_save_not_rich' depends on axioms: [propext]
+'PackedStaticGuidance.packed_materializes_no_rich_rows' depends on axioms: [propext, Quot.sound]
+'PackedStaticGuidance.selectedMaterialization' does not depend on any axioms
+'PackedStaticGuidance.lookup_materializes_selected_only' depends on axioms: [propext]
+'PackedStaticGuidance.eagerVolume' does not depend on any axioms
+'PackedStaticGuidance.packedVolume' does not depend on any axioms
+'PackedStaticGuidance.strict_shared_geometry_volume' depends on axioms: [propext, Quot.sound]
+'PackedStaticGuidance.one_geometry_many_marks' depends on axioms: [propext, Quot.sound]
+'PackedStaticGuidance.selected_materialization_bound' depends on axioms: [propext]
+'PackedStaticGuidance.eagerPathVolume' does not depend on any axioms
+'PackedStaticGuidance.packedPathVolume' does not depend on any axioms
+'PackedStaticGuidance.one_geometry_path_saving' depends on axioms: [propext, Quot.sound]
+'PackedStaticGuidance.one_geometry_path_saving_positive' depends on axioms: [propext, Quot.sound]
