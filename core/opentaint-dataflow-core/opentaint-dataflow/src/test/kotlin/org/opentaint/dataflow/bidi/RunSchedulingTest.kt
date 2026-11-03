@@ -213,6 +213,18 @@ class RunSchedulingTest {
                     }
                     val config = f.config(L = 1)
                     run = RunManager(config, shared, factory, steps = steps, quantum = 1)
+                    val finalPublications = AtomicReference<List<Pair<Publication, Int>>>()
+                    run.joinedPreparationObserver = { phase ->
+                        if (phase == JoinedPreparationPhase.CAPTURED) {
+                            // Settled native index, after callbacks drain and before seal.
+                            val zero = Subscription(f.key, CallerRef(f.key, f.manager.zero, Layer.NORMAL, f.inst(1)),
+                                Layer.NORMAL, Reach.NORMAL, zeroOnly = true)
+                            val followInput = zero.copy(ref = zero.ref.copy(premise = follow),
+                                added = f.ops.startFact(follow), zeroOnly = false)
+                            val current = checkNotNull(storageRef.get())
+                            finalPublications.set(current.candidates(zero, config.mode) + current.candidates(followInput, config.mode))
+                        }
+                    }
                     val future = caller.submit<RunResult<RunMethodAnalyzer>> { run.run(10.seconds) }
                     assertTrue(entered.await(5, TimeUnit.SECONDS))
                     assertNull(run.terminalStatus)
@@ -237,9 +249,8 @@ class RunSchedulingTest {
                     assertEquals(2, notifications.get())
                     assertEquals(2, returned.get())
                     assertEquals(1, localFrozen.get())
-                    val followPart = zeroPart.copy(ref = zeroPart.ref.copy(premise = follow),
-                        added = f.ops.startFact(follow), zeroOnly = false)
-                    val publications = storage.candidates(zeroPart, config.mode) + storage.candidates(followPart, config.mode)
+                    val publications = checkNotNull(finalPublications.get())
+                    assertFailsWith<IllegalStateException> { storage.candidates(zeroPart, config.mode) }
                     assertEquals(expected, methodEntries(f.ops, publications.asSequence().map { it.first.premise to it.first.conclusion }))
                     assertEquals(0L, run.inFlight.pending)
                     assertEquals(3L, run.inFlight.handled, "One Work reservation spans all quanta, publication and reentrant work")

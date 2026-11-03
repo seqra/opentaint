@@ -55,6 +55,17 @@ class LoopBlockSavedIdentityTest {
             assertEquals(1, runtime.states().size, "Empty local C2 allocates no child transfer state")
             assertTrue(runtime.diagnosticStatistics().contains("rawFallbacks=1"))
             assertTrue(runtime.diagnosticStatistics().contains("drops=0"))
+            actor.captureJoinedExports()
+            val moved = runtime.detachJoinedLocalInputs()
+            try {
+                assertEquals(setOf(BlockScope.ROOT, BlockScope(root.before!!, PortId.ROOT_ENTRY),
+                    BlockScope(root.loop!!, inputPort), BlockScope(root.after!!, outputPort)), moved.keys,
+                    "Saved-only entry directories survive even without child transfer states")
+                actor.freeze()
+                for ((scope, inputs) in moved) inputs.visit { link, _ -> assertEquals(scope,link.child) }
+            } finally {
+                moved.values.forEach { it.close(); it.close() }
+            }
         }
     }
 }

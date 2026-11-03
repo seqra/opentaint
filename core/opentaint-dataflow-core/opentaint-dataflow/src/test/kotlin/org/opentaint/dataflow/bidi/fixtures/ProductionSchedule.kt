@@ -276,10 +276,12 @@ class ProductionSchedule(
             requests = requests.toSet(), sourceHits = hits, witnesses = witnesses, targets = targets, sinkSeeds = sinkSeeds)
     }
 
-    /** Read actual stored publications after all production callbacks have finished. */
+    /** Read the settled native union after all callbacks drain, before run()'s
+     * finally closes these custom schedule owners. Never read a sealed index or
+     * replace this oracle with an append history of published deltas. */
     @Suppress("UNCHECKED_CAST")
     private fun publicationGroups(storage: SummaryStorage): Map<PremiseKey, ConclusionGroup> {
-        val indexField = SummaryStorage::class.java.getDeclaredField("published").apply { isAccessible = true }
+        val indexField = SummaryStorage::class.java.getDeclaredField("publishedIndex").apply { isAccessible = true }
         val index = indexField.get(storage) as PublicationIndex
         val valuesField = PublicationIndex::class.java.getDeclaredField("merged").apply { isAccessible = true }
         return valuesField.get(index) as Map<PremiseKey, ConclusionGroup>

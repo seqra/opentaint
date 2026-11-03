@@ -17,6 +17,7 @@ class RunResult<A : RunActor>(
     val markMode: MarkMode? = null,
     val joinedStaticBindingTime: Duration = Duration.ZERO,
     val staticCompletion: FrozenCompletion? = null,
+    val joinedSealReleaseTime: Duration = Duration.ZERO,
 ) {
     val analyzers: List<A> = Collections.unmodifiableList(ArrayList(analyzers))
 

@@ -68,13 +68,22 @@ class RequestBatchCycleTest {
                     }
                 }
                 run = RunManager(f.config(roots = listOf(f.a, f.b)), shared, factory, quantum = quantum)
+                val finalRequests = LinkedHashMap<MethodKey, RequestMarkSet>()
+                run.joinedPreparationObserver = { phase ->
+                    if (phase == JoinedPreparationPhase.CAPTURED) {
+                        // Read the authoritative final union before its owner is sealed.
+                        for (method in listOf(f.a, f.b))
+                            finalRequests[method] = stores.getValue(method).borrowRequest(slot).marks
+                    }
+                }
                 val result = run.run(10.seconds)
                 assertEquals(RunStatus.COMPLETE, result.status, "$sameUnit/$quantum/$size")
                 assertEquals(0L, run.inFlight.pending)
                 assertTrue(queued.get() > 0)
                 assertEquals(setOf(f.a, f.b), result.analyzers.map { it.key }.toSet())
                 for (method in listOf(f.a, f.b)) {
-                    assertEquals(marks, stores.getValue(method).borrowRequest(slot).marks)
+                    assertEquals(marks, finalRequests.getValue(method))
+                    assertFailsWith<IllegalStateException> { stores.getValue(method).borrowRequest(slot) }
                     val arrived = inputs.filter { it.first == method }.map { it.second }
                     assertEquals(1, arrived.size)
                     assertEquals(initial.toPattern(), arrived.single().addedFact)

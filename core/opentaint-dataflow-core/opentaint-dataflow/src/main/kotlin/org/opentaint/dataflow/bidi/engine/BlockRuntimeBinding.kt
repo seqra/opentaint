@@ -30,6 +30,7 @@ internal interface BlockRuntimeBinding {
     fun routeStaticToExit(state: BlockRunState, node: CommonInst, original: PremiseKey, value: Facts)
     fun methodBoundary(state: BlockRunState, node: CommonInst, original: PremiseKey, value: Facts,
                        summary: Boolean)
+    fun keepLocalConclusion(exit: PortId, value: Facts): Boolean = true
     fun deliveryStatistics(): BlockDeliveryStatistics? = null
 }
 

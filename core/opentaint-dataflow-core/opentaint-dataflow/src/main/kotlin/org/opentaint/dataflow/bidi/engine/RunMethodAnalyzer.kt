@@ -3,6 +3,7 @@ package org.opentaint.dataflow.bidi.engine
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.ScopedTargetRows
 import org.opentaint.dataflow.bidi.store.ScopedRunSummary
+import org.opentaint.dataflow.bidi.store.OwnedScope
 import org.opentaint.dataflow.bidi.store.BlockScope
 import org.opentaint.dataflow.bidi.store.Record
 import org.opentaint.dataflow.bidi.store.NormalRuleContributorRow
@@ -19,7 +20,7 @@ class RunMethodAnalyzer(
     internal var blockRuntime: MethodBlockRuntime? = null
         private set
     private val staticTicketScopes = HashMap<Long, BlockScope>()
-    private val localStaticRequests = if (!config.run1) null else LocalStaticInputRequests(ops, mode, key,
+    private var localStaticRequests = if (!config.run1) null else LocalStaticInputRequests(ops, mode, key,
         ticket = ::nextStaticTicket,
         interest = { staticBatch.interests += it; requestWork() },
         resume = { link, original, value ->
@@ -30,6 +31,8 @@ class RunMethodAnalyzer(
     private var scopedOutgoingTargets: List<ScopedTargetRows> = emptyList()
     private var childNormalContributorRows: List<NormalRuleContributorRow> = emptyList()
     private var frozenChildCounters = LongArray(10)
+    private var capturedChildCounters = LongArray(10)
+    private var joinedMethodCaptured = false
     private var frozenBlockDiagnostics: String? = null
     internal fun blockDiagnostics(): String? = blockRuntime?.diagnosticStatistics() ?: frozenBlockDiagnostics
 
@@ -68,6 +71,12 @@ class RunMethodAnalyzer(
     internal fun forEachJoinedLocalInput(scope: BlockScope, visit: (LocalLink, Facts) -> Unit) {
         blockRuntime?.forEachLocalInput(scope, visit)
     }
+
+    internal fun detachJoinedLocalInputs(): Map<BlockScope, JoinedLocalInputs> =
+        blockRuntime?.detachJoinedLocalInputs().orEmpty()
+
+    internal fun detachJoinedStaticSources(): List<JoinedStaticSource> =
+        joinedBlockStates().map { (scope, state) -> state.joinedStaticSource(OwnedScope(key, scope)) }
 
     internal fun allocateStaticTicket(scope: BlockScope): Long = nextStaticTicket().also {
         check(staticTicketScopes.put(it, scope) == null)
@@ -137,35 +146,47 @@ class RunMethodAnalyzer(
         else checkNotNull(blockRuntime).state(scope).onStaticEffect(effect)
     }
 
-    override fun freeze() {
+    internal override fun captureJoinedExports() {
+        if (joinedMethodCaptured) return
+        check(!hasLocalWork) { "A method cannot capture unfinished root work" }
         val runtime = blockRuntime
-        check(!hasLocalWork) { "A method cannot freeze with unfinished root work" }
-        runtime?.requireIdle() // An unfinished freeze must not destroy live work.
+        runtime?.requireIdle()
+        joinedMethodCaptured = true // Failed capture cannot be retried during best-effort release.
         val closedChildren = children().toList()
         val completionStatistics = runtime?.completionScalarStatistics()?.toList().orEmpty()
+        super.captureJoinedExports()
+        for (child in closedChildren) child.captureJoinedExports()
         if (runtime != null) {
             if (context.shared.n2Statistics != null) frozenBlockDiagnostics = runtime.diagnosticStatistics()
             scopedSummaries = runtime.scopedSummaries().toList()
             scopedTargets = runtime.scopedTargets().toList()
             scopedOutgoingTargets = runtime.scopedOutgoingTargets().toList()
-            val all = closedChildren
-            frozenChildCounters = longArrayOf(all.sumOf { it.steps }, all.sumOf { it.edgeDeltas },
-                all.sumOf { it.demandLayerEdges }, all.sumOf { it.recordCrossings }, all.sumOf { it.triggerSeeds },
-                all.sumOf { it.neutralBatchApplications }, all.sumOf { it.neutralBatchMemberships },
-                all.sumOf { it.neutralBulkStorePackets }, all.sumOf { it.neutralBulkStoreMemberships },
-                all.sumOf { it.neutralScalarFallbackMemberships })
+            capturedChildCounters = longArrayOf(closedChildren.sumOf { it.steps }, closedChildren.sumOf { it.edgeDeltas },
+                closedChildren.sumOf { it.demandLayerEdges }, closedChildren.sumOf { it.recordCrossings },
+                closedChildren.sumOf { it.triggerSeeds }, closedChildren.sumOf { it.neutralBatchApplications },
+                closedChildren.sumOf { it.neutralBatchMemberships }, closedChildren.sumOf { it.neutralBulkStorePackets },
+                closedChildren.sumOf { it.neutralBulkStoreMemberships }, closedChildren.sumOf { it.neutralScalarFallbackMemberships })
         }
+        childNormalContributorRows = closedChildren.flatMap { it.frozenNormalContributorRows }
+        includeClosedBlockMeasurements(closedChildren, completionStatistics)
+    }
+
+    override fun freeze() {
+        if (executionReleased) return
+        check(!hasLocalWork) { "A method cannot freeze with unfinished root work" }
+        blockRuntime?.requireIdle()
         var failure: Throwable? = null
-        try { runtime?.freezeChildren() } catch (error: Throwable) { failure = error }
+        try { captureJoinedExports() } catch (error: Throwable) { failure = error }
+        try { blockRuntime?.freezeChildren() } catch (error: Throwable) {
+            if (failure == null) failure = error else if (failure !== error) failure.addSuppressed(error)
+        }
         finally {
-            childNormalContributorRows = closedChildren.flatMap { it.frozenNormalContributorRows }
             blockRuntime = null
+            frozenChildCounters = capturedChildCounters
             localStaticRequests?.clear()
+            localStaticRequests = null
             staticTicketScopes.clear()
             try { super.freeze() } catch (error: Throwable) {
-                if (failure == null) failure = error else if (failure !== error) failure.addSuppressed(error)
-            }
-            try { includeClosedBlockMeasurements(closedChildren, completionStatistics) } catch (error: Throwable) {
                 if (failure == null) failure = error else if (failure !== error) failure.addSuppressed(error)
             }
         }

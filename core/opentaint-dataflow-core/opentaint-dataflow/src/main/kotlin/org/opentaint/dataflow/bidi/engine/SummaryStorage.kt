@@ -16,9 +16,11 @@ class SummaryStorage(
     flowBacked: Boolean = false,
 ) {
     private val lock = Any()
-    private val published = PublicationIndex(ap, ops, flowBacked)
+    private var publishedIndex: PublicationIndex? = PublicationIndex(ap, ops, flowBacked)
+    private val published get() = checkNotNull(publishedIndex) { "Summary storage is sealed" }
     private val subscribers = LinkedHashSet<SubscriptionManager>()
-    private val requests = RequestStorage()
+    private var requestRows: RequestStorage? = RequestStorage()
+    private val requests get() = checkNotNull(requestRows) { "Summary storage is sealed" }
 
     fun borrowRequest(slot: Run1Slot): RequestRowView = synchronized(lock) { requests.borrow(slot) }
 
@@ -89,7 +91,7 @@ class SummaryStorage(
 
     fun addSubscriber(subscriber: SubscriptionManager) {
         ap.cancellation.checkpoint()
-        synchronized(lock) { subscribers.add(subscriber) }
+        synchronized(lock) { checkNotNull(publishedIndex) { "Summary storage is sealed" }; subscribers.add(subscriber) }
     }
 
     fun candidates(part: Subscription, mode: ApMode): List<Pair<Publication, Int>> =
@@ -97,11 +99,25 @@ class SummaryStorage(
 
     fun staticCandidates(): List<Pair<Publication, Int>> = synchronized(lock) { published.staticCandidates() }
 
+    /** Detach each shared subscriber exactly once through the enclosing lease. */
+    internal fun detachJoinedSubscribers(detach: (SubscriptionManager) -> JoinedCallerInputs): List<JoinedCallerInputs> =
+        synchronized(lock) {
+            checkNotNull(publishedIndex) { "Summary storage was already sealed" }
+            try { subscribers.map(detach) }
+            finally { publishedIndex = null; requestRows = null; subscribers.clear() }
+        }
+
+    internal fun releaseStopped() = synchronized(lock) {
+        publishedIndex = null
+        requestRows = null
+        subscribers.clear()
+    }
+
     /** Borrow the existing subscriber index only after all runners join. The
      * storage lock is released before inspecting caller-owned immutable inputs. */
     internal fun visitJoinedInputs(writer: Publication, mode: ApMode, visit: (Subscription) -> Unit) {
         check(mode.run1 && writer.premise is org.opentaint.dataflow.bidi.ap.InitialAp)
-        val recipients = synchronized(lock) { subscribers.toList() }
+        val recipients = synchronized(lock) { checkNotNull(publishedIndex) { "Summary storage is sealed" }; subscribers.toList() }
         for (subscriber in recipients) {
             ap.cancellation.checkpoint()
             subscriber.visitJoinedInputs(method, writer, mode, visit)
