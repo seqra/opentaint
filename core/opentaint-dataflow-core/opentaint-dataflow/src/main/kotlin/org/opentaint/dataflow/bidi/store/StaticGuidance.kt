@@ -86,7 +86,7 @@ data class StaticGuidanceEdge(val from: Pattern, val to: Pattern, val marks: Gui
 }
 
 /** A geometry key has no runtime mark. Raw EXACT/FLOW patterns here are metadata only. */
-private data class GuidanceGeometry(val from: Pattern, val to: Pattern) {
+internal data class GuidanceGeometry(val from: Pattern, val to: Pattern) {
     fun edge(label: Long): StaticGuidanceEdge = edge(unpackBridgeMarks(label))
     fun edge(marks: GuidanceMarks): StaticGuidanceEdge = when (marks) {
         GuidanceMarks.Flow -> StaticGuidanceEdge(from, to, marks)
@@ -222,10 +222,11 @@ class FrozenStaticCompletion private constructor(
     private val ownBridges: Map<CommonMethod, LongArray>,
     private val bridgeEntryRows: List<EntryRows>,
     private val bridgeEntries: EntryDirectory,
+    private val packedCatalog: PackedGuidanceCatalog,
     private val locals: Map<MethodKey, Attachments>,
-    private val terminalReaders: Map<MethodKey, List<Pattern>>,
+    private val terminalReaders: Map<MethodKey, PackedEndpointRows>,
     private val scopedLocals: Map<ScopedSummaryKey, Attachments>,
-    private val scopedTerminals: Map<ScopedSummaryKey, List<Pattern>>,
+    private val scopedTerminals: Map<ScopedSummaryKey, PackedEndpointRows>,
     private val scopedPorts: Set<ScopedSummaryKey>,
     private val ownerVisibility: FrozenOwnerVisibility,
     val seedMemberships: Long,
@@ -239,6 +240,7 @@ class FrozenStaticCompletion private constructor(
     val seedGeometries: Int get() = bridges.size
     override fun statistics(): String = "seedKeys=$seedKeys seedEntryKeys=${bridgeEntryRows.size} seedGeometries=$seedGeometries ownerMemberships=$seedMemberships " +
         "writerAttachments=$writerAttachments readerAttachments=$readerAttachments " +
+        "boundaryGeometries=${packedCatalog.geometryCount} endpointGeometries=${packedCatalog.endpointCount} " +
         "terminalAttachments=${terminalReaders.values.sumOf { it.size.toLong() } + scopedTerminals.values.sumOf { it.size.toLong() }} " +
         "scopedAttachmentPairs=${scopedLocals.size} scopedControlPairs=${scopedPorts.size} " +
         "callMethods=${graph.methodCount} callEdges=${graph.edgeCount} " +
@@ -252,38 +254,45 @@ class FrozenStaticCompletion private constructor(
     private class Owners(val familyId: Int, val graphIds: IntArray, val outsideGraph: Set<CommonMethod>)
     private class BridgeRows(val geometry: GuidanceGeometry, val labels: LongArray, val owners: List<Owners>,
                              val outputs: StaticOutputOrdinals)
-    private class EntryGeometryRows(val entries: List<Pattern>, val rowIds: IntArray,
-                                  val outputs: StaticOutputOrdinals)
-    /** The trie owns geometries; concrete entries and exclusions remain in the original rows. */
-    private class EntryDirectory(val blocks: List<EntryGeometryRows>, val spatial: PathTrie<Int>) {
+    private class EntryGeometryRows(val rowIds: IntArray, val outputs: StaticOutputOrdinals)
+    /** The directory retains metadata and primitive entry IDs, never a decoded W/R catalog. */
+    private class EntryDirectory(val entries: StaticEndpointRows,
+                                 val blocks: List<EntryGeometryRows>, val spatial: PathTrie<Int>) {
         fun visit(actual: Pattern, selection: StaticLabelSelection, visit: (Pattern, Int) -> Boolean): Boolean =
             spatial.visitAroundWhile(actual.fact.base, actual.fact.path.toIntArray()) { id ->
                 val block = blocks[id]
-                block.outputs.visit(selection) { i -> visit(block.entries[i], block.rowIds[i]) }
+                block.outputs.visit(selection) { i ->
+                    val row = block.rowIds[i]
+                    visit(entries.pattern(row), row)
+                }
             }
         companion object {
-            fun build(ap: ApManager, entries: List<Pattern>): EntryDirectory {
+            fun build(ap: ApManager, entries: StaticEndpointRows): EntryDirectory {
                 val grouped = LinkedHashMap<Pattern, MutableList<Int>>()
-                for ((id, entry) in entries.withIndex()) {
+                for (id in 0 until entries.size) {
                     ap.cancellation.checkpoint()
-                    val geometry = entry.copy(fact = entry.fact.copy(mark = MarkSlot.STAR))
-                    grouped.getOrPut(geometry) { ArrayList() }.add(id)
+                    grouped.getOrPut(entries.geometry(id)) { ArrayList() }.add(id)
                 }
                 val spatial = PathTrie<Int>(ap.cancellation)
                 val blocks = ArrayList<EntryGeometryRows>(grouped.size)
                 for ((geometry, ids) in grouped) {
                     val outputs = StaticOutputOrdinals.Builder(ap.marks)
-                    val originals = ids.map { entries[it] }
-                    for (entry in originals) outputs.add(when (val mark = entry.fact.mark) {
-                        is MarkSlot.Star -> GuidanceMarks.Flow
-                        is MarkSlot.Concrete -> GuidanceMarks.Mapped(null,
-                            if (entry.fact.base == AccessPathBase.Zero) null else mark.mark)
-                    })
+                    for (id in ids) outputs.add(entries.marks(id))
                     spatial.add(geometry.fact.base, geometry.fact.path.toIntArray(), blocks.size)
-                    blocks += EntryGeometryRows(originals, ids.toIntArray(), outputs.build())
+                    blocks += EntryGeometryRows(ids.toIntArray(), outputs.build())
                 }
-                return EntryDirectory(blocks, spatial)
+                return EntryDirectory(entries, blocks, spatial)
             }
+            fun build(ap: ApManager, entries: List<Pattern>): EntryDirectory = build(ap, object : StaticEndpointRows {
+                override val size: Int get() = entries.size
+                override fun geometry(id: Int): Pattern = entries[id].let { it.copy(fact = it.fact.copy(mark = MarkSlot.STAR)) }
+                override fun pattern(id: Int): Pattern = entries[id]
+                override fun marks(id: Int): GuidanceMarks = when (val mark = entries[id].fact.mark) {
+                    is MarkSlot.Star -> GuidanceMarks.Flow
+                    is MarkSlot.Concrete -> GuidanceMarks.Mapped(null,
+                        if (entries[id].fact.base == AccessPathBase.Zero) null else mark.mark)
+                }
+            })
         }
     }
     private class EntryRows(val entry: Pattern, val owners: Owners)
@@ -308,17 +317,17 @@ class FrozenStaticCompletion private constructor(
             return true
         }
         companion object {
-            fun build(ap: ApManager, rows: List<StaticGuidanceEdge>): BoundaryDirectory {
+            fun build(ap: ApManager, rows: PackedGuidanceRows): BoundaryDirectory {
                 val grouped = LinkedHashMap<GuidanceGeometry, MutableList<Int>>()
-                for ((id, row) in rows.withIndex()) {
+                for (id in 0 until rows.size) {
                     ap.cancellation.checkpoint()
-                    grouped.getOrPut(GuidanceGeometry.of(row)) { ArrayList() }.add(id)
+                    grouped.getOrPut(rows.geometry(id)) { ArrayList() }.add(id)
                 }
                 val spatial = PathTrie<Int>(ap.cancellation)
                 val blocks = ArrayList<BoundaryGeometryRows>(grouped.size)
                 for ((geometry, ids) in grouped) {
                     val outputs = StaticOutputOrdinals.Builder(ap.marks)
-                    for (id in ids) { ap.cancellation.checkpoint(); outputs.add(rows[id].marks) }
+                    for (id in ids) { ap.cancellation.checkpoint(); outputs.add(rows.marks(id)) }
                     spatial.add(geometry.to.fact.base, geometry.to.fact.path.toIntArray(), blocks.size)
                     blocks += BoundaryGeometryRows(ids.toIntArray(), geometry, outputs.build())
                 }
@@ -327,10 +336,10 @@ class FrozenStaticCompletion private constructor(
         }
     }
     private class Attachments(
-        val writerRows: List<StaticGuidanceEdge>,
+        val writerRows: PackedGuidanceRows,
         val writers: BoundaryDirectory,
         val writerSources: PathTrie<Int>,
-        val readerRows: List<StaticGuidanceEdge>,
+        val readerRows: PackedGuidanceRows,
         val readers: BoundaryDirectory,
         val coloredOutputs: SelectorRows,
         val writerEntries: EntryDirectory,
@@ -386,7 +395,7 @@ class FrozenStaticCompletion private constructor(
                 if (!bridgeEnds.visitAroundWhile(STATIC, leaf.fact.path.toIntArray()) { false }) return true
             } else if (leaf.fact.mark is MarkSlot.Concrete && leaf.fact.mark.mark != TaintMark.ZERO && local != null) {
                 if (!local.readers.visitAroundWhile(leaf.fact.base, leaf.fact.path.toIntArray()) {
-                        local.readerRows[it].marks != GuidanceMarks.Flow
+                        local.readerRows.marks(it) != GuidanceMarks.Flow
                     }) return true
             }
         }
@@ -420,8 +429,8 @@ class FrozenStaticCompletion private constructor(
 
         private fun view(method: MethodKey, inherited: Boolean): StaticDemandView {
             require(method == owner.method) { "A scoped completion retains its original method key" }
-            val selected = keys.map { View(method, inherited, scopedLocals[it], scopedTerminals[it].orEmpty()) }
-            return if (selected.isEmpty()) View(method, inherited, null, emptyList())
+            val selected = keys.map { View(method, inherited, scopedLocals[it], scopedTerminals[it]) }
+            return if (selected.isEmpty()) View(method, inherited, null, null)
                 else unionStaticDemandViews(selected)
         }
 
@@ -447,8 +456,8 @@ class FrozenStaticCompletion private constructor(
 
     private inner class View(private val method: MethodKey, private val inherited: Boolean,
                              private val local: Attachments? = locals[method],
-                             private val terminalInputs: List<Pattern> = terminalReaders[method].orEmpty()) : C5StaticDemandView {
-        override fun targetInputs(): Sequence<Pattern> = terminalInputs.asSequence()
+                             private val terminalInputs: PackedEndpointRows? = terminalReaders[method]) : C5StaticDemandView {
+        override fun targetInputs(): Sequence<Pattern> = terminalInputs?.patterns() ?: emptySequence()
         private val ownId = graph.id(method.method)
         private val ownRows = ownBridges[method.method] ?: LongArray(0)
         private fun eligible(owners: Owners): Boolean {
@@ -497,7 +506,7 @@ class FrozenStaticCompletion private constructor(
                 while (ordinals.hasNext()) {
                     ap.cancellation.checkpoint()
                     val i = ordinals.nextInt()
-                    val entry = block.entries[i]
+                    val entry = directory.entries.pattern(block.rowIds[i])
                     if (!markSub(entry.fact.mark, actual.fact.mark, ap.marks)) continue
                     // Full MethodKey already scopes local W/R. Only B projections check owners.
                     if (bridge && !eligible(bridgeEntryRows[block.rowIds[i]].owners)) continue
@@ -526,8 +535,7 @@ class FrozenStaticCompletion private constructor(
                 val rows = if (actual.fact.base == STATIC) local.writerRows else local.readerRows
                 for (id in index.ids(actual.fact.base, actual.fact.path.toIntArray(), prefixesOnly, query)) {
                     ap.cancellation.checkpoint()
-                    val row = rows[id]
-                    if (keep == null || keep.keep(row.from, row.to, row.marks)) yield(row)
+                    rows.keptEdge(id, keep)?.let { yield(it) }
                 }
             }
             if (actual.fact.base == STATIC) for (id in candidates(bridgeEnds, actual, prefixesOnly))
@@ -539,7 +547,7 @@ class FrozenStaticCompletion private constructor(
             if (actual.fact.base == STATIC) {
                 for (id in candidates(flowEnds, actual, false)) yieldAll(rows(id, true))
             } else if (local != null) for (id in candidates(local.flowReaders, actual, false)) {
-                ap.cancellation.checkpoint(); yield(local.readerRows[id])
+                ap.cancellation.checkpoint(); yield(local.readerRows.edge(id))
             }
         }
 
@@ -556,7 +564,7 @@ class FrozenStaticCompletion private constructor(
                 val rows = if (initial.base == STATIC) local.writerRows else local.readerRows
                 for (id in targetIndex.lookupPrefixes(initial.base, path)) {
                     ap.cancellation.checkpoint()
-                    if (id in sourceIds) yield(rows[id])
+                    if (id in sourceIds) yield(rows.edge(id))
                 }
             }
             if (initial.base != STATIC) return@sequence
@@ -583,8 +591,7 @@ class FrozenStaticCompletion private constructor(
             for (id in candidates(index, input, false)) yieldAll(rows(id, flowOnly, keep, query))
             if (!flowOnly && local != null) for (id in local.writers.ids(input.fact.base, input.fact.path.toIntArray(), query = query)) {
                 ap.cancellation.checkpoint()
-                val row = local.writerRows[id]
-                if (keep == null || keep.keep(row.from, row.to, row.marks)) yield(row)
+                local.writerRows.keptEdge(id, keep)?.let { yield(it) }
             }
         }
 
@@ -596,7 +603,7 @@ class FrozenStaticCompletion private constructor(
         override fun markedOutputs(mark: TaintMark): Sequence<Pattern> = sequence {
             ap.cancellation.checkpoint()
             if (local != null) for (id in local.coloredOutputs.candidates(mark)) {
-                val output = local.writerRows[id.toInt()].to
+                val output = local.writerRows.to(id.toInt())
                 if (ap.marks.coversAtom((output.fact.mark as MarkSlot.Concrete).mark, mark)) yield(output)
             }
             for (ref in coloredBridgeOutputs.candidates(mark)) {
@@ -626,8 +633,7 @@ class FrozenStaticCompletion private constructor(
             val target = if (initial.base == STATIC)
                 bridgeEnds.lookupPrefixes(STATIC, path).any { rows(it, keep = keepTarget, query = query).iterator().hasNext() }
             else local?.readers?.ids(initial.base, path, true, query)?.any { id ->
-                val row = local.readerRows[id]
-                keepTarget == null || keepTarget.keep(row.from, row.to, row.marks)
+                keepTarget == null || keepTarget.keep(local.readerRows.from(id), local.readerRows.to(id), local.readerRows.marks(id))
             } == true
             if (!target) return false
             for (leaf in outputs) {
@@ -648,7 +654,7 @@ class FrozenStaticCompletion private constructor(
                 ap.marks.coversAtom(output.fact.mark.mark, mark) && joins(output, input)
             if (local != null) for (id in local.writers.ids(STATIC, input.fact.path.toIntArray(), query = query)) {
                 ap.cancellation.checkpoint()
-                if (matches(local.writerRows[id].to)) return true
+                if (matches(local.writerRows.to(id))) return true
             }
             return !bridgeEnds.visitAroundWhile(STATIC, input.fact.path.toIntArray()) { id ->
                 for (edge in rows(id, query = query)) if (edge.marks != GuidanceMarks.Flow && matches(edge.to)) return@visitAroundWhile false
@@ -663,10 +669,12 @@ class FrozenStaticCompletion private constructor(
 
     class Builder(private val ap: ApManager, private val graph: DetachedStaticCallGraph) {
         private val bridges = LinkedHashMap<GuidanceGeometry, Long2ObjectLinkedOpenHashMap<MutableSet<CommonMethod>>>()
-        private val localRows = LinkedHashMap<MethodKey, Pair<MutableSet<StaticGuidanceEdge>, MutableSet<StaticGuidanceEdge>>>()
-        private val terminalReaders = LinkedHashMap<MethodKey, MutableSet<Pattern>>()
-        private val scopedLocalRows = LinkedHashMap<ScopedSummaryKey, Pair<MutableSet<StaticGuidanceEdge>, MutableSet<StaticGuidanceEdge>>>()
-        private val scopedTerminals = LinkedHashMap<ScopedSummaryKey, MutableSet<Pattern>>()
+        private val catalog = PackedGuidanceCatalog.Builder()
+        private val localRows = LinkedHashMap<MethodKey, Pair<PackedGuidanceRows.Builder, PackedGuidanceRows.Builder>>()
+        private val terminalReaders = LinkedHashMap<MethodKey, PackedEndpointRows.Builder>()
+        private val scopedLocalRows = LinkedHashMap<ScopedSummaryKey, Pair<PackedGuidanceRows.Builder, PackedGuidanceRows.Builder>>()
+        private val scopedTerminals = LinkedHashMap<ScopedSummaryKey, PackedEndpointRows.Builder>()
+        private fun attachmentRows() = PackedGuidanceRows.Builder(catalog) to PackedGuidanceRows.Builder(catalog)
         private val scopedPorts = LinkedHashSet<ScopedSummaryKey>()
 
         /** An entered scope can borrow shared B/carry even without local W/R attachments. */
@@ -682,12 +690,11 @@ class FrozenStaticCompletion private constructor(
             if (!RuntimeDataDomain.base(from.fact.base) || !RuntimeDataDomain.base(to.fact.base)) return
             val fromStatic = staticAnchor(ap, from) != null
             val toStatic = staticAnchor(ap, to) != null
-            if (fromStatic && toStatic) addBridge(producer.method, StaticGuidanceEdge.of(from, to))
+            if (fromStatic && toStatic) addNormalizedBridge(producer.method, from, to)
             else {
                 if (fromStatic == toStatic || !fromStatic && from.fact.base == STATIC || !toStatic && to.fact.base == STATIC) return
-                val rows = scopedLocalRows.getOrPut(producer) { LinkedHashSet<StaticGuidanceEdge>() to LinkedHashSet() }
-                val edge = StaticGuidanceEdge.of(from, to)
-                if (toStatic) rows.first += edge else rows.second += edge
+                val rows = scopedLocalRows.getOrPut(producer, ::attachmentRows)
+                if (toStatic) rows.first.add(from, to) else rows.second.add(from, to)
             }
         }
 
@@ -696,7 +703,7 @@ class FrozenStaticCompletion private constructor(
             addScopedBoundary(producer)
             if (!RuntimeDataDomain.base(from.fact.base) || staticAnchor(ap, from) == null) return
             check(from.fact.mark is MarkSlot.Concrete)
-            scopedTerminals.getOrPut(producer) { LinkedHashSet() }.add(guidancePattern(from))
+            scopedTerminals.getOrPut(producer) { PackedEndpointRows.Builder(catalog) }.add(guidancePattern(from))
         }
 
         /** Only an anonymous DEMAND terminal is an endpoint of this guidance graph. */
@@ -704,7 +711,7 @@ class FrozenStaticCompletion private constructor(
             ap.cancellation.checkpoint()
             if (!RuntimeDataDomain.base(from.fact.base) || staticAnchor(ap, from) == null) return
             check(from.fact.mark is MarkSlot.Concrete) { "A terminal reader needs a concrete input mark" }
-            terminalReaders.getOrPut(method) { LinkedHashSet() }.add(guidancePattern(from))
+            terminalReaders.getOrPut(method) { PackedEndpointRows.Builder(catalog) }.add(guidancePattern(from))
         }
 
         /** Phase B accepts only frozen seeds. Caller binding has finished and
@@ -714,17 +721,29 @@ class FrozenStaticCompletion private constructor(
             if (!RuntimeDataDomain.base(from.fact.base) || !RuntimeDataDomain.base(to.fact.base)) return
             val fromStatic = staticAnchor(ap, from) != null
             val toStatic = staticAnchor(ap, to) != null
-            if (fromStatic && toStatic) addBridge(method, StaticGuidanceEdge.of(from, to))
+            if (fromStatic && toStatic) addNormalizedBridge(method, from, to)
             else addBoundary(method, from, to)
         }
 
         fun addSeed(method: MethodKey, edge: StaticGuidanceEdge) = addSeed(method, edge.from, edge.to)
 
+        private fun addNormalizedBridge(method: MethodKey, from: Pattern, to: Pattern) {
+            val a = guidancePattern(from)
+            val b = guidancePattern(to)
+            // B keeps the same geometry, exact label codec and owner graph.
+            val label = BoundaryMarkCodec.pack(a.fact.mark, b.fact.mark)
+            addBridgeParts(method, GuidanceGeometry(a.copy(fact = a.fact.copy(mark = MarkSlot.STAR)),
+                b.copy(fact = b.fact.copy(mark = MarkSlot.STAR))), label)
+        }
+
         fun addBridge(method: MethodKey, edge: StaticGuidanceEdge) {
             ap.cancellation.checkpoint()
             check(staticAnchor(ap, edge.from) != null && staticAnchor(ap, edge.to) != null)
-            val rows = bridges.getOrPut(GuidanceGeometry.of(edge)) { Long2ObjectLinkedOpenHashMap() }
-            val label = packBridgeMarks(edge.marks)
+            addBridgeParts(method, GuidanceGeometry.of(edge), packBridgeMarks(edge.marks))
+        }
+
+        private fun addBridgeParts(method: MethodKey, geometry: GuidanceGeometry, label: Long) {
+            val rows = bridges.getOrPut(geometry) { Long2ObjectLinkedOpenHashMap() }
             val owners = rows.get(label) ?: LinkedHashSet<CommonMethod>().also { rows.put(label, it) }
             owners += method.method
         }
@@ -737,9 +756,8 @@ class FrozenStaticCompletion private constructor(
             if (fromStatic == toStatic) return
             // Do not reinterpret a broad static endpoint as a method-local attachment.
             if (!fromStatic && from.fact.base == STATIC || !toStatic && to.fact.base == STATIC) return
-            val rows = localRows.getOrPut(method) { LinkedHashSet<StaticGuidanceEdge>() to LinkedHashSet() }
-            val edge = StaticGuidanceEdge.of(from, to)
-            if (toStatic) rows.first += edge else rows.second += edge
+            val rows = localRows.getOrPut(method, ::attachmentRows)
+            if (toStatic) rows.first.add(from, to) else rows.second.add(from, to)
         }
 
         fun build(): FrozenStaticCompletion {
@@ -791,26 +809,31 @@ class FrozenStaticCompletion private constructor(
                 starts.add(STATIC, geometry.from.fact.path.toIntArray(), frozenBridges.size)
                 frozenBridges += BridgeRows(geometry, labels, owners, ordinals.build())
             }
-            fun freezeAttachments(rows: Pair<Set<StaticGuidanceEdge>, Set<StaticGuidanceEdge>>): Attachments {
+            val frozenCatalog = catalog.freeze()
+            fun freezeAttachments(rows: Pair<PackedGuidanceRows.Builder, PackedGuidanceRows.Builder>): Attachments {
                 ap.cancellation.checkpoint()
                 val writerSources = PathTrie<Int>(ap.cancellation)
                 val colors = SelectorRows(ap)
                 val flowReaders = PathTrie<Int>(ap.cancellation)
                 val readerSources = PathTrie<Int>(ap.cancellation)
-                val writerRows = rows.first.toList()
-                val readerRows = rows.second.toList()
-                for ((id, row) in writerRows.withIndex()) {
-                    writerSources.add(row.from.fact.base, row.from.fact.path.toIntArray(), id)
-                    (row.to.fact.mark as? MarkSlot.Concrete)?.let { colors.add(it.mark, id.toLong()) }
+                val writerRows = rows.first.freeze(frozenCatalog)
+                val readerRows = rows.second.freeze(frozenCatalog)
+                for (id in 0 until writerRows.size) {
+                    ap.cancellation.checkpoint()
+                    val from = writerRows.geometry(id).from
+                    writerSources.add(from.fact.base, from.fact.path.toIntArray(), id)
+                    writerRows.outputMark(id)?.let { colors.add(it, id.toLong()) }
                 }
-                for ((id, row) in readerRows.withIndex()) {
-                    readerSources.add(row.from.fact.base, row.from.fact.path.toIntArray(), id)
-                    if (row.marks == GuidanceMarks.Flow) flowReaders.add(row.to.fact.base, row.to.fact.path.toIntArray(), id)
+                for (id in 0 until readerRows.size) {
+                    ap.cancellation.checkpoint()
+                    val geometry = readerRows.geometry(id)
+                    readerSources.add(geometry.from.fact.base, geometry.from.fact.path.toIntArray(), id)
+                    if (readerRows.isFlow(id)) flowReaders.add(geometry.to.fact.base, geometry.to.fact.path.toIntArray(), id)
                 }
                 return Attachments(writerRows, BoundaryDirectory.build(ap, writerRows), writerSources,
                     readerRows, BoundaryDirectory.build(ap, readerRows), colors,
-                    EntryDirectory.build(ap, writerRows.map { it.to }.distinct()),
-                    EntryDirectory.build(ap, readerRows.map { it.to }.distinct()), flowReaders, readerSources)
+                    EntryDirectory.build(ap, rows.first.freezeEntries(frozenCatalog)),
+                    EntryDirectory.build(ap, rows.second.freezeEntries(frozenCatalog)), flowReaders, readerSources)
             }
             val locals = localRows.mapValues { (_, rows) -> ap.cancellation.checkpoint(); freezeAttachments(rows) }
             val scoped = scopedLocalRows.mapValues { (_, rows) -> ap.cancellation.checkpoint(); freezeAttachments(rows) }
@@ -829,10 +852,10 @@ class FrozenStaticCompletion private constructor(
             return FrozenStaticCompletion(ap, graph, frozenBridges, ends, starts, flowStarts, flowEnds, coloredOutputs,
                 Collections.unmodifiableSet(bridgeOwners), own.mapValues { it.value.toLongArray() },
                 entryRows, EntryDirectory.build(ap, entryRows.map { it.entry }),
-                Collections.unmodifiableMap(locals),
-                Collections.unmodifiableMap(terminalReaders.mapValues { Collections.unmodifiableList(it.value.toList()) }),
+                frozenCatalog, Collections.unmodifiableMap(locals),
+                Collections.unmodifiableMap(terminalReaders.mapValues { it.value.freeze(frozenCatalog) }),
                 Collections.unmodifiableMap(scoped),
-                Collections.unmodifiableMap(scopedTerminals.mapValues { Collections.unmodifiableList(it.value.toList()) }),
+                Collections.unmodifiableMap(scopedTerminals.mapValues { it.value.freeze(frozenCatalog) }),
                 Collections.unmodifiableSet(LinkedHashSet(scopedPorts)), visibility,
                 memberships, localRows.values.sumOf { it.first.size.toLong() } + scopedLocalRows.values.sumOf { it.first.size.toLong() },
                 localRows.values.sumOf { it.second.size.toLong() } + scopedLocalRows.values.sumOf { it.second.size.toLong() })
