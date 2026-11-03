@@ -12,10 +12,16 @@ import (
 // maxHelpWidth is the widest that the help text is wrapped, even in a wider terminal.
 const maxHelpWidth = 80
 
-// helpTemplate is the default cobra help template with the Long text wrapped by wrapHelp.
+// docsURL is the documentation that the end of every help links to.
+const docsURL = "https://github.com/seqra/opentaint/tree/main/docs"
+
+// helpTemplate is the default cobra help template with the Long text wrapped by wrapHelp and a
+// link to the docs at the end.
 const helpTemplate = `{{with (or .Long .Short)}}{{. | wrapHelp | trimTrailingWhitespaces}}
 
-{{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}`
+{{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}
+{{end}}Learn more at ` + docsURL + `
+`
 
 func configureHelpWrap() {
 	cobra.AddTemplateFunc("wrapHelp", func(text string) string {

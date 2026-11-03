@@ -13,11 +13,8 @@ var compileModelsOutput string
 var compileModelsCmd = &cobra.Command{
 	Use:   "models <model-project>",
 	Short: "Compile a dataflow model project",
-	Long: `Compile the dataflow models of a model project against the library versions that its build.gradle.kts pins
-
-Arguments:
-  <model-project>  Model project created with "opentaint model init"`,
-	Args: cobra.ExactArgs(1),
+	Long:  "Compile a dataflow model project. `opentaint scan` and the test runs compile it on demand, so use this command to see the compiler errors or to compile ahead of time.\n\nArguments:\n  <model-project>  Model project from `opentaint model init`",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath := log.AbsPathOrExit(args[0], "model-project")
 
@@ -57,5 +54,5 @@ func init() {
 
 	compileModelsCmd.Flags().StringVarP(&compileModelsOutput, "output", "o", "",
 		"Path to the compiled models (default: <model-project>/.opentaint/build)")
-	compileCmd.AddCommand(deprecatedCommand(compileModelsCmd, "approximations", "opentaint compile models"))
+	compileCmd.AddCommand(deprecatedCommand(compileModelsCmd, "opentaint compile approximations", "opentaint compile models"))
 }

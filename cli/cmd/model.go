@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/seqra/opentaint/internal/models"
+	"github.com/seqra/opentaint/internal/output"
 	"github.com/seqra/opentaint/internal/utils/log"
 	"github.com/spf13/cobra"
 )
@@ -13,22 +15,15 @@ var initModelDeps []string
 var modelCmd = &cobra.Command{
 	Use:   "model",
 	Short: "Create dataflow model projects",
-	Long: `A dataflow model describes how taint moves through library methods that the analyzer cannot see into. A model project holds such models and pins the library versions they are written against
-
-Compile a model project with "opentaint compile models" and apply it with --dataflow-models`,
 }
 
 var modelInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
 	Short: "Create a dataflow model project",
-	Long: `Create a Gradle project for dataflow models
-
-Arguments:
-  <output-dir>  Directory of the new model project
-
-Give each library that the models are written against with --dependency, at the version that the scanned application uses. To change the dependencies of an existing project, run the command again with the full list`,
-	Example: `  # Create a project for models of jackson-databind
-  opentaint model init ./jackson-models --dependency com.fasterxml.jackson.core:jackson-databind:2.17.2`,
+	Long:  "Create a dataflow model project. Use it when the analyzer loses taint in a library method that it cannot see into.\n\nArguments:\n  <output-dir>  Directory of the new model project",
+	Example: `  # Create a model project for the Jackson version that the app uses
+  opentaint model init .opentaint/dataflow \
+    --dependency com.fasterxml.jackson.core:jackson-databind:2.17.2`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath := log.AbsPathOrExit(args[0], "output-dir")
@@ -42,8 +37,8 @@ Give each library that the models are written against with --dependency, at the 
 		// Warn the user because this removes dependency pins that they added manually.
 		existing := models.IsProject(projectPath)
 		if existing {
-			out.Warnf("Replacing the build file of the existing model project at %s; "+
-				"pass every dependency the models need, not only the new ones", projectPath)
+			out.Warnf("Replacing the build file of the existing model project at %s. "+
+				"Pass every dependency that the models need, not only the new ones", projectPath)
 		}
 
 		if err := models.Scaffold(projectPath, initModelDeps, analyzerJarPath); err != nil {
@@ -55,8 +50,10 @@ Give each library that the models are written against with --dependency, at the 
 		} else {
 			fmt.Printf("Model project initialized at %s\n", projectPath)
 		}
-		suggest("After you write the models, test them with:",
-			fmt.Sprintf("opentaint test model run <project-model> --dataflow-models %s", shellQuote(args[0])))
+		out.Suggestions(
+			output.Suggestion{Description: "To add the models, write them in:", Command: filepath.Join(args[0], "src", "main", "java")},
+			output.Suggestion{Description: "To test the models, run:", Command: fmt.Sprintf("opentaint test model run <project-model> --dataflow-models %s", shellQuote(args[0]))},
+		)
 	},
 }
 
@@ -65,9 +62,9 @@ func init() {
 	modelCmd.AddCommand(modelInitCmd)
 
 	modelInitCmd.Flags().StringArrayVar(&initModelDeps, "dependency", nil,
-		"Compile-only Maven dependency coordinates the models are written against (repeatable)")
+		"Library that the models refer to, as group:artifact:version (repeatable)")
 
-	approximationCmd := deprecatedGroup(modelCmd, "approximation", "opentaint model")
-	approximationCmd.AddCommand(deprecatedCommand(modelInitCmd, "init", "opentaint model init"))
+	approximationCmd := deprecatedGroup(modelCmd, "opentaint approximation", "opentaint model")
+	approximationCmd.AddCommand(deprecatedCommand(modelInitCmd, "opentaint approximation init", "opentaint model init"))
 	rootCmd.AddCommand(approximationCmd)
 }

@@ -7,19 +7,15 @@ import (
 var reachabilityEntryPoint string
 
 var testRuleReachabilityCmd = &cobra.Command{
-	Use:   "reachability <rule-id> [source-path]",
+	Use:   "reachability <rule-id> [<source-path>]",
 	Short: "Show why a rule does or does not fire",
-	Long: `Scan a project with one rule and write a fact-reachability report that shows why the rule does or does not fire. The library source and sink rules that the rule refers to are included
+	Long:  "Show why a rule does or does not fire on a project.\n\nArguments:\n  <rule-id>        Full rule ID, e.g. java/security/sqli.yaml:sql-injection\n  [<source-path>]  Project root (default: the current directory)",
+	Example: `  # Show why a rule does not fire on the project in the current directory
+  opentaint test rule reachability java/security/sqli.yaml:sql-injection .
 
-Arguments:
-  <rule-id>      Full ID of the rule, such as java/security/path-traversal.yaml:path-traversal
-  [source-path]  Root directory of the project (default: the current directory)
-
-To use a compiled project model, give --project-model instead of [source-path]. The report debug-ifds-fact-reachability.sarif is written next to the SARIF report
-
-` + scanExitCodesHelp("Reachability analysis completed"),
-	Example: `  # Debug the path-traversal rule from one entry point
-  opentaint test rule reachability java/security/path-traversal.yaml:path-traversal ./app \
+  # Trace a rule from one entry point
+  opentaint test rule reachability \
+    java/security/path-traversal.yaml:path-traversal . \
     --entry-points com.example.FileController#download`,
 	Annotations: map[string]string{"PrintConfig": "true"},
 	Args:        cobra.RangeArgs(1, 2),

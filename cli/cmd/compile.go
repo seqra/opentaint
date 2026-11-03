@@ -41,15 +41,16 @@ func dockerCompileSuggestion() output.Suggestion {
 
 // compileCmd represents the compile command
 var compileCmd = &cobra.Command{
-	Use:   "compile <project>",
+	Use:   "compile <source-path>",
 	Short: "Compile a Java or Kotlin project into a project model",
-	Args:  cobra.ExactArgs(1), // require exactly one argument
-	Long: `Detect the build system of a Java or Kotlin project, compile the project, and write a project model that "opentaint scan --project-model" analyzes without a new build
+	Long:  "Compile a Java or Kotlin project into a project model. Use it to scan one build more than once or to compile a test project.\n\nArguments:\n  <source-path>  Project root",
+	Example: `  # Compile the project in the current directory
+  opentaint compile . -o .opentaint/project
 
-Arguments:
-  <project>  Root directory of the project`,
-	Example: `  # Compile a project into ./app-model
-  opentaint compile ./app -o ./app-model`,
+  # Compile a rule test project
+  opentaint compile .opentaint/test-projects/my-rule/sinks \
+    -o .opentaint/test-compiled/my-rule/sinks`,
+	Args:        cobra.ExactArgs(1), // require exactly one argument
 	Annotations: map[string]string{"PrintConfig": "true"},
 	Run: func(cmd *cobra.Command, args []string) {
 		ProjectPath = args[0]
@@ -112,7 +113,7 @@ Arguments:
 func init() {
 	rootCmd.AddCommand(compileCmd)
 
-	compileCmd.Flags().StringVarP(&OutputProjectModelPath, "output", "o", "", "Path to the project model to create (required, must not exist)")
+	compileCmd.Flags().StringVarP(&OutputProjectModelPath, "output", "o", "", "Path to the new project model, which must not exist (required)")
 	_ = compileCmd.MarkFlagRequired("output")
 	compileCmd.Flags().BoolVar(&DryRunCompile, "dry-run", false, "Validate inputs and show what would run without compiling")
 	compileCmd.Flags().StringVar(&CompileLogFile, "log-file", "", logFileUsage)

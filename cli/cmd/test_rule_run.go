@@ -24,18 +24,19 @@ var (
 )
 
 var testRuleRunCmd = &cobra.Command{
-	Use:   "run <project-model>",
+	Use:   "run <test-project-model>",
 	Short: "Run rule tests on a compiled test project",
-	Long: `Run the built-in rules and the --ruleset rules on the samples that rule-test.yaml declares and report which samples passed
+	Long:  "Run rule tests on a compiled test project.\n\nArguments:\n  <test-project-model>  Test project compiled with `opentaint compile`",
+	Example: `  # Run the tests with the built-in rules
+  opentaint test rule run .opentaint/test-compiled/my-rule/sinks
 
-Arguments:
-  <project-model>  Test project compiled with "opentaint compile"
+  # Run the tests with your own rules
+  opentaint test rule run .opentaint/test-compiled/my-rule/sinks \
+    --ruleset .opentaint/rules
 
-The results are written to test-result.json and test-results.sarif in --output, or in a temporary directory when --output is not set
-
-` + testExitCodesHelp("All rule tests passed"),
-	Example: `  # Test your rules on the sinks project and keep the results
-  opentaint test rule run ./rule-tests/sinks/model --ruleset ./rules -o ./results`,
+  # Run the tests of one rule
+  opentaint test rule run .opentaint/test-compiled/my-rule/sinks \
+    --rule-id java/security/sqli.yaml:sql-injection`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		runTestProject(args[0], testProjectOptions{

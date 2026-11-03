@@ -18,15 +18,10 @@ var (
 )
 
 var updateCmd = &cobra.Command{
-	Use:   "update [version]",
+	Use:   "update [<version>]",
 	Short: "Update opentaint to the latest version",
-	Long: `Update opentaint to the latest release or to [version]. Downgrades are not supported
-
-Arguments:
-  [version]  Release to update to, such as 1.2.3 (default: the latest release)
-
-When opentaint was installed with Homebrew or npm, the command prints the package manager command to run instead`,
-	Args: cobra.MaximumNArgs(1),
+	Long:  "Update opentaint to the latest version or to <version>.\n\nArguments:\n  [<version>]  Release to update to, such as 1.2.3 (default: the latest release)",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// Check installation method first
 		method, exePath := utils.DetectInstallMethod()

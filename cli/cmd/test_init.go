@@ -18,15 +18,11 @@ var initRuleSourcesOnly bool
 
 var testRuleInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
-	Short: "Create rule test projects with source and sink harnesses",
-	Long: `Create Gradle test projects for detection rules. The sinks project tests sink rules against a generic taint source, and the sources project tests source rules against a generic taint sink
-
-Arguments:
-  <output-dir>  Parent directory of the sinks and sources projects
-
-Declare the positive and negative samples in the rule-test.yaml file of each project`,
+	Short: "Create test projects for sink and source rules",
+	Long:  "Create test projects for sink and source rules.\n\nArguments:\n  <output-dir>  Parent directory of the `sinks` and `sources` projects",
 	Example: `  # Create only the sinks project, with a library that the samples call
-  opentaint test rule init ./rule-tests --sinks-only --dependency org.springframework:spring-jdbc:6.1.14`,
+  opentaint test rule init .opentaint/test-projects/my-rule --sinks-only \
+    --dependency org.springframework:spring-jdbc:6.1.14`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if initRuleSinksOnly && initRuleSourcesOnly {
@@ -65,14 +61,10 @@ Declare the positive and negative samples in the rule-test.yaml file of each pro
 var testModelInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
 	Short: "Create a dataflow model test project",
-	Long: `Create a Gradle test project for dataflow models. A sample passes taint from Taint.source() through the modeled method to Taint.sink(), and the fixed rule model-rule checks that the taint reaches the sink
-
-Arguments:
-  <output-dir>  Directory of the new test project
-
-Declare the positive and negative samples in rule-test.yaml. The model under test is given to "opentaint test model run" with --dataflow-models`,
-	Example: `  # Create a test project whose samples call jackson-databind
-  opentaint test model init ./model-test --dependency com.fasterxml.jackson.core:jackson-databind:2.17.2`,
+	Long:  "Create a dataflow model test project.\n\nArguments:\n  <output-dir>  Directory of the new test project",
+	Example: `  # Create a test project with samples that call Jackson
+  opentaint test model init .opentaint/test-projects/my-model \
+    --dependency com.fasterxml.jackson.core:jackson-databind:2.17.2`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := testproject.Bootstrap(args[0], "model-test-project", initModelProjectDeps); err != nil {
@@ -95,14 +87,14 @@ Declare the positive and negative samples in rule-test.yaml. The model under tes
 func init() {
 	testRuleCmd.AddCommand(testRuleInitCmd)
 	testRuleInitCmd.Flags().StringArrayVar(&initRuleProjectDeps, "dependency", nil,
-		"Compile-only Maven dependency coordinates for generated samples (repeatable)")
+		"Library that the samples call, as group:artifact:version (repeatable)")
 	testRuleInitCmd.Flags().BoolVar(&initRuleSinksOnly, "sinks-only", false,
-		"Create only the sinks test project")
+		"Create only the sinks project")
 	testRuleInitCmd.Flags().BoolVar(&initRuleSourcesOnly, "sources-only", false,
-		"Create only the sources test project")
+		"Create only the sources project")
 
 	testModelCmd.AddCommand(testModelInitCmd)
 	testModelInitCmd.Flags().StringArrayVar(&initModelProjectDeps, "dependency", nil,
-		"Compile-only Maven dependency coordinates for generated samples (repeatable)")
-	testApproximationCmd.AddCommand(deprecatedCommand(testModelInitCmd, "init", "opentaint test model init"))
+		"Library that the samples call, as group:artifact:version (repeatable)")
+	testApproximationCmd.AddCommand(deprecatedCommand(testModelInitCmd, "opentaint test approximation init", "opentaint test model init"))
 }

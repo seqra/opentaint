@@ -219,10 +219,10 @@ var (
 var projectCmd = &cobra.Command{
 	Use:   "project",
 	Short: "Create a project model from precompiled JARs or classes",
-	Long:  `Create a project model from compiled classes or JARs without a build. Use it when the project cannot be built with "opentaint compile"`,
-	Example: `  # Create a project model from an application JAR and its library JARs
-  opentaint project --source-root ./src --classpath ./app.jar --package com.example \
-    --dependency ./lib/guava.jar --dependency ./lib/jackson-databind.jar -o ./app-model`,
+	Long:  "Create a project model from precompiled JARs or classes. Use it when `opentaint compile` cannot build the project.",
+	Example: `  # Create a project model from an application JAR and a library JAR
+  opentaint project --source-root ./src --classpath ./app.jar \
+    --package com.example --dependency ./lib/guava.jar -o .opentaint/project`,
 	Run: func(cmd *cobra.Command, args []string) {
 		config := NewJavaAutobuilder().
 			WithOutputDir(OutputDir).
@@ -277,7 +277,7 @@ var projectCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(projectCmd)
 
-	projectCmd.Flags().StringVarP(&OutputDir, "output", "o", "", "Path to the project model to create (required, must not exist)")
+	projectCmd.Flags().StringVarP(&OutputDir, "output", "o", "", "Path to the new project model, which must not exist (required)")
 	_ = projectCmd.MarkFlagRequired("output")
 	projectCmd.Flags().StringVar(&SourceRoot, "source-root", "", "Project source directory (required)")
 	_ = projectCmd.MarkFlagRequired("source-root")

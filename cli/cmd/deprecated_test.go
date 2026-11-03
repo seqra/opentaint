@@ -25,8 +25,8 @@ func TestDeprecatedCommandsPointAtTheirNewNames(t *testing.T) {
 			if err != nil || len(rest) != 0 || command.Name() != tc.old[len(tc.old)-1] {
 				t.Fatalf("Find(%v) = %s %v %v", tc.old, command.CommandPath(), rest, err)
 			}
-			if !strings.Contains(command.Deprecated, tc.newPath) {
-				t.Errorf("Deprecated = %q, want it to name %q", command.Deprecated, tc.newPath)
+			if want := renamedNotice(command.CommandPath(), tc.newPath); command.Deprecated != want {
+				t.Errorf("Deprecated = %q, want %q", command.Deprecated, want)
 			}
 			if command.IsAvailableCommand() {
 				t.Error("a deprecated command is listed in help")
@@ -93,7 +93,7 @@ func TestDeprecatedGroupHelpIsTheHelpOfTheNewGroup(t *testing.T) {
 		{[]string{"test", "approximation"}, "opentaint test model [command]"},
 		// A subcommand of a deprecated group keeps its own help.
 		{[]string{"approximation", "init"}, "opentaint approximation init <output-dir>"},
-		{[]string{"test", "approximation", "run"}, "opentaint test approximation run <project-model>"},
+		{[]string{"test", "approximation", "run"}, "opentaint test approximation run <test-project-model>"},
 	} {
 		t.Run(strings.Join(tc.old, " "), func(t *testing.T) {
 			command, _, err := rootCmd.Find(tc.old)

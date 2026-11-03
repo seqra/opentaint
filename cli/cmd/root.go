@@ -33,14 +33,9 @@ var updateHintCh = make(chan string, 1)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "opentaint",
-	Short: "Find vulnerabilities in source code with taint analysis",
-	Long: `OpenTaint finds vulnerabilities in Java and Kotlin projects. It follows tainted data from untrusted sources to dangerous sinks
-
-Quick start:
-  opentaint pull                                   Download the analysis toolchain
-  opentaint scan . -o report.sarif                 Scan the project in the current directory
-  opentaint summary report.sarif --show-findings   Show the findings of the report`,
+	Use:           "opentaint",
+	Short:         "Find vulnerabilities in Java and Kotlin projects",
+	Long:          "OpenTaint is a taint analysis engine for Java and Kotlin projects.\n\nQuick start:\n  # Scan the project in the current directory\n  opentaint scan . -o .opentaint/results/report.sarif\n\n  # List the findings\n  opentaint summary .opentaint/results/report.sarif --show-findings",
 	SilenceErrors: true,
 	SilenceUsage:  true,
 
@@ -94,7 +89,7 @@ func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", output.Humanize(err))
-		fmt.Fprintln(os.Stderr, "Run 'opentaint --help' for usage.")
+		fmt.Fprintln(os.Stderr, "Run `opentaint --help` for usage.")
 		os.Exit(1)
 	}
 }
@@ -113,13 +108,13 @@ func init() {
 
 	rootCmd.Flags().BoolVarP(&toolVersion, "version", "v", false, "Print the version information")
 
-	rootCmd.PersistentFlags().BoolVarP(&globals.Config.Output.Debug, "debug", "d", false, "Enable debug output (stream JAR subprocess output, show debug-only fields)")
+	rootCmd.PersistentFlags().BoolVarP(&globals.Config.Output.Debug, "debug", "d", false, "Show debug output")
 	_ = viper.BindPFlag("output.debug", rootCmd.PersistentFlags().Lookup("debug"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Output.Color, "color", "auto", "Color mode (auto, always, never)")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Output.Color, "color", "auto", "Color mode: auto, always, or never")
 	_ = viper.BindPFlag("output.color", rootCmd.PersistentFlags().Lookup("color"))
 
-	rootCmd.PersistentFlags().BoolVarP(&globals.Config.Output.Quiet, "quiet", "q", false, "Suppress interactive UI elements (spinners, progress bars) and JAR streaming")
+	rootCmd.PersistentFlags().BoolVarP(&globals.Config.Output.Quiet, "quiet", "q", false, "Hide spinners and progress bars, and do not stream the analyzer output")
 	_ = viper.BindPFlag("output.quiet", rootCmd.PersistentFlags().Lookup("quiet"))
 
 	rootCmd.PersistentFlags().StringVar(&globals.Config.Analyzer.Version, "analyzer-version", globals.AnalyzerBindVersion, "Analyzer version to use")

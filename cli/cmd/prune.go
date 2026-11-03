@@ -58,9 +58,12 @@ func resolveCategories() (utils.PruneCategory, error) {
 var pruneCmd = &cobra.Command{
 	Use:   "prune",
 	Short: "Remove stale downloads, cached project models, and logs",
-	Long: `Remove stale downloads, cached project models, and logs from ~/.opentaint
+	Long:  "Remove stale downloads, cached project models, and logs from `~/.opentaint`.",
+	Example: `  # Remove stale downloads and cached project models
+  opentaint prune
 
-Without a category flag, the command removes the stale analyzer, autobuilder, and rules downloads, the old Java runtimes, and the cached project models. With --all, it also removes the logs and the artifacts in ~/.opentaint/install`,
+  # Remove everything, including the logs and the installed components
+  opentaint prune --all`,
 	Run: func(cmd *cobra.Command, args []string) {
 		categories, err := resolveCategories()
 		if err != nil {
@@ -148,8 +151,8 @@ func init() {
 	pruneCmd.Flags().BoolVar(&pruneAll, "all", false, "Prune all categories")
 	pruneCmd.Flags().BoolVar(&pruneArtifacts, "artifacts", false, "Prune stale analyzer and autobuilder downloads")
 	pruneCmd.Flags().BoolVar(&pruneRules, "rules", false, "Prune stale rules downloads")
-	pruneCmd.Flags().BoolVar(&pruneJDK, "jdk", false, "Prune old JDK and JRE downloads")
+	pruneCmd.Flags().BoolVar(&pruneJDK, "jdk", false, "Prune stale JDK and JRE downloads")
 	pruneCmd.Flags().BoolVar(&pruneModels, "models", false, "Prune cached project models")
 	pruneCmd.Flags().BoolVar(&pruneLogs, "logs", false, "Prune project log files")
-	pruneCmd.Flags().BoolVar(&pruneInstall, "install", false, "Prune the artifacts in ~/.opentaint/install (they are downloaded again on the next run)")
+	pruneCmd.Flags().BoolVar(&pruneInstall, "install", false, "Prune the components in ~/.opentaint/install")
 }

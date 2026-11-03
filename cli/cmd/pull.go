@@ -17,8 +17,8 @@ import (
 
 var pullCmd = &cobra.Command{
 	Use:   "pull",
-	Short: "Download the analyzer, autobuilder, built-in rules, and Java runtime",
-	Long:  `Download the analyzer, autobuilder, built-in rules, and Java runtime. Components bundled with the release archive are used instead of a download`,
+	Short: "Download the analyzer, autobuilder, rules, and Java runtime",
+	Long:  "Download the analyzer, autobuilder, built-in rules, and Java runtime. Use it to prepare a machine ahead of time: other commands download a missing component on their own.",
 	Run: func(cmd *cobra.Command, args []string) {
 		out.Section("OpenTaint Pull").
 			Field("Autobuilder", globals.Config.Autobuilder.Version).
