@@ -1,0 +1,18 @@
+{
+  "status": "UNSELECTED_CANDIDATE_REFERENCE_ONLY",
+  "dateUTC": "2026-11-02T21:27:37.925756+00:00",
+  "baseRevision": "6052e2ea2d400a7f1f47c0f5fe4497bae23e2ace",
+  "candidateRuntimeImplemented": false,
+  "productionVerified": false,
+  "sourceRole": "Current existing interfaces/counterexample source snapshot; content hashes are not implementation or native-validation evidence for this candidate.",
+  "sources": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/MethodBlockRuntime.kt": "8f05b03d9e05fb2880b10ee61ed61829302cdbf2000154b21a97949d90334fe5",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockRunState.kt": "44a8a92d53d9e6200031e882dd3242039fed68c2be1f89b2b82e4646ddf6b893",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockSummaryLinks.kt": "6f4a69892ac55bf578399af2902aaaa5ab12a754c2cd55b13167587ff80764d7",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandStore.kt": "2fd6fc0cab91ab7983f927b889c4650e8c9d3ad474cdcf78d3f66eec3660e6f8",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/NormalTargetStore.kt": "0932838c780b20a9a36a6d3ae07f665032e7268e8c62f9874e3d5d06ee2f6bf2",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/Seeds.kt": "81d97f109a9289666334e4d635dc6adde9e8d88e0e6c0fdc6aed2ce0b8583503",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockTrustBoundaryFindingTest.kt": "4f1c9dd21e83d7a7c358b2da84159d363f5b689218ea8c782ccfe0b0b78106ec",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockSavedTargetWorkTest.kt": "bcb3f32846244b5930f95611f2a5884345963386bb8a5e39d92681bb61658af3"
+  }
+}

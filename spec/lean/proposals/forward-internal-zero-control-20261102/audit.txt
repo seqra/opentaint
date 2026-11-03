@@ -1,0 +1,100 @@
+'ForwardInternalZeroControl.enabled' does not depend on any axioms
+'ForwardInternalZeroControl.forwardInternal' does not depend on any axioms
+'ForwardInternalZeroControl.backwardInternal' does not depend on any axioms
+'ForwardInternalZeroControl.publicBoundary' does not depend on any axioms
+'ForwardInternalZeroControl.run1' does not depend on any axioms
+'ForwardInternalZeroControl.Path.append' does not depend on any axioms
+'ForwardInternalZeroControl.Path.invariant' does not depend on any axioms
+'ForwardInternalZeroControl.token' does not depend on any axioms
+'ForwardInternalZeroControl.admitControl' does not depend on any axioms
+'ForwardInternalZeroControl.control_admission_has_the_existing_root_permission' does not depend on any axioms
+'ForwardInternalZeroControl.admission_keeps_scope_original_vertex_and_layer' depends on axioms: [propext]
+'ForwardInternalZeroControl.nonzero_origin_Reach_gets_no_inherited_admission' depends on axioms: [propext]
+'ForwardInternalZeroControl.an_existing_ordinary_ZERO_C2_result_needs_no_new_admission' depends on axioms: [propext]
+'ForwardInternalZeroControl.a_demand_root_never_becomes_normal_control' does not depend on any axioms
+'ForwardInternalZeroControl.backward_has_no_new_control_admission' does not depend on any axioms
+'ForwardInternalZeroControl.public_method_admission_has_no_new_control_permission' does not depend on any axioms
+'ForwardInternalZeroControl.run1_keeps_its_previous_policy' does not depend on any axioms
+'ForwardInternalZeroControl.no_reached_control_can_exist_without_root_admission' does not depend on any axioms
+'ForwardInternalZeroControl.output' does not depend on any axioms
+'ForwardInternalZeroControl.publishControl' does not depend on any axioms
+'ForwardInternalZeroControl.advance' does not depend on any axioms
+'ForwardInternalZeroControl.internal_output_keeps_both_actual_ports_and_full_origin' depends on axioms: [propext]
+'ForwardInternalZeroControl.output_is_an_existing_graph_edge' does not depend on any axioms
+'ForwardInternalZeroControl.continuation_keeps_root_and_actual_target' does not depend on any axioms
+'ForwardInternalZeroControl.continuation_still_has_a_constructive_root_path' does not depend on any axioms
+'ForwardInternalZeroControl.backward_has_no_new_control_output' does not depend on any axioms
+'ForwardInternalZeroControl.an_ordinary_C5_accepted_output_gets_no_fallback_control' depends on axioms: [propext]
+'ForwardInternalZeroControl.a_nonzero_raw_original_gets_no_control_fallback' depends on axioms: [propext]
+'ForwardInternalZeroControl.inherited_control_output_cannot_upgrade_DEMAND' does not depend on any axioms
+'ForwardInternalZeroControl.joinLayer' does not depend on any axioms
+'ForwardInternalZeroControl.applyControl' does not depend on any axioms
+'ForwardInternalZeroControl.current_control_binding_keeps_the_complete_waiting_original' does not depend on any axioms
+'ForwardInternalZeroControl.a_DATA_input_cannot_consume_a_control_identity' depends on axioms: [propext]
+'ForwardInternalZeroControl.a_nonzero_parent_original_cannot_consume_a_control_identity' depends on axioms: [propext]
+'ForwardInternalZeroControl.an_unrelated_scope_cannot_consume_a_control_identity' depends on axioms: [propext]
+'ForwardInternalZeroControl.an_unrelated_exit_cannot_consume_a_control_identity' depends on axioms: [propext]
+'ForwardInternalZeroControl.a_DEMAND_waiting_input_remains_DEMAND' depends on axioms: [propext]
+'ForwardInternalZeroControl.a_DEMAND_identity_remains_DEMAND' depends on axioms: [propext]
+'ForwardInternalZeroControl.emptyReplay' does not depend on any axioms
+'ForwardInternalZeroControl.replay' depends on axioms: [propext]
+'ForwardInternalZeroControl.publish' depends on axioms: [propext]
+'ForwardInternalZeroControl.offer' depends on axioms: [propext]
+'ForwardInternalZeroControl.late_link_and_early_link_have_the_same_delivery' depends on axioms: [propext, Quot.sound]
+'ForwardInternalZeroControl.a_cached_identity_replays_without_a_new_initial' depends on axioms: [propext]
+'ForwardInternalZeroControl.a_fresh_late_control_delivery_reserves_owner_work' depends on axioms: [propext]
+'ForwardInternalZeroControl.repeating_the_same_identity_does_not_duplicate_the_delivery' depends on axioms: [propext]
+'ForwardInternalZeroControl.rememberControl' does not depend on any axioms
+'ForwardInternalZeroControl.remembering_control_keeps_all_semantic_views' does not depend on any axioms
+'ForwardInternalZeroControl.every_old_DATA_lookup_is_equal' does not depend on any axioms
+'ForwardInternalZeroControl.every_old_paired_C5_lookup_is_equal' does not depend on any axioms
+'ForwardInternalZeroControl.sourceAllowed' does not depend on any axioms
+'ForwardInternalZeroControl.source_permission_and_action_key_are_unchanged' does not depend on any axioms
+'ForwardInternalZeroControl.a_missing_source_permission_stays_missing' does not depend on any axioms
+'ForwardInternalZeroControl.endpointC5' does not depend on any axioms
+'ForwardInternalZeroControl.acceptsTarget' does not depend on any axioms
+'ForwardInternalZeroControl.actual_control_does_not_change_Target_permission' does not depend on any axioms
+'ForwardInternalZeroControl.no_AP_rows_still_reject_Target_after_control' does not depend on any axioms
+'ForwardInternalZeroControl.virtualZeroDemand' does not depend on any axioms
+'ForwardInternalZeroControl.rejected_virtual_Zero_Zero_demand_grants_Target_permission' does not depend on any axioms
+'ForwardInternalZeroControl.control_only_storage_creates_no_native_or_public_record' does not depend on any axioms
+'ForwardInternalZeroControl.inferOrdinaryNative' does not depend on any axioms
+'ForwardInternalZeroControl.control_transport_does_not_grant_ordinary_native_permission' depends on axioms: [propext]
+'ForwardInternalZeroControl.a_DEMAND_derivation_is_not_a_NORMAL_native_record' does not depend on any axioms
+'ForwardInternalZeroControl.legitimate_ordinary_native_derivation_can_grow_the_store_after_control' depends on axioms: [propext]
+'ForwardInternalZeroControl.complete' does not depend on any axioms
+'ForwardInternalZeroControl.normalTarget' does not depend on any axioms
+'ForwardInternalZeroControl.zeroPremiseArm' does not depend on any axioms
+'ForwardInternalZeroControl.normZero' does not depend on any axioms
+'ForwardInternalZeroControl.normData' does not depend on any axioms
+'ForwardInternalZeroControl.a_missing_ND_literal_still_rejects_NormalTarget' does not depend on any axioms
+'ForwardInternalZeroControl.a_complete_NORMAL_witness_can_still_create_NormalTarget' does not depend on any axioms
+'ForwardInternalZeroControl.DEMAND_control_cannot_upgrade_a_NormalTarget' does not depend on any axioms
+'ForwardInternalZeroControl.a_mixed_ZERO_DATA_cube_does_not_gain_a_ZERO_arm' does not depend on any axioms
+'ForwardInternalZeroControl.only_a_complete_all_ZERO_cube_gets_the_ZERO_arm' does not depend on any axioms
+'ForwardInternalZeroControl.finiteOrigin' does not depend on any axioms
+'ForwardInternalZeroControl.finiteScope' does not depend on any axioms
+'ForwardInternalZeroControl.finiteGraph' does not depend on any axioms
+'ForwardInternalZeroControl.finiteRoot' does not depend on any axioms
+'ForwardInternalZeroControl.finiteInput' does not depend on any axioms
+'ForwardInternalZeroControl.finiteDemandInput' does not depend on any axioms
+'ForwardInternalZeroControl.a_NORMAL_root_flag_does_not_upgrade_an_actual_DEMAND_input' does not depend on any axioms
+'ForwardInternalZeroControl.finiteCompletion' depends on axioms: [propext]
+'ForwardInternalZeroControl.actual_root_input_can_pass_C2_but_fail_the_ordinary_identity_C5' does not depend on any axioms
+'ForwardInternalZeroControl.the_actual_C2_only_pipeline_still_drops_the_identity' does not depend on any axioms
+'ForwardInternalZeroControl.actual_control_output_reaches_the_next_real_block_without_Target_permission' depends on axioms: [propext]
+'ForwardInternalZeroControl.having_a_root_ZERO_does_not_admit_a_nonzero_original_Reach' does not depend on any axioms
+'ForwardInternalZeroControl.noLeaveGraph' does not depend on any axioms
+'ForwardInternalZeroControl.a_no_leave_control_cannot_invent_a_return' depends on axioms: [propext, Quot.sound]
+'ForwardInternalZeroControl.admitLayer' depends on axioms: [propext]
+'ForwardInternalZeroControl.rank' does not depend on any axioms
+'ForwardInternalZeroControl.fresh' depends on axioms: [propext]
+'ForwardInternalZeroControl.offers' depends on axioms: [propext]
+'ForwardInternalZeroControl.one_admission_consumes_finite_layer_budget' depends on axioms: [propext]
+'ForwardInternalZeroControl.layer_rank_is_at_most_two' does not depend on any axioms
+'ForwardInternalZeroControl.all_admissions_fit_the_layer_budget' depends on axioms: [propext, Quot.sound]
+'ForwardInternalZeroControl.at_most_two_fresh_control_admissions_per_scope' depends on axioms: [propext, Quot.sound]
+'ForwardInternalZeroControl.scopeAdmissions' depends on axioms: [propext]
+'ForwardInternalZeroControl.finite_scopes_have_a_two_per_scope_admission_bound' depends on axioms: [propext, Quot.sound]
+'ForwardInternalZeroControl.arbitraryRuleWork' does not depend on any axioms
+'ForwardInternalZeroControl.bounded_control_admission_does_not_bound_all_rule_work' depends on axioms: [propext]
