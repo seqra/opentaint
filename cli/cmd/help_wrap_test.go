@@ -54,3 +54,15 @@ func TestHelpWrapsLongAtMaxWidth(t *testing.T) {
 		}
 	}
 }
+
+func TestHelpEndsWithTheDocsLink(t *testing.T) {
+	var buf bytes.Buffer
+	modelCmd.SetOut(&buf)
+	defer modelCmd.SetOut(nil)
+	if err := modelCmd.Help(); err != nil {
+		t.Fatal(err)
+	}
+	if want := "\n\nLearn more at " + docsURL + "\n"; !strings.HasSuffix(buf.String(), want) {
+		t.Errorf("help ends with %q, want %q", buf.String()[max(0, buf.Len()-120):], want)
+	}
+}

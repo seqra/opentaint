@@ -7,9 +7,10 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// deprecatedCommand returns a hidden copy of cmd under its old name. Running it prints that the
-// name is deprecated, pointing at newPath, and then runs cmd with the same flags.
-func deprecatedCommand(cmd *cobra.Command, oldName, newPath string) *cobra.Command {
+// deprecatedCommand returns a hidden copy of cmd under the last word of oldPath. Running it prints
+// that oldPath is now newPath, and then runs cmd with the same flags.
+func deprecatedCommand(cmd *cobra.Command, oldPath, newPath string) *cobra.Command {
+	oldName := lastWord(oldPath)
 	alias := &cobra.Command{
 		Use:         oldName + strings.TrimPrefix(cmd.Use, cmd.Name()),
 		Short:       cmd.Short,
@@ -17,20 +18,20 @@ func deprecatedCommand(cmd *cobra.Command, oldName, newPath string) *cobra.Comma
 		Args:        cmd.Args,
 		Run:         cmd.Run,
 		Annotations: cmd.Annotations,
-		Deprecated:  "use '" + newPath + "' instead",
+		Deprecated:  renamedNotice(oldPath, newPath),
 	}
 	alias.Flags().AddFlagSet(cmd.Flags())
 	return alias
 }
 
-// deprecatedGroup returns a hidden command group under the old name of group. Its subcommands are
-// deprecated too, so cobra lists none of them. The help of the old group is therefore the help of
-// group, after the deprecation notice.
-func deprecatedGroup(group *cobra.Command, oldName, newPath string) *cobra.Command {
+// deprecatedGroup returns a hidden command group under the last word of oldPath. Its subcommands
+// are deprecated too, so cobra lists none of them. The help of the old group is therefore the help
+// of group, after the deprecation notice.
+func deprecatedGroup(group *cobra.Command, oldPath, newPath string) *cobra.Command {
 	alias := &cobra.Command{
-		Use:        oldName,
+		Use:        lastWord(oldPath),
 		Short:      group.Short,
-		Deprecated: "use '" + newPath + "' instead",
+		Deprecated: renamedNotice(oldPath, newPath),
 	}
 	alias.SetHelpFunc(func(c *cobra.Command, args []string) {
 		if c != alias {
@@ -43,6 +44,16 @@ func deprecatedGroup(group *cobra.Command, oldName, newPath string) *cobra.Comma
 	return alias
 }
 
+// renamedNotice completes the cobra notice `Command "<name>" is deprecated, `. Cobra gives only
+// the last word of the command, so the notice names both full paths.
+func renamedNotice(oldPath, newPath string) string {
+	return "`" + oldPath + "` is now `" + newPath + "`"
+}
+
+func lastWord(path string) string {
+	return path[strings.LastIndex(path, " ")+1:]
+}
+
 // addDeprecatedFlagAlias registers oldName as a hidden, deprecated name of the flag newName.
 // Both names set the same value, so they can be mixed on one command line.
 func addDeprecatedFlagAlias(flags *pflag.FlagSet, newName, oldName string) {
@@ -53,5 +64,5 @@ func addDeprecatedFlagAlias(flags *pflag.FlagSet, newName, oldName string) {
 		Value:    flag.Value,
 		DefValue: flag.DefValue,
 	})
-	_ = flags.MarkDeprecated(oldName, "use --"+newName+" instead")
+	_ = flags.MarkDeprecated(oldName, "use `--"+newName+"` instead")
 }

@@ -11,17 +11,18 @@ import (
 var summaryCmd = &cobra.Command{
 	Use:   "summary <sarif-report>",
 	Short: "Show a summary of a SARIF report",
-	Args:  cobra.ExactArgs(1), // require exactly one argument
-	Long: `Show the number of findings by severity and the rules that found them. With --show-findings, also list the findings
+	Long:  "Show a summary of a SARIF report.\n\nArguments:\n  <sarif-report>  SARIF report from `opentaint scan` or a test run",
+	Example: `  # Show the summary of a report
+  opentaint summary .opentaint/results/report.sarif
 
-Arguments:
-  <sarif-report>  SARIF report of "opentaint scan" or "opentaint test"`,
-	Example: `  # List the error findings in src/main
-  opentaint summary report.sarif --show-findings --severity error --path "src/main/**"
+  # List the errors in the main sources
+  opentaint summary .opentaint/results/report.sarif --show-findings \
+    --severity error --path "src/main/**"
 
-  # Show every code-flow step of the path-traversal findings, with the code
-  opentaint summary report.sarif --show-findings --rule-id path-traversal --verbose-flow --show-code-snippets`,
-
+  # Show the path traversal findings with full code flows and code
+  opentaint summary .opentaint/results/report.sarif --show-findings \
+    --rule-id path-traversal --verbose-flow --show-code-snippets`,
+	Args: cobra.ExactArgs(1), // require exactly one argument
 	Run: func(cmd *cobra.Command, args []string) {
 		for _, s := range summarySeverities {
 			if err := sarif.ValidateSeverity(s); err != nil {
@@ -70,15 +71,15 @@ func init() {
 	rootCmd.AddCommand(summaryCmd)
 
 	summaryCmd.Flags().BoolVar(&showFindings, "show-findings", false, "List the findings")
-	summaryCmd.Flags().BoolVar(&showCodeSnippets, "show-code-snippets", false, "Show code snippets of findings")
+	summaryCmd.Flags().BoolVar(&showCodeSnippets, "show-code-snippets", false, "Show the code snippet of each finding")
 	summaryCmd.Flags().BoolVar(&verboseFlow, "verbose-flow", false, "Show every code-flow step, not only the source and sink")
-	summaryCmd.Flags().StringArrayVar(&summaryPaths, "path", nil, "Show only findings whose file path matches this glob (** supported, repeatable)")
+	summaryCmd.Flags().StringArrayVar(&summaryPaths, "path", nil, "Show only findings whose file path matches this glob (e.g. src/main/**) (repeatable)")
 	summaryCmd.Flags().StringArrayVar(&summarySeverities, "severity", nil, "Show only findings of this SARIF level: error, warning, note, or none (repeatable)")
 	summaryCmd.Flags().StringArrayVar(&summaryRuleIDs, "rule-id", nil, "Show only findings of this rule: full ID, leaf name, or glob (repeatable)")
 	summaryCmd.Flags().StringArrayVar(&summaryFingerprints, "partial-fingerprint", nil, "Show only findings whose partial fingerprint starts with this prefix (repeatable)")
-	summaryCmd.Flags().StringVar(&summaryFingerprintKey, "partial-fingerprint-key", "", "SARIF partialFingerprints key that --partial-fingerprint matches (default vulnerabilityWithTraceHash/v1)")
+	summaryCmd.Flags().StringVar(&summaryFingerprintKey, "partial-fingerprint-key", "", "SARIF partialFingerprints key that --partial-fingerprint matches (default: vulnerabilityWithTraceHash/v1)")
 	summaryCmd.Flags().IntVar(&summaryMaxNestingLevel, "max-nesting-level", -1, "Hide code-flow steps deeper than this call-nesting level (-1 = off)")
-	summaryCmd.Flags().StringVar(&summaryGroupBy, "group-by", "", "Group findings by severity, rule-id, or file-path (default file-path)")
+	summaryCmd.Flags().StringVar(&summaryGroupBy, "group-by", "", "Group findings by severity, rule-id, or file-path (default: file-path)")
 	summaryCmd.Flags().StringVar(&summaryCodeFlow, "code-flow", "", "Code flows to show for each finding: all or a 1-based index (default: the first)")
 }
 

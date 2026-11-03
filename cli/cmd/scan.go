@@ -73,25 +73,19 @@ func (p scanPlan) title() string {
 
 // scanCmd represents the scan command
 var scanCmd = &cobra.Command{
-	Use:   "scan [source-path]",
+	Use:   "scan [<source-path>]",
 	Short: "Scan a Java or Kotlin project for vulnerabilities",
-	Args:  cobra.MaximumNArgs(1),
-	Long: `Detect the build system of a Java or Kotlin project, compile the project, and analyze it
+	Long:  "Build a Java or Kotlin project and scan it for vulnerabilities.\n\nArguments:\n  [<source-path>]  Project root (default: the current directory)",
+	Example: `  # Scan the project in the current directory
+  opentaint scan . -o .opentaint/results/report.sarif
 
-Arguments:
-  [source-path]  Root directory of the project (default: the current directory)
+  # Scan a large project with more memory and time
+  opentaint scan . --max-memory 16G --timeout 20m
 
-To scan a compiled project model, give --project-model instead of [source-path]. The report is written to --output, or to the project model directory when --output is not set
-
-` + scanExitCodesHelp("Scan completed"),
-	Example: `  # Scan with your own rules in addition to the built-in ones
-  opentaint scan ./app --ruleset builtin --ruleset ./rules -o report.sarif
-
-  # Scan a project model compiled with "opentaint compile"
-  opentaint scan --project-model ./app-model -o report.sarif
-
-  # Give a large project more time and memory
-  opentaint scan ./app --timeout 30m --max-memory 16G`,
+  # Add your own rules and dataflow models to the built-in ones
+  opentaint scan . --ruleset builtin --ruleset .opentaint/rules \
+    --dataflow-models .opentaint/dataflow`,
+	Args:        cobra.MaximumNArgs(1),
 	Annotations: map[string]string{"PrintConfig": "true"},
 	Run: func(cmd *cobra.Command, args []string) {
 		if scanFlags.DebugRunAnalysisOnSelectedEntryPoints != "" {
@@ -105,7 +99,7 @@ func prepareScanConfig(cfg ScanConfig, args []string) ScanConfig {
 	if len(args) > 0 && cfg.ProjectModelPath != "" {
 		out.Error("Cannot use both a source path argument and --project-model flag")
 		suggest("Use either a source path or --project-model:",
-			utils.NewScanCommand("<source-path>").Build()+"\n  "+utils.NewScanCommand("").WithProjectModel("<model-path>").Build())
+			utils.NewScanCommand("<source-path>").Build()+"\n  "+utils.NewScanCommand("").WithProjectModel("<project-model>").Build())
 		os.Exit(1)
 	}
 	if cfg.Recompile && cfg.ProjectModelPath != "" {
@@ -150,8 +144,8 @@ func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&globals.Config.Scan.MaxMemory, "max-memory", "8G", "Maximum analyzer heap size (e.g. 8G, 1024m)")
 	cmd.Flags().Int64Var(&globals.Config.Scan.CodeFlowLimit, "code-flow-limit", 0, "Maximum number of code flows per finding (0 = unlimited)")
 	cmd.Flags().BoolVar(&scanFlags.DryRun, "dry-run", false, "Validate inputs and show what would run without compiling or scanning")
-	cmd.Flags().BoolVar(&scanFlags.Recompile, "recompile", false, "Force recompilation even if a cached project model exists")
-	cmd.Flags().StringVar(&scanFlags.ProjectModelPath, "project-model", "", "Path to a pre-compiled project model (skips compilation)")
+	cmd.Flags().BoolVar(&scanFlags.Recompile, "recompile", false, "Rebuild the project even if a cached project model exists")
+	cmd.Flags().StringVar(&scanFlags.ProjectModelPath, "project-model", "", "Path to a compiled project model to scan")
 	cmd.Flags().StringVar(&scanFlags.LogFile, "log-file", "", logFileUsage)
 
 	addPassthroughModelsFlag(cmd, &scanFlags.PassthroughModels)
@@ -596,7 +590,7 @@ func resolveScanPlan(cfg ScanConfig, absUserProjectRoot string) scanPlan {
 		} else {
 			out.Error("Another scan is currently analyzing this project")
 		}
-		suggest("To scan an existing model instead, run:", utils.NewScanCommand("").WithProjectModel("<model-path>").Build())
+		suggest("To scan an existing model instead, run:", utils.NewScanCommand("").WithProjectModel("<project-model>").Build())
 		os.Exit(1)
 	}
 	if lockErr != nil {

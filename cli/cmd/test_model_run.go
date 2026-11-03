@@ -17,18 +17,16 @@ var (
 )
 
 var testModelRunCmd = &cobra.Command{
-	Use:   "run <project-model>",
+	Use:   "run <test-project-model>",
 	Short: "Run dataflow model tests on a compiled test project",
-	Long: `Run the samples that rule-test.yaml declares with the --dataflow-models models applied and report which samples passed
+	Long:  "Run dataflow model tests on a compiled test project.\n\nArguments:\n  <test-project-model>  Test project compiled with `opentaint compile`",
+	Example: `  # Test a model project
+  opentaint test model run .opentaint/test-compiled/my-model \
+    --dataflow-models .opentaint/dataflow
 
-Arguments:
-  <project-model>  Test project compiled with "opentaint compile"
-
-The results are written to test-result.json and test-results.sarif in --output, or in a temporary directory when --output is not set
-
-` + testExitCodesHelp("All model tests passed"),
-	Example: `  # Test a model project and keep the results
-  opentaint test model run ./model-test/model --dataflow-models ./jackson-models -o ./results`,
+  # Test pass-through models
+  opentaint test model run .opentaint/test-compiled/my-model \
+    --passthrough-models .opentaint/pass-through`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ruleDir, err := os.MkdirTemp("", "opentaint-model-rule-*")
@@ -56,5 +54,5 @@ The results are written to test-result.json and test-results.sarif in --output, 
 func init() {
 	testModelCmd.AddCommand(testModelRunCmd)
 	addTestRunFlags(testModelRunCmd, &testModelOutputDir, &testModelTimeout, &testModelMaxMemory, &testModelDataflow, &testModelPassthrough)
-	testApproximationCmd.AddCommand(deprecatedCommand(testModelRunCmd, "run", "opentaint test model run"))
+	testApproximationCmd.AddCommand(deprecatedCommand(testModelRunCmd, "opentaint test approximation run", "opentaint test model run"))
 }
