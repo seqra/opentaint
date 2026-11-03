@@ -5,6 +5,7 @@ import org.opentaint.dataflow.bidi.driver.ScopedTargetRows
 import org.opentaint.dataflow.bidi.store.ScopedRunSummary
 import org.opentaint.dataflow.bidi.store.BlockScope
 import org.opentaint.dataflow.bidi.store.Record
+import org.opentaint.dataflow.bidi.store.NormalRuleContributorRow
 
 /** The only scheduled actor for an original method. Block state is owned here. */
 class RunMethodAnalyzer(
@@ -27,6 +28,7 @@ class RunMethodAnalyzer(
     private var scopedSummaries: List<ScopedRunSummary> = emptyList()
     private var scopedTargets: List<ScopedTargetRows> = emptyList()
     private var scopedOutgoingTargets: List<ScopedTargetRows> = emptyList()
+    private var childNormalContributorRows: List<NormalRuleContributorRow> = emptyList()
     private var frozenChildCounters = LongArray(10)
     private var frozenBlockDiagnostics: String? = null
     internal fun blockDiagnostics(): String? = blockRuntime?.diagnosticStatistics() ?: frozenBlockDiagnostics
@@ -59,6 +61,8 @@ class RunMethodAnalyzer(
     internal fun blockSummaries(): Sequence<ScopedRunSummary> = scopedSummaries.asSequence()
     internal fun blockTargets(): Sequence<ScopedTargetRows> = scopedTargets.asSequence()
     internal fun blockOutgoingTargets(): Sequence<ScopedTargetRows> = scopedOutgoingTargets.asSequence()
+    internal fun normalContributorRows(): Sequence<NormalRuleContributorRow> =
+        frozenNormalContributorRows.asSequence() + childNormalContributorRows.asSequence()
     internal fun joinedBlockStates(): List<Pair<BlockScope, BlockRunState>> =
         blockRuntime?.states() ?: listOf(BlockScope.ROOT to this)
     internal fun forEachJoinedLocalInput(scope: BlockScope, visit: (LocalLink, Facts) -> Unit) {
@@ -150,6 +154,7 @@ class RunMethodAnalyzer(
         var failure: Throwable? = null
         try { runtime?.freezeChildren() } catch (error: Throwable) { failure = error }
         finally {
+            childNormalContributorRows = closedChildren.flatMap { it.frozenNormalContributorRows }
             blockRuntime = null
             localStaticRequests?.clear()
             staticTicketScopes.clear()

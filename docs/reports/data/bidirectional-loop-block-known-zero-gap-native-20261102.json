@@ -1,0 +1,3670 @@
+{
+  "status": "KNOWN_OPEN_DESIGN_FAILURE",
+  "isAcceptanceGatePass": false,
+  "dateUTC": "2026-11-02T21:25:33.271396+00:00",
+  "parentRevision": "6052e2ea2d400a7f1f47c0f5fe4497bae23e2ace",
+  "worktreeSourceHashes": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/MethodBlockRuntime.kt": "8f05b03d9e05fb2880b10ee61ed61829302cdbf2000154b21a97949d90334fe5",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockEmptyReverseJoinTest.kt": "f454067ef32c3c977d7f72f9371e446c6b223a28fb832ae0161f231e7a5086af",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockTrustBoundaryFindingTest.kt": "4f1c9dd21e83d7a7c358b2da84159d363f5b689218ea8c782ccfe0b0b78106ec"
+  },
+  "command": "./core/gradlew -p core :opentaint-dataflow-core:opentaint-dataflow:clean :opentaint-dataflow-core:opentaint-jvm-dataflow:clean :opentaint-dataflow-core:opentaint-dataflow:test :opentaint-dataflow-core:opentaint-jvm-dataflow:test --continue --no-build-cache --console=plain",
+  "exitCode": 1,
+  "logSha256": "d4b7cd6cfea73282c7f77332480f536e19f2725d6e7e30e457060e88d315007e",
+  "modules": {
+    "common": {
+      "classes": [
+        {
+          "name": "org.opentaint.dataflow.ap.ifds.access.DeepAccessorExclusionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.ap.ifds.access.DeepAccessorExclusionTest.xml",
+          "sha256": "10b40c24918ed10decb5f717ab7d5c089aa652e9f6a4330dd4f171cdde4ac431",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.ap.ifds.access.FactCleanerContractTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.ap.ifds.access.FactCleanerContractTest.xml",
+          "sha256": "96bd6f546dc75fc15b970fc8b8175fd1e44159c7026f811afbb845ff73060278",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.ap.ifds.access.automata.AccessGraphTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.ap.ifds.access.automata.AccessGraphTest.xml",
+          "sha256": "ff7cba44f8dbba124090345bcb047e976cb46d0127839da02f79a8d27e315dcc",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.ap.ifds.access.automata.AutomataAccessTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.ap.ifds.access.automata.AutomataAccessTest.xml",
+          "sha256": "5f90f428dadb76d9a68458ef507547f4755111076271ae57bf99e0c9cc4d7de6",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.ap.ifds.access.automata.AutomataInitialFactAbstractionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.ap.ifds.access.automata.AutomataInitialFactAbstractionTest.xml",
+          "sha256": "69b35fa04fd3a840cbb5c6768209e9ad1247a6c24f978d0275508a38793a6d4b",
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.ap.ifds.access.automata.GraphIndexTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.ap.ifds.access.automata.GraphIndexTest.xml",
+          "sha256": "9d8ece8130cbec434ca3479423b6278cdfae490a6c71aa96e8e2eb8109346566",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.ap.ifds.access.cactus.CactusAccessTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.ap.ifds.access.cactus.CactusAccessTest.xml",
+          "sha256": "0f2ff1240084d383782da1f430c35b8544764b0460d382d47c7bbf57ba9d0338",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.ap.ifds.access.tree.AnyFieldAccessorExclusionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.ap.ifds.access.tree.AnyFieldAccessorExclusionTest.xml",
+          "sha256": "98fc0749eae90129c49b7e5f6e33324fa8309b4bf7eb4f34e2d7525f88fca3dd",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.ap.ifds.access.tree.TreeInitialFactAbstractionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.ap.ifds.access.tree.TreeInitialFactAbstractionTest.xml",
+          "sha256": "c8689ea12c2446e78a90cc84e35257251567b436545f2fef28e7b66ed75339c3",
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.ap.ifds.access.util.AccessorInternerTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.ap.ifds.access.util.AccessorInternerTest.xml",
+          "sha256": "e7fc740ff55096841f5b8368131c45ecaa368ee6fde4eb1726cdcb15120d2552",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.ap.ifds.trace.path.MethodTraceSearchTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.ap.ifds.trace.path.MethodTraceSearchTest.xml",
+          "sha256": "0898aeeec1fa663372263c74edf28fe2ac161832d53618c9398a1e24f3c4462c",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.AbstractDemandExclusionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.AbstractDemandExclusionTest.xml",
+          "sha256": "d2736a47dc22e13026394736fe3351d118dc569c8b046465635756d8c34b810a",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.AddedFactRemovalTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.AddedFactRemovalTest.xml",
+          "sha256": "451b1fd74e20c257eac3dcda0c04970b485816c9d89e1c9b087ea2355c0f67f6",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.AddedFactStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.AddedFactStoreTest.xml",
+          "sha256": "d433b4fc127f2c4b383d61b60ca7a7ae010ed9b609892eb237fa2745b3dbf2ff",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.AdmittedSummaryViewTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.AdmittedSummaryViewTest.xml",
+          "sha256": "e8b819b8ac4b8ea11373d6bd8cdd24347eecaf8501f47ac46b6e9f69a9c7e66c",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.AnyDeliveryTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.AnyDeliveryTest.xml",
+          "sha256": "25e12276cbe86fe80ec8de3aa64fb84ab16f772997d141bc7aa38db2920a63e8",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.AnyTaintIterationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.AnyTaintIterationTest.xml",
+          "sha256": "91d8ff10d9ab7cc70fbdd2d37a3d89c69b162dced61989033ca5e114c4383b31",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.AnyTaintSupportTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.AnyTaintSupportTest.xml",
+          "sha256": "940b04ad229d4c58e411b1f2b0d7fdf7e3f7d1a12f675ca026cae2296db1733e",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ApCancellationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ApCancellationTest.xml",
+          "sha256": "7dbbd06ca5f03cf1b439ab7f2d1aac22f714708a4448034d7424a5756dacfc26",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ApplyEdgeVectorsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ApplyEdgeVectorsTest.xml",
+          "sha256": "daabba34c59648cf97aac55e272a82f6de4093c35198faf50aa76e63b1fdabfb",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.BackwardDiscoveryGraphTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.BackwardDiscoveryGraphTest.xml",
+          "sha256": "1db4e2493dd3814035a24a9023e4e1ecfd06684f10d66b9b60a074882ec41647",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.BackwardSourceSummaryTargetTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.BackwardSourceSummaryTargetTest.xml",
+          "sha256": "9f337cee9920fcda627140c486b6febb9430a3f4176b869ea9df09bd6c9f7ac9",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.BarrierFailureTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.BarrierFailureTest.xml",
+          "sha256": "f2b4ee3b63091dfb8277d8359b7d6a0b9db1a5ee63f3e5cb7b5b5c334aa20c1c",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.BidirectionalEntryLookupTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.BidirectionalEntryLookupTest.xml",
+          "sha256": "69fdfd4a0ab2806f7ede0ec8dc8cbb91db23fbd65a976702156061a2f61961cd",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.BlockBoundaryDemandViewTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.BlockBoundaryDemandViewTest.xml",
+          "sha256": "3b5072b3b33b9d05ddcc9ec056cfe899f6f8903098572ba8f4e4786ed623ab25",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.BlockCfgDeliveryCacheTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.BlockCfgDeliveryCacheTest.xml",
+          "sha256": "67084168632f39c45a7753dfee6e61bfe4f024f0525e1a8c470891baa28fe568",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.BlockHandOffTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.BlockHandOffTest.xml",
+          "sha256": "a648a8778a3809d3dc2a50dd69a0985a7a37be43b73d6437780a178fa332b8fe",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.BlockSummaryLinksTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.BlockSummaryLinksTest.xml",
+          "sha256": "0c4f209303f051a543811ad8644bb7bd387d43b59e367bce9301f636c659830c",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.BodyWorkStatisticsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.BodyWorkStatisticsTest.xml",
+          "sha256": "662aa0f7dac912cf2723bcbcc33863cd993e7a6c6f3d93e9ac089ca9e350871e",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.BuilderTransferVectorsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.BuilderTransferVectorsTest.xml",
+          "sha256": "7f8eef677d55249e39778bd2669bd30fb9fa4fdb75247a0938c7648a4ad4cc8e",
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.C5DiagnosticSamplesTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.C5DiagnosticSamplesTest.xml",
+          "sha256": "6bf87afff18d1d8999bef48c5ff435c67f6baf708ff3d6976af2113c2ec10305",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.C5StaticPruningTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.C5StaticPruningTest.xml",
+          "sha256": "b2a735c58b9fc07aa9826e7565cf1d3b86f0c7947165b7f18c9b3d099972d4cc",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CallPlanReversalTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CallPlanReversalTest.xml",
+          "sha256": "009d59b6a52f4c80598a2f2174b5c1342bf55226c49e1396766a9a8c315b815e",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CallPlanTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CallPlanTest.xml",
+          "sha256": "e11a88c407d6d7c7e08157d2b7bd11a48fb6ed277faa62c503476f6f8628a14a",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CallServiceLifetimeTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CallServiceLifetimeTest.xml",
+          "sha256": "832c7aba67b1c848f2a0d959f1d21feec5b54c37cf812569be04bd05c11d5f63",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CallSourceHitTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CallSourceHitTest.xml",
+          "sha256": "e11369df28b2610e55181f9d6925fd004cfab72261b426e019fa485ae591935f",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CallZeroTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CallZeroTest.xml",
+          "sha256": "023c7bbf35df4c2c545695cdb29786d423b3ffcf898762bfdf91114737ec4547",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CallerStateAcceptanceTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CallerStateAcceptanceTest.xml",
+          "sha256": "a8a817c41178e96739776db5d8da10aa424bc4758b32c76358d4366a245e965b",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CanonicalGroupProjectionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CanonicalGroupProjectionTest.xml",
+          "sha256": "73d4525eb61a81954e6cea042f67ffb5310a3000643eb87d4016d885232bbfc3",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CatalogMarkAnswerTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CatalogMarkAnswerTest.xml",
+          "sha256": "1b65b86e5ea1c0e327a36f82f04498567d8c79d99867b2237326eab62791eb62",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CfgDeliveryCacheTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CfgDeliveryCacheTest.xml",
+          "sha256": "2ca3a71195bff250fa84a6b44bc690bb4e8365fd7c88f1c0c0873d73136c5400",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CfgDeliveryEngineTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CfgDeliveryEngineTest.xml",
+          "sha256": "5dc486e08517c319fccad0308ac9887e0b5d5d2002807c4f2580c9720d8bbf97",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CleanerStepDeduplicationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CleanerStepDeduplicationTest.xml",
+          "sha256": "e87d55729d73632f38b16d49b99e6a4e05b1ba6768ecf35ec613b5fcfafdab4f",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CleanerTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CleanerTest.xml",
+          "sha256": "3b448243f8421cdebbb4a9f57e79e5be1a3f8f869130c0df1d90533fc201bb62",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ClosureUnionObservationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ClosureUnionObservationTest.xml",
+          "sha256": "f939ae256f1636a5f4d4ce49ac9980df6662930c8d0662de1f00bc04278c1052",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CompactFormCollectionsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CompactFormCollectionsTest.xml",
+          "sha256": "7a86aa8f9f3ffe7b2e6380ce70b61b7bc9acdea3ac54e2337fc56ca1f1aa1206",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ConcreteDesignDifferentialTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ConcreteDesignDifferentialTest.xml",
+          "sha256": "befc144d605fe5bafec264b818eedb92a13c3dc08e25e4e080345b78ad9b69af",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ConcreteStarDeliveryTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ConcreteStarDeliveryTest.xml",
+          "sha256": "950320e049a9917d7f0bc834ae7666c604d3bafd84e2362d346654364d4ec1e1",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ConditionalPublicationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ConditionalPublicationTest.xml",
+          "sha256": "4b20f03ab7a56ea0a31808e9de402d95816ac6196e0d41d543f409338f5dabd0",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ConjunctionStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ConjunctionStoreTest.xml",
+          "sha256": "9df8247b900ae17f271e75b6c6a95bb358f70fe236bb981285e394724f47f6f1",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ControlDemandTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ControlDemandTest.xml",
+          "sha256": "a6da12e6a0b2c4efaa0b771e0334cffe939f99b69518e6805bd00f731429d75a",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CorrelatedConcreteApTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CorrelatedConcreteApTest.xml",
+          "sha256": "b0cb07e1a224f5a6cb2e56f19abe3bc65ec22ba8631bef1ba874bae2e862ba73",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CorrelatedConcreteEngineTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CorrelatedConcreteEngineTest.xml",
+          "sha256": "2b2a119c5b2257b96ce3ab17789e230738e5f8abe839fa5971564f45836c8f82",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CumulativeSubscriptionEquivalenceTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CumulativeSubscriptionEquivalenceTest.xml",
+          "sha256": "61b4278161b633fdb423101f109696f11d82e72a3be8f3d32980eb29435f2a27",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CurrentModeActionsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CurrentModeActionsTest.xml",
+          "sha256": "e91ea2fde3fa3fcb20493b54391c8505d997f81870d94f06b752809ee6461596",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CurrentModeIterationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CurrentModeIterationTest.xml",
+          "sha256": "ddb49a13494d1b27dc09c400f8622bad475e130023f36e8d178e8e0ba1154e91",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CurrentSequenceTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CurrentSequenceTest.xml",
+          "sha256": "8deccf1dfaa69cba9b3d6899f27cbcb3f3af99fa6d32ad376b2a3d16d0a46097",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.CutPointTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.CutPointTest.xml",
+          "sha256": "087bcf508526b0ef4194d2f73121e2ea12d0913cd0b4c687b346b87e6c3d5a9b",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DeltaWorklistTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DeltaWorklistTest.xml",
+          "sha256": "4e7c3c5cad67b966012cee6bbfd114830b6394018ee594be595c46ab2d879af8",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DemandCandidateWorkloadTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DemandCandidateWorkloadTest.xml",
+          "sha256": "3ec47a79fef4c875b21b41806b1d78d55a2ca45a3c218b35c4adbd081810a2b9",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DemandLinkTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DemandLinkTest.xml",
+          "sha256": "bdf9cb05ce0c18f39ebda475517c68e4453c2b44d8c4e0d9c8fde42416352202",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DemandRelativeRestrictionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DemandRelativeRestrictionTest.xml",
+          "sha256": "7705c86eefe756449f77e2587b876cdbb47eb49ebbf93809c13fdb7f6924f4a8",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DemandRelativeWorkloadControlsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DemandRelativeWorkloadControlsTest.xml",
+          "sha256": "8da60ccf63f9011161c849369297fbaa1b0e785cb1eb9423dad0e325c0613c6d",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DemandSelectionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DemandSelectionTest.xml",
+          "sha256": "87f274396d996251d1060a8d6327c2bb380c9a7f6f2000e5f9ea23d009958836",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DemandStorageDifferentialTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DemandStorageDifferentialTest.xml",
+          "sha256": "25ae63a3a0e88b473b04405f68d5f6421d87fc582637b6346d13220980b06acb",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DemandStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DemandStoreTest.xml",
+          "sha256": "0c39190236f8fd83d2774199ed8ffe73110d9d6def4b1eac3fc91fee350fde72",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DenotationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DenotationTest.xml",
+          "sha256": "9aec3364822a09c1685428399113a169da2297d103489dd7e9609fdd7ceda3a6",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DiagonalDeltaTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DiagonalDeltaTest.xml",
+          "sha256": "1eda107fcc78a583d0c0fcb54f901f57882442542f4cc17d628b0e111f0e11a8",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DiagonalRelationsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DiagonalRelationsTest.xml",
+          "sha256": "c88894ce890785d1d44d07b40dc9b116c249e70df764c6284787f943fbf4fa83",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DiagonalTypedAdmissionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DiagonalTypedAdmissionTest.xml",
+          "sha256": "faee32991847e19d1c5923e16ebf6707cf0930d5dc7a2141701b43a2e9518c31",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DirectBarrierSummaryTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DirectBarrierSummaryTest.xml",
+          "sha256": "20bff0a46e6d5ebda784ca10fab92b185b5a0e9208fcb92559352e71b14da10e",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DirectStaticServiceTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DirectStaticServiceTest.xml",
+          "sha256": "bb1d917cde5f44732eb6d0f2931b86c0977e663786fbe728ca291b9d510ba7db",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DriverIntegrationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DriverIntegrationTest.xml",
+          "sha256": "53e4ca5869ba3b130e9c9d3eb84dcb8a2b18ca613004b6348aaeda0874159ffe",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.DriverTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.DriverTest.xml",
+          "sha256": "52565b287aa8246b33eb04197949f981be8223828698fa7824750240a4c5cae1",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.EarlierConfirmationStopTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.EarlierConfirmationStopTest.xml",
+          "sha256": "82d61fd7c5671f0f089e688297f4b0c543870df2469ee8df686570ea0e190fb2",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.EdgeTreeEquivalenceTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.EdgeTreeEquivalenceTest.xml",
+          "sha256": "9db462779070ddbef4c9a3851f3f93d76abb6343fb1d2b6b0f736457e775e7c2",
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.EmissionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.EmissionTest.xml",
+          "sha256": "c0abd58359075ae82faba77de66483c5a0510e0d0b261b18e9856dd18ec03b00",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.EmptyStaticSummaryFallbackTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.EmptyStaticSummaryFallbackTest.xml",
+          "sha256": "a6313831747190a62b9d67b4023a0f2ef4482bae0df200fc7bd11261f50010ba",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.EndFactTriggerTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.EndFactTriggerTest.xml",
+          "sha256": "aa93f7d784875bd1ac40c216b22d3dd68f40c599eccd24e4e4b217fe95ef50d5",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.EngineAlgebraTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.EngineAlgebraTest.xml",
+          "sha256": "2f833ff932e19c7a0e74c6fe1f06b4139da62a18f885183452d64953e2a660ee",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.EventQueueTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.EventQueueTest.xml",
+          "sha256": "d0e450743d5694daafee0e74493678730bf5855397f57f7ef267f953e4837828",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ExactDemandMaySourcePermissionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ExactDemandMaySourcePermissionTest.xml",
+          "sha256": "f49998ee85b0febbfdfd1ba375d06854c2992b8d8ad78d973077316cc3ca3723",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ExitRulesTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ExitRulesTest.xml",
+          "sha256": "fa0d459f82d4591f7670c3b8a1244b544d3e46feaf6b9418b80118421577fb5d",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FactKindsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FactKindsTest.xml",
+          "sha256": "aa5d9c0ad1485fd244bb6fcaf5117df77a65e9c44890bb2cad6ac1d544bdbabf",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FactShapeTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FactShapeTest.xml",
+          "sha256": "7c8448631febfdc28f1c0d1954af3f65db55c1dc3238a50e441cd89b3981a548",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FactValuesTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FactValuesTest.xml",
+          "sha256": "8d8fdff499283f0cc97b603a457168f50749a71da9a4b8d41f4abe4d08651d3f",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FactoredRequestPipelineTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FactoredRequestPipelineTest.xml",
+          "sha256": "10ddcb24eb537fba1a82edfc84de0d278e266ac05c14a1bfe02ebaaf33dc8331",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FieldCleanStepTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FieldCleanStepTest.xml",
+          "sha256": "13bbb29645de292f5b317f345a1f665fcf155fe66f45ebc03f08aa5d5b73f0f3",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FieldLimitScheduleAdmissionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FieldLimitScheduleAdmissionTest.xml",
+          "sha256": "d368665c6c51ec283ef23269da64bdcc40203d4a5b85233cf3ec8dce2744946e",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FieldLimitScheduleTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FieldLimitScheduleTest.xml",
+          "sha256": "0de80ba4667ee5646f21bceb63247468c93e9eecb9053fe640ed6fd741f3d523",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FieldLimitTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FieldLimitTest.xml",
+          "sha256": "1b7a2ef2537c5ec0edb97c3f303077759570f88056e3c7dde2db51906f385840",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FlowBackedCoverageTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FlowBackedCoverageTest.xml",
+          "sha256": "0e26260357c22c8569feb9a7d2fe84d02db81b414adc15a4dd98f667c7c23a12",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FlowBackedEngineTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FlowBackedEngineTest.xml",
+          "sha256": "99010926ea76836b9e34894ba82a8491222bfcaf5aafda92a4948b0f6240c32f",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FlowBackedOwnersTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FlowBackedOwnersTest.xml",
+          "sha256": "aa2333d6340720f61f1ad036e1f80c69d3e4aedf90ad3207deb75d8b9111acec",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FlowBackedProtectionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FlowBackedProtectionTest.xml",
+          "sha256": "f344ab193a89152a590b8aefbe7c473bf01623ead5ce38ef14c395b4cd3def80",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FlowBackedSameBaseTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FlowBackedSameBaseTest.xml",
+          "sha256": "cbfa09bdb3f85a4312b14a3b7d78dcefdbc32f69520db0126a991767beab5d0f",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FlowBackedSummaryStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FlowBackedSummaryStoreTest.xml",
+          "sha256": "a3f334366a3dc106455d2d746cf66510ddc1fba2836995efd7a35dd5a10ed4a5",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FlowSummaryNormalizationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FlowSummaryNormalizationTest.xml",
+          "sha256": "b261a3e2141e1f64688d91d6de207b92936069d243063d358bf52405eeb194ef",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FormApplierTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FormApplierTest.xml",
+          "sha256": "1ea187dd307260283ba1ad0a68be5ae61d24ecbefbbdd0ccbe6586e8ddeda5e4",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FormIndexTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FormIndexTest.xml",
+          "sha256": "21e34fb02e6d8e326042f95e63167e89aa56c4dcecbe61e7edaba94c04a23dea",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FormStorageStatisticsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FormStorageStatisticsTest.xml",
+          "sha256": "a90f219df89fd1c54d4b2e56317a8bad7d000144db3ec060d6d6a92c98856dd0",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FormsCacheTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FormsCacheTest.xml",
+          "sha256": "8938451ce2146abbdac495f2029324e1d9770a72922db9a19b4d001f0104bf46",
+          "tests": 24,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FormsReferenceTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FormsReferenceTest.xml",
+          "sha256": "f4dcaf00984e52345a2330404fa1717904822e75a288f447212ea74aabb04614",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FormsSinkTriggerTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FormsSinkTriggerTest.xml",
+          "sha256": "6cc622a47d81a32f6671ba828a4c43e0e387145a3c346fa60379c1821a7f36ea",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FrontierPropertyTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FrontierPropertyTest.xml",
+          "sha256": "b1e7f499e80db762ffa8aa7329483ead54deac49b98343797f3540259cd6f355",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FrontierSeedIndexTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FrontierSeedIndexTest.xml",
+          "sha256": "bd1d5b92e0927c62aa9ffa3b27560568f15e2cc5644448a7c9bca3203ce214ec",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FrozenOwnerVisibilityTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FrozenOwnerVisibilityTest.xml",
+          "sha256": "c234979870aa212c41d43164b8a54416c4b027af2ca9c80be63cf52d554463ff",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FrozenRequestMarksTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FrozenRequestMarksTest.xml",
+          "sha256": "5d8d83e67969da55c8ea8797d79901161f87b827e5252ff906b83072733f9246",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FrozenStaticCompletionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FrozenStaticCompletionTest.xml",
+          "sha256": "c30767962e7ff6079537f81c5e6fdeffac6149e54e6798d447f32be87d9b8d6f",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FrozenStaticRequestsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FrozenStaticRequestsTest.xml",
+          "sha256": "0960face82db48869da01266c1f3bcdd711b6514848de616930590de20c9822b",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FullCleanupPendingAttemptsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FullCleanupPendingAttemptsTest.xml",
+          "sha256": "ccee8018f53ac1e988aa2738fa89fe2a9b8250c52758fd3e39b6f19c78704f3a",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FullConditionalSourceDemandTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FullConditionalSourceDemandTest.xml",
+          "sha256": "d8b66766a7b7043b45165921890007e348b8e441c1dc36d4e74432fb4f5d6839",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.FullWorkBatchingHandoffTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.FullWorkBatchingHandoffTest.xml",
+          "sha256": "9012b70836d5c3dc8e5987a03e03f520677707a1e23a9fa63cb8d0d324945f7c",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.GeneralFlowCoverageTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.GeneralFlowCoverageTest.xml",
+          "sha256": "df1d3bed6f53b5927e5dab6381e0e2cb27dc66724efb3b210987e1af3a87710e",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.GeneratedCurrentProgramTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.GeneratedCurrentProgramTest.xml",
+          "sha256": "60910a342c3791e71801b701d4341030fec0e915e85bb90da20cdd7e9bd0c7c7",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.GenericExclusionRequestTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.GenericExclusionRequestTest.xml",
+          "sha256": "a6ead068b6f77e28e08f30365578922e5a26faa93b4f17ed018ea19c8b848513",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.GroupMergeTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.GroupMergeTest.xml",
+          "sha256": "ca836a063e71b79a5d9eee78a88dac2ce795cc916bc77cc83a659a3af783610e",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.GroupNormalizationReferenceTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.GroupNormalizationReferenceTest.xml",
+          "sha256": "594eb2722ecfa719918f503fc26671c7b766de1080c6fc212abd3a93781012af",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.GroupPredicateWorkInvestigationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.GroupPredicateWorkInvestigationTest.xml",
+          "sha256": "022470065625e882ef740e13db751e4d74032a0b9a2d6b9e8e92c32facec27f0",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.GroupedDirectStaticsEngineTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.GroupedDirectStaticsEngineTest.xml",
+          "sha256": "94fdf2595cb17cc8c00d83f91a1e7dba02d68327fd7040ab5812a72946aef0ae",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.GroupedMarkViewsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.GroupedMarkViewsTest.xml",
+          "sha256": "b234d512d6335f3e94b9278e522c925420f69d94c27422e861fd58413efcacd3",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.GroupedRequestActionReferenceTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.GroupedRequestActionReferenceTest.xml",
+          "sha256": "2c9412f805111542ec02a7fafe74ddd1c13d8b9797c4d3d40bd23be0cef6efbc",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.GroupedRunScheduleTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.GroupedRunScheduleTest.xml",
+          "sha256": "2b3cdedd2200f93c20623b605313f47da2f2b5e1f556cc661c28e471734cd0fc",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.GroupedScalarReferenceTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.GroupedScalarReferenceTest.xml",
+          "sha256": "1845e24ffd709a5d1eb87c069c7a2bb5f2c233313d04956e53558d79adb2b793",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.GroupedSourceTransferTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.GroupedSourceTransferTest.xml",
+          "sha256": "b0b15149695c3a1971f74d4d2b72216350f6db794a64d5bedc3d29dfde39c1f8",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.GroupedStaticPipelineTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.GroupedStaticPipelineTest.xml",
+          "sha256": "50acd7d7f0ad9132c4e8b0ed8cb65fee78ddb19be4ed13751f8873417a4be538",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.HandOffRegressionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.HandOffRegressionTest.xml",
+          "sha256": "dea383ee2cd2fe63b74053774b019306d7193e68bb6864b30e966a30e97b2b13",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.HandOffTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.HandOffTest.xml",
+          "sha256": "2cc5846724603459c4f80c180cf4fabf94d77f9734dd198b3016555a55bbe22f",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.HistoricalFixedResidualTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.HistoricalFixedResidualTest.xml",
+          "sha256": "3e4c0f429c97acd4e2aab79267e8f5dfe0ad12b0aff17ceb4b519131519cd103",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.HistoricalMustProgramTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.HistoricalMustProgramTest.xml",
+          "sha256": "edd347c8508a20e5513db895c1315bcf55f0a37999213ff7f421835104bdc6dc",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.HistoricalPredicateDomainTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.HistoricalPredicateDomainTest.xml",
+          "sha256": "088912f9773cb1c6883f9cf6f60a641e41a73064ef4308f2fe051814715ac0ae",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.HistoricalVersionDomainTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.HistoricalVersionDomainTest.xml",
+          "sha256": "da135211eb9cca30964737d7f1b3ceb1011a2d4ad7f1a64c816890e4966dab34",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ImmutableGroupFastPathsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ImmutableGroupFastPathsTest.xml",
+          "sha256": "d85d94b41b696c380c8673c680064f19f49e57eb6566092a9871a087dbc75330",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ImmutableMarkTableTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ImmutableMarkTableTest.xml",
+          "sha256": "81c7c2bad8760582d7398cfc8bb8cd0b26bd3adb5003ab2f5c3e8b6805c66ba2",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ImplicitStaticGroupDemandTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ImplicitStaticGroupDemandTest.xml",
+          "sha256": "b32ea030c27eb4948562fd34748534b801b50db613d2b5b2572624ae202f8339",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.InFlightTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.InFlightTest.xml",
+          "sha256": "611d9d34e4bc34699a6d5bb1725195b383b0b3c05481b4187fa28c1646ad0583",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.IndexCompletenessTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.IndexCompletenessTest.xml",
+          "sha256": "a154e0347b7b594c85373b01767fddd410e05dd4d3689bb890283a12da6127b7",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.InitialEmissionContractTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.InitialEmissionContractTest.xml",
+          "sha256": "c53358423bcfac88faa1c59be9a37cc7425226596d256da93951e06752b02164",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.InitialFactStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.InitialFactStoreTest.xml",
+          "sha256": "6515b006a81cab774b6249de6a29fca0f538daf1cb479e51c0dade88bfdc47ea",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.InitialLayerDeliveryTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.InitialLayerDeliveryTest.xml",
+          "sha256": "c5592af2205e80247b9f50a37c84cf3427c898949d2d806797251924c9957348",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.InternalBaseBoundaryTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.InternalBaseBoundaryTest.xml",
+          "sha256": "2e958685291876d82c8010b94e5a4403d23aa13e0c1bcd291fd146d64dad2b1b",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.InternerTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.InternerTest.xml",
+          "sha256": "b7a9585a9fa4b6013aa6ad11738cae643a944762f2287fa817767384add6cfd5",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.JoinedStaticWriterBindingTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.JoinedStaticWriterBindingTest.xml",
+          "sha256": "9b5f0a23cf84c71244f52f16389f44af012fb08f94c65a852b8fd66ce70cddee",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.KaryJoinTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.KaryJoinTest.xml",
+          "sha256": "00391eabfb4cc1216ac69feda1d3e03b06beec62fe4740a991dfa3a54690ce2a",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.KilledStaticExitCaptureTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.KilledStaticExitCaptureTest.xml",
+          "sha256": "5c1acdf819bc9a94e8cde46343c4c2e6dd17bde2ee65ca6755c2e2c1bb4c5467",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.KilledStaticWriteStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.KilledStaticWriteStoreTest.xml",
+          "sha256": "93f0651f76be8447c2fa185fdf3be0a711482c704f7611fb239b3ce118f584d5",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.KindFactoryTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.KindFactoryTest.xml",
+          "sha256": "40d33a8beb3111a541d9cc8eef3253e5ff5962389abd39df12ecf2d73e045a96",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LayerRulesTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LayerRulesTest.xml",
+          "sha256": "6b6db994e8792fb4b8940c50a8b8401d28a02e107b5c1901af03d40f54d6e885",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LiteralInitialImageTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LiteralInitialImageTest.xml",
+          "sha256": "7189a712ef251a26502c18d58d9ad11c9697d6e6eebf111d15b1c4a92161cb51",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LocalConjunctionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LocalConjunctionTest.xml",
+          "sha256": "04011daf1088448b289b7a4d87e896c73c13b78295d7dbbf45b9021f7ea9276f",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LocalRelationApplicationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LocalRelationApplicationTest.xml",
+          "sha256": "38442aaecb0dafc7406863cd2a064f58e2a89bff9a676c0bd2fc72664494202d",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LocalStaticInputRequestsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LocalStaticInputRequestsTest.xml",
+          "sha256": "43ce24ebf1000f9801581353ac3cc89e3b1682ab001e5fa231490ac7c33f3408",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LocalStaticWriteSupplyTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LocalStaticWriteSupplyTest.xml",
+          "sha256": "317ecd6006c4c23da95be0242f2bbd71e8fc3a22f418f20532437cef35edde56",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockBoundaryLimitTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockBoundaryLimitTest.xml",
+          "sha256": "2bfc558113d36eeed381709d8c7ae33682378a72a1421f3b782748c555d17b72",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockBoundaryNdScopeTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockBoundaryNdScopeTest.xml",
+          "sha256": "c83e410ec9f37c69fa8300dc6bebfd216d408969bb6ac096761522e17340f032",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockBreakFindingTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockBreakFindingTest.xml",
+          "sha256": "d3207f55725b0b02bf78c0036bd6517024b2937bfde304fd4b58972b53073a90",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockCallSuffixWorkTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockCallSuffixWorkTest.xml",
+          "sha256": "3a6b5bc22355cb1859b7e13a822a48a68b3a4eeaf70bf511a9a1a44ed086a814",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockCallsAndEntriesTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockCallsAndEntriesTest.xml",
+          "sha256": "f7be21c10584c8381312cb155ea6108029888fa23b285bf8f9b17e9b674c42f7",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockCurrentOfferWorkTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockCurrentOfferWorkTest.xml",
+          "sha256": "fe44044bb0e3f1b498fc62d126bfd1e46eeef137cd161ba5cf86894b7834a3c9",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockCyclicEntryTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockCyclicEntryTest.xml",
+          "sha256": "0653727a2abddcb68e1ad22944f1b8cf96cc0e15f5bb2b530e861cf56da95b4f",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockDeepNoLeaveTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockDeepNoLeaveTest.xml",
+          "sha256": "1aebbfd62d3cccd962308f7252435d1b8ff7c98b3459b15872a2b945731ca1e0",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockEmptyReverseJoinTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockEmptyReverseJoinTest.xml",
+          "sha256": "4f22011d5d7134b2850bd0ed66d55739e58a534f5540d58a6cd6fe068ca7cb02",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockExitBoundaryFindingTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockExitBoundaryFindingTest.xml",
+          "sha256": "d889842fd0f35be59dade8ff17aaa7ca77aa511c207db541221943a45272db21",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockExternalHeaderTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockExternalHeaderTest.xml",
+          "sha256": "6fdb88f0a72258dab9f8b7d4b809b096c12d125aa711b34ac9889cb728852ee5",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockLifecycleTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockLifecycleTest.xml",
+          "sha256": "9e59f25a63e197876ef7902434944caa86dcb11a341120e61be51204090879ef",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockNearestStaticTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockNearestStaticTest.xml",
+          "sha256": "f88aa1c1e949c066ee023b4a5ec0714c4f0163fdb0dd26a8c9b70e21c29b8514",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockNoLeaveTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockNoLeaveTest.xml",
+          "sha256": "7a1369f9cfc38de9625bb3f12c11774e7762f725d6f75df54b038df6621e18ce",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockNormalFlowTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockNormalFlowTest.xml",
+          "sha256": "5640a334ee9fe31c003165f3ca35506e792af7908421acf2228ef5d0d321115f",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockSavedIdentityTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockSavedIdentityTest.xml",
+          "sha256": "8fbfe9a3a9a5b1fdaaadb261e58754ff520a1e3113aca92f1c2cbdc55f600b34",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockSavedShrinkTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockSavedShrinkTest.xml",
+          "sha256": "ba2f785a1d1f9522518bfa958c75d47a94ed8768fc5e45a5e4fda6b0b6b55ebc",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockSavedTargetWorkTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockSavedTargetWorkTest.xml",
+          "sha256": "e041168b8ee192997d78717c843868eabed3ebed8945c57b12e584b0fc250cc4",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockStaticExitRulesOnceTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockStaticExitRulesOnceTest.xml",
+          "sha256": "13a562815231ed994518b163167242780b2c59b98bb46cbb5ca216f5c9f9177b",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockStaticExitSourceTransitionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockStaticExitSourceTransitionTest.xml",
+          "sha256": "6e0e68aa72b77566710ddcfe20dbacfaf2588d0e4c9b8107bb7e06fe922e3445",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockStaticReplyWorkTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockStaticReplyWorkTest.xml",
+          "sha256": "9a0972633b8848de1d7a6dfeca82b6080b4f65e9dfd1b8df0e1766e245f5288d",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlockTrustBoundaryFindingTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlockTrustBoundaryFindingTest.xml",
+          "sha256": "27cb5b2523afc8a8511ed167eaac6a6235a21d28380354dbe2c78f2448ece572",
+          "tests": 4,
+          "failures": 1,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopBlocksIntegrationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopBlocksIntegrationTest.xml",
+          "sha256": "f41abfd818e6c6f1a9484df4b414fb9f3182eb248796fea5112108683e36fab6",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopConsumerObservationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopConsumerObservationTest.xml",
+          "sha256": "34ca52dcc7f3d8792a60a057e3047c430db57a3d2f9259c749b68c62c75a5ca4",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.LoopOutputRestrictionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.LoopOutputRestrictionTest.xml",
+          "sha256": "f76fdb593776f05c4aec465259b86a8960dd41264d28d48ed685c7b97b22965c",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ManagerOwnershipTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ManagerOwnershipTest.xml",
+          "sha256": "034d16ed5f97c8c0f143a3eea0ad9ec2faf2d9f01dce1dfddb69b3a7c8a5fe0b",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.MarkCheckTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.MarkCheckTest.xml",
+          "sha256": "7295aa9c8c32bf43bbeee947105e01712483951591175fb2b3c02924682d4ab2",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.MarkExclusionsFastPathTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.MarkExclusionsFastPathTest.xml",
+          "sha256": "148a6d52d18cb290cd8ea745bb79f4e8aeefcd1b0b01ad2a6f23140243d2b1ce",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.MarkGateTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.MarkGateTest.xml",
+          "sha256": "ea6818692ce00eb2345209a1cfb1f10f4ec1d944fd3e9095512cb4422f558516",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.MarkQuestionKeyTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.MarkQuestionKeyTest.xml",
+          "sha256": "24c578630663cf16ff2b95b000aa6a132a339470d0627513566fbfd1bcdd57e5",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.MarkQuestionProtocolTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.MarkQuestionProtocolTest.xml",
+          "sha256": "79c49c77b59905eae6cb518929d17b7676dd027d5289cadf24012f416f2721e0",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.MethodContextCacheTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.MethodContextCacheTest.xml",
+          "sha256": "3a7d25490753f455ee781cd275fb4c49fac357d876bec5e7a401337706507cb1",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.MethodEdgeAdmissionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.MethodEdgeAdmissionTest.xml",
+          "sha256": "e81c62d197baf91bb396a12b10fda33a7597642d64f887a32cfb523b472e01d1",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.MethodEdgeStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.MethodEdgeStoreTest.xml",
+          "sha256": "f5f376fff594314ff456a5b472e8586905ae83420538daa48d47fa45915f3efb",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.MethodExitMetadataTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.MethodExitMetadataTest.xml",
+          "sha256": "d9b4519a581a9ca08c4dc73c9216cc2121abb3b7d6070180a00db27ccf59b2a9",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.MethodFixtureStaticProfileTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.MethodFixtureStaticProfileTest.xml",
+          "sha256": "ae394a9575f950fed8995a6c69cef41dfdc7e89c779e31287346f8bfe0378c11",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.MethodIdentityStorageTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.MethodIdentityStorageTest.xml",
+          "sha256": "7c873ccea2151de3ad351d765acafb01d640b46deac622947523fb83ff9b5102",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.MethodLocalServicesTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.MethodLocalServicesTest.xml",
+          "sha256": "c1f082b979f075afa45f33ddef885f649d8f9336417b44ea86618f1585168bff",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.MethodServicesTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.MethodServicesTest.xml",
+          "sha256": "1bad6cf6e906fd4943c2795f178808fe8a70edeac36ead3ddd648fc8f6f5423c",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.MethodWorkTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.MethodWorkTest.xml",
+          "sha256": "55d3aeb3d558866f22ea985b44eb111b14a948b6ecab8f1e462d247df8d786ae",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.MicroEdgeBuilderTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.MicroEdgeBuilderTest.xml",
+          "sha256": "2b1cd9f5d9023c7157183544f6b4588f2c746c8f3fdebdcedc1ad68b866fe07e",
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ModesTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ModesTest.xml",
+          "sha256": "9ab1b90f793f4b660d210ae206b1d03456c1265bae4abdac1b75214520dc70ac",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.N2AdmissionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.N2AdmissionTest.xml",
+          "sha256": "df13424d082247281d6102c18ffea4a22e8c5625368f5a3f9a26a4174db5e554",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.N2StatisticsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.N2StatisticsTest.xml",
+          "sha256": "5948a19b8326758002d00d0a8b812d7c0d2d8f666b9a9dfa2e8b213273840915",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.NaiveClosureFanoutTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.NaiveClosureFanoutTest.xml",
+          "sha256": "cc485fabad04a48ca73b676be1857e2e50cb85360eb03e980c3a6399826114e1",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.NaiveClosureTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.NaiveClosureTest.xml",
+          "sha256": "95fc5c6a59181249e18a7a02ae0bce4e74a20696a5e73abb9fabcb2175ee6bd0",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.NdJoinAdapterTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.NdJoinAdapterTest.xml",
+          "sha256": "3fc2b67fef9cbde18d8d4aaa4f28e466573e5d854b02874a431348250c70bc3b",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.NeutralBatchEngineTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.NeutralBatchEngineTest.xml",
+          "sha256": "652e900a04a6f9e3ab53414bd134823eb6ee980991983e4b6d46f0d09cbdd1e5",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.NeutralBatchWorklistTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.NeutralBatchWorklistTest.xml",
+          "sha256": "76eb3dc5606362a1065fabff071b4dd530397c0b923f991111b999dd6b01e27f",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.NeutralRelationBatchTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.NeutralRelationBatchTest.xml",
+          "sha256": "140e42e9fe95cc4bf1f07ff2f1c8257c9fb20e3dd84e6bb37e23096333964002",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.NormalizedHandOffTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.NormalizedHandOffTest.xml",
+          "sha256": "cc9b649a07246c605b5c334401f162ff94dca4500533bc383ed900185fdfbb50",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.OneRunAcceptanceTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.OneRunAcceptanceTest.xml",
+          "sha256": "7d6f380f20f4145d9192984d7b8f2e480b5488b33729557f624f954417a71a84",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.OrdinaryStaticRequestGateTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.OrdinaryStaticRequestGateTest.xml",
+          "sha256": "7464550866f8897bb2802017fb7072d61a643763d5cc0cf5942497cf115bd566",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.OrdinaryStaticWriterTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.OrdinaryStaticWriterTest.xml",
+          "sha256": "379f31680f565bd65d4e1ab66e3569b3654e04ca209351a5622b7c379cf08278",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.OutgoingDemandStopTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.OutgoingDemandStopTest.xml",
+          "sha256": "35c5279712bad35c1941bceaf8b2399a0d8cd2f1207154a888fdd3974123ef3c",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.OwaspDemandCycleTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.OwaspDemandCycleTest.xml",
+          "sha256": "969ce4da73a5a5780be8029a77047072b51752a6b70d5272b968596c8b481f56",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.OwnedJoinedStaticWriterBindingTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.OwnedJoinedStaticWriterBindingTest.xml",
+          "sha256": "ecbec64b5119e72846f7830d8251d58d41c149e3de5db4a7dd805339cf7e42cc",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.PathTrieTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.PathTrieTest.xml",
+          "sha256": "e9f7f7f48785ef52536f9ec2a2fa8f195144801e551e8d99603651a75821d802",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.PathWalkTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.PathWalkTest.xml",
+          "sha256": "cb5989ac0d7c0015d1bb72f236c092723b132eee47191a19906d154a115a76ee",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.PredefinedSummaryTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.PredefinedSummaryTest.xml",
+          "sha256": "c7446e959b1192ac5eb2b78625758622d7613f6643fe83491b3ef7fe97ee38d9",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.PredicateClosureTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.PredicateClosureTest.xml",
+          "sha256": "634cdb11e1c1bd89c8ff6648a04bf5b100f70d755d0d20e5238eeeb10f2d995e",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.PremiseCombinationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.PremiseCombinationTest.xml",
+          "sha256": "ee5cd819b15f95d98bdd8dd152dc5d760febc730b85b531d6bed7dbadf7eb730",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.PremiseTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.PremiseTest.xml",
+          "sha256": "73fb18bf77bad07c184b36f0d26640145b89c5564e8a5f8d5023944bec8c64e5",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.PrimitiveValuesTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.PrimitiveValuesTest.xml",
+          "sha256": "5e7855574c4adb5e3c84c3c2a28a05953a89d4c3a8932f8ffc405ba467a253cf",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ProtectionStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ProtectionStoreTest.xml",
+          "sha256": "629529db1447135cffed64fe63fcf648c4f506765231387aeaa56ba91830fae9",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ProtocolContractsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ProtocolContractsTest.xml",
+          "sha256": "c950584f89a2d0ee8fcefcce24aea35efa601a2910ffab35b74f69343173de97",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RecordDemotionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RecordDemotionTest.xml",
+          "sha256": "bfa5e0a9206bf121a487819aa9b253e006ca9e4034a8ef512ddbfe426fc3d544",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RecordReadViewsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RecordReadViewsTest.xml",
+          "sha256": "3319e60d884d9335f6f3bff7006bbb187caeafa36c0ef86033c5f039c9135beb",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RecordReplayTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RecordReplayTest.xml",
+          "sha256": "14bbe916633aa71e563a0c7354c7ac03ab32a944ca6f92daac8c2b05d0556001",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RecordStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RecordStoreTest.xml",
+          "sha256": "7f4833cc10ad80687131953ca802f0501827bb8b2d0fbcab18f72252a4204b53",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ReferenceOperationsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ReferenceOperationsTest.xml",
+          "sha256": "f10c587cd111c02f9fbad2ebf7db0fef266852bc4834777cac80dec596f69c4c",
+          "tests": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ReferenceRecordViewTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ReferenceRecordViewTest.xml",
+          "sha256": "937c20d77f6d93ec61867fa62e3d76e477a0fd640b0c7b678e18b6d2fe446fca",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ReferenceSelectorsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ReferenceSelectorsTest.xml",
+          "sha256": "da8c930ef33e302cf9faf70d606504a525d978829353098649fc2b1cfed752f2",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ReferenceSourcePredicateTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ReferenceSourcePredicateTest.xml",
+          "sha256": "dc7b0f2f5fe916dda26620ad415d2aff32f3cc0af7ed2228fcc9de7816f4584e",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RelationCensusTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RelationCensusTest.xml",
+          "sha256": "21ff0b95a6201d184592f8c0bd509961a3041be82559ca882a839bd05ed2a68c",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ReportTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ReportTest.xml",
+          "sha256": "830ce6bea5e0fa721b5158cb32c8f793fdc9cf55b8e16c9540033f7cd728f193",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RepresentativeRefinementTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RepresentativeRefinementTest.xml",
+          "sha256": "05dcaa7da3c4f9bf05d710501b11ece145f6d2c06a10bfd1ad977b5835d5fe13",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RequestActionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RequestActionTest.xml",
+          "sha256": "693f2a56880046f2efc6e128c3408b56412bcd80ce8e6e9cb1cd298cd781b2c5",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RequestBarrierJoinTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RequestBarrierJoinTest.xml",
+          "sha256": "5f6859d74b48291130744560d0d790d77ff06e7bdbc753fac31a287a1438fd2a",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RequestBatchCycleTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RequestBatchCycleTest.xml",
+          "sha256": "85049e5ca52dcd9aa8710bf80a04b657000319dc9bf69696cef9fc44e77ad580",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RequestBatchStatisticsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RequestBatchStatisticsTest.xml",
+          "sha256": "71f919b76e1ef21d480c4d2c2bab06b8c815815ac27f58e97c1e6e516e1413b5",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RequestJoinTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RequestJoinTest.xml",
+          "sha256": "3b17a913c2c9df85aacb031b05790dc979afc52304a42ddbdbf4467a572485e7",
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RequestMarkSetTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RequestMarkSetTest.xml",
+          "sha256": "91be7a3f41ab9f1b2eeac8526f8c26cf789a07b4ddf1190e700c53393c1dc4f7",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RequestSetStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RequestSetStoreTest.xml",
+          "sha256": "46150456b6b3ec8d8fe6706134a899c3bc0078431b782854cbb20be2393500d2",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RequestStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RequestStoreTest.xml",
+          "sha256": "d171e728386618628f979db439b44d8b0731b3c82179e4b6b6500c244fc9891a",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RequestWorkBarrierTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RequestWorkBarrierTest.xml",
+          "sha256": "790b99ba478d078d275c4ec55d9b23cfd58211a6b0dc1483b8d8676e9db866fb",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RestrictedDemandBoundaryTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RestrictedDemandBoundaryTest.xml",
+          "sha256": "1372c883b5b29049897ade5686526eb7294adb77777e7a2150cf7e43912ad7b6",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RestrictedDemandPipelineTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RestrictedDemandPipelineTest.xml",
+          "sha256": "6828cac306b35b0216e4ca599ddb0074afafd68be01e0ea1266429ccdb3e3176",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RestrictedDemandProtocolTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RestrictedDemandProtocolTest.xml",
+          "sha256": "c7580d23092aa0cb930b5256b54629d5d0dc1300b86f5211758378a8c87686b4",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RestrictedInitialPolicyTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RestrictedInitialPolicyTest.xml",
+          "sha256": "6bf733c2e9a12d9b96e209a365152ec37af3d4b0deb79aafccfc3aaaab0c8cfe",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RestrictedInitialTransportTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RestrictedInitialTransportTest.xml",
+          "sha256": "68b4fc36eec7fe345a1a95df17a597140217c5465ab8629cd28a91592091ad8c",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RestrictedSubscriptionEligibilityTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RestrictedSubscriptionEligibilityTest.xml",
+          "sha256": "c2a93eee25e64424537889d3564e470792f1c6ca650905d7aa50270a9a4b18ff",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RestrictionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RestrictionTest.xml",
+          "sha256": "51e04a6c02e7948b7b3ba5e94e9a690ce44e2eab35d200dc8528ff7d609c9a94",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ResultsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ResultsTest.xml",
+          "sha256": "fad971f5e379482e017a6b0d02c7947fbcf83d1d6013e049ebd048de2b20d6d7",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ReturnFullCleanupEngineTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ReturnFullCleanupEngineTest.xml",
+          "sha256": "11001e49521bdee9b5c3601a156a148df676b7654deddb4f6e35159554c0fe1b",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ReturnFullCleanupTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ReturnFullCleanupTest.xml",
+          "sha256": "f88b6dd8993813b8709df04df93e44cad33064e4364c175016ebb57a451d1ccb",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ReturnGroupScheduleEngineTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ReturnGroupScheduleEngineTest.xml",
+          "sha256": "f92e4f5b03a2a6cd5adee1e4ad7e48b27965827635c755e844e4eb4ea297c2f4",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ReturnGroupScheduleTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ReturnGroupScheduleTest.xml",
+          "sha256": "15f7f70d8f2fe91250ce41fce02979f3ef4812f8c6b25fa1c3f7c756e255dc9b",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ReturnImageCollapseTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ReturnImageCollapseTest.xml",
+          "sha256": "54c86507d072139160a0db96c8f7813451027c43f4b761265ca0aae455831df3",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ReversalTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ReversalTest.xml",
+          "sha256": "3ee4890eeb0e890bf17eac4299130934bbf82a09ffc697b73bd1db855ef73f8e",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RuleIdentityTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RuleIdentityTest.xml",
+          "sha256": "bfe82b471cb7299ce27b890a9a961751e73f2ac0ca63323093655b6e8d92d0c6",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RulePredicateCompilerTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RulePredicateCompilerTest.xml",
+          "sha256": "997fb79a6165df48c4ccb952b3c0ca4610f6aba905be5f1886a6216b29d514c2",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RulePredicateEngineTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RulePredicateEngineTest.xml",
+          "sha256": "20179944822ad3c62e3fa9a7f0820ae30cf5a5cc692e13525845ce4a6d40b16a",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RulePredicateStatisticsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RulePredicateStatisticsTest.xml",
+          "sha256": "98d4ff222ebfc7fef904cfb970ac9bd99f3d3317fc9a84852f66254e175bc617",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RulePredicateStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RulePredicateStoreTest.xml",
+          "sha256": "93f5bde81f2327da932bb26dc9f81b72597688819ab3a54d925d90518bb40c74",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RuleStatementReversalTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RuleStatementReversalTest.xml",
+          "sha256": "c8a38f4ab21498a7646dfa541d05132c924de896ce9f68dcaf4e5e708ca333f9",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1AbstractionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1AbstractionTest.xml",
+          "sha256": "20a6934aabd0518a5a61131e69d555c2b38fcda9c499efd3c8a7ad4841c11713",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1ConcreteAnswerOracleTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1ConcreteAnswerOracleTest.xml",
+          "sha256": "e1e56072f436879241dd531c83d1726b2c0a032acc48c9a4893894d926337fbb",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1ExactGlobalMarkerTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1ExactGlobalMarkerTest.xml",
+          "sha256": "0d5d654ff730e6f2fc1f02f50aede663971a93f24c56c7eac7b869887d8b82b2",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1ExceptionalResumeTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1ExceptionalResumeTest.xml",
+          "sha256": "b58e2cdbd029935d4601a9b6e80413359699eafdd3f77e096305ecf732a38d48",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1FieldPreservationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1FieldPreservationTest.xml",
+          "sha256": "03942ecfb517d43e23fc54883e5393e5862e6cc6950312f09515035424a4565d",
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1FullLayerPolicyTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1FullLayerPolicyTest.xml",
+          "sha256": "9f1f65b5193abadd0ca1cb44cd4409f00c6827abf9b60a74204ec5fc4873bd5c",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1GroundingTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1GroundingTest.xml",
+          "sha256": "612d0550368ab8f46e768f63fb97b859d551e923324efd182f0d011df7194f8e",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1InitialGrammarTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1InitialGrammarTest.xml",
+          "sha256": "8d184c3158cde3a9c6b286a08916199e3a691d8c4ecfa30d44c48c51d39b9109",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1LoopTerminationInvestigationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1LoopTerminationInvestigationTest.xml",
+          "sha256": "1a3fc72d2f9b994bcd983143892da2ba20a52291475f256657bb080f04f045c3",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1MarkModeTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1MarkModeTest.xml",
+          "sha256": "c6f8b7746d1b8a7186e86a8f65f7804290b5ff9cdf38d9c1668ddd61266b3fdb",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1OperationStaticWriterTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1OperationStaticWriterTest.xml",
+          "sha256": "fad5e5a5a5b450b8bf730b786a4b2a87eafe5a71701b51c80066253953d9156f",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1OperationWriterPipelineTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1OperationWriterPipelineTest.xml",
+          "sha256": "b277906116f34959493828eb9a01a25a71b1e816dcfa42672befaa325b2abd4e",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1OrdinaryStaticDefaultsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1OrdinaryStaticDefaultsTest.xml",
+          "sha256": "1972bbad6c85176c748e975638c64bef17268e29094c13b83a4f0d2c3628ed78",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1OriginConjunctionStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1OriginConjunctionStoreTest.xml",
+          "sha256": "2b174f8ae5a1e417982d5ccec83f72ca5eee853c9bce18861b65343604bd6c74",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1OriginPredicateStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1OriginPredicateStoreTest.xml",
+          "sha256": "78adbbc0872d9dcd1588853dff24b312c02dae6db2b78649b93c81797d8b7d7f",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1OriginProtectionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1OriginProtectionTest.xml",
+          "sha256": "c59ac131d92adc0a3e32d6fb6cefd6247b0ed8a49b125e89763c04e1f1cade14",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1PremiseStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1PremiseStoreTest.xml",
+          "sha256": "f5c2e79c98dec6ac4400b4aa6eb74adf1ce4a6f982584aaf2846c2a84427f2d7",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1RequestMatchingTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1RequestMatchingTest.xml",
+          "sha256": "15b11e607deeced7661cad84b68b5c3861412f8258da58641726d058cbbf3e36",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1RequestPipelineIntegrationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1RequestPipelineIntegrationTest.xml",
+          "sha256": "1f1c21024d4dfd7e871a79b1bf073dd46f5073c5db894d232ff1656fd7e9203c",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1RequestStatisticsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1RequestStatisticsTest.xml",
+          "sha256": "e5045091ab184c2aba95ece6e797d1ee481a364f21a9dd54b10257bfded576ed",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1RequestStorageTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1RequestStorageTest.xml",
+          "sha256": "7a41686f96edf6b9d009c389b185a6e885ad52e65eecad1a8b2a473be5084e0f",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1SinkProjectionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1SinkProjectionTest.xml",
+          "sha256": "9376ba2e8ff59aad136dbcd7fa41b3d026eec5b66acfeb13c25dd37508d52b81",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1StaticAliasEffectTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1StaticAliasEffectTest.xml",
+          "sha256": "ba28b9acbd91608e16827cd1974beb04564a16674cc129889b9ba004f4f5efc2",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1StaticComponentCodecTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1StaticComponentCodecTest.xml",
+          "sha256": "4785e3d5fe324ae80456fd7ab84d2be95c58ed8fd0cc862f6a964dbc38cb970b",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1StaticDriverSafetyTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1StaticDriverSafetyTest.xml",
+          "sha256": "34e5db6572054413e67a822bf5a0de70491046ec3c12b8c334768f6288965cad",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1StaticExitRoutingTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1StaticExitRoutingTest.xml",
+          "sha256": "9b9471b226320b461794c6beda5abffa00430f6d51908f31f6d5d424e97952dd",
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1StaticFieldAblationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1StaticFieldAblationTest.xml",
+          "sha256": "65acc55b543359f77a97923a48157e062754b5a0332e746d573dc21d3daa74ba",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1StaticGroupProtocolRemovalTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1StaticGroupProtocolRemovalTest.xml",
+          "sha256": "79211299c058ef4454ea8669482201333156cb83b80ba35dd5f825c82a7ae1e5",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1StaticProfilesTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1StaticProfilesTest.xml",
+          "sha256": "77bdc7c3a6ab9f88e3c334ee5cecff189999ddfdc45fa96a3710d80551531e2e",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1StaticRoutingTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1StaticRoutingTest.xml",
+          "sha256": "4fc6c62610904bf2bc39c2ccef54ba569f54a2d37ba226078c0773805a8f4c40",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1StaticSummaryErasureTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1StaticSummaryErasureTest.xml",
+          "sha256": "065b2bed2c544e3b663508edba85cbf01320ab1291380cb728a50bf454a068cf",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1StaticSummaryPipelineTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1StaticSummaryPipelineTest.xml",
+          "sha256": "4bb7921e37a61ca4c3ae257f7c5c30266f0cf08be8d71be85b0af52ebe72434b",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1SummaryAliasAdmissionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1SummaryAliasAdmissionTest.xml",
+          "sha256": "1c5a23763ae694b4f6fb651b88b65e58b18e87bc2bbedb7e6ddc837bb62903f2",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1SummaryAliasPartitionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1SummaryAliasPartitionTest.xml",
+          "sha256": "f5a582ca9664045e5d068280618aa70622d22709e612eb194da572baa4874d40",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.Run1TemporaryStaticSuppliesTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.Run1TemporaryStaticSuppliesTest.xml",
+          "sha256": "df136369b0c7579b59be058356899b1c3365f309364e8cff3d53e1c0c3bc5fee",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RunCleanupTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RunCleanupTest.xml",
+          "sha256": "a570b8fae976e3a9f3d3890c6c27cc175f9054b4515f4fb652e53b909d9a161c",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RunConfigTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RunConfigTest.xml",
+          "sha256": "47eb355a02d7482a6b26444ff78c43f6283cb6f401a663348d824f4cd577f7b7",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RunFailureTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RunFailureTest.xml",
+          "sha256": "d8f2b473eced088de5e6b2325f5fbffecce8532a1a1f761234688477ecdf9235",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RunJoinOverrideTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RunJoinOverrideTest.xml",
+          "sha256": "f1ed011a22bfe2439afe18405a19dfd9964b24681f952c1d5d5064b75e2ba8c6",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RunLifetimeTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RunLifetimeTest.xml",
+          "sha256": "16fb822221f9306bacacffa774c5610815476aadf382497cf0f3f4d9aadfa45d",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RunMethodHandlersTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RunMethodHandlersTest.xml",
+          "sha256": "841f11c359f611f532ba73dfeed70500b19dfdec1526b1fa67b5843a86712e90",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RunSchedulingTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RunSchedulingTest.xml",
+          "sha256": "6fb496cb9ae48549edfa61cb512f921acf8085400fe60361dff4fad2741fb848",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RunShellTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RunShellTest.xml",
+          "sha256": "036058039bbe92540f8a28c383e9ba963c3ec8c66ed7f424030413ab2c41896f",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RunSummaryBorrowTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RunSummaryBorrowTest.xml",
+          "sha256": "ad4745852d8e8aef31eae3f12c0c66458baf6309bfc5546cdb7ed752e3d3d9cb",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RunSummaryStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RunSummaryStoreTest.xml",
+          "sha256": "bc76e710de632fd8f0d42ddf1960f7eed003891846ee1edbd940efd89c8f2675",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.RuntimeDataDomainTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.RuntimeDataDomainTest.xml",
+          "sha256": "578ccabe01744c076f2974919bc7dfa403c2f8c7e24123cd90630b19ad92efe5",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ScheduleFuzzerTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ScheduleFuzzerTest.xml",
+          "sha256": "c069d40721cf1e42764bca1a5b2c172e157a8d380c389a6cc329ba31633f0c5a",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ScopedBlockStorageTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ScopedBlockStorageTest.xml",
+          "sha256": "0caa156cb85e48e0768a4ff64a51285d9cc6d474c352e49d54b2478dfdee12d1",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ScopedStaticCompletionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ScopedStaticCompletionTest.xml",
+          "sha256": "9271a1d7cc82864b1b10e40be2e4edec6e285a85fa9020986390c579f40155a3",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.SeedIndexTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.SeedIndexTest.xml",
+          "sha256": "f60cb3bde7000c04b04ed8df0b6b13d27287e690a8221cdf9b1374a9f04898b9",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.SelectedCallPolicyHelpersTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.SelectedCallPolicyHelpersTest.xml",
+          "sha256": "84ea356587849ef5d25523c6b0f5f704d27062cf8d048224e222f2b0ba426c6c",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.SelectedCallPolicyTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.SelectedCallPolicyTest.xml",
+          "sha256": "619356e000a26b787ffbc620255701acf8154605adecb856d51d4d91916b818c",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.SelectedFullReferenceTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.SelectedFullReferenceTest.xml",
+          "sha256": "50db14c82381af2e6d526caf72217b851b1f193756d302c928e05704fdbd3cf7",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.SelectedReferenceBoundaryTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.SelectedReferenceBoundaryTest.xml",
+          "sha256": "f776335eed779c3dcef050ee108f7fadbc140dce7c97643096496fccd99b61f2",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.SinkEndFactTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.SinkEndFactTest.xml",
+          "sha256": "0f49184bbc64fe867d7c35b3b3a5216072eb769d8f07b272ba8e1d822dc87a95",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.SourceActionIdentityTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.SourceActionIdentityTest.xml",
+          "sha256": "6cb45718fb0276fb3acaa60621344248e5360ead90c3d6eff2920e5d1817eec8",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.SourceHitStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.SourceHitStoreTest.xml",
+          "sha256": "5cc0c88ccc5fe112220901dcd8ecc664837c949c7d15c78426a69eb7079b3566",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StandingJoinTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StandingJoinTest.xml",
+          "sha256": "c06bbbe1b4ac553c485f7c97423eb2cbb3d31304fa7ab45340868e738035929c",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StatementSummaryReversalTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StatementSummaryReversalTest.xml",
+          "sha256": "38823c3ecfb9c5dd20b0cf1c888c465d5a0ec968013f07613a9e7360f13197ff",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticBoundaryInputRequestsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticBoundaryInputRequestsTest.xml",
+          "sha256": "cfad0dce11a2bd5fbf3a32cae00f610874ddcbac8ab7f9ef4d39cec8d1af16d9",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticCatalogClosureTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticCatalogClosureTest.xml",
+          "sha256": "c568527b1153040c66ce8efe916dda58d98ba437550df56e8ddebf6fc25733cc",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticCatalogIterationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticCatalogIterationTest.xml",
+          "sha256": "6795dfd32f5776c534461f068b254a83c74db5dcd225d13fd8a2297d73513866",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticConditionalRequestJoinTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticConditionalRequestJoinTest.xml",
+          "sha256": "7331d672abda28cf65ec13501d317d8024422bc4c6f6b3ae68beeacd3e9dea10",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticDomainDiagnosticTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticDomainDiagnosticTest.xml",
+          "sha256": "68e38a9ba90813a1c1f20330dc69beaffb40558e8cfe21b1f16784a2c04ad191",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticGroupProtocolHandoffTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticGroupProtocolHandoffTest.xml",
+          "sha256": "ae1fbd9335181db188dc48de5b13f0438c5702219b4ebd0fd3029786fcc158e0",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticInputBindingTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticInputBindingTest.xml",
+          "sha256": "e4bb61a6efd79f49e8a3a852437977c8710f517d05336ea1e8894457dcbd791c",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticOwnerEligibilityTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticOwnerEligibilityTest.xml",
+          "sha256": "dd299ae6191730875a972558dcb18a7a6c0152a9edb6fe06f3c1b23da20edba4",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticPointImagePackingTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticPointImagePackingTest.xml",
+          "sha256": "c09d5ce0d8d3d4718f2c3d6fd0207f459da8ccc597a582fe40cacafe816c62bf",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticPointRequestOwnershipTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticPointRequestOwnershipTest.xml",
+          "sha256": "a156d85f7afce436ad28e2553a8d36cfdeccbdfd5599ca4d05cfd9bf79233521",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticProducerGrammarTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticProducerGrammarTest.xml",
+          "sha256": "e97e5185f8b764ea01291847b20623e55b309aa80289357992b79eed290ac903",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticSeedGrammarTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticSeedGrammarTest.xml",
+          "sha256": "ec10fcc54ed172328dea576bf4b63995ddd38d026b9f321e6ebed6bbc917d10c",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticSelectorIndexTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticSelectorIndexTest.xml",
+          "sha256": "0e37df0c749c9b6bb890a5ae7bcc67af7905a614cd312f477864788ca8efde5f",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticSummaryBoundTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticSummaryBoundTest.xml",
+          "sha256": "39a34e22be3d824753dca7b98310d104340d202a8b0e03191224bc3a09ec28c9",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticTargetClosureTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticTargetClosureTest.xml",
+          "sha256": "7d625ff96ebc412a79c98f6dfd1a9317fccdfc7854d3383b8471a490a054a78a",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.StaticTargetRefinementTraceTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.StaticTargetRefinementTraceTest.xml",
+          "sha256": "c08fa5d4cbfcaa356f7f67b69fd3f7dca5190fb1913603b7988d87c1f73344d4",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.SubsumptionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.SubsumptionTest.xml",
+          "sha256": "132d19984faf44f3444768a144577c7cfb3cb4cabcd17f0d4b5c9f7fee8a6ed0",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.SummaryCandidateWorkloadTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.SummaryCandidateWorkloadTest.xml",
+          "sha256": "c3cc542b530495a0e524d96f96062d72652e0c9ec41e4cf9f1b3db620a7da367",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.SummaryKindsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.SummaryKindsTest.xml",
+          "sha256": "71a6c2875ec16f393dde62748569adaf3e77b9e4f5ee88814696d5d0d8a0e56d",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.SummarySelectorTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.SummarySelectorTest.xml",
+          "sha256": "1f218e6ee2ade7e409c56c517d85a63890cc612b149f437599c6ab52c658ef1a",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.SummaryStorageProtocolTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.SummaryStorageProtocolTest.xml",
+          "sha256": "92c440a9691e201f3c3bf129236c238935e2e6dc5e3f2f4c332c735fd8cb9385",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.SupportIntegrationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.SupportIntegrationTest.xml",
+          "sha256": "210e153b46c5e627e79f3be84208e418ac9c12dba0ba9c250ff8c0147cae7476",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.SupportTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.SupportTest.xml",
+          "sha256": "dc6dce6a33526fca4742456ef724d1e58895b8c0ea9c75a2a544bc702491f209",
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.TaintAdmissionProtectionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.TaintAdmissionProtectionTest.xml",
+          "sha256": "4c76839d5bf676f54b015ef52c5c4338264c68e8d2b245ca212ac305dad27ed0",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.TaintGroupKeysTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.TaintGroupKeysTest.xml",
+          "sha256": "cfb62393dc6fd7ac4b67477f3cae73387fb39c7ece06c0b053810178159280d5",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.TargetCallTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.TargetCallTest.xml",
+          "sha256": "3d805227e61730dc1b144a4defd8e2e1ea3af47b486e63091e6014830c8cf691",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.TargetProtocolTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.TargetProtocolTest.xml",
+          "sha256": "091baaf33fbfdead2e4a94f19cd40ecd350dc47e2184cf1fa1cb7db03f224949",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.TemporaryStorageBoundaryTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.TemporaryStorageBoundaryTest.xml",
+          "sha256": "cd1d86d0fc717a0fff8ce195b488241ee194bf9ae6a364d2b4bf813439286dfd",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.ThreeSetStaticRequestsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.ThreeSetStaticRequestsTest.xml",
+          "sha256": "0637a3752629f063a63f3bec16544bfde35382b8e56bc83bb113445ba57753f9",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.TrieMergeDeltaTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.TrieMergeDeltaTest.xml",
+          "sha256": "cbff06eb8734dac86b311c6cac620fb03db89197ba2a6a120b0e0befb60e42a2",
+          "tests": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.TrieTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.TrieTest.xml",
+          "sha256": "d9b05af8051ef9e616f5f29bb577e769f1e7925cd86d93283761d1cf203fd472",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.TypeFilterTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.TypeFilterTest.xml",
+          "sha256": "0724434bc076efb931803b917bfa1369027578d357d4b001441a7fcfd31e8b0d",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.UniversalRootMatchTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.UniversalRootMatchTest.xml",
+          "sha256": "e23add0bab648670d44c946441a72c9982828b647c92f0247ca3cf7dfa8e0884",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.VirtualZeroExitTargetTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.VirtualZeroExitTargetTest.xml",
+          "sha256": "d3f5c22a944b67bbb94c118eb05205b5fde326e7cb4bc62f46f11e45b55a1fad",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.VulnerabilityStoreTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.VulnerabilityStoreTest.xml",
+          "sha256": "1d3b7a1915f98c8553ed3acd50dfbd2f32b42490beb8ff34997bdeef163fb9f3",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.bidi.fixtures.BidiFixtureTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.bidi.fixtures.BidiFixtureTest.xml",
+          "sha256": "ff2e419b80edc87e80c273f1aee16d2829082e726f7e62620eef431bd4d245c8",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.graph.IntGraphSccTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.graph.IntGraphSccTest.xml",
+          "sha256": "cfbea6a90adeb8fa94ebd1932ef0a88eab4f87078d6dba469c33d8474697663a",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.graph.MethodBlockLayoutTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.graph.MethodBlockLayoutTest.xml",
+          "sha256": "a98e906e88cea88ea941a3d7c6d3a799acd12b59716a113d67c4783795b5518a",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.taint.SignedConditionNormalizerTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.taint.SignedConditionNormalizerTest.xml",
+          "sha256": "3adc2cfe6c42dda0fd130910d45f1f77a1292e581873775e41e23d4ed6ea539d",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.util.SoftReferenceManagerLifecycleTest",
+          "file": "core/opentaint-dataflow-core/opentaint-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.util.SoftReferenceManagerLifecycleTest.xml",
+          "sha256": "4d02b075a8504863996e0c57846a8e6f3157f744d51e54ab782196b5e7cd41e1",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "tests": 2377,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "previousAcceptedClassesAndCountsAllPass": true,
+      "previousAcceptedTestCount": 2372
+    },
+    "jvm": {
+      "classes": [
+        {
+          "name": "org.opentaint.dataflow.jvm.ap.ifds.alias.AliasSampleTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.ap.ifds.alias.AliasSampleTest.xml",
+          "sha256": "1331bdcd0cd8bb69e32cdbecfbc9395c6d6da808a832bc2fff5191b55fc738f3",
+          "tests": 32,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.ap.ifds.alias.DSUAliasAnalysisInvalidateOuterHeapAliasesTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.ap.ifds.alias.DSUAliasAnalysisInvalidateOuterHeapAliasesTest.xml",
+          "sha256": "8c42d0e5d6e8b4f87198f1cf8ba96127602b30a772a9a22fa2649a4c4ab0713b",
+          "tests": 27,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.ap.ifds.alias.DSUAliasAnalysisStateTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.ap.ifds.alias.DSUAliasAnalysisStateTest.xml",
+          "sha256": "68caa0f1778107c245deefcf1f156ada1a8cf4b9c38bd38c156bbb1e65a171ec",
+          "tests": 40,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRStatementSummaryTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRStatementSummaryTest.xml",
+          "sha256": "d39046ea0a601127cf70e868d9cbf3e1bff5d29d81912ba1dd2a2c1f09e13df0",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.CatalogResolverOrderTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.CatalogResolverOrderTest.xml",
+          "sha256": "2ce7e67861ffdcb43ab544bf3560efd911321a70503e1303dc7c27675f24acae",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.EffectiveBidiRulesProviderTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.EffectiveBidiRulesProviderTest.xml",
+          "sha256": "77cc31c0c118f54b53326a0069afb08ce21a013d438abf757162501a308b3971",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.GroupRuleViewsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.GroupRuleViewsTest.xml",
+          "sha256": "2e6008e3d0f97f00bfcf1482cb990945b2892389d98e8ef2622d06b64d1e582f",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRBaseRelevanceTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRBaseRelevanceTest.xml",
+          "sha256": "947294a439631dc13eac5fdbbcb9edc8b9531c31a5782f235046d75e4a347bd9",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRBidiOutputTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRBidiOutputTest.xml",
+          "sha256": "e8c9cba400ef13dc1ee2c15158e0c9204ccda87865f1418698416d9e5264ab13",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRBidiRealEntryTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRBidiRealEntryTest.xml",
+          "sha256": "4f276199eb4af36bd415ed34d71ddc94579c7208ac83d73c6a443e989e15985d",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRBidiSetupBudgetTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRBidiSetupBudgetTest.xml",
+          "sha256": "b93ae4cc62d75b991dc7063d4159f2c9d3a3787393a196781e0a9c8d8c91b253",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRBoundaryFormsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRBoundaryFormsTest.xml",
+          "sha256": "f262c6d1ec2ec55e0b0d99ab33d974414ebb99ef42113dc1b89e1a7a049cc143",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRCachedPassMethodTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRCachedPassMethodTest.xml",
+          "sha256": "82c74f0adc416507b41576e049af3a237c7cba08087173daed935c776f48f5fd",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRCallAdaptersTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRCallAdaptersTest.xml",
+          "sha256": "ce3e92bc5280ff41fb67791c2c58dc99fc2ba1fa97f3b2f49e8c50b2f14571bc",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRCallPlanTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRCallPlanTest.xml",
+          "sha256": "41874b4532773d549db59230dc1c9add71041eb4b1aeb9443f3dc9bc205f973d",
+          "tests": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRCallTransferTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRCallTransferTest.xml",
+          "sha256": "0e55b9a88faebbb1bd6ffc4a3ab270cf421167de4faac9637b1bd828a9476e60",
+          "tests": 25,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRCleanerMappingTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRCleanerMappingTest.xml",
+          "sha256": "240b00c293c3f27b9d5496adb82f60f35280dbf30aa40cfb684c591f122e0a36",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIREnumAliasTargetsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIREnumAliasTargetsTest.xml",
+          "sha256": "4602f61a6e3181deb4865c26bed275253d076b78ae52fc2f0f70b5f66e73d2bd",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRExitWiredGraphTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRExitWiredGraphTest.xml",
+          "sha256": "b76a4f2c56836aeb7913f8a6c2b0b1e57bad2db67c2cd718f1dc73a7940f233e",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRFormsContractTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRFormsContractTest.xml",
+          "sha256": "c2b03f9312ee8114ceb82d17b1750c39b6fed7a434ca0ff40baf54acaa18a008",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRInternalBasePositionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRInternalBasePositionTest.xml",
+          "sha256": "5452c58ae594b3588436ea3dcdc84d3712680edaf1bb5b89b877abe4ab6e76d8",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRInternalBaseResolutionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRInternalBaseResolutionTest.xml",
+          "sha256": "5dff16fc925b5d925b2d1f8edf86562381831da9d683c6f9237c12cbb25524ee",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRLoweredCleanerEffectTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRLoweredCleanerEffectTest.xml",
+          "sha256": "8fb81f95006a4c9495ff2c40a7093ce9fbb32a65fdebd478ba2ef8e196913ab0",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRMethodCacheTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRMethodCacheTest.xml",
+          "sha256": "3a82707733e7f953c4da74b21cd9a7b5a86204f82c17c0143447a990b6013fbd",
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRMethodContextCacheTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRMethodContextCacheTest.xml",
+          "sha256": "21933b0b59bd1d4ba7cb93ef94460785d09c7df4d5f47085f777e71644373dda",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRPredefinedCallPlanTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRPredefinedCallPlanTest.xml",
+          "sha256": "7ce3147e26d29e6243e9bd35c8624d289745d021426fd9469915ed7d80fd053b",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRReturnGroupScheduleTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRReturnGroupScheduleTest.xml",
+          "sha256": "17b6e7dc8a76c27a3b8f9a175ee9f3e6abe62addac6188a18685e0c045e539c3",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRRuleFormsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRRuleFormsTest.xml",
+          "sha256": "b6f8f97c20f4dc6271589a6de025a79efd36c874464a26ee94f4d53a49dc52a8",
+          "tests": 24,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRRuleValidationTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRRuleValidationTest.xml",
+          "sha256": "b00dae8e25d6bd9c2bda78259130c61e9c648893ad22847653999420bf5a33e6",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRRuleViewCacheTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRRuleViewCacheTest.xml",
+          "sha256": "0d34fbf1408ed5b3eef9ddc992b365c6c517718893b2d6aa07fd2e8dcad23c30",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRSignedConditionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRSignedConditionTest.xml",
+          "sha256": "8d29901f593ae4a707f88d4ada662964b25d18e47409d6e592224ec23c65ffcc",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRStatementEffectTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRStatementEffectTest.xml",
+          "sha256": "314c66b07c29e160735af9cfe93e97d6a59cbe5bc5086a7438c8009d4638cbfd",
+          "tests": 21,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRStatementFormsTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRStatementFormsTest.xml",
+          "sha256": "c1b4b4ebe0796117726ad01aee0a14d2da17fa83d7d266024989a56cf8846c4a",
+          "tests": 21,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRStaticAliasMetadataTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRStaticAliasMetadataTest.xml",
+          "sha256": "18e97629f2048564527e4547c55de0560d81ac78138b35f3dfb236a42efff288",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRStaticDomainProducerTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRStaticDomainProducerTest.xml",
+          "sha256": "a3502d8361b4c287d5d3b418ffa5264fc4164490d27804ebfaed9ad8156a1888",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRStaticMetadataFallbackTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRStaticMetadataFallbackTest.xml",
+          "sha256": "0c363f033d5fef701b4acc1b01991b17e41a1abaaf9bbb793736296a7610fbca",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRStaticMetadataTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRStaticMetadataTest.xml",
+          "sha256": "3a0d1b4b17a82f6842b245f64897e952280bde4e5bf52abe4ce843accb826b0f",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.JIRTypeFiltersTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.JIRTypeFiltersTest.xml",
+          "sha256": "d3acdb8965cfd802234c81436905156afd74bd1fd0dbdcd79d47298034c6094d",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.MarkDeclarationFinalizerTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.MarkDeclarationFinalizerTest.xml",
+          "sha256": "77eb64d65ee14f7a1b7521ea8dc99020afdf5e932814d47a5dcdb84c5b9e67df",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.PrescanCopyTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.PrescanCopyTest.xml",
+          "sha256": "bf1d63fdf3ab0085744697679a4c6ea03da4ba6d5a920dd633505fa82d4df453",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.PrescanJoinRegressionTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.PrescanJoinRegressionTest.xml",
+          "sha256": "79d1ef7e8c5e7e390a258817e9a6329f565a4d9d896674a621d4724d84e562b2",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.PrescanLifetimeTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.PrescanLifetimeTest.xml",
+          "sha256": "526db3918c23902bb360b944919a59b3fa1c7625ae0c773e7deec71de47f1ea2",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.ResolvedPrescanGraphTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.ResolvedPrescanGraphTest.xml",
+          "sha256": "e5a416af888fe1e989dae5633fc0909738cb564d209828c9969941963af0ac1d",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "org.opentaint.dataflow.jvm.bidi.RuleMetadataVulnerabilityIdentityTest",
+          "file": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/test-results/test/TEST-org.opentaint.dataflow.jvm.bidi.RuleMetadataVulnerabilityIdentityTest.xml",
+          "sha256": "1076455f49ad962d7a06aa19d5ab0d3a9ada4f2e64b0f149cd446264b585193e",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "tests": 453,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "previousAcceptedClassesAndCountsAllPass": true,
+      "previousAcceptedTestCount": 453
+    }
+  },
+  "failures": [
+    {
+      "class": "org.opentaint.dataflow.bidi.LoopBlockTrustBoundaryFindingTest",
+      "test": "exact array source and independent ZERO session binding reach joined sink after a loop()",
+      "message": "org.opentest4j.AssertionFailedError: end=AnalysisEnd(status=COMPLETE, run=3, direction=FORWARD, reason=NO_DEMAND_EDGE, run1MarkMode=FULL) ==> expected: <[trust boundary receiver and value]> but was: <[]>",
+      "trace": "org.opentest4j.AssertionFailedError: end=AnalysisEnd(status=COMPLETE, run=3, direction=FORWARD, reason=NO_DEMAND_EDGE, run1MarkMode=FULL) ==> expected: <[trust boundary receiver and value]> but was: <[]>\n\tat app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)\n\tat app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)\n\tat app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)\n\tat app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)\n\tat app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)\n\tat app//kotlin.test.junit5.JUnit5Asserter.assertEquals(JUnitSupport.kt:32)\n\tat app//kotlin.test.AssertionsKt__AssertionsKt.assertEquals(Assertions.kt:63)\n\tat app//kotlin.test.AssertionsKt.assertEquals(Unknown Source)\n\tat app//org.opentaint.dataflow.bidi.LoopBlockTrustBoundaryFindingTest.run(LoopBlockTrustBoundaryFindingTest.kt:165)\n\tat app//org.opentaint.dataflow.bidi.LoopBlockTrustBoundaryFindingTest.exact array source and independent ZERO session binding reach joined sink after a loop(LoopBlockTrustBoundaryFindingTest.kt:174)\n\tat java.base@17.0.18/java.lang.reflect.Method.invoke(Method.java:569)\n\tat java.base@17.0.18/java.util.ArrayList.forEach(ArrayList.java:1511)\n\tat java.base@17.0.18/java.util.ArrayList.forEach(ArrayList.java:1511)\n"
+    }
+  ],
+  "conductorEmptyRegionControl": "PASS",
+  "zeroCounterexampleControls": {
+    "tests": 4,
+    "failures": 1,
+    "otherControlsPass": 3
+  },
+  "sourceScope": "Current worktree with the Conductor empty-region fix and unselected ZERO diagnostic. No ZERO policy fix is implemented.",
+  "qualification": "All 2,372 previously accepted common tests and 453 JVM tests pass. The new Conductor control passes. The four-test ZERO diagnostic has one failure. This is not full acceptance and does not close task.md."
+}

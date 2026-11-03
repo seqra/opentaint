@@ -1,13 +1,15 @@
 # Loop fragments and demand collapse: local models
 
-Date: 2 November 2026. The selected boundary corrections pass the complete
-native suites: **2,372 common tests and 453 JVM tests**, with no failures,
+Date: 2 November 2026. Updated: 3 November. The selected boundary and NORMAL
+ND contributor corrections pass the complete native suites:
+**2,395 common tests and 453 JVM tests**, with no failures,
 errors or skipped tests. The benchmark harness also passes 60 Python tests.
-The latest attempted campaign (`3750b73a`) reached OWASP **run-1 FAILED**,
-with no completed or accepted iteration, then stopped conductor in prescan.
-The earlier `10957156` campaign completed OWASP **run-5** with 51 missing
-baseline sink identities. A fresh campaign is still required; see the
-[gap report](../../../../docs/reports/bidirectional-loop-boundary-source-gap-20261102.md).
+The latest measured revision (`6052e2ea`) completed and accepted OWASP
+**run-5** with 18 missing identities. Conductor reached **run-2 FAILED**,
+with **run-1** complete/accepted; Thingsboard stopped in prescan and
+Stirling-PDF did not start. A fresh campaign is still required. See the
+[NORMAL contributor model](../normal-nd-contributors-20261103/README.md)
+for the selected correction's separate 55-theorem audit.
 
 Read [the spec](../../../loop-fragments-and-demand-collapse.md),
 [method-owned blocks](../../../method-owned-loop-blocks.md),

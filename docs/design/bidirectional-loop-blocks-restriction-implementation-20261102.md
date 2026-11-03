@@ -1,10 +1,27 @@
 # Implementation proposal: method-owned loop blocks and loop restriction
 
-Date: 2 November 2026. Status: implementation requires the boundary-span
-correction in section 0.1. Native controls reproduce missing entry-source
-and exit-sink effects. The latest measured revision completes OWASP **run-5**
-with 51 missing baseline sink identities. The final project campaign and
-performance acceptance are not complete.
+Date: 2 November 2026. Updated: 3 November 2026. The boundary corrections
+are implemented. Revision `6052e2ea` completes and accepts OWASP **run-5**
+with 18 missing baseline sink identities. A native control completes
+**run-3** with its finding absent. The selected correction keeps NORMAL
+ND condition contributors across forward runs; see section 0.2. The final
+project campaign and performance acceptance are not complete.
+
+### 0.2 Keep NORMAL ND contributors
+
+Apply [normal-nd-contributors.md](../../spec/normal-nd-contributors.md).
+Keep accepted NORMAL conditional leaf edges at their exact rule point,
+including incomplete conditions. Restore them into the ordinary local
+join when a current input satisfies a leaf at the same point. Keep every
+saved premise in the completed ND result. Persist only after a completed
+forward run. Do not enqueue saved facts or add ZERO admission, control
+identities, source permissions, or synthetic ZERO demand.
+
+This is an explicit extension to condition-evidence persistence. The
+separate forward-internal-ZERO draft remains unselected. C2, C5, field
+transfer, complete ND application, and Target rules keep their selected
+contracts. The native SESSION/DATA counterexample is the first acceptance
+gate; a new project campaign is still required after that gate passes.
 
 ### 0.1 Boundary-span correction and acceptance gate
 
@@ -312,6 +329,9 @@ binding or alias expansion. Use the ordinary
 entry/replay policy, identity transfer for an admitted initial, and the
 same local C5. Eliding its empty physical control step must preserve those
 logical admission and entry/exit scopes; it is not a C2 bypass.
+When a shared normal interface discovers another reverse predecessor after
+initial admission, replay this same empty identity. Do not route the
+predecessor's physical instruction through the empty region's point store.
 
 ### 3.3 Validate before use
 

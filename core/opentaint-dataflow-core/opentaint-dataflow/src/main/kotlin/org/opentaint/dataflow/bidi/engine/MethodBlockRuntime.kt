@@ -265,7 +265,14 @@ internal class MethodBlockRuntime(
     }
 
     private fun startEntryTarget(e: Entry, state: BlockRunState, target: Int, original: PremiseKey, value: Facts) {
-        if (target in e.methodStarts && layout[e.scope.block].isLeaf)
+        if (isEmptyBlock(e.scope.block)) {
+            // A shared normal interface can discover another real reverse
+            // predecessor after this identity region already admitted its
+            // initial. Replay the same logical identity as Binding.start;
+            // the physical predecessor belongs to the adjacent region.
+            if (target in e.methodStarts) state.startAt(original, graph.instructions[target], value)
+            else state.retainBlockSummary(e.scope.entry, original, value)
+        } else if (target in e.methodStarts && layout[e.scope.block].isLeaf)
             state.startAt(original, graph.instructions[target], value)
         else routeInside(e, target, original, value, e.scope.entry, methodStart = target in e.methodStarts)
     }

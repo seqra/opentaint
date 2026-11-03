@@ -1,0 +1,98 @@
+'NormalNdContributors.supported' does not depend on any axioms
+'NormalNdContributors.retainable' does not depend on any axioms
+'NormalNdContributors.keep' does not depend on any axioms
+'NormalNdContributors.savedRows' does not depend on any axioms
+'NormalNdContributors.sameSite' does not depend on any axioms
+'NormalNdContributors.restore' does not depend on any axioms
+'NormalNdContributors.DEMAND_is_never_retained' depends on axioms: [propext]
+'NormalNdContributors.GROUP_is_not_reinterpreted_as_FULL' depends on axioms: [propext]
+'NormalNdContributors.backward_is_not_retained' depends on axioms: [propext]
+'NormalNdContributors.an_unaccepted_fact_is_not_retained' depends on axioms: [propext]
+'NormalNdContributors.every_kept_input_is_the_same_conditional_edge' does not depend on any axioms
+'NormalNdContributors.kept_geometry_marks_exclusions_and_protection_are_identical' does not depend on any axioms
+'NormalNdContributors.failed_or_cancelled_run_publishes_no_new_evidence' does not depend on any axioms
+'NormalNdContributors.backward_restore_is_empty' depends on axioms: [propext]
+'NormalNdContributors.GROUP_restore_is_empty' depends on axioms: [propext]
+'NormalNdContributors.restored_input_has_the_exact_owner_context_operation_stage_rule_key' depends on axioms: [propext]
+'NormalNdContributors.knownLeaf' does not depend on any axioms
+'NormalNdContributors.currentHolds' does not depend on any axioms
+'NormalNdContributors.Pool' does not depend on any axioms
+'NormalNdContributors.emptyPool' does not depend on any axioms
+'NormalNdContributors.rowsPool' does not depend on any axioms
+'NormalNdContributors.addInput' does not depend on any axioms
+'NormalNdContributors.addRows' does not depend on any axioms
+'NormalNdContributors.vectors' does not depend on any axioms
+'NormalNdContributors.validBinding' does not depend on any axioms
+'NormalNdContributors.ordinaryJoin' does not depend on any axioms
+'NormalNdContributors.premiseUnion' does not depend on any axioms
+'NormalNdContributors.resultLayer' does not depend on any axioms
+'NormalNdContributors.outcome' does not depend on any axioms
+'NormalNdContributors.every_contributing_premise_member_remains' depends on axioms: [propext, Quot.sound]
+'NormalNdContributors.a_ZERO_result_premise_requires_every_contributor_to_be_ZERO' depends on axioms: [propext,
+ Quot.sound]
+'NormalNdContributors.NORMAL_requires_all_selected_contributors_NORMAL' does not depend on any axioms
+'NormalNdContributors.accepted_fact_metadata_is_not_recomputed' does not depend on any axioms
+'NormalNdContributors.begin' does not depend on any axioms
+'NormalNdContributors.ready' does not depend on any axioms
+'NormalNdContributors.freshBindings' does not depend on any axioms
+'NormalNdContributors.accept' does not depend on any axioms
+'NormalNdContributors.loading_history_alone_is_not_execution' does not depend on any axioms
+'NormalNdContributors.a_nonmatching_current_check_does_not_activate_or_emit' depends on axioms: [propext]
+'NormalNdContributors.replay_and_current_Holds_use_the_ordinary_same_input_join' depends on axioms: [propext]
+'NormalNdContributors.filter_of_false_on_members_is_empty' depends on axioms: [propext]
+'NormalNdContributors.a_missing_source_permission_produces_no_action_callback' depends on axioms: [propext]
+'NormalNdContributors.initial_and_completed_dedup_are_reset_per_run' does not depend on any axioms
+'NormalNdContributors.semanticStage' does not depend on any axioms
+'NormalNdContributors.BOUND_outgoing_addresses_have_one_condition_key' does not depend on any axioms
+'NormalNdContributors.source_phases_are_not_normalized_away' does not depend on any axioms
+'NormalNdContributors.source_and_conjunction_phases_cannot_join' does not depend on any axioms
+'NormalNdContributors.add_current_inputs_commutes' depends on axioms: [Quot.sound]
+'NormalNdContributors.add_current_input_is_idempotent' depends on axioms: [Quot.sound]
+'NormalNdContributors.no_new_binding_is_fresh_again' depends on axioms: [propext]
+'NormalNdContributors.current_arrival_order_has_the_same_complete_bindings' depends on axioms: [propext, Quot.sound]
+'NormalNdContributors.replaying_the_same_current_certificate_emits_no_duplicate' depends on axioms: [propext,
+ Quot.sound]
+'NormalNdContributors.every_restored_input_is_NORMAL' depends on axioms: [propext]
+'NormalNdContributors.every_output_of_ordinary_join_keeps_the_selected_leaf_order' depends on axioms: [propext,
+ Quot.sound]
+'NormalNdContributors.publish' does not depend on any axioms
+'NormalNdContributors.unsuccessful_barrier_keeps_the_previous_snapshot' does not depend on any axioms
+'NormalNdContributors.publishing_new_evidence_never_loses_an_old_certificate' depends on axioms: [propext, Quot.sound]
+'NormalNdContributors.finite_vectors_are_constructively_complete' depends on axioms: [propext, Quot.sound]
+'NormalNdContributors.finite_vector_width_is_exact' depends on axioms: [propext, Quot.sound]
+'NormalNdContributors.finite_vectors_contain_only_catalog_inputs' depends on axioms: [propext, Quot.sound]
+'NormalNdContributors.ordinary_join_is_complete_in_the_finite_certificate_universe' depends on axioms: [propext,
+ Quot.sound]
+'NormalNdContributors.ordinary_join_only_uses_same_site_accepted_available_certificates' depends on axioms: [propext,
+ Quot.sound]
+'NormalNdContributors.currentParts' does not depend on any axioms
+'NormalNdContributors.restored_evidence_does_not_become_an_extra_current_packet' depends on axioms: [propext]
+'NormalNdContributors.site' does not depend on any axioms
+'NormalNdContributors.normalFacts' does not depend on any axioms
+'NormalNdContributors.session' does not depend on any axioms
+'NormalNdContributors.data' does not depend on any axioms
+'NormalNdContributors.oldP' does not depend on any axioms
+'NormalNdContributors.currentDemand' does not depend on any axioms
+'NormalNdContributors.andPlan' does not depend on any axioms
+'NormalNdContributors.catalog' does not depend on any axioms
+'NormalNdContributors.an_incomplete_NORMAL_leaf_is_retained' does not depend on any axioms
+'NormalNdContributors.session_cache_plus_current_DATA_restores_the_complete_binding' does not depend on any axioms
+'NormalNdContributors.old_conditional_P_and_current_Q_keep_both_premises' does not depend on any axioms
+'NormalNdContributors.NORMAL_cache_plus_DEMAND_current_is_DEMAND' does not depend on any axioms
+'NormalNdContributors.a_caller_with_only_Q_cannot_satisfy_the_old_P_binding' does not depend on any axioms
+'NormalNdContributors.mixed_ZERO_and_nonzero_support_has_no_independent_ZERO_arm' does not depend on any axioms
+'NormalNdContributors.an_unrelated_stage_cannot_restore_the_same_facts' does not depend on any axioms
+'NormalNdContributors.an_unrelated_owner_cannot_restore_the_same_facts' does not depend on any axioms
+'NormalNdContributors.anotherCurrentLeaf' does not depend on any axioms
+'NormalNdContributors.twoAlternatives' does not depend on any axioms
+'NormalNdContributors.activationCatalog' does not depend on any axioms
+'NormalNdContributors.cached_complete_bindings_are_not_emitted_when_loaded' does not depend on any axioms
+'NormalNdContributors.current_accepted_leaf_activates_a_cached_complete_binding' does not depend on any axioms
+'NormalNdContributors.unrelated_activating_premise_is_not_added_to_the_saved_binding' depends on axioms: [propext,
+ Quot.sound]
+'NormalNdContributors.nonmatching_leaf_cannot_activate_cached_complete_bindings' does not depend on any axioms
+'NormalNdContributors.an_unrelated_DEMAND_trigger_does_not_demote_a_saved_complete_NORMAL_binding' does not depend on any axioms
+'NormalNdContributors.same_facts_at_another_block_or_entry_do_not_share_cache' does not depend on any axioms
+'NormalNdContributors.same_facts_at_another_rule_or_phase_do_not_share_cache' does not depend on any axioms
+'NormalNdContributors.protection_and_exclusions_are_not_replaced_by_a_query_pattern' does not depend on any axioms
+'NormalNdContributors.a_completed_binding_can_be_used_again_in_a_new_run' does not depend on any axioms

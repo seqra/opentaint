@@ -50,6 +50,10 @@ open class BlockRunState internal constructor(
     val edges: ScopedEdgeStore<CommonInst> get() = checkNotNull(edgeStore) { "The method edges were released" }
     val initials: InitialFactStore get() = checkNotNull(initialStore) { "The initial facts were released" }
     val summaries = RunSummaryStore(ap, flowBacked = true)
+    internal val normalRuleContributors = NormalRuleContributors(ap,
+        port.shared.normalRuleContributors.snapshot(), key, scope, mode)
+    internal var frozenNormalContributorRows: List<NormalRuleContributorRow> = emptyList()
+        private set
     internal val portSummaries = PortSummaryStores(ap, flowBacked = true)
     private val localPublications = LinkedHashMap<PortId, MutableList<Publication>>()
     val sourceHits: SourceHitStore? = if (binding != null) binding.sourceHits else if (forward) null else SourceHitStore()
@@ -1029,6 +1033,7 @@ open class BlockRunState internal constructor(
         }
         try {
             release { releaseAbstraction() }
+            release { frozenNormalContributorRows = normalRuleContributors.freezeRows() }
             release { localServices.freeze() }
             release { callServices.freeze() }
             release { pointResumes?.clear() }
