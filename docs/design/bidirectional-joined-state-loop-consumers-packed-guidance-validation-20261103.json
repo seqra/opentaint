@@ -1,18 +1,19 @@
 {
   "status": "PASS",
-  "generatedUTC": "2026-11-03T17:45:39.893720+00:00",
+  "generatedUTC": "2026-11-03T18:23:00.621994+00:00",
   "scope": "Selected design and constructive finite models only; no Kotlin implementation or project experiment.",
   "sourceRevision": "050b83cfb7b2e75856ea113c44d0a2d6b707250d",
-  "checkoutRevision": "b5fbae2400516e90beb9e17aec6a4bb8a2ac3162",
+  "checkoutRevision": "c7ed16e99c599ca926812c067df0b6608b6185f2",
   "canonicalProposal": {
     "path": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
-    "sha256": "59e3b9db3a9db67120071f3047c1d476dbce0cbcecb4d05e24cf6525e2a2c0b7",
-    "lines": 1565
+    "sha256": "e05f075a774abe857a434a478095b419f45f40d508f223d86cdaafaeb644b94c",
+    "lines": 1907
   },
   "components": {
     "docs/design/bidirectional-joined-state-release-design-20261103.md": "4ca9febe1220bdd846c3fc3f3e81d49ac6f21e104e102fd74c2d41b6ac371441",
     "docs/design/bidirectional-loop-consumer-query-design-20261103.md": "26074dd10050f0d846157e92afcfad0d5f8742391c50b1e773054f532bf095c6",
-    "docs/design/bidirectional-packed-static-guidance-design-20261103.md": "fb871ac6c82ee48c9b27565bc7274cfe120e06cdf2bb43cb8c53c22314f56f86"
+    "docs/design/bidirectional-packed-static-guidance-design-20261103.md": "fb871ac6c82ee48c9b27565bc7274cfe120e06cdf2bb43cb8c53c22314f56f86",
+    "docs/design/bidirectional-block-boundary-live-locals-design-20261103.md": "eacb7f40449296a0db35a675070e2180dc9420c8fa9a88c33b427fad08da18c2"
   },
   "models": {
     "joined-state-release-selected-design-20261103": {
@@ -135,12 +136,35 @@
         "spec/proof-guide.md": "c51296c2773f7a09bc96e3a4679c0b97610c38baf792b39e0de7ef2bf4787dcd"
       },
       "nativeImplementationVerified": false
+    },
+    "block-boundary-live-locals-20261103": {
+      "receipt": "spec/lean/proposals/block-boundary-live-locals-20261103/checks.json",
+      "sha256": "c80e713274802e41ef5867654dcf21526556a3cb8e19059e7851215c2478097f",
+      "status": "SELECTED_PROPOSAL_MODEL_PASS",
+      "theorems": 42,
+      "auditedDeclarations": 72,
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ],
+      "inputHashes": {
+        "spec/lean/proposals/block-boundary-live-locals-20261103/LiveLocals.lean": "fe3cfaa7639db78bf29b6995ee19503e001d002d2df221fb121a46f58f26e018",
+        "spec/lean/proposals/block-boundary-live-locals-20261103/REPORT.md": "dfffa88ec26acc8962f0195fa73ccedb5d8b54e05ad0e8099c0e096b06460f0e",
+        "spec/lean/proposals/block-boundary-live-locals-20261103/README.md": "13d56fddc3a8fc1c3ed9afad06e43eecd30ce026af74a526af24679f7d8efaf6",
+        "spec/lean/proposals/block-boundary-live-locals-20261103/check.py": "f8820c6d63576daef45b5756a356c3a1e09be4b7a710b1ddc4bdf815d926bc8b",
+        "spec/lean/proposals/block-boundary-live-locals-20261103/reference-source-pins.json": "a08a649bf4850366a4315dfbbe9101ab464cdaf13eff245f6dfd6656d0d71c8d",
+        "spec/proof-guide.md": "c51296c2773f7a09bc96e3a4679c0b97610c38baf792b39e0de7ef2bf4787dcd",
+        "spec/impl-proposal-guide.md": "0068a5ea23d3215cab580fc341bbcbfaf64d504920d35d8bf041b166c73ea17a",
+        "spec/lean/lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
+        "spec/lean/proposals/call-stage-result-merging-analysis-20261101/check.py": "817d1ab500b65240cdedeed4c741bcb24470b60e047d5ac3d5dd30eaf951f4dc"
+      },
+      "nativeImplementationVerified": false
     }
   },
   "totals": {
-    "theorems": 214,
-    "auditedDeclarations": 340,
-    "uniqueNativeSourcePins": 48
+    "theorems": 256,
+    "auditedDeclarations": 412,
+    "uniqueNativeSourcePins": 65
   },
   "nativeSourceHashes": {
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunManager.kt": "1dcb4919305d5fdfd9c28279ddbba9eb3588ed758c45ab0b41daca47a672adf3",
@@ -190,7 +214,24 @@
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/C5StaticDemandView.kt": "12ad3ea3f2785c209b43fc65ae2af2b952ca9085eb340a45d457cee3090aeddd",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticSelectorIndex.kt": "487904fc700e893b08d58a76588ef8340ba86eb9575c7d9bbd07e6f78e9bd983",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/UnionStaticDemandView.kt": "32aa30d243ded17d05396e774d9de5c8e3681dda3c6c9c97396f882acfb9805d",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/BlockScope.kt": "c21ce42f3791812ea7b2acf899740047a66010d6d79aa83326b6e61e85d6cc7a"
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/BlockScope.kt": "c21ce42f3791812ea7b2acf899740047a66010d6d79aa83326b6e61e85d6cc7a",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/MicroEdgeBuilder.kt": "557f90c24c2b1aa0182afffa2039344b4b5c3e9b75a3bbf1d148b09b798c2963",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/StatementSummary.kt": "f3a00e5cfbb8003d97d5d773b3f318a7c86ba7cf188521a4381a4f0a006bcadb",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/graph/MethodBlockLayout.kt": "135495356d727c9d8027d66f53e475ef5cfe2c03253094035f62d7de6059e6ba",
+    "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRExitWiredGraph.kt": "66c0749b4472dd087d222909238b6e51326be8ef5b02ac7ab056a6e92fb204f1",
+    "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/ap/ifds/analysis/JIRStatementSummary.kt": "c690b9e2fe8c27cff7ab54aa97e4aa18242b3862a4e6a74bc83b8f12051c23eb",
+    "core/opentaint-ir/opentaint-ir-api-jvm/src/main/kotlin/org/opentaint/ir/api/jvm/cfg/JIRGraph.kt": "a2501bb5fcc3072cb06aaa6ce78588307da3928b90658d6e44c6711c37f01d7e",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockRuntimeBinding.kt": "10fae8bb5fe945bba0dd5a137c61831f6e557f5165baf15a5b8b9ce3d5203f82",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockCfgDeliveryCache.kt": "244187cd3ab886733f2950d6d49dadaea9ad4eabcfe60e877fc04cb3168bbe16",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/MethodContextCache.kt": "98c42a5c8b50e8d0ddf2e3332d0c5c922cef70558b37e6c75d54a1261cfa0e9a",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/graph/MethodBlockLayoutBuilder.kt": "974504c55b86eb31b3a902bc580c9bcd02b059c9664ec3a4bc82a333f2bcad4c",
+    "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRMethodEntry.kt": "5afc956c4a0d91ece9b1e407de30da8b628015d10629a7c928b4e7076b4f67b0",
+    "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRMethodForms.kt": "a0e3164146949243a5529f1666622e416d66d838c8aaad1176d10e4845e1c2b9",
+    "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRStatementForms.kt": "789e5c6446ba8f8916f1c60a6a63392ce6221e8d75517647cc2fddd0f018afd3",
+    "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRCallPlanBuilder.kt": "58eefab7cfe915f02676edea716909c9c52fadc093418993cb699ed4f5bb4362",
+    "core/opentaint-ir/opentaint-ir-api-jvm/src/main/kotlin/org/opentaint/ir/api/jvm/cfg/JIRInst.kt": "374ade9bbb60745749bcd5a39f4a39c93ef419fd902babfae8588c2756810b10",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/ap/ifds/LanguageManager.kt": "6b264eddeb10ea5625fd7532c79ed55188cf1219ba15ab002a29b3e87e38a2e0",
+    "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/ap/ifds/JIRLanguageManager.kt": "96cf718f924df395622984882acac7c95d346103c7308c32f01c001097f4fd78"
   },
   "checks": {
     "receiptInputsAndLogsStable": true,
@@ -241,6 +282,11 @@
     },
     {
       "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "../../spec/lean/proposals/block-boundary-live-locals-20261103/REPORT.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
       "target": "bidirectional-joined-state-loop-consumers-packed-guidance-validation-20261103.json",
       "exists": true
     },
@@ -272,6 +318,16 @@
     {
       "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
       "target": "bidirectional-packed-static-guidance-design-20261103.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "bidirectional-block-boundary-live-locals-design-20261103.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "../../spec/lean/proposals/block-boundary-live-locals-20261103/REPORT.md",
       "exists": true
     },
     {
@@ -317,6 +373,26 @@
     {
       "source": "docs/design/bidirectional-packed-static-guidance-design-20261103.md",
       "target": "../../spec/lean/proposals/packed-static-guidance-20261103/README.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-block-boundary-live-locals-design-20261103.md",
+      "target": "bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-block-boundary-live-locals-design-20261103.md",
+      "target": "../../spec/impl-proposal-guide.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-block-boundary-live-locals-design-20261103.md",
+      "target": "../../spec/proof-guide.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-block-boundary-live-locals-design-20261103.md",
+      "target": "../../spec/lean/proposals/block-boundary-live-locals-20261103/REPORT.md",
       "exists": true
     }
   ],

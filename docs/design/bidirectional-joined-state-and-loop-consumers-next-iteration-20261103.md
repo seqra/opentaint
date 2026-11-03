@@ -9,6 +9,15 @@ specifies the concrete owners, APIs, lookup paths, constructive proofs,
 native test gates and implementation order. The secondary pruning candidate
 in section 5 is not selected.
 
+Point 2 also includes the selected
+[instruction-only block live-local filter](bidirectional-block-boundary-live-locals-design-20261103.md).
+For `x=...; while(true){ var tmp=x; ... }`, drop old `tmp` before boundary
+summary emission or demand checks. The next copy overwrites it before use.
+Use simple CFG live-variable analysis; add no rule-read or alias pass.
+Keep live carried locals on the existing path and check each leaving route
+separately. Internal dead-local summary/demand counts can decrease; reports
+and live results must remain unchanged.
+
 Use the [current campaign report](../reports/bidirectional-loop-blocks-scoped-requests-performance-20261103.md)
 and its embedded CPU and heap evidence. The earlier static-terminal/query
 proposal used `1e6c4396`. It is historical. In the current campaign,
