@@ -5,6 +5,7 @@ import org.opentaint.dataflow.bidi.ap.AdmittedInitial
 import org.opentaint.dataflow.bidi.ap.Layer
 import org.opentaint.dataflow.bidi.ap.MethodKey
 import org.opentaint.dataflow.bidi.store.CallerRef
+import org.opentaint.dataflow.bidi.store.BlockScope
 import java.util.Collections
 
 sealed interface RunEvent {
@@ -17,8 +18,9 @@ sealed interface RunEvent {
     }
     data class StaticOwner(val effect: StaticOwnerEffect) : RunEvent
 
-    /** A detached immutable batch addressed to the full method owner. */
-    data class MarkRequestsIn(val method: MethodKey, val rows: RequestRows) : RunEvent
+    /** A detached immutable batch addressed to the method's actual block entry. */
+    data class MarkRequestsIn(val method: MethodKey, val rows: RequestRows,
+                              val scope: BlockScope = BlockScope.ROOT) : RunEvent
 
     /** Only a subscribed caller runner handles this event; the publisher reads no caller directory. */
     data class ChangedRequests(val callee: MethodKey, val rows: RequestRows) : RunEvent

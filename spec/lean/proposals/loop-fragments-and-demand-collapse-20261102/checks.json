@@ -13,8 +13,8 @@
     "runtimeBaseline": "8213756108af9cd278668db871fc77428caec64a",
     "baselineRole": "Historical pre-implementation sources and local-model receipt. These are not the current runtime.",
     "runtimeChanged": true,
-    "sourceState": "Native-tested NORMAL ND contributor correction worktree; hashes identify exact source before commit.",
-    "sourcePinBaseRevision": "6052e2ea2d400a7f1f47c0f5fe4497bae23e2ace",
+    "sourceState": "Native-tested scope-preserving physical request correction; hashes identify exact source before commit.",
+    "sourcePinBaseRevision": "1e6c43963868dde6f652a4b9fa0284c95c818b2c",
     "sourceScopes": [
       {
         "directory": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi",
@@ -42,14 +42,13 @@
       }
     ],
     "nativeValidation": {
-      "path": "docs/reports/data/bidirectional-normal-nd-contributors-validation-20261103.json",
-      "sha256": "6efdfed90a578c38fce953f8ce548bd953ebce9d399c364c8bf2b447fe1256d1",
-      "sourceSetSha256": "8cfca2b69a001d91a69181105ff0a5e0c9a21e6991231eaf3e8baeb2bf055a54",
+      "path": "docs/reports/data/bidirectional-scoped-mark-requests-validation-20261103.json",
+      "sha256": "f8fb0215a34b76f1038ff6a6da002390943852934189c94be91f33f9a4cb6e9c",
+      "sourceSetSha256": "1d99facd27fdf2a5073cbad959f85787d9545eaa8437f0824c2448351312ca15",
       "tests": {
-        "common": 2395,
+        "common": 2399,
         "jvm": 453
-      },
-      "pythonTests": 60
+      }
     },
     "historicalEvidence": {
       "implementation-source-pins-before-implementation.json": {
@@ -151,18 +150,18 @@
       "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Run1StaticService.kt": "e9b972a5d8beab9c5455a2185f4a35784e7b71872273f8813cc9f113d0d687e3",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunActor.kt": "33a462e12af0ffd912001f06304cbfea6ce828f654bd46f862cc6f939eba5de3",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunConfig.kt": "23fb389029bed45753ecffaa4571a441b284bf3bf047427bf653a1c5a8f33df7",
-      "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunEvent.kt": "83481cc03a3032b0e0aec544b9030256b1f2dd61f709032cdac8d5b35b19301a",
+      "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunEvent.kt": "848384b48da641a8d5bccdd148e5bd37f4c9c29d79ec369765b9cfe1f82fe300",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunManager.kt": "1dcb4919305d5fdfd9c28279ddbba9eb3588ed758c45ab0b41daca47a672adf3",
-      "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt": "6e1088ee811193284294d9e1b443979d92b277d80ea1546f8d69a7bf46b2d718",
+      "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt": "25f3632ed61022315224e80098d3087deb9270a1211445157822968f0a3069f5",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodCallServices.kt": "3f7745a9ad5389aa70dde5cb3bb469deaa670c7b48735a953f4e85540b63897c",
-      "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodHandlers.kt": "c162ac21465f53f73e03562d48d7433198024003daf7dff7847736a1d4e218a2",
+      "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodHandlers.kt": "3375f480788b75a2f37fb4f805d296d4ca53b30dffc85997fb99469816673121",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodLocalServices.kt": "dd4580aa83a9a9a0594811013575ba9380053ddc84ebcede8bf21469a8a0cc04",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunStatus.kt": "950e993e55b997c25561f603e89bda6584dcdeb92cc90b28161a2424295af634",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunnerPort.kt": "773538685e04bbf2ba775601d18f6fff8a041b663a97eaf2f6ab9438abfca5d0",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SharedObjects.kt": "f19e8b9b4c9cb3a11129dc6c0b7c3fbe707a152002e2d3da752b3ef644a2651d",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/StaticBoundaryInputRequests.kt": "2c9d073535bb33cf564225ebbb1381ef28671ea19a227a53e730ac447a071f7a",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/StaticInputGrammar.kt": "68a73a66151da3a6c356b162908445e925875a515e47be24c39397c32eb8090b",
-      "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SubscriptionManager.kt": "9e74fd2603e5cdea7c7d8ea32208e402b4856535d2d7ba21d027078e62eddd5e",
+      "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SubscriptionManager.kt": "4c2970b3edcfaff76270a9f78f9c7dcd903ec449a09b1cc54290aa99dda27302",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SubscriptionPort.kt": "485f71f35939f1d3448e392652ac7fd24f1844a3f78c5b83b4174643e359c459",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SummaryStorage.kt": "d7f4a9beda28cc3ad222c325d45f57d895289ac34a64ffd5662a2db0615287c4",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Target.kt": "56da6eddf3bd111dd000ba8eea8dfb2750fbaaec8ee17bdb8a71a4841c9fa1e9",
@@ -529,6 +528,7 @@
       "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/RuntimeDataDomainTest.kt": "8fa8b5d2d08cc8947854d957d862c8c1342ca6ec8de005ca225f719da98ec6bb",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/ScheduleFuzzerTest.kt": "a5489e716a79f43be106cc12f73da457d50722d4707352fb55b036e716647c84",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/ScopedBlockStorageTest.kt": "24bed1f4a8aefe320d1519d8646f13bbb35069e8d30d517565b81ddfd5043a04",
+      "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/ScopedPhysicalMarkRequestTest.kt": "7d1e7b284993081a8f47a1e44e454c843088303c421c6ad22713e2aae7ec56ad",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/ScopedStaticCompletionTest.kt": "9f95c3c8275f8697a8962c10fea70a468b5f9a4c7230ed65c741cd0d16749335",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/SeedIndexTest.kt": "00c61258234dc414678119b9905b1bc3166ed826a798dd7492417eecd7c1305a",
       "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/SelectedCallPolicyHelpersTest.kt": "9049b8da224b9668c00ff28dbc4440e8a763dd18c4b0b74f3590a8221d791a17",
@@ -709,6 +709,7 @@
       "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/test/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRStaticMetadata.kt": "31fdc2f9402b33e68c93eaaf8577fcda96e44d511daa28b52edab9c8789d5a94",
       "docs/reports/data/bidirectional-loop-blocks-validation-20261102.json": "e4ff48b55f66a831cae5bcd85e7e8122bf2c13c8d43dd780977555c895a00e11",
       "docs/reports/data/bidirectional-normal-nd-contributors-validation-20261103.json": "6efdfed90a578c38fce953f8ce548bd953ebce9d399c364c8bf2b447fe1256d1",
+      "docs/reports/data/bidirectional-scoped-mark-requests-validation-20261103.json": "f8fb0215a34b76f1038ff6a6da002390943852934189c94be91f33f9a4cb6e9c",
       "scripts/benchmark_bidi_projects.py": "3856ef82bc88a1f755c4582d532471dae71e0bff43fcc85f53d9a990d85a6dce",
       "scripts/compare_bidi_projects.py": "5fb815655ff7be9faa3edd43201ca9b53ca6da67460c9f7a5215f3fd587ef18d",
       "scripts/summarize_bidi_profiles.py": "c61ebbd24156cd2eb60320c9d8cb1b7082f0a702960f92ca3a64809d2b74c749",
@@ -720,14 +721,13 @@
     }
   },
   "nativeValidation": {
-    "path": "docs/reports/data/bidirectional-normal-nd-contributors-validation-20261103.json",
-    "sha256": "6efdfed90a578c38fce953f8ce548bd953ebce9d399c364c8bf2b447fe1256d1",
-    "sourceSetSha256": "8cfca2b69a001d91a69181105ff0a5e0c9a21e6991231eaf3e8baeb2bf055a54",
+    "path": "docs/reports/data/bidirectional-scoped-mark-requests-validation-20261103.json",
+    "sha256": "f8fb0215a34b76f1038ff6a6da002390943852934189c94be91f33f9a4cb6e9c",
+    "sourceSetSha256": "1d99facd27fdf2a5073cbad959f85787d9545eaa8437f0824c2448351312ca15",
     "tests": {
-      "common": 2395,
+      "common": 2399,
       "jvm": 453
-    },
-    "pythonTests": 60
+    }
   },
   "historicalEvidence": {
     "implementation-source-pins-before-implementation.json": {
@@ -743,7 +743,7 @@
   "NORMALRouteRuntimeServiceSelected": false,
   "generalCrossRunConvergenceProved": false,
   "projectSpeedupMeasured": false,
-  "utc": "2026-11-03T07:10:53.701896+00:00",
+  "utc": "2026-11-03T09:18:26.911225+00:00",
   "toolchain": "leanprover/lean4:v4.33.1",
   "leanVersion": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
   "moduleCount": 19,
@@ -1753,7 +1753,7 @@
     "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/StaticBoundaryInputRelay-audit.txt": "b3b8abd1e42d1da2cf2492a64b152ab58f83918d4ce24f026b055b77d46ead55",
     "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/MethodExitMetadataEffects-check.json": "7b5877f859ef03ac839f045910cbd1c597ef13a0e76a71807a805be8f7cab72c",
     "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/MethodExitMetadataEffects-audit.txt": "59a0cad515b283d88f9658b4b5260cf0063657b6b4ba0c0ccda91461fd9ec6e5",
-    "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/implementation-source-pins.json": "8456467888d7bf1b5f92f8dbc55eadcbf8909dabb0e7335ba7e83a10c4124044",
+    "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/implementation-source-pins.json": "c9c40645516a0912d7edd094ae4525c25a3da88631f44e5c05ddc7a0910acd55",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/AccessorTable.kt": "e3bd86f7f338ea0dcfb5aa2516c8f988197f9ff4dde9027d951e6c5968bcc4ba",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/AdmittedInitial.kt": "8960e70e51cb77635a5545ff50828ac15bd053b1ac7d2bcf2914418d5b7340fd",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApManager.kt": "d8a575de8fc4f65d7d589f82784e1614a1728f6284b6865e055749a02b8b02b0",
@@ -1842,18 +1842,18 @@
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Run1StaticService.kt": "e9b972a5d8beab9c5455a2185f4a35784e7b71872273f8813cc9f113d0d687e3",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunActor.kt": "33a462e12af0ffd912001f06304cbfea6ce828f654bd46f862cc6f939eba5de3",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunConfig.kt": "23fb389029bed45753ecffaa4571a441b284bf3bf047427bf653a1c5a8f33df7",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunEvent.kt": "83481cc03a3032b0e0aec544b9030256b1f2dd61f709032cdac8d5b35b19301a",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunEvent.kt": "848384b48da641a8d5bccdd148e5bd37f4c9c29d79ec369765b9cfe1f82fe300",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunManager.kt": "1dcb4919305d5fdfd9c28279ddbba9eb3588ed758c45ab0b41daca47a672adf3",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt": "6e1088ee811193284294d9e1b443979d92b277d80ea1546f8d69a7bf46b2d718",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt": "25f3632ed61022315224e80098d3087deb9270a1211445157822968f0a3069f5",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodCallServices.kt": "3f7745a9ad5389aa70dde5cb3bb469deaa670c7b48735a953f4e85540b63897c",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodHandlers.kt": "c162ac21465f53f73e03562d48d7433198024003daf7dff7847736a1d4e218a2",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodHandlers.kt": "3375f480788b75a2f37fb4f805d296d4ca53b30dffc85997fb99469816673121",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodLocalServices.kt": "dd4580aa83a9a9a0594811013575ba9380053ddc84ebcede8bf21469a8a0cc04",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunStatus.kt": "950e993e55b997c25561f603e89bda6584dcdeb92cc90b28161a2424295af634",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunnerPort.kt": "773538685e04bbf2ba775601d18f6fff8a041b663a97eaf2f6ab9438abfca5d0",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SharedObjects.kt": "f19e8b9b4c9cb3a11129dc6c0b7c3fbe707a152002e2d3da752b3ef644a2651d",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/StaticBoundaryInputRequests.kt": "2c9d073535bb33cf564225ebbb1381ef28671ea19a227a53e730ac447a071f7a",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/StaticInputGrammar.kt": "68a73a66151da3a6c356b162908445e925875a515e47be24c39397c32eb8090b",
-    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SubscriptionManager.kt": "9e74fd2603e5cdea7c7d8ea32208e402b4856535d2d7ba21d027078e62eddd5e",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SubscriptionManager.kt": "4c2970b3edcfaff76270a9f78f9c7dcd903ec449a09b1cc54290aa99dda27302",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SubscriptionPort.kt": "485f71f35939f1d3448e392652ac7fd24f1844a3f78c5b83b4174643e359c459",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SummaryStorage.kt": "d7f4a9beda28cc3ad222c325d45f57d895289ac34a64ffd5662a2db0615287c4",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Target.kt": "56da6eddf3bd111dd000ba8eea8dfb2750fbaaec8ee17bdb8a71a4841c9fa1e9",
@@ -2220,6 +2220,7 @@
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/RuntimeDataDomainTest.kt": "8fa8b5d2d08cc8947854d957d862c8c1342ca6ec8de005ca225f719da98ec6bb",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/ScheduleFuzzerTest.kt": "a5489e716a79f43be106cc12f73da457d50722d4707352fb55b036e716647c84",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/ScopedBlockStorageTest.kt": "24bed1f4a8aefe320d1519d8646f13bbb35069e8d30d517565b81ddfd5043a04",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/ScopedPhysicalMarkRequestTest.kt": "7d1e7b284993081a8f47a1e44e454c843088303c421c6ad22713e2aae7ec56ad",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/ScopedStaticCompletionTest.kt": "9f95c3c8275f8697a8962c10fea70a468b5f9a4c7230ed65c741cd0d16749335",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/SeedIndexTest.kt": "00c61258234dc414678119b9905b1bc3166ed826a798dd7492417eecd7c1305a",
     "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/SelectedCallPolicyHelpersTest.kt": "9049b8da224b9668c00ff28dbc4440e8a763dd18c4b0b74f3590a8221d791a17",
@@ -2400,6 +2401,7 @@
     "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/test/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRStaticMetadata.kt": "31fdc2f9402b33e68c93eaaf8577fcda96e44d511daa28b52edab9c8789d5a94",
     "docs/reports/data/bidirectional-loop-blocks-validation-20261102.json": "e4ff48b55f66a831cae5bcd85e7e8122bf2c13c8d43dd780977555c895a00e11",
     "docs/reports/data/bidirectional-normal-nd-contributors-validation-20261103.json": "6efdfed90a578c38fce953f8ce548bd953ebce9d399c364c8bf2b447fe1256d1",
+    "docs/reports/data/bidirectional-scoped-mark-requests-validation-20261103.json": "f8fb0215a34b76f1038ff6a6da002390943852934189c94be91f33f9a4cb6e9c",
     "scripts/benchmark_bidi_projects.py": "3856ef82bc88a1f755c4582d532471dae71e0bff43fcc85f53d9a990d85a6dce",
     "scripts/compare_bidi_projects.py": "5fb815655ff7be9faa3edd43201ca9b53ca6da67460c9f7a5215f3fd587ef18d",
     "scripts/summarize_bidi_profiles.py": "c61ebbd24156cd2eb60320c9d8cb1b7082f0a702960f92ca3a64809d2b74c749",
@@ -2410,7 +2412,7 @@
     "scripts/test_summarize_bidi_workload.py": "ec0853b8dbb0f3b3e211809ebf1372016c60c42a4b4135923239778e110750e9",
     "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/implementation-source-pins-before-implementation.json": "feccaad92b8af20d357515e390470109135028333858dc9c7374753894141c37",
     "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/checks-before-implementation.json": "ee08185a18b6593154581d096eb2c9be6ab2a6bca613f22d1924ce0ae7cbcd46",
-    "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/README.md": "3d5db077875afdd4abab55b6194c41e97dfe768469db2f0c3f1e99ec7177ba9f",
+    "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/README.md": "c8e33842271e9ba0df67c2c2c9db783cde18b70554c04301c3ccdd9fb47bc922",
     "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/check.py": "8c66a0ccf41bfa72282fa5ad3f6ec8018b21cca36399adc67157a4407dc87919",
     "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/controls.md": "a94856bbf2384b7191371d21d6b654e6acdc9c561cbaced2f44b15f8816e9723",
     "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/controls/LoopGrowingDemandControlTest.kt": "b8b6f13bab6190eaf82ad6060baea509761aae4d1e83fec640e623bc8602da30",
@@ -2419,8 +2421,8 @@
     "spec/lean/proposals/call-stage-result-merging-analysis-20261101/check.py": "817d1ab500b65240cdedeed4c741bcb24470b60e047d5ac3d5dd30eaf951f4dc",
     "spec/loop-fragments-and-demand-collapse.md": "7632952f4785a7ca5e48697b2f2fc0097a3f4aa79810c175d693379ba020266a",
     "spec/method-owned-loop-blocks.md": "695782acdfe40e26c66390bb01e104e888a589eebf3b42db33a646ad1d17bdc7",
-    "spec/loop-blocks-implementation-proofs.md": "86c7363618a1d41ab910e85686b5eb4f873467712360a9e30233e06a237e8d9c",
-    "docs/design/bidirectional-loop-blocks-restriction-implementation-20261102.md": "7d8635cd3eb74b9ca1b748dd6dc8144df881ecd660b28504007026cd93da908a",
+    "spec/loop-blocks-implementation-proofs.md": "8d0c1c582837426a1fef412eeae8762dc068bfc312bcaa18455ef7bd20bc2e20",
+    "docs/design/bidirectional-loop-blocks-restriction-implementation-20261102.md": "a1f8b295bdd2116c887466080567b358613fdcffe608ad5111b9caea17a424fe",
     "spec/loop-fragments-and-demand-collapse-proofs.md": "b78740614b3938bada40e2e61d48f6f014311264fde7a8aa4debf21943c5d0a0",
     "spec/proof-guide.md": "c51296c2773f7a09bc96e3a4679c0b97610c38baf792b39e0de7ef2bf4787dcd",
     "spec/lean/lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
@@ -2435,13 +2437,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Control.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Control.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Control.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.7320217043161392,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Control.log",
+      "wallSeconds": 1.3502002656459808,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Control.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -2452,13 +2454,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Geometry.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Geometry.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Geometry.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.9987821877002716,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Geometry.log",
+      "wallSeconds": 1.15900419652462,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Geometry.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -2469,13 +2471,13 @@
         "-M",
         "2048",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Admission.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Admission.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Admission.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 65.59928312897682,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Admission.log",
+      "wallSeconds": 65.39052741229534,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Admission.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -2486,13 +2488,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Guidance.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Guidance.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Guidance.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.664066880941391,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Guidance.log",
+      "wallSeconds": 0.6070625483989716,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Guidance.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -2503,13 +2505,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Shape.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Shape.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Shape.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.3580702096223831,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Shape.log",
+      "wallSeconds": 0.2842945009469986,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Shape.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -2520,13 +2522,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Protocol.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Protocol.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Protocol.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.41367295384407043,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Protocol.log",
+      "wallSeconds": 0.4187294691801071,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Protocol.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -2537,13 +2539,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Restriction.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Restriction.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Restriction.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.6913614869117737,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Restriction.log",
+      "wallSeconds": 0.5698371976613998,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Restriction.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -2554,13 +2556,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Feedback.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Feedback.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Feedback.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.2765842527151108,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Feedback.log",
+      "wallSeconds": 0.23585960268974304,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Feedback.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -2571,13 +2573,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Blocks.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Blocks.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Blocks.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.5761252790689468,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Blocks.log",
+      "wallSeconds": 0.5078846514225006,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Blocks.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -2588,13 +2590,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Decomposition.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Decomposition.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Decomposition.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.40895481407642365,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Decomposition.log",
+      "wallSeconds": 0.4108922481536865,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Decomposition.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -2605,13 +2607,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Implementation.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Implementation.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Implementation.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.40635593235492706,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Implementation.log",
+      "wallSeconds": 0.35772740840911865,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Implementation.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -2622,13 +2624,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Discovery.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Discovery.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Discovery.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.4163524806499481,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Discovery.log",
+      "wallSeconds": 0.37204355001449585,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Discovery.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -2639,13 +2641,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/ExceptionalControlDemand.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/ExceptionalControlDemand.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/ExceptionalControlDemand.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.8032301515340805,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/ExceptionalControlDemand.log",
+      "wallSeconds": 0.7712811976671219,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/ExceptionalControlDemand.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -2656,13 +2658,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Usefulness.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Usefulness.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/Usefulness.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.7454172670841217,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Usefulness.log",
+      "wallSeconds": 0.6774211674928665,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Usefulness.log",
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -2673,13 +2675,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/EntryPrefixNativeRecords.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/EntryPrefixNativeRecords.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/EntryPrefixNativeRecords.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 1.3153252601623535,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/EntryPrefixNativeRecords.log",
+      "wallSeconds": 1.2160371392965317,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/EntryPrefixNativeRecords.log",
       "logSha256": "71d83606e8c594b8f30feaca7e959b46c4725f03a5827012dd16a74afae63fa9"
     },
     {
@@ -2690,13 +2692,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/NearestBoundaryTerminals.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/NearestBoundaryTerminals.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/NearestBoundaryTerminals.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 1.4480536431074142,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/NearestBoundaryTerminals.log",
+      "wallSeconds": 1.3565295040607452,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/NearestBoundaryTerminals.log",
       "logSha256": "45e29aae2cd233700e5cd845649c611dd46894d1e8f27f3cd6c1a48eb3dddc95"
     },
     {
@@ -2707,13 +2709,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/CanonicalLoopExit.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/CanonicalLoopExit.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/CanonicalLoopExit.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 1.2644851207733154,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/CanonicalLoopExit.log",
+      "wallSeconds": 1.169813647866249,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/CanonicalLoopExit.log",
       "logSha256": "874f5b60fd4a32c969d3d40eb9f3de490f9df5a662d2816d57e11b5cf3114e14"
     },
     {
@@ -2724,13 +2726,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/StaticBoundaryInputRelay.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/StaticBoundaryInputRelay.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/StaticBoundaryInputRelay.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.7927627563476562,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/StaticBoundaryInputRelay.log",
+      "wallSeconds": 0.7115837335586548,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/StaticBoundaryInputRelay.log",
       "logSha256": "b3b8abd1e42d1da2cf2492a64b152ab58f83918d4ce24f026b055b77d46ead55"
     },
     {
@@ -2741,13 +2743,13 @@
         "-M",
         "768",
         "-o",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/MethodExitMetadataEffects.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/MethodExitMetadataEffects.olean",
         "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/loop-fragments-and-demand-collapse-20261102/MethodExitMetadataEffects.lean"
       ],
       "cwd": "spec/lean/proposals/loop-fragments-and-demand-collapse-20261102",
       "exitCode": 0,
-      "wallSeconds": 0.8698235154151917,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/MethodExitMetadataEffects.log",
+      "wallSeconds": 0.8184455633163452,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/MethodExitMetadataEffects.log",
       "logSha256": "59a0cad515b283d88f9658b4b5260cf0063657b6b4ba0c0ccda91461fd9ec6e5"
     },
     {
@@ -2757,12 +2759,12 @@
         "1",
         "-M",
         "2048",
-        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Audit.lean"
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Audit.lean"
       ],
-      "cwd": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z",
+      "cwd": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z",
       "exitCode": 0,
-      "wallSeconds": 0.37847529351711273,
-      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T070934520845Z/Audit.log",
+      "wallSeconds": 0.3034546971321106,
+      "log": "spec/lean/.lake/verification/loop-fragments-and-demand-collapse-20261102/20261103T091708208931Z/Audit.log",
       "logSha256": "58bef2d97d7c619b9d0a1a87f9f1ded50c6f988bf237e84d66e2b0f7416ee845"
     }
   ],

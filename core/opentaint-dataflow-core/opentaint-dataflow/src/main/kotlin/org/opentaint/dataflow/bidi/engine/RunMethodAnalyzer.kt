@@ -92,6 +92,10 @@ class RunMethodAnalyzer(
     private fun waiting(scope: BlockScope): BlockRunState =
         if (scope == BlockScope.ROOT) this else checkNotNull(blockRuntime).state(scope)
 
+    internal fun addScopedMarkRequests(scope: BlockScope, rows: RequestRows) {
+        waiting(scope).addMarkRequests(rows)
+    }
+
     override fun applySummary(part: Subscription, pub: Publication, member: Int) {
         if (part.ref.scope == BlockScope.ROOT) super.applySummary(part, pub, member)
         else waiting(part.ref.scope).applySummary(part, pub, member)

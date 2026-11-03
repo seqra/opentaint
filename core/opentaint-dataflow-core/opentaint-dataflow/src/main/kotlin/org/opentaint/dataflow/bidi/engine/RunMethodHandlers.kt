@@ -72,7 +72,7 @@ class RunMethodHandlers(
                 is RunEvent.StaticOwner -> port.analyzer(event.effect.owner).onStaticEffect(event.effect)
                 is RunEvent.MarkRequestsIn -> {
                     val valid = event.rows.filterKeys { org.opentaint.dataflow.bidi.ap.RuntimeDataDomain.base(it.base) }
-                    if (valid.isNotEmpty()) port.analyzer(event.method).addMarkRequests(valid)
+                    if (valid.isNotEmpty()) port.analyzer(event.method).addScopedMarkRequests(event.scope, valid)
                 }
                 is RunEvent.InitialAnswersIn -> for (initial in event.answers) {
                     port.shared.cancellation.checkpoint()

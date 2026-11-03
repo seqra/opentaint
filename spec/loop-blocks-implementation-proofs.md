@@ -1,12 +1,13 @@
 # Loop-block implementation: proof dossier
 
 Date: 2 November 2026. Updated: 3 November. The selected boundary and NORMAL
-ND contributor corrections pass 2,395 common and 453 JVM tests. The source-pinned receipt
+ND contributor and scoped-request corrections pass 2,399 common and 453 JVM tests. The source-pinned receipt
 records this native gate; it does not prove the Kotlin/AP adapters or project
-quality. The latest measured revision (`6052e2ea`) completed and accepted
-OWASP **run-5** with 18 missing baseline sink identities. Conductor reached
-**run-2 FAILED**, with **run-1** complete/accepted. Thingsboard stopped in
-prescan; Stirling-PDF did not start. A fresh campaign is required.
+quality. The latest measured revision (`1e6c43963`) completed OWASP
+**run-5** with one missing identity and Conductor **run-7** with three.
+Thingsboard timed out at **run-2** with **run-1** accepted; Stirling-PDF
+timed out at **run-8** with **run-7** accepted. A fresh campaign is required
+after the scoped-request correction, which passes its actual-JIR control.
 Proposal section 6.1 uses existing exceptional-exit backward discovery.
 The selected compatibility hack also lets a reached backward exceptional
 ZERO apply the normal-exit paired control demand. It adds no new start.
@@ -583,6 +584,29 @@ service controls, ten store controls, and all existing common/JVM tests.
 It pins the full selected Kotlin source set. The earlier native receipt
 and the before-implementation evidence stay unchanged. Project quality
 and speed still require the new campaign.
+
+## 4.2 Scoped physical mark requests
+
+The [scoped request addendum](scoped-request-climbs.md) restores ownership
+already required by method-owned blocks. A physical subscriber's scope
+must survive climb grouping, batching, and destination dispatch. ROOT R
+cannot suppress a request to another owner. Receiver-local R/P insertion
+and Work scheduling stay unchanged.
+
+The [separate model](lean/proposals/scoped-request-climbs-20261103/README.md)
+passes 32 theorems and audits 55 declarations with no choice or unproved
+axioms. It proves exact scoped cell delivery, complete mark sets, local
+deduplication and ROOT-only sender filtering. It assumes the existing AP
+matching predicate and does not prove the Kotlin scheduler.
+
+The [new native receipt](../docs/reports/data/bidirectional-scoped-mark-requests-validation-20261103.json)
+records two intended protocol failures followed by four passing controls
+and the complete common/JVM checks. The
+[actual-JIR trace](../docs/reports/bidirectional-loop-block-scoped-request-gap-20261103.md)
+shows the returning request belongs to AL entry 47. Restoring its owner
+changes the single-root result from zero findings to the expected finding
+at run-3, without changing source permissions or ZERO admission. This is
+native correctness evidence, not a new project performance result.
 
 ## 5. Work claims and limits
 

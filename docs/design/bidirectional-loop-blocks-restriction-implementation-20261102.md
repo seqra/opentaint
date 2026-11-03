@@ -1,11 +1,13 @@
 # Implementation proposal: method-owned loop blocks and loop restriction
 
-Date: 2 November 2026. Updated: 3 November 2026. The boundary corrections
-are implemented. Revision `6052e2ea` completes and accepts OWASP **run-5**
-with 18 missing baseline sink identities. A native control completes
-**run-3** with its finding absent. The selected correction keeps NORMAL
-ND condition contributors across forward runs; see section 0.2. The final
-project campaign and performance acceptance are not complete.
+Date: 2 November 2026. Updated: 3 November 2026. The boundary and NORMAL
+ND contributor corrections are implemented. Measured revision `1e6c43963`
+completes OWASP **run-5** with one missing identity and Conductor **run-7**
+with three missing identities. Thingsboard times out in **run-2** with
+**run-1** accepted; Stirling-PDF times out in **run-8** with **run-7** accepted.
+The scope correction in section 0.3 restores the remaining OWASP finding
+in an actual-JIR native control at **run-3**. A fresh project campaign is
+required. Quality and performance acceptance are not complete.
 
 ### 0.2 Keep NORMAL ND contributors
 
@@ -22,6 +24,17 @@ separate forward-internal-ZERO draft remains unselected. C2, C5, field
 transfer, complete ND application, and Target rules keep their selected
 contracts. The native SESSION/DATA counterexample is the first acceptance
 gate; a new project campaign is still required after that gate passes.
+
+### 0.3 Preserve physical request destinations
+
+Apply [scoped-request-climbs.md](../../spec/scoped-request-climbs.md).
+The physical call already stores its caller's `BlockScope`. Keep that
+scope in the request climb key, batch destination and `MarkRequestsIn`
+event. Dispatch through the method actor to the existing named block.
+Use the existing local request commit and abstraction. ROOT R cannot
+suppress a request to another block; deduplicate that request at its owner.
+Keep direct TAINT answers, static point requests, C2/C5 and source
+permissions unchanged. This restores the specified ownership contract.
 
 ### 0.1 Boundary-span correction and acceptance gate
 
@@ -66,7 +79,7 @@ Source baseline: `7b59054ef`. Its analyzer runtime is unchanged from
 `8213756108af9cd278668db871fc77428caec64a`. The proof package records the
 reviewed source hashes. Recheck those hashes before implementation.
 
-The [latest measurement](../reports/bidirectional-demand-relative-summary-restriction-performance-20261101.md)
+The [pre-implementation reference](../reports/bidirectional-demand-relative-summary-restriction-performance-20261101.md)
 reaches Conductor **run-6**, with **run-5** complete/accepted;
 Stirling-PDF **run-8**, with **run-7** complete/accepted;
 Thingsboard **run-2**, with **run-1** complete/accepted; and OWASP
