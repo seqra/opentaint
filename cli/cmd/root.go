@@ -101,6 +101,7 @@ func Execute() {
 
 func init() {
 	configureExperimentalFlagVisibility()
+	configureHelpWrap()
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
