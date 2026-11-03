@@ -65,8 +65,10 @@ class GoAnalysisManager(
     override fun selectPhase(phase: Phase) {
         selectedPhase = phase
         contexts.forEach { it.resetAnalysisCache() }
-        if (phase is Phase.FullScan) {
-            taintConfig.selectRules(relevantRuleIds)
+        when (phase) {
+            Phase.Prescan -> Unit
+            Phase.ShallowScan -> taintConfig.selectRules(relevantRuleIds)
+            is Phase.FullScan -> taintConfig.selectRules(relevantRuleIds)
         }
     }
 

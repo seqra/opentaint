@@ -101,18 +101,18 @@ class MethodAnalyzerEdges(
         val finalAp = edge.factAp
 
         val storage = if (isAbstractStaticEdge(initialAp, finalAp)) abstractStaticEdges else taintedToFactEdges
-        val (addedInitial, addedFinal) = storage.add(edge.statement, initialAp, finalAp) ?: return emptyList()
-
-        if (addedInitial === initialAp && addedFinal === finalAp) return listOf(edge)
-
-        return listOf(
-            Edge.FactToFact(
-                methodEntryPoint = edge.methodEntryPoint,
-                initialFactAp = addedInitial,
-                statement = edge.statement,
-                factAp = addedFinal
-            )
-        )
+        return storage.add(edge.statement, initialAp, finalAp).map { (addedInitial, addedFinal) ->
+            if (addedInitial === initialAp && addedFinal === finalAp) {
+                edge
+            } else {
+                Edge.FactToFact(
+                    methodEntryPoint = edge.methodEntryPoint,
+                    initialFactAp = addedInitial,
+                    statement = edge.statement,
+                    factAp = addedFinal,
+                )
+            }
+        }
     }
 
     fun allZeroToFactFactsAtStatement(statement: CommonInst, finalFactPattern: InitialFactAp): List<FinalFactAp> {
@@ -178,21 +178,23 @@ class MethodAnalyzerEdges(
             statement: CommonInst,
             initialAp: InitialFactAp,
             finalAp: FinalFactAp
-        ): Pair<InitialFactAp, FinalFactAp>? {
+        ): List<Pair<InitialFactAp, FinalFactAp>> {
             val edgeIdx = instructionStorageIdx(statement, languageManager)
             val exclusion = finalAp.exclusions
             val currentExclusion = exclusions[edgeIdx]
 
             if (currentExclusion == null) {
                 exclusions[edgeIdx] = exclusion
-                return initialAp to finalAp
+                return listOf(initialAp to finalAp)
             }
 
             val mergedExclusion = currentExclusion.union(exclusion)
-            if (mergedExclusion === currentExclusion) return null
+            if (mergedExclusion === currentExclusion) return emptyList()
 
             exclusions[edgeIdx] = mergedExclusion
-            return initialAp.replaceExclusions(mergedExclusion) to finalAp.replaceExclusions(mergedExclusion)
+            return listOf(
+                initialAp.replaceExclusions(mergedExclusion) to finalAp.replaceExclusions(mergedExclusion),
+            )
         }
 
         override fun collectApAtStatement(

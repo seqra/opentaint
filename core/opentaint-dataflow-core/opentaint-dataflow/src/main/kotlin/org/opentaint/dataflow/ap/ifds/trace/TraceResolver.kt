@@ -26,6 +26,7 @@ class TraceResolver(
 ) {
     data class Params(
         val resolveEntryPointToStartTrace: Boolean = true,
+        val resolveAllTraces: Boolean = false,
     )
 
     data class Trace(
@@ -122,7 +123,10 @@ class TraceResolver(
         data class InProgress(val state: State) : TraceResolutionResult
     }
 
-    fun resolveTrace(state: State): TraceResolutionResult {
+    fun resolveTrace(
+        state: State,
+        isActive: () -> Boolean = cancellation::isActive,
+    ): TraceResolutionResult {
         when (state) {
             is State.Initial -> {
                 val requests = mutableListOf<TraceResolutionRequest>()
@@ -153,13 +157,18 @@ class TraceResolver(
                         return NoTrace(state.vulnerability)
                     }
 
-                    val nextState = addNextRequest(state)
+                    var nextState = addNextRequest(state)
+                    if (params.resolveAllTraces) {
+                        while (nextState.nextRequestIdx < state.requests.size && isActive()) {
+                            nextState = addNextRequest(nextState)
+                        }
+                    }
                     return TraceResolutionResult.InProgress(nextState)
                 }
 
                 ProcessingKind.PROCESS -> {
                     val timeLimit = TimeSource.Monotonic.markNow() + 100.milliseconds
-                    state.builder.process(stepLimit = 100, timeLimit)
+                    state.builder.process(stepLimit = 100, timeLimit, isActive)
 
                     if (!state.builder.isEmpty()) {
                         return TraceResolutionResult.InProgress(state)
@@ -345,9 +354,12 @@ class TraceResolver(
         fun isEmpty(): Boolean =
             unprocessedCall2Sink.isEmpty() && unprocessedCall2Source.isEmpty()
 
-        fun process(stepLimit: Int, timeLimit: TimeMark) {
+        fun process(stepLimit: Int, timeLimit: TimeMark, isActive: () -> Boolean) {
             var steps = 0
-            while (cancellation.isActive() && ++steps < stepLimit && timeLimit.hasNotPassedNow()) {
+            while (
+                cancellation.isActive() && isActive() &&
+                ++steps < stepLimit && timeLimit.hasNotPassedNow()
+            ) {
                 val event = pollUnprocessedEvent() ?: break
                 val resolvedNodes = resolveNode(event.trace, event.kind, event.depth)
 

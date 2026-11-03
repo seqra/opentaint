@@ -7,6 +7,7 @@ import org.opentaint.dataflow.ap.ifds.FactToFactEdgeBuilder
 import org.opentaint.dataflow.ap.ifds.MethodSummaryFactEdgesForExitPoint
 import org.opentaint.dataflow.ap.ifds.SummaryFactStorage
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.InitialToFinalSummaryStorageStats
 import org.opentaint.dataflow.ap.ifds.access.MethodInitialToFinalApSummariesStorage
 import org.opentaint.dataflow.util.collectToListWithPostProcess
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -19,6 +20,10 @@ abstract class CommonF2FSummary<IAP, FAP: Any>(val methodEntryPoint: CommonInst)
     interface Storage<IAP, FAP : Any> {
         fun add(edges: List<StorageEdge<IAP, FAP>>, added: MutableList<F2FBBuilder<IAP, FAP>>)
         fun collectSummariesTo(dst: MutableList<F2FBBuilder<IAP, FAP>>, initialFactPatter: FAP?)
+        fun collectSummariesByFinalTo(dst: MutableList<F2FBBuilder<IAP, FAP>>, finalFactPattern: FAP) {
+            collectSummariesTo(dst, initialFactPatter = null)
+        }
+        fun storageStats(): InitialToFinalSummaryStorageStats? = null
     }
 
     abstract fun createStorage(): Storage<IAP, FAP>
