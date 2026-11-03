@@ -18,13 +18,17 @@ var (
 
 var testModelRunCmd = &cobra.Command{
 	Use:   "run <project-model>",
-	Short: "Run dataflow model tests on a compiled project model",
-	Long: `Run the samples specified in rule-test.yaml with the supplied dataflow models applied.
+	Short: "Run dataflow model tests on a compiled test project",
+	Long: `Run the samples that rule-test.yaml declares with the --dataflow-models models applied and report which samples passed
 
-A built-in source-to-sink harness rule is applied automatically; positive samples reference the
-model-rule.yaml rule with id "model-rule".
+Arguments:
+  <project-model>  Test project compiled with "opentaint compile"
+
+The results are written to test-result.json and test-results.sarif in --output, or in a temporary directory when --output is not set
 
 ` + testExitCodesHelp("All model tests passed"),
+	Example: `  # Test a model project and keep the results
+  opentaint test model run ./model-test/model --dataflow-models ./jackson-models -o ./results`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ruleDir, err := os.MkdirTemp("", "opentaint-model-rule-*")
@@ -37,6 +41,7 @@ model-rule.yaml rule with id "model-rule".
 
 		runTestProject(args[0], testProjectOptions{
 			label:             "Model tests",
+			passedLine:        "All model tests passed.",
 			tempDir:           "opentaint-test-models-*",
 			rulesets:          []string{ruleDir},
 			outputDir:         testModelOutputDir,

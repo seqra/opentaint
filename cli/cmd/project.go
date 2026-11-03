@@ -181,7 +181,7 @@ func (c *JavaAutobuilderConfig) printProjectSummary(config *project.Config) erro
 	projectYamlPath := filepath.Join(c.outputDir, "project.yaml")
 
 	c.logProjectSummary(projectYamlPath, config)
-	suggest("To scan project run", utils.BuildScanCommandFromCompile(c.outputDir, c.outputDir))
+	suggest("To scan the generated model, run:", utils.BuildScanCommandFromCompile(c.outputDir, c.outputDir))
 	return nil
 }
 
@@ -218,16 +218,11 @@ var (
 
 var projectCmd = &cobra.Command{
 	Use:   "project",
-	Short: "Create a project model directory containing a project.yaml configuration from precompiled JARs or classes",
-	Long: `Create a project model directory containing a project.yaml configuration from precompiled JARs or classes.
-
-This command generates a project model, automatically detecting dependencies and project structure.
-Additional packages have to be specified to enhance the generated configuration.
-
-Examples:
-  # Classpath analysis
-  opentaint project --output ./project-model --source-root /path/to/source \
-    --classpath /path/to/app.jar --package com.example`,
+	Short: "Create a project model from precompiled JARs or classes",
+	Long:  `Create a project model from compiled classes or JARs without a build. Use it when the project cannot be built with "opentaint compile"`,
+	Example: `  # Create a project model from an application JAR and its library JARs
+  opentaint project --source-root ./src --classpath ./app.jar --package com.example \
+    --dependency ./lib/guava.jar --dependency ./lib/jackson-databind.jar -o ./app-model`,
 	Run: func(cmd *cobra.Command, args []string) {
 		config := NewJavaAutobuilder().
 			WithOutputDir(OutputDir).
@@ -269,12 +264,12 @@ Examples:
 
 		if DryRunProject {
 			failOnInvalidInputs(config.validate)
-			runDryRun("Project generation")
+			runDryRun("project-model generation")
 			return
 		}
 
 		if err := config.Execute(); err != nil {
-			out.Fatalf("Failed to generate project configuration: %s", err)
+			failf("Failed to generate project configuration: %s", err)
 		}
 	},
 }
@@ -282,15 +277,15 @@ Examples:
 func init() {
 	rootCmd.AddCommand(projectCmd)
 
-	projectCmd.Flags().StringVarP(&OutputDir, "output", "o", "", "Output directory for project.yaml")
+	projectCmd.Flags().StringVarP(&OutputDir, "output", "o", "", "Path to the project model to create (required, must not exist)")
 	_ = projectCmd.MarkFlagRequired("output")
-	projectCmd.Flags().StringVar(&SourceRoot, "source-root", "", "Source root directory")
+	projectCmd.Flags().StringVar(&SourceRoot, "source-root", "", "Project source directory (required)")
 	_ = projectCmd.MarkFlagRequired("source-root")
-	projectCmd.Flags().StringArrayVar(&Dependencies, "dependency", []string{}, "Project dependencies (JAR files)")
-	projectCmd.Flags().StringArrayVar(&Packages, "package", []string{}, "Project packages")
+	projectCmd.Flags().StringArrayVar(&Dependencies, "dependency", []string{}, "Library JAR the project depends on (repeatable)")
+	projectCmd.Flags().StringArrayVar(&Packages, "package", []string{}, "Package of the project's own code (repeatable, required)")
 	_ = projectCmd.MarkFlagRequired("package")
-	projectCmd.Flags().StringArrayVar(&Classpaths, "classpath", []string{}, "Classpath entries (classes or JAR files)")
+	projectCmd.Flags().StringArrayVar(&Classpaths, "classpath", []string{}, "Class directory or JAR of the project (repeatable, required)")
 	_ = projectCmd.MarkFlagRequired("classpath")
-	projectCmd.Flags().BoolVar(&DryRunProject, "dry-run", false, "Validate inputs and show what would run without generating project model")
-	projectCmd.Flags().StringVar(&ProjectLogFile, "log-file", "", "Path to the log file (default: <cache-dir>/logs/<timestamp>.log)")
+	projectCmd.Flags().BoolVar(&DryRunProject, "dry-run", false, "Validate inputs and show what would run without generating the project model")
+	projectCmd.Flags().StringVar(&ProjectLogFile, "log-file", "", logFileUsage)
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/seqra/opentaint/internal/output"
 	"github.com/seqra/opentaint/internal/testmodel"
 	"github.com/seqra/opentaint/internal/testproject"
 	"github.com/seqra/opentaint/internal/testrule"
@@ -18,19 +19,14 @@ var initRuleSourcesOnly bool
 var testRuleInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
 	Short: "Create rule test projects with source and sink harnesses",
-	Long: `Create one or two Gradle test projects under <output-dir>. The sinks
-project tests sink rules against a generic Taint source; the sources project
-tests source rules against a generic Taint sink. Use --sinks-only or
---sources-only when only one project is needed.
+	Long: `Create Gradle test projects for detection rules. The sinks project tests sink rules against a generic taint source, and the sources project tests source rules against a generic taint sink
 
-Each project includes:
-  - build.gradle.kts with compile-only dependencies, settings.gradle.kts
-  - src/main/java/test/ with Taint.java (the generic source()/sink()) for test sample sources
-  - test-rules/java/lib/test/generic-{source,sink}.yaml marker rules for test-only joins
+Arguments:
+  <output-dir>  Parent directory of the sinks and sources projects
 
-Positive and negative samples are specified via rule-test.yaml.
-
-Use --dependency to add compile-only Maven dependencies for the samples.`,
+Declare the positive and negative samples in the rule-test.yaml file of each project`,
+	Example: `  # Create only the sinks project, with a library that the samples call
+  opentaint test rule init ./rule-tests --sinks-only --dependency org.springframework:spring-jdbc:6.1.14`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if initRuleSinksOnly && initRuleSourcesOnly {
@@ -50,28 +46,33 @@ Use --dependency to add compile-only Maven dependencies for the samples.`,
 			if err := testrule.Scaffold(dir); err != nil {
 				out.Fatalf("Failed to scaffold rule test project: %s", err)
 			}
-			fmt.Printf("Rule test project (%s) initialized at %s\n", kind, dir)
+			out.Printf("Rule test project (%s) initialized at %s", kind, dir)
 		}
+		var suggestions []output.Suggestion
+		for _, kind := range kinds {
+			dir := filepath.Join(args[0], kind)
+			modelDir := filepath.Join(dir, "model")
+			suggestions = append(suggestions,
+				output.Suggestion{Description: fmt.Sprintf("To add %s test samples, edit:", kind), Command: filepath.Join(dir, testproject.RuleTestFileName)},
+				output.Suggestion{Description: fmt.Sprintf("To compile the %s test project, run:", kind), Command: fmt.Sprintf("opentaint compile %s -o %s", shellQuote(dir), shellQuote(modelDir))},
+				output.Suggestion{Description: fmt.Sprintf("To run the %s tests, run:", kind), Command: fmt.Sprintf("opentaint test rule run %s", shellQuote(modelDir))},
+			)
+		}
+		out.Suggestions(suggestions...)
 	},
 }
 
 var testModelInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
 	Short: "Create a dataflow model test project",
-	Long: `Create a minimal Gradle project for testing OpenTaint dataflow models.
+	Long: `Create a Gradle test project for dataflow models. A sample passes taint from Taint.source() through the modeled method to Taint.sink(), and the fixed rule model-rule checks that the taint reaches the sink
 
-The project includes:
-  - build.gradle.kts with compile-only dependencies
-  - settings.gradle.kts
-  - model-rule.yaml, the fixed source-to-sink rule the samples are checked against
-  - src/main/java/test/ with Taint.java (the fixed source() and sink()) for test sample sources
+Arguments:
+  <output-dir>  Directory of the new test project
 
-Positive and negative samples are specified via rule-test.yaml.
-
-The model under test is supplied separately at test time with
---dataflow-models.
-
-Use --dependency to add compile-only Maven dependencies for the samples.`,
+Declare the positive and negative samples in rule-test.yaml. The model under test is given to "opentaint test model run" with --dataflow-models`,
+	Example: `  # Create a test project whose samples call jackson-databind
+  opentaint test model init ./model-test --dependency com.fasterxml.jackson.core:jackson-databind:2.17.2`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := testproject.Bootstrap(args[0], "model-test-project", initModelProjectDeps); err != nil {
@@ -80,7 +81,14 @@ Use --dependency to add compile-only Maven dependencies for the samples.`,
 		if err := testmodel.Scaffold(args[0]); err != nil {
 			out.Fatalf("Failed to scaffold model test project: %s", err)
 		}
-		fmt.Printf("Model test project initialized at %s\n", args[0])
+		out.Printf("Model test project initialized at %s", args[0])
+		dir := args[0]
+		modelDir := filepath.Join(dir, "model")
+		out.Suggestions(
+			output.Suggestion{Description: "To add your test samples, edit:", Command: filepath.Join(dir, testproject.RuleTestFileName)},
+			output.Suggestion{Description: "To compile the test project, run:", Command: fmt.Sprintf("opentaint compile %s -o %s", shellQuote(dir), shellQuote(modelDir))},
+			output.Suggestion{Description: "To run the tests, run:", Command: fmt.Sprintf("opentaint test model run %s --dataflow-models <model>", shellQuote(modelDir))},
+		)
 	},
 }
 

@@ -27,15 +27,12 @@ type healthComponent struct {
 
 var healthCmd = &cobra.Command{
 	Use:   "health",
-	Short: "Show resolved dependency paths",
-	Long: `Show the on-disk paths OpenTaint uses for the autobuilder, analyzer,
-built-in rules, and Java runtime.
+	Short: "Show the paths of the analyzer, autobuilder, built-in rules, and Java runtime",
+	Long: `Show the versions and paths of the analyzer, autobuilder, built-in rules, and Java runtime. The command exits with a nonzero code when a component is missing
 
-Use --autobuilder, --analyzer, --rules, or --runtime to select components. When
-exactly one component is selected, only its path is printed. The command does
-not download artifacts except built-in rules, which are fetched on demand.
-
-The exit code is non-zero when any selected component is missing.`,
+With one component flag, the command prints only the path of that component`,
+	Example: `  # Store the path of the built-in rules for a script
+  rules_dir=$(opentaint health --rules)`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runHealth()
@@ -46,7 +43,7 @@ func init() {
 	rootCmd.AddCommand(healthCmd)
 	healthCmd.Flags().BoolVar(&healthAutobuilder, "autobuilder", false, "Print only the autobuilder JAR path")
 	healthCmd.Flags().BoolVar(&healthAnalyzer, "analyzer", false, "Print only the analyzer JAR path")
-	healthCmd.Flags().BoolVar(&healthRules, "rules", false, "Print only the built-in rules path, downloading rules if needed")
+	healthCmd.Flags().BoolVar(&healthRules, "rules", false, "Print only the built-in rules path (downloads the rules when missing)")
 	healthCmd.Flags().BoolVar(&healthRuntime, "runtime", false, "Print only the Java runtime path")
 }
 
@@ -105,6 +102,7 @@ func runHealth() error {
 	}
 	sb.Render()
 	if len(missing) > 0 {
+		out.Suggest("To download the missing components, run:", "opentaint pull")
 		return fmt.Errorf("missing components: %s", strings.Join(missing, ", "))
 	}
 	return nil

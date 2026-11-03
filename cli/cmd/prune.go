@@ -57,24 +57,10 @@ func resolveCategories() (utils.PruneCategory, error) {
 
 var pruneCmd = &cobra.Command{
 	Use:   "prune",
-	Short: "Remove stale downloaded artifacts from ~/.opentaint",
-	Long: `Remove stale downloaded artifacts from the local cache (~/.opentaint).
+	Short: "Remove stale downloads, cached project models, and logs",
+	Long: `Remove stale downloads, cached project models, and logs from ~/.opentaint
 
-Identifies artifacts that are no longer needed:
-- Old versions of analyzer JARs, autobuilder JARs, and rules
-- Downloaded JDK/JRE versions that don't match the current version
-- Cached project models
-
-Use category flags to prune selectively:
-  --artifacts   Stale analyzer and autobuilder JARs
-  --rules       Stale rules directories
-  --jdk         Old JDK/JRE versions
-  --models      Cached project models
-  --logs        Project log files
-  --install     Install-tier lib and JRE artifacts (requires re-download)
-
-Without category flags, prunes: artifacts + rules + jdk + models.
-With --all: prunes everything including logs and install-tier.`,
+Without a category flag, the command removes the stale analyzer, autobuilder, and rules downloads, the old Java runtimes, and the cached project models. With --all, it also removes the logs and the artifacts in ~/.opentaint/install`,
 	Run: func(cmd *cobra.Command, args []string) {
 		categories, err := resolveCategories()
 		if err != nil {
@@ -84,23 +70,23 @@ With --all: prunes everything including logs and install-tier.`,
 		// Acquire global prune lock
 		pruneLockPath, err := utils.PruneLockPath()
 		if err != nil {
-			out.Fatalf("Failed to resolve prune lock path: %s", err)
+			failf("Failed to resolve prune lock path: %s", err)
 		}
 		pruneLock, err := utils.TryLockExclusive(pruneLockPath, utils.LockMeta{
 			PID:     os.Getpid(),
 			Command: "prune",
 		})
 		if err == utils.ErrLocked {
-			out.Fatal("Another prune is already running")
+			failWith(1, "Another prune is already running")
 		}
 		if err != nil {
-			out.Fatalf("Failed to acquire prune lock: %s", err)
+			failf("Failed to acquire prune lock: %s", err)
 		}
 		defer pruneLock.Unlock()
 
 		result, err := utils.ScanForStaleArtifacts(categories)
 		if err != nil {
-			out.Fatalf("Failed to scan for stale artifacts: %s", err)
+			failf("Failed to scan for stale artifacts: %s", err)
 		}
 
 		// Display skipped projects
@@ -130,22 +116,27 @@ With --all: prunes everything including logs and install-tier.`,
 			Render()
 
 		if pruneDryRun {
-			out.Print("Dry run mode. No files were deleted.")
+			out.Print("Dry run complete. No files were deleted.")
+			suggest("To delete these artifacts, run:", withFlag(rerunWithoutDryRun(), "--yes"))
 			return
 		}
 
 		if !pruneYes {
 			if !out.Confirm("Delete these artifacts?", false) {
 				out.Print("Prune cancelled.")
+				suggest("To prune without confirming, run:", withFlag(rerunWithoutDryRun(), "--yes"))
 				return
 			}
 		}
 
 		if err := utils.DeleteArtifacts(result.Stale); err != nil {
-			out.Fatalf("Failed to delete artifacts: %s", err)
+			failf("Failed to delete artifacts: %s", err)
 		}
 
 		out.Successf("Pruned %d items, freed %s", result.TotalCount, output.FormatSize(result.TotalSize))
+		if pruneInstall || pruneAll {
+			suggest("To restore the removed components, run:", "opentaint pull")
+		}
 	},
 }
 
@@ -153,12 +144,12 @@ func init() {
 	rootCmd.AddCommand(pruneCmd)
 
 	pruneCmd.Flags().BoolVar(&pruneDryRun, "dry-run", false, "Show what would be deleted without deleting")
-	pruneCmd.Flags().BoolVar(&pruneYes, "yes", false, "Skip interactive confirmation")
-	pruneCmd.Flags().BoolVar(&pruneAll, "all", false, "Prune everything including logs and install-tier artifacts")
-	pruneCmd.Flags().BoolVar(&pruneArtifacts, "artifacts", false, "Prune stale analyzer and autobuilder JARs")
-	pruneCmd.Flags().BoolVar(&pruneRules, "rules", false, "Prune stale rules directories")
-	pruneCmd.Flags().BoolVar(&pruneJDK, "jdk", false, "Prune old JDK/JRE versions")
+	pruneCmd.Flags().BoolVar(&pruneYes, "yes", false, "Skip the confirmation prompt")
+	pruneCmd.Flags().BoolVar(&pruneAll, "all", false, "Prune all categories")
+	pruneCmd.Flags().BoolVar(&pruneArtifacts, "artifacts", false, "Prune stale analyzer and autobuilder downloads")
+	pruneCmd.Flags().BoolVar(&pruneRules, "rules", false, "Prune stale rules downloads")
+	pruneCmd.Flags().BoolVar(&pruneJDK, "jdk", false, "Prune old JDK and JRE downloads")
 	pruneCmd.Flags().BoolVar(&pruneModels, "models", false, "Prune cached project models")
 	pruneCmd.Flags().BoolVar(&pruneLogs, "logs", false, "Prune project log files")
-	pruneCmd.Flags().BoolVar(&pruneInstall, "install", false, "Prune install-tier lib and JRE artifacts (requires re-download on next run)")
+	pruneCmd.Flags().BoolVar(&pruneInstall, "install", false, "Prune the artifacts in ~/.opentaint/install (they are downloaded again on the next run)")
 }

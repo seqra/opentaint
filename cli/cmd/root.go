@@ -33,9 +33,14 @@ var updateHintCh = make(chan string, 1)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:           "opentaint",
-	Short:         "OpenTaint Analyzer",
-	Long:          `OpenTaint is a CLI tool that analyzes Java and Kotlin projects to find vulnerabilities`,
+	Use:   "opentaint",
+	Short: "Find vulnerabilities in source code with taint analysis",
+	Long: `OpenTaint finds vulnerabilities in Java and Kotlin projects. It follows tainted data from untrusted sources to dangerous sinks
+
+Quick start:
+  opentaint pull                                   Download the analysis toolchain
+  opentaint scan . -o report.sarif                 Scan the project in the current directory
+  opentaint summary report.sarif --show-findings   Show the findings of the report`,
 	SilenceErrors: true,
 	SilenceUsage:  true,
 
@@ -116,41 +121,41 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&globals.Config.Output.Quiet, "quiet", "q", false, "Suppress interactive UI elements (spinners, progress bars) and JAR streaming")
 	_ = viper.BindPFlag("output.quiet", rootCmd.PersistentFlags().Lookup("quiet"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Analyzer.Version, "analyzer-version", globals.AnalyzerBindVersion, "Version of opentaint analyzer")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Analyzer.Version, "analyzer-version", globals.AnalyzerBindVersion, "Analyzer version to use")
 	_ = rootCmd.PersistentFlags().MarkHidden("analyzer-version")
 	_ = viper.BindPFlag("analyzer.version", rootCmd.PersistentFlags().Lookup("analyzer-version"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Autobuilder.Version, "autobuilder-version", globals.AutobuilderBindVersion, "Version of opentaint autobuilder")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Autobuilder.Version, "autobuilder-version", globals.AutobuilderBindVersion, "Autobuilder version to use")
 	_ = rootCmd.PersistentFlags().MarkHidden("autobuilder-version")
 	_ = viper.BindPFlag("autobuilder.version", rootCmd.PersistentFlags().Lookup("autobuilder-version"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Rules.Version, "rules-version", globals.RulesBindVersion, "Version of opentaint rules")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Rules.Version, "rules-version", globals.RulesBindVersion, "Rules version to use")
 	_ = rootCmd.PersistentFlags().MarkHidden("rules-version")
 	_ = viper.BindPFlag("rules.version", rootCmd.PersistentFlags().Lookup("rules-version"))
 
-	rootCmd.PersistentFlags().IntVar(&globals.Config.Java.Version, "java-version", globals.DefaultJavaVersion, "Java version to use for running analyzer")
+	rootCmd.PersistentFlags().IntVar(&globals.Config.Java.Version, "java-version", globals.DefaultJavaVersion, "Java version to compile projects with when no system Java is found")
 	_ = viper.BindPFlag("java.version", rootCmd.PersistentFlags().Lookup("java-version"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Github.Token, "github-token", "", "Token for docker image pull from ghcr.io")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Github.Token, "github-token", "", "GitHub token for downloading releases")
 	_ = rootCmd.PersistentFlags().MarkHidden("github-token")
 	_ = viper.BindPFlag("github.token", rootCmd.PersistentFlags().Lookup("github-token"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Owner, "owner", globals.RepoOwner, "Organization owner for GitHub repositories")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Owner, "owner", globals.RepoOwner, "Owner of the GitHub repository to download releases from")
 	_ = rootCmd.PersistentFlags().MarkHidden("owner")
 	_ = viper.BindPFlag("owner", rootCmd.PersistentFlags().Lookup("owner"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Repo, "repo", globals.RepoName, "GitHub repository name")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Repo, "repo", globals.RepoName, "GitHub repository to download releases from")
 	_ = rootCmd.PersistentFlags().MarkHidden("repo")
 	_ = viper.BindPFlag("repo", rootCmd.PersistentFlags().Lookup("repo"))
 
 	rootCmd.PersistentFlags().BoolVar(&globals.Config.SkipVerify, "skip-verify", false, "Skip SHA256 checksum verification of downloaded artifacts")
 	_ = viper.BindPFlag("skip-verify", rootCmd.PersistentFlags().Lookup("skip-verify"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Analyzer.JarPath, "analyzer-jar", "", "Path to analyzer JAR (dev override, skips download)")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Analyzer.JarPath, "analyzer-jar", "", "Path to a local analyzer JAR to use instead of downloading one")
 	_ = rootCmd.PersistentFlags().MarkHidden("analyzer-jar")
 	_ = viper.BindPFlag("analyzer.jar_path", rootCmd.PersistentFlags().Lookup("analyzer-jar"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Autobuilder.JarPath, "autobuilder-jar", "", "Path to autobuilder JAR (dev override, skips download)")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Autobuilder.JarPath, "autobuilder-jar", "", "Path to a local autobuilder JAR to use instead of downloading one")
 	_ = rootCmd.PersistentFlags().MarkHidden("autobuilder-jar")
 	_ = viper.BindPFlag("autobuilder.jar_path", rootCmd.PersistentFlags().Lookup("autobuilder-jar"))
 }

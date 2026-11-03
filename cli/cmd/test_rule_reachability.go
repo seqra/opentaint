@@ -8,12 +8,19 @@ var reachabilityEntryPoint string
 
 var testRuleReachabilityCmd = &cobra.Command{
 	Use:   "reachability <rule-id> [source-path]",
-	Short: "Trace why a rule can or cannot reach its facts",
-	Long: `Scan a project with one rule and write a sibling fact-reachability SARIF
-report (debug-ifds-fact-reachability.sarif) next to the main one. Use this to
-debug why a rule does or does not fire.
+	Short: "Show why a rule does or does not fire",
+	Long: `Scan a project with one rule and write a fact-reachability report that shows why the rule does or does not fire. The library source and sink rules that the rule refers to are included
 
-Referenced library source and sink rules are collected and analyzed automatically.`,
+Arguments:
+  <rule-id>      Full ID of the rule, such as java/security/path-traversal.yaml:path-traversal
+  [source-path]  Root directory of the project (default: the current directory)
+
+To use a compiled project model, give --project-model instead of [source-path]. The report debug-ifds-fact-reachability.sarif is written next to the SARIF report
+
+` + scanExitCodesHelp("Reachability analysis completed"),
+	Example: `  # Debug the path-traversal rule from one entry point
+  opentaint test rule reachability java/security/path-traversal.yaml:path-traversal ./app \
+    --entry-points com.example.FileController#download`,
 	Annotations: map[string]string{"PrintConfig": "true"},
 	Args:        cobra.RangeArgs(1, 2),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -38,6 +45,5 @@ func reachabilityScanConfig(base ScanConfig, ruleID, entryPoint string) ScanConf
 func init() {
 	testRuleCmd.AddCommand(testRuleReachabilityCmd)
 	addScanFlags(testRuleReachabilityCmd)
-	testRuleReachabilityCmd.Flags().StringVar(&reachabilityEntryPoint, "entry-points", "",
-		"Start analysis from a fully qualified method such as com.example.Class#method")
+	testRuleReachabilityCmd.Flags().StringVar(&reachabilityEntryPoint, "entry-points", "", entryPointsUsage)
 }

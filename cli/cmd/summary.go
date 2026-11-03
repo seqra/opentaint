@@ -9,14 +9,18 @@ import (
 
 // summaryCmd represents the summary command
 var summaryCmd = &cobra.Command{
-	Use:   "summary sarif",
-	Short: "Print summary of your sarif",
+	Use:   "summary <sarif-report>",
+	Short: "Show a summary of a SARIF report",
 	Args:  cobra.ExactArgs(1), // require exactly one argument
-	Long: `Print summary of your sarif file
+	Long: `Show the number of findings by severity and the rules that found them. With --show-findings, also list the findings
 
 Arguments:
-  sarif  - Path to a sarif file
-`,
+  <sarif-report>  SARIF report of "opentaint scan" or "opentaint test"`,
+	Example: `  # List the error findings in src/main
+  opentaint summary report.sarif --show-findings --severity error --path "src/main/**"
+
+  # Show every code-flow step of the path-traversal findings, with the code
+  opentaint summary report.sarif --show-findings --rule-id path-traversal --verbose-flow --show-code-snippets`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		for _, s := range summarySeverities {
@@ -39,6 +43,13 @@ Arguments:
 			out.Fatalf("Failed to load SARIF report: %s", err)
 		}
 		printSarifSummary(report, absSarifPath, summaryFilters(), summaryListingOptions(dim, codeFlowSel))
+
+		if !showFindings && sarif.GenerateSummary(report.Filter(summaryFilters())).TotalFindings > 0 {
+			out.Suggest(
+				"To list the findings, run:",
+				currentSummaryBuilder(absSarifPath).WithShowFindings().Build(),
+			)
+		}
 	},
 }
 
@@ -58,17 +69,17 @@ var summaryCodeFlow string
 func init() {
 	rootCmd.AddCommand(summaryCmd)
 
-	summaryCmd.Flags().BoolVar(&showFindings, "show-findings", false, "Show all issues from Sarif file")
-	summaryCmd.Flags().BoolVar(&showCodeSnippets, "show-code-snippets", false, "Show finding related code snippets")
-	summaryCmd.Flags().BoolVar(&verboseFlow, "verbose-flow", false, "Show full code flow steps for findings")
+	summaryCmd.Flags().BoolVar(&showFindings, "show-findings", false, "List the findings")
+	summaryCmd.Flags().BoolVar(&showCodeSnippets, "show-code-snippets", false, "Show code snippets of findings")
+	summaryCmd.Flags().BoolVar(&verboseFlow, "verbose-flow", false, "Show every code-flow step, not only the source and sink")
 	summaryCmd.Flags().StringArrayVar(&summaryPaths, "path", nil, "Show only findings whose file path matches this glob (** supported, repeatable)")
-	summaryCmd.Flags().StringArrayVar(&summarySeverities, "severity", nil, "Show only findings of this SARIF level: error, warning, note, none (repeatable)")
-	summaryCmd.Flags().StringArrayVar(&summaryRuleIDs, "rule-id", nil, "Show only findings for this rule: full id, leaf name, or glob (repeatable)")
-	summaryCmd.Flags().StringArrayVar(&summaryFingerprints, "partial-fingerprint", nil, "Show only findings whose partial fingerprint starts with this value (git-hash style, repeatable)")
-	summaryCmd.Flags().StringVar(&summaryFingerprintKey, "partial-fingerprint-key", "", "partialFingerprints key matched by --partial-fingerprint (default vulnerabilityWithTraceHash/v1)")
-	summaryCmd.Flags().IntVar(&summaryMaxNestingLevel, "max-nesting-level", -1, "Collapse code-flow steps deeper than this call-nesting level (-1 = no cap)")
-	summaryCmd.Flags().StringVar(&summaryGroupBy, "group-by", "", "Group the --show-findings listing by: severity, rule-id, file-path (default file-path)")
-	summaryCmd.Flags().StringVar(&summaryCodeFlow, "code-flow", "", "Render code flows: \"all\", a 1-based index, or unset (first only)")
+	summaryCmd.Flags().StringArrayVar(&summarySeverities, "severity", nil, "Show only findings of this SARIF level: error, warning, note, or none (repeatable)")
+	summaryCmd.Flags().StringArrayVar(&summaryRuleIDs, "rule-id", nil, "Show only findings of this rule: full ID, leaf name, or glob (repeatable)")
+	summaryCmd.Flags().StringArrayVar(&summaryFingerprints, "partial-fingerprint", nil, "Show only findings whose partial fingerprint starts with this prefix (repeatable)")
+	summaryCmd.Flags().StringVar(&summaryFingerprintKey, "partial-fingerprint-key", "", "SARIF partialFingerprints key that --partial-fingerprint matches (default vulnerabilityWithTraceHash/v1)")
+	summaryCmd.Flags().IntVar(&summaryMaxNestingLevel, "max-nesting-level", -1, "Hide code-flow steps deeper than this call-nesting level (-1 = off)")
+	summaryCmd.Flags().StringVar(&summaryGroupBy, "group-by", "", "Group findings by severity, rule-id, or file-path (default file-path)")
+	summaryCmd.Flags().StringVar(&summaryCodeFlow, "code-flow", "", "Code flows to show for each finding: all or a 1-based index (default: the first)")
 }
 
 // currentSummaryBuilder returns a builder pre-populated with the user's current summary flags.
@@ -137,7 +148,7 @@ func printSarifSummary(report *sarif.Report, absSarifPath string, filters sarif.
 
 	if showFindings && hasOmittedFlow && !verboseFlow {
 		out.Suggest(
-			"To see full code flow and code snippets, use:",
+			"To see the full code flow and code snippets, run:",
 			currentSummaryBuilder(absSarifPath).WithVerboseFlow().WithShowCodeSnippets().Build(),
 		)
 	}
