@@ -3,6 +3,8 @@ package org.opentaint.dataflow.bidi.engine
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.store.forEachMark
 import org.opentaint.dataflow.bidi.store.RequestMarkSetBuilder
+import org.opentaint.dataflow.bidi.store.BlockScope
+import org.opentaint.dataflow.bidi.store.OwnedScope
 
 /** Replay and delivery use one complete AP predicate after their candidate scans. */
 fun matches(sub: Subscription, pub: Publication, member: Int, ops: ApOps, mode: ApMode): Facts? {
@@ -81,7 +83,7 @@ class SubscriptionManager(port: SubscriptionPort) {
         }
     }
 
-    private data class ClimbTarget(val method: MethodKey, val slot: Run1Slot)
+    private data class ClimbTarget(val owner: OwnedScope, val slot: Run1Slot)
     private class ReplayCounts {
         var candidates = 0L
         var tests = 0L
@@ -144,12 +146,15 @@ class SubscriptionManager(port: SubscriptionPort) {
                                     offered.takeSnapshot().forEachMark { ap.cancellation.checkpoint(); target.add(it) }
                                     return@inputs
                                 }
-                                val target = ClimbTarget(part.ref.caller, checkNotNull(original))
-                                val admitted = port.summaryStorage(target.method).borrowRequest(original)
+                                val target = ClimbTarget(OwnedScope(part.ref.caller, part.ref.scope), checkNotNull(original))
+                                // Only the root snapshot is exposed here. A nonroot caller
+                                // admits/deduplicates requests in its own R/P stores on delivery.
+                                val admitted = if (target.owner.local == BlockScope.ROOT)
+                                    port.summaryStorage(target.owner.method).borrowRequest(original) else null
                                 val destination = climbs.getOrPut(target, ::RequestMarkSetBuilder)
                                 offered.takeSnapshot().forEachMark { mark ->
                                     ap.cancellation.checkpoint()
-                                    if (!admitted.containsId(mark.id)) {
+                                    if (admitted?.containsId(mark.id) != true) {
                                         if (counts != null) counts.climbs++
                                         if (batch != null) batch.climbs++
                                         if (!destination.add(mark) && batch != null) batch.duplicateTargetUnions++
@@ -170,18 +175,19 @@ class SubscriptionManager(port: SubscriptionPort) {
                     is Reach -> Unit
                 }
             }
-            val requestsByMethod = LinkedHashMap<MethodKey, MutableMap<Run1Slot, org.opentaint.dataflow.bidi.store.RequestMarkSet>>()
+            val requestsByOwner = LinkedHashMap<OwnedScope, MutableMap<Run1Slot, org.opentaint.dataflow.bidi.store.RequestMarkSet>>()
             for ((part, marks) in staticPoints) {
                 ap.cancellation.checkpoint()
                 port.applier(part.caller).requestStaticGroups(part, marks.takeSnapshot())
             }
             for ((target, marks) in climbs) {
                 ap.cancellation.checkpoint()
-                if (!marks.isEmpty) requestsByMethod.getOrPut(target.method, ::LinkedHashMap)[target.slot] = marks.takeSnapshot()
+                if (!marks.isEmpty) requestsByOwner.getOrPut(target.owner, ::LinkedHashMap)[target.slot] = marks.takeSnapshot()
             }
-            for ((method, rowsToSend) in requestsByMethod) {
+            for ((owner, rowsToSend) in requestsByOwner) {
                 ap.cancellation.checkpoint()
-                val accepted = port.send(RunEvent.MarkRequestsIn(method, java.util.Collections.unmodifiableMap(rowsToSend)))
+                val accepted = port.send(RunEvent.MarkRequestsIn(owner.method,
+                    java.util.Collections.unmodifiableMap(rowsToSend), owner.local))
                 ap.cancellation.checkpoint()
                 check(accepted) { "An active run rejected a request delivery" }
                 if (batch != null) batch.acceptedBatch(rowsToSend.values.sumOf { it.size })

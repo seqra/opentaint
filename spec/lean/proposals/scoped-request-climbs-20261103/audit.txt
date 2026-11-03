@@ -1,0 +1,55 @@
+'ScopedRequestClimbs.insert' depends on axioms: [propext]
+'ScopedRequestClimbs.mem_insert' depends on axioms: [propext]
+'ScopedRequestClimbs.unique' depends on axioms: [propext]
+'ScopedRequestClimbs.mem_unique' depends on axioms: [propext]
+'ScopedRequestClimbs.marksAt' does not depend on any axioms
+'ScopedRequestClimbs.addRow' depends on axioms: [propext]
+'ScopedRequestClimbs.mem_marksAt_cons' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.addRow_membership' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.addForOwner' depends on axioms: [propext]
+'ScopedRequestClimbs.batchRows' depends on axioms: [propext]
+'ScopedRequestClimbs.batchRows_membership' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.owners' depends on axioms: [propext]
+'ScopedRequestClimbs.batches' depends on axioms: [propext]
+'ScopedRequestClimbs.delivered' does not depend on any axioms
+'ScopedRequestClimbs.batching_preserves_every_owner_slot_mark' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.eraseScope' does not depend on any axioms
+'ScopedRequestClimbs.old_projection_erases_destination_scope' does not depend on any axioms
+'ScopedRequestClimbs.old_projection_collapses_distinct_scopes' does not depend on any axioms
+'ScopedRequestClimbs.climb' does not depend on any axioms
+'ScopedRequestClimbs.climb_preserves_scope' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.climb_preserves_slot' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.climb_contains_all_full_marks' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.prefilter' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.filteredClimb' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.nonroot_prefilter_never_reads_peer_rows' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.root_prefilter_keeps_exactly_unadmitted_marks' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.insertRequest' depends on axioms: [propext]
+'ScopedRequestClimbs.destination_dedup_keeps_every_new_scoped_request' depends on axioms: [propext]
+'ScopedRequestClimbs.destination_dedup_is_idempotent' depends on axioms: [propext]
+'ScopedRequestClimbs.destination_dedup_cannot_suppress_another_scope' depends on axioms: [propext]
+'ScopedRequestClimbs.batching_joins_same_scope_marks_without_loss' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.same_slot_different_scopes_are_both_delivered' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.matchedClimb' does not depend on any axioms
+'ScopedRequestClimbs.unmatched_slots_still_emit_nothing' depends on axioms: [propext]
+'ScopedRequestClimbs.matched_slots_keep_the_same_fields_and_tail' depends on axioms: [propext]
+'ScopedRequestClimbs.fresh' depends on axioms: [propext]
+'ScopedRequestClimbs.fresh_membership' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.nonroot_filtered_climb_keeps_all_marks' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.receiver_only_observes_its_exact_owner' depends on axioms: [propext]
+'ScopedRequestClimbs.scoped_dedup_membership_is_order_independent' depends on axioms: [propext]
+'ScopedRequestClimbs.batching_does_not_add_a_new_mark' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.batching_does_not_drop_a_mark' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.receiverHas' does not depend on any axioms
+'ScopedRequestClimbs.receiver_R_at_another_scope_is_not_an_answer' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.receiver_P_at_another_scope_cannot_deduplicate_an_initial' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.sampleSlot' does not depend on any axioms
+'ScopedRequestClimbs.ownerA' does not depend on any axioms
+'ScopedRequestClimbs.ownerB' does not depend on any axioms
+'ScopedRequestClimbs.ownerRoot' does not depend on any axioms
+'ScopedRequestClimbs.fullMarks' does not depend on any axioms
+'ScopedRequestClimbs.requests' does not depend on any axioms
+'ScopedRequestClimbs.old_keys_are_identical_but_new_keys_differ' does not depend on any axioms
+'ScopedRequestClimbs.new_batch_retains_both_owners_and_every_mark' depends on axioms: [propext, Quot.sound]
+'ScopedRequestClimbs.root_history_cannot_answer_a_local_request' depends on axioms: [propext]
+'ScopedRequestClimbs.root_prefilter_does_not_remove_either_local_owner' depends on axioms: [propext, Quot.sound]

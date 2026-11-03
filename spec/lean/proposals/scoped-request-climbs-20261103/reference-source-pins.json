@@ -1,0 +1,11 @@
+{
+  "productionVerified": false,
+  "baselineRevision": "1e6c43963868dde6f652a4b9fa0284c95c818b2c",
+  "sourceRole": "Immutable pre-correction interfaces. These blobs identify scope loss and existing local deduplication; no claim that Lean verifies production Kotlin.",
+  "sources": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SubscriptionManager.kt": "9e74fd2603e5cdea7c7d8ea32208e402b4856535d2d7ba21d027078e62eddd5e",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunEvent.kt": "83481cc03a3032b0e0aec544b9030256b1f2dd61f709032cdac8d5b35b19301a",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodHandlers.kt": "c162ac21465f53f73e03562d48d7433198024003daf7dff7847736a1d4e218a2",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockRunState.kt": "3c195ca227f5bbbcd0e07131f74924de8c533e590e80cee5c05f371e3102f187"
+  }
+}

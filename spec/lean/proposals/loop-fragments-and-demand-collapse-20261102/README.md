@@ -1,15 +1,18 @@
 # Loop fragments and demand collapse: local models
 
 Date: 2 November 2026. Updated: 3 November. The selected boundary and NORMAL
-ND contributor corrections pass the complete native suites:
-**2,395 common tests and 453 JVM tests**, with no failures,
+ND contributor and scoped-request corrections pass the complete native suites:
+**2,399 common tests and 453 JVM tests**, with no failures,
 errors or skipped tests. The benchmark harness also passes 60 Python tests.
-The latest measured revision (`6052e2ea`) completed and accepted OWASP
-**run-5** with 18 missing identities. Conductor reached **run-2 FAILED**,
-with **run-1** complete/accepted; Thingsboard stopped in prescan and
-Stirling-PDF did not start. A fresh campaign is still required. See the
+The latest measured revision (`1e6c43963`) completed OWASP **run-5** with
+one missing identity and Conductor **run-7** with three. Thingsboard timed
+out in **run-2** with **run-1** accepted; Stirling-PDF timed out in **run-8**
+with **run-7** accepted. The scoped-request native fix requires a fresh
+campaign. See the
 [NORMAL contributor model](../normal-nd-contributors-20261103/README.md)
-for the selected correction's separate 55-theorem audit.
+for the selected correction's separate 55-theorem audit and the
+[scoped-request model](../scoped-request-climbs-20261103/README.md)
+for its separate 32-theorem audit.
 
 Read [the spec](../../../loop-fragments-and-demand-collapse.md),
 [method-owned blocks](../../../method-owned-loop-blocks.md),
