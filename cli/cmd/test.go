@@ -31,11 +31,7 @@ var testModelCmd = &cobra.Command{
 }
 
 // testApproximationCmd is the deprecated name of testModelCmd.
-var testApproximationCmd = &cobra.Command{
-	Use:        "approximation",
-	Short:      testModelCmd.Short,
-	Deprecated: "use 'opentaint test model' instead",
-}
+var testApproximationCmd = deprecatedGroup(testModelCmd, "approximation", "opentaint test model")
 
 func init() {
 	rootCmd.AddCommand(testCmd)
