@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/seqra/opentaint/internal/globals"
+	"github.com/seqra/opentaint/internal/testmodel"
+	"github.com/seqra/opentaint/internal/testproject"
 	"github.com/seqra/opentaint/internal/utils"
 	"github.com/seqra/opentaint/internal/utils/java"
 	"github.com/seqra/opentaint/internal/utils/log"
@@ -99,7 +101,7 @@ Arguments:
 		}); err == nil {
 			out.Blank()
 			printCompileSummary(absOutputProjectModelPath)
-			suggest("To scan the compiled project model, run:", utils.BuildScanCommandFromCompile(projectRoot, absOutputProjectModelPath))
+			suggest(compileNextStep(absProjectRoot, projectRoot, absOutputProjectModelPath))
 		} else {
 			out.InteractiveBlank()
 			failWith(1, fmt.Sprintf("Native compile has failed: %s", err), dockerCompileSuggestion())
@@ -190,4 +192,17 @@ func compileProjectWithLogs(absOutputProjectModelPath, absProjectRoot, autobuild
 	}
 
 	return nil
+}
+
+// compileNextStep returns the hint printed after a successful compile. A compiled test project is
+// tested, not scanned.
+func compileNextStep(absProjectRoot, projectRoot, absOutputProjectModelPath string) (string, string) {
+	if !utils.PathExists(filepath.Join(absProjectRoot, testproject.RuleTestFileName)) {
+		return "To scan the compiled project model, run:", utils.BuildScanCommandFromCompile(projectRoot, absOutputProjectModelPath)
+	}
+	projectModel := shellQuote(absOutputProjectModelPath)
+	if testmodel.IsTestProject(absProjectRoot) {
+		return "To run the model tests, run:", "opentaint test model run " + projectModel + " --dataflow-models <model>"
+	}
+	return "To run the rule tests, run:", "opentaint test rule run " + projectModel
 }

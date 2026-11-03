@@ -55,7 +55,8 @@ Give each library that the models are written against with --dependency, at the 
 		} else {
 			fmt.Printf("Model project initialized at %s\n", projectPath)
 		}
-		suggest("To compile the models run", fmt.Sprintf("opentaint compile models %s", args[0]))
+		suggest("After you write the models, test them with:",
+			fmt.Sprintf("opentaint test model run <project-model> --dataflow-models %s", shellQuote(args[0])))
 	},
 }
 

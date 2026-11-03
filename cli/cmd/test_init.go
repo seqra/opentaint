@@ -53,7 +53,7 @@ Declare the positive and negative samples in the rule-test.yaml file of each pro
 			dir := filepath.Join(args[0], kind)
 			modelDir := filepath.Join(dir, "model")
 			suggestions = append(suggestions,
-				output.Suggestion{Description: fmt.Sprintf("To add %s test samples, edit:", kind), Command: filepath.Join(dir, "rule-test.yaml")},
+				output.Suggestion{Description: fmt.Sprintf("To add %s test samples, edit:", kind), Command: filepath.Join(dir, testproject.RuleTestFileName)},
 				output.Suggestion{Description: fmt.Sprintf("To compile the %s test project, run:", kind), Command: fmt.Sprintf("opentaint compile %s -o %s", shellQuote(dir), shellQuote(modelDir))},
 				output.Suggestion{Description: fmt.Sprintf("To run the %s tests, run:", kind), Command: fmt.Sprintf("opentaint test rule run %s", shellQuote(modelDir))},
 			)
@@ -85,7 +85,7 @@ Declare the positive and negative samples in rule-test.yaml. The model under tes
 		dir := args[0]
 		modelDir := filepath.Join(dir, "model")
 		out.Suggestions(
-			output.Suggestion{Description: "To add your test samples, edit:", Command: filepath.Join(dir, "rule-test.yaml")},
+			output.Suggestion{Description: "To add your test samples, edit:", Command: filepath.Join(dir, testproject.RuleTestFileName)},
 			output.Suggestion{Description: "To compile the test project, run:", Command: fmt.Sprintf("opentaint compile %s -o %s", shellQuote(dir), shellQuote(modelDir))},
 			output.Suggestion{Description: "To run the tests, run:", Command: fmt.Sprintf("opentaint test model run %s --dataflow-models <model>", shellQuote(modelDir))},
 		)
