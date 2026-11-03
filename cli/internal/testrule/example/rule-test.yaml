@@ -1,0 +1,9 @@
+# Add one entry for each rule under test. The rule-id is the path of the rule file relative to
+# its ruleset root and the ID of the rule. Samples are entry-point methods given as <class>#<method>
+#
+#   - rule-id: java/security/my-rule.yaml#my-rule
+#     positive:
+#       - test.MySamples#positive
+#     negative:
+#       - test.MySamples#negative
+tests: []

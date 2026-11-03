@@ -47,8 +47,8 @@ Arguments:
 			Field("Model project", projectPath).
 			Field("Compiled models written to", models.ClassesDir(outputPath)).
 			Render()
-		suggest("To apply these models in a scan run",
-			fmt.Sprintf("opentaint scan <project-model> --dataflow-models %s", args[0]))
+		suggest("To scan with these models, run:",
+			fmt.Sprintf("opentaint scan <source-path> --dataflow-models %s", shellQuote(args[0])))
 	},
 }
 
