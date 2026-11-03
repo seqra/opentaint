@@ -687,6 +687,26 @@ internal class MethodBlockRuntime(
     fun forEachLocalInput(scope: BlockScope, visit: (LocalLink, Facts) -> Unit) {
         entries[scope]?.links?.forEachInput(visit)
     }
+    /** Transfer every existing input directory, including saved-only entries. */
+    fun detachJoinedLocalInputs(): Map<BlockScope, JoinedLocalInputs> {
+        requireIdle()
+        val acquired = LinkedHashMap<BlockScope, JoinedLocalInputs>()
+        try {
+            for ((scope, entry) in entries) {
+                val moved = entry.links.detachJoinedInputs()
+                try { acquired[scope] = moved } catch (error: Throwable) {
+                    try { moved.close() } catch (cleanup: Throwable) { if (cleanup !== error) error.addSuppressed(cleanup) }
+                    throw error
+                }
+            }
+            return acquired
+        } catch (error: Throwable) {
+            for (moved in acquired.values) try { moved.close() } catch (cleanup: Throwable) {
+                if (cleanup !== error) error.addSuppressed(cleanup)
+            }
+            throw error
+        }
+    }
     fun scopedSummaries(): Sequence<ScopedRunSummary> = sequence {
         for ((scope, e) in entries) if (scope != BlockScope.ROOT && e.stateOrNull != null)
             for ((exit, rows) in e.state.portSummaries.entries())

@@ -84,6 +84,7 @@ class IterationDriver internal constructor(
             logOptimizationStatistics(config, "END")
             throw error
         }
+        logger.info { "BIDI_JOINED_RELEASE run=${config.index} sealReleaseTime=${result.joinedSealReleaseTime} status=${result.status}" }
         val engineTime = (start.elapsedNow() - result.joinedStaticBindingTime).coerceAtLeast(Duration.ZERO)
         logger.info { "BIDI_RUN_END run=${config.index} status=${result.status} engineTime=$engineTime" }
         if (config.run1 && config.mode.markMode == MarkMode.FULL && result.status == RunStatus.COMPLETE) {

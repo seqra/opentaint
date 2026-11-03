@@ -52,6 +52,8 @@ class RunManager<A : RunActor>(
     private val completion = CompletableDeferred<RunStatus>()
     private val status = AtomicReference<RunStatus?>(null)
     private val invoked = AtomicBoolean()
+    /** Native lifecycle/failure control; production keeps this null. */
+    internal var joinedPreparationObserver: ((JoinedPreparationPhase) -> Unit)? = null
     private class Deadline(private val start: TimeMark, private val timeout: Duration) {
         val remaining: Duration get() = timeout - start.elapsedNow()
     }
@@ -189,52 +191,117 @@ class RunManager<A : RunActor>(
         val joinedActors = if (joined) snapshot.flatMap { it.analyzers() } else emptyList()
         var staticCompletion: FrozenCompletion? = null
         var joinedStaticBindingTime = Duration.ZERO
-        if (joined && config.run1 && status.get() == RunStatus.COMPLETE) {
-            val started = TimeSource.Monotonic.markNow()
+        var joinedSealReleaseTime = Duration.ZERO
+        val methods = joinedActors.filterIsInstance<RunMethodAnalyzer>()
+        val realMethods = methods.size == joinedActors.size
+        var preparationStarted = false
+        val lease = JoinedBindingLease()
+        val releasedRunners = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<UnitRunner<A>, Boolean>())
+        var failure: Throwable? = null
+        var preparationError: Throwable? = null
+        fun release(action: () -> Unit) {
+            try { action() } catch (error: Throwable) {
+                val first = failure ?: preparationError
+                if (first == null) failure = error else if (error !== first) first.addSuppressed(error)
+            }
+        }
+        fun releaseRunner(runner: UnitRunner<A>) {
+            if (releasedRunners.add(runner)) runner.release()
+        }
+        fun prepareJoined(checkpoint: () -> Unit): JoinedStaticGuidance? {
+            var sources: List<JoinedStaticSource> = emptyList()
+            var primary: Throwable? = null
+            try {
+                if (realMethods) {
+                    preparationStarted = true
+                    val sealStarted = TimeSource.Monotonic.markNow()
+                    try {
+                        check(inFlight.pending == 0L && !admitting) { "Joined preparation needs complete callback quiescence" }
+                        for (method in methods) { checkpoint(); method.captureJoinedExports() }
+                        joinedPreparationObserver?.invoke(JoinedPreparationPhase.CAPTURED)
+                        if (config.run1) {
+                            sources = methods.flatMap { checkpoint(); it.detachJoinedStaticSources() }
+                            for (method in methods) { checkpoint(); lease.addLocal(method.key, method.detachJoinedLocalInputs()) }
+                            for (storage in storages.values) { checkpoint(); lease.addCallers(storage) }
+                        }
+                        joinedPreparationObserver?.invoke(JoinedPreparationPhase.SEALED)
+                        for (method in methods) {
+                            checkpoint()
+                            release { method.freeze() }
+                        }
+                        failure?.let { throw it }
+                        for (runner in snapshot) release { releaseRunner(runner) }
+                        failure?.let { throw it }
+                        synchronized(admission) { runners.clear(); runnerJobs.clear(); storages.clear() }
+                        joinedPreparationObserver?.invoke(JoinedPreparationPhase.RELEASED)
+                    } finally { joinedSealReleaseTime += sealStarted.elapsedNow() }
+                }
+                if (!config.run1) return null
+                checkpoint()
+                joinedPreparationObserver?.invoke(JoinedPreparationPhase.BEFORE_BIND)
+                val bindStarted = TimeSource.Monotonic.markNow()
+                val result = try {
+                    if (realMethods) completeJoinedStaticGuidance(config, shared, sources, lease, checkpoint)
+                    else completeJoinedStaticGuidance(config, shared, methods, storage = { storages[it] }, checkpoint = checkpoint)
+                } finally { joinedStaticBindingTime += bindStarted.elapsedNow() }
+                checkpoint()
+                joinedPreparationObserver?.invoke(JoinedPreparationPhase.BOUND)
+                return result
+            } catch (error: Throwable) {
+                primary = error
+                throw error
+            } finally {
+                val closeStarted = TimeSource.Monotonic.markNow()
+                var cleanup: Throwable? = null
+                fun close(action: () -> Unit) {
+                    try { action() } catch (error: Throwable) {
+                        val first = primary ?: cleanup
+                        if (first == null) cleanup = error else if (first !== error) first.addSuppressed(error)
+                    }
+                }
+                close { lease.close() }
+                sources = emptyList() // Drop reader references, never shared native stores or keys.
+                joinedSealReleaseTime += closeStarted.elapsedNow()
+                if (realMethods) close { joinedPreparationObserver?.invoke(JoinedPreparationPhase.CLOSED) }
+                if (primary == null) cleanup?.let { throw it }
+            }
+        }
+        if (joined && status.get() == RunStatus.COMPLETE) {
             val resourceGate = Any()
             var resourceActive = true
             var guidance: JoinedStaticGuidance? = null
-            fun rejectGuidance(reason: RunStatus) = synchronized(resourceGate) {
+            fun rejectPreparation(reason: RunStatus) = synchronized(resourceGate) {
                 check(reason != RunStatus.COMPLETE)
-                if (resourceActive && status.compareAndSet(RunStatus.COMPLETE, reason))
-                    shared.cancellation.cancel()
+                if (resourceActive && status.compareAndSet(RunStatus.COMPLETE, reason)) shared.cancellation.cancel()
             }
             fun checkpoint() {
-                if (checkNotNull(deadline).remaining <= Duration.ZERO) rejectGuidance(RunStatus.TIMEOUT)
+                if (checkNotNull(deadline).remaining <= Duration.ZERO) rejectPreparation(RunStatus.TIMEOUT)
                 shared.cancellation.checkpoint()
             }
             try {
-                // The engine guard has ended; keep the same configured memory
-                // policy active while borrowing joined caller inputs.
-                withJoinedDeadline(remaining = { checkNotNull(deadline).remaining },
-                    onTimeout = { rejectGuidance(RunStatus.TIMEOUT) }) {
-                    MemoryManager(shared.refManager, OOM_THRESHOLD) { rejectGuidance(RunStatus.OOM) }
-                        .runWithMemoryManager {
-                            checkpoint()
-                            guidance = completeJoinedStaticGuidance(config, shared,
-                                joinedActors.filterIsInstance<RunMethodAnalyzer>(),
-                                storage = { method -> storages[method] }, checkpoint = ::checkpoint)
-                            checkpoint()
-                        }
+                if (config.run1) {
+                    // Preserve the existing joined resource gate around the entire new lifetime phase.
+                    withJoinedDeadline(remaining = { checkNotNull(deadline).remaining },
+                        onTimeout = { rejectPreparation(RunStatus.TIMEOUT) }) {
+                        MemoryManager(shared.refManager, OOM_THRESHOLD) { rejectPreparation(RunStatus.OOM) }
+                            .runWithMemoryManager { checkpoint(); guidance = prepareJoined(::checkpoint); checkpoint() }
+                    }
+                } else {
+                    // Later runs keep their old post-join guard coverage.
+                    guidance = prepareJoined(shared.cancellation::checkpoint)
                 }
             } catch (error: Throwable) {
-                rejectGuidance(if (error is OutOfMemoryError) RunStatus.OOM else RunStatus.FAILED)
-                logger.error(error) { "Run ${config.index}: joined static writer completion failed" }
-            } finally {
-                // An already dispatched GC callback cannot reject the result
-                // after this completion phase has closed.
-                synchronized(resourceGate) { resourceActive = false }
-                joinedStaticBindingTime = started.elapsedNow()
-            }
-            if (status.get() == RunStatus.COMPLETE) staticCompletion = checkNotNull(guidance).completion
-            logger.info {
+                preparationError = error
+                rejectPreparation(if (error is OutOfMemoryError) RunStatus.OOM else RunStatus.FAILED)
+                logger.error(error) { "Run ${config.index}: joined preparation failed" }
+            } finally { synchronized(resourceGate) { resourceActive = false } }
+            if (status.get() == RunStatus.COMPLETE) staticCompletion = guidance?.completion
+            if (config.run1) logger.info {
                 "BIDI_STATIC_WRITER_BIND run=${config.index} bindingTime=$joinedStaticBindingTime status=${status.get()} " +
                     "observedCandidates=${guidance?.observedCandidates ?: 0} lostCandidates=${guidance?.lostCandidates ?: 0} " +
                     "peakCandidateMemberships=${guidance?.peakCandidates ?: 0} " +
-                    "pruneTime=${guidance?.pruneTime ?: Duration.ZERO} " +
-                    "writerTime=${guidance?.writerTime ?: Duration.ZERO} " +
-                    "closureFreezeTime=${guidance?.closureFreezeTime ?: Duration.ZERO} " +
-                    "${guidance?.binding ?: "no-completed-binding"}"
+                    "pruneTime=${guidance?.pruneTime ?: Duration.ZERO} writerTime=${guidance?.writerTime ?: Duration.ZERO} " +
+                    "closureFreezeTime=${guidance?.closureFreezeTime ?: Duration.ZERO} ${guidance?.binding ?: "no-completed-binding"}"
             }
         }
         val end = checkNotNull(status.get())
@@ -259,31 +326,25 @@ class RunManager<A : RunActor>(
             } }
         }
         staticService?.let { logger.info { "BIDI_STATIC_STATISTICS run=${config.index} status=$end totals=${it.statistics()} requests=${it.requestStatistics()}" } }
-        var failure: Throwable? = null
-        fun release(action: () -> Unit) {
-            try { action() }
-            catch (error: Throwable) {
-                val first = failure
-                if (first == null) failure = error
-                else if (error !== first) first.addSuppressed(error)
-            }
-        }
         try {
             for (analyzer in analyzers) release { analyzer.freeze() }
+            if (preparationStarted && end != RunStatus.COMPLETE)
+                for (method in methods) release { method.freeze() }
         } finally {
-            if (joined) for (runner in snapshot) release { runner.release() }
+            release { lease.close() }
+            if (joined) for (runner in snapshot) release { releaseRunner(runner) }
             // A complete run's frozen state is still needed by the driver barrier.
             if (joined && config.run1 && end != RunStatus.COMPLETE) shared.releaseRun1CatalogCoverage()
             synchronized(admission) {
                 runners.clear()
                 runnerJobs.clear()
-                if (joined) storages.clear()
+                if (joined) { storages.values.forEach { it.releaseStopped() }; storages.clear() }
             }
             if (joined) staticService?.clear()
         }
         failure?.let { throw it }
         return RunResult(end, analyzers, config.index, config.direction, config.mode.markMode,
-            joinedStaticBindingTime, staticCompletion)
+            joinedStaticBindingTime, staticCompletion, joinedSealReleaseTime)
     }
 
     private fun startRoots() {

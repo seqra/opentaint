@@ -4,6 +4,9 @@ import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.store.*
 import org.opentaint.dataflow.graph.PortId
 
+private typealias Input = LocalInputValue
+private typealias InputKey = LocalInputKey
+
 /** A local boundary has no call instruction, binding stages, or iteration counter. */
 internal data class LocalLink(
     val parent: BlockScope,
@@ -27,9 +30,9 @@ internal class BlockSummaryLinks(
 ) {
     private val ap get() = ops.manager
     private val application = LocalRelationApplication(ops, mode)
-    private data class InputKey(val link: LocalLink, val group: GroupKey)
-    private data class Input(val link: LocalLink, var value: Facts)
-    private val inputs = LinkedHashMap<InputKey, Input>()
+    private var inputDirectory: LocalInputDirectory? = LocalInputDirectory()
+    private val inputs: LocalInputDirectory get() = checkNotNull(inputDirectory) { "Local links are sealed" }
+    private fun checkLive() { checkNotNull(inputDirectory) { "Local links are sealed" } }
     private val publications = LinkedHashMap<PortId, PublicationIndex>()
     private var targets = PublicationIndex(ap, ops)
     private val deliveries = ArrayDeque<Delivery>()
@@ -52,6 +55,7 @@ internal class BlockSummaryLinks(
     val inputGroups: Int get() = inputs.size
 
     fun offer(link: LocalLink, actual: Facts) {
+        checkLive()
         require(link.child == scope)
         ap.cancellation.checkpoint()
         if (!RuntimeDataDomain.packet(link.original, actual)) return
@@ -82,6 +86,7 @@ internal class BlockSummaryLinks(
     }
 
     fun publish(exit: PortId, rows: List<Publication>) {
+        checkLive()
         val index = publications.getOrPut(exit) { PublicationIndex(ap, ops, flowBacked = true) }
         val fresh = index.addAll(rows)
         // Snapshot before delivery. A callback can offer another local input.
@@ -95,6 +100,7 @@ internal class BlockSummaryLinks(
     }
 
     fun publishTargets(rows: TargetBatch) {
+        checkLive()
         val fresh = targets.addTargets(rows)
         val current = inputs.values.map { Input(it.link, it.value) }
         for (row in fresh) for (input in current) for (member in 0 until row.premise.size) {
@@ -107,12 +113,14 @@ internal class BlockSummaryLinks(
     }
 
     fun replaySavedTarget(link: LocalLink, actual: Facts, row: TargetSummary, member: Int) {
+        checkLive()
         if (row.premise.isZero && row.target is Target.NormalTarget) return
         deliveries += Delivery.Terminal(Input(link, actual), row, member, saved = true)
     }
 
     /** Bounded draining makes every local callback visible to the method idle test. */
     fun drain(quantum: Int): Int {
+        checkLive()
         require(quantum > 0)
         var done = 0
         while (done < quantum && deliveries.isNotEmpty()) {
@@ -206,13 +214,23 @@ internal class BlockSummaryLinks(
     }
 
     fun forEachInput(visit: (LocalLink, Facts) -> Unit) {
+        checkLive()
         val snapshot = inputs.values.map { it.link to it.value }
         for ((link, value) in snapshot) { ap.cancellation.checkpoint(); visit(link, value) }
     }
 
+    internal fun detachJoinedInputs(): JoinedLocalInputs {
+        check(deliveries.isEmpty()) { "Local deliveries must drain before input detach" }
+        val owned = checkNotNull(inputDirectory) { "Local inputs were already detached" }
+        inputDirectory = null
+        return JoinedLocalInputs(owned)
+    }
+
     fun clear() {
         check(deliveries.isEmpty()) { "Local deliveries must drain before release" }
-        inputs.clear(); publications.clear(); joins.clear(); terminalJoins.clear()
+        inputDirectory?.clear()
+        inputDirectory = null
+        publications.clear(); joins.clear(); terminalJoins.clear()
         targets = PublicationIndex(ap, ops)
     }
 }

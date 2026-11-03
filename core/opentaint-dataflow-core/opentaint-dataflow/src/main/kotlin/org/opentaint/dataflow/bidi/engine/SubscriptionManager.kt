@@ -18,7 +18,8 @@ fun matches(sub: Subscription, pub: Publication, member: Int, ops: ApOps, mode: 
 /** Only notify runs on a publisher's thread; all subscription state is runner-owned. */
 class SubscriptionManager(port: SubscriptionPort) {
     @Volatile private var port: SubscriptionPort? = port
-    private val byCallee = LinkedHashMap<MethodKey, CalleeSubscriptions>()
+    private var inputDirectory: LinkedHashMap<MethodKey, CalleeSubscriptions>? = LinkedHashMap()
+    private val byCallee get() = checkNotNull(inputDirectory) { "Caller inputs were sealed" }
 
     private fun active(): SubscriptionPort = checkNotNull(port) { "The subscriptions were released" }.also {
         it.ops.manager.cancellation.checkpoint()
@@ -309,11 +310,20 @@ class SubscriptionManager(port: SubscriptionPort) {
         byCallee[callee]?.visitJoinedCandidates(writer, mode, visit)
     }
 
+    internal fun detachJoinedInputs(): JoinedCallerInputs {
+        checkNotNull(port) { "Caller subscriptions were already released" }
+        val owned = checkNotNull(inputDirectory) { "Caller inputs were already detached" }
+        inputDirectory = null
+        port = null
+        return JoinedCallerInputs(owned)
+    }
+
     /** Joining ends all notifications before the owning runner calls this method. */
     fun freeze() {
-        byCallee.values.forEach(CalleeSubscriptions::clear)
-        byCallee.clear()
+        val owned = inputDirectory
+        inputDirectory = null
         port = null
+        if (owned != null) JoinedCallerInputs(owned).close()
     }
 
 }

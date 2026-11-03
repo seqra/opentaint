@@ -30,40 +30,66 @@ internal fun completeJoinedStaticGuidance(
     storage: (MethodKey) -> SummaryStorage?,
     checkpoint: () -> Unit,
 ): JoinedStaticGuidance {
+    val byMethod = actors.associateBy { it.key }
+    return completeFromSources(config, shared, actors.flatMap { it.detachJoinedStaticSources() },
+        borrow = { owner, writer, visit ->
+            if (owner.local == BlockScope.ROOT) storage(owner.method)?.visitJoinedInputs(writer, config.mode) {
+                check(it.callee == owner.method)
+                visit(OwnedWriterInput.call(it))
+            } else byMethod[owner.method]?.forEachJoinedLocalInput(owner.local) { link, actual ->
+                checkpoint(); check(link.child == owner.local)
+                visit(OwnedWriterInput.local(owner.method, link, actual))
+            }
+        }, checkpoint = checkpoint)
+}
+
+internal fun completeJoinedStaticGuidance(
+    config: RunConfig,
+    shared: SharedObjects,
+    sources: List<JoinedStaticSource>,
+    inputs: JoinedBindingLease,
+    checkpoint: () -> Unit,
+): JoinedStaticGuidance = completeFromSources(config, shared, sources,
+    borrow = { owner, writer, visit ->
+        if (owner.local == BlockScope.ROOT) inputs.visitCallerInputs(owner.method, writer, config.mode) {
+            check(it.callee == owner.method)
+            visit(OwnedWriterInput.call(it))
+        } else inputs.visitLocalInputs(owner) { link, actual ->
+            checkpoint(); check(link.child == owner.local)
+            visit(OwnedWriterInput.local(owner.method, link, actual))
+        }
+    }, checkpoint = checkpoint)
+
+private fun completeFromSources(
+    config: RunConfig,
+    shared: SharedObjects,
+    sources: List<JoinedStaticSource>,
+    borrow: (OwnedScope, Publication, (OwnedWriterInput) -> Unit) -> Unit,
+    checkpoint: () -> Unit,
+): JoinedStaticGuidance {
     check(config.run1)
     val builder = FrozenStaticCompletion.Builder(shared.ap, shared.staticCallGraph)
     val keys = shared.staticWriteKeyInterner
-    val byMethod = actors.associateBy { it.key }
     fun seed(owner: OwnedScope, original: Pattern, output: Pattern, exit: PortId = PortId.STATIC_SHORTCUT) {
         if (owner.local == BlockScope.ROOT) builder.addSeed(owner.method, original, output)
         else builder.addScopedSeed(ScopedSummaryKey(owner.method, owner.local, exit), original, output)
     }
     val binding = OwnedJoinedStaticWriterBinding(shared.ops, config.mode, keys,
-        borrow = { owner, writer, visit ->
-            if (owner.local == BlockScope.ROOT) {
-                storage(owner.method)?.visitJoinedInputs(writer, config.mode) { input ->
-                    check(input.callee == owner.method) { "A writer can bind only its complete callee key" }
-                    visit(OwnedWriterInput.call(input))
-                }
-            } else byMethod[owner.method]?.forEachJoinedLocalInput(owner.local) { link, actual ->
-                checkpoint()
-                check(link.child == owner.local) { "A joined local writer keeps its entry scope" }
-                visit(OwnedWriterInput.local(owner.method, link, actual))
-            }
-        },
+        borrow = borrow,
         onBound = { owner, original, output -> seed(owner, original.toPattern(), output) },
         checkpoint = checkpoint)
     var observed = 0L
     var lost = 0L
     var peak = 0L
     var pruneTime = Duration.ZERO
-    for (actor in actors) for ((scope, state) in actor.joinedBlockStates()) {
+    for (source in sources) {
         checkpoint()
-        val owner = OwnedScope(actor.key, scope)
-        val shortcut = ScopedSummaryKey(actor.key, scope, PortId.STATIC_SHORTCUT)
+        val owner = source.owner
+        val scope = owner.local
+        val shortcut = ScopedSummaryKey(owner.method, scope, PortId.STATIC_SHORTCUT)
         if (scope != BlockScope.ROOT) builder.addScopedBoundary(shortcut)
         val pruneStarted = TimeSource.Monotonic.markNow()
-        val writes = state.freezeStaticWriteCandidates()
+        val writes = source.freezeWrites()
         pruneTime += pruneStarted.elapsedNow()
         observed += writes.observedCount
         lost += writes.lostCount
@@ -79,21 +105,20 @@ internal fun completeJoinedStaticGuidance(
             checkpoint()
             if (keys.row(id).original.base != STATIC) binding.offer(owner, id)
         }
-        for (bridge in state.staticGuidanceSeeds.frozenRows()) {
+        for (bridge in source.privateSeeds.frozenRows()) {
             checkpoint()
             seed(owner, bridge.from, bridge.to)
         }
-        for (terminal in state.outgoingTargets) {
+        for (terminal in source.outgoingDemandTargets) {
             checkpoint()
             check(terminal.target == Target.DemandTarget)
             val original = checkNotNull(terminal.premise as? InitialAp) { "Run-1 cannot retain an ND original" }
-            if (scope == BlockScope.ROOT) builder.addTarget(actor.key, original.toPattern())
-            else builder.addScopedTarget(ScopedSummaryKey(actor.key, scope, PortId.ROOT_EXIT), original.toPattern())
+            if (scope == BlockScope.ROOT) builder.addTarget(owner.method, original.toPattern())
+            else builder.addScopedTarget(ScopedSummaryKey(owner.method, scope, PortId.ROOT_EXIT), original.toPattern())
         }
-        val stores = if (scope == BlockScope.ROOT) sequenceOf(PortId.ROOT_EXIT to state.summaries)
-            else state.portSummaries.entries()
+        val stores = source.exitStores()
         for ((exit, summaries) in stores) {
-            if (scope != BlockScope.ROOT) builder.addScopedBoundary(ScopedSummaryKey(actor.key, scope, exit))
+            if (scope != BlockScope.ROOT) builder.addScopedBoundary(ScopedSummaryKey(owner.method, scope, exit))
             for ((original, facts) in summaries.demandEdges(Direction.FORWARD)) {
                 checkpoint()
                 check(original is InitialAp) { "Run-1 cannot retain an ND original" }

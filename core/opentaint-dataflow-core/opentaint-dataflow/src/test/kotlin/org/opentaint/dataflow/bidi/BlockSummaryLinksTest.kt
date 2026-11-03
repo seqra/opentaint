@@ -202,7 +202,10 @@ class BlockSummaryLinksTest {
         assertFalse(h.links.hasPending)
         assertEquals(setOf(exit, PortId(13)), h.data.map { it.exit }.toSet())
         h.links.clear()
-        assertEquals(0, h.links.inputGroups)
+        assertFalse(h.links.hasPending)
+        assertFailsWith<IllegalStateException> { h.links.inputGroups }
+        assertFailsWith<IllegalStateException> { h.links.offer(link(i), fixture.fact(x, mark = t)) }
+        assertEquals(0, Harness().links.inputGroups, "A new lifecycle starts with a new input owner")
     }
 
     @Test fun `release also clears terminal rows before a new local lifecycle`() {
@@ -210,9 +213,16 @@ class BlockSummaryLinksTest {
         val i = initial()
         h.links.publishTargets(listOf(TargetSummary(i, Target.DemandTarget)))
         h.links.clear()
-        h.links.offer(link(i), fixture.fact(x, mark = t))
-        assertFalse(h.links.hasPending)
+        assertFailsWith<IllegalStateException> { h.links.offer(link(i), fixture.fact(x, mark = t)) }
+        assertFailsWith<IllegalStateException> { h.links.publishTargets(listOf(TargetSummary(i, Target.DemandTarget))) }
+        val fresh = Harness()
+        fresh.links.offer(link(i), fixture.fact(x, mark = t))
+        assertFalse(fresh.links.hasPending, "The previous lifecycle's terminal cannot enter the new owner")
+        assertTrue(fresh.terminals.isEmpty())
         assertTrue(h.terminals.isEmpty())
+        fresh.links.publishTargets(listOf(TargetSummary(i, Target.DemandTarget)))
+        fresh.drain()
+        assertEquals(listOf(Terminal(link(i), i, Target.DemandTarget)), fresh.terminals)
     }
 
     @Test fun `run1 ZERO replays certified static FLOW at either publication order without another request`() {

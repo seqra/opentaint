@@ -55,7 +55,7 @@ open class BlockRunState internal constructor(
     internal var frozenNormalContributorRows: List<NormalRuleContributorRow> = emptyList()
         private set
     internal val portSummaries = PortSummaryStores(ap, flowBacked = true)
-    private val localPublications = LinkedHashMap<PortId, MutableList<Publication>>()
+    private var localPublications = LinkedHashMap<PortId, MutableList<Publication>>()
     val sourceHits: SourceHitStore? = if (binding != null) binding.sourceHits else if (forward) null else SourceHitStore()
     val staticGuidanceSeeds = StaticGuidanceSeedStore(ap, ops, port.shared.staticGuidanceInterner)
     private val staticWriteCandidates = if (mode.run1)
@@ -69,17 +69,24 @@ open class BlockRunState internal constructor(
             else portSummaries.entries().asSequence().flatMap { it.second.all() }
         return checkNotNull(staticWriteCandidates).freeze(admitted, staticGuidanceSeeds.frozenRows())
     }
+    internal fun joinedStaticSource(owner: OwnedScope): JoinedStaticSource {
+        check(mode.run1)
+        return JoinedStaticSource(owner, summaries.takeIf { isRootScope },
+            portSummaries.takeUnless { isRootScope }, outgoingTargets, staticGuidanceSeeds,
+            checkNotNull(staticWriteCandidates))
+    }
+
     private val checkRun2StaticAnchors = config.index == 2
     private var temporary = RequestStorage()
     private var temporarySinceNanos = 0L
     private val staticSupplyProfile = if (config.run1 && config.direction == Direction.FORWARD &&
         mode.markMode == MarkMode.FULL) SupplyProfile.CANONICAL_RUN1_FULL else SupplyProfile.ORDERED_REFERENCE
     internal var staticBatch = StaticBatch(staticSupplyProfile, ap.cancellation, context.shared.n2Statistics); private set
-    private val pointResumes = if (config.run1) Run1PointResume(this) else null
+    private var pointResumes = if (config.run1) Run1PointResume(this) else null
     private data class PointWork(val premise: PremiseKey, val facts: Facts,
                                  val site: ResumeSite, val state: CallResumeState?)
     private data class RuleItem(val premise: PremiseKey, val facts: Facts)
-    private val resumeQueue = java.util.ArrayDeque<PointWork>()
+    private var resumeQueue = java.util.ArrayDeque<PointWork>()
     private val operationOwner = FormOwner()
     internal var abstraction: Run1Abstraction? = if (config.run1) Run1Abstraction(
         ops,
@@ -107,8 +114,9 @@ open class BlockRunState internal constructor(
     private var calls: MethodCallServices? = callFactory.create(this)
     internal val localServices: MethodLocalServices get() = checkNotNull(local) { "The local services were released" }
     private val callServices: MethodCallServices get() = checkNotNull(calls) { "The call services were released" }
-    internal val applier = FormApplier(EngineAlgebra(this))
-    private val worklist = DeltaWorklist(flowFirst = mode.run1 && mode.markMode == MarkMode.FULL,
+    private var formApplier: FormApplier<PremiseKey, Facts>? = FormApplier(EngineAlgebra(this))
+    internal val applier get() = checkNotNull(formApplier) { "The form applier was released" }
+    private var worklist = DeltaWorklist(flowFirst = mode.run1 && mode.markMode == MarkMode.FULL,
         batchManager = ap.takeIf { mode.run1 && mode.markMode == MarkMode.FULL })
     private var pending = ArrayList<Publication>()
     private var targetPublicationSink: TargetPublicationSink? = targetPublisher
@@ -888,11 +896,14 @@ open class BlockRunState internal constructor(
         }
     }
 
-    internal fun retainBlockSummary(exit: PortId, premise: PremiseKey, facts: Facts) =
+    internal fun retainBlockSummary(exit: PortId, premise: PremiseKey, facts: Facts) {
+        if (binding?.keepLocalConclusion(exit, facts) == false) return
         boundedSummaryResult(premise, facts) { pr, value -> retainSummary(pr, value, exit) }
+    }
 
     private fun retainSummary(rawPremise: PremiseKey, rawFacts: Facts, exit: PortId = PortId.ROOT_EXIT) {
         if (!RuntimeDataDomain.packet(rawPremise, rawFacts)) return
+        if (binding?.keepLocalConclusion(exit, rawFacts) == false) return
         val normalized = normalizeFlowSummary(ap, rawPremise, rawFacts)
         val premise = normalized.premise
         val facts = normalized.facts
@@ -1018,11 +1029,37 @@ open class BlockRunState internal constructor(
         )
     }
 
+    private var joinedCaptured = false
+    internal var executionReleased = false; private set
+
+    internal open fun captureJoinedExports() {
+        check(!executionReleased) { "Method execution was released" }
+        if (joinedCaptured) return
+        check(worklist.isEmpty && pending.isEmpty() && localPublications.isEmpty() && pendingTargets.isEmpty() && !hasPendingAbstractionWork) {
+            "A method cannot capture unfinished work"
+        }
+        joinedCaptured = true // A failed capture must still be releasable without a second freezeRows call.
+        frozenNormalContributorRows = normalRuleContributors.freezeRows()
+        if (binding == null) context.delivery.let {
+            cfgDeliveryHits = it.hits; cfgDeliverySearches = it.searches
+            cfgDeliveryVisitedNodes = it.visitedNodes; cfgDeliveryDestinations = it.destinations
+            cfgDeliveryMaxWidth = it.maxWidth
+        } else binding.deliveryStatistics()?.let {
+            cfgDeliveryHits = it.hits; cfgDeliverySearches = it.searches
+            cfgDeliveryVisitedNodes = it.visited; cfgDeliveryDestinations = it.destinations
+            cfgDeliveryMaxWidth = it.maxWidth
+        }
+        scalarIdentityStatistics = edgeStore?.scalarStatisticsSnapshot()
+        if (isRootScope) bodyWorkSnapshot = bodyWork?.snapshot()
+    }
+
     open fun freeze() {
+        if (executionReleased) return
         check(worklist.isEmpty && pending.isEmpty() && localPublications.isEmpty() && pendingTargets.isEmpty() && !hasPendingAbstractionWork) {
             "A method cannot freeze with unfinished work"
         }
         var failure: Throwable? = null
+        try { captureJoinedExports() } catch (error: Throwable) { failure = error }
         fun release(action: () -> Unit) {
             try { action() }
             catch (error: Throwable) {
@@ -1033,41 +1070,33 @@ open class BlockRunState internal constructor(
         }
         try {
             release { releaseAbstraction() }
-            release { frozenNormalContributorRows = normalRuleContributors.freezeRows() }
             release { localServices.freeze() }
             release { callServices.freeze() }
             release { pointResumes?.clear() }
+            pointResumes = null
 
         } finally {
-            if (binding == null) context.delivery.let {
-                cfgDeliveryHits = it.hits
-                cfgDeliverySearches = it.searches
-                cfgDeliveryVisitedNodes = it.visitedNodes
-                cfgDeliveryDestinations = it.destinations
-                cfgDeliveryMaxWidth = it.maxWidth
-            } else binding.deliveryStatistics()?.let {
-                cfgDeliveryHits = it.hits
-                cfgDeliverySearches = it.searches
-                cfgDeliveryVisitedNodes = it.visited
-                cfgDeliveryDestinations = it.destinations
-                cfgDeliveryMaxWidth = it.maxWidth
-            }
             local = null
             calls = null
+            formApplier = null
             publicationSink = null
             targetPublicationSink = null
             port = null
             runContext = null
             rootRouting = null
             worklist.clear()
+            worklist = DeltaWorklist(flowFirst = mode.run1 && mode.markMode == MarkMode.FULL,
+                batchManager = ap.takeIf { mode.run1 && mode.markMode == MarkMode.FULL })
             pending = ArrayList()
-            localPublications.clear()
-            release { scalarIdentityStatistics = edgeStore?.scalarStatisticsSnapshot() }
-            release { if (isRootScope) bodyWorkSnapshot = bodyWork?.snapshot() }
+            localPublications = LinkedHashMap()
             bodyWork = null
             edgeStore = null
             initialStore = null
             temporary = RequestStorage()
+            pendingTargets = ArrayList()
+            resumeQueue = java.util.ArrayDeque()
+            staticBatch = StaticBatch(staticSupplyProfile, ap.cancellation)
+            executionReleased = true
         }
         failure?.let { throw it }
     }
