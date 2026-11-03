@@ -1,0 +1,17 @@
+{
+  "selection": "UNSELECTED",
+  "baselineRevision": "050b83cfb7b2e75856ea113c44d0a2d6b707250d",
+  "sourceRole": "Immutable reference interfaces and old membership/normalization contract; not a kernel verification of Kotlin.",
+  "productionVerified": false,
+  "kotlinOracleEquivalenceProved": false,
+  "sources": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/KilledStaticWriteStore.kt": "418b95a3e21b456caa1e4368188c5d59febe2356fb9eb8d17446700bec8f5241",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticGuidance.kt": "33b47d51676c51d16a08e0296f269de540a6b01a656e3bd55e86f8ca13765328",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/FlowBackedSummaries.kt": "7d4d92d668bfb8312949ee4402328959a178df6b8a0f61e916750cbc2e6a1a79",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DiagonalRelations.kt": "cbd86b7e586fcf2831f3cf1f0092c3fb73b7f06e40910beaa78255ee1b1590ef",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Conclusions.kt": "ff059941492674f0eb063e546a1e81ed83d7e13b5294d9124ef42ea807d2e9ec",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/FlowSummaryNormalization.kt": "42ebef857f4c695cd260dea3738927b512ef843ebb597409e3ac62607404b86e",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": "c4a2547aeb7e03d2daf13bc8fe811b3a4bc8026d74bd162a6cd3f06a9bbc90f0",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockRunState.kt": "3c195ca227f5bbbcd0e07131f74924de8c533e590e80cee5c05f371e3102f187"
+  }
+}

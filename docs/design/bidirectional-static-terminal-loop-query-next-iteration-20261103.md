@@ -1,5 +1,10 @@
 # Next iteration: avoid repeated demand queries
 
+Historical proposal. The [current proposal](bidirectional-joined-state-and-loop-consumers-next-iteration-20261103.md)
+uses the later `050b83cfb` campaign, including the run-1 Thingsboard OOM.
+Use that proposal for the next selection. The measurements below remain
+specific to `1e6c4396`.
+
 3 November 2026. Status: proposal, not selected for implementation.
 
 Use the measurements from

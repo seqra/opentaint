@@ -1,0 +1,48 @@
+'PostJoinRelease.fresh' does not depend on any axioms
+'PostJoinRelease.admitLive' depends on axioms: [propext]
+'PostJoinRelease.joinSuccess' does not depend on any axioms
+'PostJoinRelease.joinFailure' does not depend on any axioms
+'PostJoinRelease.capture' does not depend on any axioms
+'PostJoinRelease.releaseExecution' does not depend on any axioms
+'PostJoinRelease.bind' does not depend on any axioms
+'PostJoinRelease.commit' does not depend on any axioms
+'PostJoinRelease.finalRelease' does not depend on any axioms
+'PostJoinRelease.oldPath' does not depend on any axioms
+'PostJoinRelease.proposedPath' does not depend on any axioms
+'PostJoinRelease.no_live_after_join' depends on axioms: [propext]
+'PostJoinRelease.no_live_after_snapshots' depends on axioms: [propext]
+'PostJoinRelease.no_live_after_release' depends on axioms: [propext]
+'PostJoinRelease.no_live_after_binding' depends on axioms: [propext]
+'PostJoinRelease.no_live_after_failure' depends on axioms: [propext]
+'PostJoinRelease.no_work_publication_or_delivery_after_join' depends on axioms: [propext]
+'PostJoinRelease.fresh_not_published' does not depend on any axioms
+'PostJoinRelease.failed_join_not_published' does not depend on any axioms
+'PostJoinRelease.failed_join_has_no_bound_output' does not depend on any axioms
+'PostJoinRelease.failed_join_cannot_early_release' does not depend on any axioms
+'PostJoinRelease.cannot_release_while_running' depends on axioms: [propext]
+'PostJoinRelease.cannot_release_before_snapshot' depends on axioms: [propext]
+'PostJoinRelease.release_removes_selected_execution_root' depends on axioms: [propext]
+'PostJoinRelease.release_preserves_retained_footprint' does not depend on any axioms
+'PostJoinRelease.release_preserves_completed_snapshots' does not depend on any axioms
+'PostJoinRelease.every_retained_read_unchanged' does not depend on any axioms
+'PostJoinRelease.all_raw_ids_owners_ports_marks_unchanged' does not depend on any axioms
+'PostJoinRelease.release_makes_no_early_publication' does not depend on any axioms
+'PostJoinRelease.capture_precedes_release' depends on axioms: [propext]
+'PostJoinRelease.captured_state_is_ready_to_drop' depends on axioms: [propext]
+'PostJoinRelease.release_is_idempotent' depends on axioms: [propext]
+'PostJoinRelease.final_release_idempotent' depends on axioms: [propext]
+'PostJoinRelease.final_release_cannot_skip_snapshots' depends on axioms: [propext]
+'PostJoinRelease.final_release_retains_binding_inputs' does not depend on any axioms
+'PostJoinRelease.final_release_does_not_publish' does not depend on any axioms
+'PostJoinRelease.release_then_binding_same_final_state' depends on axioms: [propext]
+'PostJoinRelease.release_then_binding_same_output' depends on axioms: [propext]
+'PostJoinRelease.release_then_binding_same_publication' depends on axioms: [propext]
+'PostJoinRelease.failed_binding_never_publishes' depends on axioms: [propext]
+'PostJoinRelease.failed_binding_has_no_output' depends on axioms: [propext]
+'PostJoinRelease.successful_binding_publishes_same_value' depends on axioms: [propext]
+'PostJoinRelease.early_commit_joined_is_noop' depends on axioms: [propext]
+'PostJoinRelease.early_commit_released_is_noop' depends on axioms: [propext]
+'PostJoinRelease.aliasWitness' does not depend on any axioms
+'PostJoinRelease.retained_alias_survives_root_release' does not depend on any axioms
+'PostJoinRelease.executionDependent' does not depend on any axioms
+'PostJoinRelease.execution_read_breaks_equivalence_witness' does not depend on any axioms

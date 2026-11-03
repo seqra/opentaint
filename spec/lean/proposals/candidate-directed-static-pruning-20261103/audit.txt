@@ -1,0 +1,66 @@
+'CandidateStaticPruning.isFlow' does not depend on any axioms
+'CandidateStaticPruning.pairEndpoint' does not depend on any axioms
+'CandidateStaticPruning.normalizePair' does not depend on any axioms
+'CandidateStaticPruning.guidancePattern' does not depend on any axioms
+'CandidateStaticPruning.relation' depends on axioms: [propext]
+'CandidateStaticPruning.key' depends on axioms: [propext]
+'CandidateStaticPruning.survivors' depends on axioms: [propext]
+'CandidateStaticPruning.member' depends on axioms: [propext]
+'CandidateStaticPruning.oldFreeze' depends on axioms: [propext]
+'CandidateStaticPruning.queryFreeze' depends on axioms: [propext]
+'CandidateStaticPruning.OracleEquivalent' depends on axioms: [propext]
+'CandidateStaticPruning.exact_reference_oracle' depends on axioms: [propext]
+'CandidateStaticPruning.equivalent_oracle_preserves_lost' depends on axioms: [propext]
+'CandidateStaticPruning.equivalent_oracle_preserves_exact_result' depends on axioms: [propext]
+'CandidateStaticPruning.observed_ids_and_order_unchanged' depends on axioms: [propext]
+'CandidateStaticPruning.peak_unchanged' depends on axioms: [propext]
+'CandidateStaticPruning.lost_is_ordered_filter' depends on axioms: [propext]
+'CandidateStaticPruning.layer_ignored' depends on axioms: [propext]
+'CandidateStaticPruning.protection_ignored' depends on axioms: [propext]
+'CandidateStaticPruning.survivors_include_both_layers' depends on axioms: [propext]
+'CandidateStaticPruning.protection_does_not_change_membership' depends on axioms: [propext]
+'CandidateStaticPruning.flow_exact_pair_widens' depends on axioms: [propext]
+'CandidateStaticPruning.colored_pair_keeps_exact' depends on axioms: [propext]
+'CandidateStaticPruning.guidance_preserves_base_fields' depends on axioms: [propext]
+'CandidateStaticPruning.must_becomes_any_clears_fields' depends on axioms: [propext]
+'CandidateStaticPruning.flow_mark_exclusions_dropped' depends on axioms: [propext]
+'CandidateStaticPruning.colored_mark_preserved' depends on axioms: [propext]
+'CandidateStaticPruning.samplePattern' does not depend on any axioms
+'CandidateStaticPruning.sampleFlow' does not depend on any axioms
+'CandidateStaticPruning.normalizedFlow' does not depend on any axioms
+'CandidateStaticPruning.sampleColored' does not depend on any axioms
+'CandidateStaticPruning.mustColored' does not depend on any axioms
+'CandidateStaticPruning.anyColored' does not depend on any axioms
+'CandidateStaticPruning.full_flow_normalization_example' depends on axioms: [propext]
+'CandidateStaticPruning.must_any_key_collision' depends on axioms: [propext]
+'CandidateStaticPruning.raw_rows_differ_despite_guidance_collision' does not depend on any axioms
+'CandidateStaticPruning.rawDirectory' does not depend on any axioms
+'CandidateStaticPruning.raw_ids_not_merged_when_keys_equal' depends on axioms: [propext]
+'CandidateStaticPruning.raw_observed_ids_retained_when_keys_survive' depends on axioms: [propext]
+'CandidateStaticPruning.flow_is_not_colored_membership' depends on axioms: [propext]
+'CandidateStaticPruning.omitted_colored_row_remains_lost' depends on axioms: [propext]
+'CandidateStaticPruning.demand_colored_survivor_is_present' depends on axioms: [propext]
+'CandidateStaticPruning.private_b_normalized_membership' depends on axioms: [propext]
+'CandidateStaticPruning.oldPlan' does not depend on any axioms
+'CandidateStaticPruning.candidatePlan' does not depend on any axioms
+'CandidateStaticPruning.candidateQueries' does not depend on any axioms
+'CandidateStaticPruning.candidate_queries_keep_raw_order' does not depend on any axioms
+'CandidateStaticPruning.duplicate_normalized_key_queries_not_merged' does not depend on any axioms
+'CandidateStaticPruning.zero_candidates_request_no_enumeration' does not depend on any axioms
+'CandidateStaticPruning.old_empty_candidates_still_materializes' does not depend on any axioms
+'CandidateStaticPruning.zero_candidates_no_oracle_calls' depends on axioms: [propext]
+'CandidateStaticPruning.isEnumeration' depends on axioms: [propext]
+'CandidateStaticPruning.enumerationCount' depends on axioms: [propext]
+'CandidateStaticPruning.candidate_no_full_row_materialization' depends on axioms: [propext]
+'CandidateStaticPruning.filterTrue' depends on axioms: [propext, Quot.sound]
+'CandidateStaticPruning.filterFalse' depends on axioms: [propext]
+'CandidateStaticPruning.old_full_row_materializations' depends on axioms: [propext, Quot.sound]
+'CandidateStaticPruning.oldUnrelatedRows' depends on axioms: [propext]
+'CandidateStaticPruning.newCallerUnrelatedRows' does not depend on any axioms
+'CandidateStaticPruning.no_candidates_all_old_rows_unrelated' depends on axioms: [propext, Quot.sound]
+'CandidateStaticPruning.candidate_caller_avoids_unrelated_rows' depends on axioms: [propext]
+'CandidateStaticPruning.strict_caller_work_witness' depends on axioms: [propext]
+'CandidateStaticPruning.strict_nonempty_caller_work_witness' depends on axioms: [propext]
+'CandidateStaticPruning.candidate_plan_linear_actions' depends on axioms: [propext, Quot.sound]
+'CandidateStaticPruning.newTotalUnrelatedRows' does not depend on any axioms
+'CandidateStaticPruning.zero_total_unrelated_requires_oracle_cost_law' does not depend on any axioms
