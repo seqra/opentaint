@@ -13,28 +13,22 @@ var initModelDeps []string
 var modelCmd = &cobra.Command{
 	Use:   "model",
 	Short: "Create dataflow model projects",
-	Long: `A dataflow model project holds code-based models of how taint moves through
-methods the analyzer cannot see into, together with the exact dependency versions those
-models are written against.
+	Long: `A dataflow model describes how taint moves through library methods that the analyzer cannot see into. A model project holds such models and pins the library versions they are written against
 
-Compile one with 'opentaint compile models', and apply it with the
---dataflow-models flag of 'opentaint scan' or 'opentaint test model run'.`,
+Compile a model project with "opentaint compile models" and apply it with --dataflow-models`,
 }
 
 var modelInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
 	Short: "Create a dataflow model project",
-	Long: `Create a Gradle project for OpenTaint dataflow models.
+	Long: `Create a Gradle project for dataflow models
 
-The project includes:
-  - build.gradle.kts with compile-only dependencies, settings.gradle.kts
-  - libs/opentaint-approximations-api.jar, the @Approximate annotations and the
-    OpentaintNdUtil / ArgumentTypeContext support types
-  - src/main/java/ for the model sources, one @Approximate class per target class
+Arguments:
+  <output-dir>  Directory of the new model project
 
-Use --dependency to pin the libraries the models are written against, at the exact versions
-the target application uses. Those pins are the models' compile environment: they, and
-nothing about the project under analysis, decide what the models compile against.`,
+Give each library that the models are written against with --dependency, at the version that the scanned application uses. To change the dependencies of an existing project, run the command again with the full list`,
+	Example: `  # Create a project for models of jackson-databind
+  opentaint model init ./jackson-models --dependency com.fasterxml.jackson.core:jackson-databind:2.17.2`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath := log.AbsPathOrExit(args[0], "output-dir")

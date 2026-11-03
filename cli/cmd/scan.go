@@ -74,40 +74,24 @@ func (p scanPlan) title() string {
 // scanCmd represents the scan command
 var scanCmd = &cobra.Command{
 	Use:   "scan [source-path]",
-	Short: "Scan a project for vulnerabilities",
+	Short: "Scan a Java or Kotlin project for vulnerabilities",
 	Args:  cobra.MaximumNArgs(1),
-	Long: `Scan a project and find vulnerabilities. OpenTaint finds the build system, builds the project, and does a taint analysis.
+	Long: `Detect the build system of a Java or Kotlin project, compile the project, and analyze it
 
-The source-path argument is the project root. It is optional. The default is the current directory. To scan a project model that is already compiled, use --project-model. Do not give source-path and --project-model together.
+Arguments:
+  [source-path]  Root directory of the project (default: the current directory)
 
-OpenTaint writes the findings to a SARIF report. Use --output to set the report path. If --output is not set, the report goes into the project model directory. A summary is shown when the scan completes.
-
-Before your first scan, run "opentaint pull" one time. To read a report again later, use "opentaint summary".
+To scan a compiled project model, give --project-model instead of [source-path]. The report is written to --output, or to the project model directory when --output is not set
 
 ` + scanExitCodesHelp("Scan completed"),
-	Example: `  # Scan the current directory with the built-in rules
-  opentaint scan .
+	Example: `  # Scan with your own rules in addition to the built-in ones
+  opentaint scan ./app --ruleset builtin --ruleset ./rules -o report.sarif
 
-  # Scan a project and write the report to a known path
-  opentaint scan ./my-app -o report.sarif
-
-  # Scan a project model that is already compiled
-  opentaint scan --project-model ./model -o report.sarif
-
-  # Use your own rules and show only errors
-  opentaint scan . --ruleset ./rules --severity error -o report.sarif
+  # Scan a project model compiled with "opentaint compile"
+  opentaint scan --project-model ./app-model -o report.sarif
 
   # Give a large project more time and memory
-  opentaint scan . --timeout 30m --max-memory 16G -o report.sarif
-
-  # Recipe: first scan on a new machine
-  opentaint pull
-  opentaint scan . -o report.sarif
-  opentaint summary report.sarif --show-findings
-
-  # Recipe: build one time, then scan many times
-  opentaint compile ./my-app -o ./model
-  opentaint scan --project-model ./model -o report.sarif`,
+  opentaint scan ./app --timeout 30m --max-memory 16G`,
 	Annotations: map[string]string{"PrintConfig": "true"},
 	Run: func(cmd *cobra.Command, args []string) {
 		if scanFlags.DebugRunAnalysisOnSelectedEntryPoints != "" {
@@ -142,31 +126,33 @@ func init() {
 	addEntryPointsFlag(scanCmd)
 }
 
+// entryPointsUsage describes the --entry-points flag of scan and test rule reachability.
+const entryPointsUsage = "Start analysis from a fully qualified method such as com.example.Class#method, or '*' for every method"
+
 func addEntryPointsFlag(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&scanFlags.DebugRunAnalysisOnSelectedEntryPoints, "entry-points", "",
-		"Start analysis from a fully qualified method such as com.example.Class#method, or '*' for every method")
+	cmd.Flags().StringVar(&scanFlags.DebugRunAnalysisOnSelectedEntryPoints, "entry-points", "", entryPointsUsage)
 	_ = cmd.Flags().MarkHidden("entry-points")
 }
 
 func addRuleIDFlag(cmd *cobra.Command) {
-	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Run only rules with this ID (repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Run only the rule with this ID (repeatable)")
 }
 
 func addScanFlags(cmd *cobra.Command) {
-	cmd.Flags().DurationVarP(&globals.Config.Scan.Timeout, "timeout", "t", 900*time.Second, "Maximum wall-clock time for analysis (e.g. 30m, 1h)")
+	cmd.Flags().DurationVarP(&globals.Config.Scan.Timeout, "timeout", "t", 900*time.Second, "Analysis timeout (e.g. 30m, 1h)")
 
-	cmd.Flags().StringArrayVar(&scanFlags.Ruleset, "ruleset", []string{"builtin"}, "Rules to run: a YAML file, a directory of .yml or .yaml files, or builtin for the built-in rules (repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.Ruleset, "ruleset", []string{"builtin"}, "Rules file or directory, or builtin for the built-in rules (repeatable)")
 
-	cmd.Flags().BoolVar(&scanFlags.SemgrepCompatibilitySarif, "semgrep-compatibility-sarif", true, "Use Semgrep-compatible rule IDs in the SARIF report")
-	cmd.Flags().StringVarP(&scanFlags.SarifReportPath, "output", "o", "", "Path to write the SARIF report")
+	cmd.Flags().BoolVar(&scanFlags.SemgrepCompatibilitySarif, "semgrep-compatibility-sarif", true, "Use Semgrep-style dotted rule IDs in the SARIF report")
+	cmd.Flags().StringVarP(&scanFlags.SarifReportPath, "output", "o", "", "Path to the SARIF report (default: <project-model>/sources/opentaint.sarif)")
 
-	cmd.Flags().StringArrayVar(&scanFlags.Severity, "severity", []string{"warning", "error"}, "Run only rules at these severity levels: note, warning, error (repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.Severity, "severity", []string{"warning", "error"}, "Run only the rules of this severity: note, warning, or error (repeatable)")
 	cmd.Flags().StringVar(&globals.Config.Scan.MaxMemory, "max-memory", "8G", "Maximum analyzer heap size (e.g. 8G, 1024m)")
-	cmd.Flags().Int64Var(&globals.Config.Scan.CodeFlowLimit, "code-flow-limit", 0, "Maximum number of code flows to include in the report (0 = unlimited)")
+	cmd.Flags().Int64Var(&globals.Config.Scan.CodeFlowLimit, "code-flow-limit", 0, "Maximum number of code flows per finding (0 = unlimited)")
 	cmd.Flags().BoolVar(&scanFlags.DryRun, "dry-run", false, "Validate inputs and show what would run without compiling or scanning")
 	cmd.Flags().BoolVar(&scanFlags.Recompile, "recompile", false, "Force recompilation even if a cached project model exists")
 	cmd.Flags().StringVar(&scanFlags.ProjectModelPath, "project-model", "", "Path to a pre-compiled project model (skips compilation)")
-	cmd.Flags().StringVar(&scanFlags.LogFile, "log-file", "", "Path to the log file (default: <cache-dir>/logs/<timestamp>.log)")
+	cmd.Flags().StringVar(&scanFlags.LogFile, "log-file", "", logFileUsage)
 
 	addPassthroughModelsFlag(cmd, &scanFlags.PassthroughModels)
 
@@ -174,7 +160,7 @@ func addScanFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&scanFlags.TrackExternalMethods, "track-external-methods", false, "Write external-method coverage files next to the SARIF report")
 
-	cmd.Flags().IntVar(&scanFlags.IterationLimit, "iteration-limit", 0, "Cap the iterative-deepening fact depth at N field accessors and drop facts over it (0 = unlimited)")
+	cmd.Flags().IntVar(&scanFlags.IterationLimit, "iteration-limit", 0, "Cap the iterative-deepening fact depth at N field accessors (0 = unlimited)")
 }
 
 // currentScanBuilder returns a builder pre-populated with the user's current scan flags.

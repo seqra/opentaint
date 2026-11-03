@@ -219,27 +219,10 @@ var (
 var projectCmd = &cobra.Command{
 	Use:   "project",
 	Short: "Create a project model from precompiled JARs or classes",
-	Long: `Create a project model from JARs or classes that are already compiled. No build occurs. OpenTaint examines the classpath, finds the modules and dependencies, and writes a project.yaml file.
-
-Use this command when you have compiled artifacts but no build. To build a model from sources, use "opentaint compile".
-
-All inputs are flags. Give the source path with --source-root. Give the compiled classes or JARs with --classpath. Give the packages to include with --package. Add more JAR files with --dependency.
-
-Use --output to set the project model directory. This directory must not exist before the command runs.
-
-Before the first run, run "opentaint pull" one time. To scan the model, use "opentaint scan --project-model".`,
-	Example: `  # Create a project model from a compiled JAR
-  opentaint project --source-root ./src --classpath ./app.jar --package com.example -o ./model
-
-  # Add more dependency JARs to the classpath
-  opentaint project --source-root ./src --classpath ./app.jar --dependency ./lib.jar --package com.example -o ./model
-
-  # Make sure the inputs are correct, without a model
-  opentaint project --source-root ./src --classpath ./app.jar --package com.example -o ./model --dry-run
-
-  # Recipe: scan a vendor JAR that you cannot build
-  opentaint project --source-root ./src --classpath ./vendor-app.jar --package com.vendor -o ./model
-  opentaint scan --project-model ./model -o report.sarif`,
+	Long:  `Create a project model from compiled classes or JARs without a build. Use it when the project cannot be built with "opentaint compile"`,
+	Example: `  # Create a project model from an application JAR and its library JARs
+  opentaint project --source-root ./src --classpath ./app.jar --package com.example \
+    --dependency ./lib/guava.jar --dependency ./lib/jackson-databind.jar -o ./app-model`,
 	Run: func(cmd *cobra.Command, args []string) {
 		config := NewJavaAutobuilder().
 			WithOutputDir(OutputDir).
@@ -294,15 +277,15 @@ Before the first run, run "opentaint pull" one time. To scan the model, use "ope
 func init() {
 	rootCmd.AddCommand(projectCmd)
 
-	projectCmd.Flags().StringVarP(&OutputDir, "output", "o", "", "Directory to write the generated project model (required, must not exist)")
+	projectCmd.Flags().StringVarP(&OutputDir, "output", "o", "", "Path to the project model to create (required, must not exist)")
 	_ = projectCmd.MarkFlagRequired("output")
-	projectCmd.Flags().StringVar(&SourceRoot, "source-root", "", "Path to the project source root")
+	projectCmd.Flags().StringVar(&SourceRoot, "source-root", "", "Project source directory (required)")
 	_ = projectCmd.MarkFlagRequired("source-root")
-	projectCmd.Flags().StringArrayVar(&Dependencies, "dependency", []string{}, "Additional dependency JAR file on the compile classpath (repeatable)")
-	projectCmd.Flags().StringArrayVar(&Packages, "package", []string{}, "Package to include in the generated model (repeatable)")
+	projectCmd.Flags().StringArrayVar(&Dependencies, "dependency", []string{}, "Library JAR the project depends on (repeatable)")
+	projectCmd.Flags().StringArrayVar(&Packages, "package", []string{}, "Package of the project's own code (repeatable, required)")
 	_ = projectCmd.MarkFlagRequired("package")
-	projectCmd.Flags().StringArrayVar(&Classpaths, "classpath", []string{}, "Classpath entry: a compiled classes directory or a JAR file (repeatable)")
+	projectCmd.Flags().StringArrayVar(&Classpaths, "classpath", []string{}, "Class directory or JAR of the project (repeatable, required)")
 	_ = projectCmd.MarkFlagRequired("classpath")
 	projectCmd.Flags().BoolVar(&DryRunProject, "dry-run", false, "Validate inputs and show what would run without generating the project model")
-	projectCmd.Flags().StringVar(&ProjectLogFile, "log-file", "", "Path to the log file (default: <cache-dir>/logs/<timestamp>.log)")
+	projectCmd.Flags().StringVar(&ProjectLogFile, "log-file", "", logFileUsage)
 }

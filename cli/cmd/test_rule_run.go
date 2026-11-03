@@ -25,28 +25,17 @@ var (
 
 var testRuleRunCmd = &cobra.Command{
 	Use:   "run <project-model>",
-	Short: "Run detection-rule tests on a compiled project model",
-	Long: `Run detection rules on the samples that rule-test.yaml declares. The command reports which samples passed. The built-in rules are always included.
+	Short: "Run rule tests on a compiled test project",
+	Long: `Run the built-in rules and the --ruleset rules on the samples that rule-test.yaml declares and report which samples passed
 
-The project-model argument is a compiled project model directory from "opentaint compile". To add your own rules, use --ruleset. To run only specified rules, use --rule-id. To apply models, use --dataflow-models or --passthrough-models.
+Arguments:
+  <project-model>  Test project compiled with "opentaint compile"
 
-The command writes test-result.json and a test-results.sarif report to --output. If --output is not set, it writes to a temporary directory.
-
-Compile the test project before you run the tests. To read the results, use "opentaint summary".
+The results are written to test-result.json and test-results.sarif in --output, or in a temporary directory when --output is not set
 
 ` + testExitCodesHelp("All rule tests passed"),
-	Example: `  # Run the built-in rules on a compiled model
-  opentaint test rule run ./rule-tests/sinks/model
-
-  # Test your own rules and write the results to a directory
-  opentaint test rule run ./rule-tests/sinks/model --ruleset ./rules -o ./results
-
-  # Run only one rule
-  opentaint test rule run ./rule-tests/sinks/model --rule-id <rule-id>
-
-  # Recipe: change a rule, then make sure the tests stay green
-  opentaint test rule run ./rule-tests/sinks/model --ruleset ./rules -o ./results
-  opentaint summary ./results/test-results.sarif --show-findings`,
+	Example: `  # Test your rules on the sinks project and keep the results
+  opentaint test rule run ./rule-tests/sinks/model --ruleset ./rules -o ./results`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		runTestProject(args[0], testProjectOptions{
@@ -208,7 +197,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 func init() {
 	testRuleCmd.AddCommand(testRuleRunCmd)
 
-	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleset, "ruleset", nil, "Ruleset to test: a YAML file or a directory of .yml or .yaml files (repeatable)")
+	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleset, "ruleset", nil, "Rules file or directory to load in addition to the built-in rules (repeatable)")
 	addTestRunFlags(testRuleRunCmd, &testRulesOutputDir, &testRulesTimeout, &testRulesMaxMemory, &testRulesDataflow, &testRulesPassthrough)
-	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleID, "rule-id", nil, "Run only rules with this ID (repeatable)")
+	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleID, "rule-id", nil, "Run only the rule with this ID (repeatable)")
 }

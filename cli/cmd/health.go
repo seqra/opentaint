@@ -27,26 +27,12 @@ type healthComponent struct {
 
 var healthCmd = &cobra.Command{
 	Use:   "health",
-	Short: "Show dependency paths and report missing components",
-	Long: `Show the paths of the components on this computer. The components are the autobuilder, the analyzer, the built-in rules, and the Java runtime. The command shows if each component is present.
+	Short: "Show the paths of the analyzer, autobuilder, built-in rules, and Java runtime",
+	Long: `Show the versions and paths of the analyzer, autobuilder, built-in rules, and Java runtime. The command exits with a nonzero code when a component is missing
 
-To select components, use --autobuilder, --analyzer, --rules, or --runtime. With no flag, the command shows all four components. If you select exactly one component, only its path is printed. This output is good for scripts.
-
-Only the built-in rules are downloaded when they are missing. No other component is downloaded.
-
-If a selected component is missing, the command exits with a code that is not zero. To download the missing components, run "opentaint pull".`,
-	Example: `  # Show all components and their paths
-  opentaint health
-
-  # Print only the analyzer JAR path, for a script
-  opentaint health --analyzer
-
-  # Make sure the Java runtime is present
-  opentaint health --runtime
-
-  # Recipe: use the built-in rules path in a script
-  RULES=$(opentaint health --rules)
-  opentaint scan . --ruleset "$RULES" --ruleset ./extra-rules -o report.sarif`,
+With one component flag, the command prints only the path of that component`,
+	Example: `  # Store the path of the built-in rules for a script
+  rules_dir=$(opentaint health --rules)`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runHealth()
@@ -57,7 +43,7 @@ func init() {
 	rootCmd.AddCommand(healthCmd)
 	healthCmd.Flags().BoolVar(&healthAutobuilder, "autobuilder", false, "Print only the autobuilder JAR path")
 	healthCmd.Flags().BoolVar(&healthAnalyzer, "analyzer", false, "Print only the analyzer JAR path")
-	healthCmd.Flags().BoolVar(&healthRules, "rules", false, "Print only the built-in rules path, downloading rules if needed")
+	healthCmd.Flags().BoolVar(&healthRules, "rules", false, "Print only the built-in rules path (downloads the rules when missing)")
 	healthCmd.Flags().BoolVar(&healthRuntime, "runtime", false, "Print only the Java runtime path")
 }
 

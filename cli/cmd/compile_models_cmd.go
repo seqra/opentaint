@@ -13,15 +13,10 @@ var compileModelsOutput string
 var compileModelsCmd = &cobra.Command{
 	Use:   "models <model-project>",
 	Short: "Compile a dataflow model project",
-	Long: `Compile the dataflow models in <model-project> against the
-dependencies that project pins in its own build file.
+	Long: `Compile the dataflow models of a model project against the library versions that its build.gradle.kts pins
 
-This is the model project, not the project to scan: its build.gradle.kts lists the exact
-library versions the models are written against, so the same models compile identically
-wherever they are applied.
-
-Scanning and testing build a model project on demand, so running this is only
-needed to compile ahead of time or to see compilation errors on their own.`,
+Arguments:
+  <model-project>  Model project created with "opentaint model init"`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath := log.AbsPathOrExit(args[0], "model-project")
