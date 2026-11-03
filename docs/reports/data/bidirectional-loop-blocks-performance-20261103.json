@@ -202264,10 +202264,16 @@
       "errors": 0,
       "skipped": 0,
       "receiptPath": "docs/reports/data/bidirectional-scoped-mark-requests-validation-20261103.json",
-      "receiptSha256": "f8fb0215a34b76f1038ff6a6da002390943852934189c94be91f33f9a4cb6e9c",
-      "sourceCount": 645,
-      "sourceSetSha256": "1d99facd27fdf2a5073cbad959f85787d9545eaa8437f0824c2448351312ca15",
-      "runtimeVerifiedByKernel": false
+      "receiptSha256": "69e1248ef7055287dec524cf70bcd0bbfbfd6f529bb82c1331c2b61460501047",
+      "sourceCount": 936,
+      "sourceSetSha256": "5abd6f71f3f7ab89fa4f0c81e0e3f0d297f82611acf81df0d6b01ed0a0303427",
+      "runtimeVerifiedByKernel": false,
+      "sourceRoots": [
+        "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin",
+        "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin",
+        "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin",
+        "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/test/kotlin"
+      ]
     },
     "newCampaign": "../loop-blocks-scoped-requests-20261103",
     "newCampaignLaunched": false,
