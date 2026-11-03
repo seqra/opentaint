@@ -40,25 +40,14 @@ func dockerCompileSuggestion() output.Suggestion {
 // compileCmd represents the compile command
 var compileCmd = &cobra.Command{
 	Use:   "compile <project>",
-	Short: "Compile a project into a reusable project model",
+	Short: "Compile a Java or Kotlin project into a project model",
 	Args:  cobra.ExactArgs(1), // require exactly one argument
-	Long: `Compile a project into a project model that you can scan many times. OpenTaint finds the build system, collects the modules and dependencies, and builds the project.
+	Long: `Detect the build system of a Java or Kotlin project, compile the project, and write a project model that "opentaint scan --project-model" analyzes without a new build
 
-The project argument is the path to the project root. It is required. Use --output to set the project model directory. This directory must not exist before the command runs.
-
-Later scans can use the model without a new build. This makes repeated scans fast.
-
-To scan the model, use "opentaint scan --project-model".`,
-	Example: `  # Compile the current directory into a project model
-  opentaint compile . -o ./model
-
-  # Make sure the inputs are correct, without a build
-  opentaint compile . -o ./model --dry-run
-
-  # Recipe: compile one time, then scan with different settings
-  opentaint compile ./my-app -o ./model
-  opentaint scan --project-model ./model --ruleset ./team-rules -o team.sarif
-  opentaint scan --project-model ./model --severity error -o errors.sarif`,
+Arguments:
+  <project>  Root directory of the project`,
+	Example: `  # Compile a project into ./app-model
+  opentaint compile ./app -o ./app-model`,
 	Annotations: map[string]string{"PrintConfig": "true"},
 	Run: func(cmd *cobra.Command, args []string) {
 		ProjectPath = args[0]
@@ -121,10 +110,10 @@ To scan the model, use "opentaint scan --project-model".`,
 func init() {
 	rootCmd.AddCommand(compileCmd)
 
-	compileCmd.Flags().StringVarP(&OutputProjectModelPath, "output", "o", "", `Path to the project model directory to create (required, must not exist)`)
+	compileCmd.Flags().StringVarP(&OutputProjectModelPath, "output", "o", "", "Path to the project model to create (required, must not exist)")
 	_ = compileCmd.MarkFlagRequired("output")
 	compileCmd.Flags().BoolVar(&DryRunCompile, "dry-run", false, "Validate inputs and show what would run without compiling")
-	compileCmd.Flags().StringVar(&CompileLogFile, "log-file", "", "Path to the log file (default: <cache-dir>/logs/<timestamp>.log)")
+	compileCmd.Flags().StringVar(&CompileLogFile, "log-file", "", logFileUsage)
 }
 
 func compile(absProjectRoot, absOutputProjectModelPath, autobuilderJarPath string, javaRunner java.JavaRunner) error {

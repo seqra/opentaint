@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/seqra/opentaint/internal/analyzer"
 )
@@ -11,12 +12,20 @@ import (
 func analyzerExitCodeRows(exceptionNote string) string {
 	rows := ""
 	for _, code := range []int{analyzer.ExitException, analyzer.ExitOOM, analyzer.ExitTimeout, analyzer.ExitConfigError} {
-		rows += fmt.Sprintf("\n  %-3d  %s", code, analyzer.ExitMessage(code))
+		rows += fmt.Sprintf("\n  %-3d  %s", code, capitalize(analyzer.ExitMessage(code)))
 		if code == analyzer.ExitException && exceptionNote != "" {
 			rows += " " + exceptionNote
 		}
 	}
 	return rows
+}
+
+// capitalize upper-cases the first letter, so the analyzer rows match the rows above them.
+func capitalize(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
 }
 
 func scanExitCodesHelp(completedLine string) string {

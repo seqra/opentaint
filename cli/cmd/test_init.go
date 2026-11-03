@@ -19,26 +19,14 @@ var initRuleSourcesOnly bool
 var testRuleInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
 	Short: "Create rule test projects with source and sink harnesses",
-	Long: `Create one or two Gradle test projects for detection-rule tests. The sinks project tests sink rules with a generic taint source. The sources project tests source rules with a generic taint sink.
+	Long: `Create Gradle test projects for detection rules. The sinks project tests sink rules against a generic taint source, and the sources project tests source rules against a generic taint sink
 
-The output-dir argument is the parent directory for the new projects. The default creates the two projects, in output-dir/sinks and output-dir/sources. To create one project only, use --sinks-only or --sources-only. To add compile-only Maven dependencies for the samples, use --dependency.
+Arguments:
+  <output-dir>  Parent directory of the sinks and sources projects
 
-Each project contains a rule-test.yaml file and a Taint.java harness. Declare your positive and negative samples in rule-test.yaml.
-
-Then compile the project with "opentaint compile" and run the samples with "opentaint test rule run".`,
-	Example: `  # Create the sinks and the sources test projects
-  opentaint test rule init ./rule-tests
-
-  # Create only the sinks project
-  opentaint test rule init ./rule-tests --sinks-only
-
-  # Add a compile-only dependency for the samples
-  opentaint test rule init ./rule-tests --dependency <group:artifact:version>
-
-  # Recipe: from an empty directory to a first test run
-  opentaint test rule init ./rule-tests
-  opentaint compile ./rule-tests/sinks -o ./rule-tests/sinks/model
-  opentaint test rule run ./rule-tests/sinks/model --ruleset ./my-rules`,
+Declare the positive and negative samples in the rule-test.yaml file of each project`,
+	Example: `  # Create only the sinks project, with a library that the samples call
+  opentaint test rule init ./rule-tests --sinks-only --dependency org.springframework:spring-jdbc:6.1.14`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if initRuleSinksOnly && initRuleSourcesOnly {
@@ -77,23 +65,14 @@ Then compile the project with "opentaint compile" and run the samples with "open
 var testModelInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
 	Short: "Create a dataflow model test project",
-	Long: `Create a Gradle test project for dataflow model tests. The project contains a fixed source-to-sink rule. The samples are checked against this rule.
+	Long: `Create a Gradle test project for dataflow models. A sample passes taint from Taint.source() through the modeled method to Taint.sink(), and the fixed rule model-rule checks that the taint reaches the sink
 
-The output-dir argument is the directory for the new project. To add compile-only Maven dependencies for the samples, use --dependency. The model under test is not part of the project. Give it at run time with --dataflow-models.
+Arguments:
+  <output-dir>  Directory of the new test project
 
-The project contains a rule-test.yaml file, a Taint.java source and sink, and a fixed source-to-sink harness rule. Declare your positive and negative samples in rule-test.yaml.
-
-Then compile the project with "opentaint compile" and run the samples with "opentaint test model run".`,
-	Example: `  # Create a dataflow model test project
-  opentaint test model init ./model-test
-
-  # Add a compile-only dependency for the samples
-  opentaint test model init ./model-test --dependency <group:artifact:version>
-
-  # Recipe: from an empty directory to a first test run
-  opentaint test model init ./model-test
-  opentaint compile ./model-test -o ./model-test/model
-  opentaint test model run ./model-test/model --dataflow-models ./my-model`,
+Declare the positive and negative samples in rule-test.yaml. The model under test is given to "opentaint test model run" with --dataflow-models`,
+	Example: `  # Create a test project whose samples call jackson-databind
+  opentaint test model init ./model-test --dependency com.fasterxml.jackson.core:jackson-databind:2.17.2`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := testproject.Bootstrap(args[0], "model-test-project", initModelProjectDeps); err != nil {

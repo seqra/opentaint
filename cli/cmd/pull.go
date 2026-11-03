@@ -17,21 +17,8 @@ import (
 
 var pullCmd = &cobra.Command{
 	Use:   "pull",
-	Short: "Download the analysis toolchain and Java runtime",
-	Long: `Download the toolchain into the local cache. The toolchain contains the analyzer, the autobuilder, the built-in rules, and a Java runtime. After the download, OpenTaint can build and scan projects without network access.
-
-If a release archive supplied bundled artifacts, OpenTaint uses them. They are not downloaded again.
-
-Run "opentaint pull" one time before your first scan. To remove old downloads, use "opentaint prune".`,
-	Example: `  # Download the toolchain before the first scan
-  opentaint pull
-
-  # Download a different Java runtime version
-  opentaint pull --java-version 17
-
-  # Recipe: prepare a machine that will have no network access
-  opentaint pull
-  opentaint health`,
+	Short: "Download the analyzer, autobuilder, built-in rules, and Java runtime",
+	Long:  `Download the analyzer, autobuilder, built-in rules, and Java runtime. Components bundled with the release archive are used instead of a download`,
 	Run: func(cmd *cobra.Command, args []string) {
 		out.Section("OpenTaint Pull").
 			Field("Autobuilder", globals.Config.Autobuilder.Version).

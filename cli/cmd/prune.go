@@ -57,27 +57,10 @@ func resolveCategories() (utils.PruneCategory, error) {
 
 var pruneCmd = &cobra.Command{
 	Use:   "prune",
-	Short: "Remove old downloaded artifacts from the cache",
-	Long: `Remove old downloaded artifacts from the local cache (~/.opentaint). The command removes analyzer and autobuilder JARs that a newer version replaced, old rules, JDK and JRE versions that do not match the configuration, and cached project models.
+	Short: "Remove stale downloads, cached project models, and logs",
+	Long: `Remove stale downloads, cached project models, and logs from ~/.opentaint
 
-To select categories, use --artifacts, --rules, --jdk, --models, --logs, or --install. With no category flag, the command removes artifacts, rules, jdk, and models. The --all flag removes everything, with logs and install-tier artifacts included. Do not give --all together with a category flag.
-
-To see the deletions without a removal, use --dry-run. To skip the confirmation prompt, use --yes. To download the toolchain again, run "opentaint pull".`,
-	Example: `  # Remove the default categories, with a confirmation prompt
-  opentaint prune
-
-  # Remove only the old JDK and JRE versions
-  opentaint prune --jdk
-
-  # Remove everything, with logs and install-tier artifacts included
-  opentaint prune --all
-
-  # See what the command would delete, without a deletion
-  opentaint prune --dry-run
-
-  # Recipe: get disk space back, keep the current toolchain
-  opentaint prune --dry-run
-  opentaint prune --yes`,
+Without a category flag, the command removes the stale analyzer, autobuilder, and rules downloads, the old Java runtimes, and the cached project models. With --all, it also removes the logs and the artifacts in ~/.opentaint/install`,
 	Run: func(cmd *cobra.Command, args []string) {
 		categories, err := resolveCategories()
 		if err != nil {
@@ -161,12 +144,12 @@ func init() {
 	rootCmd.AddCommand(pruneCmd)
 
 	pruneCmd.Flags().BoolVar(&pruneDryRun, "dry-run", false, "Show what would be deleted without deleting")
-	pruneCmd.Flags().BoolVar(&pruneYes, "yes", false, "Skip interactive confirmation")
-	pruneCmd.Flags().BoolVar(&pruneAll, "all", false, "Prune everything including logs and install-tier artifacts")
-	pruneCmd.Flags().BoolVar(&pruneArtifacts, "artifacts", false, "Prune stale analyzer and autobuilder JARs")
-	pruneCmd.Flags().BoolVar(&pruneRules, "rules", false, "Prune stale rules directories")
-	pruneCmd.Flags().BoolVar(&pruneJDK, "jdk", false, "Prune old JDK/JRE versions")
+	pruneCmd.Flags().BoolVar(&pruneYes, "yes", false, "Skip the confirmation prompt")
+	pruneCmd.Flags().BoolVar(&pruneAll, "all", false, "Prune all categories")
+	pruneCmd.Flags().BoolVar(&pruneArtifacts, "artifacts", false, "Prune stale analyzer and autobuilder downloads")
+	pruneCmd.Flags().BoolVar(&pruneRules, "rules", false, "Prune stale rules downloads")
+	pruneCmd.Flags().BoolVar(&pruneJDK, "jdk", false, "Prune old JDK and JRE downloads")
 	pruneCmd.Flags().BoolVar(&pruneModels, "models", false, "Prune cached project models")
 	pruneCmd.Flags().BoolVar(&pruneLogs, "logs", false, "Prune project log files")
-	pruneCmd.Flags().BoolVar(&pruneInstall, "install", false, "Prune install-tier lib and JRE artifacts (requires re-download on next run)")
+	pruneCmd.Flags().BoolVar(&pruneInstall, "install", false, "Prune the artifacts in ~/.opentaint/install (they are downloaded again on the next run)")
 }
