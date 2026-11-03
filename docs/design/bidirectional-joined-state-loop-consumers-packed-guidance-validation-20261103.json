@@ -1,0 +1,330 @@
+{
+  "status": "PASS",
+  "generatedUTC": "2026-11-03T17:45:39.893720+00:00",
+  "scope": "Selected design and constructive finite models only; no Kotlin implementation or project experiment.",
+  "sourceRevision": "050b83cfb7b2e75856ea113c44d0a2d6b707250d",
+  "checkoutRevision": "b5fbae2400516e90beb9e17aec6a4bb8a2ac3162",
+  "canonicalProposal": {
+    "path": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+    "sha256": "59e3b9db3a9db67120071f3047c1d476dbce0cbcecb4d05e24cf6525e2a2c0b7",
+    "lines": 1565
+  },
+  "components": {
+    "docs/design/bidirectional-joined-state-release-design-20261103.md": "4ca9febe1220bdd846c3fc3f3e81d49ac6f21e104e102fd74c2d41b6ac371441",
+    "docs/design/bidirectional-loop-consumer-query-design-20261103.md": "26074dd10050f0d846157e92afcfad0d5f8742391c50b1e773054f532bf095c6",
+    "docs/design/bidirectional-packed-static-guidance-design-20261103.md": "fb871ac6c82ee48c9b27565bc7274cfe120e06cdf2bb43cb8c53c22314f56f86"
+  },
+  "models": {
+    "joined-state-release-selected-design-20261103": {
+      "receipt": "spec/lean/proposals/joined-state-release-selected-design-20261103/checks.json",
+      "sha256": "4f0d0d48fe8207fcf5e16665551d63484e6f724eb2114353870f13b900023c7b",
+      "status": "SELECTED_DESIGN_CONDITIONAL_FINITE_MODEL_PASS",
+      "theorems": 87,
+      "auditedDeclarations": 117,
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ],
+      "inputHashes": {
+        "spec/lean/proposals/joined-state-release-selected-design-20261103/JoinedStateRelease.lean": "62c3e7de47555d4b3e0ba6401c0bcb61164f41d9a034d828f0f628e26256b638",
+        "docs/design/bidirectional-joined-state-release-design-20261103.md": "4ca9febe1220bdd846c3fc3f3e81d49ac6f21e104e102fd74c2d41b6ac371441",
+        "spec/lean/proposals/joined-state-release-selected-design-20261103/README.md": "bd88e7ae0390820fd50dd0f55d456abe233f40d8e7190fd01aa311cc2c8a2aee",
+        "spec/lean/proposals/joined-state-release-selected-design-20261103/REPORT.md": "e727c70218976456c9ccb1e1d7cd21c7e268670f153e41fab23582027e4d943f",
+        "spec/lean/proposals/joined-state-release-selected-design-20261103/check.py": "0f94dde51e532d72083514181d96171f94eb80d2d8624f0ebe4ff4803da90984",
+        "spec/lean/proposals/joined-state-release-selected-design-20261103/reference-source-pins.json": "fa274deae7086e4be11b23ff698a498167deedd3edfe954d09d9f66b2b258f35",
+        "spec/proof-guide.md": "c51296c2773f7a09bc96e3a4679c0b97610c38baf792b39e0de7ef2bf4787dcd",
+        "spec/lean/lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
+        "spec/impl-proposal-guide.md": "0068a5ea23d3215cab580fc341bbcbfaf64d504920d35d8bf041b166c73ea17a",
+        "spec/lean/proposals/call-stage-result-merging-analysis-20261101/check.py": "817d1ab500b65240cdedeed4c741bcb24470b60e047d5ac3d5dd30eaf951f4dc"
+      },
+      "nativeImplementationVerified": false
+    },
+    "loop-consumer-query-reuse-20261103": {
+      "receipt": "spec/lean/proposals/loop-consumer-query-reuse-20261103/checks.json",
+      "sha256": "da3f3870c7ae08b3e29565eddd86b1fa5f58b4128baa6a8917331f878b6ba498",
+      "status": "SELECTED_DESIGN_MODEL_PASS",
+      "theorems": 71,
+      "auditedDeclarations": 127,
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ],
+      "inputHashes": {
+        "spec/lean/proposals/loop-consumer-query-reuse-20261103/LoopQueryReuse.lean": "9d53972136791d96d25f59e5ae3395b0d11709ff5a5364a50c644cbad48d1323",
+        "docs/design/bidirectional-loop-consumer-query-design-20261103.md": "26074dd10050f0d846157e92afcfad0d5f8742391c50b1e773054f532bf095c6",
+        "spec/lean/proposals/loop-consumer-query-reuse-20261103/README.md": "132c47f0240ea2670f489279c18324b39685caae5addfddb48c563afc3a55c2f",
+        "spec/lean/proposals/loop-consumer-query-reuse-20261103/REPORT.md": "82752719477d675863092dcf0416e5aa6b9ed6da65a9716920e127e771d0e7ff",
+        "spec/lean/proposals/loop-consumer-query-reuse-20261103/check.py": "d00d017ac864defcae57e7653bfa19e885cf9cc1a40f9c4ad5fd55ea51fdf6d6",
+        "spec/lean/proposals/loop-consumer-query-reuse-20261103/reference-source-pins.json": "22648ec42e1107db441bcdb42d6fe48d8290ebe939465446612dd827cd418e44",
+        "spec/proof-guide.md": "c51296c2773f7a09bc96e3a4679c0b97610c38baf792b39e0de7ef2bf4787dcd",
+        "spec/impl-proposal-guide.md": "0068a5ea23d3215cab580fc341bbcbfaf64d504920d35d8bf041b166c73ea17a",
+        "spec/lean/lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
+        "spec/lean/proposals/call-stage-result-merging-analysis-20261101/check.py": "817d1ab500b65240cdedeed4c741bcb24470b60e047d5ac3d5dd30eaf951f4dc"
+      },
+      "nativeImplementationVerified": false
+    },
+    "packed-static-guidance-20261103": {
+      "receipt": "spec/lean/proposals/packed-static-guidance-20261103/checks.json",
+      "sha256": "6299d22b523232b5b31b715f6bca6fe6efc6f2127bc51e87843f27e06ac82437",
+      "status": "SELECTED_DESIGN_FINITE_MODEL_PASS",
+      "theorems": 48,
+      "auditedDeclarations": 84,
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ],
+      "inputHashes": {
+        "spec/lean/proposals/packed-static-guidance-20261103/PackedStaticGuidance.lean": "1267d882c7a3f7a69c40f80450e3b6896e7fc2c6e3de280fdf894fe4a5def5e8",
+        "docs/design/bidirectional-packed-static-guidance-design-20261103.md": "fb871ac6c82ee48c9b27565bc7274cfe120e06cdf2bb43cb8c53c22314f56f86",
+        "spec/lean/proposals/packed-static-guidance-20261103/PROPOSAL.md": "e92fbd8bcab1f9d8115bb05da62852fcbd605782e43dc6f537fef464fbd2323b",
+        "spec/lean/proposals/packed-static-guidance-20261103/README.md": "b765225580dbd97d8c75fa49875e4e71d07a78d7046e30bcc929aa23450ef3f4",
+        "spec/lean/proposals/packed-static-guidance-20261103/REPORT.md": "6e33a62dc779e7d02440872802e0f97ed770c6baf32b30be5aea3e496762a910",
+        "spec/lean/proposals/packed-static-guidance-20261103/check.py": "5664563fde56112ddbb1fba1ea3e6728197c730a0ac4a2a49a27ef9bf76509c3",
+        "spec/lean/proposals/packed-static-guidance-20261103/reference-source-pins.json": "78325ea0396c248c8e955dc13745a08c4511f517f741743194870c19570b7968",
+        "spec/proof-guide.md": "c51296c2773f7a09bc96e3a4679c0b97610c38baf792b39e0de7ef2bf4787dcd",
+        "spec/impl-proposal-guide.md": "0068a5ea23d3215cab580fc341bbcbfaf64d504920d35d8bf041b166c73ea17a",
+        "spec/lean/lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
+        "spec/lean/proposals/call-stage-result-merging-analysis-20261101/check.py": "817d1ab500b65240cdedeed4c741bcb24470b60e047d5ac3d5dd30eaf951f4dc"
+      },
+      "nativeImplementationVerified": false
+    },
+    "joined-state-modular-composition-20261103": {
+      "receipt": "spec/lean/proposals/joined-state-modular-composition-20261103/checks.json",
+      "sha256": "44f1a8f9da66c2d05499e3dea121f9571dfd05a68ee17362690f3ced136d463f",
+      "status": "SELECTED_DESIGN_MODULAR_COMPOSITION_PASS",
+      "theorems": 8,
+      "auditedDeclarations": 12,
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ],
+      "inputHashes": {
+        "docs/design/bidirectional-joined-state-release-design-20261103.md": "4ca9febe1220bdd846c3fc3f3e81d49ac6f21e104e102fd74c2d41b6ac371441",
+        "docs/design/bidirectional-loop-consumer-query-design-20261103.md": "26074dd10050f0d846157e92afcfad0d5f8742391c50b1e773054f532bf095c6",
+        "docs/design/bidirectional-packed-static-guidance-design-20261103.md": "fb871ac6c82ee48c9b27565bc7274cfe120e06cdf2bb43cb8c53c22314f56f86",
+        "spec/impl-proposal-guide.md": "0068a5ea23d3215cab580fc341bbcbfaf64d504920d35d8bf041b166c73ea17a",
+        "spec/lean/lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
+        "spec/lean/proposals/call-stage-result-merging-analysis-20261101/check.py": "817d1ab500b65240cdedeed4c741bcb24470b60e047d5ac3d5dd30eaf951f4dc",
+        "spec/lean/proposals/joined-state-modular-composition-20261103/Composition.lean": "a9c2b6a009cb1c95740128270a19f28121180d5b9092350838a7e6c22408baca",
+        "spec/lean/proposals/joined-state-modular-composition-20261103/README.md": "7859fd051afc015331ca31edfe7dcc8053931b80e68c8dedac489ce0b9682b51",
+        "spec/lean/proposals/joined-state-modular-composition-20261103/REPORT.md": "a730202219263b9b9ed915f4e2d0bbf82c10b1259447a690e8b6a95a8c1a9a74",
+        "spec/lean/proposals/joined-state-modular-composition-20261103/check.py": "e3da4ec7877e0db6ec9e27a05738ae9f0abb5265fb8ee1dabadcf0a14fda8940",
+        "spec/lean/proposals/joined-state-modular-composition-20261103/component-pins.json": "66a5ddca9d11b88e4bb40190b0b61137ca2debd2dec2a9f0f4bfd8a9b01766c9",
+        "spec/lean/proposals/joined-state-release-selected-design-20261103/JoinedStateRelease.lean": "62c3e7de47555d4b3e0ba6401c0bcb61164f41d9a034d828f0f628e26256b638",
+        "spec/lean/proposals/joined-state-release-selected-design-20261103/README.md": "bd88e7ae0390820fd50dd0f55d456abe233f40d8e7190fd01aa311cc2c8a2aee",
+        "spec/lean/proposals/joined-state-release-selected-design-20261103/REPORT.md": "e727c70218976456c9ccb1e1d7cd21c7e268670f153e41fab23582027e4d943f",
+        "spec/lean/proposals/joined-state-release-selected-design-20261103/audit.txt": "80c16ce1daf6d40ec21a3538ba27886ad32a83e8e0464a8d5a6502581c4689b3",
+        "spec/lean/proposals/joined-state-release-selected-design-20261103/check.py": "0f94dde51e532d72083514181d96171f94eb80d2d8624f0ebe4ff4803da90984",
+        "spec/lean/proposals/joined-state-release-selected-design-20261103/checks.json": "4f0d0d48fe8207fcf5e16665551d63484e6f724eb2114353870f13b900023c7b",
+        "spec/lean/proposals/joined-state-release-selected-design-20261103/reference-source-pins.json": "fa274deae7086e4be11b23ff698a498167deedd3edfe954d09d9f66b2b258f35",
+        "spec/lean/proposals/loop-consumer-query-reuse-20261103/LoopQueryReuse.lean": "9d53972136791d96d25f59e5ae3395b0d11709ff5a5364a50c644cbad48d1323",
+        "spec/lean/proposals/loop-consumer-query-reuse-20261103/README.md": "132c47f0240ea2670f489279c18324b39685caae5addfddb48c563afc3a55c2f",
+        "spec/lean/proposals/loop-consumer-query-reuse-20261103/REPORT.md": "82752719477d675863092dcf0416e5aa6b9ed6da65a9716920e127e771d0e7ff",
+        "spec/lean/proposals/loop-consumer-query-reuse-20261103/audit.txt": "96d1ae9069324550ac3e3d4cc47abf25fff1885281d4bc0b64c27602cad8c84c",
+        "spec/lean/proposals/loop-consumer-query-reuse-20261103/check.py": "d00d017ac864defcae57e7653bfa19e885cf9cc1a40f9c4ad5fd55ea51fdf6d6",
+        "spec/lean/proposals/loop-consumer-query-reuse-20261103/checks.json": "da3f3870c7ae08b3e29565eddd86b1fa5f58b4128baa6a8917331f878b6ba498",
+        "spec/lean/proposals/loop-consumer-query-reuse-20261103/reference-source-pins.json": "22648ec42e1107db441bcdb42d6fe48d8290ebe939465446612dd827cd418e44",
+        "spec/lean/proposals/packed-static-guidance-20261103/PROPOSAL.md": "e92fbd8bcab1f9d8115bb05da62852fcbd605782e43dc6f537fef464fbd2323b",
+        "spec/lean/proposals/packed-static-guidance-20261103/PackedStaticGuidance.lean": "1267d882c7a3f7a69c40f80450e3b6896e7fc2c6e3de280fdf894fe4a5def5e8",
+        "spec/lean/proposals/packed-static-guidance-20261103/README.md": "b765225580dbd97d8c75fa49875e4e71d07a78d7046e30bcc929aa23450ef3f4",
+        "spec/lean/proposals/packed-static-guidance-20261103/REPORT.md": "6e33a62dc779e7d02440872802e0f97ed770c6baf32b30be5aea3e496762a910",
+        "spec/lean/proposals/packed-static-guidance-20261103/audit.txt": "86f195c32c1ca48d5503251780f26ff6f4e1ead5d483e54bffd803b67ec0f444",
+        "spec/lean/proposals/packed-static-guidance-20261103/check.py": "5664563fde56112ddbb1fba1ea3e6728197c730a0ac4a2a49a27ef9bf76509c3",
+        "spec/lean/proposals/packed-static-guidance-20261103/checks.json": "6299d22b523232b5b31b715f6bca6fe6efc6f2127bc51e87843f27e06ac82437",
+        "spec/lean/proposals/packed-static-guidance-20261103/reference-source-pins.json": "78325ea0396c248c8e955dc13745a08c4511f517f741743194870c19570b7968",
+        "spec/proof-guide.md": "c51296c2773f7a09bc96e3a4679c0b97610c38baf792b39e0de7ef2bf4787dcd"
+      },
+      "nativeImplementationVerified": false
+    }
+  },
+  "totals": {
+    "theorems": 214,
+    "auditedDeclarations": 340,
+    "uniqueNativeSourcePins": 48
+  },
+  "nativeSourceHashes": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunManager.kt": "1dcb4919305d5fdfd9c28279ddbba9eb3588ed758c45ab0b41daca47a672adf3",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/UnitRunner.kt": "4d2840aa2abf3a2b8c226f260747e31903de5c153e0eca3e281a8a7cf35acd58",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt": "25f3632ed61022315224e80098d3087deb9270a1211445157822968f0a3069f5",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockRunState.kt": "3c195ca227f5bbbcd0e07131f74924de8c533e590e80cee5c05f371e3102f187",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/MethodBlockRuntime.kt": "8f05b03d9e05fb2880b10ee61ed61829302cdbf2000154b21a97949d90334fe5",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockSummaryLinks.kt": "6f4a69892ac55bf578399af2902aaaa5ab12a754c2cd55b13167587ff80764d7",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodHandlers.kt": "3375f480788b75a2f37fb4f805d296d4ca53b30dffc85997fb99469816673121",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SubscriptionManager.kt": "4c2970b3edcfaff76270a9f78f9c7dcd903ec449a09b1cc54290aa99dda27302",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/CalleeSubscriptions.kt": "6653fc032fa8dd7e02c70c3d759ee9a35168f272c72d74de0bb6f1eabaf574b5",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SummaryStorage.kt": "d7f4a9beda28cc3ad222c325d45f57d895289ac34a64ffd5662a2db0615287c4",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/JoinedStaticGuidance.kt": "557b74caa84decd2c3e4190e030d6a1b42de2f1b80e3f9c4f52f7f1a4d543b13",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/OwnedJoinedStaticWriterBinding.kt": "09e53b4963aab2af19f351858574b8158b3062d41478d6d41c246f98a2763a9d",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/NormalRuleContributors.kt": "ef8217aa796699793f23e7cc1fc060e9930ac740322f78f37425091a25f8d71c",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BodyWorkStatistics.kt": "70ad1d71e54c4fd398f56538afffe5f7e5f4055e8f9a55a4f6b02f82bcdfc8f7",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunStatus.kt": "950e993e55b997c25561f603e89bda6584dcdeb92cc90b28161a2424295af634",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodLocalServices.kt": "dd4580aa83a9a9a0594811013575ba9380053ddc84ebcede8bf21469a8a0cc04",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodCallServices.kt": "3f7745a9ad5389aa70dde5cb3bb469deaa670c7b48735a953f4e85540b63897c",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RunSummaries.kt": "8b8d445450374e23b27b211dede49abede2165c6b7bc458912d18ef1845c6d7f",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/KilledStaticWriteStore.kt": "418b95a3e21b456caa1e4368188c5d59febe2356fb9eb8d17446700bec8f5241",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/NormalRuleContributorStore.kt": "94c1f8d9ddcea4f6fef5ad0fbcb0681c4d8aa1647784836eb243e3987592476b",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RecordStore.kt": "17f63dad8c10afc8d0d31c7bc1f05a7f53a4c8570b01de1ef8f1cb53ec48b140",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/IterationDriver.kt": "0699fa8b20f95560de7f228b4dc61907c5e68233d00483bea17cfac26f93435e",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/HandOff.kt": "87331c360b1cce0f5e0fb4200e8713148e639adeae432392175d00357949112d",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/Report.kt": "9389b4f1ab478ceb74a74c03cab17870c82a056d03b596e1e7754c991e1d3fe7",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/Frontier.kt": "ba7979dbe643d06cd6372031ef58df8262f3a6d1d280090f8a2d065b0b4ad52f",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LoopConsumerObservation.kt": "87ebfcdbdf6ddec4a26ecf3965255f075f183ff274e577869ee9059b8354ac2b",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LoopOutputRestriction.kt": "7b44a1303a0151e363e46264e39d58e19e930ff114839b9946b1a2da34ccbc9c",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LocalRelationApplication.kt": "d053e80bc0cf2130eabfed182de66123876c171867162b90cb7da1c10776563f",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockBoundaryDemandView.kt": "089b70e2efe3ff415bd8721648ab1e9986d0f91f6635d311400a7e25906133f7",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandStore.kt": "2fd6fc0cab91ab7983f927b889c4650e8c9d3ad474cdcf78d3f66eec3660e6f8",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandResultCoverage.kt": "9b9525780415b0091df273b4eef8478397a7096c8bc19928fffe515e0a238257",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticGuidance.kt": "33b47d51676c51d16a08e0296f269de540a6b01a656e3bd55e86f8ca13765328",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApOps.kt": "9ecf5a0a403f8b0b76c5e0bfe79ca94ccba8eb9d5700bc18fb88c11f482d0dc4",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Demand.kt": "46a46bdf05074bc1d35dd1373e5fe5b1861e2055a315b1bd400ab2bf2e33a672",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": "c4a2547aeb7e03d2daf13bc8fe811b3a4bc8026d74bd162a6cd3f06a9bbc90f0",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/RestrictedInitialPolicy.kt": "dcbaee551ecdae33590c56ef0154bfd0ef419c8c8fa3dc7b38127006a73ad44e",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/FlowSummaryNormalization.kt": "42ebef857f4c695cd260dea3738927b512ef843ebb597409e3ac62607404b86e",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Conclusions.kt": "ff059941492674f0eb063e546a1e81ed83d7e13b5294d9124ef42ea807d2e9ec",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/FlowBackedProtection.kt": "babe4411354ceeaa06c169602c8bae726ae29b83ad979fb8febaa95a70f37d62",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/RuntimeDataDomain.kt": "603c7f1613c6b5835d22a550aabc448cc21660f2707503bbcd09b196024cd5fe",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Summary.kt": "f21c80f317d08d9ffc70f86cef2138fb40cd16e7d0c02956700c3f507e32c24f",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/EdgeApplication.kt": "a9dac26784fe001055bcb4a8fabae5ea88877941aab66c244bbc6d756850fcc5",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApOut.kt": "c34d8c6907a05a5699babfe132c1b46a0dce4710e0bcc85e6d12c092c5308227",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticPairLookup.kt": "2fe986cfa96c79c841131cc65db23f3fb4db01e7ced8a3d2229f5b0981e63f00",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/C5StaticDemandView.kt": "12ad3ea3f2785c209b43fc65ae2af2b952ca9085eb340a45d457cee3090aeddd",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticSelectorIndex.kt": "487904fc700e893b08d58a76588ef8340ba86eb9575c7d9bbd07e6f78e9bd983",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/UnionStaticDemandView.kt": "32aa30d243ded17d05396e774d9de5c8e3681dda3c6c9c97396f882acfb9805d",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/BlockScope.kt": "c21ce42f3791812ea7b2acf899740047a66010d6d79aa83326b6e61e85d6cc7a"
+  },
+  "checks": {
+    "receiptInputsAndLogsStable": true,
+    "embeddedComponentBodiesExact": true,
+    "runtimeTreeUnchanged": true,
+    "localLinksExist": true
+  },
+  "localLinks": [
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "bidirectional-joined-state-and-loop-consumers-next-iteration-20261103.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "../../spec/impl-proposal-guide.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "../../spec/proof-guide.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "../reports/bidirectional-loop-blocks-scoped-requests-performance-20261103.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "../../spec/lean/proposals/joined-state-release-selected-design-20261103/REPORT.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "../../spec/lean/proposals/loop-consumer-query-reuse-20261103/REPORT.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "../../spec/lean/proposals/packed-static-guidance-20261103/REPORT.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "../../spec/lean/proposals/joined-state-modular-composition-20261103/REPORT.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "bidirectional-joined-state-loop-consumers-packed-guidance-validation-20261103.json",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "bidirectional-joined-state-release-design-20261103.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "../reports/bidirectional-loop-blocks-scoped-requests-performance-20261103.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "../../spec/lean/proposals/joined-state-release-selected-design-20261103/REPORT.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "bidirectional-loop-consumer-query-design-20261103.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "../../spec/lean/proposals/loop-consumer-query-reuse-20261103/README.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md",
+      "target": "bidirectional-packed-static-guidance-design-20261103.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-release-design-20261103.md",
+      "target": "bidirectional-joined-state-and-loop-consumers-next-iteration-20261103.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-release-design-20261103.md",
+      "target": "../reports/bidirectional-loop-blocks-scoped-requests-performance-20261103.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-joined-state-release-design-20261103.md",
+      "target": "../../spec/lean/proposals/joined-state-release-selected-design-20261103/REPORT.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-loop-consumer-query-design-20261103.md",
+      "target": "../../spec/impl-proposal-guide.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-loop-consumer-query-design-20261103.md",
+      "target": "../../spec/proof-guide.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-loop-consumer-query-design-20261103.md",
+      "target": "../../spec/lean/proposals/loop-consumer-query-reuse-20261103/README.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-packed-static-guidance-design-20261103.md",
+      "target": "bidirectional-joined-state-and-loop-consumers-next-iteration-20261103.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-packed-static-guidance-design-20261103.md",
+      "target": "../reports/bidirectional-loop-blocks-scoped-requests-performance-20261103.md",
+      "exists": true
+    },
+    {
+      "source": "docs/design/bidirectional-packed-static-guidance-design-20261103.md",
+      "target": "../../spec/lean/proposals/packed-static-guidance-20261103/README.md",
+      "exists": true
+    }
+  ],
+  "runtimeImplementationChanged": false,
+  "nativeTestsRun": false,
+  "projectExperimentsRun": false,
+  "kotlinAdaptersVerifiedByKernel": false,
+  "garbageCollectionOrMemorySavingVerified": false,
+  "projectSpeedupOrConvergenceProved": false,
+  "errors": []
+}

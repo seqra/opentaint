@@ -1,0 +1,117 @@
+'PostJoinRelease.fresh' does not depend on any axioms
+'PostJoinRelease.admitLive' depends on axioms: [propext]
+'PostJoinRelease.joinSuccess' does not depend on any axioms
+'PostJoinRelease.joinFailure' does not depend on any axioms
+'PostJoinRelease.capture' does not depend on any axioms
+'PostJoinRelease.releaseExecution' does not depend on any axioms
+'PostJoinRelease.bind' does not depend on any axioms
+'PostJoinRelease.commit' does not depend on any axioms
+'PostJoinRelease.finalRelease' does not depend on any axioms
+'PostJoinRelease.oldPath' does not depend on any axioms
+'PostJoinRelease.proposedPath' does not depend on any axioms
+'PostJoinRelease.no_live_after_join' depends on axioms: [propext]
+'PostJoinRelease.no_live_after_snapshots' depends on axioms: [propext]
+'PostJoinRelease.no_live_after_release' depends on axioms: [propext]
+'PostJoinRelease.no_live_after_binding' depends on axioms: [propext]
+'PostJoinRelease.no_live_after_failure' depends on axioms: [propext]
+'PostJoinRelease.no_work_publication_or_delivery_after_join' depends on axioms: [propext]
+'PostJoinRelease.fresh_not_published' does not depend on any axioms
+'PostJoinRelease.failed_join_not_published' does not depend on any axioms
+'PostJoinRelease.failed_join_has_no_bound_output' does not depend on any axioms
+'PostJoinRelease.failed_join_cannot_early_release' does not depend on any axioms
+'PostJoinRelease.cannot_release_while_running' depends on axioms: [propext]
+'PostJoinRelease.cannot_release_before_snapshot' depends on axioms: [propext]
+'PostJoinRelease.release_removes_selected_execution_root' depends on axioms: [propext]
+'PostJoinRelease.release_preserves_retained_footprint' does not depend on any axioms
+'PostJoinRelease.release_preserves_completed_snapshots' does not depend on any axioms
+'PostJoinRelease.every_retained_read_unchanged' does not depend on any axioms
+'PostJoinRelease.all_raw_ids_owners_ports_marks_unchanged' does not depend on any axioms
+'PostJoinRelease.release_makes_no_early_publication' does not depend on any axioms
+'PostJoinRelease.capture_precedes_release' depends on axioms: [propext]
+'PostJoinRelease.captured_state_is_ready_to_drop' depends on axioms: [propext]
+'PostJoinRelease.release_is_idempotent' depends on axioms: [propext]
+'PostJoinRelease.final_release_idempotent' depends on axioms: [propext]
+'PostJoinRelease.final_release_cannot_skip_snapshots' depends on axioms: [propext]
+'PostJoinRelease.final_release_retains_binding_inputs' does not depend on any axioms
+'PostJoinRelease.final_release_does_not_publish' does not depend on any axioms
+'PostJoinRelease.release_then_binding_same_final_state' depends on axioms: [propext]
+'PostJoinRelease.release_then_binding_same_output' depends on axioms: [propext]
+'PostJoinRelease.release_then_binding_same_publication' depends on axioms: [propext]
+'PostJoinRelease.failed_binding_never_publishes' depends on axioms: [propext]
+'PostJoinRelease.failed_binding_has_no_output' depends on axioms: [propext]
+'PostJoinRelease.successful_binding_publishes_same_value' depends on axioms: [propext]
+'PostJoinRelease.early_commit_joined_is_noop' depends on axioms: [propext]
+'PostJoinRelease.early_commit_released_is_noop' depends on axioms: [propext]
+'PostJoinRelease.aliasWitness' does not depend on any axioms
+'PostJoinRelease.retained_alias_survives_root_release' does not depend on any axioms
+'PostJoinRelease.executionDependent' does not depend on any axioms
+'PostJoinRelease.execution_read_breaks_equivalence_witness' does not depend on any axioms
+'JoinedStateRelease.idle' does not depend on any axioms
+'JoinedStateRelease.mayLive' does not depend on any axioms
+'JoinedStateRelease.join' does not depend on any axioms
+'JoinedStateRelease.capture' does not depend on any axioms
+'JoinedStateRelease.releaseExecution' does not depend on any axioms
+'JoinedStateRelease.localAt' does not depend on any axioms
+'JoinedStateRelease.callersAt' does not depend on any axioms
+'JoinedStateRelease.bindLocal' does not depend on any axioms
+'JoinedStateRelease.bindCaller' does not depend on any axioms
+'JoinedStateRelease.bind' does not depend on any axioms
+'JoinedStateRelease.commit' depends on axioms: [propext]
+'JoinedStateRelease.abort' does not depend on any axioms
+'JoinedStateRelease.dispose' does not depend on any axioms
+'JoinedStateRelease.join_requires_idle' depends on axioms: [propext]
+'JoinedStateRelease.join_requires_stopped' depends on axioms: [propext]
+'JoinedStateRelease.joined_has_no_live_routing' depends on axioms: [propext]
+'JoinedStateRelease.captured_has_no_live_routing' depends on axioms: [propext]
+'JoinedStateRelease.released_has_no_live_routing' depends on axioms: [propext]
+'JoinedStateRelease.release_requires_capture' depends on axioms: [propext]
+'JoinedStateRelease.release_requires_lease' depends on axioms: [propext]
+'JoinedStateRelease.release_preserves_retained' does not depend on any axioms
+'JoinedStateRelease.release_preserves_capture' does not depend on any axioms
+'JoinedStateRelease.release_preserves_previous_acceptance' does not depend on any axioms
+'JoinedStateRelease.release_preserves_current_acceptance' does not depend on any axioms
+'JoinedStateRelease.release_discards_selected_bundle' depends on axioms: [propext]
+'JoinedStateRelease.capture_complete_exports' depends on axioms: [propext]
+'JoinedStateRelease.capture_does_not_rebind_inputs' does not depend on any axioms
+'JoinedStateRelease.capture_does_not_publish_reports' does not depend on any axioms
+'JoinedStateRelease.exact_local_owner' depends on axioms: [propext]
+'JoinedStateRelease.no_cross_scope_local_read' depends on axioms: [propext]
+'JoinedStateRelease.exact_callee_owner' depends on axioms: [propext]
+'JoinedStateRelease.local_query_preserved' does not depend on any axioms
+'JoinedStateRelease.caller_query_preserved' does not depend on any axioms
+'JoinedStateRelease.concrete_local_binding_sequence_preserved' does not depend on any axioms
+'JoinedStateRelease.concrete_physical_binding_sequence_preserved' does not depend on any axioms
+'JoinedStateRelease.all_driver_exports_preserved' does not depend on any axioms
+'JoinedStateRelease.raw_target_inventory_preserved' does not depend on any axioms
+'JoinedStateRelease.outgoing_target_inventory_preserved' does not depend on any axioms
+'JoinedStateRelease.diagnostics_preserved' does not depend on any axioms
+'JoinedStateRelease.contributors_preserved' does not depend on any axioms
+'JoinedStateRelease.all_raw_writes_preserved' does not depend on any axioms
+'JoinedStateRelease.failed_binding_keeps_old_acceptance' depends on axioms: [propext]
+'JoinedStateRelease.failed_driver_validation_keeps_old_acceptance' depends on axioms: [propext]
+'JoinedStateRelease.abort_has_no_new_candidate' does not depend on any axioms
+'JoinedStateRelease.abort_preserves_prior_reports' does not depend on any axioms
+'JoinedStateRelease.dispose_releases_binding_lease' depends on axioms: [propext]
+'JoinedStateRelease.dispose_preserves_committed_exports' does not depend on any axioms
+'JoinedStateRelease.dispose_preserves_reports' does not depend on any axioms
+'JoinedStateRelease.release_idempotent' depends on axioms: [propext]
+'JoinedStateRelease.dispose_idempotent' depends on axioms: [propext]
+'JoinedStateRelease.detach' depends on axioms: [propext]
+'JoinedStateRelease.detach_moves_exact_values' depends on axioms: [propext]
+'JoinedStateRelease.detach_does_not_keep_two_standing_directories' depends on axioms: [propext]
+'JoinedStateRelease.detach_preserves_order_and_multiplicity' depends on axioms: [propext]
+'JoinedStateRelease.detach_idempotent' depends on axioms: [propext]
+'JoinedStateRelease.closeJoined' does not depend on any axioms
+'JoinedStateRelease.close_joined_drops_owner_reference' does not depend on any axioms
+'JoinedStateRelease.close_joined_does_not_clear_live_alias' does not depend on any axioms
+'JoinedStateRelease.moved_then_closed_has_no_directory_root' depends on axioms: [propext]
+'JoinedStateRelease.close_joined_idempotent' does not depend on any axioms
+'JoinedStateRelease.failed_join_cannot_capture' does not depend on any axioms
+'JoinedStateRelease.failed_join_cannot_bind' does not depend on any axioms
+'JoinedStateRelease.failure_cleanup_does_not_restore_execution' depends on axioms: [propext]
+'JoinedStateRelease.no_new_report_from_failure_cleanup' depends on axioms: [propext]
+'JoinedStateRelease.edges' does not depend on any axioms
+'JoinedStateRelease.reachable' does not depend on any axioms
+'JoinedStateRelease.plain_input_reader_does_not_retain_execution' depends on axioms: [propext, Quot.sound]
+'JoinedStateRelease.actor_callback_alias_keeps_execution' depends on axioms: [propext, Quot.sound]
+'JoinedStateRelease.removing_input_reader_would_lose_input' depends on axioms: [propext, Quot.sound]

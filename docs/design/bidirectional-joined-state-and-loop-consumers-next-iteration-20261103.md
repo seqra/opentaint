@@ -1,7 +1,13 @@
 # Next iteration: finish engine lifetimes and avoid repeated consumer work
 
-3 November 2026. Status: **proposal; not selected and not implemented**.
+3 November 2026. Status: **all three ranked points selected for detailed design;
+not implemented**.
 Reference runtime: `050b83cfb7b2e75856ea113c44d0a2d6b707250d`.
+
+The [complete implementation proposal](bidirectional-joined-state-loop-consumers-packed-guidance-implementation-20261103.md)
+specifies the concrete owners, APIs, lookup paths, constructive proofs,
+native test gates and implementation order. The secondary pruning candidate
+in section 5 is not selected.
 
 Use the [current campaign report](../reports/bidirectional-loop-blocks-scoped-requests-performance-20261103.md)
 and its embedded CPU and heap evidence. The earlier static-terminal/query

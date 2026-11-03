@@ -1,0 +1,117 @@
+{
+  "status": "SELECTED_DESIGN_MODULAR_COMPOSITION_PASS",
+  "selection": "SELECTED_DESIGN_COMPOSITION_ONLY",
+  "runtimeImplementationChanged": false,
+  "kotlinVerified": false,
+  "gcVerified": false,
+  "fullAPAdapterVerified": false,
+  "projectQualityOrSpeedupMeasured": false,
+  "wholeDriverConvergenceProved": false,
+  "resourceLimitOutcomeEquivalenceProved": false,
+  "utc": "2026-11-03T17:36:46.153476+00:00",
+  "toolchain": "leanprover/lean4:v4.33.1",
+  "leanVersion": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+  "baselineRevision": "050b83cfb7b2e75856ea113c44d0a2d6b707250d",
+  "moduleCount": 1,
+  "theoremCount": 8,
+  "auditedPublicDeclarationCount": 12,
+  "declarations": [
+    "JoinedStateComposition.referenceOracle",
+    "JoinedStateComposition.selectedOracle",
+    "JoinedStateComposition.release_preserves_complete_source_stream",
+    "JoinedStateComposition.release_and_packing_preserve_complete_oracle",
+    "JoinedStateComposition.referenceObservation",
+    "JoinedStateComposition.selectedObservation",
+    "JoinedStateComposition.combined_complete_observer_port_equal",
+    "JoinedStateComposition.combined_finite_restriction_program_equal",
+    "JoinedStateComposition.combined_handoff_and_report_projection_equal",
+    "JoinedStateComposition.combined_static_callback_trace_equal",
+    "JoinedStateComposition.NORMAL_and_DEMAND_Target_export_ids_equal",
+    "JoinedStateComposition.packed_oracle_preserves_finite_recursive_compositions"
+  ],
+  "importedComponentModels": [
+    {
+      "package": "joined-state-release-selected-design-20261103",
+      "theorems": 87,
+      "declarations": 117
+    },
+    {
+      "package": "loop-consumer-query-reuse-20261103",
+      "theorems": 71,
+      "declarations": 127
+    },
+    {
+      "package": "packed-static-guidance-20261103",
+      "theorems": 48,
+      "declarations": 84
+    }
+  ],
+  "axioms": [
+    "Quot.sound",
+    "propext"
+  ],
+  "noChoiceOrUnprovedAxioms": true,
+  "allExplicitPublicDefinitionsAndTheoremsAudited": true,
+  "inputsStable": true,
+  "inputHashes": {
+    "docs/design/bidirectional-joined-state-release-design-20261103.md": "4ca9febe1220bdd846c3fc3f3e81d49ac6f21e104e102fd74c2d41b6ac371441",
+    "docs/design/bidirectional-loop-consumer-query-design-20261103.md": "26074dd10050f0d846157e92afcfad0d5f8742391c50b1e773054f532bf095c6",
+    "docs/design/bidirectional-packed-static-guidance-design-20261103.md": "fb871ac6c82ee48c9b27565bc7274cfe120e06cdf2bb43cb8c53c22314f56f86",
+    "spec/impl-proposal-guide.md": "0068a5ea23d3215cab580fc341bbcbfaf64d504920d35d8bf041b166c73ea17a",
+    "spec/lean/lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
+    "spec/lean/proposals/call-stage-result-merging-analysis-20261101/check.py": "817d1ab500b65240cdedeed4c741bcb24470b60e047d5ac3d5dd30eaf951f4dc",
+    "spec/lean/proposals/joined-state-modular-composition-20261103/Composition.lean": "a9c2b6a009cb1c95740128270a19f28121180d5b9092350838a7e6c22408baca",
+    "spec/lean/proposals/joined-state-modular-composition-20261103/README.md": "7859fd051afc015331ca31edfe7dcc8053931b80e68c8dedac489ce0b9682b51",
+    "spec/lean/proposals/joined-state-modular-composition-20261103/REPORT.md": "a730202219263b9b9ed915f4e2d0bbf82c10b1259447a690e8b6a95a8c1a9a74",
+    "spec/lean/proposals/joined-state-modular-composition-20261103/check.py": "e3da4ec7877e0db6ec9e27a05738ae9f0abb5265fb8ee1dabadcf0a14fda8940",
+    "spec/lean/proposals/joined-state-modular-composition-20261103/component-pins.json": "66a5ddca9d11b88e4bb40190b0b61137ca2debd2dec2a9f0f4bfd8a9b01766c9",
+    "spec/lean/proposals/joined-state-release-selected-design-20261103/JoinedStateRelease.lean": "62c3e7de47555d4b3e0ba6401c0bcb61164f41d9a034d828f0f628e26256b638",
+    "spec/lean/proposals/joined-state-release-selected-design-20261103/README.md": "bd88e7ae0390820fd50dd0f55d456abe233f40d8e7190fd01aa311cc2c8a2aee",
+    "spec/lean/proposals/joined-state-release-selected-design-20261103/REPORT.md": "e727c70218976456c9ccb1e1d7cd21c7e268670f153e41fab23582027e4d943f",
+    "spec/lean/proposals/joined-state-release-selected-design-20261103/audit.txt": "80c16ce1daf6d40ec21a3538ba27886ad32a83e8e0464a8d5a6502581c4689b3",
+    "spec/lean/proposals/joined-state-release-selected-design-20261103/check.py": "0f94dde51e532d72083514181d96171f94eb80d2d8624f0ebe4ff4803da90984",
+    "spec/lean/proposals/joined-state-release-selected-design-20261103/checks.json": "4f0d0d48fe8207fcf5e16665551d63484e6f724eb2114353870f13b900023c7b",
+    "spec/lean/proposals/joined-state-release-selected-design-20261103/reference-source-pins.json": "fa274deae7086e4be11b23ff698a498167deedd3edfe954d09d9f66b2b258f35",
+    "spec/lean/proposals/loop-consumer-query-reuse-20261103/LoopQueryReuse.lean": "9d53972136791d96d25f59e5ae3395b0d11709ff5a5364a50c644cbad48d1323",
+    "spec/lean/proposals/loop-consumer-query-reuse-20261103/README.md": "132c47f0240ea2670f489279c18324b39685caae5addfddb48c563afc3a55c2f",
+    "spec/lean/proposals/loop-consumer-query-reuse-20261103/REPORT.md": "82752719477d675863092dcf0416e5aa6b9ed6da65a9716920e127e771d0e7ff",
+    "spec/lean/proposals/loop-consumer-query-reuse-20261103/audit.txt": "96d1ae9069324550ac3e3d4cc47abf25fff1885281d4bc0b64c27602cad8c84c",
+    "spec/lean/proposals/loop-consumer-query-reuse-20261103/check.py": "d00d017ac864defcae57e7653bfa19e885cf9cc1a40f9c4ad5fd55ea51fdf6d6",
+    "spec/lean/proposals/loop-consumer-query-reuse-20261103/checks.json": "da3f3870c7ae08b3e29565eddd86b1fa5f58b4128baa6a8917331f878b6ba498",
+    "spec/lean/proposals/loop-consumer-query-reuse-20261103/reference-source-pins.json": "22648ec42e1107db441bcdb42d6fe48d8290ebe939465446612dd827cd418e44",
+    "spec/lean/proposals/packed-static-guidance-20261103/PROPOSAL.md": "e92fbd8bcab1f9d8115bb05da62852fcbd605782e43dc6f537fef464fbd2323b",
+    "spec/lean/proposals/packed-static-guidance-20261103/PackedStaticGuidance.lean": "1267d882c7a3f7a69c40f80450e3b6896e7fc2c6e3de280fdf894fe4a5def5e8",
+    "spec/lean/proposals/packed-static-guidance-20261103/README.md": "b765225580dbd97d8c75fa49875e4e71d07a78d7046e30bcc929aa23450ef3f4",
+    "spec/lean/proposals/packed-static-guidance-20261103/REPORT.md": "6e33a62dc779e7d02440872802e0f97ed770c6baf32b30be5aea3e496762a910",
+    "spec/lean/proposals/packed-static-guidance-20261103/audit.txt": "86f195c32c1ca48d5503251780f26ff6f4e1ead5d483e54bffd803b67ec0f444",
+    "spec/lean/proposals/packed-static-guidance-20261103/check.py": "5664563fde56112ddbb1fba1ea3e6728197c730a0ac4a2a49a27ef9bf76509c3",
+    "spec/lean/proposals/packed-static-guidance-20261103/checks.json": "6299d22b523232b5b31b715f6bca6fe6efc6f2127bc51e87843f27e06ac82437",
+    "spec/lean/proposals/packed-static-guidance-20261103/reference-source-pins.json": "78325ea0396c248c8e955dc13745a08c4511f517f741743194870c19570b7968",
+    "spec/proof-guide.md": "c51296c2773f7a09bc96e3a4679c0b97610c38baf792b39e0de7ef2bf4787dcd"
+  },
+  "portableAudit": {
+    "path": "spec/lean/proposals/joined-state-modular-composition-20261103/audit.txt",
+    "sha256": "7a4dbb6686c582956be15b97159212d1e37dbf183b87e35bd62fd434402e1780"
+  },
+  "logs": {
+    "spec/lean/.lake/verification/joined-state-modular-composition-20261103/20261103T173641580399Z/Audit.lean": "81730b7161686104a77ca4f537b8d8f979aedbfd76d0b9d5c7a2ead5b3f5ec91",
+    "spec/lean/.lake/verification/joined-state-modular-composition-20261103/20261103T173641580399Z/Audit.log": "7a4dbb6686c582956be15b97159212d1e37dbf183b87e35bd62fd434402e1780",
+    "spec/lean/.lake/verification/joined-state-modular-composition-20261103/20261103T173641580399Z/Composition.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "spec/lean/.lake/verification/joined-state-modular-composition-20261103/20261103T173641580399Z/JoinedStateRelease.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "spec/lean/.lake/verification/joined-state-modular-composition-20261103/20261103T173641580399Z/LoopQueryReuse.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "spec/lean/.lake/verification/joined-state-modular-composition-20261103/20261103T173641580399Z/PackedStaticGuidance.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "prerequisites": [
+    "Point 1 Kotlin seal preserves its complete retained read footprint and actual input owners.",
+    "Ingest is the unchanged deterministic normalized ordered static source and bound-extra stream.",
+    "Packed native indexes/callbacks realize point 3 exact complete ordered query oracle.",
+    "Point 2 preparedPort preserves full enclosing observations under its native eligibility/fallback conditions.",
+    "Exact frozen scope/ports/policy, full originals, layers, exclusions, protection and Target IDs are retained.",
+    "Finite query programs and deterministic handoff/report functions consume those complete equal values."
+  ],
+  "limits": [
+    "No Kotlin/native/concurrency/GC/canonical-reference proof follows from imported finite models.",
+    "No project run, new experiment, resource-limit outcome, memory reclamation or speedup is proved.",
+    "The composition adds no ZERO/Target/AP/ND/source-permission policy and verifies no archived ZERO draft."
+  ]
+}

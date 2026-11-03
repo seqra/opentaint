@@ -1,0 +1,127 @@
+'LoopQueryReuse.checked' does not depend on any axioms
+'LoopQueryReuse.oldLeaf' does not depend on any axioms
+'LoopQueryReuse.ticketLeaf' does not depend on any axioms
+'LoopQueryReuse.ticket_uses_same_entry_predicate' depends on axioms: [propext]
+'LoopQueryReuse.ticket_preserves_native_leaf' depends on axioms: [propext]
+'LoopQueryReuse.oldParts' does not depend on any axioms
+'LoopQueryReuse.preparedParts' does not depend on any axioms
+'LoopQueryReuse.empty_flatMap' depends on axioms: [propext]
+'LoopQueryReuse.factor_entry_before_all_protection_parts' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.identical_post_normalization_and_annotation_transport' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.prepareRows' does not depend on any axioms
+'LoopQueryReuse.oldRows' does not depend on any axioms
+'LoopQueryReuse.preparedRows' does not depend on any axioms
+'LoopQueryReuse.prepared_rows_equal_for_every_raw_output' depends on axioms: [propext]
+'LoopQueryReuse.prepared_row_is_one_original_pair' depends on axioms: [propext]
+'LoopQueryReuse.budget' does not depend on any axioms
+'LoopQueryReuse.row_budget_is_native_FL_plus_one' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.budget_never_exceeds_global' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.each_row_keeps_its_exit_depth' depends on axioms: [propext]
+'LoopQueryReuse.compileRows' does not depend on any axioms
+'LoopQueryReuse.applyCompiled' does not depend on any axioms
+'LoopQueryReuse.compiled_entry_decisions_preserve_ordered_outputs' depends on axioms: [propext]
+'LoopQueryReuse.attemptedRows' does not depend on any axioms
+'LoopQueryReuse.compiled_plan_keeps_all_diagnostic_row_references' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.output_matched_diagnostic_attempt_order_preserved' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.all_rejected_entries_give_empty_C5_for_every_output' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.observeReplay' does not depend on any axioms
+'LoopQueryReuse.DataReplayOnly' does not depend on any axioms
+'LoopQueryReuse.EmptyDataPorts' does not depend on any axioms
+'LoopQueryReuse.skip_only_proven_empty_DATA_replay' depends on axioms: [propext]
+'LoopQueryReuse.empty_DATA_plan_does_not_authorize_Target_skip' does not depend on any axioms
+'LoopQueryReuse.nativeSinkRoute' does not depend on any axioms
+'LoopQueryReuse.nonReach_native_sink_is_DATA' does not depend on any axioms
+'LoopQueryReuse.backward_Reach_native_sink_can_emit_Target' does not depend on any axioms
+'LoopQueryReuse.canSkipReplay' does not depend on any axioms
+'LoopQueryReuse.reverse_MUST_root_unknown_keep_native_replay' does not depend on any axioms
+'LoopQueryReuse.every_port_needs_an_empty_certificate' does not depend on any axioms
+'LoopQueryReuse.empty_replay_contribution_preserves_ordered_observation' depends on axioms: [propext]
+'LoopQueryReuse.labelOne' does not depend on any axioms
+'LoopQueryReuse.project' does not depend on any axioms
+'LoopQueryReuse.project_own_family' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.project_other_family' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.labelled' does not depend on any axioms
+'LoopQueryReuse.plain' does not depend on any axioms
+'LoopQueryReuse.project_append' depends on axioms: [propext]
+'LoopQueryReuse.labelled_plain_projection_exact' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.twoFamilies' does not depend on any axioms
+'LoopQueryReuse.bundleAdjacent' does not depend on any axioms
+'LoopQueryReuse.bundleRepeat' does not depend on any axioms
+'LoopQueryReuse.other_scopes_project_empty' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.adjacent_projection_preserved' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.repeat_projection_preserved' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.frozen_projection_stays_equal' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.referenceObservation' does not depend on any axioms
+'LoopQueryReuse.bundledObservation' does not depend on any axioms
+'LoopQueryReuse.complete_three_family_signature_preserved' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.positive_adjacent_does_not_remove_repeat_or_enclosing' does not depend on any axioms
+'LoopQueryReuse.lookup' does not depend on any axioms
+'LoopQueryReuse.CacheValid' does not depend on any axioms
+'LoopQueryReuse.remember' does not depend on any axioms
+'LoopQueryReuse.memo' does not depend on any axioms
+'LoopQueryReuse.lookup_valid' depends on axioms: [propext]
+'LoopQueryReuse.remember_valid' depends on axioms: [propext]
+'LoopQueryReuse.remember_bounded' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.memo_answer_exact' depends on axioms: [propext]
+'LoopQueryReuse.memo_valid' depends on axioms: [propext]
+'LoopQueryReuse.memo_bounded' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.memoAdmitted' does not depend on any axioms
+'LoopQueryReuse.result_weight_gate_cannot_change_query_answer' depends on axioms: [propext]
+'LoopQueryReuse.admitted_memo_valid' depends on axioms: [propext]
+'LoopQueryReuse.admitted_memo_bounded' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.belowWeight' does not depend on any axioms
+'LoopQueryReuse.remember_entry_weight_bounded' depends on axioms: [propext]
+'LoopQueryReuse.totalWeight' does not depend on any axioms
+'LoopQueryReuse.entry_and_capacity_bounds_bound_total_references' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.C2_selected_reference_bound' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.C5_selected_reference_bound' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.evaluate' does not depend on any axioms
+'LoopQueryReuse.evaluateMemo' does not depend on any axioms
+'LoopQueryReuse.every_finite_adaptive_query_program_same' depends on axioms: [propext]
+'LoopQueryReuse.restriction_selection_and_complete_observation_same' depends on axioms: [propext]
+'LoopQueryReuse.ownerQuantum' does not depend on any axioms
+'LoopQueryReuse.cache_dies_with_quantum' depends on axioms: [propext]
+'LoopQueryReuse.queryWithWork' does not depend on any axioms
+'LoopQueryReuse.no_new_work_queue_or_completion_effect' does not depend on any axioms
+'LoopQueryReuse.flowMemberTemplate' does not depend on any axioms
+'LoopQueryReuse.preparedMemberTemplates' does not depend on any axioms
+'LoopQueryReuse.nativeNormalizedMembers' does not depend on any axioms
+'LoopQueryReuse.pattern_only_templates_equal_native_after_guarded_kind' does not depend on any axioms
+'LoopQueryReuse.FLOW_EXACT_template_changes_tail_only' does not depend on any axioms
+'LoopQueryReuse.nonFLOW_ND_templates_keep_complete_members' does not depend on any axioms
+'LoopQueryReuse.unknown_result_kind_requires_fallback' does not depend on any axioms
+'LoopQueryReuse.normalFlow' does not depend on any axioms
+'LoopQueryReuse.protectedCopy' does not depend on any axioms
+'LoopQueryReuse.Facts_equals_is_not_a_full_query_key' does not depend on any axioms
+'LoopQueryReuse.sampleKey' does not depend on any axioms
+'LoopQueryReuse.complete_original_cannot_be_one_metadata_arm' does not depend on any axioms
+'LoopQueryReuse.exact_exit_cannot_be_dropped' does not depend on any axioms
+'LoopQueryReuse.frozen_snapshot_cannot_be_dropped' does not depend on any axioms
+'LoopQueryReuse.annotation_cannot_be_dropped' does not depend on any axioms
+'LoopQueryReuse.canEmitCell' does not depend on any axioms
+'LoopQueryReuse.canStoreCell' does not depend on any axioms
+'LoopQueryReuse.NORMAL_FLOW_EXACT_STAR_preimage_required' does not depend on any axioms
+'LoopQueryReuse.metadataArm' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.completeExecution' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.ND_metadata_is_not_execution_OR' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.rowA' does not depend on any axioms
+'LoopQueryReuse.rowB' does not depend on any axioms
+'LoopQueryReuse.entryCell' does not depend on any axioms
+'LoopQueryReuse.outputCell' does not depend on any axioms
+'LoopQueryReuse.entry_exit_permissions_cannot_cross_pairs' does not depend on any axioms
+'LoopQueryReuse.different_positive_masks_cannot_share_key' does not depend on any axioms
+'LoopQueryReuse.localPreparationEnabled' does not depend on any axioms
+'LoopQueryReuse.run2_uses_exact_native_fallback' does not depend on any axioms
+'LoopQueryReuse.static_completion_uses_exact_native_fallback' does not depend on any axioms
+'LoopQueryReuse.Zero_Reach_uses_exact_native_fallback' does not depend on any axioms
+'LoopQueryReuse.savedTargetObserved' does not depend on any axioms
+'LoopQueryReuse.saved_ZERO_NormalTarget_has_no_new_effect' does not depend on any axioms
+'LoopQueryReuse.backward_NormalTarget_never_observed' does not depend on any axioms
+'LoopQueryReuse.DEMAND_NormalTarget_never_observed' does not depend on any axioms
+'LoopQueryReuse.cycleProtection' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.native_application_requires_complete_cycle_original' depends on axioms: [propext, Quot.sound]
+'LoopQueryReuse.oldEntryChecks' does not depend on any axioms
+'LoopQueryReuse.preparedEntryChecks' does not depend on any axioms
+'LoopQueryReuse.fixed_entry_checks_do_not_depend_on_unique_full_keys' does not depend on any axioms
+'LoopQueryReuse.preparation_can_cost_more_when_no_output_matches' does not depend on any axioms
+'LoopQueryReuse.repeated_C2_projection_checks_removed' depends on axioms: [propext, Quot.sound]
