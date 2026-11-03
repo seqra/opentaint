@@ -32,6 +32,11 @@ internal class MethodBlockRuntime(
     }
     private val application = LocalRelationApplication(ops, mode)
     private val restriction = LoopOutputRestriction(ops)
+    private val liveLocals = port.shared.contexts.blockLiveLocals(key)
+    private val queryCounts = LoopQueryCounts()
+    private var quantumQueries: LoopQueryScratch? = null
+    private var localBoundaryOffers = 0L
+    private var localBoundaryDrops = 0L
     private val observers = HashMap<Pair<BlockScope, BlockId>, LoopConsumerObservation>()
     private val entries = LinkedHashMap<BlockScope, Entry>()
     private val ready = LinkedHashSet<BlockScope>()
@@ -115,6 +120,7 @@ internal class MethodBlockRuntime(
     fun state(scope: BlockScope): BlockRunState = entries[scope]?.state ?: error("Unentered block scope $scope")
     fun scheduleRoot() { ready += BlockScope.ROOT }
     fun requireIdle() {
+        check(quantumQueries == null) { "An active observer quantum cannot be sealed" }
         check(ready.isEmpty() && pending.isEmpty() && entries.values.none { it.links.hasPending || it.stateOrNull?.hasLocalWork == true }) {
             "A method has pending block work"
         }
@@ -148,6 +154,15 @@ internal class MethodBlockRuntime(
 
     /** Call only on the method owner while its counted work reservation is held. */
     fun work(quantum: Int): Boolean {
+        check(quantumQueries == null)
+        quantumQueries = LoopQueryScratch(ap, queryCounts)
+        return try { workQuantum(quantum) } finally {
+            quantumQueries?.clear()
+            quantumQueries = null
+        }
+    }
+
+    private fun workQuantum(quantum: Int): Boolean {
         require(quantum > 0)
         var used = 0
         while (used < quantum) {
@@ -209,6 +224,8 @@ internal class MethodBlockRuntime(
         override val sourceHits get() = root.sourceHits
         override val sinkSeeds get() = root.sinkSeeds
         override val demand get() = e.demand
+        override fun keepLocalConclusion(exit: PortId, value: Facts): Boolean =
+            this@MethodBlockRuntime.keepLocalConclusion(e.scope.block, exit, value)
         override fun schedule() { ready += scope; port.enqueue(root) }
         override fun start(state: BlockRunState, original: InitialAp, value: Facts) {
             check(original.isZero || e.starts.size <= 1 || layout.normalExit(scope.entry) != null) { "A DATA initial has one exact entry target" }
@@ -439,6 +456,7 @@ internal class MethodBlockRuntime(
         val parent = entries.getValue(link.parent)
         val child = layout[link.child.block]
         val completionExit = if (isEmptyBlock(child.id)) link.point else exit
+        if (!keepLocalConclusion(child.id, completionExit, value)) return
         // Reuse the ordinary global AP bound before a local result is stored
         // or offered onward. A saved relation can add its own prefix to the
         // caller suffix, just as a real call summary does. This is not a new
@@ -471,12 +489,16 @@ internal class MethodBlockRuntime(
                                original: PremiseKey, value: Facts) {
         if (isEmptyBlock(child.id)) {
             if (link.point.ordinal >= 0) for (route in deliveryRoutes(link.point)) {
+                if (!keepAlongRoute(route, value)) continue
                 if (route.feedbackLoop == parent.scope.block)
                     parent.state.retainBlockSummary(route.port, original, value)
                 else if (layout.contains(parent.scope.block, route.to))
                     routeInside(parent, route.to, original, value, link.point, passedEmpty = true)
                 else parent.state.retainBlockSummary(outputPort(route.port, parent.scope.block), original, value)
             } else for (target in entries.getValue(link.child).starts.toList()) {
+                val local = value.base as? org.opentaint.dataflow.ap.ifds.AccessPathBase.LocalVar
+                if (local != null && !isRootEnd(target) && target != originalEntry &&
+                    liveLocals?.mayEnter(!forward, target, local.idx) == false) continue
                 if (layout.contains(parent.scope.block, target))
                     routeInside(parent, target, original, value, link.point, passedEmpty = true)
                 else parent.state.retainBlockSummary(link.point, original, value)
@@ -502,6 +524,7 @@ internal class MethodBlockRuntime(
             return
         }
         for (route in deliveryRoutes(exit)) {
+            if (!keepAlongRoute(route, value)) continue
             if (layout.contains(parent.scope.block, route.to) && route.feedbackLoop != parent.scope.block)
                 routeInside(parent, route.to, original, value, exit)
             else if (parent.scope == BlockScope.ROOT) error("An original CFG edge cannot leave its method layout")
@@ -617,6 +640,63 @@ internal class MethodBlockRuntime(
     private fun directedRoute(portId: PortId): MethodBlockRoute =
         routesByPort[portId] ?: error("Unknown directed block port $portId")
 
+    private fun keepAlongRoute(route: MethodBlockRoute, value: Facts, count: Boolean = true): Boolean {
+        val local = value.base as? org.opentaint.dataflow.ap.ifds.AccessPathBase.LocalVar ?: return true
+        if (count) localBoundaryOffers++
+        // The actual endpoint handler must run before filtering its completed DATA.
+        val keep = isRootEnd(route.to) || route.to == originalEntry ||
+            liveLocals?.mayFollow(!forward, route, local.idx) != false
+        if (!keep && count) localBoundaryDrops++
+        return keep
+    }
+
+    private fun keepLocalConclusion(block: BlockId, exit: PortId, value: Facts, count: Boolean = true): Boolean {
+        if (value.base !is org.opentaint.dataflow.ap.ifds.AccessPathBase.LocalVar) return true
+        if (count) localBoundaryOffers++
+        // Synthetic/unknown interfaces retain the native path until a real
+        // continuation is available. A missing mask is not an empty mask.
+        if (exit.ordinal < 0 || liveLocals == null) return true
+        val normal = layout.normalExit(exit)
+        if (normal == null && exit !in routesByPort) return true
+        val keep = deliveryRoutes(exit).any { keepAlongRoute(it, value, count = false) }
+        if (!keep && count) localBoundaryDrops++
+        return keep
+    }
+
+    private fun plan(parent: Entry, exit: PortId, original: PremiseKey, templates: List<Pattern>): PreparedLocalDataPlan? {
+        val scratch = quantumQueries ?: return null
+        val view: Any = if (parent.rootEntry) checkNotNull(config.demand) else checkNotNull(parent.demand)
+        return scratch.plan(view, exit, original, templates, config.admissionPolicy) {
+            if (parent.rootEntry) checkNotNull(config.demand).prepareDataPlan(key, templates, config.admissionPolicy) { queryCounts.planChecks++ }
+            else (parent.demand as? PreparedScopeDemandView)?.prepareDataPlan(exit, templates, config.admissionPolicy) { queryCounts.planChecks++ }
+        }
+    }
+
+    private fun intersect(parent: Entry, exit: PortId, original: PremiseKey, value: Facts): List<Facts> {
+        if (value !is Reach && !original.isZero && original.size <= 2048) {
+            val prepared = plan(parent, exit, original, original.members.map { it.toPattern() })
+            prepared?.intersect(original, value)?.let { return it }
+        }
+        return if (parent.rootEntry) checkNotNull(config.demand).intersect(key, original, value, config.admissionPolicy)
+            else checkNotNull(parent.demand).intersect(exit, original, value, config.admissionPolicy)
+    }
+
+    private fun skipEmptyDataReplay(parent: Entry, original: PremiseKey, actual: Facts,
+                                    saved: LoopObservedRecord): Boolean {
+        val record = saved.record
+        if (parent.rootEntry || mode.run1 || original.isZero || original.size > 2048 || actual is Reach ||
+            original.isFlow != (actual is FlowTree) || record.direction != config.direction ||
+            record.premise.isZero || record.premise.tail == Tail.ANY_TAINT || record.conclusion is Reach ||
+            record.conclusion.base == org.opentaint.dataflow.ap.ifds.AccessPathBase.Zero ||
+            record.premise.isFlow != (record.conclusion is FlowTree) ||
+            original.isFlow && record.conclusion !is FlowTree) return false
+        val templates = normalizedOriginalTemplates(original, flow = original.isFlow)
+        val prepared = plan(parent, saved.enclosingExit, original, templates) ?: return false
+        if (!prepared.emptyForBase(record.conclusion.base)) return false
+        queryCounts.emptyReplays++
+        return true
+    }
+
     private fun observe(parent: Entry, loop: MethodBlock, link: LocalLink, exit: PortId,
                         original: PremiseKey, value: Facts): LoopObservation<LoopEnclosingResult> {
         val observer = observers.getOrPut(parent.scope to loop.id) {
@@ -630,29 +710,41 @@ internal class MethodBlockRuntime(
         val repeatScopes = loop.repeatPorts.map { BlockScope(loop.id, it) }.toSet()
         val adjacentDemands = adjacentScopes.associateWith { checkNotNull(config.demand).scope(key, it) }
         val repeatDemands = repeatScopes.associateWith { checkNotNull(config.demand).scope(key, it) }
+        fun initials(scope: BlockScope, demand: ScopeDemandView, actual: Facts): Set<AdmittedInitial> {
+            if (!keepLocalConclusion(scope.block, scope.entry, actual, count = false)) return emptySet()
+            quantumQueries?.let { return it.initials(demand, actual, config.admissionPolicy) }
+            ap.cancellation.checkpoint(); queryCounts.c2Queries++; queryCounts.c2Native++
+            return demand.initials(actual, config.admissionPolicy).also { queryCounts.c2Rows += it.size }
+        }
         fun labelled(actual: Facts): Set<LoopLabelledAdmission> = buildSet {
-            for ((scope, demand) in adjacentDemands) for (initial in demand.initials(actual, config.admissionPolicy))
+            for ((scope, demand) in adjacentDemands) for (initial in initials(scope, demand, actual))
                 add(LoopLabelledAdmission(scope, LoopAdmissionFamily.ADJACENT, initial))
-            for ((scope, demand) in repeatDemands) for (initial in demand.initials(actual, config.admissionPolicy))
+            for ((scope, demand) in repeatDemands) for (initial in initials(scope, demand, actual))
                 add(LoopLabelledAdmission(scope, LoopAdmissionFamily.REPEAT, initial))
         }
         val enclosingDemand = parent.demand
         val views = LoopConsumerViews(parent.scope, parent.rootEntry,
-            { actual -> adjacentDemands.values.flatMap { it.initials(actual, config.admissionPolicy) }.toSet() },
-            { actual -> repeatDemands.values.flatMap { it.initials(actual, config.admissionPolicy) }.toSet() },
+            { actual -> adjacentDemands.flatMap { (scope, demand) -> initials(scope, demand, actual) }.toSet() },
+            { actual -> repeatDemands.flatMap { (scope, demand) -> initials(scope, demand, actual) }.toSet() },
             { actual -> adjacentScopes.asSequence().flatMap { scope -> savedRows(scope, actual) }
                 .flatMap { record -> enclosingPorts(checkNotNull(record.exitIn(config.direction)), parent.scope.block)
                     .asSequence().map { LoopObservedRecord(record, it) } } },
             { pr, actual -> adjacentScopes.asSequence().flatMap { scope ->
                 config.normalTargets.candidates(key, scope, pr, actual, mode).asSequence()
             }.map { (row, member) -> LoopObservedTarget(row, member, methodExit) } },
-            { portId, pr, actual -> if (parent.rootEntry) checkNotNull(config.demand).intersect(key, pr, actual, config.admissionPolicy)
-                else checkNotNull(enclosingDemand).intersect(portId, pr, actual, config.admissionPolicy) },
+            { portId, pr, actual -> intersect(parent, portId, pr, actual) },
             { portId, pr -> if (parent.rootEntry) checkNotNull(config.demand).acceptsTarget(key, pr, config.admissionPolicy)
                 else checkNotNull(enclosingDemand).acceptsTarget(portId, pr, config.admissionPolicy) },
             { pr, id -> config.normalTargets.contains(key, if (parent.rootEntry) null else parent.scope, pr, id) },
             port.shared.interpreter::isSummaryBase, ::labelled,
-            { pr, actual -> if (parent.rootEntry) root.adjustObservedMethodExit(pr, actual) else actual })
+            { pr, actual -> if (parent.rootEntry) root.adjustObservedMethodExit(pr, actual) else actual },
+            admissionBundle = { actual -> LoopAdmissionBundle(
+                { adjacentDemands.flatMap { (scope, demand) -> initials(scope, demand, actual).map {
+                    LoopLabelledAdmission(scope, LoopAdmissionFamily.ADJACENT, it) } } },
+                { repeatDemands.flatMap { (scope, demand) -> initials(scope, demand, actual).map {
+                    LoopLabelledAdmission(scope, LoopAdmissionFamily.REPEAT, it) } } }) },
+            keepEnclosingData = { output, actual -> keepLocalConclusion(parent.scope.block, output, actual, count = false) },
+            skipEmptyDataReplay = { pr, actual, saved -> skipEmptyDataReplay(parent, pr, actual, saved) })
         LoopConsumerObservation(ops, mode, views)
         }
         return observer.observe(original, value)
@@ -672,6 +764,11 @@ internal class MethodBlockRuntime(
             "liveInputGroups=${entries.values.sumOf { it.links.inputGroups.toLong() }} " +
             "completionPoints=${entries.values.sumOf { it.completions.size.toLong() }} " +
             "boundaryLimitOffers=$boundaryLimitOffers boundaryLimitCuts=$boundaryLimitCuts " +
+            "localBoundaryOffers=$localBoundaryOffers localBoundaryDrops=$localBoundaryDrops " +
+            "localMasks=${liveLocals?.retainedMasks ?: 0} localMaskWords=${liveLocals?.retainedWords ?: 0} " +
+            "c2Queries=${queryCounts.c2Queries} c2Hits=${queryCounts.c2Hits} c2Native=${queryCounts.c2Native} c2Rows=${queryCounts.c2Rows} " +
+            "c5Plans=${queryCounts.plans} c5PlanChecks=${queryCounts.planChecks} c5PlanHits=${queryCounts.planHits} c5PlanFallbacks=${queryCounts.planFallbacks} " +
+            "emptyDataReplays=${queryCounts.emptyReplays} " +
             "offers=${counts.offers} bypasses=${counts.bypasses} scalars=${counts.scalarQueries} " +
             "observations=${counts.observations} trials=${counts.trials} drops=${counts.drops} " +
             "cuts=${counts.cuts} rawFallbacks=${counts.rawFallbacks}" + gapDetails

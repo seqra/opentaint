@@ -25,7 +25,7 @@ internal class BlockBoundaryDemandView(
     role: BlockEntryRole,
     normalOutputs: Collection<PortId>,
     private val staticShortcutTarget: (PortId, PremiseKey, RestrictedInitialPolicy) -> Boolean = { _, _, _ -> false },
-) : ScopeDemandView {
+) : org.opentaint.dataflow.bidi.store.PreparedScopeDemandView {
     private val outputs = normalOutputs.toSet()
     private val exceptionalHack = direction == Direction.BACKWARD && role == BlockEntryRole.EXCEPTIONAL_INTERFACE
     private val backward = direction == Direction.BACKWARD
@@ -47,6 +47,10 @@ internal class BlockBoundaryDemandView(
 
     override fun initials(actual: Facts, policy: RestrictedInitialPolicy): Set<AdmittedInitial> =
         admission(actual, policy).initials
+
+    override fun prepareDataPlan(exit: PortId, templates: List<Pattern>,
+                                 policy: RestrictedInitialPolicy, onEntryCheck: () -> Unit): org.opentaint.dataflow.bidi.store.PreparedLocalDataPlan? =
+        (physical as? org.opentaint.dataflow.bidi.store.PreparedScopeDemandView)?.prepareDataPlan(exit, templates, policy, onEntryCheck)
 
     override fun intersect(exit: PortId, original: PremiseKey, raw: Facts,
                            policy: RestrictedInitialPolicy): List<Facts> {

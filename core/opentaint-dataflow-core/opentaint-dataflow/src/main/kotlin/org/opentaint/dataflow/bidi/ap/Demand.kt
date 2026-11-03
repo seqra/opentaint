@@ -72,13 +72,47 @@ internal fun restrictFacts(ops: ApOps, j: InitialAp, g: Facts, d: DemandPattern,
     return out.results
 }
 
+/** An accepted existing entry predicate, bound to immutable native patterns.
+ * No hypothetical initial is interned and no caller may construct a ticket. */
+internal class EntryRestrictionTicket private constructor(
+    val initial: Pattern,
+    val pair: DemandPattern,
+    private val ops: ApOps,
+) {
+    fun restrict(raw: Facts): List<Facts> {
+        val out = CollectingOut()
+        ops.manager.transportProtection(raw, out) { part, sink ->
+            val selected = LinkedHashSet<Conclusion>()
+            for (leaf in ops.leaves(part)) {
+                ops.manager.cancellation.checkpoint()
+                restrictConclusionOnly(Conclusion(leaf.fact, leaf.exclusion, part.layer == Layer.DEMAND),
+                    pair.exit, ops.manager.marks)?.let(selected::add)
+            }
+            for (value in packRestricted(ops, selected)) sink.result(value)
+        }
+        return out.results
+    }
+
+    companion object {
+        fun prepare(ops: ApOps, initial: Pattern, pair: DemandPattern,
+                    policy: RestrictedInitialPolicy): EntryRestrictionTicket? {
+            ops.manager.cancellation.checkpoint()
+            return if (policy.canStoreInitial(pair.entry, initial)) EntryRestrictionTicket(initial, pair, ops) else null
+        }
+    }
+}
+
 /** Exact-key packing preserves every reference leaf and its raw layer. */
 private fun restrictPlainFacts(ops: ApOps, j: InitialAp, g: Facts, d: DemandPattern,
                            policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ops.manager.marks)): List<Facts> {
+    return packRestricted(ops, restrictRaw(ops, j, g, d, policy))
+}
+
+private fun packRestricted(ops: ApOps, selected: Iterable<Conclusion>): List<Facts> {
     val m = ops.manager
     val values = LinkedHashMap<GroupKey, Facts>()
-    for (selected in restrictRaw(ops, j, g, d, policy)) {
-        val c = normalizeFlowSummaryConclusion(selected)
+    for (value in selected) {
+        val c = normalizeFlowSummaryConclusion(value)
         m.cancellation.checkpoint()
         val f = m.factsOf(c.fact, c.exclusion, if (c.demand) Layer.DEMAND else Layer.NORMAL)
         val old = values[f.groupKey]

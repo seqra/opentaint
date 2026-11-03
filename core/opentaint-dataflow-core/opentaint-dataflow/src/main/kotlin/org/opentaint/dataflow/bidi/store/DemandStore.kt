@@ -32,7 +32,7 @@ class DemandStore private constructor(
         if (query.scope == null) completion else scopedCompletions[OwnedScope(query.method, query.scope)]?.selectExit(query.exit)
 
     /** C2 borrows the union of this entry's exits; C5 selects one actual exit. */
-    fun scope(method: MethodKey, scope: BlockScope): ScopeDemandView = object : ScopeDemandView {
+    fun scope(method: MethodKey, scope: BlockScope): ScopeDemandView = object : PreparedScopeDemandView {
         override fun initials(actual: Facts, policy: RestrictedInitialPolicy): Set<AdmittedInitial> =
             initials(Query(method, scope), actual, policy)
         override fun intersect(exit: PortId, original: PremiseKey, raw: Facts,
@@ -40,6 +40,61 @@ class DemandStore private constructor(
             intersect(Query(method, scope, exit), original, raw, policy)
         override fun acceptsTarget(exit: PortId, original: PremiseKey, policy: RestrictedInitialPolicy): Boolean =
             intersect(Query(method, scope, exit), original, Reach.DEMAND, policy).isNotEmpty()
+        override fun prepareDataPlan(exit: PortId, templates: List<Pattern>, policy: RestrictedInitialPolicy,
+                                     onEntryCheck: () -> Unit): PreparedLocalDataPlan? =
+            prepareLocalDataPlan(Query(method, scope, exit), templates, policy, onEntryCheck)
+    }
+
+    internal fun prepareDataPlan(method: MethodKey, templates: List<Pattern>,
+                                 policy: RestrictedInitialPolicy, onEntryCheck: () -> Unit = {}): PreparedLocalDataPlan? =
+        prepareLocalDataPlan(Query(method), templates, policy, onEntryCheck)
+
+    /** Exact local DATA capability. Static/control/unsupported cases keep native C5. */
+    private fun prepareLocalDataPlan(query: Query, templates: List<Pattern>,
+                                     policy: RestrictedInitialPolicy, onEntryCheck: () -> Unit): PreparedLocalDataPlan? {
+        ap.cancellation.checkpoint()
+        if (policy.run < 3 || hasStaticCompletion || hasSharedStaticCarry || templates.isEmpty() || templates.size > 2048 ||
+            templates.any { it.fact.base == AccessPathBase.Zero }) return null
+        val local = local(query)
+        val ops = ApOps(ap)
+        data class Planned(val member: Int, val id: Int, val pair: DemandPattern, val ticket: EntryRestrictionTicket?)
+        val rows = ArrayList<Planned>()
+        for ((ordinal, member) in templates.withIndex()) {
+            ap.cancellation.checkpoint()
+            if (local != null) for (id in local.byEntry.lookupPrefixes(member.fact.base, member.fact.path.toIntArray())) {
+                if (query.scope != null && query.exit != null &&
+                    scoped.getValue(OwnedScope(query.method, query.scope)).rowPorts[id] != query.exit) continue
+                if (rows.size + templates.size == 2048) return null
+                val pair = local.rows[id]
+                onEntryCheck()
+                rows += Planned(ordinal, id, pair, EntryRestrictionTicket.prepare(ops, member, pair, policy))
+            }
+        }
+        return object : PreparedLocalDataPlan {
+            override val rowChecks: Int = rows.size
+            override fun emptyForBase(base: AccessPathBase): Boolean = rows.none {
+                it.ticket != null && it.pair.exit?.fact?.base == base
+            }
+            override fun intersect(original: PremiseKey, raw: Facts): List<Facts>? {
+                ap.cancellation.checkpoint()
+                if (raw is Reach || original.isZero || original.members.map { it.toPattern() } != templates) return null
+                if (!RuntimeDataDomain.packet(original, raw)) return emptyList()
+                val result = ExactDemandResults(ap)
+                val outputIds = HashSet<Int>()
+                if (local != null) for (leaf in ops.leaves(raw))
+                    local.byExit.visitAround(leaf.fact.base, leaf.fact.path.toIntArray()) { outputIds += it }
+                for (row in rows) {
+                    ap.cancellation.checkpoint()
+                    if (row.id !in outputIds) continue
+                    statistics?.add(7)
+                    if (row.pair.exit == null) continue
+                    statistics?.add(9)
+                    offerDataPair(query.method, ops, original.member(row.member), raw, row.pair, policy,
+                        result, route = 0, prepared = true, ticket = row.ticket)
+                }
+                return result.all()
+            }
+        }
     }
 
     private val statistics = if (java.lang.Boolean.getBoolean("org.opentaint.bidi.optimizationStatistics"))
@@ -202,7 +257,8 @@ class DemandStore private constructor(
 
     /** Exact C5 must precede the cut, and each complete row supplies its own exit depth. */
     private fun offerDataPair(method: MethodKey, ops: ApOps, member: InitialAp, raw: Facts, pair: DemandPattern,
-                              policy: RestrictedInitialPolicy, result: ExactDemandResults, route: Int) {
+                              policy: RestrictedInitialPolicy, result: ExactDemandResults, route: Int,
+                              prepared: Boolean = false, ticket: EntryRestrictionTicket? = null) {
         ap.cancellation.checkpoint()
         val exit = pair.exit ?: return
         val depth = exit.fact.path.count { it.isCounted() }
@@ -212,7 +268,7 @@ class DemandStore private constructor(
         val budget = if (depth >= global) global else depth + 1
         statistics?.dataRow(raw, exit, budget, route)
         val sampledRow = statistics?.sampleRow(method, member, raw, pair, budget, route)
-        val selected = ops.restrict(member, raw, pair, policy)
+        val selected = if (prepared) ticket?.restrict(raw).orEmpty() else ops.restrict(member, raw, pair, policy)
         if (selected.isEmpty()) {
             statistics?.rejectedRow()
             statistics?.sampleResult(sampledRow, null, null)

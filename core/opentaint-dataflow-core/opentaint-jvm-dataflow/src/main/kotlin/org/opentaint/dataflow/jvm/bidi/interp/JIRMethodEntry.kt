@@ -10,12 +10,14 @@ import org.opentaint.dataflow.bidi.interp.FormsCache
 import org.opentaint.dataflow.bidi.interp.StatementSummary
 import org.opentaint.dataflow.graph.MethodInstGraph
 import org.opentaint.dataflow.graph.MethodBlockLayoutBuilder
+import org.opentaint.dataflow.graph.BlockLiveLocals
 import org.opentaint.dataflow.graph.reversed
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRMethod
+import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.jvm.graph.JMethodEnterInst
 import org.opentaint.jvm.graph.JMethodExitExceptionalInst
 import org.opentaint.jvm.graph.JMethodExitNormalInst
@@ -40,7 +42,7 @@ class JIRMethodEntry internal constructor(val method: JIRMethod, internal val sh
     @Suppress("UNCHECKED_CAST")
     private val common get() = shared.graph as ApplicationGraph<CommonMethod, CommonInst>
 
-    /** Reachability belongs to the existing alias analysis; forms have no liveness step. */
+    /** Alias reachability stays separate from instruction-only boundary liveness. */
     val aliasAnalysis: JIRLocalAliasAnalysis? by lazy {
         if (!shared.aliasParams.useAliasAnalysis) null
         else JIRLocalAliasAnalysis(shared.graph.methodGraph(method).entryPoints().first(), shared.graph,
@@ -60,6 +62,11 @@ class JIRMethodEntry internal constructor(val method: JIRMethod, internal val sh
     }
     private val backwardGraph by lazy {
         MethodInstGraph.build(shared.languageManager, JIRExitWiredGraph(common).reversed, method)
+    }
+
+    val blockLiveLocals by lazy {
+        BlockLiveLocals.build(blockLayout, forwardGraph.graph, backwardGraph.graph,
+            forwardGraph.instructions.map { localAccess(it as JIRInst) }, shared.cancellation)
     }
 
     fun graph(direction: Direction): MethodInstGraph =
