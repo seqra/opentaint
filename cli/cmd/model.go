@@ -67,11 +67,7 @@ func init() {
 	modelInitCmd.Flags().StringArrayVar(&initModelDeps, "dependency", nil,
 		"Compile-only Maven dependency coordinates the models are written against (repeatable)")
 
-	approximationCmd := &cobra.Command{
-		Use:        "approximation",
-		Short:      modelCmd.Short,
-		Deprecated: "use 'opentaint model' instead",
-	}
+	approximationCmd := deprecatedGroup(modelCmd, "approximation", "opentaint model")
 	approximationCmd.AddCommand(deprecatedCommand(modelInitCmd, "init", "opentaint model init"))
 	rootCmd.AddCommand(approximationCmd)
 }

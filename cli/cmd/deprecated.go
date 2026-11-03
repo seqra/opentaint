@@ -23,6 +23,26 @@ func deprecatedCommand(cmd *cobra.Command, oldName, newPath string) *cobra.Comma
 	return alias
 }
 
+// deprecatedGroup returns a hidden command group under the old name of group. Its subcommands are
+// deprecated too, so cobra lists none of them. The help of the old group is therefore the help of
+// group, after the deprecation notice.
+func deprecatedGroup(group *cobra.Command, oldName, newPath string) *cobra.Command {
+	alias := &cobra.Command{
+		Use:        oldName,
+		Short:      group.Short,
+		Deprecated: "use '" + newPath + "' instead",
+	}
+	alias.SetHelpFunc(func(c *cobra.Command, args []string) {
+		if c != alias {
+			// The subcommands inherit this function. They keep the help of the root.
+			c.Root().HelpFunc()(c, args)
+			return
+		}
+		_ = group.Help()
+	})
+	return alias
+}
+
 // addDeprecatedFlagAlias registers oldName as a hidden, deprecated name of the flag newName.
 // Both names set the same value, so they can be mixed on one command line.
 func addDeprecatedFlagAlias(flags *pflag.FlagSet, newName, oldName string) {
