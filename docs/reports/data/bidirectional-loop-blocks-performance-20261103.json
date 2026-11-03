@@ -202281,5 +202281,1662 @@
     "projectQualityAfterFix": "NOT_MEASURED"
   },
   "initialReportSourceSnapshotUnchanged": true,
-  "runtimeWorktreeChangedAfterMeasurement": true
+  "runtimeWorktreeChangedAfterMeasurement": true,
+  "captureCleanupAfterReport": {
+    "receiptPath": "/drive-testcomp/opentaint-go-rules/loop-blocks-restriction-corrected-20261102/preparation/capture-cleanup-manifest.json",
+    "receiptSha256": "f83532b29ebc2dd0d977a346dd93a7570d5df64fade5dd7e4ed0391bd1d4daf6",
+    "receipt": {
+      "status": "COMPLETE",
+      "campaign": "/drive-testcomp/opentaint-go-rules/loop-blocks-restriction-corrected-20261102",
+      "measuredRevision": "1e6c43963868dde6f652a4b9fa0284c95c818b2c",
+      "authorization": "Parent/root explicit cleanup request under task.md; only this completed prior campaign raw captures.",
+      "createdUTC": "2026-11-03T09:26:40.683573+00:00",
+      "rawKinds": [
+        ".jfr",
+        ".collapsed"
+      ],
+      "heapDumpsFound": 0,
+      "rawFileCount": 30,
+      "rawBytes": 1558936327,
+      "archive": {
+        "path": "preparation/derived-capture-evidence.tar.gz",
+        "bytes": 25412208,
+        "sha256": "3700e4295a4114a53a02992c56ba98f6f9a47c940aa98f47adb325c0cbddbcc2",
+        "memberCount": 88,
+        "contents": [
+          {
+            "path": "analysis-tools/DirectJfrWorkload$Counts.class",
+            "sha256": "4aaacdc2bd14f92c9b21b2f49fd878144477a712ca1a8a30386ca8bf2d463811"
+          },
+          {
+            "path": "analysis-tools/DirectJfrWorkload$Trace.class",
+            "sha256": "73171cb2356003906a26b43caa26f4ccb6583c882c1f7085d09454698e72b574"
+          },
+          {
+            "path": "analysis-tools/DirectJfrWorkload$Window.class",
+            "sha256": "d3a1702f562611f24fa3dcf3f04956befc4d3f581a975b0b7a2e859b41c1dde4"
+          },
+          {
+            "path": "analysis-tools/DirectJfrWorkload.class",
+            "sha256": "fe9017afe667cfd12eb9cce5fafef2be6bade382319163727dd16c5f25e05cdc"
+          },
+          {
+            "path": "analysis-tools/DirectJfrWorkload.java",
+            "sha256": "f291bf2db4e4d846648038e1fd54084512ac47e083af6c43657a8fc39af2eb86"
+          },
+          {
+            "path": "analysis-tools/archive-clean-captures.py",
+            "sha256": "bedecd7d5c2fc76eef56ce943c5876005cdc544934d5798b737c0af6c9cefe71"
+          },
+          {
+            "path": "analysis-tools/candidates/loop-observer-query-plans.md",
+            "sha256": "4e3ada679a95f013463e9509211e3d14d070c79a4862c9b418f07d880c3fd815"
+          },
+          {
+            "path": "analysis-tools/candidates/selected-terminal-origin-lookups.md",
+            "sha256": "5f80e4b66af8c7a180ad419f4d505ace6482459dda2a87399ef9a41e4f2101c2"
+          },
+          {
+            "path": "analysis-tools/classify-quality.py",
+            "sha256": "9ccf6b2bd7063edad714656da62dc4aea7186f45d7a6d4f13b8deaea220e4bb1"
+          },
+          {
+            "path": "analysis-tools/compare-cpu-workload.py",
+            "sha256": "e9531e98273a165aa427cdbd5722c0eb496418376a5797af2e179fe52b6dc7cc"
+          },
+          {
+            "path": "analysis-tools/derive-collapsed.py",
+            "sha256": "4e34756c23fc2e62513e6e6cfd22eec272ae0e06430084a47c02ba458f65ebe4"
+          },
+          {
+            "path": "analysis-tools/derive-cpu-workload.py",
+            "sha256": "37011e92d65b08e570e3a98ebcad9a66b6a5b414dc7aeca1d607389b32b60f0c"
+          },
+          {
+            "path": "analysis-tools/derive-direct-jfr.py",
+            "sha256": "5e743015347ed81b21987990de59af84f84ad69f2d3444a158760928578be328"
+          },
+          {
+            "path": "analysis-tools/extract-workload.py",
+            "sha256": "a479298347ba946bf65e9fc6a44913c3c1c246c7fab2c207ffcd4bd6219141df"
+          },
+          {
+            "path": "analysis-tools/launch-campaign.py",
+            "sha256": "4cf82ec398954993795a1b1ca174ab7ce4438a3243930afbcc710f931f88ebdc"
+          },
+          {
+            "path": "analysis-tools/live-controls.py",
+            "sha256": "42f26e9e91bd8b6598c8e45c79a6fa270cf25cb993353821c899e8f842d2ca0d"
+          },
+          {
+            "path": "analysis-tools/memory-summary.py",
+            "sha256": "c3fee4117f8d0fd3ef1e9e394b80c41510cd4aaea149406c5ee44dd647590edd"
+          },
+          {
+            "path": "analysis-tools/normal_exit_gaps.py",
+            "sha256": "3414f16767e41c52f8f9d60c6a7c7ab23319fea9959a51b19ad420a0b5a3137f"
+          },
+          {
+            "path": "analysis-tools/observer-cpu-components.py",
+            "sha256": "d5fcc4cdc9a270cbb064393bd606f85d096c26549ce0745e4db5feaadc2971b9"
+          },
+          {
+            "path": "analysis-tools/postcampaign-quality.py",
+            "sha256": "ede4c9d9a319968204c7f7aedc30a0e5d7447ef0aba054232abaacd92995d0e6"
+          },
+          {
+            "path": "analysis-tools/profile-helper-pins.json",
+            "sha256": "420d67c53e27dda8627eead20bf15ee3beea3454698942c59e22fbb73df6a148"
+          },
+          {
+            "path": "analysis-tools/profile-source-provenance.json",
+            "sha256": "e8ef8fddfb161dffda97f3eda6575ce1ff9fa189d4c226b152d7f3ab90d4a710"
+          },
+          {
+            "path": "analysis-tools/profile-source-snapshot/compare_bidi_projects.py",
+            "sha256": "5fb815655ff7be9faa3edd43201ca9b53ca6da67460c9f7a5215f3fd587ef18d"
+          },
+          {
+            "path": "analysis-tools/profile-source-snapshot/summarize_bidi_profiles.py",
+            "sha256": "c61ebbd24156cd2eb60320c9d8cb1b7082f0a702960f92ca3a64809d2b74c749"
+          },
+          {
+            "path": "analysis-tools/profile-source-snapshot/summarize_bidi_workload.py",
+            "sha256": "65fffd3ca7b812d8579db6fdd525331de566adb5ec15f3e090a197a4f9daaf81"
+          },
+          {
+            "path": "analysis-tools/profile_common.py",
+            "sha256": "28916458eabe9779ce374ee961ad9895356baf8a85cc3fca5c4a6f43f8e5ac4d"
+          },
+          {
+            "path": "analysis-tools/test_profile_helpers.py",
+            "sha256": "fff1de4f2d66df280e322f6b7e597f9fd21011e14790ca096dd0c492b50b4fe5"
+          },
+          {
+            "path": "analysis-tools/validate-direct-jfr.py",
+            "sha256": "fc0988c499d56fdc8c47433d5c8fe7a3b91f4cac2b4c86db32457f4e9e679b3d"
+          },
+          {
+            "path": "cpu-workload-comparison.json",
+            "sha256": "76c6fd329b6df851c8f2104258769a2812e049ff1755c7d1c365addcc4faa4d5"
+          },
+          {
+            "path": "preparation/direct-jfr-reader-validation.json",
+            "sha256": "dcf0b5941c80d517d6ac780e4f1508f7f982c131ff7417125f1570a51025615e"
+          },
+          {
+            "path": "projects/OWASP/bidi/collapsed-cpu-summary.json",
+            "sha256": "b3316bef81193de39c4e04631633f934a0ddbfac9d5050841f95e309a0ce30b2"
+          },
+          {
+            "path": "projects/OWASP/bidi/continuous-direct-jfr-raw-summary.json",
+            "sha256": "967f69f1ac1c56848cc93b3902f7786f23a10cd673375542820f8ccfb0f64e6b"
+          },
+          {
+            "path": "projects/OWASP/bidi/continuous-direct-workload-profile-summary.json",
+            "sha256": "8d8a01418c0164409407728607566af3baee19811c2b6d4f83be470dac473fbb"
+          },
+          {
+            "path": "projects/OWASP/bidi/memory-summary.json",
+            "sha256": "5f8e543651b0cd375fd4b677aa21122fe8802bef4fcf76f7ad095cb654cbf7d2"
+          },
+          {
+            "path": "projects/OWASP/bidi/run-2-end-direct-jfr-raw-summary.json",
+            "sha256": "86fec1386b212809b56e6c1761af925cdd71740805f4eb3b1ff02df25746f52b"
+          },
+          {
+            "path": "projects/OWASP/bidi/run-2-end-direct-workload-profile-summary.json",
+            "sha256": "2520030a55392450d9f6541c284ed0bec79f34c406c382832ecb3d8033137dd1"
+          },
+          {
+            "path": "projects/OWASP/bidi/run-3-end-direct-jfr-raw-summary.json",
+            "sha256": "9b5b1de469bee216f12f7f249fd1530fc309273b510431987889802fc974e87e"
+          },
+          {
+            "path": "projects/OWASP/bidi/run-3-end-direct-workload-profile-summary.json",
+            "sha256": "c88b157d44a58e17eb09224bb181e6f49cd2240865b61bfc42ce8211a3ceeb92"
+          },
+          {
+            "path": "projects/OWASP/bidi/run-4-end-direct-jfr-raw-summary.json",
+            "sha256": "b670059b537840b50158faaf87fa193a1c74210e93e0d6d87dd3f5c3faf6ad4b"
+          },
+          {
+            "path": "projects/OWASP/bidi/run-4-end-direct-workload-profile-summary.json",
+            "sha256": "a419873a69c54b681b4b19abe7b193e60f81c56465134eeb2786a5465878da18"
+          },
+          {
+            "path": "projects/OWASP/bidi/run-5-end-direct-jfr-raw-summary.json",
+            "sha256": "8a3ddf83c965ee3f5d2512fb59500c005360bc765f6fbdc0d6727e5146e17ab5"
+          },
+          {
+            "path": "projects/OWASP/bidi/run-5-end-direct-workload-profile-summary.json",
+            "sha256": "196de1b453fa79443be72574371d8028b931bf24fabb35cd010a6bc6edca942b"
+          },
+          {
+            "path": "projects/OWASP/bidi/run1-direct-jfr-raw-summary.json",
+            "sha256": "a8e4f07d6c6ae94838efdec215cf58de36516fca3305806c63f377fb4c4ef31e"
+          },
+          {
+            "path": "projects/OWASP/bidi/run1-direct-workload-profile-summary.json",
+            "sha256": "0ef2e0a8c6e619750671518ce10d740d9d38937a6ef4b8abe803e62938871c51"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/collapsed-candidate-memberships.json",
+            "sha256": "9df35f27542dce17d0a40588439eb3cbc7e70c6dd69a6509a4328ff3f2809687"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/collapsed-cpu-summary.json",
+            "sha256": "12d8d6731d6317e37b938cf88884e00782766af0f25c543265cae2e462db9562"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/continuous-direct-jfr-raw-summary.json",
+            "sha256": "ab0dcf1f53cdf52142bf2c8f6e82186960c3a8493485e34593e1443bdd8db1fc"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/continuous-direct-workload-profile-summary.json",
+            "sha256": "2b804c7e747816cdbccd1c74eea6d8e928e495ace346bb0c65a1d8e4f790eab3"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/continuous-workload-profile-summary.json",
+            "sha256": "b292160b66db29968758ddc393561d51dd5d8d674d604dd1186f6d938d617aed"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/memory-summary.json",
+            "sha256": "1c1a17ba0b01c40fa5507ac23074dcf27c1823bec08e910f4240401831bbe8d3"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/observer-cpu-components.json",
+            "sha256": "765dc14394e3490b8b7994749a64ed222f661493de25b2d998a930c539cbe0a0"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run-2-end-direct-jfr-raw-summary.json",
+            "sha256": "d607145d0c2c306ad3515f5235306ac2679e0b59243d590f15ae8208b25ca01e"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run-2-end-direct-workload-profile-summary.json",
+            "sha256": "306e574b6ef51a4fa9320e5467319756412943b0812cbcd9a2b146d8a6071bf1"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run-3-end-direct-jfr-raw-summary.json",
+            "sha256": "65d9669d8aef34c322032844946e83ecf7fc93c912000a2b4d41bb3912b84f7c"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run-3-end-direct-workload-profile-summary.json",
+            "sha256": "bcf0440317f975f0ea1ac1a25bdf86c8f1fbf14837c44d54e9ebe1efc0045868"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run-4-end-direct-jfr-raw-summary.json",
+            "sha256": "eaa85eaa83ec468b43897af3645d15fb79cedb8e4d8720a4c524639ebfb6752a"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run-4-end-direct-workload-profile-summary.json",
+            "sha256": "ba91b570e6544067e161ce67632ff006af184163a95abbbb203eed47fca048a1"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run-5-end-direct-jfr-raw-summary.json",
+            "sha256": "055f8e662bab5693c7470c0116d3bf9ab48edc65e3e2a2bb4d0857f58e951777"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run-5-end-direct-workload-profile-summary.json",
+            "sha256": "24976e21092dc38101a0a41892bca010040220b063031c45e9cf2f6ef84023a1"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run-6-end-direct-jfr-raw-summary.json",
+            "sha256": "dee0301a0266e44ee57687c67cb6dfe5bfd90545fa8a47a9e8d896fd264cd05d"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run-6-end-direct-workload-profile-summary.json",
+            "sha256": "908f3cc370668e8fafd5a7a64a9b07527d108fe572ee995c2a556fd944b8ba32"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run-7-end-direct-jfr-raw-summary.json",
+            "sha256": "c60d806f80b31441aba1e3d8c3f2d6cf32acf6ca67041ce364f79ab82515a955"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run-7-end-direct-workload-profile-summary.json",
+            "sha256": "546353b83c22eb1557df57919b865a277b317dbf47984292f975950bc7a34bab"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run-8-end-direct-jfr-raw-summary.json",
+            "sha256": "7ea86fca47b32c514fd99d559457adfa011a726f9c26f20001f32bcf8af61074"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run-8-end-direct-workload-profile-summary.json",
+            "sha256": "9a9c9e3728f1760328014d29b8c040fe7cfac5963a7d6d64f1404db2c17188db"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run1-direct-jfr-raw-summary.json",
+            "sha256": "2a930d72bf7a0ab856ebea4a1d8e4301523c6d90ace270e9ae230bc5d884962c"
+          },
+          {
+            "path": "projects/Stirling-PDF/bidi/run1-direct-workload-profile-summary.json",
+            "sha256": "b1c6dd7eef574e4f659e5d418e03a9fe79967419911f2d5eb44e78cb5a2cf58d"
+          },
+          {
+            "path": "projects/conductor/bidi/continuous-direct-jfr-raw-summary.json",
+            "sha256": "8981de521902abc261d0ecc45a9a7d8f8c92d742044f709ce576ef89c69198d5"
+          },
+          {
+            "path": "projects/conductor/bidi/continuous-direct-workload-profile-summary.json",
+            "sha256": "f0a2e479a29264d465319027589a9619e3297dfbd4cf24885c9ff16835ede9c1"
+          },
+          {
+            "path": "projects/conductor/bidi/memory-summary.json",
+            "sha256": "d10db00d7f6b2bdec81746df3fc80830cb1d313599c5eae5874d5d2b61e0f019"
+          },
+          {
+            "path": "projects/conductor/bidi/run-2-end-direct-jfr-raw-summary.json",
+            "sha256": "4bb128460477df1e8edb977d6303945e880a03eabd641fdedb1324423b915530"
+          },
+          {
+            "path": "projects/conductor/bidi/run-2-end-direct-workload-profile-summary.json",
+            "sha256": "6b05a9741ff0dc3a46f2f7e2d3ed331d11b9ed1fd8326897e4be8b7490204672"
+          },
+          {
+            "path": "projects/conductor/bidi/run-3-end-direct-jfr-raw-summary.json",
+            "sha256": "8df1514af06bdaf2a64711423cd1265c5d4d1fdde6e6738493829145dc2d4ba0"
+          },
+          {
+            "path": "projects/conductor/bidi/run-3-end-direct-workload-profile-summary.json",
+            "sha256": "230e1fb970e6770ef17e4426f9f7611405d32f042a0b02578b3134fe5278416d"
+          },
+          {
+            "path": "projects/conductor/bidi/run-4-end-direct-jfr-raw-summary.json",
+            "sha256": "182f92bf6baf8f2467ab39d2a9804d0c00ae8607f7c09e7c07419a0e2a8113d1"
+          },
+          {
+            "path": "projects/conductor/bidi/run-4-end-direct-workload-profile-summary.json",
+            "sha256": "8c794350280f8e5f6417aabc08e65729ee3a8ba3307e3594a0801788b3cd9459"
+          },
+          {
+            "path": "projects/conductor/bidi/run1-direct-jfr-raw-summary.json",
+            "sha256": "dfa439e61ee407764170d4a537444342509da5dd047186e8a37f8da026a6346c"
+          },
+          {
+            "path": "projects/conductor/bidi/run1-direct-workload-profile-summary.json",
+            "sha256": "bd7993d69682d157e7dcc70894131101248b77f5e189ebcfd9c2090c510baecf"
+          },
+          {
+            "path": "projects/thingsboard/bidi/collapsed-cpu-summary.json",
+            "sha256": "cdd61196bd0a14e76707c188fde9cf61ea581b3589fe29043350c6f419d3758d"
+          },
+          {
+            "path": "projects/thingsboard/bidi/continuous-direct-jfr-raw-summary.json",
+            "sha256": "46046643246ebd48b8b854c53d52b1dac07798bb0051e458d181a1464154ea78"
+          },
+          {
+            "path": "projects/thingsboard/bidi/continuous-direct-workload-profile-summary.json",
+            "sha256": "7fb7efb5e4aca433b3115f18131b99f392765b662eaa1ea5199065ee1d58c625"
+          },
+          {
+            "path": "projects/thingsboard/bidi/memory-summary.json",
+            "sha256": "ebbc21a1846b1c27a42f27ff62e4764328bc7c0b701968c03f2c71f7c7942994"
+          },
+          {
+            "path": "projects/thingsboard/bidi/observer-cpu-components.json",
+            "sha256": "72f9998c09cde2dcb3ec33e23f6a213e2fd0811a16c27d95861191fb4bdbfa0e"
+          },
+          {
+            "path": "projects/thingsboard/bidi/run-2-end-direct-jfr-raw-summary.json",
+            "sha256": "574ea4e874c378dad5459ebce48492ee3cfeb0519aa2aabd5260cb1763c26cc4"
+          },
+          {
+            "path": "projects/thingsboard/bidi/run-2-end-direct-workload-profile-summary.json",
+            "sha256": "b153a0150a68c7346d35f58d72ef03acd0ba8aa2c410879b7f3d692f837421e8"
+          },
+          {
+            "path": "projects/thingsboard/bidi/run1-direct-jfr-raw-summary.json",
+            "sha256": "84c39179e29c62459d1b795394bdb5e3d78c9f58d95e701830941067872a520c"
+          },
+          {
+            "path": "projects/thingsboard/bidi/run1-direct-workload-profile-summary.json",
+            "sha256": "09bd2b82143a68a94ac4a0beadb94fdf92fb7003719301754edf49e0f6614060"
+          },
+          {
+            "path": "workload-after-cpu.json",
+            "sha256": "6dbe19b24f4b6e591e5efb8c10e218ef3bca9a9ebb35524fb4d68d6c1d7c63d1"
+          }
+        ]
+      },
+      "qualification": "This is an archive of portable derived measurement evidence, not a lossless raw-JFR archive. Direct reader retains selected Java execution/allocation and GC summaries for every immutable closed snapshot; raw cumulative recordings overlap and must not be summed. Existing logs, SARIF, GC logs, resources and profiler logs are retained.",
+      "captures": [
+        {
+          "path": "projects/OWASP/bidi/continuous.jfr",
+          "kind": ".jfr",
+          "bytes": 31352800,
+          "sha256": "0b3c6e5b1031a5203f842d3816ed744e0c032fb75dbeae096edae00c1cc96887",
+          "mtimeNs": 1793690369969002257,
+          "derived": [
+            {
+              "path": "projects/OWASP/bidi/continuous-direct-workload-profile-summary.json",
+              "bytes": 2133083,
+              "sha256": "8d8a01418c0164409407728607566af3baee19811c2b6d4f83be470dac473fbb"
+            },
+            {
+              "path": "projects/OWASP/bidi/continuous-direct-jfr-raw-summary.json",
+              "bytes": 4120528,
+              "sha256": "967f69f1ac1c56848cc93b3902f7786f23a10cd673375542820f8ccfb0f64e6b"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 10785,
+            "allocationSamples": 40149,
+            "allocationWeight": 391682163328,
+            "selectedEvents": 51529,
+            "firstSelectedEventEpoch": 1793690167.015028,
+            "lastSelectedEventEpoch": 1793690369.7249098
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:40.805299+00:00"
+        },
+        {
+          "path": "projects/OWASP/bidi/normal.collapsed",
+          "kind": ".collapsed",
+          "bytes": 5856489,
+          "sha256": "83266a689bb21195d1c04bab7ae58abc494b3ed41f0930511fb87e397f444df5",
+          "mtimeNs": 1793690309384188275,
+          "derived": [
+            {
+              "path": "projects/OWASP/bidi/collapsed-cpu-summary.json",
+              "bytes": 22363,
+              "sha256": "b3316bef81193de39c4e04631633f934a0ddbfac9d5050841f95e309a0ce30b2"
+            }
+          ],
+          "statistics": {
+            "cpuSamples": 6560,
+            "exactRunAttribution": null,
+            "attributionNote": "Collapsed weights have no timestamps. The poll-observed window is conservative; mixed samples are not split or assigned to the starting run."
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:40.809494+00:00"
+        },
+        {
+          "path": "projects/OWASP/bidi/run-2-end.jfr",
+          "kind": ".jfr",
+          "bytes": 24259384,
+          "sha256": "0168c61544344d696e1f0eb978f8cba3dcd8612d6666b2c5415e10301c81efb4",
+          "mtimeNs": 1793690327440430874,
+          "derived": [
+            {
+              "path": "projects/OWASP/bidi/run-2-end-direct-workload-profile-summary.json",
+              "bytes": 1548768,
+              "sha256": "2520030a55392450d9f6541c284ed0bec79f34c406c382832ecb3d8033137dd1"
+            },
+            {
+              "path": "projects/OWASP/bidi/run-2-end-direct-jfr-raw-summary.json",
+              "bytes": 3266569,
+              "sha256": "86fec1386b212809b56e6c1761af925cdd71740805f4eb3b1ff02df25746f52b"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 8572,
+            "allocationSamples": 34817,
+            "allocationWeight": 308821579656,
+            "selectedEvents": 43935,
+            "firstSelectedEventEpoch": 1793690167.015028,
+            "lastSelectedEventEpoch": 1793690327.4127219
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:40.828000+00:00"
+        },
+        {
+          "path": "projects/OWASP/bidi/run-3-end.jfr",
+          "kind": ".jfr",
+          "bytes": 27866817,
+          "sha256": "4776da3ab5f19ef121c4386d3da97fcc163975d9532886f011ac4c8845e61469",
+          "mtimeNs": 1793690350648742688,
+          "derived": [
+            {
+              "path": "projects/OWASP/bidi/run-3-end-direct-workload-profile-summary.json",
+              "bytes": 2029664,
+              "sha256": "c88b157d44a58e17eb09224bb181e6f49cd2240865b61bfc42ce8211a3ceeb92"
+            },
+            {
+              "path": "projects/OWASP/bidi/run-3-end-direct-jfr-raw-summary.json",
+              "bytes": 4017801,
+              "sha256": "9b5b1de469bee216f12f7f249fd1530fc309273b510431987889802fc974e87e"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 9409,
+            "allocationSamples": 38850,
+            "allocationWeight": 354725803912,
+            "selectedEvents": 48846,
+            "firstSelectedEventEpoch": 1793690167.015028,
+            "lastSelectedEventEpoch": 1793690350.6188414
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:40.843927+00:00"
+        },
+        {
+          "path": "projects/OWASP/bidi/run-4-end.jfr",
+          "kind": ".jfr",
+          "bytes": 28676047,
+          "sha256": "01889473b3a9c8ec671f545ec707f4edb1cbb2eba7380648accd962f646bd443",
+          "mtimeNs": 1793690352844772192,
+          "derived": [
+            {
+              "path": "projects/OWASP/bidi/run-4-end-direct-workload-profile-summary.json",
+              "bytes": 2083525,
+              "sha256": "a419873a69c54b681b4b19abe7b193e60f81c56465134eeb2786a5465878da18"
+            },
+            {
+              "path": "projects/OWASP/bidi/run-4-end-direct-jfr-raw-summary.json",
+              "bytes": 4066520,
+              "sha256": "b670059b537840b50158faaf87fa193a1c74210e93e0d6d87dd3f5c3faf6ad4b"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 9416,
+            "allocationSamples": 39331,
+            "allocationWeight": 355261816736,
+            "selectedEvents": 49334,
+            "firstSelectedEventEpoch": 1793690167.015028,
+            "lastSelectedEventEpoch": 1793690351.6363287
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:40.860607+00:00"
+        },
+        {
+          "path": "projects/OWASP/bidi/run-5-end.jfr",
+          "kind": ".jfr",
+          "bytes": 29423156,
+          "sha256": "152024bb9b731c2732e12369ae1ff3f950d4aecc546b6db200bed9e16cf24919",
+          "mtimeNs": 1793690354208790518,
+          "derived": [
+            {
+              "path": "projects/OWASP/bidi/run-5-end-direct-workload-profile-summary.json",
+              "bytes": 2133414,
+              "sha256": "196de1b453fa79443be72574371d8028b931bf24fabb35cd010a6bc6edca942b"
+            },
+            {
+              "path": "projects/OWASP/bidi/run-5-end-direct-jfr-raw-summary.json",
+              "bytes": 4104273,
+              "sha256": "8a3ddf83c965ee3f5d2512fb59500c005360bc765f6fbdc0d6727e5146e17ab5"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 9467,
+            "allocationSamples": 39429,
+            "allocationWeight": 355437313384,
+            "selectedEvents": 49483,
+            "firstSelectedEventEpoch": 1793690167.015028,
+            "lastSelectedEventEpoch": 1793690353.9502263
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:40.877684+00:00"
+        },
+        {
+          "path": "projects/OWASP/bidi/run1.jfr",
+          "kind": ".jfr",
+          "bytes": 19483573,
+          "sha256": "bbbd7495359bb1b01a40968c368bc172f629b2127b5bbe648f07f9b50a3ece87",
+          "mtimeNs": 1793690299284052569,
+          "derived": [
+            {
+              "path": "projects/OWASP/bidi/run1-direct-workload-profile-summary.json",
+              "bytes": 825201,
+              "sha256": "0ef2e0a8c6e619750671518ce10d740d9d38937a6ef4b8abe803e62938871c51"
+            },
+            {
+              "path": "projects/OWASP/bidi/run1-direct-jfr-raw-summary.json",
+              "bytes": 2174543,
+              "sha256": "a8e4f07d6c6ae94838efdec215cf58de36516fca3305806c63f377fb4c4ef31e"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 7514,
+            "allocationSamples": 28270,
+            "allocationWeight": 258135604432,
+            "selectedEvents": 36212,
+            "firstSelectedEventEpoch": 1793690167.015028,
+            "lastSelectedEventEpoch": 1793690299.2600572
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:40.889206+00:00"
+        },
+        {
+          "path": "projects/conductor/bidi/continuous.jfr",
+          "kind": ".jfr",
+          "bytes": 29906883,
+          "sha256": "221b055f712bcf923e9bd400a7eff01312051254e1a8d825ce35c4af96902e99",
+          "mtimeNs": 1793690480490487010,
+          "derived": [
+            {
+              "path": "projects/conductor/bidi/continuous-direct-workload-profile-summary.json",
+              "bytes": 2682378,
+              "sha256": "f0a2e479a29264d465319027589a9619e3297dfbd4cf24885c9ff16835ede9c1"
+            },
+            {
+              "path": "projects/conductor/bidi/continuous-direct-jfr-raw-summary.json",
+              "bytes": 5035725,
+              "sha256": "8981de521902abc261d0ecc45a9a7d8f8c92d742044f709ce576ef89c69198d5"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 16144,
+            "allocationSamples": 27898,
+            "allocationWeight": 303614539560,
+            "selectedEvents": 44603,
+            "firstSelectedEventEpoch": 1793690373.8858874,
+            "lastSelectedEventEpoch": 1793690480.4744368
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:40.906536+00:00"
+        },
+        {
+          "path": "projects/conductor/bidi/run-2-end.jfr",
+          "kind": ".jfr",
+          "bytes": 25980278,
+          "sha256": "18173303fbc0bdcd81e2f955cb13ceb202849e715901e0c9d34bd5d3a957b7d3",
+          "mtimeNs": 1793690469174334997,
+          "derived": [
+            {
+              "path": "projects/conductor/bidi/run-2-end-direct-workload-profile-summary.json",
+              "bytes": 1935216,
+              "sha256": "6b05a9741ff0dc3a46f2f7e2d3ed331d11b9ed1fd8326897e4be8b7490204672"
+            },
+            {
+              "path": "projects/conductor/bidi/run-2-end-direct-jfr-raw-summary.json",
+              "bytes": 4171137,
+              "sha256": "4bb128460477df1e8edb977d6303945e880a03eabd641fdedb1324423b915530"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 15118,
+            "allocationSamples": 24948,
+            "allocationWeight": 269788992872,
+            "selectedEvents": 40612,
+            "firstSelectedEventEpoch": 1793690373.8858874,
+            "lastSelectedEventEpoch": 1793690469.1173356
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:40.922229+00:00"
+        },
+        {
+          "path": "projects/conductor/bidi/run-3-end.jfr",
+          "kind": ".jfr",
+          "bytes": 28706238,
+          "sha256": "7e5903246fac96821cf98e9db45128fdfa8f93f6e697559f3d137af1a90da1f6",
+          "mtimeNs": 1793690479330471427,
+          "derived": [
+            {
+              "path": "projects/conductor/bidi/run-3-end-direct-workload-profile-summary.json",
+              "bytes": 2441710,
+              "sha256": "230e1fb970e6770ef17e4426f9f7611405d32f042a0b02578b3134fe5278416d"
+            },
+            {
+              "path": "projects/conductor/bidi/run-3-end-direct-jfr-raw-summary.json",
+              "bytes": 4845982,
+              "sha256": "8df1514af06bdaf2a64711423cd1265c5d4d1fdde6e6738493829145dc2d4ba0"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 16091,
+            "allocationSamples": 27720,
+            "allocationWeight": 302012646256,
+            "selectedEvents": 44372,
+            "firstSelectedEventEpoch": 1793690373.8858874,
+            "lastSelectedEventEpoch": 1793690479.312906
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:40.939270+00:00"
+        },
+        {
+          "path": "projects/conductor/bidi/run-4-end.jfr",
+          "kind": ".jfr",
+          "bytes": 29220071,
+          "sha256": "07f58abab5fae0f38dda6c1cbb60b53dbca34686c82f231e2e15b8de4e1d4e2d",
+          "mtimeNs": 1793690479470473309,
+          "derived": [
+            {
+              "path": "projects/conductor/bidi/run-4-end-direct-workload-profile-summary.json",
+              "bytes": 2531361,
+              "sha256": "8c794350280f8e5f6417aabc08e65729ee3a8ba3307e3594a0801788b3cd9459"
+            },
+            {
+              "path": "projects/conductor/bidi/run-4-end-direct-jfr-raw-summary.json",
+              "bytes": 4918080,
+              "sha256": "182f92bf6baf8f2467ab39d2a9804d0c00ae8607f7c09e7c07419a0e2a8113d1"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 16101,
+            "allocationSamples": 27729,
+            "allocationWeight": 302134261984,
+            "selectedEvents": 44391,
+            "firstSelectedEventEpoch": 1793690373.8858874,
+            "lastSelectedEventEpoch": 1793690479.458575
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:40.956362+00:00"
+        },
+        {
+          "path": "projects/conductor/bidi/run1.jfr",
+          "kind": ".jfr",
+          "bytes": 20284076,
+          "sha256": "7f1fe839046bc87f1d36c6c8c20be75455b45213e25463f98ea41d5747e1d0e8",
+          "mtimeNs": 1793690450674086471,
+          "derived": [
+            {
+              "path": "projects/conductor/bidi/run1-direct-workload-profile-summary.json",
+              "bytes": 785707,
+              "sha256": "bd7993d69682d157e7dcc70894131101248b77f5e189ebcfd9c2090c510baecf"
+            },
+            {
+              "path": "projects/conductor/bidi/run1-direct-jfr-raw-summary.json",
+              "bytes": 2282162,
+              "sha256": "dfa439e61ee407764170d4a537444342509da5dd047186e8a37f8da026a6346c"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 11327,
+            "allocationSamples": 20166,
+            "allocationWeight": 202287790960,
+            "selectedEvents": 31997,
+            "firstSelectedEventEpoch": 1793690373.8858874,
+            "lastSelectedEventEpoch": 1793690450.66163
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:40.968450+00:00"
+        },
+        {
+          "path": "projects/thingsboard/bidi/continuous.jfr",
+          "kind": ".jfr",
+          "bytes": 261745271,
+          "sha256": "e04273f16190baf9f7d79bff2c35b680240ed6b90720365d8c44bc0c2be5f326",
+          "mtimeNs": 1793691607577615845,
+          "derived": [
+            {
+              "path": "projects/thingsboard/bidi/continuous-direct-workload-profile-summary.json",
+              "bytes": 1986721,
+              "sha256": "7fb7efb5e4aca433b3115f18131b99f392765b662eaa1ea5199065ee1d58c625"
+            },
+            {
+              "path": "projects/thingsboard/bidi/continuous-direct-jfr-raw-summary.json",
+              "bytes": 4899760,
+              "sha256": "46046643246ebd48b8b854c53d52b1dac07798bb0051e458d181a1464154ea78"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 289875,
+            "allocationSamples": 252322,
+            "allocationWeight": 5280094981952,
+            "selectedEvents": 546576,
+            "firstSelectedEventEpoch": 1793690689.282444,
+            "lastSelectedEventEpoch": 1793691606.8288045
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.118062+00:00"
+        },
+        {
+          "path": "projects/thingsboard/bidi/near-limit.collapsed",
+          "kind": ".collapsed",
+          "bytes": 25588442,
+          "sha256": "4c9acc3637c213312a0a10bd4a11f669ea899051ebc01d617e4494fa3279c531",
+          "mtimeNs": 1793691574301169453,
+          "derived": [
+            {
+              "path": "projects/thingsboard/bidi/collapsed-cpu-summary.json",
+              "bytes": 41078,
+              "sha256": "cdd61196bd0a14e76707c188fde9cf61ea581b3589fe29043350c6f419d3758d"
+            }
+          ],
+          "statistics": {
+            "cpuSamples": 40423,
+            "exactRunAttribution": "run-2",
+            "attributionNote": "Collapsed weights have no timestamps. The poll-observed window is conservative; mixed samples are not split or assigned to the starting run."
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.134351+00:00"
+        },
+        {
+          "path": "projects/thingsboard/bidi/normal.collapsed",
+          "kind": ".collapsed",
+          "bytes": 45172568,
+          "sha256": "aea099aad9c46a718e2b50b3aa5475e0567c17f437bd260c16159095d12ff482",
+          "mtimeNs": 1793690758174216658,
+          "derived": [
+            {
+              "path": "projects/thingsboard/bidi/collapsed-cpu-summary.json",
+              "bytes": 41078,
+              "sha256": "cdd61196bd0a14e76707c188fde9cf61ea581b3589fe29043350c6f419d3758d"
+            }
+          ],
+          "statistics": {
+            "cpuSamples": 42667,
+            "exactRunAttribution": "run-1",
+            "attributionNote": "Collapsed weights have no timestamps. The poll-observed window is conservative; mixed samples are not split or assigned to the starting run."
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.161606+00:00"
+        },
+        {
+          "path": "projects/thingsboard/bidi/run-2-end.jfr",
+          "kind": ".jfr",
+          "bytes": 260514215,
+          "sha256": "44a60819f3b2595395a4389786f514412a14362dbe0010023ce65fad4411e4f6",
+          "mtimeNs": 1793691603541561704,
+          "derived": [
+            {
+              "path": "projects/thingsboard/bidi/run-2-end-direct-workload-profile-summary.json",
+              "bytes": 1986732,
+              "sha256": "b153a0150a68c7346d35f58d72ef03acd0ba8aa2c410879b7f3d692f837421e8"
+            },
+            {
+              "path": "projects/thingsboard/bidi/run-2-end-direct-jfr-raw-summary.json",
+              "bytes": 4892174,
+              "sha256": "574ea4e874c378dad5459ebce48492ee3cfeb0519aa2aabd5260cb1763c26cc4"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 289826,
+            "allocationSamples": 251539,
+            "allocationWeight": 5278512998672,
+            "selectedEvents": 545737,
+            "firstSelectedEventEpoch": 1793690689.282444,
+            "lastSelectedEventEpoch": 1793691603.317769
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.306357+00:00"
+        },
+        {
+          "path": "projects/thingsboard/bidi/run-2-normal.collapsed",
+          "kind": ".collapsed",
+          "bytes": 21830002,
+          "sha256": "923fc3861dc961e61bf9e3d54782463c0d0dea266510a8b2591e6831df393d6a",
+          "mtimeNs": 1793691177763849136,
+          "derived": [
+            {
+              "path": "projects/thingsboard/bidi/collapsed-cpu-summary.json",
+              "bytes": 41078,
+              "sha256": "cdd61196bd0a14e76707c188fde9cf61ea581b3589fe29043350c6f419d3758d"
+            }
+          ],
+          "statistics": {
+            "cpuSamples": 38563,
+            "exactRunAttribution": "run-2",
+            "attributionNote": "Collapsed weights have no timestamps. The poll-observed window is conservative; mixed samples are not split or assigned to the starting run."
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.320226+00:00"
+        },
+        {
+          "path": "projects/thingsboard/bidi/run1.jfr",
+          "kind": ".jfr",
+          "bytes": 164329178,
+          "sha256": "0a96314a7d34e4d992315409888825f7ef40062721eaae086ed746924b913076",
+          "mtimeNs": 1793691069406395010,
+          "derived": [
+            {
+              "path": "projects/thingsboard/bidi/run1-direct-workload-profile-summary.json",
+              "bytes": 935351,
+              "sha256": "09bd2b82143a68a94ac4a0beadb94fdf92fb7003719301754edf49e0f6614060"
+            },
+            {
+              "path": "projects/thingsboard/bidi/run1-direct-jfr-raw-summary.json",
+              "bytes": 3719097,
+              "sha256": "84c39179e29c62459d1b795394bdb5e3d78c9f58d95e701830941067872a520c"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 84214,
+            "allocationSamples": 155924,
+            "allocationWeight": 2180176570352,
+            "selectedEvents": 242948,
+            "firstSelectedEventEpoch": 1793690489.241941,
+            "lastSelectedEventEpoch": 1793691069.2348635
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.411129+00:00"
+        },
+        {
+          "path": "projects/Stirling-PDF/bidi/continuous.jfr",
+          "kind": ".jfr",
+          "bytes": 103529031,
+          "sha256": "9b0132a73452f4f8541154b6475ae712767fe5ea5b2064f2d5acc2d46d603eac",
+          "mtimeNs": 1793692717376497524,
+          "derived": [
+            {
+              "path": "projects/Stirling-PDF/bidi/continuous-direct-workload-profile-summary.json",
+              "bytes": 4664471,
+              "sha256": "2b804c7e747816cdbccd1c74eea6d8e928e495ace346bb0c65a1d8e4f790eab3"
+            },
+            {
+              "path": "projects/Stirling-PDF/bidi/continuous-direct-jfr-raw-summary.json",
+              "bytes": 7519171,
+              "sha256": "ab0dcf1f53cdf52142bf2c8f6e82186960c3a8493485e34593e1443bdd8db1fc"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 66063,
+            "allocationSamples": 304240,
+            "allocationWeight": 3103671152992,
+            "selectedEvents": 371749,
+            "firstSelectedEventEpoch": 1793691610.7112253,
+            "lastSelectedEventEpoch": 1793692717.3189113
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.471503+00:00"
+        },
+        {
+          "path": "projects/Stirling-PDF/bidi/near-limit.collapsed",
+          "kind": ".collapsed",
+          "bytes": 9575453,
+          "sha256": "522be13d3be35c8ba5d075e4ef7ed7c636c49602eb451f17772903aa28a0ffe2",
+          "mtimeNs": 1793692685612071730,
+          "derived": [
+            {
+              "path": "projects/Stirling-PDF/bidi/collapsed-cpu-summary.json",
+              "bytes": 46602,
+              "sha256": "12d8d6731d6317e37b938cf88884e00782766af0f25c543265cae2e462db9562"
+            }
+          ],
+          "statistics": {
+            "cpuSamples": 3819,
+            "exactRunAttribution": null,
+            "attributionNote": "Collapsed weights have no timestamps. The poll-observed window is conservative; mixed samples are not split or assigned to the starting run."
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.478154+00:00"
+        },
+        {
+          "path": "projects/Stirling-PDF/bidi/run-2-end.jfr",
+          "kind": ".jfr",
+          "bytes": 20525837,
+          "sha256": "6adc26a950732fa6b1e48190bf8db1b44071a28a4e6e7335711f408b9ea603d1",
+          "mtimeNs": 1793691682310618322,
+          "derived": [
+            {
+              "path": "projects/Stirling-PDF/bidi/run-2-end-direct-workload-profile-summary.json",
+              "bytes": 1590099,
+              "sha256": "306e574b6ef51a4fa9320e5467319756412943b0812cbcd9a2b146d8a6071bf1"
+            },
+            {
+              "path": "projects/Stirling-PDF/bidi/run-2-end-direct-jfr-raw-summary.json",
+              "bytes": 3588848,
+              "sha256": "d607145d0c2c306ad3515f5235306ac2679e0b59243d590f15ae8208b25ca01e"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 11863,
+            "allocationSamples": 19389,
+            "allocationWeight": 232620755072,
+            "selectedEvents": 31554,
+            "firstSelectedEventEpoch": 1793691610.7112253,
+            "lastSelectedEventEpoch": 1793691682.285782
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.490555+00:00"
+        },
+        {
+          "path": "projects/Stirling-PDF/bidi/run-3-end.jfr",
+          "kind": ".jfr",
+          "bytes": 23048824,
+          "sha256": "98909f8ae10a3ce8fefac763d7810e2fe943ace86eb2695e6036399e9224319b",
+          "mtimeNs": 1793691688470700952,
+          "derived": [
+            {
+              "path": "projects/Stirling-PDF/bidi/run-3-end-direct-workload-profile-summary.json",
+              "bytes": 2330951,
+              "sha256": "bcf0440317f975f0ea1ac1a25bdf86c8f1fbf14837c44d54e9ebe1efc0045868"
+            },
+            {
+              "path": "projects/Stirling-PDF/bidi/run-3-end-direct-jfr-raw-summary.json",
+              "bytes": 4593758,
+              "sha256": "65d9669d8aef34c322032844946e83ecf7fc93c912000a2b4d41bb3912b84f7c"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 13168,
+            "allocationSamples": 21109,
+            "allocationWeight": 259427999264,
+            "selectedEvents": 34589,
+            "firstSelectedEventEpoch": 1793691610.7112253,
+            "lastSelectedEventEpoch": 1793691688.4437385
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.504423+00:00"
+        },
+        {
+          "path": "projects/Stirling-PDF/bidi/run-4-end.jfr",
+          "kind": ".jfr",
+          "bytes": 24549552,
+          "sha256": "6a2b79eb7f3254e29260ee71eae88d611436e6491b2a01c4bcf4ca476ce5ed33",
+          "mtimeNs": 1793691693606769845,
+          "derived": [
+            {
+              "path": "projects/Stirling-PDF/bidi/run-4-end-direct-workload-profile-summary.json",
+              "bytes": 2968581,
+              "sha256": "ba91b570e6544067e161ce67632ff006af184163a95abbbb203eed47fca048a1"
+            },
+            {
+              "path": "projects/Stirling-PDF/bidi/run-4-end-direct-jfr-raw-summary.json",
+              "bytes": 5300613,
+              "sha256": "eaa85eaa83ec468b43897af3645d15fb79cedb8e4d8720a4c524639ebfb6752a"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 13367,
+            "allocationSamples": 22660,
+            "allocationWeight": 276084873824,
+            "selectedEvents": 36345,
+            "firstSelectedEventEpoch": 1793691610.7112253,
+            "lastSelectedEventEpoch": 1793691693.590449
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.519066+00:00"
+        },
+        {
+          "path": "projects/Stirling-PDF/bidi/run-5-end.jfr",
+          "kind": ".jfr",
+          "bytes": 27801942,
+          "sha256": "ca39bc87c42ffaa1dd6d673c2453d48b7437f7bc92afc4780fa33a6cfa09bdcf",
+          "mtimeNs": 1793691707770959837,
+          "derived": [
+            {
+              "path": "projects/Stirling-PDF/bidi/run-5-end-direct-workload-profile-summary.json",
+              "bytes": 3455404,
+              "sha256": "24976e21092dc38101a0a41892bca010040220b063031c45e9cf2f6ef84023a1"
+            },
+            {
+              "path": "projects/Stirling-PDF/bidi/run-5-end-direct-jfr-raw-summary.json",
+              "bytes": 5870515,
+              "sha256": "055f8e662bab5693c7470c0116d3bf9ab48edc65e3e2a2bb4d0857f58e951777"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 14003,
+            "allocationSamples": 26654,
+            "allocationWeight": 320139575552,
+            "selectedEvents": 40993,
+            "firstSelectedEventEpoch": 1793691610.7112253,
+            "lastSelectedEventEpoch": 1793691707.745161
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.535499+00:00"
+        },
+        {
+          "path": "projects/Stirling-PDF/bidi/run-6-end.jfr",
+          "kind": ".jfr",
+          "bytes": 37754518,
+          "sha256": "0bce971703ea832f2778a56650742b1c52aac733f2d7fb470274300f15a2d519",
+          "mtimeNs": 1793691808336308721,
+          "derived": [
+            {
+              "path": "projects/Stirling-PDF/bidi/run-6-end-direct-workload-profile-summary.json",
+              "bytes": 3832404,
+              "sha256": "908f3cc370668e8fafd5a7a64a9b07527d108fe572ee995c2a556fd944b8ba32"
+            },
+            {
+              "path": "projects/Stirling-PDF/bidi/run-6-end-direct-jfr-raw-summary.json",
+              "bytes": 6405997,
+              "sha256": "dee0301a0266e44ee57687c67cb6dfe5bfd90545fa8a47a9e8d896fd264cd05d"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 18448,
+            "allocationSamples": 55788,
+            "allocationWeight": 594651821352,
+            "selectedEvents": 74678,
+            "firstSelectedEventEpoch": 1793691610.7112253,
+            "lastSelectedEventEpoch": 1793691808.0363266
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.557236+00:00"
+        },
+        {
+          "path": "projects/Stirling-PDF/bidi/run-6-normal.collapsed",
+          "kind": ".collapsed",
+          "bytes": 6732968,
+          "sha256": "098274cb8b48ea65046b5ea913fb2c53c48b690ee19e85f67c821872f2bd0ae7",
+          "mtimeNs": 1793691798052170784,
+          "derived": [
+            {
+              "path": "projects/Stirling-PDF/bidi/collapsed-cpu-summary.json",
+              "bytes": 46602,
+              "sha256": "12d8d6731d6317e37b938cf88884e00782766af0f25c543265cae2e462db9562"
+            }
+          ],
+          "statistics": {
+            "cpuSamples": 3149,
+            "exactRunAttribution": "run-6",
+            "attributionNote": "Collapsed weights have no timestamps. The poll-observed window is conservative; mixed samples are not split or assigned to the starting run."
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.561943+00:00"
+        },
+        {
+          "path": "projects/Stirling-PDF/bidi/run-7-end.jfr",
+          "kind": ".jfr",
+          "bytes": 97840850,
+          "sha256": "3c62adab2b9aeff8674f0c55ccc097cdb59726a96bf82248481089a127380bf9",
+          "mtimeNs": 1793692664579789793,
+          "derived": [
+            {
+              "path": "projects/Stirling-PDF/bidi/run-7-end-direct-workload-profile-summary.json",
+              "bytes": 4370726,
+              "sha256": "546353b83c22eb1557df57919b865a277b317dbf47984292f975950bc7a34bab"
+            },
+            {
+              "path": "projects/Stirling-PDF/bidi/run-7-end-direct-jfr-raw-summary.json",
+              "bytes": 7120455,
+              "sha256": "c60d806f80b31441aba1e3d8c3f2d6cf32acf6ca67041ce364f79ab82515a955"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 63288,
+            "allocationSamples": 293987,
+            "allocationWeight": 2968111950776,
+            "selectedEvents": 358665,
+            "firstSelectedEventEpoch": 1793691610.7112253,
+            "lastSelectedEventEpoch": 1793692663.640971
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.618214+00:00"
+        },
+        {
+          "path": "projects/Stirling-PDF/bidi/run-7-normal.collapsed",
+          "kind": ".collapsed",
+          "bytes": 8734304,
+          "sha256": "f29be53a8b39ba0c990a750accc983338a812211d93ebcc218de74c6c4c1753f",
+          "mtimeNs": 1793691898541518560,
+          "derived": [
+            {
+              "path": "projects/Stirling-PDF/bidi/collapsed-cpu-summary.json",
+              "bytes": 46602,
+              "sha256": "12d8d6731d6317e37b938cf88884e00782766af0f25c543265cae2e462db9562"
+            }
+          ],
+          "statistics": {
+            "cpuSamples": 3019,
+            "exactRunAttribution": "run-7",
+            "attributionNote": "Collapsed weights have no timestamps. The poll-observed window is conservative; mixed samples are not split or assigned to the starting run."
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.624306+00:00"
+        },
+        {
+          "path": "projects/Stirling-PDF/bidi/run-8-end.jfr",
+          "kind": ".jfr",
+          "bytes": 102876199,
+          "sha256": "bde3c4ac137ad7297aa037419d4deb8e5a689df49c8fec6099e93216d36fc0aa",
+          "mtimeNs": 1793692717188495004,
+          "derived": [
+            {
+              "path": "projects/Stirling-PDF/bidi/run-8-end-direct-workload-profile-summary.json",
+              "bytes": 4664449,
+              "sha256": "9a9c9e3728f1760328014d29b8c040fe7cfac5963a7d6d64f1404db2c17188db"
+            },
+            {
+              "path": "projects/Stirling-PDF/bidi/run-8-end-direct-jfr-raw-summary.json",
+              "bytes": 7514357,
+              "sha256": "7ea86fca47b32c514fd99d559457adfa011a726f9c26f20001f32bcf8af61074"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 66043,
+            "allocationSamples": 304120,
+            "allocationWeight": 3103319942264,
+            "selectedEvents": 371609,
+            "firstSelectedEventEpoch": 1793691610.7112253,
+            "lastSelectedEventEpoch": 1793692714.8021133
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.686785+00:00"
+        },
+        {
+          "path": "projects/Stirling-PDF/bidi/run1.jfr",
+          "kind": ".jfr",
+          "bytes": 15771361,
+          "sha256": "1b896e3ed79da0341638fb481090d31e6e64f910f8c09d8c8bb974daf8fc0c56",
+          "mtimeNs": 1793691668118427951,
+          "derived": [
+            {
+              "path": "projects/Stirling-PDF/bidi/run1-direct-workload-profile-summary.json",
+              "bytes": 1048499,
+              "sha256": "b1c6dd7eef574e4f659e5d418e03a9fe79967419911f2d5eb44e78cb5a2cf58d"
+            },
+            {
+              "path": "projects/Stirling-PDF/bidi/run1-direct-jfr-raw-summary.json",
+              "bytes": 2442441,
+              "sha256": "2a930d72bf7a0ab856ebea4a1d8e4301523c6d90ace270e9ae230bc5d884962c"
+            }
+          ],
+          "statistics": {
+            "javaSamples": 9225,
+            "allocationSamples": 15450,
+            "allocationWeight": 169878501368,
+            "selectedEvents": 24955,
+            "firstSelectedEventEpoch": 1793691610.7112253,
+            "lastSelectedEventEpoch": 1793691668.090698
+          },
+          "deleted": true,
+          "deletedUTC": "2026-11-03T09:26:41.696969+00:00"
+        }
+      ],
+      "preservedFileCount": 113,
+      "preservedFiles": {
+        "projects/OWASP/bidi/analyzer-process.json": {
+          "bytes": 15104,
+          "sha256": "6a9c140f8f8322c3495d1cfecff9c7f00219a8f6a11b2a6ddf83836b088dd665"
+        },
+        "projects/OWASP/bidi/analyzer.log": {
+          "bytes": 4483311,
+          "sha256": "0a62511fe2a02eac70114228b451e4544d6c22a15fd73007ed79ad146eac15fd"
+        },
+        "projects/OWASP/bidi/benchmark.init.gradle": {
+          "bytes": 1729,
+          "sha256": "ded039e8ca2e5fb641778c552b43f4c0bee0ed525348db43b0971a18d9f98115"
+        },
+        "projects/OWASP/bidi/collapsed-cpu-summary.json": {
+          "bytes": 22363,
+          "sha256": "b3316bef81193de39c4e04631633f934a0ddbfac9d5050841f95e309a0ce30b2"
+        },
+        "projects/OWASP/bidi/console.log": {
+          "bytes": 4505810,
+          "sha256": "f1421f3cd22c09889be140a1869bfefd8d3dffd312b2bd0404fdfee596dffafd"
+        },
+        "projects/OWASP/bidi/continuous-direct-jfr-raw-summary.json": {
+          "bytes": 4120528,
+          "sha256": "967f69f1ac1c56848cc93b3902f7786f23a10cd673375542820f8ccfb0f64e6b"
+        },
+        "projects/OWASP/bidi/continuous-direct-workload-profile-summary.json": {
+          "bytes": 2133083,
+          "sha256": "8d8a01418c0164409407728607566af3baee19811c2b6d4f83be470dac473fbb"
+        },
+        "projects/OWASP/bidi/direct-jfr-scopes.tsv": {
+          "bytes": 738,
+          "sha256": "3bf30b9f751f978cead22b250580b9efc371a7355fc6267d38550b2fa91dc9ac"
+        },
+        "projects/OWASP/bidi/direct-jfr-windows.tsv": {
+          "bytes": 1021,
+          "sha256": "927138b532244783305cac3b8693626439340368691d98e1234c9859fc865b86"
+        },
+        "projects/OWASP/bidi/gc.log": {
+          "bytes": 475188,
+          "sha256": "88a61f3cac5dcd83fc92d71d01d873b8c688083c7b11922b4d2391964293b535"
+        },
+        "projects/OWASP/bidi/gradle.pid": {
+          "bytes": 8,
+          "sha256": "87c21ead4e2b7fa859da83b52b31702a92203db5d5c90aad2cd042a89af6b5b6"
+        },
+        "projects/OWASP/bidi/manifest.json": {
+          "bytes": 3051,
+          "sha256": "90e92899831b022ff88324f157648d4113bdf50a118b17996216164d2f78e1f1"
+        },
+        "projects/OWASP/bidi/memory-summary.json": {
+          "bytes": 99181,
+          "sha256": "5f8e543651b0cd375fd4b677aa21122fe8802bef4fcf76f7ad095cb654cbf7d2"
+        },
+        "projects/OWASP/bidi/normal-profiler.log": {
+          "bytes": 30,
+          "sha256": "29f57b1c74c2437048315ab7c5d8f228ed0481f54e552112f4b43b3e3512d2ca"
+        },
+        "projects/OWASP/bidi/reports/report-ifds.sarif": {
+          "bytes": 13761621,
+          "sha256": "75cea8d1e5fb19286ec7ebd5d1a6ab02f2acf52326b75621f027cc04ee430dbe"
+        },
+        "projects/OWASP/bidi/resources.jsonl": {
+          "bytes": 41120,
+          "sha256": "5ba51b556c81364663f90f5cc5a25b8a73bb3ef9dabf8dab0be153ab9ea55a63"
+        },
+        "projects/OWASP/bidi/run-2-end-direct-jfr-raw-summary.json": {
+          "bytes": 3266569,
+          "sha256": "86fec1386b212809b56e6c1761af925cdd71740805f4eb3b1ff02df25746f52b"
+        },
+        "projects/OWASP/bidi/run-2-end-direct-workload-profile-summary.json": {
+          "bytes": 1548768,
+          "sha256": "2520030a55392450d9f6541c284ed0bec79f34c406c382832ecb3d8033137dd1"
+        },
+        "projects/OWASP/bidi/run-3-end-direct-jfr-raw-summary.json": {
+          "bytes": 4017801,
+          "sha256": "9b5b1de469bee216f12f7f249fd1530fc309273b510431987889802fc974e87e"
+        },
+        "projects/OWASP/bidi/run-3-end-direct-workload-profile-summary.json": {
+          "bytes": 2029664,
+          "sha256": "c88b157d44a58e17eb09224bb181e6f49cd2240865b61bfc42ce8211a3ceeb92"
+        },
+        "projects/OWASP/bidi/run-4-end-direct-jfr-raw-summary.json": {
+          "bytes": 4066520,
+          "sha256": "b670059b537840b50158faaf87fa193a1c74210e93e0d6d87dd3f5c3faf6ad4b"
+        },
+        "projects/OWASP/bidi/run-4-end-direct-workload-profile-summary.json": {
+          "bytes": 2083525,
+          "sha256": "a419873a69c54b681b4b19abe7b193e60f81c56465134eeb2786a5465878da18"
+        },
+        "projects/OWASP/bidi/run-5-end-direct-jfr-raw-summary.json": {
+          "bytes": 4104273,
+          "sha256": "8a3ddf83c965ee3f5d2512fb59500c005360bc765f6fbdc0d6727e5146e17ab5"
+        },
+        "projects/OWASP/bidi/run-5-end-direct-workload-profile-summary.json": {
+          "bytes": 2133414,
+          "sha256": "196de1b453fa79443be72574371d8028b931bf24fabb35cd010a6bc6edca942b"
+        },
+        "projects/OWASP/bidi/run1-direct-jfr-raw-summary.json": {
+          "bytes": 2174543,
+          "sha256": "a8e4f07d6c6ae94838efdec215cf58de36516fca3305806c63f377fb4c4ef31e"
+        },
+        "projects/OWASP/bidi/run1-direct-workload-profile-summary.json": {
+          "bytes": 825201,
+          "sha256": "0ef2e0a8c6e619750671518ce10d740d9d38937a6ef4b8abe803e62938871c51"
+        },
+        "projects/OWASP/bidi/summary.json": {
+          "bytes": 6349,
+          "sha256": "af8a6b4a243cddeada5de171ff604e34d1c56eb071659c0833e50b11002caab4"
+        },
+        "projects/conductor/bidi/analyzer-process.json": {
+          "bytes": 15669,
+          "sha256": "a3048dab1827660ab6414a48793715021fe28d65c47afda621d632ad3ae580fa"
+        },
+        "projects/conductor/bidi/analyzer.log": {
+          "bytes": 10434711,
+          "sha256": "0bc34398da3e414eb10b6e98248018ace440dd56ab49775dcd3ede53dd51bc38"
+        },
+        "projects/conductor/bidi/benchmark.init.gradle": {
+          "bytes": 2250,
+          "sha256": "4f434f62c1191d488d4b3e4561be233e984f69a44c4bc4d87ffeca07c2a8d3bf"
+        },
+        "projects/conductor/bidi/console.log": {
+          "bytes": 10457292,
+          "sha256": "f4f7337f8fef9bd457b3b4106544d5722627c3216de17762ef66a0f46c8dc64e"
+        },
+        "projects/conductor/bidi/continuous-direct-jfr-raw-summary.json": {
+          "bytes": 5035725,
+          "sha256": "8981de521902abc261d0ecc45a9a7d8f8c92d742044f709ce576ef89c69198d5"
+        },
+        "projects/conductor/bidi/continuous-direct-workload-profile-summary.json": {
+          "bytes": 2682378,
+          "sha256": "f0a2e479a29264d465319027589a9619e3297dfbd4cf24885c9ff16835ede9c1"
+        },
+        "projects/conductor/bidi/direct-jfr-scopes.tsv": {
+          "bytes": 738,
+          "sha256": "3bf30b9f751f978cead22b250580b9efc371a7355fc6267d38550b2fa91dc9ac"
+        },
+        "projects/conductor/bidi/direct-jfr-windows.tsv": {
+          "bytes": 1283,
+          "sha256": "26cba8390df38ae924af8555668f033e22b3e449a898fa410a9472fa3691bf1f"
+        },
+        "projects/conductor/bidi/gc.log": {
+          "bytes": 447445,
+          "sha256": "f7f28aa9347c87826790fdf4cf5881c32780fadeca95bce1df6f0fac025f796e"
+        },
+        "projects/conductor/bidi/gradle.pid": {
+          "bytes": 8,
+          "sha256": "b4e1d553c0b643db3cab7759a2e378c33a743233e6e6997cc386ad04f5fbee62"
+        },
+        "projects/conductor/bidi/manifest.json": {
+          "bytes": 3650,
+          "sha256": "e4203aa4cf38746ba4023e744cc52d33d608222acc8707fa42652c434974d27e"
+        },
+        "projects/conductor/bidi/memory-summary.json": {
+          "bytes": 96364,
+          "sha256": "d10db00d7f6b2bdec81746df3fc80830cb1d313599c5eae5874d5d2b61e0f019"
+        },
+        "projects/conductor/bidi/reports/report-ifds.sarif": {
+          "bytes": 260508,
+          "sha256": "89bcc3bc8afc435be2ded1ef0502a0e0cf67f62cb46e429ea854b8919752f96e"
+        },
+        "projects/conductor/bidi/resources.jsonl": {
+          "bytes": 21454,
+          "sha256": "005b177f36e87f6df4c6256fce5f0e759a6a8ea7f3d56d286dced5e781cdcd88"
+        },
+        "projects/conductor/bidi/run-2-end-direct-jfr-raw-summary.json": {
+          "bytes": 4171137,
+          "sha256": "4bb128460477df1e8edb977d6303945e880a03eabd641fdedb1324423b915530"
+        },
+        "projects/conductor/bidi/run-2-end-direct-workload-profile-summary.json": {
+          "bytes": 1935216,
+          "sha256": "6b05a9741ff0dc3a46f2f7e2d3ed331d11b9ed1fd8326897e4be8b7490204672"
+        },
+        "projects/conductor/bidi/run-3-end-direct-jfr-raw-summary.json": {
+          "bytes": 4845982,
+          "sha256": "8df1514af06bdaf2a64711423cd1265c5d4d1fdde6e6738493829145dc2d4ba0"
+        },
+        "projects/conductor/bidi/run-3-end-direct-workload-profile-summary.json": {
+          "bytes": 2441710,
+          "sha256": "230e1fb970e6770ef17e4426f9f7611405d32f042a0b02578b3134fe5278416d"
+        },
+        "projects/conductor/bidi/run-4-end-direct-jfr-raw-summary.json": {
+          "bytes": 4918080,
+          "sha256": "182f92bf6baf8f2467ab39d2a9804d0c00ae8607f7c09e7c07419a0e2a8113d1"
+        },
+        "projects/conductor/bidi/run-4-end-direct-workload-profile-summary.json": {
+          "bytes": 2531361,
+          "sha256": "8c794350280f8e5f6417aabc08e65729ee3a8ba3307e3594a0801788b3cd9459"
+        },
+        "projects/conductor/bidi/run1-direct-jfr-raw-summary.json": {
+          "bytes": 2282162,
+          "sha256": "dfa439e61ee407764170d4a537444342509da5dd047186e8a37f8da026a6346c"
+        },
+        "projects/conductor/bidi/run1-direct-workload-profile-summary.json": {
+          "bytes": 785707,
+          "sha256": "bd7993d69682d157e7dcc70894131101248b77f5e189ebcfd9c2090c510baecf"
+        },
+        "projects/conductor/bidi/summary.json": {
+          "bytes": 7729,
+          "sha256": "bc5c640124e1a78f00dd9a034d2266dcac1b20c52277b312522d53ed0174ad3a"
+        },
+        "projects/thingsboard/bidi/analyzer-process.json": {
+          "bytes": 15291,
+          "sha256": "c551988e6efec40c97043924526105431e812596f2c89c699598b67a0cefe3fc"
+        },
+        "projects/thingsboard/bidi/analyzer.log": {
+          "bytes": 16216938,
+          "sha256": "d7ba0a4cb07e69cd5cc10e6e4741216345f9e044d23269825f554ba56dfa3d9d"
+        },
+        "projects/thingsboard/bidi/benchmark.init.gradle": {
+          "bytes": 1896,
+          "sha256": "f58734c9a63adac7b402cf10b0f0143ac5b9a0e37b151518d26f5ed0b185a460"
+        },
+        "projects/thingsboard/bidi/collapsed-cpu-summary.json": {
+          "bytes": 41078,
+          "sha256": "cdd61196bd0a14e76707c188fde9cf61ea581b3589fe29043350c6f419d3758d"
+        },
+        "projects/thingsboard/bidi/console.log": {
+          "bytes": 16239974,
+          "sha256": "219eea9d66b55e1e382a7b05b9774509e9077498093e2820ec9d099634b92582"
+        },
+        "projects/thingsboard/bidi/continuous-direct-jfr-raw-summary.json": {
+          "bytes": 4899760,
+          "sha256": "46046643246ebd48b8b854c53d52b1dac07798bb0051e458d181a1464154ea78"
+        },
+        "projects/thingsboard/bidi/continuous-direct-workload-profile-summary.json": {
+          "bytes": 1986721,
+          "sha256": "7fb7efb5e4aca433b3115f18131b99f392765b662eaa1ea5199065ee1d58c625"
+        },
+        "projects/thingsboard/bidi/direct-jfr-scopes.tsv": {
+          "bytes": 738,
+          "sha256": "3bf30b9f751f978cead22b250580b9efc371a7355fc6267d38550b2fa91dc9ac"
+        },
+        "projects/thingsboard/bidi/direct-jfr-windows.tsv": {
+          "bytes": 599,
+          "sha256": "4b8bca4fbee5ac8a9de0047f0cf4b95123dd1a6e185a474708f5638ada84d79e"
+        },
+        "projects/thingsboard/bidi/gc.log": {
+          "bytes": 4239275,
+          "sha256": "3f7ba37eb81287396e494d0218a757865ea953feb4f067e7de83e782bd170199"
+        },
+        "projects/thingsboard/bidi/gradle.pid": {
+          "bytes": 8,
+          "sha256": "2db2b8e136f93c00d622ecd3617547601b12b24525f6070034e476fe98246e45"
+        },
+        "projects/thingsboard/bidi/manifest.json": {
+          "bytes": 3279,
+          "sha256": "1114c6b092adea4552175c345135c2238f68c823164e34ebf0959fa3596767c1"
+        },
+        "projects/thingsboard/bidi/memory-summary.json": {
+          "bytes": 800898,
+          "sha256": "ebbc21a1846b1c27a42f27ff62e4764328bc7c0b701968c03f2c71f7c7942994"
+        },
+        "projects/thingsboard/bidi/near-limit-profiler.log": {
+          "bytes": 30,
+          "sha256": "29f57b1c74c2437048315ab7c5d8f228ed0481f54e552112f4b43b3e3512d2ca"
+        },
+        "projects/thingsboard/bidi/normal-profiler.log": {
+          "bytes": 30,
+          "sha256": "29f57b1c74c2437048315ab7c5d8f228ed0481f54e552112f4b43b3e3512d2ca"
+        },
+        "projects/thingsboard/bidi/observer-cpu-components.json": {
+          "bytes": 32165,
+          "sha256": "72f9998c09cde2dcb3ec33e23f6a213e2fd0811a16c27d95861191fb4bdbfa0e"
+        },
+        "projects/thingsboard/bidi/reports/report-ifds.sarif": {
+          "bytes": 282554,
+          "sha256": "fa472356b7dae9802ff7811eb7ebc213d881171d04a2d54acee86bc753c537b5"
+        },
+        "projects/thingsboard/bidi/resources.jsonl": {
+          "bytes": 231440,
+          "sha256": "bbcc116afaa026794e231e93e37f7c10cd91088a031f05406e715217f1d09ab1"
+        },
+        "projects/thingsboard/bidi/run-2-end-direct-jfr-raw-summary.json": {
+          "bytes": 4892174,
+          "sha256": "574ea4e874c378dad5459ebce48492ee3cfeb0519aa2aabd5260cb1763c26cc4"
+        },
+        "projects/thingsboard/bidi/run-2-end-direct-workload-profile-summary.json": {
+          "bytes": 1986732,
+          "sha256": "b153a0150a68c7346d35f58d72ef03acd0ba8aa2c410879b7f3d692f837421e8"
+        },
+        "projects/thingsboard/bidi/run-2-normal-profiler.log": {
+          "bytes": 30,
+          "sha256": "29f57b1c74c2437048315ab7c5d8f228ed0481f54e552112f4b43b3e3512d2ca"
+        },
+        "projects/thingsboard/bidi/run1-direct-jfr-raw-summary.json": {
+          "bytes": 3719097,
+          "sha256": "84c39179e29c62459d1b795394bdb5e3d78c9f58d95e701830941067872a520c"
+        },
+        "projects/thingsboard/bidi/run1-direct-workload-profile-summary.json": {
+          "bytes": 935351,
+          "sha256": "09bd2b82143a68a94ac4a0beadb94fdf92fb7003719301754edf49e0f6614060"
+        },
+        "projects/thingsboard/bidi/summary.json": {
+          "bytes": 7448,
+          "sha256": "10fb4efa9ba6c174791259562a8437a3cc0f64f74af92df72ae6ea662ad2ad64"
+        },
+        "projects/Stirling-PDF/bidi/analyzer-process.json": {
+          "bytes": 15265,
+          "sha256": "d603d27247862de676b8c7790c63fe092d1688738b410fb88dae2a48c184a2cd"
+        },
+        "projects/Stirling-PDF/bidi/analyzer.log": {
+          "bytes": 5745920,
+          "sha256": "776fede102bf9a907980a7ba5526a3bf16e42cbc2403cc8afd18febf3c54b650"
+        },
+        "projects/Stirling-PDF/bidi/benchmark.init.gradle": {
+          "bytes": 1870,
+          "sha256": "ddc5882c2143fcd9c2af85a0a287202e8f1c5ca39990a63770d3aa4a74a118b8"
+        },
+        "projects/Stirling-PDF/bidi/collapsed-candidate-memberships.json": {
+          "bytes": 3100,
+          "sha256": "9df35f27542dce17d0a40588439eb3cbc7e70c6dd69a6509a4328ff3f2809687"
+        },
+        "projects/Stirling-PDF/bidi/collapsed-cpu-summary.json": {
+          "bytes": 46602,
+          "sha256": "12d8d6731d6317e37b938cf88884e00782766af0f25c543265cae2e462db9562"
+        },
+        "projects/Stirling-PDF/bidi/console.log": {
+          "bytes": 5768924,
+          "sha256": "a7f8ad233574072134e65d68bc3930b8c7679fbd7cf71ce770584e4fa5336c3a"
+        },
+        "projects/Stirling-PDF/bidi/continuous-direct-jfr-raw-summary.json": {
+          "bytes": 7519171,
+          "sha256": "ab0dcf1f53cdf52142bf2c8f6e82186960c3a8493485e34593e1443bdd8db1fc"
+        },
+        "projects/Stirling-PDF/bidi/continuous-direct-workload-profile-summary.json": {
+          "bytes": 4664471,
+          "sha256": "2b804c7e747816cdbccd1c74eea6d8e928e495ace346bb0c65a1d8e4f790eab3"
+        },
+        "projects/Stirling-PDF/bidi/continuous-workload-jfr-reader.log": {
+          "bytes": 63,
+          "sha256": "d47f2144497a5010b10563a538b1812239f9f8f4057fe771abd430c602482969"
+        },
+        "projects/Stirling-PDF/bidi/continuous-workload-profile-summary.json": {
+          "bytes": 4619226,
+          "sha256": "b292160b66db29968758ddc393561d51dd5d8d674d604dd1186f6d938d617aed"
+        },
+        "projects/Stirling-PDF/bidi/direct-jfr-scopes.tsv": {
+          "bytes": 738,
+          "sha256": "3bf30b9f751f978cead22b250580b9efc371a7355fc6267d38550b2fa91dc9ac"
+        },
+        "projects/Stirling-PDF/bidi/direct-jfr-windows.tsv": {
+          "bytes": 1559,
+          "sha256": "3b3a0473592088be5d9e3e3cbeb3f8d189fe0e0ebb809e53ffb7ac5a61ebcac4"
+        },
+        "projects/Stirling-PDF/bidi/gc.log": {
+          "bytes": 1163029,
+          "sha256": "a07836078b4cda27db21c6ccfebd878d9549b1641756aad7587ef3d0f039a706"
+        },
+        "projects/Stirling-PDF/bidi/gradle.pid": {
+          "bytes": 8,
+          "sha256": "c4b8884f5f389e0fadeef6bfcc16bc6d975fd952e2a16fbe6682aa388f5c4bbd"
+        },
+        "projects/Stirling-PDF/bidi/manifest.json": {
+          "bytes": 3223,
+          "sha256": "3e86b9c5f6ef1f0167a7529959502f5dc807fbf8805f4f110eb24703412e67cf"
+        },
+        "projects/Stirling-PDF/bidi/memory-summary.json": {
+          "bytes": 230806,
+          "sha256": "1c1a17ba0b01c40fa5507ac23074dcf27c1823bec08e910f4240401831bbe8d3"
+        },
+        "projects/Stirling-PDF/bidi/near-limit-profiler.log": {
+          "bytes": 30,
+          "sha256": "29f57b1c74c2437048315ab7c5d8f228ed0481f54e552112f4b43b3e3512d2ca"
+        },
+        "projects/Stirling-PDF/bidi/observer-cpu-components.json": {
+          "bytes": 81387,
+          "sha256": "765dc14394e3490b8b7994749a64ed222f661493de25b2d998a930c539cbe0a0"
+        },
+        "projects/Stirling-PDF/bidi/reports/report-ifds.sarif": {
+          "bytes": 299387,
+          "sha256": "0fdc678016dfad5445ba74b53a06a87d6ec19dbaa152f8237ca3d352c763236f"
+        },
+        "projects/Stirling-PDF/bidi/resources.jsonl": {
+          "bytes": 226215,
+          "sha256": "8dc883c1235a2c303221a765a12f766ad5eae368aab173c615e18666013a1687"
+        },
+        "projects/Stirling-PDF/bidi/run-2-end-direct-jfr-raw-summary.json": {
+          "bytes": 3588848,
+          "sha256": "d607145d0c2c306ad3515f5235306ac2679e0b59243d590f15ae8208b25ca01e"
+        },
+        "projects/Stirling-PDF/bidi/run-2-end-direct-workload-profile-summary.json": {
+          "bytes": 1590099,
+          "sha256": "306e574b6ef51a4fa9320e5467319756412943b0812cbcd9a2b146d8a6071bf1"
+        },
+        "projects/Stirling-PDF/bidi/run-3-end-direct-jfr-raw-summary.json": {
+          "bytes": 4593758,
+          "sha256": "65d9669d8aef34c322032844946e83ecf7fc93c912000a2b4d41bb3912b84f7c"
+        },
+        "projects/Stirling-PDF/bidi/run-3-end-direct-workload-profile-summary.json": {
+          "bytes": 2330951,
+          "sha256": "bcf0440317f975f0ea1ac1a25bdf86c8f1fbf14837c44d54e9ebe1efc0045868"
+        },
+        "projects/Stirling-PDF/bidi/run-4-end-direct-jfr-raw-summary.json": {
+          "bytes": 5300613,
+          "sha256": "eaa85eaa83ec468b43897af3645d15fb79cedb8e4d8720a4c524639ebfb6752a"
+        },
+        "projects/Stirling-PDF/bidi/run-4-end-direct-workload-profile-summary.json": {
+          "bytes": 2968581,
+          "sha256": "ba91b570e6544067e161ce67632ff006af184163a95abbbb203eed47fca048a1"
+        },
+        "projects/Stirling-PDF/bidi/run-5-end-direct-jfr-raw-summary.json": {
+          "bytes": 5870515,
+          "sha256": "055f8e662bab5693c7470c0116d3bf9ab48edc65e3e2a2bb4d0857f58e951777"
+        },
+        "projects/Stirling-PDF/bidi/run-5-end-direct-workload-profile-summary.json": {
+          "bytes": 3455404,
+          "sha256": "24976e21092dc38101a0a41892bca010040220b063031c45e9cf2f6ef84023a1"
+        },
+        "projects/Stirling-PDF/bidi/run-6-end-direct-jfr-raw-summary.json": {
+          "bytes": 6405997,
+          "sha256": "dee0301a0266e44ee57687c67cb6dfe5bfd90545fa8a47a9e8d896fd264cd05d"
+        },
+        "projects/Stirling-PDF/bidi/run-6-end-direct-workload-profile-summary.json": {
+          "bytes": 3832404,
+          "sha256": "908f3cc370668e8fafd5a7a64a9b07527d108fe572ee995c2a556fd944b8ba32"
+        },
+        "projects/Stirling-PDF/bidi/run-6-normal-profiler.log": {
+          "bytes": 30,
+          "sha256": "29f57b1c74c2437048315ab7c5d8f228ed0481f54e552112f4b43b3e3512d2ca"
+        },
+        "projects/Stirling-PDF/bidi/run-7-end-direct-jfr-raw-summary.json": {
+          "bytes": 7120455,
+          "sha256": "c60d806f80b31441aba1e3d8c3f2d6cf32acf6ca67041ce364f79ab82515a955"
+        },
+        "projects/Stirling-PDF/bidi/run-7-end-direct-workload-profile-summary.json": {
+          "bytes": 4370726,
+          "sha256": "546353b83c22eb1557df57919b865a277b317dbf47984292f975950bc7a34bab"
+        },
+        "projects/Stirling-PDF/bidi/run-7-normal-profiler.log": {
+          "bytes": 30,
+          "sha256": "29f57b1c74c2437048315ab7c5d8f228ed0481f54e552112f4b43b3e3512d2ca"
+        },
+        "projects/Stirling-PDF/bidi/run-8-end-direct-jfr-raw-summary.json": {
+          "bytes": 7514357,
+          "sha256": "7ea86fca47b32c514fd99d559457adfa011a726f9c26f20001f32bcf8af61074"
+        },
+        "projects/Stirling-PDF/bidi/run-8-end-direct-workload-profile-summary.json": {
+          "bytes": 4664449,
+          "sha256": "9a9c9e3728f1760328014d29b8c040fe7cfac5963a7d6d64f1404db2c17188db"
+        },
+        "projects/Stirling-PDF/bidi/run1-direct-jfr-raw-summary.json": {
+          "bytes": 2442441,
+          "sha256": "2a930d72bf7a0ab856ebea4a1d8e4301523c6d90ace270e9ae230bc5d884962c"
+        },
+        "projects/Stirling-PDF/bidi/run1-direct-workload-profile-summary.json": {
+          "bytes": 1048499,
+          "sha256": "b1c6dd7eef574e4f659e5d418e03a9fe79967419911f2d5eb44e78cb5a2cf58d"
+        },
+        "projects/Stirling-PDF/bidi/summary.json": {
+          "bytes": 7726,
+          "sha256": "e5188d947e338cf43afb0c0cea69bce5d26e0e36e08f04f9dfab1f896dad1dc6"
+        }
+      },
+      "completedUTC": "2026-11-03T09:26:41.836542+00:00",
+      "deletedFileCount": 30,
+      "deletedBytes": 1558936327,
+      "preservedFilesVerified": true
+    },
+    "archivePath": "/drive-testcomp/opentaint-go-rules/loop-blocks-restriction-corrected-20261102/preparation/derived-capture-evidence.tar.gz",
+    "archiveSha256": "3700e4295a4114a53a02992c56ba98f6f9a47c940aa98f47adb325c0cbddbcc2",
+    "measuredResultsUnchanged": true
+  }
 }

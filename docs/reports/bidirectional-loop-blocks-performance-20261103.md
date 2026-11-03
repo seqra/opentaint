@@ -211,7 +211,7 @@ All four commands finished, but the optimization task is not complete. Resolve t
 
 The saved f945 and 86ad reports are reused. The source-equivalence flags in the data file cover four named call-lowering/exporter files only. They do not establish whole-analyzer semantic equality. Every sampled hot-owner `normalExitGaps` count is zero; the logs do not cover every owner, so this is not a complete layout proof.
 
-No new analyzer configuration, baseline run, heap request, or runtime modification was used to produce this report. No raw capture was deleted during this post-processing.
+No new analyzer configuration, baseline run, heap request, or runtime modification was used to produce this measured report. After profile interpretation, all 30 raw JFR/CPU captures (1,558,936,327 bytes) were individually hashed, derived, and removed. All 113 non-raw project files were checked and retained. The 25,412,208-byte derived archive has SHA-256 `3700e4295a4114a53a02992c56ba98f6f9a47c940aa98f47adb325c0cbddbcc2`. The cleanup receipt has SHA-256 `f83532b29ebc2dd0d977a346dd93a7570d5df64fade5dd7e4ed0391bd1d4daf6`. Its full contents are embedded in the report data. The archive also preserves derived summaries for 19 closed snapshots; overlapping recordings must not be summed. This cleanup changes no finding, timing, or quality status.
 
 ## 9. Post-measurement scope-routing correction
 
