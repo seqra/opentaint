@@ -21,12 +21,68 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
         if (core.forward && core.config.run1) Run1OriginConjunctionStore(core.ap) else null
     private var originPredicateStore: Run1OriginPredicateStore? =
         if (core.forward && core.config.run1) Run1OriginPredicateStore(core.ap, core.context.shared.formStatistics) else null
+    // FULL condition evidence belongs to one semantic operation point. E6
+    // call-summary joins keep the separate actor-wide conjunctionStore above.
+    private val conditionConjunctions = HashMap<NormalRuleSite, ConjunctionStore>()
+    private val conditionPredicates = HashMap<NormalRuleSite, RulePredicateStore>()
+    private val conditionOriginConjunctions = HashMap<NormalRuleSite, Run1OriginConjunctionStore>()
+    private val conditionOriginPredicates = HashMap<NormalRuleSite, Run1OriginPredicateStore>()
     override val conjunctions: ConjunctionStore? get() = conjunctionStore
     private var triggered: HashSet<Pair<CommonInst, Any>>? = HashSet()
     override val hasPendingRequests: Boolean get() = owner?.abstraction?.hasPending == true
 
     private fun activeCore(): BlockRunState =
         checkNotNull(owner) { "The local services were frozen" }.also { it.ap.cancellation.checkpoint() }
+
+    private fun predicatesAt(rule: NormalRuleDescriptor, at: OperationInput): RulePredicateStore {
+        val core = activeCore()
+        return if (core.mode.markMode != MarkMode.FULL) checkNotNull(predicateStore)
+        else conditionPredicates.getOrPut(NormalRuleContributors.stableSite(rule, at.site)) {
+            RulePredicateStore(core.ap, core.context.shared.formStatistics)
+        }
+    }
+
+    private fun conjunctionsAt(rule: NormalRuleDescriptor, at: OperationInput): ConjunctionStore {
+        val core = activeCore()
+        return if (core.mode.markMode != MarkMode.FULL) checkNotNull(conjunctionStore)
+        else conditionConjunctions.getOrPut(NormalRuleContributors.stableSite(rule, at.site)) {
+            ConjunctionStore(core.ap, core.context.shared.n2Statistics)
+        }
+    }
+
+    private fun originPredicatesAt(rule: NormalRuleDescriptor, at: OperationInput): Run1OriginPredicateStore {
+        val core = activeCore()
+        return if (core.mode.markMode != MarkMode.FULL) checkNotNull(originPredicateStore)
+        else conditionOriginPredicates.getOrPut(NormalRuleContributors.stableSite(rule, at.site)) {
+            Run1OriginPredicateStore(core.ap, core.context.shared.formStatistics)
+        }
+    }
+
+    private fun originConjunctionsAt(rule: NormalRuleDescriptor, at: OperationInput): Run1OriginConjunctionStore {
+        val core = activeCore()
+        return if (core.mode.markMode != MarkMode.FULL) checkNotNull(originConjunctionStore)
+        else conditionOriginConjunctions.getOrPut(NormalRuleContributors.stableSite(rule, at.site)) {
+            Run1OriginConjunctionStore(core.ap)
+        }
+    }
+
+    /** Only a current accepted leaf activates earlier NORMAL conditional
+     * evidence. Ready cached bindings use this invocation's ordinary callback. */
+    private fun <B> acceptedLeaf(rule: NormalRuleDescriptor, at: OperationInput, leaf: Int,
+                               input: ConjunctionStore.Input,
+                               add: (Int, ConjunctionStore.Input, (B) -> Unit) -> Unit,
+                               cache: Boolean = true,
+                               emit: (B) -> Unit) {
+        val core = activeCore()
+        if (!cache) { add(leaf, input, emit); return }
+        val ready = ArrayList<B>()
+        if (!core.config.run1) core.normalRuleContributors.restoreOnce(rule, at.site) { saved ->
+            add(saved.leaf, saved.input) { ready += it }
+        }
+        core.normalRuleContributors.keep(rule, at.site, leaf, input)
+        for (binding in ready) emit(binding)
+        add(leaf, input, emit)
+    }
 
     override fun addMarkRequest(premise: InitialAp, mark: TaintMark) {
         val core = activeCore()
@@ -56,7 +112,9 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
                                at: OperationInput, sink: (PremiseKey, Facts) -> Unit) {
         val core = activeCore()
         if (!RuntimeDataDomain.packet(premise, facts) || !RuntimeDataDomain.base(edge.target.base)) return
-        val store = checkNotNull(conjunctionStore) { "A backward form has independent conjunction branches" }
+        check(core.forward) { "A backward form has independent conjunction branches" }
+        val rule = NormalRuleDescriptor.legacyConjunction(edge)
+        val store = conjunctionsAt(rule, at)
         for ((index, literal) in edge.literals.withIndex()) {
             core.ap.cancellation.checkpoint()
             if (literal.fact.base != facts.base) continue
@@ -66,18 +124,20 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
                 is MarkCheck.Holds -> {
                     val input = ConjunctionStore.Input(premise, checked.facts.layer, checked.facts)
                     if (core.config.run1) {
+                        core.normalRuleContributors.keep(rule, at.site, index, input)
                         val targets = HashMap<Layer, Facts>()
                         val assigned = runtimeAtom(core, (edge.target.mark as? MarkSlot.Concrete)?.mark)
                         val triggering = runtimeAtom(core, (literal.fact.mark as? MarkSlot.Concrete)?.mark)
-                        checkNotNull(originConjunctionStore).addProtectedOrigins(edge, node, edge.literals.size, index, input, assigned, triggering) { initial, layer, nonSubsumable ->
+                        originConjunctionsAt(rule, at).addProtectedOrigins(edge, node, edge.literals.size, index, input, assigned, triggering) { initial, layer, nonSubsumable ->
                             val result = targets.getOrPut(layer) { core.ops.targetTree(edge.target, layer, core.mode) }
                             sink(initial, core.forceRun1Layer(initial, protectTarget(result, nonSubsumable)))
                         }
                         continue
                     }
-                    val combinations = store.add(edge, node, edge.literals.size, index,
-                        input)
-                    for (combination in combinations) {
+                    acceptedLeaf<ConjunctionStore.Combination>(rule, at, index, input,
+                        add = { leaf, accepted, emit ->
+                            for (combination in store.add(edge, node, edge.literals.size, leaf, accepted)) emit(combination)
+                        }) { combination ->
                         core.ap.cancellation.checkpoint()
                         val result = core.ops.targetTree(edge.target, combination.layer, core.mode)
                         val protected = ruleProtection(core, combination.inputs, combination.premise,
@@ -129,13 +189,15 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
             return
         }
         check(core.forward)
+        val rule = NormalRuleDescriptor.predicate(source.id)
         fun multiLeaf(selected: RulePredicate, leaf: Int, pattern: Pattern, allowSingle: Boolean) {
             when (val checked = core.ops.checkMark(facts, pattern, core.mode, core.unchangedStaticInitial(premise))) {
                 MarkCheck.None -> Unit
                 is MarkCheck.Request -> core.needGroups(at, checked.mark)
                 is MarkCheck.Holds -> if (core.config.run1) {
-                    checkNotNull(originPredicateStore).add(source.id, node, selected, leaf,
-                        ConjunctionStore.Input(premise, checked.facts.layer, checked.facts)) { cube ->
+                    val input = ConjunctionStore.Input(premise, checked.facts.layer, checked.facts)
+                    core.normalRuleContributors.keep(rule, at.site, leaf, input)
+                    originPredicatesAt(rule, at).add(source.id, node, selected, leaf, input) { cube ->
                         if (allowSingle || cube.leaves.size >= 2) for (action in source.actions) {
                             core.ap.cancellation.checkpoint()
                             if (!RuntimeDataDomain.base(action.target.base)) continue
@@ -151,8 +213,9 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
                             }
                         }
                     }
-                } else checkNotNull(predicateStore).add(source.id, node, selected, leaf,
-                    ConjunctionStore.Input(premise, checked.facts.layer, checked.facts)) { combination ->
+                } else acceptedLeaf<RulePredicateStore.Combination>(rule, at, leaf,
+                    ConjunctionStore.Input(premise, checked.facts.layer, checked.facts),
+                    add = { index, input, emit -> predicatesAt(rule, at).add(source.id, node, selected, index, input, emit) }) { combination ->
                     // GROUP folding can leave one accepted leaf in an original MULTI transfer.
                     if (allowSingle || combination.leaves.size >= 2) for (action in source.actions) {
                         core.ap.cancellation.checkpoint()
@@ -227,6 +290,7 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
             core.ap.cancellation.checkpoint()
             val predicate = sink.predicate
             if (predicate != null && !predicate.isTrue) {
+                val rule = NormalRuleDescriptor.predicate(checkNotNull(sink.occurrenceId))
                 matchingLeaves(core, predicate, facts) { index, literal ->
                     core.ap.cancellation.checkpoint()
                     when (val checked = core.ops.checkMark(facts, literal, core.mode, core.unchangedStaticInitial(premise))) {
@@ -234,8 +298,11 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
                         is MarkCheck.Request -> core.needGroups(at, checked.mark)
                         is MarkCheck.Holds -> {
                             parts += checked.facts
-                            checkNotNull(predicateStore).addBinding(checkNotNull(sink.occurrenceId), node, predicate, index,
-                                ConjunctionStore.Input(premise, checked.facts.layer, checked.facts)) { combination ->
+                            acceptedLeaf<RulePredicateStore.CompletePredicateBinding>(rule, at, index,
+                                ConjunctionStore.Input(premise, checked.facts.layer, checked.facts),
+                                add = { leaf, input, emit -> predicatesAt(rule, at).addBinding(
+                                    checkNotNull(sink.occurrenceId), node, predicate, leaf, input, emit) },
+                                cache = predicate.isMulti(index)) { combination ->
                                 val edges = combination.inputs.map {
                                     SinkEdge(it.premise, it.layer, checkNotNull(it.facts))
                                 }
@@ -258,9 +325,13 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
                             witness(core, sink, node, listOf(SinkEdge(premise, checked.facts.layer, checked.facts)))
                             fired += sink to checked.facts.layer
                         } else {
-                            val combinations = checkNotNull(conjunctionStore).addBinding(sink.joinKey, node, sink.patterns.size, index,
-                                ConjunctionStore.Input(premise, checked.facts.layer, checked.facts))
-                            for (combination in combinations) {
+                            val rule = NormalRuleDescriptor.legacySink(sink)
+                            acceptedLeaf<ConjunctionStore.CompleteBinding>(rule, at, index,
+                                ConjunctionStore.Input(premise, checked.facts.layer, checked.facts),
+                                add = { leaf, input, emit ->
+                                    for (combination in conjunctionsAt(rule, at).addBinding(sink.joinKey, node,
+                                        sink.patterns.size, leaf, input)) emit(combination)
+                                }) { combination ->
                                 core.ap.cancellation.checkpoint()
                                 val edges = combination.inputs.map { input ->
                                     core.ap.cancellation.checkpoint()
@@ -373,6 +444,10 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
     }
 
     override fun freeze() {
+        conditionConjunctions.clear()
+        conditionPredicates.clear()
+        conditionOriginConjunctions.clear()
+        conditionOriginPredicates.clear()
         conjunctionStore = null
         predicateStore = null
         originConjunctionStore = null

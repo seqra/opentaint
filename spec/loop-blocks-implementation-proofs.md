@@ -1,12 +1,12 @@
 # Loop-block implementation: proof dossier
 
-Date: 2 November 2026. The selected boundary corrections have checked local
-models and pass 2,372 common and 453 JVM tests. The source-pinned receipt
+Date: 2 November 2026. Updated: 3 November. The selected boundary and NORMAL
+ND contributor corrections pass 2,395 common and 453 JVM tests. The source-pinned receipt
 records this native gate; it does not prove the Kotlin/AP adapters or project
-quality. The latest attempted campaign (`3750b73a`) reached OWASP
-**run-1 FAILED**, with no completed or accepted iteration, then stopped
-conductor during prescan. The earlier `10957156` campaign completed OWASP
-**run-5** with 51 missing baseline sink identities. A fresh campaign is required.
+quality. The latest measured revision (`6052e2ea`) completed and accepted
+OWASP **run-5** with 18 missing baseline sink identities. Conductor reached
+**run-2 FAILED**, with **run-1** complete/accepted. Thingsboard stopped in
+prescan; Stirling-PDF did not start. A fresh campaign is required.
 Proposal section 6.1 uses existing exceptional-exit backward discovery.
 The selected compatibility hack also lets a reached backward exceptional
 ZERO apply the normal-exit paired control demand. It adds no new start.
@@ -559,6 +559,30 @@ path as the current implementation, so its behavior is not justified by
 a new decomposition assumption. The repeated-read, internal source/sink,
 port-specific kill/source and two-loop recursive-AL controls in proposal
 section 12 are required end-to-end tests.
+
+## 4.1 NORMAL ND contributors across forward runs
+
+The [selected contributor spec](normal-nd-contributors.md) changes the
+lifetime of accepted NORMAL condition edges. It keeps their full premises
+and metadata at the exact owner and semantic operation point. A current
+accepted check restores them into the ordinary join. It creates no ZERO
+admission, source permission, CFG packet or demand merely by loading them.
+
+The [separate constructive model](lean/proposals/normal-nd-contributors-20261103/README.md)
+passes 55 theorems and audits 92 declarations. Only `propext` and
+`Quot.sound` occur in the axiom audit. It proves conditional premise union,
+NORMAL-only retention, complete finite binding enumeration, activation,
+layer preservation, exact-point isolation, metadata identity and duplicate
+suppression. CALL_SINK addresses share their semantic BOUND point;
+different source phases remain separate. It does not replace the production
+NNF evaluator or prove the Kotlin adapter.
+
+The [new native receipt](../docs/reports/data/bidirectional-normal-nd-contributors-validation-20261103.json)
+covers the failing SESSION/DATA loop case, its three controls, eight local
+service controls, ten store controls, and all existing common/JVM tests.
+It pins the full selected Kotlin source set. The earlier native receipt
+and the before-implementation evidence stay unchanged. Project quality
+and speed still require the new campaign.
 
 ## 5. Work claims and limits
 

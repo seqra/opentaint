@@ -1,0 +1,11 @@
+{
+  "sourceRole": "Immutable pre-correction baseline references. These hashes identify existing join and AP interfaces; they do not verify the selected runtime adapter or current working tree.",
+  "baselineRevision": "6052e2ea2d400a7f1f47c0f5fe4497bae23e2ace",
+  "productionVerified": false,
+  "sources": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/ConjunctionStore.kt": "8f758a03e52335cecaa183e2b41086528c47c0d018a25626e1ec0297b5029443",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RulePredicateStore.kt": "df05e515f65d208815079599d190cb06d21d197d548b36446a7ed60d586c0cb5",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodLocalServices.kt": "04add0c7df29538c4536056d65a45ff621e056ea6ec1b0b1677073fd9fb66c91",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Facts.kt": "9aa496dcd49a96333843a2fa70ffc0b2284bcad7aec92a7b990667b9c3af7cf1"
+  }
+}

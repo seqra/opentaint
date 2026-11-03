@@ -221,6 +221,10 @@ class IterationDriver internal constructor(
         logger.info { "BIDI_TARGET_STATISTICS run=${config.index} raw=${result.analyzers.sumOf { it.targets.size }} outgoing=${result.analyzers.sumOf { it.outgoingTargets.size }} reports=${terminals.entries.size} blockRaw=${result.analyzers.asSequence().flatMap { it.blockTargets() }.sumOf { it.rows.size }} blockOutgoing=${result.analyzers.asSequence().flatMap { it.blockOutgoingTargets() }.sumOf { it.rows.size }}" }
         // All fallible preparation precedes this single terminal/report commit.
         shared.cancellation.checkpoint()
+        if (forward && config.mode.markMode == MarkMode.FULL) {
+            shared.normalRuleContributors.publish(result.analyzers.asSequence()
+                .flatMap { it.normalContributorRows() }.asIterable())
+        }
         report.commit(terminals)
         return next
     }

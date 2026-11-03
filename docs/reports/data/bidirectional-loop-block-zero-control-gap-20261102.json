@@ -1,0 +1,1256 @@
+{
+  "state": "DESIGN_DECISION_REQUIRED",
+  "dateUTC": "2026-11-02T21:01:07.821456+00:00",
+  "measuredRevision": "6052e2ea2d400a7f1f47c0f5fe4497bae23e2ace",
+  "project": {
+    "latestReached": "run-5",
+    "latestComplete": "run-5",
+    "latestAccepted": "run-5",
+    "baselineIdentities": 4112,
+    "currentIdentities": 4094,
+    "missing": 18,
+    "added": 0,
+    "oldMissingRecovered": 33,
+    "newMissingOutsideOld51": 0
+  },
+  "qualityEvidence": {
+    "state": "CURRENT_QUALITY_GATE_FAILED_PRELIMINARY_SOURCE_REVIEW",
+    "revision": "6052e2ea2d400a7f1f47c0f5fe4497bae23e2ace",
+    "latestReached": "run-5",
+    "latestComplete": "run-5",
+    "latestAccepted": "run-5",
+    "fixedBaselineIdentities": 4112,
+    "immediateControlIdentities": 4112,
+    "currentIdentities": 4094,
+    "missing": 18,
+    "added": 0,
+    "overlapWithPrevious51": 18,
+    "newOutsidePrevious51": 0,
+    "recoveredFromPrevious51": 33,
+    "remainingRuleFamilies": {
+      "java/security/insecure-design.yaml:trust-boundary-violation": 18
+    },
+    "sourceFamilies": {
+      "cookies": 14,
+      "headerNames": 2,
+      "parameterNames": 2
+    },
+    "benchmarkExpectedLabels": {
+      "false": 5,
+      "true": 13
+    },
+    "hypothesis": "The remaining trust-boundary paths also require the post-loop getSession receiver binding in addition to the loop-derived user input. This is a rule-family-specific multi-stage/producer path; the first missing current demand, source permission, or complete sink binding is not yet identified.",
+    "qualification": "All18 are strict f945 and86ad identity losses, including13 benchmark true cases. Membership in the previous51 does not make them accepted. No current native semantic reproducer has yet been run for this family.",
+    "evidence": {
+      "classification": {
+        "path": "/drive-testcomp/opentaint-go-rules/loop-blocks-restriction-retry-20261102/analysis/quality-classification/OWASP.json",
+        "sha256": "ce580a5afd3efd74a00b37b21140f5536a708d7c37e5e427ade43c99293967b9"
+      },
+      "prior51": {
+        "path": "/drive-testcomp/opentaint-go-rules/loop-blocks-restriction-fixed-20261102/analysis-tools/quality-review/OWASP-missing-root-cause.json",
+        "sha256": "0b1d0a974b8cacdb5723159cc0ba3d75a9a277df6786613296f9f1c7a06cfc82"
+      }
+    },
+    "rows": [
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "+zrvLRz1Iito4/yhthfb4ufuK7hXIRxXa6td4O79XtM=",
+          "org.owasp.benchmark.testcode.BenchmarkTest00993#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "+zrvLRz1Iito4/yhthfb4ufuK7hXIRxXa6td4O79XtM=",
+            "org.owasp.benchmark.testcode.BenchmarkTest00993#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "+zrvLRz1Iito4/yhthfb4ufuK7hXIRxXa6td4O79XtM=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest00993#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 38,
+          "instruction": "%31.putValue(\"userid\", bar)",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00993.java",
+          "region": {
+            "endColumn": 53,
+            "endLine": 69,
+            "startColumn": 9,
+            "startLine": 69
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest00993#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):38:(%31.putValue(\"userid\", bar))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest00993#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00993.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 53,
+                "endLine": 69,
+                "startColumn": 9,
+                "startLine": 69
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "+zrvLRz1Iito4/yhthfb4ufuK7hXIRxXa6td4O79XtM=",
+            "vulnerabilityWithTraceHash/v1": "fM86Glg1ieHIHhJ9gPzYgxvbfY2Ry8yQZVZWHWAHtw0=",
+            "vulnerabilitySourceSinkHash/v1": "FgKq6mCeI0w7L1TqCG9cGNklJrFgIhijjm6sa6EAJHE="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 3219,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "cookies",
+        "benchmarkExpectedRealVulnerability": false,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "11f9bf5a9abd8e37cda10f89d826ea23e2658d26e8e6bc59bfc8ccd02ce2a267"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "BIG74iyPOXJ2cdCFdDFqOq3ZD5rg0rIlMy0wd1+HWp8=",
+          "org.owasp.benchmark.testcode.BenchmarkTest01875#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "BIG74iyPOXJ2cdCFdDFqOq3ZD5rg0rIlMy0wd1+HWp8=",
+            "org.owasp.benchmark.testcode.BenchmarkTest01875#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "BIG74iyPOXJ2cdCFdDFqOq3ZD5rg0rIlMy0wd1+HWp8=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest01875#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 32,
+          "instruction": "%30.setAttribute(bar, \"10340\")",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest01875.java",
+          "region": {
+            "endColumn": 56,
+            "endLine": 69,
+            "startColumn": 9,
+            "startLine": 69
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest01875#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):32:(%30.setAttribute(bar, \"10340\"))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest01875#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest01875.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 56,
+                "endLine": 69,
+                "startColumn": 9,
+                "startLine": 69
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "BIG74iyPOXJ2cdCFdDFqOq3ZD5rg0rIlMy0wd1+HWp8=",
+            "vulnerabilityWithTraceHash/v1": "5t0VRbTPUDuMLBKP32nypw1YlJ3lS1Qj/85FWMprb2E=",
+            "vulnerabilitySourceSinkHash/v1": "T0/Ps2sw1bGsJLz7XB4jrwVFB4lFPhs4h7wMGknlpeU="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 41,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "cookies",
+        "benchmarkExpectedRealVulnerability": true,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "e92ba3f9a1af5d25962eea2d21664c17af4d56a846449afa39a61593bd68c564"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "GWxQ+Dbr0FGSW3eQ/hsCZwluNqHknOhdGAzecVS8HVM=",
+          "org.owasp.benchmark.testcode.BenchmarkTest01143#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "GWxQ+Dbr0FGSW3eQ/hsCZwluNqHknOhdGAzecVS8HVM=",
+            "org.owasp.benchmark.testcode.BenchmarkTest01143#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "GWxQ+Dbr0FGSW3eQ/hsCZwluNqHknOhdGAzecVS8HVM=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest01143#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 27,
+          "instruction": "%22.putValue(\"userid\", bar)",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest01143.java",
+          "region": {
+            "endColumn": 53,
+            "endLine": 64,
+            "startColumn": 9,
+            "startLine": 64
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest01143#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):27:(%22.putValue(\"userid\", bar))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest01143#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest01143.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 53,
+                "endLine": 64,
+                "startColumn": 9,
+                "startLine": 64
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "GWxQ+Dbr0FGSW3eQ/hsCZwluNqHknOhdGAzecVS8HVM=",
+            "vulnerabilityWithTraceHash/v1": "nm/I4GVdZV6P2byYe7ZEUqj5OY26H3K/uhdVqo5nzfE=",
+            "vulnerabilitySourceSinkHash/v1": "5whMBnNA1HLfnbjcJNyJacPjB+YWGi8ALGj5HbgMp2Y="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 2,
+          "run_index": 0,
+          "result_index": 3759,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "headerNames",
+        "benchmarkExpectedRealVulnerability": true,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "57c242069113c3cf044f87fe2775c12bc03c03fedf77e106924725477f3ad3de"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "HpIrOFopwmFyIB7Dqh11ktumq2Ft2/c1xAJkmkqmKo8=",
+          "org.owasp.benchmark.testcode.BenchmarkTest01876#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "HpIrOFopwmFyIB7Dqh11ktumq2Ft2/c1xAJkmkqmKo8=",
+            "org.owasp.benchmark.testcode.BenchmarkTest01876#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "HpIrOFopwmFyIB7Dqh11ktumq2Ft2/c1xAJkmkqmKo8=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest01876#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 32,
+          "instruction": "%30.setAttribute(\"userid\", bar)",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest01876.java",
+          "region": {
+            "endColumn": 57,
+            "endLine": 69,
+            "startColumn": 9,
+            "startLine": 69
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest01876#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):32:(%30.setAttribute(\"userid\", bar))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest01876#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest01876.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 57,
+                "endLine": 69,
+                "startColumn": 9,
+                "startLine": 69
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "HpIrOFopwmFyIB7Dqh11ktumq2Ft2/c1xAJkmkqmKo8=",
+            "vulnerabilityWithTraceHash/v1": "qjtp69MLooya7E6QsMZVCbTadYTNvU4qi1T966MXWQk=",
+            "vulnerabilitySourceSinkHash/v1": "Ztox39t+Dc2AJy0gYrYqfHqK+bm+DJ3qbGgjCl5v0Nw="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 752,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "cookies",
+        "benchmarkExpectedRealVulnerability": true,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "09de633c2c65ca71500b5c421f7d2ece7a3ffa99b50a233322610907d2ce183f"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "TpEz2NdDEPfThyuxT6UwYi88HpmTIiQJgpyGuko/sBM=",
+          "org.owasp.benchmark.testcode.BenchmarkTest01872#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "TpEz2NdDEPfThyuxT6UwYi88HpmTIiQJgpyGuko/sBM=",
+            "org.owasp.benchmark.testcode.BenchmarkTest01872#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "TpEz2NdDEPfThyuxT6UwYi88HpmTIiQJgpyGuko/sBM=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest01872#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 32,
+          "instruction": "%30.putValue(bar, \"10340\")",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest01872.java",
+          "region": {
+            "endColumn": 52,
+            "endLine": 69,
+            "startColumn": 9,
+            "startLine": 69
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest01872#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):32:(%30.putValue(bar, \"10340\"))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest01872#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest01872.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 52,
+                "endLine": 69,
+                "startColumn": 9,
+                "startLine": 69
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "TpEz2NdDEPfThyuxT6UwYi88HpmTIiQJgpyGuko/sBM=",
+            "vulnerabilityWithTraceHash/v1": "QrVxOTkTIOa0iV+lulbEBfsnzH2UidDaDkgvGcfOlqw=",
+            "vulnerabilitySourceSinkHash/v1": "5/ZoOUG6ZnAmKFbOmcC4tLeK7yUTf5WqUgmZpyRH510="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 2575,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "cookies",
+        "benchmarkExpectedRealVulnerability": true,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "ee24bc76f7570e670fb0cd555cc6263fcb15a77475f6b97187c58de297ee2436"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "VRGNY7VwOwO7+WHGf2L78K501YUZ81TliFZ2xrUTs4g=",
+          "org.owasp.benchmark.testcode.BenchmarkTest00099#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "VRGNY7VwOwO7+WHGf2L78K501YUZ81TliFZ2xrUTs4g=",
+            "org.owasp.benchmark.testcode.BenchmarkTest00099#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "VRGNY7VwOwO7+WHGf2L78K501YUZ81TliFZ2xrUTs4g=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest00099#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 42,
+          "instruction": "%37.setAttribute(\"userid\", bar)",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00099.java",
+          "region": {
+            "endColumn": 57,
+            "endLine": 79,
+            "startColumn": 9,
+            "startLine": 79
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest00099#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):42:(%37.setAttribute(\"userid\", bar))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest00099#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00099.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 57,
+                "endLine": 79,
+                "startColumn": 9,
+                "startLine": 79
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "VRGNY7VwOwO7+WHGf2L78K501YUZ81TliFZ2xrUTs4g=",
+            "vulnerabilityWithTraceHash/v1": "FbvKaJAEqesv7DikwuarsLFDCWlQRtAt8qdjEL6OO7s=",
+            "vulnerabilitySourceSinkHash/v1": "AMqo+l0yZd+rekwuBu3otYiYFnoMFwDtoSyB6Vntt0s="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 1527,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "cookies",
+        "benchmarkExpectedRealVulnerability": false,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "a090489dde88ca3934d1afbe3a1017f05db4e2cec66dd3a414b43fc0ad0ac26e"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "YC+iuC9l3WMaaqvRF7kk9XijNqkUhkcsgaezcY8lbGQ=",
+          "org.owasp.benchmark.testcode.BenchmarkTest02016#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "YC+iuC9l3WMaaqvRF7kk9XijNqkUhkcsgaezcY8lbGQ=",
+            "org.owasp.benchmark.testcode.BenchmarkTest02016#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "YC+iuC9l3WMaaqvRF7kk9XijNqkUhkcsgaezcY8lbGQ=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest02016#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 24,
+          "instruction": "%21.putValue(\"userid\", bar)",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest02016.java",
+          "region": {
+            "endColumn": 53,
+            "endLine": 64,
+            "startColumn": 9,
+            "startLine": 64
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest02016#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):24:(%21.putValue(\"userid\", bar))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest02016#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest02016.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 53,
+                "endLine": 64,
+                "startColumn": 9,
+                "startLine": 64
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "YC+iuC9l3WMaaqvRF7kk9XijNqkUhkcsgaezcY8lbGQ=",
+            "vulnerabilityWithTraceHash/v1": "Mk9uhhgJob0GSra+svWNvfZ9MqnfQ//M5CzYPRA9u80=",
+            "vulnerabilitySourceSinkHash/v1": "fii7VDWFOvNad6uTeoH8+IZyPghfyN7KCjivK9it9ok="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 2,
+          "run_index": 0,
+          "result_index": 783,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "headerNames",
+        "benchmarkExpectedRealVulnerability": true,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "e6e372eeaecb4fb3132d916b171dca7870971b7e0250df1cd0ab3bec980eb92d"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "ciVjut0Er2Qg9mIZI5SJ8izLLlUjuPbiLmfmeMssw+o=",
+          "org.owasp.benchmark.testcode.BenchmarkTest01458#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "ciVjut0Er2Qg9mIZI5SJ8izLLlUjuPbiLmfmeMssw+o=",
+            "org.owasp.benchmark.testcode.BenchmarkTest01458#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "ciVjut0Er2Qg9mIZI5SJ8izLLlUjuPbiLmfmeMssw+o=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest01458#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 73,
+          "instruction": "%14.setAttribute(bar, \"10340\")",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest01458.java",
+          "region": {
+            "endColumn": 56,
+            "endLine": 63,
+            "startColumn": 9,
+            "startLine": 63
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest01458#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):73:(%14.setAttribute(bar, \"10340\"))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest01458#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest01458.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 56,
+                "endLine": 63,
+                "startColumn": 9,
+                "startLine": 63
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "ciVjut0Er2Qg9mIZI5SJ8izLLlUjuPbiLmfmeMssw+o=",
+            "vulnerabilityWithTraceHash/v1": "DgMEmk9SRU48UFtg9mZHf61yiE1k2HXilWg6vh5E414=",
+            "vulnerabilitySourceSinkHash/v1": "wcK/JHyACZd58imv7NrbJnG5+9TMjJNF8301+bc+dVU="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 2,
+          "run_index": 0,
+          "result_index": 2167,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "parameterNames",
+        "benchmarkExpectedRealVulnerability": true,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "5462281b6ae412bdd5bd580103124f862bd95cba3de5626a1b33b429582d68c4"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "enq9xegQ2CagAVaNJDKL+FXhNvlF5U94w3/cRhBv0Ug=",
+          "org.owasp.benchmark.testcode.BenchmarkTest00991#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "enq9xegQ2CagAVaNJDKL+FXhNvlF5U94w3/cRhBv0Ug=",
+            "org.owasp.benchmark.testcode.BenchmarkTest00991#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "enq9xegQ2CagAVaNJDKL+FXhNvlF5U94w3/cRhBv0Ug=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest00991#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 38,
+          "instruction": "%31.putValue(bar, \"10340\")",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00991.java",
+          "region": {
+            "endColumn": 52,
+            "endLine": 69,
+            "startColumn": 9,
+            "startLine": 69
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest00991#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):38:(%31.putValue(bar, \"10340\"))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest00991#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00991.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 52,
+                "endLine": 69,
+                "startColumn": 9,
+                "startLine": 69
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "enq9xegQ2CagAVaNJDKL+FXhNvlF5U94w3/cRhBv0Ug=",
+            "vulnerabilityWithTraceHash/v1": "AI3Qk3GQYVpScNmpFDARbRZQZ6y1VQ17bipQe+38IJE=",
+            "vulnerabilitySourceSinkHash/v1": "JkYMYoNRflKgWgt4/tu9GsoOYOVltnWquI0SZAgsIVU="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 167,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "cookies",
+        "benchmarkExpectedRealVulnerability": true,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "0635cdec0c6dda7901a76ded336916340b507125740e6cb5822ba3007c021ebe"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "i++os88XMht9RE++N4iyIhJIR77iEHwd/XdN8hLD3Bk=",
+          "org.owasp.benchmark.testcode.BenchmarkTest00097#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "i++os88XMht9RE++N4iyIhJIR77iEHwd/XdN8hLD3Bk=",
+            "org.owasp.benchmark.testcode.BenchmarkTest00097#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "i++os88XMht9RE++N4iyIhJIR77iEHwd/XdN8hLD3Bk=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest00097#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 39,
+          "instruction": "%32.putValue(bar, \"10340\")",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00097.java",
+          "region": {
+            "endColumn": 52,
+            "endLine": 74,
+            "startColumn": 9,
+            "startLine": 74
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest00097#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):39:(%32.putValue(bar, \"10340\"))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest00097#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00097.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 52,
+                "endLine": 74,
+                "startColumn": 9,
+                "startLine": 74
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "i++os88XMht9RE++N4iyIhJIR77iEHwd/XdN8hLD3Bk=",
+            "vulnerabilityWithTraceHash/v1": "Lbptfh1P12AOV5hJYchkpBJmS3xn2AZsamsSyyZHoes=",
+            "vulnerabilitySourceSinkHash/v1": "6T76k3qn+sV4W5ExMuzykI9oljc4oBGiTe6WGAlQqtc="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 2524,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "cookies",
+        "benchmarkExpectedRealVulnerability": false,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "ba21e33f55da169829a780ff85508bbeedc5d131ceee1ccc58cdb26b6fa5c03e"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "jJgyfAI8BpT6z6UM2YLFPEMMlncnzwy7Cx2m/pJh8I4=",
+          "org.owasp.benchmark.testcode.BenchmarkTest02352#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "jJgyfAI8BpT6z6UM2YLFPEMMlncnzwy7Cx2m/pJh8I4=",
+            "org.owasp.benchmark.testcode.BenchmarkTest02352#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "jJgyfAI8BpT6z6UM2YLFPEMMlncnzwy7Cx2m/pJh8I4=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest02352#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 71,
+          "instruction": "%13.setAttribute(bar, \"10340\")",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest02352.java",
+          "region": {
+            "endColumn": 56,
+            "endLine": 63,
+            "startColumn": 9,
+            "startLine": 63
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest02352#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):71:(%13.setAttribute(bar, \"10340\"))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest02352#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest02352.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 56,
+                "endLine": 63,
+                "startColumn": 9,
+                "startLine": 63
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "jJgyfAI8BpT6z6UM2YLFPEMMlncnzwy7Cx2m/pJh8I4=",
+            "vulnerabilityWithTraceHash/v1": "Hwd7LBm179P5q92QuSDZwasHpEdhW8T21yfFneL0ea4=",
+            "vulnerabilitySourceSinkHash/v1": "aX2hJ6ifWUnmyJJbHpUfxa6LL8/pF5puvST0vKVVkf8="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 2,
+          "run_index": 0,
+          "result_index": 3598,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "parameterNames",
+        "benchmarkExpectedRealVulnerability": true,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "6e1b5c65eab220e383d2a3bfa6827dd1a902abe72fe2964ff4af1d6e6a577a1a"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "lfPOQlkWgRMiGc8xXlO1gXHd6aHAsBD1bvgUIQLHLI8=",
+          "org.owasp.benchmark.testcode.BenchmarkTest00994#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "lfPOQlkWgRMiGc8xXlO1gXHd6aHAsBD1bvgUIQLHLI8=",
+            "org.owasp.benchmark.testcode.BenchmarkTest00994#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "lfPOQlkWgRMiGc8xXlO1gXHd6aHAsBD1bvgUIQLHLI8=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest00994#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 38,
+          "instruction": "%31.putValue(\"userid\", bar)",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00994.java",
+          "region": {
+            "endColumn": 53,
+            "endLine": 69,
+            "startColumn": 9,
+            "startLine": 69
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest00994#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):38:(%31.putValue(\"userid\", bar))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest00994#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00994.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 53,
+                "endLine": 69,
+                "startColumn": 9,
+                "startLine": 69
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "lfPOQlkWgRMiGc8xXlO1gXHd6aHAsBD1bvgUIQLHLI8=",
+            "vulnerabilityWithTraceHash/v1": "VliUHvpG3fRBhT9fE1ZeR7JOjIxTiCTl/Pl5QEQZdW0=",
+            "vulnerabilitySourceSinkHash/v1": "sdzme8rRsJ4tLZyOEKaZb3I4KwJFAhjDRliZ4cSn43c="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 2862,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "cookies",
+        "benchmarkExpectedRealVulnerability": true,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "7279a5ad0995d29e9ec82a7e3b37ea6cff7a4c6853a90f4b7c61acaed28a79ba"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "mAZLAl+qCAw4Qm8zyb8YkPw7p2fjI+IGhK4QcSwdYis=",
+          "org.owasp.benchmark.testcode.BenchmarkTest01874#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "mAZLAl+qCAw4Qm8zyb8YkPw7p2fjI+IGhK4QcSwdYis=",
+            "org.owasp.benchmark.testcode.BenchmarkTest01874#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "mAZLAl+qCAw4Qm8zyb8YkPw7p2fjI+IGhK4QcSwdYis=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest01874#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 32,
+          "instruction": "%30.setAttribute(bar, \"10340\")",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest01874.java",
+          "region": {
+            "endColumn": 56,
+            "endLine": 69,
+            "startColumn": 9,
+            "startLine": 69
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest01874#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):32:(%30.setAttribute(bar, \"10340\"))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest01874#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest01874.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 56,
+                "endLine": 69,
+                "startColumn": 9,
+                "startLine": 69
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "mAZLAl+qCAw4Qm8zyb8YkPw7p2fjI+IGhK4QcSwdYis=",
+            "vulnerabilityWithTraceHash/v1": "CmGqfQ9WobdL/nNxvPi1kxYpgoNTKQG3ucKT0a2laUc=",
+            "vulnerabilitySourceSinkHash/v1": "whLZVVkXFw+mG3zlfO2mYnRj8DYKCdEnRhVJTxeHPJk="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 3597,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "cookies",
+        "benchmarkExpectedRealVulnerability": true,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "7008c1a3fae8e99c442e827ab35361ec20f15507bd69e8886e1b5ca520798557"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "oQnN98Rl084F4NGgytP/BnrvL95e3FWE2I+XpkatVtk=",
+          "org.owasp.benchmark.testcode.BenchmarkTest00992#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "oQnN98Rl084F4NGgytP/BnrvL95e3FWE2I+XpkatVtk=",
+            "org.owasp.benchmark.testcode.BenchmarkTest00992#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "oQnN98Rl084F4NGgytP/BnrvL95e3FWE2I+XpkatVtk=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest00992#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 38,
+          "instruction": "%31.putValue(bar, \"10340\")",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00992.java",
+          "region": {
+            "endColumn": 52,
+            "endLine": 69,
+            "startColumn": 9,
+            "startLine": 69
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest00992#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):38:(%31.putValue(bar, \"10340\"))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest00992#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00992.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 52,
+                "endLine": 69,
+                "startColumn": 9,
+                "startLine": 69
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "oQnN98Rl084F4NGgytP/BnrvL95e3FWE2I+XpkatVtk=",
+            "vulnerabilityWithTraceHash/v1": "GuamYwMz1kq9F5RZAaBr5wF4WFgBKhNIi+vvEOmHNfE=",
+            "vulnerabilitySourceSinkHash/v1": "00c12p2kM4A2ogHzjBPywWW4rR5zjBKc4Hbz/dkjNqE="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 3735,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "cookies",
+        "benchmarkExpectedRealVulnerability": false,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "262a113eb0f70b49f5312eef28d26c72c5f731a0bcce594b5eee215d44383a24"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "qcrUDoKkqJfWdjFHjxqdBPPN1x/p5rhDhN3Kjf4pfnw=",
+          "org.owasp.benchmark.testcode.BenchmarkTest00995#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "qcrUDoKkqJfWdjFHjxqdBPPN1x/p5rhDhN3Kjf4pfnw=",
+            "org.owasp.benchmark.testcode.BenchmarkTest00995#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "qcrUDoKkqJfWdjFHjxqdBPPN1x/p5rhDhN3Kjf4pfnw=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest00995#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 38,
+          "instruction": "%31.setAttribute(bar, \"10340\")",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00995.java",
+          "region": {
+            "endColumn": 56,
+            "endLine": 69,
+            "startColumn": 9,
+            "startLine": 69
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest00995#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):38:(%31.setAttribute(bar, \"10340\"))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest00995#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00995.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 56,
+                "endLine": 69,
+                "startColumn": 9,
+                "startLine": 69
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "qcrUDoKkqJfWdjFHjxqdBPPN1x/p5rhDhN3Kjf4pfnw=",
+            "vulnerabilityWithTraceHash/v1": "Rb90CvlDBHb94wvBF2ArtXDgwy91YiWIpO/68UaGiTs=",
+            "vulnerabilitySourceSinkHash/v1": "r5ruzSnxnGXM65KJcCfolTm/Oho2YJEW5XYpmaC4hpg="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 2336,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "cookies",
+        "benchmarkExpectedRealVulnerability": true,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "b87dba5f02ff68ded39e0b464976e033cf7615c55ba7f25f5ddf5dcbf6fee7c4"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "rsQlZ425lJ/asqpnfT8ncjLxlMKzlPiFuH0bXv7S83U=",
+          "org.owasp.benchmark.testcode.BenchmarkTest00098#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "rsQlZ425lJ/asqpnfT8ncjLxlMKzlPiFuH0bXv7S83U=",
+            "org.owasp.benchmark.testcode.BenchmarkTest00098#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "rsQlZ425lJ/asqpnfT8ncjLxlMKzlPiFuH0bXv7S83U=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest00098#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 32,
+          "instruction": "%30.putValue(\"userid\", bar)",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00098.java",
+          "region": {
+            "endColumn": 53,
+            "endLine": 69,
+            "startColumn": 9,
+            "startLine": 69
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest00098#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):32:(%30.putValue(\"userid\", bar))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest00098#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00098.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 53,
+                "endLine": 69,
+                "startColumn": 9,
+                "startLine": 69
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "rsQlZ425lJ/asqpnfT8ncjLxlMKzlPiFuH0bXv7S83U=",
+            "vulnerabilityWithTraceHash/v1": "6oi1bBs3KfxDEQTksVzRskoweozZyzWbqOwMZ1ZiWtM=",
+            "vulnerabilitySourceSinkHash/v1": "g/1NHAk/q4k3uLNIenZIaYZ+nZdewu/+bq5PhcjboN0="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 2407,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "cookies",
+        "benchmarkExpectedRealVulnerability": true,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "b7ab6c3b40a8bf4fc58313d8bd743b896cccf4f1446ecf9c43741f35da3c0192"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "vJcKK4rpJNSOoUjwFmNLqOJnPcbGz3E2+HIqsWccdlc=",
+          "org.owasp.benchmark.testcode.BenchmarkTest00004#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "vJcKK4rpJNSOoUjwFmNLqOJnPcbGz3E2+HIqsWccdlc=",
+            "org.owasp.benchmark.testcode.BenchmarkTest00004#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "vJcKK4rpJNSOoUjwFmNLqOJnPcbGz3E2+HIqsWccdlc=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest00004#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 31,
+          "instruction": "%28.setAttribute(%27, \"10340\")",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00004.java",
+          "region": {
+            "endColumn": 58,
+            "endLine": 68,
+            "startColumn": 9,
+            "startLine": 68
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest00004#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):31:(%28.setAttribute(%27, \"10340\"))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest00004#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest00004.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 58,
+                "endLine": 68,
+                "startColumn": 9,
+                "startLine": 68
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "vJcKK4rpJNSOoUjwFmNLqOJnPcbGz3E2+HIqsWccdlc=",
+            "vulnerabilityWithTraceHash/v1": "6fxVbSpfNzsyZJy1QIJNJJjcjsnmt1SDexRqUpVsXVI=",
+            "vulnerabilitySourceSinkHash/v1": "vpAnCIqbpWKSPbziDwUz3eRNR+uvh0Jai1pSuBHHHH8="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 3529,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "cookies",
+        "benchmarkExpectedRealVulnerability": true,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "b73d2b9b44c0738fa2de8e5724ad48bf9f0871ed104a869429fb8b5b02d5d7c2"
+      },
+      {
+        "identity": [
+          "sink_fingerprint_and_signature",
+          "java/security/insecure-design.yaml:trust-boundary-violation",
+          "yPmYlA1bMI2dgSXvb2CFUg0F/Vp18nPhAHQ49/k9kYY=",
+          "org.owasp.benchmark.testcode.BenchmarkTest01873#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+        ],
+        "baselineOccurrence": {
+          "identity": [
+            "sink_fingerprint_and_signature",
+            "java/security/insecure-design.yaml:trust-boundary-violation",
+            "yPmYlA1bMI2dgSXvb2CFUg0F/Vp18nPhAHQ49/k9kYY=",
+            "org.owasp.benchmark.testcode.BenchmarkTest01873#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)"
+          ],
+          "rule_id": "java/security/insecure-design.yaml:trust-boundary-violation",
+          "sink_fingerprint": "yPmYlA1bMI2dgSXvb2CFUg0F/Vp18nPhAHQ49/k9kYY=",
+          "method_signature": "org.owasp.benchmark.testcode.BenchmarkTest01873#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)",
+          "instruction_index": 32,
+          "instruction": "%30.putValue(\"userid\", bar)",
+          "path": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest01873.java",
+          "region": {
+            "endColumn": 53,
+            "endLine": 69,
+            "startColumn": 9,
+            "startLine": 69
+          },
+          "raw_location": {
+            "logicalLocations": [
+              {
+                "decoratedName": "org.owasp.benchmark.testcode.BenchmarkTest01873#doPost(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse):32:(%30.putValue(\"userid\", bar))",
+                "fullyQualifiedName": "org.owasp.benchmark.testcode.BenchmarkTest01873#doPost"
+              }
+            ],
+            "physicalLocation": {
+              "artifactLocation": {
+                "uri": "src/main/java/org/owasp/benchmark/testcode/BenchmarkTest01873.java",
+                "uriBaseId": "%SRCROOT%"
+              },
+              "region": {
+                "endColumn": 53,
+                "endLine": 69,
+                "startColumn": 9,
+                "startLine": 69
+              }
+            }
+          },
+          "partial_fingerprints": {
+            "vulnerabilitySinkHash/v1": "yPmYlA1bMI2dgSXvb2CFUg0F/Vp18nPhAHQ49/k9kYY=",
+            "vulnerabilityWithTraceHash/v1": "34QYRau8wujX6m7O5xMF8ap2V7y0b7ttyQehum3f3is=",
+            "vulnerabilitySourceSinkHash/v1": "8Foh7iiwS8t4hfdTcgzuNDzXpACcsnY4pGJ4N+55BHQ="
+          },
+          "message": {
+            "text": "A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n"
+          },
+          "properties": null,
+          "code_flow_count": 1,
+          "run_index": 0,
+          "result_index": 3085,
+          "location_index": 0
+        },
+        "priorFailedAttemptSourceFamily": "cookies",
+        "benchmarkExpectedRealVulnerability": false,
+        "benchmarkCategory": "trustbound",
+        "sourceSha256": "b93db5957ab72753e2a7602e1f33eaf98bfe3b1d89a80f362dc8c6a46af6d9a4"
+      }
+    ],
+    "nativeOrAnalyzerStartedByThisAudit": false,
+    "profileScanned": false
+  },
+  "native": {
+    "command": "./core/gradlew -p core :opentaint-dataflow-core:opentaint-dataflow:test --tests '*LoopBlockTrustBoundaryFindingTest' --console=plain",
+    "tests": 4,
+    "failures": 1,
+    "latestReached": "run-3",
+    "latestComplete": "run-3",
+    "latestAccepted": "run-3",
+    "endReason": "NO_DEMAND_EDGE",
+    "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopBlockTrustBoundaryFindingTest.kt",
+    "sourceSha256": "4f1c9dd21e83d7a7c358b2da84159d363f5b689218ea8c782ccfe0b0b78106ec",
+    "sourceText": "package org.opentaint.dataflow.bidi\n\nimport org.opentaint.dataflow.ap.ifds.AccessPathBase\nimport org.opentaint.dataflow.ap.ifds.ElementAccessor\nimport org.opentaint.dataflow.bidi.ap.*\nimport org.opentaint.dataflow.bidi.driver.FixedLimits\nimport org.opentaint.dataflow.bidi.engine.*\nimport org.opentaint.dataflow.bidi.fixtures.DriverFixtures\nimport org.opentaint.dataflow.bidi.interp.*\nimport org.opentaint.dataflow.bidi.interp.CallPoint.*\nimport org.opentaint.dataflow.bidi.interp.StageKind.*\nimport kotlin.test.*\nimport kotlin.time.Duration.Companion.seconds\n\n/** A request binding and a data mark meet a separately bound session receiver. */\nclass LoopBlockTrustBoundaryFindingTest {\n    private fun run(withLoop: Boolean, exactArray: Boolean = false, conditionalSession: Boolean = true) {\n        DriverFixtures().use { f ->\n            val p = f.program\n            // ENTRY metadata: request/$REQ.\n            // cookies=request.getCookies(); // CM(this,$REQ) -> ret.[any-taint]/DATA.\n            // while (again()) { param=cookies[i]; if (match()) break; }\n            // session=request.getSession(); // CM(this,$REQ) -> ret.$/SESSION.\n            // session.setAttribute(param,\"value\"); // CM(this,SESSION) AND CM(arg0,DATA).\n            val method = p.method(\"trust boundary loop=$withLoop\", listOf(\n                listOf(1), listOf(2), listOf(3, 6), listOf(4), listOf(5),\n                if (withLoop) listOf(2, 6) else listOf(6), listOf(7), listOf(8), emptyList(), emptyList()),\n                normalExit = 8, exceptionalExit = 9, backwardExitDiscovery = true).key()\n            val request = AccessPathBase.Argument(0)\n            val cookies = AccessPathBase.LocalVar(0)\n            val param = AccessPathBase.LocalVar(1)\n            val session = AccessPathBase.LocalVar(2)\n            val cookie = AccessPathBase.LocalVar(3)\n            val receiver = AccessPathBase.This\n            val returned = AccessPathBase.Return\n            val sinkArg = AccessPathBase.Argument(1)\n            val req = MarkSlot.Concrete(p.mark(\"T\"))\n            val data = MarkSlot.Concrete(p.mark(\"U\"))\n            val boundSession = MarkSlot.Concrete(p.mark(\"V\"))\n            val element = f.manager.accessors.index(ElementAccessor)\n            val owner = FormOwner()\n            fun occurrence(at: Int, kind: RuleKind) = RuleOccurrenceId(\n                FormKey(owner, method.method, method, p.inst(method, at)), kind, 0)\n            val entryId = occurrence(0, RuleKind.ENTRY_SOURCE)\n            val entryAction = ActionId(entryId, ActionRole.SOURCE, 0)\n            val entryEdge = PathEdge(ZERO_FACT, p.pattern(request, mark = req).fact, ExclusionSet.Empty)\n            p.entry(method, RuleStatement(MicroEdgeBuilder().apply {\n                keepZero(); sourceEdge(entryEdge, entryAction)\n            }.build(), StatementSummary.EMPTY, emptyList()))\n\n            fun sourceCall(at: Int, output: AccessPathBase, targets: List<PathFact>,\n                           conditional: Boolean = true): List<Pair<PathEdge, ActionId>> {\n                val condition = p.pattern(receiver, mark = req)\n                val builder = RulePredicate.Builder(f.cancellation, f.manager.marks)\n                val id = occurrence(at, RuleKind.CALL_SOURCE)\n                val actions = targets.mapIndexed { index, target -> SourceAction(ActionId(id, ActionRole.SOURCE, index), target) }\n                val source = if (conditional) SourceRuleOccurrence(id, builder.build(builder.leaf(condition)), actions) else null\n                val transfers = actions.map { action ->\n                    (source?.transfer(condition, action)?.forward\n                        ?: PathEdge(ZERO_FACT, action.target, ExclusionSet.Empty)) to action.id\n                }\n                // JIRCallPlanBuilder's source branch bypasses return cleanup;\n                // ordinary receiver identity is a separate unresolved branch.\n                val sources = MicroEdgeBuilder().apply {\n                    keepZero()\n                    if (source != null) source(source)\n                    else transfers.forEach { (edge, action) -> sourceEdge(edge, action) }\n                }.buildStage()\n                p.call(method, at, CallPlan(setOf(request, output), listOf(\n                    CallStage.Edges(BEFORE, BOUND, BIND_IN, f.summary(ZERO_KEEP,\n                        starEdge(request, emptyList(), receiver, emptyList()))),\n                    CallStage.Edges(BOUND, REWRITTEN, SOURCES, sources),\n                    CallStage.Actions(BOUND, ADDED, emptyList()),\n                    CallStage.Edges(ADDED, RETURNED, UNRESOLVED, f.summary(ZERO_KEEP, keepEdge(receiver))),\n                    CallStage.Actions(RETURNED, REWRITTEN, emptyList()),\n                    CallStage.Edges(REWRITTEN, AFTER, BIND_BACK, f.summary(ZERO_KEEP,\n                        starEdge(receiver, emptyList(), request, emptyList()),\n                        starEdge(returned, emptyList(), output, emptyList()))),\n                ), emptyList(), BEFORE, AFTER))\n                return transfers\n            }\n            // resolveWithArray expands BaseOnly array-result assignment to root\n            // and element EXACT actions. It does not imply a MUST source.\n            val cookieTargets = if (exactArray) listOf(\n                p.pattern(returned, mark = data).fact,\n                p.pattern(returned, listOf(element), mark = data).fact,\n            ) else listOf(p.pattern(returned, tail = Tail.ANY_TAINT, mark = data).fact)\n            val cookieSources = sourceCall(1, cookies, cookieTargets)\n            p.statement(method, 3, MicroEdgeBuilder().apply { read(cookie, cookies, listOf(element)) }.build())\n            // The ordinary get-value model is CopyAllMarks(This,Result), from\n            // JIRMethodGetDefault.defaultPropagationRules + JIRRuleForms.pass.\n            p.call(method, 4, CallPlan(setOf(cookie, param), listOf(\n                CallStage.Edges(BEFORE, BOUND, BIND_IN, f.summary(ZERO_KEEP,\n                    starEdge(cookie, emptyList(), receiver, emptyList()))),\n                CallStage.Actions(BOUND, ADDED, emptyList()),\n                CallStage.Edges(ADDED, RETURNED, UNRESOLVED, f.summary(ZERO_KEEP, keepEdge(receiver),\n                    starEdge(receiver, emptyList(), returned, emptyList()))),\n                CallStage.Actions(RETURNED, REWRITTEN, emptyList()),\n                CallStage.Edges(REWRITTEN, AFTER, BIND_BACK, f.summary(ZERO_KEEP,\n                    starEdge(receiver, emptyList(), cookie, emptyList()),\n                    starEdge(returned, emptyList(), param, emptyList()))),\n            ), emptyList(), BEFORE, AFTER))\n            // The first getSession step belongs to the independent SINK pattern\n            // automaton. Its generated receiver marker is an unconditional\n            // typed ZERO source; it need not check the SOURCE automaton's REQ.\n            val sessionSources = sourceCall(6, session,\n                listOf(p.pattern(returned, mark = boundSession).fact), conditionalSession)\n            val sinkBuilder = RulePredicate.Builder(f.cancellation, f.manager.marks)\n            val predicate = sinkBuilder.build(sinkBuilder.and(listOf(\n                sinkBuilder.leaf(p.pattern(receiver, mark = boundSession)),\n                sinkBuilder.leaf(p.pattern(sinkArg, mark = data)),\n            )))\n            val sink = SinkRule(f.rule(\"trust boundary receiver and value\"), 0, predicate.leaves,\n                emptyList(), occurrence(7, RuleKind.CALL_SINK), predicate)\n            val bound = f.summary(ZERO_KEEP, keepEdge(receiver), keepEdge(sinkArg))\n            p.call(method, 7, CallPlan(setOf(session, param), listOf(\n                CallStage.Edges(BEFORE, BOUND, BIND_IN, f.summary(ZERO_KEEP,\n                    starEdge(session, emptyList(), receiver, emptyList()),\n                    starEdge(param, emptyList(), sinkArg, emptyList()))),\n                CallStage.Actions(BOUND, ADDED, emptyList()),\n                CallStage.Edges(ADDED, RETURNED, UNRESOLVED, bound),\n                CallStage.Actions(RETURNED, REWRITTEN, emptyList()),\n                CallStage.Edges(REWRITTEN, AFTER, BIND_BACK, f.summary(ZERO_KEEP,\n                    starEdge(receiver, emptyList(), session, emptyList()),\n                    starEdge(sinkArg, emptyList(), param, emptyList()))),\n            ), listOf(sink), BEFORE, AFTER))\n            val driver = f.driver(FixedLimits(listOf(1, 1, 2, 3, 4)), 20.seconds, run1MarkMode = MarkMode.FULL)\n            val report = driver.analyze(listOf(method))\n            if (report.entries.none { it.descriptor.key.ruleId == sink.rule.id }) println(buildString {\n                fun image(original: PremiseKey, value: Facts) =\n                    \"${original.members.map { it.toPattern() }} -> ${f.ops.leaves(value).toList()} layer=${value.layer}\"\n                appendLine(\"TRUST_BOUNDARY_TRACE loop=$withLoop exactArray=$exactArray conditionalSession=$conditionalSession end=${report.end}\")\n                for (config in f.configs) appendLine(\"config=${config.index} entryPermission=${config.seeds.allowsSource(method,p.inst(method,0),entryEdge,entryAction)} cookiePermissions=${cookieSources.map { config.seeds.allowsSource(method,p.inst(method,1),it.first,it.second) }} sessionPermissions=${sessionSources.map { config.seeds.allowsSource(method,p.inst(method,6),it.first,it.second) }}\")\n                for (frontier in driver.frontiers) appendLine(\"frontier=${frontier.run} demand=${frontier.demandEdges} targetDemand=${frontier.targetDemand} reports=${frontier.reportedSinks}\")\n                if (withLoop) {\n                    val layout = f.shared.contexts.blockLayout(method)\n                    val after = checkNotNull(layout[layout.root].after)\n                    val first = f.results.first { it.runIndex == 1 }.analyzers.single { it.key == method }\n                    val scopes = first.blockSummaries().filter { it.key.scope.block == after }.map { it.key.scope }.distinct().toList()\n                    val dataInput = f.manager.factsOf(p.pattern(param, mark = data).fact, ExclusionSet.Empty, Layer.NORMAL)\n                    for (config in f.configs.filter { it.index >= 3 && it.direction == Direction.FORWARD }) for (scope in scopes) {\n                        val view = checkNotNull(config.demand).scope(method, scope)\n                        appendLine(\"C2 run=${config.index} scope=$scope ZERO=${view.initials(Reach.NORMAL, config.admissionPolicy)} DATA=${view.initials(dataInput, config.admissionPolicy).map { it.initial.toPattern() to it.layer }}\")\n                        val saved = f.records.byEntry(method, scope, f.manager.zero.toPattern()).filter { record ->\n                            record.direction == Direction.FORWARD && record.premise.isZero && f.ops.leaves(record.conclusion).any {\n                                it.fact.base == session && it.fact.mark == boundSession\n                            }\n                        }.toList()\n                        appendLine(\"SAVED_SESSION scope=$scope rows=${saved.map { image(it.premise,it.conclusion) }}\")\n                    }\n                }\n                for (result in f.results) for (actor in result.analyzers) {\n                    appendLine(\"run=${result.runIndex} ROOT targets=${actor.targets} sourceHits=${actor.sourceHits?.occurrences()?.toList()}\")\n                    for ((original, value) in actor.summaries.all()) appendLine(\"run=${result.runIndex} ROOT ${image(original,value)}\")\n                    for (block in actor.blockSummaries()) for ((original,value) in block.summaries.all())\n                        appendLine(\"run=${result.runIndex} BLOCK=${block.key} ${image(original,value)}\")\n                    for (block in actor.blockTargets()) for (row in block.rows)\n                        appendLine(\"run=${result.runIndex} TARGET scope=${block.scope} original=${row.premise.members.map { it.toPattern() }} target=${row.target}\")\n                    for (block in actor.blockOutgoingTargets()) for (row in block.rows)\n                        appendLine(\"run=${result.runIndex} OUT_TARGET scope=${block.scope} original=${row.premise.members.map { it.toPattern() }} target=${row.target}\")\n                }\n                for (row in f.processed) appendLine(\"run=${row.run} at=${row.delta.node.location.index} ${image(row.delta.premise,row.delta.facts)}\")\n            })\n            assertEquals(RunStatus.COMPLETE, report.end.status)\n            assertEquals(listOf(sink.rule.id), report.entries.map { it.descriptor.key.ruleId }, \"end=${report.end}\")\n            assertEquals(p.inst(method,7), report.entries.single().descriptor.key.statement)\n            assertTrue(f.results.flatMap { it.analyzers }.all { it.key == method })\n        }\n    }\n\n    @Test fun `request binding and session receiver meet cookie data after a real loop`() = run(true)\n    @Test fun `same metadata source and joined sink report without feedback`() = run(false)\n    @Test fun `exact array source and independent ZERO session binding reach joined sink after a loop`() =\n        run(true, exactArray = true, conditionalSession = false)\n    @Test fun `same exact array and independent session rules reach joined sink without feedback`() =\n        run(false, exactArray = true, conditionalSession = false)\n}\n",
+    "logSha256": "6ab36aba95ef7f76dbe931d5b665065b9449d23d1d0e224c96eb7c1db2d90fdf",
+    "logText": "> Task :opentaint-common-build:checkKotlinGradlePluginConfigurationErrors\n> Task :opentaint-jvm-autobuilder:buildSrc:checkKotlinGradlePluginConfigurationErrors\n> Task :opentaint-jvm-autobuilder:buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE\n> Task :opentaint-jvm-autobuilder:buildSrc:generateScriptPluginAdapters UP-TO-DATE\n> Task :opentaint-jvm-autobuilder:buildSrc:pluginDescriptors UP-TO-DATE\n> Task :opentaint-jvm-autobuilder:buildSrc:processResources UP-TO-DATE\n> Task :opentaint-common-build:compileKotlin UP-TO-DATE\n> Task :opentaint-common-build:compileJava NO-SOURCE\n> Task :opentaint-common-build:pluginDescriptors UP-TO-DATE\n> Task :opentaint-common-build:processResources NO-SOURCE\n> Task :opentaint-common-build:classes UP-TO-DATE\n> Task :opentaint-common-build:jar UP-TO-DATE\n> Task :opentaint-jvm-autobuilder:buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE\n> Task :opentaint-jvm-autobuilder:buildSrc:compilePluginsBlocks UP-TO-DATE\n> Task :opentaint-jvm-autobuilder:buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE\n> Task :opentaint-jvm-autobuilder:buildSrc:compileKotlin UP-TO-DATE\n> Task :opentaint-jvm-autobuilder:buildSrc:compileJava NO-SOURCE\n> Task :opentaint-jvm-autobuilder:buildSrc:compileGroovy NO-SOURCE\n> Task :opentaint-jvm-autobuilder:buildSrc:classes UP-TO-DATE\n> Task :opentaint-jvm-autobuilder:buildSrc:jar UP-TO-DATE\n> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors\n> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE\n> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE\n> Task :buildSrc:compilePluginsBlocks UP-TO-DATE\n> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE\n> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE\n> Task :buildSrc:compileKotlin UP-TO-DATE\n> Task :buildSrc:compileJava NO-SOURCE\n> Task :buildSrc:compileGroovy NO-SOURCE\n> Task :buildSrc:pluginDescriptors UP-TO-DATE\n> Task :buildSrc:processResources UP-TO-DATE\n> Task :buildSrc:classes UP-TO-DATE\n> Task :buildSrc:jar UP-TO-DATE\n> Task :opentaint-ir:buildSrc:checkKotlinGradlePluginConfigurationErrors\n> Task :opentaint-ir:buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE\n> Task :opentaint-ir:buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE\n> Task :opentaint-ir:buildSrc:compilePluginsBlocks UP-TO-DATE\n> Task :opentaint-ir:buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE\n> Task :opentaint-ir:buildSrc:generateScriptPluginAdapters UP-TO-DATE\n> Task :opentaint-ir:buildSrc:compileKotlin UP-TO-DATE\n> Task :opentaint-ir:buildSrc:compileJava NO-SOURCE\n> Task :opentaint-ir:buildSrc:compileGroovy NO-SOURCE\n> Task :opentaint-ir:buildSrc:pluginDescriptors UP-TO-DATE\n> Task :opentaint-ir:buildSrc:processResources UP-TO-DATE\n> Task :opentaint-ir:buildSrc:classes UP-TO-DATE\n> Task :opentaint-ir:buildSrc:jar UP-TO-DATE\n> Task :opentaint-dataflow-core:buildSrc:checkKotlinGradlePluginConfigurationErrors\n> Task :opentaint-dataflow-core:buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE\n> Task :opentaint-dataflow-core:buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE\n> Task :opentaint-dataflow-core:buildSrc:compilePluginsBlocks UP-TO-DATE\n> Task :opentaint-dataflow-core:buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE\n> Task :opentaint-dataflow-core:buildSrc:generateScriptPluginAdapters UP-TO-DATE\n> Task :opentaint-dataflow-core:buildSrc:compileKotlin UP-TO-DATE\n> Task :opentaint-dataflow-core:buildSrc:compileJava NO-SOURCE\n> Task :opentaint-dataflow-core:buildSrc:compileGroovy NO-SOURCE\n> Task :opentaint-dataflow-core:buildSrc:pluginDescriptors UP-TO-DATE\n> Task :opentaint-dataflow-core:buildSrc:processResources UP-TO-DATE\n> Task :opentaint-dataflow-core:buildSrc:classes UP-TO-DATE\n> Task :opentaint-dataflow-core:buildSrc:jar UP-TO-DATE\n> Task :opentaint-utils:buildSrc:checkKotlinGradlePluginConfigurationErrors\n> Task :opentaint-utils:buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE\n> Task :opentaint-utils:buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE\n> Task :opentaint-utils:buildSrc:compilePluginsBlocks UP-TO-DATE\n> Task :opentaint-utils:buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE\n> Task :opentaint-utils:buildSrc:generateScriptPluginAdapters UP-TO-DATE\n> Task :opentaint-utils:buildSrc:compileKotlin UP-TO-DATE\n> Task :opentaint-utils:buildSrc:compileJava NO-SOURCE\n> Task :opentaint-utils:buildSrc:compileGroovy NO-SOURCE\n> Task :opentaint-utils:buildSrc:pluginDescriptors UP-TO-DATE\n> Task :opentaint-utils:buildSrc:processResources UP-TO-DATE\n> Task :opentaint-utils:buildSrc:classes UP-TO-DATE\n> Task :opentaint-utils:buildSrc:jar UP-TO-DATE\n> Task :opentaint-configuration-rules:buildSrc:checkKotlinGradlePluginConfigurationErrors\n> Task :opentaint-configuration-rules:buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE\n> Task :opentaint-configuration-rules:buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE\n> Task :opentaint-configuration-rules:buildSrc:compilePluginsBlocks UP-TO-DATE\n> Task :opentaint-configuration-rules:buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE\n> Task :opentaint-configuration-rules:buildSrc:generateScriptPluginAdapters UP-TO-DATE\n> Task :opentaint-configuration-rules:buildSrc:compileKotlin UP-TO-DATE\n> Task :opentaint-configuration-rules:buildSrc:compileJava NO-SOURCE\n> Task :opentaint-configuration-rules:buildSrc:compileGroovy NO-SOURCE\n> Task :opentaint-configuration-rules:buildSrc:pluginDescriptors UP-TO-DATE\n> Task :opentaint-configuration-rules:buildSrc:processResources UP-TO-DATE\n> Task :opentaint-configuration-rules:buildSrc:classes UP-TO-DATE\n> Task :opentaint-configuration-rules:buildSrc:jar UP-TO-DATE\n> Task :opentaint-utils:common-util:checkKotlinGradlePluginConfigurationErrors SKIPPED\n> Task :opentaint-ir:opentaint-ir-api-common:checkKotlinGradlePluginConfigurationErrors SKIPPED\n> Task :opentaint-dataflow-core:opentaint-dataflow:checkKotlinGradlePluginConfigurationErrors SKIPPED\n> Task :opentaint-configuration-rules:configuration-rules-common:checkKotlinGradlePluginConfigurationErrors SKIPPED\n> Task :opentaint-configuration-rules:configuration-rules-common:processResources NO-SOURCE\n> Task :opentaint-dataflow-core:opentaint-dataflow:processResources NO-SOURCE\n> Task :opentaint-dataflow-core:opentaint-dataflow:processTestResources NO-SOURCE\n> Task :opentaint-utils:common-util:compileKotlin UP-TO-DATE\n> Task :opentaint-utils:common-util:compileJava NO-SOURCE\n> Task :opentaint-utils:common-util:processResources NO-SOURCE\n> Task :opentaint-utils:common-util:classes UP-TO-DATE\n> Task :opentaint-utils:common-util:jar UP-TO-DATE\n> Task :opentaint-ir:opentaint-ir-api-common:compileKotlin UP-TO-DATE\n> Task :opentaint-ir:opentaint-ir-api-common:compileJava NO-SOURCE\n> Task :opentaint-ir:opentaint-ir-api-common:processResources NO-SOURCE\n> Task :opentaint-ir:opentaint-ir-api-common:classes UP-TO-DATE\n> Task :opentaint-ir:opentaint-ir-api-common:jar UP-TO-DATE\n> Task :opentaint-configuration-rules:configuration-rules-common:compileKotlin UP-TO-DATE\n> Task :opentaint-configuration-rules:configuration-rules-common:compileJava NO-SOURCE\n> Task :opentaint-configuration-rules:configuration-rules-common:classes UP-TO-DATE\n> Task :opentaint-configuration-rules:configuration-rules-common:jar UP-TO-DATE\n> Task :opentaint-dataflow-core:opentaint-dataflow:compileKotlin UP-TO-DATE\n> Task :opentaint-dataflow-core:opentaint-dataflow:compileJava UP-TO-DATE\n> Task :opentaint-dataflow-core:opentaint-dataflow:classes UP-TO-DATE\n> Task :opentaint-dataflow-core:opentaint-dataflow:jar UP-TO-DATE\n> Task :opentaint-dataflow-core:opentaint-dataflow:compileTestKotlin\n> Task :opentaint-dataflow-core:opentaint-dataflow:compileTestJava NO-SOURCE\n> Task :opentaint-dataflow-core:opentaint-dataflow:testClasses UP-TO-DATE\n\n> Task :opentaint-dataflow-core:opentaint-dataflow:test FAILED\n\nLoopBlockTrustBoundaryFindingTest > exact array source and independent ZERO session binding reach joined sink after a loop() FAILED\n    org.opentest4j.AssertionFailedError at LoopBlockTrustBoundaryFindingTest.kt:165\n\nLoopBlockTrustBoundaryFindingTest > same metadata source and joined sink report without feedback() PASSED\n\nLoopBlockTrustBoundaryFindingTest > request binding and session receiver meet cookie data after a real loop() PASSED\n\nLoopBlockTrustBoundaryFindingTest > same exact array and independent session rules reach joined sink without feedback() PASSED\n\n4 tests completed, 1 failed\n\nFAILURE: Build failed with an exception.\n\n* What went wrong:\nExecution failed for task ':opentaint-dataflow-core:opentaint-dataflow:test'.\n> There were failing tests. See the report at: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/reports/tests/test/index.html\n\n* Try:\n> Run with --scan to get full insights.\n\nBUILD FAILED in 2s\n75 actionable tasks: 9 executed, 66 up-to-date\n",
+    "xmlSha256": "6bdbaca2f678631d830c2cd5dced5a534a643b92360d5415203d2361aad4edf2",
+    "traceText": "TRUST_BOUNDARY_TRACE loop=true exactArray=true conditionalSession=false end=AnalysisEnd(status=COMPLETE, run=3, direction=FORWARD, reason=NO_DEMAND_EDGE, run1MarkMode=FULL)\nconfig=1 entryPermission=false cookiePermissions=[false, false] sessionPermissions=[false]\nconfig=2 entryPermission=false cookiePermissions=[false, false] sessionPermissions=[false]\nconfig=3 entryPermission=false cookiePermissions=[false, false] sessionPermissions=[true]\nfrontier=1 demand={trust boundary loop=true [context]=10} targetDemand=2 reports=0\nfrontier=2 demand={trust boundary loop=true [context]=3} targetDemand=1 reports=0\nfrontier=3 demand={} targetDemand=0 reports=0\nC2 run=3 scope=BlockScope(block=BlockId(ordinal=3), entry=PortId(ordinal=10)) ZERO=[] DATA=[(Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty), NORMAL)]\nSAVED_SESSION scope=BlockScope(block=BlockId(ordinal=3), entry=PortId(ordinal=10)) rows=[[Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(2), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=3))), exclusion=Empty)] layer=NORMAL]\nrun=1 ROOT targets=[TargetSummary(premise=org.opentaint.dataflow.bidi.ap.InitialAp@19d02936, target=DemandTarget)] sourceHits=null\nrun=1 ROOT [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 ROOT [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=1), entry=PortId(ordinal=-1)), exit=PortId(ordinal=1)) [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=1), entry=PortId(ordinal=-1)), exit=PortId(ordinal=1)) [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty), Pattern(fact=PathFact(base=var(0), path=[11], tail=EXACT, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=1), entry=PortId(ordinal=-1)), exit=PortId(ordinal=1)) [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=1)), exit=PortId(ordinal=10)) [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=1)), exit=PortId(ordinal=10)) [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=1)), exit=PortId(ordinal=10)) [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=1)), exit=PortId(ordinal=10)) [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=ANY, mark=Star(excluded={})), exclusion=Empty)] layer=DEMAND\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=1)), exit=PortId(ordinal=10)) [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=ANY, mark=Star(excluded={})), exclusion=Empty)] layer=DEMAND\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=1)), exit=PortId(ordinal=6)) [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=1)), exit=PortId(ordinal=6)) [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=1)), exit=PortId(ordinal=6)) [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=1)), exit=PortId(ordinal=6)) [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=ANY, mark=Star(excluded={})), exclusion=Empty)] layer=DEMAND\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=1)), exit=PortId(ordinal=6)) [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=ANY, mark=Star(excluded={})), exclusion=Empty)] layer=DEMAND\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=3), entry=PortId(ordinal=10)), exit=PortId(ordinal=-2)) [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=3), entry=PortId(ordinal=10)), exit=PortId(ordinal=-2)) [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=3), entry=PortId(ordinal=10)), exit=PortId(ordinal=-2)) [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(2), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=3))), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=3), entry=PortId(ordinal=10)), exit=PortId(ordinal=-2)) [Pattern(fact=PathFact(base=var(3), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=3), entry=PortId(ordinal=10)), exit=PortId(ordinal=-2)) [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=3), entry=PortId(ordinal=10)), exit=PortId(ordinal=-2)) [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=6)), exit=PortId(ordinal=10)) [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=6)), exit=PortId(ordinal=10)) [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=6)), exit=PortId(ordinal=10)) [Pattern(fact=PathFact(base=var(3), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=6)), exit=PortId(ordinal=10)) [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=6)), exit=PortId(ordinal=10)) [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=6)), exit=PortId(ordinal=10)) [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=ANY, mark=Star(excluded={})), exclusion=Empty)] layer=DEMAND\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=6)), exit=PortId(ordinal=10)) [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=ANY, mark=Star(excluded={})), exclusion=Empty)] layer=DEMAND\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=6)), exit=PortId(ordinal=6)) [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=6)), exit=PortId(ordinal=6)) [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=6)), exit=PortId(ordinal=6)) [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=6)), exit=PortId(ordinal=6)) [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=ANY, mark=Star(excluded={})), exclusion=Empty)] layer=DEMAND\nrun=1 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=6)), exit=PortId(ordinal=6)) [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=ANY, mark=Star(excluded={})), exclusion=Empty)] layer=DEMAND\nrun=1 TARGET scope=BlockScope(block=BlockId(ordinal=3), entry=PortId(ordinal=10)) original=[Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] target=DemandTarget\nrun=1 OUT_TARGET scope=BlockScope(block=BlockId(ordinal=3), entry=PortId(ordinal=10)) original=[Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] target=DemandTarget\nrun=2 ROOT targets=[TargetSummary(premise=org.opentaint.dataflow.bidi.ap.InitialAp@19d02936, target=DemandTarget)] sourceHits=[Hit(method=trust boundary loop=true [context], statement=trust boundary loop=true:6, forward=PathEdge(from=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), to=PathFact(base=ret, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=3))), exclusion=Empty, fromExclusion=Empty, toExclusion=Empty), action=ActionId(occurrence=RuleOccurrenceId(form=FormKey(owner=org.opentaint.dataflow.bidi.interp.FormOwner@2bdcd540, method=trust boundary loop=true, context=trust boundary loop=true [context], statement=trust boundary loop=true:6), kind=CALL_SOURCE, ordinal=0), role=SOURCE, ordinal=0, relevantMarkOrdinal=0, generatedStep=0))]\nrun=2 ROOT [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=2 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=3), entry=PortId(ordinal=-2)), exit=PortId(ordinal=10)) [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] layer=NORMAL\nrun=2 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=10)), exit=PortId(ordinal=1)) [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[11], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=10)), exit=PortId(ordinal=6)) [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[11], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=6)), exit=PortId(ordinal=1)) [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[11], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 BLOCK=ScopedSummaryKey(method=trust boundary loop=true [context], scope=BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=6)), exit=PortId(ordinal=6)) [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[11], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 TARGET scope=BlockScope(block=BlockId(ordinal=3), entry=PortId(ordinal=-2)) original=[Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] target=DemandTarget\nrun=3 ROOT targets=[] sourceHits=null\nrun=3 ROOT [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 at=0 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 at=1 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 at=0 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty)] layer=NORMAL\nrun=1 at=1 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty)] layer=NORMAL\nrun=1 at=2 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 at=3 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 at=4 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 at=5 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 at=2 [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=3 [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=4 [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=5 [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=2 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=3 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=4 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=ANY, mark=Star(excluded={})), exclusion=Empty)] layer=DEMAND\nrun=1 at=5 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=ANY, mark=Star(excluded={})), exclusion=Empty)] layer=DEMAND\nrun=1 at=5 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=ANY, mark=Star(excluded={})), exclusion=Empty)] layer=DEMAND\nrun=1 at=4 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=5 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=6 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 at=2 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 at=7 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 at=3 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 at=8 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 at=4 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 at=5 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=1 at=6 [Pattern(fact=PathFact(base=var(3), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=2 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=7 [Pattern(fact=PathFact(base=var(3), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=3 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=8 [Pattern(fact=PathFact(base=var(3), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=4 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=ANY, mark=Star(excluded={})), exclusion=Empty)] layer=DEMAND\nrun=1 at=6 [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=5 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=ANY, mark=Star(excluded={})), exclusion=Empty)] layer=DEMAND\nrun=1 at=7 [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=5 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=ANY, mark=Star(excluded={})), exclusion=Empty)] layer=DEMAND\nrun=1 at=8 [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=4 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=6 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=5 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=7 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=2 [Pattern(fact=PathFact(base=var(3), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=8 [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=3 [Pattern(fact=PathFact(base=var(3), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=6 [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=2 [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=7 [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=3 [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=8 [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=4 [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=2 [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=3 [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=4 [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=5 [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(0), path=[], tail=STAR, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=1 at=7 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(2), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=3))), exclusion=Empty)] layer=NORMAL\nrun=1 at=8 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(2), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=3))), exclusion=Empty)] layer=NORMAL\nrun=1 at=6 [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] layer=DEMAND\nrun=1 at=7 [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] layer=DEMAND\nrun=1 at=8 [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] layer=DEMAND\nrun=2 at=9 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=2 at=8 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=2 at=7 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=2 at=6 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] layer=NORMAL\nrun=2 at=6 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=arg(1), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] layer=NORMAL\nrun=2 at=6 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] layer=NORMAL\nrun=2 at=6 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<this>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=3))), exclusion=Empty)] layer=NORMAL\nrun=2 at=6 [Pattern(fact=PathFact(base=<zero>, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=0))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(2), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=3))), exclusion=Empty)] layer=NORMAL\nrun=2 at=5 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 at=5 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 at=4 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 at=4 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 at=3 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<this>, path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 at=3 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<this>, path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 at=2 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<this>, path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 at=2 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=<this>, path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 at=3 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 at=3 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(3), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 at=2 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[11], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 at=2 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(0), path=[11], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=2 at=2 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty)] layer=NORMAL\nrun=3 at=6 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] layer=NORMAL\nrun=3 at=7 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] layer=NORMAL\nrun=3 at=8 [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] -> [Pattern(fact=PathFact(base=var(1), path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=2))), exclusion=Empty)] layer=NORMAL\n\n",
+    "markAliases": {
+      "REQ": "T / id1",
+      "DATA": "U / id2",
+      "SESSION": "V / id3"
+    },
+    "c2Zero": [],
+    "c2Data": "param.$/DATA, NORMAL",
+    "run3SessionSourcePermission": true
+  },
+  "serializedRuleMetadata": "20:50:57.046 [main] INFO org.opentaint.semgrep.pattern.SemgrepTraceLogger$Companion$logger$1 -- insecure-design.yaml | Found 5 supported rules\n20:50:57.048 [main] INFO org.opentaint.semgrep.pattern.SemgrepTraceLogger$Companion$logger$1 -- insecure-design.yaml | Register 5 rules\n20:50:57.051 [main] INFO org.opentaint.semgrep.pattern.SemgrepTraceLogger$Companion$logger$1 -- insecure-design.yaml/persistent-cookie/load-ruleset | Skip disabled rule\n20:50:57.384 [main] INFO org.opentaint.semgrep.pattern.SemgrepTraceLogger$Companion$logger$1 -- insecure-design.yaml/trust-boundary-violation | Generate 16 rules from java/security/insecure-design.yaml:trust-boundary-violation\nRULE java/security/insecure-design.yaml:trust-boundary-violation\nITEM EntryPoint(function=Complex(package=Pattern(pattern=.*), class=Pattern(pattern=.*), name=Pattern(pattern=.*)), signature=null, overrides=false, condition=And(allOf=[IsType(typeIs=ClassPattern(package=Pattern(pattern=.*), class=Simple(value=HttpServletRequest), typeArgs=null), pos=AnyArgument(classifier=$REQ)), Or(anyOf=[MethodAnnotated(annotation=AnnotationConstraint(type=ClassPattern(package=Pattern(pattern=.*), class=Simple(value=PostMapping), typeArgs=null), params=null)), MethodAnnotated(annotation=AnnotationConstraint(type=ClassPattern(package=Pattern(pattern=.*), class=Simple(value=GetMapping), typeArgs=null), params=null)), MethodAnnotated(annotation=AnnotationConstraint(type=ClassPattern(package=Pattern(pattern=.*), class=Simple(value=DeleteMapping), typeArgs=null), params=null)), MethodAnnotated(annotation=AnnotationConstraint(type=ClassPattern(package=Pattern(pattern=.*), class=Simple(value=RequestMapping), typeArgs=null), params=null)), MethodAnnotated(annotation=AnnotationConstraint(type=ClassPattern(package=Pattern(pattern=.*), class=Simple(value=PutMapping), typeArgs=null), params=null)), MethodAnnotated(annotation=AnnotationConstraint(type=ClassPattern(package=Pattern(pattern=.*), class=Simple(value=PatchMapping), typeArgs=null), params=null))])]), taint=[SerializedTaintAssignAction(kind=java/security/insecure-design.yaml:trust-boundary-violation;source_0;$REQ;2, annotatedWith=null, pos=BaseOnly(base=AnyArgument(classifier=$REQ)))], info=UserRuleFromSemgrepInfo(ruleId=java/security/insecure-design.yaml:trust-boundary-violation, relevantTaintMarks=[java/security/insecure-design.yaml:trust-boundary-violation;source_0;$REQ;2]), serializedId=java/security/insecure-design.yaml:trust-boundary-violation:entry-point:0)\nITEM Source(function=Complex(package=Pattern(pattern=.*), class=Pattern(pattern=.*), name=Pattern(pattern=.*)), signature=null, overrides=true, condition=And(allOf=[ContainsMark(tainted=java/security/insecure-design.yaml:trust-boundary-violation;source_0;$REQ;2, pos=BaseOnly(base=This)), Not(not=And(allOf=[NumberOfArgs(numberOfArgs=0), MethodNameMatches(methodName=Pattern(pattern=^getSession$))]))]), taint=[SerializedTaintAssignAction(kind=java/security/insecure-design.yaml:trust-boundary-violation;0;_<T>_;, annotatedWith=null, pos=BaseOnly(base=Result))], info=UserRuleFromSemgrepInfo(ruleId=java/security/insecure-design.yaml:trust-boundary-violation, relevantTaintMarks=[java/security/insecure-design.yaml:trust-boundary-violation;source_0;generated_source;3, java/security/insecure-design.yaml:trust-boundary-violation;source_0;$REQ;2]), serializedId=java/security/insecure-design.yaml:trust-boundary-violation:source:1)\nITEM EntryPoint(function=Complex(package=Pattern(pattern=.*), class=Pattern(pattern=.*), name=Simple(value=doPost)), signature=null, overrides=false, condition=IsType(typeIs=ClassPattern(package=Pattern(pattern=.*), class=Simple(value=HttpServletRequest), typeArgs=null), pos=AnyArgument(classifier=$REQ)), taint=[SerializedTaintAssignAction(kind=java/security/insecure-design.yaml:trust-boundary-violation;source_1;$REQ;2, annotatedWith=null, pos=BaseOnly(base=AnyArgument(classifier=$REQ)))], info=UserRuleFromSemgrepInfo(ruleId=java/security/insecure-design.yaml:trust-boundary-violation, relevantTaintMarks=[java/security/insecure-design.yaml:trust-boundary-violation;source_1;$REQ;2]), serializedId=java/security/insecure-design.yaml:trust-boundary-violation:entry-point:2)\nITEM EntryPoint(function=Complex(package=Pattern(pattern=.*), class=Pattern(pattern=.*), name=Simple(value=doDelete)), signature=null, overrides=false, condition=IsType(typeIs=ClassPattern(package=Pattern(pattern=.*), class=Simple(value=HttpServletRequest), typeArgs=null), pos=AnyArgument(classifier=$REQ)), taint=[SerializedTaintAssignAction(kind=java/security/insecure-design.yaml:trust-boundary-violation;source_1;$REQ;2, annotatedWith=null, pos=BaseOnly(base=AnyArgument(classifier=$REQ)))], info=UserRuleFromSemgrepInfo(ruleId=java/security/insecure-design.yaml:trust-boundary-violation, relevantTaintMarks=[java/security/insecure-design.yaml:trust-boundary-violation;source_1;$REQ;2]), serializedId=java/security/insecure-design.yaml:trust-boundary-violation:entry-point:3)\nITEM EntryPoint(function=Complex(package=Pattern(pattern=.*), class=Pattern(pattern=.*), name=Simple(value=doTrace)), signature=null, overrides=false, condition=IsType(typeIs=ClassPattern(package=Pattern(pattern=.*), class=Simple(value=HttpServletRequest), typeArgs=null), pos=AnyArgument(classifier=$REQ)), taint=[SerializedTaintAssignAction(kind=java/security/insecure-design.yaml:trust-boundary-violation;source_1;$REQ;2, annotatedWith=null, pos=BaseOnly(base=AnyArgument(classifier=$REQ)))], info=UserRuleFromSemgrepInfo(ruleId=java/security/insecure-design.yaml:trust-boundary-violation, relevantTaintMarks=[java/security/insecure-design.yaml:trust-boundary-violation;source_1;$REQ;2]), serializedId=java/security/insecure-design.yaml:trust-boundary-violation:entry-point:4)\nITEM EntryPoint(function=Complex(package=Pattern(pattern=.*), class=Pattern(pattern=.*), name=Simple(value=doGet)), signature=null, overrides=false, condition=IsType(typeIs=ClassPattern(package=Pattern(pattern=.*), class=Simple(value=HttpServletRequest), typeArgs=null), pos=AnyArgument(classifier=$REQ)), taint=[SerializedTaintAssignAction(kind=java/security/insecure-design.yaml:trust-boundary-violation;source_1;$REQ;2, annotatedWith=null, pos=BaseOnly(base=AnyArgument(classifier=$REQ)))], info=UserRuleFromSemgrepInfo(ruleId=java/security/insecure-design.yaml:trust-boundary-violation, relevantTaintMarks=[java/security/insecure-design.yaml:trust-boundary-violation;source_1;$REQ;2]), serializedId=java/security/insecure-design.yaml:trust-boundary-violation:entry-point:5)\nITEM Source(function=Complex(package=Pattern(pattern=.*), class=Pattern(pattern=.*), name=Pattern(pattern=.*)), signature=null, overrides=true, condition=And(allOf=[ContainsMark(tainted=java/security/insecure-design.yaml:trust-boundary-violation;source_1;$REQ;2, pos=BaseOnly(base=This)), Not(not=And(allOf=[NumberOfArgs(numberOfArgs=0), MethodNameMatches(methodName=Pattern(pattern=^getSession$))]))]), taint=[SerializedTaintAssignAction(kind=java/security/insecure-design.yaml:trust-boundary-violation;0;_<T>_;, annotatedWith=null, pos=BaseOnly(base=Result))], info=UserRuleFromSemgrepInfo(ruleId=java/security/insecure-design.yaml:trust-boundary-violation, relevantTaintMarks=[java/security/insecure-design.yaml:trust-boundary-violation;source_1;$REQ;2, java/security/insecure-design.yaml:trust-boundary-violation;source_1;generated_source;3]), serializedId=java/security/insecure-design.yaml:trust-boundary-violation:source:6)\nITEM Source(function=Complex(package=Pattern(pattern=.*), class=Simple(value=HttpServletRequest), name=Simple(value=getSession)), signature=null, overrides=true, condition=And(allOf=[NumberOfArgs(numberOfArgs=0), ContainsMark(tainted=java/security/insecure-design.yaml:trust-boundary-violation;0;_<T>_;, pos=BaseOnly(base=AnyArgument(classifier=tainted))), IsType(typeIs=ClassPattern(package=Pattern(pattern=.*), class=Simple(value=HttpServletRequest), typeArgs=null), pos=This)]), taint=[SerializedTaintAssignAction(kind=java/security/insecure-design.yaml:trust-boundary-violation;sink_0;$<ARTIFICIAL>_0;2, annotatedWith=null, pos=BaseOnly(base=Result))], info=UserRuleFromSemgrepInfo(ruleId=java/security/insecure-design.yaml:trust-boundary-violation, relevantTaintMarks=[java/security/insecure-design.yaml:trust-boundary-violation;sink_0;$<ARTIFICIAL>_0;2, java/security/insecure-design.yaml:trust-boundary-violation;0;_<T>_;]), serializedId=java/security/insecure-design.yaml:trust-boundary-violation:source:7)\nITEM Source(function=Complex(package=Pattern(pattern=.*), class=Simple(value=HttpServletRequest), name=Simple(value=getSession)), signature=null, overrides=true, condition=And(allOf=[NumberOfArgs(numberOfArgs=0), IsType(typeIs=ClassPattern(package=Pattern(pattern=.*), class=Simple(value=HttpServletRequest), typeArgs=null), pos=This)]), taint=[SerializedTaintAssignAction(kind=java/security/insecure-design.yaml:trust-boundary-violation;sink_0;$<ARTIFICIAL>_0;3, annotatedWith=null, pos=BaseOnly(base=Result))], info=UserRuleFromSemgrepInfo(ruleId=java/security/insecure-design.yaml:trust-boundary-violation, relevantTaintMarks=[java/security/insecure-design.yaml:trust-boundary-violation;0;_<T>_;, java/security/insecure-design.yaml:trust-boundary-violation;sink_0;$<ARTIFICIAL>_0;3]), serializedId=java/security/insecure-design.yaml:trust-boundary-violation:source:8)\nITEM Source(function=Complex(package=Pattern(pattern=.*), class=Simple(value=HttpServletRequest), name=Simple(value=getSession)), signature=null, overrides=true, condition=And(allOf=[NumberOfArgs(numberOfArgs=0), ContainsMark(tainted=java/security/insecure-design.yaml:trust-boundary-violation;0;_<T>_;, pos=BaseOnly(base=This)), IsType(typeIs=ClassPattern(package=Pattern(pattern=.*), class=Simple(value=HttpServletRequest), typeArgs=null), pos=This)]), taint=[SerializedTaintAssignAction(kind=java/security/insecure-design.yaml:trust-boundary-violation;sink_0;$<ARTIFICIAL>_0;4, annotatedWith=null, pos=BaseOnly(base=Result))], info=UserRuleFromSemgrepInfo(ruleId=java/security/insecure-design.yaml:trust-boundary-violation, relevantTaintMarks=[java/security/insecure-design.yaml:trust-boundary-violation;sink_0;$<ARTIFICIAL>_0;4, java/security/insecure-design.yaml:trust-boundary-violation;0;_<T>_;]), serializedId=java/security/insecure-design.yaml:trust-boundary-violation:source:9)\nITEM Sink(function=Complex(package=Pattern(pattern=.*), class=Pattern(pattern=.*), name=Pattern(pattern=.*)), signature=null, overrides=true, condition=And(allOf=[ContainsMark(tainted=java/security/insecure-design.yaml:trust-boundary-violation;sink_0;$<ARTIFICIAL>_0;2, pos=BaseOnly(base=This)), NumberOfArgs(numberOfArgs=2), MethodNameMatches(methodName=Pattern(pattern=^(putValue|setAttribute)$))]), trackFactsReachAnalysisEnd=[], id=java/security/insecure-design.yaml:trust-boundary-violation, cwe=null, note=null, meta=SinkMetaData(cwe=[501], note=A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n, severity=Note), info=null, serializedId=java/security/insecure-design.yaml:trust-boundary-violation:sink:10)\nITEM Sink(function=Complex(package=Pattern(pattern=.*), class=Pattern(pattern=.*), name=Pattern(pattern=.*)), signature=null, overrides=true, condition=And(allOf=[ContainsMark(tainted=java/security/insecure-design.yaml:trust-boundary-violation;sink_0;$<ARTIFICIAL>_0;3, pos=BaseOnly(base=This)), NumberOfArgs(numberOfArgs=2), ContainsMark(tainted=java/security/insecure-design.yaml:trust-boundary-violation;0;_<T>_;, pos=BaseOnly(base=AnyArgument(classifier=tainted))), MethodNameMatches(methodName=Pattern(pattern=^(putValue|setAttribute)$))]), trackFactsReachAnalysisEnd=[], id=java/security/insecure-design.yaml:trust-boundary-violation, cwe=null, note=null, meta=SinkMetaData(cwe=[501], note=A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n, severity=Note), info=null, serializedId=java/security/insecure-design.yaml:trust-boundary-violation:sink:11)\nITEM Sink(function=Complex(package=Pattern(pattern=.*), class=Pattern(pattern=.*), name=Pattern(pattern=.*)), signature=null, overrides=true, condition=And(allOf=[ContainsMark(tainted=java/security/insecure-design.yaml:trust-boundary-violation;sink_0;$<ARTIFICIAL>_0;3, pos=BaseOnly(base=This)), ContainsMark(tainted=java/security/insecure-design.yaml:trust-boundary-violation;0;_<T>_;, pos=BaseOnly(base=This)), NumberOfArgs(numberOfArgs=2), MethodNameMatches(methodName=Pattern(pattern=^(putValue|setAttribute)$))]), trackFactsReachAnalysisEnd=[], id=java/security/insecure-design.yaml:trust-boundary-violation, cwe=null, note=null, meta=SinkMetaData(cwe=[501], note=A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n, severity=Note), info=null, serializedId=java/security/insecure-design.yaml:trust-boundary-violation:sink:12)\nITEM Sink(function=Complex(package=Pattern(pattern=.*), class=Pattern(pattern=.*), name=Pattern(pattern=.*)), signature=null, overrides=true, condition=And(allOf=[ContainsMark(tainted=java/security/insecure-design.yaml:trust-boundary-violation;sink_0;$<ARTIFICIAL>_0;4, pos=BaseOnly(base=This)), NumberOfArgs(numberOfArgs=2), MethodNameMatches(methodName=Pattern(pattern=^(putValue|setAttribute)$))]), trackFactsReachAnalysisEnd=[], id=java/security/insecure-design.yaml:trust-boundary-violation, cwe=null, note=null, meta=SinkMetaData(cwe=[501], note=A trust boundary can be thought of as line drawn through a program. On one side\nof the line, data is untrusted. On the other side of the line, data is assumed\nto be trustworthy. The purpose of validation logic is to allow data to safely\ncross the trust boundary - to move from untrusted to trusted. A trust boundary\nviolation occurs when a program blurs the line between what is trusted and what\nis untrusted. By combining trusted and untrusted data in the same data\nstructure, it becomes easier for programmers to mistakenly trust unvalidated\ndata.\n, severity=Note), info=null, serializedId=java/security/insecure-design.yaml:trust-boundary-violation:sink:13)\nITEM Source(function=Complex(package=Simple(value=org.owasp.esapi), class=Simple(value=ESAPI), name=Simple(value=encoder)), signature=null, overrides=true, condition=NumberOfArgs(numberOfArgs=0), taint=[SerializedTaintAssignAction(kind=java/security/insecure-design.yaml:trust-boundary-violation;pass_0_0;$<ARTIFICIAL>_1;1, annotatedWith=null, pos=BaseOnly(base=Result))], info=UserRuleFromSemgrepInfo(ruleId=java/security/insecure-design.yaml:trust-boundary-violation, relevantTaintMarks=[java/security/insecure-design.yaml:trust-boundary-violation;0;_<T>_;, java/security/insecure-design.yaml:trust-boundary-violation;pass_0_0;$<ARTIFICIAL>_1;1]), serializedId=java/security/insecure-design.yaml:trust-boundary-violation:source:14)\nITEM Source(function=Complex(package=Pattern(pattern=.*), class=Pattern(pattern=.*), name=Simple(value=encodeForHTML)), signature=null, overrides=true, condition=And(allOf=[Or(anyOf=[ContainsMark(tainted=java/security/insecure-design.yaml:trust-boundary-violation;0;_<T>_;, pos=BaseOnly(base=Argument(idx=0))), ContainsMark(tainted=java/security/insecure-design.yaml:trust-boundary-violation;pass_0_0;$<ARTIFICIAL>_1;1, pos=BaseOnly(base=This))]), ContainsMark(tainted=java/security/insecure-design.yaml:trust-boundary-violation;pass_0_0;$<ARTIFICIAL>_1;1, pos=BaseOnly(base=This)), NumberOfArgs(numberOfArgs=1), ContainsMark(tainted=java/security/insecure-design.yaml:trust-boundary-violation;0;_<T>_;, pos=BaseOnly(base=Argument(idx=0)))]), taint=[SerializedTaintAssignAction(kind=java/security/insecure-design.yaml:trust-boundary-violation;0;_<T>_;, annotatedWith=null, pos=BaseOnly(base=Result))], info=UserRuleFromSemgrepInfo(ruleId=java/security/insecure-design.yaml:trust-boundary-violation, relevantTaintMarks=[java/security/insecure-design.yaml:trust-boundary-violation;0;_<T>_;, java/security/insecure-design.yaml:trust-boundary-violation;pass_0_0;$<ARTIFICIAL>_1;1]), serializedId=java/security/insecure-design.yaml:trust-boundary-violation:source:15)\n",
+  "policyChanged": false,
+  "qualification": "Native causality matches the shared serialized rule shape; this is not an event-by-event trace of all18 project finding paths."
+}

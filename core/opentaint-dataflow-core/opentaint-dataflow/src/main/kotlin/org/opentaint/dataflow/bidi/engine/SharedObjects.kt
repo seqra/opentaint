@@ -45,6 +45,7 @@ class SharedObjects(
         org.opentaint.dataflow.bidi.store.DetachedStaticCallGraph.EMPTY,
 ) : AutoCloseable {
     val reportCatalog = ReportCatalog()
+    val normalRuleContributors = org.opentaint.dataflow.bidi.store.NormalRuleContributorStore(ap)
     val staticGuidanceInterner = org.opentaint.dataflow.bidi.store.StaticGuidanceInterner(ap)
     val staticWriteKeyInterner = org.opentaint.dataflow.bidi.store.StaticWriteKeyInterner(ap)
     var staticCallGraph = staticCallGraph
