@@ -1,0 +1,72 @@
+'LiveLocals.Mask' does not depend on any axioms
+'LiveLocals.allMasks' depends on axioms: [propext]
+'LiveLocals.every_mask_enumerated' depends on axioms: [propext, Quot.sound]
+'LiveLocals.MaskLe' does not depend on any axioms
+'LiveLocals.MonotoneTransfer' does not depend on any axioms
+'LiveLocals.Closed' does not depend on any axioms
+'LiveLocals.least' depends on axioms: [propext]
+'LiveLocals.least_characterization' depends on axioms: [propext, Quot.sound]
+'LiveLocals.least_below_each_closed' depends on axioms: [propext, Quot.sound]
+'LiveLocals.least_is_closed' depends on axioms: [propext, Quot.sound]
+'LiveLocals.least_is_fixed' depends on axioms: [propext, Quot.sound]
+'LiveLocals.Graph' does not depend on any axioms
+'LiveLocals.successorsLive' does not depend on any axioms
+'LiveLocals.forward' does not depend on any axioms
+'LiveLocals.backward' does not depend on any axioms
+'LiveLocals.blockTransfer' does not depend on any axioms
+'LiveLocals.blockUse' does not depend on any axioms
+'LiveLocals.blockDef' does not depend on any axioms
+'LiveLocals.ordered_block_transfer_has_USE_DEF_form' depends on axioms: [propext, Quot.sound]
+'LiveLocals.first_definition_blocks_later_use_of_old_tmp' does not depend on any axioms
+'LiveLocals.RHS_read_precedes_LHS_commit' does not depend on any axioms
+'LiveLocals.successors_monotone' depends on axioms: [propext, Quot.sound]
+'LiveLocals.forward_monotone' depends on axioms: [propext, Quot.sound]
+'LiveLocals.backward_monotone' depends on axioms: [propext, Quot.sound]
+'LiveLocals.first_use_below_every_closed' depends on axioms: [propext, Quot.sound]
+'LiveLocals.first_use_is_live' depends on axioms: [propext, Quot.sound]
+'LiveLocals.firstUseMask' depends on axioms: [propext]
+'LiveLocals.live_unfolds_to_use_or_live_unkilled_successor' depends on axioms: [propext, Quot.sound]
+'LiveLocals.firstUseSearch' does not depend on any axioms
+'LiveLocals.search_sound' depends on axioms: [propext, Quot.sound]
+'LiveLocals.path_has_finite_search_witness' depends on axioms: [propext, Quot.sound]
+'LiveLocals.boundary' does not depend on any axioms
+'LiveLocals.boundary_live_iff_actual_destination_live' depends on axioms: [propext, Quot.sound]
+'LiveLocals.boundary_dead_means_every_actual_destination_dead' depends on axioms: [propext, Quot.sound]
+'LiveLocals.all_exit_continuations_union' depends on axioms: [propext]
+'LiveLocals.routeExampleLive' depends on axioms: [propext]
+'LiveLocals.feedback_live_but_AL_dead' depends on axioms: [propext]
+'LiveLocals.wrongly_borrowing_feedback_retains_dead_AL_local' depends on axioms: [propext]
+'LiveLocals.observeOld' does not depend on any axioms
+'LiveLocals.none_token_is_silent' depends on axioms: [propext]
+'LiveLocals.dead_local_has_no_instruction_observations' depends on axioms: [propext, Quot.sound]
+'LiveLocals.dropping_dead_token_has_same_instruction_observations' depends on axioms: [propext, Quot.sound]
+'LiveLocals.keepPacket' depends on axioms: [propext]
+'LiveLocals.filterBoundary' depends on axioms: [propext]
+'LiveLocals.retained_packet_preserves_whole_premise_and_annotation' depends on axioms: [propext]
+'LiveLocals.live_loop_carried_packet_uses_unchanged_native_path' depends on axioms: [propext]
+'LiveLocals.dead_route_local_cannot_escape' depends on axioms: [propext]
+'LiveLocals.nonlocals_always_retained' depends on axioms: [propext, Quot.sound]
+'LiveLocals.filtering_does_not_rebuild_retained_packets' depends on axioms: [propext]
+'LiveLocals.stronger_filter_after_weaker_same_as_stronger' depends on axioms: [propext]
+'LiveLocals.actual_route_live_implies_shared_leave_live' depends on axioms: [propext, Quot.sound]
+'LiveLocals.actual_route_filter_removes_shared_exit_leakage' depends on axioms: [propext, Quot.sound]
+'LiveLocals.boundaryState' depends on axioms: [propext]
+'LiveLocals.completed_source_Target_static_effects_unchanged' depends on axioms: [propext]
+'LiveLocals.dead_local_drops_while_nonlocal_annotations_stay' depends on axioms: [propext]
+'LiveLocals.tmpUse' depends on axioms: [propext]
+'LiveLocals.tmpDef' depends on axioms: [propext]
+'LiveLocals.tmpGraph' depends on axioms: [propext]
+'LiveLocals.fresh_iteration_assignment_kills_old_tmp' depends on axioms: [propext]
+'LiveLocals.tmp_is_live_after_definition_before_use' depends on axioms: [propext]
+'LiveLocals.backward_mentions_do_not_kill_lhs' depends on axioms: [propext]
+'LiveLocals.read_before_write_keeps_old_value' depends on axioms: [propext]
+'LiveLocals.principalGraph' depends on axioms: [propext]
+'LiveLocals.principalTmpUse' depends on axioms: [propext]
+'LiveLocals.principalTmpDef' depends on axioms: [propext]
+'LiveLocals.principalXUse' depends on axioms: [propext]
+'LiveLocals.principalXDef' does not depend on any axioms
+'LiveLocals.principal_tmp_dead_on_repeat_x_live' depends on axioms: [propext]
+'LiveLocals.principal_tmp_live_inside_body_before_use' depends on axioms: [propext]
+'LiveLocals.principal_tmp_cannot_escape_actual_AL_route' depends on axioms: [propext]
+'LiveLocals.principalRepeatLocal' depends on axioms: [propext]
+'LiveLocals.principal_repeat_drops_tmp_keeps_x_and_completed_sink' depends on axioms: [propext]

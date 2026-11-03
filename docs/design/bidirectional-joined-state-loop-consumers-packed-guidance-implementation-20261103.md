@@ -14,12 +14,17 @@ Checkout `b5fbae2400516e90beb9e17aec6a4bb8a2ac3162` has the same runtime.
 Its archived forward-ZERO draft is not selected. The secondary
 candidate-directed static-pruning proposal is also not selected.
 
+The selected loop-query work also includes the instruction-only dead-local
+pre-filter in section D. It drops `tmp` in `while (...) { tmp = x; ... }`
+before boundary summary or demand work, when old `tmp` is dead on repeat.
+
 ## Selected result and limits
 
 | Change | Current behavior | Required new behavior |
 | --- | --- | --- |
 | Release closed state at join | Execution and publication indexes remain while static binding builds its output | Capture required exports, move actual input directories, then release execution/current-delivery owners before pruning or binding |
 | Prepare and reuse loop queries | Repeat C2 projections and the same C5 input predicate for new outputs and trial prefixes | Reuse ordered C2 answers and checked local C5 entry plans; keep native output restriction and native fallback |
+| Drop dead boundary locals within the loop work | Send dead temporaries through summary and consumer processing | Use CFG live-local bit sets to drop their conclusions before summary emission and demand checks |
 | Pack static guidance | Retain rich W/R and terminal sets, then build another frozen index | Retain shared geometry and primitive exact labels/owner memberships; create rich rows only for selected query candidates/results |
 
 **Selected major analyzer semantic changes: none.** Required results remain
@@ -39,6 +44,10 @@ Resource-limited outcomes can improve when work or retention is removed.
 The proof target is semantic equality under the component contracts, not
 equal OOM/timeout timing, callback counts or JVM allocation. No proof below
 establishes a project speedup, a JVM byte saving or global convergence.
+Dead local boundary summaries and their internal demand rows can disappear.
+For this pre-filter, preservation means observations and live results, not
+equality of the deleted internal row inventories. Keep live carried values
+on the existing path. No new direct-repeat mechanism is selected.
 
 ## Measurement reference
 
@@ -141,15 +150,16 @@ provide its completed static result and must not enter that fallback.
 | Query reuse, prepared entry, annotations and fallback | 71 / 127 | [Loop queries](../../spec/lean/proposals/loop-consumer-query-reuse-20261103/REPORT.md) |
 | Packed rows, ordered queries and finite composition | 48 / 84 | [Static catalog](../../spec/lean/proposals/packed-static-guidance-20261103/REPORT.md) |
 | Composition of the three contracts | 8 / 12 | [Combined pipeline](../../spec/lean/proposals/joined-state-modular-composition-20261103/REPORT.md) |
+| Instruction-only dead-local pre-filter | 42 / 72 | [Boundary live locals](../../spec/lean/proposals/block-boundary-live-locals-20261103/REPORT.md) |
 
-All 214 theorems are constructive. The audits allow only `propext` and
+All 256 theorems are constructive. The audits allow only `propext` and
 `Quot.sound`; no choice, unproved axiom or native-evaluation proof is used.
 The component/source/index adapters and the real quiescence/read-footprint
 contracts remain native implementation obligations. These models do not
 kernel-verify Kotlin, JVM identity, concurrency, GC or performance.
 
 The [design validation receipt](bidirectional-joined-state-loop-consumers-packed-guidance-validation-20261103.json)
-records the four proof receipts, component/source hashes, unchanged runtime
+records the five proof receipts, component/source hashes, unchanged runtime
 and local-link checks. It records no native test or project experiment.
 
 The combined result uses these exact premises: release preserves the
@@ -158,6 +168,11 @@ the observer preserves its complete signature for every raw/trial input.
 Then the existing adaptive shortest-prefix decision and deterministic
 handoff/report projections have the same result. Do not weaken this to a
 set of marks, independent entry/exit permission, or an unordered graph.
+The extra local-erasure model proves the observation projection for dead
+old values and exact route filtering. It does not change the three imported
+composition models or prove native Kotlin AP observation equivalence. The
+instruction classifier and boundary/observer adapters have explicit native
+test gates in section D.
 
 ## A. Release closed state at the successful join
 
@@ -1469,6 +1484,324 @@ The allocation-unit proof does not set a promised percentage of the measured
 No Kotlin file, analyzer run or project measurement is changed by this design.
 
 
+## D. Drop dead local conclusions before boundary work
+
+Component source: [bidirectional-block-boundary-live-locals-design-20261103.md](bidirectional-block-boundary-live-locals-design-20261103.md).
+Frozen design SHA-256: `eacb7f40449296a0db35a675070e2180dc9420c8fa9a88c33b427fad08da18c2`.
+
+### 1. Contract
+
+Compute forward and backward live-local bit sets when the method block
+metadata is built. At an outgoing boundary, drop a DATA edge if its
+conclusion is a local variable that is dead on that continuation. Perform
+this test **before summary construction, publication, C5 intersection and
+loop-consumer demand checks**.
+
+Use CFG instructions only. Do not load rules, inspect rule conditions,
+enumerate aliases or call alias analysis. A rule cannot access a local
+that its instruction does not mention. An inaccessible local does not
+need an alias check.
+
+A loop-body temporary whose old value is dead on repeat and on every
+leaving route has no boundary summary. It does not escape the loop body.
+This test uses values and CFG uses, not variable names or declaration text.
+
+| Current behavior | New behavior |
+| --- | --- |
+| Unchanged delivery brings a temporary to a boundary, then constructs a local summary and checks its consumers | One bit test drops a dead local conclusion before this work |
+| A temporary can enter parent completion, publication and demand stores although the continuation cannot read its value | The temporary stays inside its useful block scope |
+| Live loop-carried values use the ordinary block path | The same path remains for live loop-carried values |
+
+**Major analyzer semantic changes: none.** The selected change removes
+unobservable local rows. Internal local summaries, demand rows, callbacks
+and work counters can decrease. They are not required to be equal to the
+unfiltered inventories. Preserve observations, live results, method
+summaries, reports, source permission and static effects. Do not change
+field transfer, marks, layers, protection, ND joins, CFG reachability,
+loop restriction, initial emission or method exit rules.
+
+Only test the conclusion base. Keep the complete premise and all retained
+fact annotations unchanged. Never drop ZERO, Target, static, argument,
+`this`, return or exception facts through this test. Keep effects already
+produced inside the block, including Targets and NORMAL rule contributors.
+Do not infer a new lexical variable identity or rename method registers.
+
+### 2. Principal pattern
+
+```java
+x = ...;
+while (true) {
+    var tmp = x;          // Reads x. Replaces the old tmp.
+    use(tmp);            // Reads the new tmp.
+}
+```
+
+```text
+At the copy:             P -> x.$/T produces P -> tmp.$/T.
+At repeat, before:       tmp enters summary/demand processing.
+At repeat, after:        drop P -> tmp.$/T immediately.
+Reason:                  the next copy kills old tmp before any read.
+Retain x:                the next copy reads x before overwriting it.
+```
+
+The same test applies to FLOW and DEMAND facts with this local base.
+The field chain and mark do not make an inaccessible local accessible.
+An effect from `use(tmp)`, such as `P -> Target`, is already separate and
+remains. The filter does not undo the instruction.
+
+This is different from a live carried value:
+
+```java
+Node tmp = null;
+while (again()) {
+    if (choose()) tmp = sourceT();
+    else sinkT(tmp);      // Can read a previous iteration's tmp.
+}
+// AL does not use tmp.
+```
+
+The repeat continuation keeps `tmp`: there is a path to a read before an
+overwrite. The existing summary and restriction path handles that value.
+The leaving continuation drops `tmp` if it is dead in AL. Do not add a
+direct repeat path or drop live carried values.
+
+### 3. Instruction metadata and fixed point
+
+Add a small metadata API next to method forms. It must inspect operands
+without compiling or specializing a rule. Do not reuse
+`isBaseRelevant`: its current backward footprint can query aliases.
+
+```kotlin
+data class LocalAccess(
+    val uses: BitSet,
+    val definiteDefinitions: BitSet,
+    val mentions: BitSet,
+)
+
+// Proposed API. All indices are the existing LocalVar.idx indices.
+fun localAccess(instruction: CommonInst): LocalAccess
+```
+
+Forward `uses` contains RHS locals, call receiver/arguments, address and
+index locals of a memory LHS, and return/throw operands. A direct local
+LHS is a definition, not a read, unless it also occurs in an operand.
+For `tmp = x`, USE is `{x}` and DEF is `{tmp}`. For `x = x.f`, USE
+contains `x` whether or not the overwrite can be certified. A field/array
+write does not define its base local.
+`JIRAssignInst.operands` includes the LHS. Do not collect that array as
+forward USE without separating the direct local LHS from the RHS.
+
+A definition kills the old local only if the overwrite is definite on
+all successors of that CFG instruction. If an assignment can throw before
+it commits, use an empty kill set unless the existing graph already has
+a separate committed-write node. Do not add a graph rewrite or a new
+exception policy to make the mask smaller.
+The initial classifier can certify plain local/constant copies, including
+`tmp = x`. An unknown or potentially throwing RHS has no certified kill.
+`LanguageManager.producesExceptionalControlFlow == false` is not a commit
+certificate: its JVM implementation does not classify every throwing RHS.
+
+Use ordinary forward USE/DEF liveness. Backward analysis must include
+definitions as accesses: it must reach the instruction that defines the
+demanded local. Use all instruction mentions and no kills for the backward
+mask. This conservative backward calculation needs no reverse-transfer,
+rule or alias analysis. It can keep extra locals; it cannot drop a needed
+one. In particular, do not swap USE and DEF and kill RHS locals: the
+reverse of `a = b` also preserves existing `b` facts.
+
+```kotlin
+// Temporary solver state. graph is the actual graph for this direction,
+// including its exceptional/discovery edges and the loop feedback edges.
+val liveIn = Array(graph.size) { BitSet(localCount) }
+val queue = allInstructionIndices()
+
+while (queue.isNotEmpty()) {
+    val s = queue.removeFirst()
+    val next = if (forward) access[s].uses.cloneBits()
+               else access[s].mentions.cloneBits()
+    graph.forEachSuccessor(s) { to ->
+        val carried = liveIn[to].cloneBits()
+        if (forward) carried.andNot(access[s].definiteDefinitions)
+        next.or(carried)
+    }
+    if (next != liveIn[s]) {
+        liveIn[s] = next
+        graph.forEachPredecessor(s) { queue.addIfAbsent(it) }
+    }
+}
+```
+
+Initialize **all** nodes, including non-returning SCCs. Starting only from
+method exits misses `while (true)`. The equations compute the least fixed
+point from empty sets. They do not inspect current facts or demand.
+
+### 4. Masks at real boundary continuations
+
+Retain immutable bit sets for block output interfaces in both directions.
+The bit set for a real directed route `s -> to` is `liveIn[to]`: the
+instruction at `s` has already run. Do not use the input mask of `s`.
+
+```kotlin
+// Proposed sidecar for the existing immutable layout/form owner.
+class BlockLiveLocals {
+    fun mayLeave(direction: Direction, block: BlockId,
+                 exit: PortId, local: Int): Boolean
+    fun mayFollow(direction: Direction, route: MethodBlockRoute,
+                  local: Int): Boolean
+}
+```
+
+For the existing single logical normal exit, union the masks of its real
+leaving routes. Keep feedback separate. Before actual delivery, check
+each real route again. A union must not leak a value from a live route
+onto a dead route.
+
+```text
+Loop repeat output:    union of genuine repeat continuations.
+Loop leaving output:   union of genuine leaving continuations only.
+Actual route delivery: liveIn of that route's destination.
+```
+
+Use the same rule for backward routes, empty identity blocks and nested
+blocks. A child result kept for one continuation can become dead when it
+crosses the next parent boundary. Check that boundary too. Preserve the
+single loop exit and its existing join scope.
+
+Build this sidecar with the existing method decomposition metadata, once
+per actual graph direction. Cache it with that form/layout owner, not
+with each run, scope, fact, mark or caller. Release instruction solver
+arrays after retaining the required boundary masks. No fact or callback
+belongs in this metadata. Treat stored bit sets as immutable.
+An unsupported synthetic output role keeps the native path until its
+actual target is known. A missing mask is not an empty live set.
+
+### 5. Boundary integration
+
+```kotlin
+fun keepLocalConclusion(block: BlockId, exit: PortId, value: Facts): Boolean {
+    val local = value.base as? AccessPathBase.LocalVar ?: return true
+    return liveLocals.mayLeave(direction, block, exit, local.idx)
+}
+
+// BlockRunState: early guard avoids boundedSummaryResult work.
+fun retainBlockSummary(exit: PortId, original: PremiseKey, value: Facts) {
+    if (binding?.keepLocalConclusion(exit, value) == false) return
+    existingRetainBlockSummary(exit, original, value)
+}
+
+// Central guard also covers endAt's direct retainSummary path.
+fun retainSummary(original: PremiseKey, value: Facts, exit: PortId) {
+    if (binding?.keepLocalConclusion(exit, value) == false) return
+    existingNormalizeCountRestrictAndPublish(original, value, exit)
+}
+
+// MethodBlockRuntime.onApplied: applies to saved and current child results.
+fun onApplied(link: LocalLink, exit: PortId, original: PremiseKey, value: Facts) {
+    if (!keepLocalConclusion(link.child.block, exit, value)) return
+    existingLimitRestrictAndStoreCompletion(link, exit, original, value)
+}
+
+// Before routing one actual completion branch.
+for (route in deliveryRoutes(exit)) {
+    val local = value.base as? AccessPathBase.LocalVar
+    if (local != null && !liveLocals.mayFollow(direction, route, local.idx)) continue
+    existingRouteCompleted(route, original, value)
+}
+```
+
+Use the same producer guard for leaf delivery, empty identities and
+parent forwarding. Do not add an independent fact store or replace
+post-statement deduplication. Leave unchanged delivery inside a block.
+It can deliver a dead temporary to the boundary; the bit test stops it
+before the expensive boundary work.
+
+Apply the same masks inside loop observation. Adjacent and repeat C2
+families use their own continuation masks. Saved-AL replay checks its
+completed local output against the enclosing output mask before
+normalization/C5. Do not let observer-only replay reintroduce a row that
+actual boundary delivery drops. All nonlocal observation families keep
+their existing order and behavior.
+
+Physical method entry/exit rules still run at their existing instruction.
+Do not put a dead-local shortcut ahead of those handlers. Filter only
+their completed DATA output. The direct `endAt`/`retainSummary` path must
+use the same final output guard; do not bypass it accidentally. The
+STATIC shortcut and Target path have nonlocal conclusions and pass.
+
+Save completed effects and existing contributor snapshots as before.
+An edge with a dead local **premise** and a live conclusion remains.
+This feature does not remove inputs needed by joined writer binding or
+the inventories retained by point 1.
+
+| Source | Proposed change |
+| --- | --- |
+| `JIRMethodEntry`, `JIRMethodForms` and method-context metadata access | Extract raw local operands; own the decomposition-side liveness metadata; do not use the alias-aware relevance API |
+| `MethodBlockLayout` sidecar | Hold immutable per-direction interface and real-route masks; leave block/port IDs unchanged |
+| `BlockRunState.retainBlockSummary` and `retainSummary` | Early and central conclusion-only guards |
+| `MethodBlockRuntime.onApplied` and `routeCompleted` | Guard saved/current results before observer work and before each actual route |
+| `MethodBlockRuntime.observe` | Use the same continuation and enclosing-output filters in observer-only replay |
+
+The metadata API must have a conservative default for unsupported
+backends. It must not silently return an empty mask for an unclassified
+instruction or interface. The selected JVM path must classify the plain
+copy in section 2 exactly.
+
+### 6. Proof and implementation gates
+
+The [constructive model and proof report](../../spec/lean/proposals/block-boundary-live-locals-20261103/REPORT.md)
+cover finite CFG liveness, forward read-before-kill paths, conservative
+backward mentions, boundary masks and dead-local observation removal.
+The checker passes 42 theorems and audits 72 declarations. Its source
+pins use `c7ed16e99c599ca926812c067df0b6608b6185f2`, which has the same
+runtime as the combined proposal's reference revision.
+The native instruction classifier and insertion sites remain implementation
+obligations. The model does not prove a JVM speedup or a byte saving.
+
+The proof chain is:
+
+```text
+finite monotone equations -> executable least fixed point
+read before definite kill -> local is in liveIn
+local absent from liveIn -> no observation of that old value
+each boundary mask covers its actual continuations
+drop dead conclusion -> same remaining observations and live results
+nonlocal/premise/annotation/completed effects -> unchanged
+```
+
+Do not claim equality of all internal summary streams after removing dead
+rows. The three original component proofs still apply to their retained
+inputs. The new erasure proof establishes the observation projection for
+the pre-filter. Kernel checking does not establish the Kotlin adapter.
+
+Add native RED controls before implementation, then make them GREEN:
+
+| Control | Required check |
+| --- | --- |
+| `x=...; while(true){ tmp=x; use(tmp); }` | No `tmp` boundary summary, completion or observer call; retain `x` |
+| Dead copy with FLOW, FULL T and DEMAND | Same drop for all annotations; surviving facts stay bit-for-bit equal |
+| Conditional assignment then use on another traversal | Keep live carried local on repeat; preserve sink |
+| Dead AL local but live repeat | Keep repeat; no DATA delivery to AL |
+| Live AL local | Preserve its output and later sink |
+| Two leaving routes, local live on one | Shared exit keeps it; actual dead route drops it |
+| Nested loop local | Recheck child and parent exits; no leak into an unrelated suffix |
+| `x=x.f`, field/array write, exceptional assignment | Read-before-write and uncommitted overwrite preserve old-value liveness |
+| Backward `a=b` and definition reached before a read | Keep required definitions and preserved RHS facts |
+| ZERO, Targets, statics, arguments, return, exception | Existing paths, exit effects and inventories unchanged |
+| Live conclusion with a dead premise | Keep full original premise and annotations |
+| Non-returning SCC, empty block, backward discovery | Valid fixed point and exact route coverage |
+
+Compare reports, live/method outputs, source permissions and required
+guidance with the unfiltered oracle. Check dead-row absence separately.
+Do not require old diagnostic work counts or dead local demand rows.
+
+Run this pre-filter before the query-reuse optimization in point 2.
+Counters can record local boundary offers/drops and avoided summary or
+observer entries. Do not perform a demand lookup to count avoided work.
+In the selected campaign, report those counts with the latest reached,
+complete and accepted run-N. The current measurement frontiers remain:
+OWASP run-5/5/5; Conductor run-6/5/5; Thingsboard run-1/none/none;
+Stirling-PDF run-8/7/7. No new measurement is part of this design update.
+
 ## Combined implementation order
 
 The following is the future implementation plan. This design task changes
@@ -1476,7 +1809,7 @@ no Kotlin implementation and runs no Gradle/analyzer experiment.
 
 1. **Keep the reference oracles.** Pin the current binder, observer,
    restriction and static builder in test helpers. Run the four constructive
-   model checkers. Add the named RED controls from each component before
+   component model checkers and the dead-local checker. Add the named RED controls before
    changing its production path.
 2. **Add detached read owners and frozen exports.** Keep native summaries,
    targets, source/sink seeds, contributors and exact diagnostics. Move every
@@ -1491,17 +1824,22 @@ no Kotlin implementation and runs no Gradle/analyzer experiment.
    and owner-local ordinals. Migrate every query/index consumer against the
    ordered reference oracle. Keep B, AP writer binding and graph traversal.
    Check that the frozen result has no live-owner closure. Commit separately.
-5. **Prepare loop queries.** Add the ordered C2 answer bundle first. Add the
+5. **Filter dead locals and prepare loop queries.** First add instruction-only
+   forward/backward live-local metadata and boundary guards from section D.
+   Verify `tmp=x` drops old `tmp` before summaries/demand, keeps `x`, and keeps
+   live carried locals on the native path. Then add the ordered C2 answer bundle. Add the
    checked AP entry ticket and local C5 plan next. Add the bounded C2
    owner-quantum memo, bounded C5 plan cache (32 contexts, at most 2,048 row
    references per plan), and the proved narrow empty-DATA shortcut. Preserve all
    native fallbacks. No full-observation memo is selected. Commit separately.
 6. **Run integration gates.** Test A/B/C alone and together on deterministic
-   native fixtures. Compare normal/demand summaries, full marked geometry,
+   native fixtures. Compare normal/demand summaries modulo dead local
+   conclusions, full marked geometry,
    protection, raw NORMAL IDs, outgoing DEMAND Targets, source/sink seeds,
    contributor rows, exact scoped/port keys and composed handoff queries.
    Test late callbacks, empty regions, nested loops, predefined summaries,
-   recursive callers, reverse/MUST records and partial failures.
+   recursive callers, reverse/MUST records and partial failures. Check dead
+   local row absence and observable/live-result equality separately.
 7. **Repeat the selected project campaign.** Use the existing direct Gradle
    harness and only the four unchanged configurations below. Do not rerun
    saved baselines or disable statics/aliases to claim a speedup.
@@ -1517,6 +1855,8 @@ Remove the old actor/storage callback dependency from real joined binding,
 late-only release of execution/current-delivery state, duplicate labelled
 C2 calls, repeated entry checks in the selected prepared path, and rich
 W/R/terminal builder/frozen row catalogs after their replacements pass.
+Remove dead local boundary rows before their summary, completion and demand
+work. Keep existing handling for locals live on the actual route.
 
 Keep actual input history, admitted native summary stores, raw Target and
 source/sink inventories, contributor snapshots, raw pre-exit write IDs and
@@ -1545,6 +1885,8 @@ Conductor:    run-4/run-5/run-6 physical packets, local offers, observations,
               C2 calls/hits, plan checks/hits/rows, empty replay skips,
               native fallbacks, prefix trials, Java/all-thread CPU and GC.
 Stirling:     the same query/work census for run-6/run-7/run-8.
+Loop locals:  per run-N boundary offers/drops, retained mask size,
+              avoided summary/observer entries, live carried controls.
 ```
 
 A shorter failing run or a result with fewer findings is not a success.
