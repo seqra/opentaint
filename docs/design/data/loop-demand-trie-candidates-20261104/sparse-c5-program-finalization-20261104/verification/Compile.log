@@ -1,0 +1,6 @@
+/drive-testcomp/opentaint-go-rules/opentaint-w3/docs/design/data/loop-demand-trie-candidates-20261104/sparse-c5-program-finalization-20261104/Sparse.lean:162:40: warning: Try `simp at sizes` instead of `simpa using sizes`
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+/drive-testcomp/opentaint-go-rules/opentaint-w3/docs/design/data/loop-demand-trie-candidates-20261104/sparse-c5-program-finalization-20261104/Sparse.lean:170:40: warning: Try `simp at sizes` instead of `simpa using sizes`
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`

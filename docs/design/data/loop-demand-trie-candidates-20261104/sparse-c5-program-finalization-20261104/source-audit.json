@@ -1,0 +1,92 @@
+{
+  "status": "UNSELECTED_SOURCE_REPRESENTATION_DELTA_AND_CONDITIONAL_MODEL",
+  "revision": "52f32dd437d438aec4a700a02c18d94c31d58093",
+  "kotlin_changed": false,
+  "new_analyzer_or_jvm_or_profile_reader": false,
+  "native_verified": false,
+  "note": {
+    "path": "/drive-testcomp/opentaint-go-rules/loop-demand-trie-20261104/analysis-tools/candidates/sparse-c5-program-finalization-20261104.md",
+    "sha256": "4430b69ed882420b68184ab9c7c24a70e7a0c5c85007759c83444960c4bae34c"
+  },
+  "proof": {
+    "path": "/drive-testcomp/opentaint-go-rules/loop-demand-trie-20261104/analysis-tools/candidates/sparse-c5-program-finalization-20261104/checks.json",
+    "sha256": "d5b3e4b386567ce3ddd6c1d496742ef33f4cf8edff18a0ea702773a6968564e7"
+  },
+  "native_prerequisites": [
+    "Sparse key support and uniqueness",
+    "Sorted original program ordinals",
+    "Identical ordered protected/ordinary selections",
+    "Unchanged native pack/mask/limit callback",
+    "Same 2048 unique-reference fallback"
+  ],
+  "precise_saved_work": [
+    "Dense s-slot reference array allocation/zeroing",
+    "Unoccupied program visits and their optional diagnostics"
+  ],
+  "work_not_saved": [
+    "Already lazy ProgramBucket/LinkedHashSet allocations for selected programs",
+    "Scalar enumeration and trie selection",
+    "Selected pack/protection/limit work"
+  ],
+  "measurement_limits": [
+    "No new measurement was run",
+    "k occupancy is not directly logged in existing counters",
+    "11.28 percent bookkeeping is parent-reported motivation, not an avoidable share estimate",
+    "Exact memo early sample had no hits; remains future conditional"
+  ],
+  "source_files": [
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/PreparedOutputPrograms.kt",
+      "sha256": "682b774936ee5cc56857a4d2be79e4ccb59778fb05cc475203f347f403c2a747",
+      "locations": {
+        "dense_array": 35,
+        "existing_lazy_bucket": 47,
+        "overflow_before_output": [
+          62,
+          63
+        ],
+        "dense_finalizer": [
+          65,
+          89
+        ],
+        "native_pack_limit": [
+          78,
+          87
+        ],
+        "first_accepted_ordinal": [
+          101,
+          111
+        ]
+      }
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/DemandScalarStreams.kt",
+      "sha256": "332451e9fbba550cba0ed6d27575f6db7fa73116727fcca06d5739758e0d49c0",
+      "locations": {
+        "independent_native_streams": [
+          19,
+          33
+        ],
+        "unchanged_packer": [
+          35,
+          43
+        ]
+      }
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandResultCoverage.kt",
+      "sha256": "ade7b5a26ceb3973c60e4a58598256d7ba116b53003e019074816bd74e1cde1d",
+      "locations": {
+        "optional_counters": true,
+        "prepared_and_native_legacy_attempts_share_keys": true
+      }
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandStore.kt",
+      "sha256": "e908018f682d2742bb4632f1091e7032a24238cf4f7e97826ef7c81019a1450b",
+      "locations": {
+        "factory_caps_and_native_fallback_preserved": true
+      }
+    }
+  ]
+}

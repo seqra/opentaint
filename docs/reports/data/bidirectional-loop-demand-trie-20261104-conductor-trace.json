@@ -1,0 +1,6967 @@
+{
+  "status": "BOUNDED_CAPTURE_ONLY",
+  "input": {
+    "path": "/drive-testcomp/opentaint-go-rules/loop-demand-trie-20261104/diagnostics/conductor-replace-run4-4096-20261104T141344817253Z/trace.log",
+    "bytes": 5377313,
+    "sha256": "3ae22a8c9285f9d81bbb3b32954a8433b7ce366856d7c709ff384fe9929f9e1f",
+    "stableDuringRead": true,
+    "fullyRead": true
+  },
+  "reader": {
+    "coverage": {
+      "inputBytesRead": 5377313,
+      "unreadBytes": 0,
+      "traceEventsSeen": 4096,
+      "traceEventsDecoded": 4096,
+      "eventsOmittedByReaderLimit": 0,
+      "decodeErrors": 0,
+      "oversizedInputLines": 0
+    },
+    "sha256": "c7be0cf74d80fb66b73b378da4ae9e4580c71ad637fdc1435c5b4c806909101b",
+    "allExpansionsComplete": true
+  },
+  "events": 4096,
+  "stages": {
+    "local-offer": 60,
+    "local-reversed-record": 332,
+    "local-applied": 889,
+    "local-kept": 889,
+    "local-completion": 889,
+    "local-relation": 644,
+    "loop-observation": 393
+  },
+  "frameCount": 889,
+  "completeFrames": 889,
+  "allAppliedKeys": {
+    "frames": 889,
+    "distinctExactKeys": 693,
+    "repeatOccurrencesAfterFirst": 196,
+    "maxOccurrencesForOneKey": 9,
+    "histogramByOccurrences": {
+      "1": 588,
+      "6": 1,
+      "8": 1,
+      "4": 18,
+      "3": 4,
+      "7": 3,
+      "2": 72,
+      "9": 2,
+      "5": 4
+    }
+  },
+  "growingAppliedKeys": {
+    "frames": 339,
+    "distinctExactKeys": 339,
+    "repeatOccurrencesAfterFirst": 0,
+    "maxOccurrencesForOneKey": 1,
+    "histogramByOccurrences": {
+      "1": 339
+    }
+  },
+  "freshByGrowing": [
+    {
+      "grows": false,
+      "fresh": true,
+      "count": 229
+    },
+    {
+      "grows": true,
+      "fresh": false,
+      "count": 32
+    },
+    {
+      "grows": false,
+      "fresh": false,
+      "count": 321
+    },
+    {
+      "grows": true,
+      "fresh": true,
+      "count": 307
+    }
+  ],
+  "completionExactKeys": 651,
+  "completionExactRepeatOccurrences": 238,
+  "memoEstimates": [
+    {
+      "capacity": 32,
+      "strategy": "CLEAR_ON_CAPACITY",
+      "hits": 0,
+      "offers": 339,
+      "hitFraction": 0.0,
+      "observationsAtRepeatedKeys": 0,
+      "outputAndFullObservationConflicts": 0,
+      "realQuantumResetsKnown": false
+    },
+    {
+      "capacity": 32,
+      "strategy": "LRU",
+      "hits": 0,
+      "offers": 339,
+      "hitFraction": 0.0,
+      "observationsAtRepeatedKeys": 0,
+      "outputAndFullObservationConflicts": 0,
+      "realQuantumResetsKnown": false
+    },
+    {
+      "capacity": 128,
+      "strategy": "CLEAR_ON_CAPACITY",
+      "hits": 0,
+      "offers": 339,
+      "hitFraction": 0.0,
+      "observationsAtRepeatedKeys": 0,
+      "outputAndFullObservationConflicts": 0,
+      "realQuantumResetsKnown": false
+    },
+    {
+      "capacity": 128,
+      "strategy": "LRU",
+      "hits": 0,
+      "offers": 339,
+      "hitFraction": 0.0,
+      "observationsAtRepeatedKeys": 0,
+      "outputAndFullObservationConflicts": 0,
+      "realQuantumResetsKnown": false
+    },
+    {
+      "capacity": 512,
+      "strategy": "CLEAR_ON_CAPACITY",
+      "hits": 0,
+      "offers": 339,
+      "hitFraction": 0.0,
+      "observationsAtRepeatedKeys": 0,
+      "outputAndFullObservationConflicts": 0,
+      "realQuantumResetsKnown": false
+    },
+    {
+      "capacity": 512,
+      "strategy": "LRU",
+      "hits": 0,
+      "offers": 339,
+      "hitFraction": 0.0,
+      "observationsAtRepeatedKeys": 0,
+      "outputAndFullObservationConflicts": 0,
+      "realQuantumResetsKnown": false
+    }
+  ],
+  "representatives": [
+    {
+      "kind": "properCut",
+      "source": {
+        "rawRecord": {
+          "run": 4,
+          "method": "com.netflix.conductor.core.utils.ParametersUtils#replace(java.util.Map, com.jayway.jsonpath.DocumentContext, java.lang.String) [{arg(0) == java.util.HashMap}]",
+          "stage": "local-relation",
+          "sequence": 3047,
+          "nanoTime": 70241949456664343,
+          "parent": "BlockScope(block=BlockId(ordinal=0), entry=PortId(ordinal=-1))",
+          "child": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+          "exit": 7,
+          "point": 40,
+          "I": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 62,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                "base": "var(9)",
+                "path": [],
+                "tail": "STAR",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ]
+          },
+          "O": {
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+            "base": "var(3)",
+            "path": [
+              520
+            ],
+            "tail": "STAR",
+            "E": [],
+            "mark": {
+              "kind": "FLOW",
+              "mx": []
+            }
+          },
+          "P": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 11568,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                "base": "ret",
+                "path": [
+                  540,
+                  540
+                ],
+                "tail": "STAR",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ]
+          },
+          "applied": {
+            "kind": "FLOW",
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+            "base": "var(3)",
+            "layer": "NORMAL",
+            "tail": "STAR",
+            "E": [],
+            "mx": [],
+            "root": 0,
+            "protection": null
+          },
+          "nodes": [
+            {
+              "id": 0,
+              "flowLeaf": false,
+              "children": [
+                {
+                  "field": 520,
+                  "node": 1
+                }
+              ]
+            },
+            {
+              "id": 1,
+              "flowLeaf": false,
+              "children": [
+                {
+                  "field": 540,
+                  "node": 2
+                }
+              ]
+            },
+            {
+              "id": 2,
+              "flowLeaf": false,
+              "children": [
+                {
+                  "field": 540,
+                  "node": 3
+                }
+              ]
+            },
+            {
+              "id": 3,
+              "flowLeaf": true,
+              "children": []
+            }
+          ],
+          "catalogIncluded": true,
+          "fields": [
+            {
+              "id": 520,
+              "name": "Iterable#Element"
+            },
+            {
+              "id": 540,
+              "name": "Map#MapValue"
+            }
+          ],
+          "marks": []
+        },
+        "premises": {
+          "I": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 62,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                "base": "var(9)",
+                "path": [],
+                "tail": "STAR",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ],
+            "completeAsCaptured": true
+          },
+          "P": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 11568,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                "base": "ret",
+                "path": [
+                  540,
+                  540
+                ],
+                "tail": "STAR",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ],
+            "completeAsCaptured": true
+          }
+        },
+        "patterns": {
+          "O": {
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+            "base": "var(3)",
+            "path": [
+              520
+            ],
+            "tail": "STAR",
+            "E": [],
+            "mark": {
+              "kind": "FLOW",
+              "mx": []
+            }
+          }
+        },
+        "facts": {
+          "applied": {
+            "scalarExpansionComplete": true,
+            "ordinaryExpansionComplete": true,
+            "protectionExpansionComplete": true,
+            "rows": [
+              {
+                "base": "var(3)",
+                "path": [
+                  520,
+                  540,
+                  540
+                ],
+                "tail": "STAR",
+                "mark": "FLOW",
+                "layer": "NORMAL",
+                "E": [],
+                "mx": [],
+                "protected": false,
+                "notation": "var(3).Iterable#Element.Map#MapValue.Map#MapValue/STAR/FLOW/NORMAL/E[]/mx[]/protected=False"
+              }
+            ],
+            "protectedRows": [],
+            "reasons": [],
+            "packedDagIsEmbeddedComplete": true
+          }
+        },
+        "allScalarExpansionsComplete": true,
+        "catalogIncluded": true,
+        "limits": {
+          "maxScalarRowsPerStream": 128,
+          "maxNodeVisitsPerStream": 4096,
+          "maxPathDepth": 128
+        },
+        "note": "Raw captured DAG/full premises remain embedded even when bounded scalar notation expansion is partial. This is one sampled event, not complete program provenance."
+      },
+      "applied": {
+        "rawRecord": {
+          "run": 4,
+          "method": "com.netflix.conductor.core.utils.ParametersUtils#replace(java.util.Map, com.jayway.jsonpath.DocumentContext, java.lang.String) [{arg(0) == java.util.HashMap}]",
+          "stage": "local-applied",
+          "sequence": 3048,
+          "nanoTime": 70241949456707931,
+          "parent": "BlockScope(block=BlockId(ordinal=0), entry=PortId(ordinal=-1))",
+          "child": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+          "exit": 7,
+          "point": 7,
+          "P": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 11568,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                "base": "ret",
+                "path": [
+                  540,
+                  540
+                ],
+                "tail": "STAR",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ]
+          },
+          "value": {
+            "kind": "FLOW",
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+            "base": "var(3)",
+            "layer": "NORMAL",
+            "tail": "STAR",
+            "E": [],
+            "mx": [],
+            "root": 0,
+            "protection": null
+          },
+          "grows": true,
+          "prepared": "Routes",
+          "nodes": [
+            {
+              "id": 0,
+              "flowLeaf": false,
+              "children": [
+                {
+                  "field": 520,
+                  "node": 1
+                }
+              ]
+            },
+            {
+              "id": 1,
+              "flowLeaf": false,
+              "children": [
+                {
+                  "field": 540,
+                  "node": 2
+                }
+              ]
+            },
+            {
+              "id": 2,
+              "flowLeaf": false,
+              "children": [
+                {
+                  "field": 540,
+                  "node": 3
+                }
+              ]
+            },
+            {
+              "id": 3,
+              "flowLeaf": true,
+              "children": []
+            }
+          ],
+          "catalogIncluded": true,
+          "fields": [
+            {
+              "id": 540,
+              "name": "Map#MapValue"
+            },
+            {
+              "id": 520,
+              "name": "Iterable#Element"
+            }
+          ],
+          "marks": []
+        },
+        "premises": {
+          "P": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 11568,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                "base": "ret",
+                "path": [
+                  540,
+                  540
+                ],
+                "tail": "STAR",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ],
+            "completeAsCaptured": true
+          }
+        },
+        "patterns": {},
+        "facts": {
+          "value": {
+            "scalarExpansionComplete": true,
+            "ordinaryExpansionComplete": true,
+            "protectionExpansionComplete": true,
+            "rows": [
+              {
+                "base": "var(3)",
+                "path": [
+                  520,
+                  540,
+                  540
+                ],
+                "tail": "STAR",
+                "mark": "FLOW",
+                "layer": "NORMAL",
+                "E": [],
+                "mx": [],
+                "protected": false,
+                "notation": "var(3).Iterable#Element.Map#MapValue.Map#MapValue/STAR/FLOW/NORMAL/E[]/mx[]/protected=False"
+              }
+            ],
+            "protectedRows": [],
+            "reasons": [],
+            "packedDagIsEmbeddedComplete": true
+          }
+        },
+        "allScalarExpansionsComplete": true,
+        "catalogIncluded": true,
+        "limits": {
+          "maxScalarRowsPerStream": 128,
+          "maxNodeVisitsPerStream": 4096,
+          "maxPathDepth": 128
+        },
+        "note": "Raw captured DAG/full premises remain embedded even when bounded scalar notation expansion is partial. This is one sampled event, not complete program provenance."
+      },
+      "observations": [
+        {
+          "rawRecord": {
+            "run": 4,
+            "method": "com.netflix.conductor.core.utils.ParametersUtils#replace(java.util.Map, com.jayway.jsonpath.DocumentContext, java.lang.String) [{arg(0) == java.util.HashMap}]",
+            "stage": "loop-observation",
+            "sequence": 3049,
+            "nanoTime": 70241949456810915,
+            "parent": "BlockScope(block=BlockId(ordinal=0), entry=PortId(ordinal=-1))",
+            "loop": 2,
+            "exit": 7,
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11568,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [
+                    540,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "F": {
+              "kind": "FLOW",
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+              "base": "var(3)",
+              "layer": "NORMAL",
+              "tail": "STAR",
+              "E": [],
+              "mx": [],
+              "root": 0,
+              "protection": null
+            },
+            "adjacentCount": 0,
+            "repeatCount": 2,
+            "labelCount": 2,
+            "enclosingCount": 0,
+            "repeat0Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1358,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "repeat0Layer": "NORMAL",
+            "repeat1Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11770,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "repeat1Layer": "NORMAL",
+            "label0Scope": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+            "label0Family": "REPEAT",
+            "label0Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1358,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "label0Layer": "NORMAL",
+            "label1Scope": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+            "label1Family": "REPEAT",
+            "label1Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11770,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "label1Layer": "NORMAL",
+            "nodes": [
+              {
+                "id": 0,
+                "flowLeaf": false,
+                "children": [
+                  {
+                    "field": 520,
+                    "node": 1
+                  }
+                ]
+              },
+              {
+                "id": 1,
+                "flowLeaf": false,
+                "children": [
+                  {
+                    "field": 540,
+                    "node": 2
+                  }
+                ]
+              },
+              {
+                "id": 2,
+                "flowLeaf": false,
+                "children": [
+                  {
+                    "field": 540,
+                    "node": 3
+                  }
+                ]
+              },
+              {
+                "id": 3,
+                "flowLeaf": true,
+                "children": []
+              }
+            ],
+            "catalogIncluded": true,
+            "fields": [
+              {
+                "id": 540,
+                "name": "Map#MapValue"
+              },
+              {
+                "id": 520,
+                "name": "Iterable#Element"
+              }
+            ],
+            "marks": []
+          },
+          "premises": {
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11568,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [
+                    540,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            },
+            "repeat0Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1358,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            },
+            "repeat1Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11770,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            },
+            "label0Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1358,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            },
+            "label1Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11770,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            }
+          },
+          "patterns": {},
+          "facts": {
+            "F": {
+              "scalarExpansionComplete": true,
+              "ordinaryExpansionComplete": true,
+              "protectionExpansionComplete": true,
+              "rows": [
+                {
+                  "base": "var(3)",
+                  "path": [
+                    520,
+                    540,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "mark": "FLOW",
+                  "layer": "NORMAL",
+                  "E": [],
+                  "mx": [],
+                  "protected": false,
+                  "notation": "var(3).Iterable#Element.Map#MapValue.Map#MapValue/STAR/FLOW/NORMAL/E[]/mx[]/protected=False"
+                }
+              ],
+              "protectedRows": [],
+              "reasons": [],
+              "packedDagIsEmbeddedComplete": true
+            }
+          },
+          "allScalarExpansionsComplete": true,
+          "catalogIncluded": true,
+          "limits": {
+            "maxScalarRowsPerStream": 128,
+            "maxNodeVisitsPerStream": 4096,
+            "maxPathDepth": 128
+          },
+          "note": "Raw captured DAG/full premises remain embedded even when bounded scalar notation expansion is partial. This is one sampled event, not complete program provenance."
+        },
+        {
+          "rawRecord": {
+            "run": 4,
+            "method": "com.netflix.conductor.core.utils.ParametersUtils#replace(java.util.Map, com.jayway.jsonpath.DocumentContext, java.lang.String) [{arg(0) == java.util.HashMap}]",
+            "stage": "loop-observation",
+            "sequence": 3050,
+            "nanoTime": 70241949456943901,
+            "parent": "BlockScope(block=BlockId(ordinal=0), entry=PortId(ordinal=-1))",
+            "loop": 2,
+            "exit": 7,
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11568,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [
+                    540,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "F": {
+              "kind": "FLOW",
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+              "base": "var(3)",
+              "layer": "DEMAND",
+              "tail": "ANY",
+              "E": [],
+              "mx": [],
+              "root": 0,
+              "protection": null
+            },
+            "adjacentCount": 0,
+            "repeatCount": 2,
+            "labelCount": 2,
+            "enclosingCount": 0,
+            "repeat0Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1358,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "repeat0Layer": "NORMAL",
+            "repeat1Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11770,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "repeat1Layer": "NORMAL",
+            "label0Scope": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+            "label0Family": "REPEAT",
+            "label0Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1358,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "label0Layer": "NORMAL",
+            "label1Scope": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+            "label1Family": "REPEAT",
+            "label1Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11770,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "label1Layer": "NORMAL",
+            "nodes": [
+              {
+                "id": 0,
+                "flowLeaf": false,
+                "children": [
+                  {
+                    "field": 520,
+                    "node": 1
+                  }
+                ]
+              },
+              {
+                "id": 1,
+                "flowLeaf": false,
+                "children": [
+                  {
+                    "field": 540,
+                    "node": 2
+                  }
+                ]
+              },
+              {
+                "id": 2,
+                "flowLeaf": true,
+                "children": []
+              }
+            ],
+            "catalogIncluded": true,
+            "fields": [
+              {
+                "id": 540,
+                "name": "Map#MapValue"
+              },
+              {
+                "id": 520,
+                "name": "Iterable#Element"
+              }
+            ],
+            "marks": []
+          },
+          "premises": {
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11568,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [
+                    540,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            },
+            "repeat0Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1358,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            },
+            "repeat1Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11770,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            },
+            "label0Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1358,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            },
+            "label1Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11770,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            }
+          },
+          "patterns": {},
+          "facts": {
+            "F": {
+              "scalarExpansionComplete": true,
+              "ordinaryExpansionComplete": true,
+              "protectionExpansionComplete": true,
+              "rows": [
+                {
+                  "base": "var(3)",
+                  "path": [
+                    520,
+                    540
+                  ],
+                  "tail": "ANY",
+                  "mark": "FLOW",
+                  "layer": "DEMAND",
+                  "E": [],
+                  "mx": [],
+                  "protected": false,
+                  "notation": "var(3).Iterable#Element.Map#MapValue/ANY/FLOW/DEMAND/E[]/mx[]/protected=False"
+                }
+              ],
+              "protectedRows": [],
+              "reasons": [],
+              "packedDagIsEmbeddedComplete": true
+            }
+          },
+          "allScalarExpansionsComplete": true,
+          "catalogIncluded": true,
+          "limits": {
+            "maxScalarRowsPerStream": 128,
+            "maxNodeVisitsPerStream": 4096,
+            "maxPathDepth": 128
+          },
+          "note": "Raw captured DAG/full premises remain embedded even when bounded scalar notation expansion is partial. This is one sampled event, not complete program provenance."
+        }
+      ],
+      "kept": [
+        {
+          "rawRecord": {
+            "run": 4,
+            "method": "com.netflix.conductor.core.utils.ParametersUtils#replace(java.util.Map, com.jayway.jsonpath.DocumentContext, java.lang.String) [{arg(0) == java.util.HashMap}]",
+            "stage": "local-kept",
+            "sequence": 3051,
+            "nanoTime": 70241949457022869,
+            "parent": "BlockScope(block=BlockId(ordinal=0), entry=PortId(ordinal=-1))",
+            "child": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+            "exit": 7,
+            "point": 7,
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11568,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [
+                    540,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "kept": {
+              "kind": "FLOW",
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+              "base": "var(3)",
+              "layer": "DEMAND",
+              "tail": "ANY",
+              "E": [],
+              "mx": [],
+              "root": 0,
+              "protection": null
+            },
+            "nodes": [
+              {
+                "id": 0,
+                "flowLeaf": false,
+                "children": [
+                  {
+                    "field": 520,
+                    "node": 1
+                  }
+                ]
+              },
+              {
+                "id": 1,
+                "flowLeaf": false,
+                "children": [
+                  {
+                    "field": 540,
+                    "node": 2
+                  }
+                ]
+              },
+              {
+                "id": 2,
+                "flowLeaf": true,
+                "children": []
+              }
+            ],
+            "catalogIncluded": true,
+            "fields": [
+              {
+                "id": 540,
+                "name": "Map#MapValue"
+              },
+              {
+                "id": 520,
+                "name": "Iterable#Element"
+              }
+            ],
+            "marks": []
+          },
+          "premises": {
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11568,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [
+                    540,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            }
+          },
+          "patterns": {},
+          "facts": {
+            "kept": {
+              "scalarExpansionComplete": true,
+              "ordinaryExpansionComplete": true,
+              "protectionExpansionComplete": true,
+              "rows": [
+                {
+                  "base": "var(3)",
+                  "path": [
+                    520,
+                    540
+                  ],
+                  "tail": "ANY",
+                  "mark": "FLOW",
+                  "layer": "DEMAND",
+                  "E": [],
+                  "mx": [],
+                  "protected": false,
+                  "notation": "var(3).Iterable#Element.Map#MapValue/ANY/FLOW/DEMAND/E[]/mx[]/protected=False"
+                }
+              ],
+              "protectedRows": [],
+              "reasons": [],
+              "packedDagIsEmbeddedComplete": true
+            }
+          },
+          "allScalarExpansionsComplete": true,
+          "catalogIncluded": true,
+          "limits": {
+            "maxScalarRowsPerStream": 128,
+            "maxNodeVisitsPerStream": 4096,
+            "maxPathDepth": 128
+          },
+          "note": "Raw captured DAG/full premises remain embedded even when bounded scalar notation expansion is partial. This is one sampled event, not complete program provenance."
+        }
+      ],
+      "completions": [
+        {
+          "rawRecord": {
+            "run": 4,
+            "method": "com.netflix.conductor.core.utils.ParametersUtils#replace(java.util.Map, com.jayway.jsonpath.DocumentContext, java.lang.String) [{arg(0) == java.util.HashMap}]",
+            "stage": "local-completion",
+            "sequence": 3052,
+            "nanoTime": 70241949457056033,
+            "parent": "BlockScope(block=BlockId(ordinal=0), entry=PortId(ordinal=-1))",
+            "child": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+            "exit": 7,
+            "point": 7,
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11568,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [
+                    540,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "offered": {
+              "kind": "FLOW",
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+              "base": "var(3)",
+              "layer": "DEMAND",
+              "tail": "ANY",
+              "E": [],
+              "mx": [],
+              "root": 0,
+              "protection": null
+            },
+            "fresh": true,
+            "delta": {
+              "kind": "FLOW",
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+              "base": "var(3)",
+              "layer": "DEMAND",
+              "tail": "ANY",
+              "E": [],
+              "mx": [],
+              "root": 0,
+              "protection": null
+            },
+            "nodes": [
+              {
+                "id": 0,
+                "flowLeaf": false,
+                "children": [
+                  {
+                    "field": 520,
+                    "node": 1
+                  }
+                ]
+              },
+              {
+                "id": 1,
+                "flowLeaf": false,
+                "children": [
+                  {
+                    "field": 540,
+                    "node": 2
+                  }
+                ]
+              },
+              {
+                "id": 2,
+                "flowLeaf": true,
+                "children": []
+              }
+            ],
+            "catalogIncluded": true,
+            "fields": [
+              {
+                "id": 540,
+                "name": "Map#MapValue"
+              },
+              {
+                "id": 520,
+                "name": "Iterable#Element"
+              }
+            ],
+            "marks": []
+          },
+          "premises": {
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 11568,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [
+                    540,
+                    540
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            }
+          },
+          "patterns": {},
+          "facts": {
+            "offered": {
+              "scalarExpansionComplete": true,
+              "ordinaryExpansionComplete": true,
+              "protectionExpansionComplete": true,
+              "rows": [
+                {
+                  "base": "var(3)",
+                  "path": [
+                    520,
+                    540
+                  ],
+                  "tail": "ANY",
+                  "mark": "FLOW",
+                  "layer": "DEMAND",
+                  "E": [],
+                  "mx": [],
+                  "protected": false,
+                  "notation": "var(3).Iterable#Element.Map#MapValue/ANY/FLOW/DEMAND/E[]/mx[]/protected=False"
+                }
+              ],
+              "protectedRows": [],
+              "reasons": [],
+              "packedDagIsEmbeddedComplete": true
+            },
+            "delta": {
+              "scalarExpansionComplete": true,
+              "ordinaryExpansionComplete": true,
+              "protectionExpansionComplete": true,
+              "rows": [
+                {
+                  "base": "var(3)",
+                  "path": [
+                    520,
+                    540
+                  ],
+                  "tail": "ANY",
+                  "mark": "FLOW",
+                  "layer": "DEMAND",
+                  "E": [],
+                  "mx": [],
+                  "protected": false,
+                  "notation": "var(3).Iterable#Element.Map#MapValue/ANY/FLOW/DEMAND/E[]/mx[]/protected=False"
+                }
+              ],
+              "protectedRows": [],
+              "reasons": [],
+              "packedDagIsEmbeddedComplete": true
+            }
+          },
+          "allScalarExpansionsComplete": true,
+          "catalogIncluded": true,
+          "limits": {
+            "maxScalarRowsPerStream": 128,
+            "maxNodeVisitsPerStream": 4096,
+            "maxPathDepth": 128
+          },
+          "note": "Raw captured DAG/full premises remain embedded even when bounded scalar notation expansion is partial. This is one sampled event, not complete program provenance."
+        }
+      ]
+    },
+    {
+      "kind": "growingDuplicate",
+      "source": {
+        "rawRecord": {
+          "run": 4,
+          "method": "com.netflix.conductor.core.utils.ParametersUtils#replace(java.util.Map, com.jayway.jsonpath.DocumentContext, java.lang.String) [{arg(0) == java.util.HashMap}]",
+          "stage": "local-relation",
+          "sequence": 216,
+          "nanoTime": 70241949244592519,
+          "parent": "BlockScope(block=BlockId(ordinal=0), entry=PortId(ordinal=-1))",
+          "child": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+          "exit": 7,
+          "point": 40,
+          "I": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 62,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                "base": "var(9)",
+                "path": [],
+                "tail": "STAR",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ]
+          },
+          "O": {
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+            "base": "var(3)",
+            "path": [
+              520
+            ],
+            "tail": "STAR",
+            "E": [],
+            "mark": {
+              "kind": "FLOW",
+              "mx": []
+            }
+          },
+          "P": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 716,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                "base": "ret",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ]
+          },
+          "applied": {
+            "kind": "FLOW",
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+            "base": "var(3)",
+            "layer": "DEMAND",
+            "tail": "ANY",
+            "E": [],
+            "mx": [],
+            "root": 0,
+            "protection": null
+          },
+          "nodes": [
+            {
+              "id": 0,
+              "flowLeaf": false,
+              "children": [
+                {
+                  "field": 520,
+                  "node": 1
+                }
+              ]
+            },
+            {
+              "id": 1,
+              "flowLeaf": true,
+              "children": []
+            }
+          ],
+          "catalogIncluded": true,
+          "fields": [
+            {
+              "id": 520,
+              "name": "Iterable#Element"
+            }
+          ],
+          "marks": []
+        },
+        "premises": {
+          "I": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 62,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                "base": "var(9)",
+                "path": [],
+                "tail": "STAR",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ],
+            "completeAsCaptured": true
+          },
+          "P": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 716,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                "base": "ret",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ],
+            "completeAsCaptured": true
+          }
+        },
+        "patterns": {
+          "O": {
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+            "base": "var(3)",
+            "path": [
+              520
+            ],
+            "tail": "STAR",
+            "E": [],
+            "mark": {
+              "kind": "FLOW",
+              "mx": []
+            }
+          }
+        },
+        "facts": {
+          "applied": {
+            "scalarExpansionComplete": true,
+            "ordinaryExpansionComplete": true,
+            "protectionExpansionComplete": true,
+            "rows": [
+              {
+                "base": "var(3)",
+                "path": [
+                  520
+                ],
+                "tail": "ANY",
+                "mark": "FLOW",
+                "layer": "DEMAND",
+                "E": [],
+                "mx": [],
+                "protected": false,
+                "notation": "var(3).Iterable#Element/ANY/FLOW/DEMAND/E[]/mx[]/protected=False"
+              }
+            ],
+            "protectedRows": [],
+            "reasons": [],
+            "packedDagIsEmbeddedComplete": true
+          }
+        },
+        "allScalarExpansionsComplete": true,
+        "catalogIncluded": true,
+        "limits": {
+          "maxScalarRowsPerStream": 128,
+          "maxNodeVisitsPerStream": 4096,
+          "maxPathDepth": 128
+        },
+        "note": "Raw captured DAG/full premises remain embedded even when bounded scalar notation expansion is partial. This is one sampled event, not complete program provenance."
+      },
+      "applied": {
+        "rawRecord": {
+          "run": 4,
+          "method": "com.netflix.conductor.core.utils.ParametersUtils#replace(java.util.Map, com.jayway.jsonpath.DocumentContext, java.lang.String) [{arg(0) == java.util.HashMap}]",
+          "stage": "local-applied",
+          "sequence": 217,
+          "nanoTime": 70241949244627496,
+          "parent": "BlockScope(block=BlockId(ordinal=0), entry=PortId(ordinal=-1))",
+          "child": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+          "exit": 7,
+          "point": 7,
+          "P": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 716,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                "base": "ret",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ]
+          },
+          "value": {
+            "kind": "FLOW",
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+            "base": "var(3)",
+            "layer": "DEMAND",
+            "tail": "ANY",
+            "E": [],
+            "mx": [],
+            "root": 0,
+            "protection": null
+          },
+          "grows": true,
+          "prepared": "Routes",
+          "nodes": [
+            {
+              "id": 0,
+              "flowLeaf": false,
+              "children": [
+                {
+                  "field": 520,
+                  "node": 1
+                }
+              ]
+            },
+            {
+              "id": 1,
+              "flowLeaf": true,
+              "children": []
+            }
+          ],
+          "catalogIncluded": true,
+          "fields": [
+            {
+              "id": 520,
+              "name": "Iterable#Element"
+            }
+          ],
+          "marks": []
+        },
+        "premises": {
+          "P": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 716,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                "base": "ret",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ],
+            "completeAsCaptured": true
+          }
+        },
+        "patterns": {},
+        "facts": {
+          "value": {
+            "scalarExpansionComplete": true,
+            "ordinaryExpansionComplete": true,
+            "protectionExpansionComplete": true,
+            "rows": [
+              {
+                "base": "var(3)",
+                "path": [
+                  520
+                ],
+                "tail": "ANY",
+                "mark": "FLOW",
+                "layer": "DEMAND",
+                "E": [],
+                "mx": [],
+                "protected": false,
+                "notation": "var(3).Iterable#Element/ANY/FLOW/DEMAND/E[]/mx[]/protected=False"
+              }
+            ],
+            "protectedRows": [],
+            "reasons": [],
+            "packedDagIsEmbeddedComplete": true
+          }
+        },
+        "allScalarExpansionsComplete": true,
+        "catalogIncluded": true,
+        "limits": {
+          "maxScalarRowsPerStream": 128,
+          "maxNodeVisitsPerStream": 4096,
+          "maxPathDepth": 128
+        },
+        "note": "Raw captured DAG/full premises remain embedded even when bounded scalar notation expansion is partial. This is one sampled event, not complete program provenance."
+      },
+      "observations": [
+        {
+          "rawRecord": {
+            "run": 4,
+            "method": "com.netflix.conductor.core.utils.ParametersUtils#replace(java.util.Map, com.jayway.jsonpath.DocumentContext, java.lang.String) [{arg(0) == java.util.HashMap}]",
+            "stage": "loop-observation",
+            "sequence": 218,
+            "nanoTime": 70241949245398111,
+            "parent": "BlockScope(block=BlockId(ordinal=0), entry=PortId(ordinal=-1))",
+            "loop": 2,
+            "exit": 7,
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 716,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [],
+                  "tail": "ANY",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "F": {
+              "kind": "FLOW",
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+              "base": "var(3)",
+              "layer": "DEMAND",
+              "tail": "ANY",
+              "E": [],
+              "mx": [],
+              "root": 0,
+              "protection": null
+            },
+            "adjacentCount": 0,
+            "repeatCount": 2,
+            "labelCount": 2,
+            "enclosingCount": 0,
+            "repeat0Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1358,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "repeat0Layer": "NORMAL",
+            "repeat1Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1894,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "ANY",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "repeat1Layer": "DEMAND",
+            "label0Scope": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+            "label0Family": "REPEAT",
+            "label0Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1358,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "label0Layer": "NORMAL",
+            "label1Scope": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+            "label1Family": "REPEAT",
+            "label1Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1894,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "ANY",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "label1Layer": "DEMAND",
+            "nodes": [
+              {
+                "id": 0,
+                "flowLeaf": false,
+                "children": [
+                  {
+                    "field": 520,
+                    "node": 1
+                  }
+                ]
+              },
+              {
+                "id": 1,
+                "flowLeaf": true,
+                "children": []
+              }
+            ],
+            "catalogIncluded": true,
+            "fields": [
+              {
+                "id": 520,
+                "name": "Iterable#Element"
+              }
+            ],
+            "marks": []
+          },
+          "premises": {
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 716,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [],
+                  "tail": "ANY",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            },
+            "repeat0Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1358,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            },
+            "repeat1Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1894,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "ANY",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            },
+            "label0Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1358,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "STAR",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            },
+            "label1Initial": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 1894,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "ANY",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            }
+          },
+          "patterns": {},
+          "facts": {
+            "F": {
+              "scalarExpansionComplete": true,
+              "ordinaryExpansionComplete": true,
+              "protectionExpansionComplete": true,
+              "rows": [
+                {
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "ANY",
+                  "mark": "FLOW",
+                  "layer": "DEMAND",
+                  "E": [],
+                  "mx": [],
+                  "protected": false,
+                  "notation": "var(3).Iterable#Element/ANY/FLOW/DEMAND/E[]/mx[]/protected=False"
+                }
+              ],
+              "protectedRows": [],
+              "reasons": [],
+              "packedDagIsEmbeddedComplete": true
+            }
+          },
+          "allScalarExpansionsComplete": true,
+          "catalogIncluded": true,
+          "limits": {
+            "maxScalarRowsPerStream": 128,
+            "maxNodeVisitsPerStream": 4096,
+            "maxPathDepth": 128
+          },
+          "note": "Raw captured DAG/full premises remain embedded even when bounded scalar notation expansion is partial. This is one sampled event, not complete program provenance."
+        }
+      ],
+      "kept": [
+        {
+          "rawRecord": {
+            "run": 4,
+            "method": "com.netflix.conductor.core.utils.ParametersUtils#replace(java.util.Map, com.jayway.jsonpath.DocumentContext, java.lang.String) [{arg(0) == java.util.HashMap}]",
+            "stage": "local-kept",
+            "sequence": 219,
+            "nanoTime": 70241949245531586,
+            "parent": "BlockScope(block=BlockId(ordinal=0), entry=PortId(ordinal=-1))",
+            "child": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+            "exit": 7,
+            "point": 7,
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 716,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [],
+                  "tail": "ANY",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "kept": {
+              "kind": "FLOW",
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+              "base": "var(3)",
+              "layer": "DEMAND",
+              "tail": "ANY",
+              "E": [],
+              "mx": [],
+              "root": 0,
+              "protection": null
+            },
+            "nodes": [
+              {
+                "id": 0,
+                "flowLeaf": false,
+                "children": [
+                  {
+                    "field": 520,
+                    "node": 1
+                  }
+                ]
+              },
+              {
+                "id": 1,
+                "flowLeaf": true,
+                "children": []
+              }
+            ],
+            "catalogIncluded": true,
+            "fields": [
+              {
+                "id": 520,
+                "name": "Iterable#Element"
+              }
+            ],
+            "marks": []
+          },
+          "premises": {
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 716,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [],
+                  "tail": "ANY",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            }
+          },
+          "patterns": {},
+          "facts": {
+            "kept": {
+              "scalarExpansionComplete": true,
+              "ordinaryExpansionComplete": true,
+              "protectionExpansionComplete": true,
+              "rows": [
+                {
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "ANY",
+                  "mark": "FLOW",
+                  "layer": "DEMAND",
+                  "E": [],
+                  "mx": [],
+                  "protected": false,
+                  "notation": "var(3).Iterable#Element/ANY/FLOW/DEMAND/E[]/mx[]/protected=False"
+                }
+              ],
+              "protectedRows": [],
+              "reasons": [],
+              "packedDagIsEmbeddedComplete": true
+            }
+          },
+          "allScalarExpansionsComplete": true,
+          "catalogIncluded": true,
+          "limits": {
+            "maxScalarRowsPerStream": 128,
+            "maxNodeVisitsPerStream": 4096,
+            "maxPathDepth": 128
+          },
+          "note": "Raw captured DAG/full premises remain embedded even when bounded scalar notation expansion is partial. This is one sampled event, not complete program provenance."
+        }
+      ],
+      "completions": [
+        {
+          "rawRecord": {
+            "run": 4,
+            "method": "com.netflix.conductor.core.utils.ParametersUtils#replace(java.util.Map, com.jayway.jsonpath.DocumentContext, java.lang.String) [{arg(0) == java.util.HashMap}]",
+            "stage": "local-completion",
+            "sequence": 220,
+            "nanoTime": 70241949245567235,
+            "parent": "BlockScope(block=BlockId(ordinal=0), entry=PortId(ordinal=-1))",
+            "child": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+            "exit": 7,
+            "point": 7,
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 716,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [],
+                  "tail": "ANY",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "offered": {
+              "kind": "FLOW",
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+              "base": "var(3)",
+              "layer": "DEMAND",
+              "tail": "ANY",
+              "E": [],
+              "mx": [],
+              "root": 0,
+              "protection": null
+            },
+            "fresh": false,
+            "nodes": [
+              {
+                "id": 0,
+                "flowLeaf": false,
+                "children": [
+                  {
+                    "field": 520,
+                    "node": 1
+                  }
+                ]
+              },
+              {
+                "id": 1,
+                "flowLeaf": true,
+                "children": []
+              }
+            ],
+            "catalogIncluded": true,
+            "fields": [
+              {
+                "id": 520,
+                "name": "Iterable#Element"
+              }
+            ],
+            "marks": []
+          },
+          "premises": {
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 716,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [],
+                  "tail": "ANY",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            }
+          },
+          "patterns": {},
+          "facts": {
+            "offered": {
+              "scalarExpansionComplete": true,
+              "ordinaryExpansionComplete": true,
+              "protectionExpansionComplete": true,
+              "rows": [
+                {
+                  "base": "var(3)",
+                  "path": [
+                    520
+                  ],
+                  "tail": "ANY",
+                  "mark": "FLOW",
+                  "layer": "DEMAND",
+                  "E": [],
+                  "mx": [],
+                  "protected": false,
+                  "notation": "var(3).Iterable#Element/ANY/FLOW/DEMAND/E[]/mx[]/protected=False"
+                }
+              ],
+              "protectedRows": [],
+              "reasons": [],
+              "packedDagIsEmbeddedComplete": true
+            }
+          },
+          "allScalarExpansionsComplete": true,
+          "catalogIncluded": true,
+          "limits": {
+            "maxScalarRowsPerStream": 128,
+            "maxNodeVisitsPerStream": 4096,
+            "maxPathDepth": 128
+          },
+          "note": "Raw captured DAG/full premises remain embedded even when bounded scalar notation expansion is partial. This is one sampled event, not complete program provenance."
+        }
+      ]
+    },
+    {
+      "kind": "nongrowingDuplicate",
+      "source": {
+        "rawRecord": {
+          "run": 4,
+          "method": "com.netflix.conductor.core.utils.ParametersUtils#replace(java.util.Map, com.jayway.jsonpath.DocumentContext, java.lang.String) [{arg(0) == java.util.HashMap}]",
+          "stage": "local-relation",
+          "sequence": 310,
+          "nanoTime": 70241949248868996,
+          "parent": "BlockScope(block=BlockId(ordinal=0), entry=PortId(ordinal=-1))",
+          "child": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+          "exit": 7,
+          "point": 40,
+          "I": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 1393,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                "base": "var(9)",
+                "path": [
+                  544
+                ],
+                "tail": "STAR",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ]
+          },
+          "O": {
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+            "base": "var(3)",
+            "path": [
+              544
+            ],
+            "tail": "STAR",
+            "E": [],
+            "mark": {
+              "kind": "FLOW",
+              "mx": []
+            }
+          },
+          "P": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 716,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                "base": "ret",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ]
+          },
+          "applied": {
+            "kind": "FLOW",
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+            "base": "var(3)",
+            "layer": "DEMAND",
+            "tail": "ANY",
+            "E": [],
+            "mx": [],
+            "root": 0,
+            "protection": null
+          },
+          "nodes": [
+            {
+              "id": 0,
+              "flowLeaf": false,
+              "children": [
+                {
+                  "field": 544,
+                  "node": 1
+                }
+              ]
+            },
+            {
+              "id": 1,
+              "flowLeaf": true,
+              "children": []
+            }
+          ],
+          "catalogIncluded": true,
+          "fields": [
+            {
+              "id": 544,
+              "name": "HttpHeaders#headerValues"
+            }
+          ],
+          "marks": []
+        },
+        "premises": {
+          "I": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 1393,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+                "base": "var(9)",
+                "path": [
+                  544
+                ],
+                "tail": "STAR",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ],
+            "completeAsCaptured": true
+          },
+          "P": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 716,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                "base": "ret",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ],
+            "completeAsCaptured": true
+          }
+        },
+        "patterns": {
+          "O": {
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+            "base": "var(3)",
+            "path": [
+              544
+            ],
+            "tail": "STAR",
+            "E": [],
+            "mark": {
+              "kind": "FLOW",
+              "mx": []
+            }
+          }
+        },
+        "facts": {
+          "applied": {
+            "scalarExpansionComplete": true,
+            "ordinaryExpansionComplete": true,
+            "protectionExpansionComplete": true,
+            "rows": [
+              {
+                "base": "var(3)",
+                "path": [
+                  544
+                ],
+                "tail": "ANY",
+                "mark": "FLOW",
+                "layer": "DEMAND",
+                "E": [],
+                "mx": [],
+                "protected": false,
+                "notation": "var(3).HttpHeaders#headerValues/ANY/FLOW/DEMAND/E[]/mx[]/protected=False"
+              }
+            ],
+            "protectedRows": [],
+            "reasons": [],
+            "packedDagIsEmbeddedComplete": true
+          }
+        },
+        "allScalarExpansionsComplete": true,
+        "catalogIncluded": true,
+        "limits": {
+          "maxScalarRowsPerStream": 128,
+          "maxNodeVisitsPerStream": 4096,
+          "maxPathDepth": 128
+        },
+        "note": "Raw captured DAG/full premises remain embedded even when bounded scalar notation expansion is partial. This is one sampled event, not complete program provenance."
+      },
+      "applied": {
+        "rawRecord": {
+          "run": 4,
+          "method": "com.netflix.conductor.core.utils.ParametersUtils#replace(java.util.Map, com.jayway.jsonpath.DocumentContext, java.lang.String) [{arg(0) == java.util.HashMap}]",
+          "stage": "local-applied",
+          "sequence": 311,
+          "nanoTime": 70241949248914037,
+          "parent": "BlockScope(block=BlockId(ordinal=0), entry=PortId(ordinal=-1))",
+          "child": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+          "exit": 7,
+          "point": 7,
+          "P": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 716,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                "base": "ret",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ]
+          },
+          "value": {
+            "kind": "FLOW",
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+            "base": "var(3)",
+            "layer": "DEMAND",
+            "tail": "ANY",
+            "E": [],
+            "mx": [],
+            "root": 0,
+            "protection": null
+          },
+          "grows": false,
+          "prepared": "Routes",
+          "nodes": [
+            {
+              "id": 0,
+              "flowLeaf": false,
+              "children": [
+                {
+                  "field": 544,
+                  "node": 1
+                }
+              ]
+            },
+            {
+              "id": 1,
+              "flowLeaf": true,
+              "children": []
+            }
+          ],
+          "catalogIncluded": true,
+          "fields": [
+            {
+              "id": 544,
+              "name": "HttpHeaders#headerValues"
+            }
+          ],
+          "marks": []
+        },
+        "premises": {
+          "P": {
+            "kind": "INITIAL",
+            "members": [
+              {
+                "id": 716,
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                "base": "ret",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            ],
+            "completeAsCaptured": true
+          }
+        },
+        "patterns": {},
+        "facts": {
+          "value": {
+            "scalarExpansionComplete": true,
+            "ordinaryExpansionComplete": true,
+            "protectionExpansionComplete": true,
+            "rows": [
+              {
+                "base": "var(3)",
+                "path": [
+                  544
+                ],
+                "tail": "ANY",
+                "mark": "FLOW",
+                "layer": "DEMAND",
+                "E": [],
+                "mx": [],
+                "protected": false,
+                "notation": "var(3).HttpHeaders#headerValues/ANY/FLOW/DEMAND/E[]/mx[]/protected=False"
+              }
+            ],
+            "protectedRows": [],
+            "reasons": [],
+            "packedDagIsEmbeddedComplete": true
+          }
+        },
+        "allScalarExpansionsComplete": true,
+        "catalogIncluded": true,
+        "limits": {
+          "maxScalarRowsPerStream": 128,
+          "maxNodeVisitsPerStream": 4096,
+          "maxPathDepth": 128
+        },
+        "note": "Raw captured DAG/full premises remain embedded even when bounded scalar notation expansion is partial. This is one sampled event, not complete program provenance."
+      },
+      "observations": [],
+      "kept": [
+        {
+          "rawRecord": {
+            "run": 4,
+            "method": "com.netflix.conductor.core.utils.ParametersUtils#replace(java.util.Map, com.jayway.jsonpath.DocumentContext, java.lang.String) [{arg(0) == java.util.HashMap}]",
+            "stage": "local-kept",
+            "sequence": 312,
+            "nanoTime": 70241949248935228,
+            "parent": "BlockScope(block=BlockId(ordinal=0), entry=PortId(ordinal=-1))",
+            "child": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+            "exit": 7,
+            "point": 7,
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 716,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [],
+                  "tail": "ANY",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "kept": {
+              "kind": "FLOW",
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+              "base": "var(3)",
+              "layer": "DEMAND",
+              "tail": "ANY",
+              "E": [],
+              "mx": [],
+              "root": 0,
+              "protection": null
+            },
+            "nodes": [
+              {
+                "id": 0,
+                "flowLeaf": false,
+                "children": [
+                  {
+                    "field": 544,
+                    "node": 1
+                  }
+                ]
+              },
+              {
+                "id": 1,
+                "flowLeaf": true,
+                "children": []
+              }
+            ],
+            "catalogIncluded": true,
+            "fields": [
+              {
+                "id": 544,
+                "name": "HttpHeaders#headerValues"
+              }
+            ],
+            "marks": []
+          },
+          "premises": {
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 716,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [],
+                  "tail": "ANY",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            }
+          },
+          "patterns": {},
+          "facts": {
+            "kept": {
+              "scalarExpansionComplete": true,
+              "ordinaryExpansionComplete": true,
+              "protectionExpansionComplete": true,
+              "rows": [
+                {
+                  "base": "var(3)",
+                  "path": [
+                    544
+                  ],
+                  "tail": "ANY",
+                  "mark": "FLOW",
+                  "layer": "DEMAND",
+                  "E": [],
+                  "mx": [],
+                  "protected": false,
+                  "notation": "var(3).HttpHeaders#headerValues/ANY/FLOW/DEMAND/E[]/mx[]/protected=False"
+                }
+              ],
+              "protectedRows": [],
+              "reasons": [],
+              "packedDagIsEmbeddedComplete": true
+            }
+          },
+          "allScalarExpansionsComplete": true,
+          "catalogIncluded": true,
+          "limits": {
+            "maxScalarRowsPerStream": 128,
+            "maxNodeVisitsPerStream": 4096,
+            "maxPathDepth": 128
+          },
+          "note": "Raw captured DAG/full premises remain embedded even when bounded scalar notation expansion is partial. This is one sampled event, not complete program provenance."
+        }
+      ],
+      "completions": [
+        {
+          "rawRecord": {
+            "run": 4,
+            "method": "com.netflix.conductor.core.utils.ParametersUtils#replace(java.util.Map, com.jayway.jsonpath.DocumentContext, java.lang.String) [{arg(0) == java.util.HashMap}]",
+            "stage": "local-completion",
+            "sequence": 313,
+            "nanoTime": 70241949248954852,
+            "parent": "BlockScope(block=BlockId(ordinal=0), entry=PortId(ordinal=-1))",
+            "child": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=40))",
+            "exit": 7,
+            "point": 7,
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 716,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [],
+                  "tail": "ANY",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ]
+            },
+            "offered": {
+              "kind": "FLOW",
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+              "base": "var(3)",
+              "layer": "DEMAND",
+              "tail": "ANY",
+              "E": [],
+              "mx": [],
+              "root": 0,
+              "protection": null
+            },
+            "fresh": false,
+            "nodes": [
+              {
+                "id": 0,
+                "flowLeaf": false,
+                "children": [
+                  {
+                    "field": 544,
+                    "node": 1
+                  }
+                ]
+              },
+              {
+                "id": 1,
+                "flowLeaf": true,
+                "children": []
+              }
+            ],
+            "catalogIncluded": true,
+            "fields": [
+              {
+                "id": 544,
+                "name": "HttpHeaders#headerValues"
+              }
+            ],
+            "marks": []
+          },
+          "premises": {
+            "P": {
+              "kind": "INITIAL",
+              "members": [
+                {
+                  "id": 716,
+                  "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+                  "base": "ret",
+                  "path": [],
+                  "tail": "ANY",
+                  "E": [],
+                  "mark": {
+                    "kind": "FLOW",
+                    "mx": []
+                  }
+                }
+              ],
+              "completeAsCaptured": true
+            }
+          },
+          "patterns": {},
+          "facts": {
+            "offered": {
+              "scalarExpansionComplete": true,
+              "ordinaryExpansionComplete": true,
+              "protectionExpansionComplete": true,
+              "rows": [
+                {
+                  "base": "var(3)",
+                  "path": [
+                    544
+                  ],
+                  "tail": "ANY",
+                  "mark": "FLOW",
+                  "layer": "DEMAND",
+                  "E": [],
+                  "mx": [],
+                  "protected": false,
+                  "notation": "var(3).HttpHeaders#headerValues/ANY/FLOW/DEMAND/E[]/mx[]/protected=False"
+                }
+              ],
+              "protectedRows": [],
+              "reasons": [],
+              "packedDagIsEmbeddedComplete": true
+            }
+          },
+          "allScalarExpansionsComplete": true,
+          "catalogIncluded": true,
+          "limits": {
+            "maxScalarRowsPerStream": 128,
+            "maxNodeVisitsPerStream": 4096,
+            "maxPathDepth": 128
+          },
+          "note": "Raw captured DAG/full premises remain embedded even when bounded scalar notation expansion is partial. This is one sampled event, not complete program provenance."
+        }
+      ]
+    }
+  ],
+  "qualifications": [
+    "First4096 emitted events, approximately0.304seconds, not random or whole-run sample.",
+    "All frame correlation follows synchronous same-owner onApplied->observations->kept->completion source; temporal proximity alone does not link unrelated source rows/offers.",
+    "Memo candidates compare full original and full Facts including protection/headers, full parent/childscope/point/exit/run/method and grows; all contexts fixed in one captured run snapshot.",
+    "Native owner-quantum boundaries absent. Capacity simulations ignore unknown quantum clears, so no claimed actual hit rate or whole-phase speedup."
+  ],
+  "fullObservationQueries": {
+    "count": 393,
+    "distinctExactContextPAndFactKeys": 393,
+    "repeatOccurrencesAfterFirst": 0
+  },
+  "capturedFactKinds": {
+    "FLOW": 889
+  },
+  "capturedLayers": {
+    "DEMAND": 516,
+    "NORMAL": 373
+  },
+  "capturedProtectionPresent": 0,
+  "distinctP": 21,
+  "distinctDirectGeometry": {
+    "I": 19,
+    "O": 19,
+    "IAndO": 60
+  },
+  "distinctReversedViewGeometry": {
+    "I": 20,
+    "O": 9,
+    "IAndOAndAnnotations": 36
+  },
+  "sourceRelation62CartesianFanout": {
+    "I": {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 62,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+          "base": "var(9)",
+          "path": [],
+          "tail": "STAR",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    "eventCount": 360,
+    "distinctCompleteP": 18,
+    "distinctOutputGeometry": 10,
+    "exits": [
+      7,
+      40
+    ],
+    "distinctCells": 360,
+    "equalsCompleteProduct": true,
+    "outputGeometries": [
+      {
+        "E": [],
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        },
+        "path": [
+          1808
+        ],
+        "tail": "STAR"
+      },
+      {
+        "E": [],
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        },
+        "path": [
+          1816
+        ],
+        "tail": "STAR"
+      },
+      {
+        "E": [],
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        },
+        "path": [
+          1820
+        ],
+        "tail": "STAR"
+      },
+      {
+        "E": [],
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        },
+        "path": [
+          1824
+        ],
+        "tail": "STAR"
+      },
+      {
+        "E": [],
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        },
+        "path": [
+          3940
+        ],
+        "tail": "STAR"
+      },
+      {
+        "E": [],
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        },
+        "path": [
+          3976
+        ],
+        "tail": "STAR"
+      },
+      {
+        "E": [],
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        },
+        "path": [
+          3980
+        ],
+        "tail": "STAR"
+      },
+      {
+        "E": [],
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        },
+        "path": [
+          3984
+        ],
+        "tail": "STAR"
+      },
+      {
+        "E": [],
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        },
+        "path": [
+          520
+        ],
+        "tail": "STAR"
+      },
+      {
+        "E": [],
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        },
+        "path": [],
+        "tail": "STAR"
+      }
+    ]
+  },
+  "growingNonfreshNarrowCoverageWitnesses": [
+    {
+      "appliedSequence": 217,
+      "completionSequence": 220,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        215
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 222,
+      "completionSequence": 225,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        215
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 227,
+      "completionSequence": 230,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        215
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 232,
+      "completionSequence": 235,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        215
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 237,
+      "completionSequence": 240,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        215
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 242,
+      "completionSequence": 245,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        215
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 247,
+      "completionSequence": 250,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        215
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 252,
+      "completionSequence": 255,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        215
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 257,
+      "completionSequence": 260,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        215
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 266,
+      "completionSequence": 269,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        264
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 271,
+      "completionSequence": 274,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        264
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 276,
+      "completionSequence": 279,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        264
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 281,
+      "completionSequence": 284,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        264
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 286,
+      "completionSequence": 289,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        264
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 291,
+      "completionSequence": 294,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        264
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 296,
+      "completionSequence": 299,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        264
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 301,
+      "completionSequence": 304,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        264
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 306,
+      "completionSequence": 309,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        264
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 823,
+      "completionSequence": 826,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        215
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 856,
+      "completionSequence": 859,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        264
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 885,
+      "completionSequence": 888,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        215
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 902,
+      "completionSequence": 905,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        264
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 920,
+      "completionSequence": 923,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        918
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 969,
+      "completionSequence": 972,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        967
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 1066,
+      "completionSequence": 1069,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        1039
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 1115,
+      "completionSequence": 1118,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        1088
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 1748,
+      "completionSequence": 1751,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        1572
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 1777,
+      "completionSequence": 1780,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        1616
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 2065,
+      "completionSequence": 2068,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        1923
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 2078,
+      "completionSequence": 2081,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        1979
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 2097,
+      "completionSequence": 2100,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        2090
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    },
+    {
+      "appliedSequence": 2146,
+      "completionSequence": 2149,
+      "rawLayer": "DEMAND",
+      "rawTail": "ANY",
+      "earlierBroadAnyFreshCompletionSequences": [
+        2139
+      ],
+      "coveredByEarlierAnyAtDepthAtMostOne": true
+    }
+  ],
+  "spanSeconds": 0.303713718,
+  "fieldCatalog": {
+    "520": "Iterable#Element",
+    "3940": "Map$Entry#Value",
+    "3936": "Map$Entry#Key",
+    "3072": "CharSequence#<rule-storage>",
+    "540": "Map#MapValue",
+    "1536": "Map#MapKey",
+    "1808": "Iterator#Element",
+    "1540": "Bindings#<rule-storage>",
+    "544": "HttpHeaders#headerValues",
+    "916": "HttpHeaders#headerValue",
+    "1816": "StrTokenizer#<rule-storage>",
+    "1820": "HeaderElementIterator#<rule-storage>",
+    "1824": "HeaderIterator#<rule-storage>",
+    "3976": "ImmutablePair#right",
+    "3980": "MutablePair#right",
+    "3984": "Map$Entry#<rule-storage>",
+    "3968": "ImmutablePair#left",
+    "3972": "MutablePair#left",
+    "1": "<static>(java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;source_0;_<S>_;pos)",
+    "11": "*"
+  },
+  "markCatalog": {
+    "8": "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;0;_<T>_;",
+    "7": "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;source_0;_<S>_;1"
+  },
+  "checks": {
+    "allAppliedFramesHaveOneKeptAndCompletion": true,
+    "allFactsScalarExpansionComplete": true,
+    "capturedSequenceGapFree": true,
+    "allDataOriginalsHaveCompleteCapturedMembers": true
+  },
+  "sourcePins": "52f32dd437d438aec4a700a02c18d94c31d58093",
+  "provenance": {
+    "trace.jsonl": "574fa180944346f6c1797eaa79ce82dc31e60c41d5ad5bc2fd6dd471ea340fb4",
+    "trace.log": "3ae22a8c9285f9d81bbb3b32954a8433b7ce366856d7c709ff384fe9929f9e1f",
+    "decoded-trace.json": "ad3e1dcc024375e4c978c392bec57256b2b3cc8236d2d96986709a2edd5052f1",
+    "manifest.json": "c47800f07b3ae17525e9faba01f63290cadcb008ae002f308afc11fbd91bf214",
+    "analyze-decoded-trace.py": "5656f36905e2d40b2c4f4c5df184e1472c0e6fad0f64fb1aa546468b8fcc77e3"
+  },
+  "applicationDepthHistogram": {
+    "0": 81,
+    "1": 395,
+    "2": 356,
+    "3": 57
+  },
+  "keptDepthHistogram": {
+    "0": 81,
+    "1": 395,
+    "2": 410,
+    "3": 3
+  },
+  "appliedWholePList": [
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 716,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [],
+          "tail": "ANY",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 839,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            520
+          ],
+          "tail": "ANY",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 1273,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            3940
+          ],
+          "tail": "ANY",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 1274,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            3936
+          ],
+          "tail": "ANY",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 11536,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            3072
+          ],
+          "tail": "ANY",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 826,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            540
+          ],
+          "tail": "ANY",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 827,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            1536
+          ],
+          "tail": "ANY",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 1188,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            1808
+          ],
+          "tail": "ANY",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 859,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            1540
+          ],
+          "tail": "ANY",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 714,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            540
+          ],
+          "tail": "STAR",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 723,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            544
+          ],
+          "tail": "STAR",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 724,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            916
+          ],
+          "tail": "STAR",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 722,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            1540
+          ],
+          "tail": "STAR",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 11568,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            540,
+            540
+          ],
+          "tail": "STAR",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 11569,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            1540,
+            540
+          ],
+          "tail": "STAR",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 761,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            520
+          ],
+          "tail": "STAR",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 715,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            1536
+          ],
+          "tail": "STAR",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 11578,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            540,
+            1536
+          ],
+          "tail": "STAR",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 11477,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            1540,
+            1536
+          ],
+          "tail": "STAR",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 11623,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            540,
+            1540
+          ],
+          "tail": "STAR",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    },
+    {
+      "kind": "INITIAL",
+      "members": [
+        {
+          "id": 11624,
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            1540,
+            1540
+          ],
+          "tail": "STAR",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        }
+      ]
+    }
+  ],
+  "sourceLaneQualification": "local-relation calls onData, which is shared by current unary and same-direction saved direct replay. The event has no lane flag; do not label its644events all current publications.",
+  "reversePremiseKinds": {
+    "FLOW": 246,
+    "CONCRETE": 86
+  },
+  "rawToKeptCuts": [
+    {
+      "appliedSequence": 3048,
+      "keptSequence": 3051,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              520,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              520,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3054,
+      "keptSequence": 3057,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1808,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1808,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3060,
+      "keptSequence": 3063,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1816,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1816,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3066,
+      "keptSequence": 3069,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1820,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1820,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3072,
+      "keptSequence": 3075,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1824,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1824,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3078,
+      "keptSequence": 3081,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3940,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3940,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3084,
+      "keptSequence": 3087,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3976,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3976,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3090,
+      "keptSequence": 3093,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3980,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3980,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3096,
+      "keptSequence": 3099,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3984,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3984,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3106,
+      "keptSequence": 3109,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              520,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              520,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3112,
+      "keptSequence": 3115,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1808,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1808,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3118,
+      "keptSequence": 3121,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1816,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1816,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3124,
+      "keptSequence": 3127,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1820,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1820,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3130,
+      "keptSequence": 3133,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1824,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1824,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3136,
+      "keptSequence": 3139,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3940,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3940,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3142,
+      "keptSequence": 3145,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3976,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3976,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3148,
+      "keptSequence": 3151,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3980,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3980,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3154,
+      "keptSequence": 3157,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3984,
+              540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3984,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3317,
+      "keptSequence": 3320,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              520,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              520,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3323,
+      "keptSequence": 3326,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1808,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1808,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3329,
+      "keptSequence": 3332,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1816,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1816,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3335,
+      "keptSequence": 3338,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1820,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1820,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3341,
+      "keptSequence": 3344,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1824,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1824,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3347,
+      "keptSequence": 3350,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3940,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3940,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3353,
+      "keptSequence": 3356,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3976,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3976,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3359,
+      "keptSequence": 3362,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3980,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3980,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3365,
+      "keptSequence": 3368,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3984,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3984,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3375,
+      "keptSequence": 3378,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              520,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              520,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3381,
+      "keptSequence": 3384,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1808,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1808,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3387,
+      "keptSequence": 3390,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1816,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1816,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3393,
+      "keptSequence": 3396,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1820,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1820,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3399,
+      "keptSequence": 3402,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1824,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1824,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3405,
+      "keptSequence": 3408,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3940,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3940,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3411,
+      "keptSequence": 3414,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3976,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3976,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3417,
+      "keptSequence": 3420,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3980,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3980,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3423,
+      "keptSequence": 3426,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3984,
+              1540,
+              540
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3984,
+              1540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3842,
+      "keptSequence": 3845,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              520,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              520,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3848,
+      "keptSequence": 3851,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1808,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1808,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3854,
+      "keptSequence": 3857,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1816,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1816,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3860,
+      "keptSequence": 3863,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1820,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1820,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3866,
+      "keptSequence": 3869,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1824,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1824,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3872,
+      "keptSequence": 3875,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3940,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3940,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3878,
+      "keptSequence": 3881,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3976,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3976,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3884,
+      "keptSequence": 3887,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3980,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3980,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3890,
+      "keptSequence": 3893,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3984,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3984,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3900,
+      "keptSequence": 3903,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              520,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              520,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3906,
+      "keptSequence": 3909,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1808,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1808,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3912,
+      "keptSequence": 3915,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1816,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1816,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3918,
+      "keptSequence": 3921,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1820,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1820,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3924,
+      "keptSequence": 3927,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1824,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              1824,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3930,
+      "keptSequence": 3933,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3940,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3940,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3936,
+      "keptSequence": 3939,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3976,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3976,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3942,
+      "keptSequence": 3945,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3980,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3980,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    },
+    {
+      "appliedSequence": 3948,
+      "keptSequence": 3951,
+      "raw": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3984,
+              540,
+              1536
+            ],
+            "tail": "STAR",
+            "mark": "FLOW",
+            "layer": "NORMAL",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      },
+      "kept": {
+        "kind": "FLOW",
+        "base": "var(3)",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$LocalVar",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "rows": [
+          {
+            "base": "var(3)",
+            "path": [
+              3984,
+              540
+            ],
+            "tail": "ANY",
+            "mark": "FLOW",
+            "layer": "DEMAND",
+            "E": [],
+            "mx": [],
+            "protected": false
+          }
+        ],
+        "protectionRows": [],
+        "protectionPresent": false
+      }
+    }
+  ],
+  "completionOutcomeCounts": {
+    "fresh": 536,
+    "nonfresh": 353,
+    "freshFraction": 0.6029246344206974
+  },
+  "observationFamilyCounts": [
+    {
+      "adjacent": 0,
+      "repeat": 2,
+      "enclosing": 0,
+      "count": 376
+    },
+    {
+      "adjacent": 2,
+      "repeat": 2,
+      "enclosing": 0,
+      "count": 2
+    },
+    {
+      "adjacent": 1,
+      "repeat": 2,
+      "enclosing": 0,
+      "count": 15
+    }
+  ],
+  "ndPremiseSeen": false,
+  "runtimeSourceHashes": {
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/MethodBlockRuntime.kt": "124698c56303fc926d5541880a7ba206e32b281fa3561666d6b6974077b8b487",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LoopOutputRestriction.kt": "e62752d603d6acfa738e2e6233a0317e5209a754f2918bad46971fe5bee2256d",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LoopConsumerObservation.kt": "6d98f705f055f6223ab97a061dd278a41fb0d5797375c4189b19b2691555518c",
+    "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Groups.kt": "4acac35dc174c5e07596f5de84f5d6b38a26837cbc81879bb22b80b0183298fa"
+  },
+  "sourceArtifact": {
+    "source": "/drive-testcomp/opentaint-go-rules/loop-demand-trie-20261104/diagnostics/conductor-replace-run4-4096-20261104T141344817253Z/analysis.json",
+    "bytes": 183246,
+    "sha256": "0a10234d91b22e634a28e90950624564a51ecd6e0fcb4aea71b6bf371d55e586"
+  }
+}
