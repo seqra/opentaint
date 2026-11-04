@@ -14205,7 +14205,7 @@
     "countCaveats": [
       "Physical maximum-depth/kind bins are exhaustive packet-event counters, not retained set cardinalities.",
       "Sampled path list retains the final64 sampled events per method; first16 and every1024th event are sampled, with no claim of unbiased distribution.",
-      "C5 row samples are bounded first64 global samples per run; a method taking all slots is not a population proof. Descriptors include full demand paths up to12 but raw/selected/admitted use only firstBranch and maxFL.",
+      "C5 row samples retain the last64 sampled rows per run; the first16 attempts and every4096th attempt are sampled. A method filling retained slots is not a population proof. Descriptors include demand paths up to12 but raw/selected/admitted show firstBranch and maxFL only.",
       "Loop method counters are a hot-owner sample. Here the decoder is present consistently; global DemandQueryStatistics separately verify its predominance.",
       "All phase counts are completed iterations3\u20138; run9 timed out and its partial frontier is not treated as accepted."
     ],
@@ -29873,5 +29873,14 @@
     "Annotation memberships, pair rows, candidate attempts and actual packets have different units.",
     "c5ExactRejectRows mixes prepared null-bucket finalization and native failed row restriction.",
     "All relevant existing campaign progress labels and partial timeout qualifications are preserved."
+  ],
+  "reportDataCorrections": [
+    {
+      "change": "Correct C5 sample-window description; all numerical measurements unchanged.",
+      "previousDescription": "C5 row samples are bounded first64 global samples per run; a method taking all slots is not a population proof. Descriptors include full demand paths up to12 but raw/selected/admitted use only firstBranch and maxFL.",
+      "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandResultCoverage.kt",
+      "sha256": "ade7b5a26ceb3973c60e4a58598256d7ba116b53003e019074816bd74e1cde1d",
+      "lines": "77-89"
+    }
   ]
 }
