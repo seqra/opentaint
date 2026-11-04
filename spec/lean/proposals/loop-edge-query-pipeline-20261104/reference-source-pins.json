@@ -1,0 +1,19 @@
+{
+  "selection": "PROPOSAL_MODEL_ONLY",
+  "baselineRevision": "e558b496acf82de6ff136325d58f3d90ee5b8559",
+  "productionVerified": false,
+  "kotlinAdapterVerified": false,
+  "sourceRole": "Immutable current implementation context; no native AP/index adapter proof is claimed.",
+  "sources": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandStore.kt": "975a16c58d3cf3192fc6723c956c37aa45d8d02a44b9f8d86d2d508e7f511e06",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/PreparedLocalDataPlan.kt": "83699af36343807d687b274e13e4fbf542dcbba23de96fb8b262a5e83d7b164e",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/PathTrie.kt": "44e586e0e1681011554353d4b1c65d10b5f0f8522ba22005c907933f875ad59b",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandResultCoverage.kt": "9b9525780415b0091df273b4eef8478397a7096c8bc19928fffe515e0a238257",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LoopConsumerObservation.kt": "fbf8fa6fd60d85348eb2baf877abf37f41bbec4a011179d082a638269cd5c902",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LoopOutputRestriction.kt": "7b44a1303a0151e363e46264e39d58e19e930ff114839b9946b1a2da34ccbc9c",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/MethodBlockRuntime.kt": "95c23c3e7d638fdaab04eb6764d33cd7232dba13a491e4e215fc9d5b0397e3af",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LoopQueryScratch.kt": "9da07001fa30a1a23e0887758c79ef581e0733b4824b0a5720fcb7fd600d8a53",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Demand.kt": "1498a6a07e2967349badc79b2e752c194bb6381c4097e5a2de29455b12d19fe6",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": "c4a2547aeb7e03d2daf13bc8fe811b3a4bc8026d74bd162a6cd3f06a9bbc90f0"
+  }
+}

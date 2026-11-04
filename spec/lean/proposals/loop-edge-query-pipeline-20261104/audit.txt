@@ -1,0 +1,36 @@
+'OutputRowBatching.selectedParts' does not depend on any axioms
+'OutputRowBatching.CandidateComplete' does not depend on any axioms
+'OutputRowBatching.maskedSelect' does not depend on any axioms
+'OutputRowBatching.conservative_candidate_cell' depends on axioms: [propext]
+'OutputRowBatching.conservative_candidate_parts' depends on axioms: [propext, Quot.sound]
+'OutputRowBatching.prependColumn' does not depend on any axioms
+'OutputRowBatching.leafMajor' does not depend on any axioms
+'OutputRowBatching.zipWith_map_same' depends on axioms: [propext]
+'OutputRowBatching.leaf_major_buckets_equal_native' depends on axioms: [propext, Quot.sound]
+'OutputRowBatching.conservative_leaf_major_buckets' depends on axioms: [propext, Quot.sound]
+'OutputRowBatching.nativeRows' does not depend on any axioms
+'OutputRowBatching.emitBuckets' does not depend on any axioms
+'OutputRowBatching.preparedRows' does not depend on any axioms
+'OutputRowBatching.entry_mask_elimination' depends on axioms: [propext]
+'OutputRowBatching.emit_complete_buckets' depends on axioms: [propext]
+'OutputRowBatching.full_ordered_factorization' depends on axioms: [propext, Quot.sound]
+'OutputRowBatching.same_ordered_union' depends on axioms: [propext, Quot.sound]
+'OutputRowBatching.planPostings' does not depend on any axioms
+'OutputRowBatching.plan_postings_sublist' depends on axioms: [propext]
+'OutputRowBatching.output_posting_work_bound' depends on axioms: [propext]
+'OutputRowBatching.currentPostingWork' does not depend on any axioms
+'OutputRowBatching.planPostingWork' does not depend on any axioms
+'OutputRowBatching.batched_posting_work_bound' depends on axioms: [propext]
+'OutputRowBatching.no_saving_when_all_eligible' depends on axioms: [propext, Quot.sound]
+'OutputRowBatching.all_unrelated_postings_removed' does not depend on any axioms
+'OutputRowBatching.exampleRows' does not depend on any axioms
+'OutputRowBatching.distinct_nd_ordinals_retained' does not depend on any axioms
+'OutputRowBatching.scalar_input_order_retained' does not depend on any axioms
+'OutputRowBatching.pack_cut_need_not_distribute' does not depend on any axioms
+'OutputRowBatching.rejected_row_does_not_pack_empty' does not depend on any axioms
+'OutputRowBatching.dropping_live_candidate_changes_answer' does not depend on any axioms
+'OutputRowBatching.strict_work_improvement_witness' does not depend on any axioms
+'OutputRowBatching.PairedRow' does not depend on any axioms
+'OutputRowBatching.PairedRow.mk' does not depend on any axioms
+'OutputRowBatching.PairedRow.ordinal' does not depend on any axioms
+'OutputRowBatching.PairedRow.payload' does not depend on any axioms
