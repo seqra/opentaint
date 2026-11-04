@@ -575,6 +575,95 @@ This proves a need for MAY `inside` under the current saved-record and demand
 protocol. It does not establish a need for an ancestor STAR/FLOW input. That
 remaining cell must be evaluated separately.
 
+### 6.3 A STAR counterexample from the selected C2 policy
+
+A third probe gives a necessary concrete STAR case. At the critical match,
+the actual is `p.*/T`, DEMAND, and the saved premise is `p.f.$/T`. Neither
+has MAY or MUST. Earlier cuts and demands still have MAY; this is not a
+program with no MAY facts anywhere.
+
+Use the same exact source and conditional-source/sink rules as section 6.2,
+and insert one wrapper:
+
+```java
+void main() {
+    Box x = sourceABF();
+    Object y = wrapper(x);
+    sinkU(y);
+}
+
+Object wrapper(Box w) {
+    return helper(w.a.b);
+}
+
+Object helper(Box p) {
+    Object t = p.f;
+    return transform(t);
+}
+```
+
+The helper gets the same run-2 NORMAL record as before. Its forward view is
+`p.f.$/T -> ret.$/U`. The wrapper's backward requirement has three fields;
+run-2's limit one cuts it:
+
+```text
+run-2 helper summary:     ret.$/U -> p.f.$/T        N
+run-2 wrapper summary:    ret.$/U -> w.a.[any]/T    D
+```
+
+In run-3, native C2 emits a concrete STAR initial at the first new field:
+
+```text
+wrapper Dc:              w.a.[any]/T
+wrapper Dp:              ret.$/U
+submitted:               w.a.b.[any]/T             D
+C2 initial and start:    w.a.b.*/T -> w.a.b.*/T     D
+
+bind w.a.b to helper:    w.a.b.*/T -> p.*/T         D
+saved helper view:       p.f.$/T -> ret.$/U         N
+                        applicable=false; inside=true
+applied result:          w.a.b.*/T -> ret.$/U       D
+```
+
+Thus the STAR actual is not an invented input. It is an observed initial
+edge from the selected C2 rule, followed by an ordinary suffix-preserving
+argument binding. The unknown suffix can start with `f`. The record does
+not establish that it does; its result remains DEMAND.
+
+The result preserves the wrapper demand and the caller Target. In run-4,
+the full `w.a.b.f.$/T` requirement fits limit three, and the wrapper obtains
+a NORMAL native relation. In run-5, the exact source input satisfies that
+record by `applicable`, and the caller reports the U sink.
+
+Two complete driver mutants isolate the dependency:
+
+| Matcher | Latest reached / completed / accepted | Final findings |
+| --- | --- | ---: |
+| Current | run-5 / run-5 / run-5 | 1 |
+| STAR inside disabled; MAY/MUST retained | run-3 / run-3 / run-3 | 0 |
+| Only concrete STAR inside disabled; FLOW STAR and MAY/MUST retained | run-3 / run-3 / run-3 | 0 |
+
+The last control shows that the loss does not depend on disabling abstract
+FLOW matching. The wrapper has no U return result and loses its paired
+summary. The caller loses its only outgoing Target and stops in run-3.
+Normal argument identities cannot fill this gap: the wrapper's output
+demand is `ret.$/U`.
+
+The [portable evidence](data/bidirectional-star-inside-counterexample-20261104.json)
+contains the full code/rule forms, inferred records, processed initials,
+native application controls, all three outputs, matcher source and command
+manifests. All runs use FULL, one worker and limits `1,1,2,3,4`. Mutants load
+only from external class directories; repository implementation is unchanged.
+
+EXACT input is different. Its location has no strict descendant. If an
+EXACT actual passes `inside`, the premise must be at the same path with
+an EXACT tail, and `applicable` already accepts it under the same mark test.
+This gives no additional descendant match.
+
+The original abstract `p.*/FLOW` case remains unproved as a necessary
+operation. Do not use this concrete STAR counterexample to justify that
+different cell.
+
 ## 7. Where the modeled combinations can come from
 
 The source and model audit gives a plausible alias route for the unusual
