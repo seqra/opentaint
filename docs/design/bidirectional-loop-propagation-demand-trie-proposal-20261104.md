@@ -6,6 +6,9 @@ Reference runtime: `e558b496acf82de6ff136325d58f3d90ee5b8559`.
 Latest measurements: Conductor reached run-6 / completed run-5 / accepted
 run-5; Stirling-PDF reached run-8 / completed run-7 / accepted run-7.
 
+Implementation details and validation plan:
+[Loop propagation and demand tries: implementation proposal](bidirectional-loop-propagation-demand-trie-implementation-20261104.md).
+
 ## 1. Purpose and scope
 
 Reduce repeated work when a fact crosses a loop boundary. Use demand tries to

@@ -1,0 +1,27 @@
+{
+  "selection": "IMPLEMENTATION_PROPOSAL_MODEL_ONLY",
+  "baselineRevision": "e558b496acf82de6ff136325d58f3d90ee5b8559",
+  "productionVerified": false,
+  "kotlinAdapterVerified": false,
+  "sourceRole": "Immutable native context for unproved output-program and oriented-route adapters.",
+  "sources": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Demand.kt": "1498a6a07e2967349badc79b2e752c194bb6381c4097e5a2de29455b12d19fe6",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": "c4a2547aeb7e03d2daf13bc8fe811b3a4bc8026d74bd162a6cd3f06a9bbc90f0",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Summary.kt": "f21c80f317d08d9ffc70f86cef2138fb40cd16e7d0c02956700c3f507e32c24f",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApOps.kt": "9ecf5a0a403f8b0b76c5e0bfe79ca94ccba8eb9d5700bc18fb88c11f482d0dc4",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LocalRelationApplication.kt": "d053e80bc0cf2130eabfed182de66123876c171867162b90cb7da1c10776563f",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/MethodBlockRuntime.kt": "95c23c3e7d638fdaab04eb6764d33cd7232dba13a491e4e215fc9d5b0397e3af",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockBoundaryDemandView.kt": "10f9265f2e3978d27e628fd704c43ee0ed974e852783ea9a46d6685be91b7d54",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LoopConsumerObservation.kt": "fbf8fa6fd60d85348eb2baf877abf37f41bbec4a011179d082a638269cd5c902",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockSummaryLinks.kt": "d7c342e6fb53a1884af478b2b39db49685d44ec05eedaf6c428625b436ddc0bc",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandStore.kt": "975a16c58d3cf3192fc6723c956c37aa45d8d02a44b9f8d86d2d508e7f511e06",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandResultCoverage.kt": "9b9525780415b0091df273b4eef8478397a7096c8bc19928fffe515e0a238257",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/PreparedLocalDataPlan.kt": "83699af36343807d687b274e13e4fbf542dcbba23de96fb8b262a5e83d7b164e"
+  },
+  "relatedProofReceipts": {
+    "spec/lean/proposals/loop-edge-query-pipeline-20261104/checks.json": "ad58c9264b2857fc6c2ab57e4eba528f87c5c0719e9f50460e8a74f7936cfdd4",
+    "spec/lean/proposals/demand-trie-loop-restriction-20261104/checks.json": "2827b2945a1f12cb7bc64f8d3971b1d66aa6b4f63eda9e8445199f8f8beac7c2"
+  },
+  "relatedProofsImported": false,
+  "relatedProofReceiptsRewritten": false
+}
