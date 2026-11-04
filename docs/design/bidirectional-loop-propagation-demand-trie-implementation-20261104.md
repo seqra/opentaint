@@ -857,6 +857,12 @@ Do not remove the ordinary positional indexes that those paths still use.
 
 ## 14. Post-implementation experiments
 
+### 14.1 Campaign and comparison
+
+Run this investigation after the proposed optimization is implemented and
+its required tests pass. The result must identify the main remaining source
+of work. A timing table or a list of hot functions is not sufficient.
+
 Use only the current selected project configurations: FULL marks, 16 GiB,
 statics and aliases enabled, field limits `1,1,2,...`, and configured timeouts.
 Use `runProjectAnalyzer` directly. Follow the existing OWASP workflow and the
@@ -871,6 +877,10 @@ and 93.16% of Stirling run-7 Java CPU. Stirling run-7 had 502.471 million C5
 row attempts with 99.972% entry memo hits. Conductor's prepared output-ID set
 was a major allocation site. These measurements motivate work elimination;
 they do not establish this proposal's speedup.
+Also inspect each project's new slowest iteration, including thingsboard.
+For each slow backward run, compare its fact handling with the preceding and
+following forward runs, if they are reached. Do not limit the investigation
+to the reference run numbers when the new version progresses further.
 
 Every report must include latest **reached / completed / accepted iteration**
 for every project, even after timeout or OOM. Report each iteration engine
@@ -878,6 +888,12 @@ time, transition time, NORMAL/DEMAND/Target frontier and exact finding diff.
 Use accepted snapshots for quality comparisons and identify partial snapshots
 separately. Explain any loss against both the fixed quality baseline and the
 reference runtime; do not silently waive an existing or new gap.
+Pin the runtime commit, configuration, field limit, direction and profile
+interval for each measurement. Compare equal iterations and distinguish full
+iteration totals from partial timeout intervals. Report the cost of diagnostic
+collection separately when it materially affects the result.
+
+### 14.2 Pipeline counters, CPU, allocation and retained memory
 
 Add diagnostic counters behind the existing statistics option:
 
@@ -896,17 +912,137 @@ time. Capture CPU and allocation profiles under sustained load and near the
 configured limit. Capture and analyze a heap snapshot if the memory manager
 reports OOM; do not infer retained-memory layout from allocation samples.
 
-After the campaign, inspect fact shapes again. Count scalar memberships and
-packed groups; classify field depth/tail, mark, layer, protection, block/exit,
-direct/reverse relation and growing/non-growing body geometry. Distinguish:
+For each dominant pipeline, report its operation count, CPU share, allocated
+bytes or allocation sample weight, and retained bytes when a heap snapshot
+supports that claim. State the denominator and sampling interval. Separate
+inclusive pipeline time from exclusive stage time; do not add nested costs
+as if they were disjoint. Distinguish work that produces a fresh result from
+work that ends in a failed match, unchanged merge, duplicate, drop or cut.
+
+### 14.3 Exact fact and relation census
+
+Count packed groups and scalar memberships separately. A single packet can
+carry many paths and marks. A small demand frontier does not bound the number
+of offers, saved applications, trial observations or scalar/program pairs.
+
+Classify facts and relations by:
+
+- Method, block, entry/exit port, instruction and direction.
+- Complete original P, including all ND members; stored body premise I;
+  stored conclusion O; and applied result F. Do not combine these identities.
+- Base kind: local, argument/receiver, return, static field or typed control.
+- Concrete field path, counted FL, tail, full mark, field/mark exclusions,
+  NORMAL/DEMAND layer and full protection annotation.
+- Direct or reversed saved/current relation, growing or non-growing stored
+  geometry, packed group width, and actual applied suffix depth.
+
+Measure uniqueness at the stage's real key. The same fact under a different
+original, scope or port is not a duplicate at that stage. Count protection-only
+upgrades separately: ordinary `Facts.equals` does not include that annotation.
+Also compare geometry-only groups to show whether marks, originals or scopes
+multiply the same field shape. Do not use this diagnostic grouping as a new
+deduplication policy.
+
+For the largest work families, report these quantities side by side:
+
+| Quantity | Question it answers |
+| --- | --- |
+| Unique annotated stage keys and total offers | Is work caused by new semantic data or repeated delivery? |
+| Scalar paths/mark memberships per packet | Does packing hide a large amount of native selection work? |
+| Distinct originals and scopes per geometry | Do context and premise combinations multiply an otherwise small fact set? |
+| Entry rows K, accepted rows k, output programs s | Did output sharing remove the expected repeated restrictions? |
+| Candidate, matched and applied pairs | Is cost in broad lookup, failed matching or actual composition? |
+| Raw depth, first accepted budget and final depth | How much deep work is later discarded by restriction? |
+| Fresh completions/publications and outgoing demand | How much processing produces new analysis state? |
+
+### 14.4 Trace representative facts through the complete pipeline
+
+Select examples from the measured dominant families, not only from convenient
+tests. Include a case that produces useful fresh output and a case dominated
+by repeated, rejected or later-collapsed work. For backward-heavy workloads,
+include a comparable fast forward case and explain the different operation
+counts. Embed the evidence and traces directly in the report.
+
+Each example must contain the actual code under analysis, with method and
+instruction locations, the relevant previous-run demand rows and saved/current
+summaries. Show full fact paths, marks, tails, exclusions, layers and protection.
+Preserve all ND premises. If registers need an IR excerpt to explain their
+binding, include that excerpt beside the source code. Distinguish an exact
+sample from the aggregate family it represents.
+
+Trace these stages in native order; explicitly mark a stage as not applicable
+when the selected fact does not pass through it:
+
+| Stage | Required evidence |
+| --- | --- |
+| Origin and offer | Producing statement or saved summary; exact P/F offered; whether it is new or repeated |
+| Saved replay and C2 | Applied persisted relation; selected demand rows; emitted initial or rejection reason; retained original and port |
+| Current input/summary join | Input group and freshness; candidate rows/members; native matches; real ND join if present; subscription/delivery count |
+| Actual propagation | Instructions and block transitions traversed; field/mark changes; real request/Target effects; local or real-call application |
+| Summary emission | Raw I/O; prepared live destinations; normalization; paired C5 entry eligibility and output programs |
+| Loop gate | Stored growth decision; complete raw observation; witness and skipped budgets; tested cuts and first accepted result |
+| Storage and delivery | Completion/store key; fresh delta or duplicate/protection upgrade; publication fan-out and next actual destinations |
+| Handoff | Admitted NORMAL/DEMAND/Target record and its effect on the next frontier, or the exact reason no record remains |
+
+For each example, include a compact stage table:
+
+| Stage | Exact input → output | Offers / distinct keys | Candidates / matches | Fresh results | CPU/allocation attribution |
+| --- | --- | --- | --- | --- | --- |
+| Actual measured stage | Actual annotated facts/relations | Measured counts | Measured counts | Measured count | Measured or explicitly unavailable |
+
+Explain how one fact causes additional work. Examples include a publication
+reaching many standing inputs, one saved reverse view enumerating many marked
+positions, or one raw loop result causing several complete observations.
+Record these multiplicities from counters or trace events. Do not infer them
+from a hot stack alone, and do not assume successive multipliers are independent.
+
+Use aggregate counters for the normal campaign. If exact tracing is needed,
+use a bounded diagnostic capture for selected methods, blocks and iterations
+with the same analysis configuration. State sampling limits and dropped-event
+counts. Do not log every fact or retain an unbounded provenance graph in the
+performance run. A diagnostic trace must not become a new analysis store or
+affect admission, equality or scheduling.
+
+### 14.5 Determine the cause and its total impact
+
+Distinguish at least these patterns:
 
 1. Actual intra-procedural growth before a boundary, then collapse at C5.
 2. Repeated observer/plan work for a small fixed packet and unchanged demand.
 3. Saved reverse-view enumeration or real interprocedural joins.
 4. Real output width or ND combinations that this proposal does not remove.
+5. Repeated candidate lookup, replay or delivery that ends in no fresh result.
+6. Mark, original or block-scope multiplicity rather than field-path growth.
 
 Compare input/summary candidate reductions with total runtime. A lower query
 counter alone does not prove success. If the full baseline observer remains
 dominant, report its native sub-operations and representative facts. Propose
 any further algorithm separately; do not extend analyzer semantics during
 this implementation.
+
+The report must finish with a ranked workload table. For each family, give
+its project/iteration, representative fact trace, total operation count,
+unique-key count, CPU/allocation share and fresh output count. State how much
+of the measured workload these families explain and leave an explicit
+unattributed remainder. A few expensive examples without aggregate support
+do not establish the main cause.
+
+Answer these questions from that evidence:
+
+1. What is the largest remaining source of work, and why is it performed?
+2. Is the dominant factor data growth, context/mark multiplicity, repeated
+   processing, a broad lookup, or the minimum work needed for actual results?
+3. Why is it expensive in the slow backward runs and less expensive in the
+   compared forward runs? Separate direction, field-limit and demand-shape
+   effects rather than attributing every difference to direction alone.
+4. Which work did this optimization remove, and which expected reduction did
+   not occur? Include native fallback frequency and its causes.
+5. Which further work could be omitted without losing a required result?
+   Show the exact fact/consumer invariant and estimate the affected operation
+   and CPU/allocation shares. Separate this estimate from a measured speedup.
+
+If a main cause is still unproved, state the competing explanations and the
+next targeted measurement needed to distinguish them. Do not conclude with
+an unsupported request to make a hot operation faster. The objective is to
+identify why that operation is called so often and whether the analyzer needs
+to perform that work at all.
