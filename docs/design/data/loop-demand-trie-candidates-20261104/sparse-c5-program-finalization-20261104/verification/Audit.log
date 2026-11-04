@@ -1,0 +1,38 @@
+'SparseC5Finalization.Bucket' does not depend on any axioms
+'SparseC5Finalization.Output' does not depend on any axioms
+'SparseC5Finalization.Rows' does not depend on any axioms
+'SparseC5Finalization.Emit' does not depend on any axioms
+'SparseC5Finalization.emitAt' does not depend on any axioms
+'SparseC5Finalization.activeKeys' does not depend on any axioms
+'SparseC5Finalization.dense' does not depend on any axioms
+'SparseC5Finalization.ascending' does not depend on any axioms
+'SparseC5Finalization.sparse' depends on axioms: [propext, Quot.sound]
+'SparseC5Finalization.empty_cell_is_silent' depends on axioms: [propext]
+'SparseC5Finalization.discard_empty_cells' depends on axioms: [propext]
+'SparseC5Finalization.ascending_transitive' depends on axioms: [propext]
+'SparseC5Finalization.ascending_total' depends on axioms: [propext]
+'SparseC5Finalization.sorted_encountered' depends on axioms: [propext, Quot.sound]
+'SparseC5Finalization.native_ordinals_sorted' depends on axioms: [propext, Quot.sound]
+'SparseC5Finalization.active_keys_sorted' depends on axioms: [propext, Quot.sound]
+'SparseC5Finalization.sort_restores_native_ordinals' depends on axioms: [propext, Quot.sound]
+'SparseC5Finalization.exact_ordered_output_stream' depends on axioms: [propext, Quot.sound]
+'SparseC5Finalization.exact_final_annotation_union' depends on axioms: [propext, Quot.sound]
+'SparseC5Finalization.certify' depends on axioms: [propext, Quot.sound]
+'SparseC5Finalization.certificate_ordered_output' depends on axioms: [propext, Quot.sound]
+'SparseC5Finalization.sparse_sort_preserves_work_size' depends on axioms: [propext, Quot.sound]
+'SparseC5Finalization.selected_finalizers_at_most_plan' depends on axioms: [propext, Quot.sound]
+'SparseC5Finalization.selected_finalizers_at_most_reference_cap' does not depend on any axioms
+'SparseC5Finalization.QueryResult' does not depend on any axioms
+'SparseC5Finalization.finishQuery' does not depend on any axioms
+'SparseC5Finalization.exact_bounded_query_result' depends on axioms: [propext, Quot.sound]
+'SparseC5Finalization.overflow_returns_no_partial_outputs' depends on axioms: [propext]
+'SparseC5Finalization.exampleBucket' does not depend on any axioms
+'SparseC5Finalization.exampleRows' does not depend on any axioms
+'SparseC5Finalization.exampleEmit' does not depend on any axioms
+'SparseC5Finalization.unsorted_encounter_is_not_native_order' does not depend on any axioms
+'SparseC5Finalization.sorted_sparse_example' depends on axioms: [propext, Quot.sound]
+'SparseC5Finalization.example_active_keys' does not depend on any axioms
+'SparseC5Finalization.duplicate_ordinal_certificate_is_rejected' depends on axioms: [propext, Quot.sound]
+'SparseC5Finalization.missing_ordinal_certificate_is_rejected' depends on axioms: [propext, Quot.sound]
+'SparseC5Finalization.empty_query_allocates_no_selected_cells' does not depend on any axioms
+'SparseC5Finalization.selected_bucket_can_emit_nothing' depends on axioms: [propext, Quot.sound]
