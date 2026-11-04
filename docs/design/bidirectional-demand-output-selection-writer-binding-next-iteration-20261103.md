@@ -40,6 +40,11 @@ kernel-checked models. Do not implement an unselected behavior to close a proof.
 
 ## 2. Select C5 outputs from the prepared plan
 
+The [loop pipeline and complexity design](bidirectional-loop-edge-pipeline-and-complexity-20261104.md)
+expands this direction for Conductor and Stirling-PDF. It defines summary
+emission, actual application, pure restriction queries, lookup costs and
+output-program/scalar organization. It remains a design proposal.
+
 ### Evidence
 
 Conductor's partial run-6 has 79,421 Java samples. Loop observation accounts
