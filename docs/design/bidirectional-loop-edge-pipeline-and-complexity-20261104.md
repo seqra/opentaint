@@ -1,5 +1,8 @@
 # Loop edge pipeline and lookup complexity
 
+The current [unified loop proposal](bidirectional-loop-propagation-demand-trie-proposal-20261104.md)
+consolidates the design. This document remains the detailed source and cost audit.
+
 4 November 2026. Analysis and design direction. No analyzer change is made.
 
 Runtime reference: `e558b496acf82de6ff136325d58f3d90ee5b8559`.
@@ -524,6 +527,11 @@ later gain protection, so it cannot be rejected merely because the baseline
 copy is protected. A protected result cannot become plain. Missing results
 are checked after the relevant complete family has been visited. Perform this
 comparison after native C5 packing/union; do not infer it from partial AP work.
+
+The [demand-trie design](../../spec/demand-trie-loop-restriction.md) specifies
+the field cursor, nested terminal payloads and a native C2 witness that can
+certify an entire earlier-budget rejection range. It keeps the full observer
+and the existing ascending search for budgets without such a certificate.
 
 ### 7.7 Reuse admission evidence only at the same actual destination
 

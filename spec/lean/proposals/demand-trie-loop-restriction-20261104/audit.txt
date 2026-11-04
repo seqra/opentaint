@@ -1,0 +1,73 @@
+'DemandTriePrefix.lcp' does not depend on any axioms
+'DemandTriePrefix.maxLcp' does not depend on any axioms
+'DemandTriePrefix.lcp_right_empty' does not depend on any axioms
+'DemandTriePrefix.lcp_append_prefix' depends on axioms: [propext]
+'DemandTriePrefix.referencePath' does not depend on any axioms
+'DemandTriePrefix.max_lcp_empty_raw' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.max_lcp_cons' depends on axioms: [propext]
+'DemandTriePrefix.node_walk_length_equals_lcp_reference' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.node_walk_equals_full_lcp_reference' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.reference_is_prefix' does not depend on any axioms
+'DemandTriePrefix.reference_depth_bound' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.reference_idempotent' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.requested_prefix_identity' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.demand_lcp_le_max' depends on axioms: [propext]
+'DemandTriePrefix.boundaryWitness' does not depend on any axioms
+'DemandTriePrefix.boundary_witness_spec' depends on axioms: [propext]
+'DemandTriePrefix.lcp_is_shared_prefix' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.boundary_witness_shares_maximum_prefix' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.take_prefix_of_le' depends on axioms: [propext]
+'DemandTriePrefix.retained_first_distinguishing_field' depends on axioms: [propext]
+'DemandTriePrefix.requested_path_plus_one_bound' depends on axioms: [propext]
+'DemandTriePrefix.terminalPayloads' does not depend on any axioms
+'DemandTriePrefix.terminal_payload_append' depends on axioms: [propext]
+'DemandTriePrefix.shorter_terminal_keeps_own_payload' depends on axioms: [propext]
+'DemandTriePrefix.longer_terminal_keeps_own_payload' depends on axioms: [propext]
+'DemandTriePrefix.same_raw_prefix_order' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.take_kept_prefix' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.rowCertificate' does not depend on any axioms
+'DemandTriePrefix.certificateCheck' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.checked_certificate' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.c2Key' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.initialLayer' does not depend on any axioms
+'DemandTriePrefix.c2Image' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.star_initial_layer' does not depend on any axioms
+'DemandTriePrefix.any_demand_may_ancestor_constant' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.strict_certificate_preserves_c2' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.certifiedProject' does not depend on any axioms
+'DemandTriePrefix.certified_project_c2' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.certified_project_base' does not depend on any axioms
+'DemandTriePrefix.certified_project_mark' does not depend on any axioms
+'DemandTriePrefix.certified_project_protection' does not depend on any axioms
+'DemandTriePrefix.shared_prefix_constant_any_range' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.proper_projection_is_any_demand' depends on axioms: [propext]
+'DemandTriePrefix.c2Family' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.shared_prefix_witness_in_family' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.complete_c2_image_preserved' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.firstAccepted' does not depend on any axioms
+'DemandTriePrefix.skip_only_certified_rejected_prefix' depends on axioms: [propext]
+'DemandTriePrefix.absent_witness_rejects_range' does not depend on any axioms
+'DemandTriePrefix.skip_absent_witness_range' depends on axioms: [propext]
+'DemandTriePrefix.userRaw' depends on axioms: [propext]
+'DemandTriePrefix.nestedDemands' depends on axioms: [propext]
+'DemandTriePrefix.siblingDemands' depends on axioms: [propext]
+'DemandTriePrefix.user_nested_fghk_to_fgh' depends on axioms: [propext]
+'DemandTriePrefix.user_sibling_fgz_retains_h' depends on axioms: [propext]
+'DemandTriePrefix.user_nested_certificate' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.user_sibling_certificate' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.user_nested_any_demand_image' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.nested_terminal_payloads_both_survive' depends on axioms: [propext]
+'DemandTriePrefix.deepest_matching_terminal_is_not_enough' depends on axioms: [propext]
+'DemandTriePrefix.one_global_longest_path_is_not_enough' depends on axioms: [propext]
+'DemandTriePrefix.mayCounterexample' depends on axioms: [propext]
+'DemandTriePrefix.may_geometry_is_not_always_minimal' depends on axioms: [propext, Quot.sound]
+'DemandTriePrefix.StrictCutCertificate' does not depend on any axioms
+'DemandTriePrefix.StrictCutCertificate.mk' does not depend on any axioms
+'DemandTriePrefix.StrictCutCertificate.keptPrefix' does not depend on any axioms
+'DemandTriePrefix.StrictCutCertificate.shorter' does not depend on any axioms
+'DemandTriePrefix.StrictCutCertificate.firstNew' does not depend on any axioms
+'DemandTriePrefix.StrictCutCertificate.distinct' does not depend on any axioms
+'DemandTriePrefix.InitialTail' does not depend on any axioms
+'DemandTriePrefix.InitialTail.exact' does not depend on any axioms
+'DemandTriePrefix.InitialTail.star' does not depend on any axioms
+'DemandTriePrefix.InitialTail.may' does not depend on any axioms
