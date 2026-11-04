@@ -551,3 +551,7 @@ targets repeated complete-premise writer matching and provably empty pure
 observer work, with sparse C5 finalization as a smaller option. It states
 current/new behavior, examples and proof obligations. No next-iteration
 runtime change is included here.
+
+The [frontier-growth investigation](bidirectional-stirling-conductor-frontier-growth-20261104.md)
+traces the Stirling forward-run increases and Conductor run-4/run-5 changes
+to exact method counts, FLOW path shapes and distinct processing costs.
