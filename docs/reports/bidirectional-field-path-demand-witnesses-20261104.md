@@ -725,6 +725,14 @@ loop gate, then compare the canonical and original output sets. It must
 measure actual replay, repeat admission, C5 output and instruction work.
 No further analyzer experiment or runtime change was made here.
 
+Follow-up native controls add an important qualification: current C2 can
+emit a distinct NORMAL refinement initial from a spatially covered MAY or
+MUST leaf. Thus an output antichain alone does not prove unchanged demand
+progress. The [new candidate design](../design/bidirectional-flow-antichains-and-demand-discharge-20261104.md)
+separates spatial coverage, grouped ancestor-reader evaluation, and complete
+next-demand discharge. Its controls use the same runtime and do not add a
+new project performance measurement.
+
 ## 9. Relevant implementation points
 
 - [Scalar coverage and native MUST reversal](../../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt):
