@@ -1,0 +1,104 @@
+'ProgramDedup.State' does not depend on any axioms
+'ProgramDedup.maskLe' does not depend on any axioms
+'ProgramDedup.maskOr' does not depend on any axioms
+'ProgramDedup.mask_le_or_left' depends on axioms: [propext]
+'ProgramDedup.mask_le_or_right' depends on axioms: [propext]
+'ProgramDedup.mask_le_trans' does not depend on any axioms
+'ProgramDedup.mask_or_covered' depends on axioms: [Quot.sound]
+'ProgramDedup.mergePacket' does not depend on any axioms
+'ProgramDedup.add' does not depend on any axioms
+'ProgramDedup.covers' does not depend on any axioms
+'ProgramDedup.add_of_covered' depends on axioms: [propext, Quot.sound]
+'ProgramDedup.covers_after_add_self' depends on axioms: [propext, Quot.sound]
+'ProgramDedup.covers_preserved_by_add' depends on axioms: [propext]
+'ProgramDedup.runPackets' does not depend on any axioms
+'ProgramDedup.run_preserves_coverage' depends on axioms: [propext]
+'ProgramDedup.run_covers_every_packet' depends on axioms: [propext, Quot.sound]
+'ProgramDedup.run_covered_stream_is_identity' depends on axioms: [propext, Quot.sound]
+'ProgramDedup.identical_stream_is_idempotent' depends on axioms: [propext, Quot.sound]
+'ProgramDedup.nativePrograms' does not depend on any axioms
+'ProgramDedup.stablePrograms' depends on axioms: [propext]
+'ProgramDedup.dedupPrograms' depends on axioms: [propext]
+'ProgramDedup.stable_program_count_bound' depends on axioms: [propext]
+'ProgramDedup.dedup_programs_equal_native_stable' depends on axioms: [propext]
+'ProgramDedup.stable_dedup_preserves_ordered_union' depends on axioms: [propext, Quot.sound]
+'ProgramDedup.eligiblePrograms' does not depend on any axioms
+'ProgramDedup.after_eligibility_exact_ordered_outputs' depends on axioms: [propext, Quot.sound]
+'ProgramDedup.exampleEmit' does not depend on any axioms
+'ProgramDedup.example_exact_first_output_order' does not depend on any axioms
+'ProgramDedup.example_protection_upgrade_is_retained' depends on axioms: [propext]
+'ProgramDedup.example_repeated_programs_keep_first_order' depends on axioms: [propext]
+'ProgramDedup.example_fewer_output_program_evaluations' depends on axioms: [propext]
+'ProgramDedup.dedup_before_eligibility_is_unsound' does not depend on any axioms
+'BoundaryFilter.destination' does not depend on any axioms
+'BoundaryFilter.keepEndpoint' depends on axioms: [propext]
+'BoundaryFilter.keepOutput' depends on axioms: [propext]
+'BoundaryFilter.DataOnlyAt' does not depend on any axioms
+'BoundaryFilter.DataAt' depends on axioms: [propext]
+'BoundaryFilter.keepPrepared' depends on axioms: [propext]
+'BoundaryFilter.dispatchPrepared' depends on axioms: [propext]
+'BoundaryFilter.prepared_token_matches_native_guard' depends on axioms: [propext]
+'BoundaryFilter.prepare_route_before_application_keep_effects' depends on axioms: [propext]
+'BoundaryFilter.nonData' depends on axioms: [propext]
+'BoundaryFilter.all_effects_preserved_for_every_token' depends on axioms: [propext, Quot.sound]
+'BoundaryFilter.uniform_keep' depends on axioms: [propext]
+'BoundaryFilter.uniform_filter' depends on axioms: [propext]
+'BoundaryFilter.move_boundary_filter_before_application' depends on axioms: [propext]
+'BoundaryFilter.forward_destination' does not depend on any axioms
+'BoundaryFilter.reverse_destination' does not depend on any axioms
+'BoundaryFilter.typed_endpoints_always_keep' depends on axioms: [propext]
+'BoundaryFilter.nondata_effects_always_keep' depends on axioms: [propext]
+'BoundaryFilter.a_target_prevents_data_only_capability' does not depend on any axioms
+'BoundaryFilter.a_request_prevents_data_only_capability' does not depend on any axioms
+'BoundaryFilter.move_route_filter_over_rows' depends on axioms: [propext]
+'BoundaryFilter.unionMask' does not depend on any axioms
+'BoundaryFilter.route_guard_absorbs_producer_union' depends on axioms: [propext, Quot.sound]
+'BoundaryFilter.output_guard_absorbs_producer_union' depends on axioms: [propext, Quot.sound]
+'BoundaryFilter.producer_then_actual_route_is_exact' depends on axioms: [propext, Quot.sound]
+'BoundaryFilter.exampleLive' does not depend on any axioms
+'BoundaryFilter.examplePacket' does not depend on any axioms
+'BoundaryFilter.exampleRelation' does not depend on any axioms
+'BoundaryFilter.exampleApply' does not depend on any axioms
+'BoundaryFilter.example_apply_has_oriented_capability' depends on axioms: [propext]
+'BoundaryFilter.live_feedback_is_preserved' depends on axioms: [propext]
+'BoundaryFilter.dead_leaving_route_is_dropped' depends on axioms: [propext]
+'BoundaryFilter.wrong_reverse_destination_is_unsound' depends on axioms: [propext]
+'BoundaryFilter.blindly_skipping_request_is_unsound' depends on axioms: [propext]
+'CandidateJoin.Complete' does not depend on any axioms
+'CandidateJoin.selected' does not depend on any axioms
+'CandidateJoin.selected_equals_native' depends on axioms: [propext]
+'CandidateJoin.same_ordered_input_matches' depends on axioms: [propext, Quot.sound]
+'CandidateJoin.same_ordered_row_input_join' depends on axioms: [propext, Quot.sound]
+'CandidateJoin.omitting_live_pair_is_unsound' does not depend on any axioms
+'ProgramDedup.Packet' does not depend on any axioms
+'ProgramDedup.Packet.mk' does not depend on any axioms
+'ProgramDedup.Packet.payload' does not depend on any axioms
+'ProgramDedup.Packet.protection' does not depend on any axioms
+'BoundaryFilter.Endpoint' does not depend on any axioms
+'BoundaryFilter.Endpoint.local' does not depend on any axioms
+'BoundaryFilter.Endpoint.zero' does not depend on any axioms
+'BoundaryFilter.Endpoint.static' does not depend on any axioms
+'BoundaryFilter.Endpoint.argument' does not depend on any axioms
+'BoundaryFilter.Endpoint.receiver' does not depend on any axioms
+'BoundaryFilter.Endpoint.returned' does not depend on any axioms
+'BoundaryFilter.Endpoint.exception' does not depend on any axioms
+'BoundaryFilter.Direction' does not depend on any axioms
+'BoundaryFilter.Direction.forward' does not depend on any axioms
+'BoundaryFilter.Direction.reverse' does not depend on any axioms
+'BoundaryFilter.Relation' does not depend on any axioms
+'BoundaryFilter.Relation.mk' does not depend on any axioms
+'BoundaryFilter.Relation.premise' does not depend on any axioms
+'BoundaryFilter.Relation.conclusion' does not depend on any axioms
+'BoundaryFilter.DataPacket' does not depend on any axioms
+'BoundaryFilter.DataPacket.mk' does not depend on any axioms
+'BoundaryFilter.DataPacket.endpoint' does not depend on any axioms
+'BoundaryFilter.DataPacket.ordinaryPayload' does not depend on any axioms
+'BoundaryFilter.DataPacket.protection' does not depend on any axioms
+'BoundaryFilter.Output' does not depend on any axioms
+'BoundaryFilter.Output.data' does not depend on any axioms
+'BoundaryFilter.Output.target' does not depend on any axioms
+'BoundaryFilter.Output.request' does not depend on any axioms
+'BoundaryFilter.Output.staticEffect' does not depend on any axioms
+'BoundaryFilter.Route' does not depend on any axioms
+'BoundaryFilter.Route.repeat' does not depend on any axioms
+'BoundaryFilter.Route.leave' does not depend on any axioms
