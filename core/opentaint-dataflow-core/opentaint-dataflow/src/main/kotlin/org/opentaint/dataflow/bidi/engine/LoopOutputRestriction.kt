@@ -99,6 +99,9 @@ internal class LoopRestrictionStatistics {
     var drops: Long = 0; internal set
     var cuts: Long = 0; internal set
     var rawFallbacks: Long = 0; internal set
+    var certificates: Long = 0; internal set
+    var certificateFallbacks: Long = 0; internal set
+    var budgetsSkipped: Long = 0; internal set
 }
 
 /** Conservative shortest-safe-prefix reference from the selected loop specification.
@@ -126,7 +129,15 @@ internal class LoopOutputRestriction(private val ops: ApOps) {
         grows: Boolean,
         appliedValue: Facts,
         observe: (Facts) -> LoopObservation<R>,
-    ): List<Facts> {
+    ): List<Facts> = restrictWithCertificate(run1, grows, appliedValue, observe, null)
+
+    fun <R> restrict(run1: Boolean, grows: Boolean, appliedValue: Facts,
+                     session: LoopRestrictionSession<R>): List<Facts> =
+        restrictWithCertificate(run1, grows, appliedValue, session.observe, session::certifiedFirstBudget)
+
+    private fun <R> restrictWithCertificate(run1: Boolean, grows: Boolean, appliedValue: Facts,
+                                           observe: (Facts) -> LoopObservation<R>,
+                                           firstBudget: ((Facts, LoopObservation<R>) -> Int?)?): List<Facts> {
         val ap = ops.manager
         ap.cancellation.checkpoint()
         statistics.offers++
@@ -136,12 +147,13 @@ internal class LoopOutputRestriction(private val ops: ApOps) {
         }
         val result = ExactDemandResults(ap)
         for (scalar in annotatedLoopScalars(ops, appliedValue)) {
-            restrictScalar(scalar, observe)?.let(result::add)
+            restrictScalar(scalar, observe, firstBudget)?.let(result::add)
         }
         return result.all()
     }
 
-    private fun <R> restrictScalar(raw: Facts, observe: (Facts) -> LoopObservation<R>): Facts? {
+    private fun <R> restrictScalar(raw: Facts, observe: (Facts) -> LoopObservation<R>,
+                                  firstBudget: ((Facts, LoopObservation<R>) -> Int?)?): Facts? {
         ops.manager.cancellation.checkpoint()
         statistics.scalarQueries++
         statistics.observations++
@@ -155,7 +167,13 @@ internal class LoopOutputRestriction(private val ops: ApOps) {
             is FlowTree -> raw.root.boundedDepth
             is TaintTree -> raw.root.boundedDepth
         }
-        for (budget in 1 until depth) {
+        val certified = if (depth > 1) firstBudget?.invoke(raw, baseline) else null
+        if (certified != null) {
+            check(certified in 2..depth)
+            statistics.certificates++
+            statistics.budgetsSkipped += certified - 1
+        } else if (firstBudget != null && depth > 1) statistics.certificateFallbacks++
+        for (budget in (certified ?: 1) until depth) {
             ops.manager.cancellation.checkpoint()
             statistics.trials++
             var candidate: Facts? = null

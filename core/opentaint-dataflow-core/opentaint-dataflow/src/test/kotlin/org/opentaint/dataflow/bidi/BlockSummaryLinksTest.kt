@@ -9,6 +9,8 @@ import org.opentaint.dataflow.bidi.fixtures.StoreFixtures
 import org.opentaint.dataflow.bidi.store.BlockScope
 import org.opentaint.dataflow.graph.BlockId
 import org.opentaint.dataflow.graph.PortId
+import org.opentaint.dataflow.graph.*
+import java.util.BitSet
 import kotlin.test.*
 
 class BlockSummaryLinksTest {
@@ -89,6 +91,23 @@ class BlockSummaryLinksTest {
         assertEquals(1, h.links.inputGroups)
     }
 
+    @Test fun `one unary match is shared by every output scalar without changing callbacks`() {
+        val stats = LocalSummaryMatchStatistics()
+        val received = ArrayList<Facts>()
+        val links = BlockSummaryLinks(ops, mode, child,
+            { _, _, _, _, _, value -> received += value }, { _, _, _ -> error("No Target") },
+            { _, _, _ -> error("No request") }, stats)
+        val i = initial()
+        val result = ap.mergeAddDelta(fixture.fact(ret, listOf(f), mark = u),
+            fixture.fact(ret, listOf(g), mark = u)).first
+        links.offer(link(i), fixture.fact(x, mark = t))
+        links.publish(exit, listOf(Publication(i, result)))
+        while (links.hasPending) links.drain(1)
+        assertEquals(1L, stats.nativeMatches)
+        assertEquals(setOf(fixture.pattern(ret,listOf(f),mark=u),fixture.pattern(ret,listOf(g),mark=u)),
+            received.flatMap { ops.leaves(it).toList() }.toSet())
+    }
+
     @Test fun `a complete ND row waits for every member and retains both parent origins`() {
         val h = Harness()
         val i1 = initial(x, t)
@@ -103,6 +122,56 @@ class BlockSummaryLinksTest {
         assertEquals(1, h.data.size)
         assertEquals(setOf(i1, i2), h.data.single().original.members.toSet())
         assertEquals(premise, h.data.single().row)
+    }
+
+    @Test fun `a late ND arm emits prior output geometry with its own prepared routes`() {
+        val next=listOf(listOf(1),listOf(2,4),listOf(3),listOf(1,5),listOf(6),listOf(6),emptyList())
+        fun bits(values:List<Int>)=BitSet().apply { values.forEach(::set) }
+        val graph=CompactGraph.build(next.size) { bits(next[it]) }
+        val reverse=CompactGraph.build(next.size) { to -> bits(next.indices.filter { to in next[it] }) }
+        val layout=MethodBlockLayoutBuilder.build(graph,listOf(0),normalExits=listOf(6))
+        val loop=layout.blocks.single { it.isLoop }
+        val scope=BlockScope(loop.id,layout.port(0,1)!!.id)
+        val output=layout.normalExits.single { it.loop==loop.id }
+        val tmp=AccessPathBase.LocalVar(0)
+        val metadata=List(7) { index -> LocalAccess(bits(if(index==4) listOf(0) else emptyList()),
+            BitSet(),bits(if(index==4) listOf(0) else emptyList())) }
+        val live=BlockLiveLocals.build(layout,graph,reverse,metadata,ap.cancellation)
+        val directed=layout.directed(graph,false)
+        val routes=buildMap { for(from in next.indices) for(to in next[from]) {
+            val route=directed.route(from,to);put(route.port,route)
+        } }
+        val directory=PreparedExitDirectory(layout,routes,false,live,setOf(6),0)
+        val i1=initial(x,t);val i2=initial(y,u);val premise=ap.union(i1,i2)
+        val outputs=ArrayList<Pair<Pattern,Facts>>()
+        val stats=LocalSummaryMatchStatistics()
+        val links=BlockSummaryLinks(ops,mode,scope,
+            { _,port,_,geometry,original,value ->
+                assertEquals(setOf(i1,i2),original.members.toSet())
+                assertEquals(value.base,geometry.fact.base,"The waking row cannot substitute its own output geometry")
+                val prepared=directory.getOrPrepare(scope,port,value.base) as PreparedExit.Routes
+                // The certified normal cut absorbs both leave tails up to the real join.
+                // Keep all native directed routes, including the method-endpoint override.
+                val expected=output.routes.map { routes.getValue(it) }.filter { route ->
+                    value.base==ret || route.to==0 || route.to==6 ||
+                        live.mayFollow(false,route,(value.base as AccessPathBase.LocalVar).idx)
+                }
+                assertEquals(expected,prepared.routes,"Each prior output uses its own base and full canonical J routes")
+                outputs+=geometry to value
+            },{ _,_,_ -> error("No Target") },{ _,_,_ -> error("No request") },stats)
+        val first=LocalLink(parent,PortId(10),i1,Layer.NORMAL,scope)
+        val second=first.copy(original=i2)
+        links.publish(output.id,listOf(Publication(premise,fixture.fact(tmp,mark=u))))
+        links.offer(first,fixture.fact(x,mark=t))
+        while(links.hasPending) links.drain(1)
+        links.publish(output.id,listOf(Publication(premise,fixture.fact(ret,mark=u))))
+        while(links.hasPending) links.drain(1)
+        assertTrue(outputs.isEmpty(),"Both output rows must wait for the final native AND arm")
+        links.offer(second,fixture.fact(y,mark=u))
+        while(links.hasPending) links.drain(1)
+        assertEquals(setOf(tmp,ret),outputs.map { it.second.base }.toSet())
+        assertEquals(2L,stats.ndCombinations,"The late member emits both stored output bases")
+        assertEquals(2L,stats.dataCallbacks)
     }
 
     @Test fun `ND inputs at different parent points or entries cannot complete each other`() {

@@ -34,21 +34,7 @@ class Record(
             m.cancellation.checkpoint()
             if (leaf.fact.base != a.fact.base ||
                 !(leaf.fact.path.startsWith(a.fact.path) || a.fact.path.startsWith(leaf.fact.path))) continue
-            val view = reverseRecordLeaf(direction, nativePremise, Conclusion(leaf.fact, leaf.exclusion, demand = false))
-                ?: continue
-            val taint = conclusion as? TaintTree
-            val protected = taint?.nonSubsumable?.let { mask ->
-                var at: TaintNode? = mask
-                for (accessor in leaf.fact.path) {
-                    m.cancellation.checkpoint()
-                    at = at?.child(accessor)
-                }
-                val atom = (leaf.fact.mark as? MarkSlot.Concrete)?.mark
-                atom != null && at?.leaf?.let { marks ->
-                    atom in if (leaf.fact.tail == Tail.EXACT) marks.exact else marks.any
-                } == true
-            } == true
-            yield(view to protected)
+            reverseOne(leaf, nativePremise)?.let { yield(it) }
         }
     }
 
@@ -59,6 +45,58 @@ class Record(
 
     /** Read-only geometry view for diagnostic and reference clients. */
     fun reversedAt(a: Pattern): Sequence<RecordLeafView> = reversedLeavesAt(a).map { it.first }
+
+    internal fun reverseOne(leaf: Pattern, nativePremise: Pattern): Pair<RecordLeafView, Boolean>? {
+        val m = premise.manager
+        val view = reverseRecordLeaf(direction, nativePremise, Conclusion(leaf.fact, leaf.exclusion, demand = false))
+            ?: return null
+        var at: TaintNode? = (conclusion as? TaintTree)?.nonSubsumable
+        for (accessor in leaf.fact.path) { m.cancellation.checkpoint(); at = at?.child(accessor) }
+        val atom = (leaf.fact.mark as? MarkSlot.Concrete)?.mark
+        val protected = atom != null && at?.leaf?.let {
+            atom in if (leaf.fact.tail == Tail.EXACT) it.exact else it.any
+        } == true
+        return view to protected
+    }
+}
+
+/** One actual output position, not a full-mark posting. Record identity is unchanged. */
+class RecordOutputPosition internal constructor(val record: Record, private val node: PathNode?, val ordinal: Int) {
+    val path: List<Int> get() = node?.toList() ?: emptyList()
+    fun forEachReversedAt(actual: Pattern, emit: (RecordLeafView, Boolean) -> Unit) {
+        val m = record.premise.manager
+        m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.packet(record.premise, record.conclusion) || actual.fact.base != record.conclusion.base) return
+        val p = path
+        if (!(p.startsWith(actual.fact.path) || actual.fact.path.startsWith(p))) return
+        check(record.conclusion.layer == Layer.NORMAL)
+        val nativePremise = record.premise.toPattern()
+        fun offer(pattern: Pattern) { record.reverseOne(pattern, nativePremise)?.let { (view, protected) -> emit(view, protected) } }
+        when (val value = record.conclusion) {
+            is Reach -> if (p.isEmpty()) offer(m.zero.toPattern())
+            is FlowTree -> {
+                var at: FlowNode? = value.root
+                for (accessor in p) { m.cancellation.checkpoint(); at = at?.child(accessor) }
+                if (at?.leaf?.isEmpty == false)
+                    offer(Pattern(PathFact(value.base, p, value.tail, MarkSlot.Star(value.markExclusion)), value.exclusion))
+            }
+            is TaintTree -> {
+                var at: TaintNode? = value.root
+                for (accessor in p) { m.cancellation.checkpoint(); at = at?.child(accessor) }
+                val leaf = at?.leaf ?: return
+                for (id in leaf.exact.data) {
+                    m.cancellation.checkpoint()
+                    offer(Pattern(PathFact(value.base, p, Tail.EXACT, MarkSlot.Concrete(TaintMark(id))), ExclusionSet.Empty))
+                }
+                for (id in leaf.any.data) {
+                    m.cancellation.checkpoint()
+                    offer(Pattern(PathFact(value.base, p, value.anyTail, MarkSlot.Concrete(TaintMark(id))), value.exclusion))
+                }
+            }
+        }
+    }
+    override fun equals(other: Any?): Boolean = other is RecordOutputPosition && record === other.record && ordinal == other.ordinal
+    override fun hashCode(): Int = 31 * System.identityHashCode(record) + ordinal
 }
 
 /** Persistent native records. A run obtains a view that permits reads only. */
@@ -68,6 +106,7 @@ interface RecordStore {
     fun byExit(method: MethodKey, fact: Pattern): Sequence<Record>
     fun byEntry(method: MethodKey, scope: BlockScope, addedFact: Pattern): Sequence<Record> = emptySequence()
     fun byExit(method: MethodKey, scope: BlockScope, fact: Pattern): Sequence<Record> = emptySequence()
+    fun byExitPositions(method: MethodKey, scope: BlockScope, fact: Pattern): List<RecordOutputPosition>? = null
     fun view(): RecordStore
     fun persist(direction: Direction, summaries: Sequence<Pair<MethodKey, RunSummaryStore>>)
     fun persistScoped(direction: Direction, summaries: Sequence<ScopedRunSummary>) {
@@ -80,12 +119,12 @@ data class ScopedRunSummary(val key: ScopedSummaryKey, val summaries: RunSummary
 /** The driver writes only at a barrier; the next run reads the published indexes. */
 class PersistentRecordStore(private val m: ApManager) : RecordStore {
     private val entry = HashMap<MethodKey, PathTrie<Record>>()
-    private val exit = HashMap<MethodKey, PathTrie<Record>>()
+    private val exit = HashMap<MethodKey, PathTrie<RecordOutputPosition>>()
     private data class ScopedIndexKey(val method: MethodKey, val block: BlockId, val port: PortId)
     private data class MergeKey(val method: MethodKey, val direction: Direction, val premise: InitialAp,
                                 val scope: BlockScope?, val exit: PortId?)
     private val scopedEntry = HashMap<ScopedIndexKey, PathTrie<Record>>()
-    private val scopedExit = HashMap<ScopedIndexKey, PathTrie<Record>>()
+    private val scopedExit = HashMap<ScopedIndexKey, PathTrie<RecordOutputPosition>>()
     private val merged = HashMap<MergeKey, ConclusionGroup>()
     private val interners = m.newInterners()
 
@@ -102,7 +141,10 @@ class PersistentRecordStore(private val m: ApManager) : RecordStore {
             else scopedExit.getOrPut(ScopedIndexKey(record.method, record.scope.block, checkNotNull(record.exit))) {
                 PathTrie(m.cancellation)
             }
-        m.forEachLeafPosition(record.conclusion) { base, path -> output.add(base, path, record) }
+        var ordinal = 0
+        m.forEachLeafPosition(record.conclusion) { base, path ->
+            output.add(base, path, RecordOutputPosition(record, m.path(path.asList()), ordinal++))
+        }
     }
 
     /** R2 candidates; the caller tests applicable or inside on the full native premise. */
@@ -122,9 +164,9 @@ class PersistentRecordStore(private val m: ApManager) : RecordStore {
         if (!RuntimeDataDomain.base(fact.fact.base)) return@sequence
         val candidates = exit[method]?.around(fact.fact.base, fact.fact.path.toIntArray()).orEmpty()
         val seen = HashSet<Record>()
-        for (record in candidates) {
+        for (position in candidates) {
             m.cancellation.checkpoint()
-            if (seen.add(record)) yield(record)
+            if (seen.add(position.record)) yield(position.record)
         }
     }
 
@@ -132,7 +174,17 @@ class PersistentRecordStore(private val m: ApManager) : RecordStore {
         scopedCandidates(scopedEntry[ScopedIndexKey(method, scope.block, scope.entry)], addedFact)
 
     override fun byExit(method: MethodKey, scope: BlockScope, fact: Pattern): Sequence<Record> =
-        scopedCandidates(scopedExit[ScopedIndexKey(method, scope.block, scope.entry)], fact)
+        sequence {
+            val seen = HashSet<Record>()
+            for (position in byExitPositions(method, scope, fact)) if (seen.add(position.record)) yield(position.record)
+        }
+
+    override fun byExitPositions(method: MethodKey, scope: BlockScope, fact: Pattern): List<RecordOutputPosition> {
+        m.cancellation.checkpoint()
+        if (!RuntimeDataDomain.base(fact.fact.base)) return emptyList()
+        return scopedExit[ScopedIndexKey(method, scope.block, scope.entry)]
+            ?.around(fact.fact.base, fact.fact.path.toIntArray()).orEmpty()
+    }
 
     private fun scopedCandidates(index: PathTrie<Record>?, fact: Pattern): Sequence<Record> = sequence {
         m.cancellation.checkpoint()

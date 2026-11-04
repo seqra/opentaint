@@ -12,6 +12,8 @@ internal interface PreparedScopeDemandView : ScopeDemandView {
 
 internal interface PreparedLocalDataPlan {
     val rowChecks: Int
+    /** Immutable executable program count; rejected rows are not programs. */
+    val outputProgramCount: Int
     fun intersect(original: PremiseKey, raw: Facts): List<Facts>?
     fun emptyForBase(base: AccessPathBase): Boolean
 }

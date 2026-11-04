@@ -16,7 +16,7 @@ class DemandStore private constructor(
     private val scoped: Map<OwnedScope, ScopedDemandIndex>,
     private val scopedCompletions: Map<OwnedScope, FrozenCompletion>,
 ) {
-    private class MethodDemandIndex(val entries: PathTrie<Pattern>, val rows: List<DemandPattern>,
+    private class MethodDemandIndex(val entries: FrozenDemandTrie<Pattern>, val rows: List<DemandPattern>,
                                    val byEntry: PathTrie<Int>, val byExit: PathTrie<Int>, val entryCount: Int)
     private class ScopedDemandIndex(
         val data: MethodDemandIndex,
@@ -32,7 +32,9 @@ class DemandStore private constructor(
         if (query.scope == null) completion else scopedCompletions[OwnedScope(query.method, query.scope)]?.selectExit(query.exit)
 
     /** C2 borrows the union of this entry's exits; C5 selects one actual exit. */
-    fun scope(method: MethodKey, scope: BlockScope): ScopeDemandView = object : PreparedScopeDemandView {
+    fun scope(method: MethodKey, scope: BlockScope): ScopeDemandView = object : PreparedScopeDemandView, EntryPrecisionView {
+        override fun precisionCursors(actual: Pattern, policy: RestrictedInitialPolicy): List<AnyDemandCursor> =
+            local(Query(method, scope))?.entries?.precisionCursors(actual, ap.marks).orEmpty()
         override fun initials(actual: Facts, policy: RestrictedInitialPolicy): Set<AdmittedInitial> =
             initials(Query(method, scope), actual, policy)
         override fun intersect(exit: PortId, original: PremiseKey, raw: Facts,
@@ -53,52 +55,38 @@ class DemandStore private constructor(
     private fun prepareLocalDataPlan(query: Query, templates: List<Pattern>,
                                      policy: RestrictedInitialPolicy, onEntryCheck: () -> Unit): PreparedLocalDataPlan? {
         ap.cancellation.checkpoint()
-        if (policy.run < 3 || hasStaticCompletion || hasSharedStaticCarry || templates.isEmpty() || templates.size > 2048 ||
-            templates.any { it.fact.base == AccessPathBase.Zero }) return null
+        fun fallback(reason: PreparedPlanFallback): PreparedLocalDataPlan? {
+            statistics?.preparedFallback(reason)
+            return null
+        }
+        if (policy.run < 3) return fallback(PreparedPlanFallback.RUN)
+        if (hasStaticCompletion) return fallback(PreparedPlanFallback.STATIC_COMPLETION)
+        if (hasSharedStaticCarry) return fallback(PreparedPlanFallback.SHARED_CARRY)
+        if (templates.isEmpty()) return fallback(PreparedPlanFallback.EMPTY_TEMPLATES)
+        if (templates.size > 2048) return fallback(PreparedPlanFallback.OVERSIZE_TEMPLATES)
+        if (templates.any { it.fact.base == AccessPathBase.Zero }) return fallback(PreparedPlanFallback.ZERO_TEMPLATE)
         val local = local(query)
         val ops = ApOps(ap)
-        data class Planned(val member: Int, val id: Int, val pair: DemandPattern, val ticket: EntryRestrictionTicket?)
-        val rows = ArrayList<Planned>()
-        for ((ordinal, member) in templates.withIndex()) {
+        val programs = PreparedOutputPrograms.Builder(ap, query.method, templates, policy, statistics)
+        var occurrences = 0
+        for (member in templates) {
             ap.cancellation.checkpoint()
             if (local != null) for (id in local.byEntry.lookupPrefixes(member.fact.base, member.fact.path.toIntArray())) {
                 if (query.scope != null && query.exit != null &&
                     scoped.getValue(OwnedScope(query.method, query.scope)).rowPorts[id] != query.exit) continue
-                if (rows.size + templates.size == 2048) return null
+                if (occurrences + templates.size == 2048) return fallback(PreparedPlanFallback.OCCURRENCE_BUDGET)
                 val pair = local.rows[id]
                 onEntryCheck()
-                rows += Planned(ordinal, id, pair, EntryRestrictionTicket.prepare(ops, member, pair, policy))
+                programs.offer(EntryRestrictionTicket.prepare(ops, member, pair, policy))
+                occurrences++
             }
         }
-        return object : PreparedLocalDataPlan {
-            override val rowChecks: Int = rows.size
-            override fun emptyForBase(base: AccessPathBase): Boolean = rows.none {
-                it.ticket != null && it.pair.exit?.fact?.base == base
-            }
-            override fun intersect(original: PremiseKey, raw: Facts): List<Facts>? {
-                ap.cancellation.checkpoint()
-                if (raw is Reach || original.isZero || original.members.map { it.toPattern() } != templates) return null
-                if (!RuntimeDataDomain.packet(original, raw)) return emptyList()
-                val result = ExactDemandResults(ap)
-                val outputIds = HashSet<Int>()
-                if (local != null) for (leaf in ops.leaves(raw))
-                    local.byExit.visitAround(leaf.fact.base, leaf.fact.path.toIntArray()) { outputIds += it }
-                for (row in rows) {
-                    ap.cancellation.checkpoint()
-                    if (row.id !in outputIds) continue
-                    statistics?.add(7)
-                    if (row.pair.exit == null) continue
-                    statistics?.add(9)
-                    offerDataPair(query.method, ops, original.member(row.member), raw, row.pair, policy,
-                        result, route = 0, prepared = true, ticket = row.ticket)
-                }
-                return result.all()
-            }
-        }
+        return programs.build()
     }
 
     private val statistics = if (java.lang.Boolean.getBoolean("org.opentaint.bidi.optimizationStatistics"))
         DemandQueryStatistics() else null
+    private val entryTrieCounts = statistics?.let { stats -> stats::trieQuery }
     val hasStaticCompletion: Boolean get() = completion != null || scopedCompletions.isNotEmpty()
     internal fun validateIncoming(run: Int) {
         require(run >= 2)
@@ -159,7 +147,7 @@ class DemandStore private constructor(
         val local = local(query)
         for (leaf in leaves) {
             ap.cancellation.checkpoint()
-            local?.entries?.visitAround(leaf.fact.base, leaf.fact.path.toIntArray()) { result.offer(it, leaf) }
+            local?.entries?.visitCountedNativeOrder(leaf, DemandQueryKind.INITIAL_C2, ap.marks, entryTrieCounts) { result.offer(it, leaf) }
             staticCarry(leaf)?.let { result.offer(it.entry, leaf) }
         }
         val skipped = completion(query) ?: return result.initials // run-3 onward: local only
@@ -168,7 +156,7 @@ class DemandStore private constructor(
         // This query-local structural bound uses scalar emit only. No possible key is interned.
         for (leaf in leaves) {
             ap.cancellation.checkpoint()
-            local?.entries?.visitAround(leaf.fact.base, leaf.fact.path.toIntArray()) {
+            local?.entries?.visitCountedNativeOrder(leaf, DemandQueryKind.INITIAL_C2, ap.marks, entryTrieCounts) {
                 result.requireFamily(it, false, leaf)
             }
             skipped.visitPossibleTargets(method, leaf) { target, flow ->
@@ -257,8 +245,7 @@ class DemandStore private constructor(
 
     /** Exact C5 must precede the cut, and each complete row supplies its own exit depth. */
     private fun offerDataPair(method: MethodKey, ops: ApOps, member: InitialAp, raw: Facts, pair: DemandPattern,
-                              policy: RestrictedInitialPolicy, result: ExactDemandResults, route: Int,
-                              prepared: Boolean = false, ticket: EntryRestrictionTicket? = null) {
+                              policy: RestrictedInitialPolicy, result: ExactDemandResults, route: Int) {
         ap.cancellation.checkpoint()
         val exit = pair.exit ?: return
         val depth = exit.fact.path.count { it.isCounted() }
@@ -268,7 +255,7 @@ class DemandStore private constructor(
         val budget = if (depth >= global) global else depth + 1
         statistics?.dataRow(raw, exit, budget, route)
         val sampledRow = statistics?.sampleRow(method, member, raw, pair, budget, route)
-        val selected = if (prepared) ticket?.restrict(raw).orEmpty() else ops.restrict(member, raw, pair, policy)
+        val selected = ops.restrict(member, raw, pair, policy)
         if (selected.isEmpty()) {
             statistics?.rejectedRow()
             statistics?.sampleResult(sampledRow, null, null)
@@ -528,22 +515,22 @@ class DemandStore private constructor(
         }
 
         private fun index(rows: List<DemandPattern>, controls: List<PairedDemand>): MethodDemandIndex {
-            val entries = PathTrie<Pattern>(m.cancellation)
+            val entries = FrozenDemandTrie.Builder<Pattern>(m.cancellation)
             val byEntry = PathTrie<Int>(m.cancellation)
             val byExit = PathTrie<Int>(m.cancellation)
             var entryCount = 0
             for ((id, demand) in rows.withIndex()) {
                 m.cancellation.checkpoint()
-                if (entries.add(demand.entry.fact.base, demand.entry.fact.path.toIntArray(), demand.entry)) entryCount++
+                if (entries.add(demand.entry, demand.entry)) entryCount++
                 byEntry.add(demand.entry.fact.base, demand.entry.fact.path.toIntArray(), id)
                 demand.exit?.let { byExit.add(it.fact.base, it.fact.path.toIntArray(), id) }
             }
             for (row in controls) {
                 m.cancellation.checkpoint()
                 val entry = (row.entry as? DemandEntry.Data)?.pattern ?: continue
-                if (entries.add(entry.fact.base, entry.fact.path.toIntArray(), entry)) entryCount++
+                if (entries.add(entry, entry)) entryCount++
             }
-            return MethodDemandIndex(entries, Collections.unmodifiableList(rows.toList()), byEntry, byExit, entryCount)
+            return MethodDemandIndex(entries.build(), Collections.unmodifiableList(rows.toList()), byEntry, byExit, entryCount)
         }
     }
 }

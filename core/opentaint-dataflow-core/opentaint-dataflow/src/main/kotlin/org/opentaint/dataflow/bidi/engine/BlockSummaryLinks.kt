@@ -7,6 +7,30 @@ import org.opentaint.dataflow.graph.PortId
 private typealias Input = LocalInputValue
 private typealias InputKey = LocalInputKey
 
+/** Optional numeric census shared by one method's block links. No input or result history. */
+internal class LocalSummaryMatchStatistics {
+    var offers = 0L; internal set
+    var freshInputGroups = 0L; internal set
+    var freshInputDeltas = 0L; internal set
+    var publicationRows = 0L; internal set
+    var targetRows = 0L; internal set
+    var candidatePairs = 0L; internal set
+    var publicationCandidatePairs = 0L; internal set
+    var publicationLinearPairBound = 0L; internal set
+    var nativeMatches = 0L; internal set
+    var ndCombinations = 0L; internal set
+    var dataCallbacks = 0L; internal set
+    var targetCallbacks = 0L; internal set
+
+    fun diagnosticStatistics(): String =
+        "localInputOffers=$offers localFreshInputGroups=$freshInputGroups localFreshInputDeltas=$freshInputDeltas " +
+        "localPublishedRows=$publicationRows localPublishedTargetRows=$targetRows " +
+        "localCandidatePairs=$candidatePairs localPublicationCandidatePairs=$publicationCandidatePairs " +
+        "localPublicationLinearPairs=$publicationLinearPairBound " +
+        "localNativeMatches=$nativeMatches localNdCombinations=$ndCombinations " +
+        "localDataCallbacks=$dataCallbacks localTargetCallbacks=$targetCallbacks"
+}
+
 /** A local boundary has no call instruction, binding stages, or iteration counter. */
 internal data class LocalLink(
     val parent: BlockScope,
@@ -27,17 +51,19 @@ internal class BlockSummaryLinks(
     private val data: (LocalLink, PortId, PremiseKey, Pattern, PremiseKey, Facts) -> Unit,
     private val terminal: (LocalLink, PremiseKey, Target) -> Unit,
     private val request: (LocalLink, Facts, TaintMark) -> Unit,
+    private val matchStatistics: LocalSummaryMatchStatistics? = null,
 ) {
     private val ap get() = ops.manager
     private val application = LocalRelationApplication(ops, mode)
-    private var inputDirectory: LocalInputDirectory? = LocalInputDirectory()
+    private var inputDirectory: LocalInputDirectory? = LocalInputDirectory(ops)
     private val inputs: LocalInputDirectory get() = checkNotNull(inputDirectory) { "Local links are sealed" }
     private fun checkLive() { checkNotNull(inputDirectory) { "Local links are sealed" } }
     private val publications = LinkedHashMap<PortId, PublicationIndex>()
     private var targets = PublicationIndex(ap, ops)
     private val deliveries = ArrayDeque<Delivery>()
     private sealed interface Delivery {
-        data class Data(val input: Input, val exit: PortId, val row: Publication, val member: Int) : Delivery
+        data class Data(val input: Input, val exit: PortId, val row: Publication, val member: Int,
+                        val matched: Facts) : Delivery
         data class Terminal(val input: Input, val row: TargetSummary, val member: Int, val saved: Boolean) : Delivery
     }
     private data class NdKey(val parent: BlockScope, val point: PortId, val exit: PortId,
@@ -56,6 +82,7 @@ internal class BlockSummaryLinks(
 
     fun offer(link: LocalLink, actual: Facts) {
         checkLive()
+        matchStatistics?.let { it.offers++ }
         require(link.child == scope)
         ap.cancellation.checkpoint()
         if (!RuntimeDataDomain.packet(link.original, actual)) return
@@ -63,6 +90,7 @@ internal class BlockSummaryLinks(
         val key = InputKey(link, actual.groupKey)
         val old = inputs[key]
         val fresh = if (old == null) {
+            matchStatistics?.let { it.freshInputGroups++ }
             inputs[key] = Input(link, actual)
             actual
         } else {
@@ -71,13 +99,16 @@ internal class BlockSummaryLinks(
             old.value = merged
             delta
         }
+        matchStatistics?.let { it.freshInputDeltas++ }
+        inputs.recordDelta(key, fresh)
         // Deliver the fresh packet only. The standing row retains the current union.
         val offered = Input(link, fresh)
+        val matches = HashMap<InitialAp, MatchedInput?>()
         for ((exit, index) in publications) {
             for ((row, member) in index.candidates(link.original, fresh, mode))
-                deliveries += Delivery.Data(offered, exit, row, member)
+                queueData(offered, exit, row, member, matches)
             if (isStaticControl(offered)) for ((row, member) in index.staticCandidates())
-                deliveries += Delivery.Data(offered, exit, row, member)
+                queueData(offered, exit, row, member, matches)
         }
         for ((row, member) in targets.targetCandidates(link.original, fresh, mode))
             deliveries += Delivery.Terminal(offered, row, member, saved = false)
@@ -89,27 +120,49 @@ internal class BlockSummaryLinks(
         checkLive()
         val index = publications.getOrPut(exit) { PublicationIndex(ap, ops, flowBacked = true) }
         val fresh = index.addAll(rows)
+        matchStatistics?.let { stats ->
+            stats.publicationRows += fresh.size
+            for (row in fresh) stats.publicationLinearPairBound += inputs.size.toLong() * row.premise.size
+        }
         // Snapshot before delivery. A callback can offer another local input.
-        val current = inputs.values.map { Input(it.link, it.value) }
-        for (row in fresh) for (input in current) for (member in 0 until row.premise.size) {
-            ap.cancellation.checkpoint()
-            if (isStaticControl(input) && row.premise.member(member).base == STATIC ||
-                ops.satisfying(input.value, row.premise.member(member), mode) != null)
-                deliveries += Delivery.Data(input, exit, row, member)
+        val matches = HashMap<InputKey, MutableMap<InitialAp, MatchedInput?>>()
+        for (row in fresh) for ((input, member) in inputs.candidates(row.premise, mode)) {
+            matchStatistics?.let { it.publicationCandidatePairs++ }
+            val cache = matches.getOrPut(InputKey(input.link, input.value.groupKey)) { HashMap() }
+            queueData(input, exit, row, member, cache)
         }
     }
 
     fun publishTargets(rows: TargetBatch) {
         checkLive()
         val fresh = targets.addTargets(rows)
-        val current = inputs.values.map { Input(it.link, it.value) }
-        for (row in fresh) for (input in current) for (member in 0 until row.premise.size) {
+        matchStatistics?.let { stats ->
+            stats.targetRows += fresh.size
+        }
+        for (row in fresh) for ((input, member) in inputs.candidates(row.premise, mode)) {
             ap.cancellation.checkpoint()
             if (isStaticControl(input) && row.premise.member(member).base == STATIC ||
                 application.targetArmLayer(input.value, row.premise.member(member), row.target,
                     saved = false, offeredLayer = input.link.layer) != null)
                 deliveries += Delivery.Terminal(input, row, member, saved = false)
         }
+    }
+
+    /** The certified static lane changes the selected original as well as the packet.
+     * Keep the raw selected packet for ordinary request callbacks. */
+    private data class MatchedInput(val input: Input, val facts: Facts)
+    private fun queueData(offered: Input, exit: PortId, row: Publication, member: Int,
+                          cache: MutableMap<InitialAp, MatchedInput?>) {
+        matchStatistics?.let { it.candidatePairs++ }
+        val initial = row.premise.member(member)
+        if (!cache.containsKey(initial)) {
+            val input = if (isStaticControl(offered) && initial.base == STATIC)
+                suppliedStaticInput(offered, initial) else offered
+            matchStatistics?.let { it.nativeMatches++ }
+            cache[initial] = ops.satisfying(input.value, initial, mode)?.let { MatchedInput(input, it) }
+        }
+        val matched = cache[initial] ?: return
+        deliveries += Delivery.Data(matched.input, exit, row, member, matched.facts)
     }
 
     fun replaySavedTarget(link: LocalLink, actual: Facts, row: TargetSummary, member: Int) {
@@ -135,29 +188,33 @@ internal class BlockSummaryLinks(
     }
 
     private fun output(input: Input, exit: PortId, row: PremiseKey, geometry: Pattern) = object : LocalRelationOut {
-        override fun data(original: PremiseKey, value: Facts) =
+        override fun data(original: PremiseKey, value: Facts) {
+            matchStatistics?.let { it.dataCallbacks++ }
             data(input.link, exit, row, geometry, original, value)
-        override fun target(original: PremiseKey, target: Target) = terminal(input.link, original, target)
+        }
+        override fun target(original: PremiseKey, target: Target) {
+            matchStatistics?.let { it.targetCallbacks++ }
+            terminal(input.link, original, target)
+        }
         override fun markRequest(mark: TaintMark) = request(input.link, input.value, mark)
     }
 
     private fun deliver(delivery: Delivery.Data) {
-        val (offered, exit, row, member) = delivery
-        val input = if (isStaticControl(offered) && row.premise.member(member).base == STATIC)
-            suppliedStaticInput(offered, row.premise.member(member)) else offered
+        val (input, exit, row, member, matchedInput) = delivery
         // A different geometry has a different loop growth classification.
         for (scalar in annotatedLoopScalars(ops, row.conclusion)) {
             val geometry = ops.leaves(scalar).single()
             when (val premise = row.premise) {
-                is InitialAp -> application.applyCurrent(input.value, input.link.original, premise, scalar,
+                is InitialAp -> application.applyMatched(matchedInput, input.link.original, premise, scalar,
                     output(input, exit, premise, geometry))
                 is PremiseSet -> {
                     check(!mode.run1 && mode.direction == Direction.FORWARD)
-                    val matched = ops.satisfying(input.value, premise.member(member), mode) as? TaintTree ?: continue
+                    val matched = matchedInput as? TaintTree ?: continue
                     val key = NdKey(input.link.parent, input.link.point, exit, premise, scalar.layer)
                     val join = joins.getOrPut(key) { NdSummaryJoin(ap, premise.size) }
                     val binding = NdInput(input.link, premise.member(member), matched.layer).also { it.matched = matched }
                     fun emit(parts: List<NdInput>, value: TaintTree) {
+                        matchStatistics?.let { it.ndCombinations++ }
                         var original: PremiseKey = ap.zero
                         for (part in parts) original = ap.union(original, part.link.original)
                         val complete = Input(input.link.copy(original = original), input.value)
@@ -192,8 +249,10 @@ internal class BlockSummaryLinks(
         for (parts in combinations) {
             var original: PremiseKey = ap.zero
             for (part in parts) original = ap.union(original, part.link.original)
-            if (row.target !is Target.NormalTarget || parts.all { it.layer == Layer.NORMAL })
+            if (row.target !is Target.NormalTarget || parts.all { it.layer == Layer.NORMAL }) {
+                matchStatistics?.let { it.targetCallbacks++ }
                 terminal(input.link, original, row.target)
+            }
         }
     }
 
@@ -222,6 +281,7 @@ internal class BlockSummaryLinks(
     internal fun detachJoinedInputs(): JoinedLocalInputs {
         check(deliveries.isEmpty()) { "Local deliveries must drain before input detach" }
         val owned = checkNotNull(inputDirectory) { "Local inputs were already detached" }
+        owned.releaseCandidateIndex()
         inputDirectory = null
         return JoinedLocalInputs(owned)
     }

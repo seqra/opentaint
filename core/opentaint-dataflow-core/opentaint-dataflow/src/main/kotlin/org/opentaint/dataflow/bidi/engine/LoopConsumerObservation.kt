@@ -7,7 +7,16 @@ import org.opentaint.dataflow.bidi.store.Record
 import org.opentaint.dataflow.graph.PortId
 
 /** The router identifies the enclosing region's exit, preserving the saved row's actual port. */
-internal data class LoopObservedRecord(val record: Record, val enclosingExit: PortId)
+internal class LoopObservedRecord(val record: Record, val enclosingExit: PortId,
+                                  private val selection: SavedRecordSelection? = null) {
+    fun forEachReversedAt(actual: Facts, ops: ApOps, emit: (RecordLeafView, Boolean) -> Unit) =
+        (selection ?: SavedRecordSelection(record)).forEachReversedAt(actual, ops, emit)
+
+    // Selected positions are an invocation annotation. Preserve the existing observation key.
+    override fun equals(other: Any?): Boolean = other is LoopObservedRecord &&
+        record == other.record && enclosingExit == other.enclosingExit
+    override fun hashCode(): Int = 31 * record.hashCode() + enclosingExit.hashCode()
+}
 internal data class LoopObservedTarget(val row: TargetSummary, val member: Int, val enclosingExit: PortId)
 
 /** Scope, complete original and exit are part of the observation, not only AP geometry. */
@@ -35,6 +44,7 @@ internal class LoopConsumerViews(
     val admissionBundle: ((Facts) -> LoopAdmissionBundle)? = null,
     val keepEnclosingData: (PortId, Facts) -> Boolean = { _, _ -> true },
     val skipEmptyDataReplay: (PremiseKey, Facts, LoopObservedRecord) -> Boolean = { _, _, _ -> false },
+    val precisionCursors: (Pattern) -> List<LoopPrecisionCursor>? = { null },
 )
 
 /** Complete three-family observer. All scratch is local to one query invocation. */
@@ -44,6 +54,8 @@ internal class LoopConsumerObservation(
     private val views: LoopConsumerViews,
 ) {
     private val application = LocalRelationApplication(ops, mode)
+
+    fun precisionCursors(actual: Pattern): List<LoopPrecisionCursor>? = views.precisionCursors(actual)
 
     fun observe(original: PremiseKey, value: Facts): LoopObservation<LoopEnclosingResult> {
         val ap = ops.manager
@@ -85,10 +97,8 @@ internal class LoopConsumerObservation(
             val output = sink(saved.enclosingExit)
             if (record.direction == mode.direction) application.applyRecord(value, original, record, output)
             else {
-                val reversed = LinkedHashSet<Pair<RecordLeafView, Boolean>>()
-                for (leaf in ops.leaves(value)) record.forEachReversedAt(leaf) { view, protected ->
-                    if (reversed.add(view to protected))
-                        application.applyRecordView(value, original, view, protected, output)
+                saved.forEachReversedAt(value, ops) { view, protected ->
+                    application.applyRecordView(value, original, view, protected, output)
                 }
             }
         }

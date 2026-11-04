@@ -5,15 +5,46 @@ import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicLongArray
 
+internal enum class PreparedPlanFallback {
+    RUN, STATIC_COMPLETION, SHARED_CARRY, EMPTY_TEMPLATES, OVERSIZE_TEMPLATES, ZERO_TEMPLATE, OCCURRENCE_BUDGET,
+}
+
 /** Counters only. A query never retains its path trace in the frozen snapshot. */
-internal class DemandQueryStatistics {
+internal class DemandQueryStatistics : DemandScalarWork {
     private val values = AtomicLongArray(18)
     private val admissions = AtomicLongArray(16 * 5)
     private val restriction = AtomicLongArray(11)
     private val depths = AtomicLongArray(5 * 17)
     private val sampleOrdinal = AtomicLong()
     private val rowSamples = ArrayDeque<String>()
+    private val prepared = AtomicLongArray(12)
+    private val tries = AtomicLongArray(3)
+    private val preparedFallbacks = AtomicLongArray(PreparedPlanFallback.entries.size)
     fun add(kind: Int, amount: Long = 1) { values.addAndGet(kind, amount) }
+    fun preparedPlan(checked: Int, accepted: Int, programs: Int) {
+        prepared.incrementAndGet(0)
+        prepared.addAndGet(1, checked.toLong())
+        prepared.addAndGet(2, accepted.toLong())
+        prepared.addAndGet(3, programs.toLong())
+    }
+    fun preparedQuery() { prepared.incrementAndGet(4) }
+    fun preparedFallback(reason: PreparedPlanFallback) { preparedFallbacks.incrementAndGet(reason.ordinal) }
+    override fun stream() { prepared.incrementAndGet(5) }
+    override fun scalar() { prepared.incrementAndGet(6) }
+    override fun candidate() { prepared.incrementAndGet(7) }
+    override fun selectedReference(size: Int) {
+        prepared.incrementAndGet(8)
+        var old = prepared[9]
+        while (size > old && !prepared.compareAndSet(9, old, size.toLong())) old = prepared[9]
+    }
+    override fun overflow() { prepared.incrementAndGet(10) }
+    override fun pack() { prepared.incrementAndGet(11) }
+    /** Aggregate once per trie query; disabled diagnostics perform no counter updates. */
+    fun trieQuery(nodes: Long, profiles: Long, candidates: Long) {
+        tries.addAndGet(0, nodes)
+        tries.addAndGet(1, profiles)
+        tries.addAndGet(2, candidates)
+    }
     fun admission(entry: Pattern, actual: Pattern, emitted: Pattern?) {
         val cell = (entry.fact.tail.ordinal * 4 + actual.fact.tail.ordinal) * 5
         admissions.incrementAndGet(cell + if (emitted == null) 4 else emitted.fact.tail.ordinal)
@@ -41,10 +72,13 @@ internal class DemandQueryStatistics {
     }
     /** A sampled row holds copied scalar text only. It is not propagation state. */
     fun sampleRow(method: MethodKey, member: InitialAp, raw: Facts, pair: DemandPattern,
-                  budget: Int, route: Int): String? {
+                  budget: Int, route: Int): String? =
+        samplePreparedRow(method, member.toPattern(), raw, pair, budget, route)
+    fun samplePreparedRow(method: MethodKey, member: Pattern, raw: Facts, pair: DemandPattern,
+                          budget: Int, route: Int): String? {
         val ordinal = sampleOrdinal.incrementAndGet()
         if (ordinal > 16 && ordinal % 4096L != 0L) return null
-        return "method=${method.toString().take(300)} route=$route matchingMember=${describe(member.toPattern())} " +
+        return "method=${method.toString().take(300)} route=$route matchingMember=${describe(member)} " +
             "Dc=${describe(pair.entry)} Dp=${pair.exit?.let(::describe)} budget=$budget raw=${describe(raw)}"
     }
     fun sampleResult(row: String?, selected: Facts?, admitted: Facts?) {
@@ -94,6 +128,15 @@ internal class DemandQueryStatistics {
         "c2States", "c2Joins", "c5Candidates", "c5States", "c5Restrict", "c5Covered", "c5Visible",
         "c5FixedReject", "c5Duplicate", "c5Popped", "c5Expand", "c5ComposeAttempts", "c5ComposeAccepted")
         .mapIndexed { i, name -> "$name=${values[i]}" }.joinToString(" ") + buildString {
+            for ((i, name) in listOf("c5PreparedPlans", "c5PlanOccurrences", "c5AcceptedOccurrences", "c5OutputPrograms",
+                "c5ProgramQueries", "c5PacketStreams", "c5ScalarEnumerations", "c5ProgramCandidates",
+                "c5SelectedReferences", "c5SelectedReferencePeak", "c5BucketFallbacks", "c5StreamPacks").withIndex())
+                append(" $name=${prepared[i]}")
+            for ((i, name) in listOf("trieNodes", "trieProfiles", "trieCandidates").withIndex())
+                append(" $name=${tries[i]}")
+            for ((i, name) in listOf("Run", "StaticCompletion", "SharedCarry", "EmptyTemplates",
+                "OversizeTemplates", "ZeroTemplate", "OccurrenceBudget").withIndex())
+                append(" c5PlanFallback$name=${preparedFallbacks[i]}")
             for (d in Tail.entries) for (a in Tail.entries) for (result in 0..4) {
                 val count = admissions[(d.ordinal * 4 + a.ordinal) * 5 + result]
                 if (count != 0L) append(" c2_${d}_${a}_${if (result == 4) "REJECT" else Tail.entries[result]}=$count")
