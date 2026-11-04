@@ -15,6 +15,8 @@ private class IdentityKey(private val value: Any) {
 internal class LoopQueryCounts {
     var c2Queries = 0L; var c2Hits = 0L; var c2Native = 0L; var c2Rows = 0L
     var plans = 0L; var planChecks = 0L; var planHits = 0L; var planFallbacks = 0L; var emptyReplays = 0L
+    var oversizedPlanRequests = 0L
+    var c5PreparedQueries = 0L; var c5NativeQueries = 0L; var c5ReferenceFallbacks = 0L
 }
 
 /** One synchronous owner work quantum; never retained by a frozen result. */
@@ -40,7 +42,9 @@ internal class LoopQueryScratch(private val ap: ApManager, val counts: LoopQuery
     fun plan(view: Any, exit: PortId?, original: PremiseKey, templates: List<Pattern>, policy: RestrictedInitialPolicy,
              prepare: () -> PreparedLocalDataPlan?): PreparedLocalDataPlan? {
         ap.cancellation.checkpoint()
-        if (templates.size > 2048 || original.size > 2048) { counts.planFallbacks++; return null }
+        if (templates.size > 2048 || original.size > 2048) {
+            counts.planFallbacks++; counts.oversizedPlanRequests++; return null
+        }
         val key = PlanKey(IdentityKey(view), exit, IdentityKey(policy), original, templates)
         if (plans.containsKey(key)) { counts.planHits++; return plans[key] }
         counts.plans++

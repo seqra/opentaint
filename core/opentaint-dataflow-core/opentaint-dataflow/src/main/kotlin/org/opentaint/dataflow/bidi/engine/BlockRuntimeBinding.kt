@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.bidi.engine
 
+import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.store.*
 import org.opentaint.dataflow.graph.PortId
@@ -31,6 +32,9 @@ internal interface BlockRuntimeBinding {
     fun methodBoundary(state: BlockRunState, node: CommonInst, original: PremiseKey, value: Facts,
                        summary: Boolean)
     fun keepLocalConclusion(exit: PortId, value: Facts): Boolean = true
+    /** Query-only normalized C5. Null delegates to the native demand view. */
+    fun intersectSummary(exit: PortId, original: PremiseKey, raw: Facts): List<Facts>? = null
+    fun prepareExit(exit: PortId, base: AccessPathBase): PreparedExit? = null
     fun deliveryStatistics(): BlockDeliveryStatistics? = null
 }
 
@@ -42,4 +46,6 @@ internal interface MethodRootRouting {
     fun start(node: CommonInst, original: InitialAp, value: Facts)
     fun enter(node: CommonInst, original: PremiseKey, value: Facts)
     fun successors(node: CommonInst, original: PremiseKey, value: Facts)
+    /** Query-only normalized C5. Null delegates to the native demand view. */
+    fun intersectSummary(exit: PortId, original: PremiseKey, raw: Facts): List<Facts>? = null
 }

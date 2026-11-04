@@ -5,6 +5,8 @@ import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.engine.*
 import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
 import org.opentaint.dataflow.bidi.interp.MicroEdgeBuilder
+import org.opentaint.dataflow.bidi.store.*
+import org.opentaint.dataflow.graph.PortId
 import org.opentaint.dataflow.graph.LocalAccess
 import java.util.BitSet
 import kotlin.test.*
@@ -13,6 +15,36 @@ class BlockBoundaryLocalFilterTest {
     private fun access(uses: List<Int> = emptyList(), defs: List<Int> = emptyList()): LocalAccess {
         fun bits(values: List<Int>) = BitSet().apply { values.forEach(::set) }
         return LocalAccess(bits(uses), bits(defs), bits(uses + defs))
+    }
+
+    @Test fun `dead DATA from a native saved application still delivers its excluded mark request`() {
+        // while (again()) {} ; exit. The saved body relation has a dead local image.
+        // Applying its excluded FLOW target must still request T at the real parent input.
+        MethodAnalysisFixtures(listOf(listOf(1),listOf(2,4),listOf(3),listOf(1),listOf(5),emptyList()),5).use { f ->
+            val x=AccessPathBase.Argument(0)
+            val dead=AccessPathBase.LocalVar(7)
+            val t=f.mark("T")
+            f.instructionLocalAccess=List(6) { access() }
+            val layout=f.contexts.blockLayout(f.key)
+            val loop=layout.blocks.single { it.isLoop }
+            val input=layout.port(0,1)!!.id
+            val output=layout.normalExits.single { it.loop==loop.id }.id
+            val initial=f.manager.initial(f.pattern(x,tail=Tail.STAR,mark=MarkSlot.STAR))
+            val result=f.fact(dead,tail=Tail.STAR,mark=MarkSlot.Star(f.manager.markSetOf(t)))
+            f.records.add(Record(f.key,Direction.FORWARD,initial,result,BlockScope(loop.id,input),output))
+            val actor=f.core(RunConfig(1,1,null,f.records,org.opentaint.dataflow.bidi.driver.SeedIndex.EMPTY,
+                listOf(f.key),run1MarkMode=MarkMode.FULL),
+                localFactory=MethodLocalServicesFactory(::RunMethodLocalServices))
+            actor.addInitial(initial)
+            f.drain(actor,quantum=1)
+            assertTrue(t in f.requestRow(actor,assertNotNull(Run1Slot.fromInitial(initial))),
+                "Native saved application must execute the generic exclusion creator before DATA is discarded")
+            assertFalse(actor.joinedBlockStates().any { (_,state) ->
+                state.portSummaries.entries().any { (_,store) -> store.all().any { it.second.base==dead } }
+            },"No dead local may enter admitted DATA storage")
+            assertFalse(actor.summaries.all().any { it.second.base==dead })
+            actor.freeze()
+        }
     }
 
     @Test fun `plain copy kills old loop temporary before any boundary summary`() {

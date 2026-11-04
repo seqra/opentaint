@@ -9,6 +9,7 @@ import org.opentaint.dataflow.bidi.engine.MethodCallServicesFactory
 import org.opentaint.dataflow.bidi.engine.MethodLocalServicesFactory
 import org.opentaint.dataflow.bidi.engine.RunConfig
 import org.opentaint.dataflow.bidi.engine.RunManager
+import org.opentaint.dataflow.bidi.engine.LoopPipelineTrace
 import org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer
 import org.opentaint.dataflow.bidi.engine.RunMethodCallServices
 import org.opentaint.dataflow.bidi.engine.RunMethodHandlers
@@ -83,6 +84,9 @@ class IterationDriver internal constructor(
             logger.info { "BIDI_RUN_END run=${config.index} status=FAILED engineTime=${start.elapsedNow()}" }
             logOptimizationStatistics(config, "END")
             throw error
+        } finally {
+            // Diagnostic counters only. Engine workers have joined before this callback returns.
+            LoopPipelineTrace.finishRun(config.index)
         }
         logger.info { "BIDI_JOINED_RELEASE run=${config.index} sealReleaseTime=${result.joinedSealReleaseTime} status=${result.status}" }
         val engineTime = (start.elapsedNow() - result.joinedStaticBindingTime).coerceAtLeast(Duration.ZERO)

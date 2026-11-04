@@ -81,6 +81,27 @@ class LocalRelationApplicationTest {
         assertFalse(provisional.data.any { it.second.layer == Layer.NORMAL })
     }
 
+    @Test fun `one saved native match and MUST split is reused across every output scalar`() {
+        val initial = ap.initial(fixture.pattern(x, tail = Tail.ANY_TAINT, mark = t))
+        val packed = ap.mergeAddDelta(fixture.fact(ret,listOf(f),mark=u),fixture.fact(ret,listOf(g),mark=u)).first
+        val whole = Record(fixture.method,Direction.FORWARD,initial,packed)
+        val actual = fixture.fact(x,listOf(f),Tail.ANY_TAINT,t)
+        val original = ap.initial(fixture.pattern(y,mark=t))
+        val lanes = assertNotNull(application.matchRecord(actual,original,whole))
+        assertTrue(lanes.any { it.pendingDemotion })
+        val expected = Output()
+        val selected = Output()
+        for (scalar in annotatedLoopScalars(ops,packed)) {
+            val row = Record(fixture.method,Direction.FORWARD,initial,scalar)
+            application.applyRecord(actual,original,row,expected)
+            application.applyMatchedRecord(lanes,original,row,selected)
+        }
+        assertEquals(expected.data,selected.data)
+        assertEquals(expected.targets,selected.targets)
+        assertEquals(expected.requests,selected.requests)
+        assertTrue(selected.data.all { it.second.layer == Layer.DEMAND })
+    }
+
     @Test
     fun `reverse source discharge becomes DemandTarget while zero-to-zero stays control data`() {
         val backward = LocalRelationApplication(ops, ApMode(false, Direction.BACKWARD, 10))

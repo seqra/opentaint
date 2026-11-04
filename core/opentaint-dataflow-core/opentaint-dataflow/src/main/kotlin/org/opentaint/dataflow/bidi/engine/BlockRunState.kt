@@ -897,16 +897,27 @@ open class BlockRunState internal constructor(
     }
 
     internal fun retainBlockSummary(exit: PortId, premise: PremiseKey, facts: Facts) {
-        if (binding?.keepLocalConclusion(exit, facts) == false) return
         boundedSummaryResult(premise, facts) { pr, value -> retainSummary(pr, value, exit) }
     }
 
     private fun retainSummary(rawPremise: PremiseKey, rawFacts: Facts, exit: PortId = PortId.ROOT_EXIT) {
         if (!RuntimeDataDomain.packet(rawPremise, rawFacts)) return
-        if (binding?.keepLocalConclusion(exit, rawFacts) == false) return
+        val preparedExit = binding?.prepareExit(exit, rawFacts.base)
+        if (preparedExit === PreparedExit.DeadData ||
+            preparedExit == null && binding?.keepLocalConclusion(exit, rawFacts) == false) return
         val normalized = normalizeFlowSummary(ap, rawPremise, rawFacts)
         val premise = normalized.premise
         val facts = normalized.facts
+        val trace = LoopPipelineTrace.enabled(config.index, key)
+        if (trace) LoopPipelineTrace.record(config.index, key, "c5-normalized") {
+            catalog(ap)
+            text("scope", scope.toString())
+            number("exit", exit.ordinal)
+            this.premise("rawP", rawPremise)
+            this.facts("rawF", rawFacts)
+            this.premise("P", premise)
+            this.facts("F", facts)
+        }
         bodyWork?.candidate(premise, facts, internalBlock = !isRootScope)
         assertCanonicalFlowSummary(premise, facts)
         if (!config.run1 && facts is FlowTree && facts.layer == Layer.DEMAND)
@@ -924,11 +935,20 @@ open class BlockRunState internal constructor(
             return
         }
         val admitted = if (config.run1) listOf(facts) else
-            binding?.demand?.intersect(exit, premise, facts, config.admissionPolicy)
+            binding?.intersectSummary(exit, premise, facts)
+                ?: rootRouting?.intersectSummary(exit, premise, facts)
+                ?: binding?.demand?.intersect(exit, premise, facts, config.admissionPolicy)
                 ?: checkNotNull(config.demand).intersect(key, premise, facts, config.admissionPolicy)
         for (piece in admitted) {
             ap.cancellation.checkpoint()
             checkKinds(premise, piece)
+            if (trace) LoopPipelineTrace.record(config.index, key, "c5-admitted") {
+                catalog(ap)
+                text("scope", scope.toString())
+                number("exit", exit.ordinal)
+                this.premise("P", premise)
+                this.facts("F", piece)
+            }
             val store = if (isRootScope) summaries else portSummaries.at(exit)
             val delta = store.addAdmitted(premise, piece) ?: continue
             localEdgeDeltas++

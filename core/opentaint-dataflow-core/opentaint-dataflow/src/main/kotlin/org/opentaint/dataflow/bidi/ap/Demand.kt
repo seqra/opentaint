@@ -79,6 +79,8 @@ internal class EntryRestrictionTicket private constructor(
     val pair: DemandPattern,
     private val ops: ApOps,
 ) {
+    fun acceptedOutput(): AcceptedEntryOutput? = AcceptedEntryOutput.from(this)
+
     fun restrict(raw: Facts): List<Facts> {
         val out = CollectingOut()
         ops.manager.transportProtection(raw, out) { part, sink ->
@@ -88,7 +90,7 @@ internal class EntryRestrictionTicket private constructor(
                 restrictConclusionOnly(Conclusion(leaf.fact, leaf.exclusion, part.layer == Layer.DEMAND),
                     pair.exit, ops.manager.marks)?.let(selected::add)
             }
-            for (value in packRestricted(ops, selected)) sink.result(value)
+            for (value in packRestrictedSelections(ops, selected)) sink.result(value)
         }
         return out.results
     }
@@ -102,13 +104,23 @@ internal class EntryRestrictionTicket private constructor(
     }
 }
 
+/** Only a successful native entry check can produce this DATA output capability. */
+internal class AcceptedEntryOutput private constructor(
+    val initial: Pattern, val pair: DemandPattern, val fullExit: Pattern,
+) {
+    companion object {
+        fun from(ticket: EntryRestrictionTicket): AcceptedEntryOutput? =
+            ticket.pair.exit?.let { AcceptedEntryOutput(ticket.initial, ticket.pair, it) }
+    }
+}
+
 /** Exact-key packing preserves every reference leaf and its raw layer. */
 private fun restrictPlainFacts(ops: ApOps, j: InitialAp, g: Facts, d: DemandPattern,
                            policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ops.manager.marks)): List<Facts> {
-    return packRestricted(ops, restrictRaw(ops, j, g, d, policy))
+    return packRestrictedSelections(ops, restrictRaw(ops, j, g, d, policy))
 }
 
-private fun packRestricted(ops: ApOps, selected: Iterable<Conclusion>): List<Facts> {
+internal fun packRestrictedSelections(ops: ApOps, selected: Iterable<Conclusion>): List<Facts> {
     val m = ops.manager
     val values = LinkedHashMap<GroupKey, Facts>()
     for (value in selected) {

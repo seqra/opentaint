@@ -34,9 +34,13 @@ internal class MethodBlockRuntime(
     private val restriction = LoopOutputRestriction(ops)
     private val liveLocals = port.shared.contexts.blockLiveLocals(key)
     private val queryCounts = LoopQueryCounts()
+    private val localMatchCounts = if (port.shared.n2Statistics != null) LocalSummaryMatchStatistics() else null
+    private val savedSelectionCounts = if (port.shared.n2Statistics != null) SavedRecordSelectionStatistics() else null
     private var quantumQueries: LoopQueryScratch? = null
     private var localBoundaryOffers = 0L
     private var localBoundaryDrops = 0L
+    private var prePublicationLocalOffers = 0L
+    private var prePublicationDeadLocals = 0L
     private val observers = HashMap<Pair<BlockScope, BlockId>, LoopConsumerObservation>()
     private val entries = LinkedHashMap<BlockScope, Entry>()
     private val ready = LinkedHashSet<BlockScope>()
@@ -54,6 +58,10 @@ internal class MethodBlockRuntime(
     private val exceptionalEndpoints = port.shared.interpreter.exitNodes(key).filter { it.exceptional }
         .mapTo(HashSet()) { port.shared.language.getInstIndex(it.node) }
     private val originalEntry = port.shared.language.getInstIndex(port.shared.interpreter.entryNode(key))
+    private val preparedExits = run {
+        PreparedExitDirectory(layout, routesByPort, !forward, liveLocals,
+            normalEndpoints + exceptionalEndpoints, originalEntry)
+    }
     private var released = false
 
     private data class ChildPoint(val child: BlockId, val exit: PortId)
@@ -91,7 +99,7 @@ internal class MethodBlockRuntime(
                 TargetPublicationSink { _, _ -> error("An internal block cannot publish external Targets") }, Binding(this))
                 .also { stateOrNull = it }
         }
-        val links = BlockSummaryLinks(ops, mode, scope, ::onData, ::onTerminal, ::onRequest)
+        val links = BlockSummaryLinks(ops, mode, scope, ::onData, ::onTerminal, ::onRequest, localMatchCounts)
         fun addCompletion(child: BlockId, exit: PortId, original: PremiseKey, value: Facts): Facts? {
             val point = ChildPoint(child, exit)
             val store = completions.getOrPut(point) {
@@ -137,6 +145,8 @@ internal class MethodBlockRuntime(
     }
 
     override fun enter(node: CommonInst, original: PremiseKey, value: Facts) = enterRoot(node, original, value)
+    override fun intersectSummary(exit: PortId, original: PremiseKey, raw: Facts): List<Facts>? =
+        if (quantumQueries == null) null else intersect(entries.getValue(BlockScope.ROOT), exit, original, raw)
     fun enterRoot(node: CommonInst, original: PremiseKey, value: Facts) {
         check(!released)
         if (!forward && port.shared.language.getInstIndex(node) in exceptionalEndpoints)
@@ -224,8 +234,18 @@ internal class MethodBlockRuntime(
         override val sourceHits get() = root.sourceHits
         override val sinkSeeds get() = root.sinkSeeds
         override val demand get() = e.demand
+        override fun intersectSummary(exit: PortId, original: PremiseKey, raw: Facts): List<Facts>? =
+            if (quantumQueries == null) null else intersect(e, exit, original, raw)
         override fun keepLocalConclusion(exit: PortId, value: Facts): Boolean =
             this@MethodBlockRuntime.keepLocalConclusion(e.scope.block, exit, value)
+        override fun prepareExit(exit: PortId, base: org.opentaint.dataflow.ap.ifds.AccessPathBase): PreparedExit {
+            val prepared = preparedExits.getOrPrepare(e.scope, exit, base)
+            if (base is org.opentaint.dataflow.ap.ifds.AccessPathBase.LocalVar) {
+                prePublicationLocalOffers++
+                if (prepared === PreparedExit.DeadData) prePublicationDeadLocals++
+            }
+            return prepared
+        }
         override fun schedule() { ready += scope; port.enqueue(root) }
         override fun start(state: BlockRunState, original: InitialAp, value: Facts) {
             check(original.isZero || e.starts.size <= 1 || layout.normalExit(scope.entry) != null) { "A DATA initial has one exact entry target" }
@@ -328,6 +348,11 @@ internal class MethodBlockRuntime(
         val childEntry = entry(scope)
         if (methodStart) childEntry.methodStarts += target
         val link = LocalLink(parent.scope, logical, original, value.layer, scope)
+        if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "local-offer") {
+            catalog(ap); text("parent", parent.scope.toString()); text("child", scope.toString())
+            number("point", logical.ordinal); number("target", target)
+            premise("P", original); facts("offered", value)
+        }
         replaySaved(childEntry, link, value)
         val admission = if (config.run1) null else childEntry.demand!!.admission(value, config.admissionPolicy)
         val initials = admission?.initials
@@ -397,30 +422,27 @@ internal class MethodBlockRuntime(
         else entries.getValue(link.parent).state.addMarkRequest(original, mark)
     }
 
-    private fun savedRows(scope: BlockScope, actual: Facts): Sequence<Record> = sequence {
-        val seen = HashSet<Record>()
-        for (leaf in ops.leaves(actual)) {
-            for (record in config.records.byEntry(key, scope, leaf))
-                if (record.direction == config.direction && seen.add(record)) yield(record)
-            for (record in config.records.byExit(key, scope, leaf))
-                if (record.direction != config.direction && seen.add(record)) yield(record)
-        }
-    }
+    private fun savedRows(scope: BlockScope, actual: Facts): Sequence<SavedRecordSelection> =
+        selectSavedRecords(config.records, key, scope, actual, ops, config.direction, savedSelectionCounts).asSequence()
 
     private fun replaySaved(child: Entry, link: LocalLink, actual: Facts) {
-        for (record in savedRows(child.scope, actual)) {
+        for (selected in savedRows(child.scope, actual)) {
+            val record = selected.record
             val exit = checkNotNull(record.exitIn(config.direction))
             if (record.direction == config.direction) {
+                preparedExits.getOrPrepare(child.scope, if (isEmptyBlock(child.scope.block)) child.scope.entry else exit,
+                    record.conclusion.base)
+                savedSelectionCounts?.let { it.replayDirectMatches++ }
+                val lanes = application.matchRecord(actual, link.original, record) ?: continue
                 for (scalar in annotatedLoopScalars(ops, record.conclusion)) {
                     val row = Record(key, record.direction, record.premise, scalar)
                     applySaved(child, link, actual, exit, record.premise, ops.leaves(scalar).single()) {
-                        out -> application.applyRecord(actual, link.original, row, out)
+                        out -> application.applyMatchedRecord(lanes, link.original, row, out)
                     }
                 }
             } else {
-                val seen = LinkedHashSet<Pair<RecordLeafView, Boolean>>()
-                for (leaf in ops.leaves(actual)) record.forEachReversedAt(leaf) { view, protected ->
-                    if (seen.add(view to protected)) applySavedView(child, link, actual, exit, view, protected)
+                selected.forEachReversedAt(actual, ops) { view, protected ->
+                    applySavedView(child, link, actual, exit, view, protected)
                 }
             }
         }
@@ -440,6 +462,14 @@ internal class MethodBlockRuntime(
 
     private fun applySavedView(child: Entry, link: LocalLink, actual: Facts, exit: PortId,
                                view: RecordLeafView, protected: Boolean) {
+        preparedExits.getOrPrepare(child.scope, if (isEmptyBlock(child.scope.block)) child.scope.entry else exit, view.result.fact.base)
+        if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "local-reversed-record") {
+            catalog(ap); text("parent", link.parent.toString()); text("child", link.child.toString())
+            number("exit", exit.ordinal); number("point", link.point.ordinal)
+            premise("P", link.original); facts("offered", actual)
+            pattern("I", view.premise); pattern("O", Pattern(view.result.fact, view.result.exclusion))
+            flag("resultDemand", view.result.demand); flag("protected", protected)
+        }
         val grows = loopFieldLength(Pattern(view.result.fact, view.result.exclusion)) > loopFieldLength(view.premise)
         application.applyRecordView(actual, link.original, view, protected, object : LocalRelationOut {
             override fun data(original: PremiseKey, value: Facts) = onApplied(link, exit, grows, original, value)
@@ -449,14 +479,27 @@ internal class MethodBlockRuntime(
     }
 
     private fun onData(link: LocalLink, exit: PortId, row: PremiseKey, geometry: Pattern,
-                       original: PremiseKey, value: Facts) =
+                       original: PremiseKey, value: Facts) {
+        if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "local-relation") {
+            catalog(ap); text("parent", link.parent.toString()); text("child", link.child.toString())
+            number("exit", exit.ordinal); number("point", link.point.ordinal)
+            premise("I", row); pattern("O", geometry); premise("P", original); facts("applied", value)
+        }
         onApplied(link, exit, loopSummaryGrows(row, geometry), original, value)
+    }
 
     private fun onApplied(link: LocalLink, exit: PortId, grows: Boolean, original: PremiseKey, value: Facts) {
         val parent = entries.getValue(link.parent)
         val child = layout[link.child.block]
         val completionExit = if (isEmptyBlock(child.id)) link.point else exit
-        if (!keepLocalConclusion(child.id, completionExit, value)) return
+        val routes = preparedExits.getOrPrepare(link.child, completionExit, value.base)
+        if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "local-applied") {
+            catalog(ap); text("parent", link.parent.toString()); text("child", link.child.toString())
+            number("exit", exit.ordinal); number("point", completionExit.ordinal)
+            premise("P", original); facts("value", value); flag("grows", grows)
+            text("prepared", routes.javaClass.simpleName)
+        }
+        if (routes === PreparedExit.DeadData) return
         // Reuse the ordinary global AP bound before a local result is stored
         // or offered onward. A saved relation can add its own prefix to the
         // caller suffix, just as a real call summary does. This is not a new
@@ -471,10 +514,24 @@ internal class MethodBlockRuntime(
         ops.limit(value, config.fieldLimit, object : ApOut {
             override fun result(bounded: Facts) {
                 val values = if (!child.isLoop || exit.ordinal < 0) listOf(bounded) else
-                    restriction.restrict(config.run1, grows, bounded) { candidate -> observe(parent, child, link, exit, original, candidate) }
+                    restriction.restrict(config.run1, grows, bounded, LoopRestrictionSession(ops, config.admissionPolicy,
+                        { candidate -> observe(parent, child, link, exit, original, candidate) },
+                        { actual -> observers[parent.scope to child.id]?.precisionCursors(actual) }))
                 for (kept in values) {
-                    val fresh = parent.addCompletion(child.id, completionExit, original, kept) ?: continue
-                    queue { routeCompleted(parent, child, link, exit, original, fresh) }
+                    if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "local-kept") {
+                        catalog(ap); text("parent", link.parent.toString()); text("child", link.child.toString())
+                        number("exit", exit.ordinal); number("point", completionExit.ordinal)
+                        premise("P", original); facts("kept", kept)
+                    }
+                    val fresh = parent.addCompletion(child.id, completionExit, original, kept)
+                    if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "local-completion") {
+                        catalog(ap); text("parent", link.parent.toString()); text("child", link.child.toString())
+                        number("exit", exit.ordinal); number("point", completionExit.ordinal)
+                        premise("P", original); facts("offered", kept); flag("fresh", fresh != null)
+                        if (fresh != null) facts("delta", fresh)
+                    }
+                    if (fresh == null) continue
+                    queue { routeCompleted(parent, child, link, exit, original, fresh, routes) }
                 }
             }
             override fun markRequest(mark: TaintMark) = error("A global local-boundary field limit cannot request a mark")
@@ -486,19 +543,16 @@ internal class MethodBlockRuntime(
     }
 
     private fun routeCompleted(parent: Entry, child: MethodBlock, link: LocalLink, exit: PortId,
-                               original: PremiseKey, value: Facts) {
+                               original: PremiseKey, value: Facts, prepared: PreparedExit) {
         if (isEmptyBlock(child.id)) {
-            if (link.point.ordinal >= 0) for (route in deliveryRoutes(link.point)) {
-                if (!keepAlongRoute(route, value)) continue
+            if (link.point.ordinal >= 0) for (route in preparedRoutes(prepared, link.point)) {
                 if (route.feedbackLoop == parent.scope.block)
                     parent.state.retainBlockSummary(route.port, original, value)
                 else if (layout.contains(parent.scope.block, route.to))
                     routeInside(parent, route.to, original, value, link.point, passedEmpty = true)
                 else parent.state.retainBlockSummary(outputPort(route.port, parent.scope.block), original, value)
             } else for (target in entries.getValue(link.child).starts.toList()) {
-                val local = value.base as? org.opentaint.dataflow.ap.ifds.AccessPathBase.LocalVar
-                if (local != null && !isRootEnd(target) && target != originalEntry &&
-                    liveLocals?.mayEnter(!forward, target, local.idx) == false) continue
+                if (prepared is PreparedExit.ActualStarts && !prepared.allows(target)) continue
                 if (layout.contains(parent.scope.block, target))
                     routeInside(parent, target, original, value, link.point, passedEmpty = true)
                 else parent.state.retainBlockSummary(link.point, original, value)
@@ -523,8 +577,7 @@ internal class MethodBlockRuntime(
             } else parent.state.retainBlockSummary(exit, original, value)
             return
         }
-        for (route in deliveryRoutes(exit)) {
-            if (!keepAlongRoute(route, value)) continue
+        for (route in preparedRoutes(prepared, exit)) {
             if (layout.contains(parent.scope.block, route.to) && route.feedbackLoop != parent.scope.block)
                 routeInside(parent, route.to, original, value, exit)
             else if (parent.scope == BlockScope.ROOT) error("An original CFG edge cannot leave its method layout")
@@ -536,6 +589,12 @@ internal class MethodBlockRuntime(
                 else parent.state.retainBlockSummary(outputPort(route.port, parent.scope.block), original, value)
             }
         }
+    }
+
+    private fun preparedRoutes(prepared: PreparedExit, exit: PortId): List<MethodBlockRoute> = when (prepared) {
+        is PreparedExit.Routes -> prepared.routes
+        PreparedExit.DeadData -> emptyList()
+        else -> deliveryRoutes(exit) // Unknown interfaces keep their established native dispatch.
     }
 
     private fun entryRole(scope: BlockScope): BlockEntryRole {
@@ -675,8 +734,12 @@ internal class MethodBlockRuntime(
     private fun intersect(parent: Entry, exit: PortId, original: PremiseKey, value: Facts): List<Facts> {
         if (value !is Reach && !original.isZero && original.size <= 2048) {
             val prepared = plan(parent, exit, original, original.members.map { it.toPattern() })
-            prepared?.intersect(original, value)?.let { return it }
+            if (prepared != null) {
+                prepared.intersect(original, value)?.let { queryCounts.c5PreparedQueries++; return it }
+                queryCounts.c5ReferenceFallbacks++
+            }
         }
+        queryCounts.c5NativeQueries++
         return if (parent.rootEntry) checkNotNull(config.demand).intersect(key, original, value, config.admissionPolicy)
             else checkNotNull(parent.demand).intersect(exit, original, value, config.admissionPolicy)
     }
@@ -727,8 +790,8 @@ internal class MethodBlockRuntime(
             { actual -> adjacentDemands.flatMap { (scope, demand) -> initials(scope, demand, actual) }.toSet() },
             { actual -> repeatDemands.flatMap { (scope, demand) -> initials(scope, demand, actual) }.toSet() },
             { actual -> adjacentScopes.asSequence().flatMap { scope -> savedRows(scope, actual) }
-                .flatMap { record -> enclosingPorts(checkNotNull(record.exitIn(config.direction)), parent.scope.block)
-                    .asSequence().map { LoopObservedRecord(record, it) } } },
+                .flatMap { selected -> enclosingPorts(checkNotNull(selected.record.exitIn(config.direction)), parent.scope.block)
+                    .asSequence().map { LoopObservedRecord(selected.record, it, selected) } } },
             { pr, actual -> adjacentScopes.asSequence().flatMap { scope ->
                 config.normalTargets.candidates(key, scope, pr, actual, mode).asSequence()
             }.map { (row, member) -> LoopObservedTarget(row, member, methodExit) } },
@@ -744,10 +807,53 @@ internal class MethodBlockRuntime(
                 { repeatDemands.flatMap { (scope, demand) -> initials(scope, demand, actual).map {
                     LoopLabelledAdmission(scope, LoopAdmissionFamily.REPEAT, it) } } }) },
             keepEnclosingData = { output, actual -> keepLocalConclusion(parent.scope.block, output, actual, count = false) },
-            skipEmptyDataReplay = { pr, actual, saved -> skipEmptyDataReplay(parent, pr, actual, saved) })
+            skipEmptyDataReplay = { pr, actual, saved -> skipEmptyDataReplay(parent, pr, actual, saved) },
+            precisionCursors = { actual ->
+                val packet = ap.factsOf(actual.fact, actual.exclusion, Layer.DEMAND)
+                buildList {
+                    for ((family, demands) in listOf(LoopAdmissionFamily.ADJACENT to adjacentDemands,
+                                                     LoopAdmissionFamily.REPEAT to repeatDemands))
+                        for ((scope, demand) in demands) {
+                            if (!keepLocalConclusion(scope.block, scope.entry, packet, count = false)) continue
+                            val cursors = (demand as? EntryPrecisionView)?.precisionCursors(actual, config.admissionPolicy)
+                                ?: continue
+                            for (cursor in cursors) add(LoopPrecisionCursor(scope, family, cursor))
+                        }
+                }
+            })
         LoopConsumerObservation(ops, mode, views)
         }
-        return observer.observe(original, value)
+        val observation = observer.observe(original, value)
+        if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "loop-observation") {
+            catalog(ap); text("parent", parent.scope.toString()); number("loop", loop.id.ordinal)
+            number("exit", exit.ordinal); premise("P", original); facts("F", value)
+            number("adjacentCount", observation.adjacentInitials.size)
+            number("repeatCount", observation.repeatInitials.size)
+            number("labelCount", observation.labelledAdmissions.size)
+            number("enclosingCount", observation.enclosingResults.size)
+            for ((index, admitted) in observation.adjacentInitials.withIndex()) {
+                premise("adjacent${index}Initial", admitted.initial); text("adjacent${index}Layer", admitted.layer.name)
+            }
+            for ((index, admitted) in observation.repeatInitials.withIndex()) {
+                premise("repeat${index}Initial", admitted.initial); text("repeat${index}Layer", admitted.layer.name)
+            }
+            for ((index, labelled) in observation.labelledAdmissions.withIndex()) {
+                text("label${index}Scope", labelled.scope.toString()); text("label${index}Family", labelled.family.name)
+                premise("label${index}Initial", labelled.admitted.initial); text("label${index}Layer", labelled.admitted.layer.name)
+            }
+            for ((index, result) in observation.enclosingResults.withIndex()) when (result) {
+                is LoopEnclosingResult.Data -> {
+                    text("result${index}Scope", result.scope.toString()); number("result${index}Exit", result.exit.ordinal)
+                    premise("result${index}P", result.original); pattern("result${index}F", result.member.pattern)
+                    text("result${index}Layer", result.member.layer.name); flag("result${index}Protected", result.member.nonSubsumable)
+                }
+                is LoopEnclosingResult.Terminal -> {
+                    text("result${index}Scope", result.scope.toString()); number("result${index}Exit", result.exit.ordinal)
+                    premise("result${index}P", result.original); text("result${index}Target", result.target.toString())
+                }
+            }
+        }
+        return observation
     }
 
     /** Barrier-only scalar census. It retains no edge, premise or form snapshot. */
@@ -765,13 +871,20 @@ internal class MethodBlockRuntime(
             "completionPoints=${entries.values.sumOf { it.completions.size.toLong() }} " +
             "boundaryLimitOffers=$boundaryLimitOffers boundaryLimitCuts=$boundaryLimitCuts " +
             "localBoundaryOffers=$localBoundaryOffers localBoundaryDrops=$localBoundaryDrops " +
+            "prePublicationLocalOffers=$prePublicationLocalOffers prePublicationDeadLocals=$prePublicationDeadLocals " +
             "localMasks=${liveLocals?.retainedMasks ?: 0} localMaskWords=${liveLocals?.retainedWords ?: 0} " +
             "c2Queries=${queryCounts.c2Queries} c2Hits=${queryCounts.c2Hits} c2Native=${queryCounts.c2Native} c2Rows=${queryCounts.c2Rows} " +
             "c5Plans=${queryCounts.plans} c5PlanChecks=${queryCounts.planChecks} c5PlanHits=${queryCounts.planHits} c5PlanFallbacks=${queryCounts.planFallbacks} " +
+            "oversizedPlanRequests=${queryCounts.oversizedPlanRequests} c5PreparedQueries=${queryCounts.c5PreparedQueries} " +
+            "c5NativeQueries=${queryCounts.c5NativeQueries} c5ReferenceFallbacks=${queryCounts.c5ReferenceFallbacks} " +
             "emptyDataReplays=${queryCounts.emptyReplays} " +
             "offers=${counts.offers} bypasses=${counts.bypasses} scalars=${counts.scalarQueries} " +
             "observations=${counts.observations} trials=${counts.trials} drops=${counts.drops} " +
-            "cuts=${counts.cuts} rawFallbacks=${counts.rawFallbacks}" + gapDetails
+            "cuts=${counts.cuts} rawFallbacks=${counts.rawFallbacks} " +
+            "certificates=${counts.certificates} certificateFallbacks=${counts.certificateFallbacks} budgetsSkipped=${counts.budgetsSkipped} " +
+            (localMatchCounts?.diagnosticStatistics()?.plus(" ") ?: "") +
+            (savedSelectionCounts?.diagnosticStatistics()?.plus(" ") ?: "") +
+            "preparedExitEntries=${preparedExits.preparations} preparedExitTargetMasks=${preparedExits.targetMaskBuilds}" + gapDetails
     }
 
     /** Numeric-only snapshots at the owner barrier; no completion facts escape. */
@@ -832,7 +945,7 @@ internal class MethodBlockRuntime(
             for ((scope, e) in entries) if (scope != BlockScope.ROOT) e.stateOrNull?.let { state -> release { state.freeze() } }
             for (e in entries.values) release { e.links.clear() }
         } finally {
-            entries.clear(); ready.clear(); pending.clear(); observers.clear(); released = true
+            entries.clear(); ready.clear(); pending.clear(); observers.clear(); preparedExits.clear(); released = true
         }
         failure?.let { throw it }
     }

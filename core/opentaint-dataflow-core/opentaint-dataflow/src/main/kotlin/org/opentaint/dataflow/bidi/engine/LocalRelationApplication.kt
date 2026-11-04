@@ -58,14 +58,29 @@ internal class LocalRelationApplication(private val ops: ApOps, private val mode
     /** Native MUST records have a definite lane and a provisional lane. With no call suffix,
      * commit the existing pending demotion at this boundary rather than after return actions. */
     fun applyRecord(actual: Facts, original: PremiseKey, record: Record, out: LocalRelationOut): Boolean {
+        val lanes = matchRecord(actual, original, record) ?: return false
+        return applyMatchedRecord(lanes, original, record, out)
+    }
+
+    /** A saved native premise is matched once, including its distinct MUST lane split.
+     * These invocation-local lanes can be reused for every scalar of this same native row. */
+    fun matchRecord(actual: Facts, original: PremiseKey, record: Record): List<NativeRecordLane>? {
         val initial = record.premise
-        if (!valid(actual, original, initial, record.conclusion)) return false
-        val offered = ops.satisfying(actual, initial, mode, record = true) ?: return false
+        if (!valid(actual, original, initial, record.conclusion)) return null
+        val offered = ops.satisfying(actual, initial, mode, record = true) ?: return null
+        return nativeRecordLanes(ops, mode, offered, initial)
+    }
+
+    fun applyMatchedRecord(lanes: List<NativeRecordLane>, original: PremiseKey, record: Record,
+                           out: LocalRelationOut): Boolean {
+        val initial = record.premise
         var applied = false
-        for (lane in nativeRecordLanes(ops, mode, offered, initial))
+        for (lane in lanes) {
+            if (!valid(lane.actual, original, initial, record.conclusion)) continue
             ops.applySummary(lane.actual, initial, record.conclusion, mode,
                 sink(original, lane.actual, initial.isZero, lane.pendingDemotion, out) { applied = true },
                 original = original)
+        }
         return applied
     }
 

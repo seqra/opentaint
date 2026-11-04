@@ -25,7 +25,7 @@ internal class BlockBoundaryDemandView(
     role: BlockEntryRole,
     normalOutputs: Collection<PortId>,
     private val staticShortcutTarget: (PortId, PremiseKey, RestrictedInitialPolicy) -> Boolean = { _, _, _ -> false },
-) : org.opentaint.dataflow.bidi.store.PreparedScopeDemandView {
+) : org.opentaint.dataflow.bidi.store.PreparedScopeDemandView, org.opentaint.dataflow.bidi.store.EntryPrecisionView {
     private val outputs = normalOutputs.toSet()
     private val exceptionalHack = direction == Direction.BACKWARD && role == BlockEntryRole.EXCEPTIONAL_INTERFACE
     private val backward = direction == Direction.BACKWARD
@@ -47,6 +47,9 @@ internal class BlockBoundaryDemandView(
 
     override fun initials(actual: Facts, policy: RestrictedInitialPolicy): Set<AdmittedInitial> =
         admission(actual, policy).initials
+
+    override fun precisionCursors(actual: Pattern, policy: RestrictedInitialPolicy): List<org.opentaint.dataflow.bidi.store.AnyDemandCursor>? =
+        (physical as? org.opentaint.dataflow.bidi.store.EntryPrecisionView)?.precisionCursors(actual, policy)
 
     override fun prepareDataPlan(exit: PortId, templates: List<Pattern>,
                                  policy: RestrictedInitialPolicy, onEntryCheck: () -> Unit): org.opentaint.dataflow.bidi.store.PreparedLocalDataPlan? =
