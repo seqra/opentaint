@@ -41,6 +41,10 @@ does not prevent exponential fixed-depth width: an allowed opposite-direction
 record can produce the MAY seed, after which ordinary equal-length rewrites
 still visit `2^L` paths.
 
+Selected scope: **all incoming STAR facts**, including STAR/FLOW and concrete
+STAR/T on DEMAND. Runtime implementation remains unchanged.
+MAY/MUST, same-path matching and ordinary instruction transfers remain unchanged.
+
 ## 2. Why S covers L
 
 STAR is a shared suffix variable. With empty field and mark exclusions:
@@ -191,9 +195,8 @@ same-path matching, matches where the actual is below the premise, MAY,
 MUST, and all ordinary instruction/field-read transfers.
 
 ```kotlin
-allowStrictAncestor(actualLeaf, origin, scope) {
+allowStrictAncestor(actualLeaf, origin) {
     if (actualLeaf.tail != STAR) return true
-    if (scope == FLOW_ONLY && actualLeaf.kind != FLOW) return true
     return origin == OPPOSITE_RECORD
 }
 ```
@@ -202,17 +205,16 @@ The external policy controls change restricted runs only. Run-1 matching
 stays unchanged in those tests. This is a limit of the experiment, not an
 implicit decision about every run-1 static or special-model path.
 
-There are two meaningful scopes:
-
-- FLOW-only: restrict incoming STAR/FLOW; keep concrete STAR request/refinement
-  lanes unchanged.
-- All incoming STAR: also restrict concrete STAR/DEMAND. This has a larger
-  C2/application proof surface.
+The selected scope includes concrete STAR/DEMAND as well as STAR/FLOW.
+There is no FLOW-only exemption for concrete request/refinement lanes.
+The narrower FLOW-only policy remains a tested alternative, not the selected
+rule. Preserve the existing concrete starting layers and protection flags.
 
 Changing only STAR *premises* is a different policy. A concrete STAR actual
 can match a deeper EXACT premise, as in the earlier necessary example.
-The controls test all interpretations separately. The user scope question
-remains open; no interpretation is silently implemented.
+The controls test all interpretations separately. The selected rule is based
+on the incoming STAR tail, not the summary premise's tail. It therefore also
+applies when the deeper premise is EXACT. Runtime implementation is unchanged.
 
 The [source audit](data/bidirectional-star-inside-direction-source-audit-20261105.json)
 lists physical calls, local blocks, saved replay, observer queries, ND,
@@ -344,9 +346,9 @@ MUST/MAY canonicalization as its separate work item, including the previously
 identified refinement contract. Do not mistake a changed demand count or
 literal observer signature for a counterexample to concrete relation cover.
 
-For direction gating, define incoming-tail scope, strict-ancestor matching
-and explicit origin at every consumer before implementation. Prove the
-replacement for saved-direct and run-2 paths, or retain those cells until
+For direction gating, use the selected all-incoming-STAR scope and define
+strict-ancestor matching and explicit origin at every consumer before
+implementation. Prove the replacement for saved-direct and run-2 paths, or retain those cells until
 the proof exists. No source permissions, rejected-input history, grounding
 labels, field rules or stopping policy are added by this investigation.
 
