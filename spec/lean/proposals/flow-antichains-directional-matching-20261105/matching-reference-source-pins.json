@@ -1,0 +1,20 @@
+{
+  "baselineRevision": "52f32dd437d438aec4a700a02c18d94c31d58093",
+  "sourceRole": "Immutable native reference-interface source pins; not production correctness evidence",
+  "productionVerified": false,
+  "sources": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Summary.kt": "f21c80f317d08d9ffc70f86cef2138fb40cd16e7d0c02956700c3f507e32c24f",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApOps.kt": "9ecf5a0a403f8b0b76c5e0bfe79ca94ccba8eb9d5700bc18fb88c11f482d0dc4",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/PersistedSummaryReplay.kt": "50378507fb19ece0d77e4a3536db84cfc614db60e4b81bbdc855798cceb305a7",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LocalRelationApplication.kt": "19a1c9bc9fbdb846287e74085861bb51813ae1abfb0f1d518b368f5a6bc4aaf7",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SubscriptionManager.kt": "6304f727ea5d6d35edda9707fab5cbfdee33ad2ee17bff078bfc4ff2793bdb61",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockSummaryLinks.kt": "78bde7bc417b6a0a4cb0c11ccbe881904df1d506bd312cd26eef8c9987bf4fb7",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodCallServices.kt": "3f7745a9ad5389aa70dde5cb3bb469deaa670c7b48735a953f4e85540b63897c",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LoopConsumerObservation.kt": "6d98f705f055f6223ab97a061dd278a41fb0d5797375c4189b19b2691555518c",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/MethodBlockRuntime.kt": "124698c56303fc926d5541880a7ba206e32b281fa3561666d6b6974077b8b487",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Run1RequestMatching.kt": "fd000a5b854212685b79d7a9979fe885081eee375bd72f16108d7d586afeaf80",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/OwnedJoinedStaticWriterBinding.kt": "09e53b4963aab2af19f351858574b8158b3062d41478d6d41c246f98a2763a9d",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/NormalTargetStore.kt": "0932838c780b20a9a36a6d3ae07f665032e7268e8c62f9874e3d5d06ee2f6bf2",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Target.kt": "56da6eddf3bd111dd000ba8eea8dfb2750fbaaec8ee17bdb8a71a4841c9fa1e9"
+  }
+}

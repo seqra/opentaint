@@ -1,0 +1,12 @@
+{
+  "baselineRevision": "52f32dd437d438aec4a700a02c18d94c31d58093",
+  "role": "Source correspondence audit only. Kernel proves finite region algorithm, not Kotlin implementation.",
+  "sources": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Groups.kt": "4acac35dc174c5e07596f5de84f5d6b38a26837cbc81879bb22b80b0183298fa",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": "c4a2547aeb7e03d2daf13bc8fe811b3a4bc8026d74bd162a6cd3f06a9bbc90f0",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApManager.kt": "d8a575de8fc4f65d7d589f82784e1614a1728f6284b6865e055749a02b8b02b0",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Summary.kt": "f21c80f317d08d9ffc70f86cef2138fb40cd16e7d0c02956700c3f507e32c24f",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DiagonalRelations.kt": "cbd86b7e586fcf2831f3cf1f0092c3fb73b7f06e40910beaa78255ee1b1590ef",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RecordStore.kt": "e4e201500932915628756d772752af13c2e24031d9708348b43e98849480baa4"
+  }
+}

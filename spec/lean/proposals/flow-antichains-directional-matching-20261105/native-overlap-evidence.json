@@ -1,0 +1,774 @@
+{
+  "schema": "reverse-must-overlap-native-adapter-evidence-v1",
+  "state": "NATIVE_FINITE_AP_BRIDGE_PASS_NOT_KOTLIN_IMPLEMENTATION",
+  "date": "2026-11-05",
+  "runtimeRevision": "52f32dd437d438aec4a700a02c18d94c31d58093",
+  "nativeCases": {
+    "state": "PASS",
+    "cases": [
+      {
+        "actualKind": "STAR FLOW",
+        "nativeSelection": null,
+        "actual": {
+          "layer": "NORMAL",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "STAR",
+              "mark": "Star(excluded={1})",
+              "E": "{8}"
+            }
+          ]
+        },
+        "viewPremise": "Pattern(fact=PathFact(base=ret, path=[], tail=STAR, mark=Star(excluded={})), exclusion={12})",
+        "viewResult": "Conclusion(fact=PathFact(base=arg(0), path=[0, 4], tail=ANY, mark=Star(excluded={2})), exclusion=Empty, demand=true)",
+        "nativeRawApplyOutputs": [
+          {
+            "layer": "DEMAND",
+            "rows": [
+              {
+                "base": "arg(0)",
+                "path": [
+                  0,
+                  4
+                ],
+                "tail": "ANY",
+                "mark": "Star(excluded={1, 2})",
+                "E": "Empty"
+              }
+            ]
+          }
+        ],
+        "intersectionActual": {
+          "layer": "NORMAL",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "STAR",
+              "mark": "Star(excluded={1})",
+              "E": "{8, 12}"
+            }
+          ]
+        },
+        "nativeIntersectionSelection": {
+          "layer": "NORMAL",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "STAR",
+              "mark": "Star(excluded={1})",
+              "E": "{8, 12}"
+            }
+          ]
+        },
+        "nativeIntersectionApplyOutputs": [
+          {
+            "layer": "DEMAND",
+            "rows": [
+              {
+                "base": "arg(0)",
+                "path": [
+                  0,
+                  4
+                ],
+                "tail": "ANY",
+                "mark": "Star(excluded={1, 2})",
+                "E": "Empty"
+              }
+            ]
+          }
+        ],
+        "requests": []
+      },
+      {
+        "actualKind": "MAY FLOW",
+        "nativeSelection": {
+          "layer": "DEMAND",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "ANY",
+              "mark": "Star(excluded={1})",
+              "E": "Empty"
+            }
+          ]
+        },
+        "actual": {
+          "layer": "DEMAND",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "ANY",
+              "mark": "Star(excluded={1})",
+              "E": "Empty"
+            }
+          ]
+        },
+        "viewPremise": "Pattern(fact=PathFact(base=ret, path=[], tail=STAR, mark=Star(excluded={})), exclusion={12})",
+        "viewResult": "Conclusion(fact=PathFact(base=arg(0), path=[0, 4], tail=ANY, mark=Star(excluded={2})), exclusion=Empty, demand=true)",
+        "nativeRawApplyOutputs": [
+          {
+            "layer": "DEMAND",
+            "rows": [
+              {
+                "base": "arg(0)",
+                "path": [
+                  0,
+                  4
+                ],
+                "tail": "ANY",
+                "mark": "Star(excluded={1, 2})",
+                "E": "Empty"
+              }
+            ]
+          }
+        ],
+        "intersectionActual": {
+          "layer": "DEMAND",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "ANY",
+              "mark": "Star(excluded={1})",
+              "E": "Empty"
+            }
+          ]
+        },
+        "nativeIntersectionSelection": {
+          "layer": "DEMAND",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "ANY",
+              "mark": "Star(excluded={1})",
+              "E": "Empty"
+            }
+          ]
+        },
+        "nativeIntersectionApplyOutputs": [
+          {
+            "layer": "DEMAND",
+            "rows": [
+              {
+                "base": "arg(0)",
+                "path": [
+                  0,
+                  4
+                ],
+                "tail": "ANY",
+                "mark": "Star(excluded={1, 2})",
+                "E": "Empty"
+              }
+            ]
+          }
+        ],
+        "requests": []
+      },
+      {
+        "actualKind": "MUST FLOW",
+        "nativeSelection": null,
+        "actual": {
+          "layer": "NORMAL",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "ANY_TAINT",
+              "mark": "Star(excluded={1})",
+              "E": "{8}"
+            }
+          ]
+        },
+        "viewPremise": "Pattern(fact=PathFact(base=ret, path=[], tail=STAR, mark=Star(excluded={})), exclusion={12})",
+        "viewResult": "Conclusion(fact=PathFact(base=arg(0), path=[0, 4], tail=ANY, mark=Star(excluded={2})), exclusion=Empty, demand=true)",
+        "nativeRawApplyOutputs": [
+          {
+            "layer": "DEMAND",
+            "rows": [
+              {
+                "base": "arg(0)",
+                "path": [
+                  0,
+                  4
+                ],
+                "tail": "ANY",
+                "mark": "Star(excluded={1, 2})",
+                "E": "Empty"
+              }
+            ]
+          }
+        ],
+        "intersectionActual": {
+          "layer": "NORMAL",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "ANY_TAINT",
+              "mark": "Star(excluded={1})",
+              "E": "{8}"
+            }
+          ]
+        },
+        "nativeIntersectionSelection": null,
+        "nativeIntersectionApplyOutputs": [
+          {
+            "layer": "DEMAND",
+            "rows": [
+              {
+                "base": "arg(0)",
+                "path": [
+                  0,
+                  4
+                ],
+                "tail": "ANY",
+                "mark": "Star(excluded={1, 2})",
+                "E": "Empty"
+              }
+            ]
+          }
+        ],
+        "requests": []
+      }
+    ],
+    "concreteCases": [
+      {
+        "oldPremise": "org.opentaint.dataflow.bidi.ap.InitialAp@544fe44c",
+        "oldOutput": {
+          "layer": "NORMAL",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "ANY_TAINT",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{12}"
+            }
+          ]
+        },
+        "actual": {
+          "layer": "NORMAL",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "STAR",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{8}"
+            }
+          ]
+        },
+        "actualProtected": true,
+        "nativeOldSelection": null,
+        "projectedActual": {
+          "layer": "NORMAL",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "STAR",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{8, 12}"
+            }
+          ]
+        },
+        "nativeProjectedSelection": {
+          "layer": "NORMAL",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "STAR",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{8, 12}"
+            }
+          ]
+        },
+        "viewPremise": "Pattern(fact=PathFact(base=ret, path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=1))), exclusion={12})",
+        "viewResult": "Conclusion(fact=PathFact(base=arg(0), path=[0, 4], tail=EXACT, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty, demand=false)",
+        "nativeRawApplyOutputs": [
+          {
+            "layer": "NORMAL",
+            "rows": [
+              {
+                "base": "arg(0)",
+                "path": [
+                  0,
+                  4
+                ],
+                "tail": "EXACT",
+                "mark": "Concrete(mark=TaintMark(id=1))",
+                "E": "Empty"
+              }
+            ]
+          }
+        ],
+        "nativeBridgeOutputs": [
+          {
+            "layer": "NORMAL",
+            "rows": [
+              {
+                "base": "arg(0)",
+                "path": [
+                  0,
+                  4
+                ],
+                "tail": "EXACT",
+                "mark": "Concrete(mark=TaintMark(id=1))",
+                "E": "Empty"
+              }
+            ]
+          }
+        ],
+        "protectionPreserved": true,
+        "requests": []
+      },
+      {
+        "oldPremise": "org.opentaint.dataflow.bidi.ap.InitialAp@544fe44c",
+        "oldOutput": {
+          "layer": "NORMAL",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "ANY_TAINT",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{12}"
+            }
+          ]
+        },
+        "actual": {
+          "layer": "DEMAND",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "STAR",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{8}"
+            }
+          ]
+        },
+        "actualProtected": true,
+        "nativeOldSelection": null,
+        "projectedActual": {
+          "layer": "DEMAND",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "STAR",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{8, 12}"
+            }
+          ]
+        },
+        "nativeProjectedSelection": {
+          "layer": "DEMAND",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "STAR",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{8, 12}"
+            }
+          ]
+        },
+        "viewPremise": "Pattern(fact=PathFact(base=ret, path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=1))), exclusion={12})",
+        "viewResult": "Conclusion(fact=PathFact(base=arg(0), path=[0, 4], tail=EXACT, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty, demand=false)",
+        "nativeRawApplyOutputs": [
+          {
+            "layer": "DEMAND",
+            "rows": [
+              {
+                "base": "arg(0)",
+                "path": [
+                  0,
+                  4
+                ],
+                "tail": "EXACT",
+                "mark": "Concrete(mark=TaintMark(id=1))",
+                "E": "Empty"
+              }
+            ]
+          }
+        ],
+        "nativeBridgeOutputs": [
+          {
+            "layer": "DEMAND",
+            "rows": [
+              {
+                "base": "arg(0)",
+                "path": [
+                  0,
+                  4
+                ],
+                "tail": "EXACT",
+                "mark": "Concrete(mark=TaintMark(id=1))",
+                "E": "Empty"
+              }
+            ]
+          }
+        ],
+        "protectionPreserved": true,
+        "requests": []
+      },
+      {
+        "oldPremise": "org.opentaint.dataflow.bidi.ap.InitialAp@5abca1e0",
+        "oldOutput": {
+          "layer": "NORMAL",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "ANY_TAINT",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{12}"
+            }
+          ]
+        },
+        "actual": {
+          "layer": "NORMAL",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "STAR",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{8}"
+            }
+          ]
+        },
+        "actualProtected": true,
+        "nativeOldSelection": null,
+        "projectedActual": {
+          "layer": "NORMAL",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "STAR",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{8, 12}"
+            }
+          ]
+        },
+        "nativeProjectedSelection": {
+          "layer": "NORMAL",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "STAR",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{8, 12}"
+            }
+          ]
+        },
+        "viewPremise": "Pattern(fact=PathFact(base=ret, path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=1))), exclusion={12})",
+        "viewResult": "Conclusion(fact=PathFact(base=arg(0), path=[0, 4], tail=ANY, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty, demand=true)",
+        "nativeRawApplyOutputs": [
+          {
+            "layer": "DEMAND",
+            "rows": [
+              {
+                "base": "arg(0)",
+                "path": [
+                  0,
+                  4
+                ],
+                "tail": "ANY",
+                "mark": "Concrete(mark=TaintMark(id=1))",
+                "E": "Empty"
+              }
+            ]
+          }
+        ],
+        "nativeBridgeOutputs": [
+          {
+            "layer": "DEMAND",
+            "rows": [
+              {
+                "base": "arg(0)",
+                "path": [
+                  0,
+                  4
+                ],
+                "tail": "ANY",
+                "mark": "Concrete(mark=TaintMark(id=1))",
+                "E": "Empty"
+              }
+            ]
+          }
+        ],
+        "protectionPreserved": true,
+        "requests": []
+      },
+      {
+        "oldPremise": "org.opentaint.dataflow.bidi.ap.InitialAp@5abca1e0",
+        "oldOutput": {
+          "layer": "NORMAL",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "ANY_TAINT",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{12}"
+            }
+          ]
+        },
+        "actual": {
+          "layer": "DEMAND",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "STAR",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{8}"
+            }
+          ]
+        },
+        "actualProtected": true,
+        "nativeOldSelection": null,
+        "projectedActual": {
+          "layer": "DEMAND",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "STAR",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{8, 12}"
+            }
+          ]
+        },
+        "nativeProjectedSelection": {
+          "layer": "DEMAND",
+          "rows": [
+            {
+              "base": "ret",
+              "path": [],
+              "tail": "STAR",
+              "mark": "Concrete(mark=TaintMark(id=1))",
+              "E": "{8, 12}"
+            }
+          ]
+        },
+        "viewPremise": "Pattern(fact=PathFact(base=ret, path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=1))), exclusion={12})",
+        "viewResult": "Conclusion(fact=PathFact(base=arg(0), path=[0, 4], tail=ANY, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty, demand=true)",
+        "nativeRawApplyOutputs": [
+          {
+            "layer": "DEMAND",
+            "rows": [
+              {
+                "base": "arg(0)",
+                "path": [
+                  0,
+                  4
+                ],
+                "tail": "ANY",
+                "mark": "Concrete(mark=TaintMark(id=1))",
+                "E": "Empty"
+              }
+            ]
+          }
+        ],
+        "nativeBridgeOutputs": [
+          {
+            "layer": "DEMAND",
+            "rows": [
+              {
+                "base": "arg(0)",
+                "path": [
+                  0,
+                  4
+                ],
+                "tail": "ANY",
+                "mark": "Concrete(mark=TaintMark(id=1))",
+                "E": "Empty"
+              }
+            ]
+          }
+        ],
+        "protectionPreserved": true,
+        "requests": []
+      }
+    ],
+    "sourceRecord": {
+      "producerDirection": "FORWARD",
+      "P": "org.opentaint.dataflow.bidi.ap.InitialAp@63753b6d",
+      "output": {
+        "layer": "NORMAL",
+        "rows": [
+          {
+            "base": "ret",
+            "path": [],
+            "tail": "ANY_TAINT",
+            "mark": "Star(excluded={2})",
+            "E": "{12}"
+          }
+        ]
+      },
+      "scope": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=20))",
+      "exit": "PortId(ordinal=80)",
+      "readerScope": "BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=80))",
+      "readerExit": "PortId(ordinal=20)"
+    },
+    "limits": "Native AP application only; direct invocation deliberately bypasses old rejected Summary selector to test the proposed overlap adapter path; no production changes or project run."
+  },
+  "controls": {
+    "flow": 3,
+    "concrete": "EXACT-to-MUST reverse keeps EXACT native result and inherited actual layer; MUST-to-MUST reverse keeps ANY DEMAND. Protected membership survives both layers.",
+    "allPass": true,
+    "newOverlapCell": "OPPOSITE trusted MUST-constructor provenance with an old MUST CONCLUSION +same-path actual STAR. Old P.MUST\u2192G.STAR constructor-only readers stay legacy. MAY/MUST actual controls are native comparisons; no additional selector broadening selected here.",
+    "flowSTAR": "Old matcher rejects incomparable E. Eunion projected actual passes old matcher plus compiled application and preserves full mx union/ANY DEMAND.",
+    "rawApplyLimit": "Direct unprojected native application deliberately bypasses old rejected matcher only as a control. Proposed adapter always native-matches projected packet before application."
+  },
+  "bounds": {
+    "heapMiB": 512,
+    "activeProcessors": 1,
+    "gradle": false,
+    "projectRuns": false,
+    "productionEdits": false
+  },
+  "manifest": {
+    "compileCommand": [
+      "/usr/lib/jvm/temurin-17-jdk-amd64/bin/java",
+      "-Xmx512m",
+      "-XX:ActiveProcessorCount=1",
+      "-cp",
+      "/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-compiler-embeddable/2.1.0/988bf980588bbbcfa1ba19c1ffd7aa869b335a31/kotlin-compiler-embeddable-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.1.0/85f8b81009cda5890e54ba67d64b5e599c645020/kotlin-stdlib-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-script-runtime/2.1.0/5909da8c57b75a117714ab0e348c86101b7a3284/kotlin-script-runtime-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-reflect/2.1.0/dc3753b59b67d79b7d2f546d51e22a0ec1f082d8/kotlin-reflect-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.intellij.deps/trove4j/1.0.20200330/3afb14d5f9ceb459d724e907a21145e8ff394f02/trove4j-1.0.20200330.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/classes/java/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/classes/kotlin/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/resources/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-dataflow/build/libs/opentaint-jvm-sast-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-go-querylang/build/libs/opentaint-go-querylang.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-java-querylang/build/libs/opentaint-java-querylang.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/libs/opentaint-jvm-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/opentaint-jvm-util/build/libs/opentaint-jvm-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/cli-util/build/libs/cli-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-project/build/libs/opentaint-jvm-sast-project.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-project-model/build/libs/opentaint-project-model.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-go-dataflow/build/libs/opentaint-go-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-config/go-config/build/libs/go-config.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-config/java-config/build/libs/java-config.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-go/build/libs/configuration-rules-go.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-jvm/build/libs/configuration-rules-jvm.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-se-api/build/libs/opentaint-jvm-sast-se-api.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-approximations/build/libs/opentaint-ir-approximations.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-core/build/libs/opentaint-ir-core.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-jvm/build/libs/opentaint-ir-api-jvm.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-storage/build/libs/opentaint-ir-storage.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-storage/build/libs/opentaint-ir-api-storage.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/go/go-ir-client/build/libs/go-ir-client.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/go/go-ir-api/build/libs/go-ir-api.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/libs/opentaint-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/common-util/build/libs/common-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-common/build/libs/configuration-rules-common.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-common/build/libs/opentaint-ir-api-common.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.xodus/xodus-utils/2.0.1/cc05cb08e8ee02cb1ccf44b039f33aad22bbe091/xodus-utils-2.0.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.microutils/kotlin-logging-jvm/3.0.5/82f2256aeedccfd9c27ea585274a50bf06517383/kotlin-logging-jvm-3.0.5.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.detekt.sarif4k/sarif4k-jvm/0.5.0/d3060993cd73b57ee61b260841bedcabb7dcbb02/sarif4k-jvm-0.5.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk7/2.1.0/d77bee6c7bc849e7b9bf4b83e94e8fd1dfc0ea8a/kotlin-stdlib-jdk7-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-reflect/2.1.0/dc3753b59b67d79b7d2f546d51e22a0ec1f082d8/kotlin-reflect-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-collections-immutable-jvm/0.3.8/6119a57df1ad662593dfe21954898183c6c933b4/kotlinx-collections-immutable-jvm-0.3.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.charleskorn.kaml/kaml-jvm/0.73.0/abeffe03e958d06cfa6496ecf7c3be9e566c33cf/kaml-jvm-0.73.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-core-jvm/1.7.3/1f226780b845ff9206474c05159245d861556249/kotlinx-serialization-core-jvm-1.7.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-json-jvm/1.7.3/6701e8c68d9e82387ce72ee96e8ddf058208d58f/kotlinx-serialization-json-jvm-1.7.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.clikt/clikt-jvm/5.0.0/baa4d11e7f7a68c077bce23a21db133d9a199812/clikt-mordant-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-kotlin-stub/1.4.1/dd41461deff6151ed6b5ddaf9ad369410931e195/grpc-kotlin-stub-1.4.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.protobuf/protobuf-kotlin/4.29.3/74a540084c44f770f69e6f07071f1af6daac51e0/protobuf-kotlin-4.29.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-core-jvm/1.10.1/fe066928754beda3d59c8282e04289546465a360/kotlinx-coroutines-core-jvm-1.10.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/it.krzeminski/snakeyaml-engine-kmp-jvm/3.1.1/542190d973fb66f3568fbcec1a3a8210e2f705dc/snakeyaml-engine-kmp-jvm-3.1.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.squareup.okio/okio-jvm/3.10.2/6a2cc3acd5a83e66075a2f6c5b0608b6043fa34c/okio-jvm-3.10.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.clikt/clikt-core-jvm/5.0.0/1bbee7b4d792ec86447900488397638214fa491a/clikt-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm/3.0.0/ce34373aa2e8f4ab8c3f229615676e7da88de2ad/mordant-omnibus-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/net.thauvin.erik.urlencoder/urlencoder-lib-jvm/1.6.0/6b922dd3ff960b08873c10395545e08355e250c9/urlencoder-lib-jvm-1.6.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-jna-jvm/3.0.0/bde15ea7842e9b77dec187390cde07bf6c15b14d/mordant-jvm-jna-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-ffm-jvm/3.0.0/96a8677a522395ae552719cfd050d5b9a47ecd8e/mordant-jvm-ffm-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-graal-ffi-jvm/3.0.0/e5c456bbad024da819bffde07a223ae6cb9582a3/mordant-jvm-graal-ffi-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-core-jvm/3.0.0/c1e712a55e6ca965522a809fef068d036a7600b7/mordant-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.colormath/colormath-jvm/3.6.0/d5593e3f07b2447bec0b17f5cb7141a0f0de9688/colormath-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.1.20/aa8ca79cd50578314f6d1180c47cbe14c0fee567/kotlin-stdlib-2.1.20.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk8/2.1.0/c4a51be16c840b969ed706bc25d5836b099d188a/kotlin-stdlib-jdk8-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/it.unimi.dsi/fastutil-core/8.5.13/dd3d3ed477b7c1aee8176f6684813f48304769f9/fastutil-core-8.5.13.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.zeroturnaround/zt-exec/1.12/51a8d135518365a169a8c94e074c7eaaf864e147/zt-exec-1.12.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.antlr/antlr4-runtime/4.9.3/81befc16ebedb8b8aea3e4c0835dd5ca7e8523a8/antlr4-runtime-4.9.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-classic/1.4.8/f00ba91d993e4d14301b11968d3cacc3be7ef3e1/logback-classic-1.4.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/info.leadinglight/jdot/1.0/8e84489791d7fe20bf1631e791152b554cfea4ba/jdot-1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/dk.brics.automaton/automaton/1.11-8/6ebfa65eb431ff4b715a23be7a750cbc4cc96d0f/automaton-1.11-8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-commons/9.9.1/ab35de4c537184a09339069f1a3b3aacf2289149/asm-commons-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-util/9.9.1/e51f5b0ae0b0c1960687ae970a2a3434d39d8abb/asm-util-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-analysis/9.9.1/1ab8d9316ef7a67240087919a708246c37ed1660/asm-analysis-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-tree/9.9.1/b6b1b3366296163b4b1f540731aad0a2baa484d8/asm-tree-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm/9.9.1/2ceea6ab43bcae1979b2a6d85fc0ca429877e5ab/asm-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-netty-shaded/1.69.0/99aa9789172695a4b09fe2af5f5bd0ab1be4ae85/grpc-netty-shaded-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-protobuf/1.69.0/2990b4948357d4fe46aaecb47290cff102079f1e/grpc-protobuf-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-stub/1.69.0/9e7dc30a9c2df70e25ef4b941f46187e6e178e7a/grpc-stub-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-util/1.69.0/1929ab12fce0c610d9d7229b8767f6abb09ebd51/grpc-util-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-core/1.69.0/7dad3419dfb91a77788afcdf79e0477172784910/grpc-core-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-protobuf-lite/1.69.0/91711f27421babf868e424a64426fccb9e8bf6ec/grpc-protobuf-lite-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-context/1.69.0/cea23878872f76418dcd6df0c6eef0bf27463537/grpc-context-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-api/1.69.0/965c2c7f708cd6e6ddbf1eb175c3e87e96e41297/grpc-api-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/33.3.1-android/852f8b363da0111e819460021ca693cacca3e8db/guava-33.3.1-jre.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-metadata-jvm/2.3.0/7758780509972cf8338f06649cc5e4b11acc14e/kotlin-metadata-jvm-2.3.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.7/41eb7184ea9d556f23e18b5cb99cad1f8581fc00/slf4j-api-2.0.7.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-core/1.4.8/3fba9c105e0efc5ffdcda701379687917d5286f7/logback-core-1.4.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.api.grpc/proto-google-common-protos/2.48.0/86b550469172d830d174d7434c318d7dff179910/proto-google-common-protos-2.48.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.protobuf/protobuf-java/4.29.3/83afa847b893932b49a8fd896608fa23cd5fb0b5/protobuf-java-4.29.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/23.0.0/8cc20c07506ec18e0834947b84a864bfc094484e/annotations-23.0.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/failureaccess/1.0.2/c4a06a64e650562f30b7bf9aaec1bfed43aca12b/failureaccess-1.0.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/b421526c5f297295adef1c886e5246c39d4ac629/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.code.findbugs/jsr305/3.0.2/25ea2e8b0c338a877313bd4672d3fe056ea78f0d/jsr305-3.0.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.checkerframework/checker-qual/3.43.0/9425eee39e56b116d2b998b7c2cebcbd11a3c98b/checker-qual-3.43.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.11.0/527175ca6d81050b53bdd4c457a6d6e017626b0e/gson-2.11.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.errorprone/error_prone_annotations/2.30.0/ff171acb7fb9cbe2b9f50b391e1d52459d30ee62/error_prone_annotations-2.30.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.j2objc/j2objc-annotations/3.0.0/7399e65dd7e9ff3404f4535b2f017093bdb134c7/j2objc-annotations-3.0.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-compress/1.21/4ec95b60d4e86b5c95a0e919cb172a0af98011ef/commons-compress-1.21.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.perfmark/perfmark-api/0.27.0/f86f575a41b091786a4b027cd9c0c1d2e3fc1c01/perfmark-api-0.27.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/javax.annotation/javax.annotation-api/1.3.2/934c04d3cfef185a8008e7bf34331b79730a9d43/javax.annotation-api-1.3.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.codehaus.mojo/animal-sniffer-annotations/1.24/aa9ba58d30e0aad7f1808fce9c541ea3760678d8/animal-sniffer-annotations-1.24.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.android/annotations/4.1.1.4/a1678ba907bf92691d879fef34e1a187038f9259/annotations-4.1.1.4.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna/5.14.0/67bf3eaea4f0718cb376a181a629e5f88fa1c9dd/jna-5.14.0.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/test",
+      "org.jetbrains.kotlin.cli.jvm.K2JVMCompiler",
+      "-no-stdlib",
+      "-no-reflect",
+      "-classpath",
+      "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/classes/java/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/classes/kotlin/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/resources/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-dataflow/build/libs/opentaint-jvm-sast-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-go-querylang/build/libs/opentaint-go-querylang.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-java-querylang/build/libs/opentaint-java-querylang.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/libs/opentaint-jvm-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/opentaint-jvm-util/build/libs/opentaint-jvm-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/cli-util/build/libs/cli-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-project/build/libs/opentaint-jvm-sast-project.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-project-model/build/libs/opentaint-project-model.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-go-dataflow/build/libs/opentaint-go-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-config/go-config/build/libs/go-config.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-config/java-config/build/libs/java-config.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-go/build/libs/configuration-rules-go.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-jvm/build/libs/configuration-rules-jvm.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-se-api/build/libs/opentaint-jvm-sast-se-api.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-approximations/build/libs/opentaint-ir-approximations.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-core/build/libs/opentaint-ir-core.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-jvm/build/libs/opentaint-ir-api-jvm.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-storage/build/libs/opentaint-ir-storage.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-storage/build/libs/opentaint-ir-api-storage.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/go/go-ir-client/build/libs/go-ir-client.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/go/go-ir-api/build/libs/go-ir-api.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/libs/opentaint-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/common-util/build/libs/common-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-common/build/libs/configuration-rules-common.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-common/build/libs/opentaint-ir-api-common.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.xodus/xodus-utils/2.0.1/cc05cb08e8ee02cb1ccf44b039f33aad22bbe091/xodus-utils-2.0.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.microutils/kotlin-logging-jvm/3.0.5/82f2256aeedccfd9c27ea585274a50bf06517383/kotlin-logging-jvm-3.0.5.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.detekt.sarif4k/sarif4k-jvm/0.5.0/d3060993cd73b57ee61b260841bedcabb7dcbb02/sarif4k-jvm-0.5.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk7/2.1.0/d77bee6c7bc849e7b9bf4b83e94e8fd1dfc0ea8a/kotlin-stdlib-jdk7-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-reflect/2.1.0/dc3753b59b67d79b7d2f546d51e22a0ec1f082d8/kotlin-reflect-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-collections-immutable-jvm/0.3.8/6119a57df1ad662593dfe21954898183c6c933b4/kotlinx-collections-immutable-jvm-0.3.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.charleskorn.kaml/kaml-jvm/0.73.0/abeffe03e958d06cfa6496ecf7c3be9e566c33cf/kaml-jvm-0.73.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-core-jvm/1.7.3/1f226780b845ff9206474c05159245d861556249/kotlinx-serialization-core-jvm-1.7.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-json-jvm/1.7.3/6701e8c68d9e82387ce72ee96e8ddf058208d58f/kotlinx-serialization-json-jvm-1.7.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.clikt/clikt-jvm/5.0.0/baa4d11e7f7a68c077bce23a21db133d9a199812/clikt-mordant-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-kotlin-stub/1.4.1/dd41461deff6151ed6b5ddaf9ad369410931e195/grpc-kotlin-stub-1.4.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.protobuf/protobuf-kotlin/4.29.3/74a540084c44f770f69e6f07071f1af6daac51e0/protobuf-kotlin-4.29.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-core-jvm/1.10.1/fe066928754beda3d59c8282e04289546465a360/kotlinx-coroutines-core-jvm-1.10.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/it.krzeminski/snakeyaml-engine-kmp-jvm/3.1.1/542190d973fb66f3568fbcec1a3a8210e2f705dc/snakeyaml-engine-kmp-jvm-3.1.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.squareup.okio/okio-jvm/3.10.2/6a2cc3acd5a83e66075a2f6c5b0608b6043fa34c/okio-jvm-3.10.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.clikt/clikt-core-jvm/5.0.0/1bbee7b4d792ec86447900488397638214fa491a/clikt-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm/3.0.0/ce34373aa2e8f4ab8c3f229615676e7da88de2ad/mordant-omnibus-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/net.thauvin.erik.urlencoder/urlencoder-lib-jvm/1.6.0/6b922dd3ff960b08873c10395545e08355e250c9/urlencoder-lib-jvm-1.6.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-jna-jvm/3.0.0/bde15ea7842e9b77dec187390cde07bf6c15b14d/mordant-jvm-jna-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-ffm-jvm/3.0.0/96a8677a522395ae552719cfd050d5b9a47ecd8e/mordant-jvm-ffm-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-graal-ffi-jvm/3.0.0/e5c456bbad024da819bffde07a223ae6cb9582a3/mordant-jvm-graal-ffi-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-core-jvm/3.0.0/c1e712a55e6ca965522a809fef068d036a7600b7/mordant-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.colormath/colormath-jvm/3.6.0/d5593e3f07b2447bec0b17f5cb7141a0f0de9688/colormath-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.1.20/aa8ca79cd50578314f6d1180c47cbe14c0fee567/kotlin-stdlib-2.1.20.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk8/2.1.0/c4a51be16c840b969ed706bc25d5836b099d188a/kotlin-stdlib-jdk8-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/it.unimi.dsi/fastutil-core/8.5.13/dd3d3ed477b7c1aee8176f6684813f48304769f9/fastutil-core-8.5.13.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.zeroturnaround/zt-exec/1.12/51a8d135518365a169a8c94e074c7eaaf864e147/zt-exec-1.12.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.antlr/antlr4-runtime/4.9.3/81befc16ebedb8b8aea3e4c0835dd5ca7e8523a8/antlr4-runtime-4.9.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-classic/1.4.8/f00ba91d993e4d14301b11968d3cacc3be7ef3e1/logback-classic-1.4.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/info.leadinglight/jdot/1.0/8e84489791d7fe20bf1631e791152b554cfea4ba/jdot-1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/dk.brics.automaton/automaton/1.11-8/6ebfa65eb431ff4b715a23be7a750cbc4cc96d0f/automaton-1.11-8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-commons/9.9.1/ab35de4c537184a09339069f1a3b3aacf2289149/asm-commons-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-util/9.9.1/e51f5b0ae0b0c1960687ae970a2a3434d39d8abb/asm-util-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-analysis/9.9.1/1ab8d9316ef7a67240087919a708246c37ed1660/asm-analysis-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-tree/9.9.1/b6b1b3366296163b4b1f540731aad0a2baa484d8/asm-tree-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm/9.9.1/2ceea6ab43bcae1979b2a6d85fc0ca429877e5ab/asm-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-netty-shaded/1.69.0/99aa9789172695a4b09fe2af5f5bd0ab1be4ae85/grpc-netty-shaded-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-protobuf/1.69.0/2990b4948357d4fe46aaecb47290cff102079f1e/grpc-protobuf-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-stub/1.69.0/9e7dc30a9c2df70e25ef4b941f46187e6e178e7a/grpc-stub-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-util/1.69.0/1929ab12fce0c610d9d7229b8767f6abb09ebd51/grpc-util-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-core/1.69.0/7dad3419dfb91a77788afcdf79e0477172784910/grpc-core-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-protobuf-lite/1.69.0/91711f27421babf868e424a64426fccb9e8bf6ec/grpc-protobuf-lite-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-context/1.69.0/cea23878872f76418dcd6df0c6eef0bf27463537/grpc-context-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-api/1.69.0/965c2c7f708cd6e6ddbf1eb175c3e87e96e41297/grpc-api-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/33.3.1-android/852f8b363da0111e819460021ca693cacca3e8db/guava-33.3.1-jre.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.7/41eb7184ea9d556f23e18b5cb99cad1f8581fc00/slf4j-api-2.0.7.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-core/1.4.8/3fba9c105e0efc5ffdcda701379687917d5286f7/logback-core-1.4.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.api.grpc/proto-google-common-protos/2.48.0/86b550469172d830d174d7434c318d7dff179910/proto-google-common-protos-2.48.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.protobuf/protobuf-java/4.29.3/83afa847b893932b49a8fd896608fa23cd5fb0b5/protobuf-java-4.29.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/23.0.0/8cc20c07506ec18e0834947b84a864bfc094484e/annotations-23.0.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/failureaccess/1.0.2/c4a06a64e650562f30b7bf9aaec1bfed43aca12b/failureaccess-1.0.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/b421526c5f297295adef1c886e5246c39d4ac629/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.code.findbugs/jsr305/3.0.2/25ea2e8b0c338a877313bd4672d3fe056ea78f0d/jsr305-3.0.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.checkerframework/checker-qual/3.43.0/9425eee39e56b116d2b998b7c2cebcbd11a3c98b/checker-qual-3.43.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.11.0/527175ca6d81050b53bdd4c457a6d6e017626b0e/gson-2.11.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.errorprone/error_prone_annotations/2.30.0/ff171acb7fb9cbe2b9f50b391e1d52459d30ee62/error_prone_annotations-2.30.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.j2objc/j2objc-annotations/3.0.0/7399e65dd7e9ff3404f4535b2f017093bdb134c7/j2objc-annotations-3.0.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-compress/1.21/4ec95b60d4e86b5c95a0e919cb172a0af98011ef/commons-compress-1.21.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.perfmark/perfmark-api/0.27.0/f86f575a41b091786a4b027cd9c0c1d2e3fc1c01/perfmark-api-0.27.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/javax.annotation/javax.annotation-api/1.3.2/934c04d3cfef185a8008e7bf34331b79730a9d43/javax.annotation-api-1.3.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.codehaus.mojo/animal-sniffer-annotations/1.24/aa9ba58d30e0aad7f1808fce9c541ea3760678d8/animal-sniffer-annotations-1.24.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.android/annotations/4.1.1.4/a1678ba907bf92691d879fef34e1a187038f9259/annotations-4.1.1.4.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna/5.14.0/67bf3eaea4f0718cb376a181a629e5f88fa1c9dd/jna-5.14.0.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/test",
+      "-Xfriend-paths=/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/libs/opentaint-dataflow.jar",
+      "-jvm-target",
+      "17",
+      "-d",
+      "/drive-testcomp/opentaint-go-rules/loop-demand-trie-20261104/analysis-tools/same-direction-star-policy-20261105/reverse-at-classes",
+      "/drive-testcomp/opentaint-go-rules/loop-demand-trie-20261104/analysis-tools/same-direction-star-policy-20261105/NativeReverseMustAtProbe.kt"
+    ],
+    "compileExit": 0,
+    "runCommand": [
+      "/usr/lib/jvm/temurin-17-jdk-amd64/bin/java",
+      "-Xmx512m",
+      "-XX:ActiveProcessorCount=1",
+      "-cp",
+      "/drive-testcomp/opentaint-go-rules/loop-demand-trie-20261104/analysis-tools/same-direction-star-policy-20261105/reverse-at-classes:/drive-testcomp/opentaint-go-rules/loop-demand-trie-20261104/analysis-tools/same-direction-star-policy-20261105/classes:/drive-testcomp/opentaint-go-rules/loop-demand-trie-20261104/analysis-tools/star-inside-counterexample-20261104/classes:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/classes/java/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/classes/kotlin/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/resources/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-dataflow/build/libs/opentaint-jvm-sast-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-go-querylang/build/libs/opentaint-go-querylang.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-java-querylang/build/libs/opentaint-java-querylang.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/libs/opentaint-jvm-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/opentaint-jvm-util/build/libs/opentaint-jvm-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/cli-util/build/libs/cli-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-project/build/libs/opentaint-jvm-sast-project.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-project-model/build/libs/opentaint-project-model.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-go-dataflow/build/libs/opentaint-go-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-config/go-config/build/libs/go-config.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-config/java-config/build/libs/java-config.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-go/build/libs/configuration-rules-go.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-jvm/build/libs/configuration-rules-jvm.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-se-api/build/libs/opentaint-jvm-sast-se-api.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-approximations/build/libs/opentaint-ir-approximations.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-core/build/libs/opentaint-ir-core.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-jvm/build/libs/opentaint-ir-api-jvm.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-storage/build/libs/opentaint-ir-storage.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-storage/build/libs/opentaint-ir-api-storage.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/go/go-ir-client/build/libs/go-ir-client.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/go/go-ir-api/build/libs/go-ir-api.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/libs/opentaint-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/common-util/build/libs/common-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-common/build/libs/configuration-rules-common.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-common/build/libs/opentaint-ir-api-common.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.xodus/xodus-utils/2.0.1/cc05cb08e8ee02cb1ccf44b039f33aad22bbe091/xodus-utils-2.0.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.microutils/kotlin-logging-jvm/3.0.5/82f2256aeedccfd9c27ea585274a50bf06517383/kotlin-logging-jvm-3.0.5.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.detekt.sarif4k/sarif4k-jvm/0.5.0/d3060993cd73b57ee61b260841bedcabb7dcbb02/sarif4k-jvm-0.5.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk7/2.1.0/d77bee6c7bc849e7b9bf4b83e94e8fd1dfc0ea8a/kotlin-stdlib-jdk7-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-reflect/2.1.0/dc3753b59b67d79b7d2f546d51e22a0ec1f082d8/kotlin-reflect-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-collections-immutable-jvm/0.3.8/6119a57df1ad662593dfe21954898183c6c933b4/kotlinx-collections-immutable-jvm-0.3.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.charleskorn.kaml/kaml-jvm/0.73.0/abeffe03e958d06cfa6496ecf7c3be9e566c33cf/kaml-jvm-0.73.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-core-jvm/1.7.3/1f226780b845ff9206474c05159245d861556249/kotlinx-serialization-core-jvm-1.7.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-json-jvm/1.7.3/6701e8c68d9e82387ce72ee96e8ddf058208d58f/kotlinx-serialization-json-jvm-1.7.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.clikt/clikt-jvm/5.0.0/baa4d11e7f7a68c077bce23a21db133d9a199812/clikt-mordant-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-kotlin-stub/1.4.1/dd41461deff6151ed6b5ddaf9ad369410931e195/grpc-kotlin-stub-1.4.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.protobuf/protobuf-kotlin/4.29.3/74a540084c44f770f69e6f07071f1af6daac51e0/protobuf-kotlin-4.29.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-core-jvm/1.10.1/fe066928754beda3d59c8282e04289546465a360/kotlinx-coroutines-core-jvm-1.10.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/it.krzeminski/snakeyaml-engine-kmp-jvm/3.1.1/542190d973fb66f3568fbcec1a3a8210e2f705dc/snakeyaml-engine-kmp-jvm-3.1.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.squareup.okio/okio-jvm/3.10.2/6a2cc3acd5a83e66075a2f6c5b0608b6043fa34c/okio-jvm-3.10.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.clikt/clikt-core-jvm/5.0.0/1bbee7b4d792ec86447900488397638214fa491a/clikt-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm/3.0.0/ce34373aa2e8f4ab8c3f229615676e7da88de2ad/mordant-omnibus-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/net.thauvin.erik.urlencoder/urlencoder-lib-jvm/1.6.0/6b922dd3ff960b08873c10395545e08355e250c9/urlencoder-lib-jvm-1.6.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-jna-jvm/3.0.0/bde15ea7842e9b77dec187390cde07bf6c15b14d/mordant-jvm-jna-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-ffm-jvm/3.0.0/96a8677a522395ae552719cfd050d5b9a47ecd8e/mordant-jvm-ffm-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-graal-ffi-jvm/3.0.0/e5c456bbad024da819bffde07a223ae6cb9582a3/mordant-jvm-graal-ffi-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-core-jvm/3.0.0/c1e712a55e6ca965522a809fef068d036a7600b7/mordant-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.colormath/colormath-jvm/3.6.0/d5593e3f07b2447bec0b17f5cb7141a0f0de9688/colormath-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.1.20/aa8ca79cd50578314f6d1180c47cbe14c0fee567/kotlin-stdlib-2.1.20.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk8/2.1.0/c4a51be16c840b969ed706bc25d5836b099d188a/kotlin-stdlib-jdk8-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/it.unimi.dsi/fastutil-core/8.5.13/dd3d3ed477b7c1aee8176f6684813f48304769f9/fastutil-core-8.5.13.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.zeroturnaround/zt-exec/1.12/51a8d135518365a169a8c94e074c7eaaf864e147/zt-exec-1.12.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.antlr/antlr4-runtime/4.9.3/81befc16ebedb8b8aea3e4c0835dd5ca7e8523a8/antlr4-runtime-4.9.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-classic/1.4.8/f00ba91d993e4d14301b11968d3cacc3be7ef3e1/logback-classic-1.4.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/info.leadinglight/jdot/1.0/8e84489791d7fe20bf1631e791152b554cfea4ba/jdot-1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/dk.brics.automaton/automaton/1.11-8/6ebfa65eb431ff4b715a23be7a750cbc4cc96d0f/automaton-1.11-8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-commons/9.9.1/ab35de4c537184a09339069f1a3b3aacf2289149/asm-commons-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-util/9.9.1/e51f5b0ae0b0c1960687ae970a2a3434d39d8abb/asm-util-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-analysis/9.9.1/1ab8d9316ef7a67240087919a708246c37ed1660/asm-analysis-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-tree/9.9.1/b6b1b3366296163b4b1f540731aad0a2baa484d8/asm-tree-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm/9.9.1/2ceea6ab43bcae1979b2a6d85fc0ca429877e5ab/asm-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-netty-shaded/1.69.0/99aa9789172695a4b09fe2af5f5bd0ab1be4ae85/grpc-netty-shaded-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-protobuf/1.69.0/2990b4948357d4fe46aaecb47290cff102079f1e/grpc-protobuf-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-stub/1.69.0/9e7dc30a9c2df70e25ef4b941f46187e6e178e7a/grpc-stub-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-util/1.69.0/1929ab12fce0c610d9d7229b8767f6abb09ebd51/grpc-util-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-core/1.69.0/7dad3419dfb91a77788afcdf79e0477172784910/grpc-core-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-protobuf-lite/1.69.0/91711f27421babf868e424a64426fccb9e8bf6ec/grpc-protobuf-lite-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-context/1.69.0/cea23878872f76418dcd6df0c6eef0bf27463537/grpc-context-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-api/1.69.0/965c2c7f708cd6e6ddbf1eb175c3e87e96e41297/grpc-api-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/33.3.1-android/852f8b363da0111e819460021ca693cacca3e8db/guava-33.3.1-jre.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-metadata-jvm/2.3.0/7758780509972cf8338f06649cc5e4b11acc14e/kotlin-metadata-jvm-2.3.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.7/41eb7184ea9d556f23e18b5cb99cad1f8581fc00/slf4j-api-2.0.7.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-core/1.4.8/3fba9c105e0efc5ffdcda701379687917d5286f7/logback-core-1.4.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.api.grpc/proto-google-common-protos/2.48.0/86b550469172d830d174d7434c318d7dff179910/proto-google-common-protos-2.48.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.protobuf/protobuf-java/4.29.3/83afa847b893932b49a8fd896608fa23cd5fb0b5/protobuf-java-4.29.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/23.0.0/8cc20c07506ec18e0834947b84a864bfc094484e/annotations-23.0.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/failureaccess/1.0.2/c4a06a64e650562f30b7bf9aaec1bfed43aca12b/failureaccess-1.0.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/b421526c5f297295adef1c886e5246c39d4ac629/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.code.findbugs/jsr305/3.0.2/25ea2e8b0c338a877313bd4672d3fe056ea78f0d/jsr305-3.0.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.checkerframework/checker-qual/3.43.0/9425eee39e56b116d2b998b7c2cebcbd11a3c98b/checker-qual-3.43.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.11.0/527175ca6d81050b53bdd4c457a6d6e017626b0e/gson-2.11.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.errorprone/error_prone_annotations/2.30.0/ff171acb7fb9cbe2b9f50b391e1d52459d30ee62/error_prone_annotations-2.30.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.j2objc/j2objc-annotations/3.0.0/7399e65dd7e9ff3404f4535b2f017093bdb134c7/j2objc-annotations-3.0.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-compress/1.21/4ec95b60d4e86b5c95a0e919cb172a0af98011ef/commons-compress-1.21.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.perfmark/perfmark-api/0.27.0/f86f575a41b091786a4b027cd9c0c1d2e3fc1c01/perfmark-api-0.27.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/javax.annotation/javax.annotation-api/1.3.2/934c04d3cfef185a8008e7bf34331b79730a9d43/javax.annotation-api-1.3.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.codehaus.mojo/animal-sniffer-annotations/1.24/aa9ba58d30e0aad7f1808fce9c541ea3760678d8/animal-sniffer-annotations-1.24.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.android/annotations/4.1.1.4/a1678ba907bf92691d879fef34e1a187038f9259/annotations-4.1.1.4.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna/5.14.0/67bf3eaea4f0718cb376a181a629e5f88fa1c9dd/jna-5.14.0.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/test",
+      "org.opentaint.dataflow.bidi.external.NativeReverseMustAtProbeKt"
+    ],
+    "runExit": 0
+  },
+  "sourcePins": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": {
+      "sha256": "c4a2547aeb7e03d2daf13bc8fe811b3a4bc8026d74bd162a6cd3f06a9bbc90f0",
+      "workingTreeMatches": true
+    },
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Summary.kt": {
+      "sha256": "f21c80f317d08d9ffc70f86cef2138fb40cd16e7d0c02956700c3f507e32c24f",
+      "workingTreeMatches": true
+    },
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApOps.kt": {
+      "sha256": "9ecf5a0a403f8b0b76c5e0bfe79ca94ccba8eb9d5700bc18fb88c11f482d0dc4",
+      "workingTreeMatches": true
+    },
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/EdgeApplication.kt": {
+      "sha256": "a9dac26784fe001055bcb4a8fabae5ea88877941aab66c244bbc6d756850fcc5",
+      "workingTreeMatches": true
+    },
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/FlowBackedProtection.kt": {
+      "sha256": "babe4411354ceeaa06c169602c8bae726ae29b83ad979fb8febaa95a70f37d62",
+      "workingTreeMatches": true
+    },
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LocalRelationApplication.kt": {
+      "sha256": "19a1c9bc9fbdb846287e74085861bb51813ae1abfb0f1d518b368f5a6bc4aaf7",
+      "workingTreeMatches": true
+    },
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/PersistedSummaryReplay.kt": {
+      "sha256": "50378507fb19ece0d77e4a3536db84cfc614db60e4b81bbdc855798cceb305a7",
+      "workingTreeMatches": true
+    },
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SavedRecordSelection.kt": {
+      "sha256": "b9eeae938beb42fe346291d29342d642132c518ea04d14fd32a95fb6c7194240",
+      "workingTreeMatches": true
+    },
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RecordStore.kt": {
+      "sha256": "e4e201500932915628756d772752af13c2e24031d9708348b43e98849480baa4",
+      "workingTreeMatches": true
+    }
+  },
+  "classpathAudit": {
+    "method": "First matching system-classpath provider resolved from exact runCommand entries; no javaagent or custom loader. This is static classpath evidence, not per-run VM class-load logging.",
+    "providers": {
+      "org/opentaint/dataflow/bidi/ap/SummaryKt.class": {
+        "classpathProvider": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/libs/opentaint-dataflow.jar",
+        "jarSha256": "9c5bf1fef6fc7b146465c15748bc9933150383e6e13fb5034062dd90ef06f193",
+        "classSha256": "4a98b8c16c0a8cf5977c744eee54ac1a96c74cfba8403c7a4acb65eacb46760e"
+      },
+      "org/opentaint/dataflow/bidi/ap/ReferenceKt.class": {
+        "classpathProvider": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/libs/opentaint-dataflow.jar",
+        "jarSha256": "9c5bf1fef6fc7b146465c15748bc9933150383e6e13fb5034062dd90ef06f193",
+        "classSha256": "39f1d580348fe61b8e73f1fa5e35b54b0d471dc7a579222837d5e038af1843b6"
+      },
+      "org/opentaint/dataflow/bidi/ap/ApOps.class": {
+        "classpathProvider": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/libs/opentaint-dataflow.jar",
+        "jarSha256": "9c5bf1fef6fc7b146465c15748bc9933150383e6e13fb5034062dd90ef06f193",
+        "classSha256": "176c2a444d867e579bda496978d335aa5efa491a1fd1e3a302b4da617a678ac5"
+      },
+      "org/opentaint/dataflow/bidi/ap/EdgeApplication.class": {
+        "classpathProvider": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/libs/opentaint-dataflow.jar",
+        "jarSha256": "9c5bf1fef6fc7b146465c15748bc9933150383e6e13fb5034062dd90ef06f193",
+        "classSha256": "95f7eaa463062cf65bceb649f63a4c920ceec15d8c3a12bbd068dffacc5e5a61"
+      },
+      "org/opentaint/dataflow/bidi/engine/LocalRelationApplication.class": {
+        "classpathProvider": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/libs/opentaint-dataflow.jar",
+        "jarSha256": "9c5bf1fef6fc7b146465c15748bc9933150383e6e13fb5034062dd90ef06f193",
+        "classSha256": "98b85eab18d8f44efcb91964983622ae7cc49b603285c91b4edce2e5b6f54e22"
+      },
+      "org/opentaint/dataflow/bidi/fixtures/StoreFixtures.class": {
+        "classpathProvider": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/test",
+        "classSha256": "d5a9f3dce34119c5e76fb0605a05bafbadbaa4d404b2d0f12cb5c2f29e73a8cb"
+      }
+    }
+  },
+  "portableAssets": {
+    "native-overlap-Probe.kt": {
+      "sha256": "68ae0026b764b41ba0983e20f186973d09ef1245617bce62c8f832f9e51b7f09",
+      "bytes": 6572,
+      "text": "package org.opentaint.dataflow.bidi.external\nimport org.opentaint.dataflow.ap.ifds.AccessPathBase\nimport org.opentaint.dataflow.bidi.ap.*\nimport org.opentaint.dataflow.bidi.fixtures.StoreFixtures\nimport org.opentaint.dataflow.bidi.store.*\nimport org.opentaint.dataflow.graph.*\n\nprivate fun quote(s: String): String = \"\\\"\" + s.replace(\"\\\\\", \"\\\\\\\\\").replace(\"\\\"\", \"\\\\\\\"\") + \"\\\"\"\nprivate fun json(x: Any?): String = when(x) {\n null -> \"null\"; is String -> quote(x); is Boolean, is Number -> x.toString()\n is Map<*, *> -> x.entries.joinToString(\",\", \"{\", \"}\") { quote(it.key.toString()) + \":\" + json(it.value) }\n is Iterable<*> -> x.joinToString(\",\", \"[\", \"]\") { json(it) }; else -> error(\"JSON\")\n}\nfun main() {\n val f = StoreFixtures(); val ap = f.manager; val ops = f.ops\n val p = AccessPathBase.Argument(0); val q = AccessPathBase.Return\n val aa = f.field(\"prefixA\"); val bb = f.field(\"prefixB\")\n val gg = f.field(\"actualExcludedG\"); val hh = f.field(\"storedExcludedH\"); val ii = f.field(\"oldInputExcludedI\")\n val t = f.mark(\"T\"); val u = f.mark(\"U\")\n val old = ap.initial(f.pattern(p, listOf(aa,bb), Tail.ANY_TAINT, MarkSlot.STAR, ExclusionSet.of(ii)))\n val output = f.fact(q, tail=Tail.ANY_TAINT, mark=MarkSlot.Star(MarkExclusions.of(ap.marks,listOf(u))), exclusion=ExclusionSet.of(hh))\n val record = Record(f.method, Direction.FORWARD, old, output, BlockScope(BlockId(2),PortId(20)), PortId(80))\n val mode = ApMode(false,Direction.BACKWARD,5)\n fun desc(x: Facts) = linkedMapOf(\"layer\" to x.layer.name, \"rows\" to ops.leaves(x).map { pat -> linkedMapOf(\"base\" to pat.fact.base.toString(),\"path\" to pat.fact.path,\"tail\" to pat.fact.tail.name,\"mark\" to pat.fact.mark.toString(),\"E\" to pat.exclusion.toString()) }.toList())\n fun nativeApply(actual: Facts, view: RecordLeafView): Pair<List<Facts>,List<Int>> {\n  val results=ArrayList<Facts>();val requests=ArrayList<Int>()\n  ops.applyRecordLeaf(actual,view,false,mode,object:ApOut {\n   override fun result(fact:Facts) { results += fact }\n   override fun markRequest(mark:TaintMark) { requests += mark.id }\n  }, original=ap.initial(f.pattern(q, tail=Tail.STAR, mark=MarkSlot.STAR)))\n  return results to requests\n }\n val cases = ArrayList<Map<String,Any?>>()\n for ((name,tail,layer) in listOf(Triple(\"STAR FLOW\",Tail.STAR,Layer.NORMAL),Triple(\"MAY FLOW\",Tail.ANY,Layer.DEMAND),Triple(\"MUST FLOW\",Tail.ANY_TAINT,Layer.NORMAL))) {\n  val actual=f.fact(q,tail=tail,mark=MarkSlot.Star(MarkExclusions.of(ap.marks,listOf(t))),exclusion=if(tail==Tail.ANY)ExclusionSet.Empty else ExclusionSet.of(gg),layer=layer)\n  var view:RecordLeafView?=null\n  record.forEachReversedAt(ops.leaves(actual).single()) { v,_ -> check(view==null);view=v }\n  val v=checkNotNull(view)\n  val matched=ops.satisfying(actual,v.premise,mode,record=true)\n  val raw=nativeApply(actual,v)\n  val narrowed=if(tail==Tail.STAR) f.fact(q,tail=tail,mark=MarkSlot.Star(MarkExclusions.of(ap.marks,listOf(t))),exclusion=ExclusionSet.of(intArrayOf(gg,hh)),layer=layer) else actual\n  val projectionSelected=ops.satisfying(narrowed,v.premise,mode,record=true)\n  if(tail==Tail.STAR) check(projectionSelected!=null)\n  val projected=nativeApply(projectionSelected ?: narrowed,v)\n  check(raw.second.isEmpty() && projected.second.isEmpty())\n  check(raw.first.single()==projected.first.single())\n  check(raw.first.single().layer==Layer.DEMAND)\n  val leaf=ops.leaves(raw.first.single()).single()\n  check(leaf.fact.base==p && leaf.fact.path==listOf(aa,bb) && leaf.fact.tail==Tail.ANY && leaf.exclusion==ExclusionSet.Empty)\n  check((leaf.fact.mark as MarkSlot.Star).excluded==MarkExclusions.of(ap.marks,listOf(t,u)))\n  if(tail==Tail.STAR)check(matched==null)\n  cases += linkedMapOf(\"actualKind\" to name,\"nativeSelection\" to matched?.let(::desc),\"actual\" to desc(actual),\"viewPremise\" to v.premise.toString(),\"viewResult\" to v.result.toString(),\"nativeRawApplyOutputs\" to raw.first.map(::desc),\"intersectionActual\" to desc(narrowed),\"nativeIntersectionSelection\" to projectionSelected?.let(::desc),\"nativeIntersectionApplyOutputs\" to projected.first.map(::desc),\"requests\" to raw.second)\n }\n val concrete = ArrayList<Map<String,Any?>>()\n for (oldTail in listOf(Tail.EXACT,Tail.ANY_TAINT)) for (actualLayer in listOf(Layer.NORMAL,Layer.DEMAND)) {\n  val oldP=ap.initial(f.pattern(p,listOf(aa,bb),oldTail,MarkSlot.Concrete(t),if(oldTail==Tail.ANY_TAINT)ExclusionSet.of(ii) else ExclusionSet.Empty))\n  val oldG=f.fact(q,tail=Tail.ANY_TAINT,mark=MarkSlot.Concrete(t),exclusion=ExclusionSet.of(hh))\n  val r=Record(f.method,Direction.FORWARD,oldP,oldG)\n  val rawPlain=f.fact(q,tail=Tail.STAR,mark=MarkSlot.Concrete(t),exclusion=ExclusionSet.of(gg),layer=actualLayer) as TaintTree\n  val raw=rawPlain.withProtection(rawPlain.root)\n  val projectedPlain=f.fact(q,tail=Tail.STAR,mark=MarkSlot.Concrete(t),exclusion=ExclusionSet.of(intArrayOf(gg,hh)),layer=actualLayer) as TaintTree\n  val projection=projectedPlain.withProtection(rawPlain.root)\n  var read:RecordLeafView?=null\n  r.forEachReversedAt(ops.leaves(raw).single()) { v,_ -> check(read==null);read=v }\n  val v=checkNotNull(read)\n  check(ops.satisfying(raw,v.premise,mode,record=true)==null)\n  val matched=checkNotNull(ops.satisfying(projection,v.premise,mode,record=true))\n  val oldApp=nativeApply(raw,v)\n  val bridgeApp=nativeApply(matched,v)\n  check(oldApp.first.single()==bridgeApp.first.single())\n  val out=bridgeApp.first.single()\n  check(out.layer==if(oldTail==Tail.ANY_TAINT)Layer.DEMAND else actualLayer)\n  check((out as TaintTree).nonSubsumable!=null)\n  concrete += linkedMapOf(\"oldPremise\" to oldP.toString(),\"oldOutput\" to desc(oldG),\"actual\" to desc(raw),\"actualProtected\" to true,\"nativeOldSelection\" to null,\"projectedActual\" to desc(projection),\"nativeProjectedSelection\" to desc(matched),\"viewPremise\" to v.premise.toString(),\"viewResult\" to v.result.toString(),\"nativeRawApplyOutputs\" to oldApp.first.map(::desc),\"nativeBridgeOutputs\" to bridgeApp.first.map(::desc),\"protectionPreserved\" to true,\"requests\" to bridgeApp.second)\n }\n println(json(linkedMapOf(\"state\" to \"PASS\",\"cases\" to cases,\"concreteCases\" to concrete,\"sourceRecord\" to linkedMapOf(\"producerDirection\" to record.direction.name,\"P\" to old.toString(),\"output\" to desc(output),\"scope\" to record.scope.toString(),\"exit\" to record.exit.toString(),\"readerScope\" to record.scopeIn(mode.direction).toString(),\"readerExit\" to record.exitIn(mode.direction).toString()),\"limits\" to \"Native AP application only; direct invocation deliberately bypasses old rejected Summary selector to test the proposed overlap adapter path; no production changes or project run.\")))\n}\n"
+    },
+    "native-overlap-output.json": {
+      "sha256": "64e4c9616867c5341674f4b1cdbc704b4d8a51cfcce8cab6c661aa3621073161",
+      "bytes": 8696,
+      "text": "{\"state\":\"PASS\",\"cases\":[{\"actualKind\":\"STAR FLOW\",\"nativeSelection\":null,\"actual\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"STAR\",\"mark\":\"Star(excluded={1})\",\"E\":\"{8}\"}]},\"viewPremise\":\"Pattern(fact=PathFact(base=ret, path=[], tail=STAR, mark=Star(excluded={})), exclusion={12})\",\"viewResult\":\"Conclusion(fact=PathFact(base=arg(0), path=[0, 4], tail=ANY, mark=Star(excluded={2})), exclusion=Empty, demand=true)\",\"nativeRawApplyOutputs\":[{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"arg(0)\",\"path\":[0,4],\"tail\":\"ANY\",\"mark\":\"Star(excluded={1, 2})\",\"E\":\"Empty\"}]}],\"intersectionActual\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"STAR\",\"mark\":\"Star(excluded={1})\",\"E\":\"{8, 12}\"}]},\"nativeIntersectionSelection\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"STAR\",\"mark\":\"Star(excluded={1})\",\"E\":\"{8, 12}\"}]},\"nativeIntersectionApplyOutputs\":[{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"arg(0)\",\"path\":[0,4],\"tail\":\"ANY\",\"mark\":\"Star(excluded={1, 2})\",\"E\":\"Empty\"}]}],\"requests\":[]},{\"actualKind\":\"MAY FLOW\",\"nativeSelection\":{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"ANY\",\"mark\":\"Star(excluded={1})\",\"E\":\"Empty\"}]},\"actual\":{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"ANY\",\"mark\":\"Star(excluded={1})\",\"E\":\"Empty\"}]},\"viewPremise\":\"Pattern(fact=PathFact(base=ret, path=[], tail=STAR, mark=Star(excluded={})), exclusion={12})\",\"viewResult\":\"Conclusion(fact=PathFact(base=arg(0), path=[0, 4], tail=ANY, mark=Star(excluded={2})), exclusion=Empty, demand=true)\",\"nativeRawApplyOutputs\":[{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"arg(0)\",\"path\":[0,4],\"tail\":\"ANY\",\"mark\":\"Star(excluded={1, 2})\",\"E\":\"Empty\"}]}],\"intersectionActual\":{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"ANY\",\"mark\":\"Star(excluded={1})\",\"E\":\"Empty\"}]},\"nativeIntersectionSelection\":{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"ANY\",\"mark\":\"Star(excluded={1})\",\"E\":\"Empty\"}]},\"nativeIntersectionApplyOutputs\":[{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"arg(0)\",\"path\":[0,4],\"tail\":\"ANY\",\"mark\":\"Star(excluded={1, 2})\",\"E\":\"Empty\"}]}],\"requests\":[]},{\"actualKind\":\"MUST FLOW\",\"nativeSelection\":null,\"actual\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"ANY_TAINT\",\"mark\":\"Star(excluded={1})\",\"E\":\"{8}\"}]},\"viewPremise\":\"Pattern(fact=PathFact(base=ret, path=[], tail=STAR, mark=Star(excluded={})), exclusion={12})\",\"viewResult\":\"Conclusion(fact=PathFact(base=arg(0), path=[0, 4], tail=ANY, mark=Star(excluded={2})), exclusion=Empty, demand=true)\",\"nativeRawApplyOutputs\":[{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"arg(0)\",\"path\":[0,4],\"tail\":\"ANY\",\"mark\":\"Star(excluded={1, 2})\",\"E\":\"Empty\"}]}],\"intersectionActual\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"ANY_TAINT\",\"mark\":\"Star(excluded={1})\",\"E\":\"{8}\"}]},\"nativeIntersectionSelection\":null,\"nativeIntersectionApplyOutputs\":[{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"arg(0)\",\"path\":[0,4],\"tail\":\"ANY\",\"mark\":\"Star(excluded={1, 2})\",\"E\":\"Empty\"}]}],\"requests\":[]}],\"concreteCases\":[{\"oldPremise\":\"org.opentaint.dataflow.bidi.ap.InitialAp@544fe44c\",\"oldOutput\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"ANY_TAINT\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{12}\"}]},\"actual\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"STAR\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{8}\"}]},\"actualProtected\":true,\"nativeOldSelection\":null,\"projectedActual\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"STAR\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{8, 12}\"}]},\"nativeProjectedSelection\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"STAR\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{8, 12}\"}]},\"viewPremise\":\"Pattern(fact=PathFact(base=ret, path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=1))), exclusion={12})\",\"viewResult\":\"Conclusion(fact=PathFact(base=arg(0), path=[0, 4], tail=EXACT, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty, demand=false)\",\"nativeRawApplyOutputs\":[{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"arg(0)\",\"path\":[0,4],\"tail\":\"EXACT\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"Empty\"}]}],\"nativeBridgeOutputs\":[{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"arg(0)\",\"path\":[0,4],\"tail\":\"EXACT\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"Empty\"}]}],\"protectionPreserved\":true,\"requests\":[]},{\"oldPremise\":\"org.opentaint.dataflow.bidi.ap.InitialAp@544fe44c\",\"oldOutput\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"ANY_TAINT\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{12}\"}]},\"actual\":{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"STAR\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{8}\"}]},\"actualProtected\":true,\"nativeOldSelection\":null,\"projectedActual\":{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"STAR\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{8, 12}\"}]},\"nativeProjectedSelection\":{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"STAR\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{8, 12}\"}]},\"viewPremise\":\"Pattern(fact=PathFact(base=ret, path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=1))), exclusion={12})\",\"viewResult\":\"Conclusion(fact=PathFact(base=arg(0), path=[0, 4], tail=EXACT, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty, demand=false)\",\"nativeRawApplyOutputs\":[{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"arg(0)\",\"path\":[0,4],\"tail\":\"EXACT\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"Empty\"}]}],\"nativeBridgeOutputs\":[{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"arg(0)\",\"path\":[0,4],\"tail\":\"EXACT\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"Empty\"}]}],\"protectionPreserved\":true,\"requests\":[]},{\"oldPremise\":\"org.opentaint.dataflow.bidi.ap.InitialAp@5abca1e0\",\"oldOutput\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"ANY_TAINT\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{12}\"}]},\"actual\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"STAR\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{8}\"}]},\"actualProtected\":true,\"nativeOldSelection\":null,\"projectedActual\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"STAR\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{8, 12}\"}]},\"nativeProjectedSelection\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"STAR\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{8, 12}\"}]},\"viewPremise\":\"Pattern(fact=PathFact(base=ret, path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=1))), exclusion={12})\",\"viewResult\":\"Conclusion(fact=PathFact(base=arg(0), path=[0, 4], tail=ANY, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty, demand=true)\",\"nativeRawApplyOutputs\":[{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"arg(0)\",\"path\":[0,4],\"tail\":\"ANY\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"Empty\"}]}],\"nativeBridgeOutputs\":[{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"arg(0)\",\"path\":[0,4],\"tail\":\"ANY\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"Empty\"}]}],\"protectionPreserved\":true,\"requests\":[]},{\"oldPremise\":\"org.opentaint.dataflow.bidi.ap.InitialAp@5abca1e0\",\"oldOutput\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"ANY_TAINT\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{12}\"}]},\"actual\":{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"STAR\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{8}\"}]},\"actualProtected\":true,\"nativeOldSelection\":null,\"projectedActual\":{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"STAR\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{8, 12}\"}]},\"nativeProjectedSelection\":{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"STAR\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"{8, 12}\"}]},\"viewPremise\":\"Pattern(fact=PathFact(base=ret, path=[], tail=STAR, mark=Concrete(mark=TaintMark(id=1))), exclusion={12})\",\"viewResult\":\"Conclusion(fact=PathFact(base=arg(0), path=[0, 4], tail=ANY, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty, demand=true)\",\"nativeRawApplyOutputs\":[{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"arg(0)\",\"path\":[0,4],\"tail\":\"ANY\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"Empty\"}]}],\"nativeBridgeOutputs\":[{\"layer\":\"DEMAND\",\"rows\":[{\"base\":\"arg(0)\",\"path\":[0,4],\"tail\":\"ANY\",\"mark\":\"Concrete(mark=TaintMark(id=1))\",\"E\":\"Empty\"}]}],\"protectionPreserved\":true,\"requests\":[]}],\"sourceRecord\":{\"producerDirection\":\"FORWARD\",\"P\":\"org.opentaint.dataflow.bidi.ap.InitialAp@63753b6d\",\"output\":{\"layer\":\"NORMAL\",\"rows\":[{\"base\":\"ret\",\"path\":[],\"tail\":\"ANY_TAINT\",\"mark\":\"Star(excluded={2})\",\"E\":\"{12}\"}]},\"scope\":\"BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=20))\",\"exit\":\"PortId(ordinal=80)\",\"readerScope\":\"BlockScope(block=BlockId(ordinal=2), entry=PortId(ordinal=80))\",\"readerExit\":\"PortId(ordinal=20)\"},\"limits\":\"Native AP application only; direct invocation deliberately bypasses old rejected Summary selector to test the proposed overlap adapter path; no production changes or project run.\"}\n"
+    },
+    "native-overlap-manifest.json": {
+      "sha256": "57ed03c86855e1ee1bf1593d5ed24ffcb3f39f9fb7fb8e9975b45197ee75333c",
+      "bytes": 41744,
+      "text": "{\n  \"compileCommand\": [\n    \"/usr/lib/jvm/temurin-17-jdk-amd64/bin/java\",\n    \"-Xmx512m\",\n    \"-XX:ActiveProcessorCount=1\",\n    \"-cp\",\n    \"/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-compiler-embeddable/2.1.0/988bf980588bbbcfa1ba19c1ffd7aa869b335a31/kotlin-compiler-embeddable-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.1.0/85f8b81009cda5890e54ba67d64b5e599c645020/kotlin-stdlib-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-script-runtime/2.1.0/5909da8c57b75a117714ab0e348c86101b7a3284/kotlin-script-runtime-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-reflect/2.1.0/dc3753b59b67d79b7d2f546d51e22a0ec1f082d8/kotlin-reflect-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.intellij.deps/trove4j/1.0.20200330/3afb14d5f9ceb459d724e907a21145e8ff394f02/trove4j-1.0.20200330.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/classes/java/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/classes/kotlin/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/resources/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-dataflow/build/libs/opentaint-jvm-sast-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-go-querylang/build/libs/opentaint-go-querylang.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-java-querylang/build/libs/opentaint-java-querylang.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/libs/opentaint-jvm-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/opentaint-jvm-util/build/libs/opentaint-jvm-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/cli-util/build/libs/cli-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-project/build/libs/opentaint-jvm-sast-project.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-project-model/build/libs/opentaint-project-model.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-go-dataflow/build/libs/opentaint-go-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-config/go-config/build/libs/go-config.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-config/java-config/build/libs/java-config.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-go/build/libs/configuration-rules-go.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-jvm/build/libs/configuration-rules-jvm.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-se-api/build/libs/opentaint-jvm-sast-se-api.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-approximations/build/libs/opentaint-ir-approximations.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-core/build/libs/opentaint-ir-core.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-jvm/build/libs/opentaint-ir-api-jvm.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-storage/build/libs/opentaint-ir-storage.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-storage/build/libs/opentaint-ir-api-storage.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/go/go-ir-client/build/libs/go-ir-client.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/go/go-ir-api/build/libs/go-ir-api.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/libs/opentaint-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/common-util/build/libs/common-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-common/build/libs/configuration-rules-common.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-common/build/libs/opentaint-ir-api-common.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.xodus/xodus-utils/2.0.1/cc05cb08e8ee02cb1ccf44b039f33aad22bbe091/xodus-utils-2.0.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.microutils/kotlin-logging-jvm/3.0.5/82f2256aeedccfd9c27ea585274a50bf06517383/kotlin-logging-jvm-3.0.5.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.detekt.sarif4k/sarif4k-jvm/0.5.0/d3060993cd73b57ee61b260841bedcabb7dcbb02/sarif4k-jvm-0.5.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk7/2.1.0/d77bee6c7bc849e7b9bf4b83e94e8fd1dfc0ea8a/kotlin-stdlib-jdk7-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-reflect/2.1.0/dc3753b59b67d79b7d2f546d51e22a0ec1f082d8/kotlin-reflect-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-collections-immutable-jvm/0.3.8/6119a57df1ad662593dfe21954898183c6c933b4/kotlinx-collections-immutable-jvm-0.3.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.charleskorn.kaml/kaml-jvm/0.73.0/abeffe03e958d06cfa6496ecf7c3be9e566c33cf/kaml-jvm-0.73.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-core-jvm/1.7.3/1f226780b845ff9206474c05159245d861556249/kotlinx-serialization-core-jvm-1.7.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-json-jvm/1.7.3/6701e8c68d9e82387ce72ee96e8ddf058208d58f/kotlinx-serialization-json-jvm-1.7.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.clikt/clikt-jvm/5.0.0/baa4d11e7f7a68c077bce23a21db133d9a199812/clikt-mordant-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-kotlin-stub/1.4.1/dd41461deff6151ed6b5ddaf9ad369410931e195/grpc-kotlin-stub-1.4.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.protobuf/protobuf-kotlin/4.29.3/74a540084c44f770f69e6f07071f1af6daac51e0/protobuf-kotlin-4.29.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-core-jvm/1.10.1/fe066928754beda3d59c8282e04289546465a360/kotlinx-coroutines-core-jvm-1.10.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/it.krzeminski/snakeyaml-engine-kmp-jvm/3.1.1/542190d973fb66f3568fbcec1a3a8210e2f705dc/snakeyaml-engine-kmp-jvm-3.1.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.squareup.okio/okio-jvm/3.10.2/6a2cc3acd5a83e66075a2f6c5b0608b6043fa34c/okio-jvm-3.10.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.clikt/clikt-core-jvm/5.0.0/1bbee7b4d792ec86447900488397638214fa491a/clikt-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm/3.0.0/ce34373aa2e8f4ab8c3f229615676e7da88de2ad/mordant-omnibus-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/net.thauvin.erik.urlencoder/urlencoder-lib-jvm/1.6.0/6b922dd3ff960b08873c10395545e08355e250c9/urlencoder-lib-jvm-1.6.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-jna-jvm/3.0.0/bde15ea7842e9b77dec187390cde07bf6c15b14d/mordant-jvm-jna-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-ffm-jvm/3.0.0/96a8677a522395ae552719cfd050d5b9a47ecd8e/mordant-jvm-ffm-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-graal-ffi-jvm/3.0.0/e5c456bbad024da819bffde07a223ae6cb9582a3/mordant-jvm-graal-ffi-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-core-jvm/3.0.0/c1e712a55e6ca965522a809fef068d036a7600b7/mordant-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.colormath/colormath-jvm/3.6.0/d5593e3f07b2447bec0b17f5cb7141a0f0de9688/colormath-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.1.20/aa8ca79cd50578314f6d1180c47cbe14c0fee567/kotlin-stdlib-2.1.20.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk8/2.1.0/c4a51be16c840b969ed706bc25d5836b099d188a/kotlin-stdlib-jdk8-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/it.unimi.dsi/fastutil-core/8.5.13/dd3d3ed477b7c1aee8176f6684813f48304769f9/fastutil-core-8.5.13.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.zeroturnaround/zt-exec/1.12/51a8d135518365a169a8c94e074c7eaaf864e147/zt-exec-1.12.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.antlr/antlr4-runtime/4.9.3/81befc16ebedb8b8aea3e4c0835dd5ca7e8523a8/antlr4-runtime-4.9.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-classic/1.4.8/f00ba91d993e4d14301b11968d3cacc3be7ef3e1/logback-classic-1.4.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/info.leadinglight/jdot/1.0/8e84489791d7fe20bf1631e791152b554cfea4ba/jdot-1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/dk.brics.automaton/automaton/1.11-8/6ebfa65eb431ff4b715a23be7a750cbc4cc96d0f/automaton-1.11-8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-commons/9.9.1/ab35de4c537184a09339069f1a3b3aacf2289149/asm-commons-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-util/9.9.1/e51f5b0ae0b0c1960687ae970a2a3434d39d8abb/asm-util-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-analysis/9.9.1/1ab8d9316ef7a67240087919a708246c37ed1660/asm-analysis-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-tree/9.9.1/b6b1b3366296163b4b1f540731aad0a2baa484d8/asm-tree-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm/9.9.1/2ceea6ab43bcae1979b2a6d85fc0ca429877e5ab/asm-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-netty-shaded/1.69.0/99aa9789172695a4b09fe2af5f5bd0ab1be4ae85/grpc-netty-shaded-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-protobuf/1.69.0/2990b4948357d4fe46aaecb47290cff102079f1e/grpc-protobuf-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-stub/1.69.0/9e7dc30a9c2df70e25ef4b941f46187e6e178e7a/grpc-stub-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-util/1.69.0/1929ab12fce0c610d9d7229b8767f6abb09ebd51/grpc-util-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-core/1.69.0/7dad3419dfb91a77788afcdf79e0477172784910/grpc-core-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-protobuf-lite/1.69.0/91711f27421babf868e424a64426fccb9e8bf6ec/grpc-protobuf-lite-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-context/1.69.0/cea23878872f76418dcd6df0c6eef0bf27463537/grpc-context-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-api/1.69.0/965c2c7f708cd6e6ddbf1eb175c3e87e96e41297/grpc-api-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/33.3.1-android/852f8b363da0111e819460021ca693cacca3e8db/guava-33.3.1-jre.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-metadata-jvm/2.3.0/7758780509972cf8338f06649cc5e4b11acc14e/kotlin-metadata-jvm-2.3.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.7/41eb7184ea9d556f23e18b5cb99cad1f8581fc00/slf4j-api-2.0.7.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-core/1.4.8/3fba9c105e0efc5ffdcda701379687917d5286f7/logback-core-1.4.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.api.grpc/proto-google-common-protos/2.48.0/86b550469172d830d174d7434c318d7dff179910/proto-google-common-protos-2.48.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.protobuf/protobuf-java/4.29.3/83afa847b893932b49a8fd896608fa23cd5fb0b5/protobuf-java-4.29.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/23.0.0/8cc20c07506ec18e0834947b84a864bfc094484e/annotations-23.0.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/failureaccess/1.0.2/c4a06a64e650562f30b7bf9aaec1bfed43aca12b/failureaccess-1.0.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/b421526c5f297295adef1c886e5246c39d4ac629/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.code.findbugs/jsr305/3.0.2/25ea2e8b0c338a877313bd4672d3fe056ea78f0d/jsr305-3.0.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.checkerframework/checker-qual/3.43.0/9425eee39e56b116d2b998b7c2cebcbd11a3c98b/checker-qual-3.43.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.11.0/527175ca6d81050b53bdd4c457a6d6e017626b0e/gson-2.11.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.errorprone/error_prone_annotations/2.30.0/ff171acb7fb9cbe2b9f50b391e1d52459d30ee62/error_prone_annotations-2.30.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.j2objc/j2objc-annotations/3.0.0/7399e65dd7e9ff3404f4535b2f017093bdb134c7/j2objc-annotations-3.0.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-compress/1.21/4ec95b60d4e86b5c95a0e919cb172a0af98011ef/commons-compress-1.21.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.perfmark/perfmark-api/0.27.0/f86f575a41b091786a4b027cd9c0c1d2e3fc1c01/perfmark-api-0.27.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/javax.annotation/javax.annotation-api/1.3.2/934c04d3cfef185a8008e7bf34331b79730a9d43/javax.annotation-api-1.3.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.codehaus.mojo/animal-sniffer-annotations/1.24/aa9ba58d30e0aad7f1808fce9c541ea3760678d8/animal-sniffer-annotations-1.24.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.android/annotations/4.1.1.4/a1678ba907bf92691d879fef34e1a187038f9259/annotations-4.1.1.4.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna/5.14.0/67bf3eaea4f0718cb376a181a629e5f88fa1c9dd/jna-5.14.0.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/test\",\n    \"org.jetbrains.kotlin.cli.jvm.K2JVMCompiler\",\n    \"-no-stdlib\",\n    \"-no-reflect\",\n    \"-classpath\",\n    \"/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/classes/java/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/classes/kotlin/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/resources/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-dataflow/build/libs/opentaint-jvm-sast-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-go-querylang/build/libs/opentaint-go-querylang.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-java-querylang/build/libs/opentaint-java-querylang.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/libs/opentaint-jvm-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/opentaint-jvm-util/build/libs/opentaint-jvm-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/cli-util/build/libs/cli-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-project/build/libs/opentaint-jvm-sast-project.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-project-model/build/libs/opentaint-project-model.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-go-dataflow/build/libs/opentaint-go-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-config/go-config/build/libs/go-config.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-config/java-config/build/libs/java-config.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-go/build/libs/configuration-rules-go.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-jvm/build/libs/configuration-rules-jvm.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-se-api/build/libs/opentaint-jvm-sast-se-api.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-approximations/build/libs/opentaint-ir-approximations.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-core/build/libs/opentaint-ir-core.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-jvm/build/libs/opentaint-ir-api-jvm.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-storage/build/libs/opentaint-ir-storage.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-storage/build/libs/opentaint-ir-api-storage.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/go/go-ir-client/build/libs/go-ir-client.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/go/go-ir-api/build/libs/go-ir-api.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/libs/opentaint-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/common-util/build/libs/common-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-common/build/libs/configuration-rules-common.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-common/build/libs/opentaint-ir-api-common.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.xodus/xodus-utils/2.0.1/cc05cb08e8ee02cb1ccf44b039f33aad22bbe091/xodus-utils-2.0.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.microutils/kotlin-logging-jvm/3.0.5/82f2256aeedccfd9c27ea585274a50bf06517383/kotlin-logging-jvm-3.0.5.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.detekt.sarif4k/sarif4k-jvm/0.5.0/d3060993cd73b57ee61b260841bedcabb7dcbb02/sarif4k-jvm-0.5.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk7/2.1.0/d77bee6c7bc849e7b9bf4b83e94e8fd1dfc0ea8a/kotlin-stdlib-jdk7-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-reflect/2.1.0/dc3753b59b67d79b7d2f546d51e22a0ec1f082d8/kotlin-reflect-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-collections-immutable-jvm/0.3.8/6119a57df1ad662593dfe21954898183c6c933b4/kotlinx-collections-immutable-jvm-0.3.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.charleskorn.kaml/kaml-jvm/0.73.0/abeffe03e958d06cfa6496ecf7c3be9e566c33cf/kaml-jvm-0.73.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-core-jvm/1.7.3/1f226780b845ff9206474c05159245d861556249/kotlinx-serialization-core-jvm-1.7.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-json-jvm/1.7.3/6701e8c68d9e82387ce72ee96e8ddf058208d58f/kotlinx-serialization-json-jvm-1.7.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.clikt/clikt-jvm/5.0.0/baa4d11e7f7a68c077bce23a21db133d9a199812/clikt-mordant-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-kotlin-stub/1.4.1/dd41461deff6151ed6b5ddaf9ad369410931e195/grpc-kotlin-stub-1.4.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.protobuf/protobuf-kotlin/4.29.3/74a540084c44f770f69e6f07071f1af6daac51e0/protobuf-kotlin-4.29.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-core-jvm/1.10.1/fe066928754beda3d59c8282e04289546465a360/kotlinx-coroutines-core-jvm-1.10.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/it.krzeminski/snakeyaml-engine-kmp-jvm/3.1.1/542190d973fb66f3568fbcec1a3a8210e2f705dc/snakeyaml-engine-kmp-jvm-3.1.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.squareup.okio/okio-jvm/3.10.2/6a2cc3acd5a83e66075a2f6c5b0608b6043fa34c/okio-jvm-3.10.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.clikt/clikt-core-jvm/5.0.0/1bbee7b4d792ec86447900488397638214fa491a/clikt-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm/3.0.0/ce34373aa2e8f4ab8c3f229615676e7da88de2ad/mordant-omnibus-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/net.thauvin.erik.urlencoder/urlencoder-lib-jvm/1.6.0/6b922dd3ff960b08873c10395545e08355e250c9/urlencoder-lib-jvm-1.6.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-jna-jvm/3.0.0/bde15ea7842e9b77dec187390cde07bf6c15b14d/mordant-jvm-jna-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-ffm-jvm/3.0.0/96a8677a522395ae552719cfd050d5b9a47ecd8e/mordant-jvm-ffm-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-graal-ffi-jvm/3.0.0/e5c456bbad024da819bffde07a223ae6cb9582a3/mordant-jvm-graal-ffi-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-core-jvm/3.0.0/c1e712a55e6ca965522a809fef068d036a7600b7/mordant-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.colormath/colormath-jvm/3.6.0/d5593e3f07b2447bec0b17f5cb7141a0f0de9688/colormath-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.1.20/aa8ca79cd50578314f6d1180c47cbe14c0fee567/kotlin-stdlib-2.1.20.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk8/2.1.0/c4a51be16c840b969ed706bc25d5836b099d188a/kotlin-stdlib-jdk8-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/it.unimi.dsi/fastutil-core/8.5.13/dd3d3ed477b7c1aee8176f6684813f48304769f9/fastutil-core-8.5.13.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.zeroturnaround/zt-exec/1.12/51a8d135518365a169a8c94e074c7eaaf864e147/zt-exec-1.12.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.antlr/antlr4-runtime/4.9.3/81befc16ebedb8b8aea3e4c0835dd5ca7e8523a8/antlr4-runtime-4.9.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-classic/1.4.8/f00ba91d993e4d14301b11968d3cacc3be7ef3e1/logback-classic-1.4.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/info.leadinglight/jdot/1.0/8e84489791d7fe20bf1631e791152b554cfea4ba/jdot-1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/dk.brics.automaton/automaton/1.11-8/6ebfa65eb431ff4b715a23be7a750cbc4cc96d0f/automaton-1.11-8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-commons/9.9.1/ab35de4c537184a09339069f1a3b3aacf2289149/asm-commons-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-util/9.9.1/e51f5b0ae0b0c1960687ae970a2a3434d39d8abb/asm-util-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-analysis/9.9.1/1ab8d9316ef7a67240087919a708246c37ed1660/asm-analysis-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-tree/9.9.1/b6b1b3366296163b4b1f540731aad0a2baa484d8/asm-tree-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm/9.9.1/2ceea6ab43bcae1979b2a6d85fc0ca429877e5ab/asm-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-netty-shaded/1.69.0/99aa9789172695a4b09fe2af5f5bd0ab1be4ae85/grpc-netty-shaded-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-protobuf/1.69.0/2990b4948357d4fe46aaecb47290cff102079f1e/grpc-protobuf-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-stub/1.69.0/9e7dc30a9c2df70e25ef4b941f46187e6e178e7a/grpc-stub-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-util/1.69.0/1929ab12fce0c610d9d7229b8767f6abb09ebd51/grpc-util-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-core/1.69.0/7dad3419dfb91a77788afcdf79e0477172784910/grpc-core-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-protobuf-lite/1.69.0/91711f27421babf868e424a64426fccb9e8bf6ec/grpc-protobuf-lite-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-context/1.69.0/cea23878872f76418dcd6df0c6eef0bf27463537/grpc-context-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-api/1.69.0/965c2c7f708cd6e6ddbf1eb175c3e87e96e41297/grpc-api-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/33.3.1-android/852f8b363da0111e819460021ca693cacca3e8db/guava-33.3.1-jre.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.7/41eb7184ea9d556f23e18b5cb99cad1f8581fc00/slf4j-api-2.0.7.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-core/1.4.8/3fba9c105e0efc5ffdcda701379687917d5286f7/logback-core-1.4.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.api.grpc/proto-google-common-protos/2.48.0/86b550469172d830d174d7434c318d7dff179910/proto-google-common-protos-2.48.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.protobuf/protobuf-java/4.29.3/83afa847b893932b49a8fd896608fa23cd5fb0b5/protobuf-java-4.29.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/23.0.0/8cc20c07506ec18e0834947b84a864bfc094484e/annotations-23.0.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/failureaccess/1.0.2/c4a06a64e650562f30b7bf9aaec1bfed43aca12b/failureaccess-1.0.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/b421526c5f297295adef1c886e5246c39d4ac629/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.code.findbugs/jsr305/3.0.2/25ea2e8b0c338a877313bd4672d3fe056ea78f0d/jsr305-3.0.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.checkerframework/checker-qual/3.43.0/9425eee39e56b116d2b998b7c2cebcbd11a3c98b/checker-qual-3.43.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.11.0/527175ca6d81050b53bdd4c457a6d6e017626b0e/gson-2.11.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.errorprone/error_prone_annotations/2.30.0/ff171acb7fb9cbe2b9f50b391e1d52459d30ee62/error_prone_annotations-2.30.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.j2objc/j2objc-annotations/3.0.0/7399e65dd7e9ff3404f4535b2f017093bdb134c7/j2objc-annotations-3.0.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-compress/1.21/4ec95b60d4e86b5c95a0e919cb172a0af98011ef/commons-compress-1.21.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.perfmark/perfmark-api/0.27.0/f86f575a41b091786a4b027cd9c0c1d2e3fc1c01/perfmark-api-0.27.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/javax.annotation/javax.annotation-api/1.3.2/934c04d3cfef185a8008e7bf34331b79730a9d43/javax.annotation-api-1.3.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.codehaus.mojo/animal-sniffer-annotations/1.24/aa9ba58d30e0aad7f1808fce9c541ea3760678d8/animal-sniffer-annotations-1.24.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.android/annotations/4.1.1.4/a1678ba907bf92691d879fef34e1a187038f9259/annotations-4.1.1.4.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna/5.14.0/67bf3eaea4f0718cb376a181a629e5f88fa1c9dd/jna-5.14.0.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/test\",\n    \"-Xfriend-paths=/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/libs/opentaint-dataflow.jar\",\n    \"-jvm-target\",\n    \"17\",\n    \"-d\",\n    \"/drive-testcomp/opentaint-go-rules/loop-demand-trie-20261104/analysis-tools/same-direction-star-policy-20261105/reverse-at-classes\",\n    \"/drive-testcomp/opentaint-go-rules/loop-demand-trie-20261104/analysis-tools/same-direction-star-policy-20261105/NativeReverseMustAtProbe.kt\"\n  ],\n  \"compileExit\": 0,\n  \"runCommand\": [\n    \"/usr/lib/jvm/temurin-17-jdk-amd64/bin/java\",\n    \"-Xmx512m\",\n    \"-XX:ActiveProcessorCount=1\",\n    \"-cp\",\n    \"/drive-testcomp/opentaint-go-rules/loop-demand-trie-20261104/analysis-tools/same-direction-star-policy-20261105/reverse-at-classes:/drive-testcomp/opentaint-go-rules/loop-demand-trie-20261104/analysis-tools/same-direction-star-policy-20261105/classes:/drive-testcomp/opentaint-go-rules/loop-demand-trie-20261104/analysis-tools/star-inside-counterexample-20261104/classes:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/classes/java/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/classes/kotlin/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/build/resources/main:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-dataflow/build/libs/opentaint-jvm-sast-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-go-querylang/build/libs/opentaint-go-querylang.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-java-querylang/build/libs/opentaint-java-querylang.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-jvm-dataflow/build/libs/opentaint-jvm-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/opentaint-jvm-util/build/libs/opentaint-jvm-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/cli-util/build/libs/cli-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-project/build/libs/opentaint-jvm-sast-project.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-project-model/build/libs/opentaint-project-model.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-go-dataflow/build/libs/opentaint-go-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-config/go-config/build/libs/go-config.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-config/java-config/build/libs/java-config.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-go/build/libs/configuration-rules-go.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-jvm/build/libs/configuration-rules-jvm.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-se-api/build/libs/opentaint-jvm-sast-se-api.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-approximations/build/libs/opentaint-ir-approximations.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-core/build/libs/opentaint-ir-core.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-jvm/build/libs/opentaint-ir-api-jvm.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-storage/build/libs/opentaint-ir-storage.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-storage/build/libs/opentaint-ir-api-storage.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/go/go-ir-client/build/libs/go-ir-client.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/go/go-ir-api/build/libs/go-ir-api.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/libs/opentaint-dataflow.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-utils/common-util/build/libs/common-util.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-configuration-rules/configuration-rules-common/build/libs/configuration-rules-common.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/opentaint-ir-api-common/build/libs/opentaint-ir-api-common.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.xodus/xodus-utils/2.0.1/cc05cb08e8ee02cb1ccf44b039f33aad22bbe091/xodus-utils-2.0.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.microutils/kotlin-logging-jvm/3.0.5/82f2256aeedccfd9c27ea585274a50bf06517383/kotlin-logging-jvm-3.0.5.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.github.detekt.sarif4k/sarif4k-jvm/0.5.0/d3060993cd73b57ee61b260841bedcabb7dcbb02/sarif4k-jvm-0.5.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk7/2.1.0/d77bee6c7bc849e7b9bf4b83e94e8fd1dfc0ea8a/kotlin-stdlib-jdk7-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-reflect/2.1.0/dc3753b59b67d79b7d2f546d51e22a0ec1f082d8/kotlin-reflect-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-collections-immutable-jvm/0.3.8/6119a57df1ad662593dfe21954898183c6c933b4/kotlinx-collections-immutable-jvm-0.3.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.charleskorn.kaml/kaml-jvm/0.73.0/abeffe03e958d06cfa6496ecf7c3be9e566c33cf/kaml-jvm-0.73.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-core-jvm/1.7.3/1f226780b845ff9206474c05159245d861556249/kotlinx-serialization-core-jvm-1.7.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-json-jvm/1.7.3/6701e8c68d9e82387ce72ee96e8ddf058208d58f/kotlinx-serialization-json-jvm-1.7.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.clikt/clikt-jvm/5.0.0/baa4d11e7f7a68c077bce23a21db133d9a199812/clikt-mordant-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-kotlin-stub/1.4.1/dd41461deff6151ed6b5ddaf9ad369410931e195/grpc-kotlin-stub-1.4.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.protobuf/protobuf-kotlin/4.29.3/74a540084c44f770f69e6f07071f1af6daac51e0/protobuf-kotlin-4.29.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-core-jvm/1.10.1/fe066928754beda3d59c8282e04289546465a360/kotlinx-coroutines-core-jvm-1.10.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/it.krzeminski/snakeyaml-engine-kmp-jvm/3.1.1/542190d973fb66f3568fbcec1a3a8210e2f705dc/snakeyaml-engine-kmp-jvm-3.1.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.squareup.okio/okio-jvm/3.10.2/6a2cc3acd5a83e66075a2f6c5b0608b6043fa34c/okio-jvm-3.10.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.clikt/clikt-core-jvm/5.0.0/1bbee7b4d792ec86447900488397638214fa491a/clikt-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm/3.0.0/ce34373aa2e8f4ab8c3f229615676e7da88de2ad/mordant-omnibus-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/net.thauvin.erik.urlencoder/urlencoder-lib-jvm/1.6.0/6b922dd3ff960b08873c10395545e08355e250c9/urlencoder-lib-jvm-1.6.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-jna-jvm/3.0.0/bde15ea7842e9b77dec187390cde07bf6c15b14d/mordant-jvm-jna-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-ffm-jvm/3.0.0/96a8677a522395ae552719cfd050d5b9a47ecd8e/mordant-jvm-ffm-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-jvm-graal-ffi-jvm/3.0.0/e5c456bbad024da819bffde07a223ae6cb9582a3/mordant-jvm-graal-ffi-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.mordant/mordant-core-jvm/3.0.0/c1e712a55e6ca965522a809fef068d036a7600b7/mordant-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.github.ajalt.colormath/colormath-jvm/3.6.0/d5593e3f07b2447bec0b17f5cb7141a0f0de9688/colormath-jvm.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.1.20/aa8ca79cd50578314f6d1180c47cbe14c0fee567/kotlin-stdlib-2.1.20.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk8/2.1.0/c4a51be16c840b969ed706bc25d5836b099d188a/kotlin-stdlib-jdk8-2.1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/it.unimi.dsi/fastutil-core/8.5.13/dd3d3ed477b7c1aee8176f6684813f48304769f9/fastutil-core-8.5.13.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.zeroturnaround/zt-exec/1.12/51a8d135518365a169a8c94e074c7eaaf864e147/zt-exec-1.12.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.antlr/antlr4-runtime/4.9.3/81befc16ebedb8b8aea3e4c0835dd5ca7e8523a8/antlr4-runtime-4.9.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-classic/1.4.8/f00ba91d993e4d14301b11968d3cacc3be7ef3e1/logback-classic-1.4.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/info.leadinglight/jdot/1.0/8e84489791d7fe20bf1631e791152b554cfea4ba/jdot-1.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/dk.brics.automaton/automaton/1.11-8/6ebfa65eb431ff4b715a23be7a750cbc4cc96d0f/automaton-1.11-8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-commons/9.9.1/ab35de4c537184a09339069f1a3b3aacf2289149/asm-commons-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-util/9.9.1/e51f5b0ae0b0c1960687ae970a2a3434d39d8abb/asm-util-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-analysis/9.9.1/1ab8d9316ef7a67240087919a708246c37ed1660/asm-analysis-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-tree/9.9.1/b6b1b3366296163b4b1f540731aad0a2baa484d8/asm-tree-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm/9.9.1/2ceea6ab43bcae1979b2a6d85fc0ca429877e5ab/asm-9.9.1.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-netty-shaded/1.69.0/99aa9789172695a4b09fe2af5f5bd0ab1be4ae85/grpc-netty-shaded-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-protobuf/1.69.0/2990b4948357d4fe46aaecb47290cff102079f1e/grpc-protobuf-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-stub/1.69.0/9e7dc30a9c2df70e25ef4b941f46187e6e178e7a/grpc-stub-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-util/1.69.0/1929ab12fce0c610d9d7229b8767f6abb09ebd51/grpc-util-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-core/1.69.0/7dad3419dfb91a77788afcdf79e0477172784910/grpc-core-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-protobuf-lite/1.69.0/91711f27421babf868e424a64426fccb9e8bf6ec/grpc-protobuf-lite-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-context/1.69.0/cea23878872f76418dcd6df0c6eef0bf27463537/grpc-context-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.grpc/grpc-api/1.69.0/965c2c7f708cd6e6ddbf1eb175c3e87e96e41297/grpc-api-1.69.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/33.3.1-android/852f8b363da0111e819460021ca693cacca3e8db/guava-33.3.1-jre.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-metadata-jvm/2.3.0/7758780509972cf8338f06649cc5e4b11acc14e/kotlin-metadata-jvm-2.3.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.7/41eb7184ea9d556f23e18b5cb99cad1f8581fc00/slf4j-api-2.0.7.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-core/1.4.8/3fba9c105e0efc5ffdcda701379687917d5286f7/logback-core-1.4.8.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.api.grpc/proto-google-common-protos/2.48.0/86b550469172d830d174d7434c318d7dff179910/proto-google-common-protos-2.48.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.protobuf/protobuf-java/4.29.3/83afa847b893932b49a8fd896608fa23cd5fb0b5/protobuf-java-4.29.3.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/23.0.0/8cc20c07506ec18e0834947b84a864bfc094484e/annotations-23.0.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/failureaccess/1.0.2/c4a06a64e650562f30b7bf9aaec1bfed43aca12b/failureaccess-1.0.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/b421526c5f297295adef1c886e5246c39d4ac629/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.code.findbugs/jsr305/3.0.2/25ea2e8b0c338a877313bd4672d3fe056ea78f0d/jsr305-3.0.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.checkerframework/checker-qual/3.43.0/9425eee39e56b116d2b998b7c2cebcbd11a3c98b/checker-qual-3.43.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.11.0/527175ca6d81050b53bdd4c457a6d6e017626b0e/gson-2.11.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.errorprone/error_prone_annotations/2.30.0/ff171acb7fb9cbe2b9f50b391e1d52459d30ee62/error_prone_annotations-2.30.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.j2objc/j2objc-annotations/3.0.0/7399e65dd7e9ff3404f4535b2f017093bdb134c7/j2objc-annotations-3.0.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-compress/1.21/4ec95b60d4e86b5c95a0e919cb172a0af98011ef/commons-compress-1.21.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/io.perfmark/perfmark-api/0.27.0/f86f575a41b091786a4b027cd9c0c1d2e3fc1c01/perfmark-api-0.27.0.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/javax.annotation/javax.annotation-api/1.3.2/934c04d3cfef185a8008e7bf34331b79730a9d43/javax.annotation-api-1.3.2.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/org.codehaus.mojo/animal-sniffer-annotations/1.24/aa9ba58d30e0aad7f1808fce9c541ea3760678d8/animal-sniffer-annotations-1.24.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/com.google.android/annotations/4.1.1.4/a1678ba907bf92691d879fef34e1a187038f9259/annotations-4.1.1.4.jar:/home/sobol/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna/5.14.0/67bf3eaea4f0718cb376a181a629e5f88fa1c9dd/jna-5.14.0.jar:/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/build/classes/kotlin/test\",\n    \"org.opentaint.dataflow.bidi.external.NativeReverseMustAtProbeKt\"\n  ],\n  \"runExit\": 0\n}"
+    }
+  },
+  "adapter": {
+    "text": "# Reverse-MUST overlap: transient native adapter\n\n5 November 2026. Selected implementation design, no Kotlin implementation.\nThis is a supplement to the explicit CURRENT/SAVED_DIRECT/OPPOSITE matcher.\nThe pure region law belongs to Canonical.lean. This adapter retains the exact\nnative inverse output and layer. It does not define a new demotion policy.\n\n## Verified native bridge\n\nA bounded native AP probe runs on the unmodified52f dataflow jar:\n\n```text\nold P = arg0.prefixA.prefixB.MUST/FLOW / E{oldInputExcludedI}\nold G = ret.MUST/FLOW / E{storedExcludedH}, mx{U}, NORMAL\nreader mode = BACKWARD; old producer = FORWARD\nactual = ret.STAR/FLOW / E{actualExcludedG}, mx{T}, NORMAL\nG != H\n\nold view = ret.STAR/FLOW / E{H} -> P.ANY/FLOW / E{}, DEMAND\nold native Summary selector: no match\nproject same-path actual STAR flag to E{G,H}: old selector matches\nexisting native applyRecordLeaf + compiled edge: P.ANY/FLOW, DEMAND,\n  E{}, mx{T,U}; no mark requests\n```\n\nThe probe also applies the native compiled edge to the unprojected actual;\nits output is identical. This rules out a second hidden rejection in that\nclosed FLOW cell. The proposed adapter still uses projected match+apply,\nnot a bypass of the native selector.\n\nFour concrete cases also PASS. For old P.EXACT/T -> ret.MUST/T, the native\ninverse remains P.EXACT/T with demand=false: NORMAL actual gives NORMAL,\nDEMAND actual gives DEMAND. For old P.MUST/T -> ret.MUST/T, the native inverse\nremains P.ANY/T, DEMAND for both actual layers. In all four cases the actual\nSTAR/T has protection, the original incomparable-E selector rejects, the\nprojected selector and native application pass, and protection survives.\nDo not narrow the selected overlap correction to FLOW-only while pruning\nconcrete MUST relations, and do not force these concrete outputs to DEMAND.\n\nThe separate MAY/MUST FLOW controls in the probe are native application\ncomparisons, not permission to broaden their selector. Only the actual STAR\nsame-path overlap cell is added by this adapter.\n\n## Preserve provenance before it is erased\n\n`ap/Reference.kt:80` has `RecordLeafView(premise,result)`. The special MUST\nconstructor at90\u2013113 loses some old tails and old input E by design. Do not\ninfer MUST provenance from result ANY, read-premise STAR or nonempty E.\n\nRefactor the constructor internally to return a transient wrapper:\n\n```kotlin\nenum class NativeReadKind { GENERIC, FLOW_MUST_CONSTRUCTOR, CONCRETE_MUST_CONSTRUCTOR }\nenum class OverlapCapability { NONE, MUST_CONCLUSION }\n\n// Ordinary class: no automatic equality over compiler/source metadata.\nclass NativeReverseRead internal constructor(\n    val geometry: RecordLeafView,\n    val kind: NativeReadKind,\n    val source: NativeReadSource, // immutable old P, old scalar G, producer direction\n) {\n    val overlapCapability: OverlapCapability get() =\n        if (kind != GENERIC && source.conclusion.fact.tail == ANY_TAINT)\n            MUST_CONCLUSION else NONE\n    fun semanticKey() = NativeReadKey(geometry, overlapCapability)\n}\n\ndata class NativeReadSource(\n    val producer: Direction,\n    val premise: Pattern,\n    val conclusion: Conclusion,\n)\ndata class NativeReadKey(val geometry: RecordLeafView, val capability: OverlapCapability)\n```\n\n`FLOW_MUST_CONSTRUCTOR` is produced only by the accepted first branch of\n`mustRecordReadView`. `CONCRETE_MUST_CONSTRUCTOR` is produced only by its accepted concrete\nbranch. `GENERIC` is produced by the existing generic revEdge fallback.\nConstruct source and kind in the same branch as the view, not by repeating\nan approximate tail test at a caller. Keep the public geometry-only\n`reverseRecordLeaf` reference function as `typedRead?.geometry` if needed.\nNo new persisted AP field or Record identity/equality is required.\n\nNew overlap authority is narrower than recognition of a MUST constructor:\nrequire an old normal MUST CONCLUSION. The special FLOW constructor also\naccepts old P.MUST -> G.STAR. That reader retains LEGACY eligibility and must\nnot inherit the added overlap branch merely from its constructor family.\nTwo equal view geometries can therefore have different overlap capabilities;\n`semanticKey` must distinguish those capabilities.\n\nOld input E, output E, complete marks/mx, old direction and raw scalar geometry\nremain available in `source`. The existing inverse can still deliberately\nforget old input E in its result. Do not restore that E or rewrite output\nheaders. Physical ports stay on the owning Record and its direction-aware\nscopeIn/exitIn functions; do not turn them into AP fields.\n\n## Match legacy plus one projected AT contribution\n\nThe helper below returns at most two invocation-local packets per read.\nNative legacy output is first. A new projected STAR packet is second.\nThis preserves the entire old stream before the new selected overlap effect.\nNever project the whole packed actual or its exact/MAY/MUST memberships.\n\n```kotlin\nfun matchReversePackets(actual, read, mode): List<Facts> {\n    require(read.source.producer != mode.direction)\n    val old = ops.matchSummary(actual, read.geometry.premise, mode, OPPOSITE)\n\n    if (read.overlapCapability != MUST_CONCLUSION || read.geometry.premise.tail != STAR)\n        return listOfNotNull(old)\n\n    // Ordinary STAR at the SAME read path only. All native old ancestry,\n    // below and non-STAR checks retain their existing behavior.\n    val starAt = samePathStarMemberships(actual, read.geometry.premise.path)\n        ?: return listOfNotNull(old)\n    val aE = actual.exclusion\n    val rE = read.geometry.premise.exclusion\n    if (aE.isSubsetOf(rE) || rE.isSubsetOf(aE))\n        return listOfNotNull(old) // old AT/applicable already handles this flag\n\n    val projected = starAt.withExclusion(aE.union(rE))\n    val extra = ops.matchSummary(projected, read.geometry.premise, mode, OPPOSITE)\n    return listOfNotNull(old, extra)\n}\n```\n\n`samePathStarMemberships` is a complete membership operation:\n\n- For FlowTree with tail STAR: look up the read-premise path and keep its\n  complete Flow flag, actual layer and full mx. Build only that path/flag.\n- For TaintTree with anyTail STAR: keep ALL `.any` marks at that exact node;\n  omit its `.exact` marks, which remain on the legacy path. Keep the complete\n  selected protection mask with `retainProtection(actual, projected)`.\n- For Reach, EXACT, MAY, MUST or a missing STAR flag: return null.\n\nThe predicate is per scalar header/profile; do not compare a first mark,\nforget mx or convert a mixed exact/nonexact packet wholesale. The projection\nis an ephemeral matching packet. It is not an admitted initial, standing\ninput update, summary, demand, persisted row or source permission.\n\nFor same-path actual STAR and a STAR read premise, old eligibility uses the\nE subset tests in either direction (`applicable` or `inside`). If both fail,\nthe old STAR AT contribution is absent. The new E-union packet is the\nintersection region and contains the shared anchor. The existing native\nquery succeeds via `Ereader subset Eprojected`. The full native mark gate and\nprotection selection still execute. The pure region law does not replace them.\n\nFor a plain FLOW-MUST-conclusion read with FlowTree STAR actual, all positions can emit\nthe same constant P.ANY/FLOW result. A later proved specialization could skip\nextra when any legacy contribution already gives that complete result. Do\nnot rely on that shortcut in the general implementation: a concrete packet\nmay have a legacy match for U and a new projected STAR/T at the same time.\nFallback-only-when-legacy-empty would lose T/protection there.\n\n## Reuse existing application and effect handling\n\nFor each selected packet, call the existing native application with the exact\nview, original complete caller P and protected-result flag:\n\n```kotlin\nfor (packet in matchReversePackets(actual, read, mode)) {\n    ops.applyRecordLeaf(packet, read.geometry, protected, mode,\n        existingCollector(original, ...), original = original)\n}\n```\n\nNo new summaryEdge, custom mark transformer, blanket layer change or source\ncallback is needed. The original `view.result` controls the result layer.\nThe same ordinary global field cap, post-S storage, complete original,\ncycle/protection logic, source-to-Reach discharge and Target handler run.\nA ZERO source inverse may still produce Reach/Target; do not suppress that\ncase by an assumed DATA-output-base shortcut.\n\nAt physical calls, `PersistedSummaryReplay` can call the shared helper and\npass each selected packet to the existing already-matched `applyRecordView`.\nAt local boundaries and in pure observers, `LocalRelationApplication` calls\nthe same helper and applies all packets. Do not match a projected packet a\nsecond time with a generic/current role. Classification and loop gating use\nthe STORED read geometry, never the transient projected E header.\n\n## Selection and dedup migration\n\n- Add typed construction at `Record.reverseOne` and\n  `RecordOutputPosition.forEachReversedAt` in store/RecordStore.kt. Both full\n  and positional readers must use the same trusted MUST constructor.\n- Add or migrate typed callbacks in `SavedRecordSelection`. Its record-first,\n  submitted-leaf and native-position order stays unchanged.\n- `PersistedSummaryReplay.seenViews` changes its key explicitly from geometry\n  to `NativeReadKey(geometry,overlapCapability)`. Keep its false-to-true protection upgrade\n  rule exactly. A rejected generic read must not suppress a later MUST read\n  with different eligibility.\n- The per-record positional `SavedRecordSelection` seen set likewise uses\n  `(NativeReadKey,protected)`, retaining old iteration order.\n- Scope and physical exit are fixed by each owning query/record. If an index\n  shares keys across those contexts, include owner/scope/exit in that key;\n  do not broaden an invocation-local dedup key silently.\n- Retain full `source` metadata for guard validation but do not add raw Record\n  object identity or unused source fields to semantic equality by default.\n  The overlap capability plus complete geometry determines eligibility;\n  old input E intentionally forgotten by the native inverse is not restored.\n\nCandidate PathTrie/position queries already enumerate comparable real paths;\nthe added AT case needs no broader scan, synthetic field or port alias.\nPersistent summaries/Targets/normal contributors retain their existing keys.\nNativeRecord source headers and source kind are read-only for this invocation.\n\n## Native gates still required before implementation acceptance\n\nThe current seven standalone AP controls verify the bridge, not the complete\npacked/actor integration. Add native tests for:\n\n1. A packet with a legacy-matching mark/position and a different newly\n   projected STAR mark: both results and protection must survive.\n2. A full multi-mark STAR node, protected and unprotected memberships, both\n   concrete and FLOW MUST provenance, both actual layers.\n3. A generic read with otherwise similar geometry must not gain overlap;\n   matching dedup must retain distinct semantic read kinds.\n4. Same-path comparable E keeps the old result without duplicate overlap\n   lane; excluded strict descendant, disjoint branches, MAY/MUST unchanged.\n5. Direct/current roles cannot invoke the adapter. NormalResult from concrete\n   EXACT-to-MUST remains NORMAL only when the native applied layer is NORMAL.\n6. Physical/local/pure-observer consistency, exact ports, full parent ND,\n   Source->Reach/Target and real call suffix continuation ordering.\n\nNo full native AP, Kotlin, whole-engine soundness, termination or report\ninvariance theorem is claimed by the region model or these finite probes.\n",
+    "sha256": "34a88fec082ccfe180b61856da40c5304d4084a8d3891bd48b6f639b1d5f9f67"
+  },
+  "limitations": [
+    "Standalone AP controls only: no complete packed multi-mark/local/call/observer integration verification.",
+    "The seven controls do not prove universal native AP or full-engine soundness.",
+    "Pure region overlap proof and native inverse output law are separate from Kotlin correspondence.",
+    "No blanket DEMAND demotion, source permission, new AP policy for direct/current matching, or runtime changes.",
+    "General adapter must retain legacy plus projected same-path STAR contributions; fallback-only is insufficient for concrete mixed packets."
+  ]
+}
