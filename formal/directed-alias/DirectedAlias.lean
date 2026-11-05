@@ -85,3 +85,6 @@ import DirectedAlias.Sound.ValueSem.Backward
 import DirectedAlias.Sound.ValueSem.BackwardEq
 import DirectedAlias.Opt.ValueSemCost
 import DirectedAlias.Sound.ValueSem.CalleeNull
+import DirectedAlias.Sound.ValueSem.Statics
+import DirectedAlias.Opt.ValueSemStatics
+import DirectedAlias.Sound.ValueSem.StaticsExamples

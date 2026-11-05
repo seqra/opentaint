@@ -397,10 +397,12 @@ The Lean model in `formal/directed-alias` proves these facts for a structured ve
 
 | Fact | Lean theorem |
 |---|---|
-| The analysis is sound under assumptions 1-4 of §3: each alias of one execution (the same object or the same null) is a may-alias. The Lean model treats a static write as an ordinary store, so the static rule of assumption 5 is outside this theorem. | `csoundVS` |
+| The analysis is sound under the five assumptions of §3: each alias of one execution (the same object or the same null) is a may-alias. Assumption 5 is a concrete semantics in which the static writes of the method have no effect. | `csoundVS`; with the static rule: `csoundVSS`, `execA5_iff` |
+| A static read gives exactly `{⟨C.f⟩}`: the cells of a static holder keep their default content. | `static_read`, `SCInv_analyze` |
+| Assumption 5 is a real restriction: without it, `C.f = v; t = C.f` has the alias `t ~ v`, and a value stored only into a static field can lose an alias after a call. | `gapA`, `gapB` |
 | It stays sound if a callee also writes new nulls. | `csoundVS_W` |
 | Assumption 4 is necessary: with a local that is used before it is assigned, a real alias is lost. | `siteless_unsound` |
-| The node representation gives the same answers as the set semantics. | `mayProgVSO_eq`, `csoundVSO` |
+| The node representation gives the same answers as the set semantics. | `mayProgVSO_eq`, `csoundVSO`; with the static rule: `mayProgVSSO_eq`, `csoundVSSO` |
 | A call writes no heap entry, and changes only the result and the two sets. | `callVSO_heap_frame`, `callVSO_frame` |
 | The on-demand test of §5.8 is sound with loops (for consistent final states), and equal to the sets on loop-free code with different sites. | `csoundBW`, `mayProgBW_eq` |
 | `x = new X(); a = x.f` gives `a ~ x.f`, with and without a call, and the alias is real. | `user_answers`, `user_real`, `user_call_real` |
@@ -414,4 +416,4 @@ The Lean model in `formal/directed-alias` proves these facts for a structured ve
 | The backward search gives the same paths as an enumeration of all paths. | `findAlias_iff` |
 | The search for a heap path gives the same paths as an enumeration. | `heapAliases_iff` |
 
-Argued, not proved: the static rule of assumption 5 (§5.2, §5.3), the fixpoint strategy of §5.5, the exception rule, the query normal form, the consistency of the final states for §5.8, and definite assignment in the JIR form of the bytecode.
+Argued, not proved: the fixpoint strategy of §5.5, the exception rule, the query normal form, the consistency of the final states for §5.8, and definite assignment in the JIR form of the bytecode.
