@@ -11,7 +11,10 @@ baseline. Finer external control B restores R3 refinement guidance and all
 seven expected native R5 report projections by disabling only proper-prefix
 subtraction in `canonicalSpans`. A, same-point removal off alone, remains at
 five. This isolates a sufficient proper-prefix intervention, not an accepted
-fix or the first actual removed AP packet/coordinate. Performance proposals 1 and 2 below remain
+fix. Later B2 captures trace closed point/summary-store removals and the
+complete frozen explicit demand view. The later C2/report causal chain is
+not proved.
+Performance proposals 1 and 2 below remain
 unimplemented and unselected; neither claims to fix the missing findings.
 
 ## 0. Correctness first: preserve required refinement guidance
@@ -53,8 +56,33 @@ B has 62 complete/four late R3 INPUT drops with all R5 collections complete;
 both reach run-6/run-5/run-5. These are diagnostic scopes, not new historical
 full-suite counts or SARIF-fingerprint equality.
 
-The first actual removed packet, exact mark/layer/coordinate and whether C2
-or loop observation is the first affected consumer remain untraced. The earlier NORMAL-off and matching-only controls fail to recover
+The later unchanged-code B2 capture now records a concrete proper-prefix
+state removal in four-argument `getTasksToBeScheduled`, Empty context and ROOT
+scope. Under full `ret.Element.[any]/FLOW` premise with empty E/mx, existing
+`arg1.taskDefinition.[any]/FLOW D` is covered when root-only
+`arg1.[any]/FLOW D` arrives. Both output headers have empty E and the exact
+unsafe-jackson FULL exclusion set J 10–65. Live merged-state subtraction and
+five matching point-store closes prove this broad-after-narrow change;
+the incoming packet itself does not contain both paths.
+
+The stopped attempt ends at run-2/run-1/run-1: five paired removals, 40 completed
+windows, one whole deadline drop and no B2 snapshot. The earlier extra frozen
+row has empty mx and exact HashMap context. Source `guidancePattern` erases
+FLOW mx during handoff projection. The first stopped attempt has no B2
+export; its point evidence remains valid and partial. The [full point-store
+witnesses](../reports/bidirectional-conductor-canonical-quality-regression-20261105.md#actual-b2-point-store-subtraction)
+preserve all headers, catalogs and censoring. The completed cold follow-up
+now closes B2 with seven paired point/summary removals and all five planned
+collections complete, zero drops, at run-3/run-2/run-1. Its typed HashMap and
+Empty SUMMARY transactions remove the child under the same actual mxJ; their
+final admitted stores remain root-only. In the complete outgoing direct DATA
+view, Empty 64 plus typed 49 totals113 rows, with one root pair and no explicit
+child pair in each context. Thus the summary-to-frozen-view bridge is observed
+in one attempt, including native empty-mx projection. A root pair may still
+cover the child denotationally. No later C2 rejection or report-loss chain is
+proved; this evidence does not select a repair. See the [completed cold
+bridge](../reports/bidirectional-conductor-canonical-quality-regression-20261105.md#completed-cold-b2-summary-and-guidance-bridge).
+The earlier NORMAL-off and matching-only controls fail to recover
 through R5; that does not exclude interactions. The [native NORMAL-cover/C2
 countercell](../reports/bidirectional-normal-cover-opposite-c2-countercell-20261105.md)
 shows why denotational relation cover alone is not an initial-progress theorem,
@@ -104,7 +132,7 @@ speedup. Sample shares are not seconds and are not retained-memory shares.
 
 | Priority | Change | Measured evidence | Work to remove |
 | --- | --- | --- | --- |
-| 0 | Preserve required refinement guidance; repair undesigned/unselected | B proper-prefix-only control restores R3 guidance/native R5 seven; A same-point-only stays five; main still fails | Correctness gate, not a performance claim |
+| 0 | Preserve required refinement guidance; repair undesigned/unselected | B restores R3 guidance/native R5 seven; actual B2 summary removal and complete frozen explicit view are traced, but later C2/report chain is open; main still fails | Correctness gate, not a performance claim |
 | 1 | Canonicalize frozen joined inputs once | Thingsboard's observed run-1 static-completion window: 440.336 s; 33,403 Java samples; canonical packet/state work 48.97% of samples and 51.07% of weighted allocation bytes | Repeated normalization of the same immutable joined input for different writer visits |
 | 2 | Return bounded packets before protection transport | Conductor's logged top-24 method rows at run-12: 4,944,767 limit offers, zero over-limit offers; the run-12 capture contains 5,196 of 10,466 sample weights under `ApOps.limit` | Splitting, walking, and reattaching protection when the field limiter returns the original packet |
 

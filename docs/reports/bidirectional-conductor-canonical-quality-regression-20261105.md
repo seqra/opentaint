@@ -8,9 +8,12 @@ subtraction while same-point removal, cross-header logic, NORMAL relations
 and opposite-only STAR remain enabled. It restores R3 WFDef guidance and both
 missing native R5 report projections. Control A, which disables same-point
 removal alone, does not recover them. This narrows the sufficient causal
-intervention to proper-prefix subtraction in that helper; the first actual
-removed packet, exact coordinate and C2-versus-loop-observer effect remain
-untraced. No repair is selected, and the control
+intervention to proper-prefix subtraction in that helper. A later unchanged-code
+B2 captures now trace actual point-store removals and, in a completed cold
+follow-up, summary-store removal through a complete frozen explicit demand
+view. The root pair remains and the child pair is absent in both captured
+contexts. The later C2-versus-loop-observer/report causal chain remains untraced.
+No repair is selected, and the control
 is not main-campaign correctness or performance acceptance.
 
 The [portable evidence](data/bidirectional-conductor-canonical-quality-regression-20261105.json)
@@ -20,7 +23,13 @@ relevant demand collections, the post-B4 model record inventory, earlier actual
 admissions, exact identities, native controls, the finite real-JIR receipt, selected local application and
 call34 spans, all paired 45 DATA/one CONTROL guidance, complete five-owner
 NormalTarget views/descriptors, eleven checked handoff equalities, and earlier
-census/prefix controls. The measured main runtime is unchanged. No JVM, build,
+census/prefix controls. The new `b2ActualPointNormalizationDiagnostic` also
+embeds the final stopped-attempt receipt and full raw/decoded five-witness
+artifact once each, with actual headers, source and capture controls.
+`b2ColdSummaryNormalizationDiagnostic` adds the sealed cold audit, complete
+bridge view and seven raw/decoded positive witnesses, each once, with their
+separate temporal limits.
+The measured main runtime is unchanged. No JVM, build,
 benchmark or real-project run was started to write this appendix.
 
 The newer terminal evidence adds the R1/B2/F3 guidance-inception audit, the
@@ -51,7 +60,9 @@ lost AP edge.
 The third, positive rollback is different: disabling only the two pinned
 coordinate-removal functions restores R3 WFDef STAR/Graal guidance through
 three methods and yields all seven expected native R5 report projections.
-The exact first coordinate remains open. A repair that preserves or changes
+The first coordinate linking that recovery to the missing reports remains
+open; the later B2 point-removal witness is stated separately below.
+A repair that preserves or changes
 C2 refinement images is UNDESIGNED/UNSELECTED; an explicit user behavior
 decision is pending.
 
@@ -808,9 +819,10 @@ report descriptors, class-load evidence, source/ABI receipts and native
 cold/warm checks are embedded. Neither diagnostic invents SARIF fingerprints.
 
 B narrows the earlier two-function result to a sufficient one-expression
-proper-prefix intervention. It does not identify the first actual removed
-Conductor packet, mark/layer/coordinate or which caller/consumer first loses
-progress. In particular, it does not prove a C2 repair rather than a loop
+proper-prefix intervention. That rollback does not itself identify the actual
+removed packet or the caller/consumer that first loses progress. The later
+B2 captures below prove point and summary-store removal plus a complete
+frozen explicit view. They do not prove a C2 repair rather than a loop
 observer repair. Main8331 still fails its strict quality comparison, and the
 user policy decision and repair design remain pending.
 
@@ -844,6 +856,178 @@ called the concrete getTasks control exit `Target`. Its original native rows
 already said `Zero`. The corrected v2 summary uses `Zero`. This correction
 does not change the separately captured outgoing DemandTargets or report
 identities. The original v1 files remain preserved.
+
+## Actual B2 point-store subtraction
+
+The unchanged-code attempt `conductor-B2-proper-prefix-normalization-20261105T205045713816Z`
+directly observes `canonicalSpans` at line 37/code 329 inside a selected
+`BlockRunState.admitOutput` invocation. Its final receipt is SHA256
+`319a64f7b27c8f833a6cf6133be17a0d63024821ef7723e7c32fe510691f019b`.
+The full raw/decoded positive artifact is SHA256
+`14a7e1c790b07b31b865135865c2dbe11265d49d26e8be04ea47d5d03372ea44`.
+Both are embedded once in `b2ActualPointNormalizationDiagnostic`; the latter
+was written before the manual stop and retains its original prefix-state
+label. The final receipt supplies the closed-attempt status.
+
+The owner is `DeciderService#getTasksToBeScheduled(WorkflowModel,WorkflowTask,int,String)`
+in native EmptyMethodContext, ROOT scope `(0,ROOT_ENTRY)`. The first window 27
+is instruction 17/source 998, `taskToSchedule.getTaskDefinition()` in the
+`TaskMapperContext` builder chain. Actual project source 974–1015 and the native
+field catalog are embedded. There is no inferred local-register mapping.
+
+Let `J` be the exact output mx set10–65 in this attempt's catalog. All 56
+members are unsafe-jackson FULL atoms. It does not exclude Graal atoms; the
+full cofinite mask remains part of the witness. Every row below has empty E.
+
+```text
+P = ret.<java.lang.Iterable.Element:Object>.[any]/FLOW, mx={}
+
+before point authority: arg1.<WorkflowTask.taskDefinition:TaskDef>.[any]/FLOW D, mx=J
+incoming packet:        arg1.[any]/FLOW D, mx=J
+actual merged cohort:   {arg1, arg1.taskDefinition}.[any]/FLOW D, mx=J
+
+canonicalSpans at child taskDefinition:
+    old leaf=LEAF, inherited root=LEAF, computed leaf=NONE
+
+after point authority:  arg1.[any]/FLOW D, mx=J
+fresh delta:            arg1.[any]/FLOW D, mx=J
+```
+
+This is broad-after-narrow **state** normalization. The incoming packet is
+root-only; the removed child was in the prior point authority. The header
+comes from live `canonicalRegions.value`, with base/layer from
+`canonicalFlowState.first`; native root/E identities are checked. It is not
+copied from an earlier frozen pattern. The sole path to the removed node in
+this cohort is field 2476, covered by the empty root prefix. The same node UID
+is interpreted only through each event's own DAG table.
+
+| Paired window | Actual instruction | Source line | Captured point-store result |
+|---|---:|---:|---|
+|27 |17 |998 |taskDefinition child removed; root-only authority and fresh delta |
+|28 |3 |982 |Same full P, output header and state-removal geometry |
+|29 |2 |979 |Same full P, output header and state-removal geometry |
+|30 |1 |980 |Same full P, output header and state-removal geometry |
+|31 |54 |entry, no source line |Same full P, output header and state-removal geometry |
+
+Each pair closes at line 704/code 40 after `edges.addAll` returns. Thus this is
+actual point authority mutation, not just a queued publication, a dropped
+event or a missing-post inference. That fence precedes successor routing;
+it does not prove later summary export, handoff, C2 rejection or report loss.
+The five counts are memo-state subtraction events. `canonicalSpans` keys by
+node identity plus inherited payload, so they are not a count of unique
+logical field paths; all bounded root-to-node path witnesses are retained.
+
+The attempt was intentionally stopped due to hot breakpoint overhead, at
+**run-2/run-1/run-1**. It has five removals with five matching point closes,
+40 completed windows overall, one whole `PAUSE_DEADLINE` event drop in
+window 32, and zero decoder drops. No B2 snapshot or final B2 handoff is
+available. The false cap flag is not complete-run coverage after manual stop.
+Source/classpath/class-load checks show production8331 unchanged; the observer
+does not invoke target methods or write target fields. Its 64 Java controls,
+30 metadata checks, 18 controller controls and 180-field audit are separate
+from repository test counts. Diagnostic timings are excluded from the main
+performance tables.
+
+The earlier extra frozen pair belongs to exact HashMap context and has empty
+mx. This actual removal is in Empty context with mxJ. `guidancePattern`
+replaces a FLOW mark with empty-mx STAR before `HandOff` stores demand, which
+is a source-supported bridge between header forms, not an observed bridge
+for this first transaction. This first attempt has no same-attempt B2 export.
+The completed cold follow-up below supplies a separate same-attempt
+summary-to-frozen-view bridge; it does not retrospectively complete the first
+attempt or prove later C2 behavior or either missing finding.
+
+## Completed cold B2 summary and guidance bridge
+
+The separate unchanged-code cold attempt
+`conductor-B2-proper-prefix-normalization-cold-20261105T211150435991Z`
+completes its B2 snapshot at 21:28:32 UTC, then reaches F3. Its terminal labels
+are **run-3/run-2/run-1**, and the owned analyzer is gone. The final audit is
+SHA256 `f5bcf1f633273693917516500576f930551485340a1e6ec813ba8e1dab27e63b`;
+the bridge artifact is `1126fd65159da4a811b8be29251fe55885f18a56ed2571d8a75f177db45a6c85`;
+the full seven-case positive artifact is
+`6612af3e19387bc0c516a6324dbe139206817ec1ba9cc5d9fe7541686f82e82b`.
+All are embedded in `b2ColdSummaryNormalizationDiagnostic`. The positive
+artifact was sealed while live; its original prefix limits are historical,
+and final coverage comes from the terminal audit.
+
+Nineteen windows close; seven contain a paired actual subtraction. There are
+zero capture or decoder drops. Five POINT windows 12–16 cover the exact
+HashMap argument-1 context at instructions 17,3,2,1,54. The two SUMMARY windows
+are 17 in that typed context and 19 in Empty context. Both retain physical
+ROOT scope and ROOT_EXIT(-2). They close at 972/code 901 after complete C5
+admission and `RunSummaryStore` mutation, before `requestWork`.
+
+The same full premise is `ret.Element.[any]/FLOW`, empty E/mx. The actual
+output header is `arg1.[any]/FLOW DEMAND`, empty E and mxJ 10–65, with the full
+unsafe-jackson catalog. The two SUMMARY transactions independently show:
+
+```text
+prior admitted summary:  P -> arg1.taskDefinition.[any]/FLOW D, mxJ
+incoming summary input:  P -> arg1.[any]/FLOW D, mxJ
+live canonical cohort:   root LEAF plus child LEAF
+native subtraction:      child LEAF - inherited LEAF = NONE
+complete C5 input/post:  P -> arg1.[any]/FLOW D, mxJ
+admitted summary after:  root only, same P/E/mx/tail/layer
+```
+
+These are actual summary authority changes, not only point-store changes or
+pending publications. The end-of-B2 public summaries still contain the
+root-only row in each of the two contexts. Native IDs 500/2532 denote
+Element/taskDefinition in this JVM; previous-attempt IDs 556/2476 are not
+reused as cross-JVM keys.
+
+The completed snapshot enumerates all five planned collections: two current
+public summary inventories, one selected-owner census, outgoing direct public
+DATA and outgoing direct public CONTROL. The decoder has four semantic
+collections plus the owner census; that difference is not a lost collection.
+There are no whole drops. The complete DATA collection contains 113 rows,
+partitioned as follows:
+
+| Native context | All explicit DATA pairs | `arg1.[any]/FLOW -> ret.Element.[any]/FLOW` | `arg1.taskDefinition.[any]/FLOW -> ret.Element.[any]/FLOW` |
+|---|---:|---:|---:|
+|Empty |64 |1 |0 |
+|Exact HashMap, argument1 |49 |1 |0 |
+
+All four endpoints in the root pairs have native empty E/mx. The complete
+catalog and every explicit row are embedded, so child-row absence follows
+from an exhaustive view read rather than a missing callback or quota. It is
+absence of that exact explicit direct DATA pair, not absence of all semantic
+support, control guidance or native C2 eligibility.
+
+The native source selects DEMAND summary pieces, and backward `HandOff`
+projects each as `DemandPattern(guidancePattern(piece),guidancePattern(P))`.
+`guidancePattern` replaces FLOW mx with empty-mx STAR. This explains the header
+change from the observed admitted summary to the observed frozen pair.
+The observer does not invoke the function and does not capture an individual
+HandOff callback. The stronger evidence is the same-attempt completed admitted
+store plus the complete frozen explicit view under that unchanged source.
+
+Discovery closes after the two known ROOT families. After the successful
+POINT window 16 the observer deletes all four POINT hooks and their active
+return guards, while the SUMMARY hooks remain. This transition is recorded;
+later POINTs and future unregistered cores are censored. No claim of complete
+normalization-event coverage follows from zero drops. The instrumented B2
+engine time, 843.66 s, includes debugger overhead and is not substituted into
+main performance. No analyzer code, target fields or matching policy changes.
+
+Terminal source verification checks all 1,969 launch source files and 79
+runtime class/JAR files unchanged, with ordered classpath and class origins
+passing. Its SHA256 is
+`73af6c4816b20064fa3677762e1a245ed4e4b4237dc74e6b3ac36e356d95dd1c`.
+The observer detached with `B2_FREEZE_CAPTURED`; controller cleanup then
+terminated only the verified owned analyzer. There is no manual-stop artifact
+for this cold attempt and no full-project completion claim.
+
+This closes the same-attempt admitted-store to frozen explicit-view gap.
+It does not capture a later C2 rejection or prove which operational consumer
+first loses the needed refinement. Existing R3 captures lack the complete
+getTasks4 pre-C2 tuple: caller P, actual argument1 Facts, native context,
+scope/entry/BIND_IN stage and the same replay/query/NormalTarget envelope.
+The successful private Ops admissions have different owners; F5 inputs do
+not stand in for R3. The earlier recovery control and the
+missing main findings remain separate evidence. Repair and user policy are
+still UNDESIGNED/UNSELECTED; main 8331 remains five-versus-seven FAIL.
 
 ## Opposite-record role audit
 
@@ -947,8 +1131,11 @@ They leave interactions open. The role audit finds no misclassified opposite
 reader, but does not establish that the selected policy is sufficient. Main
 quality remains blocked. The positive control B now isolates the
 sufficient proper-prefix subtraction intervention in `canonicalSpans`, while
-A alone does not recover the reports. The first actual removed packet, exact
-coordinate and repair mechanism remain unresolved. The native NORMAL-cover/C2
+A alone does not recover the reports. Five actual B2 point-store removals are
+now traced under full P and the actual nonempty output mx, with completed
+post-state checks. The cold follow-up also traces admitted SUMMARY removal
+and the complete frozen explicit view in typed and Empty contexts. Later
+C2/report causal effects and the repair mechanism remain unresolved. The native NORMAL-cover/C2
 countercell is still not the traced Conductor mechanism; the organic CFG
 controls still recover and do not reproduce finding loss.
 

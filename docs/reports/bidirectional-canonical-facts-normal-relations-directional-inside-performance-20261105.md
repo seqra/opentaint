@@ -1,6 +1,6 @@
 # Canonical facts, NORMAL relations and directional inside: main campaign
 
-**Status: main quality FAIL; proper-prefix subtraction contribution isolated.** Runtime `8331bf9e326ddd1bd5083dbc50456963d6b26b52` preserves OWASP and recent Stirling report identities, but its latest accepted Conductor report still misses two identities present in all five saved quality controls. Finer control B restores required R3 guidance and seven native R5 report projections by disabling only proper-prefix subtraction in `canonicalSpans`; same-point and cross-header behavior remain enabled. Control A, same-point removal off alone, retains five reports. The first actual removed packet, exact AP coordinate and C2-versus-loop-observer effect remain untraced. This diagnostic is not an accepted fix or performance result; the main campaign is not a completed correctness acceptance. Thingsboard has no accepted forward report.
+**Status: main quality FAIL; proper-prefix subtraction contribution isolated.** Runtime `8331bf9e326ddd1bd5083dbc50456963d6b26b52` preserves OWASP and recent Stirling report identities, but its latest accepted Conductor report still misses two identities present in all five saved quality controls. Finer control B restores required R3 guidance and seven native R5 report projections by disabling only proper-prefix subtraction in `canonicalSpans`; same-point and cross-header behavior remain enabled. Control A, same-point removal off alone, retains five reports. A later cold B2 capture proves seven paired point/summary-store removals and a complete frozen explicit view: both captured contexts retain the root FLOW pair and omit the taskDefinition child pair. The later C2/report causal chain remains untraced. These diagnostics are not an accepted fix or performance result; the main campaign is not a completed correctness acceptance. Thingsboard has no accepted forward report.
 
 The [portable evidence](data/bidirectional-canonical-facts-normal-relations-directional-inside-performance-20261105.json) embeds exact identity sets, changed SARIF entries, per-run sample/allocation/resource data, memory signals, launch/source/helper/capture hashes, and executed reader commands. No baseline was rerun. All raw captures remain preserved.
 
@@ -41,7 +41,7 @@ Labels below mean latest reached / completed / accepted forward iteration. Count
 | Stirling-PDF | TIMEOUT | run-16/run-15/run-15 | 1107.484 | 13.918 | 22 | 0 missing / 0 added |
 
 - **OWASP:** all 4,112 identities match f945, 86ad, 050b, e558 and 52f. SARIF files are not byte-identical, so the equality claim is about the complete strict identity set.
-- **Conductor:** five identities versus seven in all five saved quality controls; main labels remain run-15/run-14/run-13. The missing identities are `PythonEvaluator#evaluate(java.lang.String, java.lang.Object)` and `ScriptEvaluator#getSource(java.lang.String)`, both for `java.security.graaljs-polyglot-code-injection`; full fingerprints/SARIF records are embedded. The [investigation appendix](bidirectional-conductor-canonical-quality-regression-20261105.md) records preserved inputs, successful required R3 local admissions, and no opposite-record role misclassification. Separate NORMAL-support-off and matching-only controls do not recover Graal through R5. The broad coordinate-removal rollback recovers both, and finer control B does so with only proper-prefix subtraction disabled; control A, same-point-only off, remains at five. B restores R3 WFDef guidance, then complete R5 native report entries match all expected seven rule/full-Java-signature projections. A has 66 complete collections/zero drops; B has 62 complete/four late R3 INPUT drops, with all R5 collections complete. Both diagnostic labels are run-6/run-5/run-5. This is not a SARIF-fingerprint equality claim. The proper-prefix intervention is isolated, but the first removed packet/coordinate and C2-versus-observer effect remain unresolved; no repair is selected. The [native NORMAL-cover/C2 countercell](bidirectional-normal-cover-opposite-c2-countercell-20261105.md) remains a general operational warning, not the traced Conductor mechanism.
+- **Conductor:** five identities versus seven in all five saved quality controls; main labels remain run-15/run-14/run-13. The missing identities are `PythonEvaluator#evaluate(java.lang.String, java.lang.Object)` and `ScriptEvaluator#getSource(java.lang.String)`, both for `java.security.graaljs-polyglot-code-injection`; full fingerprints/SARIF records are embedded. The [investigation appendix](bidirectional-conductor-canonical-quality-regression-20261105.md) records preserved inputs, successful required R3 local admissions, and no opposite-record role misclassification. Separate NORMAL-support-off and matching-only controls do not recover Graal through R5. The broad coordinate-removal rollback recovers both, and finer control B does so with only proper-prefix subtraction disabled; control A, same-point-only off, remains at five. B restores R3 WFDef guidance, then complete R5 native report entries match all expected seven rule/full-Java-signature projections. A has 66 complete collections/zero drops; B has 62 complete/four late R3 INPUT drops, with all R5 collections complete. Both diagnostic labels are run-6/run-5/run-5. This is not a SARIF-fingerprint equality claim. A separate cold B2 attempt now traces actual point and summary removals through the complete frozen explicit demand view. Both contexts retain the root pair and omit the child pair. The later C2-versus-observer/report effect remains unresolved; no repair is selected. The [native NORMAL-cover/C2 countercell](bidirectional-normal-cover-opposite-c2-countercell-20261105.md) remains a general operational warning, not the traced Conductor mechanism.
 - **Stirling-PDF:** 22 identities and byte-identical SARIF to 86ad, 050b, e558 and 52f. The f945 difference remains three missing and eight added, already present in those recent controls. The accepted report is still a timeout snapshot, not proof of convergence.
 - **Thingsboard:** run 1 timed out during static completion, with no complete or accepted forward iteration. Its empty SARIF must not be reported as fourteen newly lost findings or equivalent quality to older accepted results.
 
@@ -254,6 +254,59 @@ also passes on current and proper-prefix-off runtimes. Its four native cases
 all finish at run-5. No captured packet contains the needed proper-prefix
 pair, so this control is not a finding-loss reproducer or a proof that the
 selected canonicalization preserves all findings.
+
+### Actual B2 point and summary removal
+
+A later passive capture on unchanged production records five removals with
+matching completed point-store admissions in four-argument
+`DeciderService.getTasksToBeScheduled`, empty context and ROOT scope. The first
+is instruction 17, source 998, `taskToSchedule.getTaskDefinition()`. Under full
+premise `ret.Element.[any]/FLOW` with empty E/mx, an incoming `arg1.[any]/FLOW`
+DEMAND packet replaces existing `arg1.taskDefinition.[any]/FLOW` support.
+The actual merged state contains both coordinates; `canonicalSpans` changes
+the child LEAF to NONE under inherited root LEAF. The matched post marker
+shows a fresh root-only delta and root-only current authority.
+
+This is broad-after-narrow **state** normalization, not a mixed incoming
+packet. Both output packets have empty E and the same mx 10–65: full
+unsafe-jackson exclusions, which do not exclude Graal atoms. These headers
+must not be replaced with the earlier frozen pair's empty mx or exact HashMap
+context. Source `guidancePattern` removes FLOW mx during handoff projection,
+but that source bridge is not an observed handoff for this transaction.
+
+The attempt was manually stopped because hot breakpoint overhead prevented a
+timely B2 capture. Its labels are **run-2/run-1/run-1**: five actual removals,
+40 completed windows, one whole deadline drop and zero decoder drops; no B2
+snapshot exists. Counts are native memo-state events, not five unique logical
+paths. The [appendix](bidirectional-conductor-canonical-quality-regression-20261105.md#actual-b2-point-store-subtraction)
+embeds the full five witnesses, final receipt, sources and masks.
+
+The separate cold follow-up completes B2 and then reaches F3: diagnostic labels
+**run-3/run-2/run-1**. It has 19 closed windows, seven paired removals and zero
+capture/decoder drops. Two are actual ROOT_EXIT summary-store removals, one in
+exact HashMap argument-1 context and one in Empty context. Each complete post
+contains the root-only C5-admitted input and root-only summary authority under
+the same full P and actual output header. Native field IDs are local to each
+attempt; the cold catalog uses500/2532 for Element/taskDefinition.
+
+At the completed B2 snapshot, all five collections are complete: four semantic
+collections and one owner census. Its outgoing direct public DATA view has
+113 rows, split Empty 64/exact HashMap49. Each context contains exactly one
+`arg1.[any]/FLOW -> ret.Element.[any]/FLOW` pair and no explicit
+`arg1.taskDefinition.[any]/FLOW -> ret.Element.[any]/FLOW` pair. Both endpoints
+have empty E/mx. Thus the same-attempt admitted-store to frozen explicit-view
+bridge is now observed, with native `guidancePattern` explaining the FLOW mx
+projection. No observer invocation of that function is claimed. Explicit pair
+absence is not absence of denotational coverage or a proved C2 rejection.
+
+The [cold receipt and full seven witnesses](bidirectional-conductor-canonical-quality-regression-20261105.md#completed-cold-b2-summary-and-guidance-bridge)
+retain all rows, masks, scopes, control limits and source hashes. The positive
+witness file was sealed while live; its status is superseded by the terminal
+audit. Constructor discovery and POINT hooks were removed after the known
+contexts/point witness, so later point trace coverage is censored. No
+subsequent C2/report-loss chain is proved. Diagnostic B2 time is excluded from
+main performance. Main timings, quality and native/model validation counts
+are unchanged.
 
 ## Evidence and unresolved work
 
