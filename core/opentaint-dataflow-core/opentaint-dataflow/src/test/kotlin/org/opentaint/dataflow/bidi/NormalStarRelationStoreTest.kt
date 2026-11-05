@@ -255,6 +255,69 @@ class NormalStarRelationStoreTest {
         }
     }
 
+    @Test fun `direct FLOW cover needs no intermediate in either arrival order or marked layer`() {
+        for (backed in listOf(false, true)) for (flowFirst in listOf(false, true))
+            for (suffix in listOf(listOf(a), listOf(a, b, c))) for (layer in Layer.entries)
+                for (variant in 0..2) {
+                    val mx = if (variant == 2) ap.markSetOf(f.mark("T")) else MarkSet.EMPTY
+                    val broad = Publication(initial(), flow(mx = mx))
+                    val markedI = ap.initial(f.pattern(x, suffix, Tail.STAR))
+                    val plain = f.fact(y, suffix, Tail.STAR, layer = layer) as TaintTree
+                    val marked = Publication(markedI, if (variant == 1) plain.withProtection(plain.root) else plain)
+                    val rows = if (flowFirst) listOf(broad, marked) else listOf(marked, broad)
+                    val expected = if (variant == 0) setOf(broad) else setOf(broad, marked)
+                    val label = "backed=$backed flowFirst=$flowFirst suffix=$suffix layer=$layer variant=$variant"
+                    val store = RunSummaryStore(ap, flowBacked = backed)
+                    val publications = PublicationIndex(ap, f.ops, flowBacked = backed)
+                    for (row in rows) {
+                        store.addAdmittedAll(row.premise, row.conclusion)
+                        publications.addAll(listOf(row))
+                    }
+                    assertEquals(expected, store.all().map { Publication(it.first, it.second) }.toSet(), label)
+                    assertEquals(expected, publications.currentPublications().toSet(), label)
+                    assertEquals(if (variant == 0) emptySet() else setOf(marked.conclusion),
+                        store.borrow(markedI).toSet(), label)
+                    if (variant == 0) for (direction in Direction.entries)
+                        assertTrue(store.demandEdges(direction).none(), label)
+                    val batch = PublicationIndex(ap, f.ops, flowBacked = backed)
+                    assertEquals(expected, batch.addAll(rows).toSet(), label)
+                }
+    }
+
+    @Test fun `persistent direct and reverse reads remove transitive FLOW specializations in either order`() {
+        // Concrete STAR premises are not native persisted records. Exercise
+        // transitive geometry and mark-mask coverage with legal FLOW records.
+        val scope = BlockScope(BlockId(2), PortId(3))
+        val exit = PortId(4)
+        for (direction in Direction.entries) for (flowFirst in listOf(false, true))
+            for (scoped in listOf(false, true)) for (suffix in listOf(listOf(a), listOf(a, b, c))) {
+                val narrowI = initial(suffix)
+                val broad = Record(f.method, direction, initial(), flow(),
+                    if (scoped) scope else null, if (scoped) exit else null)
+                val narrow = Record(f.method, direction, narrowI, flow(suffix, mx = ap.markSetOf(f.mark("T"))),
+                    if (scoped) scope else null, if (scoped) exit else null)
+                val records = PersistentRecordStore(ap)
+                for (row in if (flowFirst) listOf(broad, narrow) else listOf(narrow, broad)) records.add(row)
+                val input = narrowI.toPattern()
+                val output = f.pattern(y, suffix, Tail.STAR)
+                val direct = if (scoped) records.byEntry(f.method, scope, input)
+                    else records.byEntry(f.method, input)
+                val reverse = if (scoped) records.byExit(f.method, BlockScope(scope.block, exit), output)
+                    else records.byExit(f.method, output)
+                val label = "direction=$direction flowFirst=$flowFirst scoped=$scoped suffix=$suffix"
+                for (selected in listOf(direct, reverse)) {
+                    val only = selected.single()
+                    assertSame(broad.premise, only.premise, label)
+                    assertSame(broad.conclusion, only.conclusion, label)
+                }
+                if (scoped) {
+                    val positions = records.byExitPositions(f.method, BlockScope(scope.block, exit), output)
+                    assertEquals(listOf(emptyList()), positions.map { it.path }, label)
+                    assertSame(broad.premise, positions.single().record.premise, label)
+                }
+            }
+    }
+
     @Test fun `packed admission agrees with scalar aligned cover after every batch`() {
         data class Row(val input: List<Int>, val output: List<Int>)
         fun covers(short: Row, long: Row): Boolean = long.input.size >= short.input.size &&
