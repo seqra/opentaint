@@ -1,14 +1,16 @@
 # Conductor canonical-quality regression: investigation appendix
 
-**Status: main quality FAIL; coordinate-removal contribution isolated.** The
+**Status: main quality FAIL; proper-prefix subtraction contribution isolated.** The
 main `8331bf9e326ddd1bd5083dbc50456963d6b26b52` campaign still accepts five
-Conductor identities rather than seven. A verified external two-function
-SpatialCanonical rollback restores required R3 WFDef guidance and both
-missing native R5 report projections while NORMAL relation/transitivity and
-opposite-only STAR matching remain enabled. This isolates a causal
-contribution of the coordinate-removal bundle in the control. It does not
-identify the first lost AP coordinate, which function is responsible, or the
-first C2-versus-loop-observer effect. No repair is selected, and the control
+Conductor identities rather than seven. The finer external control B changes
+one expression in `canonicalSpans`, disabling proper-prefix covered-atom
+subtraction while same-point removal, cross-header logic, NORMAL relations
+and opposite-only STAR remain enabled. It restores R3 WFDef guidance and both
+missing native R5 report projections. Control A, which disables same-point
+removal alone, does not recover them. This narrows the sufficient causal
+intervention to proper-prefix subtraction in that helper; the first actual
+removed packet, exact coordinate and C2-versus-loop-observer effect remain
+untraced. No repair is selected, and the control
 is not main-campaign correctness or performance acceptance.
 
 The [portable evidence](data/bidirectional-conductor-canonical-quality-regression-20261105.json)
@@ -52,6 +54,10 @@ three methods and yields all seven expected native R5 report projections.
 The exact first coordinate remains open. A repair that preserves or changes
 C2 refinement images is UNDESIGNED/UNSELECTED; an explicit user behavior
 decision is pending.
+
+The finer A/B controls now separate same-point removal from proper-prefix
+subtraction: A remains at five native R5 reports, while B restores all seven.
+The cold/warm and cross-header scope limits are stated below.
 
 ## Main quality authority
 
@@ -662,6 +668,8 @@ tables. Neither is an old-baseline rerun or accepted implementation change.
 | NORMAL support off,18:24:08 |Only `NormalStarRelationIndex.supports` returns false |run-6/run-5/run-5 |64 complete; two whole report-identity collections DROP |Neither Graal report recovered, by the cumulative NormalTarget proof below |
 | Matching restriction off,18:33:31 |Only Pattern-overload `ApOps.matchSummary` permits strict-ancestor STAR for every role |run-6/run-5/run-5 |66 complete, zero DROP/decode errors |Complete R3/R5 native entries retain the same five rule/sink-signature projections as main; no Graal report |
 | Coordinate-removal bundle off,18:47:19 |Only `canonicalSpans` returns the raw root and `canonicalRegions` disables below-coordinate subtraction |run-6/run-5/run-5 |62 complete; four late R3 INPUT whole drops; all 23 R5 collections complete |Both Graal reports recovered; native R5 projection equals expected seven |
+| A: same-point off,19:38:20 |Only `canonicalSpans` skips its same-point MAY-covered EXACT removal |run-6/run-5/run-5 |66 complete, zero DROP/decode errors |Five native R5 reports; neither Graal report recovered |
+| B: proper-prefix off,19:42:38 |Only `canonicalSpans` skips subtraction of covered ancestor atoms |run-6/run-5/run-5 |62 complete; four late R3 INPUT whole drops; all 23 R5 collections complete |Both Graal reports recovered; native R5 projection equals expected seven |
 
 The first control's identity adapter cannot read boxed `ReportId` keys and
 drops each report-identity collection whole. Its exact five identities are
@@ -758,6 +766,53 @@ required implied C2 refinements from canonical facts and retaining current C2
 outputs while repairing other guidance. Neither mechanism is designed or
 selected here. In particular, the earlier canonical-only decision is not
 silently replaced by raw descendant history or separate refinement labels.
+
+## Finer A/B isolation
+
+The next controls use production8331 from a docs-only workspace at38f0. Both
+end at **run-6/run-5/run-5**, owned analyzers gone. Each capsule passes 60 native
+checks and verifies its ABI, exact source delta and three loaded class sources.
+These are external control checks, not an addition to the historical 2,990-test
+receipt or a new full repository suite.
+
+Both replace only this expression in `canonicalSpans`:
+
+```text
+Base: samePoint(minus(key.node.leaf, key.above))
+A:    minus(key.node.leaf, key.above)
+B:    samePoint(key.node.leaf)
+```
+
+**A is negative.** Turning off same-point MAY-covered EXACT deletion alone
+leaves five committed native reports at R3/R5 and no Graal recovery. All 66
+collections are complete, with zero DROP/decode errors. Its native checks
+retain the raw/cold same-point EXACT bit and recover EXACT/FLOW NORMAL beside
+ANY/FLOW DEMAND at C2. The warm changed-group check still removes that exact
+coordinate through unchanged state/group behavior. A therefore does not turn
+off all MAY-over-EXACT subsumption, and its negative result is not proof that
+same-point removal is harmless in every program.
+
+**B is positive.** Turning off only proper-prefix covered-atom subtraction
+restores the R3 WFDef STAR/Graal guidance and seven native R5 report entries.
+The rule/full-Java-signature projection equals the fixed expected seven, zero
+missing and zero added, including Script instruction12/source253 and Python
+instruction58/source63. Same-point deletion remains on. `canonicalRegions`
+cross-header policy remains on; its same-header use of `canonicalSpans` does
+inherit B's proper-prefix change. Other Group behavior, E/mx/header fills,
+protection, NORMAL/transitive cover and opposite-only STAR remain on.
+
+B has 62 complete collections and four late R3 INPUT whole drops; all 23 R5
+collections and the report/target authorities are complete. A dropped INPUT
+collection is unavailable, not empty. Full paired/native facts, catalogs,
+report descriptors, class-load evidence, source/ABI receipts and native
+cold/warm checks are embedded. Neither diagnostic invents SARIF fingerprints.
+
+B narrows the earlier two-function result to a sufficient one-expression
+proper-prefix intervention. It does not identify the first actual removed
+Conductor packet, mark/layer/coordinate or which caller/consumer first loses
+progress. In particular, it does not prove a C2 repair rather than a loop
+observer repair. Main8331 still fails its strict quality comparison, and the
+user policy decision and repair design remain pending.
 
 ## Opposite-record role audit
 
@@ -859,9 +914,10 @@ The two verified single-feature rollback controls also fail to recover Graal
 through committed R5, with different report-identity coverage stated above.
 They leave interactions open. The role audit finds no misclassified opposite
 reader, but does not establish that the selected policy is sufficient. Main
-quality remains blocked. The later positive coordinate-removal control now
-isolates that bundle's causal contribution, but the first exact AP coordinate
-and repair mechanism remain unresolved. The native NORMAL-cover/C2
+quality remains blocked. The positive control B now isolates the
+sufficient proper-prefix subtraction intervention in `canonicalSpans`, while
+A alone does not recover the reports. The first actual removed packet, exact
+coordinate and repair mechanism remain unresolved. The native NORMAL-cover/C2
 countercell is still not the traced Conductor mechanism; the organic CFG
 controls still recover and do not reproduce finding loss.
 
