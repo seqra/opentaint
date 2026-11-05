@@ -114862,7 +114862,7 @@
         ],
         "classification": "EXACT_RETURN_IDENTITY_ABSENT_SAME_METHOD_RULE_STILL_REPORTED",
         "qualification": "Do not substitute same-method detection for exact per-return coverage. Strict baseline identity gate remains failing.",
-        "establishedCause": "Simple boundary export lacks the actual return witness and the resolver chooses final real return IR126 at148–149 instead of baseline IR103 at133–134.",
+        "establishedCause": "Simple boundary export lacks the actual return witness and the resolver chooses final real return IR126 at148\u2013149 instead of baseline IR103 at133\u2013134.",
         "limit": "Reporting-coordinate defect is established; same-method/same-rule reporting does not prove the original returned-value branch survives.",
         "baselineLocation": [
           {
@@ -114897,7 +114897,7 @@
         ],
         "classification": "EXACT_RETURN_IDENTITY_ABSENT_SAME_METHOD_RULE_STILL_REPORTED",
         "qualification": "Do not substitute same-method detection for exact per-return coverage. Strict baseline identity gate remains failing.",
-        "establishedCause": "The same Simple-export representative-return path selects IR109 return null at130 instead of baseline IR50 at90–91.",
+        "establishedCause": "The same Simple-export representative-return path selects IR109 return null at130 instead of baseline IR50 at90\u201391.",
         "limit": "The reported null location neither proves tainted null nor proves the original byte-return branch survives.",
         "baselineLocation": [
           {
@@ -115207,12 +115207,32 @@
   "conductorInvestigationAppendix": {
     "report": "docs/reports/bidirectional-conductor-canonical-quality-regression-20261105.md",
     "data": "docs/reports/data/bidirectional-conductor-canonical-quality-regression-20261105.json",
-    "dataSha256": "0b40aa79d5cc3fa8162c2d8c713cb32db89820a19956ddc1f81b4de662f74d58",
+    "dataSha256": "9908e601683d690696a96eb0bc59db5cf5d8f5a9af42f0f2c3889342cff1b501",
     "state": "PROPER_PREFIX_SUBTRACTION_CAUSAL_CONTRIBUTION_ISOLATED_REPAIR_UNDESIGNED_MAIN_QUALITY_FAIL",
     "runtimeRevision": "8331bf9e326ddd1bd5083dbc50456963d6b26b52",
     "observedPositiveBoundary": "B restores actualR3WFDefSTAR guide and nativeR5Script12/253 plusPython58/63. Same-point/cross-header canonicalization and NORMAL/directional policies remainenabled.",
     "remainingUncertainty": "First actual removedpacket/coordinate and C2-versus-loop-observer effect untraced. Repair/policy UNDESIGNED/UNSELECTED pendinguser. Native projection is not diagnostic SARIF fingerprints or accepted fix/performance.",
     "performanceUse": "Diagnostic timings excluded from main campaign comparison.",
-    "diagnosticCausalStatus": "FinerB proper-prefix subtraction one-expression rollback restores expected native7; A same-point-only rollback remains5. Main8331 quality remainsFAIL."
+    "diagnosticCausalStatus": "FinerB proper-prefix subtraction one-expression rollback restores expected native7; A same-point-only rollback remains5. Main8331 quality remainsFAIL.",
+    "earliestFrozenInputDemandDifference": "getTasks4 F3 input DATA113\u2192114 and CONTROL18\u219220; query-view comparison, not observed first drop."
+  },
+  "followupValidation": {
+    "data": "docs/reports/data/bidirectional-canonical-current-validation-20261105.json",
+    "sha256": "3fc793f85a4df031e024f5359754e64c23bf583fcedff5384a095b0d15cfb168",
+    "testedHead": "10c1538144ec672387526ff01c0853d994838de2",
+    "productionRevision": "8331bf9e326ddd1bd5083dbc50456963d6b26b52",
+    "tests": 2992,
+    "theorems": 175,
+    "declarations": 249,
+    "interpretation": "Fresh selected native/model checks include the two b409 test additions and current proof guide. Original campaign/native2990 receipts remain unchanged. No real-project rerun or quality-recovery acceptance."
+  },
+  "followupNativeControls": {
+    "report": "docs/reports/bidirectional-nd-loop-canonical-control-20261105.md",
+    "data": "docs/reports/data/bidirectional-nd-loop-canonical-control-20261105.json",
+    "dataSha256": "6e44a06feac3ea525652216b6f738ecdaf4dddc97dbdc9812394a0df31a417ec",
+    "state": "PASS_NO_FALSE_NEGATIVE_REPRODUCTION",
+    "caseCount": 4,
+    "labels": "run-5/run-5/run-5 for all four native cases",
+    "limit": "No captured same-mark same-tail proper-prefix MAY/MUST pair; not an actual first-loss trace or project-quality recovery."
   }
 }

@@ -61,6 +61,14 @@ shows why denotational relation cover alone is not an initial-progress theorem,
 but is not the traced Conductor mechanism. The [organic CFG controls](../reports/bidirectional-normal-cover-cfg-progress-control-20261105.md)
 recover their findings and do not reproduce the project loss.
 
+The earliest captured input-demand difference is now before run-3 transfer.
+Control B has an extra `arg1.taskDefinition.[any]/FLOW → ret.Element.[any]/FLOW`
+pair in getTasks4's typed context, plus two `This.taskMappers.[any]/T → Zero`
+control rows. These are frozen query-view differences, not observed first
+removals. They do not select a C2 repair or prove which row causes recovery.
+The appendix retains the native rows and the correction from an earlier
+readable `Target` label to the actual `Zero` control exit.
+
 The user behavior decision is pending between:
 
 - allowing required implied C2 refinements from canonical facts, revising the

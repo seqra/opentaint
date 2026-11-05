@@ -23,6 +23,12 @@ files still use the removed report API. Those files are byte-identical to the
 saved control. The passing count is for the dataflow and JVM dataflow modules;
 it is not a claim that every repository test compiles.
 
+A [current-tree follow-up](bidirectional-canonical-current-acceptance-20261105.md)
+passes 2,992 tests after the two transitivity regressions were added. Its fresh
+model check passes the same 175 theorems and 249 declarations with the updated
+proof guide. The original campaign receipts above remain unchanged. No
+real-project run or analyzer behavior changed for this follow-up.
+
 ## Quality and command outcomes
 
 Labels below mean latest reached / completed / accepted forward iteration. Counts are strict finding identities, not interchangeable sink names.
@@ -242,6 +248,12 @@ tests and not a reproduction or solution of the real Conductor loss**. The
 workflow probe explicitly does not load actual JIR Spring rules,
 collection/getter models, aliases, source predicates or the Python string loop.
 The exact project trace and first-loss audit remain incomplete.
+
+The later [conditional-source loop control](bidirectional-nd-loop-canonical-control-20261105.md)
+also passes on current and proper-prefix-off runtimes. Its four native cases
+all finish at run-5. No captured packet contains the needed proper-prefix
+pair, so this control is not a finding-loss reproducer or a proof that the
+selected canonicalization preserves all findings.
 
 ## Evidence and unresolved work
 
