@@ -4,14 +4,17 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.store.PathTrie
 import org.opentaint.dataflow.bidi.store.FlowBackedSummaries
+import org.opentaint.dataflow.bidi.store.NormalStarRelationIndex
 import java.util.Collections
 
 /** Candidate lookup preserves the full premise and the member that matched its position. */
 class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBacked: Boolean = false) {
     private data class Member(val premise: PremiseKey, val index: Int)
     private val interners = ap.newInterners()
-    private val merged = LinkedHashMap<PremiseKey, ConclusionGroup>()
-    private val backed = if (flowBacked) FlowBackedSummaries(ap) else null
+    private val possiblyEmpty = LinkedHashSet<PremiseKey>()
+    private val normalStars = NormalStarRelationIndex(ap, interners) { possiblyEmpty += it }
+    private val backed = FlowBackedSummaries(ap, replaceCovered = flowBacked, interners = interners,
+        normalStars = normalStars, emptied = { possiblyEmpty += it })
     private val targets = LinkedHashMap<PremiseKey, LinkedHashSet<Target>>()
     private val indexed = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<PremiseKey, Boolean>())
     private val byMember = PathTrie<Member>(ap.cancellation)
@@ -31,17 +34,25 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
             check(pub.premise !is PremiseSet || pub.conclusion is TaintTree) {
                 "A multi-premise publication must be TAINT"
             }
-            val fresh = if (backed != null) backed.add(pub.premise, pub.conclusion)
-                else merged.getOrPut(pub.premise) { ConclusionGroup(ap, interners) }.add(pub.conclusion)
-            if (fresh == null) continue
+            val fresh = backed.addAll(pub.premise, pub.conclusion)
+            if (fresh.isEmpty()) continue
             indexPremise(pub.premise)
-            out += Publication(pub.premise, fresh)
+            for (piece in fresh) out += Publication(pub.premise, piece)
         }
         // FLOW can arrive after a marked delta in this same detached batch.
         // Normalize before notifying callers, as well as before later replay.
-        val current = if (backed == null) out else out.mapNotNull { pub ->
-            backed.normalize(pub.premise, pub.conclusion)?.let { Publication(pub.premise, it) }
+        val current = out.flatMap { pub ->
+            val kept = backed.retainCurrentAll(pub.premise, pub.conclusion)
+            kept.map { Publication(pub.premise, it) }
         }
+        for (premise in possiblyEmpty) if (publications(premise).isEmpty() && targets[premise].isNullOrEmpty()) {
+            indexed.remove(premise)
+            for (index in 0 until premise.size) {
+                val initial = premise.member(index)
+                byMember.remove(initial.base, initial.pathData, Member(premise, index))
+            }
+        }
+        possiblyEmpty.clear()
         return Collections.unmodifiableList(current)
     }
 
@@ -149,8 +160,11 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
         return Collections.unmodifiableList(out)
     }
 
-    private fun publications(premise: PremiseKey): List<Publication> {
-        val values = backed?.borrow(premise) ?: merged[premise]?.all() ?: emptySequence()
-        return values.map { Publication(premise, it) }.toList()
-    }
+    private fun currentFacts(premise: PremiseKey): Sequence<Facts> = backed.borrow(premise)
+
+    /** Settled current native relation, including packed channels; never an append history. */
+    internal fun currentPublications(): List<Publication> = backed.all().map { Publication(it.first, it.second) }.toList()
+
+    private fun publications(premise: PremiseKey): List<Publication> =
+        currentFacts(premise).map { Publication(premise, it) }.toList()
 }

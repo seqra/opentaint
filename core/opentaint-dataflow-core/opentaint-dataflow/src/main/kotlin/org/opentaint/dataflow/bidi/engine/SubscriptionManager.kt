@@ -12,7 +12,8 @@ fun matches(sub: Subscription, pub: Publication, member: Int, ops: ApOps, mode: 
     if (!RuntimeDataDomain.packet(sub.ref.premise, sub.added) ||
         !RuntimeDataDomain.packet(pub.premise, pub.conclusion)) return null
     return if (sub.zeroOnly) sub.added.takeIf { pub.premise.isZero }
-    else ops.satisfying(sub.added, pub.premise.member(member), mode)
+    else ops.matchSummary(sub.added, pub.premise.member(member), mode, nativeRecordRead = false,
+        role = SummaryMatchRole.CURRENT)
 }
 
 /** Only notify runs on a publisher's thread; all subscription state is runner-owned. */
@@ -26,6 +27,12 @@ class SubscriptionManager(port: SubscriptionPort) {
     }
 
     fun subscribe(sub: Subscription) {
+        val port = active()
+        for (packet in port.ops.manager.canonicalPackets(sub.added))
+            subscribeCanonical(sub.copy(added = packet))
+    }
+
+    private fun subscribeCanonical(sub: Subscription) {
         val port = active()
         if (!RuntimeDataDomain.packet(sub.ref.premise, sub.added)) return
         check(!port.config.run1 || sub.ref.premise is InitialAp) { "Run-1 subscriptions have one original premise" }
@@ -56,30 +63,35 @@ class SubscriptionManager(port: SubscriptionPort) {
 
     private fun replay(storage: SummaryStorage, admitted: CalleeSubscriptions.Admission) {
         val port = active()
-        val part = admitted.fresh
-        for ((pub, member) in storage.candidates(part, port.config.mode)) {
-            port.ops.manager.cancellation.checkpoint()
-            applyMatch(part, pub, member)
-        }
-        for ((row, member) in storage.targetCandidates(part, port.config.mode)) {
-            port.ops.manager.cancellation.checkpoint()
-            port.applier(part.caller).applyTarget(part, row, member)
-        }
-        if (isStaticControl(part)) for ((row, member) in storage.staticTargetCandidates()) {
-            port.ops.manager.cancellation.checkpoint()
-            port.applier(part.caller).applyStaticTarget(part, row, member)
-        }
-        if (isStaticControl(part)) for ((pub, member) in storage.staticCandidates()) {
-            port.ops.manager.cancellation.checkpoint()
-            applyStaticControl(part, pub, member)
+        for (packet in port.ops.manager.canonicalPackets(admitted.fresh.added)) {
+            val part = admitted.fresh.copy(added = packet)
+            for ((pub, member) in storage.candidates(part, port.config.mode)) {
+                port.ops.manager.cancellation.checkpoint()
+                applyMatch(part, pub, member)
+            }
+            for ((row, member) in storage.targetCandidates(part, port.config.mode)) {
+                port.ops.manager.cancellation.checkpoint()
+                port.applier(part.caller).applyTarget(part, row, member)
+            }
+            if (isStaticControl(part)) for ((row, member) in storage.staticTargetCandidates()) {
+                port.ops.manager.cancellation.checkpoint()
+                port.applier(part.caller).applyStaticTarget(part, row, member)
+            }
+            if (isStaticControl(part)) for ((pub, member) in storage.staticCandidates()) {
+                port.ops.manager.cancellation.checkpoint()
+                applyStaticControl(part, pub, member)
+            }
         }
         if (port.config.run1 && !admitted.fresh.zeroOnly) {
             val current = admitted.current
             checkKinds(current)
             if (current.added is FlowTree) {
                 port.abstractionStatistics?.freshFlowInputVisit(admitted.growth)
-                val rows = storage.borrowMatchingRequests(current.added)
-                joinRequests(rows) { visit -> visit(current) }
+                for (packet in port.ops.manager.canonicalPackets(current.added)) {
+                    val part = current.copy(added = packet)
+                    val rows = storage.borrowMatchingRequests(packet)
+                    joinRequests(rows) { visit -> visit(part) }
+                }
             }
         }
     }

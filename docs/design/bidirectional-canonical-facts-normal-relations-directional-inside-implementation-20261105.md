@@ -1,6 +1,7 @@
 # Implementation proposal: canonical facts, NORMAL relations, and directional STAR matching
 
-Date: 5 November 2026. Status: proposal. No analyzer implementation change.
+Date: 5 November 2026. Status: implementation and validation in progress.
+The user added the transitive-coverage clarification during implementation.
 Reviewed runtime: `52f32dd437d438aec4a700a02c18d94c31d58093`.
 
 This document implements the three selected changes from the
@@ -147,6 +148,10 @@ restore any ordinary coordinates required by native protection-mask inclusion.
 Those coordinates support retained protected data; they are not raw C2 history.
 
 Use native catalog-aware `MarkExclusions.isSubsetOf` for cross-mx coverage.
+At one output coordinate with equal E, two FLOW cohorts have an exact union
+with `mx = mx1.intersect(mx2)`. Keep nonshared coordinates under their original
+headers. This can make their shared immediate child a complete supplier. Do
+not combine different E and different mx without a separate exact-union law.
 For a FLOW fill, require the child to supply every mark allowed by the parent;
 equal canonical mx is the simple supported case. Keep any extra child marks.
 If a child supplies only part of the parent's FLOW complement, keep that pair
@@ -355,8 +360,9 @@ Result: retain S; L adds no concrete correlated pair.
 ```
 
 Start with singleton nonzero nonstatic FLOW STAR endpoints, empty field
-exclusions at both endpoints, and equal canonical native mark-exclusion headers
-in the same mark catalog.
+exclusions at both endpoints. The covering output must admit every mark that
+the covered output admits: `short.mx.isSubsetOf(long.mx)` in the same native
+mark catalog. Equal canonical mx is one case of this rule.
 Keep the same owner, method context, direction, scope, physical entry and exit.
 Do not compare protected concrete relations, ND, Targets, ZERO or static special
 relations with this new law. They keep their existing handling.
@@ -373,7 +379,42 @@ The MUST exclusion rules in section 3 are broader. Equal nonempty endpoint E
 does not prove aligned STAR coverage because the exclusions act after different
 known prefixes.
 
-### 4.2 Relation-family trie
+### 4.2 Packed relation index and scalar reference
+
+The coverage relation is transitive. In particular:
+
+```text
+A NORMAL: p.*   /FLOW -> q.*   /FLOW
+B NORMAL: p.f.* /FLOW -> q.f.* /FLOW
+C:        p.f.* /T    -> q.f.* /T, with no protection
+
+A covers B; B covers C; therefore A covers C.
+Do not require B to remain stored or to have arrived at all.
+C then A -> C is removed; A then C -> C is not admitted.
+```
+
+Apply this rule in both summary backends and publication storage. Point stores
+keep concrete facts for rule observations under their existing policy. At the
+persistent barrier, merge current and saved rows under the same coverage law.
+Current owners do not import rows from a different saved authority.
+
+The mx subset guard is an explicit extension of the earlier equal-mx boundary.
+It is required for transitivity with native same-input FLOW joins. For example,
+A/mx={} covers B/mx={T}; if B covers an aligned longer row C/mx={T}, A must also
+cover C. Keep the Empty field-E and interface guards. A protected C, or a C
+whose mark is excluded by A, is not covered.
+
+Production keeps packed output DAGs. It indexes concrete input prefixes. A
+shorter input fixes one shared residual r. Graft r onto the shorter output DAG,
+then subtract only equal output coordinates from the longer packet. Select
+compatible output bases and native mx subsets. Never enumerate output paths to
+allocate a row for each logical leaf. Preserve native same-input FLOW joins
+before and after cross-input reduction. Only actually admitted rows supply
+coverage.
+
+The following scalar equal-mx index remains a reference for the geometry law.
+Its family factoring is not the physical packed storage layout:
+
 
 ```kotlin
 data class FamilyKey(
@@ -406,7 +447,7 @@ fun admitAligned(row: NormalStarRow): RelationChange {
 }
 ```
 
-The common-suffix factor is only an index. Never create a row at the empty
+In the scalar reference, the common-suffix factor is only an index. Never create a row at the empty
 residual unless that row was actually admitted. If only L exists, retain L.
 A raw S rejected by C5 cannot cover L. Apply this antichain after existing
 restriction and normalization, before current summary publication.
@@ -480,7 +521,11 @@ Rebuild the relevant indexes from canonical authoritative rows at the barrier;
 do not leave covered L records reachable by `byEntry`, `byExit`, or output-position
 selection. Preserve all unrelated saved rows, scopes and physical port labels.
 
-Batch public and scoped ingestion into one barrier rebuild:
+Batch public and scoped ingestion into one barrier rebuild. Stage copies of
+only touched owner relations, with shared immutable DAG payloads. Build their
+complete replacement indexes, then swap one `(authority, indexes)` state root
+after the last cancellation check. A canceled batch must not become visible
+when cancellation is later cleared. Standalone mutations use the same law:
 
 ```kotlin
 interface RecordStore {
@@ -493,9 +538,10 @@ interface RecordStore {
 
 // In PersistentRecordStore:
 override fun persistCompleted(direction, publicRows, scopedRows) {
-    ingestCanonical(direction, publicRows, scopedRows)
-    val next = buildAllCurrentIndexes() // Repack current records and output ordinals.
-    indexes = next                      // Expose a complete directory only.
+    val stagedAuthority = ingestCanonicalCopy(state.authority, direction, publicRows, scopedRows)
+    val next = buildAllCurrentIndexes(stagedAuthority)
+    cancellation.checkpoint()
+    state = State(stagedAuthority, next) // Expose one complete authority/directory.
 }
 ```
 
@@ -699,9 +745,12 @@ Spatial scalar oracle:     O(n² * d) pair search per merge round;
                           naive repeated pair reduction can take O(n³ * d)
 Spatial trie plan:         bottom-up fill + top-down coverage visits
                           O(visited (node, coverage-state) pairs + mask work)
-Aligned row factoring:     O(inputDepth + outputDepth)
-Residual covering lookup:  O(residualDepth)
-Broader row insertion:     O(residualDepth + k), plus posting removal
+Scalar reference factoring: O(inputDepth + outputDepth)
+Scalar reference lookup:    O(residualDepth)
+Scalar reference insertion: O(residualDepth + k), plus posting removal
+Packed current lookup:      input-prefix candidates × visited DAG pair states
+Packed broader insertion:   input-descendant candidates × visited DAG pair states
+                            plus removed postings and compatible-header work
 Saved index rebuild:       O(canonical saved memberships and index postings)
 Direction gate:            O(1) per native strict-spine contribution
 ```
@@ -730,12 +779,21 @@ The constructive proof package is
 The package states its model-to-Kotlin boundary. It does not claim a kernel
 proof of the complete driver, project convergence, resource limits or no-FN.
 
-The combined kernel check passes **162 theorems in four modules**, with
-232 explicit definitions/theorems audited. The only dependencies are `propext`
-and `Quot.sound`; there is no Classical choice or unchecked proof placeholder.
-Run `python3 spec/lean/proposals/flow-antichains-directional-matching-20261105/check.py`.
-The [receipt](../../spec/lean/proposals/flow-antichains-directional-matching-20261105/checks.json)
-pins the exact checked model, proposal and unchanged runtime context.
+The implementation follow-up kernel check passes **175 theorems in five modules**,
+with 249 explicit definitions/theorems audited. The only dependencies are
+`propext` and `Quot.sound`; there is no Classical choice or proof placeholder.
+Run `python3 spec/lean/proposals/flow-antichains-directional-matching-20261105/implementation-check.py`.
+The [implementation receipt](../../spec/lean/proposals/flow-antichains-directional-matching-20261105/implementation-checks.json)
+pins the checked models, proposal, checker and native source snapshot. It pins
+Kotlin sources; it does not prove Kotlin correspondence.
+
+`Implementation.lean` adds 13 laws for packed-index input-prefix eligibility,
+transitive geometry and mark coverage, FLOW-backed unprotected marks without
+an admitted intermediate row, protection/excluded-mark negatives, and cofinite
+support union. The original four modules and their 162 laws remain unchanged.
+The original `check.py` and [proposal receipt](../../spec/lean/proposals/flow-antichains-directional-matching-20261105/checks.json)
+retain their reviewed `52f32dd` unchanged-runtime boundary; use that checker on
+the reference tree, not on the implemented worktree.
 
 ### 8.1 Spatial coverage and exact union
 

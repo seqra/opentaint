@@ -141,11 +141,12 @@ class NdSummaryJoin<S : Any>(private val m: ApManager, arity: Int, private val s
     fun addConclusion(g: TaintTree): List<Pair<List<S>, TaintTree>> {
         m.cancellation.checkpoint()
         if (!RuntimeDataDomain.base(g.base)) return emptyList()
-        val delta = conclusion.getOrPut(g.base) { TaintGroup(m, interners.taint) }.add(g) ?: return emptyList()
+        val deltas = conclusion.getOrPut(g.base) { TaintGroup(m, interners.taint) }.addAll(g)
+        if (deltas.isEmpty()) return emptyList()
         val out = ArrayList<Pair<List<S>, TaintTree>>(full.size)
         for (combination in full) {
             m.cancellation.checkpoint()
-            out += combination to delta
+            for (delta in deltas) out += combination to delta
         }
         return out
     }

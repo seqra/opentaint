@@ -230,7 +230,7 @@ class Run1StaticGroupProtocolRemovalTest {
         }
     }
 
-    @Test fun `accepted exact payload remains selectable after same-path marks and broader tails arrive`() = Fixture().use { t ->
+    @Test fun `accepted exact payload keeps canonical support after broader tails arrive`() = Fixture().use { t ->
         val store = RunSummaryStore(t.f.manager)
         val exact = t.f.run1Fact(STATIC, t.target)
         val selected = t.f.ops.leaves(exact).single()
@@ -238,8 +238,10 @@ class Run1StaticGroupProtocolRemovalTest {
         for (value in listOf(t.f.run1Fact(STATIC, t.target, full = t.f.mark("output")),
             t.f.run1Fact(STATIC, t.target, Tail.ANY_TAINT), t.f.run1Fact(STATIC, t.target, Tail.ANY))) {
             store.addAdmitted(t.initial, value)
-            assertTrue(store.borrow(t.initial).any { current -> t.f.ops.leaves(current).any { it == selected } },
-                "Incoming subsumption and delta subtraction cannot remove the accepted exact leaf")
+            assertTrue(store.borrow(t.initial).any { current -> t.f.ops.leaves(current).any {
+                it == selected || it.fact.path == selected.fact.path && it.fact.mark == selected.fact.mark &&
+                    it.fact.tail == Tail.ANY
+            } }, "The exact payload survives, or the same-mark MAY covers it")
         }
     }
 

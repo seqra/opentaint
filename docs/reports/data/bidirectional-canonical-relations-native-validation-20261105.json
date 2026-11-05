@@ -1,0 +1,2035 @@
+{
+  "schema": "opentaint.canonical-relations.native-validation.v1",
+  "state": "SELECTED_NATIVE_GATES_PASS",
+  "utc": "2026-11-05T10:23:11.421406+00:00",
+  "sourceState": "WORKTREE_HASH_PINNED_BEFORE_COMMIT",
+  "selectedProposal": "docs/design/bidirectional-canonical-facts-normal-relations-directional-inside-implementation-20261105.md",
+  "sourceFiles": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApOps.kt": "b123fbcdee38b6356c13197ddee65f546a2b31970881e4b32916e8451b4407ba",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Demand.kt": "ed68c3b9dfcaedf88f7ae7781743730cb74eea800250a5929a8effd2da78215e",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Groups.kt": "5ba4222d042af755ad7dcf17ec1ad0035d7ca0b2338c27cae2d9a923d64d052a",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/NativeReverseRead.kt": "0fe8332359b567237f4106c686eeeabd569131381d04cfdb401354e0eebd826d",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt": "f8a6ee199524b4982ffd8bea7e1f78c9cad45ba8e43c2c522233967f3f26a453",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/SpatialCanonical.kt": "2a915fc4eac7be13471891f111cf8d84bbfe4ecda9be37d6da3e8e4947e09a83",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Summary.kt": "786a65478cd6a14612200e5b56979f19b4788f9d7f261a15497f68157161e263",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/SummaryMatchRole.kt": "32ee1c7145789d526efc86e8871d4565a3bf8f15b5efdbf90e9d96af39c60586",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/IterationDriver.kt": "355320394a0fe3c44f69c75092222c789af7c6050577c1fac545eadf4c6c39a0",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockRunState.kt": "944f7303a3433d25b2baf17391dc5121f5fd19335c740998c075722a53756606",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockSummaryLinks.kt": "22426563921ff0fe0a3fc096bae68cf226519b7d8657eb4e4ee11f6014a7ea4e",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/CalleeSubscriptions.kt": "9a6cc4264824789f717bf0f7428e54c69e25ca67313b24d4c22c9564d7fe63f7",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/JoinedLocalInputs.kt": "64d6b7c943604a7f178c4539dd36702b2243569970fc9bd9e59c63dcd720a101",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LocalRelationApplication.kt": "860d2235047f0da2a8ac9a418635affea305afc7ead0f450f50025c3a666811e",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LoopConsumerObservation.kt": "c20974a42e87a0f56a0a097a85a34a7900bfef08e71bfc65864e74946195321a",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LoopOutputRestriction.kt": "524c294994fb4632fb1b28d81c26f40857f7c0ab89b97cdee177acc6d6f03435",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/MethodBlockRuntime.kt": "99229571571f0b15b4a02795845d771f76079c55c566920c99b6f1c97ec6ec00",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/OwnedJoinedStaticWriterBinding.kt": "1d309b63dd52feebcc11d9c3de086c9b562e7797ca46359fadf306ae6e8f3ae2",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/PersistedSummaryReplay.kt": "bc5d4d20736405d5960ebfe81839bb8c8cc35e296ad7dc8a79217c5108bd442c",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/PublicationIndex.kt": "81199578b4b68329c7a4b2ad839f476f67bc7c334916c2451e0c04edffb508bf",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodCallServices.kt": "c523a65d198c412bfd71de4328e4274ccd31cf677cb06caa2b5a46d97e530e1e",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SavedRecordSelection.kt": "3c563bfbfa022daa4a0e7b754926d8e019b2a23b6b5dd3f992b2fff55368e1ee",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SubscriptionManager.kt": "313436d3b172c30dd361535f943b65f783c6158fee9164caab193d4008bd2140",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/ConjunctionStore.kt": "ff00b8db2c62a86def3e0947c61f082e5bb50edd737392a349514078542ed330",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandStore.kt": "c28466f8ec0db8752e2c571d6e7ad7140fdf03888c356c9315f7d730f7cd310a",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DiagonalRelations.kt": "886267d52e0b7290af237eead4eb4974e95babdda8f43a1f4567f5a017e3b10f",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/FlowBackedSummaries.kt": "1ec74aa2c621479069d9227a10e720c717fbc06856e4e06441885ae5f6f60f5e",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/MethodEdges.kt": "b55ae26df01349d9ec49a4185eb44e3f332416d5f23bb7712b5eb642070d4f6b",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/NormalStarRelationIndex.kt": "e6f74ceb016c6dda22bc323029bc851cbbe684cd32b627faec9507b8892a2390",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/PathTrie.kt": "9d23865e91f0e38cb60839a5f8189a1629a52ff67c8d711969c15b8b8fd14bb0",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RecordStore.kt": "12686fefa251ddf62cece19274421dbc43737ef48886eb42ca1c06c8bc413135",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RunSummaries.kt": "4811791fbf524aeffb6078bfff580400f5a414485f8f3fc6692a594943ec6697",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/BarrierFailureTest.kt": "f05e0abefd309650fcd545fa9dd2dd1352517daed8626ebac3c742e22f1cb44b",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/CanonicalInitialAdmissionTest.kt": "1decb8380c6f17cb182a14b074ac02cf4e3bf02329f6d80cf941d8980884f908",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/CanonicalPointAdmissionTest.kt": "0730d2c44f82047bd752774d524bf9621e7e32afac7667c622d398be32b48ac6",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/CorrelatedConcreteEngineTest.kt": "fc394d1e337ae6351b8b05d16d9ff144a4a1aceedcad955014b6f8428b3f1b34",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/DemandRelativeWorkloadControlsTest.kt": "04fd7628554783293c09d1f72ac309c02315efa16c154bf1c1797fabcbbb545b",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/DiagonalRelationsTest.kt": "e9787388c997b11c501b45c47f44b521de8643aed7c5177b0025a982451f10d6",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/DirectionalMatchingIntegrationTest.kt": "ded4899d8dc6ecca9f009c78e115bafd2c1074de6416b2e210b4119eb70d49d1",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/DirectionalSummaryMatchingTest.kt": "38d8e68cf796faebb703a23e1fced4e88af57dc1263e29cf9beb2f4e89e92d8a",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/EmissionTest.kt": "7d75c28bcccb47bf37bb2181e8b83e3074e5baa893d0d4e2dcd63908bbdd1dad",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/FlowBackedSameBaseTest.kt": "c8cc00ae8044131ffa06b3be7ae47d029c2f595fc3cd5741d59906c27a671e77",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/IndexCompletenessTest.kt": "160b8ea6cc9f89a862463ed1da899ab254d64bd94426703f67755ef32ca7c875",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/LoopCanonicalBoundaryTest.kt": "58e2c948f3b07091fa9f537a70a4c7b0024b4642fde03efdb74fdc9b1e79865b",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/MethodEdgeStoreTest.kt": "0502ec94060af2934a47b71f9cfaaed5dadcd1f19cd207f2b12ff3d1b09cefa5",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/NormalStarRelationStoreTest.kt": "5d37049a8f8f9716c2787d39a9f2b3fb9b89c3eaace697a3059ff6dcd1f7e049",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/RecordStoreTest.kt": "911200c52db387a9322a4c8c44ba3aed10fb45044428f76608c798face4040bc",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/RelationCensusTest.kt": "c245e3a3faf24647a9298437ff4185f56d53a307cb4c8bd6bb0d3fa3677d8607",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/Run1StaticGroupProtocolRemovalTest.kt": "305a83882c68928c686f68190002b601644f42384b3cc59ff7659f62b40437b3",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/RunMethodHandlersTest.kt": "261c525656b5664c3277e0db53163cd8c24052cdd2d59ffb4666452ca0db4dc6",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/RunSummaryStoreTest.kt": "0ba437f4c91f0b4918c4b11a01699de49f5d71f932b382811914697d687580ef",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/SpatialCanonicalOracleTest.kt": "d348cea9d7b745f40300ad76655368e6b2c453fbff881937551d3c7964bcb857",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/SpatialCanonicalTest.kt": "420cb9c007547bd4f30ab8b14a1d757de446a478f7c73eaae76164c86ad9e7b5",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/SubsumptionTest.kt": "fc8e05eaab87e5fb58aa6473eda601516ee592b24fdefbf4f6d18d74c566cbcc",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/TaintAdmissionProtectionTest.kt": "cccefccadfb7ce0da22441c08ab23f80e6cf6ae6a0fe10fdfc96ea3d061f212f",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/fixtures/CumulativeSubscriptionReference.kt": "f6e8eccba6866f3f7d82f860b6ab8c2bf3a13e1379ed89098e7ee4fbd8b9baf0",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/fixtures/ProductionSchedule.kt": "a4aeb59a96d146720a433534304822dcf19339646048d7d8b7b38b983c011903"
+  },
+  "suites": [
+    {
+      "module": "opentaint-dataflow",
+      "suites": 387,
+      "tests": 2529,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlFiles": [
+        {
+          "name": "TEST-org.opentaint.dataflow.ap.ifds.access.DeepAccessorExclusionTest.xml",
+          "sha256": "563c22a18a379c4466e169a814e8be65d51756cda70f8ec14527623617802a71"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.ap.ifds.access.FactCleanerContractTest.xml",
+          "sha256": "5f95ac7098b8adbf04e904cdea0f855bbe183a3cc03051d33b8775d93d3eb0bc"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.ap.ifds.access.automata.AccessGraphTest.xml",
+          "sha256": "3690db787df15827e91811495248ab2e4249575073c5d0d7b202b4f00a4a0dbb"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.ap.ifds.access.automata.AutomataAccessTest.xml",
+          "sha256": "698d133bc57de580bfec58093612e9c74ca96a6d3473c998a9bcb659291737c8"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.ap.ifds.access.automata.AutomataInitialFactAbstractionTest.xml",
+          "sha256": "30ee747c1802a28934b777f9fe9c409fe527f1eb155f5d0899c8e54d2da34458"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.ap.ifds.access.automata.GraphIndexTest.xml",
+          "sha256": "3f8ecf30de1529673dc434aad6258aa171c348af5372da9f01715bff0fe2c1a3"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.ap.ifds.access.cactus.CactusAccessTest.xml",
+          "sha256": "a2b93b8b15bee630e9d3182ae46d6fcc77bc479d6670909fda2c878b4ae1d824"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.ap.ifds.access.tree.AnyFieldAccessorExclusionTest.xml",
+          "sha256": "ee8eacc5aeb70fc3536d21bc5fb87a52e22bad815a2722b1f20bd92f3f8373ef"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.ap.ifds.access.tree.TreeInitialFactAbstractionTest.xml",
+          "sha256": "0b9a9727d6583fae82e0383966232b23f7d9f1429f36eb488508d39d81f88d62"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.ap.ifds.access.util.AccessorInternerTest.xml",
+          "sha256": "455c6d4b0ec5e86aaec252b92c2dd6faf239f722c13a4b959e38613086eb50cb"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.ap.ifds.trace.path.MethodTraceSearchTest.xml",
+          "sha256": "40d0b5672153ebf5f7e4f9e410c3701bfc558b60fe94a07df53326c54fb6b3f9"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.AbstractDemandExclusionTest.xml",
+          "sha256": "39fc95f1374fef3783489f2d161e2b2174bed48e006459b6200f90eea3832e03"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.AddedFactRemovalTest.xml",
+          "sha256": "b759016effdd4eb0dd9529bd66e45d5dff10456d24a355d46174aa9ba0848f0f"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.AddedFactStoreTest.xml",
+          "sha256": "37ff61daa27f5d8aae4235952152e9433b2785152f2fafc0476841de59e3393f"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.AdmittedSummaryViewTest.xml",
+          "sha256": "5235196acd6320c28aecdeed159d4bdceb8beace7dcc2c519f9d1f18684ecdd3"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.AnyDeliveryTest.xml",
+          "sha256": "45128cbef008ba7a5dd62de726e2e5391b2fe6a5c3e3cc3afd2e3f654e4a2b16"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.AnyTaintIterationTest.xml",
+          "sha256": "4bb583674a7272e1da9e380288d62665ec1d68046686f9fab09debd615726281"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.AnyTaintSupportTest.xml",
+          "sha256": "05e76bcd6df2938490576cb202b4c5e61ff73f1d93c391f317c017e5962ace27"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ApCancellationTest.xml",
+          "sha256": "abe11a9df0b33e69b82bbccf1f8293db5b66acb54da20608c9855546b0738d8e"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ApplyEdgeVectorsTest.xml",
+          "sha256": "61ce3991c6a2140f03eb0213c70d6729151f172081b4af17657af1024380261a"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.BackwardDiscoveryGraphTest.xml",
+          "sha256": "4d736bda9b22207871a90b9caec928e47742df1e65ccad5de1d8092b117083b6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.BackwardSourceSummaryTargetTest.xml",
+          "sha256": "7d33a47b1416861e0baf5bdd834b5009f15d2287708cd89996503e98c80e3e4c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.BarrierFailureTest.xml",
+          "sha256": "190a799027d45e4a4f0877e32a3789475b2c516b692a21bdfa70c90e9d8604f9"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.BidirectionalEntryLookupTest.xml",
+          "sha256": "f6ff578051b4319cf923998289bb4c6adf08b407799e881bbc529eaeae907323"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.BlockBoundaryDemandViewTest.xml",
+          "sha256": "2dc0057847df674600654bad0a147d7779b16f88f8b865518b6b27965e5b9bf9"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.BlockBoundaryLocalFilterTest.xml",
+          "sha256": "248d60cb854c2e1211e67fc85fc4e9e5358127396dee42e58a1de02917645553"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.BlockCfgDeliveryCacheTest.xml",
+          "sha256": "bae712a6441aac2ec5eef44492ee59a27a900de458775481259a2024482e3991"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.BlockHandOffTest.xml",
+          "sha256": "021f930c545eaa8d244feeb82a9288d1b304c25abf1b22df2d09554758725ce7"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.BlockLiveLocalsTest.xml",
+          "sha256": "9053131852405a628837ae24dbca966dd6a9c6cde255d2dad747b1a617952e68"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.BlockSummaryLinksTest.xml",
+          "sha256": "acc76f7a00add01117bdd5c6001d4badae3c4e11ddb889f95fdb7ed8bc593e30"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.BodyWorkStatisticsTest.xml",
+          "sha256": "d0ef2ceef47a92cb1388335df09c8ac2166f7a316c2e01ceec898464464bc9e8"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.BuilderTransferVectorsTest.xml",
+          "sha256": "5767f8262835570f64e67b4f1bbce5796c8963b4d328bc71d58e9dedba3a0dee"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.C5DiagnosticSamplesTest.xml",
+          "sha256": "3adb5467c35de9431865484019475091ba9fd410fc6ccd3733f2c8e038921742"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.C5StaticPruningTest.xml",
+          "sha256": "f1e730e62228c5b412568a9010e6c089cb9a638b3b9a904e6ea826925284c869"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CallPlanReversalTest.xml",
+          "sha256": "c573905d3fc8f5bab3c8c916db0aaaa447c76a92d527b2e89eb76c2861539d48"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CallPlanTest.xml",
+          "sha256": "73ffc402e4b9ce0664e1fecb30a1ee57217259b2ecce9ae3aad467949bdccb67"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CallServiceLifetimeTest.xml",
+          "sha256": "8d71d253219c40df9185696ee6cc2ec08b7e830b49366684657a2a1e780c7841"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CallSourceHitTest.xml",
+          "sha256": "77d59b51cb0c79cfff7e4cd713d727221034f256e4bfad1e7ac5e66a988a4bea"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CallZeroTest.xml",
+          "sha256": "c30e2a975fb0caf8714b65f21760846f992417c1d6028afba4a6422cdfc2ce97"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CallerStateAcceptanceTest.xml",
+          "sha256": "1dca29628d75e68afd2197bce6270a373f2b7d52ba1323dde90eec29089c1100"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CanonicalGroupProjectionTest.xml",
+          "sha256": "89dfc6042bd0d8bbfe027e231c411fa4920a230e367c3cf03257446141690310"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CanonicalInitialAdmissionTest.xml",
+          "sha256": "4dfb9417d3c88dc531a7b28cbfcfbe26685c0b5294aa1a76b5fc50f65fc54cc2"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CanonicalPointAdmissionTest.xml",
+          "sha256": "fec7531ce216a836e65ce97332773c9d272b0325ef2dd028f11ea5880e67bcbb"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CatalogMarkAnswerTest.xml",
+          "sha256": "2f44567ba0c866f1bf107d2fb30849fca7edc9e96c23690722c3c97fe26868df"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CfgDeliveryCacheTest.xml",
+          "sha256": "7f50e3f14121cef36f6119460200deb035b6a831a6cc86a21cfcbc7851f97735"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CfgDeliveryEngineTest.xml",
+          "sha256": "78997498a560e61067ebc982dbf7471ea453bafd20a221034785037ce94d70fd"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CleanerStepDeduplicationTest.xml",
+          "sha256": "21e767dfb170ed64f5a8a65a88ac2872dda45c5892501d0e5ba45f215ce59167"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CleanerTest.xml",
+          "sha256": "29515f928c5c3a4d3aa216b4ed3c7df2f18d64e710809cff5e13d30b203535e9"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ClosureUnionObservationTest.xml",
+          "sha256": "91cfcd8160bfecb04e0da8232360a40a447d698a813d7b69af5808351518a731"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CompactFormCollectionsTest.xml",
+          "sha256": "c7ed03f270ed47f525083cacc6f797fcc724ce4bf5c74427c8ee70db823c690c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ConcreteDesignDifferentialTest.xml",
+          "sha256": "c7d6666813bba2c22e49219b75e13d6e2c375373d7ca6e849a7ddf1bb96c394c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ConcreteStarDeliveryTest.xml",
+          "sha256": "7405c6a1172112b5391c462d20ba3815935d3a5b001a2bf6509085073061359b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ConditionalPublicationTest.xml",
+          "sha256": "0ebef95ad026c3a4cbd8978e9053e35e4f9b6a1a12d685d8e33066c00ead3342"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ConjunctionStoreTest.xml",
+          "sha256": "d4648140fbe487428a304174272f638518b969fe269276b89404d609e5df4683"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ControlDemandTest.xml",
+          "sha256": "77e38e56f7f94ff2d5b123e2de678e6abb35864edbf3ca2204e8514b872b9ec0"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CorrelatedConcreteApTest.xml",
+          "sha256": "968b65057965ba666d51d7d81d8e6a62ed92ac7d1843f6ea368fca3cd132b398"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CorrelatedConcreteEngineTest.xml",
+          "sha256": "fde678e79e611407ab474a3552e3301b6883fd016c65507f16b09e90a71f23fb"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CumulativeSubscriptionEquivalenceTest.xml",
+          "sha256": "d982ef498fa7f7db8a9e3edb5460cf8cf6dbba5c9d7e79635c04e82580f93d1f"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CurrentModeActionsTest.xml",
+          "sha256": "66f218dd55196bedb199c75aacbfbcdfb05678357c5db57e68cac8f0998fbea5"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CurrentModeIterationTest.xml",
+          "sha256": "b611eb769bec6e6d895d31c7c59714f31c671b6920365700e1bdc4ef40c14b78"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CurrentSequenceTest.xml",
+          "sha256": "6a92df22bf647637b7d31151abb8b2b8e3a635b8e53e021c822979cd5e6864b9"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.CutPointTest.xml",
+          "sha256": "ee91aab597f56d90a592852c41e3c87b424ec0bdc0ed8d5b6819f050a7ec96ef"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DeltaWorklistTest.xml",
+          "sha256": "a0a419f0ee8ee65ae3f53f736b517ec7097385d09c98b6ce10ff8647baf5834a"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DemandCandidateWorkloadTest.xml",
+          "sha256": "65f13566c3f9bb883e45ed2f0c80c321ab617a42b7f9c224d6bc436b26e31ee7"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DemandLinkTest.xml",
+          "sha256": "dcf31d6266f2335771555a7847eeabb95a2ad9d2459d13bdbc893631b7850f10"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DemandRelativeRestrictionTest.xml",
+          "sha256": "1dd31e1d52435118980af9ff99b6159ebeda19edb851fcc5247fd00cfb2da5bf"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DemandRelativeWorkloadControlsTest.xml",
+          "sha256": "28840cfd555108be875666f56efa20308e2d3da7b102330d979ef9dd991bbb74"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DemandSelectionTest.xml",
+          "sha256": "d9c17869f63d1fbdd5dfc4e4a56c300f7dd2086f14dbe62628f67c8f45e852b4"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DemandStorageDifferentialTest.xml",
+          "sha256": "ffcaeef1ffbd0f6ab3a40f7b6e8caa2f573c39644f438d6235eea291dd6a964b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DemandStoreTest.xml",
+          "sha256": "bd3b02938de9be43e16e035c6ccc6acd8b61f0eddcb98326604e66f2b580e4d8"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DenotationTest.xml",
+          "sha256": "439070162b1c14a056529f632331b00991f9df62c4a4310cc1b7e85868d9d2f6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DiagonalDeltaTest.xml",
+          "sha256": "24cc1d0f8ae5b587aaa59fc183007674dbe2253cc0001a3d6293d37ca7c40617"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DiagonalRelationsTest.xml",
+          "sha256": "15c40a27047f112383b993e6fbd6c34f322e3c592e1b63fd7a09620fa8b147ce"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DiagonalTypedAdmissionTest.xml",
+          "sha256": "eb41252b8d980eb1a31619fe83dbf47708ce4cedcb33cf1af4ca1c30167c0fd9"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DirectBarrierSummaryTest.xml",
+          "sha256": "ac0dc650c3001690baca8c67f108498194714a9ba60e915f05e2959456c6e294"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DirectStaticServiceTest.xml",
+          "sha256": "998c323f8f75859cafe83fe7baf7e3a4e7966925abc626f0f9b806211eb4465b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DirectionalMatchingIntegrationTest.xml",
+          "sha256": "55155b2ad09a2dee099b3a63a60678f83ac14d9d8dd32cc0cb9a7d40ff8f4b7b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DirectionalSummaryMatchingTest.xml",
+          "sha256": "bb80861f4befa4816083ca06bdab3eede101d5c43a53cad6e943a4e4a0327f30"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DriverIntegrationTest.xml",
+          "sha256": "63c69e995b6206571876d290e0277705c8b6225d74346aa82870a2ac37189898"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.DriverTest.xml",
+          "sha256": "d60ba97f7f1adcba311f0a43ca2840d350d6d813239cd282a2ffadf7516985a0"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.EarlierConfirmationStopTest.xml",
+          "sha256": "324a68b85c97ed933a48dcd624bf684fbcb59d6c897e8f77c4f7526281607c90"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.EdgeTreeEquivalenceTest.xml",
+          "sha256": "a7f62a928baf2ef03c5d10caf554800e514172df7dffa7a4387257691824727d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.EmissionTest.xml",
+          "sha256": "b9fb700171d6f7b8af532f4ace5cc6166d856a292ea85121c9b70e5c238d7105"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.EmptyStaticSummaryFallbackTest.xml",
+          "sha256": "b0bb0f6cd4c72db087f39a66a25e8ab4a47b34bd5bb7d31f46e184f4fd3b903d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.EndFactTriggerTest.xml",
+          "sha256": "b9e4d02f8318ff5d749a12b255ba49084c0977ab1926904ba72969021830d347"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.EngineAlgebraTest.xml",
+          "sha256": "fb58464ce7755a50e395cf860e1ab672b774ffbd87aaeb6ebdbac1ded5fc938b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.EntryRestrictionTicketTest.xml",
+          "sha256": "2daeab0b4274a131584f4196031e4fa76d17ee2061230239368c3f6c8de98a06"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.EventQueueTest.xml",
+          "sha256": "72d74b48b2b4a5cf845c8a19f790409805f9f7397e14e7589e14d00dca664585"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ExactDemandMaySourcePermissionTest.xml",
+          "sha256": "f29d75518f5b1412c181f1fa3f2346f32dc9eb2f472de01696e79336c8e2649d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ExitRulesTest.xml",
+          "sha256": "e00fdcbb3ad3d5b196eadd960de1a48e88aaa13bc83f0cb260e8ea7540dc0014"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FactKindsTest.xml",
+          "sha256": "e7e6e2c7d9a41a278dabbdd3710de3db70a18773b64464a9ed96f6c16ae230d3"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FactShapeTest.xml",
+          "sha256": "4153ab7c8de94358983e385d84e070ed47e68e555c5bef9cc2fc6a431e91a721"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FactValuesTest.xml",
+          "sha256": "0260c3788c178f1ae611a90bab74c039a2904734fdf3cb374ac5618081782be6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FactoredRequestPipelineTest.xml",
+          "sha256": "5314babbef14f27574f9dff29a348a3bfb4959eb90f043172dbe4d4d544abe6f"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FieldCleanStepTest.xml",
+          "sha256": "a66c05736c50e37ba265db5c504496e0437d30b7e97fea75a540d45dfcd00f24"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FieldLimitScheduleAdmissionTest.xml",
+          "sha256": "dbe184e8a6dbad1a63e07583c1106677815867d562233d4711ccf1ba17ed6747"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FieldLimitScheduleTest.xml",
+          "sha256": "41f62fa5e0b5bfe1ce063ff6062e73e97d6436cacaeabd3e94940c39a95cfc92"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FieldLimitTest.xml",
+          "sha256": "dcfa5a9c47d0ab1dbd8e2295785e1b113328ce714c53b2768f66c3ef3a03f0e5"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FlowBackedCoverageTest.xml",
+          "sha256": "0387d2702a07600e99bb9550b68be476edd8299de615b17c5a0e550384b4d64d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FlowBackedEngineTest.xml",
+          "sha256": "ec041f28011355bf9e4b9e836c7072c2cc41093c272adbce8c183213bc93db9c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FlowBackedOwnersTest.xml",
+          "sha256": "1799deb3aa9487aa20343bb254f4673661f005a0ecf243418945e64b7fa9f3c4"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FlowBackedProtectionTest.xml",
+          "sha256": "25c9cbc720960f6924f112bad063977e19094fb6611a9b7fd656d2e63df04c86"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FlowBackedSameBaseTest.xml",
+          "sha256": "e648c4d799af251741dd2fc4ffabf88f2bd181c2c8ddfa136a5ded4fb48b98fd"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FlowBackedSummaryStoreTest.xml",
+          "sha256": "585d39ce56d682452daafe6919e6c5c30fb0681f3477ffa1ec71878353fc9ae5"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FlowSummaryNormalizationTest.xml",
+          "sha256": "f5ce74fc5b625f3189c3bfe7f03c4aa4598d746ba0a5db4e580829a7ad0a1ada"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FormApplierTest.xml",
+          "sha256": "3e82ea301514e8d709f1ccb7ec31ee6f08cc021af5c0e12d58a3cabdf91db743"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FormIndexTest.xml",
+          "sha256": "875a6f1c78025c3e5ce6f2e774ba479f95a845416ddd83e7bfc96ce3c0b11d01"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FormStorageStatisticsTest.xml",
+          "sha256": "04346c9d1892fa8f121040b27dd1387d5246b9dba4c6806381a7d4a9f0ecf25c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FormsCacheTest.xml",
+          "sha256": "e576f780b1cefe42292a26c0d92f9ad9cc0aa70e15784009405f2cf7a30ed0fa"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FormsReferenceTest.xml",
+          "sha256": "309a61f85f99af8edf2c76e58e367fd55ee3cba9eb5c7eb3a6f26118963b05f2"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FormsSinkTriggerTest.xml",
+          "sha256": "8ddf91b4a93c92ad060ba14deb9e640325f6fa1af6d3d2612c38efbf13d33108"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FrontierPropertyTest.xml",
+          "sha256": "4acbf512be670d21f48e514531dae62c0b56d85c7e16a1745f01bd2c1ac337df"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FrontierSeedIndexTest.xml",
+          "sha256": "2279a773384af3d48d08c88e44f4557fe74843a5530e4c922b03ad68c195abe4"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FrozenDemandTrieTest.xml",
+          "sha256": "f1d4cd5e1c0e3ed72c32e435c283244392a3c381f367daa7ba681a6f7b3844b8"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FrozenOwnerVisibilityTest.xml",
+          "sha256": "c3c8c6ee13b4131ae06a9b990529d03faeb4ab1f5aec6365a53cbd68085bbd66"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FrozenRequestMarksTest.xml",
+          "sha256": "4232acc833640f4e4e977a9e339a9c9f9076930320ee735b056534d7ff4a97b1"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FrozenStaticCompletionTest.xml",
+          "sha256": "325edd1aceedf95caeffbecc873496e3523822d411a6a1677f46fff476a7e5c6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FrozenStaticRequestsTest.xml",
+          "sha256": "48794c8f5a0895ecc0e6e073fd55f74c5c02aa90b8df2ae3c78af72ce09719b4"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FullCleanupPendingAttemptsTest.xml",
+          "sha256": "9a3cb3403b8bbf5f25160dee8bfb6b01311ecae0dbf40a30c683a286076f8dfe"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FullConditionalSourceDemandTest.xml",
+          "sha256": "f906c6e5ccfd0db6aeadd379505b319fb0e2baec94802cd1f2e87f01c17d66c2"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.FullWorkBatchingHandoffTest.xml",
+          "sha256": "f636940cf95c001ad593aa57fc935bbdad21618e6e05b934305183b67c63caf1"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.GeneralFlowCoverageTest.xml",
+          "sha256": "99ca6fe1cb16fe8d9b124f935a33270e73739918bbafcbef076336e0409f7e91"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.GeneratedCurrentProgramTest.xml",
+          "sha256": "18c34ceb0c596e351cc8e383a227cd99f3adb5cc744b22cefdb55a3e05091036"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.GenericExclusionRequestTest.xml",
+          "sha256": "f84553727c88fd06458926c1fe290984fb887d9ec8563b89e9a6724907e8dc3e"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.GroupMergeTest.xml",
+          "sha256": "4c6654b66fa6c021344d684ee4fc56e4d38ebeb24732dff3d323f9378d1bc327"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.GroupNormalizationReferenceTest.xml",
+          "sha256": "881c3f515c7fe9b5ec5c31d155944700f50bd2312cd6b8ed4c961e94385543e1"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.GroupPredicateWorkInvestigationTest.xml",
+          "sha256": "b5ad10d5a462f7af6cdc494a28821ffb972d2538e15bf066b8da4b48617cb381"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.GroupedDirectStaticsEngineTest.xml",
+          "sha256": "292be9a977740a1f37300fb651999307f9b2efb91342b2ad4fa23b7902a3d89b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.GroupedMarkViewsTest.xml",
+          "sha256": "cd6ba6896e96d2f344aa6a4a8c78717b3145afd7f6993e16221426cb53690bbe"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.GroupedRequestActionReferenceTest.xml",
+          "sha256": "76860ecb83c9eb1a532edcd95cff180817d5632300175b50a2bf2b33facb8717"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.GroupedRunScheduleTest.xml",
+          "sha256": "26c065e7fe9e1dc46e9c94219701f470584c5e6c5fc3a5b42d150595e8c5ee8a"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.GroupedScalarReferenceTest.xml",
+          "sha256": "eae789774abf4425fc037e8b9f72d549ed49df897d717977829b889d5893b478"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.GroupedSourceTransferTest.xml",
+          "sha256": "624051edab4de2e20d391afe26a180db700ccfc806ac4025ca02c8bae58b280b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.GroupedStaticPipelineTest.xml",
+          "sha256": "bb7204f1c774876ace21b31e301563452d318f32c69785fc73dec679bd78e39a"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.HandOffRegressionTest.xml",
+          "sha256": "187e15ca2a13bec4d6288ebc7b626b2ecf1af987e48aeb59f93df357feb5c773"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.HandOffTest.xml",
+          "sha256": "b4ad6d20094fd3de25c26a60797d2ba589138abd1acc3c15c1948c6d1e7902cb"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.HistoricalFixedResidualTest.xml",
+          "sha256": "a023e30fbfdbf0ae6b4738ee721d104f6e6cb3ad31c7b8898656a5b3387c1fe6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.HistoricalMustProgramTest.xml",
+          "sha256": "0146edfd99239861bae8d97df50fc36498320a4c26b47bcf841452c105f0ece8"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.HistoricalPredicateDomainTest.xml",
+          "sha256": "f659202664d2daa82fe06f60e8035ffb490ebf755eaefba3c9834ab1bdec1c96"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.HistoricalVersionDomainTest.xml",
+          "sha256": "3ca68bad374cafa00ae006f10059e7b58ccd1aa6c16d16b44a9cfaf1f6ee5ab0"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ImmutableGroupFastPathsTest.xml",
+          "sha256": "3234829a686ec740660297fce07dd98b45ca47169def3d1f39baeae342e18e97"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ImmutableMarkTableTest.xml",
+          "sha256": "71bc756a581d9a8f056c464a3d24e6220ebeb6c3edd85d1be8bd38246ac91303"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ImplicitStaticGroupDemandTest.xml",
+          "sha256": "00da3f07835f96e58195f8db0e6e5ac5b4d97ddafd1df243446de6cf27394fcb"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.InFlightTest.xml",
+          "sha256": "b113cffa18cd6b1dc03c7d654d422dc20b7a8df7a10d7f9ec8bf391a9916d648"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.IndexCompletenessTest.xml",
+          "sha256": "58001171c4f2efa04b489f08788b625212afcced0779812aa0090316c7354ec1"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.InitialEmissionContractTest.xml",
+          "sha256": "2cd4d888e684e0f8a1c6752bae19c007e99d6c19d1a90a6c00b61934d125da1c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.InitialFactStoreTest.xml",
+          "sha256": "151f4ceffc62cf3be3879c7ea14cfd72a705f604a984aa7216dd087f455d0aa8"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.InitialLayerDeliveryTest.xml",
+          "sha256": "5e274950114c7370ebee3c07cea047cf716973a6fa04a8abe263446960d0bd16"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.InternalBaseBoundaryTest.xml",
+          "sha256": "37ce461615c64b7c221592d9c258287cec3a9cbbe153fbea66469585f8c018ad"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.InternerTest.xml",
+          "sha256": "b874754b0c1acc710cb0dabd2955497b7623d47bea761f1bb019f38fdb660cac"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.JoinedInputDetachmentTest.xml",
+          "sha256": "d860abe92a2cc501b7062da068cb24a3ae32a20cc01ab6a94444e7d915f20719"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.JoinedStatePreparationTest.xml",
+          "sha256": "71bb6007063b7ce4b7932be7f38479129d6b25561be60252ea9dfd0b00376a81"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.JoinedStaticWriterBindingTest.xml",
+          "sha256": "29bd908d0463805fd0fd77155c55bd7d3fd92515dd6bc79e683a5675dcee9a51"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.KaryJoinTest.xml",
+          "sha256": "f05b23afb4336dc3653839576d30e49f4176adf3cc6c1ffd3d3513942477b28b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.KilledStaticExitCaptureTest.xml",
+          "sha256": "2106492d58ad0191cf437b61da9ed710fb9c2eb1f8d56d45fe2a1520b42bf1d9"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.KilledStaticWriteStoreTest.xml",
+          "sha256": "ee5fb1a9e5c1d7b9ee790f23b65001422d7cdee3321dff09e77835c7f53c977e"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.KindFactoryTest.xml",
+          "sha256": "a12a9429c9dd651aefbbb39a93f2614c4220adf916b8d4c05d2fe098f9bea58b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LayerRulesTest.xml",
+          "sha256": "3753324f311881cb96e6a741efdcd27af3ee58964c822fcaa96e8cf57f1246e5"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LiteralInitialImageTest.xml",
+          "sha256": "43ae7b5983b288ec5259fc4d98e6ea0d91a4ce4af2b834d3a57f5c573ed7d5d7"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LocalConjunctionTest.xml",
+          "sha256": "b573b4f5faca29f6f806b4abe7a08d84a43c59dbc2205d4ef0a18ccea1dddd78"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LocalInputCandidateTest.xml",
+          "sha256": "235bffdc3af99d2d0fabdeebc2d5247121d96734d2c02b1d26d20b83072372d3"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LocalRelationApplicationTest.xml",
+          "sha256": "af514e6e627fd90999d42bc9c2c714c235ad92bade8c190ea1b0b9a7c8145c31"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LocalStaticInputRequestsTest.xml",
+          "sha256": "0936d2a82c38366cf3a611217e4bb148abd7c471b453c4e3d2b23bce510c5679"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LocalStaticWriteSupplyTest.xml",
+          "sha256": "b77b1eda2f67c8205aebd5d087df3d82efc0f845549872ae67d899ca7bc9c59f"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockBoundaryLimitTest.xml",
+          "sha256": "1c5be6466d065e4877a55afaead494a5821423a1f2b3cbae317a880b4a7c3d0a"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockBoundaryNdScopeTest.xml",
+          "sha256": "92d5725c0fff83295676d49d26268159ff29056da5234caa3d1bee99c218a7e6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockBreakFindingTest.xml",
+          "sha256": "b4cf50c697d67416f45432d7b857a3805afdf8cd393ab0c8c06327698e892e9e"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockCallSuffixWorkTest.xml",
+          "sha256": "2552040d9e9c97a6a72d0731d91d1703f1204bbc54276f67dd0a3437f9c4e142"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockCallsAndEntriesTest.xml",
+          "sha256": "5ac2948e2ba84db6602124ab2e486eeff47391749b9eff2dd303cf3174b1624b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockCurrentOfferWorkTest.xml",
+          "sha256": "386095fa4fa3fc421732ab351f59e25a5894f6d826f45e9cdea456202bd8397d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockCyclicEntryTest.xml",
+          "sha256": "71e0449fdf559a50adcb33823dc8220a22e9d44e9c3b2837971d162c66d495a8"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockDeepNoLeaveTest.xml",
+          "sha256": "784969534a1be1e7a7d826188fa27be9838b7af330e44bf0d3b3b2cf2ad64113"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockEmptyReverseJoinTest.xml",
+          "sha256": "a16034b844c675acc321706dfab778a2d95fee98d979709b6e4916fd9e02f479"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockExitBoundaryFindingTest.xml",
+          "sha256": "3ffd033ca3c33348dc22c8b3af774ba41ddc0ce72a6dbd9324d4995744336e49"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockExternalHeaderTest.xml",
+          "sha256": "c57f2515f365ca5709b04e7665ef9d394d5cfe800ae68c66dfc5f5f86b0698f6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockLifecycleTest.xml",
+          "sha256": "b3041ac0a7137689782e2cdf7474d17402d882d8711ff262105e425c2cb27677"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockNearestStaticTest.xml",
+          "sha256": "7c923a9cdead7195956aa661a5c72792fbddbd3b277593a7600c1f8932f8badb"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockNoLeaveTest.xml",
+          "sha256": "e4d1db1d4509d6e01c097028eeaeb5e9339bbcff84f1f10a42ea6e2996776599"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockNormalFlowTest.xml",
+          "sha256": "1f3730978aa6e117f83c8ba68e2011c768ff9abecb29ddfd9b2e26c3bb405c62"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockSavedIdentityTest.xml",
+          "sha256": "60139531a8335e7d77d96004c377631b2b6d3ce2dc54b6e1f5d1ff3e10c31d8b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockSavedShrinkTest.xml",
+          "sha256": "f27edcf955492257cd2701e20524eb4c137773f113e22f9b7c3b6d7b2cd53500"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockSavedTargetWorkTest.xml",
+          "sha256": "a9c360ad6ee97f170f6ca8c7edde91407ccc7293f47dfb1e3a63c0bf5d87d4fc"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockStaticExitRulesOnceTest.xml",
+          "sha256": "e9467c045e9a884c2606fef1e7c7baa39e569ad2cf5de6c6b60b70dd3050cf3b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockStaticExitSourceTransitionTest.xml",
+          "sha256": "d6175f9e46995def38034d7f1b84b698cfb3bca54133eb21ea62a330e394aad7"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockStaticReplyWorkTest.xml",
+          "sha256": "341cb24959b2946bc9fdc150da434ff1156bc2cebfcf8aa60dcb284b86a23deb"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlockTrustBoundaryFindingTest.xml",
+          "sha256": "b96200ffa4f33a94e5f96ec761b9b36875a4a25410f05c1f150b465717b69a7d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopBlocksIntegrationTest.xml",
+          "sha256": "2026ff78a922fd0bcb5446bd85df377acf6d23d0261dc4428e9c05013aacd8eb"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopCanonicalBoundaryTest.xml",
+          "sha256": "d7467c687286c356123899beb83cb7af8fdf1df55ee6e7b411b0ad3db240e5e3"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopConsumerObservationTest.xml",
+          "sha256": "2aece6b9480817d801103cdb0502f3649a76d3bb1d7cfff616263a7c564a4eeb"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopOutputRestrictionTest.xml",
+          "sha256": "9738c172b820f4b2c21c5807f1c131d27d499c6c277cf78581f2fd371f46785c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopPipelineTraceTest.xml",
+          "sha256": "7808d15fe1f5a44db438ccf4f73bd8b0b7a218a42fd6be53c8cf0e9867e58933"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopQueryScratchTest.xml",
+          "sha256": "90ac7e77f3e620ac1eccb7efc151b0f2e08dfda54feffa9072fc65d707c168b0"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.LoopRestrictionSessionTest.xml",
+          "sha256": "7167d0d749792ae7c4daf0315b57e272ce35bf0b8c2778e9205830640be326b1"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ManagerOwnershipTest.xml",
+          "sha256": "88e5c2804a95b864fb9f01298b4fffa7dadd1a4afaf3363db7009ea25161ca35"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.MarkCheckTest.xml",
+          "sha256": "3a6b56b27e301b6bb893d7a7e56a55a33663b29c611574a62cf7766c34dbecc7"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.MarkExclusionsFastPathTest.xml",
+          "sha256": "b48473b1e25fa8317dc3a42ae7b34ae15240dd4456f53fc4d1d318d0186f5307"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.MarkGateTest.xml",
+          "sha256": "ddd72ddb6f5c76e11a07e6651ff94066e3c32db8a33663db9dc060577676b263"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.MarkQuestionKeyTest.xml",
+          "sha256": "5d888d4d6da48f1607bf5b8d4750e8b6f77370311043e74b9714bb2b1f54008f"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.MarkQuestionProtocolTest.xml",
+          "sha256": "0095512acfdeef0f99a66f72fa574bfc710c966bb977b00ec23e2999217cf74f"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.MethodContextCacheTest.xml",
+          "sha256": "f680f27997fd82eee0106827f6bb8d1a5c3223d6deb716efbcde9c3de11135aa"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.MethodEdgeAdmissionTest.xml",
+          "sha256": "0a86f3ac2aee802f5cf2899ae726d4fe2775b72494e947b624627210f790188f"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.MethodEdgeStoreTest.xml",
+          "sha256": "2a9bc87e57ed3cc07ab2f31c496adde8d87ec5f03cc317223575b3c1ff687eaf"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.MethodExitMetadataTest.xml",
+          "sha256": "78eee09c85ceb3825c810e794189cec8ab86f5db0ff495a9d29011721705a436"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.MethodFixtureStaticProfileTest.xml",
+          "sha256": "5e84cc59033bba96f40ec8e78212c15ab0cfd7345c59c5d2ddd8e2d3b2998f91"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.MethodIdentityStorageTest.xml",
+          "sha256": "2039eb15278eb76b4a142efe579a7bc009aa8ead26446b03ecbb824deeb4d3b8"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.MethodLocalServicesTest.xml",
+          "sha256": "c6851f3a0b039715d21b48b6bbb32b3e985367d45ae8e026afd1b6354361bc92"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.MethodServicesTest.xml",
+          "sha256": "e79f6e26226bdf952fae5ae82991ecbfb8bc47ffed37b6440a3d115ccc969121"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.MethodWorkTest.xml",
+          "sha256": "6a94dd29fbfae1685fc70543f0aad800cca9ec2a2a2b38829957394b42918bc6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.MicroEdgeBuilderTest.xml",
+          "sha256": "ff82cc691893fb34e075971c6bfcd18edaa7491d279ab5ecda39a619d2c434e1"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ModesTest.xml",
+          "sha256": "db5b7660a8e9afe0fedca4b1ec7c164ed74e220cfd7de08fb984f9d50d32407a"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.N2AdmissionTest.xml",
+          "sha256": "1358dfbe68e79c177d823f917185923e19d4689a41ea94ac5abfe5885261c869"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.N2StatisticsTest.xml",
+          "sha256": "3101ec9c4d8a20127e0347f6ab88564f292e7243d54aa3018ad568737d0cf494"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.NaiveClosureFanoutTest.xml",
+          "sha256": "e5a21e5abd46a13564aae5b436af21b9f6e9308641c4fa14897bb74c0c276ed5"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.NaiveClosureTest.xml",
+          "sha256": "51acb886fec3abc9a5804fb8cd64dbd67ab86634228798562e95b229c59e4781"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.NdJoinAdapterTest.xml",
+          "sha256": "e3846c9a8b82a265b0602ae22de2911a413869d99e1ccc8e569189334f62dd15"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.NeutralBatchEngineTest.xml",
+          "sha256": "da328dc8eebfb75bc0bfaec5159ac238093c415081e007fdb69aac4165ca3cdd"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.NeutralBatchWorklistTest.xml",
+          "sha256": "dfd31dfed157bc89c45255275466b2732ae6f83e327ee5b476196a30f5058065"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.NeutralRelationBatchTest.xml",
+          "sha256": "d3f177436ea8cf1686468c418a3bebd7ae9b87157374b5513e2b00b15ad8f829"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.NormalNdContributorReuseTest.xml",
+          "sha256": "bbd2b07a722b4c7bc1764852160853483ff9e9f83bb79618e85dc4a862d24c12"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.NormalRuleContributorStoreTest.xml",
+          "sha256": "a4ff9cd9eecf163007c737ff4098e416129ce4f66f635285d93df4e6bc23e855"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.NormalStarRelationStoreTest.xml",
+          "sha256": "f461beda681e6252560fe672667c58c05db7eb34df1f66a9fe3d0760489bbe12"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.NormalizedHandOffTest.xml",
+          "sha256": "cca3147c20fde0a4152865b7bf32048115770f88c1e44bc0cfb36c89a35371b5"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.OneRunAcceptanceTest.xml",
+          "sha256": "ecabf0bc7ddd4e12aad208e5307b9390e60b38449213ac0162d60c66243a6c54"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.OrdinaryStaticRequestGateTest.xml",
+          "sha256": "2ab8d7e5e97b2bbc52b5a8c41f6f4b4a99b97eab3ba346b4fc9937aaa43e3f8f"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.OrdinaryStaticWriterTest.xml",
+          "sha256": "7c292fd80ade5bbcab208777e460f95258cebc2fc6195464bcff60122ffc0775"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.OutgoingDemandStopTest.xml",
+          "sha256": "4ba776c0efc3d0777a6a6157c0bb143c8d663b3719ad7bdae9dc3874a3261b5b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.OwaspDemandCycleTest.xml",
+          "sha256": "9db5958ef3371be6f8588238f6f98dd6fd65cd7eca39cfb3d008d9794cccd004"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.OwnedJoinedStaticWriterBindingTest.xml",
+          "sha256": "f1831f6443342ee31da9f4d31c07c6122b5841c1283664a7c0a7f04299611d0c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.PackedStaticGuidanceTest.xml",
+          "sha256": "0234086d36a57bfa96115c8b5af6bc93bfcd36b13f77810c6a9ff1392db82695"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.PathTrieTest.xml",
+          "sha256": "cbc8c6f401cb04530cc7b562289371fc07f4fb132cdd12961148a5c735ee1ea2"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.PathWalkTest.xml",
+          "sha256": "1a55736eab63d4ff068d93c4429e7b81d4656e58ba2ad71af165be48478ec442"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.PredefinedSummaryTest.xml",
+          "sha256": "d2b9a028c4da79bedb99f2bf937313a9278e0bafdddb4f5f8543e28bde9f2347"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.PredicateClosureTest.xml",
+          "sha256": "ed6898ea97b83efaf4a56469da5b9aa12c8cdd805bb47310042bf787d09ea300"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.PremiseCombinationTest.xml",
+          "sha256": "8cd14f7c6b43033fc47d0cbd9a9b8931d1b3d53161c9c16ed9b1738d0441d5f6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.PremiseTest.xml",
+          "sha256": "593084bf8c519d3545e718cfab77e591201b1919f094837bd995123624213ba6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.PreparedBlockExitsTest.xml",
+          "sha256": "f9f34957180544a17dc66ac866475a72b1fb9913460d745331a8a915503304e6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.PreparedBodySummaryTest.xml",
+          "sha256": "ddbafeb4eddd048f80e36d7daf2b70a11031d834ed60ce01b5dd3b1f6b83b384"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.PreparedDemandPlanTest.xml",
+          "sha256": "734eb30ed5e35d0b74d73c39b2c814dfb5533c58de2a994a067889a942c60e44"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.PreparedOutputProgramsTest.xml",
+          "sha256": "b9d2ea09c87f8e8eaa8e3bd6f9e413743e4bd2b0207cd71f315dc0b86d575d49"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.PreparedSummaryFallbackTest.xml",
+          "sha256": "8ba812c4e4f589327335ba1619f492a8d31b7129c1f0f6bd1ef26169c2a695c7"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.PrimitiveValuesTest.xml",
+          "sha256": "ad7ce3b3619c6e4174e210ccb24d377156846e8304fe41de4cfc680b39951977"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ProtectionStoreTest.xml",
+          "sha256": "aa15f50c6896ecc3b463622c5729bea43e764298605aa22c4515d98cbedeb750"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ProtocolContractsTest.xml",
+          "sha256": "29e9e35a99d1003f96f88d80c7360d225a4e3ea8310fe3589079bef21a6aaca8"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RecordDemotionTest.xml",
+          "sha256": "20acea658efeedbc0d8f21e4c977ca0c3d38feca47d5750d6a1978e38231b3b6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RecordOutputPositionTest.xml",
+          "sha256": "1fc8d114f99c33f016266386e587d49bad54b173a8343dbfecb1443cd05acef6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RecordReadViewsTest.xml",
+          "sha256": "f52691e02adb451eb49936406bd974fdc96e6a5ca0d8cd5bd90da294f1736d3f"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RecordReplayTest.xml",
+          "sha256": "8a44ec0e285f348e4b8465b901118e8ec36b779b1d27da259f9f57ead9388b00"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RecordStoreTest.xml",
+          "sha256": "d432539ebaac05e1e315dd62a21fc3de98dc9a0b83e71fa7afd4cfd1631b8c79"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ReferenceOperationsTest.xml",
+          "sha256": "e3e2ef29a59788e2ea214ce42c990f6e37660671db39f4347f27f577d667c437"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ReferenceRecordViewTest.xml",
+          "sha256": "114e54c965eb2616244b8cfac30eb42bface4854f65f62bddac959678754f369"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ReferenceSelectorsTest.xml",
+          "sha256": "b53173c2fdfe368d791d63fb378c1569271e51837f034b2ddf66d3014bc2c5be"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ReferenceSourcePredicateTest.xml",
+          "sha256": "db68c20eca95cf2286a12d8dfd522bb162b30261156db0be0d45992a9bcb6f5d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RelationCensusTest.xml",
+          "sha256": "393378841464f0ec775d99e796e678ebc8000fee431d0e84b587064bab8da2f2"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ReportTest.xml",
+          "sha256": "eefa1166c7b4269a8c8ac526dcd20d9273b7e00e7ae8785e352bef1771bc7b97"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RepresentativeRefinementTest.xml",
+          "sha256": "e69fe6a6375cee45839cc44cd7ad93146f9d5d7d87fd5ebefb97ed04edd1b014"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RequestActionTest.xml",
+          "sha256": "82b47a63349a0888cf5067ccf04470b36e983e4fd93d8596be53d7629f65dd94"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RequestBarrierJoinTest.xml",
+          "sha256": "7a97a1abf680b5448391d89af3d3cd9c89a52716a48fc6a51166f24a483280b4"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RequestBatchCycleTest.xml",
+          "sha256": "c06b0de755af56079e01f172ae2d33fd7ac2d0ef3a2de7744d4944dcda24e4df"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RequestBatchStatisticsTest.xml",
+          "sha256": "e93eb4bf76d2f638b22af03080ff31d34d20622bb253410636fb61d0aaec21da"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RequestJoinTest.xml",
+          "sha256": "6a6dd7c8468261d47106c9de4abdcb1bda6aa08d672b51a06fa79e2aa21e708d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RequestMarkSetTest.xml",
+          "sha256": "5c0ad8f5cad79054906715379c919babfe9196a91293bc5c5194ccc4bd6cb88e"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RequestSetStoreTest.xml",
+          "sha256": "e989eaa58bfd86618ec4034568e57b1f616b0eb1a17b8bdd3952375a86c3ed65"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RequestStoreTest.xml",
+          "sha256": "f0661b1f5a21cb46a72b895e1dc1d15e8b6dc8ff3618af57a9f1298237285994"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RequestWorkBarrierTest.xml",
+          "sha256": "903fcc6be094c60796c4ecd9b61c651ca078deb6da8dbae735ed358c7095cd84"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RestrictedDemandBoundaryTest.xml",
+          "sha256": "5eade975603b5f6498f50154ff5bb201b078c894cdaa4604bc8636fd065b5911"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RestrictedDemandPipelineTest.xml",
+          "sha256": "aefa3fdd92e2896ef4fe4265b7f2f86692cb20ee63a52d5519f9c8915fdfb767"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RestrictedDemandProtocolTest.xml",
+          "sha256": "0968eabff5ddbde3e6ca612ae081e770f6410bc809a1af4cfe1b2cd0d5ba249f"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RestrictedInitialPolicyTest.xml",
+          "sha256": "df5aae98d3b15422ee185b28f7332d2d60a4827f3b903d47b6346f7a1ae7e6e8"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RestrictedInitialTransportTest.xml",
+          "sha256": "72d0cf4a20f26652f020d8dbc118a3c98bbe6d7057eb0381ca883c4e4839e04c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RestrictedSubscriptionEligibilityTest.xml",
+          "sha256": "95dd3217ab2d53dab3b2e055c51dfc6d498764969dd8eecd0c8a3941544145f1"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RestrictionTest.xml",
+          "sha256": "1fd25a3627dafbae77befb730ee2a6544cb461786a6a888c217059a654087679"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ResultsTest.xml",
+          "sha256": "da42c315cff2ad8922b9510505fc041479a4357c0b4b41de6fc70766df9cebb6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ReturnFullCleanupEngineTest.xml",
+          "sha256": "631d2c6ed377a1daee0e4fac28c2e18a3896f8119095cab23161c2713072b450"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ReturnFullCleanupTest.xml",
+          "sha256": "ffe65307bf0796f189639c71f6919a39c4457d18e323131e6bde6fe9b8f38744"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ReturnGroupScheduleEngineTest.xml",
+          "sha256": "5ac524dfe5b5210c38589f48514c58b709f0afeb9bbd8e5dc6175da8f3a2f42c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ReturnGroupScheduleTest.xml",
+          "sha256": "ad07720542decedfcd880defc1ebacd338965ffb4770adc5f4184d18cf1ef69f"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ReturnImageCollapseTest.xml",
+          "sha256": "86d82ecf46a4f40618275fa11a0f9f102a2a9e09d7599cd0ba65582f2a45fc40"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ReversalTest.xml",
+          "sha256": "c2a6c876d303b55cfa5e2b17e5abc0343621f6326f7ef1ef82945bb3df901f13"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RuleIdentityTest.xml",
+          "sha256": "625378af58d1f3401379041726aa57807fb7ac08dcc5ef2daeff3ac42dabc2f5"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RulePredicateCompilerTest.xml",
+          "sha256": "ca4a7cc86513ecd08af0c6f63d03f645c16efbdebacbf71bbc4e6c1b3ffb6719"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RulePredicateEngineTest.xml",
+          "sha256": "b499682d1465848eaec68cc6244e2f964fe3171ee9f42567b5c7f75d9bced49d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RulePredicateStatisticsTest.xml",
+          "sha256": "21e3d4de9ecdb0e7e7f6b429a1ba3bb412d6e7136b0a84b2c1327e6895765f2c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RulePredicateStoreTest.xml",
+          "sha256": "72a00eae4427aa02525326bd4e46cdaf6cca70346ff4f82aeab374b7b6892fbc"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RuleStatementReversalTest.xml",
+          "sha256": "dad820df10aa553b3fc74dc1d346663c6405d8ba8920f0f15d84cd114d48ca21"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1AbstractionTest.xml",
+          "sha256": "848fc44c87ea83269ed12df0f09020b198821cce29653d7567b21ebbd6ee2679"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1ConcreteAnswerOracleTest.xml",
+          "sha256": "b523cc31b9ac8582cf7ad345fa6d12e15776d69c43da56bb89f66801622eea34"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1ExactGlobalMarkerTest.xml",
+          "sha256": "d91a1e5238bbe638de396900aec77dbd6249d5fba0eb30df834cb5e7b9492923"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1ExceptionalResumeTest.xml",
+          "sha256": "933c374022848d8782d1541896ee338e9912b3412009706becedf73d17adbd66"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1FieldPreservationTest.xml",
+          "sha256": "7fcf1fbd6ef0b2a6e80c0485d9e4165e90d678fecae5eb3cecd3a750a5fe1020"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1FullLayerPolicyTest.xml",
+          "sha256": "eb7435ae2066117c49926ea4f2eaf7444b475653b453baa79a961f1f3b8c438a"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1GroundingTest.xml",
+          "sha256": "c8d773dc2752bfb44d48c207cc933deb2e0ef1c68add38838ac7fd745520e61c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1InitialGrammarTest.xml",
+          "sha256": "29a4663b14616f51d5204332fe1d2d5ef668631d33e0d05cf53d1b32957c31f2"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1LoopTerminationInvestigationTest.xml",
+          "sha256": "7bc34ec8cdac3b296771a0c8eff1267be6821423cf42e70418368707fefa034a"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1MarkModeTest.xml",
+          "sha256": "a41680b58f8e83947975fac2cbae6e3877c354efe9a3106320dd8e083d4017e1"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1OperationStaticWriterTest.xml",
+          "sha256": "4ffbeabca77be51f3f5ced023a463b718c5ed17968193d023c69c8c1af47f1b7"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1OperationWriterPipelineTest.xml",
+          "sha256": "b56300b533d053e1aec5141a54b871cf965a891bf000f7c5c4fb3f76f9b45c5b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1OrdinaryStaticDefaultsTest.xml",
+          "sha256": "61a11418090ce3c409bdb01f1d9d34be154e7b4487f3f120d9ced165c11251da"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1OriginConjunctionStoreTest.xml",
+          "sha256": "cacf3423d7d12c86eae0d8d04e1dc72c08115d246f189bbf856aad44ff63deed"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1OriginPredicateStoreTest.xml",
+          "sha256": "fcda3c21b67f97e7065f25b551b3a307d43d3728b450816daccdc93f96adfbea"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1OriginProtectionTest.xml",
+          "sha256": "54d94fc841d1941d68793f825281795ba7da578108011a940b06bee5f7a88b8e"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1PremiseStoreTest.xml",
+          "sha256": "79a40462b50538ac03d36bc4e1b29ee4f52fb14815d5b9439c26b5e3bc3d17bc"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1RequestMatchingTest.xml",
+          "sha256": "a97256553ba418c33e43ce2857bf4eae94a7f28c172edc86e1ec1338bffd75e9"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1RequestPipelineIntegrationTest.xml",
+          "sha256": "b693f40fb0e5bb1eb0b22b3ba73eca0adccd87ee91b7e1cfe68c8230ff39d008"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1RequestStatisticsTest.xml",
+          "sha256": "48333cc177b457480e0e881ba9a44051dc8455f8b99e2a7efbcbacc039b6a27a"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1RequestStorageTest.xml",
+          "sha256": "1c70e128d9b4d30edf07370664d283e843118c954f0dd4073bff411b983b0601"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1SinkProjectionTest.xml",
+          "sha256": "49cc3ecf495c4a0025a5ba578a30db76d142e362a1f1a03981a659d142f0c2e2"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1StaticAliasEffectTest.xml",
+          "sha256": "df037de2c38a838e8067bc0ef9426c1d2702a8449c25f072f06544f656963b5d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1StaticComponentCodecTest.xml",
+          "sha256": "6e59c92f191f80e5ef67e9810db8403caa8411497cb8a59f9de512fc8014b343"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1StaticDriverSafetyTest.xml",
+          "sha256": "bfa054cd227cfcc94a8ff0242174adceb10c9cf3347442d370fb263fb72bc3f6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1StaticExitRoutingTest.xml",
+          "sha256": "3511e8e69bcada2c3a5be6ef3e77b9d151b1ce5fd8f2fc7838299ec7d0dedbbe"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1StaticFieldAblationTest.xml",
+          "sha256": "5f6b74b6c61a1afa04603ec740c650070a086d35d84e22016510c43bafd0417b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1StaticGroupProtocolRemovalTest.xml",
+          "sha256": "06914b70d47165000683cb60b49d036a4d300f4e09aeef918d2e7d6a60593570"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1StaticProfilesTest.xml",
+          "sha256": "7b7f2f497764810cb6b61e78a8b737c9c3b76f78ae2845afc36540327a4c25ec"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1StaticRoutingTest.xml",
+          "sha256": "67889522be44d664ded0e14981d3c053611e5ce2ecb6f96fa5c0ead6fa87682e"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1StaticSummaryErasureTest.xml",
+          "sha256": "d62194fb79103cf3704260f7cc715486ae19901867ce8900449be6dbe6e8eac0"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1StaticSummaryPipelineTest.xml",
+          "sha256": "de041dad079ef360937d4632b25026722375a70b9f7fe77750f17fec3a5a982d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1SummaryAliasAdmissionTest.xml",
+          "sha256": "4649a262a3fad16d4e9d8716bed3481ddd77533cd919846ff6f0b75ab1f2e0f1"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1SummaryAliasPartitionTest.xml",
+          "sha256": "ba9dbb8b05785415ff869376cc5e088b66c0f98cdb72b9da288e62a1a74b82d1"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.Run1TemporaryStaticSuppliesTest.xml",
+          "sha256": "6b4e10c1b51553ac07f97ae7022d6b0c98196aa8299abce8c3727697a186c522"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RunCleanupTest.xml",
+          "sha256": "2ee74929aa0f926decb79a0c96b3eecd2662cc79ee05f450b89868286d5d8b5c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RunConfigTest.xml",
+          "sha256": "3f341e7b22886c4be84bc556e28b3a75bc30fd5dc5afebc974d19aa47ac485f6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RunFailureTest.xml",
+          "sha256": "415d53633688229324d2cc2b3b074c90440cfb562f1071208df62b5693d86c2c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RunJoinOverrideTest.xml",
+          "sha256": "c13dc8dbf3ddd0f050326953efc1845223aeca89cced3d7d9b087fedaf42afc0"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RunLifetimeTest.xml",
+          "sha256": "a7081c0c2885368c0c814984ae18a3bcfb00f1f88b5903e95dbeed489008ab5d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RunMethodHandlersTest.xml",
+          "sha256": "db21b78e8a4a23ae1b4a6785a293b09213c8fc7f35b01a2b162c56ca8b62ff8f"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RunSchedulingTest.xml",
+          "sha256": "b3e278ed28f3b1de0e2e807872ddb52405acc55c0307fa24cbd3d9757f600959"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RunShellTest.xml",
+          "sha256": "7f2f302e3e5ba6429cc38da32b1456ccdfcd62c06d5d60ee38487ac673570c64"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RunSummaryBorrowTest.xml",
+          "sha256": "3894cb5cc86616aa8b1559af044f498768ffa026663eb641ab312bcab69956f3"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RunSummaryStoreTest.xml",
+          "sha256": "0a991dc455c0b0127ab22058fc4ec555dcd65424759c17d9308980f7689c1f14"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.RuntimeDataDomainTest.xml",
+          "sha256": "e2452c565e0d22af22c8a1f3f9c7fd0242eb86734fb02bc98a5f0fdcbe9e614c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SavedRecordSelectionTest.xml",
+          "sha256": "aa86f7d3a2f35e23433e1dbf421ed87421203e0618bb5b89bceb82bec6cd5f60"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ScheduleFuzzerTest.xml",
+          "sha256": "b17a2ab967142e0e0cf456133c33b2eb32ab67bbcfd28e94aaf00b651467df47"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ScopedBlockStorageTest.xml",
+          "sha256": "7ffc7574d56058700b3061483899b7164605c118d4747cb3837fd1568f0a29af"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ScopedPhysicalMarkRequestTest.xml",
+          "sha256": "eece98321b71487d34aab922c7f450d4376b6d4bb81f41669ba7cd07807c055d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ScopedStaticCompletionTest.xml",
+          "sha256": "f1967c474d1e94c164b6b17a6785f6659b266dce0b3f31d9b2b01851e1e8994d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SeedIndexTest.xml",
+          "sha256": "21ce68fa7d1a1eac790f35adc63f294b39c389435114fdb90bed6218f9b335f9"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SelectedCallPolicyHelpersTest.xml",
+          "sha256": "db99ca16c33cf74b4496adecc4a7f110224236dee9187f53d473e5007fc35f1c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SelectedCallPolicyTest.xml",
+          "sha256": "801a875ff0595375a51879a4d441e24203b7677fb9c76223c5443881ac66813b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SelectedFullReferenceTest.xml",
+          "sha256": "554c8aac19808e19e8a194b86755df56fdeabbedde9d2d596024e411def2527e"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SelectedReferenceBoundaryTest.xml",
+          "sha256": "1211ea732422cd12a1b7c612c43e605568b43d8a1bba3ee0f3ee1acaf76c1678"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SinkEndFactTest.xml",
+          "sha256": "d8ff83e964e207784195041d317d10b4eaa6b15b74e1173f7ee944d3d7bb6a9e"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SourceActionIdentityTest.xml",
+          "sha256": "62ce9be79ac92173c3f0fddc10cf0d0040caf6873a023858889c17d64b7528a0"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SourceHitStoreTest.xml",
+          "sha256": "2cf92a6687679a764504ea25482329886ea019b6849210331a981a026a01ac03"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SpatialCanonicalOracleTest.xml",
+          "sha256": "7598237a8f82c00743227c0f23ade0d8e8d63e830537185c5f93328b66ed47b3"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SpatialCanonicalTest.xml",
+          "sha256": "7030317683225a5e4134d72305f1bce2e1de0b283b2193a3d6704ce20d01742c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StandingJoinTest.xml",
+          "sha256": "f25ff5be80dcb13a5be2d44ed2c0c46c52f415b768c80a0f5432f8fd517f32f1"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StatementSummaryReversalTest.xml",
+          "sha256": "bc13fa40ceb0883e3ffd923f0b3a6395c7f4c000ff7e64f31de08a9a34a0e0c1"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticBoundaryInputRequestsTest.xml",
+          "sha256": "98815b115a03f4b709f7be97fbd46ac788af1623cc19af3244e7183622e6c359"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticCatalogClosureTest.xml",
+          "sha256": "1c5b4a909a3407ec84f0dc2d4632cdda93c08bab21a0065c858685133324459a"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticCatalogIterationTest.xml",
+          "sha256": "cb4105856fb6e236765ad9a08bfbe55346841379b291a41057e099b10fe0ecb0"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticConditionalRequestJoinTest.xml",
+          "sha256": "cf50186535003202ea2c605fd06089aaaab032835ebea512554cdecda91a8c66"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticDomainDiagnosticTest.xml",
+          "sha256": "6ffd4b615ab626047b9731c0fcbd665a4998651533614d6a5c2f7a8735ad3afb"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticGroupProtocolHandoffTest.xml",
+          "sha256": "ee7fb1aff0a0e1bd8afeb630d29be1b85466bf0156b61e913cf531e649d6a5d7"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticInputBindingTest.xml",
+          "sha256": "fb44ce69f4bb32d8f86275bd97430ad7f0395830a58bda5bd4afb550ce04e130"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticOwnerEligibilityTest.xml",
+          "sha256": "f56539237dd3a4d08961db607788ca3a5dccd59dadd4632469f65fb7b11d815b"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticPointImagePackingTest.xml",
+          "sha256": "7a8c85351ff542c7c13d1168be5675caccebad3ca7ddf0efc6514f197f9f0cd5"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticPointRequestOwnershipTest.xml",
+          "sha256": "157dccc3ad5d56f6a9e9dcb7c2af58751e4e23fe7e1467837894a00602b9915a"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticProducerGrammarTest.xml",
+          "sha256": "b29e0c0b21e2979810bf58a9aa01a266e7a4e3d1fc7e4ace10446181a5c48b13"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticSeedGrammarTest.xml",
+          "sha256": "2d340081e68f8a24bcdb1f59ed1e1129aa8e02f832eb9c39795364b9a92fbc8e"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticSelectorIndexTest.xml",
+          "sha256": "286229692dece0efc6b9d12e476aeedd02dd0764ed82c573217b5934f3d8a839"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticSummaryBoundTest.xml",
+          "sha256": "12f1493d0bab9676d73aad1b0048147ab01904eae5a908314b2b154fe55f4bf5"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticTargetClosureTest.xml",
+          "sha256": "264c23ec896ac47c9713366f950e2a253e7e5e1383d8bc91f002209bfec3dc24"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.StaticTargetRefinementTraceTest.xml",
+          "sha256": "c6e2f2aac0bd82016ff6cecaff64bee57a16e19bc50570b1d52b74ea71cf6f86"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SubsumptionTest.xml",
+          "sha256": "8a864ab31749de9ac72013b2d24094ee37e050a3fc99b8994a2d1e8379a86cbd"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SummaryCandidateWorkloadTest.xml",
+          "sha256": "9e16345f1cf0b3b932984d4c89d1748bff5d963c78fd2c5f9538a122a3d74169"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SummaryKindsTest.xml",
+          "sha256": "0f0c5d16482f89059134f3cfb20b4b11a153a15c57fb9dd6824492b77c0e5e6e"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SummarySelectorTest.xml",
+          "sha256": "254bfaa40b516b7873dd20623338a0df6244beadc09f9aa6bab194772443d3bf"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SummaryStorageProtocolTest.xml",
+          "sha256": "67a6bf0e6f7fd37e5d9b0031aaab66c38be9a95c80754156f514e9def346b8d4"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SupportIntegrationTest.xml",
+          "sha256": "2adfbc781825d1e556df3464674c9bc21c32863376b29370d5f0975a8e5fb98e"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.SupportTest.xml",
+          "sha256": "91a12e0bbde9b2eaa3ea949225152bf294f5790f68b2650228bf702a8151153a"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.TaintAdmissionProtectionTest.xml",
+          "sha256": "9e896d5599d1aa63da9087f9cde01956b2b296e2aec713d4cda3ca62f2272f93"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.TaintGroupKeysTest.xml",
+          "sha256": "bc654289952f3ec02200cc97cd0854af83de1f6e48563c4ff49c7d2add4c670c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.TargetCallTest.xml",
+          "sha256": "02876005a603a39811f0cf170a28122aed8efbab49b494a08892bca8e99acd43"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.TargetProtocolTest.xml",
+          "sha256": "1fc434eb7cf9ee2c35e02df7029bf7aa28ffabef552ec93f702e514c768b23b3"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.TemporaryStorageBoundaryTest.xml",
+          "sha256": "9536076e61ac776567c11a9ba6f5e5105e3fa9e161e31dc3ba65748ab77bac22"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.ThreeSetStaticRequestsTest.xml",
+          "sha256": "453c23f6f41634df2ca9fff0bbcfad73e9aafc2f1f0ed80143f0d3289a76b6c3"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.TrieMergeDeltaTest.xml",
+          "sha256": "c37f79bb14a1eedf296612f7209b6d7458ee8b4b33b4373dcd521cd3202514cb"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.TrieTest.xml",
+          "sha256": "96ac8e2f1ddda71abf0b76fc46fbf280babd3c7ffd80d6c87ce2a5fda0cdb74a"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.TypeFilterTest.xml",
+          "sha256": "abf87b918a638d9ef5b6c7967345f8bd5ff65f9758fab459fe28b3728bde5ebe"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.UniversalRootMatchTest.xml",
+          "sha256": "9d0fb69b691eac0e32db8af65eb6e6c0502ca9cf155335adcea6077de089401e"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.VirtualZeroExitTargetTest.xml",
+          "sha256": "178d794ab77eb28f15c9ae6dab908a1218f7075e7a5bbb03c87f4cf711242ae6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.VulnerabilityStoreTest.xml",
+          "sha256": "571b6c23352caab8ba6b687b57042c044b9e4bf92fed1eb448b8f28f3b20b44f"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.bidi.fixtures.BidiFixtureTest.xml",
+          "sha256": "b7b572633f7811245a684269a6bebcfaf6b2f93c7503bd19ac6012b37f09df99"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.graph.IntGraphSccTest.xml",
+          "sha256": "7dff3bcf7da0f489092d54db9855e173c143f1a5ebeb71df12bcf7eb802a6033"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.graph.MethodBlockLayoutTest.xml",
+          "sha256": "0a096200827783732aaa9a932f491573b4b44a136b6fc913ae60cf7e58f9690d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.taint.SignedConditionNormalizerTest.xml",
+          "sha256": "98d14722bfc28b87700545debdea3608dc214041567e72988ebbb5c83da8771e"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.util.SoftReferenceManagerLifecycleTest.xml",
+          "sha256": "8742313cf6d8b3124aff3ffd98b37e98a0f04f44448ced069bec41b368a14317"
+        }
+      ]
+    },
+    {
+      "module": "opentaint-jvm-dataflow",
+      "suites": 45,
+      "tests": 461,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xmlFiles": [
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.ap.ifds.alias.AliasSampleTest.xml",
+          "sha256": "4a882f7c02466b8e33f54554d4864a8c6ab3d01a921d465c7ff8e40450826452"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.ap.ifds.alias.DSUAliasAnalysisInvalidateOuterHeapAliasesTest.xml",
+          "sha256": "bb96b0f601be8ccaf3f0ddfdb89c5d0baf92e83e9cf851cd1f3bbf0b702a544c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.ap.ifds.alias.DSUAliasAnalysisStateTest.xml",
+          "sha256": "18634851af68918f46cdb93371097b67f0761d6b923562d3ee444148c38f5980"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRStatementSummaryTest.xml",
+          "sha256": "efa20242165ef9f9517898779a0635211639b2506d7789ec6120dc9a6a208017"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.CatalogResolverOrderTest.xml",
+          "sha256": "1fb1b126189c3a4b9b5bcc6ae7d901c67990241dc9d48b83e40ba1d4d29c3dfa"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.EffectiveBidiRulesProviderTest.xml",
+          "sha256": "28aae3c6c95d36c540d47bc48255a33fb7f527babb4855e0c52b51fa4968b3e9"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.GroupRuleViewsTest.xml",
+          "sha256": "86611981a746793eaf360717ee4a3f6f31dfa01e3b930312d69dec3a8112d918"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRBaseRelevanceTest.xml",
+          "sha256": "5ba41157ab85f0ceac2f9cb00865d8dfa112490293e04fec924d563bece7106c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRBidiOutputTest.xml",
+          "sha256": "d7431b739f3017fa833320c245ea7be5c3a7c257b48d9c320433af34f30ad102"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRBidiRealEntryTest.xml",
+          "sha256": "cba9e81b8ac77ddc78dad8714843a5155d9d47fcb0f33ebe87db847f1bac4336"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRBidiSetupBudgetTest.xml",
+          "sha256": "4a621a71315827749cecbc242889322befcd205ef30d3c0503f94cc97dd920fd"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRBlockLiveLocalsTest.xml",
+          "sha256": "93c4766c6ae40d914b51efadd0091ba26e874ecb4a3bdb802ce2e245d6b2dbaa"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRBoundaryFormsTest.xml",
+          "sha256": "04e7331c1a87b0b28238b09971f79ed8e7c586f65f90768a1ab5ccdc4faaf405"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRCachedPassMethodTest.xml",
+          "sha256": "6492b71a004d330771bb11b43d2d7f2499be3ad77d5bf642e971038d433b4446"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRCallAdaptersTest.xml",
+          "sha256": "261306e393718db7a7c84fe2808e097e0697f36140037c8e824d953d38ea3c68"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRCallPlanTest.xml",
+          "sha256": "59ae4c7ebb26063a9d643726bc5bb4647613069dfe3e601d3d4ca2fd3b2fa1a0"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRCallTransferTest.xml",
+          "sha256": "9a2e5c6895085c27c59747098ff24ca716086f3f75b4fadda83e0e3b41f25fb0"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRCleanerMappingTest.xml",
+          "sha256": "2e488fa0d11a518920d5c1be216f96cb69218b04ec16cd362baab31f7aa1b095"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIREnumAliasTargetsTest.xml",
+          "sha256": "c94efff3461260287ec681f1d3f133c6a0799a2b85dbc4fc90c61ddd995929ec"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRExitWiredGraphTest.xml",
+          "sha256": "5254495df571a8081b22d44fb42d97e154cf396f804f6f042d6d7f764e9882d2"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRFormsContractTest.xml",
+          "sha256": "3f2f18e70f98274bb708ae327e80efd0030d5b6b0db960cb7e1de13743503b33"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRInternalBasePositionTest.xml",
+          "sha256": "7cc4d4f85bb4ca233a9828e31fba53c44f131937c54124d816bf28f239a0f0f6"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRInternalBaseResolutionTest.xml",
+          "sha256": "b5a4225dede6a2ce2b3fa7b2992a5b9c5d796ae8927c7c0c72e472a9322636dc"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRLoweredCleanerEffectTest.xml",
+          "sha256": "85aeb76dbb523abb1650a5f443b7375d9a09da8574f8896aa6331c5e5ea5eeeb"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRMethodCacheTest.xml",
+          "sha256": "b3d3017e7d6b5470c077493e0b36e2855de7d30b2ac7aac167cfd974e79ae6c7"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRMethodContextCacheTest.xml",
+          "sha256": "c2ed03aaa452e2d5c1324a36c44f1b8ef9d71216577c3b4524f3be04a479cc1a"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRPredefinedCallPlanTest.xml",
+          "sha256": "251b455af36d352c3cde887ad35b09166df360871b529233c6a6b15a149e1d66"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRReturnGroupScheduleTest.xml",
+          "sha256": "318fc6aacd5380e158c30b4f351c8e31ea92e4f67b3332b4ced776d6606983df"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRRuleFormsTest.xml",
+          "sha256": "d145ee653f87b8cdf0816a9f8553c4f3fb5def401a304b578845b2008498a42c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRRuleValidationTest.xml",
+          "sha256": "9f0f2d462dabab2b73c896c08e484c9fd7b0507e655303476567726c3761989e"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRRuleViewCacheTest.xml",
+          "sha256": "6d975e986a219a0fa555624dafbbdc169368460c57adceb184cd2ccb70fc1610"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRSignedConditionTest.xml",
+          "sha256": "5a354ccbffa1464f7b177f49d23da5c456e68f86c3fe1665c7d712c063942123"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRStatementEffectTest.xml",
+          "sha256": "63166a6a7cace6897a7d757fd64065a703a4c431c97189ed5e11c73986f38bf4"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRStatementFormsTest.xml",
+          "sha256": "8ac2e52f044b95900d22f01ecebce53af1b9a047690952fadf029f31f81654f5"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRStaticAliasMetadataTest.xml",
+          "sha256": "2b68988dbe5aeb9982a1b550a1eb5d1f4a97ee2f923869261e78a39749aaba6d"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRStaticDomainProducerTest.xml",
+          "sha256": "00cee7b166700cb691a31b70502793a40ea7d61f434f0d05ac0190e4c5e72dc9"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRStaticMetadataFallbackTest.xml",
+          "sha256": "095355ac8e69893c0c54f92e7f61900a90cdc7879c2d0c614e27114b1128975f"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRStaticMetadataTest.xml",
+          "sha256": "3973a7add578260698255332f7c360641ea90c48851d66c5662f7bc0f3fffcf2"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.JIRTypeFiltersTest.xml",
+          "sha256": "2c6b766e2f2ec61a97a7ee9902977dbc68f59b71c01398b3b7325d4241c2e662"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.MarkDeclarationFinalizerTest.xml",
+          "sha256": "c3c6b506a9198126ca9f1a55857f645ba03c3f65d88e5097fe72dc610e0432c9"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.PrescanCopyTest.xml",
+          "sha256": "41e87054dbd9b15f761d9fe457a95faedb144526184fd657373da282100bca11"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.PrescanJoinRegressionTest.xml",
+          "sha256": "8f5e1f523cc41475095477c5a64721953672d60d5819ef7cfc5a3d3184a2d396"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.PrescanLifetimeTest.xml",
+          "sha256": "305370ba24431c52c77da0032fb1e64b25fcc798bf0dfd1a635cb4431ce417eb"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.ResolvedPrescanGraphTest.xml",
+          "sha256": "bfb2933d51fa223480a4b67a7c4cb0d4f728471b64bfece7df26278a3e89af9c"
+        },
+        {
+          "name": "TEST-org.opentaint.dataflow.jvm.bidi.RuleMetadataVulnerabilityIdentityTest.xml",
+          "sha256": "4767a335a715b7420a8e57562e672976c500d3c595bef3e3bd79fc825590f827"
+        }
+      ]
+    }
+  ],
+  "totalTests": 2990,
+  "nativeCommand": [
+    "./gradlew",
+    ":opentaint-dataflow-core:opentaint-dataflow:test",
+    ":opentaint-dataflow-core:opentaint-jvm-dataflow:test",
+    "--console=plain"
+  ],
+  "nativeLogSha256": "23c20c7aed9991bb54b152948b8773e51ecbf9190a749555a04735c98f8c1042",
+  "runnerJar": {
+    "path": "core/build/libs/opentaint-project-analyzer.jar",
+    "sha256": "4a26370314be62c8977786cf6d5a4788ff4a8624a41ca50b3d00288bdba68ea7"
+  },
+  "runnerBuild": {
+    "command": [
+      "./gradlew",
+      ":projectAnalyzerJar",
+      "-x",
+      ":opentaint-ir:go:buildGoServer",
+      "--console=plain"
+    ],
+    "status": "PASS",
+    "logSha256": "20de9c5e963559bf3ef54e0f02882fc332ec26d607e42773416e0562cf04f949"
+  },
+  "constructiveModels": {
+    "path": "spec/lean/proposals/flow-antichains-directional-matching-20261105/implementation-checks.json",
+    "sha256": "50182628fc5596081921c392466a133ae439b0b16eff82e0bbbeb150fc36f823",
+    "theorems": 175,
+    "declarations": 249,
+    "scope": "Constructive selected models and bridge laws; native source pins are not a Kotlin correspondence proof."
+  },
+  "additionalRootJvmTestAttempt": {
+    "status": "PREEXISTING_TEST_COMPILE_FAILURE",
+    "runtimeModifiedToBypass": false,
+    "allErrorFilesUnchangedFrom52f": {
+      "core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt": true,
+      "core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/CleanerDslAnalysisTest.kt": true,
+      "core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt": true,
+      "core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt": true,
+      "core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRRun1LocalStaticWriterAcceptanceTest.kt": true,
+      "core/src/test/kotlin/org/opentaint/jvm/sast/project/spring/SpringDispatcherAcceptanceTest.kt": true
+    },
+    "errors": [
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:151:53 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:151:97 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:168:57 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:169:34 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:170:36 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:171:37 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:178:30 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:178:39 Unresolved reference 'key'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:185:110 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:198:75 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:67:41 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:74:34 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:76:23 Unresolved reference 'SinkWitness'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:77:81 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:77:86 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:78:20 Unresolved reference 'confirmed'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:78:41 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:80:29 Unresolved reference 'VulnerabilityKey'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:80:79 Too many arguments for 'constructor(id: ReportId, descriptor: ReportDescriptor): Report.Entry'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:80:82 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/BidiEntryHookTest.kt:80:82 Too many arguments for 'constructor(id: ReportId, descriptor: ReportDescriptor): Report.Entry'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/CleanerDslAnalysisTest.kt:13:43 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/CleanerDslAnalysisTest.kt:467:26 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/CleanerDslAnalysisTest.kt:468:45 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/CleanerDslAnalysisTest.kt:468:48 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/CleanerDslAnalysisTest.kt:469:41 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/CleanerDslAnalysisTest.kt:469:44 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/CleanerDslAnalysisTest.kt:470:38 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/CleanerDslAnalysisTest.kt:470:53 Unresolved reference 'key'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/CleanerDslAnalysisTest.kt:470:65 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/CleanerDslAnalysisTest.kt:470:71 Unresolved reference 'state'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:170:39 Function 'component1()' is ambiguous for this expression: ",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:170:39 Function 'component2()' is ambiguous for this expression: ",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:170:53 Method 'iterator()' is ambiguous for this expression. Applicable candidates:",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:170:53 Unresolved reference 'witnessesByKey'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:170:90 Method 'iterator()' is ambiguous for this expression. Applicable candidates:",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:201:65 No value passed for parameter 'direction'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:239:42 Unresolved reference 'VulnerabilityKey'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:239:69 Unresolved reference 'SinkWitness'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:240:101 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:240:101 Function invocation 'run(...)' expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:240:32 Unresolved reference 'rule'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:240:42 Unresolved reference 'statement'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:240:61 Unresolved reference 'methodKey'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:240:80 Unresolved reference 'alternative'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:240:93 Argument type mismatch: actual type is 'R', but 'kotlin.Int' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:241:109 Unresolved reference 'layer'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:241:13 Argument type mismatch: actual type is 'kotlin.collections.List<T>', but 'kotlin.collections.List<org.opentaint.jvm.sast.dataflow.J03ObservedLiteral>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:241:13 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:241:29 Unresolved reference 'edges'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:241:41 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:241:94 Unresolved reference 'premise'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:242:40 Unresolved reference 'facts'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:243:71 Unresolved reference 'facts'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:244:34 Argument type mismatch: actual type is 'kotlin.collections.List<T>', but 'kotlin.collections.List<org.opentaint.jvm.sast.dataflow.JvmObservedPath>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:244:34 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:244:50 Unresolved reference 'endFacts'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:245:43 Argument type mismatch: actual type is 'kotlin.Unit', but 'org.opentaint.dataflow.bidi.ap.PathFact' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:245:43 Expression expected, but package name found.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/J03ObservedDriverBridge.kt:246:25 Unresolved reference 'confirmed'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:100:23 Unresolved reference 'witnesses'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:100:42 Unresolved reference 'methodKey'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:100:76 Unresolved reference 'run'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:101:24 Unresolved reference 'alternative'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:101:65 Unresolved reference 'confirmed'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:116:26 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:116:26 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:116:45 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:116:48 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:147:26 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:147:26 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:147:45 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:147:48 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:170:30 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:170:30 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:170:51 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:170:54 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:197:30 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:197:30 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:197:58 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:197:61 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:221:26 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:221:26 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:221:48 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:221:51 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:221:87 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:221:90 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:241:26 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:241:26 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:241:48 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:241:51 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:241:87 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:241:90 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:242:31 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:242:34 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:293:32 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:293:32 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:293:56 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:293:59 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:311:29 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:311:29 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:311:56 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:311:59 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:319:31 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:319:31 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:319:58 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:319:61 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:335:32 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:335:32 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:335:58 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:335:61 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:342:100 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:342:103 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:342:32 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:342:32 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:342:58 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:342:61 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:352:26 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:352:26 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:352:52 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:352:55 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:352:94 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:352:97 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:371:31 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:371:31 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:371:49 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:371:52 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:372:51 Unresolved reference 'witnesses'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:372:71 Unresolved reference 'confirmed'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:374:34 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:374:34 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:386:30 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:386:30 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:386:56 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:386:59 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:408:26 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:408:26 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:408:48 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:408:51 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:418:26 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'kotlin.collections.Map<kotlin.String, ERROR CLASS: Symbol not found for ReportState>' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:418:26 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:56:103 Unresolved reference 'state'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:56:70 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:56:70 Not enough information to infer type argument for 'K'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:56:70 Not enough information to infer type argument for 'V'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:56:85 Unresolved reference 'key'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:56:97 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:56:97 Not enough information to infer type argument for 'B'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:57:78 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:59:9 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:59:9 Not enough information to infer type argument for 'T'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:59:9 Type inference failed. The value of the type parameter 'T' should be mentioned in input types (argument types, receiver type, or expected type). Try to specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:99:35 Unresolved reference 'key'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRBidiSequenceAcceptanceTest.kt:99:74 Unresolved reference 'key'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRRun1LocalStaticWriterAcceptanceTest.kt:70:101 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRRun1LocalStaticWriterAcceptanceTest.kt:70:107 Unresolved reference 'state'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRRun1LocalStaticWriterAcceptanceTest.kt:70:22 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'T' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRRun1LocalStaticWriterAcceptanceTest.kt:70:22 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRRun1LocalStaticWriterAcceptanceTest.kt:70:33 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRRun1LocalStaticWriterAcceptanceTest.kt:70:36 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRRun1LocalStaticWriterAcceptanceTest.kt:70:57 Argument type mismatch: actual type is 'kotlin.collections.Map<K, V>', but 'T' was expected.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRRun1LocalStaticWriterAcceptanceTest.kt:70:74 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRRun1LocalStaticWriterAcceptanceTest.kt:70:89 Unresolved reference 'key'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRRun1LocalStaticWriterAcceptanceTest.kt:70:9 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/JIRRun1LocalStaticWriterAcceptanceTest.kt:8:43 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/project/spring/SpringDispatcherAcceptanceTest.kt:131:54 Cannot infer type for this parameter. Please specify it explicitly.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/project/spring/SpringDispatcherAcceptanceTest.kt:131:63 Unresolved reference 'key'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/project/spring/SpringDispatcherAcceptanceTest.kt:132:51 Unresolved reference 'state'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/project/spring/SpringDispatcherAcceptanceTest.kt:132:60 Unresolved reference 'ReportState'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/project/spring/SpringDispatcherAcceptanceTest.kt:134:55 Unresolved reference 'witnesses'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/project/spring/SpringDispatcherAcceptanceTest.kt:134:75 Unresolved reference 'confirmed'.",
+      "e: file:///drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/test/kotlin/org/opentaint/jvm/sast/project/spring/SpringDispatcherAcceptanceTest.kt:135:52 Unresolved reference 'key'."
+    ],
+    "logSha256": "7f48e6e13d7c0570bb40ae5494c7be7edffb01c7c92b58c862978c1b4a0b2acc",
+    "baselineReportApi": "Report.Entry(id,descriptor); no ReportState/SinkWitness/witnessesByKey in 52f baseline"
+  },
+  "projectCampaign": "NOT_STARTED"
+}

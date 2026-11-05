@@ -89,12 +89,13 @@ fun summaryEdge(j: Pattern, g: Conclusion): PathEdge {
 }
 
 /** Concrete native must views retain their existing policy. New FLOW must views always return an ANY demand. */
-private fun mustRecordReadView(p: Pattern, g: Conclusion): RecordLeafView? {
+private fun mustRecordReadView(p: Pattern, g: Conclusion): NativeReverseRead? {
     if (!g.demand && p.fact.mark is MarkSlot.Star && g.fact.mark is MarkSlot.Star &&
         ((p.fact.tail == Tail.ANY_TAINT && g.fact.tail in setOf(Tail.STAR, Tail.ANY_TAINT)) ||
             (p.fact.tail == Tail.STAR && g.fact.tail == Tail.ANY_TAINT))) {
-        return RecordLeafView(Pattern(g.fact.copy(tail = Tail.STAR, mark = p.fact.mark), g.exclusion),
-            Conclusion(p.fact.copy(tail = Tail.ANY, mark = g.fact.mark), ExclusionSet.Empty, demand = true))
+        return NativeReverseRead(RecordLeafView(Pattern(g.fact.copy(tail = Tail.STAR, mark = p.fact.mark), g.exclusion),
+            Conclusion(p.fact.copy(tail = Tail.ANY, mark = g.fact.mark), ExclusionSet.Empty, demand = true)),
+            NativeReadKind.FLOW_MUST, Direction.FORWARD, p, g)
     }
     val concrete = p.fact.mark is MarkSlot.Concrete && g.fact.mark is MarkSlot.Concrete
     val accepted = !g.demand && concrete && when (p.fact.tail) {
@@ -109,12 +110,13 @@ private fun mustRecordReadView(p: Pattern, g: Conclusion): RecordLeafView? {
     else Pattern(g.fact, ExclusionSet.Empty)                        // exact conclusion stays exact
     val demand = p.fact.tail == Tail.ANY_TAINT
     val resultFact = if (demand) p.fact.copy(tail = Tail.ANY) else p.fact
-    return RecordLeafView(readPremise, Conclusion(resultFact, ExclusionSet.Empty, demand))   // forget old must-input E
+    return NativeReverseRead(RecordLeafView(readPremise, Conclusion(resultFact, ExclusionSet.Empty, demand)),
+        NativeReadKind.CONCRETE_MUST, Direction.FORWARD, p, g)   // forget old must-input E
 }
 
 /** Raw normal singleton record only. CurrentSimplifications.MustViews.readView_factored_equiv checks the accepted
  *  must constructor. Retain generic micro-edge revEdge and its fallback guards for every other native shape. */
-fun reverseRecordLeaf(direction: Direction, p: Pattern, g: Conclusion): RecordLeafView? {
+fun reverseNativeRecordLeaf(direction: Direction, p: Pattern, g: Conclusion): NativeReverseRead? {
     if (g.demand) return null
     if (p.exclusion != ExclusionSet.Empty && p.fact.tail != Tail.STAR && p.fact.tail != Tail.ANY_TAINT) return null
     if (direction == Direction.BACKWARD && (p.fact.tail == Tail.ANY_TAINT || g.fact.tail == Tail.ANY_TAINT)) return null
@@ -122,9 +124,13 @@ fun reverseRecordLeaf(direction: Direction, p: Pattern, g: Conclusion): RecordLe
     if (p.fact.tail == Tail.ANY_TAINT) return null                   // no unsupported native must-input fallback
     if (p.fact.tail == Tail.STAR && p.fact.mark is MarkSlot.Concrete) return null   // invalid native normal shape
     val rev = revEdge(summaryEdge(p, g)) ?: return null
-    return RecordLeafView(Pattern(rev.from, ExclusionSet.Empty),
-        Conclusion(rev.to, rev.exclusion, demand = rev.to.tail == Tail.ANY))
+    return NativeReverseRead(RecordLeafView(Pattern(rev.from, ExclusionSet.Empty),
+        Conclusion(rev.to, rev.exclusion, demand = rev.to.tail == Tail.ANY)), NativeReadKind.GENERIC, direction, p, g)
 }
+
+/** Geometry-only native reference API. Production matching also retains constructor provenance. */
+fun reverseRecordLeaf(direction: Direction, p: Pattern, g: Conclusion): RecordLeafView? =
+    reverseNativeRecordLeaf(direction, p, g)?.view
 
 /** Identity classification without starting a transient premise. Concrete STAR readers are effects. */
 fun recordLeafIdentity(v: RecordLeafView): Boolean = !v.result.demand && v.premise.fact.base != AccessPathBase.Zero &&

@@ -36,15 +36,20 @@ class IndexCompletenessTest {
             added.layer, added, zeroOnly)
     private fun scan(f: StoreFixtures, publications: List<Publication>, parts: List<Subscription>, mode: ApMode): Set<Match> =
         buildSet {
-            for (pub in publications) for (member in 0 until pub.premise.size) for (part in parts) {
-                val selected = if (part.zeroOnly) part.added.takeIf { pub.premise.isZero }
-                    else f.ops.satisfying(part.added, pub.premise.member(member), mode)
-                if (selected != null) add(Match(pub, member, part, selected))
-            }
+            // Full selected AP scan: no positional index is used as an oracle.
+            for (pub in publications) for (member in 0 until pub.premise.size) for (raw in parts)
+                for (packet in f.manager.canonicalPackets(raw.added)) {
+                    val part = raw.copy(added = packet)
+                    val selected = if (part.zeroOnly) part.added.takeIf { pub.premise.isZero }
+                        else f.ops.matchSummary(part.added, pub.premise.member(member), mode,
+                            nativeRecordRead = false, role = SummaryMatchRole.CURRENT)
+                    if (selected != null) add(Match(pub, member, part, selected))
+                }
         }
     private fun replay(f: StoreFixtures, index: PublicationIndex, parts: List<Subscription>, mode: ApMode): Set<Match> =
         buildSet {
-            for (part in parts) {
+            for (raw in parts) for (packet in f.manager.canonicalPackets(raw.added)) {
+                val part = raw.copy(added = packet)
                 val candidates = index.candidates(part, mode)
                 assertEquals(candidates.size, candidates.distinct().size, "Each full premise/member is returned once")
                 for ((pub, member) in candidates) matches(part, pub, member, f.ops, mode)?.let {
@@ -83,12 +88,11 @@ class IndexCompletenessTest {
         when (facts) {
             is Reach -> put(emptyList(), Tail.EXACT, MarkSlot.Concrete(TaintMark.ZERO))
             is FlowTree -> walk(facts.root) { path, _ ->
-                put(path, if (demand) Tail.ANY else Tail.STAR, MarkSlot.Star(facts.markExclusion), facts.exclusion)
+                put(path, facts.tail, MarkSlot.Star(facts.markExclusion), facts.exclusion)
             }
             is TaintTree -> walk(facts.root) { path, leaf ->
                 for (id in leaf.exact.ids) put(path, Tail.EXACT, MarkSlot.Concrete(TaintMark(id)))
-                for (id in leaf.any.ids) put(path, if (demand) Tail.ANY else Tail.ANY_TAINT,
-                    MarkSlot.Concrete(TaintMark(id)), facts.exclusion)
+                for (id in leaf.any.ids) put(path, facts.anyTail, MarkSlot.Concrete(TaintMark(id)), facts.exclusion)
             }
         }
     }
@@ -109,7 +113,8 @@ class IndexCompletenessTest {
         fun build(at: Prefix): TaintNode = f.manager.taintAlg.node(
             f.manager.taintLeaves(MarkSet(at.exact.toIntArray()), MarkSet(at.any.toIntArray())),
             at.children.keys.toIntArray(), at.children.values.map(::build).toTypedArray())
-        return f.manager.taintTree(leaves.first().fact.base, layer, build(root), e)
+        return f.manager.taintTree(leaves.first().fact.base, layer, build(root), e,
+            leaves.firstOrNull { it.fact.tail != Tail.EXACT }?.fact?.tail ?: Tail.ANY_TAINT)
     }
     /** Test-local raw rebuild: exact group unions, without the production accumulator or merge. */
     private fun cumulative(f: StoreFixtures, admitted: List<Subscription>): List<Subscription> {
@@ -134,7 +139,7 @@ class IndexCompletenessTest {
                     }
                     fun build(at: Prefix): FlowNode = FlowAlgebra.node(if (at.exact.isEmpty()) FlowLeaf.NONE else FlowLeaf.LEAF,
                         at.children.keys.toIntArray(), at.children.values.map(::build).toTypedArray())
-                    f.manager.flowTree(key.group.base, key.group.layer, key.group.exclusion, key.group.markExclusion, build(prefix))
+                    f.manager.flowTree(key.group.base, key.group.layer, key.group.exclusion, key.group.markExclusion, build(prefix), key.group.tail)
                 }
             }
             sub.copy(added = facts)
@@ -296,7 +301,7 @@ class IndexCompletenessTest {
     }
 
     @Test
-    fun `restricted canonical FLOW overlap includes both directions but annotated E and concrete guards still apply`(): Unit {
+    fun `current STAR ancestry is removed while below MAY and native header guards still apply`(): Unit {
         val f = StoreFixtures()
         val a = f.field("a")
         val b = f.field("b")
@@ -312,9 +317,12 @@ class IndexCompletenessTest {
         val incomparable = sub(f, f.fact(tail = Tail.STAR, mark = MarkSlot.STAR, exclusion = ExclusionSet.of(b)), 2)
         verifyBoth(f, pubs, listOf(above, below, incomparable), modes.drop(1))
         for (mode in modes.drop(1)) {
-            assertEquals(above.added, matches(above, pubs[0], 0, f.ops, mode))
+            assertNull(matches(above, pubs[0], 0, f.ops, mode), "CURRENT cannot use strict STAR ancestry")
             assertEquals(below.added, matches(below, pubs[0], 0, f.ops, mode))
-            assertEquals(above.added, matches(above, pubs[1], 0, f.ops, mode))
+            assertNull(matches(above, pubs[1], 0, f.ops, mode))
+            val mayAbove = sub(f, f.fact(tail = Tail.ANY, mark = MarkSlot.STAR, layer = Layer.DEMAND), 3)
+            assertEquals(mayAbove.added, matches(mayAbove, pubs[0], 0, f.ops, mode))
+            assertEquals(mayAbove.added, matches(mayAbove, pubs[1], 0, f.ops, mode))
             assertNull(matches(incomparable, pubs[2], 0, f.ops, mode))
             assertNull(matches(above, pubs[3], 0, f.ops, mode))
         }
@@ -436,8 +444,8 @@ class IndexCompletenessTest {
         }
         val run1 = delivery(f, index, listOf(pub), modes[0])
         val matchedGroup = run1.single { it.subscription.ref == root.ref && it.subscription.added.groupKey == root.added.groupKey }
-        assertEquals(decoded(root.added) + decoded(deeper.added), decoded(matchedGroup.selected),
-            "Both actual nonexact ancestor and direct descendant survive the complete match")
+        assertEquals(decoded(deeper.added), decoded(matchedGroup.selected),
+            "CURRENT preserves the direct descendant but removes the strict STAR ancestor contribution")
         val before = index.candidates(pub, 0, modes[1]).toList()
         val late = root.copy(ref = root.ref.copy(caller = f.key("late")))
         assertEquals(late, index.add(late))

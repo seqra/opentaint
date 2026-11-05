@@ -11,8 +11,36 @@ class FlowGroup(private val m: ApManager, private val interner: TrieInterner<Flo
     fun all(): Sequence<FlowTree> = trees[0].asSequence() + trees[1].asSequence()
 
     /** T4: return the new part, or the merged value when T2 changes an annotation. */
-    fun add(t: FlowTree): FlowTree? {
-        val list = trees[t.layer.ordinal]
+    fun add(t: FlowTree): FlowTree? = addAll(t).also {
+        check(it.size <= 1) { "Canonical admission has multiple headers; use addAll" }
+    }.singleOrNull()
+
+    fun addAll(t: FlowTree): List<FlowTree> {
+        m.cancellation.checkpoint()
+        val before = trees[t.layer.ordinal]
+        if (t.tail != Tail.ANY && t.tail != Tail.ANY_TAINT)
+            return addInto(t,before)?.let(::listOf) ?: emptyList()
+        if (before.isEmpty()) {
+            val canonical = m.canonicalFlowPacket(t)
+            val root = interner.internIfRequired(canonical.root)
+            val stored = if (root === canonical.root) canonical else canonical.withRoot(root)
+            trees[t.layer.ordinal] = arrayListOf(stored)
+            return listOf(stored)
+        }
+        val staged = ArrayList(before)
+        if (addInto(t, staged) == null) return emptyList()
+        val after = m.canonicalFlowState(staged)
+        val changes = ArrayList<FlowTree>()
+        for (value in after) {
+            val fresh = subtractSubsumed(value,before) ?: continue
+            changes += fresh
+        }
+        m.cancellation.checkpoint()
+        trees[t.layer.ordinal] = ArrayList(after.map { it.withRoot(interner.internIfRequired(it.root)) })
+        return changes
+    }
+
+    private fun addInto(t: FlowTree, list: ArrayList<FlowTree>): FlowTree? {
         var pending = t
         while (true) {
             m.cancellation.checkpoint()
@@ -61,10 +89,12 @@ class FlowGroup(private val m: ApManager, private val interner: TrieInterner<Flo
                 Tail.EXACT -> t.tail == Tail.EXACT && stored.exclusion.isSubsetOf(t.exclusion)
                 Tail.ANY_TAINT -> t.tail == Tail.ANY_TAINT && stored.exclusion.isSubsetOf(t.exclusion)
             }
-            val belowOk = marks && stored.tail == Tail.ANY
+            val belowOk = marks && (stored.tail == Tail.ANY ||
+                stored.tail == Tail.ANY_TAINT && t.tail == Tail.ANY_TAINT)
             root = FlowAlgebra.subtract(root, stored.root, FlowLeaf.NONE,
                 at = { if (atOk) it else FlowLeaf.NONE },
                 below = { if (belowOk) it else FlowLeaf.NONE },
+                admits = stored.exclusion::admits,
                 cancellation = m.cancellation) ?: return null
         }
         return if (root === t.root) t else t.withRoot(root)
@@ -99,9 +129,48 @@ class TaintGroup(private val m: ApManager, private val interner: TrieInterner<Ta
         list += t
     }
 
-    fun add(t: TaintTree): TaintTree? {
+    fun add(t: TaintTree): TaintTree? = addAll(t).also {
+        check(it.size <= 1) { "Canonical admission has multiple headers; use addAll" }
+    }.singleOrNull()
+
+    fun addAll(t: TaintTree): List<TaintTree> {
+        m.cancellation.checkpoint()
+        val before = trees[t.layer.ordinal]
+        if (!t.root.hasAny || t.anyTail != Tail.ANY && t.anyTail != Tail.ANY_TAINT)
+            return addInto(t,before)?.let(::listOf) ?: emptyList()
+        if (before.isEmpty()) {
+            val canonical = m.canonicalTaintPacket(t)
+            val root = interner.internIfRequired(canonical.root)
+            val stored = if (root === canonical.root) canonical
+                else admittedTree(m,canonical,root,canonical.nonSubsumable)
+            trees[t.layer.ordinal] = arrayListOf(stored)
+            return listOf(stored)
+        }
+        // Ordinary and protected E provenance must remain separate until the
+        // two streams are normalized. The old equal-root admission intersects
+        // E before unioning masks and would broaden one-sided protection.
+        if (subtractSubsumed(t,before) == null) return emptyList()
+        val after = m.canonicalTaintState(before + t)
+        val changes = ArrayList<TaintTree>()
+        for (value in after) {
+            val fresh = subtractSubsumed(value,before) ?: continue
+            // Preserve T4's whole mixed-content delta only for an actual
+            // equal-content E weakening; unrelated old exact siblings are not fresh.
+            val wholeEJoin = before.any { old -> old.root.hasAny && old.root == t.root &&
+                old.anyTail == t.anyTail && old.exclusion != t.exclusion &&
+                value.anyTail == t.anyTail && value.root == t.root &&
+                value.exclusion == old.exclusion.intersect(t.exclusion) && value.exclusion != old.exclusion }
+            changes += if (wholeEJoin) value else fresh
+        }
+        m.cancellation.checkpoint()
+        trees[t.layer.ordinal] = ArrayList(after.map {
+            admittedTree(m,it,interner.internIfRequired(it.root),it.nonSubsumable)
+        })
+        return changes
+    }
+
+    private fun addInto(t: TaintTree, list: ArrayList<TaintTree>): TaintTree? {
         val alg = m.taintAlg
-        val list = trees[t.layer.ordinal]
         var pending = t
         while (true) {
             m.cancellation.checkpoint()
@@ -195,14 +264,20 @@ class ConclusionGroup(private val m: ApManager, private val interners: StoreInte
     private val flow = HashMap<AccessPathBase, FlowGroup>(2)
     private val taint = HashMap<AccessPathBase, TaintGroup>(2)
 
-    fun add(f: Facts): Facts? {
+    fun add(f: Facts): Facts? = addAll(f).also {
+        check(it.size <= 1) { "Canonical admission has multiple headers; use addAll" }
+    }.singleOrNull()
+
+    fun addAll(f: Facts): List<Facts> {
         m.cancellation.checkpoint()
         return when (f) {
-            is Reach -> if (reach[f.layer.ordinal]) null else f.also { reach[f.layer.ordinal] = true }
-            is FlowTree -> flow.getOrPut(f.base) { FlowGroup(m, interners.flow) }.add(f)
-            is TaintTree -> taint.getOrPut(f.base) { TaintGroup(m, interners.taint) }.add(f)
+            is Reach -> if (reach[f.layer.ordinal]) emptyList() else listOf(f.also { reach[f.layer.ordinal] = true })
+            is FlowTree -> flow.getOrPut(f.base) { FlowGroup(m, interners.flow) }.addAll(f)
+            is TaintTree -> taint.getOrPut(f.base) { TaintGroup(m, interners.taint) }.addAll(f)
         }
     }
+
+    fun retainCurrent(offered: Facts): List<Facts> = retainCurrentFacts(m,offered,all().asIterable())
 
     fun all(): Sequence<Facts> = Layer.entries.asSequence().filter { reach[it.ordinal] }.map(Reach::of) +
         flow.values.asSequence().flatMap { it.all() } + taint.values.asSequence().flatMap { it.all() }

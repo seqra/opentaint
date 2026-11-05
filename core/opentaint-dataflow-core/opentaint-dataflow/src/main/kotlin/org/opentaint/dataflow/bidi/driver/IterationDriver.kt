@@ -212,8 +212,8 @@ class IterationDriver internal constructor(
         }
         val forward = config.direction == Direction.FORWARD
         val terminals = report.prepare(config, result, shared)
-        shared.records.persist(config.direction, result.analyzers.asSequence().map { it.key to it.summaries })
-        shared.records.persistScoped(config.direction, result.analyzers.asSequence().flatMap { it.blockSummaries() })
+        shared.records.persistCompleted(config.direction, result.analyzers.asSequence().map { it.key to it.summaries },
+            result.analyzers.asSequence().flatMap { it.blockSummaries() })
         val handOff = HandOff.of(config, result, shared)
         val frontier = frontierOf(config, result, handOff, terminals.entries.size)
         frontierLog += frontier

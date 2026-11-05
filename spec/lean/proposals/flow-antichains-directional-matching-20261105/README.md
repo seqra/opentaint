@@ -69,3 +69,24 @@ Existing campaign labels remain: OWASP **run-5/run-5/run-5**, Conductor
 **run-9/run-8/run-7** (reached/completed/accepted). No project was rerun for this
 proposal. The prior bounded direction controls complete/accept **run-7**; those
 finite programs do not establish whole-project equivalence.
+
+
+## Implementation follow-up
+
+The user requires transitive subsumption in both arrival orders. The native
+implementation uses packed input-prefix candidates and DAG suffix grafts, with
+native output-mx subset checks. It does not allocate one index row per output
+path. `Implementation.lean` adds 13 constructive laws (17 declarations) for
+prefix eligibility, transitive marked coverage with no retained intermediate,
+protection/excluded-mark negatives and exact cofinite support union.
+
+Run `python3 implementation-check.py`. It checks all five modules: 175 theorems
+and 249 declarations. `implementation-checks.json` pins the current proposal,
+checker and native source snapshot. The kernel verifies the models and their
+bridge laws; the source pins do not prove the Kotlin adapter. Native tests and
+real-project quality checks remain required. There is no whole-engine finding,
+scheduling, convergence or resource theorem.
+
+The original `check.py` and `checks.json` retain the unchanged `52f32dd` source
+boundary. Use that checker in the reference tree. Do not replace its archived
+source pins to claim that the implemented Kotlin code has a kernel proof.

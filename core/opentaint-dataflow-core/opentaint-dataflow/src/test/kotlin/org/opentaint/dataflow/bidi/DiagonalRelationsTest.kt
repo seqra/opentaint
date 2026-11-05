@@ -65,7 +65,23 @@ class DiagonalRelationsTest {
         assertEquals(setOf(listOf(g)), paths(delta))
         assertEquals(setOf(listOf(f), listOf(g)), stored(store, initial()))
         assertNull(store.add(initial(), facts(paths = listOf(listOf(f, h)))))
-        assertEquals(2, store.markMembershipCount)
+        // Canonical admission re-encodes this mark's complete current geometry
+        // as one packed row; both f and g assertions above remain exact.
+        assertEquals(1, store.markMembershipCount)
+    }
+
+    @Test
+    fun `MAY diagonal packet and late broader shape retain canonical geometry`() {
+        val root = facts(paths = listOf(emptyList()))
+        val child = facts(paths = listOf(listOf(f,g)))
+        for (offers in listOf(listOf(facts(paths = listOf(emptyList(),listOf(f,g)))),
+            listOf(root,child),listOf(child,root))) {
+            val store = DiagonalRelations(m)
+            offers.forEach { store.addAll(initial(),it) }
+            assertEquals(setOf(emptyList<Int>()),stored(store,initial()))
+            assertEquals(1,store.rowCount)
+            assertTrue(store.addAll(initial(),root).isEmpty())
+        }
     }
 
     @Test

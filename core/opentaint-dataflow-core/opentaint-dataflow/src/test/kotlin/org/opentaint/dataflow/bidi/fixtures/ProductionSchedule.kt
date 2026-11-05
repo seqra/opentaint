@@ -265,8 +265,8 @@ class ProductionSchedule(
         }
         val publications = LinkedHashSet<ObservedEdge>()
         for ((method, storage) in storages) {
-            for ((premise, group) in publicationGroups(storage)) for (facts in group.all())
-                publications += observedEdges(shared.ops, method, premise, facts)
+            for (publication in currentPublications(storage))
+                publications += observedEdges(shared.ops, method, publication.premise, publication.conclusion)
         }
         val witnesses = vulnerabilities.witnessesOf(config.index).map { (key, witness) ->
             observedWitness(shared.ops, key, witness)
@@ -279,11 +279,9 @@ class ProductionSchedule(
     /** Read the settled native union after all callbacks drain, before run()'s
      * finally closes these custom schedule owners. Never read a sealed index or
      * replace this oracle with an append history of published deltas. */
-    @Suppress("UNCHECKED_CAST")
-    private fun publicationGroups(storage: SummaryStorage): Map<PremiseKey, ConclusionGroup> {
+    private fun currentPublications(storage: SummaryStorage): List<Publication> {
         val indexField = SummaryStorage::class.java.getDeclaredField("publishedIndex").apply { isAccessible = true }
         val index = indexField.get(storage) as PublicationIndex
-        val valuesField = PublicationIndex::class.java.getDeclaredField("merged").apply { isAccessible = true }
-        return valuesField.get(index) as Map<PremiseKey, ConclusionGroup>
+        return index.currentPublications()
     }
 }

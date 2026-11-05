@@ -103,7 +103,7 @@ class RunSummaryStoreTest {
         }
     }
 
-    @Test fun `covered offers add no delta while retained exact rows and layers remain independent`(): Unit = with(v) {
+    @Test fun `covered offers add no delta and MAY removes exact support only in its own layer`(): Unit = with(v) {
         val key = premise()
         val general = leaf(p(f), Tail.ANY, layer = Layer.DEMAND)
         val specific = leaf(p(f, g), layer = Layer.DEMAND)
@@ -114,9 +114,7 @@ class RunSummaryStoreTest {
             assertNotNull(store.addAdmitted(key, pack(general)))
             assertNull(store.addAdmitted(key, pack(specific)))
             assertNotNull(store.addAdmitted(key, pack(normal)))
-            // Existing TAINT storage retains an earlier exact sibling, but a
-            // newly offered exact sibling under ANY contributes no fresh delta.
-            val demand = if (broadFirst) setOf(general) else setOf(general, specific)
+            val demand = setOf(general)
             assertEquals((demand + normal).map { key to it }.toSet(), observed(store.all()))
             assertEquals(demand.map { key to it }.toSet(), observed(store.demandEdges(Direction.FORWARD)))
         }

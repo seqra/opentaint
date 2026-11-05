@@ -183,7 +183,10 @@ class RunMethodHandlersTest {
             h.handler.handle(delivery)
             val applied = h.applications.single()
             assertEquals(sub, applied.first)
-            assertSame(pub.conclusion, applied.second.conclusion)
+            assertEquals(pub.conclusion, applied.second.conclusion,
+                "Canonical publication may rebuild an equal packet; the caller and full payload remain exact")
+            assertEquals((pub.conclusion as? TaintTree)?.nonSubsumable,
+                (applied.second.conclusion as? TaintTree)?.nonSubsumable)
             assertEquals(0, applied.third)
             assertEquals(setOf(f.a), h.actors.keys, "The subscribed caller owns the resume service")
         }

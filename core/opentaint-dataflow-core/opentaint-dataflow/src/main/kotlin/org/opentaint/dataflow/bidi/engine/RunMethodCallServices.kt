@@ -453,8 +453,15 @@ class RunMethodCallServices(core: BlockRunState) : MethodCallServices {
     /** Known input and late pool replies share matching and STATIC origin selection. */
     private fun applyStaticInput(part: Subscription, result: StaticCallResult, member: Int, actual: Facts) {
         val core = active()
+        for (packet in core.ap.canonicalPackets(actual))
+            applyCanonicalStaticInput(part, result, member, packet)
+    }
+
+    private fun applyCanonicalStaticInput(part: Subscription, result: StaticCallResult, member: Int, actual: Facts) {
+        val core = active()
         val initial = result.premise.member(member)
-        val matched = core.ops.satisfying(actual, initial, core.mode) ?: return
+        val matched = core.ops.matchSummary(actual, initial, core.mode, nativeRecordRead = false,
+            role = SummaryMatchRole.CURRENT) ?: return
         for (leaf in core.ops.leaves(matched)) {
             check(leaf.fact.path.size != 1 || leaf.fact.tail == Tail.EXACT) {
                 "A global class-marker call input must remain exact"
@@ -493,12 +500,19 @@ class RunMethodCallServices(core: BlockRunState) : MethodCallServices {
 
     private fun applyTarget(part: Subscription, row: TargetSummary, member: Int, saved: Boolean) {
         val core = active()
+        for (packet in core.ap.canonicalPackets(part.added))
+            applyCanonicalTarget(part.copy(added = packet), row, member, saved)
+    }
+
+    private fun applyCanonicalTarget(part: Subscription, row: TargetSummary, member: Int, saved: Boolean) {
+        val core = active()
         if (!core.forward && row.target is Target.NormalTarget) return
         if (!RuntimeDataDomain.packet(part.ref.premise, part.added) || !RuntimeDataDomain.premise(row.premise)) return
         val initial = row.premise.member(member)
         if (part.zeroOnly && !initial.isZero) return
-        val selected = core.ops.satisfying(part.added, initial, core.mode,
-            record = saved && initial.tail != Tail.ANY_TAINT) ?: return
+        val selected = core.ops.matchSummary(part.added, initial, core.mode,
+            nativeRecordRead = saved && initial.tail != Tail.ANY_TAINT,
+            role = if (saved) SummaryMatchRole.SAVED_DIRECT else SummaryMatchRole.CURRENT) ?: return
         val layer = if (part.ref.callerLayer == Layer.DEMAND || selected.layer == Layer.DEMAND ||
             part.linkLayer == Layer.DEMAND) Layer.DEMAND else Layer.NORMAL
         if (row.target is Target.NormalTarget && layer != Layer.NORMAL) return

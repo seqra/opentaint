@@ -8,6 +8,10 @@ import org.opentaint.dataflow.bidi.ap.*
 class CumulativeSubscriptionReference(private val universe: BoundedDenotation) {
     fun selects(premise: Pattern, added: Conclusion, restricted: Boolean): Boolean {
         val a = Pattern(added.fact, added.exclusion)
+        // Selected CURRENT policy removes only strict-ancestor STAR. The
+        // remaining oracle stays a finite denotation check, not a tree/index query.
+        if (a.fact.tail == Tail.STAR && premise.fact.path.size > a.fact.path.size &&
+            premise.fact.path.startsWith(a.fact.path)) return false
         val pPositions = universe.spatial(premise)
         val aPositions = universe.spatial(a)
         val applicable = universe.marked(premise).containsAll(universe.marked(a)) &&
@@ -58,13 +62,14 @@ fun cumulativeInput(manager: ApManager, raw: List<Conclusion>): Facts {
         val root = leaves.map { (it as FlowTree).root }.reduce { left, right ->
             FlowAlgebra.mergeAdd(left, right, manager.cancellation)
         }
-        manager.flowTree(first.fact.base, layer, first.exclusion, (first.fact.mark as MarkSlot.Star).excluded, root)
+        manager.flowTree(first.fact.base, layer, first.exclusion, (first.fact.mark as MarkSlot.Star).excluded, root, first.fact.tail)
     } else {
         val exclusion = raw.firstOrNull { it.fact.tail == Tail.ANY_TAINT }?.exclusion ?: ExclusionSet.Empty
         require(raw.all { it.fact.tail != Tail.ANY_TAINT || it.exclusion == exclusion })
         val root = leaves.map { (it as TaintTree).root }.reduce { left, right ->
             manager.taintAlg.mergeAdd(left, right, manager.cancellation)
         }
-        manager.taintTree(first.fact.base, layer, root, exclusion)
+        manager.taintTree(first.fact.base, layer, root, exclusion,
+            raw.firstOrNull { it.fact.tail != Tail.EXACT }?.fact?.tail ?: Tail.ANY_TAINT)
     }
 }

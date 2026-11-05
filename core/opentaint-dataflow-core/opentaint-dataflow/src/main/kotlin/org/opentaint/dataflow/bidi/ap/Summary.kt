@@ -29,7 +29,8 @@ private fun taintTails(m: ApManager, a: TaintTree) =
     }
 
 /** Preserve full selected leaves and their input annotations. Record demotion occurs after return actions. */
-internal fun satisfyingPart(m: ApManager, a: Facts, j: Pattern, mode: ApMode, record: Boolean): Facts? {
+internal fun satisfyingPart(m: ApManager, a: Facts, j: Pattern, mode: ApMode, record: Boolean,
+                            allowStrictAncestorStar: Boolean = true): Facts? {
     m.cancellation.checkpoint()
     if (a.base != j.fact.base) return null
     check(j.fact.tail != Tail.ANY_TAINT || (mode.restricted && mode.direction == Direction.FORWARD)) {
@@ -51,9 +52,9 @@ internal fun satisfyingPart(m: ApManager, a: Facts, j: Pattern, mode: ApMode, re
     return when (a) {
         is Reach -> a.takeIf { j.fact.base == AccessPathBase.Zero }
         is FlowTree -> if (j.fact.mark !is MarkSlot.Star) null
-            else summaryPart(m, a.root, FlowAlgebra, flowTails(a), j, below, inside)
+            else summaryPart(m, a.root, FlowAlgebra, flowTails(a), j, below, inside, allowStrictAncestorStar)
                 ?.let { m.flowTree(a.base, a.layer, a.exclusion, a.markExclusion, it, a.tail) }
-        is TaintTree -> summaryPart(m, a.root, m.taintAlg, taintTails(m, a), j, below, inside)
+        is TaintTree -> summaryPart(m, a.root, m.taintAlg, taintTails(m, a), j, below, inside, allowStrictAncestorStar)
             ?.let { markSubPart(m, it, j, mode) }
             ?.let { m.taintTree(a.base, if (mode.markMode == MarkMode.GROUP) Layer.DEMAND else a.layer, it, a.exclusion, a.anyTail) }
     }
@@ -83,10 +84,10 @@ private fun markSubPart(m: ApManager, n: TaintNode, j: Pattern, mode: ApMode): T
 
 private fun <P : TrieLeaf> summaryPart(
     m: ApManager, root: TrieNode<P>, alg: LeafAlgebra<P>, t: SummaryTails<P>, j: Pattern,
-    below: Boolean, inside: Boolean,
+    below: Boolean, inside: Boolean, allowStrictAncestorStar: Boolean,
 ): TrieNode<P>? {
     val b = if (below) applicablePart(m, root, alg, t, j) else null
-    val i = if (inside) insidePart(m, root, alg, t, j) else null
+    val i = if (inside) insidePart(m, root, alg, t, j, allowStrictAncestorStar) else null
     return if (b == null) i else if (i == null) b else alg.mergeAdd(b, i, m.cancellation)
 }
 
@@ -117,12 +118,14 @@ private fun <P : TrieLeaf> applicablePart(
 
 private fun <P : TrieLeaf> insidePart(
     m: ApManager, root: TrieNode<P>, alg: LeafAlgebra<P>, t: SummaryTails<P>, j: Pattern,
+    allowStrictAncestorStar: Boolean,
 ): TrieNode<P>? {
     val path = j.fact.path.toIntArray()
     val spine = ArrayList<P>()
     val u = root.walk(path) { d, n ->
         m.cancellation.checkpoint()
-        spine += t.select(n.leaf, t.exclusion.admits(path[d]), t.anyExclusion.admits(path[d]), false)
+        spine += t.select(n.leaf, allowStrictAncestorStar && t.exclusion.admits(path[d]),
+            t.anyExclusion.admits(path[d]), false)
     }
     m.cancellation.checkpoint()
     if (u != null) spine += t.select(u.leaf,

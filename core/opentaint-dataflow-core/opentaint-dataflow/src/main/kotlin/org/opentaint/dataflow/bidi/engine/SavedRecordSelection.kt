@@ -25,24 +25,28 @@ internal class SavedRecordSelection(
     private val reversePositions: List<Pair<Pattern, List<RecordOutputPosition>>>? = null,
     private val statistics: SavedRecordSelectionStatistics? = null,
 ) {
-    fun forEachReversedAt(actual: Facts, ops: ApOps, emit: (RecordLeafView, Boolean) -> Unit) {
-        val seen = LinkedHashSet<Pair<RecordLeafView, Boolean>>()
-        fun offer(view: RecordLeafView, protected: Boolean) {
-            if (seen.add(view to protected)) {
+    fun forEachNativeReversedAt(actual: Facts, ops: ApOps, emit: (NativeReverseRead, Boolean) -> Unit) {
+        val seen = LinkedHashSet<Pair<NativeReadKey, Boolean>>()
+        fun offer(view: NativeReverseRead, protected: Boolean) {
+            if (seen.add(view.semanticKey() to protected)) {
                 statistics?.let { it.reversedViews++ }
                 emit(view, protected)
             }
         }
         val selected = reversePositions
         if (selected == null) {
-            for (leaf in ops.leaves(actual)) record.forEachReversedAt(leaf, ::offer)
+            for (leaf in ops.leaves(actual)) record.forEachNativeReversedAt(leaf, ::offer)
         } else {
             for ((leaf, positions) in selected) for (position in positions) {
                 ops.manager.cancellation.checkpoint()
-                position.forEachReversedAt(leaf, ::offer)
+                position.forEachNativeReversedAt(leaf, ::offer)
             }
         }
     }
+
+    fun forEachReversedAt(actual: Facts, ops: ApOps, emit: (RecordLeafView, Boolean) -> Unit) =
+        forEachNativeReversedAt(actual, ops) { read, protected -> emit(read.view, protected) }
+
 }
 
 /** Preserve record-first discovery, then submitted-leaf and native output-position order.
