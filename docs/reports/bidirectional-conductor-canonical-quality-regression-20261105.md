@@ -814,6 +814,37 @@ progress. In particular, it does not prove a C2 repair rather than a loop
 observer repair. Main8331 still fails its strict quality comparison, and the
 user policy decision and repair design remain pending.
 
+## Earliest captured input-demand difference
+
+An offline comparison finds a difference in the frozen input demand for the
+four-argument `getTasksToBeScheduled` before run-3 transfer. These input views
+were read after committed run-3. Their demand comes from run-2; the capture is
+not a run-2 normalization event.
+
+| Complete collection | Original | Control B | Added in B |
+|---|---:|---:|---|
+| Public DATA pairs | 113 | 114 | `arg1.taskDefinition.[any]/FLOW → ret.Element.[any]/FLOW`, in exact `HashMap` argument-1 context |
+| Public CONTROL pairs | 18 | 20 | `This.taskMappers.[any]/T → Zero`, once for Graal FULL and once for SQL FULL, in empty context |
+
+No row is removed in B. The fields are
+`WorkflowTask.taskDefinition:TaskDef`, `Iterable.Element:Object`, and
+`DeciderService.taskMappers:Map`; the portable data keeps the full field names,
+mark keys, native owners and contexts. Do not infer a source-level type claim
+from the captured native `HashMap` context.
+
+This is earlier query guidance than the restored run-3 outgoing targets. It
+does not prove that the added rows cause recovery. Four original run-3 streams
+contain 1,579 captured packets, including 522 MAY/MUST packets, but no captured
+raw packet with the required proper-prefix witness. B has no packet or
+normalization-event capture. An identical-input C2 replay is therefore not
+supported by these records.
+
+An erratum is included in the portable data. An external v1 readable summary
+called the concrete getTasks control exit `Target`. Its original native rows
+already said `Zero`. The corrected v2 summary uses `Zero`. This correction
+does not change the separately captured outgoing DemandTargets or report
+identities. The original v1 files remain preserved.
+
 ## Opposite-record role audit
 
 The source audit checks all 15 explicit role-assignment sites in the production
