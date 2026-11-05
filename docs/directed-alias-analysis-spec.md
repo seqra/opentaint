@@ -61,12 +61,13 @@ Default content. A cell that the method did not write holds its default content.
 | `⟨@s.c.q⟩` | `{⟨@s.c.q.c'⟩}` at cell `c'` if `q.c'` has at most K cells, else `{deep(@s.c)}` |
 | `null(i)`, `const(v)` | an own child origin; a read through a null throws, so this content is never observed |
 
-Assumptions. The analysis is sound if these four statements are true:
+Assumptions. The analysis is sound if these five statements are true:
 
 1. **Entry heap is a tree.** Two different entry roots are different objects. Two different entry paths below the roots are different objects. Aliases that the callers make between arguments are not visible.
 2. **Callees reach only their arguments and the statics, and do not make aliases.** An unresolved call can reach the values reachable from its arguments (the receiver included) and from the static holders. It can overwrite a cell of such an object, or keep the cell. Each overwritten cell gets its own new value (a new object, or a new null). The call does not store an existing value into a cell. The taint analysis models those effects with its own summaries.
 3. **Depth limit.** Values deeper than K are summarized by `deep`.
 4. **Definite assignment.** Each local is assigned before it is used. The JVM verifier guarantees this for bytecode.
+5. **Static fields keep their initial value for the method.** A read of a static field gives the value that the field had before the method. The method does not see its own static writes, and an unresolved call does not reach a value only because the method stored it in a static field. The taint analysis tracks static fields on its own (by decision; this is a known gap of the local analysis).
 
 ## 4. State
 
@@ -127,6 +128,8 @@ The read does not change `heap`. The reader gets the origins of the cell, so it 
 
 An array read `x = y[i]` is the same rule with the cell `[]`.
 
+A static read `x = C.f` always gives `{⟨C.f⟩}`: the default content of cell `f` of the static holder `⟨C⟩`, as if the field was not initialized (assumption 5). The static holders keep their default content, because static writes are ignored (§5.3).
+
 ### 5.3 Field write: `x.f = y`
 
 The write is strong if all these conditions are true. Else it is weak.
@@ -144,7 +147,7 @@ weak:     H(o, f) := H(o, f) ∪ pts(y)    for each o ∈ pts(x)
 - A strong update removes the old content of the cell. A weak update keeps it and adds the new value.
 - If `H(o, f) ⊆ pts(y)`, the two updates give the same result. Then the test is not necessary. This is true, for example, for the first write of a value that the cell already holds.
 - An array write `x[i] = y` is always a weak update.
-- A static write `C.f = y` is a write of cell `f` of the static holder of `C`.
+- A static write `C.f = y` is ignored: the state does not change (assumption 5).
 
 A write goes down the order. After `a.f = z`, each `x` with `a ⊒ x` reads `z` at `f`.
 
@@ -167,7 +170,7 @@ Exceptions: the state on an edge to a catch handler is `join(state before, state
 
 The call does not change the alias graph. It only prohibits strong updates later.
 
-1. **Start set.** `R := pts(a1) ∪ ... ∪ pts(an) ∪ {⟨r⟩ : r a static holder}`. The receiver is an argument. For a constructor call, it is the new object.
+1. **Start set.** `R := pts(a1) ∪ ... ∪ pts(an) ∪ {⟨r⟩ : r a static holder}`. The receiver is an argument. For a constructor call, it is the new object. The static holders have no written cells, so they add only their symbolic descendants: after any call, `⟨C.f…⟩` has the reached prefix `⟨C⟩`.
 2. **Closure.** An origin is covered if it is in `R` or below an origin of `R` (a symbolic descendant, or an allocation child `⟨@t.c…⟩` of `new(t)` or `old(t)`). Add to `R` the content of each written cell of each covered origin. Repeat until `R` does not grow. If the closure does not stop within its limit, put each origin into both sets.
 3. **Record.** `Etree := Etree ∪ R`. `Eval := Eval ∪ { contents of the cells of the covered origins }`.
 4. **Result.** `env[x] := {⟨s⟩}`.
@@ -359,6 +362,20 @@ d = n.g;        // {null(0)}
 
 `a ~ b` and `c ~ d` are true. If `m` writes new objects into `n.f` and `n.g`, the readers of each cell get the same object.
 
+### 6.8 Static fields
+
+```java
+C.f = v;        // ignored: the state does not change
+t = C.f;        // pts(t) = {⟨C.f⟩}
+u = C.f;        // pts(u) = {⟨C.f⟩}
+t.g = z;        // ⟨C.f⟩ is unique, and no call came before: strong update
+m();            // the static holder ⟨C⟩ is reached
+u.g = w;        // ⟨C.f⟩ has the reached prefix ⟨C⟩: weak update
+```
+
+- `t ~ u` is true: both read the static field.
+- `t ~ v` is false: the static write is ignored (assumption 5).
+
 ## 7. Parameters
 
 | Parameter | Proposed value | Status |
@@ -369,6 +386,7 @@ d = n.g;        // {null(0)}
 | Strong update on entry roots | on | decided |
 | Alias removal at calls | none | decided |
 | Read rule | a read aliases the cell, nulls included (§5.2, §6.6) | decided |
+| Static fields | writes ignored; a read gives `{⟨C.f⟩}` (§5.2, §5.3, §6.8) | decided |
 | Call rule | no change of the alias graph; it only prohibits strong updates (§5.6) | decided |
 | Strong-update test after calls | the sets `Etree` and `Eval`, or the on-demand test of §5.8 | open |
 | Alias answer volume control | to choose after the measurement | open |
@@ -379,7 +397,7 @@ The Lean model in `formal/directed-alias` proves these facts for a structured ve
 
 | Fact | Lean theorem |
 |---|---|
-| The analysis is sound under the four assumptions of §3: each alias of one execution (the same object or the same null) is a may-alias. | `csoundVS` |
+| The analysis is sound under assumptions 1-4 of §3: each alias of one execution (the same object or the same null) is a may-alias. The Lean model treats a static write as an ordinary store, so the static rule of assumption 5 is outside this theorem. | `csoundVS` |
 | It stays sound if a callee also writes new nulls. | `csoundVS_W` |
 | Assumption 4 is necessary: with a local that is used before it is assigned, a real alias is lost. | `siteless_unsound` |
 | The node representation gives the same answers as the set semantics. | `mayProgVSO_eq`, `csoundVSO` |
@@ -396,4 +414,4 @@ The Lean model in `formal/directed-alias` proves these facts for a structured ve
 | The backward search gives the same paths as an enumeration of all paths. | `findAlias_iff` |
 | The search for a heap path gives the same paths as an enumeration. | `heapAliases_iff` |
 
-Argued, not proved: the fixpoint strategy of §5.5, the exception rule, the query normal form, the consistency of the final states for §5.8, and definite assignment in the JIR form of the bytecode.
+Argued, not proved: the static rule of assumption 5 (§5.2, §5.3), the fixpoint strategy of §5.5, the exception rule, the query normal form, the consistency of the final states for §5.8, and definite assignment in the JIR form of the bytecode.
