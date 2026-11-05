@@ -114862,7 +114862,7 @@
         ],
         "classification": "EXACT_RETURN_IDENTITY_ABSENT_SAME_METHOD_RULE_STILL_REPORTED",
         "qualification": "Do not substitute same-method detection for exact per-return coverage. Strict baseline identity gate remains failing.",
-        "establishedCause": "Simple boundary export lacks the actual return witness and the resolver chooses final real return IR126 at148\u2013149 instead of baseline IR103 at133\u2013134.",
+        "establishedCause": "Simple boundary export lacks the actual return witness and the resolver chooses final real return IR126 at148–149 instead of baseline IR103 at133–134.",
         "limit": "Reporting-coordinate defect is established; same-method/same-rule reporting does not prove the original returned-value branch survives.",
         "baselineLocation": [
           {
@@ -114897,7 +114897,7 @@
         ],
         "classification": "EXACT_RETURN_IDENTITY_ABSENT_SAME_METHOD_RULE_STILL_REPORTED",
         "qualification": "Do not substitute same-method detection for exact per-return coverage. Strict baseline identity gate remains failing.",
-        "establishedCause": "The same Simple-export representative-return path selects IR109 return null at130 instead of baseline IR50 at90\u201391.",
+        "establishedCause": "The same Simple-export representative-return path selects IR109 return null at130 instead of baseline IR50 at90–91.",
         "limit": "The reported null location neither proves tainted null nor proves the original byte-return branch survives.",
         "baselineLocation": [
           {
@@ -115207,14 +115207,82 @@
   "conductorInvestigationAppendix": {
     "report": "docs/reports/bidirectional-conductor-canonical-quality-regression-20261105.md",
     "data": "docs/reports/data/bidirectional-conductor-canonical-quality-regression-20261105.json",
-    "dataSha256": "9908e601683d690696a96eb0bc59db5cf5d8f5a9af42f0f2c3889342cff1b501",
-    "state": "PROPER_PREFIX_SUBTRACTION_CAUSAL_CONTRIBUTION_ISOLATED_REPAIR_UNDESIGNED_MAIN_QUALITY_FAIL",
+    "dataSha256": "e397da65c89e6af3b896a15111228647134abba85c42d9854184da4521489c96",
+    "state": "ACTUAL_B2_SUMMARY_TO_FROZEN_EXPLICIT_DATA_VIEW_TRACED_C2_REPORT_CHAIN_OPEN_MAIN_QUALITY_FAIL",
     "runtimeRevision": "8331bf9e326ddd1bd5083dbc50456963d6b26b52",
-    "observedPositiveBoundary": "B restores actualR3WFDefSTAR guide and nativeR5Script12/253 plusPython58/63. Same-point/cross-header canonicalization and NORMAL/directional policies remainenabled.",
-    "remainingUncertainty": "First actual removedpacket/coordinate and C2-versus-loop-observer effect untraced. Repair/policy UNDESIGNED/UNSELECTED pendinguser. Native projection is not diagnostic SARIF fingerprints or accepted fix/performance.",
+    "observedPositiveBoundary": "Same-attempt exact HashMap and Empty ROOT_EXIT summary stores lose explicit taskDefinition child coordinates under broader root support; final admitted summaries remain root-only, and complete postB2 direct DATA view has one root pair and no child pair in each context.",
+    "remainingUncertainty": "No complete actual R3 getTasks4 pre-C2 tuple (callerP, actual arg1 Facts, native context/scope/entry/BIND_IN stage, same replay/query/NormalTarget envelope) is captured. Earliest actual C2 eligibility/output difference and complete missing-finding causal chain remain unproved. Prior successful privateOps admissions have different owners; F5 inputs cannot substitute for R3. Repair remains UNDESIGNED/UNSELECTED; native projection is not strict SARIF acceptance.",
     "performanceUse": "Diagnostic timings excluded from main campaign comparison.",
     "diagnosticCausalStatus": "FinerB proper-prefix subtraction one-expression rollback restores expected native7; A same-point-only rollback remains5. Main8331 quality remainsFAIL.",
-    "earliestFrozenInputDemandDifference": "getTasks4 F3 input DATA113\u2192114 and CONTROL18\u219220; query-view comparison, not observed first drop."
+    "earliestFrozenInputDemandDifference": "getTasks4 F3 input DATA113→114 and CONTROL18→20; query-view comparison, not observed first drop.",
+    "actualB2PointNormalization": {
+      "state": "FIVE_PAIRED_POINT_STORE_SUBTRACTIONS_OBSERVED_NO_B2_EXPORT_OR_REPORT_LINEAGE",
+      "runtimeRevision": "8331bf9e326ddd1bd5083dbc50456963d6b26b52",
+      "labels": {
+        "reached": "run-2",
+        "completed": "run-1",
+        "accepted": "run-1"
+      },
+      "counts": {
+        "actualSubtractions": 5,
+        "pairedSubtractionWindows": 5,
+        "completedWindows": 40,
+        "wholeEventDrops": 1,
+        "decoderDrops": 0,
+        "B2CompletedSnapshots": 0
+      },
+      "mechanism": "Broad-after-narrow FLOW state normalization, not a mixed incoming packet: an existing arg1.taskDefinition ANY/DEMAND leaf is removed when a same-header root-only arg1 ANY/DEMAND packet arrives. The actual canonicalRegions cohort merges them, and the matched point-store post retains only root support with a fresh root delta.",
+      "fullPremise": "Return.Iterable.Element ANY/FLOW with empty E/mx; actual argument1 output ANY/DEMAND with Eempty and mx10..65 (all56 unsafe-jackson FULL exclusions). Complete typed values/catalogs remain in full witnesses.",
+      "physicalAndLogicalCounts": "Five native memo-state subtraction events in ROOT/Empty context. Node identity plus inherited leaf can represent multiple logical paths; exact path witnesses are separately retained.",
+      "fence": "POINT704/code40 after edges.addAll and before successor routing; not final method summary, handoff, C2 rejection or report loss.",
+      "stop": "Root manually stopped the diagnostic due hot breakpoint overhead. No completed B2 snapshot; window32 deadline whole-DROP is incomplete, not negative evidence.",
+      "coldFollowup": "A separate cold follow-up was launched; no result is incorporated in this evidence cut.",
+      "remainingGap": "The earlier extra F3 input pair has exact HashMap context and empty mx. This actual point removal has Empty context and mxJ; no same-attempt export or later C2/report chain connects them. The first causally relevant removal is not claimed.",
+      "sourceBridgeOnly": "guidancePattern replaces FLOW marks with empty-mx STAR before HandOff stores paired demand. This source fact does not prove this transaction became the specific frozen pair.",
+      "mainMeasurementUse": "No main timing, memory, quality, native-test or model-gate changes; production8331 remains five-versus-seven FAIL.",
+      "appendixDataKey": "b2ActualPointNormalizationDiagnostic",
+      "finalReceiptSourceSha256": "319a64f7b27c8f833a6cf6133be17a0d63024821ef7723e7c32fe510691f019b",
+      "fullPositiveWitnessSourceSha256": "14a7e1c790b07b31b865135865c2dbe11265d49d26e8be04ea47d5d03372ea44",
+      "fullEvidenceEmbeddedOnceInAppendixData": true,
+      "historicalCutSupersededBy": "actualB2ColdSummaryNormalization; first attempt remains partial and its no-export limit applies to that attempt."
+    },
+    "actualB2ColdSummaryNormalization": {
+      "state": "ACTUAL_SUMMARY_SUBTRACTION_TO_COMPLETE_FROZEN_EXPLICIT_DATA_VIEW_PROVED_C2_REPORT_CHAIN_OPEN",
+      "runtimeRevision": "8331bf9e326ddd1bd5083dbc50456963d6b26b52",
+      "labels": {
+        "reached": "run-3",
+        "completed": "run-2",
+        "accepted": "run-1"
+      },
+      "B2SnapshotUTC": "2026-11-05T21:28:32Z",
+      "counts": {
+        "closedWindows": 19,
+        "pairedNativeSubtractions": 7,
+        "pointSubtractions": 5,
+        "summarySubtractions": 2,
+        "completePlannedCollections": 5,
+        "semanticCollections": 4,
+        "ownerCensusCollections": 1,
+        "captureDrops": 0,
+        "decoderDrops": 0,
+        "outgoingDirectPublicDataRows": 113,
+        "emptyContextDataRows": 64,
+        "exactHashMapContextDataRows": 49
+      },
+      "observedBridge": "Same-attempt exact HashMap and Empty ROOT_EXIT summary stores lose explicit taskDefinition child coordinates under broader root support; final admitted summaries remain root-only, and complete postB2 direct DATA view has one root pair and no child pair in each context.",
+      "sourceProjectionBoundary": "Native DEMAND selection plus HandOff.toForward and guidancePattern account for reversed paired endpoints and FLOW mx erasure. Observer made no native invocation of those functions and did not record an individual HandOff callback.",
+      "explicitViewLimit": "Exact explicit direct DATA child pair absence is established by complete-directory enumeration. A root pair can still cover child behavior denotationally; no absence of control support or C2 eligibility is inferred.",
+      "nextUnknown": "No complete actual R3 getTasks4 pre-C2 tuple (callerP, actual arg1 Facts, native context/scope/entry/BIND_IN stage, same replay/query/NormalTarget envelope) is captured. Earliest actual C2 eligibility/output difference and complete missing-finding causal chain remain unproved. Prior successful privateOps admissions have different owners; F5 inputs cannot substitute for R3.",
+      "captureScope": "Discovery closed after two known ROOT families; after POINT16 all four POINT hooks/active return guards were deleted while SUMMARY hooks remained. Later POINT/future-unregistered-core trace coverage is censored, despite zero drops.",
+      "terminalScope": "Observer detached successfully with B2_FREEZE_CAPTURED, then controller-owned cleanup terminated only the verified analyzer. No manual-stop artifact; not full project completion.",
+      "performanceUse": "Diagnostic B2 engine843.66s includes breakpoint overhead and is not main performance. Main quality remains5versus7 and all benchmark/native/model numbers are unchanged.",
+      "appendixDataKey": "b2ColdSummaryNormalizationDiagnostic",
+      "finalReceiptSourceSha256": "f5bcf1f633273693917516500576f930551485340a1e6ec813ba8e1dab27e63b",
+      "guidanceBridgeSourceSha256": "1126fd65159da4a811b8be29251fe55885f18a56ed2571d8a75f177db45a6c85",
+      "fullSevenCasePositiveSourceSha256": "6612af3e19387bc0c516a6324dbe139206817ec1ba9cc5d9fe7541686f82e82b",
+      "terminalSourceVerificationSha256": "73af6c4816b20064fa3677762e1a245ed4e4b4237dc74e6b3ac36e356d95dd1c",
+      "fullEvidenceEmbeddedOnceInAppendixData": true
+    }
   },
   "followupValidation": {
     "data": "docs/reports/data/bidirectional-canonical-current-validation-20261105.json",

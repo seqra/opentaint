@@ -34,7 +34,7 @@ rerun.
 | Preserve strict finding identities | **Not met.** Conductor loses two new identities. Stirling has three inherited missing f945 identities. Thingsboard quality is censored. |
 | Explain time and memory | Main report has per-run engine/transition times, CPU/allocation profiles, RSS and GC. No memory-manager OOM was observed; three commands time out. |
 | Validate profiles | All 142 continuous/window records pass 284 denominator checks. Coverage limits remain explicit. |
-| Trace exact fact behavior | Selected complete spans and a causal rollback exist. The first actual removed Conductor packet remains untraced. |
+| Trace exact fact behavior | Actual B2 point/summary removals now have complete native post-state checks and a complete frozen explicit-view bridge. The later C2/report causal chain remains untraced. |
 | Clean prior captures | All 35 manifest-listed files are absent; 1,631,812,783 bytes were recorded removed. User debugging files remain untouched. |
 | Propose the next iteration | The ranked proposal has a correctness gate, then frozen-input canonicalization reuse and the bounded-input limiter fast path. No new proposal is silently implemented. |
 
@@ -56,6 +56,26 @@ subtraction restores seven native rule/full-signature projections at run-5.
 It is not an accepted repair or strict SARIF-fingerprint comparison. The
 earliest captured frozen-demand difference is before run-3 transfer; it is
 not an observed first drop.
+
+The later [B2 point-store capture](bidirectional-conductor-canonical-quality-regression-20261105.md#actual-b2-point-store-subtraction)
+now traces broad-after-narrow state subtraction under complete premises and
+headers in `getTasksToBeScheduled`, Empty context and ROOT scope. Five closed
+windows at instructions 17/3/2/1/54 replace explicit `arg1.taskDefinition` support
+with root support, both ANY/FLOW DEMAND with identical E/mx. This is not a
+mixed incoming packet: the child was in the prior point authority. The attempt
+was manually stopped due to hot breakpoint overhead at run-2/run-1/run-1,
+with 40 completed windows, one whole deadline drop, zero decoder drops and
+no B2 snapshot. That first attempt remains partial.
+
+The separate [completed cold capture](bidirectional-conductor-canonical-quality-regression-20261105.md#completed-cold-b2-summary-and-guidance-bridge)
+now closes B2 and reaches F3, at run-3/run-2/run-1. Seven paired removals include
+actual ROOT_EXIT summary-store changes in typed HashMap and Empty contexts.
+All five planned collections are complete with zero capture/decoder drops.
+The 113-row outgoing direct DATA view has 64 Empty and 49 typed rows; each
+context retains one root pair and no explicit taskDefinition child pair.
+This proves the same-attempt admitted-store to frozen explicit-view bridge,
+not a later native C2 rejection or report-loss chain. The 2,992-test and 175/249
+model gates, main quality and measured timings are unchanged.
 
 A separate [conditional-source loop control](bidirectional-nd-loop-canonical-control-20261105.md)
 also completes at run-5 for both current and proper-prefix-off runtimes, with
