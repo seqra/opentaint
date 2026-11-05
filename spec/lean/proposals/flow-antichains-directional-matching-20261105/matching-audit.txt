@@ -1,0 +1,55 @@
+'FlowAntichains.Matching.pathPrefix' does not depend on any axioms
+'FlowAntichains.Matching.strictAncestor' does not depend on any axioms
+'FlowAntichains.Matching.sameBase' does not depend on any axioms
+'FlowAntichains.Matching.selectedRole' does not depend on any axioms
+'FlowAntichains.Matching.blocked' does not depend on any axioms
+'FlowAntichains.Matching.nativeKeep' does not depend on any axioms
+'FlowAntichains.Matching.keep' does not depend on any axioms
+'FlowAntichains.Matching.nativeSelect' does not depend on any axioms
+'FlowAntichains.Matching.select' does not depend on any axioms
+'FlowAntichains.Matching.selectAtRun' does not depend on any axioms
+'FlowAntichains.Matching.pathPrefix_refl' depends on axioms: [propext]
+'FlowAntichains.Matching.strict_irrefl' depends on axioms: [propext]
+'FlowAntichains.Matching.empty_strict_nonempty' depends on axioms: [propext]
+'FlowAntichains.Matching.role_same' does not depend on any axioms
+'FlowAntichains.Matching.role_forward_backward' does not depend on any axioms
+'FlowAntichains.Matching.role_backward_forward' does not depend on any axioms
+'FlowAntichains.Matching.opposite_never_blocks' depends on axioms: [propext]
+'FlowAntichains.Matching.opposite_keep_native' depends on axioms: [propext]
+'FlowAntichains.Matching.opposite_exact_list' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Matching.current_direct_same' does not depend on any axioms
+'FlowAntichains.Matching.run_independent' does not depend on any axioms
+'FlowAntichains.Matching.preserve_nonstar' depends on axioms: [propext]
+'FlowAntichains.Matching.preserve_may' depends on axioms: [propext]
+'FlowAntichains.Matching.preserve_must' depends on axioms: [propext]
+'FlowAntichains.Matching.preserve_exact' depends on axioms: [propext]
+'FlowAntichains.Matching.preserve_at' depends on axioms: [propext]
+'FlowAntichains.Matching.preserve_not_strict' depends on axioms: [propext]
+'FlowAntichains.Matching.only_native' depends on axioms: [propext]
+'FlowAntichains.Matching.exact_delta' depends on axioms: [propext]
+'FlowAntichains.Matching.reject_blocked' depends on axioms: [propext]
+'FlowAntichains.Matching.selected_member' depends on axioms: [propext]
+'FlowAntichains.Matching.selected_is_native' depends on axioms: [propext]
+'FlowAntichains.Matching.selected_payload_exact' depends on axioms: [propext]
+'FlowAntichains.Matching.select_stable_sublist' depends on axioms: [propext]
+'FlowAntichains.Matching.select_idempotent' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Matching.product' does not depend on any axioms
+'FlowAntichains.Matching.bindings' does not depend on any axioms
+'FlowAntichains.Matching.nativeBindings' does not depend on any axioms
+'FlowAntichains.Matching.product_nil' does not depend on any axioms
+'FlowAntichains.Matching.empty_arm_no_binding' does not depend on any axioms
+'FlowAntichains.Matching.product_length' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Matching.complete_binding_length' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Matching.opposite_bindings_exact' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Matching.preserve_empty_query' depends on axioms: [propext]
+'FlowAntichains.Matching.run1_ordinary_vacuous' depends on axioms: [propext]
+'FlowAntichains.Matching.preserve_not_above_depth' depends on axioms: [propext]
+'FlowAntichains.Matching.product_native_inclusion' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Matching.binding_empty_first_arm' does not depend on any axioms
+'FlowAntichains.Matching.per_arm_uses_same_role' does not depend on any axioms
+'FlowAntichains.Matching.no_replacement_candidate' depends on axioms: [propext]
+'FlowAntichains.Matching.starExample' does not depend on any axioms
+'FlowAntichains.Matching.concrete_full_profile_star_current_drops' does not depend on any axioms
+'FlowAntichains.Matching.same_example_opposite_survives' does not depend on any axioms
+'FlowAntichains.Matching.run1_current_star_changes' does not depend on any axioms
+'FlowAntichains.Matching.no_layer_veto' does not depend on any axioms
