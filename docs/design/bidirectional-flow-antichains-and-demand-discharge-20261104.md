@@ -1,7 +1,7 @@
 # Reduce field-path work with relation groups and canonical facts
 
-4 November 2026. Investigation and design candidates. No analyzer change
-is selected or implemented here. Runtime:
+4 November 2026. Investigation and design candidates. Analyzer implementation
+is unchanged. Runtime:
 `52f32dd437d438aec4a700a02c18d94c31d58093`.
 
 The [5 November follow-up](../reports/bidirectional-normal-star-subsumption-direction-policy-20261105.md)
@@ -9,6 +9,12 @@ proves the aligned NORMAL STAR relation inclusion constructively. The old
 extra ANY/DEMAND result is not a semantic counterexample to that rule.
 It also tests direction-limited STAR matching and states its remaining
 correctness and workload limits. Runtime implementation remains unchanged.
+
+Selected matching scope from that follow-up: restrict strict-ancestor
+`inside` for **all incoming STAR facts**, including concrete STAR/T on
+DEMAND, to opposite-direction records. Preserve MAY/MUST, equal-path
+matching and ordinary instruction transfers. This scope clarification
+does not select or implement the other design candidates in this document.
 
 Latest original campaign reached / completed / accepted:
 Stirling-PDF **run-9 / run-8 / run-7**; Conductor **run-6 / run-5 / run-5**.
