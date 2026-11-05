@@ -40,7 +40,7 @@ internal fun emitInitials(ops: ApOps, d: DemandPattern, added: Facts,
     m.cancellation.checkpoint()
     check(d.entry.fact.tail != Tail.ANY_TAINT) { "W8 (d): a demand entry cannot have a must tail" }
     val result = LinkedHashSet<InitialAp>()
-    for (a in ops.leaves(added)) {
+    for (packet in m.canonicalPackets(added)) for (a in ops.leaves(packet)) {
         m.cancellation.checkpoint()
         val j = policy.emit(d.entry, a) ?: continue
         result += m.initial(j)

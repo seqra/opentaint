@@ -100,7 +100,7 @@ internal class MethodBlockRuntime(
                 .also { stateOrNull = it }
         }
         val links = BlockSummaryLinks(ops, mode, scope, ::onData, ::onTerminal, ::onRequest, localMatchCounts)
-        fun addCompletion(child: BlockId, exit: PortId, original: PremiseKey, value: Facts): Facts? {
+        fun addCompletion(child: BlockId, exit: PortId, original: PremiseKey, value: Facts): List<Facts> {
             val point = ChildPoint(child, exit)
             val store = completions.getOrPut(point) {
                 val directory = object : PointDirectory<ChildPoint> {
@@ -115,7 +115,7 @@ internal class MethodBlockRuntime(
                     flowBacked = mode.run1 && mode.markMode == MarkMode.FULL,
                     collectStatistics = port.shared.n2Statistics != null)
             }
-            return store.add(point, original, value)
+            return store.addAll(point, original, value)
         }
     }
 
@@ -441,8 +441,8 @@ internal class MethodBlockRuntime(
                     }
                 }
             } else {
-                selected.forEachReversedAt(actual, ops) { view, protected ->
-                    applySavedView(child, link, actual, exit, view, protected)
+                selected.forEachNativeReversedAt(actual, ops) { read, protected ->
+                    applySavedView(child, link, actual, exit, read, protected)
                 }
             }
         }
@@ -461,7 +461,8 @@ internal class MethodBlockRuntime(
     }
 
     private fun applySavedView(child: Entry, link: LocalLink, actual: Facts, exit: PortId,
-                               view: RecordLeafView, protected: Boolean) {
+                               read: NativeReverseRead, protected: Boolean) {
+        val view = read.view
         preparedExits.getOrPrepare(child.scope, if (isEmptyBlock(child.scope.block)) child.scope.entry else exit, view.result.fact.base)
         if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "local-reversed-record") {
             catalog(ap); text("parent", link.parent.toString()); text("child", link.child.toString())
@@ -471,7 +472,7 @@ internal class MethodBlockRuntime(
             flag("resultDemand", view.result.demand); flag("protected", protected)
         }
         val grows = loopFieldLength(Pattern(view.result.fact, view.result.exclusion)) > loopFieldLength(view.premise)
-        application.applyRecordView(actual, link.original, view, protected, object : LocalRelationOut {
+        application.applyNativeRecordRead(actual, link.original, read, protected, object : LocalRelationOut {
             override fun data(original: PremiseKey, value: Facts) = onApplied(link, exit, grows, original, value)
             override fun target(original: PremiseKey, target: Target) = onTerminal(link, original, target)
             override fun markRequest(mark: TaintMark) = onRequest(link, actual, mark)
@@ -524,14 +525,21 @@ internal class MethodBlockRuntime(
                         premise("P", original); facts("kept", kept)
                     }
                     val fresh = parent.addCompletion(child.id, completionExit, original, kept)
-                    if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "local-completion") {
-                        catalog(ap); text("parent", link.parent.toString()); text("child", link.child.toString())
-                        number("exit", exit.ordinal); number("point", completionExit.ordinal)
-                        premise("P", original); facts("offered", kept); flag("fresh", fresh != null)
-                        if (fresh != null) facts("delta", fresh)
+                    if (fresh.isEmpty() && LoopPipelineTrace.enabled(config.index, key))
+                        LoopPipelineTrace.record(config.index, key, "local-completion") {
+                            catalog(ap); text("parent", link.parent.toString()); text("child", link.child.toString())
+                            number("exit", exit.ordinal); number("point", completionExit.ordinal)
+                            premise("P", original); facts("offered", kept); flag("fresh", false)
+                        }
+                    for (delta in fresh) {
+                        if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "local-completion") {
+                            catalog(ap); text("parent", link.parent.toString()); text("child", link.child.toString())
+                            number("exit", exit.ordinal); number("point", completionExit.ordinal)
+                            premise("P", original); facts("offered", kept); flag("fresh", true)
+                            facts("delta", delta)
+                        }
+                        queue { routeCompleted(parent, child, link, exit, original, delta, routes) }
                     }
-                    if (fresh == null) continue
-                    queue { routeCompleted(parent, child, link, exit, original, fresh, routes) }
                 }
             }
             override fun markRequest(mark: TaintMark) = error("A global local-boundary field limit cannot request a mark")

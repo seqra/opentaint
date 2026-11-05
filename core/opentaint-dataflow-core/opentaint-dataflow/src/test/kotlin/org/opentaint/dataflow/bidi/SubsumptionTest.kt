@@ -18,7 +18,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
-/** Required incoming subsumption, independently decoded from typed trie payloads. T5 stays disabled. */
+/** Selected canonical prefix admission, decoded independently from typed trie payloads. */
 class SubsumptionTest {
     private val manager = testApManager(Cancellation())
     private val x = AccessPathBase.Argument(0)
@@ -205,14 +205,16 @@ class SubsumptionTest {
         val group = group()
         group.add(typed(stored))
         val delta = assertNotNull(group.add(taintBundle(incoming, empty, Layer.DEMAND)))
-        val referenceDelta = incoming.filterNot { subsumes(stored, it) }.toSet()
-        assertEquals(referenceDelta, decode(listOf(delta)))
-        assertEquals(setOf(incoming[2], incoming[3]), referenceDelta)
+        val referenceDelta = incoming.filterNot { subsumes(stored,it) }.filter { candidate ->
+            incoming.none { other -> other != candidate && subsumes(other,candidate) }
+        }.toSet()
+        assertEquals(referenceDelta,decode(listOf(delta)))
+        assertEquals(setOf(incoming[3]),referenceDelta)
         assertEquals(observed(listOf(stored) + incoming), observed(decode(group.all().toList())))
     }
 
     @Test
-    fun `disabled T5 keeps old demand descendants after a new ancestor and rejects covered incoming leaves`() {
+    fun `canonical demand ancestor removes old descendants and rejects covered incoming leaves`() {
         for (mark in listOf(MarkSlot.STAR, mt)) {
             val descendant = conclusion(listOf(g), Tail.ANY, mark)
             val ancestor = conclusion(emptyList(), Tail.ANY, mark)
@@ -220,7 +222,7 @@ class SubsumptionTest {
             val group = group()
             assertNotNull(group.add(typed(descendant)))
             assertNotNull(group.add(typed(ancestor)))
-            assertEquals(setOf(descendant, ancestor), decode(group.all().toList()))
+            assertEquals(setOf(ancestor), decode(group.all().toList()))
             val stored = group.all().toList()
             assertNull(group.add(typed(later)))
             assertEquals(stored.size, group.all().count())

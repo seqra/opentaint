@@ -1,0 +1,249 @@
+'FlowAntichains.Canonical.Path' does not depend on any axioms
+'FlowAntichains.Canonical.pathCovers' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.covers' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.pathCovers_refl' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.pathCovers_trans' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.pathCovers_antisymm' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.covers_refl' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.covers_header' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.covers_trans' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.covers_antisymm' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.denotes' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.covered' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.covered_iff' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.insert' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.normalize' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.insert_subset' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.insert_denotes' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.normalize_subset' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.normalize_denotes' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.Reduced' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.no_member_covers' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.insert_reduced' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.normalize_reduced' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.normalize_idempotent_denotation' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.different_header_never_covers' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.excluded_first_field_not_covered' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.may_prefix_covers' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.plain_cannot_cover_protected' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.atPoint' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.unionAt' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.meetExclusions' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.fillExclusion' does not depend on any axioms
+'FlowAntichains.Canonical.meet_membership' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.fill_membership' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.same_anchor_union' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.complete_root' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.direct_child_fill' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.admitted_descendant' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.descendant_union' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.mergePaths' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.mergePaths_exact' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.mergeRegions' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.mergeRegions_key' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.mergeRegions_exact' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.mergeWith' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.mergeWith_exact' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.mergeOne' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.mergeOne_exact' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.normalizeRegionsFuel' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.normalizeRegions' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.normalizeRegionsFuel_exact' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.normalizeRegions_exact' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.unequal_keys_never_join' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.cross_E_must_cover' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.complete_direct_child_fills' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.longer_child_does_not_fill' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.excluded_child_does_not_fill' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.longer_child_missing_anchor' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.excluded_child_missing_descendant' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.mergeWith_length' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.mergeOne_length' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.normalizeRegionsFuel_irreducible' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.normalizeRegions_irreducible' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.normalizeRegionsFuel_stable' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.normalizeRegions_idempotent' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.headerBucket' does not depend on any axioms
+'FlowAntichains.Canonical.headerBucket_union' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.indexedNormalize' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.indexed_reference_equivalent' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.indexedCandidateTests' does not depend on any axioms
+'FlowAntichains.Canonical.indexed_candidate_bound' depends on axioms: [propext]
+'FlowAntichains.Canonical.unrelated_headers_cost_zero' depends on axioms: [propext]
+'FlowAntichains.Canonical.inherited_context_matters' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.overlapWitness' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.overlapWitness_sound' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.overlapWitness_complete' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.overlapWitness_iff' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.equal_anchor_overlap' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.blocked_child_no_overlap' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.markAllowed' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.mxSubset' does not depend on any axioms
+'FlowAntichains.Canonical.mx_support' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.flow_fill_guard' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.flow_descendant_guard' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.narrower_flow_child_cannot_fill' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.reverseOverlapEligible' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.ordinary_reader_unchanged' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.same_direction_overlap_disabled' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Canonical.proofScope' does not depend on any axioms
+'FlowAntichains.Relations.produce' does not depend on any axioms
+'FlowAntichains.Relations.denotes' does not depend on any axioms
+'FlowAntichains.Relations.specialize' does not depend on any axioms
+'FlowAntichains.Relations.coveringSuffix' does not depend on any axioms
+'FlowAntichains.Relations.produced_specialization' depends on axioms: [propext]
+'FlowAntichains.Relations.specialization_subrelation' depends on axioms: [propext]
+'FlowAntichains.Relations.union_specialization_is_short' depends on axioms: [propext]
+'FlowAntichains.Relations.every_specialization_is_covered' depends on axioms: [propext]
+'FlowAntichains.Relations.empty_specialization' depends on axioms: [propext]
+'FlowAntichains.Relations.specialize_twice' depends on axioms: [propext]
+'FlowAntichains.Relations.reverseGeometry' does not depend on any axioms
+'FlowAntichains.Relations.reverse_geometry_specializes' does not depend on any axioms
+'FlowAntichains.Relations.reverse_specialization_subrelation' depends on axioms: [propext]
+'FlowAntichains.Relations.counted' does not depend on any axioms
+'FlowAntichains.Relations.counted_append' depends on axioms: [propext]
+'FlowAntichains.Relations.grows' does not depend on any axioms
+'FlowAntichains.Relations.specialization_growth_iff' depends on axioms: [propext]
+'FlowAntichains.Relations.reverse_specialization_growth_iff' depends on axioms: [propext]
+'FlowAntichains.Relations.strip' does not depend on any axioms
+'FlowAntichains.Relations.applyExact' does not depend on any axioms
+'FlowAntichains.Relations.strip_append' depends on axioms: [propext]
+'FlowAntichains.Relations.exact_descendant_applications_equal' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Relations.exact_descendant_result' depends on axioms: [propext]
+'FlowAntichains.Relations.identityRow' does not depend on any axioms
+'FlowAntichains.Relations.wrongResidualRow' does not depend on any axioms
+'FlowAntichains.Relations.aligned_example' does not depend on any axioms
+'FlowAntichains.Relations.unaligned_example_changes_result' does not depend on any axioms
+'FlowAntichains.Relations.pair_metadata_preserved' does not depend on any axioms
+'FlowAntichains.Relations.Covers' does not depend on any axioms
+'FlowAntichains.Relations.covers_refl' depends on axioms: [propext]
+'FlowAntichains.Relations.covers_trans' depends on axioms: [propext]
+'FlowAntichains.Relations.cover_denotation' depends on axioms: [propext]
+'FlowAntichains.Relations.strip_sound' depends on axioms: [propext]
+'FlowAntichains.Relations.coverWitness' does not depend on any axioms
+'FlowAntichains.Relations.coverWitness_sound' depends on axioms: [propext]
+'FlowAntichains.Relations.coverWitness_complete' depends on axioms: [propext]
+'FlowAntichains.Relations.coversB' does not depend on any axioms
+'FlowAntichains.Relations.coversB_iff' depends on axioms: [propext]
+'FlowAntichains.Relations.cancelHeads' depends on axioms: [propext]
+'FlowAntichains.Relations.cancelHeads_reconstruct' depends on axioms: [propext]
+'FlowAntichains.Relations.cancelHeads_common' depends on axioms: [propext]
+'FlowAntichains.Relations.factorPaths' depends on axioms: [propext]
+'FlowAntichains.Relations.factorPaths_reconstruct' depends on axioms: [propext]
+'FlowAntichains.Relations.factorPaths_append' depends on axioms: [propext]
+'FlowAntichains.Relations.factors' depends on axioms: [propext]
+'FlowAntichains.Relations.family' depends on axioms: [propext]
+'FlowAntichains.Relations.family_specialize' depends on axioms: [propext]
+'FlowAntichains.Relations.residual_specialize' depends on axioms: [propext]
+'FlowAntichains.Relations.IndexCovers' depends on axioms: [propext]
+'FlowAntichains.Relations.cover_has_index_witness' depends on axioms: [propext]
+'FlowAntichains.Relations.index_witness_is_cover' depends on axioms: [propext]
+'FlowAntichains.Relations.index_cover_iff' depends on axioms: [propext]
+'FlowAntichains.Relations.prefixCandidates' depends on axioms: [propext]
+'FlowAntichains.Relations.prefixCandidates_complete_and_sound' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Relations.applyPayload' does not depend on any axioms
+'FlowAntichains.Relations.below_payload_applications_equal' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Relations.below_ordered_packet_applications_equal' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Relations.listDenotes' does not depend on any axioms
+'FlowAntichains.Relations.Antichain' does not depend on any axioms
+'FlowAntichains.Relations.insert' does not depend on any axioms
+'FlowAntichains.Relations.insert_never_invents' depends on axioms: [propext]
+'FlowAntichains.Relations.insert_covers_every_input' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Relations.insert_preserves_relation' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Relations.insert_antichain' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Relations.build' does not depend on any axioms
+'FlowAntichains.Relations.build_antichain' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Relations.build_never_invents' depends on axioms: [propext]
+'FlowAntichains.Relations.build_preserves_relation' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Relations.canonical' does not depend on any axioms
+'FlowAntichains.Relations.canonical_is_antichain' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Relations.canonical_relation' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Relations.canonical_has_input_witness' depends on axioms: [propext]
+'FlowAntichains.Relations.late_short_row_replaces_long_without_inventing_base' does not depend on any axioms
+'FlowAntichains.Relations.long_rows_do_not_invent_missing_base' does not depend on any axioms
+'FlowAntichains.Relations.distinct_interfaces_do_not_merge' does not depend on any axioms
+'FlowAntichains.Matching.pathPrefix' does not depend on any axioms
+'FlowAntichains.Matching.strictAncestor' does not depend on any axioms
+'FlowAntichains.Matching.sameBase' does not depend on any axioms
+'FlowAntichains.Matching.selectedRole' does not depend on any axioms
+'FlowAntichains.Matching.blocked' does not depend on any axioms
+'FlowAntichains.Matching.nativeKeep' does not depend on any axioms
+'FlowAntichains.Matching.keep' does not depend on any axioms
+'FlowAntichains.Matching.nativeSelect' does not depend on any axioms
+'FlowAntichains.Matching.select' does not depend on any axioms
+'FlowAntichains.Matching.selectAtRun' does not depend on any axioms
+'FlowAntichains.Matching.pathPrefix_refl' depends on axioms: [propext]
+'FlowAntichains.Matching.strict_irrefl' depends on axioms: [propext]
+'FlowAntichains.Matching.empty_strict_nonempty' depends on axioms: [propext]
+'FlowAntichains.Matching.role_same' does not depend on any axioms
+'FlowAntichains.Matching.role_forward_backward' does not depend on any axioms
+'FlowAntichains.Matching.role_backward_forward' does not depend on any axioms
+'FlowAntichains.Matching.opposite_never_blocks' depends on axioms: [propext]
+'FlowAntichains.Matching.opposite_keep_native' depends on axioms: [propext]
+'FlowAntichains.Matching.opposite_exact_list' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Matching.current_direct_same' does not depend on any axioms
+'FlowAntichains.Matching.run_independent' does not depend on any axioms
+'FlowAntichains.Matching.preserve_nonstar' depends on axioms: [propext]
+'FlowAntichains.Matching.preserve_may' depends on axioms: [propext]
+'FlowAntichains.Matching.preserve_must' depends on axioms: [propext]
+'FlowAntichains.Matching.preserve_exact' depends on axioms: [propext]
+'FlowAntichains.Matching.preserve_at' depends on axioms: [propext]
+'FlowAntichains.Matching.preserve_not_strict' depends on axioms: [propext]
+'FlowAntichains.Matching.only_native' depends on axioms: [propext]
+'FlowAntichains.Matching.exact_delta' depends on axioms: [propext]
+'FlowAntichains.Matching.reject_blocked' depends on axioms: [propext]
+'FlowAntichains.Matching.selected_member' depends on axioms: [propext]
+'FlowAntichains.Matching.selected_is_native' depends on axioms: [propext]
+'FlowAntichains.Matching.selected_payload_exact' depends on axioms: [propext]
+'FlowAntichains.Matching.select_stable_sublist' depends on axioms: [propext]
+'FlowAntichains.Matching.select_idempotent' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Matching.product' does not depend on any axioms
+'FlowAntichains.Matching.bindings' does not depend on any axioms
+'FlowAntichains.Matching.nativeBindings' does not depend on any axioms
+'FlowAntichains.Matching.product_nil' does not depend on any axioms
+'FlowAntichains.Matching.empty_arm_no_binding' does not depend on any axioms
+'FlowAntichains.Matching.product_length' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Matching.complete_binding_length' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Matching.opposite_bindings_exact' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Matching.preserve_empty_query' depends on axioms: [propext]
+'FlowAntichains.Matching.run1_ordinary_vacuous' depends on axioms: [propext]
+'FlowAntichains.Matching.preserve_not_above_depth' depends on axioms: [propext]
+'FlowAntichains.Matching.product_native_inclusion' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Matching.binding_empty_first_arm' does not depend on any axioms
+'FlowAntichains.Matching.per_arm_uses_same_role' does not depend on any axioms
+'FlowAntichains.Matching.no_replacement_candidate' depends on axioms: [propext]
+'FlowAntichains.Matching.starExample' does not depend on any axioms
+'FlowAntichains.Matching.concrete_full_profile_star_current_drops' does not depend on any axioms
+'FlowAntichains.Matching.same_example_opposite_survives' does not depend on any axioms
+'FlowAntichains.Matching.run1_current_star_changes' does not depend on any axioms
+'FlowAntichains.Matching.no_layer_veto' does not depend on any axioms
+'FlowAntichains.Reachability.pairAt' does not depend on any axioms
+'FlowAntichains.Reachability.edge' does not depend on any axioms
+'FlowAntichains.Reachability.path' does not depend on any axioms
+'FlowAntichains.Reachability.canonical_edge' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Reachability.canonical_path' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Reachability.exact_intermediate_positions' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Reachability.no_new_concrete_path' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Reachability.observed' does not depend on any axioms
+'FlowAntichains.Reachability.canonical_observation' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Reachability.observation_witness_unchanged' depends on axioms: [propext, Quot.sound]
+'FlowAntichains.Reachability.edge_preserves_full_mark' does not depend on any axioms
+'FlowAntichains.Reachability.path_nil' does not depend on any axioms
+'FlowAntichains.Reachability.path_single' does not depend on any axioms
+'FlowAntichains.Implementation.covers_requires_input_prefix' does not depend on any axioms
+'FlowAntichains.Implementation.covers_has_exact_output_residual' does not depend on any axioms
+'FlowAntichains.Implementation.implicit_specialization_transitive' depends on axioms: [propext]
+'FlowAntichains.Implementation.MarkedRelation' does not depend on any axioms
+'FlowAntichains.Implementation.FlowRelation' does not depend on any axioms
+'FlowAntichains.Implementation.CanAbsorbMarked' does not depend on any axioms
+'FlowAntichains.Implementation.flow_absorbs_allowed_unprotected_marked_cover' depends on axioms: [propext]
+'FlowAntichains.Implementation.marked_specialization_needs_no_admitted_intermediate' depends on axioms: [propext]
+'FlowAntichains.Implementation.marked_cover_transitive' depends on axioms: [propext]
+'FlowAntichains.Implementation.protected_marked_relation_is_not_absorbable' does not depend on any axioms
+'FlowAntichains.Implementation.excluded_full_mark_is_not_absorbable' does not depend on any axioms
+'FlowAntichains.Implementation.AllowsIncluded' does not depend on any axioms
+'FlowAntichains.Implementation.allowed_mask_transitive' does not depend on any axioms
+'FlowAntichains.Implementation.compatible_mask_and_geometry_cover' depends on axioms: [propext]
+'FlowAntichains.Implementation.mx_chain_needs_no_retained_intermediate' depends on axioms: [propext]
+'FlowAntichains.Implementation.allowed_union_is_exclusion_intersection' does not depend on any axioms
+'FlowAntichains.Implementation.cofinite_union_retains_each_allowed_side' depends on axioms: [propext]

@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.bidi.engine
 
 import org.opentaint.dataflow.bidi.ap.Facts
+import org.opentaint.dataflow.bidi.ap.canonicalPackets
 import org.opentaint.dataflow.bidi.ap.GroupKey
 import org.opentaint.dataflow.bidi.ap.ApOps
 import org.opentaint.dataflow.bidi.ap.ApMode
@@ -59,15 +60,20 @@ internal class LocalInputDirectory(private val ops: ApOps? = null) {
         val result = ArrayList<LocalInputCandidate>()
         for (handle in selected.keys.sorted()) {
             val current = ordered[handle]
-            val snapshot = LocalInputValue(current.link, current.value)
+            val packets = ops?.manager?.canonicalPackets(current.value) ?: listOf(current.value)
             val members = selected.getValue(handle)
             var member = members.nextSetBit(0)
             while (member >= 0) {
-                result += LocalInputCandidate(snapshot, member)
+                for (packet in packets) result += LocalInputCandidate(LocalInputValue(current.link, packet), member)
                 member = members.nextSetBit(member + 1)
             }
         }
         return result
+    }
+
+    internal fun visitCanonical(visit: (LocalLink, Facts) -> Unit) {
+        for (input in rows.values) for (packet in ops?.manager?.canonicalPackets(input.value) ?: listOf(input.value))
+            visit(input.link, packet)
     }
 
     internal fun releaseCandidateIndex() {
@@ -82,8 +88,7 @@ internal class LocalInputDirectory(private val ops: ApOps? = null) {
 internal class JoinedLocalInputs internal constructor(private var directory: LocalInputDirectory?) : AutoCloseable {
     internal val groups: Int get() = checkNotNull(directory) { "Joined local inputs are closed" }.size
     fun visit(visit: (LocalLink, Facts) -> Unit) {
-        for (input in checkNotNull(directory) { "Joined local inputs are closed" }.values)
-            visit(input.link, input.value)
+        checkNotNull(directory) { "Joined local inputs are closed" }.visitCanonical(visit)
     }
     override fun close() {
         val owned = directory ?: return

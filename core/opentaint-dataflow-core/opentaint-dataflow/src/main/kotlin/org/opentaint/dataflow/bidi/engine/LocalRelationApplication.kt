@@ -23,7 +23,8 @@ internal fun nativeRecordLanes(ops: ApOps, mode: ApMode, matchedActual: Facts,
     ops.manager.cancellation.checkpoint()
     if (initial.tail != Tail.ANY_TAINT) return listOf(NativeRecordLane(matchedActual, false))
     check(mode.direction == Direction.FORWARD) { "A native must record is only forward" }
-    val inside = ops.satisfying(matchedActual, initial, mode)
+    val inside = ops.matchSummary(matchedActual, initial, mode, nativeRecordRead = false,
+        role = SummaryMatchRole.SAVED_DIRECT)
     val residual = if (inside == null) matchedActual else ops.without(matchedActual, inside)
     return listOfNotNull(inside?.let { NativeRecordLane(it, false) }, residual?.let { NativeRecordLane(it, true) })
 }
@@ -40,8 +41,13 @@ internal class LocalRelationApplication(private val ops: ApOps, private val mode
     fun applyCurrent(actual: Facts, original: PremiseKey, initial: InitialAp,
                      conclusion: Facts, out: LocalRelationOut): Boolean {
         if (!valid(actual, original, initial, conclusion)) return false
-        val matched = ops.satisfying(actual, initial, mode) ?: return false
-        return applyMatched(matched, original, initial, conclusion, out)
+        var applied = false
+        for (packet in ap.canonicalPackets(actual)) {
+            val matched = ops.matchSummary(packet, initial, mode, nativeRecordRead = false,
+                role = SummaryMatchRole.CURRENT) ?: continue
+            applied = applyMatched(matched, original, initial, conclusion, out) || applied
+        }
+        return applied
     }
 
     /** Match once at subscription delivery, then share this exact applicator with saved replay. */
@@ -67,8 +73,14 @@ internal class LocalRelationApplication(private val ops: ApOps, private val mode
     fun matchRecord(actual: Facts, original: PremiseKey, record: Record): List<NativeRecordLane>? {
         val initial = record.premise
         if (!valid(actual, original, initial, record.conclusion)) return null
-        val offered = ops.satisfying(actual, initial, mode, record = true) ?: return null
-        return nativeRecordLanes(ops, mode, offered, initial)
+        require(record.direction == mode.direction) { "Use the native inverse for an opposite record" }
+        val lanes = ArrayList<NativeRecordLane>()
+        for (packet in ap.canonicalPackets(actual)) {
+            val offered = ops.matchSummary(packet, initial, mode, nativeRecordRead = true,
+                role = SummaryMatchRole.SAVED_DIRECT) ?: continue
+            lanes += nativeRecordLanes(ops, mode, offered, initial)
+        }
+        return lanes.takeIf { it.isNotEmpty() }
     }
 
     fun applyMatchedRecord(lanes: List<NativeRecordLane>, original: PremiseKey, record: Record,
@@ -87,10 +99,28 @@ internal class LocalRelationApplication(private val ops: ApOps, private val mode
     /** Opposite-direction records retain the transient native view; do not intern a MUST query. */
     fun applyRecordView(actual: Facts, original: PremiseKey, view: RecordLeafView,
                         nonSubsumable: Boolean, out: LocalRelationOut): Boolean {
+        var applied = false
+        for (packet in ap.canonicalPackets(actual)) {
+            val matched = ops.matchSummary(packet, view.premise, mode, nativeRecordRead = true,
+                role = SummaryMatchRole.OPPOSITE_RECORD) ?: continue
+            applied = applyMatchedView(matched, original, view, nonSubsumable, out) || applied
+        }
+        return applied
+    }
+
+    fun applyNativeRecordRead(actual: Facts, original: PremiseKey, read: NativeReverseRead,
+                              nonSubsumable: Boolean, out: LocalRelationOut): Boolean {
+        var applied = false
+        for (matched in matchOppositeRecordPackets(ops, actual, read, mode))
+            applied = applyMatchedView(matched, original, read.view, nonSubsumable, out) || applied
+        return applied
+    }
+
+    private fun applyMatchedView(matched: Facts, original: PremiseKey, view: RecordLeafView,
+                                 nonSubsumable: Boolean, out: LocalRelationOut): Boolean {
         ap.cancellation.checkpoint()
-        if (!RuntimeDataDomain.packet(original, actual) || !RuntimeDataDomain.base(view.premise.fact.base) ||
+        if (!RuntimeDataDomain.packet(original, matched) || !RuntimeDataDomain.base(view.premise.fact.base) ||
             !RuntimeDataDomain.base(view.result.fact.base)) return false
-        val matched = ops.satisfying(actual, view.premise, mode, record = true) ?: return false
         var applied = false
         ops.applyRecordLeaf(matched, view, nonSubsumable, mode,
             sink(original, matched, view.premise.fact.base == AccessPathBase.Zero,
@@ -134,10 +164,14 @@ internal class LocalRelationApplication(private val ops: ApOps, private val mode
         ap.cancellation.checkpoint()
         if (!RuntimeDataDomain.packet(initial, actual)) return null
         if (mode.direction == Direction.BACKWARD && target is Target.NormalTarget) return null
-        val matched = ops.satisfying(actual, initial, mode,
-            record = saved && initial.tail != Tail.ANY_TAINT) ?: return null
-        val layer = offeredLayer or (matched.layer == Layer.DEMAND)
-        return layer.takeIf { target !is Target.NormalTarget || it == Layer.NORMAL }
+        for (packet in ap.canonicalPackets(actual)) {
+            val matched = ops.matchSummary(packet, initial, mode,
+                nativeRecordRead = saved && initial.tail != Tail.ANY_TAINT,
+                role = if (saved) SummaryMatchRole.SAVED_DIRECT else SummaryMatchRole.CURRENT) ?: continue
+            val layer = offeredLayer or (matched.layer == Layer.DEMAND)
+            if (target !is Target.NormalTarget || layer == Layer.NORMAL) return layer
+        }
+        return null
     }
 
     private fun valid(actual: Facts, original: PremiseKey, initial: InitialAp, conclusion: Facts): Boolean {

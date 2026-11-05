@@ -111,8 +111,12 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
      * mutation; an empty list means the whole offered mask was already stored.
      * Different geometry for an overlapping mark needs the existing spatial
      * subtraction/protection adapter and is deliberately not guessed here. */
-    fun addDiagonal(delta: DiagonalDelta): List<DiagonalDelta>? {
+    fun addDiagonal(offered: DiagonalDelta): List<DiagonalDelta>? {
         m.cancellation.checkpoint()
+        val delta = if (offered.tail == Tail.ANY) {
+            val packet = m.flowTree(offered.base,offered.layer,offered.exclusion,MarkExclusions.EMPTY,offered.geometry,Tail.ANY)
+            offered.copy(geometry = m.canonicalFlowPacket(packet).root)
+        } else offered
         if (!RuntimeDataDomain.initial(delta.initialShape) || !RuntimeDataDomain.base(delta.base)) return emptyList()
         require(delta.initialShape.manager === m) { "A diagonal packet must use this AP manager" }
         val header = Header(delta.initialShape, delta.base, delta.layer, delta.tail, delta.exclusion)
@@ -152,7 +156,32 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
 
     /** Admit geometry/mask memberships before constructing the one scalar
      * delta needed by the current interpreter interface. */
-    fun add(premise: PremiseKey, facts: Facts): Facts? {
+    fun add(premise: PremiseKey, facts: Facts): Facts? = addAll(premise,facts).also {
+        check(it.size <= 1) { "Canonical diagonal admission has multiple headers; use addAll" }
+    }.singleOrNull()
+
+    fun addAll(premise: PremiseKey, facts: Facts): List<Facts> {
+        if (!RuntimeDataDomain.packet(premise,facts)) return emptyList()
+        require(supports(premise,facts)) { "Only admitted diagonal STAR or ANY relations use this store" }
+        val f = facts as TaintTree
+        if (f.anyTail != Tail.ANY) return addOne(premise,f)?.let(::listOf) ?: emptyList()
+        val initial = premise as InitialAp
+        val mark = (initial.mark as MarkSlot.Concrete).mark
+        val scope = Scope(checkNotNull(flowInitialForCoverage(m,premise)), f.base, f.layer)
+        val before = currentAtom(scope,mark)
+        // Preserve the existing diagonal late-flag policy, then canonicalize
+        // its exact resulting support. This must not invent parent protection.
+        val delta = addOne(premise,m.canonicalTaintPacket(f)) as? TaintTree ?: return emptyList()
+        val temporary = TaintGroup(m,interners.taint)
+        before.values.forEach(temporary::restoreCurrent)
+        val changes = temporary.addAll(delta)
+        val after = LinkedHashMap<Header,TaintTree>()
+        for (value in temporary.all()) after[Header(scope.initial,value.base,value.layer,value.anyTail,value.exclusion)] = value
+        replaceAtom(scope,mark,after)
+        return changes
+    }
+
+    private fun addOne(premise: PremiseKey, facts: Facts): Facts? {
         if (!RuntimeDataDomain.packet(premise, facts)) return null
         require(supports(premise, facts)) { "Only admitted diagonal STAR or ANY relations use this store" }
         val f = facts as TaintTree
@@ -216,19 +245,7 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
      * Decode one atom's current rows, apply that law once, and encode only its
      * changed current state. No scalar tree or removed row survives this call. */
     private fun addAcrossHeaders(offered: Header, mark: TaintMark, facts: TaintTree): Facts? {
-        val before = LinkedHashMap<Header, TaintTree>()
-        for ((header, rows) in scopedRows(offered.scope)) {
-            m.cancellation.checkpoint()
-            var root: FlowNode? = null
-            var flags: FlowNode? = null
-            for ((shape, masks) in rows) {
-                m.cancellation.checkpoint()
-                if (mark !in masks.marks) continue
-                root = union(root, shape)
-                if (mark in masks.protected) flags = union(flags, shape)
-            }
-            if (root != null) before[header] = decode(header, root, mark, flags)
-        }
+        val before = currentAtom(offered.scope,mark)
         val temporary = TaintGroup(m, interners.taint)
         before.values.forEach(temporary::restoreCurrent)
         val delta = temporary.add(facts)
@@ -242,11 +259,33 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
                 value == current && value.nonSubsumable == current.nonSubsumable
             }) return delta
 
+        replaceAtom(offered.scope,mark,after)
+        return delta
+    }
+
+    private fun currentAtom(scope: Scope, mark: TaintMark): LinkedHashMap<Header,TaintTree> {
+        val before = LinkedHashMap<Header, TaintTree>()
+        for ((header, rows) in scopedRows(scope)) {
+            m.cancellation.checkpoint()
+            var root: FlowNode? = null
+            var flags: FlowNode? = null
+            for ((shape, masks) in rows) {
+                m.cancellation.checkpoint()
+                if (mark !in masks.marks) continue
+                root = union(root, shape)
+                if (mark in masks.protected) flags = union(flags, shape)
+            }
+            if (root != null) before[header] = decode(header, root, mark, flags)
+        }
+        return before
+    }
+
+    private fun replaceAtom(scope: Scope, mark: TaintMark, after: Map<Header,TaintTree>) {
         // Prepare the replacement off-store. Cancellation must not leave an
         // empty header, a stale sibling, or a half-rewritten shared T/U mask.
         val one = m.markSetOf(mark)
         val replacement = LinkedHashMap<Header, Rows>()
-        for ((header, rows) in scopedRows(offered.scope)) {
+        for ((header, rows) in scopedRows(scope)) {
             m.cancellation.checkpoint()
             val kept = Rows(header.tail, header.exclusion)
             for ((shape, masks) in rows) {
@@ -277,8 +316,7 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
             previous = rows
         }
         m.cancellation.checkpoint()
-        if (head == null) headers.remove(offered.scope) else headers[offered.scope] = head
-        return delta
+        if (head == null) headers.remove(scope) else headers[scope] = head
     }
 
     fun all(): Sequence<Pair<PremiseKey, Facts>> = sequence {

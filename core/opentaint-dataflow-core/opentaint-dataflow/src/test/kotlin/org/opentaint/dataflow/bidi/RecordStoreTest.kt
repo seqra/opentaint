@@ -34,6 +34,8 @@ class RecordStoreTest {
             (b.size <= a.size && b.indices.all { b[it] == a[it] })
     private fun entryMatch(record: Record, a: Pattern): Boolean =
         applicable(record.premise.toPattern(), a) || inside(record.premise.toPattern(), a)
+    private fun semantics(record: Record, leaves: Set<Conclusion> = v.decoded(record.conclusion)) =
+        Triple(record.direction, record.premise, leaves)
     private fun allAtEntry(store: RecordStore, method: MethodKey = fixture.method): List<Record> =
         listOf(v.x, v.y, STATIC, AccessPathBase.Zero).flatMap { base ->
             store.byEntry(method, fixture.pattern(base = base, tail = Tail.STAR, mark = MarkSlot.STAR)).toList()
@@ -142,21 +144,26 @@ class RecordStoreTest {
             row(premise(p(f)), listOf(leaf(p(g), base = y)), method = other),
         )
         rows.forEach { store.add(it.record) }
+        // The source oracle applies the selected scalar spatial law. Physical
+        // Record identity/delta partition is no longer the persistent authority.
+        val canonicalRows = rows.map { item -> item.copy(leaves = item.leaves.filter { candidate ->
+            item.leaves.none { other -> other != candidate && subsumes(other, candidate) }
+        }) }
         for (method in listOf(fixture.method, other, fixture.key("missing"))) for (query in patterns()) {
             val candidates = store.byExit(method, query).toList()
-            val expectedCandidates = rows.filter { it.record.method == method && it.leaves.any { leaf ->
+            val expectedCandidates = canonicalRows.filter { it.record.method == method && it.leaves.any { leaf ->
                 leaf.fact.base == query.fact.base && related(leaf.fact.path, query.fact.path)
-            } }.map { it.record }.toSet()
-            assertEquals(expectedCandidates, candidates.toSet(), "$method $query")
+            } }.map { semantics(it.record, it.leaves.toSet()) }.toSet()
+            assertEquals(expectedCandidates, candidates.map { semantics(it) }.toSet(), "$method $query")
             assertEquals(candidates.size, candidates.toSet().size)
-            val expected = rows.filter { it.record.method == method }.flatMap { item -> item.leaves.mapNotNull { leaf ->
+            val expected = canonicalRows.filter { it.record.method == method }.flatMap { item -> item.leaves.mapNotNull { leaf ->
                 reverseRecordLeaf(item.record.direction, item.record.premise.toPattern(), leaf)?.takeIf {
                     applicable(it.premise, query) || inside(it.premise, query)
-                }?.let { item.record to it }
+                }?.let { semantics(item.record, item.leaves.toSet()) to it }
             } }.toSet()
             val actual = candidates.flatMap { record -> record.reversedAt(query).filter {
                 applicable(it.premise, query) || inside(it.premise, query)
-            }.map { record to it }.toList() }.toSet()
+            }.map { semantics(record) to it }.toList() }.toSet()
             assertEquals(expected, actual, "$method $query")
         }
     }
@@ -267,7 +274,7 @@ class RecordStoreTest {
     }
 
     @Test
-    fun `persistent T1 unions index only new deltas and deduplicate every multi-leaf candidate`(): Unit = with(v) {
+    fun `persistent T1 indexes the current union and deduplicates every multi-leaf candidate`(): Unit = with(v) {
         for (forwardOrder in listOf(false, true)) {
             val store = PersistentRecordStore(m)
             val key = premise(p(f))
@@ -280,9 +287,8 @@ class RecordStoreTest {
                 store.persist(Direction.FORWARD, sequenceOf(fixture.method to raw))
             }
             val records = allAtEntry(store)
-            val expectedDeltas = setOf(order[0].toSet(), order[1].toSet() - order[0].toSet())
-            assertEquals(expectedDeltas, records.map { decoded(it.conclusion) }.toSet())
-            assertEquals(2, records.size)
+            assertEquals(setOf((left + right).toSet()), records.map { decoded(it.conclusion) }.toSet())
+            assertEquals(1, records.size)
             assertEquals((left + right).toSet(), records.flatMap { decoded(it.conclusion) }.toSet())
             for (path in listOf(p(), p(g), p(g, f), p(h))) {
                 val query = fixture.pattern(base = y, path = path)
@@ -299,7 +305,7 @@ class RecordStoreTest {
     }
 
     @Test
-    fun `persistent T2 indexes the whole annotation delta in either insertion order`(): Unit = with(v) {
+    fun `persistent T2 replaces obsolete annotation cohorts in either insertion order`(): Unit = with(v) {
         data class Case(val key: InitialAp, val left: List<Conclusion>, val right: List<Conclusion>, val merged: Set<Conclusion>)
         val flowKey = premise(p(f), Tail.STAR, MarkSlot.STAR)
         val exact = leaf(p(h), mark = mu)
@@ -318,8 +324,8 @@ class RecordStoreTest {
                 store.persist(Direction.FORWARD, sequenceOf(fixture.method to raw))
             }
             val records = allAtEntry(store)
-            assertEquals(setOf(order[0].toSet(), case.merged), records.map { decoded(it.conclusion) }.toSet())
-            assertEquals(2, records.size)
+            assertEquals(setOf(case.merged), records.map { decoded(it.conclusion) }.toSet())
+            assertEquals(1, records.size)
             for (path in case.merged.map { it.fact.path }.distinct()) {
                 val candidates = store.byExit(fixture.method, fixture.pattern(path = path)).toList()
                 assertTrue(candidates.any { decoded(it.conclusion) == case.merged })
@@ -355,13 +361,15 @@ class RecordStoreTest {
             val records = allAtEntry(store, method)
             assertTrue(records.all { it.method == method })
             val expected = buildSet {
-                for (direction in Direction.entries) add(Triple(direction, key, setOf(first)))
+                for (direction in Direction.entries) add(Triple(direction, key, first))
                 if (method == fixture.method) {
-                    add(Triple(Direction.FORWARD, key, setOf(later)))
-                    add(Triple(Direction.FORWARD, otherKey, setOf(first)))
+                    add(Triple(Direction.FORWARD, key, later))
+                    add(Triple(Direction.FORWARD, otherKey, first))
                 }
             }
-            assertEquals(expected, records.map { Triple(it.direction, it.premise, decoded(it.conclusion)) }.toSet())
+            assertEquals(expected, records.flatMap { record -> decoded(record.conclusion).map {
+                Triple(record.direction, record.premise, it)
+            } }.toSet())
         }
     }
 
@@ -437,7 +445,7 @@ class RecordStoreTest {
     }
 
     @Test
-    fun `cancellation during the summary source iteration stops the next barrier insertion`(): Unit = with(v) {
+    fun `cancellation during summary source iteration exposes no partial directory or later staged leak`(): Unit = with(v) {
         val store = PersistentRecordStore(m)
         val first = RunSummaryStore(m)
         val second = RunSummaryStore(m)
@@ -453,10 +461,12 @@ class RecordStoreTest {
         }
         try { assertFailsWith<Cancellation.Cancelled> { store.persist(Direction.FORWARD, summaries) } }
         finally { fixture.cancellation.activate() }
+        assertTrue(allAtEntry(store).isEmpty(), "A failed batch must leave its previous directory unchanged")
+        store.persist(Direction.FORWARD, sequenceOf(fixture.method to second))
         val records = allAtEntry(store)
         assertEquals(1, records.size)
-        assertSame(firstKey, records.single().premise)
-        assertEquals(setOf(firstLeaf), decoded(records.single().conclusion))
+        assertSame(secondKey, records.single().premise)
+        assertFalse(records.any { it.premise === firstKey }, "Reactivation cannot expose abandoned staged rows")
     }
 
     @Test

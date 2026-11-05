@@ -55,7 +55,9 @@ class RelationCensusTest {
         val flowRoot = FlowAlgebra.node(FlowLeaf.NONE, intArrayOf(f, g).sortedArray(), arrayOf(flowLeaf, flowLeaf))
         store.addAdmitted(initial(MarkSlot.STAR), m.flowTree(output, Layer.DEMAND, ExclusionSet.Empty, MarkSet.EMPTY, flowRoot, Tail.ANY))
         store.addAdmitted(m.zero, Reach.NORMAL)
-        assertEquals(RelationCensus(concreteOutputMemberships = 8, protectedOutputMemberships = 2,
+        // MAY U removes both child exact U memberships; child MAY T removes
+        // only the unprotected child exact T. The protected exact coordinate remains.
+        assertEquals(RelationCensus(concreteOutputMemberships = 5, protectedOutputMemberships = 2,
             scalarConcreteRows = 1, flowOutputAnnotations = 2), store.census())
         assertEquals(store.census(), store.demandCensus(Direction.FORWARD))
     }

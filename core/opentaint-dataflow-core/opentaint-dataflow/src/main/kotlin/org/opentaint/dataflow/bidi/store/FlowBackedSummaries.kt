@@ -7,10 +7,13 @@ import java.util.IdentityHashMap
  * Each endpoint keeps one authoritative relation with its existing admission law. */
 internal class FlowBackedSummaries(private val m: ApManager,
                                    private val replaceCovered: Boolean = true,
-                                   private val interners: StoreInterners = m.newInterners()) {
+                                   private val interners: StoreInterners = m.newInterners(),
+                                   private val normalStars: NormalStarRelationIndex? = null,
+                                   private val emptied: (PremiseKey) -> Unit = {}) {
     private val groups = IdentityHashMap<PremiseKey, ConclusionGroup>()
     private val concreteByShape = IdentityHashMap<InitialAp, MutableSet<PremiseKey>>()
     private val diagonal = DiagonalRelations(m, interners)
+    private val concreteShapes = PathTrie<InitialAp>(m.cancellation)
 
     /** A method-point neutral continuation admits its mask before any scalar
      * materialization. Summary boundaries keep their existing producer hooks. */
@@ -26,30 +29,39 @@ internal class FlowBackedSummaries(private val m: ApManager,
             m.cancellation.checkpoint()
             if (include(premise, facts.layer)) result += counter.scalar(facts)
         }
+        normalStars?.all()?.forEach { (premise, facts) ->
+            if (include(premise, facts.layer)) result += counter.scalar(facts)
+        }
         return result
     }
 
-    fun add(premise: PremiseKey, offered: Facts): Facts? {
+    fun add(premise: PremiseKey, offered: Facts): Facts? = addAll(premise, offered).also {
+        check(it.size <= 1) { "Use addAll for a split canonical header" }
+    }.singleOrNull()
+
+    fun addAll(premise: PremiseKey, offered: Facts): List<Facts> {
         m.cancellation.checkpoint()
-        if (!RuntimeDataDomain.packet(premise, offered)) return null
+        if (!RuntimeDataDomain.packet(premise, offered)) return emptyList()
         if (offered is FlowTree) {
-            val delta = groups.getOrPut(premise) { ConclusionGroup(m, interners) }.add(offered) ?: return null
             val initial = premise as InitialAp
-            if (!replaceCovered) return delta
-            diagonal.compact(initial, delta as FlowTree)
-            // Only unsupported mixed/cross-mark rows live in these groups.
-            // Rebuild their current residual, not a replay or history record.
-            for (key in concreteByShape[initial].orEmpty()) {
-                m.cancellation.checkpoint()
-                val current = groups[key] ?: continue
-                val replacement = ConclusionGroup(m, interners)
-                for (facts in current.all()) normalize(key, facts)?.let(replacement::add)
-                groups[key] = replacement
+            if (normalStars?.supports(initial, offered) == true) {
+                val update = normalStars.add(initial, offered)
+                if (update.affectedInitials.isNotEmpty()) {
+                    // Include concrete-only shapes: there need not have been an old FLOW L.
+                    for (shape in concreteShapes.lookupExtensions(initial.base, initial.pathData)) refreshConcrete(shape)
+                }
+                return update.fresh
             }
+            val delta = groups.getOrPut(premise) { ConclusionGroup(m, interners) }.addAll(offered)
+            if ((replaceCovered || normalStars != null) && delta.isNotEmpty()) refreshConcrete(initial)
             return delta
         }
-        val residual = normalize(premise, offered) ?: return null
-        if (diagonal.supports(premise, residual)) return diagonal.add(premise, residual)
+        val residual = normalize(premise, offered) ?: return emptyList()
+        rememberConcrete(premise)
+        // The scalar summary backend gains the selected NORMAL relation law only.
+        // Point owners have no normalStars and retain their existing diagonal path.
+        if (!replaceCovered && normalStars != null) return addFallback(premise, residual)
+        if (diagonal.supports(premise, residual)) return diagonal.addAll(premise, residual)
         // A cross-mark or exact sibling must not create a second authoritative
         // copy of the diagonal membership in the scalar fallback.
         if (residual is TaintTree && (residual.anyTail == Tail.STAR || residual.anyTail == Tail.ANY)) {
@@ -62,42 +74,66 @@ internal class FlowBackedSummaries(private val m: ApManager,
                 }
                 if (root != null) {
                     val part = residual.withRoot(root)
-                    val fresh = diagonal.add(premise, part)
+                    val fresh = diagonal.addAll(premise, part)
                     val rest = ApOps(m).without(residual, part)
-                    val extra = rest?.let { addFallback(premise, it) }
-                    return when {
-                        fresh == null -> extra
-                        extra == null -> fresh
-                        else -> {
-                            val result = m.taintTree(residual.base, residual.layer,
-                                m.taintAlg.mergeAdd((fresh as TaintTree).root, (extra as TaintTree).root, m.cancellation),
-                                residual.exclusion, residual.anyTail)
-                            val flag = fresh.nonSubsumable?.let { a -> extra.nonSubsumable?.let {
-                                m.taintAlg.mergeAdd(a, it, m.cancellation)
-                            } ?: a } ?: extra.nonSubsumable
-                            result.withProtection(flag)
-                        }
-                    }
+                    val extra = rest?.let { addFallback(premise, it) }.orEmpty()
+                    val result = ConclusionGroup(m, interners)
+                    for (value in fresh + extra) result.addAll(value)
+                    return result.all().toList()
                 }
             }
         }
         return addFallback(premise, residual)
     }
 
-    private fun addFallback(premise: PremiseKey, residual: Facts): Facts? {
-        if (replaceCovered) flowInitialForCoverage(m, premise)?.let { shape ->
-            concreteByShape.getOrPut(shape) { java.util.Collections.newSetFromMap(IdentityHashMap()) }.add(premise)
+    private fun addFallback(premise: PremiseKey, residual: Facts): List<Facts> =
+        groups.getOrPut(premise) { ConclusionGroup(m, interners) }.addAll(residual)
+
+    private fun rememberConcrete(premise: PremiseKey) {
+        if (replaceCovered || normalStars != null) flowInitialForCoverage(m, premise)?.let { shape ->
+            concreteByShape.getOrPut(shape) {
+                concreteShapes.add(shape.base, shape.pathData, shape)
+                java.util.Collections.newSetFromMap(IdentityHashMap())
+            }.add(premise)
         }
-        return groups.getOrPut(premise) { ConclusionGroup(m, interners) }.add(residual)
+    }
+
+    private fun flowCovers(shape: InitialAp): List<FlowTree> = buildList {
+        if (replaceCovered) groups[shape]?.all()?.filterIsInstance<FlowTree>()?.forEach(::add)
+        normalStars?.visitSpecializedCovers(shape, ::add)
+    }
+
+    private fun refreshConcrete(shape: InitialAp) {
+        val covers = flowCovers(shape)
+        if (replaceCovered) for (flow in covers) diagonal.compact(shape, flow)
+        val keys = concreteByShape[shape] ?: return
+        for (key in keys.toList()) {
+            m.cancellation.checkpoint()
+            groups[key]?.let { current ->
+                val replacement = ConclusionGroup(m, interners)
+                for (facts in current.all()) normalize(key, facts)?.let { replacement.addAll(it) }
+                if (replacement.all().none()) groups.remove(key) else groups[key] = replacement
+            }
+            if (groups[key]?.all()?.any() != true && diagonal.borrow(key).none()) {
+                keys.remove(key)
+                emptied(key)
+            }
+        }
+        if (keys.isEmpty()) {
+            concreteByShape.remove(shape)
+            concreteShapes.remove(shape.base, shape.pathData, shape)
+        }
     }
 
     /** All supported typed cells use the same coverage law. Call consumers
      * retain their own identity classifier; it is not a summary-store guard. */
     fun normalize(premise: PremiseKey, facts: Facts): Facts? {
-        if (!replaceCovered || facts !is TaintTree || (facts.anyTail != Tail.STAR && facts.anyTail != Tail.ANY)) return facts
+        if (facts is FlowTree && premise is InitialAp && normalStars?.supports(premise, facts) == true)
+            return normalStars.retainCurrent(premise, facts)
+        if ((!replaceCovered && normalStars == null) || facts !is TaintTree ||
+            (facts.anyTail != Tail.STAR && facts.anyTail != Tail.ANY)) return facts
         val initial = flowInitialForCoverage(m, premise) ?: return facts
-        val flow = groups[initial]?.all()?.filterIsInstance<FlowTree>() ?: return facts
-        return removeFlowCovered(m, premise, facts, flow.asIterable(), facts.nonSubsumable)
+        return removeFlowCovered(m, premise, facts, flowCovers(initial), facts.nonSubsumable)
     }
 
     fun all(): Sequence<Pair<PremiseKey, Facts>> = sequence {
@@ -106,10 +142,15 @@ internal class FlowBackedSummaries(private val m: ApManager,
             for (facts in group.all()) yield(premise to facts)
         }
         yieldAll(diagonal.all())
+        normalStars?.all()?.forEach { yield(it.first to it.second) }
     }
 
     fun borrow(premise: PremiseKey): Sequence<Facts> = sequence {
         yieldAll(groups[premise]?.all() ?: emptySequence())
         yieldAll(diagonal.borrow(premise))
+        yieldAll(normalStars?.borrowExact(premise) ?: emptySequence())
     }
+
+    fun retainCurrentAll(premise: PremiseKey, offered: Facts): List<Facts> =
+        retainCurrentFacts(m, offered, borrow(premise).asIterable())
 }

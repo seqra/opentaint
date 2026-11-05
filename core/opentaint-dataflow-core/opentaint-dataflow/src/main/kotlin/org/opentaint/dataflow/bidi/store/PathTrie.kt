@@ -28,6 +28,30 @@ class PathTrie<V : Any>(private val cancellation: Cancellation? = null) {
         return node.values.add(value)
     }
 
+    /** Remove one current posting and release empty path nodes on the owning writer. */
+    fun remove(base: AccessPathBase, path: IntArray, value: V): Boolean {
+        cancellation?.checkpoint()
+        val root = roots[base] ?: return false
+        val spine = ArrayList<Node<V>>(path.size + 1)
+        spine += root
+        var node = root
+        for (accessor in path) {
+            cancellation?.checkpoint()
+            node = node.child(accessor) ?: return false
+            spine += node
+        }
+        if (!node.values.remove(value)) return false
+        for (index in path.indices.reversed()) {
+            val child = spine[index + 1]
+            if (child.values.isNotEmpty() || child.children?.isNotEmpty() == true) break
+            val parent = spine[index]
+            parent.children?.remove(path[index])
+            if (parent.children?.isEmpty() == true) parent.children = null
+        }
+        if (root.values.isEmpty() && root.children == null) roots.remove(base)
+        return true
+    }
+
     fun lookupPrefixes(base: AccessPathBase, path: IntArray): MutableList<V> {
         cancellation?.checkpoint()
         val out = ArrayList<V>()

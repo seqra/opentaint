@@ -92,9 +92,12 @@ open class ScopedEdgeStore<P>(private val m: ApManager, private val points: Poin
     }
 
     /** T4: new leaves, or the whole merged value when a T2 annotation changes. */
-    fun add(node: P, premise: PremiseKey, f: Facts): Facts? {
+    fun add(node: P, premise: PremiseKey, f: Facts): Facts? =
+        addAll(node, premise, f).also { check(it.size <= 1) { "Use addAll for split canonical headers" } }.singleOrNull()
+
+    fun addAll(node: P, premise: PremiseKey, f: Facts): List<Facts> {
         m.cancellation.checkpoint()
-        if (!RuntimeDataDomain.packet(premise, f)) return null
+        if (!RuntimeDataDomain.packet(premise, f)) return emptyList()
         check(f.base !is AccessPathBase.CleanerTemporary) { "A field-action temporary cannot enter method storage" }
         check((f is FlowTree) == premise.isFlow) { "K6: the conclusion kind follows the premise" }
         check(premise !is PremiseSet || f is TaintTree) { "A multi-premise edge must be TAINT" }
@@ -102,9 +105,9 @@ open class ScopedEdgeStore<P>(private val m: ApManager, private val points: Poin
         when (f) {
             is Reach -> {
                 val bits = reach.getOrPut(premise) { arrayOf(BitSet(size), BitSet(size)) }[f.layer.ordinal]
-                if (bits[index]) return null
+                if (bits[index]) return emptyList()
                 bits.set(index)
-                return f
+                return listOf(f)
             }
             is FlowTree -> assert(f.root.boundedDepth <= fieldLimit) { "W3: a stored conclusion must be within the field limit" }
             is TaintTree -> assert(f.root.boundedDepth <= fieldLimit) { "W3: a stored conclusion must be within the field limit" }
@@ -112,31 +115,31 @@ open class ScopedEdgeStore<P>(private val m: ApManager, private val points: Poin
         packed?.let { statements ->
             val owner = statements[index] ?: FlowBackedSummaries(m, replaceCovered = false, interners = interners)
                 .also { statements[index] = it }
-            return owner.add(premise, f)
+            return owner.addAll(premise, f)
         }
         val rows = groups.getOrPut(premise) {
             ScalarPremiseRows((premise as? InitialAp)?.takeUnless { it.isZero })
         }
-        rows.full?.get(index)?.let { return it.add(f) }
+        rows.full?.get(index)?.let { return it.addAll(f) }
         val kind = rows.initial?.let { m.identityKind(it, f) } ?: NOT_IDENTITY
         if (kind == NOT_IDENTITY) return promoteAndAdd(rows, index, f)
         val seen = rows.present(f.layer, index)
         val protected = kind == PROTECTED_IDENTITY
-        if (seen && (!protected || rows.isProtected(f.layer, index))) return null
+        if (seen && (!protected || rows.isProtected(f.layer, index))) return emptyList()
         rows.setPresent(f.layer, index)
         if (protected) rows.setProtected(f.layer, index)
-        return f
+        return listOf(f)
     }
 
     /** Restore current compact images only. The restoration delta never escapes. */
-    private fun promoteAndAdd(rows: ScalarPremiseRows, index: Int, offered: Facts): Facts? {
+    private fun promoteAndAdd(rows: ScalarPremiseRows, index: Int, offered: Facts): List<Facts> {
         val group = ConclusionGroup(m, interners)
         var promoted = false
         for (layer in Layer.entries) {
             m.cancellation.checkpoint()
             if (rows.present(layer, index)) {
                 promoted = true
-                group.add(initialImage(m, checkNotNull(rows.initial), layer, rows.isProtected(layer, index)))
+                group.addAll(initialImage(m, checkNotNull(rows.initial), layer, rows.isProtected(layer, index)))
             }
         }
         m.cancellation.checkpoint()
@@ -147,7 +150,7 @@ open class ScopedEdgeStore<P>(private val m: ApManager, private val points: Poin
             val reason = literalImageFallbackReason(rows.initial, offered)
             it.fallbackReasons[reason] = (it.fallbackReasons[reason] ?: 0L) + 1L
         }
-        return group.add(offered)
+        return group.addAll(offered)
     }
 
     /** Scan only on an explicit enabled request, at a quiescent owner boundary.

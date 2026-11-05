@@ -210,7 +210,9 @@ class MethodEdgeStoreTest {
             val dropped = subsumes(order[0], order[1])
             val delta = store.add(node, case.key, pack(order[1]))
             if (dropped) assertNull(delta) else assertEquals(setOf(order[1]), decoded(assertNotNull(delta)))
-            val expected = if (dropped) setOf(order[0]) else order.toSet()
+            val expected = order.filter { candidate ->
+                order.none { other -> other != candidate && subsumes(other,candidate) }
+            }.toSet()
             assertEquals(expected.map { case.key to it }.toSet(), observed(store.edgesAt(node)))
         }
         val store = store()
@@ -235,10 +237,16 @@ class MethodEdgeStoreTest {
             m.zero to listOf(leaf(p(), mark = MarkSlot.Concrete(TaintMark.ZERO), base = AccessPathBase.Zero)),
         )
         for ((key, leaves) in rows) store.add(node, key, pack(*leaves.toTypedArray()))
+        // Query candidate completeness is relative to the selected canonical
+        // authority. Derive its expected basis from scalar subsumption, not
+        // from the optimized store or query under test.
+        val canonicalRows = rows.map { (key, leaves) -> key to leaves.filter { candidate ->
+            leaves.none { other -> other != candidate && subsumes(other,candidate) }
+        } }
         for (base in listOf(x, y, AccessPathBase.Zero)) for (path in listOf(p(), p(f), p(f, g), p(f, h), p(g), p(h), p(h, f)))
             for (tail in Tail.entries) for (e in listOf(ExclusionSet.Empty, ex(g))) {
                 val query = Pattern(PathFact(base, path, tail, mu), e)
-                val expected = rows.filter { (_, leaves) -> leaves.any { overlap(Pattern(it.fact, it.exclusion), query) } }
+                val expected = canonicalRows.filter { (_, leaves) -> leaves.any { overlap(Pattern(it.fact, it.exclusion), query) } }
                     .flatMap { (key, leaves) -> leaves.map { key to it } }.toSet()
                 assertEquals(expected, observed(store.edgesAt(node, query)), "$base $path $tail $e")
             }

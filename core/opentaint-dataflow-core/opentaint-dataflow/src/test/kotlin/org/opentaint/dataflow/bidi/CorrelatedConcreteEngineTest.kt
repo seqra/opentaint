@@ -73,7 +73,7 @@ class CorrelatedConcreteEngineTest {
         assertEquals(1, calls)
     }
 
-    @Test fun `subscription replay forwards a protected reversed view even after its plain view`() {
+    @Test fun `subscription replay reads the protected current inverse after a plain record upgrade`() {
         PipelineFixtures(index = 2).use { p ->
             val mark = MarkSlot.Concrete(p.store.mark("T"))
             val initial = p.ap.initial(p.store.pattern(mark = mark))
@@ -82,7 +82,13 @@ class CorrelatedConcreteEngineTest {
             p.records.add(Record(p.callee, Direction.FORWARD, initial, conclusion.withProtection(conclusion.root)))
             val part = p.subscription(added = p.store.fact(base = AccessPathBase.Return, mark = mark))
             p.replayPersisted(part)
-            assertEquals(listOf(false, true), p.views.map { it.nonSubsumable })
+            assertEquals(listOf(true), p.views.map { it.nonSubsumable },
+                "The persistent current directory replaces the obsolete plain delta record")
+            val out = CollectingOut()
+            val selected = p.views.single()
+            p.ops.applyRecordLeaf(selected.part.added, selected.view, selected.nonSubsumable,
+                p.config.mode, out, original = part.ref.premise)
+            assertNotNull((out.results.single() as TaintTree).nonSubsumable)
             assertEquals(1, p.views.map { it.view }.toSet().size,
                 "Protection does not change semantic view identity")
         }

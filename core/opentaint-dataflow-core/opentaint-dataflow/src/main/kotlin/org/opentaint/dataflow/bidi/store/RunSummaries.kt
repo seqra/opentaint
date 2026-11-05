@@ -2,25 +2,27 @@ package org.opentaint.dataflow.bidi.store
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
-import java.util.IdentityHashMap
 import org.opentaint.dataflow.graph.PortId
 
 /** One admitted relation. Outgoing demand is a filtered view of the final stored headers. */
 class RunSummaryStore(private val m: ApManager, flowBacked: Boolean = false) {
-    private val groups = IdentityHashMap<PremiseKey, ConclusionGroup>()
     private val interners = m.newInterners()
-    private val backed = if (flowBacked) FlowBackedSummaries(m) else null
+    private val normalStars = NormalStarRelationIndex(m, interners)
+    private val backed = FlowBackedSummaries(m, replaceCovered = flowBacked, interners = interners, normalStars = normalStars)
 
     /** Add a candidate only after the actor has completed demand restriction. */
-    fun addAdmitted(premise: PremiseKey, g: Facts): Facts? {
+    fun addAdmitted(premise: PremiseKey, g: Facts): Facts? = addAdmittedAll(premise, g).also {
+        check(it.size <= 1) { "Use addAdmittedAll for split canonical headers" }
+    }.singleOrNull()
+
+    fun addAdmittedAll(premise: PremiseKey, g: Facts): List<Facts> {
         m.cancellation.checkpoint()
-        if (!RuntimeDataDomain.packet(premise, g)) return null
+        if (!RuntimeDataDomain.packet(premise, g)) return emptyList()
         checkShape(premise, g)
-        backed?.let { return it.add(premise, g) }
-        return groups.getOrPut(premise) { ConclusionGroup(m, interners) }.add(g)
+        return backed.addAll(premise, g)
     }
 
-    fun all(): Sequence<Pair<PremiseKey, Facts>> = backed?.all() ?: entries(groups)
+    fun all(): Sequence<Pair<PremiseKey, Facts>> = backed.all()
 
     fun demandEdges(direction: Direction): Sequence<Pair<PremiseKey, Facts>> =
         all().filter { (premise, facts) -> selectedForHandoff(premise, facts.layer, direction) }
@@ -32,21 +34,14 @@ class RunSummaryStore(private val m: ApManager, flowBacked: Boolean = false) {
 
     private fun census(include: (PremiseKey, Layer) -> Boolean): RelationCensus {
         m.cancellation.checkpoint()
-        backed?.let { return it.census(include) }
-        val counter = RelationCensusCounter(m.cancellation)
-        var result = RelationCensus.ZERO
-        for ((premise, group) in groups) for (facts in group.all()) {
-            m.cancellation.checkpoint()
-            if (include(premise, facts.layer)) result += counter.scalar(facts)
-        }
-        return result
+        return backed.census(include)
     }
 
     /** Borrow the current admitted relation on its actor owner. Consume this view
      * before mutating the store; do not retain a historical Facts snapshot. */
     fun borrow(premise: PremiseKey): Sequence<Facts> {
         m.cancellation.checkpoint()
-        return backed?.borrow(premise) ?: groups[premise]?.all() ?: emptySequence()
+        return backed.borrow(premise)
     }
 
     private fun checkShape(premise: PremiseKey, facts: Facts) {
@@ -56,16 +51,6 @@ class RunSummaryStore(private val m: ApManager, flowBacked: Boolean = false) {
         check(premise !is PremiseSet || facts is TaintTree) { "A multi-premise summary must be TAINT" }
     }
 
-    private fun entries(source: IdentityHashMap<PremiseKey, ConclusionGroup>): Sequence<Pair<PremiseKey, Facts>> = sequence {
-        m.cancellation.checkpoint()
-        for ((premise, group) in source) {
-            m.cancellation.checkpoint()
-            for (facts in group.all()) {
-                m.cancellation.checkpoint()
-                yield(premise to facts)
-            }
-        }
-    }
 }
 
 /** Allocate only exits which actually publish a completed traversal. The owner

@@ -84,7 +84,7 @@ class FlowBackedSameBaseTest {
     }
 
     @Test
-    fun `prefix coverage preserves same path and unrelated output siblings`() {
+    fun `canonical MAY root retains the uncovered parent and covers its own descendants`() {
         val concrete = initial()
         val abstract = initial(mark = MarkSlot.STAR)
         val taint = marked(listOf(emptyList(), listOf(f, h), listOf(g)))
@@ -93,7 +93,7 @@ class FlowBackedSameBaseTest {
             if (flowFirst) store.addAdmitted(abstract, flow(listOf(listOf(f))))
             store.addAdmitted(concrete, taint)
             if (!flowFirst) store.addAdmitted(abstract, flow(listOf(listOf(f))))
-            assertEquals(setOf(emptyList(), listOf(g)), paths(store.borrow(concrete)))
+            assertEquals(setOf(emptyList()), paths(store.borrow(concrete)))
         }
     }
 
