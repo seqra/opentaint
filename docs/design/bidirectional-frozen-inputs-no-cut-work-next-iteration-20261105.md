@@ -7,10 +7,11 @@ The latest reached/completed/accepted iterations are OWASP run-5/run-5/run-5,
 Conductor run-15/run-14/run-13, Thingsboard run-1/none/none, and
 Stirling-PDF run-16/run-15/run-15. Conductor has two new missing findings.
 Resolve that regression before accepting the measured revision as a quality
-baseline. A separate verified two-function SpatialCanonical rollback restores
-R3 refinement guidance and all seven expected native R5 report projections.
-It isolates a causal contribution of coordinate removal, not an accepted fix
-or the first lost AP coordinate. Performance proposals 1 and 2 below remain
+baseline. Finer external control B restores R3 refinement guidance and all
+seven expected native R5 report projections by disabling only proper-prefix
+subtraction in `canonicalSpans`. A, same-point removal off alone, remains at
+five. This isolates a sufficient proper-prefix intervention, not an accepted
+fix or the first actual removed AP packet/coordinate. Performance proposals 1 and 2 below remain
 unimplemented and unselected; neither claims to fix the missing findings.
 
 ## 0. Correctness first: preserve required refinement guidance
@@ -37,10 +38,23 @@ collections are complete; four late R3 INPUT collections are whole-DROP and
 are not interpreted as empty. The main8331 quality result remains five versus
 seven and FAIL.
 
-This establishes a causal contribution of the two-place coordinate-removal
-bundle in the diagnostic. It does not isolate which function or exact first
-AP coordinate matters, or whether C2 or loop observation is the first affected
-consumer. The earlier NORMAL-off and matching-only controls fail to recover
+The earlier control establishes a causal contribution of the two-place
+coordinate-removal bundle. The finer A/B controls narrow the sufficient
+intervention to one expression in `canonicalSpans`: B replaces
+`samePoint(minus(key.node.leaf, key.above))` with `samePoint(key.node.leaf)`.
+Same-point removal, cross-header `canonicalRegions` behavior, NORMAL relations
+and opposite-only STAR remain on; same-header state callers inherit B's
+helper change. A replaces the expression with `minus(key.node.leaf, key.above)`
+and does not recover the reports. Native cold checks show A restores an
+EXACT/FLOW NORMAL initial, but warm state/group logic still drops that exact
+coordinate; it is not a blanket rollback of MAY-over-EXACT subsumption. Each
+capsule has 60 passing native checks. A has 66 complete collections/zero drops;
+B has 62 complete/four late R3 INPUT drops with all R5 collections complete;
+both reach run-6/run-5/run-5. These are diagnostic scopes, not new historical
+full-suite counts or SARIF-fingerprint equality.
+
+The first actual removed packet, exact mark/layer/coordinate and whether C2
+or loop observation is the first affected consumer remain untraced. The earlier NORMAL-off and matching-only controls fail to recover
 through R5; that does not exclude interactions. The [native NORMAL-cover/C2
 countercell](../reports/bidirectional-normal-cover-opposite-c2-countercell-20261105.md)
 shows why denotational relation cover alone is not an initial-progress theorem,
@@ -82,7 +96,7 @@ speedup. Sample shares are not seconds and are not retained-memory shares.
 
 | Priority | Change | Measured evidence | Work to remove |
 | --- | --- | --- | --- |
-| 0 | Preserve required refinement guidance; repair undesigned/unselected | Two-function coordinate-removal control restores R3 guidance and expected native R5 seven; main still fails | Correctness gate, not a performance claim |
+| 0 | Preserve required refinement guidance; repair undesigned/unselected | B proper-prefix-only control restores R3 guidance/native R5 seven; A same-point-only stays five; main still fails | Correctness gate, not a performance claim |
 | 1 | Canonicalize frozen joined inputs once | Thingsboard's observed run-1 static-completion window: 440.336 s; 33,403 Java samples; canonical packet/state work 48.97% of samples and 51.07% of weighted allocation bytes | Repeated normalization of the same immutable joined input for different writer visits |
 | 2 | Return bounded packets before protection transport | Conductor's logged top-24 method rows at run-12: 4,944,767 limit offers, zero over-limit offers; the run-12 capture contains 5,196 of 10,466 sample weights under `ApOps.limit` | Splitting, walking, and reattaching protection when the field limiter returns the original packet |
 

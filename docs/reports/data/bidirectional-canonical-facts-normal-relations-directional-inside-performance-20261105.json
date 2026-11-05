@@ -115207,12 +115207,12 @@
   "conductorInvestigationAppendix": {
     "report": "docs/reports/bidirectional-conductor-canonical-quality-regression-20261105.md",
     "data": "docs/reports/data/bidirectional-conductor-canonical-quality-regression-20261105.json",
-    "dataSha256": "fe0047dcdc0bb627a724571bf30683a0d8469dc5f94b3e8c9e4a84303cada52a",
-    "state": "PREFIX_COORDINATE_REMOVAL_CAUSAL_CONTRIBUTION_ISOLATED_REPAIR_UNDESIGNED_MAIN_QUALITY_FAIL",
+    "dataSha256": "0b40aa79d5cc3fa8162c2d8c713cb32db89820a19956ddc1f81b4de662f74d58",
+    "state": "PROPER_PREFIX_SUBTRACTION_CAUSAL_CONTRIBUTION_ISOLATED_REPAIR_UNDESIGNED_MAIN_QUALITY_FAIL",
     "runtimeRevision": "8331bf9e326ddd1bd5083dbc50456963d6b26b52",
-    "observedPositiveBoundary": "Verified prefix control restores three R3 WFDefSTAR/Graal75 Target-guidance rows and native R5 expectedseven report projections including Script12/253 andPython58/63, while NORMAL relations/directional matching remain ON.",
-    "remainingUncertainty": "Exact first AP coordinate/operator and C2-versus-loop-observer effect untraced. Repair UNDESIGNED/UNSELECTED; explicit user policy decision pending. No diagnostic SARIF fingerprints fabricated; no accepted fix/performance claim.",
+    "observedPositiveBoundary": "B restores actualR3WFDefSTAR guide and nativeR5Script12/253 plusPython58/63. Same-point/cross-header canonicalization and NORMAL/directional policies remainenabled.",
+    "remainingUncertainty": "First actual removedpacket/coordinate and C2-versus-loop-observer effect untraced. Repair/policy UNDESIGNED/UNSELECTED pendinguser. Native projection is not diagnostic SARIF fingerprints or accepted fix/performance.",
     "performanceUse": "Diagnostic timings excluded from main campaign comparison.",
-    "diagnosticCausalStatus": "Two-place coordinate-removal contribution isolated by positive external control; main8331 quality remains FAIL."
+    "diagnosticCausalStatus": "FinerB proper-prefix subtraction one-expression rollback restores expected native7; A same-point-only rollback remains5. Main8331 quality remainsFAIL."
   }
 }
