@@ -64,7 +64,10 @@ class DiagonalRelationsTest {
         val delta = assertNotNull(store.add(initial(), facts(paths = listOf(listOf(f), listOf(g)))))
         assertEquals(setOf(listOf(g)), paths(delta))
         assertEquals(setOf(listOf(f), listOf(g)), stored(store, initial()))
-        assertNull(store.add(initial(), facts(paths = listOf(listOf(f, h)))))
+        val fine = facts(paths = listOf(listOf(f, h)))
+        assertEquals(setOf(listOf(f,h)), paths(assertNotNull(store.add(initial(), fine))))
+        assertEquals(setOf(listOf(f),listOf(g),listOf(f,h)),stored(store,initial()))
+        assertNull(store.add(initial(),fine), "An identical supplied guide is not fresh")
         // Canonical admission re-encodes this mark's complete current geometry
         // as one packed row; both f and g assertions above remain exact.
         assertEquals(1, store.markMembershipCount)
@@ -78,7 +81,7 @@ class DiagonalRelationsTest {
             listOf(root,child),listOf(child,root))) {
             val store = DiagonalRelations(m)
             offers.forEach { store.addAll(initial(),it) }
-            assertEquals(setOf(emptyList<Int>()),stored(store,initial()))
+            assertEquals(setOf(emptyList<Int>(),listOf(f,g)),stored(store,initial()))
             assertEquals(1,store.rowCount)
             assertTrue(store.addAll(initial(),root).isEmpty())
         }
@@ -104,15 +107,16 @@ class DiagonalRelationsTest {
     }
 
     @Test
-    fun `a narrower protected ANY offer upgrades its existing containing leaf only`() {
+    fun `a narrower protected ANY offer keeps only its supplied flag coordinate`() {
         val store = DiagonalRelations(m)
         store.add(initial(), facts(paths = listOf(listOf(f), listOf(g))))
         val child = facts(paths = listOf(listOf(f, h)))
         val delta = assertNotNull(store.add(initial(), child.withProtection(child.root)))
-        assertEquals(setOf(listOf(f)), paths(delta))
-        assertEquals(setOf(listOf(f)), flags(delta))
+        assertEquals(setOf(listOf(f,h)), paths(delta))
+        assertEquals(setOf(listOf(f,h)), flags(delta))
         assertNull(store.add(initial(), child.withProtection(child.root)))
-        assertEquals(setOf(listOf(f)), store.borrow(initial()).flatMap { flags(it).asSequence() }.toSet())
+        assertEquals(setOf(listOf(f),listOf(g),listOf(f,h)),stored(store,initial()))
+        assertEquals(setOf(listOf(f,h)), store.borrow(initial()).flatMap { flags(it).asSequence() }.toSet())
     }
 
     @Test

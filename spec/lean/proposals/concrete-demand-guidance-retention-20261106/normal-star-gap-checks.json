@@ -1,0 +1,49 @@
+{
+  "schema": "normal-star-flow-admission-gap-proof-check-v1",
+  "state": "PASS_COUNTEREXAMPLE_ONLY_ADMISSION_DECISION_PENDING",
+  "model": "NormalStarFlowAdmissionGap.lean",
+  "modelSha256": "82185b7c29f4c56c55ae1b8a0bc82bd3dd8109f1cba9b87e41bfd297338ad2d0",
+  "checkerSha256": "97261a626f8e0fab88689ed456016ab70916659b1a35cc01103dc15db954337b",
+  "scalarSourceSha256": "3a42cc1eb3209c82400ba528bdb1e80ba17bc09540e19e59b0d5272f9fd7c5f0",
+  "theorems": 12,
+  "theoremNames": [
+    "current_C2_same_head_ANY_STAR_FLOW_rejects",
+    "supplied_STAR_FLOW_is_not_MUST",
+    "normal_STAR_FLOW_relation_has_nonempty_entry",
+    "suffix_transport",
+    "universal_normal_STAR_FLOW_to_ret_STAR_FLOW_suffix",
+    "universal_normal_exact_T_suffix",
+    "two_getters_transport_every_normal_exact_T_suffix",
+    "existing_run3_policy_rejects_frozen_getG_cell",
+    "rejected_metadata_still_has_NORMAL_STAR_FLOW_read_image",
+    "concrete_empty_suffix_survives_both_normal_getters",
+    "a_different_first_field_is_not_transferred",
+    "executable_gap_witness"
+  ],
+  "axiomAudit": [
+    "'NormalStarFlowAdmissionGap.current_C2_same_head_ANY_STAR_FLOW_rejects' depends on axioms: [propext]",
+    "'NormalStarFlowAdmissionGap.supplied_STAR_FLOW_is_not_MUST' depends on axioms: [propext]",
+    "'NormalStarFlowAdmissionGap.normal_STAR_FLOW_relation_has_nonempty_entry' does not depend on any axioms",
+    "'NormalStarFlowAdmissionGap.suffix_transport' depends on axioms: [propext]",
+    "'NormalStarFlowAdmissionGap.universal_normal_STAR_FLOW_to_ret_STAR_FLOW_suffix' depends on axioms: [propext]",
+    "'NormalStarFlowAdmissionGap.universal_normal_exact_T_suffix' depends on axioms: [propext]",
+    "'NormalStarFlowAdmissionGap.two_getters_transport_every_normal_exact_T_suffix' depends on axioms: [propext]",
+    "'NormalStarFlowAdmissionGap.existing_run3_policy_rejects_frozen_getG_cell' depends on axioms: [propext]",
+    "'NormalStarFlowAdmissionGap.rejected_metadata_still_has_NORMAL_STAR_FLOW_read_image' depends on axioms: [propext]",
+    "'NormalStarFlowAdmissionGap.concrete_empty_suffix_survives_both_normal_getters' does not depend on any axioms",
+    "'NormalStarFlowAdmissionGap.a_different_first_field_is_not_transferred' does not depend on any axioms",
+    "'NormalStarFlowAdmissionGap.executable_gap_witness' depends on axioms: [propext]"
+  ],
+  "allowedFoundationAxioms": [
+    "propext",
+    "Quot.sound"
+  ],
+  "scope": "Existing same-head ANY demand/STAR FLOW rejection, a typed NORMAL STAR/FLOW read suffix adapter, and f/g exact full-T composition including empty suffix; ordinary bases/countable fields/Empty E.",
+  "notProved": [
+    "New policy or emitter correctness",
+    "Termination",
+    "Native AP equivalence beyond separately prepared isolated witness",
+    "Actor scheduling/C2 acceptance or real-program recovery",
+    "STAR/MUST substitution or changed layer/field/rule/mark semantics"
+  ]
+}

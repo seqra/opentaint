@@ -76,11 +76,10 @@ class MethodEdgeStoreTest {
     private val m = fixture.manager
     private fun store(limit: Int = Int.MAX_VALUE): MethodEdgeStore = MethodEdgeStore(m, fixture.method, fixture.lm, limit)
 
-    // Region coverage is unchanged. A different FLOW MAY guide position must
+    // Region coverage is unchanged. A different DEMAND MAY guide position must
     // still be admitted because its next-run initial image can differ.
     private fun storageSubsumes(stored: Conclusion, incoming: Conclusion): Boolean =
-        subsumes(stored, incoming) && !(incoming.demand && incoming.fact.mark is MarkSlot.Star &&
-            incoming.fact.tail == Tail.ANY && stored.fact.path != incoming.fact.path)
+        subsumes(stored, incoming) && !(incoming.demand && incoming.fact.tail == Tail.ANY && stored.fact.path != incoming.fact.path)
 
     @Test
     fun `K6 and multi-premise TAINT guards reject invalid edges without adding values`(): Unit = with(v) {

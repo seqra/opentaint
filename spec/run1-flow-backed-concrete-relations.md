@@ -20,6 +20,13 @@ Terminology: **protection is the non-subsumable flag**. These names refer to
 the same per-output-leaf/per-FULL-mark Boolean. There is no second protection
 mechanism, support label or dependency graph.
 
+The selected 6 November [storage clarification](concrete-demand-guidance-retention.md)
+extends the retention rule: protected effective coordinates cannot be
+subsumed by any storage normalization, not only by FLOW. Exact duplicates
+still merge with flag-wins. This does not prohibit transfer kills or change
+assignment, cleaner or summary-cycle protection. Its storage prototype and
+native end-to-end acceptance remain open.
+
 The selected [correlated concrete initial extension](run1-correlated-concrete-initials.md)
 makes the subsumption mechanism available in all runs and directions,
 including the existing ANY cell and a separate equal-output-path STAR cell.

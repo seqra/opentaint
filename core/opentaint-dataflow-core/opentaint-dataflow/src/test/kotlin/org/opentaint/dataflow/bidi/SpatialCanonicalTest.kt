@@ -56,7 +56,8 @@ class SpatialCanonicalTest {
                 listOf(childT, childU, root), listOf(root, childT, childU))) {
                 val group = TaintGroup(m, m.newInterners().taint)
                 packets.forEach(group::addAll)
-                assertEquals(expected(root, childU), leaves(group.all()))
+                val retained = if (tail == Tail.ANY) expected(root, childT, childU) else expected(root, childU)
+                assertEquals(retained, leaves(group.all()))
             }
         }
     }

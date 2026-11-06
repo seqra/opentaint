@@ -1,0 +1,37 @@
+{
+  "schema": "ordered-embed-proof-correction-v1",
+  "state": "CORRECTED_SOURCE_NOT_ROOT_RERUN",
+  "rootFirstAttempt": {
+    "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/concrete-demand-guidance-design-20261106/ordered-embed-proof-validation/first-attempt.json",
+    "sha256": "8395d162ee4d852f38e5a07603c5e233d04dec7c9a97ebb580b583c9be4c1630",
+    "rootSession": 19215,
+    "result": "FAILED_PREPARATION_NOT_ACCEPTED"
+  },
+  "originalModel": {
+    "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/concrete-demand-guidance-design-20261106/ordered-embed-proof-validation/EmbedRawProtectionOrdered.lean",
+    "sha256": "47f95c46c393eaa5956bea984563373afe476b22de5057eef3df3d219b7d0764"
+  },
+  "originalPreparation": {
+    "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/concrete-demand-guidance-design-20261106/ordered-embed-proof-validation/ordered-embed-preparation.json",
+    "sha256": "0d56f7c9b7e8eb7c2ef1669adeb9bc4b05a3ec4ac4fb436d96728e55ff5c5da2"
+  },
+  "correctedModel": {
+    "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/concrete-demand-guidance-retention-20261106/EmbedRawProtectionOrdered.lean",
+    "sha256": "7df55b2174a9343c6ffd5a6a8e8f767f41451dcb1d8937970f010ac5d24ce696",
+    "bytes": 25581
+  },
+  "changedProofBodies": [
+    "exactRows_mem",
+    "exactRows_no_spans",
+    "spanRows_literal_header",
+    "countExact_allocations"
+  ],
+  "definitionsTheoremStatementsAll50NamesUnchanged": true,
+  "outsideProofBodiesSha256": "0a7301dea60d5cc04546c13fd46770d0b4ca52f69e1b0b5da72ecf1f3cace2dc",
+  "newAxiomsOrPlaceholders": false,
+  "correction": "Use change/rw before unfolding exactRow inside list maps; prove span header membership manually by head/tail and map witnesses.",
+  "checkerChanged": false,
+  "nativeBindingChanged": false,
+  "preparerRanLeanOrChecker": false,
+  "oldReceiptsOrArchiveChanged": false
+}

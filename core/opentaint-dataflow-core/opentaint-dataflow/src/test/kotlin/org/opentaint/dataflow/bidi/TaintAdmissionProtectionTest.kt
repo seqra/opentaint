@@ -7,8 +7,9 @@ import org.opentaint.dataflow.util.Cancellation
 import kotlin.random.Random
 import kotlin.test.*
 
-/** Preserve the literal base oracle for unchanged STAR/exact admissions. The
- * selected MUST/MAY cells use independent finite region + delta-union checks. */
+/** Preserve the literal base oracle for no-H STAR/exact input and current state.
+ * Selected H and DEMAND/ANY guide retention use independent typed-coordinate
+ * union checks; DATA keeps its bounded incremental region/delta oracle. */
 class TaintAdmissionProtectionTest {
     private val fixture = StoreFixtures()
     private val m = fixture.manager
@@ -59,6 +60,38 @@ class TaintAdmissionProtectionTest {
         }
     }
 
+    /** TAINT is fixed by this test's value type. EXACT keys ignore packet
+     * tail/E wrappers; any-mask keys retain their complete span tail and E.
+     * Walk the DAG directly: raw NORMAL/ANY packets are valid here even when
+     * they cannot be constructed as scalar NORMAL/ANY conclusions (W6).
+     */
+    private data class TypedCoordinate(
+        val base: AccessPathBase, val layer: Layer, val path: List<Int>, val mark: Int,
+        val tail: Tail, val exclusion: ExclusionSet,
+    )
+
+    private fun typed(value: TaintTree, coordinate: Coordinate) = TypedCoordinate(
+        value.base, value.layer, coordinate.path, coordinate.mark,
+        if (coordinate.exact) Tail.EXACT else value.anyTail,
+        if (coordinate.exact) empty else value.exclusion,
+    )
+
+    private fun protectedKeys(values: List<TaintTree>): Set<TypedCoordinate> = buildSet {
+        for (value in values) for (coordinate in coordinates(value.nonSubsumable))
+            add(typed(value, coordinate))
+    }
+
+    private fun guideKeys(values: List<TaintTree>): Set<TypedCoordinate> = buildSet {
+        for (value in values) {
+            if (value.layer != Layer.DEMAND || value.anyTail != Tail.ANY || value.exclusion != empty) continue
+            for (coordinate in coordinates(value.root)) if (!coordinate.exact)
+                add(typed(value, coordinate))
+        }
+    }
+
+    private fun deltaCoordinates(values: List<TaintTree>, protectedOnly: Boolean = false): Set<Coordinate> =
+        values.flatMap { coordinates(if (protectedOnly) it.nonSubsumable else it.root) }.toSet()
+
     private fun observed(t: TaintTree?): AnnotatedRow? = t?.let {
         AnnotatedRow(it.base, it.layer, it.exclusion, it.anyTail,
             coordinates(it.root), coordinates(it.nonSubsumable))
@@ -93,7 +126,10 @@ class TaintAdmissionProtectionTest {
         val actual = TaintGroup(m, m.newInterners().taint)
         return inputs.mapIndexed { i, input ->
             val before = actual.all().toList()
-            val unchanged = !input.root.hasAny || input.anyTail == Tail.STAR
+            // Keep the byte/row oracle only where the selected H contract is
+            // inactive on BOTH operands. Restore current state, never re-admit it.
+            val unchanged = input.nonSubsumable == null && before.all { it.nonSubsumable == null } &&
+                (!input.root.hasAny || input.anyTail == Tail.STAR)
             val legacy = if (unchanged) ReferenceTaintGroup(m,m.newInterners().taint).also {
                 before.forEach(it::restoreCurrent)
             } else null
@@ -101,10 +137,28 @@ class TaintAdmissionProtectionTest {
             val changes = actual.addAll(input)
             val after = actual.all().toList()
             if (legacy != null) {
+                assertTrue(changes.size <= 1,"no-H STAR/exact delta cardinality at $i")
                 assertEquals(observed(expectedDelta),observed(changes.singleOrNull()),"unchanged delta $i")
-                assertTrue(changes.size <= 1)
                 assertEquals(legacy.all().map(::observed).toList(),after.map(::observed).toList(),"unchanged rows at $i")
             }
+            val beforeH = protectedKeys(before)
+            val inputH = protectedKeys(listOf(input))
+            val afterH = protectedKeys(after)
+            val deltaH = protectedKeys(changes)
+            assertEquals(beforeH + inputH,afterH,"literal typed H union at $i")
+            assertTrue(afterH.containsAll(deltaH),"delta invents no typed H at $i")
+            assertEquals(afterH,beforeH + deltaH,"complete typed H delta at $i")
+
+            val beforeGuides = guideKeys(before)
+            val inputGuides = guideKeys(listOf(input))
+            val afterGuides = guideKeys(after)
+            val deltaGuides = guideKeys(changes)
+            assertEquals(beforeGuides + inputGuides,afterGuides,"literal DEMAND/ANY guide union at $i")
+            assertTrue(afterGuides.containsAll(deltaGuides),"delta invents no guide coordinate at $i")
+            assertEquals(afterGuides,beforeGuides + deltaGuides,"complete guide delta at $i")
+
+            // This is the union of the actual pre-state and this input, not
+            // a globally recomputed DATA normal form or an arrival-order law.
             for (protected in listOf(false,true)) {
                 val expected = if (legacy == null) region(before + input,protected) else region(legacy.all().toList(),protected)
                 val retained = region(after,protected)
@@ -112,7 +166,10 @@ class TaintAdmissionProtectionTest {
                 if (legacy == null) assertEquals(retained,region(before + changes,protected),
                     "complete canonical delta $i protected=$protected input=${observed(input)} before=${before.map(::observed)}")
             }
-            after.forEach { assertTrue(coordinates(it.root).containsAll(coordinates(it.nonSubsumable))) }
+            (after + changes).forEach {
+                assertTrue(coordinates(it.root).containsAll(coordinates(it.nonSubsumable)),
+                    "every retained/delta H coordinate has a literal payload carrier at $i")
+            }
             changes
         }
     }
@@ -124,8 +181,8 @@ class TaintAdmissionProtectionTest {
         val common = c(emptyList(), mark = u)
         val deltas = checkSequence(listOf(tree(setOf(a, common), setOf(a)),
             tree(setOf(b, common), setOf(b))))
-        assertEquals(setOf(b), coordinates(deltas[1].single().root))
-        assertEquals(setOf(b), coordinates(deltas[1].single().nonSubsumable))
+        assertEquals(setOf(b), deltaCoordinates(deltas[1]))
+        assertEquals(setOf(b), deltaCoordinates(deltas[1], protectedOnly = true))
     }
 
     @Test
@@ -136,7 +193,7 @@ class TaintAdmissionProtectionTest {
         val deltas = checkSequence(listOf(plain, plain, protected, plain, protected))
         assertTrue(deltas[0].isNotEmpty())
         assertTrue(deltas[1].isEmpty())
-        assertEquals(setOf(a), coordinates(deltas[2].single().nonSubsumable))
+        assertEquals(setOf(a), deltaCoordinates(deltas[2], protectedOnly = true))
         assertTrue(deltas[3].isEmpty())
         assertTrue(deltas[4].isEmpty())
     }
@@ -148,8 +205,8 @@ class TaintAdmissionProtectionTest {
         val deltas = checkSequence(listOf(
             tree(setOf(parent), tail = Tail.ANY, layer = Layer.DEMAND),
             tree(setOf(exact), setOf(exact), layer = Layer.DEMAND)))
-        assertEquals(setOf(exact), coordinates(deltas[1].single().root))
-        assertEquals(setOf(exact), coordinates(deltas[1].single().nonSubsumable))
+        assertEquals(setOf(exact), deltaCoordinates(deltas[1]))
+        assertEquals(setOf(exact), deltaCoordinates(deltas[1], protectedOnly = true))
     }
 
     @Test
@@ -169,8 +226,8 @@ class TaintAdmissionProtectionTest {
         val b = c(listOf(g), exact = false, mark = u)
         val broad = tree(setOf(a, b), setOf(a), exclusion = ExclusionSet.of(f))
         val narrower = tree(setOf(a, b), setOf(b), exclusion = ExclusionSet.of(intArrayOf(f, g)))
-        val delta = checkSequence(listOf(broad, narrower))[1].single()
-        assertEquals(setOf(b), coordinates(delta.nonSubsumable))
+        val delta = checkSequence(listOf(broad, narrower))[1]
+        assertEquals(setOf(b), deltaCoordinates(delta, protectedOnly = true))
     }
 
     @Test
@@ -179,11 +236,14 @@ class TaintAdmissionProtectionTest {
         val exact = c(listOf(g))
         val delta = checkSequence(listOf(
             tree(setOf(must), exclusion = ExclusionSet.of(f)),
-            tree(setOf(must, exact), setOf(exact), exclusion = ExclusionSet.of(intArrayOf(f, g)))))[1].single()
-        assertEquals(setOf(exact), coordinates(delta.root))
-        assertEquals(setOf(exact), coordinates(delta.nonSubsumable))
-        assertEquals(empty, delta.exclusion)
-        assertEquals(Tail.ANY_TAINT, delta.anyTail)
+            tree(setOf(must, exact), setOf(exact), exclusion = ExclusionSet.of(intArrayOf(f, g)))))[1]
+        assertTrue(delta.isNotEmpty())
+        assertEquals(setOf(exact), deltaCoordinates(delta))
+        assertEquals(setOf(exact), deltaCoordinates(delta, protectedOnly = true))
+        delta.forEach {
+            assertEquals(empty, it.exclusion)
+            assertEquals(Tail.ANY_TAINT, it.anyTail)
+        }
     }
 
     @Test

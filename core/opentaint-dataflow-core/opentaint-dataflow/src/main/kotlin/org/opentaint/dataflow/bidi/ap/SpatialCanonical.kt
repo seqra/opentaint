@@ -46,6 +46,7 @@ private fun <P : TrieLeaf> LeafAlgebra<P>.canonicalSpans(
 /** Explicit MAY positions guide later refinement even when an ancestor covers
  * their denotation. This applies to real FLOW packets, not TAINT geometry. */
 internal fun FlowTree.keepsDemandPositions(): Boolean = layer == Layer.DEMAND && tail == Tail.ANY
+internal fun TaintTree.keepsDemandPositions(): Boolean = layer == Layer.DEMAND && anyTail == Tail.ANY
 
 internal fun ApManager.canonicalFlowPacket(value: FlowTree): FlowTree =
     if (value.keepsDemandPositions()) value else canonicalFlowDataPacket(value)
@@ -62,12 +63,11 @@ internal fun ApManager.canonicalTaintPacket(value: TaintTree): TaintTree {
     if (value.anyTail != Tail.ANY && value.anyTail != Tail.ANY_TAINT || !value.root.hasAny) return value
     if (value.root.childData == null && (value.anyTail != Tail.ANY || value.root.leaf.exact.isEmpty)) return value
     val may = value.anyTail == Tail.ANY
-    fun below(leaf: TaintLeaves) = taintLeaves(if (may) leaf.any else MarkSet.EMPTY, leaf.any)
+    fun below(leaf: TaintLeaves) = taintLeaves(if (may) leaf.any else MarkSet.EMPTY,
+        if (value.keepsDemandPositions()) MarkSet.EMPTY else leaf.any)
     fun at(leaf: TaintLeaves) = if (may) taintLeaves(leaf.exact - leaf.any, leaf.any) else leaf
     val ordinary = taintAlg.canonicalSpans(value.root, value.exclusion, this, ::below, ::at)
-    val protection = value.nonSubsumable?.let {
-        taintAlg.canonicalSpans(it, value.exclusion, this, ::below, ::at)
-    }
+    val protection = value.nonSubsumable
     // Native masks require coordinate inclusion even when plain ancestor
     // support is spatially broader than the protected dependency.
     val root = if (protection == null) ordinary else taintAlg.mergeAdd(ordinary, protection, cancellation)
@@ -313,6 +313,12 @@ private data class TaintSpatialHeader(val tail: Tail, val exclusion: ExclusionSe
 private class TaintSpatialRoots(var ordinary: TaintNode? = null, var protected: TaintNode? = null)
 
 internal fun ApManager.canonicalTaintState(values: List<TaintTree>): List<TaintTree> {
+    if (values.none { it.nonSubsumable != null }) return canonicalTaintDataState(values)
+    return embedRawProtection(canonicalTaintDataState(values.map { it.withoutProtection() }), values)
+}
+
+/** The existing regional DATA step. STAR/T4 admission remains in TaintGroup. */
+private fun ApManager.canonicalTaintDataState(values: List<TaintTree>): List<TaintTree> {
     if (values.isEmpty()) return values
     val first = values[0]
     fun union(a: TaintNode?, b: TaintNode?): TaintNode? = when {
@@ -344,7 +350,8 @@ internal fun ApManager.canonicalTaintState(values: List<TaintTree>): List<TaintT
             extract(flags,true)?.let { protected += SpatialRegion(value.anyTail,value.exclusion,Unit,it) }
         }
     }
-    val ordinarySpans = taintAlg.canonicalRegions(ordinary,this) { _,_ -> true }
+    val ordinarySpans = taintAlg.canonicalRegions(ordinary,this,
+        preserveAnyHeads = first.layer == Layer.DEMAND) { _,_ -> true }
     val protectedSpans = taintAlg.canonicalRegions(protected,this) { _,_ -> true }
     fun pruneExact(root: TaintNode?, spans: List<SpatialRegion<TaintLeaves,Unit>>): TaintNode? {
         var current = root
@@ -394,6 +401,87 @@ internal fun ApManager.canonicalTaintState(values: List<TaintTree>): List<TaintT
         val root = union(roots.ordinary,roots.protected) ?: return@mapNotNull null
         taintTree(first.base,first.layer,root,header.exclusion,header.tail,roots.protected)
     }
+}
+
+/** Retain supplied protection by effective scalar coordinates. DATA-derived
+ * E joins stay plain. EXACT ignores its wrapper; span masks retain tail/E. */
+internal fun ApManager.embedRawProtection(data: List<TaintTree>, sources: List<TaintTree>): List<TaintTree> {
+    if (sources.none { it.nonSubsumable != null }) return data
+    val first = sources.first()
+    fun union(a: TaintNode?, b: TaintNode?): TaintNode? = when {
+        a == null -> b
+        b == null -> a
+        else -> taintAlg.mergeAdd(a, b, cancellation)
+    }
+    fun exact(root: TaintNode): TaintNode? = taintAlg.mapCanonicalLeaves(root, cancellation) {
+        taintLeaves(it.exact, MarkSet.EMPTY)
+    }
+    fun minus(a: TaintNode?, b: TaintNode?): TaintNode? =
+        if (a == null || b == null) a else taintAlg.minusNode(a, b, cancellation)
+
+    var exactFlags: TaintNode? = null
+    for (source in sources) {
+        cancellation.checkpoint()
+        check(source.base == first.base && source.layer == first.layer)
+        source.nonSubsumable?.let { exactFlags = union(exactFlags, exact(it)) }
+    }
+    val grouped = LinkedHashMap<TaintSpatialHeader, TaintSpatialRoots>()
+    fun add(header: TaintSpatialHeader, root: TaintNode, flags: TaintNode?) {
+        val key = if (root.hasAny || grouped[header]?.ordinary?.hasAny == true) header
+            else TaintSpatialHeader(Tail.ANY_TAINT, ExclusionSet.Empty)
+        val target = grouped.getOrPut(key, ::TaintSpatialRoots)
+        target.ordinary = union(target.ordinary, root)
+        target.protected = union(target.protected, flags)
+    }
+    var placedExact: TaintNode? = null
+    for (value in data) {
+        cancellation.checkpoint()
+        check(value.nonSubsumable == null && value.base == first.base && value.layer == first.layer)
+        val matching = exactFlags?.let { intersectTaintMask(it, value.root, cancellation) }
+        val repeated = if (matching == null || placedExact == null) null
+            else intersectTaintMask(matching, checkNotNull(placedExact), cancellation)
+        val root = minus(value.root, repeated) ?: continue
+        val flags = minus(matching, placedExact)
+        add(TaintSpatialHeader(value.anyTail, value.exclusion), root, flags)
+        placedExact = union(placedExact, flags)
+    }
+    for (source in sources) {
+        cancellation.checkpoint()
+        val flags = source.nonSubsumable ?: continue
+        val spans = taintAlg.mapCanonicalLeaves(flags, cancellation) { taintLeaves(MarkSet.EMPTY, it.any) }
+        if (spans != null) add(TaintSpatialHeader(source.anyTail, source.exclusion), spans, spans)
+    }
+    // Restore pruned exact flags in an existing original cohort where possible.
+    // This keeps whole-content T4 geometry without duplicating effective EXACT.
+    for (source in sources) {
+        cancellation.checkpoint()
+        val header = TaintSpatialHeader(source.anyTail, source.exclusion)
+        if (header !in grouped) continue
+        val flags = minus(source.nonSubsumable?.let(::exact), placedExact) ?: continue
+        add(header, flags, flags)
+        placedExact = union(placedExact, flags)
+    }
+    minus(exactFlags, placedExact)?.let {
+        add(TaintSpatialHeader(Tail.ANY_TAINT, ExclusionSet.Empty), it, it)
+    }
+    return grouped.mapNotNull { (header, roots) ->
+        roots.ordinary?.let { taintTree(first.base, first.layer, it, header.exclusion, header.tail, roots.protected) }
+    }
+}
+
+/** Copy only already-current flags onto a legacy DATA delta. No prefix overlap. */
+internal fun ApManager.withCurrentProtection(value: TaintTree, current: List<TaintTree>): TaintTree {
+    var mask: TaintNode? = null
+    for (stored in current) {
+        cancellation.checkpoint()
+        if (stored.base != value.base || stored.layer != value.layer) continue
+        val flags = stored.nonSubsumable ?: continue
+        val typed = if (stored.anyTail == value.anyTail && stored.exclusion == value.exclusion) flags
+            else taintAlg.mapCanonicalLeaves(flags, cancellation) { taintLeaves(it.exact, MarkSet.EMPTY) } ?: continue
+        val common = intersectTaintMask(typed, value.root, cancellation) ?: continue
+        mask = mask?.let { taintAlg.mergeAdd(it, common, cancellation) } ?: common
+    }
+    return value.withProtection(mask, cancellation)
 }
 
 /** Read current exact coordinates, not semantic ancestor coverage. A final

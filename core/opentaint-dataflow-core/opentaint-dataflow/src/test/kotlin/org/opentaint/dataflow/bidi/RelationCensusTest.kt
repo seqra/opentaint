@@ -50,7 +50,12 @@ class RelationCensusTest {
             arrayOf(m.taintAlg.leafNode(m.taintLeaves(m.markSetOf(t), MarkSet.EMPTY))))
         val facts = m.taintTree(output, Layer.DEMAND, root, anyTail = Tail.ANY, nonSubsumable = protected)
         val store = RunSummaryStore(m)
-        store.addAdmitted(initial(), facts)
+        val admitted = store.addAdmittedAll(initial(), facts)
+        assertEquals(5, admitted.flatMap { fixture.ops.leaves(it).toList() }.toSet().size)
+        assertEquals(2, admitted.sumOf { value ->
+            (value as? TaintTree)?.protectedPart()?.let { fixture.ops.leaves(it).count() } ?: 0
+        })
+        assertTrue(store.all().all { it.first === initial() }, "Keep the full concrete premise")
         val flowLeaf = FlowAlgebra.LEAF_NODE
         val flowRoot = FlowAlgebra.node(FlowLeaf.NONE, intArrayOf(f, g).sortedArray(), arrayOf(flowLeaf, flowLeaf))
         store.addAdmitted(initial(MarkSlot.STAR), m.flowTree(output, Layer.DEMAND, ExclusionSet.Empty, MarkSet.EMPTY, flowRoot, Tail.ANY))

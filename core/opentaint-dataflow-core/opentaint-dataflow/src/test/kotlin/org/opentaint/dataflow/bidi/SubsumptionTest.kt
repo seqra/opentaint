@@ -205,16 +205,19 @@ class SubsumptionTest {
         val group = group()
         group.add(typed(stored))
         val delta = assertNotNull(group.add(taintBundle(incoming, empty, Layer.DEMAND)))
-        val referenceDelta = incoming.filterNot { subsumes(stored,it) }.filter { candidate ->
+        val referenceDataDelta = incoming.filterNot { subsumes(stored,it) }.filter { candidate ->
             incoming.none { other -> other != candidate && subsumes(other,candidate) }
         }.toSet()
+        assertEquals(setOf(incoming[3]),referenceDataDelta, "The scalar DATA coverage law is unchanged")
+        val suppliedGuides = incoming.filter { it.demand && it.fact.tail == Tail.ANY }
+        val referenceDelta = referenceDataDelta + suppliedGuides
         assertEquals(referenceDelta,decode(listOf(delta)))
-        assertEquals(setOf(incoming[3]),referenceDelta)
+        assertEquals(setOf(incoming[1],incoming[3]),referenceDelta)
         assertEquals(observed(listOf(stored) + incoming), observed(decode(group.all().toList())))
     }
 
     @Test
-    fun `demand ancestors retain FLOW guide positions and still canonicalize concrete MAY data`() {
+    fun `demand ancestors retain supplied FLOW and concrete MAY guide positions`() {
         for (mark in listOf(MarkSlot.STAR, mt)) {
             val descendant = conclusion(listOf(g), Tail.ANY, mark)
             val ancestor = conclusion(emptyList(), Tail.ANY, mark)
@@ -222,18 +225,13 @@ class SubsumptionTest {
             val group = group()
             assertNotNull(group.add(typed(descendant)))
             assertNotNull(group.add(typed(ancestor)))
-            val flowGuide = mark is MarkSlot.Star
-            assertEquals(if (flowGuide) setOf(ancestor,descendant) else setOf(ancestor), decode(group.all().toList()))
+            assertEquals(setOf(ancestor,descendant), decode(group.all().toList()))
+            assertEquals(setOf(later),decode(listOf(assertNotNull(group.add(typed(later))))))
+            assertEquals(setOf(ancestor,descendant,later),decode(group.all().toList()))
             val stored = group.all().toList()
-            if (flowGuide) {
-                assertEquals(setOf(later),decode(listOf(assertNotNull(group.add(typed(later))))))
-                assertEquals(setOf(ancestor,descendant,later),decode(group.all().toList()))
-            } else {
-                assertNull(group.add(typed(later)))
-                assertEquals(stored.size, group.all().count())
-                stored.zip(group.all().toList()).forEach { (before, after) -> assertSame(before, after) }
-            }
             assertNull(group.add(typed(later)),"An identical offered coordinate is never fresh")
+            assertEquals(stored.size, group.all().count())
+            stored.zip(group.all().toList()).forEach { (before, after) -> assertSame(before, after) }
             assertEquals(observed(listOf(descendant, ancestor, later)), observed(decode(group.all().toList())))
         }
     }
@@ -331,8 +329,7 @@ class SubsumptionTest {
             val first = typed(stored)
             assertSame(first, group.add(first), label)
             val delta = group.add(typed(incoming))
-            val keepGuidePosition = incoming.demand && incoming.fact.mark is MarkSlot.Star &&
-                incoming.fact.tail == Tail.ANY && stored.fact.path != incoming.fact.path
+            val keepGuidePosition = incoming.demand && incoming.fact.tail == Tail.ANY && stored.fact.path != incoming.fact.path
             assertEquals(subsumes(stored, incoming) && !keepGuidePosition, delta == null, label)
             assertEquals(observed(listOf(stored, incoming)), observed(decode(group.all().toList())), label)
         }

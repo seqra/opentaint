@@ -1,0 +1,171 @@
+{
+  "schema": "concrete-demand-guidance-proposal-preparation-v1",
+  "state": "PREPARED_SOURCE_ONLY_NOT_LEAN_CHECKED_BEHAVIOR_NOT_SELECTED",
+  "headProvidedByRoot": "6e0178c25",
+  "files": {
+    "ConcreteGuidance.lean": {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/concrete-demand-guidance-retention-20261106/ConcreteGuidance.lean",
+      "sha256": "4154360483097e9578975d00e90cf342845fc9ea3a2cb5fde5989b667f3731bb",
+      "bytes": 26866
+    },
+    "check.py": {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/concrete-demand-guidance-retention-20261106/check.py",
+      "sha256": "93095812d338cb860178d808e43dde4686d634087031f875de8470c8046af64e",
+      "bytes": 4025
+    },
+    "README.md": {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/concrete-demand-guidance-retention-20261106/README.md",
+      "sha256": "522e49bba28d169cad16ec7d97163e712900bf54afc7db1b0ed8bd9499c23724",
+      "bytes": 6639
+    }
+  },
+  "inputs": [
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Groups.kt",
+      "sha256": "6658b00dfa575718df41631e549bcd00f0a274e24e5547be63dc7aaa66d13699",
+      "bytes": 14844
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/SpatialCanonical.kt",
+      "sha256": "82639892d8ad4884264192dd08aa39d7978e255b711faab13c6cb94c738f9d4a",
+      "bytes": 23949
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/LeafViews.kt",
+      "sha256": "5d8566d80e26059e58e09717b845164b5583fce286195ae33dcfb61f6d9be2bb",
+      "bytes": 2474
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Conclusions.kt",
+      "sha256": "ff059941492674f0eb063e546a1e81ed83d7e13b5294d9124ef42ea807d2e9ec",
+      "bytes": 6084
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/RestrictedInitialPolicy.kt",
+      "sha256": "dcbaee551ecdae33590c56ef0154bfd0ef419c8c8fa3dc7b38127006a73ad44e",
+      "bytes": 7862
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/AdmittedInitial.kt",
+      "sha256": "8960e70e51cb77635a5545ff50828ac15bd053b1ac7d2bcf2914418d5b7340fd",
+      "bytes": 2111
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandStore.kt",
+      "sha256": "c28466f8ec0db8752e2c571d6e7ad7140fdf03888c356c9315f7d730f7cd310a",
+      "bytes": 32317
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/BlockHandOff.kt",
+      "sha256": "ac4fe68c4f03a362b4107652bd273eba3caf1d98bbb686873fef3ebb33167e15",
+      "bytes": 3219
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/FlowDemandGuideProducerRegressionTest.kt",
+      "sha256": "58e6ec0140ddaf18aa6cefb8ec19fe2a2bead4143c9bbc5d93eeb1aae660a205",
+      "bytes": 12671
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/initial-emission/RestrictedInitialPolicy.lean",
+      "sha256": "3a42cc1eb3209c82400ba528bdb1e80ba17bc09540e19e59b0d5272f9fd7c5f0",
+      "bytes": 72435
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/demand-guidance-retention-20261106/GuidanceFrontier.lean",
+      "sha256": "0c0b07284fbbc7ad9eddc74049370edfc9ccab1eb91ed2241d81a2127fad551a",
+      "bytes": 11025
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/demand-guidance-retention-20261106/ProducerGuidance.lean",
+      "sha256": "f551a2c43a4d1e555df689ef12fd06b84a34d1302a18f47a416bdc0a46df2c5f",
+      "bytes": 12893
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/demand-guidance-retention-20261106/checks.json",
+      "sha256": "17408c8682d45d9c8f5c21c0efaddb0d9583f4ed7f1705f0c7ce49f9437b25af",
+      "bytes": 4773
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/guidance-retention-shared-loop-investigation-20261106/prepared-capture/src/ConcreteAlGuideMechanismTest.kt",
+      "sha256": "6acef8408302557455a2f1bbae68e79f7b392b4d67d97904fca9e7dfd24fcb4a",
+      "bytes": 2924
+    }
+  ],
+  "theoremsDeclared": 58,
+  "theoremNames": [
+    "union_membership",
+    "union_both_orders",
+    "union_no_origin_products",
+    "delta_is_exact_coordinate_freshness",
+    "duplicate_is_not_fresh",
+    "delta_reconstructs_union",
+    "guide_restore_keeps_supplied",
+    "guide_restore_keeps_data",
+    "restore_exact_set_unchanged",
+    "restore_adds_no_nonguide",
+    "restore_has_no_origin_product",
+    "view_append",
+    "view_filter",
+    "restore_packet_view",
+    "restore_packet_exact_set_unchanged",
+    "captured_PZERO_current_root_then_child_loses_child",
+    "current_child_then_root_loses_child",
+    "current_same_packet_loses_child",
+    "proposal_same_packet_retains_both",
+    "proposal_root_then_child_retains_both",
+    "proposal_child_then_root_retains_both",
+    "child_coordinate_is_fresh_after_root",
+    "root_coordinate_is_fresh_after_child",
+    "same_packet_coordinates_fresh_duplicate_not_fresh",
+    "full_marks_are_independent_no_cross_mark_coverage",
+    "protected_channel_not_consumed_by_ordinary_ancestor",
+    "protected_support_is_in_native_payload_without_ordinary_origin",
+    "protected_MAY_both_orders_and_same_packet",
+    "both_channels_and_marks_restored_without_products",
+    "mixed_EXACT_keeps_current_pruning",
+    "unrelated_EXACT_survives_unchanged",
+    "mixed_masks_are_not_reclassified_by_ANY_header",
+    "non_GUIDE_headers_are_not_selected",
+    "ANY_E_is_empty_or_rejected",
+    "mixed_EXACT_never_inherits_header_E",
+    "reversing_ports_is_involutive",
+    "handoff_keeps_whole_original_and_exact_reversed_owner",
+    "root_guide_raw_and_cut_same_coarse_DEMAND",
+    "child_guide_distinguishes_raw_NORMAL_from_cut_DEMAND",
+    "mixed_EXACT_scalar_has_no_MAY_reclassification",
+    "captured_PZERO_handoff_scope_and_exit",
+    "current_handoff_lacks_child_normal_image",
+    "restored_handoff_keeps_child_normal_image_both_orders",
+    "paired_image_does_not_borrow_exit_scope_or_original",
+    "no_new_origin_combinations",
+    "concrete_handoff_never_creates_FLOW_mark",
+    "mismatching_full_mark_does_not_admit",
+    "same_head_MAY_EXACT_cell_is_not_repaired",
+    "cold_EXACT_boolean_mask_law",
+    "cold_EXACT_equals_original_exact_without_above_or_local_MAY",
+    "cold_MAY_restore_is_the_only_changed_slot",
+    "next_ABOVE_uses_original_local_mask",
+    "ordinary_and_protected_cold_masks_are_independent",
+    "finite_E0_MAY_compaction_and_restoration_same_denotation",
+    "warm_EXACT_prune_depends_only_on_unchanged_MAY_support",
+    "finite_warm_EXACT_prune_unchanged_in_both_channels",
+    "protected_bit_fresh_even_when_payload_already_present",
+    "executable_witness"
+  ],
+  "rootOnlyCheckCommand": [
+    "python3",
+    "spec/lean/proposals/concrete-demand-guidance-retention-20261106/check.py",
+    "--output",
+    "spec/lean/proposals/concrete-demand-guidance-retention-20261106/checks.json"
+  ],
+  "leanToolchain": "leanprover/lean4:v4.33.1",
+  "preparerExecutedLean": false,
+  "preparerExecutedChecker": false,
+  "productionEdited": false,
+  "userFormalEdited": false,
+  "scope": "Restore effective concrete MAY atoms only; old canonical EXACT set is an arbitrary unchanged data input. Finite native-cell recognizer is scoped, not native canonicalizer equivalence.",
+  "openSemanticCell": "Same-head MAY/EXACT C2-image loss remains under old EXACT pruning; this proposal does not preserve all supplied guide images.",
+  "knownNativeEvidenceBoundary": "Native conditional C2 tests and generic concrete prefix pruning passed under earlier root execution; no claim that this new Lean model ran or that every native producer/adaptor supplied the modeled child.",
+  "coldMaskBridge": "Universal Bool law (E and not A) and not (N and not A) = (E and not A) and not N; ordinary/protected separately. ABOVE must use original local mask.",
+  "warmMaskBridge": "Finite Empty-E MAY denotation equality on three packets, six paths, two marks, both channels, plus universal exact-prune extensionality. General native canonicalRegions and MUST/E-hole filling not proved."
+}

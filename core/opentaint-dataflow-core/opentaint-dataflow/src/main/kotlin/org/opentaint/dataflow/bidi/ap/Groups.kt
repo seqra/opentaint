@@ -136,6 +136,41 @@ class TaintGroup(private val m: ApManager, private val interner: TrieInterner<Ta
     fun addAll(t: TaintTree): List<TaintTree> {
         m.cancellation.checkpoint()
         val before = trees[t.layer.ordinal]
+        if (t.nonSubsumable != null || before.any { it.nonSubsumable != null })
+            return addWithProtection(t, before)
+        return addDataAll(t, before)
+    }
+
+    /** Preserve the existing incremental DATA order, including STAR/T4. */
+    private fun addWithProtection(t: TaintTree, before: ArrayList<TaintTree>): List<TaintTree> {
+        if (subtractSubsumed(t, before) == null) return emptyList()
+        val temporary = TaintGroup(m, interner)
+        before.forEach { temporary.restoreCurrent(it.withoutProtection()) }
+        val dataChanges = temporary.addAll(t.withoutProtection())
+        val after = m.embedRawProtection(temporary.all().toList(), before + t)
+        val changes = LinkedHashMap<GroupKey, TaintTree>()
+        fun add(value: TaintTree) {
+            val old = changes[value.groupKey]
+            changes[value.groupKey] = if (old == null) value else admittedTree(m, old,
+                m.taintAlg.mergeAdd(old.root, value.root, m.cancellation),
+                mergeProtection(old.nonSubsumable, value.nonSubsumable))
+        }
+        // Keep legacy whole-content T4 deltas, including their exact siblings.
+        for (delta in dataChanges) for (current in retainCurrentFacts(m, delta, after))
+            add(m.withCurrentProtection(current as TaintTree, after))
+        for (value in after) {
+            var fresh = value.nonSubsumable?.let { subtract(it, value, before, protectedOnly = true) } ?: continue
+            fresh = subtract(fresh, value, changes.values.toList(), protectedOnly = true) ?: continue
+            add(admittedTree(m, value, fresh, fresh))
+        }
+        m.cancellation.checkpoint()
+        trees[t.layer.ordinal] = ArrayList(after.map {
+            admittedTree(m, it, interner.internIfRequired(it.root), it.nonSubsumable)
+        })
+        return changes.values.toList()
+    }
+
+    private fun addDataAll(t: TaintTree, before: ArrayList<TaintTree>): List<TaintTree> {
         if (!t.root.hasAny || t.anyTail != Tail.ANY && t.anyTail != Tail.ANY_TAINT)
             return addInto(t,before)?.let(::listOf) ?: emptyList()
         if (before.isEmpty()) {
@@ -242,6 +277,13 @@ class TaintGroup(private val m: ApManager, private val interner: TrieInterner<Ta
         for (stored in others) {
             m.cancellation.checkpoint()
             val storedRoot = if (protectedOnly) stored.nonSubsumable ?: continue else stored.root
+            if (protectedOnly) {
+                val sameHeader = stored.anyTail == t.anyTail && stored.exclusion == t.exclusion
+                remaining = alg.subtract(remaining, storedRoot, TaintLeaves.EMPTY,
+                    at = { alg.leaves(it.exact, if (sameHeader) it.any else MarkSet.EMPTY) },
+                    below = { TaintLeaves.EMPTY }, cancellation = m.cancellation) ?: return null
+                continue
+            }
             val storedMay = stored.anyTail == Tail.ANY
             val storedStar = stored.anyTail == Tail.STAR
             val coversAny = storedMay || stored.anyTail == t.anyTail
@@ -250,7 +292,7 @@ class TaintGroup(private val m: ApManager, private val interner: TrieInterner<Ta
                 at = { alg.leaves(if (storedMay) it.exact + it.any else it.exact,
                     if (anyAt) it.any else MarkSet.EMPTY) },
                 below = { alg.leaves(if (storedMay) it.any else MarkSet.EMPTY,
-                    if (coversAny && !storedStar) it.any else MarkSet.EMPTY) },
+                    if (coversAny && !storedStar && !t.keepsDemandPositions()) it.any else MarkSet.EMPTY) },
                 admits = stored.exclusion::admits,
                 cancellation = m.cancellation) ?: return null
         }
