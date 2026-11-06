@@ -66,6 +66,7 @@ sealed interface BaseKey {
 class BaseTable {
     private val bases = KeyTable<BaseKey>(firstId = 0, name = "BaseTable")
     private val staticTypeNames = HashMap<BaseId, String>()
+    private var frozen = false
 
     val size: Int get() = bases.size
 
@@ -84,11 +85,15 @@ class BaseTable {
 
     /**
      * The static holder of [className] (a binary class name). If [typeName] is not `null` and the
-     * table has no type name for this class, the table records [typeName].
+     * table has no type name for this class, the table records [typeName]. After [freeze], a new
+     * type name causes [IllegalStateException]: the queries read the names from many threads.
      */
     fun static(className: String, typeName: String? = null): BaseId {
         val b = intern(BaseKey.Static(className))
-        if (typeName != null) staticTypeNames.putIfAbsent(b, typeName)
+        if (typeName != null && b !in staticTypeNames) {
+            check(!frozen) { "BaseTable is frozen: no new type name for $className" }
+            staticTypeNames[b] = typeName
+        }
         return b
     }
 
@@ -108,5 +113,8 @@ class BaseTable {
     /** As [allocChild], but [NO_ID] if the base does not exist. It never makes a base. */
     fun findAllocChild(site: SiteId, cell: CellId): BaseId = bases.find(BaseKey.AllocChild(site, cell))
 
-    fun freeze() = bases.freeze()
+    fun freeze() {
+        bases.freeze()
+        frozen = true
+    }
 }

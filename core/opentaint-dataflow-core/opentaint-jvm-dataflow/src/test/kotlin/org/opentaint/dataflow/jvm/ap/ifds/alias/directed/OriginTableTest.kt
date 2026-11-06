@@ -199,4 +199,19 @@ class OriginTableTest {
         assertFailsWith<IllegalStateException> { tables.cells.field("D", "h", "int") }
         assertContentEquals(intArrayOf(origins.child(x, f)), nodes.members(dx))
     }
+
+    @Test
+    fun `a frozen base table refuses a new static type name`() {
+        val named = bases.static("C", "C")
+        val unnamed = bases.static("D")
+        tables.freeze()
+        // A lookup works. The recorded name stays.
+        assertEquals(named, bases.static("C", "C"))
+        assertEquals(named, bases.static("C", "Other"))
+        assertEquals("C", bases.staticTypeName(named))
+        assertEquals(unnamed, bases.static("D"))
+        // A new name is a write: the frozen table refuses it.
+        assertFailsWith<IllegalStateException> { bases.static("D", "D") }
+        assertEquals(null, bases.staticTypeName(unnamed))
+    }
 }
