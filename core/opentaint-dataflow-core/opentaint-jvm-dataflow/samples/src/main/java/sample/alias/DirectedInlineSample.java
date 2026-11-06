@@ -92,6 +92,28 @@ public class DirectedInlineSample {
         return o;
     }
 
+    static Box makeFirst() {
+        return new Box();
+    }
+
+    static Box makeSecond() {
+        return new Box();
+    }
+
+    static Box fail() {
+        throw new IllegalStateException();
+    }
+
+    // Two consecutive call statements. A test resolves each call to many overrides.
+    static void twoCallsWithManyOverrides(Object x, Object y) {
+        Box a = makeFirst();
+        Box b = makeSecond();
+        a.value = x;
+        b.value = y;
+        Object t = a.value;
+        probe(t, a, b);
+    }
+
     static void probe(Object a, Object b, Object c) {
     }
 }

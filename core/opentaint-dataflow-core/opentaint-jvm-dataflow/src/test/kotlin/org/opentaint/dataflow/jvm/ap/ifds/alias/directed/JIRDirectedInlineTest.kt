@@ -14,6 +14,10 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAllocInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
+import org.opentaint.dataflow.jvm.ap.ifds.alias.CallResolver
+import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis.JIRInstGraph
+import org.opentaint.dataflow.jvm.ap.ifds.alias.Stmt
+import org.opentaint.dataflow.jvm.ap.ifds.alias.TaintRulesCallModelProvider
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.jvm.JIRMethod
@@ -238,6 +242,64 @@ class JIRDirectedInlineTest : BasicTestUtils() {
         val passOn = a.call("passOn")
         val etree = a.tables.nodes.members(a.after(passOn).varNode(ETREE)).toSet()
         assertTrue(a.argO(0) in etree, etree.toString())
+    }
+
+    /**
+     * Main makes the callee context `ContextInfo([k * 1000 + j])` for the override `j` of the call
+     * statement `k`. With 1001 overrides, the override 1000 of the statement `k` and the override 0
+     * of the statement `k + 1` get equal `ContextInfo` values. The engine must give them two
+     * contexts: else the two bodies share their sites, a once-site runs two times, and the store
+     * `b.value = y` is a strong update on the object of `a`.
+     */
+    @Test
+    fun `two call bodies with equal context info of main get two engine contexts`() {
+        val m = method(INLINE, "twoCallsWithManyOverrides")
+        val make = method(INLINE, "make")
+        val fail = method(INLINE, "fail")
+        val first = m.instList.filterIsInstance<JIRAssignInst>().single { it.callExpr?.method?.name == "makeFirst" }
+        val second = m.instList.filterIsInstance<JIRAssignInst>().single { it.callExpr?.method?.name == "makeSecond" }
+        assertEquals(first.location.index + 1, second.location.index, "the two calls are consecutive statements")
+
+        // Each wrapper is one more override with the body of `fail`: it always throws.
+        val failing = List(1000) { object : JIRMethod by fail {} }
+        val overrides = mapOf(
+            "makeFirst" to failing + make,
+            "makeSecond" to listOf(make) + failing,
+        )
+        val jirResolver = JIRCallResolver(cp, SingleLocationUnit(m.enclosingClass.declaration.location))
+        val base = jirAliasCallResolver(graph, languageManager, jirResolver, TaintRulesCallModelProvider(null), params(1))
+        val resolver = object : CallResolver by base {
+            override fun resolveMethodCall(callStmt: Stmt.Call, level: Int): List<JIRMethod>? =
+                if (level == 0) overrides[callStmt.method.name] else null
+
+            override fun buildMethodGraph(method: JIRMethod): JIRInstGraph? =
+                base.buildMethodGraph(if (method in failing) fail else method)
+        }
+
+        val tables = AliasTables(params(1).symDepth)
+        val cfg = JIRAliasInliner(tables, graph, languageManager, resolver).rootCfg(m.instList.first())
+        val result = DirectedFixpoint(AliasTransfer(tables)).run(cfg, verify = true)
+        assertEquals(1001, cfg.callees(first.location.index).size)
+        assertEquals(1001, cfg.callees(second.location.index).size)
+
+        val probe = m.instList.filterIsInstance<JIRCallInst>().single { it.callExpr.method.name == PROBE }
+        val st = assertNotNull(result.statesBefore[probe.location.index])
+        fun pts(i: Int): Set<OriginId> {
+            val v = tables.vars.local((probe.callExpr.args[i] as JIRLocalVar).index)
+            return tables.nodes.members(st.varNode(v)).toSet()
+        }
+        val oa = pts(1).single()
+        val ob = pts(2).single()
+        assertTrue(oa != ob, "a and b are two objects")
+        val ka = tables.sites.key(tables.origins.site(oa))
+        val kb = tables.sites.key(tables.origins.site(ob))
+        assertEquals(ka.instIndex, kb.instIndex)
+        assertTrue(ka.context != kb.context, "two engine contexts")
+
+        val x = tables.origins.root(tables.bases.arg(0))
+        val y = tables.origins.root(tables.bases.arg(1))
+        assertEquals(setOf(x), pts(0), "t = a.value holds x only")
+        assertTrue(y !in pts(0))
     }
 
     private class SingleLocationUnit(val loc: RegisteredLocation) : JIRUnitResolver {
