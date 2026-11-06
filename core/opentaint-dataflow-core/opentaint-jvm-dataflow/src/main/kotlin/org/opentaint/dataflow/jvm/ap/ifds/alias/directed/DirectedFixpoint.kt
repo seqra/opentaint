@@ -144,6 +144,7 @@ class DirectedFixpoint(
             }
         }
         val after = returned ?: evaluate(st, call)
+        tables.counters.inlinedCalls++
         return InlinedCall(after, exit, runs)
     }
 
@@ -227,6 +228,7 @@ class DirectedFixpoint(
 
         private fun evalNode(v: Int, st: AliasState) {
             cancellation?.checkpoint()
+            tables.counters.stmtEvals++
             before[v] = st
             val inlined = inline(cfg, v, st, exitNeeded || cfg.handlers(v).isNotEmpty())
             if (inlined != null) {
@@ -253,6 +255,7 @@ class DirectedFixpoint(
                     val h = c.head
                     var acc: AliasState? = null
                     var first = true
+                    var iterations = 0L
                     while (true) {
                         val input = inputs(h)
                         val next: AliasState?
@@ -276,10 +279,12 @@ class DirectedFixpoint(
                         }
                         if (!first && !changed) break
                         first = false
+                        iterations++
                         acc = next
                         if (acc != null) evalNode(h, acc)
                         for (b in c.body) stabilize(b)
                     }
+                    tables.counters.recordHeadIterations(iterations)
                 }
             }
         }

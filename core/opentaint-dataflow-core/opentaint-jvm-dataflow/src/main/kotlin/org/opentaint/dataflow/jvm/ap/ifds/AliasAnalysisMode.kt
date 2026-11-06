@@ -4,10 +4,9 @@ package org.opentaint.dataflow.jvm.ap.ifds
  * The backend of [JIRLocalAliasAnalysis].
  *
  * - [DSU]: the DSU alias analysis of main. This is the default.
- * - [SHADOW]: both backends run. The consumers get the DSU answers.
+ * - [SHADOW]: both backends run. The consumers get the DSU answers. The statistics compare the two
+ *   answers of each query (`AliasShadowStats`).
  * - [DIRECTED]: the consumers get the answers of the directed alias analysis.
- *
- * At this step, [SHADOW] uses only the DSU backend.
  */
 enum class AliasAnalysisMode {
     DSU, SHADOW, DIRECTED;

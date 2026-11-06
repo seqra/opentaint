@@ -73,8 +73,14 @@ class AliasCall(
         for (o in nodes.members(roots)) if (reached.add(o)) work.add(o)
         if (reached.add(OriginTable.REACHED_STATICS)) work.add(OriginTable.REACHED_STATICS)
 
+        val counters = tables.counters
+        counters.calls++
         while (!work.isEmpty) {
-            if (reached.size > maxCallClosure) return addSets(st, reachedAll, reachedAll)
+            if (reached.size > maxCallClosure) {
+                counters.callFallbacks++
+                counters.closureSizes.add(reached.size)
+                return addSets(st, reachedAll, reachedAll)
+            }
             transfer.step()
             val a = work.removeInt(work.size - 1)
             index.forEachCoveredBy(a) { w ->
@@ -88,6 +94,7 @@ class AliasCall(
             }
         }
 
+        counters.closureSizes.add(reached.size)
         val tree = IntArrayList(reached.size)
         val it = reached.iterator()
         while (it.hasNext()) {

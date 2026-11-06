@@ -24,8 +24,12 @@ data class AliasPath(val root: PathRoot, val cells: List<CellId>)
  * The answer of one query: the alias [paths], and the [seeds] (the start set of the search).
  * The seeds are sorted. A seed with an id from [AliasQuery.originCount] is a query-local origin.
  * The conversion (IMPL §6.2) reads the items (allocations and constants) from the seeds.
+ *
+ * [nullOnly] (statistics, `nullOnlyPaths` of `AliasVolumeStats`): for each path, true if the value
+ * of the path shares with the seeds only null-valued origins: origins of a `NULL` base or of an
+ * `ALLOC_CHILD` base (design R17). `null` if no seed is null-valued: then no path is null-only.
  */
-class QueryAnswer(val paths: List<AliasPath>, val seeds: IntArray)
+class QueryAnswer(val paths: List<AliasPath>, val seeds: IntArray, val nullOnly: BooleanArray? = null)
 
 /**
  * The backward query of the directed analysis (IMPL §6.1, §6.3, §6.4; spec §5.7). It does not use
@@ -157,7 +161,32 @@ class AliasQuery(val result: DirectedAliasResult, val maxAccessors: Int) {
     ): QueryAnswer {
         val search = Search(st, index(node, after, st), scratch, exclude)
         search.node(maxAccessors, emptyList(), seeds)
-        return QueryAnswer(search.out, seeds.copyOf())
+        return QueryAnswer(search.out, seeds.copyOf(), nullOnly(st, scratch, seeds, search.out))
+    }
+
+    /**
+     * The null-only flags of [paths] ([QueryAnswer.nullOnly]). If no seed is null-valued, it is
+     * `null` and costs one pass over the seeds. Else it reads the value of each path.
+     */
+    private fun nullOnly(st: AliasState, scratch: Scratch, seeds: IntArray, paths: List<AliasPath>): BooleanArray? {
+        if (seeds.none { scratch.isNullValued(it) }) return null
+        val flags = BooleanArray(paths.size)
+        for ((i, p) in paths.withIndex()) {
+            var value = rootValue(st, p.root, scratch)
+            for (c in p.cells) value = read(st, value, c, scratch)
+            var shared = false
+            var onlyNull = true
+            for (o in value) {
+                if (seeds.binarySearch(o) < 0) continue
+                shared = true
+                if (!scratch.isNullValued(o)) {
+                    onlyNull = false
+                    break
+                }
+            }
+            flags[i] = shared && onlyNull
+        }
+        return flags
     }
 
     private inner class Search(
@@ -248,6 +277,13 @@ class AliasQuery(val result: DirectedAliasResult, val maxAccessors: Int) {
         private fun depth(o: OriginId): Int = if (isVirtual(o)) vDepths.getInt(vIndex(o)) else origins.depth(o)
 
         private fun baseKind(b: BaseId): BaseKind = if (b < baseCount) bases.kind(b) else BaseKind.ALLOC_CHILD
+
+        /** True for a `Sym` or `Deep` origin of a `NULL` or `ALLOC_CHILD` base (statistics). */
+        fun isNullValued(o: OriginId): Boolean {
+            if (!isSym(o) && !isDeep(o)) return false
+            val k = baseKind(base(o))
+            return k == BaseKind.NULL || k == BaseKind.ALLOC_CHILD
+        }
 
         /** The root variable by rule of [o]: the base origin of `this`, of an argument or of a static holder. */
         fun ruleRoot(o: OriginId): PathRoot? {

@@ -21,6 +21,9 @@ import org.opentaint.jvm.graph.JApplicationGraph
 /**
  * The DSU alias analysis of main. It is the `DSU` backend of [org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis].
  * Its logic does not change.
+ *
+ * Statistics (IMPL §8): each [compute] records its time in `AliasStats.backend(DSU)`. A `null` result
+ * is a time-out. The statistics do not change the result.
  */
 internal class JIRDsuAliasAnalysis(
     private val entryPoint: JIRInst,
@@ -50,12 +53,13 @@ internal class JIRDsuAliasAnalysis(
         convertInstance: (Int) -> List<AliasInfo>
     ): List<AliasInfo> = info.convertToAliasInfo(depth, null, convertInstance)
 
-    override fun compute(): AnalysisResult? {
-        val analysis = JIRIntraProcAliasAnalysis(
-            entryPoint, graph, callResolver,
-            TaintRulesCallModelProvider(modelProvider),
-            languageManager, cancellation, params
-        )
-        return analysis.compute(localVariableReachability)
-    }
+    override fun compute(): AnalysisResult? =
+        AliasStats.backend(AliasBackend.DSU).measure({ true }) {
+            val analysis = JIRIntraProcAliasAnalysis(
+                entryPoint, graph, callResolver,
+                TaintRulesCallModelProvider(modelProvider),
+                languageManager, cancellation, params
+            )
+            analysis.compute(localVariableReachability)
+        }
 }

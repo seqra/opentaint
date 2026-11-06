@@ -31,6 +31,8 @@ import java.util.concurrent.ConcurrentHashMap
  * keyed by the statement, before or after, the local and the query kind keeps the full answers. So
  * the answers do not depend on the query order. The cache is a [ConcurrentHashMap]: the queries can
  * run in parallel threads, and they share the cached lists.
+ *
+ * Each answer also has the count of its null-only paths ([DirectedAnswer.nullOnlyPaths], statistics).
  */
 internal class JIRAliasAnswers(
     private val result: DirectedAliasResult,
@@ -40,7 +42,7 @@ internal class JIRAliasAnswers(
     val query = AliasQuery(result, maxAccessors)
 
     private val tables = result.tables
-    private val cache = ConcurrentHashMap<Long, List<AliasInfo>>()
+    private val cache = ConcurrentHashMap<Long, DirectedAnswer>()
 
     /** For each constant base: the root-context statements that make the constant. */
     private val constStatements: Int2ObjectOpenHashMap<IntArray> by lazy {
@@ -63,7 +65,11 @@ internal class JIRAliasAnswers(
      * The aliases of the local [localIdx] before ([after] false) or after the statement [stmt].
      * `null` if the statement has no state or the analysis does not know the local.
      */
-    fun findAlias(localIdx: Int, stmt: Int, after: Boolean): List<AliasInfo>? {
+    fun findAlias(localIdx: Int, stmt: Int, after: Boolean): List<AliasInfo>? =
+        findAliasAnswer(localIdx, stmt, after)?.infos
+
+    /** As [findAlias], with the statistics of the answer. */
+    fun findAliasAnswer(localIdx: Int, stmt: Int, after: Boolean): DirectedAnswer? {
         val v = rootLocal(localIdx, stmt, after) ?: return null
         return cached(if (after) KIND_AFTER else KIND_BEFORE, localIdx, stmt) {
             val answer = query.findAlias(stmt, after, PathRoot.Var(v)) ?: return null
@@ -72,7 +78,11 @@ internal class JIRAliasAnswers(
     }
 
     /** The array element aliases of the local [localIdx] before [stmt] (IMPL §6.3). */
-    fun findArrayElementAliases(localIdx: Int, stmt: Int): List<AliasInfo>? {
+    fun findArrayElementAliases(localIdx: Int, stmt: Int): List<AliasInfo>? =
+        findArrayElementAnswer(localIdx, stmt)?.infos
+
+    /** As [findArrayElementAliases], with the statistics of the answer. */
+    fun findArrayElementAnswer(localIdx: Int, stmt: Int): DirectedAnswer? {
         val v = rootLocal(localIdx, stmt, after = false) ?: return null
         return cached(KIND_ELEMENTS, localIdx, stmt) {
             val answer = query.findArrayElementAliases(stmt, false, PathRoot.Var(v)) ?: return null
@@ -84,9 +94,13 @@ internal class JIRAliasAnswers(
      * The heap-path query of `local.path` before [stmt] (spec §5.7): the paths only, without the
      * queried path. A path with a static accessor gives an empty answer. Not cached (tests).
      */
-    fun findHeapAlias(localIdx: Int, path: List<AliasAccessor>, stmt: Int): List<AliasInfo>? {
+    fun findHeapAlias(localIdx: Int, path: List<AliasAccessor>, stmt: Int): List<AliasInfo>? =
+        findHeapAnswer(localIdx, path, stmt)?.infos
+
+    /** As [findHeapAlias], with the statistics of the answer. */
+    fun findHeapAnswer(localIdx: Int, path: List<AliasAccessor>, stmt: Int): DirectedAnswer? {
         val v = rootLocal(localIdx, stmt, after = false) ?: return null
-        val cells = heapCells(path) ?: return emptyList()
+        val cells = heapCells(path) ?: return DirectedAnswer(emptyList(), 0)
         val answer = query.findHeapAlias(stmt, false, PathRoot.Var(v), cells.ids) ?: return null
         return convert(answer, stmt, items = false, extraCells = cells.extra)
     }
@@ -126,7 +140,7 @@ internal class JIRAliasAnswers(
         return tables.vars.find(localIdx, ROOT_CONTEXT).takeIf { it != NO_ID }
     }
 
-    private inline fun cached(kind: Int, localIdx: Int, stmt: Int, compute: () -> List<AliasInfo>): List<AliasInfo> {
+    private inline fun cached(kind: Int, localIdx: Int, stmt: Int, compute: () -> DirectedAnswer): DirectedAnswer {
         val key = (stmt.toLong() shl 32) or (localIdx.toLong() shl 2) or kind.toLong()
         cache[key]?.let { return it }
         val answer = compute()
@@ -138,9 +152,14 @@ internal class JIRAliasAnswers(
         stmt: Int,
         items: Boolean,
         extraCells: Map<CellId, AliasAccessor>,
-    ): List<AliasInfo> {
+    ): DirectedAnswer {
         val out = java.util.TreeSet(AliasInfoOrder)
-        for (p in answer.paths) convertPath(p, stmt, extraCells)?.let(out::add)
+        var nullOnly = 0
+        val flags = answer.nullOnly
+        for ((i, p) in answer.paths.withIndex()) {
+            val info = convertPath(p, stmt, extraCells) ?: continue
+            if (out.add(info) && flags != null && flags[i]) nullOnly++
+        }
         if (items) {
             for (o in answer.seeds) {
                 if (o >= query.originCount) continue
@@ -148,7 +167,7 @@ internal class JIRAliasAnswers(
             }
         }
         // The cache shares the list with all callers and threads: it must not change.
-        return Collections.unmodifiableList(ArrayList(out))
+        return DirectedAnswer(Collections.unmodifiableList(ArrayList(out)), nullOnly)
     }
 
     private fun convertPath(p: AliasPath, stmt: Int, extraCells: Map<CellId, AliasAccessor>): AliasApInfo? {
@@ -217,6 +236,12 @@ internal class JIRAliasAnswers(
         const val KIND_ELEMENTS = 2
     }
 }
+
+/**
+ * A directed answer: the [infos] that the consumers get, and [nullOnlyPaths], the count of the
+ * reported paths that share with the query only null-valued origins (`AliasVolumeStats`).
+ */
+class DirectedAnswer(val infos: List<AliasInfo>, val nullOnlyPaths: Int)
 
 /**
  * The fixed order of the directed answers (IMPL §6.2).

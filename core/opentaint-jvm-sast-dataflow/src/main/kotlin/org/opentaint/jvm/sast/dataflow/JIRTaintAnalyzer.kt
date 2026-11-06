@@ -12,6 +12,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRSummarySerializationContext
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature.JIRLambdaMethod
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
+import org.opentaint.dataflow.jvm.ap.ifds.alias.AliasStats
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodGetDefault
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
@@ -74,6 +75,11 @@ class JIRTaintAnalyzer(
 
     override fun analysisManager() =
         JIRAnalysisManager(cp, refManager, taintConfig, externalMethodTracker, analysisParams)
+
+    /** Logs the alias statistics of the project (`ALIAS-STATS` lines, IMPL §8). */
+    override fun onAnalysisEnd() {
+        AliasStats.logSummary(analysisParams.aliasAnalysisParams)
+    }
 
     override fun unitResolver() = analysisUnit
 

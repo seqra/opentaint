@@ -64,7 +64,15 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     val ifdsEngine by lazy { createIfdsEngine() }
 
     fun analyzeWithIfds(entryPoints: List<Method>): Pair<List<VulnerabilityWithTrace>, Status> {
-        return analyzeStaged(entryPoints)
+        try {
+            return analyzeStaged(entryPoints)
+        } finally {
+            onAnalysisEnd()
+        }
+    }
+
+    /** Runs at the end of [analyzeWithIfds], also after an exception. A subclass can log its statistics here. */
+    protected open fun onAnalysisEnd() {
     }
 
     open val unrollStrategy: AnyAccessorUnrollStrategy = object : AnyAccessorUnrollStrategy {

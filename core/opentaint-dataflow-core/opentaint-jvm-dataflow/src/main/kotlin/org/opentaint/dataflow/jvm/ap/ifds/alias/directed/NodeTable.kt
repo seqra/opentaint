@@ -38,6 +38,18 @@ class NodeTable {
     /** The number of memoized renames. */
     val renameMemoSize: Int get() = renameMemo.values.sumOf { it.size }
 
+    /** The sum of the member counts of all nodes (statistics). */
+    var contentSize: Long = 0
+        private set
+
+    /** The unions and renames that the memo answered before [freeze] (statistics). */
+    var memoHits: Long = 0
+        private set
+
+    /** The unions and renames that the memo did not answer before [freeze] (statistics). */
+    var memoMisses: Long = 0
+        private set
+
     val isFrozen: Boolean get() = frozen
 
     /** The sorted origin ids of node [n]. The caller must not change the array. */
@@ -64,6 +76,7 @@ class NodeTable {
         val n = sets.size
         sets.add(sorted)
         ids.put(sorted, n)
+        contentSize += sorted.size
         return n
     }
 
@@ -88,9 +101,15 @@ class NodeTable {
         if (a == EMPTY_NODE) return b
         val key = if (a < b) pairKey(a, b) else pairKey(b, a)
         val known = unionMemo.get(key)
-        if (known != NO_ID) return known
+        if (known != NO_ID) {
+            if (!frozen) memoHits++
+            return known
+        }
         val n = intern(mergeSorted(sets[a], sets[b]))
-        if (!frozen) unionMemo.put(key, n)
+        if (!frozen) {
+            memoMisses++
+            unionMemo.put(key, n)
+        }
         return n
     }
 
@@ -117,7 +136,10 @@ class NodeTable {
         val memo = renameMemo.get(pairKey(from, to))
         if (memo != null) {
             val known = memo.get(n)
-            if (known != NO_ID) return known
+            if (known != NO_ID) {
+                if (!frozen) memoHits++
+                return known
+            }
         }
         val src = sets[n]
         val removed = IntArray(src.size - 1)
@@ -129,6 +151,7 @@ class NodeTable {
             intern(mergeSorted(removed, intArrayOf(to)))
         }
         if (!frozen) {
+            memoMisses++
             val m = memo ?: Int2IntOpenHashMap().also {
                 it.defaultReturnValue(NO_ID)
                 renameMemo.put(pairKey(from, to), it)

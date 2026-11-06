@@ -175,6 +175,7 @@ class AliasTransfer(val tables: AliasTables, private val cancellation: AnalysisC
         val newCells = st.index.writtenCells(nw)
         val oldCells = st.index.writtenCells(old)
         if (newCells.isEmpty() && oldCells.isEmpty() && st.index.holders(nw).isEmpty()) return st
+        tables.counters.retires++
         val ed = edit(st)
 
         // Steps 1 and 2. A union that holds new(s) is renamed in step 3.

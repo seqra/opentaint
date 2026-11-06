@@ -14,6 +14,9 @@ class AliasTables(val symDepth: Int) {
     val origins = OriginTable(symDepth, bases, nodes, sites)
     val loopAllocs = LoopAllocTracker(nodes, origins, sites)
 
+    /** The work counters of the analysis (statistics). They never change a state. */
+    val counters = DirectedCounters()
+
     /** Makes all tables read-only. Run it after the fixpoint, before the queries (IMPL §6.4). */
     fun freeze() {
         cells.freeze()
