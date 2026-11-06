@@ -298,6 +298,17 @@ carry the input flag on each surviving output. A kill removes its membership
 and flag together. An ordinary same-mark FLOW pass does not set a new flag.
 A protected summary conclusion protects each result of its application.
 
+Pass rules are transport, not assignments. This rule applies to `CopyMark`
+and `CopyAllMarks`, in both directions and in every run. A pass keeps the
+flag of each surviving input membership. It must never create protection
+for a plain membership. An action ID does not make a pass an assignment.
+Keep the action identity and its static-operation metadata unchanged.
+
+A valid pass summary preserves the mark, or uses the correlated FLOW
+relation. It does not restore a different mark. Keep the cycle rule for
+actual mark-changing summaries; do not disable that rule for all summaries
+to enforce the pass rule.
+
 Identical edges collapse to one protected edge if either copy is protected.
 The result is the same in both arrival orders. For masks, keep a protected
 subset; do not protect U because the same leaf contains protected T.

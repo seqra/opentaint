@@ -27,6 +27,14 @@ class MicroEdge(
 
     val isSource: Boolean
         get() = forward.from.base == AccessPathBase.Zero && forward.to.base != AccessPathBase.Zero
+    /** A pass transports input protection; its action identity is not an assignment. */
+    val isRuleAssignment: Boolean
+        get() {
+            val id = actionId
+            if (id?.role == ActionRole.PASS_THROUGH ||
+                id?.occurrence?.kind == RuleKind.PASS_THROUGH) return false
+            return isSource || id != null
+        }
     val isIdentity: Boolean
         get() = edge.from == edge.to && edge.exclusion == ExclusionSet.Empty
     val may: Boolean get() = forward.to.tail == Tail.ANY || conjunctive

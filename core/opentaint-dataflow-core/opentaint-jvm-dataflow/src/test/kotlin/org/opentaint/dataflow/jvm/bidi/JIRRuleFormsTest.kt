@@ -360,6 +360,47 @@ class JIRRuleFormsTest : BasicTestUtils() {
     }
 
     @Test
+    fun `real pass forms transport protection without assigning it`(): Unit {
+        val method = v.method("plain")
+        val form = FormKey(FormOwner(), method, null, method.instList.first())
+        val id = ActionId(RuleOccurrenceId(form, RuleKind.PASS_THROUGH, 0), ActionRole.PASS_THROUGH, 0)
+        for (copyAll in listOf(false, true)) for (mayTarget in listOf(false, true)) {
+            val target = if (mayTarget) any(field(Result, "g")) else field(Result, "g")
+            val action = if (copyAll) CopyAllMarks(field(Argument(0)), target)
+                else CopyMark(RuleMark("T"), field(Argument(0)), target)
+            val rule = v.pass(listOf(action))
+            val builder = MicroEdgeBuilder()
+            forms.pass(builder, rule, action, OperationId(form, action = id))
+            val stage = builder.buildStage()
+            assertTrue(stage.edges.all { it.actionId == null && !it.isSource },
+                "Static operation identity must not change ordinary pass edge identity")
+            for (mode in listOf(ApMode(true, Direction.FORWARD, 1),
+                ApMode(false, Direction.BACKWARD, 1), ApMode(false, Direction.FORWARD, 2))) {
+                val directed = if (mode.direction == Direction.FORWARD) stage else stage.reversed()
+                val me = directed.edges.last()
+                assertFalse(me.isRuleAssignment)
+                val from = me.edge.from.copy(tail = Tail.EXACT, mark = MarkSlot.Concrete(t))
+                val plain = v.manager.factsOf(from, empty, Layer.NORMAL) as TaintTree
+                val premise = v.manager.initial(Pattern(from, empty))
+                for (flagged in listOf(false, true)) {
+                    val input = if (flagged) plain.withProtection(plain.root) else plain
+                    val output = CollectingOut()
+                    v.ops.applyEdge(input, premise, me.edge, false, mode, output, may = me.may,
+                        ruleAssignment = me.isRuleAssignment)
+                    assertTrue(output.results.isNotEmpty())
+                    for (result in output.results) {
+                        val taint = result as TaintTree
+                        assertEquals(me.edge.to.base, taint.base)
+                        assertEquals(flagged, taint.nonSubsumable != null,
+                            "$copyAll/$mayTarget/$mode flagged=$flagged")
+                        if (flagged) assertEquals(taint.root, taint.nonSubsumable)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun `new core ignores end actions before rule position validation`(): Unit {
         val invalid = field(any(Argument(0)))
         val rule = v.sink(listOf(AssignMark(RuleMark("T"), invalid)))
