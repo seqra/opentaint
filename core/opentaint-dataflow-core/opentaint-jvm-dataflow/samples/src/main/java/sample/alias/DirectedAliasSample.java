@@ -504,6 +504,69 @@ public class DirectedAliasSample {
         probe(cur, second);
     }
 
+    static Box staticBox;
+
+    static void loopAtFirstInstruction() {
+        do {
+            Box b = staticBox;
+            Object t = b.value;
+            Object v = new Object();
+            b.value = v;
+            probe(t, v, b);
+        } while (staticBox.next != null);
+    }
+
+    static void catchAfterThrowingCall(Object pv) {
+        Box x = new Box();
+        Object v = pv;
+        try {
+            x.value = v;
+            mayThrow();
+        } catch (RuntimeException e) {
+            Object t = x.value;
+            probe(t, v, x);
+        }
+    }
+
+    static class GenericStatics<T> {
+        static Object genericStatic;
+
+        static void staticWriteThenRead() {
+            Object v = new Object();
+            genericStatic = v;
+            Object t = genericStatic;
+            probe(t, v);
+        }
+    }
+
+    static class NestedStatics {
+        static class Inner {
+            static Object innerStatic;
+        }
+
+        static void staticWriteThenRead() {
+            Object v = new Object();
+            Inner.innerStatic = v;
+            Object t = Inner.innerStatic;
+            probe(t, v);
+        }
+    }
+
+    static void varargStringConstants() {
+        varargs("a", "b");
+    }
+
+    static void varargBoxedConstants() {
+        varargs(1, true);
+    }
+
+    static void varargs(Object... values) {
+    }
+
+    static void mayThrow() {
+        throw new RuntimeException();
+    }
+
     static Box makeBox() {
         return new Box();
     }

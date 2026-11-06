@@ -48,8 +48,10 @@ import org.opentaint.ir.api.jvm.cfg.JIRCastExpr
 import org.opentaint.ir.api.jvm.cfg.JIRCatchInst
 import org.opentaint.ir.api.jvm.cfg.JIRExpr
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
+import org.opentaint.ir.api.jvm.cfg.JIRGotoInst
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRLocalVar
+import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.jvm.graph.JApplicationGraphImpl
 import kotlin.test.Test
@@ -459,6 +461,60 @@ class DirectedAliasProbeTest : BasicTestUtils() {
         assertEquals(walkCur, liveRoot.answer("cur"))
     }
 
+    @Test
+    fun `today a loop at the method start gets a JIR goto so no back edge reaches the first instruction`() {
+        val p = probeAt(SAMPLE, "loopAtFirstInstruction", "t", "v", "b")
+        assertEquals(1, p.loopHeadAfterEntryGoto())
+        assertEquals(setOf("b.value", "new(v)", "static:DirectedAliasSample.staticBox.value", "v"), p.answer("t"))
+        assertEquals(setOf("b.value", "new(v)", "static:DirectedAliasSample.staticBox.value", "t"), p.answer("v"))
+        assertEquals(setOf("static:DirectedAliasSample.staticBox"), p.answer("b"))
+        assertEquals(setOf("new(v)", "t", "v"), p.heapAnswer("b", BOX, "value"))
+    }
+
+    @Test
+    fun `today catch after a throwing call reads the field that the try block wrote`() {
+        val p = probeAt(SAMPLE, "catchAfterThrowingCall", "t", "v", "x")
+        assertEquals(setOf("arg:pv", "v", "x.value"), p.answer("t"))
+        assertEquals(setOf("arg:pv", "t", "x.value"), p.answer("v"))
+        assertEquals(setOf("new(x)"), p.answer("x"))
+        assertEquals(setOf("arg:pv", "t", "v"), p.heapAnswer("x", BOX, "value"))
+    }
+
+    @Test
+    fun `today static write is ignored in a generic class`() {
+        val p = probeAt(GENERIC_STATICS, "staticWriteThenRead", "t", "v")
+        assertEquals(setOf("static:GenericStatics<T>.genericStatic"), p.answer("t"))
+        assertEquals(setOf("new(v)"), p.answer("v"))
+        assertEquals(setOf("sample.alias.DirectedAliasSample.GenericStatics<T>"), p.staticTypeNames("t"))
+    }
+
+    @Test
+    fun `today static write is ignored in a nested class`() {
+        val p = probeAt(NESTED_STATICS, "staticWriteThenRead", "t", "v")
+        assertEquals(setOf("static:NestedStatics\$Inner.innerStatic"), p.answer("t"))
+        assertEquals(setOf("new(v)"), p.answer("v"))
+        assertEquals(
+            setOf("sample.alias.DirectedAliasSample.NestedStatics.NestedStatics\$Inner"),
+            p.staticTypeNames("t")
+        )
+    }
+
+    @Test
+    fun `today vararg string constants are the element aliases of the vararg array`() {
+        val p = probeAt(SAMPLE, "varargStringConstants", "values", callee = VARARGS)
+        assertEquals(setOf("const:a", "const:b", "values[*]"), p.elementAnswer("values"))
+    }
+
+    @Test
+    fun `today vararg boxed constants are the element aliases of the vararg array`() {
+        val p = probeAt(SAMPLE, "varargBoxedConstants", "values", callee = VARARGS)
+        assertEquals(setOf("new(%1#1)", "new(%2#2)", "values[*]"), p.elementAnswer("values"))
+        assertEquals(
+            setOf("java.lang.Boolean.valueOf(1)", "java.lang.Integer.valueOf(1)"),
+            p.elementAllocCalls("values")
+        )
+    }
+
     private fun nexts(base: String, counts: IntRange): Set<String> =
         counts.map { base + ".next".repeat(it) }.toSet()
 
@@ -521,6 +577,48 @@ class DirectedAliasProbeTest : BasicTestUtils() {
 
         fun selfCopies(): Int = method.instList.count { it.isSelfCopy() }
 
+        /**
+         * Checks the JIR shape of a loop at the method start: the first instruction is a `goto` with no
+         * predecessor, and its target is a loop head. Returns the index of the loop head.
+         */
+        fun loopHeadAfterEntryGoto(): Int {
+            val flow = method.flowGraph()
+            val first = method.instList.first()
+            assertTrue(first is JIRGotoInst, "The first instruction must be a goto")
+            assertTrue(flow.predecessors(first).isEmpty(), "No edge must reach the first instruction")
+            val head = flow.successors(first).single()
+            assertTrue(flow.predecessors(head).any { it.location.index > head.location.index }, "No back edge")
+            return head.location.index
+        }
+
+        fun staticTypeNames(role: String): Set<String> = aliases(role).orEmpty()
+            .filterIsInstance<AliasApInfo>()
+            .filter { it.base == AccessPathBase.ClassStatic }
+            .flatMap { info -> info.accessors.filterIsInstance<AliasAccessor.Static>().map { it.typeName } }
+            .toSortedSet()
+
+        /**
+         * The element aliases of the array in [role], as the vararg branch of
+         * `JIRBasicAtomEvaluator.resolveLocalVarValue` gets them.
+         */
+        fun elementAliases(role: String): List<AliasInfo>? {
+            val base = AccessPathBase.LocalVar(local(role).index)
+            for (aliasSet in aa.getAllAliasAtStatement(call)) {
+                for (info in aliasSet) {
+                    if (info !is AliasApInfo || info.base != base) continue
+                    if (info.accessors.singleOrNull() is AliasAccessor.Array) return aliasSet
+                }
+            }
+            return null
+        }
+
+        fun elementAnswer(role: String): Set<String>? = elementAliases(role)?.map { it.show() }?.toSortedSet()
+
+        fun elementAllocCalls(role: String): Set<String> = elementAliases(role).orEmpty()
+            .filterIsInstance<AliasAllocInfo>()
+            .mapNotNull { method.instList[it.allocInst].callExpr?.toString() }
+            .toSortedSet()
+
         fun render(): String = buildString {
             appendLine("=== ${method.enclosingClass.simpleName}.${method.name}")
             method.instList.forEachIndexed { idx, inst ->
@@ -549,6 +647,7 @@ class DirectedAliasProbeTest : BasicTestUtils() {
             is AccessPathBase.Argument -> "arg:" + (argNames[idx] ?: "#$idx")
             is AccessPathBase.This -> "this"
             is AccessPathBase.ClassStatic -> "static"
+            is AccessPathBase.Constant -> "const:$value"
             else -> toString()
         }
 
@@ -566,9 +665,10 @@ class DirectedAliasProbeTest : BasicTestUtils() {
         methodName: String,
         vararg roles: String,
         rules: TaintRulesProvider = noRules,
+        callee: String = PROBE,
     ): Probe {
         val method = findMethod(className, methodName)
-        val call = method.instList.filterIsInstance<JIRCallInst>().first { it.callExpr.method.name == PROBE }
+        val call = method.instList.filterIsInstance<JIRCallInst>().first { it.callExpr.method.name == callee }
         check(call.callExpr.args.size == roles.size) { "Probe arity mismatch in $methodName" }
         return Probe(method, aaForMethod(method, rules), call, roles.toList()).also { println(it.render()) }
     }
@@ -598,6 +698,9 @@ class DirectedAliasProbeTest : BasicTestUtils() {
         private const val CTOR_LOOP = "$SAMPLE\$CtorLoop"
         private const val CTOR_JOIN = "$SAMPLE\$CtorJoin"
         private const val THIS_WRITES = "$SAMPLE\$ThisWrites"
+        private const val GENERIC_STATICS = "$SAMPLE\$GenericStatics"
+        private const val NESTED_STATICS = "$SAMPLE\$NestedStatics"
+        private const val VARARGS = "varargs"
         private const val OBJECT = "java.lang.Object"
         private const val PROBE = "probe"
 
