@@ -25,7 +25,9 @@ package org.opentaint.dataflow.jvm.ap.ifds.alias.directed
  *   `statesAfter[c]` (the node condition of `c` with [DirectedFixpoint.inline]);
  * - exceptional exit: for each handler `h` of `c` and each callee node `t` (also the nodes of a
  *   nested inlined call), `kill_h(statesBefore[t])` and `kill_h(statesAfter[t])` without the callee
- *   variables are below `statesBefore[h]`. The partial call condition does not apply to `c`.
+ *   variables are below `statesBefore[h]`. The partial call condition does not apply to `c`,
+ *   except if an override has no body ([CalleeBodies.hasBodilessOverride]): that override is an
+ *   unresolved call.
  *
  * These conditions give an `EPostFix` certificate of the CFG with kills at the node entries: the
  * certificate state before `w` is `statesBefore[w]` plus, for each local that `w` kills, the union
@@ -99,7 +101,8 @@ class PostFixChecker(private val fixpoint: DirectedFixpoint) {
                     forEachSpliced(inlined) { st, where ->
                         le(out, fixpoint.kill(cfg, h, st), bh, "exceptional edge from $where of node $v -> $h")
                     }
-                    continue
+                    val bodiless = (instr as AliasInstr.ResolvedCall).callees.hasBodilessOverride
+                    if (!bodiless) continue
                 }
                 val partial = fixpoint.partialCall(before, instr) ?: continue
                 le(out, fixpoint.kill(cfg, h, partial), bh, "exceptional edge $v -> $h (call)")

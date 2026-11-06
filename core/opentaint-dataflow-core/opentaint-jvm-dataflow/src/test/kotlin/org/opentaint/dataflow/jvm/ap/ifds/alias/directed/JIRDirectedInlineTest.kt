@@ -33,6 +33,7 @@ import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.jvm.graph.JApplicationGraphImpl
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -242,6 +243,24 @@ class JIRDirectedInlineTest : BasicTestUtils() {
         val passOn = a.call("passOn")
         val etree = a.tables.nodes.members(a.after(passOn).varNode(ETREE)).toSet()
         assertTrue(a.argO(0) in etree, etree.toString())
+    }
+
+    @Test
+    fun `a resolved call with an override without a body also applies the unresolved call rule`() {
+        val control = Analyzed(method(INLINE, "bodyOnlyOverride"))
+        val controlTouch = control.call("touch")
+        assertIs<AliasInstr.ResolvedCall>(control.instr(controlTouch))
+        assertFalse(assertIs<AliasInstr.ResolvedCall>(control.instr(controlTouch)).callees.hasBodilessOverride)
+        assertEquals(setOf(control.argO(2)), control.pts(control.before(control.call(PROBE)), control.probeLocal(0)))
+
+        val a = Analyzed(method(INLINE, "bodilessOverride"))
+        val touch = a.call("touch")
+        val instr = assertIs<AliasInstr.ResolvedCall>(a.instr(touch))
+        assertTrue(instr.callees.hasBodilessOverride, "the native override has no body")
+        assertEquals(1, a.result.cfg.callees(touch.location.index).size)
+        val w = a.pts(a.before(a.call(PROBE)), a.probeLocal(0))
+        assertTrue(a.argO(2) in w, w.toString())
+        assertTrue(w.size > 1, "the store t.value = v is weak: $w")
     }
 
     /**

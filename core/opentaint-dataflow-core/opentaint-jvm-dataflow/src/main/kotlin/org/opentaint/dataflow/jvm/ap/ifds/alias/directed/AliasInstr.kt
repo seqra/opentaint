@@ -121,6 +121,13 @@ fun interface CalleeBodies {
     /** The CFG of each override with a body. An empty list: the call has no body to inline. */
     fun build(callOnCycle: Boolean): List<AliasCfg>
 
+    /**
+     * True if the resolver gave an override that is not abstract and has no body (for example a
+     * native method). The inlining then also applies the rule of the unresolved call with the
+     * models (IMPL §4.4, §4.5) and joins it with the returns and the exceptional exit.
+     */
+    val hasBodilessOverride: Boolean get() = false
+
     companion object {
         /** No body: the call uses the rule of the unresolved call. */
         val NONE: CalleeBodies = CalleeBodies { emptyList() }

@@ -261,6 +261,59 @@ class DirectedInlineTest {
         assertEquals(setOf(fx.argO(0), OriginTable.REACHED_STATICS), members(st.after(0).varNode(ETREE)))
     }
 
+    /**
+     * Caller: `e = x.f; m(x); t = x.f; t.g = v; w = e.g`. The call `m` has the override `A` with an
+     * empty body. If [bodiless] is true, it also has an override without a body (a native method).
+     */
+    private fun bodilessOverrideProgram(bodiless: Boolean, exc: IntArray = intArrayOf()): AliasCfg {
+        val px = fx.arg(0)
+        val empty = Callee(1, listOf(node(AliasInstr.Return(null))))
+        val bodies = bodies(empty)
+        val withMissing = if (!bodiless) bodies else object : CalleeBodies {
+            override fun build(callOnCycle: Boolean): List<AliasCfg> = bodies.build(callOnCycle)
+            override val hasBodilessOverride: Boolean get() = true
+        }
+        val e = a
+        val w = b
+        return cfg(
+            node(fx.load(e, px, f), 1),
+            node(AliasInstr.ResolvedCall(fx.site(1), null, listOf(px), callees = withMissing), 2, exc = exc),
+            node(fx.load(t, px, f), 3),
+            node(fx.store(t, g, fx.arg(1)), 4),
+            node(fx.load(w, e, g), 5),
+            node(AliasInstr.Return(w)),
+            node(fx.assign(h, AliasValue.Fresh(fx.site(6))), 7),
+            node(AliasInstr.Return(h)),
+        )
+    }
+
+    @Test
+    fun `an override without a body also applies the unresolved call rule`() {
+        val xfg = fx.path(fx.argO(0), f, g)
+
+        // Control: only the empty body. The store t.g = v is strong, so e.g holds v only.
+        val strong = solveChecked(bodilessOverrideProgram(bodiless = false))
+        assertEquals(setOf(fx.argO(1)), fx.pts(strong.after(4), b))
+
+        // An override without a body can write x.f: the call closure reaches x, so the store is weak.
+        val st = solveChecked(bodilessOverrideProgram(bodiless = true))
+        assertTrue(fx.argO(0) in members(st.after(1).varNode(ETREE)), "the call closure reaches x")
+        assertEquals(setOf(fx.argO(1), xfg), fx.pts(st.after(4), b))
+    }
+
+    @Test
+    fun `an override without a body joins the call closure into the exceptional exit`() {
+        val program = bodilessOverrideProgram(bodiless = true, exc = intArrayOf(6))
+        val st = solveChecked(program)
+        assertTrue(fx.argO(0) in members(st.before(6).varNode(ETREE)), "the handler sees the call closure")
+
+        // The checker asks for the partial call of the override without a body at the handler.
+        val before = st.statesBefore.copyOf()
+        before[6] = fp.kill(program, 6, st.before(1))
+        val violations = checker.check(program, FixpointStates(before, st.statesAfter, st.exits))
+        assertTrue(violations.any { "-> 6 (call)" in it }, violations.toString())
+    }
+
     @Test
     fun `an unresolved call in the callee grows Etree of the caller`() {
         // Caller: t = x.f; t.g = "a"; A(x); t.g = "b". A: m(this) (unresolved). The last store is weak.

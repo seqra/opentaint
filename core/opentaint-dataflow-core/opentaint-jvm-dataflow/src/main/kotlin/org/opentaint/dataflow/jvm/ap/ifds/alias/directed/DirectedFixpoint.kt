@@ -20,7 +20,8 @@ class FixpointStates(
  * The evaluation of an inlined call (IMPL §5.5).
  *
  * - [after]: the state after the call: the join over the return states of all overrides, or the
- *   rule of the unresolved call if no override gives a return state.
+ *   rule of the unresolved call if no override gives a return state. If an override has no body
+ *   ([CalleeBodies.hasBodilessOverride]), the join also has the rule of the unresolved call.
  * - [exit]: the state on the exceptional exit (step 3), or `null` if it was not asked for.
  * - [runs]: the fixpoint run of each override (the post-fixpoint checker reads them).
  */
@@ -117,6 +118,10 @@ class DirectedFixpoint(
      *    variables. Each callee node is a thrower of the caller handlers of the call.
      * 4. An unresolved call in a callee is a passive call on the shared state: it grows `Etree` and
      *    `Eval`, and these keys stay after the return.
+     *
+     * An override without a body ([CalleeBodies.hasBodilessOverride]: a native method, for example)
+     * is an unresolved call: the state after the call also joins the rule of the unresolved call
+     * with the models, and the exceptional exit also joins the partial call ([partialCall]).
      */
     fun inline(cfg: AliasCfg, v: Int, st: AliasState, exitNeeded: Boolean): InlinedCall? {
         val call = cfg.instr(v) as? AliasInstr.ResolvedCall ?: return null
@@ -143,7 +148,9 @@ class DirectedFixpoint(
                 exit = join(exit, calleeExit?.let { removeContext(it, callee.context) })
             }
         }
-        val after = returned ?: evaluate(st, call)
+        val bodiless = call.callees.hasBodilessOverride
+        val after = if (bodiless) join(returned, evaluate(st, call))!! else returned ?: evaluate(st, call)
+        if (exitNeeded && bodiless) exit = join(exit, partialCall(st, call))
         tables.counters.inlinedCalls++
         return InlinedCall(after, exit, runs)
     }

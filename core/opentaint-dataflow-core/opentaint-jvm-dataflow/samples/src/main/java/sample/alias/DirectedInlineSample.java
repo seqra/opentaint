@@ -114,6 +114,42 @@ public class DirectedInlineSample {
         probe(t, a, b);
     }
 
+    static class Toucher {
+        void touch(Box x) {
+        }
+    }
+
+    static class NativeToucher extends Toucher {
+        @Override
+        native void touch(Box x);
+    }
+
+    static class PlainToucher {
+        void touch(Box x) {
+        }
+    }
+
+    // The call has an override with a body and an override without a body (a native method). The
+    // native override can write `x.next`, so the store `t.value = v` is weak: `w` also keeps the old value.
+    static void bodilessOverride(Toucher m, Box x, Object v) {
+        Box e = x.next;
+        m.touch(x);
+        Box t = x.next;
+        t.value = v;
+        Object w = e.value;
+        probe(w, v, x);
+    }
+
+    // The same program with one override that has a body: the store `t.value = v` is strong.
+    static void bodyOnlyOverride(PlainToucher m, Box x, Object v) {
+        Box e = x.next;
+        m.touch(x);
+        Box t = x.next;
+        t.value = v;
+        Object w = e.value;
+        probe(w, v, x);
+    }
+
     static void probe(Object a, Object b, Object c) {
     }
 }

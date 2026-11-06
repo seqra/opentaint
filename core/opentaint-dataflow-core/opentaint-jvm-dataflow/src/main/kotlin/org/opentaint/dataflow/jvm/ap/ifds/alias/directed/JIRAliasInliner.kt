@@ -38,6 +38,11 @@ import java.util.IdentityHashMap
  * - Values: the `InstEvalContext` of the call tree node (`NestedCallInstEvalCtx`) maps the callee
  *   `this` and arguments to the values of the call, and the callee locals to the callee context.
  * - Models: one [JirCallResolver.externalCallModel] cache for the analysis.
+ * - Overrides without a body: main drops an override without a method graph (a native method, for
+ *   example) and inlines the others. The directed analysis must not lose the effect of the dropped
+ *   override. So if the resolver gives an override that is not abstract and has no graph, the
+ *   bodies have [CalleeBodies.hasBodilessOverride], and the inlining also applies the rule of the
+ *   unresolved call (IMPL §4.4).
  */
 internal class JIRAliasInliner(
     private val tables: AliasTables,
@@ -103,7 +108,12 @@ internal class JIRAliasInliner(
         val overrides = methods.values.toList()
         if (overrides.isEmpty()) return null
         for (m in overrides) callers.putIfAbsent(m.state.call, node)
-        return CalleeBodies { callOnCycle -> overrides.map { calleeCfg(it, callOnCycle) } }
+        val bodiless = resolver.resolveMethodCall(stmt, node.ctx.level).orEmpty()
+            .any { !it.isAbstract && it !in methods }
+        return object : CalleeBodies {
+            override fun build(callOnCycle: Boolean): List<AliasCfg> = overrides.map { calleeCfg(it, callOnCycle) }
+            override val hasBodilessOverride: Boolean get() = bodiless
+        }
     }
 
     private fun calleeCfg(m: ResolvedCallMethod, callOnCycle: Boolean): AliasCfg {
