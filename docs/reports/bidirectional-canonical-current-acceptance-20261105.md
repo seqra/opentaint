@@ -83,6 +83,16 @@ and without the feedback edge. All four cases report the NORMAL sink. This is
 not a finding-loss reproducer: no captured packet contains the required
 proper-prefix pair. It does not close the project-quality gap.
 
+A [two-method direct regression](bidirectional-canonical-prefix-refinement-reproducer-20261106.md)
+now reproduces a concrete refinement delay. At the run-3 checkpoint, current
+code has zero NORMAL reports; the proper-prefix-off control has one. Both
+converge at run-5 with that finding. The first lost retained B2 coordinate is
+`arg0.f.[any]/FLOW`; the first missing executed F3 start is
+`arg0.f.g.*/FLOW, NORMAL`. The optional regression task is deliberately RED on
+current code. It does not change the default module tests or their historical
+2,992-test receipt. This is not a permanent finding loss or a completed
+Conductor causal trace.
+
 The semantic repair choice is still pending. The selected canonical-only C2
 policy permits literal initial images to disappear. Changing that policy or
 adding separate refinement guidance needs an explicit design under the
