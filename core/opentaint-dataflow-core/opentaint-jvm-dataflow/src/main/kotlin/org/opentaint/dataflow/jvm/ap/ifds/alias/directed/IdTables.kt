@@ -88,6 +88,7 @@ class SiteTable {
 
     private val sites = KeyTable<SiteKey>(firstId = 0, name = "SiteTable")
     private val loopSites = BitSet()
+    private val allocated = BitSet()
     private var frozen = false
 
     val size: Int get() = sites.size
@@ -96,9 +97,19 @@ class SiteTable {
 
     fun key(s: SiteId): SiteKey = sites.key(s)
 
+    /**
+     * Marks [s] as a loop site. Call it before the `AllocNew` origin of [s] exists: the holders
+     * index ([LoopAllocTracker]) caches the tracked origins of each node.
+     */
     fun markLoopSite(s: SiteId) {
         check(!frozen) { "SiteTable is frozen" }
+        check(!allocated.get(s)) { "Site $s has an AllocNew origin: mark the loop sites before the fixpoint" }
         loopSites.set(s)
+    }
+
+    /** [OriginTable] calls it when it makes the `AllocNew` origin of [s]. */
+    internal fun noteAllocNew(s: SiteId) {
+        allocated.set(s)
     }
 
     fun isLoopSite(s: SiteId): Boolean = loopSites.get(s)

@@ -48,5 +48,5 @@ class DirectedEngineFixture(symDepth: Int = 7) {
     fun node(vararg o: OriginId): NodeId = nodes.of(*o)
 
     fun withSets(st: AliasState, etree: NodeId, eval: NodeId): AliasState =
-        st.edit().apply { setVar(ETREE, etree); setVar(EVAL, eval) }.build()
+        transfer.edit(st).apply { setVar(ETREE, etree); setVar(EVAL, eval) }.build()
 }

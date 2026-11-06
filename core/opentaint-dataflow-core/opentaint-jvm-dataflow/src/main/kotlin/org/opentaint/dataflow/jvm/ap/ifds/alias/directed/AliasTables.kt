@@ -12,6 +12,7 @@ class AliasTables(val symDepth: Int) {
     val bases = BaseTable()
     val nodes = NodeTable()
     val origins = OriginTable(symDepth, bases, nodes, sites)
+    val loopAllocs = LoopAllocTracker(nodes, origins, sites)
 
     /** Makes all tables read-only. Run it after the fixpoint, before the queries (IMPL §6.4). */
     fun freeze() {

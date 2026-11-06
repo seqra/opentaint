@@ -35,7 +35,7 @@ class AliasStateTest {
 
     @Test
     fun `env has no entry for the empty set`() {
-        val st = AliasState.EMPTY.edit().apply { setVar(fx.tables.vars.local(0), EMPTY_NODE) }.build()
+        val st = fx.transfer.edit(AliasState.EMPTY).apply { setVar(fx.tables.vars.local(0), EMPTY_NODE) }.build()
         assertEquals(0, st.env.size)
         // A copy of an unassigned local gives no entry.
         val st2 = fx.run(fx.assign(a, t))
@@ -93,9 +93,11 @@ class AliasStateTest {
     @Test
     fun `copy on write does not change the input state`() {
         val st = fx.run(fx.assign(a, x))
-        val before = AliasState(st.env.clone(), st.heap.clone())
+        val env = st.env.clone()
+        val heap = st.heap.clone()
         fx.run(fx.store(a, f, z), fx.assign(a, z), from = st)
-        assertEquals(before, st)
+        assertEquals(env, st.env)
+        assertEquals(heap, st.heap)
     }
 
     @Test

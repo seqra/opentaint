@@ -92,7 +92,7 @@ class AliasTransfer(val tables: AliasTables) {
 
     /** `put(o, c, n)`: removes the key if [n] is the default node, else writes [n] (`putH`). */
     fun put(st: AliasState, o: OriginId, c: CellId, n: NodeId): AliasState {
-        val ed = st.edit()
+        val ed = edit(st)
         put(ed, o, c, n)
         return ed.build()
     }
@@ -113,7 +113,7 @@ class AliasTransfer(val tables: AliasTables) {
 
     /** The weak store: `H(o, c) := H(o, c) ∪ v` for each origin `o` of [base] (`weakE`). */
     fun storeWeak(st: AliasState, base: NodeId, c: CellId, v: NodeId): AliasState {
-        val ed = st.edit()
+        val ed = edit(st)
         for (o in nodes.members(base)) {
             put(ed, o, c, nodes.union(read(ed, o, c), v))
         }
@@ -144,22 +144,27 @@ class AliasTransfer(val tables: AliasTables) {
     }
 
     /**
-     * `retire(s)` (IMPL §4.3, spec §5.1; Lean `retireE`). The most recent object of site [s]
-     * becomes an older object:
+     * `retire(s)` (IMPL §4.3, spec §5.1; Lean `retireE`). The most recent object of the loop site
+     * [s] becomes an older object:
      * 1. for each cell `c` written for `AllocNew(s)` or for `AllocOld(s)`:
      *    `H(old, c) := H(old, c) ∪ H(new, c)`, each side read by rule (`retireNaive_ne`);
      * 2. the cells of `AllocNew(s)` are removed, so the new object has its default content;
      * 3. `AllocNew(s)` becomes `AllocOld(s)` in each node of `env` (the reserved keys included)
      *    and of `heap`.
+     *
+     * It reads the two indexes of the state ([AliasIndex]): the written cells of the two origins,
+     * and the holders of `AllocNew(s)`. It does not scan the state.
      */
     fun retire(st: AliasState, s: SiteId): AliasState {
+        require(sites.isLoopSite(s)) { "Only a loop site retires: $s" }
         val nw = origins.allocNew(s)
         val old = origins.allocOld(s)
         val newCells = st.index.writtenCells(nw)
         val oldCells = st.index.writtenCells(old)
-        val ed = st.edit()
+        if (newCells.isEmpty() && oldCells.isEmpty() && st.index.holders(nw).isEmpty()) return st
+        val ed = edit(st)
 
-        // Steps 1 and 2. The union is renamed in step 3 with all other nodes.
+        // Steps 1 and 2. A union that holds new(s) is renamed in step 3.
         if (newCells.isNotEmpty() || oldCells.isNotEmpty()) {
             val cells = IntOpenHashSet(newCells.size + oldCells.size)
             for (c in newCells) cells.add(c)
@@ -172,16 +177,17 @@ class AliasTransfer(val tables: AliasTables) {
             for (c in newCells) ed.removeHeap(heapKey(nw, c))
         }
 
-        // Step 3: rename in each node. A node without new(s) does not change.
-        st.forEachVar { v, n -> ed.setVar(v, nodes.rename(n, nw, old)) }
-        val merged = ed.build()
-        val ed2 = merged.edit()
-        merged.forEachHeap { key, n ->
-            val r = nodes.rename(n, nw, old)
-            if (r != n) put(ed2, heapKeyOrigin(key), heapKeyCell(key), r)
+        // Step 3: rename in each holder of new(s), after steps 1 and 2.
+        val held = ed.holders(nw)
+        for (v in held.vars) ed.setVar(v, nodes.rename(ed.varNode(v), nw, old))
+        for (key in held.keys) {
+            put(ed, heapKeyOrigin(key), heapKeyCell(key), nodes.rename(ed.heapNode(key), nw, old))
         }
-        return ed2.build()
+        return ed.build()
     }
+
+    /** An editor of [st] that keeps the holders index of this method. */
+    fun edit(st: AliasState): AliasState.Editor = st.edit(tables.loopAllocs)
 
     /**
      * The join of two states (IMPL §4.6; Lean `joinE`). For each key in either map: one memoized
@@ -193,7 +199,7 @@ class AliasTransfer(val tables: AliasTables) {
      */
     fun join(a: AliasState, b: AliasState): Joined {
         if (a === b) return Joined(a, false)
-        val ed = a.edit()
+        val ed = edit(a)
         b.forEachVar { v, nb ->
             val na = a.varNode(v)
             ed.setVar(v, nodes.union(na, nb))
@@ -221,7 +227,7 @@ class AliasTransfer(val tables: AliasTables) {
      * (spec §5.5). The CFG step calls it with the live set of a node.
      */
     inline fun kill(st: AliasState, keep: (VarId) -> Boolean): AliasState {
-        val ed = st.edit()
+        val ed = edit(st)
         st.forEachVar { v, _ ->
             if (v != ETREE && v != EVAL && !keep(v)) ed.removeVar(v)
         }
@@ -229,7 +235,7 @@ class AliasTransfer(val tables: AliasTables) {
     }
 
     private fun setVar(st: AliasState, v: VarId, n: NodeId): AliasState {
-        val ed = st.edit()
+        val ed = edit(st)
         ed.setVar(v, n)
         return ed.build()
     }

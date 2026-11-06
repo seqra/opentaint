@@ -89,6 +89,7 @@ class OriginTable(
         if (known != NO_ID) return known
         val o = add(ALLOC_NEW, site, NO_ID, NO_ID, NO_ID, 0)
         allocNews.put(site, o)
+        sites.noteAllocNew(site)
         return o
     }
 
