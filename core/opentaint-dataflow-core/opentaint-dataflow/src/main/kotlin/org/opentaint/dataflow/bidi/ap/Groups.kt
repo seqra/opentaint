@@ -89,7 +89,7 @@ class FlowGroup(private val m: ApManager, private val interner: TrieInterner<Flo
                 Tail.EXACT -> t.tail == Tail.EXACT && stored.exclusion.isSubsetOf(t.exclusion)
                 Tail.ANY_TAINT -> t.tail == Tail.ANY_TAINT && stored.exclusion.isSubsetOf(t.exclusion)
             }
-            val belowOk = marks && (stored.tail == Tail.ANY ||
+            val belowOk = !t.keepsDemandPositions() && marks && (stored.tail == Tail.ANY ||
                 stored.tail == Tail.ANY_TAINT && t.tail == Tail.ANY_TAINT)
             root = FlowAlgebra.subtract(root, stored.root, FlowLeaf.NONE,
                 at = { if (atOk) it else FlowLeaf.NONE },

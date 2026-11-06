@@ -134,9 +134,13 @@ class CurrentModeActionsTest {
                 assertContains(f.summaries(2, c.callee), CurrentSummary(setOf(entry),
                     Conclusion(coarse.fact, ExclusionSet.Empty, true)))
             }
-            assertEquals(fieldReturns.toSet() + f.p(ret, listOf(field), mark = MarkSlot.Concrete(c.t)),
+            // The retained f/ANY FLOW guide meets the exact f/T input at the
+            // same head. Existing C2 emits an exact FLOW initial as well as
+            // the root guide's first-field STAR initial.
+            assertEquals(fieldReturns.toSet() + f.p(ret, listOf(field), Tail.EXACT) +
+                f.p(ret, listOf(field), mark = MarkSlot.Concrete(c.t)),
                 f.premises(2, c.callee),
-                "Each field refines FLOW; the concrete f/T guide tests the selected cleaner separately")
+                "Each retained guide uses existing C2; the concrete f/T case tests the cleaner separately")
             assertTrue(f.summaries(2, c.callee).none { it.conclusion.fact ==
                 PathFact(arg, listOf(h, field), Tail.EXACT, MarkSlot.Concrete(c.t)) })
             assertTrue(f.patterns(3, c.callee, arg).all { it.entry.fact.mark is MarkSlot.Star },

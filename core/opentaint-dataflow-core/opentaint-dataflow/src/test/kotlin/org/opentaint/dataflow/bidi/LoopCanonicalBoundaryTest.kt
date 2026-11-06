@@ -10,7 +10,7 @@ import org.opentaint.dataflow.graph.PortId
 import kotlin.test.*
 
 class LoopCanonicalBoundaryTest {
-    @Test fun `newly covered applied MAY child is removed before observer scalarization`() {
+    @Test fun `applied FLOW MAY guide positions are observed before a certified loop cut`() {
         val f=StoreFixtures();val x=AccessPathBase.Argument(0)
         val g=f.field("g");val h=f.field("h")
         val root=f.fact(x,listOf(g),Tail.ANY,MarkSlot.STAR,layer=Layer.DEMAND) as FlowTree
@@ -19,8 +19,24 @@ class LoopCanonicalBoundaryTest {
         val keep=AdmittedInitial(f.manager.initial(f.pattern(x,tail=Tail.STAR,mark=MarkSlot.STAR)),Layer.NORMAL)
         val gate=LoopOutputRestriction(f.ops)
         val result=gate.restrict(false,true,packet) { LoopObservation<Unit>(setOf(keep),emptySet(),emptySet()) }
-        assertEquals(1L,gate.statistics.scalarQueries,"Canonicalize the complete applied packet before separating its leaves")
+        assertEquals(2L,gate.statistics.scalarQueries,"Each explicit FLOW guide position can select a different initial")
+        assertEquals(1L,gate.statistics.cuts,"The constant observer explicitly permits the child's prefix cut")
         assertEquals(setOf(listOf(g)),result.flatMap{f.ops.leaves(it).map{p->p.fact.path}.toList()}.toSet())
+    }
+
+    @Test fun `a distinct observed FLOW MAY child cannot be lost before or after restriction`() {
+        val f=StoreFixtures();val x=AccessPathBase.Argument(0)
+        val g=f.field("g");val h=f.field("h")
+        val parent=f.fact(x,listOf(g),Tail.ANY,MarkSlot.STAR,layer=Layer.DEMAND) as FlowTree
+        val child=f.fact(x,listOf(g,h),Tail.ANY,MarkSlot.STAR,layer=Layer.DEMAND) as FlowTree
+        val packet=parent.withRoot(FlowAlgebra.mergeAdd(parent.root,child.root,f.manager.cancellation))
+        val gate=LoopOutputRestriction(f.ops)
+        val result=gate.restrict(false,true,packet) { candidate ->
+            LoopObservation(emptySet(),setOf(f.ops.leaves(candidate).single()),emptySet())
+        }
+        assertEquals(2L,gate.statistics.scalarQueries)
+        assertEquals(0L,gate.statistics.cuts,"The child and its prefix have different observations")
+        assertEquals(setOf(listOf(g),listOf(g,h)),result.flatMap{f.ops.leaves(it).map{p->p.fact.path}.toList()}.toSet())
     }
 
     @Test fun `exclusion-blocked MUST child and protected mask coordinates remain present`() {

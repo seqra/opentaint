@@ -4,6 +4,13 @@ Date: 5 November 2026. Status: implementation and validation in progress.
 The user added the transitive-coverage clarification during implementation.
 Reviewed runtime: `52f32dd437d438aec4a700a02c18d94c31d58093`.
 
+Correction, 6 November 2026: the user selected **keep STAR; repair demand
+guidance**. The [producer correction](bidirectional-demand-guidance-retention-implementation-20261106.md)
+keeps explicit FLOW/DEMAND/ANY positions through cold, warm and fresh-delta
+admission. It revises the guidance part of the canonicalization contract below.
+It keeps the scalar emitter and concrete TAINT/data normalization unchanged.
+Its native correction is in progress; configured project acceptance is pending.
+
 This document implements the three selected changes from the
 [field-path design](bidirectional-flow-antichains-and-demand-discharge-20261104.md)
 and the [relation and matching audit](../reports/bidirectional-normal-star-subsumption-direction-policy-20261105.md).
@@ -16,6 +23,7 @@ The changes apply to all iterations, in both directions.
 | Part | Current behavior | New behavior |
 |---|---|---|
 | MUST/MAY facts | Some packets and arrival orders retain covered descendants | Keep a canonical set under the selected prefix laws, including one-packet and broad-after-narrow cases |
+| FLOW/DEMAND/ANY guidance correction | Prefix coverage can discard a position that selects a finer next-run initial | Retain each explicit guide position; deduplicate equal coordinates and keep existing same-point header laws |
 | C2 initial emission | Redundant descendant facts can produce distinct refinement initials | Use canonical facts only; do not retain the discarded leaves as refinement history |
 | MUST exclusions | Some admitted descendants and complete excluded children remain separate | Cover admitted descendants across exclusion headers; fill an excluded field only with a complete immediate MUST child |
 | Reverse MUST selection | An incomparable exclusion set can reject a same-path overlap | Accept the overlap for a reversed MUST reader; keep its typed native result and layer |
@@ -96,6 +104,12 @@ mutation. Freeze and rebuild persistent indexes only after the existing owners
 have joined. Do not add a concurrent index writer.
 
 ## 3. Canonical MUST/MAY facts
+
+The DATA coverage laws in this section exclude real FLOW/DEMAND/ANY guide
+positions after the 6 November correction. Those positions use coordinate
+freshness, not proper-prefix denotational coverage. The packed TAINT adapter's
+temporary FLOW geometry still uses the DATA laws. No discarded TAINT input
+history is restored for C2.
 
 ### 3.1 Selected coverage and exclusion laws
 

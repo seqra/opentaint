@@ -43,7 +43,15 @@ private fun <P : TrieLeaf> LeafAlgebra<P>.canonicalSpans(
     return checkNotNull(results.getValue(start)) { "A nonempty packet has a minimal retained position" }
 }
 
-internal fun ApManager.canonicalFlowPacket(value: FlowTree): FlowTree {
+/** Explicit MAY positions guide later refinement even when an ancestor covers
+ * their denotation. This applies to real FLOW packets, not TAINT geometry. */
+internal fun FlowTree.keepsDemandPositions(): Boolean = layer == Layer.DEMAND && tail == Tail.ANY
+
+internal fun ApManager.canonicalFlowPacket(value: FlowTree): FlowTree =
+    if (value.keepsDemandPositions()) value else canonicalFlowDataPacket(value)
+
+/** DATA normalization is also used by packed TAINT's temporary FLOW geometry. */
+internal fun ApManager.canonicalFlowDataPacket(value: FlowTree): FlowTree {
     if (value.tail != Tail.ANY && value.tail != Tail.ANY_TAINT) return value
     if (value.root.childData == null) return value
     val root = FlowAlgebra.canonicalSpans(value.root, value.exclusion, this, { it })
@@ -189,6 +197,7 @@ private fun <P : TrieLeaf, K> LeafAlgebra<P>.coalesceRegions(
 internal fun <P : TrieLeaf, K> LeafAlgebra<P>.canonicalRegions(
     input: List<SpatialRegion<P, K>>, m: ApManager,
     equalEJoin: ((K,K) -> K)? = null,
+    preserveAnyHeads: Boolean = false,
     channelCovers: (K, K) -> Boolean,
 ): List<SpatialRegion<P, K>> {
     var current = coalesceRegions(input, m)
@@ -263,7 +272,8 @@ internal fun <P : TrieLeaf, K> LeafAlgebra<P>.canonicalRegions(
         var changed = false
         for (i in current.indices) {
             val value = current[i]
-            var root: TrieNode<P>? = if (value.tail == Tail.ANY || value.tail == Tail.ANY_TAINT)
+            val keepHeads = preserveAnyHeads && value.tail == Tail.ANY
+            var root: TrieNode<P>? = if (!keepHeads && (value.tail == Tail.ANY || value.tail == Tail.ANY_TAINT))
                 canonicalSpans(value.root, value.exclusion, m, { it }) else value.root
             for (j in current.indices) {
                 if (i == j || root == null) continue
@@ -275,7 +285,7 @@ internal fun <P : TrieLeaf, K> LeafAlgebra<P>.canonicalRegions(
                 // Equivalent cohort headers can overlap at coordinates. Keep
                 // their first witness, never subtract the same point twice.
                 val atAllowed = sameAt && (!equivalent || j < i)
-                val belowAllowed = stored.tail == Tail.ANY || stored.tail == Tail.ANY_TAINT
+                val belowAllowed = !keepHeads && (stored.tail == Tail.ANY || stored.tail == Tail.ANY_TAINT)
                 root = subtract(root, stored.root, empty,
                     at = { if (atAllowed) it else empty },
                     below = { if (belowAllowed) it else empty },
@@ -295,7 +305,8 @@ internal fun ApManager.canonicalFlowState(values: List<FlowTree>): List<FlowTree
     return FlowAlgebra.canonicalRegions(values.map {
         check(it.base == first.base && it.layer == first.layer)
         SpatialRegion(it.tail,it.exclusion,it.markExclusion,it.root)
-    },this,equalEJoin = { a,b -> intern(a.intersect(b)) },channelCovers = MarkExclusions::isSubsetOf).map { flowTree(first.base, first.layer, it.exclusion, it.channel, it.root, it.tail) }
+    },this,equalEJoin = { a,b -> intern(a.intersect(b)) },preserveAnyHeads = first.layer == Layer.DEMAND,
+        channelCovers = MarkExclusions::isSubsetOf).map { flowTree(first.base, first.layer, it.exclusion, it.channel, it.root, it.tail) }
 }
 
 private data class TaintSpatialHeader(val tail: Tail, val exclusion: ExclusionSet)

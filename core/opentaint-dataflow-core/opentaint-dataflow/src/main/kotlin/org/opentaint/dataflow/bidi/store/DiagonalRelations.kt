@@ -115,7 +115,7 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
         m.cancellation.checkpoint()
         val delta = if (offered.tail == Tail.ANY) {
             val packet = m.flowTree(offered.base,offered.layer,offered.exclusion,MarkExclusions.EMPTY,offered.geometry,Tail.ANY)
-            offered.copy(geometry = m.canonicalFlowPacket(packet).root)
+            offered.copy(geometry = m.canonicalFlowDataPacket(packet).root)
         } else offered
         if (!RuntimeDataDomain.initial(delta.initialShape) || !RuntimeDataDomain.base(delta.base)) return emptyList()
         require(delta.initialShape.manager === m) { "A diagonal packet must use this AP manager" }

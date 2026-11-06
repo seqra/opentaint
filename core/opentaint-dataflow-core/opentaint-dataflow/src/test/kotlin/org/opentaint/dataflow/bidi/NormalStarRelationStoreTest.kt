@@ -157,15 +157,18 @@ class NormalStarRelationStoreTest {
         assertEquals(root.boundedDepth, kept.root.boundedDepth)
     }
 
-    @Test fun `detached spatial MAY and MUST batches omit coordinates removed by a later broad row`() {
+    @Test fun `detached batches keep FLOW MAY guides and compact MUST data`() {
         for (backed in listOf(false, true)) for (tail in listOf(Tail.ANY, Tail.ANY_TAINT)) {
             val index = PublicationIndex(ap, f.ops, flowBacked = backed)
             val layer = if (tail == Tail.ANY) Layer.DEMAND else Layer.NORMAL
             fun value(path: List<Int>) = ap.flowTree(y, layer, ExclusionSet.Empty, MarkSet.EMPTY,
                 FlowAlgebra.prepend(ap, ap.path(path), FlowAlgebra.LEAF_NODE), tail)
             val broad = value(emptyList())
-            val fresh = index.addAll(listOf(Publication(initial(), value(listOf(a))), Publication(initial(), broad)))
-            assertEquals(listOf(Publication(initial(), broad)), fresh, "backed=$backed tail=$tail")
+            val narrow = Publication(initial(), value(listOf(a)))
+            val root = Publication(initial(), broad)
+            val fresh = index.addAll(listOf(narrow,root))
+            assertEquals(if (tail == Tail.ANY) listOf(narrow,root) else listOf(root), fresh,
+                "backed=$backed tail=$tail")
         }
     }
 

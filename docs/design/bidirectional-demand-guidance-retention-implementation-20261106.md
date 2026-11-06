@@ -1,15 +1,15 @@
 # Retain required demand guidance; keep scalar C2 unchanged
 
-Status: **behavioral direction selected; native repair not implemented**.
-The user selected **Keep STAR; repair demand guidance**. This is a narrowed
-implementation proposal for review, not an implementation-ready whole-engine
-fix. No source patch or semantic diagnostic capsule is authorized here.
+Status: **behavioral direction selected; FLOW/DEMAND/ANY producer correction
+implemented; full validation in progress**. The user selected **Keep STAR;
+repair demand guidance**. The correction implements the bounded producer path
+specified below. It is not a whole-engine correctness or quality claim.
 
 Keep `RestrictedInitialPolicy.emit`, `canEmitInitial`, `canStoreInitial`,
 admission layers, field transfer, native MUST application and NormalTarget
 support unchanged. Keep NORMAL data-only MAY canonicalization and existing
 CertifiedNormalFlow, NonSubsumable, alias, static and ownership laws. The change
-under consideration is retention of required guide coordinates before they
+is retention of required guide coordinates before they
 are lost, with exact original and paired exit/port labels.
 
 ## Observed guide-to-image difference
@@ -48,6 +48,14 @@ Current returns STAR/FLOW NORMAL and STAR/Graal DEMAND. B retains both and adds
 MUST/FLOW NORMAL. The row difference is observed; native per-row emission
 binding is not. Both captures end at reached/completed/accepted 4/3/3. They do
 not prove that this initial is necessary for either final Conductor miss.
+
+The effect also applies to exact inputs. For an existing root ANY/FLOW guide,
+an exact `p.f.$/T` input emits `p.f.*/FLOW`. A retained same-head `p.f.[any]/FLOW`
+guide emits the existing `p.f.$/FLOW` initial as well. This is an extra worker
+through the current emitter, not a new exact-emission rule. Summary storage
+uses the existing EXACT-to-STAR normalization and keeps its mark exclusions.
+The named-field cleaner test checks the extra backward initial while keeping
+its cleaner, native-record, source-permission and final finding assertions.
 
 ## Earliest native producer boundary: observed versus inferred
 
@@ -148,6 +156,78 @@ existing dispatch can carry the revised pure view without per-owner PacketUse
 metadata. Normal TaintTree actuals, scalar C2, image, layers and current cache
 keys need not change merely to retain these FLOW guide coordinates.
 
+## Producer implementation cell
+
+Use the following changes for the demonstrated FLOW/DEMAND/ANY path. This is a
+correction to guidance compaction. The data view and the scalar emitter keep
+their current rules. A retained demand head can add refinement work.
+
+```kotlin
+// SpatialCanonical.kt: real FLOW packets only.
+internal fun FlowTree.keepsDemandPositions(): Boolean =
+    layer == Layer.DEMAND && tail == Tail.ANY
+
+internal fun ApManager.canonicalFlowPacket(value: FlowTree): FlowTree =
+    if (value.keepsDemandPositions()) value else canonicalFlowDataPacket(value)
+
+// Move the existing function body here without a semantic change.
+internal fun ApManager.canonicalFlowDataPacket(value: FlowTree): FlowTree {
+    /* existing same-tail DATA normalization */
+}
+
+// canonicalRegions gains an optional preserveAnyHeads = false argument.
+// canonicalFlowState sets it to first.layer == Layer.DEMAND.
+// Taint state calls leave it false.
+val keepHeads = preserveAnyHeads && value.tail == Tail.ANY
+var root = if (!keepHeads && value.tail in setOf(Tail.ANY, Tail.ANY_TAINT))
+    canonicalSpans(value.root, value.exclusion, m, { it }) else value.root
+val belowAllowed = !keepHeads && stored.tail in setOf(Tail.ANY, Tail.ANY_TAINT)
+
+// Groups.kt, FlowGroup.subtractSubsumed:
+val belowOk = !t.keepsDemandPositions() && marks &&
+    (stored.tail == Tail.ANY ||
+     stored.tail == Tail.ANY_TAINT && t.tail == Tail.ANY_TAINT)
+// Keep the current same-coordinate atOk predicate and header joins.
+
+// DiagonalRelations.kt: this FLOW tree is TAINT geometry, not FLOW guidance.
+val packet = m.flowTree(/* existing packed-TAINT geometry and headers */)
+offered.copy(geometry = m.canonicalFlowDataPacket(packet).root)
+```
+
+The diagonal adapter change is required. Its temporary FLOW tree can have
+DEMAND/ANY headers. Letting that surrogate use the real-FLOW exception would
+also change concrete TAINT normalization. Keep the adapter on the old DATA
+function. The source audit found one such direct call. Other existing
+`canonicalPackets` calls keep their signatures and use the real packet kind.
+
+Do not change equal-point E/mx union, MUST fill, cross-tail admission, budgets,
+protection, owner keys, fact equality, or cache keys. At a common coordinate,
+the existing mx intersection still represents the union of admitted marks.
+The producer model checks this request-union law for its finite FULL table.
+Equal handoff projections alone are insufficient to prove runtime request
+equivalence, so the runtime mx controls remain required.
+
+Required native evidence before a production correction is accepted:
+
+1. Cold packet, parent-first and child-first FLOW/DEMAND/ANY admissions retain
+   both positions. The child is fresh after its parent; an exact repeat is not.
+2. The point, summary and publication owners keep those positions and their
+   original/exit pair. Handoff uses the existing demand builder.
+3. FLOW NORMAL and MUST controls keep their old compaction. Concrete TAINT,
+   including the packed diagonal surrogate, keeps its old compaction too.
+4. The uniform and exact-prefix programs pass their run-3 checkpoints with
+   STAR emission unchanged. Their natural traces must also finish.
+5. Default native tests and the configured project campaign pass their stated
+   gates. No old B overlay is applied to the changed normalizer class.
+
+The initial native producer check has eight expected failures and four passing
+controls before correction. After correction, all 29 targeted producer/spatial
+checks pass. Both exact-prefix and uniform-source programs report in run-3;
+their natural traces complete run-5. The separate shared-loop program still
+completes run-5 with zero reports and fails its finding assertion. Keep that
+failure as an open coverage issue. These small results do not replace the
+configured project campaign.
+
 ## General contract and proof boundary
 
 The existing selector also includes NORMAL backward ZERO and NORMAL ND results.
@@ -160,14 +240,16 @@ the broader role transport is an unproved candidate, not a prerequisite assumed
 from the model or a reason to change NORMAL data-only MAY normalization now.
 
 The [finite model](../../spec/lean/proposals/demand-guidance-retention-20261106/README.md)
-passes 16 local lemmas with the unchanged scalar C2 model. Its
+passes 39 local lemmas with the unchanged scalar C2 model. Its
 `pairedAdmissionImage` retains opaque complete exit labels; it is **not
 production C5**. Scope: finite FULL scalar lists, ordinary nonstatic bases,
 counted fields, empty E. ZERO/ND occur only in the selector table. It proves
 exact row union/images in both orders and that a late store cannot recover an
-already discarded child. It does not prove native producers, role transitions,
-C5/budgets or whole-engine effects. New lemmas use only `propext`; see its
-`checks.json` axiom audit.
+already discarded child. The producer extension proves coordinate add/delta,
+exact duplicate suppression, handoff pairing, and the current same-head mx
+request-union law in a finite FULL table. It does not prove native producers,
+role transitions, C5/budgets or whole-engine effects. The models use only
+`propext` and `Quot.sound`; see the `checks.json` axiom audit.
 
 Next proof/test work is bounded to the candidate producer path: cold packet,
 both arrivals, warm point/summary/publication admission and fresh deltas;
