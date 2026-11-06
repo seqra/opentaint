@@ -26,6 +26,7 @@ import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.configuration.jvm.TaintSinkMeta
 import org.opentaint.dataflow.configuration.jvm.TaintStaticFieldSource
 import org.opentaint.dataflow.configuration.mkTrue
+import org.opentaint.dataflow.jvm.ap.ifds.AliasAnalysisMode
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -240,6 +241,7 @@ private fun ProjectAnalysisContext.analyze(
         symbolicExecutionEnabled = false,
         analysisCwe = null,
         storeSummaries = false,
+        experimentalAliasAnalysisMode = AliasAnalysisMode.fromTestProperty(),
         debugOptions = debugOptions
     )
     JIRTaintAnalyzer(

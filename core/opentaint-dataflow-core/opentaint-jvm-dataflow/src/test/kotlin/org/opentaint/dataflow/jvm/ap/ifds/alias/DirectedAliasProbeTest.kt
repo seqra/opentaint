@@ -23,6 +23,7 @@ import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
 import org.opentaint.dataflow.jvm.BasicTestUtils
+import org.opentaint.dataflow.jvm.ap.ifds.AliasAnalysisMode
 import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
@@ -56,6 +57,7 @@ import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.jvm.graph.JApplicationGraphImpl
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -515,6 +517,52 @@ class DirectedAliasProbeTest : BasicTestUtils() {
         )
     }
 
+    @Test
+    fun `mode directed is accepted by params`() {
+        val defaults = JIRLocalAliasAnalysis.Params()
+        assertEquals(AliasAnalysisMode.DSU, defaults.mode)
+        assertEquals(7, defaults.symDepth)
+        assertEquals(6, defaults.maxAccessors)
+        assertEquals(10_000, defaults.maxCallClosure)
+
+        val directed = JIRLocalAliasAnalysis.Params(mode = AliasAnalysisMode.DIRECTED)
+        assertEquals(AliasAnalysisMode.DIRECTED, directed.mode)
+
+        val method = findMethod(SAMPLE, "heapChainAllocs")
+        val call = method.instList.filterIsInstance<JIRCallInst>().first { it.callExpr.method.name == PROBE }
+        val z = AccessPathBase.LocalVar((call.callExpr.args[0] as JIRLocalVar).index)
+        val aa = aaForMethod(method, noRules, directed)
+        assertEquals(dsuForMethod(method).findAlias(z, call), aa.findAlias(z, call))
+    }
+
+    @Test
+    fun `alias analysis mode names are parsed and unknown names fail`() {
+        assertEquals(AliasAnalysisMode.DSU, AliasAnalysisMode.parse("dsu"))
+        assertEquals(AliasAnalysisMode.SHADOW, AliasAnalysisMode.parse("SHADOW"))
+        assertEquals(AliasAnalysisMode.DIRECTED, AliasAnalysisMode.parse("Directed"))
+        assertFailsWith<IllegalArgumentException> { AliasAnalysisMode.parse("fast") }
+    }
+
+    @Test
+    fun `vararg element aliases equal the group answer in dsu mode`() {
+        val cases = listOf(
+            Triple("varargStringConstants", VARARGS, 0),
+            Triple("varargBoxedConstants", VARARGS, 0),
+            Triple("catchAfterThrowingCall", PROBE, 2),
+        )
+        for ((methodName, callee, argIdx) in cases) {
+            val method = findMethod(SAMPLE, methodName)
+            val call = method.instList.filterIsInstance<JIRCallInst>().first { it.callExpr.method.name == callee }
+            val base = AccessPathBase.LocalVar((call.callExpr.args[argIdx] as JIRLocalVar).index)
+            val dsu = dsuForMethod(method)
+            val group = dsu.getAllAliasAtStatement(call).firstOrNull { set ->
+                set.any { it is AliasApInfo && it.base == base && it.accessors.singleOrNull() is AliasAccessor.Array }
+            }
+            val facade = aaForMethod(method, noRules, JIRLocalAliasAnalysis.Params(mode = AliasAnalysisMode.DSU))
+            assertEquals(group, facade.findArrayElementAliases(base, call), methodName)
+        }
+    }
+
     private fun nexts(base: String, counts: IntRange): Set<String> =
         counts.map { base + ".next".repeat(it) }.toSet()
 
@@ -565,12 +613,8 @@ class DirectedAliasProbeTest : BasicTestUtils() {
         fun heapAnswer(role: String, fieldClass: String, field: String, fieldType: String = OBJECT): Set<String> {
             val local = local(role)
             val accessor = AliasAccessor.Field(fieldClass, field, fieldType)
-            val result = sortedSetOf<String>()
-            aa.forEachHeapAlias(
-                AccessPathBase.LocalVar(local.index), call, listOf<AliasAccessor>(accessor),
-                { f -> if (f.isEmpty()) emptyList() else listOf(f.first() to f.drop(1)) },
-                { info, f -> if (f.isEmpty()) result += info.show() }
-            )
+            val result = aa.findHeapAlias(AccessPathBase.LocalVar(local.index), listOf(accessor), call)
+                .orEmpty().map { it.show() }.toSortedSet()
             println("  heap($role.$field) = $result")
             return result
         }
@@ -599,18 +643,10 @@ class DirectedAliasProbeTest : BasicTestUtils() {
 
         /**
          * The element aliases of the array in [role], as the vararg branch of
-         * `JIRBasicAtomEvaluator.resolveLocalVarValue` gets them.
+         * `JIRBasicAtomEvaluator.resolveLocalVarValue` gets them (`findArrayElementAliases`).
          */
-        fun elementAliases(role: String): List<AliasInfo>? {
-            val base = AccessPathBase.LocalVar(local(role).index)
-            for (aliasSet in aa.getAllAliasAtStatement(call)) {
-                for (info in aliasSet) {
-                    if (info !is AliasApInfo || info.base != base) continue
-                    if (info.accessors.singleOrNull() is AliasAccessor.Array) return aliasSet
-                }
-            }
-            return null
-        }
+        fun elementAliases(role: String): List<AliasInfo>? =
+            aa.findArrayElementAliases(AccessPathBase.LocalVar(local(role).index), call)
 
         fun elementAnswer(role: String): Set<String>? = elementAliases(role)?.map { it.show() }?.toSortedSet()
 
@@ -673,17 +709,31 @@ class DirectedAliasProbeTest : BasicTestUtils() {
         return Probe(method, aaForMethod(method, rules), call, roles.toList()).also { println(it.render()) }
     }
 
-    private fun aaForMethod(method: JIRMethod, rules: TaintRulesProvider): JIRLocalAliasAnalysis {
+    private fun aaForMethod(
+        method: JIRMethod,
+        rules: TaintRulesProvider,
+        params: JIRLocalAliasAnalysis.Params = testParams(),
+    ): JIRLocalAliasAnalysis {
         val ep = method.instList.first()
         val graph = JApplicationGraphImpl(cp, runBlocking { cp.usagesExt() })
         val callResolver = JIRCallResolver(cp, SingleLocationUnit(method.enclosingClass.declaration.location))
         val localReachability = JIRLocalVariableReachability(method, graph, manager)
         val cancellation = Cancellation().also { it.activate() }
-        return JIRLocalAliasAnalysis(
-            ep, graph, callResolver, rules, localReachability, cancellation, manager,
-            JIRLocalAliasAnalysis.Params()
+        return JIRLocalAliasAnalysis(ep, graph, callResolver, rules, localReachability, cancellation, manager, params)
+    }
+
+    private fun dsuForMethod(method: JIRMethod): JIRDsuAliasAnalysis {
+        val ep = method.instList.first()
+        val graph = JApplicationGraphImpl(cp, runBlocking { cp.usagesExt() })
+        val callResolver = JIRCallResolver(cp, SingleLocationUnit(method.enclosingClass.declaration.location))
+        val localReachability = JIRLocalVariableReachability(method, graph, manager)
+        val cancellation = Cancellation().also { it.activate() }
+        return JIRDsuAliasAnalysis(
+            ep, graph, callResolver, noRules, localReachability, cancellation, manager, JIRLocalAliasAnalysis.Params()
         )
     }
+
+    private fun testParams() = JIRLocalAliasAnalysis.Params(mode = AliasAnalysisMode.fromTestProperty())
 
     private class SingleLocationUnit(val loc: RegisteredLocation) : JIRUnitResolver {
         override fun resolve(method: JIRMethod): UnitType =

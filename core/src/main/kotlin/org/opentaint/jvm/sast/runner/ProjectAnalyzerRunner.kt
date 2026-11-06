@@ -12,6 +12,7 @@ import com.github.ajalt.clikt.parameters.types.path
 import org.opentaint.common.sast.CommonAnalysisOptions
 import org.opentaint.common.sast.sarif.SarifGenerationOptions
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
+import org.opentaint.dataflow.jvm.ap.ifds.AliasAnalysisMode
 import org.opentaint.go.sast.project.GoProjectAnalysisOptions
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader
 import org.opentaint.jvm.sast.project.ProjectAnalysisOptions
@@ -85,6 +86,13 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
     private val experimentalAAInterProcCallDepth: Int by option(help = "Experimental options: inter-proc alias analysis call depth")
         .int().default(1)
 
+    private val experimentalAliasAnalysisMode: AliasAnalysisMode by option(
+        "--experimental-alias-analysis-mode",
+        help = "Experimental options: local alias analysis mode"
+    )
+        .choice(AliasAnalysisMode.entries.associateBy { it.name.lowercase() })
+        .default(AliasAnalysisMode.DSU)
+
     private val sarifOptions get() = SarifGenerationOptions(
         sarifFileName = sarifFileName,
         sarifCodeFlowLimit = sarifCodeFlowLimit,
@@ -112,6 +120,7 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         symbolicExecutionTimeout = symbolicExecutionTimeout.seconds,
         storeSummaries = false,
         experimentalAAInterProcCallDepth = experimentalAAInterProcCallDepth,
+        experimentalAliasAnalysisMode = experimentalAliasAnalysisMode,
     )
 
     override fun commonOptions(): CommonAnalysisOptions = commonOptions

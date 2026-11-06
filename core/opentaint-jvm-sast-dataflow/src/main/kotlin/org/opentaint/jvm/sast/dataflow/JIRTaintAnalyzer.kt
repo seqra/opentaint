@@ -52,7 +52,8 @@ class JIRTaintAnalyzer(
     private val analysisParams get() = JIRAnalysisManager.Params(
         defaultGetModel = configureDefaultModel(),
         aliasAnalysisParams = JIRLocalAliasAnalysis.Params(
-            aliasAnalysisInterProcCallDepth = options.experimentalAAInterProcCallDepth
+            aliasAnalysisInterProcCallDepth = options.experimentalAAInterProcCallDepth,
+            mode = options.experimentalAliasAnalysisMode,
         )
     )
 

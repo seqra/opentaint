@@ -40,6 +40,9 @@ dependencies {
 tasks.withType<Test> {
     maxHeapSize = "4G"
 
+    // -PaliasAnalysisMode=<DSU|SHADOW|DIRECTED> sets the alias analysis mode of the analysis tests.
+    providers.gradleProperty("aliasAnalysisMode").orNull?.let { systemProperty("opentaint.test.aliasAnalysisMode", it) }
+
     dependsOn(project("samples").tasks.withType<Jar>())
 
     doFirst {

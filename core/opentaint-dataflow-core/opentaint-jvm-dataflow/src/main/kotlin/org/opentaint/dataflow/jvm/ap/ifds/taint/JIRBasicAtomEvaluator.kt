@@ -294,16 +294,9 @@ class JIRBasicAtomEvaluator(
                 body(aliasInfo)
             }
         } else {
-            val allAliases = aa.getAllAliasAtStatement(statement)
-            for (aliasSet in allAliases) {
-                for (info in aliasSet) {
-                    if (info !is AliasApInfo || info.base != base) continue
-                    val singleAccessor = info.accessors.singleOrNull() ?: continue
-                    if (singleAccessor is JIRLocalAliasAnalysis.AliasAccessor.Array) {
-                        body(aliasSet)
-                        return
-                    }
-                }
+            val elementAliases = aa.findArrayElementAliases(base, statement)
+            if (elementAliases != null) {
+                body(elementAliases)
             }
         }
     }

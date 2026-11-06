@@ -82,6 +82,9 @@ tasks.withType<Test> {
     dependsOn(project("samples").tasks.withType<Jar>())
     ensureGoEnvInitialized()
 
+    // -PaliasAnalysisMode=<DSU|SHADOW|DIRECTED> sets the alias analysis mode of the analysis tests.
+    providers.gradleProperty("aliasAnalysisMode").orNull?.let { systemProperty("opentaint.test.aliasAnalysisMode", it) }
+
     doFirst {
         val resolvedTestSamples = testSamples.resolve()
         val testSamplesJar = resolvedTestSamples.single { it.name == "samples.jar" }

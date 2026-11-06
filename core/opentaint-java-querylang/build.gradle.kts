@@ -60,6 +60,9 @@ tasks.withType<Test> {
     environment("TEST_SAMPLES_JAR", testSamplesJar.absolutePath)
 
     jvmArgs = listOf("-Xmx4g")
+
+    // -PaliasAnalysisMode=<DSU|SHADOW|DIRECTED> sets the alias analysis mode of the analysis tests.
+    providers.gradleProperty("aliasAnalysisMode").orNull?.let { systemProperty("opentaint.test.aliasAnalysisMode", it) }
 }
 
 val kotlinGrammar = layout.projectDirectory.dir("src/main/antlr-kotlin")

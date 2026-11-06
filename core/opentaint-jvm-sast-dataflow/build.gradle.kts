@@ -11,7 +11,8 @@ plugins {
 }
 
 dependencies {
-    implementation("org.opentaint.opentaint-dataflow-core:opentaint-jvm-dataflow")
+    // api: TaintAnalyzerOptions exposes AliasAnalysisMode of opentaint-jvm-dataflow.
+    api("org.opentaint.opentaint-dataflow-core:opentaint-jvm-dataflow")
     implementation("org.opentaint.opentaint-configuration-rules:configuration-rules-jvm")
     implementation(opentaintUtilJvm)
 

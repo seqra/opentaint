@@ -8,9 +8,7 @@ import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.alias.applyAlias
-import org.opentaint.dataflow.ap.ifds.analysis.alias.forEachAliasAtStatement
-import org.opentaint.dataflow.ap.ifds.analysis.alias.forEachAliasAtStatementAmongBases
-import org.opentaint.dataflow.ap.ifds.analysis.alias.forEachHeapAliasBeforeStatement
+import org.opentaint.dataflow.ap.ifds.analysis.alias.unapplyAlias
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
@@ -18,9 +16,6 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasInfo
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.locals
-
-fun JIRLocalAliasAnalysis.forEachAliasAtStatement(statement: JIRInst, fact: InitialFactAp, body: (InitialFactAp) -> Unit) =
-    forEachAliasAtStatement(statement, fact, AliasInfo::relevantApInfo, AliasAccessor::apAccessor, body)
 
 fun JIRLocalAliasAnalysis.forEachAliasAfterCallStatement(statement: JIRInst, fact: FinalFactAp, body: (FinalFactAp) -> Unit) {
     val base = fact.base as? AccessPathBase.LocalVar ?: return
@@ -34,9 +29,6 @@ fun JIRLocalAliasAnalysis.forEachAliasAfterCallStatement(statement: JIRInst, fac
         .forEach { alias -> applyAlias(fact, alias, AliasAccessor::apAccessor, body) }
 }
 
-fun JIRLocalAliasAnalysis.forEachHeapAliasBeforeStatement(statement: JIRInst, fact: FinalFactAp, body: (FinalFactAp) -> Unit) =
-    forEachHeapAliasBeforeStatement(statement, fact, Accessor::aliasAccessor, AliasInfo::relevantApInfo, AliasAccessor::apAccessor, body)
-
 fun JIRLocalAliasAnalysis.forEachPossibleAliasAtStatement(
     statement: JIRInst,
     fact: InitialFactAp,
@@ -49,14 +41,25 @@ fun JIRLocalAliasAnalysis.forEachPossibleAliasAtStatement(
     return forEachAliasAtStatementAmongBases(statement, fact, localVars, body)
 }
 
+/**
+ * A copy of the generic loop `forEachAliasAtStatementAmongBases` of the shared `AliasUtil.kt`.
+ * The facade [JIRLocalAliasAnalysis] does not extend the shared `LocalAliasAnalysis`. Thus it needs its own copy.
+ */
 fun JIRLocalAliasAnalysis.forEachAliasAtStatementAmongBases(
     statement: JIRInst,
     fact: InitialFactAp,
     bases: List<AccessPathBase.LocalVar>,
     body: (InitialFactAp) -> Unit
-) = forEachAliasAtStatementAmongBases(
-    statement, fact, bases, AliasInfo::relevantApInfo, AliasAccessor::apAccessor, body
-)
+) {
+    bases.forEach { base ->
+        val aliases = findAlias(base, statement) ?: return@forEach
+        aliases.forEach { alias ->
+            alias.relevantApInfo()?.let {
+                unapplyAlias(fact, base, it, AliasAccessor::apAccessor, body)
+            }
+        }
+    }
+}
 
 fun JIRLocalAliasAnalysis.forEachAliasPathAtStatement(
     statement: JIRInst,

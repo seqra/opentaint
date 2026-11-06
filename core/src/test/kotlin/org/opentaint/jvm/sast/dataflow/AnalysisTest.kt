@@ -23,6 +23,8 @@ import org.opentaint.dataflow.configuration.jvm.serialized.SinkMetaData
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
+import org.opentaint.dataflow.jvm.ap.ifds.AliasAnalysisMode
+import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRSafeApplicationGraph
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
@@ -162,7 +164,12 @@ abstract class AnalysisTest : BasicTestUtils() {
                 get() = analysisUnrollStrategy
 
             override fun analysisGraph(): ApplicationGraph<JIRMethod, JIRInst> = ifdsGraph
-            override fun analysisManager() = JIRAnalysisManager(cp, refManager, rulesProvider)
+            override fun analysisManager() = JIRAnalysisManager(
+                cp, refManager, rulesProvider,
+                params = JIRAnalysisManager.Params(
+                    aliasAnalysisParams = JIRLocalAliasAnalysis.Params(mode = AliasAnalysisMode.fromTestProperty())
+                )
+            )
             override fun unitResolver() = SingleLocationUnit(cls.declaration.location)
         }
 

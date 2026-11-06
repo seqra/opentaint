@@ -47,6 +47,7 @@ import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
 import org.opentaint.dataflow.jvm.BasicTestUtils
+import org.opentaint.dataflow.jvm.ap.ifds.AliasAnalysisMode
 import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
@@ -821,7 +822,7 @@ class AliasSampleTest : BasicTestUtils() {
 
     private fun aaForMethod(
         method: JIRMethod,
-        params: JIRLocalAliasAnalysis.Params = JIRLocalAliasAnalysis.Params()
+        params: JIRLocalAliasAnalysis.Params = JIRLocalAliasAnalysis.Params(mode = AliasAnalysisMode.fromTestProperty())
     ): JIRLocalAliasAnalysis {
         val ep = method.instList.first()
         val usages = runBlocking { cp.usagesExt() }
@@ -835,7 +836,11 @@ class AliasSampleTest : BasicTestUtils() {
     }
 
     private fun interProcParams(depth: Int) =
-        JIRLocalAliasAnalysis.Params(useAliasAnalysis = true, aliasAnalysisInterProcCallDepth = depth)
+        JIRLocalAliasAnalysis.Params(
+            useAliasAnalysis = true,
+            aliasAnalysisInterProcCallDepth = depth,
+            mode = AliasAnalysisMode.fromTestProperty(),
+        )
 
     private fun JIRMethod.findSinkCall(sinkName: String): JIRCallInst =
         instList.filterIsInstance<JIRCallInst>().first { it.callExpr.method.name == sinkName }
