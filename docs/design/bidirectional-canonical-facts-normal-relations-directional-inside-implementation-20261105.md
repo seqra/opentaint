@@ -1,6 +1,6 @@
 # Implementation proposal: canonical facts, NORMAL relations, and directional STAR matching
 
-Date: 5 November 2026. Status: implementation and validation in progress.
+Date: 5 November 2026. Status: implementation landed; quality acceptance open.
 The user added the transitive-coverage clarification during implementation.
 Reviewed runtime: `52f32dd437d438aec4a700a02c18d94c31d58093`.
 
@@ -10,16 +10,21 @@ keeps explicit FLOW/DEMAND/ANY positions through cold, warm and fresh-delta
 admission. It revises the guidance part of the canonicalization contract below.
 It keeps the scalar emitter and concrete TAINT/data normalization unchanged.
 The correction is committed as `4182adae6`. It passes 3,009 native tests.
-The four configured project commands have ended; quality and performance
-review remain open. The shared-loop reproducer still fails its finding check.
+Its four configured commands have ended and remain historical measurements.
+The shared-loop reproducer still fails its finding check.
 
 A further selected [storage clarification](../../spec/concrete-demand-guidance-retention.md)
 keeps supplied concrete TAINT/DEMAND/ANY positions and forbids all storage
 subsumption of protected coordinates. It also forbids pass rules from adding
-protection. Its local prototype is under review. These rules supersede the
+protection. Its storage implementation is locally checked. These rules supersede the
 protected-prefix/flag-fill clauses below; their older proofs keep their stated
 historical scope. C2, fields and layers are unchanged. The native example
 still completes run-5 with zero NORMAL reports.
+
+The clarification is now committed as `7069fe2d7`, after pass guard `e6fbda8e1`.
+Its source-bound default check has 3,040 clean available results, including
+462 reused JVM results. The [post-landing report](../reports/bidirectional-protected-guidance-storage-performance-20261106.md)
+records the completed configured campaign and its remaining quality limits.
 
 This document implements the three selected changes from the
 [field-path design](bidirectional-flow-antichains-and-demand-discharge-20261104.md)
@@ -65,20 +70,24 @@ changes. No compiler/index metadata is added to AP equality or hashing.
 
 ### 1.1 Latest measured iterations
 
-These are existing results, not results of this proposal. Labels mean latest
-reached / completed / accepted forward report.
+These are the latest measured results for landed runtime `7069fe2d7`, including
+the selected guidance and protection corrections. Labels mean latest reached /
+fully completed / accepted forward report.
 
 | Project | Latest labels | Outcome |
 |---|---|---|
 | OWASP | run-5 / run-5 / run-5 | Complete |
-| Conductor | run-6 / run-5 / run-5 | Timeout |
+| Conductor | run-4 / run-3 / run-3 | Timeout; seven identities match f945/52f |
 | Thingsboard | run-1 / none / none | Timeout during static completion |
-| Stirling-PDF | run-9 / run-8 / run-7 | Timeout |
+| Stirling-PDF | run-5 / run-4 / run-3 | Timeout; 21 identities equal 4182 |
 
-The [campaign report](../reports/bidirectional-loop-demand-trie-performance-20261104.md)
-contains the full configuration and quality limits. Stirling already has three
-missing fixed-baseline identities. Thingsboard has no accepted report, so its
-quality is censored. Do not claim that the fixed-baseline no-FN gate already passes.
+The [current campaign report](../reports/bidirectional-protected-guidance-storage-performance-20261106.md)
+contains all iteration times, exact identity differences and quality limits.
+The [earlier campaign](../reports/bidirectional-loop-demand-trie-performance-20261104.md)
+remains historical evidence. Stirling has four missing f945 identities and eight
+additions; one missing identity remains against 52f/8331. Its first lost fact
+is unproved. Thingsboard has no accepted report. The fixed-baseline no-FN gate
+does not pass on these censored results.
 
 ## 2. Terms and owner boundaries
 

@@ -16,7 +16,15 @@ concrete IDs include experimental GROUP atoms; no per-mark FULL/GROUP filter
 is added. FULL remains the required project acceptance mode. The finite C2
 examples are FULL-only; existing GROUP issues remain outside their claim.
 
-The [current report](../reports/bidirectional-demand-guidance-retention-performance-20261106.md)
+The implemented storage runtime is `7069fe2d7`; the pass guard is `e6fbda8e1`.
+The [post-landing measurements](../reports/bidirectional-protected-guidance-storage-performance-20261106.md)
+record latest reached / fully completed / accepted forward runs: OWASP
+**run-5 / run-5 / run-5**, Conductor **run-4 / run-3 / run-3**,
+Thingsboard **run-1 / none / none**, and Stirling-PDF
+**run-5 / run-4 / run-3**. The configured campaign and comparison are complete.
+The censored quality gates and original shared-loop finding remain open.
+
+The [point-control report](../reports/bidirectional-demand-guidance-retention-performance-20261106.md)
 contains the actual point transaction and portable control data. Shared-loop
 naturally finishes run-5 with zero findings; its expected-one assertion fails.
 The trace proves a producer loss, not a final Conductor finding cause.

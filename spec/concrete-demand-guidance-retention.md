@@ -3,6 +3,14 @@
 Date: 6 November 2026. Status: selected storage laws implemented and locally
 checked. Project acceptance and the end-to-end finding gate remain open.
 
+The [post-landing project report](../docs/reports/bidirectional-protected-guidance-storage-performance-20261106.md)
+measures committed runtime `7069fe2d7`. Latest reached / fully completed /
+accepted forward runs are OWASP **run-5 / run-5 / run-5**, Conductor
+**run-4 / run-3 / run-3**, Thingsboard **run-1 / none / none**, and
+Stirling-PDF **run-5 / run-4 / run-3**. Conductor recovers the two missing
+control identities. Thingsboard has no accepted report; Stirling's remaining
+strict identity gap is unresolved. Do not treat those timeouts as quality passes.
+
 This specification records three user decisions: keep STAR and repair demand
 guidance; do not subsume protected memberships; do not let pass rules introduce
 protection. It changes the storage clauses of the
