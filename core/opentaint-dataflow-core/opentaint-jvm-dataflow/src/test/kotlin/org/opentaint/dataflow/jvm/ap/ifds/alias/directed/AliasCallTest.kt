@@ -39,8 +39,9 @@ class AliasCallTest {
     private val d = fx.local(9)
     private val r = fx.local(10)
 
+    /** Runs [instrs] as a straight-line CFG and checks the post-fixpoint conditions ([DirectedTestDriver.runStraight]). */
     private fun run(vararg instrs: AliasInstr, fixpoint: DirectedFixpoint = fp, from: AliasState = AliasState.EMPTY): AliasState =
-        instrs.fold(from) { st, i -> fixpoint.evaluate(st, i) }
+        DirectedTestDriver.runStraight(fixpoint, fx.tables, instrs.toList(), from)
 
     private fun call(
         site: Int,

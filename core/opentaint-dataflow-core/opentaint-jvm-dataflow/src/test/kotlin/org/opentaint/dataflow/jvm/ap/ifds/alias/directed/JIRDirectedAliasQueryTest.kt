@@ -32,6 +32,7 @@ import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.jvm.graph.JApplicationGraphImpl
 import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
@@ -61,10 +62,20 @@ class JIRDirectedAliasQueryTest : BasicTestUtils() {
         val callResolver = JIRCallResolver(cp, SingleLocationUnit(method.enclosingClass.declaration.location))
         val reachability = JIRLocalVariableReachability(method, graph, languageManager)
         val cancellation = Cancellation().also { it.activate() }
+        if (params.mode == AliasAnalysisMode.DIRECTED && params.useAliasAnalysis && checked.add(method to params)) {
+            // The post-fixpoint check of the result of the method (IMPL §9.1 item 3). A violation fails the test.
+            JIRDirectedAliasAnalysis(
+                method.instList.first(), graph, callResolver, null, reachability, cancellation, languageManager, params,
+                verifyPostFix = true,
+            ).compute()
+        }
         return JIRLocalAliasAnalysis(
             method.instList.first(), graph, callResolver, null, reachability, cancellation, languageManager, params,
         )
     }
+
+    /** The methods and parameters with a passed post-fixpoint check. */
+    private val checked = ConcurrentHashMap.newKeySet<Pair<JIRMethod, JIRLocalAliasAnalysis.Params>>()
 
     private fun method(className: String, name: String): JIRMethod =
         cp.findClass(className).declaredMethods.single { it.name == name }
