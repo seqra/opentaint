@@ -1,6 +1,6 @@
 # Directed local alias analysis — compact specification
 
-This document specifies the proposed JVM local alias analysis. It is self-contained. The full design proposal, with the proofs, the measurements and the implementation plan, is `directed-alias-analysis-design.md`.
+This document specifies the proposed JVM local alias analysis. It is self-contained. The full design proposal, with the proofs and the measurements, is `directed-alias-analysis-design.md`. The implementation proposal is `directed-alias-analysis-impl.md`.
 
 ## 1. Purpose
 
@@ -43,7 +43,8 @@ An origin is an abstract value. The value of a path is a finite set of origins. 
 | `⟨@s.c.q⟩` | The value in cell `c` of an object of the allocation site `s` (for `q` empty): the default null of the cell, or a value that a callee writes there. For `q` not empty, the value at path `q` below it. `q` has at most K cells. | no |
 | `null(i)` | The null of the null assignment at site `i` (`x = null`, or `x.f = null` through a local) | no |
 | `deep(b)` | All values deeper than K below the base `b`: a root, a result site, or `@s.c` | no |
-| `const(v)` | An interned constant: a string value, a boxed value type, a class literal. The JVM can share one object for all sites. | no |
+| `const(v)` | An interned constant: a string value (key: the value), a box of a constant value (key: the box type and the value, as `Integer.valueOf(1)`), a class literal (key: the class). The JVM can share one object for all sites. | no |
+| `box(s)` | A box of a value that is not a constant (`Integer.valueOf(n)`) at site `s` | no |
 
 A unique origin denotes at most one live value. Only a unique origin can get a strong update, and §5.3 adds two more conditions.
 
@@ -59,15 +60,17 @@ Default content. A cell that the method did not write holds its default content.
 | `deep(b)` | `{deep(b)}` |
 | `new(s)`, `old(s)` | `{⟨@s.c⟩}`: the field of a new object holds a null, and this null has the name of its cell |
 | `⟨@s.c.q⟩` | `{⟨@s.c.q.c'⟩}` at cell `c'` if `q.c'` has at most K cells, else `{deep(@s.c)}` |
-| `null(i)`, `const(v)` | an own child origin; a read through a null throws, so this content is never observed |
+| `null(i)`, `const(v)`, `box(s)` | an own child origin, never unique; a read through a null throws, so this content is never observed for a null |
 
-Assumptions. The analysis is sound if these five statements are true:
+Assumptions. The analysis is sound if these seven statements are true:
 
 1. **Entry heap is a tree.** Two different entry roots are different objects. Two different entry paths below the roots are different objects. Aliases that the callers make between arguments are not visible.
 2. **Callees reach only their arguments and the statics, and do not make aliases.** An unresolved call can reach the values reachable from its arguments (the receiver included) and from the static holders. It can overwrite a cell of such an object, or keep the cell. Each overwritten cell gets its own new value (a new object, or a new null). The call does not store an existing value into a cell. The taint analysis models those effects with its own summaries.
 3. **Depth limit.** Values deeper than K are summarized by `deep`.
 4. **Definite assignment.** Each local is assigned before it is used. The JVM verifier guarantees this for bytecode.
 5. **Static fields keep their initial value for the method.** A read of a static field gives the value that the field had before the method. The method does not see its own static writes, and an unresolved call does not reach a value only because the method stored it in a static field. The taint analysis tracks static fields on its own (by decision; this is a known gap of the local analysis).
+6. **A caught exception is an unknown object.** A catch variable does not hold a value that a `throw` of the analyzed code throws. The taint analysis moves exception facts on its own (by decision; known gap: `e = new E(); try { throw e; } catch (E c) { c.f = v; } t = e.f` has the real alias `t ~ v`, and the analysis does not find it).
+7. **A box of a non-constant value is not a box of another site.** The JVM box cache can return one object for `Integer.valueOf(n)` and `Integer.valueOf(1)` if `n == 1`. The analysis does not relate them (by decision, as main).
 
 ## 4. State
 
@@ -81,7 +84,7 @@ State
   Eval  : NodeId                       the origins found in a cell of a reached origin at a call; node 0 at entry
 ```
 
-In an implementation, `Etree` and `Eval` are two reserved keys of `env`. So they need no own join or comparison. §5.8 gives a variant that computes them on demand and stores neither.
+In an implementation, `Etree` and `Eval` are two reserved keys of `env`. So they need no own join or comparison.
 
 A node is one origin set in canonical form. All states of one method share one node table:
 
@@ -95,7 +98,7 @@ Rules:
 
 - The table interns each set one time. Two node ids are equal if and only if their sets are equal.
 - A union node is above its two child nodes in the order. The nodes and the union edges form a directed acyclic graph. The origins of a node are the leaves below it.
-- Normal form: `heap` does not store an entry equal to the default content of its cell. Dead variables are removed from `env`.
+- Normal form: `heap` does not store an entry equal to the default content of its cell. Dead variables are removed from `env` (§5.5).
 - In normal form, two states are equal if and only if their maps are equal. The comparison is one integer comparison for each key.
 
 Notation in this document. `pts(x)` is the set of node `env[x]`. `H(o, c)` is the set of node `heap[(o, c)]`, or the default content.
@@ -110,6 +113,7 @@ Notation in this document. `pts(x)` is the set of node `env[x]`. `H(o, c)` is th
 | `x = null` at null site `i` | `env[x] := {null(i)}` |
 | `x = new T()` at site `s` | `retire(s)`, then `env[x] := {new(s)}` |
 | `x = "abc"`, `x = Integer.valueOf(1)`, `x = T.class` | `env[x] := {const(v)}` |
+| `x = Integer.valueOf(n)`, `n` not a constant, at site `s` | `env[x] := {box(s)}` |
 | `x = (T) y` | as `x = y` |
 | `x = <unknown expression>` at site `s` | `env[x] := {⟨s⟩}` |
 
@@ -164,7 +168,17 @@ At a node with two or more predecessors, the state is the pointwise union. For e
 
 The transfer is not monotone, because a strong update can remove content. The accumulation at the heads makes the iteration terminate. There is a finite number of origins: entry paths up to K, sites, null sites, cells.
 
-Exceptions: the state on an edge to a catch handler is `join(state before, state after)` of the instruction that throws.
+Exceptions: the state on an edge to a catch handler is `join(state before, state after)` of each instruction that can throw to it (the throwers of the JIR graph, not only the throwers that the taint graph keeps). For a call to an inlined callee, each callee instruction is such an instruction. The catch variable gets `{⟨s⟩}` (assumption 6).
+
+A back edge to the first instruction makes it a loop head: its state joins the initial state and the back edge.
+
+Dead variables. A variable is live at a statement if a later statement can read it before a write. An exception happens before the write of the statement. So a variable that a handler reads is live at each thrower of the handler, also if the thrower writes it:
+
+```
+live_in(v) = use(v) ∪ ⋃ normal successors w: (live_in(w) \ def(v)) ∪ ⋃ handlers h of v: live_in(h)
+```
+
+The analysis removes a variable from `env` only where it is not live. `Etree` and `Eval` are never removed.
 
 ### 5.6 Unresolved call: `x = m(a1, ..., an)` at site `s`
 
@@ -199,7 +213,7 @@ Accepted precision losses. The strong-update test is coarse in two shapes:
 
 A modeled library call (a pass-through rule `from → to`) is a weak copy: `to ∪= from`.
 
-An inlined callee (depth 1) runs in the caller state. Its locals are in a new context. They are removed when the callee returns. Its unresolved calls are calls of the caller.
+An inlined callee (depth 1) runs in the caller state. Its locals are in a new context. They are removed when the callee returns. Its unresolved calls are calls of the caller. A `return` of a constant or of `null` assigns that value to the result.
 
 ### 5.7 Query
 
@@ -217,20 +231,9 @@ The query is a backward search, and it is lazy:
 
 A query for a heap path `x.c1...cm` is the same search. Its start set is the value of the path: read the cells `c1...cm` from `pts(x)` (§5.2). The answer is each path `v.c1'...cn'` (`n ≤ D`) that shares an origin with this value, except the queried path. The answer cannot be derived from `findAlias(x)`. After `x.f = z`, the path `z` aliases `x.f`, but `z` does not alias `x`.
 
+A query for the elements of an array `x[*]` (the variable-argument conditions of the taint rules) is a heap-path query. It also reports the allocation sites and the constants of its start set, as `findAlias` does for a variable.
+
 Queries do not change the node table.
-
-### 5.8 The strong-update test on demand
-
-Conditions 3 and 4 of §5.3 can be computed at the write instead of in the state. Then the state has no `Etree` and no `Eval` key, and a call does no work except `env[x] := {⟨s⟩}`.
-
-At a write `x.f = y` that passes conditions 1 and 2, and with `H(o, f) ⊄ pts(y)`:
-
-1. Find the unresolved calls upstream of the write: the calls on some control-flow path from the method entry to the write. Precompute this set one time for each statement. With a loop, the later calls of the loop body are upstream too.
-2. For a target `new(s)`, ignore the calls before the allocation statement of `s`. The current object did not exist then.
-3. For each upstream call `c`: compute the closure `R_c` of §5.6 on the stored state before `c`. Cache it by the call and by the id of that state. If a proper prefix of `o` is in `R_c`, or `o` is in a cell of a covered origin of `R_c`, the write is weak.
-4. If no upstream call gives this, the write is strong.
-
-For loop-free code with different sites, this test gives the same answers as the sets of §5.6. With loops it is sound, and it can block more strong updates. The test reads the states before upstream calls. A change there flows down to the write, so the worklist evaluates the write again.
 
 ## 6. Examples
 
@@ -382,13 +385,15 @@ u.g = w;        // ⟨C.f⟩ has the reached prefix ⟨C⟩: weak update
 |---|---|---|
 | K, the origin depth | 7 (K ≥ D + 1) | open |
 | D, the query depth | 6 cells | open |
-| Recency (`new` / `old`) | on | open |
+| Recency (`new` / `old`) | on | open (only this form is proved) |
 | Strong update on entry roots | on | decided |
 | Alias removal at calls | none | decided |
 | Read rule | a read aliases the cell, nulls included (§5.2, §6.6) | decided |
 | Static fields | writes ignored; a read gives `{⟨C.f⟩}` (§5.2, §5.3, §6.8) | decided |
 | Call rule | no change of the alias graph; it only prohibits strong updates (§5.6) | decided |
-| Strong-update test after calls | the sets `Etree` and `Eval`, or the on-demand test of §5.8 | open |
+| Strong-update test after calls | the sets `Etree` and `Eval` (§5.6); an on-demand test is recorded in the design, §7.6 | decided |
+| Constants | strings by value, boxes by type and constant value, `box(s)` for other boxes | decided |
+| Catch variable | `{⟨s⟩}` (assumption 6) | decided |
 | Alias answer volume control | to choose after the measurement | open |
 
 ## 8. Guarantees
@@ -397,14 +402,15 @@ The Lean model in `formal/directed-alias` proves these facts for a structured ve
 
 | Fact | Lean theorem |
 |---|---|
-| The analysis is sound under the five assumptions of §3: each alias of one execution (the same object or the same null) is a may-alias. Assumption 5 is a concrete semantics in which the static writes of the method have no effect. | `csoundVS`; with the static rule: `csoundVSS`, `execA5_iff` |
+| The analysis is sound under the assumptions of §3: each alias of one execution (the same object or the same null) is a may-alias. Assumption 5 is a concrete semantics in which the static writes of the method have no effect. Assumption 6 is a semantics in which each `throw` of the method throws an unknown exception. Assumption 7 is outside the model. | `csoundVS`; with the static rule: `csoundVSS`, `execA5_iff`; with exceptions: `csoundCfgA6`, `reach_a6` |
+| On a control-flow graph, each post-fixpoint of the transfer is sound: each iteration order, irreducible loops, exception edges, dead-variable removal with the rule of §5.5, and inlined callees as a part of the graph. | `csoundCfg`, `csoundKill`, `csoundEngineCfg` |
+| Assumption 6 is a real restriction: a locally thrown value can alias the catch variable. A dead-variable rule that removes the written variable also at handlers loses a real alias. | `catch_gap`, `live_spec_unsound` |
 | A static read gives exactly `{⟨C.f⟩}`: the cells of a static holder keep their default content. | `static_read`, `SCInv_analyze` |
 | Assumption 5 is a real restriction: without it, `C.f = v; t = C.f` has the alias `t ~ v`, and a value stored only into a static field can lose an alias after a call. | `gapA`, `gapB` |
 | It stays sound if a callee also writes new nulls. | `csoundVS_W` |
 | Assumption 4 is necessary: with a local that is used before it is assigned, a real alias is lost. | `siteless_unsound` |
 | The node representation gives the same answers as the set semantics. | `mayProgVSO_eq`, `csoundVSO`; with the static rule: `mayProgVSSO_eq`, `csoundVSSO` |
 | A call writes no heap entry, and changes only the result and the two sets. | `callVSO_heap_frame`, `callVSO_frame` |
-| The on-demand test of §5.8 is sound with loops (for consistent final states), and equal to the sets on loop-free code with different sites. | `csoundBW`, `mayProgBW_eq` |
 | `x = new X(); a = x.f` gives `a ~ x.f`, with and without a call, and the alias is real. | `user_answers`, `user_real`, `user_call_real` |
 | The cases of §5.6 and §6.7 are found and real: the empty field, the join and loop cases, the null store. | `empty_answersVS`, `bo0_cases_VS`, `bo0_cases_realV`, `nullStore_answers`, `nullStore_real` |
 | Two null sites do not alias, and this is exact. A copy of a null aliases it. | `nulls_answers`, `nulls_exact` |
@@ -416,4 +422,4 @@ The Lean model in `formal/directed-alias` proves these facts for a structured ve
 | The backward search gives the same paths as an enumeration of all paths. | `findAlias_iff` |
 | The search for a heap path gives the same paths as an enumeration. | `heapAliases_iff` |
 
-Argued, not proved: the fixpoint strategy of §5.5, the exception rule, the query normal form, the consistency of the final states for §5.8, and definite assignment in the JIR form of the bytecode.
+Argued, not proved: the termination of the iteration of §5.5, the mapping of JIR statements to the rules of §5, and definite assignment in the JIR form of the bytecode. The implementation proofs (engine state, call closure, control-flow graph) are listed in `directed-alias-analysis-impl.md`, §7.
