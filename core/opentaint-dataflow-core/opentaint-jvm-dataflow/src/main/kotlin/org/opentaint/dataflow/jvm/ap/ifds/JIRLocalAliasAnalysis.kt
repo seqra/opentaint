@@ -27,15 +27,18 @@ import kotlin.time.Duration.Companion.seconds
  * - [AliasAnalysisMode.DIRECTED]: the directed backend ([JIRDirectedAliasAnalysis]). Its answers are sorted
  *   and have no duplicates. A local with no value gives an empty list (main gives `null`).
  * - [AliasAnalysisMode.SHADOW]: both backends run. Each answer is the answer of the DSU backend (the
- *   same list). The directed backend runs only for the statistics ([AliasShadowStats]). A failure, a
- *   time-out or a cancellation of the directed backend does not change a DSU answer: the facade
- *   counts it and stops the directed backend of this method.
+ *   same list). The directed backend runs only for the statistics ([AliasShadowStats]). A failure or
+ *   a time-out of the directed backend does not change a DSU answer: the facade counts it and stops
+ *   the directed backend of this method. A cancellation ([CancellationException]) or an interrupt
+ *   ([InterruptedException]) in the directed backend is counted, then it goes to the caller.
  *
  * Both backends give `null` on a time-out and on a statement that the analysis did not reach.
  *
- * Statistics (IMPL §8, [AliasStats]): the facade records each query one time ([AliasVolumeStats] for
- * the answering backends, [AliasShadowStats] in `SHADOW` mode). A repeated query (the same kind,
- * statement and local) is not recorded again. The statistics never change an answer.
+ * Statistics (IMPL §8, [AliasStats]): if [Params.recordsStatistics] is true, the facade records each
+ * query one time ([AliasVolumeStats] for the answering backends, [AliasShadowStats] in `SHADOW` mode).
+ * A repeated query (the same kind, statement and local) is not recorded again. In `DSU` mode without
+ * [Params.statistics], the facade records no query and keeps no statistics state: only the backend
+ * records the time of its computation. The statistics never change an answer.
  */
 class JIRLocalAliasAnalysis(
     private val entryPoint: JIRInst,
@@ -58,7 +61,15 @@ class JIRLocalAliasAnalysis(
         val maxAccessors: Int = 6,
         /** The maximum size of the call closure of the directed analysis. */
         val maxCallClosure: Int = 10_000,
-    )
+        /**
+         * The full statistics in `DSU` mode (hidden CLI option `--experimental-alias-stats`). The
+         * `SHADOW` and `DIRECTED` modes always record the full statistics.
+         */
+        val statistics: Boolean = false,
+    ) {
+        /** True if the facade records the queries and the analysis logs the `ALIAS-STATS` summary. */
+        val recordsStatistics: Boolean get() = statistics || mode != AliasAnalysisMode.DSU
+    }
 
     private val mode = params.mode
 
@@ -80,8 +91,11 @@ class JIRLocalAliasAnalysis(
         null
     }
 
-    /** The queries that the statistics recorded: `(statement, local, kind)`. */
-    private val recorded: MutableSet<Long> = ConcurrentHashMap.newKeySet()
+    /** True if this facade records the queries ([Params.recordsStatistics]). */
+    private val stats = params.recordsStatistics
+
+    /** The queries that the statistics recorded: `(statement, local, kind)`. `null` without statistics. */
+    private val recorded: MutableSet<Long>? = if (stats) ConcurrentHashMap.newKeySet() else null
 
     /** The totals of this method analysis, made at the first recorded query. */
     @Volatile
@@ -92,8 +106,11 @@ class JIRLocalAliasAnalysis(
     private var directedStopped = false
 
     init {
-        AliasStats.noteConfig(params)
+        if (stats) AliasStats.noteConfig(params)
     }
+
+    /** True if this facade keeps a statistics state: the set of the recorded queries or the method totals (tests). */
+    internal val keepsStatisticsState: Boolean get() = recorded != null || methodVolume != null
 
     /** The aliases of [base] in the state before [statement]. */
     fun findAlias(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? =
@@ -178,7 +195,7 @@ class JIRLocalAliasAnalysis(
         when (mode) {
             AliasAnalysisMode.DSU -> {
                 val answer = dsuAnswer(dsu!!)
-                if (firstQuery(kind, base, statement)) {
+                if (stats && firstQuery(kind, base, statement)) {
                     AliasStats.volume.record(AliasBackend.DSU, kind, answer, methodVolume())
                 }
                 return answer
@@ -205,7 +222,8 @@ class JIRLocalAliasAnalysis(
 
     /**
      * SHADOW: records the DSU answer, runs the directed query, and compares both answers. It never
-     * throws (except an [OutOfMemoryError]) and never changes [dsuAnswer].
+     * changes [dsuAnswer]. It throws only an [OutOfMemoryError], a cancellation and an interrupt
+     * ([onDirectedThrowable]).
      */
     private fun shadow(
         kind: AliasQueryKind,
@@ -226,13 +244,9 @@ class JIRLocalAliasAnalysis(
             directed.answer(kind, base, statement, path)
         } catch (e: OutOfMemoryError) {
             throw e
-        } catch (e: CancellationException) {
-            stopDirected { AliasStats.shadow.directedCancelled.increment() }
-            AliasStats.shadow.skip(kind)
-            return
         } catch (e: Throwable) {
-            stopDirected { AliasStats.shadow.failure(entryPoint.location.method.toString(), e) }
             AliasStats.shadow.skip(kind)
+            onDirectedThrowable(e)
             return
         }
         if (answer == null && directed.timedOut) {
@@ -252,6 +266,23 @@ class JIRLocalAliasAnalysis(
         }
     }
 
+    /**
+     * SHADOW: counts a throwable [e] of the directed backend and stops the directed backend of this
+     * method. A [CancellationException] (the parent cancellation) and an [InterruptedException] go
+     * to the caller after the count: the analysis must stop. Another throwable is a failure: the
+     * function returns, and the DSU answer stays.
+     */
+    internal fun onDirectedThrowable(e: Throwable) {
+        when (e) {
+            is CancellationException, is InterruptedException -> {
+                stopDirected { AliasStats.shadow.directedCancelled.increment() }
+                throw e
+            }
+
+            else -> stopDirected { AliasStats.shadow.failure(entryPoint.location.method.toString(), e) }
+        }
+    }
+
     private inline fun stopDirected(count: () -> Unit) {
         synchronized(this) {
             if (directedStopped) return
@@ -263,7 +294,7 @@ class JIRLocalAliasAnalysis(
     private fun firstQuery(kind: AliasQueryKind, base: AccessPathBase.LocalVar, statement: CommonInst): Boolean {
         if (kind == AliasQueryKind.HEAP) return true
         val stmt = languageManager.getInstIndex(statement).toLong()
-        return recorded.add((stmt shl 32) or (base.idx.toLong() shl 2) or kind.ordinal.toLong())
+        return recorded!!.add((stmt shl 32) or (base.idx.toLong() shl 2) or kind.ordinal.toLong())
     }
 
     private fun methodVolume(): AliasVolumeStats.MethodVolume =

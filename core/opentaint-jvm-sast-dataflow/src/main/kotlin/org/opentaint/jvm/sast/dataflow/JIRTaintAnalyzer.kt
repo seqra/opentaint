@@ -50,14 +50,17 @@ class JIRTaintAnalyzer(
         val disableDefaultGetModel: Boolean = false,
     )
 
+    private val aliasAnalysisParams = JIRLocalAliasAnalysis.Params(
+        aliasAnalysisInterProcCallDepth = options.experimentalAAInterProcCallDepth,
+        mode = options.experimentalAliasAnalysisMode,
+        symDepth = options.experimentalAliasSymbolicDepth,
+        maxAccessors = options.experimentalAliasMaxAccessors,
+        statistics = options.experimentalAliasStatistics,
+    )
+
     private val analysisParams get() = JIRAnalysisManager.Params(
         defaultGetModel = configureDefaultModel(),
-        aliasAnalysisParams = JIRLocalAliasAnalysis.Params(
-            aliasAnalysisInterProcCallDepth = options.experimentalAAInterProcCallDepth,
-            mode = options.experimentalAliasAnalysisMode,
-            symDepth = options.experimentalAliasSymbolicDepth,
-            maxAccessors = options.experimentalAliasMaxAccessors,
-        )
+        aliasAnalysisParams = aliasAnalysisParams,
     )
 
     private fun configureDefaultModel(): JIRMethodGetDefault? {
@@ -78,9 +81,9 @@ class JIRTaintAnalyzer(
     override fun analysisManager() =
         JIRAnalysisManager(cp, refManager, taintConfig, externalMethodTracker, analysisParams)
 
-    /** Logs the alias statistics of the project (`ALIAS-STATS` lines, IMPL §8). */
+    /** Logs the alias statistics of the project (`ALIAS-STATS` lines, IMPL §8), if they are on. */
     override fun onAnalysisEnd() {
-        AliasStats.logSummary(analysisParams.aliasAnalysisParams)
+        AliasStats.endOfAnalysis(aliasAnalysisParams)
     }
 
     override fun unitResolver() = analysisUnit

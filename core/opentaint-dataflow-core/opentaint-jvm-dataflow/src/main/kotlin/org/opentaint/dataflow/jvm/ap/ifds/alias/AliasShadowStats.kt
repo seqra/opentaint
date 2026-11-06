@@ -32,8 +32,10 @@ import java.util.concurrent.atomic.LongAdder
  * process logged, at most [MAX_DIFF_LINES]).
  *
  * Diff line, at INFO, one for each `notSubset` query, at most [MAX_DIFF_LINES] for each process:
- * `ALIAS-SHADOW-DIFF method=<method> inst=<index> kind=<kind> var=local#<index> dsu=[...]
- * directed=[...] extra=[...]`. `extra` is the directed set minus the DSU set.
+ * `ALIAS-SHADOW-DIFF method=<method> inst=<index> kind=<kind> var=local#<index> dsuSize=<n>
+ * directedSize=<n> extraSize=<n> dsu=[...] directed=[...] extra=[...]`. `extra` is the directed set
+ * minus the DSU set. The sizes are the full sizes. Each list shows at most [MAX_DIFF_ITEMS] items,
+ * then `+<n> more`. A line has at most [MAX_DIFF_LINE_LENGTH] characters.
  */
 class AliasShadowStats {
     class Counters {
@@ -196,6 +198,14 @@ class AliasShadowStats {
         const val MAX_DIFF_LINES = 300
         const val MAX_FAILURE_LOGS = 20
 
+        /** The maximum number of items of each list of a diff line. */
+        const val MAX_DIFF_ITEMS = 20
+
+        /** The maximum length of a diff line. A longer line is cut and ends with [CUT_MARK]. */
+        const val MAX_DIFF_LINE_LENGTH = 8_000
+
+        private const val CUT_MARK = " ...(cut)"
+
         private val logger = object : KLogging() {}.logger
 
         /** The diff line of a `notSubset` query (see the KDoc of [AliasShadowStats]). */
@@ -207,8 +217,19 @@ class AliasShadowStats {
             dsu: List<AliasInfo>,
             directed: List<AliasInfo>,
             extra: Collection<AliasInfo>,
-        ): String = "$DIFF_PREFIX method=$method inst=$inst kind=$kind var=local#$local " +
-            "dsu=$dsu directed=$directed extra=$extra"
+        ): String {
+            val line = "$DIFF_PREFIX method=$method inst=$inst kind=$kind var=local#$local " +
+                "dsuSize=${dsu.size} directedSize=${directed.size} extraSize=${extra.size} " +
+                "dsu=${items(dsu)} directed=${items(directed)} extra=${items(extra)}"
+            if (line.length <= MAX_DIFF_LINE_LENGTH) return line
+            return line.take(MAX_DIFF_LINE_LENGTH - CUT_MARK.length) + CUT_MARK
+        }
+
+        /** The first [MAX_DIFF_ITEMS] items of [items] in list form, then `+<n> more` if there are more. */
+        private fun items(items: Collection<AliasInfo>): String {
+            if (items.size <= MAX_DIFF_ITEMS) return items.toString()
+            return items.take(MAX_DIFF_ITEMS).joinToString(", ", "[", ", +${items.size - MAX_DIFF_ITEMS} more]")
+        }
 
         private fun accessorSum(answer: List<AliasInfo>): Long =
             answer.sumOf { if (it is AliasApInfo) it.accessors.size.toLong() else 0L }

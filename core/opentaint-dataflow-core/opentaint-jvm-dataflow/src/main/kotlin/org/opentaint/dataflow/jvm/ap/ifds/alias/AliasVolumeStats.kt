@@ -7,8 +7,9 @@ import java.util.concurrent.atomic.AtomicLongArray
 import java.util.concurrent.atomic.LongAdder
 
 /**
- * The volume of the alias answers (IMPL §8; design §11.2, V1). Both backends record, in each mode.
- * In `SHADOW` mode both answers of a query are recorded.
+ * The volume of the alias answers (IMPL §8; design §11.2, V1). Both backends record, in each mode
+ * with the statistics on (`Params.recordsStatistics`). In `SHADOW` mode both answers of a query are
+ * recorded.
  *
  * The facade records each query one time for each method analysis: a repeated query (the same
  * statement, local and query kind) is not recorded again. A heap-path query (tests) is recorded

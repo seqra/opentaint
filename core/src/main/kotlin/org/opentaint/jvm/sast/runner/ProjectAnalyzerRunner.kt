@@ -9,6 +9,7 @@ import com.github.ajalt.clikt.parameters.types.boolean
 import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
+import com.github.ajalt.clikt.parameters.types.restrictTo
 import org.opentaint.common.sast.CommonAnalysisOptions
 import org.opentaint.common.sast.sarif.SarifGenerationOptions
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
@@ -99,14 +100,21 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         help = "Experimental options: K, the maximum depth of the symbolic entry paths of the directed alias analysis",
         hidden = true,
     )
-        .int().default(DEFAULT_ALIAS_PARAMS.symDepth)
+        .int().restrictTo(min = 0).default(DEFAULT_ALIAS_PARAMS.symDepth)
 
     private val experimentalAliasMaxAccessors: Int by option(
         "--experimental-alias-max-accessors",
         help = "Experimental options: D, the maximum number of accessors in an answer path of the directed alias analysis",
         hidden = true,
     )
-        .int().default(DEFAULT_ALIAS_PARAMS.maxAccessors)
+        .int().restrictTo(min = 0).default(DEFAULT_ALIAS_PARAMS.maxAccessors)
+
+    private val experimentalAliasStatistics: Boolean by option(
+        "--experimental-alias-stats",
+        help = "Experimental options: record the alias statistics and log the ALIAS-STATS summary also in the DSU mode",
+        hidden = true,
+    )
+        .flag(default = false)
 
     private val sarifOptions get() = SarifGenerationOptions(
         sarifFileName = sarifFileName,
@@ -138,6 +146,7 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         experimentalAliasAnalysisMode = experimentalAliasAnalysisMode,
         experimentalAliasSymbolicDepth = experimentalAliasSymbolicDepth,
         experimentalAliasMaxAccessors = experimentalAliasMaxAccessors,
+        experimentalAliasStatistics = experimentalAliasStatistics,
     )
 
     override fun commonOptions(): CommonAnalysisOptions = commonOptions

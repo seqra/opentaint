@@ -30,6 +30,7 @@ data class CommonAnalysisOptions(
     val experimentalAliasAnalysisMode: AliasAnalysisMode = AliasAnalysisMode.DSU,
     val experimentalAliasSymbolicDepth: Int = JIRLocalAliasAnalysis.Params().symDepth,
     val experimentalAliasMaxAccessors: Int = JIRLocalAliasAnalysis.Params().maxAccessors,
+    val experimentalAliasStatistics: Boolean = false,
 ) {
     val summariesApMode get() = ifdsApMode.takeIf { storeSummaries }
 
@@ -43,6 +44,7 @@ data class CommonAnalysisOptions(
         experimentalAliasAnalysisMode = experimentalAliasAnalysisMode,
         experimentalAliasSymbolicDepth = experimentalAliasSymbolicDepth,
         experimentalAliasMaxAccessors = experimentalAliasMaxAccessors,
+        experimentalAliasStatistics = experimentalAliasStatistics,
         debugOptions = debugOptions,
         tracePathLimit = sarifGenerationOptions.sarifCodeFlowLimit,
     )

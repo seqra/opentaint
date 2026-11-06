@@ -15,6 +15,7 @@ data class TaintAnalyzerOptions(
     val experimentalAliasAnalysisMode: AliasAnalysisMode = AliasAnalysisMode.DSU,
     val experimentalAliasSymbolicDepth: Int = JIRLocalAliasAnalysis.Params().symDepth,
     val experimentalAliasMaxAccessors: Int = JIRLocalAliasAnalysis.Params().maxAccessors,
+    val experimentalAliasStatistics: Boolean = false,
     val tracePathLimit: Int? = null,
     val debugOptions: DebugOptions? = null,
 )

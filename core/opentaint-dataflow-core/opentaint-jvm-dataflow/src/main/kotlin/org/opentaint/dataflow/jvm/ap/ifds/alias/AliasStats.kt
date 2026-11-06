@@ -5,7 +5,6 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.Params
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.atomic.AtomicLongArray
 import java.util.concurrent.atomic.LongAdder
 
 /** The kind of an alias query (design §11.2, V1). */
@@ -28,8 +27,12 @@ enum class AliasBackend { DSU, DIRECTED }
 
 /**
  * The statistics of the alias analysis (IMPL §8, design §11.2). One registry for the process. It is
- * thread safe. It is always on. Each counter is a [LongAdder], an atomic value or a [StatHistogram].
- * The statistics never change an answer.
+ * thread safe. Each counter is a [LongAdder], an atomic value or a [StatHistogram]. The statistics
+ * never change an answer.
+ *
+ * The backends always record the time of each method computation ([backend]). The other groups
+ * and the summary need `Params.recordsStatistics`: the `SHADOW` and `DIRECTED` modes, or the
+ * `DSU` mode with `Params.statistics` (hidden CLI option `--experimental-alias-stats`).
  *
  * Groups:
  * - [backend]: for each backend, the number of method analyses, the time-outs, the failures and the
@@ -62,9 +65,10 @@ enum class AliasBackend { DSU, DIRECTED }
  * A percentile (`P50`, `P99`) is approximate: exact below 64, else the lower bound of a bucket of
  * relative width 1/8 ([StatHistogram]). A `Max` and a `Sum` are exact.
  *
- * The taint analyzer logs the summary at INFO at the end of the analysis of a project
- * ([logSummary]), then it resets the counters. A JVM shutdown hook logs the summary if counters
- * were recorded after the last summary (a run that a time-out or the memory guard stops).
+ * The taint analyzer calls [endOfAnalysis] at the end of the analysis of a project. With the
+ * statistics on, it logs the summary at INFO ([logSummary]). Then it resets the counters. A JVM
+ * shutdown hook logs the summary if counters were recorded after the last summary (a run that a
+ * time-out or the memory guard stops). Only a facade with the statistics on registers the hook.
  */
 object AliasStats {
     const val PREFIX = "ALIAS-STATS"
@@ -118,10 +122,24 @@ object AliasStats {
     }
 
     /** Logs the summary at INFO, then resets the counters. [params]: the configuration of the run. */
-    fun logSummary(params: Params? = null) {
+    fun logSummary(params: Params? = null): List<String> {
         val lines = summaryLines(params ?: config)
         reset()
         for (l in lines) logger.info { l }
+        return lines
+    }
+
+    /**
+     * The end of the analysis of a project with [params]. If `params.recordsStatistics` is true, it
+     * logs the summary ([logSummary]) and gives its lines. Else it resets the counters and gives an
+     * empty list.
+     */
+    fun endOfAnalysis(params: Params): List<String> {
+        if (!params.recordsStatistics) {
+            reset()
+            return emptyList()
+        }
+        return logSummary(params)
     }
 
     private fun logSummaryAtShutdown() {
@@ -236,16 +254,19 @@ class AliasBackendStats {
  * 64 has its own bucket. A larger value goes into one of 8 buckets for each power of two. So a
  * percentile is the lower bound of a bucket of relative width 1/8. The sum, the count and the
  * maximum are exact. A negative value counts as 0.
+ *
+ * Each bucket is a [LongAdder], so the worker threads do not write one shared cache line. The
+ * maximum changes only when a value is larger, so its writes are rare.
  */
 class StatHistogram {
-    private val buckets = AtomicLongArray(BUCKETS)
+    private val buckets = Array(BUCKETS) { LongAdder() }
     private val count = LongAdder()
     private val sum = LongAdder()
     private val max = AtomicLong(0)
 
     fun record(value: Long) {
         val v = if (value < 0) 0 else value
-        buckets.incrementAndGet(bucket(v))
+        buckets[bucket(v)].increment()
         count.increment()
         sum.add(v)
         if (v > max.get()) max.accumulateAndGet(v) { a, b -> maxOf(a, b) }
@@ -254,8 +275,8 @@ class StatHistogram {
     /** Adds the values of [other] to this histogram. */
     fun merge(other: StatHistogram) {
         for (i in 0 until BUCKETS) {
-            val n = other.buckets.get(i)
-            if (n != 0L) buckets.addAndGet(i, n)
+            val n = other.buckets[i].sum()
+            if (n != 0L) buckets[i].add(n)
         }
         count.add(other.count())
         sum.add(other.sum())
@@ -274,14 +295,14 @@ class StatHistogram {
         val rank = maxOf(1L, kotlin.math.ceil(q * n).toLong())
         var acc = 0L
         for (i in 0 until BUCKETS) {
-            acc += buckets.get(i)
+            acc += buckets[i].sum()
             if (acc >= rank) return minOf(lowerBound(i), max())
         }
         return max()
     }
 
     fun reset() {
-        for (i in 0 until BUCKETS) buckets.set(i, 0)
+        for (b in buckets) b.reset()
         count.reset()
         sum.reset()
         max.set(0)

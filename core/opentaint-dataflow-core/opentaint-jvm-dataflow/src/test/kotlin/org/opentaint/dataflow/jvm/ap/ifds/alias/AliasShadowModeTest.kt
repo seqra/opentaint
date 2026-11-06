@@ -27,6 +27,8 @@ import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.jvm.graph.JApplicationGraphImpl
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -104,10 +106,50 @@ class AliasShadowModeTest : BasicTestUtils() {
     }
 
     @Test
+    fun `dsu mode without the statistics switch records no query and keeps no statistics state`() {
+        val method = method(SAMPLE, "fieldWriteThroughJoinAllocs")
+        val queries = queries(method)
+        val dsuParams = params(AliasAnalysisMode.DSU)
+        assertFalse(dsuParams.recordsStatistics)
+        val aa = facade(method, dsuParams)
+        val first = answersOf(aa, queries)
+        assertEquals(first, answersOf(aa, queries))
+
+        assertFalse(aa.keepsStatisticsState, "the facade keeps no query set and no method totals")
+        for (b in AliasBackend.entries) {
+            for (k in AliasQueryKind.entries) assertEquals(0L, AliasStats.volume.of(b, k).queries.sum(), "$b $k")
+        }
+        assertFalse(AliasStats.volume.hasRecords())
+        // The compute time of the method stays.
+        assertEquals(1L, AliasStats.backend(AliasBackend.DSU).methods.sum())
+        // The end of the analysis logs no summary in this mode.
+        assertEquals(emptyList(), AliasStats.endOfAnalysis(dsuParams))
+        assertEquals(0L, AliasStats.backend(AliasBackend.DSU).methods.sum())
+    }
+
+    @Test
+    fun `the statistics switch turns on the full statistics in dsu mode`() {
+        val method = method(SAMPLE, "fieldWriteThroughJoinAllocs")
+        val queries = queries(method)
+        val dsuParams = params(AliasAnalysisMode.DSU).copy(statistics = true)
+        assertTrue(dsuParams.recordsStatistics)
+        val aa = facade(method, dsuParams)
+        answersOf(aa, queries)
+        assertTrue(aa.keepsStatisticsState)
+        assertTrue(AliasStats.volume.of(AliasBackend.DSU, AliasQueryKind.BEFORE).queries.sum() > 0)
+        assertTrue(AliasStats.volume.hasRecords())
+        val lines = AliasStats.endOfAnalysis(dsuParams)
+        assertTrue(lines.any { it.startsWith("ALIAS-STATS group=volume backend=DSU kind=BEFORE") }, lines.toString())
+        for (mode in listOf(AliasAnalysisMode.SHADOW, AliasAnalysisMode.DIRECTED)) {
+            assertTrue(params(mode).recordsStatistics, "$mode")
+        }
+    }
+
+    @Test
     fun `dsu mode answers do not change with the statistics`() {
         val method = method(SAMPLE, "fieldWriteThroughJoinAllocs")
         val queries = queries(method)
-        val facadeAnswers = answersOf(facade(method, params(AliasAnalysisMode.DSU)), queries)
+        val facadeAnswers = answersOf(facade(method, params(AliasAnalysisMode.DSU).copy(statistics = true)), queries)
         val dsu = JIRDsuAliasAnalysis(
             method.instList.first(), graph,
             JIRCallResolver(cp, SingleLocationUnit(method.enclosingClass.declaration.location)),
@@ -181,6 +223,25 @@ class AliasShadowModeTest : BasicTestUtils() {
     }
 
     @Test
+    fun `a diff line prints a limited number of items and has a limited length`() {
+        val many = (0 until 50).map { AliasApInfo(AccessPathBase.LocalVar(it), emptyList()) }
+        val line = AliasShadowStats.diffLine("m()", 3, AliasQueryKind.BEFORE, 2, many, many + many, many)
+        assertTrue(line.startsWith("ALIAS-SHADOW-DIFF method=m() inst=3 kind=BEFORE var=local#2 "), line)
+        assertTrue(" dsuSize=50 directedSize=100 extraSize=50 " in line, line)
+        val limit = AliasShadowStats.MAX_DIFF_ITEMS
+        assertTrue(" dsu=[" in line && " directed=[" in line && " extra=[" in line, line)
+        assertEquals(3 * limit, Regex("""var\(\d+\)""").findAll(line.substringAfter(" dsu=")).count(), line)
+        assertTrue("+${50 - limit} more]" in line, line)
+        assertTrue("+${100 - limit} more]" in line, line)
+
+        val longField = JIRLocalAliasAnalysis.AliasAccessor.Field("C", "f".repeat(5_000), "T")
+        val long = listOf<AliasInfo>(AliasApInfo(AccessPathBase.LocalVar(1), List(4) { longField }))
+        val cut = AliasShadowStats.diffLine("m()", 3, AliasQueryKind.BEFORE, 2, long, long, long)
+        assertTrue(cut.length <= AliasShadowStats.MAX_DIFF_LINE_LENGTH, "length ${cut.length}")
+        assertTrue(cut.startsWith("ALIAS-SHADOW-DIFF method=m() inst=3 kind=BEFORE var=local#2 dsuSize=1 "), cut.take(200))
+    }
+
+    @Test
     fun `a directed failure in shadow mode keeps the DSU answer`() {
         val method = method(SAMPLE, "fieldWriteThroughJoinAllocs")
         val queries = queries(method)
@@ -192,6 +253,24 @@ class AliasShadowModeTest : BasicTestUtils() {
         assertEquals(dsu, answersOf(facade(method, failing), queries))
         assertEquals(1L, AliasStats.shadow.directedFailures.sum())
         assertEquals(0L, AliasStats.shadow.of(AliasQueryKind.BEFORE).queries.sum())
+    }
+
+    @Test
+    fun `shadow mode counts a directed cancellation or interrupt and gives it to the caller`() {
+        val method = method(SAMPLE, "fieldWriteThroughJoinAllocs")
+        val cancelled = facade(method, params(AliasAnalysisMode.SHADOW))
+        assertFailsWith<Cancellation.Cancelled> { cancelled.onDirectedThrowable(Cancellation.Cancelled()) }
+        assertEquals(1L, AliasStats.shadow.directedCancelled.sum())
+
+        val interrupted = facade(method, params(AliasAnalysisMode.SHADOW))
+        assertFailsWith<InterruptedException> { interrupted.onDirectedThrowable(InterruptedException()) }
+        assertEquals(2L, AliasStats.shadow.directedCancelled.sum())
+
+        // Another failure is counted, and the DSU answer stays.
+        val failed = facade(method, params(AliasAnalysisMode.SHADOW))
+        failed.onDirectedThrowable(IllegalStateException("test"))
+        assertEquals(1L, AliasStats.shadow.directedFailures.sum())
+        assertEquals(2L, AliasStats.shadow.directedCancelled.sum())
     }
 
     @Test
