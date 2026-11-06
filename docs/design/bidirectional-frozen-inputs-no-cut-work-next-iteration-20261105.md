@@ -124,6 +124,16 @@ precision during admission. It does not yet establish which lost initial
 causes either final Conductor miss. Preserve this test when designing a repair;
 the repair remains unselected.
 
+The [first-field MUST candidate](bidirectional-first-field-must-admission-candidate-20261106.md)
+makes one possible repair reviewable. It would keep a known uniform head when
+forward C2 reaches that head in one field step, with the actual field exclusions.
+This is a new admission policy: concrete NORMAL input can start NORMAL MUST
+work where Current starts DEMAND STAR work. Method, block, loop, and C5 entry
+behavior are affected. The document also lists retaining STAR with repaired
+guidance and additive STAR/MUST admission as distinct contracts. No contract is
+selected. Global required-effect preservation and Conductor recovery remain
+open; this candidate does not replace the measured results or select a fix.
+
 A separate [direct loop convergence test](../reports/bidirectional-loop-boundary-normality-loss-20261106.md)
 now exposes a shared coverage gap with one mark and no ND condition. Both
 current and prefix-off code stop at run-5 with zero reports for a valid path.
