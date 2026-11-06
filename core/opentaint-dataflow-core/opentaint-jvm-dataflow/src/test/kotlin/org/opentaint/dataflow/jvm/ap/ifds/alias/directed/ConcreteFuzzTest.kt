@@ -3,13 +3,15 @@ package org.opentaint.dataflow.jvm.ap.ifds.alias.directed
 import java.util.EnumMap
 import kotlin.random.Random
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
 /**
  * The concrete fuzz test (IMPL §9.1 item 4, design §10.1 L1 step 6).
  *
- * For each seeded [RandomAliasProgram], the engine runs one time. Then [ConcreteExecutor] runs
+ * For each seeded [RandomAliasProgram], the engine runs one time, and its states must pass the
+ * post-fixpoint check (an A4-violating program can only fail the empty-cell condition). Then [ConcreteExecutor] runs
  * random executions of the same CFG (callees write new objects or new nulls into reached cells,
  * A2; a catch gives an unknown exception, A6). At each configuration (node `v` and the concrete
  * state before it), for each two paths `r1.p1`, `r2.p2` (`r` a live local, `this` or an argument;
@@ -51,7 +53,7 @@ class ConcreteFuzzTest {
 
     private fun fuzz(p: RandomAliasProgram): Pair<Long, Long> {
         val transfer = AliasTransfer(p.tables)
-        val states = DirectedFixpoint(transfer).solve(p.cfg)
+        val states = solveChecked(p, DirectedFixpoint(transfer))
         val nodes = p.tables.nodes
         val rnd = Random(p.seed * 31 + 7)
         val roots = listOf<AliasValue.Ref>(AliasValue.This, AliasValue.Arg(0), AliasValue.Arg(1)) +
@@ -104,6 +106,19 @@ class ConcreteFuzzTest {
             ends.merge(end, 1, Int::plus)
         }
         return configurations to aliases
+    }
+
+    /**
+     * Runs the engine and checks the post-fixpoint conditions. A program that can read an unassigned
+     * local (A4 fails) can only fail the empty-cell condition.
+     */
+    private fun solveChecked(p: RandomAliasProgram, fixpoint: DirectedFixpoint): FixpointStates {
+        val states = fixpoint.solve(p.cfg)
+        val violations = PostFixChecker(fixpoint).check(p.cfg, states)
+        if (p.assignedPrefix || violations.any { "holds the empty set" !in it }) {
+            assertEquals(emptyList(), violations, "post-fixpoint check")
+        }
+        return states
     }
 
     private fun read(st: ConcreteExecutor.State, start: ConcreteExecutor.Value, path: List<ConcreteExecutor.CCell>): ConcreteExecutor.Value? {

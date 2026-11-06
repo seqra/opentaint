@@ -24,6 +24,7 @@ import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
 import org.opentaint.dataflow.jvm.BasicTestUtils
 import org.opentaint.dataflow.jvm.ap.ifds.AliasAnalysisMode
+import org.opentaint.dataflow.jvm.ap.ifds.alias.directed.checkDirectedPostFix
 import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
@@ -720,6 +721,7 @@ class DirectedAliasProbeTest : BasicTestUtils() {
         val callResolver = JIRCallResolver(cp, SingleLocationUnit(method.enclosingClass.declaration.location))
         val localReachability = JIRLocalVariableReachability(method, graph, manager)
         val cancellation = Cancellation().also { it.activate() }
+        checkDirectedPostFix(ep, graph, callResolver, rules, localReachability, cancellation, manager, params)
         return JIRLocalAliasAnalysis(ep, graph, callResolver, rules, localReachability, cancellation, manager, params)
     }
 
