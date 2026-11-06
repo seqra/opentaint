@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias.directed
 
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisCancellation
 
 /** The result of [AliasTransfer.join]: the state and the change bit. */
 data class Joined(val state: AliasState, val changed: Boolean)
@@ -14,14 +15,23 @@ data class Evaluated(val state: AliasState, val node: NodeId)
  *
  * Reference: Lean `Impl/EngineState.lean` (`putH`, `storeE`, `joinE`, `retireE`) and
  * `Sound/ValueSem/Concept.lean` (`astepVS`, `retireV`, `adefaultV`).
+ *
+ * [cancellation]: a join and a retire call its checkpoint one time for each 1024 steps (IMPL §5.2).
  */
-class AliasTransfer(val tables: AliasTables) {
+class AliasTransfer(val tables: AliasTables, private val cancellation: AnalysisCancellation? = null) {
     private val nodes = tables.nodes
     private val origins = tables.origins
     private val bases = tables.bases
     private val sites = tables.sites
 
     private val thisNode: NodeId by lazy { nodes.singleton(origins.root(bases.thisBase())) }
+
+    private var steps = 0
+
+    /** One step of a join or a retire. Each 1024 steps call the cancellation checkpoint. */
+    private fun step() {
+        if (cancellation != null && (++steps and STEP_MASK) == 0) cancellation.checkpoint()
+    }
 
     /** The state after [instr]. An instruction that changes nothing gives the same instance. */
     fun transfer(st: AliasState, instr: AliasInstr): AliasState = when (instr) {
@@ -171,6 +181,7 @@ class AliasTransfer(val tables: AliasTables) {
             for (c in oldCells) cells.add(c)
             val it = cells.iterator()
             while (it.hasNext()) {
+                step()
                 val c = it.nextInt()
                 put(ed, old, c, nodes.union(read(st, old, c), read(st, nw, c)))
             }
@@ -179,8 +190,12 @@ class AliasTransfer(val tables: AliasTables) {
 
         // Step 3: rename in each holder of new(s), after steps 1 and 2.
         val held = ed.holders(nw)
-        for (v in held.vars) ed.setVar(v, nodes.rename(ed.varNode(v), nw, old))
+        for (v in held.vars) {
+            step()
+            ed.setVar(v, nodes.rename(ed.varNode(v), nw, old))
+        }
         for (key in held.keys) {
+            step()
             put(ed, heapKeyOrigin(key), heapKeyCell(key), nodes.rename(ed.heapNode(key), nw, old))
         }
         return ed.build()
@@ -201,10 +216,12 @@ class AliasTransfer(val tables: AliasTables) {
         if (a === b) return Joined(a, false)
         val ed = edit(a)
         b.forEachVar { v, nb ->
+            step()
             val na = a.varNode(v)
             ed.setVar(v, nodes.union(na, nb))
         }
         b.forEachHeap { key, nb ->
+            step()
             val o = heapKeyOrigin(key)
             val c = heapKeyCell(key)
             val na = read(a, o, c)
@@ -212,6 +229,7 @@ class AliasTransfer(val tables: AliasTables) {
         }
         // A key that only `a` has: its value in `b` is the empty set (env) or the default (heap).
         a.forEachHeap { key, na ->
+            step()
             if (!b.isWritten(key)) {
                 val o = heapKeyOrigin(key)
                 val c = heapKeyCell(key)
@@ -250,5 +268,9 @@ class AliasTransfer(val tables: AliasTables) {
     private fun put(ed: AliasState.Editor, o: OriginId, c: CellId, n: NodeId) {
         val key = heapKey(o, c)
         if (n == origins.defaultNode(o, c)) ed.removeHeap(key) else ed.setHeap(key, n)
+    }
+
+    private companion object {
+        const val STEP_MASK = 1023
     }
 }

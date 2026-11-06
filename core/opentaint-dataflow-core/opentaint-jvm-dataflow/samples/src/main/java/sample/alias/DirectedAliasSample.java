@@ -563,6 +563,67 @@ public class DirectedAliasSample {
     static void varargs(Object... values) {
     }
 
+    static class Counter {
+        int count;
+        Object value;
+    }
+
+    static Object returnString() {
+        return "s";
+    }
+
+    static Object returnNull() {
+        return null;
+    }
+
+    static void boxOfValue(int n) {
+        Object a = n;
+        Object b = 1;
+        probe(a, b);
+    }
+
+    static void classConstant() {
+        Object c = String.class;
+        probe(c);
+    }
+
+    static void primitiveStore(Counter c, int n) {
+        c.count = n;
+        probe(c);
+    }
+
+    static void nullCheckOnly() {
+        Object x = new Object();
+        if (x == null) {
+            touch(null);
+        }
+    }
+
+    static void handlerReadsOverwrittenLocal() {
+        Box x = new Box();
+        Object y = x;
+        try {
+            x = makeBox();
+        } catch (RuntimeException e) {
+            x.value = y;
+        }
+        probe(x, y);
+    }
+
+    static void nestedLoops(int n, int m) {
+        Box head = new Box();
+        for (int i = 0; i < n; i++) {
+            Box cur = head;
+            for (int j = 0; j < m; j++) {
+                Box node = new Box();
+                node.next = cur;
+                cur = node;
+            }
+            head.value = cur;
+        }
+        probe(head.value);
+    }
+
     static void mayThrow() {
         throw new RuntimeException();
     }

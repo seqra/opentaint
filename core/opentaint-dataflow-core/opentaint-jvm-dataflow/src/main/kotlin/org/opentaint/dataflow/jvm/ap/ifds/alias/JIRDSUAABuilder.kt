@@ -98,7 +98,15 @@ sealed interface Stmt : Comparable<Stmt> {
     data class FieldStore(val instance: RefValue, val field: JIRField, val value: ExprOrValue, override val originalIdx: Int) : NoCall
     data class ArrayStore(val instance: RefValue, val index: SimpleValue.Primitive, val value: ExprOrValue, override val originalIdx: Int) : NoCall
     data class WriteStatic(val field: JIRField, val value: ExprOrValue, override val originalIdx: Int) : NoCall
-    data class Return(val value: RefValue?, override val originalIdx: Int) : NoCall
+    /**
+     * `return value`. [value] is the returned local, `this` or argument. [constant] is the returned
+     * constant of `return "s"` or `return null` (the DSU reads only [value]).
+     */
+    data class Return(
+        val value: RefValue?,
+        override val originalIdx: Int,
+        val constant: SimpleValue.RefConst? = null,
+    ) : NoCall
     data class Throw(val value: RefValue, override val originalIdx: Int) : NoCall
 
     override fun compareTo(other: Stmt): Int = this.originalIdx.compareTo(other.originalIdx)
@@ -129,8 +137,8 @@ fun InstEvalContext.evalInst(inst: JIRInst): Stmt? {
         }
 
         is JIRReturnInst -> {
-            val value = inst.returnValue?.let { evalSimpleValue(it as JIRImmediate, inst) } as? RefValue
-            Stmt.Return(value, inst.location.index)
+            val returned = inst.returnValue?.let { evalSimpleValue(it as JIRImmediate, inst) }
+            Stmt.Return(returned as? RefValue, inst.location.index, returned as? SimpleValue.RefConst)
         }
 
         is JIRThrowInst -> {
