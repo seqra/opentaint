@@ -308,6 +308,18 @@ subsequent C2/report-loss chain is proved. Diagnostic B2 time is excluded from
 main performance. Main timings, quality and native/model validation counts
 are unchanged.
 
+## Small refinement reproducer, 2026-11-06
+
+The [two-method direct source-to-sink test](bidirectional-canonical-prefix-refinement-reproducer-20261106.md)
+now identifies a concrete effect of prefix canonicalization. Under field limits
+`1,1,2`, current code completes run-3 without the NORMAL report; the control
+reports it in run-3. With increasing limits, current code recovers in run-5.
+Both convergence traces reach, complete and accept run-5. This is a report
+delay, not a proved permanent false negative or the complete Conductor cause.
+The new portable receipt includes the exact first retained/processed facts and
+an optional RED checkpoint test. Main campaign times, counts and quality
+remain unchanged.
+
 ## Evidence and unresolved work
 
 The portable JSON contains the full strict identity sets once each, with hashed references from all current/control comparisons. It also embeds changed-finding SARIF evidence, every per-run marker, all quantitative profile tables, memory/GC signals, reader/source/capture provenance and the native launch receipt. Its state is `MEASURED_QUALITY_REGRESSION_UNRESOLVED`.

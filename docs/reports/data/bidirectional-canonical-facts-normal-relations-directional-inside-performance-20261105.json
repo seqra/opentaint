@@ -115302,5 +115302,41 @@
     "caseCount": 4,
     "labels": "run-5/run-5/run-5 for all four native cases",
     "limit": "No captured same-mark same-tail proper-prefix MAY/MUST pair; not an actual first-loss trace or project-quality recovery."
+  },
+  "canonicalPrefixRefinementReproducer": {
+    "report": "docs/reports/bidirectional-canonical-prefix-refinement-reproducer-20261106.md",
+    "data": "docs/reports/data/bidirectional-canonical-prefix-refinement-reproducer-20261106.json",
+    "dataSha256": "bd25d80915fc8550bbac8cf72e8cc6cd0f01740e74e5000492effc0dab2a7e35",
+    "productionRevision": "8331bf9e326ddd1bd5083dbc50456963d6b26b52",
+    "state": "SMALL_NATIVE_CHECKPOINT_REGRESSION_PROVED_EVENTUAL_REPORT_RECOVERS",
+    "checkLabels": {
+      "reached": "run-3",
+      "completed": "run-3",
+      "accepted": "run-3",
+      "endReason": "POLICY"
+    },
+    "traceLabels": {
+      "reached": "run-5",
+      "completed": "run-5",
+      "accepted": "run-5",
+      "endReason": "NO_DEMAND_EDGE"
+    },
+    "current": {
+      "checkExit": 1,
+      "checkReports": 0,
+      "firstTraceReport": 5
+    },
+    "prefixOffControl": {
+      "checkExit": 0,
+      "checkReports": 1,
+      "firstTraceReport": 3
+    },
+    "permanentFalseNegativeProved": false,
+    "conductorCausalTraceComplete": false,
+    "defaultNativeGate": {
+      "tests": 2992,
+      "changed": false,
+      "rerun": false
+    }
   }
 }

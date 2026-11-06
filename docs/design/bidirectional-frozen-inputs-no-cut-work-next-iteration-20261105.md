@@ -97,6 +97,14 @@ removals. They do not select a C2 repair or prove which row causes recovery.
 The appendix retains the native rows and the correction from an earlier
 readable `Target` label to the actual `Zero` control exit.
 
+The [new direct two-method reproducer](../reports/bidirectional-canonical-prefix-refinement-reproducer-20261106.md)
+now shows the operational difference: removing the B2 child MAY coordinate
+prevents the deeper F3 initial and delays the NORMAL finding from run-3 to
+run-5. Both variants converge with the finding. The dedicated checkpoint test
+is RED on current code and passes the proper-prefix-off control. A proposed
+repair must account for this concrete progression case. Do not infer permanent
+loss or select a C2 repair from it: the Conductor first-loss chain is still open.
+
 The user behavior decision is pending between:
 
 - allowing required implied C2 refinements from canonical facts, revising the

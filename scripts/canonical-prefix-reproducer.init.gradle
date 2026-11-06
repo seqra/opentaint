@@ -1,0 +1,38 @@
+// Optional only: this init script does not add the reproducer to default tests.
+// From core/: ./gradlew -I ../scripts/canonical-prefix-reproducer.init.gradle :opentaint-dataflow-core:opentaint-dataflow:runCanonicalPrefixReproducer
+// From core/: ./gradlew -I ../scripts/canonical-prefix-reproducer.init.gradle :opentaint-dataflow-core:opentaint-dataflow:traceCanonicalPrefixReproducer
+allprojects { p ->
+    if (p.name == 'opentaint-dataflow' && p.projectDir.name == 'opentaint-dataflow') {
+        p.afterEvaluate {
+            def reproducer = p.sourceSets.create('canonicalPrefixReproducer')
+            reproducer.java.setSrcDirs([])
+            reproducer.resources.setSrcDirs([])
+            p.kotlin.sourceSets.getByName('canonicalPrefixReproducer').kotlin.setSrcDirs([
+                new File(p.projectDir, 'src/reproducer/kotlin')])
+            reproducer.compileClasspath = p.sourceSets.main.output + p.sourceSets.test.output + p.configurations.testCompileClasspath
+            def classes = p.layout.buildDirectory.dir('classes/kotlin/canonicalPrefixReproducer')
+            reproducer.output.classesDirs.setFrom(classes)
+            p.tasks.named('compileCanonicalPrefixReproducerKotlin') {
+                dependsOn p.tasks.named('testClasses')
+                destinationDirectory.set(classes)
+                compilerOptions.jvmTarget.set(p.tasks.named('compileKotlin').get().compilerOptions.jvmTarget)
+                compilerOptions.freeCompilerArgs.add('-Xfriend-paths=' + [
+                    p.layout.buildDirectory.dir('classes/kotlin/main').get().asFile,
+                    p.layout.buildDirectory.dir('classes/kotlin/test').get().asFile
+                ].collect { it.absolutePath }.join(','))
+            }
+            ['runCanonicalPrefixReproducer': 'check', 'traceCanonicalPrefixReproducer': 'trace'].each { name, mode ->
+                p.tasks.register(name, JavaExec) {
+                    dependsOn p.tasks.named('compileCanonicalPrefixReproducerKotlin')
+                    classpath = reproducer.output + p.sourceSets.test.runtimeClasspath
+                    // Optional diagnostic capsule; ordinary use loads production classes.
+                    def overlay = p.findProperty('canonicalPrefixOverlay')
+                    if (overlay) classpath = p.files(overlay) + classpath
+                    mainClass.set('org.opentaint.dataflow.bidi.CanonicalPrefixRefinementReproducer')
+                    jvmArgs '-Xmx1g', '-XX:ActiveProcessorCount=1'
+                    args mode
+                }
+            }
+        }
+    }
+}
