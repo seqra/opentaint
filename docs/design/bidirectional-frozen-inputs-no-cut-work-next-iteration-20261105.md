@@ -105,6 +105,14 @@ is RED on current code and passes the proper-prefix-off control. A proposed
 repair must account for this concrete progression case. Do not infer permanent
 loss or select a C2 repair from it: the Conductor first-loss chain is still open.
 
+The [later actual call-admission capture](../reports/bidirectional-conductor-call-admission-20261106.md)
+ends at run-4/run-3/run-3 in both variants. All 1,218 matching full run-3
+offers return the same initial sets and ordering. The 470 B-only input keys
+differ before that comparison. This does not identify a rejected required
+initial in `getTasksToBeScheduled`, or compare packets with equal denotation
+but different coordinates. Trace the first input divergence before selecting
+a repair. No new behavior decision follows from this capture.
+
 A separate [direct loop convergence test](../reports/bidirectional-loop-boundary-normality-loss-20261106.md)
 now exposes a shared coverage gap with one mark and no ND condition. Both
 current and prefix-off code stop at run-5 with zero reports for a valid path.

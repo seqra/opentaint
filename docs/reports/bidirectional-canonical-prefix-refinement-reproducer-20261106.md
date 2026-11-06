@@ -2,6 +2,29 @@
 
 The two-method reproducer has a Current-only failure at the run-3 checkpoint. The proper-prefix-off control passes that checkpoint. With increasing limits, Current first reports the exact T observation in run 5. The control first reports it in run 3. The delay is two iterations: one backward/forward cycle. Both traces complete run 5 with one report. This does not prove a permanent false negative or the cause of the missing Conductor findings.
 
+## Concrete mechanism
+
+In the analyzed program, `p` is the mapper's `arg0`, bound from caller local 0. The report's `arg0.root` means the empty field path of `p`. Fields `f` and `g` have logged IDs 0 and 4. `[any]`, `$` and `*` mean the logged tails `ANY`, `EXACT` and `STAR`.
+
+```text
+D0 = p.[any]/FLOW
+D1 = p.f.[any]/FLOW
+A  = p.f.g.$/T
+
+Current B2 retains {D0}
+Control B2 retains {D0, D1}
+C2({D0}, A)     = {p.f.*/FLOW}
+C2({D0, D1}, A) = {p.f.*/FLOW, p.f.g.*/FLOW}
+```
+
+Both B2 coordinates are DEMAND under the same full premise `ret.Element.[any]/FLOW`. The submitted input `A` is the same NORMAL fact in both variants. All listed C2 initials are NORMAL. Field and mark exclusions are empty.
+
+As a set of covered locations, `D0` covers `D1`. In `canonicalSpans`, `minus(key.node.leaf, key.above)` subtracts the inherited parent span and removes the retained `D1` coordinate. But C2 advances one field beyond the retained demand prefix. `D0` advances to `p.f`; `D1` advances to `p.f.g`. Thus, equal set coverage does not preserve the same refinement admission.
+
+The observed chain is: B2 loses `D1`; Current has no finer `p.f.g.*/FLOW` entry in F3; reading the second field, `g`, produces `part.[any]/FLOW` in DEMAND. The control's finer entry produces `part.*/FLOW` in NORMAL. The detailed C2 rows are reconstructed queries. Actual executed entry and read rows confirm the difference. The first retained loss is the B2 demand coordinate; the submitted exact T input remains present.
+
+## Native result
+
 | Runtime and mode | Reached / completed / accepted run | NORMAL reports | First NORMAL report | Process exit |
 |---|---|---|---|---|
 | Current `8331bf9e`, check | 3 / 3 / 3 | 0 | None | 1; expected assertion |
