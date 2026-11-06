@@ -113,6 +113,17 @@ initial in `getTasksToBeScheduled`, or compare packets with equal denotation
 but different coordinates. Trace the first input divergence before selecting
 a repair. No new behavior decision follows from this capture.
 
+The [wider upstream capture](../reports/bidirectional-conductor-upstream-admission-20261106.md)
+now identifies a real run-3 admission difference. On the same NORMAL
+`workflowDefinition.MUST/Graal` input, `createAndEvaluate` starts only the
+STAR/FLOW form in Current. B also starts MUST/FLOW and later uses that initial
+as a ROOT call premise. The [uniform-source regression](../reports/bidirectional-uniform-prefix-refinement-reproducer-20261106.md)
+repeats that distinction in two methods: Current first reports in run-5, B in
+run-3, and both converge with one finding. This confirms loss of uniform
+precision during admission. It does not yet establish which lost initial
+causes either final Conductor miss. Preserve this test when designing a repair;
+the repair remains unselected.
+
 A separate [direct loop convergence test](../reports/bidirectional-loop-boundary-normality-loss-20261106.md)
 now exposes a shared coverage gap with one mark and no ND condition. Both
 current and prefix-off code stop at run-5 with zero reports for a valid path.

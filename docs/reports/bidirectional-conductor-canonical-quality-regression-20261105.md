@@ -1172,6 +1172,18 @@ reproduction of the final Conductor loss. The separate
 [loop test](bidirectional-loop-boundary-normality-loss-20261106.md) misses a
 feasible finding at natural convergence in run-5 in both variants.
 
+The [later upstream capture](bidirectional-conductor-upstream-admission-20261106.md)
+does find a precision difference outside the earlier getTasks-only comparison.
+For identical NORMAL Graal MUST input, Current omits the
+`workflowDefinition.MUST/FLOW` initial returned by B at `createAndEvaluate`.
+B later uses that exact initial as a ROOT call premise. The
+[two-method uniform test](bidirectional-uniform-prefix-refinement-reproducer-20261106.md)
+repeats the MUST-to-STAR distinction and the run-3 to run-5 report delay.
+The query difference is observed; its necessity for the two final missing
+Conductor findings remains unresolved. The wider diagnostic also reaches
+run-4, completes run-3, and accepts run-3 in both variants. B's later capture
+is censored at its output cap, so absent later events are unknown.
+
 ## Inherited Stirling limits remain separate
 
 The main report's three inherited f945 Stirling misses are not waived. Two

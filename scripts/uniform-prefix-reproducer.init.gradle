@@ -1,0 +1,38 @@
+// Optional only: this init script does not add the reproducer to default tests.
+// From core/: ./gradlew -I ../scripts/uniform-prefix-reproducer.init.gradle :opentaint-dataflow-core:opentaint-dataflow:runUniformPrefixReproducer
+// From core/: ./gradlew -I ../scripts/uniform-prefix-reproducer.init.gradle :opentaint-dataflow-core:opentaint-dataflow:traceUniformPrefixReproducer
+allprojects { p ->
+    if (p.name == 'opentaint-dataflow' && p.projectDir.name == 'opentaint-dataflow') {
+        p.afterEvaluate {
+            def reproducer = p.sourceSets.create('uniformPrefixReproducer')
+            reproducer.java.setSrcDirs([])
+            reproducer.resources.setSrcDirs([])
+            p.kotlin.sourceSets.getByName('uniformPrefixReproducer').kotlin.setSrcDirs([
+                new File(p.projectDir, 'src/uniformPrefixReproducer/kotlin')])
+            reproducer.compileClasspath = p.sourceSets.main.output + p.sourceSets.test.output + p.configurations.testCompileClasspath
+            def classes = p.layout.buildDirectory.dir('classes/kotlin/uniformPrefixReproducer')
+            reproducer.output.classesDirs.setFrom(classes)
+            p.tasks.named('compileUniformPrefixReproducerKotlin') {
+                dependsOn p.tasks.named('testClasses')
+                destinationDirectory.set(classes)
+                compilerOptions.jvmTarget.set(p.tasks.named('compileKotlin').get().compilerOptions.jvmTarget)
+                compilerOptions.freeCompilerArgs.add('-Xfriend-paths=' + [
+                    p.layout.buildDirectory.dir('classes/kotlin/main').get().asFile,
+                    p.layout.buildDirectory.dir('classes/kotlin/test').get().asFile
+                ].collect { it.absolutePath }.join(','))
+            }
+            ['runUniformPrefixReproducer': 'check', 'traceUniformPrefixReproducer': 'trace'].each { name, mode ->
+                p.tasks.register(name, JavaExec) {
+                    dependsOn p.tasks.named('compileUniformPrefixReproducerKotlin')
+                    classpath = reproducer.output + p.sourceSets.test.runtimeClasspath
+                    // Optional diagnostic capsule; ordinary use loads production classes.
+                    def overlay = p.findProperty('uniformPrefixOverlay')
+                    if (overlay) classpath = p.files(overlay) + classpath
+                    mainClass.set('org.opentaint.dataflow.bidi.UniformPrefixRefinementReproducer')
+                    jvmArgs '-Xmx1g', '-XX:ActiveProcessorCount=1'
+                    args mode
+                }
+            }
+        }
+    }
+}
