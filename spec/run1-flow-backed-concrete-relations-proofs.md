@@ -145,6 +145,25 @@ Direct constructor proofs establish:
 - An ordinary T-to-T pass creates no new protection.
 - OR is commutative and idempotent; a protected duplicate dominates.
 
+The pass-dispatch adapter has a separate constructive model in
+[PassProtectionPolicy.lean](lean/proposals/concrete-demand-guidance-retention-20261106/PassProtectionPolicy.lean).
+Its [24 checked lemmas](lean/proposals/concrete-demand-guidance-retention-20261106/pass-protection-checks.json)
+prove these local properties:
+
+- Either existing PASS_THROUGH tag disables assignment protection.
+- Every other micro-edge keeps the previous assignment classification.
+- Reversal keeps the forward metadata and uses the same classification.
+- A transport-only operation keeps a plain input plain, and moves existing
+  protection through the same transfer as its payload.
+
+The model uses a finite coordinate transfer. Native AP field geometry and
+storage are separate proof obligations. The native pass builder already
+emits transfers with no action ID; the adapter does not establish a bug in
+that builder. Keep its action and static-operation identity unchanged.
+Generic summary composition can still add valid cycle protection. The
+model includes that positive case, so it does not assert non-introduction
+for all summary applications.
+
 The main theorem is stronger than these truth tables. `Derivation Op t u p`
 is a finite derivation with original t, output u and flag p. Its constructors
 are initial, neutral move, concrete assignment, cleaner residual, call and

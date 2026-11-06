@@ -176,7 +176,7 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
                     core.collectAfterRun1Policy(at) { _, result ->
                         core.sourceHits?.add(core.key, node, edge.forward, action.id)
                         sink(premise, result, action.id)
-                    }, may = edge.may, ruleAssignment = true)
+                    }, may = edge.may, ruleAssignment = edge.isRuleAssignment)
             }
         }
         if (source.backward) {
