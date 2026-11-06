@@ -7,6 +7,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLanguageManager
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.Params
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
+import org.opentaint.dataflow.jvm.ap.ifds.alias.TaintRulesCallModelProvider
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -15,9 +16,9 @@ import org.opentaint.jvm.graph.JApplicationGraph
 /**
  * The directed alias analysis of one method (IMPL §2). It takes the inputs of the DSU backend.
  *
- * This step builds the alias CFG and runs the fixpoint. It has no queries (step T5), no call
- * closure (step T4) and no inlining (step T6). [callResolver], [modelProvider] and
- * [localVariableReachability] are for these steps.
+ * This step builds the alias CFG and runs the fixpoint with the passive unresolved call and the
+ * pass-through models of [modelProvider] (IMPL §4.4, §4.5). It has no queries (step T5) and no
+ * inlining (step T6). [callResolver] and [localVariableReachability] are for these steps.
  *
  * [verifyPostFix]: check the post-fixpoint conditions of the result (tests).
  */
@@ -50,11 +51,12 @@ internal class JIRDirectedAliasAnalysis(
     private fun compute(analysisCancellation: AnalysisCancellation): DirectedAliasResult {
         val tables = AliasTables(params.symDepth)
         val transfer = AliasTransfer(tables, analysisCancellation)
-        val lowering = JIRAliasLowering(tables)
+        val callModels = TaintRulesCallModelProvider(modelProvider)
+        val lowering = JIRAliasLowering(tables, models = callModels::provideModel)
         val cfg = AliasCfg.build(
             tables, lowering, entryPoint.location.method, entryPoint, graph, languageManager,
         )
-        return DirectedFixpoint(transfer, analysisCancellation).run(cfg, verifyPostFix)
+        return DirectedFixpoint(transfer, analysisCancellation, params.maxCallClosure).run(cfg, verifyPostFix)
     }
 
     private companion object {

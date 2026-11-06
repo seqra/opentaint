@@ -83,13 +83,38 @@ sealed interface AliasInstr {
 
     /**
      * An unresolved call at [site] (IMPL §4.4). [args] has the receiver first, if the call has one.
-     * The transfer of this step does not support it: it is the step T4.
+     * For an unresolved `<init>`, the receiver is the new object. [models] are the pass-through
+     * models of the callee (IMPL §4.5), in their order. [DirectedFixpoint] evaluates it ([AliasCall]).
      */
-    data class UnresolvedCall(val site: SiteId, val result: VarId?, val args: List<AliasValue>) : AliasInstr
+    data class UnresolvedCall(
+        val site: SiteId,
+        val result: VarId?,
+        val args: List<AliasValue>,
+        val models: List<PassThrough> = emptyList(),
+    ) : AliasInstr
 
     /**
-     * A resolved call at [site] (IMPL §5.5). The transfer of this step does not support it: it is the
-     * step T6.
+     * A resolved call at [site] (IMPL §5.5). Until the inlining step (T6), [DirectedFixpoint]
+     * evaluates it with the rule of the unresolved call, without models.
      */
     data class ResolvedCall(val site: SiteId, val result: VarId?, val args: List<AliasValue>) : AliasInstr
+}
+
+/**
+ * A pass-through model of an unresolved call (IMPL §4.5, spec §5.6): after the call, a weak copy
+ * `to ∪= pts(from)`. The lowering makes it from an `ExternalAssign` of `ExternalCallModelProvider`.
+ */
+data class PassThrough(val from: ModelPath, val to: ModelPath)
+
+/** A position of a pass-through model: a base value and a path of cells below it. */
+data class ModelPath(val base: ModelBase, val cells: List<CellId> = emptyList())
+
+/** The base of a [ModelPath]. */
+sealed interface ModelBase {
+
+    /** The result variable of the call. */
+    data object Result : ModelBase
+
+    /** A value of the call: an argument or the receiver. */
+    data class Value(val value: AliasValue) : ModelBase
 }

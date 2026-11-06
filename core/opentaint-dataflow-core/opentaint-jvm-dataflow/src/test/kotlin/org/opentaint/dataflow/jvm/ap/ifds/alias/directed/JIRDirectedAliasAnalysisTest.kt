@@ -3,6 +3,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.alias.directed
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.AAHeapAccessor
 import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
@@ -11,6 +12,9 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLanguageManager
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ArrayAlias
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider
+import org.opentaint.dataflow.jvm.ap.ifds.alias.FieldAlias
 import org.opentaint.dataflow.jvm.ap.ifds.alias.InstEvalContext
 import org.opentaint.dataflow.jvm.ap.ifds.alias.RefValue
 import org.opentaint.dataflow.jvm.ap.ifds.alias.Stmt
@@ -86,6 +90,14 @@ class JIRDirectedAliasAnalysisTest : BasicTestUtils() {
 
         fun argO(i: Int): OriginId = tables.origins.root(tables.bases.arg(i))
 
+        fun after(inst: JIRInst): AliasState = assertNotNull(result.statesAfter[inst.location.index])
+
+        fun cell(before: JIRInst, o: OriginId, c: CellId): Set<OriginId> {
+            val st = assertNotNull(result.statesBefore[before.location.index])
+            val n = st.heapNode(heapKey(o, c)).takeIf { it != NO_ID } ?: tables.origins.defaultNode(o, c)
+            return tables.nodes.members(n).toSet()
+        }
+
         fun cellOf(field: String): CellId = tables.cells.field("$SAMPLE\$Box", field, "java.lang.Object")
     }
 
@@ -130,12 +142,95 @@ class JIRDirectedAliasAnalysisTest : BasicTestUtils() {
     fun `handler gets the state before a throwing call in a JIR method`() {
         val a = analyzed(SAMPLE, "catchAfterThrowingCall")
         val probe = a.probe()
-        // The provisional `<init>` call puts REACHED_ALL into Etree, so `x.value = v` is a weak store:
-        // t gets the stored value and the default child of the new object.
         val x = a.pts(probe, a.probeArg(2)).single()
-        val child = a.tables.nodes.members(a.tables.origins.defaultNode(x, a.cellOf("value"))).toSet()
+        val value = a.cellOf("value")
+        val child = a.tables.nodes.members(a.tables.origins.defaultNode(x, value)).toSet()
+        // The `<init>` call reaches only the new object, which has no written cell. So `x.value = v`
+        // is a strong store, and the state before `mayThrow()` has only v in x.value.
+        val mayThrow = a.inst { it is JIRCallInst && it.callExpr.method.name == "mayThrow" }
+        assertEquals(setOf(a.argO(0)), a.cell(mayThrow, x, value))
+        val init = a.inst { it is JIRCallInst && it.callExpr.method.name == "<init>" }
+        val etree = a.after(init).varNode(ETREE)
+        assertEquals(setOf(OriginTable.REACHED_STATICS), a.tables.nodes.members(etree).toSet())
+        // The store `x.value = v` is in the try block, so it is a thrower of the handler (raw JIR
+        // throwers). The handler joins the state before the store: t also gets the default child.
         assertEquals(child + a.argO(0), a.pts(probe, a.probeArg(0)))
         assertEquals(setOf(a.argO(0)), a.pts(probe, a.probeArg(1)))
+    }
+
+    @Test
+    fun `the receiver of an unresolved init call is the new object`() {
+        val a = analyzed(SAMPLE, "catchAfterThrowingCall")
+        val newInst = a.inst { it is JIRAssignInst && it.rhv is org.opentaint.ir.api.jvm.cfg.JIRNewExpr }
+        val init = a.inst { it is JIRCallInst && it.callExpr.method.name == "<init>" }
+        val instr = assertIs<AliasInstr.UnresolvedCall>(a.instr(init))
+        val receiver = assertIs<AliasValue.Local>(instr.args.single())
+        val newO = a.tables.origins.allocNew(a.tables.sites.site(newInst.location.index))
+        assertEquals(setOf(newO), a.pts(init, receiver.v))
+    }
+
+    @Test
+    fun `pass-through models of the callee are lowered to the unresolved call`() {
+        val m = method(SAMPLE, "loadThenJdkCallArg")
+        val append = m.instList.single { it.callExpr?.method?.name == "append" }
+        val probe = m.instList.single { it.callExpr?.method?.name == "probe" }
+        val tables = AliasTables(7)
+        fun obj(pos: ExternalCallModelProvider.Position, vararg acc: AAHeapAccessor) =
+            ExternalCallModelProvider.ExternalObject(pos, acc.toList())
+        fun assign(from: ExternalCallModelProvider.ExternalObject, to: ExternalCallModelProvider.ExternalObject) =
+            ExternalCallModelProvider.ExternalAssign(from, to)
+        val arg0 = ExternalCallModelProvider.Position.Arg(0)
+        val self = ExternalCallModelProvider.Position.This
+        val ret = ExternalCallModelProvider.Position.RetVal
+        val fieldF = FieldAlias(JIRLocalAliasAnalysis.AliasAccessor.Field("C", "f", "java.lang.Object"), isImmutable = false)
+        val models = listOf(
+            assign(obj(arg0), obj(self)),
+            assign(obj(arg0), obj(self, fieldF, ArrayAlias)),
+            assign(obj(self), obj(ret)),
+            // No such argument: dropped.
+            assign(obj(ExternalCallModelProvider.Position.Arg(5)), obj(self)),
+        )
+        val asked = mutableListOf<String>()
+        val lowering = JIRAliasLowering(tables, models = { callee -> asked += callee.name; models })
+        val cell = tables.cells.field("C", "f", "java.lang.Object")
+
+        // sb.append(x): the receiver is argument 1 of the method, x is argument 0; the result is a local.
+        val appendInstr = assertIs<AliasInstr.UnresolvedCall>(lowering.lower(append))
+        assertNotNull(appendInstr.result)
+        val x = ModelPath(ModelBase.Value(AliasValue.Arg(0)))
+        val sb = ModelPath(ModelBase.Value(AliasValue.Arg(1)))
+        assertEquals(
+            listOf(
+                PassThrough(x, sb),
+                PassThrough(x, ModelPath(ModelBase.Value(AliasValue.Arg(1)), listOf(cell, ELEM_CELL))),
+                PassThrough(sb, ModelPath(ModelBase.Result)),
+            ),
+            appendInstr.models,
+        )
+
+        // probe(w) is static and void: each model needs the receiver, the result or a missing argument.
+        val probeInstr = assertIs<AliasInstr.UnresolvedCall>(lowering.lower(probe))
+        assertNull(probeInstr.result)
+        assertEquals(emptyList(), probeInstr.models)
+        assertEquals(listOf("append", "probe"), asked)
+
+        // The models of one callee are asked one time.
+        lowering.lower(append)
+        assertEquals(listOf("append", "probe"), asked)
+    }
+
+    @Test
+    fun `a pass-through model on the result is dropped for a call without a result variable`() {
+        val m = method(SAMPLE, "loadThenJdkCallArg")
+        val probe = m.instList.single { it.callExpr?.method?.name == "probe" }
+        val tables = AliasTables(7)
+        val arg0 = ExternalCallModelProvider.ExternalObject(ExternalCallModelProvider.Position.Arg(0), emptyList())
+        val ret = ExternalCallModelProvider.ExternalObject(ExternalCallModelProvider.Position.RetVal, emptyList())
+        val lowering = JIRAliasLowering(tables, models = {
+            listOf(ExternalCallModelProvider.ExternalAssign(arg0, ret), ExternalCallModelProvider.ExternalAssign(ret, arg0))
+        })
+        val instr = assertIs<AliasInstr.UnresolvedCall>(lowering.lower(probe))
+        assertEquals(emptyList(), instr.models)
     }
 
     @Test

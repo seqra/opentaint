@@ -11,12 +11,14 @@ data class Evaluated(val state: AliasState, val node: NodeId)
 
 /**
  * The transfer of the directed engine for the statements without calls (IMPL §4.1-§4.3), and the
- * join (IMPL §4.6). It uses the tables of one method. It does not use JIR.
+ * join (IMPL §4.6). [AliasCall] gives the transfer of an unresolved call (IMPL §4.4, §4.5). It
+ * uses the tables of one method. It does not use JIR.
  *
  * Reference: Lean `Impl/EngineState.lean` (`putH`, `storeE`, `joinE`, `retireE`) and
  * `Sound/ValueSem/Concept.lean` (`astepVS`, `retireV`, `adefaultV`).
  *
- * [cancellation]: a join and a retire call its checkpoint one time for each 1024 steps (IMPL §5.2).
+ * [cancellation]: a join, a retire and a call closure call its checkpoint one time for each 1024
+ * steps (IMPL §5.2).
  */
 class AliasTransfer(val tables: AliasTables, private val cancellation: AnalysisCancellation? = null) {
     private val nodes = tables.nodes
@@ -28,8 +30,8 @@ class AliasTransfer(val tables: AliasTables, private val cancellation: AnalysisC
 
     private var steps = 0
 
-    /** One step of a join or a retire. Each 1024 steps call the cancellation checkpoint. */
-    private fun step() {
+    /** One step of a join, a retire or a call closure. Each 1024 steps call the cancellation checkpoint. */
+    internal fun step() {
         if (cancellation != null && (++steps and STEP_MASK) == 0) cancellation.checkpoint()
     }
 
@@ -60,8 +62,9 @@ class AliasTransfer(val tables: AliasTables, private val cancellation: AnalysisC
 
         AliasInstr.StaticWrite, AliasInstr.Nop, is AliasInstr.Return, is AliasInstr.Throw -> st
 
-        is AliasInstr.UnresolvedCall -> throw NotImplementedError("Unresolved call: step T4")
-        is AliasInstr.ResolvedCall -> throw NotImplementedError("Resolved call: step T6")
+        // The calls need the closure budget and (step T6) the inlining: DirectedFixpoint.evaluate.
+        is AliasInstr.UnresolvedCall, is AliasInstr.ResolvedCall ->
+            throw NotImplementedError("A call is evaluated by DirectedFixpoint.evaluate: $instr")
     }
 
     /** `val(v)`: `env[v]` of a local, or the root of `this` or of an argument by rule. */

@@ -33,17 +33,21 @@ class DirectedAliasResult(
  * Then the kill removes the dead locals of the current context ([AliasCfg.keepsAt]). An input that
  * is not computed yet is no state (`null`), never [AliasState.EMPTY].
  *
- * Calls: this step has no call closure (IMPL §4.4, step T4) and no inlining (IMPL §5.5, step T6).
- * A call, resolved or not, is the provisional unresolved call [provisionalCall].
+ * Calls: an unresolved call is the passive call of IMPL §4.4 with the pass-through models of
+ * IMPL §4.5 ([AliasCall]). This step has no inlining (IMPL §5.5, step T6): a resolved call uses the
+ * rule of the unresolved call, without models.
+ *
+ * [maxCallClosure]: the budget of the call closure (`JIRLocalAliasAnalysis.Params.maxCallClosure`).
  */
 class DirectedFixpoint(
     val transfer: AliasTransfer,
     private val cancellation: AnalysisCancellation? = null,
+    maxCallClosure: Int = DEFAULT_MAX_CALL_CLOSURE,
 ) {
     val tables: AliasTables get() = transfer.tables
 
-    private val nodes = tables.nodes
-    private val reachedAll: NodeId by lazy { nodes.singleton(OriginTable.REACHED_ALL) }
+    /** The transfer of the calls. */
+    val calls = AliasCall(transfer, maxCallClosure)
 
     /**
      * Runs the fixpoint of [cfg] from the entry state. If [verify] is true, it checks the
@@ -68,32 +72,19 @@ class DirectedFixpoint(
 
     /** The state after [instr] from the state [st] before it. */
     fun evaluate(st: AliasState, instr: AliasInstr): AliasState = when (instr) {
-        is AliasInstr.UnresolvedCall -> provisionalCall(st, instr.site, instr.result)
-        is AliasInstr.ResolvedCall -> provisionalCall(st, instr.site, instr.result)
+        is AliasInstr.UnresolvedCall -> calls.unresolved(st, instr.site, instr.result, instr.args, instr.models)
+        is AliasInstr.ResolvedCall -> calls.unresolved(st, instr.site, instr.result, instr.args)
         else -> transfer.transfer(st, instr)
     }
 
     /**
-     * The state on an exceptional edge of a call: the call without its result (Lean `partialS`).
-     * It is `null` for an instruction that is not a call.
+     * The state on an exceptional edge of a call: the passive call without its result and without
+     * the models (Lean `partialS`). It is `null` for an instruction that is not a call.
      */
     fun partialCall(st: AliasState, instr: AliasInstr): AliasState? = when (instr) {
-        is AliasInstr.UnresolvedCall -> provisionalCall(st, instr.site, null)
-        is AliasInstr.ResolvedCall -> provisionalCall(st, instr.site, null)
+        is AliasInstr.UnresolvedCall -> calls.call(st, calls.roots(st, instr.args))
+        is AliasInstr.ResolvedCall -> calls.call(st, calls.roots(st, instr.args))
         else -> null
-    }
-
-    /**
-     * The provisional call of this step: `Etree` and `Eval` get [OriginTable.REACHED_ALL] (the sound
-     * fallback of IMPL §4.4: no origin is unique after the call), and the result gets
-     * `{Sym(FRESH(site))}`. The call writes no heap entry. The call closure (step T4) replaces it.
-     */
-    fun provisionalCall(st: AliasState, site: SiteId, result: VarId?): AliasState {
-        val ed = transfer.edit(st)
-        ed.setVar(ETREE, nodes.union(st.varNode(ETREE), reachedAll))
-        ed.setVar(EVAL, nodes.union(st.varNode(EVAL), reachedAll))
-        if (result != null) ed.setVar(result, transfer.evaluate(st, AliasValue.Fresh(site)).node)
-        return ed.build()
     }
 
     /** The kill at node [v]: removes the dead locals of the current context (IMPL §5.3). */

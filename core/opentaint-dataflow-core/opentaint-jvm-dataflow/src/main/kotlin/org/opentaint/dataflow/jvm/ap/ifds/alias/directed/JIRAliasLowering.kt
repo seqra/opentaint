@@ -1,8 +1,13 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias.directed
 
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ArrayAlias
 import org.opentaint.dataflow.jvm.ap.ifds.alias.Expr
 import org.opentaint.dataflow.jvm.ap.ifds.alias.ExprOrValue
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider.ExternalAssign
+import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider.ExternalObject
+import org.opentaint.dataflow.jvm.ap.ifds.alias.FieldAlias
 import org.opentaint.dataflow.jvm.ap.ifds.alias.InstEvalContext
 import org.opentaint.dataflow.jvm.ap.ifds.alias.RefValue
 import org.opentaint.dataflow.jvm.ap.ifds.alias.SimpleValue
@@ -10,6 +15,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.alias.Stmt
 import org.opentaint.dataflow.jvm.ap.ifds.alias.Value
 import org.opentaint.dataflow.jvm.ap.ifds.alias.evalInst
 import org.opentaint.ir.api.jvm.JIRField
+import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRCastExpr
@@ -30,18 +36,22 @@ import org.opentaint.ir.api.jvm.cfg.JIRStringConstant
  * - [evalCtx] makes the values of `this`, the arguments and the locals of the body.
  * - [bodyContext] is the context of the sites of the body.
  * - [contextOf] gives the engine context of a `RefValue.Local`.
+ * - [models] gives the pass-through models of a callee (`ExternalCallModelProvider.provideModel`).
  *
  * Calls: this step does not resolve calls. Each call is an [AliasInstr.UnresolvedCall] (a resolved
- * call is treated as unresolved until the step T6).
+ * call is treated as unresolved until the step T6). The call carries the pass-through models of its
+ * callee as JIR-free [PassThrough] data (IMPL §4.5).
  */
 internal class JIRAliasLowering(
     private val tables: AliasTables,
     private val evalCtx: InstEvalContext = RootEvalContext,
     private val bodyContext: Int = ROOT_CONTEXT,
     private val contextOf: (ContextInfo) -> Int = { ROOT_CONTEXT },
+    private val models: (JIRMethod) -> List<ExternalAssign> = { emptyList() },
 ) {
     private val vars = tables.vars
     private val bases = tables.bases
+    private val modelCache = HashMap<JIRMethod, List<ExternalAssign>>()
 
     /** The engine instruction of [inst]. A statement without an alias effect gives [AliasInstr.Nop]. */
     fun lower(inst: JIRInst): AliasInstr {
@@ -66,9 +76,42 @@ internal class JIRAliasLowering(
                 val args = ArrayList<AliasValue>(stmt.args.size + 1)
                 stmt.instance?.let { v -> value(v, inst)?.let(args::add) }
                 for (a in stmt.args) value(a, inst)?.let(args::add)
-                AliasInstr.UnresolvedCall(site(inst), stmt.lValue?.let(::local), args)
+                AliasInstr.UnresolvedCall(site(inst), stmt.lValue?.let(::local), args, passThrough(stmt, inst))
             }
         }
+    }
+
+    /**
+     * The pass-through models of the callee of [call], lowered to positions of this call. A model
+     * with a position that the call does not have (no result variable, no such argument, a
+     * primitive value) is dropped, as on main. Static positions and `AnyFieldAccessor` give no
+     * model already ([org.opentaint.dataflow.jvm.ap.ifds.alias.TaintRulesCallModelProvider]).
+     */
+    private fun passThrough(call: Stmt.Call, inst: JIRInst): List<PassThrough> {
+        val assigns = modelCache.getOrPut(call.method) { models(call.method) }
+        if (assigns.isEmpty()) return emptyList()
+        return assigns.mapNotNull { a ->
+            val from = modelPath(a.from, call, inst) ?: return@mapNotNull null
+            val to = modelPath(a.to, call, inst) ?: return@mapNotNull null
+            PassThrough(from, to)
+        }
+    }
+
+    private fun modelPath(obj: ExternalObject, call: Stmt.Call, inst: JIRInst): ModelPath? {
+        val base = when (val pos = obj.pos) {
+            ExternalCallModelProvider.Position.RetVal -> if (call.lValue == null) return null else ModelBase.Result
+            ExternalCallModelProvider.Position.This -> ModelBase.Value(call.instance?.let { value(it, inst) } ?: return null)
+            is ExternalCallModelProvider.Position.Arg ->
+                ModelBase.Value(call.args.getOrNull(pos.idx)?.let { value(it, inst) } ?: return null)
+        }
+        val cells = obj.accessors.map { acc ->
+            when (acc) {
+                is ArrayAlias -> ELEM_CELL
+                is FieldAlias -> tables.cells.field(acc.field.className, acc.field.fieldName, acc.field.fieldType)
+                else -> return null
+            }
+        }
+        return ModelPath(base, cells)
     }
 
     /** The engine variable of a local of this body. */

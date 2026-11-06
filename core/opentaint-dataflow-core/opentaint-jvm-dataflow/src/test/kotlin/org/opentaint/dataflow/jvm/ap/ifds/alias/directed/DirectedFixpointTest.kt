@@ -124,7 +124,8 @@ class DirectedFixpointTest {
         val st = solveChecked(g)
         assertEquals(setOf(freshO(s2)), fx.pts(st.before(3), x))
         assertEquals(setOf(newO(s0), freshO(s2)), fx.pts(st.before(4), x))
-        assertTrue(fx.nodes.contains(st.before(4).varNode(ETREE), OriginTable.REACHED_ALL))
+        // The call has no argument: the closure is only REACHED_STATICS, and it is in the handler state.
+        assertEquals(setOf(OriginTable.REACHED_STATICS), members(st.before(4).varNode(ETREE)))
     }
 
     @Test
@@ -182,44 +183,63 @@ class DirectedFixpointTest {
     }
 
     @Test
-    fun `unresolved call adds REACHED_ALL to Etree and Eval and gives a fresh result`() {
+    fun `unresolved call adds its closure to Etree and Eval and gives a fresh result`() {
         val s0 = fx.site(0)
         val g = cfg(
-            node(AliasInstr.UnresolvedCall(s0, r.v, listOf(fx.arg(0))), 1),
+            node(fx.store(fx.arg(0), f, fx.arg(1)), 1),
+            node(AliasInstr.UnresolvedCall(s0, r.v, listOf(fx.arg(0))), 2),
             node(AliasInstr.Return(r)),
         )
         val st = solveChecked(g)
-        val after = st.after(0)
-        assertEquals(setOf(OriginTable.REACHED_ALL), members(after.varNode(ETREE)))
-        assertEquals(setOf(OriginTable.REACHED_ALL), members(after.varNode(EVAL)))
+        val after = st.after(1)
+        assertEquals(setOf(fx.argO(0), fx.argO(1), OriginTable.REACHED_STATICS), members(after.varNode(ETREE)))
+        assertEquals(setOf(fx.argO(1)), members(after.varNode(EVAL)))
         assertEquals(setOf(freshO(s0)), fx.pts(after, r))
-        assertTrue(after.heap.isEmpty())
+        assertEquals(st.before(1).heap, after.heap)
     }
 
     @Test
-    fun `resolved call is a provisional unresolved call`() {
+    fun `resolved call uses the unresolved call rule until inlining`() {
         val s0 = fx.site(0)
         val g = cfg(
-            node(AliasInstr.ResolvedCall(s0, r.v, emptyList()), 1),
+            node(AliasInstr.ResolvedCall(s0, r.v, listOf(fx.arg(0))), 1),
             node(AliasInstr.Return(r)),
         )
         val st = solveChecked(g)
         assertEquals(setOf(freshO(s0)), fx.pts(st.after(0), r))
-        assertEquals(setOf(OriginTable.REACHED_ALL), members(st.after(0).varNode(ETREE)))
+        assertEquals(setOf(fx.argO(0), OriginTable.REACHED_STATICS), members(st.after(0).varNode(ETREE)))
     }
 
     @Test
-    fun `a call blocks a later strong update`() {
+    fun `a call blocks a later strong update below an object that it reaches`() {
+        // 0: t = x.f; 1: t.g = "a" (strong); 2: m(x); 3: t.g = "b" (weak: <x> is a reached proper prefix).
         val px = fx.arg(0)
         val g = cfg(
-            node(fx.store(px, f, const("a")), 1),
-            node(AliasInstr.UnresolvedCall(fx.site(1), null, emptyList()), 2),
-            node(fx.store(px, f, const("b")), 3),
+            node(fx.load(t, px, f), 1),
+            node(fx.store(t, next, const("a")), 2),
+            node(AliasInstr.UnresolvedCall(fx.site(2), null, listOf(px)), 3),
+            node(fx.store(t, next, const("b")), 4),
             node(AliasInstr.Nop),
         )
         val st = solveChecked(g)
-        assertEquals(setOf(constO("a")), fx.cell(st.before(1), fx.argO(0), f))
-        assertEquals(setOf(constO("a"), constO("b")), fx.cell(st.before(3), fx.argO(0), f))
+        val xf = fx.path(fx.argO(0), f)
+        assertEquals(setOf(constO("a")), fx.cell(st.before(2), xf, next))
+        assertEquals(setOf(constO("a"), constO("b")), fx.cell(st.after(3), xf, next))
+    }
+
+    @Test
+    fun `a call does not block a strong update below an object that it does not reach`() {
+        val px = fx.arg(0)
+        val g = cfg(
+            node(fx.load(t, px, f), 1),
+            node(fx.store(t, next, const("a")), 2),
+            node(AliasInstr.UnresolvedCall(fx.site(2), null, listOf(fx.arg(1))), 3),
+            node(fx.store(t, next, const("b")), 4),
+            node(AliasInstr.Nop),
+        )
+        val st = solveChecked(g)
+        val xf = fx.path(fx.argO(0), f)
+        assertEquals(setOf(constO("b")), fx.cell(st.after(3), xf, next))
     }
 
     @Test

@@ -434,10 +434,10 @@ class AliasTransferTest {
         assertEquals(4, iterations)
     }
 
-    // ---- Calls (later tasks) ----
+    // ---- Calls (DirectedFixpoint.evaluate and AliasCall) ----
 
     @Test
-    fun `call instructions are not implemented in this step`() {
+    fun `the transfer does not evaluate call instructions`() {
         val call = AliasInstr.UnresolvedCall(fx.site(9), a.v, listOf(x))
         assertFailsWith<NotImplementedError> { tr.transfer(AliasState.EMPTY, call) }
         val resolved = AliasInstr.ResolvedCall(fx.site(9), a.v, listOf(x))

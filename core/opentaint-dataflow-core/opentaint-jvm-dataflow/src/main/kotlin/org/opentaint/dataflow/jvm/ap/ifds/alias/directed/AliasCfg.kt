@@ -373,7 +373,10 @@ fun AliasInstr.uses(): IntArray {
         AliasInstr.StaticWrite, AliasInstr.Nop -> Unit
         is AliasInstr.Return -> add(value)
         is AliasInstr.Throw -> add(value)
-        is AliasInstr.UnresolvedCall -> args.forEach(::add)
+        is AliasInstr.UnresolvedCall -> {
+            args.forEach(::add)
+            models.forEach { m -> m.values { add(it) } }
+        }
         is AliasInstr.ResolvedCall -> args.forEach(::add)
     }
     return out.toIntArray()
@@ -409,6 +412,7 @@ fun AliasInstr.forEachSite(body: (SiteId) -> Unit) {
         is AliasInstr.UnresolvedCall -> {
             body(site)
             args.forEach(::visit)
+            models.forEach { m -> m.values { visit(it) } }
         }
         is AliasInstr.ResolvedCall -> {
             body(site)
@@ -416,4 +420,10 @@ fun AliasInstr.forEachSite(body: (SiteId) -> Unit) {
         }
         else -> Unit
     }
+}
+
+/** Calls [body] for the value of each base of the model that is a value of the call. */
+private inline fun PassThrough.values(body: (AliasValue) -> Unit) {
+    (from.base as? ModelBase.Value)?.let { body(it.value) }
+    (to.base as? ModelBase.Value)?.let { body(it.value) }
 }
