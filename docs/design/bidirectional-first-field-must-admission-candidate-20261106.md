@@ -1,7 +1,14 @@
 # First-field MUST admission: behavior decision candidate
 
-Status: **UNSELECTED BEHAVIOR DECISION. No implementation is authorized.**
+Status: **Decision received: keep STAR; repair demand guidance.**
 Date: 2026-11-06. Evidence commit: `f40e83b52`.
+
+The user selected the guidance repair on 2026-11-06. Keep `emit`, its C2 image,
+and the existing admission-layer rules unchanged. The MUST-replacement code
+below records an alternative that was not selected. Additive STAR/MUST
+emission was not selected either. The active repair must preserve required
+demand coordinates and their paired exits through canonicalization and
+handoff. Its storage and propagation design remains to be proved and tested.
 
 This candidate preserves a known uniform forward fact when C2 advances exactly
 one field from an ANY demand. Current changes that fact to STAR. The candidate
@@ -186,5 +193,6 @@ The candidate does not cover the original EXACT source or deeper STAR/MAY cases.
 | Keep STAR and repair demand guidance | Keeps current C2 first-field contract; can retain a same-head guide | Must design B2 guidance/retention and its scope, cost, C2/C5 image, and progress proof. |
 | Emit MUST plus STAR | Retains coarse seed while adding uniform work | Changes scalar emission contract, identity/work counts, image and loop observations; still needs effect/normality proof. |
 
-None is selected here. Review must choose the intended behavior before any
-production change or external semantic diagnostic capsule is prepared.
+The selected row is **Keep STAR and repair demand guidance**. Do not implement
+either MUST-replacement snippet or an additive admission policy. Preserve this
+analysis as the explanation of the alternatives and their semantic effects.

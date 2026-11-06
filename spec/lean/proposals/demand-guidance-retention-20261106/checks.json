@@ -1,0 +1,38 @@
+{
+  "state": "PASS",
+  "model": "GuidanceFrontier.lean",
+  "modelSha256": "0c0b07284fbbc7ad9eddc74049370edfc9ccab1eb91ed2241d81a2127fad551a",
+  "base": "proposals/initial-emission/RestrictedInitialPolicy.lean",
+  "baseSha256": "3a42cc1eb3209c82400ba528bdb1e80ba17bc09540e19e59b0d5272f9fd7c5f0",
+  "leanToolchain": "leanprover/lean4:v4.33.1",
+  "theorems": 16,
+  "axiomAudit": [
+    "'GuidanceFrontier.contains_guide_union' does not depend on any axioms",
+    "'GuidanceFrontier.guide_union_both_orders' does not depend on any axioms",
+    "'GuidanceFrontier.c2_image_union' depends on axioms: [propext]",
+    "'GuidanceFrontier.paired_admission_image_union' depends on axioms: [propext]",
+    "'GuidanceFrontier.paired_admission_image_both_orders' depends on axioms: [propext]",
+    "'GuidanceFrontier.denotational_root_ANY_covers_child_ANY' depends on axioms: [propext]",
+    "'GuidanceFrontier.unchanged_C2_has_distinct_root_child_images' depends on axioms: [propext]",
+    "'GuidanceFrontier.guide_pair_keeps_both_images_in_both_orders' depends on axioms: [propext]",
+    "'GuidanceFrontier.DATA_prefix_removal_discards_child_in_both_orders' depends on axioms: [propext]",
+    "'GuidanceFrontier.DATA_coverage_is_not_C2_image_equivalence' depends on axioms: [propext]",
+    "'GuidanceFrontier.late_store_retention_cannot_recover_discarded_child' depends on axioms: [propext]",
+    "'GuidanceFrontier.exact_pairing_does_not_cross_exit_labels' depends on axioms: [propext]",
+    "'GuidanceFrontier.source_handoff_selector_table' depends on axioms: [propext]",
+    "'GuidanceFrontier.guidance_MUST_ANY_and_other_heads' does not depend on any axioms",
+    "'GuidanceFrontier.same_point_MAY_EXACT_guide_countercell' depends on axioms: [propext]",
+    "'GuidanceFrontier.retained_rows_are_an_executable_witness' depends on axioms: [propext]"
+  ],
+  "allowedFoundationAxioms": [
+    "propext",
+    "Quot.sound"
+  ],
+  "scope": "finite C2 images and exact paired-label union, both arrival orders; unchanged scalar emit",
+  "notProved": [
+    "producer retention before normalization",
+    "production C5 restriction and budgets",
+    "role transitions and engine adapters",
+    "whole-engine effect or final Conductor recovery"
+  ]
+}
