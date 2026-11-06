@@ -1,6 +1,7 @@
 # Avoid repeated work on frozen inputs and bounded facts
 
-Status: proposal only. No change in this file is implemented or selected.
+Status: proposal only. Priority 0 has a selected behavior direction; its storage
+design is pending. Performance proposals 1 and 2 are not selected or implemented.
 
 The measured analyzer is `8331bf9e326ddd1bd5083dbc50456963d6b26b52`.
 The latest reached/completed/accepted iterations are OWASP run-5/run-5/run-5,
@@ -12,14 +13,15 @@ seven expected native R5 report projections by disabling only proper-prefix
 subtraction in `canonicalSpans`. A, same-point removal off alone, remains at
 five. This isolates a sufficient proper-prefix intervention, not an accepted
 fix. Later B2 captures trace closed point/summary-store removals and the
-complete frozen explicit demand view. The later C2/report causal chain is
-not proved.
+complete frozen explicit demand view. A matched R3 input also shows a different
+C2 image. The full chain to the final missing reports is not proved.
 Performance proposals 1 and 2 below remain
 unimplemented and unselected; neither claims to fix the missing findings.
 
 ## 0. Correctness first: preserve required refinement guidance
 
-**Priority0 is an acceptance obligation; its repair is UNDESIGNED/UNSELECTED.**
+**Priority 0 is an acceptance obligation. Keep STAR and repair demand guidance
+is selected. The storage design and required proofs remain pending.**
 The [Conductor investigation](../reports/bidirectional-conductor-canonical-quality-regression-20261105.md)
 and [portable evidence](../reports/data/bidirectional-conductor-canonical-quality-regression-20261105.json)
 show that the verified external rollback changes only `canonicalSpans`' final
@@ -122,7 +124,7 @@ repeats that distinction in two methods: Current first reports in run-5, B in
 run-3, and both converge with one finding. This confirms loss of uniform
 precision during admission. It does not yet establish which lost initial
 causes either final Conductor miss. Preserve this test when designing a repair;
-the repair remains unselected.
+the storage repair still needs a complete design.
 
 The [first-field MUST candidate](bidirectional-first-field-must-admission-candidate-20261106.md)
 makes one possible repair reviewable. It would keep a known uniform head when
@@ -131,8 +133,12 @@ This is a new admission policy: concrete NORMAL input can start NORMAL MUST
 work where Current starts DEMAND STAR work. Method, block, loop, and C5 entry
 behavior are affected. The document also lists retaining STAR with repaired
 guidance and additive STAR/MUST admission as distinct contracts. No contract is
-selected. Global required-effect preservation and Conductor recovery remain
-open; this candidate does not replace the measured results or select a fix.
+selected in that candidate's original version. The user has now selected
+**keep STAR and repair demand guidance**. Preserve the current scalar emitter,
+its image, and admission layers. Design the retention of required demand
+coordinates and complete paired exits; do not implement the MUST-replacement
+or additive alternative. Global required-effect preservation and Conductor
+recovery remain open. The decision does not replace the measured results.
 
 A separate [direct loop convergence test](../reports/bidirectional-loop-boundary-normality-loss-20261106.md)
 now exposes a shared coverage gap with one mark and no ND condition. Both
@@ -146,18 +152,18 @@ assertion is RED in both versions. No change to C2, loop restriction, Target
 routing or stopping is selected from this observation alone. The exact
 Conductor first-loss chain is still a separate obligation.
 
-The user behavior decision is pending between:
+The behavior decision is now **keep STAR; repair demand guidance**. Keep the
+current scalar C2 rules and layers. Retain the operational demand positions
+and their complete paired exits, so the existing rule can use a same-head
+guide. This revises the guidance compaction contract. It does not select the
+global proper-prefix rollback, a new emitter, or a second history store.
 
-- allowing required implied C2 refinements from canonical facts, revising the
-  earlier choice that permitted initial images to disappear; and
-- retaining current C2 outputs while repairing other guidance.
-
-Neither branch is selected. A C2/demand-geometry repair is a possible candidate,
-not a design or implementation in this proposal. Consulting removed/raw
-coordinates, keeping separate refinement labels, or changing permitted C2
-images would go beyond the current canonical-only decision and needs an
-explicit semantic design. Do not introduce any of those mechanisms as a
-performance optimization.
+The [complete local snapshot](../reports/bidirectional-conductor-must-demand-snapshot-20261106.md)
+now confirms the missing child guide for the same Conductor input. Both
+diagnostics reach run-4 and complete and accept run-3. The
+[guidance-retention design](bidirectional-demand-guidance-retention-implementation-20261106.md)
+sets out the proposed storage boundaries and the remaining proof work.
+It is a design draft; no source repair is included.
 
 Before performance acceptance, establish the required operational preservation
 contract for the chosen repair: full premise, scope/ports, mark/tail, E/mx,
@@ -173,15 +179,15 @@ Performance proposals 1 and 2 keep the approved semantic contract. They do not
 change C2 initial admission, C5 restriction, field limits, layers, protection, summary roles,
 alias handling, static supplies, or report identity. They do not introduce an
 input history, a second request authority, or a general identity cache.
-Priority0 is separate: its possible repair may require the explicit behavior
-decision above. No such semantic change is selected here.
+Priority 0 is separate. Its direction is selected above; the storage repair
+and its adapter/effect proofs are not complete.
 
 The order below uses the measured avoidable work, not a promised wall-time
 speedup. Sample shares are not seconds and are not retained-memory shares.
 
 | Priority | Change | Measured evidence | Work to remove |
 | --- | --- | --- | --- |
-| 0 | Preserve required refinement guidance; repair undesigned/unselected | B restores R3 guidance/native R5 seven; actual B2 summary removal and complete frozen explicit view are traced, but later C2/report chain is open; main still fails | Correctness gate, not a performance claim |
+| 0 | Preserve required refinement guidance; keep STAR selected, storage design pending | B restores R3 guidance/native R5 seven; actual B2 summary removal and frozen local guide differences are traced; matched R3 input returns an extra precise initial, but its final report chain is open; main still fails | Correctness gate, not a performance claim |
 | 1 | Canonicalize frozen joined inputs once | Thingsboard's observed run-1 static-completion window: 440.336 s; 33,403 Java samples; canonical packet/state work 48.97% of samples and 51.07% of weighted allocation bytes | Repeated normalization of the same immutable joined input for different writer visits |
 | 2 | Return bounded packets before protection transport | Conductor's logged top-24 method rows at run-12: 4,944,767 limit offers, zero over-limit offers; the run-12 capture contains 5,196 of 10,466 sample weights under `ApOps.limit` | Splitting, walking, and reattaching protection when the field limiter returns the original packet |
 
