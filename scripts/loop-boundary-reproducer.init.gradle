@@ -1,0 +1,34 @@
+// Optional only: this source set is separate from default tests and the prefix reproducer.
+// From core/: ./gradlew -I ../scripts/loop-boundary-reproducer.init.gradle :opentaint-dataflow-core:opentaint-dataflow:runLoopBoundaryPrecisionReproducer
+allprojects { p ->
+    if (p.name == 'opentaint-dataflow' && p.projectDir.name == 'opentaint-dataflow') {
+        p.afterEvaluate {
+            def reproducer = p.sourceSets.create('loopBoundaryReproducer')
+            reproducer.java.setSrcDirs([])
+            reproducer.resources.setSrcDirs([])
+            p.kotlin.sourceSets.getByName('loopBoundaryReproducer').kotlin.setSrcDirs([
+                new File(p.projectDir, 'src/loopReproducer/kotlin')])
+            reproducer.compileClasspath = p.sourceSets.main.output + p.sourceSets.test.output + p.configurations.testCompileClasspath
+            def classes = p.layout.buildDirectory.dir('classes/kotlin/loopBoundaryReproducer')
+            reproducer.output.classesDirs.setFrom(classes)
+            p.tasks.named('compileLoopBoundaryReproducerKotlin') {
+                dependsOn p.tasks.named('testClasses')
+                destinationDirectory.set(classes)
+                compilerOptions.jvmTarget.set(p.tasks.named('compileKotlin').get().compilerOptions.jvmTarget)
+                compilerOptions.freeCompilerArgs.add('-Xfriend-paths=' + [
+                    p.layout.buildDirectory.dir('classes/kotlin/main').get().asFile,
+                    p.layout.buildDirectory.dir('classes/kotlin/test').get().asFile
+                ].collect { it.absolutePath }.join(','))
+            }
+            p.tasks.register('runLoopBoundaryPrecisionReproducer', JavaExec) {
+                dependsOn p.tasks.named('compileLoopBoundaryReproducerKotlin')
+                classpath = reproducer.output + p.sourceSets.test.runtimeClasspath
+                // Optional diagnostic capsule; ordinary use loads production classes.
+                def overlay = p.findProperty('loopBoundaryOverlay')
+                if (overlay) classpath = p.files(overlay) + classpath
+                mainClass.set('org.opentaint.dataflow.bidi.LoopBoundaryPrecisionReproducer')
+                jvmArgs '-Xmx1g', '-XX:ActiveProcessorCount=1'
+            }
+        }
+    }
+}

@@ -115338,5 +115338,39 @@
       "changed": false,
       "rerun": false
     }
+  },
+  "loopBoundaryCoverageReproducer": {
+    "report": "docs/reports/bidirectional-loop-boundary-normality-loss-20261106.md",
+    "data": "docs/reports/data/bidirectional-loop-boundary-normality-loss-20261106.json",
+    "dataSha256": "9ae0929b82038e53235beb8ac22cd628dd31fdc6384d705a55a2fdc793ab5a92",
+    "productionRevision": "8331bf9e326ddd1bd5083dbc50456963d6b26b52",
+    "state": "SHARED_NATIVE_CONVERGENCE_COVERAGE_FAILURE_REPRODUCED",
+    "labels": {
+      "reached": "run-5",
+      "completed": "run-5",
+      "accepted": "run-5",
+      "endReason": "NO_DEMAND_EDGE"
+    },
+    "currentNormalReports": 0,
+    "prefixOffNormalReports": 0,
+    "optionalCheckExits": {
+      "current": 1,
+      "prefixOff": 1
+    },
+    "nativeTrace": {
+      "run": 3,
+      "attempted": 104,
+      "emitted": 104,
+      "drops": 0,
+      "errors": 0
+    },
+    "firstObservedNormalityLoss": "NORMAL s.f.g.EXACT/T -> DEMAND s.f.ANY/T beforeAL; rawandcutalsohaveequalDEMANDALinitials",
+    "exclusivePrefixCauseProved": false,
+    "conductorCausalTraceComplete": false,
+    "defaultNativeGate": {
+      "tests": 2992,
+      "changed": false,
+      "rerun": false
+    }
   }
 }

@@ -320,6 +320,13 @@ The new portable receipt includes the exact first retained/processed facts and
 an optional RED checkpoint test. Main campaign times, counts and quality
 remain unchanged.
 
+The separate [direct loop-boundary test](bidirectional-loop-boundary-normality-loss-20261106.md)
+shows a stronger, shared coverage failure: both variants naturally stop at
+run-5 without the expected finding. Its DIRECT F3 trace records the precise
+NORMAL carrier and the DEMAND-only restriction/admission path. Prefix-off
+does not fix this case. This is not an attribution of the Conductor losses;
+its native evidence is kept separate from the main project measurements.
+
 ## Evidence and unresolved work
 
 The portable JSON contains the full strict identity sets once each, with hashed references from all current/control comparisons. It also embeds changed-finding SARIF evidence, every per-run marker, all quantitative profile tables, memory/GC signals, reader/source/capture provenance and the native launch receipt. Its state is `MEASURED_QUALITY_REGRESSION_UNRESOLVED`.
