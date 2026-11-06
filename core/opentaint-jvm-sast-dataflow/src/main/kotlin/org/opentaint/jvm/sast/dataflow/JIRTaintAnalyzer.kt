@@ -55,6 +55,8 @@ class JIRTaintAnalyzer(
         aliasAnalysisParams = JIRLocalAliasAnalysis.Params(
             aliasAnalysisInterProcCallDepth = options.experimentalAAInterProcCallDepth,
             mode = options.experimentalAliasAnalysisMode,
+            symDepth = options.experimentalAliasSymbolicDepth,
+            maxAccessors = options.experimentalAliasMaxAccessors,
         )
     )
 

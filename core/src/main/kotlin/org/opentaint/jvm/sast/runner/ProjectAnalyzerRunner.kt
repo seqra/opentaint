@@ -13,6 +13,7 @@ import org.opentaint.common.sast.CommonAnalysisOptions
 import org.opentaint.common.sast.sarif.SarifGenerationOptions
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.dataflow.jvm.ap.ifds.AliasAnalysisMode
+import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.go.sast.project.GoProjectAnalysisOptions
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader
 import org.opentaint.jvm.sast.project.ProjectAnalysisOptions
@@ -93,6 +94,20 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         .choice(AliasAnalysisMode.entries.associateBy { it.name.lowercase() })
         .default(AliasAnalysisMode.DSU)
 
+    private val experimentalAliasSymbolicDepth: Int by option(
+        "--experimental-alias-symbolic-depth",
+        help = "Experimental options: K, the maximum depth of the symbolic entry paths of the directed alias analysis",
+        hidden = true,
+    )
+        .int().default(DEFAULT_ALIAS_PARAMS.symDepth)
+
+    private val experimentalAliasMaxAccessors: Int by option(
+        "--experimental-alias-max-accessors",
+        help = "Experimental options: D, the maximum number of accessors in an answer path of the directed alias analysis",
+        hidden = true,
+    )
+        .int().default(DEFAULT_ALIAS_PARAMS.maxAccessors)
+
     private val sarifOptions get() = SarifGenerationOptions(
         sarifFileName = sarifFileName,
         sarifCodeFlowLimit = sarifCodeFlowLimit,
@@ -121,6 +136,8 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         storeSummaries = false,
         experimentalAAInterProcCallDepth = experimentalAAInterProcCallDepth,
         experimentalAliasAnalysisMode = experimentalAliasAnalysisMode,
+        experimentalAliasSymbolicDepth = experimentalAliasSymbolicDepth,
+        experimentalAliasMaxAccessors = experimentalAliasMaxAccessors,
     )
 
     override fun commonOptions(): CommonAnalysisOptions = commonOptions
@@ -142,6 +159,8 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         .toList()
 
     companion object {
+        private val DEFAULT_ALIAS_PARAMS = JIRLocalAliasAnalysis.Params()
+
         @JvmStatic
         fun main(args: Array<String>) = ProjectAnalyzerRunner().main(args)
     }

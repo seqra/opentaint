@@ -6,6 +6,7 @@ import org.opentaint.common.sast.sarif.SarifGenerationOptions
 import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.dataflow.jvm.ap.ifds.AliasAnalysisMode
+import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import java.nio.file.Path
 import kotlin.time.Duration
 
@@ -27,6 +28,8 @@ data class CommonAnalysisOptions(
     val storeSummaries: Boolean = false,
     val experimentalAAInterProcCallDepth: Int = 1,
     val experimentalAliasAnalysisMode: AliasAnalysisMode = AliasAnalysisMode.DSU,
+    val experimentalAliasSymbolicDepth: Int = JIRLocalAliasAnalysis.Params().symDepth,
+    val experimentalAliasMaxAccessors: Int = JIRLocalAliasAnalysis.Params().maxAccessors,
 ) {
     val summariesApMode get() = ifdsApMode.takeIf { storeSummaries }
 
@@ -38,6 +41,8 @@ data class CommonAnalysisOptions(
         storeSummaries = storeSummaries,
         experimentalAAInterProcCallDepth = experimentalAAInterProcCallDepth,
         experimentalAliasAnalysisMode = experimentalAliasAnalysisMode,
+        experimentalAliasSymbolicDepth = experimentalAliasSymbolicDepth,
+        experimentalAliasMaxAccessors = experimentalAliasMaxAccessors,
         debugOptions = debugOptions,
         tracePathLimit = sarifGenerationOptions.sarifCodeFlowLimit,
     )
