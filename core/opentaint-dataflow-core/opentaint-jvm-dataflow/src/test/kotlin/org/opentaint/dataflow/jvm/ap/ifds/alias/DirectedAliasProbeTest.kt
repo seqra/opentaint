@@ -531,8 +531,9 @@ class DirectedAliasProbeTest : BasicTestUtils() {
         val method = findMethod(SAMPLE, "heapChainAllocs")
         val call = method.instList.filterIsInstance<JIRCallInst>().first { it.callExpr.method.name == PROBE }
         val z = AccessPathBase.LocalVar((call.callExpr.args[0] as JIRLocalVar).index)
+        // The directed backend answers. For this method its answer has the elements of the DSU answer.
         val aa = aaForMethod(method, noRules, directed)
-        assertEquals(dsuForMethod(method).findAlias(z, call), aa.findAlias(z, call))
+        assertEquals(dsuForMethod(method).findAlias(z, call)?.toSet(), aa.findAlias(z, call)?.toSet())
     }
 
     @Test

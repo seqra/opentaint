@@ -116,6 +116,18 @@ class OriginTable(
         else -> error("A marker has no cells: $o")
     }
 
+    /** The origin `Sym(base, [])`, or [NO_ID] if it does not exist. It never makes an origin. */
+    fun findRoot(base: BaseId): OriginId = roots.get(base)
+
+    /** The origin `Deep(base)`, or [NO_ID] if it does not exist. It never makes an origin. */
+    fun findDeep(base: BaseId): OriginId = deeps.get(base)
+
+    /** The origin `AllocNew(site)`, or [NO_ID] if it does not exist. It never makes an origin. */
+    fun findAllocNew(site: SiteId): OriginId = allocNews.get(site)
+
+    /** The origin `AllocOld(site)`, or [NO_ID] if it does not exist. It never makes an origin. */
+    fun findAllocOld(site: SiteId): OriginId = allocOlds.get(site)
+
     /** As [child], but [NO_ID] if the child origin does not exist. It never makes an origin. */
     fun findChild(o: OriginId, c: CellId): OriginId = when (kinds.getInt(o)) {
         SYM -> {

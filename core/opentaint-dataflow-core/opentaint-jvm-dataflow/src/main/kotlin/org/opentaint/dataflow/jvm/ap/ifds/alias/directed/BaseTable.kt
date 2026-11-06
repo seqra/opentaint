@@ -73,6 +73,9 @@ class BaseTable {
 
     fun key(b: BaseId): BaseKey = bases.key(b)
 
+    /** The id of a base, or [NO_ID] if the table has no id for it. It never makes a base. */
+    fun find(key: BaseKey): BaseId = bases.find(key)
+
     fun kind(b: BaseId): BaseKind = bases.key(b).kind
 
     fun thisBase(): BaseId = intern(BaseKey.This)

@@ -48,6 +48,10 @@ class CellTable {
     fun field(className: String, fieldName: String, type: String): CellId =
         fields.id(FieldKey(className, fieldName, type))
 
+    /** The id of a field, or [NO_ID] if the table has no id for it. It never makes an id. */
+    fun find(className: String, fieldName: String, type: String): CellId =
+        fields.find(FieldKey(className, fieldName, type))
+
     /** The key of a field cell, or `null` for [ELEM_CELL]. */
     fun fieldKey(c: CellId): FieldKey? = if (c == ELEM_CELL) null else fields.key(c)
 
@@ -66,6 +70,9 @@ class VarTable {
     val size: Int get() = locals.size + 2
 
     fun local(index: Int, context: Int = ROOT_CONTEXT): VarId = locals.id(LocalKey(index, context))
+
+    /** The id of a local, or [NO_ID] if the table has no id for it. It never makes an id. */
+    fun find(index: Int, context: Int = ROOT_CONTEXT): VarId = locals.find(LocalKey(index, context))
 
     /** The key of a local, or `null` for a reserved key. */
     fun key(v: VarId): LocalKey? = if (isReserved(v)) null else locals.key(v)

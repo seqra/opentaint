@@ -624,6 +624,23 @@ public class DirectedAliasSample {
         probe(head.value);
     }
 
+    static void nullAndFresh() {
+        Object n = null;
+        Object r = makeBox();
+        probe(n, r);
+    }
+
+    static void manyLocals(Box p, Object q, boolean c) {
+        Box x = new Box();
+        Box y = c ? x : p;
+        y.value = q;
+        Object t = x.value;
+        Object u = p.value;
+        Object s = "s";
+        x.next = y;
+        probe(x, y, t, u, s);
+    }
+
     static void mayThrow() {
         throw new RuntimeException();
     }

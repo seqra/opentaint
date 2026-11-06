@@ -7,7 +7,7 @@ package org.opentaint.dataflow.jvm.ap.ifds
  * - [SHADOW]: both backends run. The consumers get the DSU answers.
  * - [DIRECTED]: the consumers get the answers of the directed alias analysis.
  *
- * At this step, all modes use the DSU backend.
+ * At this step, [SHADOW] uses only the DSU backend.
  */
 enum class AliasAnalysisMode {
     DSU, SHADOW, DIRECTED;

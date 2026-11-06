@@ -3,6 +3,7 @@ package org.opentaint.dataflow.jvm.ap.ifds
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.analysis.alias.LocalAliasAnalysis.CommonAliasApInfo
 import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRDsuAliasAnalysis
+import org.opentaint.dataflow.jvm.ap.ifds.alias.directed.JIRDirectedAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -14,8 +15,13 @@ import kotlin.time.Duration.Companion.seconds
 /**
  * The local alias analysis of one method. The consumers use only this facade.
  *
- * [Params.mode] selects the backend. At this step, each mode uses the DSU backend ([JIRDsuAliasAnalysis]).
- * Thus each answer is the answer of main.
+ * [Params.mode] selects the backend:
+ * - [AliasAnalysisMode.DSU] and [AliasAnalysisMode.SHADOW]: the DSU backend ([JIRDsuAliasAnalysis]). Each
+ *   answer is the answer of main.
+ * - [AliasAnalysisMode.DIRECTED]: the directed backend ([JIRDirectedAliasAnalysis]). Its answers are sorted
+ *   and have no duplicates. A local with no value gives an empty list (main gives `null`).
+ *
+ * Both backends give `null` on a time-out and on a statement that the analysis did not reach.
  */
 class JIRLocalAliasAnalysis(
     entryPoint: JIRInst,
@@ -40,18 +46,35 @@ class JIRLocalAliasAnalysis(
         val maxCallClosure: Int = 10_000,
     )
 
-    private val dsu = JIRDsuAliasAnalysis(
-        entryPoint, graph, callResolver, modelProvider,
-        localVariableReachability, cancellation, languageManager, params
-    )
+    private val directed: JIRDirectedAliasAnalysis? = if (params.mode == AliasAnalysisMode.DIRECTED) {
+        JIRDirectedAliasAnalysis(
+            entryPoint, graph, callResolver, modelProvider,
+            localVariableReachability, cancellation, languageManager, params
+        )
+    } else {
+        null
+    }
+
+    private val dsu: JIRDsuAliasAnalysis? = if (directed == null) {
+        JIRDsuAliasAnalysis(
+            entryPoint, graph, callResolver, modelProvider,
+            localVariableReachability, cancellation, languageManager, params
+        )
+    } else {
+        null
+    }
 
     /** The aliases of [base] in the state before [statement]. */
     fun findAlias(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? =
-        dsu.findAlias(base, statement)
+        if (directed != null) directed.findAlias(base, statement) else dsu!!.findAlias(base, statement)
 
     /** The aliases of [base] in the state after [statement]. */
     fun findAliasAfterStatement(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? =
-        dsu.findAliasAfterStatement(base, statement)
+        if (directed != null) {
+            directed.findAliasAfterStatement(base, statement)
+        } else {
+            dsu!!.findAliasAfterStatement(base, statement)
+        }
 
     /**
      * The aliases of the elements of the array [base] in the state before [statement].
@@ -59,8 +82,13 @@ class JIRLocalAliasAnalysis(
      * The DSU backend gives the alias group that contains the path `base[*]`, as the vararg branch of
      * `JIRBasicAtomEvaluator` did on main. The answer also contains the path `base[*]`. If no group
      * contains the path, the result is `null`.
+     *
+     * The directed backend gives the paths that alias `base[*]` (without `base[*]`) and the allocations and
+     * the constants of the element value (IMPL §6.3).
      */
     fun findArrayElementAliases(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? {
+        if (directed != null) return directed.findArrayElementAliases(base, statement)
+        val dsu = dsu!!
         for (aliasSet in dsu.getAllAliasAtStatement(statement)) {
             for (info in aliasSet) {
                 if (info !is AliasApInfo || info.base != base) continue
@@ -77,13 +105,16 @@ class JIRLocalAliasAnalysis(
      * The aliases of the heap path `base.path` in the state before [statement]. The tests use it.
      *
      * The DSU backend gives the answers of `forEachHeapAlias` at the end of the path. If the analysis has
-     * no result, the result is `null`.
+     * no result, the result is `null`. The directed backend gives the paths of the heap-path query of
+     * spec §5.7, without the queried path.
      */
     internal fun findHeapAlias(
         base: AccessPathBase.LocalVar,
         path: List<AliasAccessor>,
         statement: CommonInst,
     ): List<AliasInfo>? {
+        if (directed != null) return directed.findHeapAlias(base, path, statement)
+        val dsu = dsu!!
         if (dsu.aliasInfo == null) return null
 
         val result = mutableListOf<AliasInfo>()
