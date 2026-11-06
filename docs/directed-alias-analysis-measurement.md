@@ -204,13 +204,13 @@ Hand-checked sample:
 | tms `DataInitConfig#init`, `mailSettings` (4 lines) | empty | `SettingRepository.__repo__.content` | U2: the call `mailSettings.get(...)` drops the alias |
 | tms `GroupMember#toString` and 3 other `toString` methods, inst 14 | the builder chain over `CharSequence.<rule-storage>` | `this.<field>.<C>.<rule-storage>` for each field and model cell | model cells (D1 shape) |
 | tms `ChatMsgImpl#put` (8 lines) | `var.MapValue^k` | `MapValue`, `Bindings.<rule-storage>`, `LRUMap.<rule-storage>`, `headerValue`, `headerValues` paths | model cells (D1 shape) |
-| tms `CustomMailSender#sendTextTo` | `formatText.content^k` | `vals[*].content^k` (inlined `StringUtil.replace`, `String.valueOf(vals[i])`) | real alias through the models; the DSU loses it; cause not isolated |
+| tms `CustomMailSender#sendTextTo` | `formatText.content^k` | `vals[*].content^k` (inlined `StringUtil.replace`, `String.valueOf(vals[i])`) | U2: in the loop of the inlined `StringUtil.replace`, JIR copies `vals` to a local (`%2 = vals`). So the unresolved call `String.valueOf(%2[i - 1])` removes the heap alias `vals[*]` before the model merges it (shape of probe row 24). A scratch sample gives the same difference with the loop at depth 0, and no difference without the loop. The directed answer is correct. |
 | thingsboard `CirclePerimeterDefinition#toString` | `this.latitude` | `const<String>(CirclePerimeterDefinition(latitude=)` | interned constant (design §7.5) |
 | thingsboard `MqttSslClient#main` | allocation item 22 | allocation item 28 | class constant `MqttSslClient.class` at two statements (IMPL §1.5) |
 | thingsboard `JacksonUtil#addKvEntry` | `var[*]^k` | `kvEntry.value` | probably U2 (`isPresent()` on the inlined optional); not checked in the bytecode |
 | tms K = 0 run, `ChatMsgImpl#put`, two locals | `arg0.id`, `arg0.openEdit` | `var(9)` for both | probably the K-limit: at K = 0 a field read gives the deep summary of its base, so the reads share an origin; not checked in the bytecode |
 
-No sampled line shows a wrong answer. One sampled line (`sendTextTo`) has no class yet. No line of the sample is U1 or U4. The tags "model cells" and "string constant" cover 83 % (tms, Conductor) and 89 % (thingsboard) of the lines.
+No sampled line shows a wrong answer. Each sampled line has a class. No line of the sample is U1 or U4. The tags "model cells" and "string constant" cover 83 % (tms, Conductor) and 89 % (thingsboard) of the lines.
 
 ## 5. Behaviour changes in the test suites
 
@@ -255,7 +255,7 @@ Gates of design §11.2 (the user sets the thresholds; this table gives the measu
 |---|---|---|
 | V1 can be measured on the three projects | not met | SHADOW at K = 7, D = 6 stops on tms, thingsboard and Conductor at 16 GB (guard or `OutOfMemoryError`). V1 has only the first 658 / 3 470 / 23 401 queries. |
 | V1 volume | measured, partial | directed paths 57x (tms), 2 497x (thingsboard), 474x (Conductor) of the DSU paths for the same queries; max answer 17 692 / 1 225 974 / 1 671 732 against 29 / 39 / 73 |
-| V1 unexplained `notSubset` queries = 0 | not met | one sampled line (`CustomMailSender#sendTextTo`) has no class; only 300 lines of each run are printed, and only a sample is checked by hand |
+| V1 unexplained `notSubset` queries = 0 | not measurable | each sampled line has a class (`CustomMailSender#sendTextTo` is U2: the loop copies `vals` to a local, so the call `String.valueOf(vals[i - 1])` removes the alias `vals[*]`); only 300 lines of each run are printed, and only a sample is checked by hand |
 | V1 precision (mean and p99 of the answer size) better than the DSU | not met | mean 2.5 → 120, 1.7 → 3 780, 1.9 → 800; p99 22 → 2 816, 20 → 960, 21 → 2 816. On the dataflowbench kernels the directed answers are smaller (Java 344 → 251, Kotlin 309 → 267 paths). |
 | V1 findings in SHADOW equal to DSU | met only at K = 0, D = 0 on tms | the default SHADOW runs do not complete |
 | V2 (IFDS events, peak heap, guard, OOM in DIRECTED) | not met | DIRECTED gets 839 / 3 407 / 35 179 events before `OutOfMemoryError`, against 230 k / 9.7M / 619 k for the DSU |
