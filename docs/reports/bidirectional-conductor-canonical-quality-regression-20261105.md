@@ -1153,6 +1153,25 @@ does not modify runtime 8331 or waive its missing findings. The behavior
 decision is pending and the main Conductor quality regression remains
 unresolved.
 
+## Later actual run-3 call admission
+
+The [actual call-admission comparison](bidirectional-conductor-call-admission-20261106.md)
+records run-4 reached, run-3 complete, and run-3 accepted in both variants.
+All 1,218 matching full offers return the same initial sets and ordering.
+Control B also records 470 input keys without an identical Current offer.
+Thus, this boundary supplies no witness of a rejected required initial on an
+identical offer. It does not compare denotationally equal packets with different
+coordinates, or identify the first input divergence. The missing Conductor
+findings remain unresolved; no repair is selected from this result.
+
+The [two-method prefix test](bidirectional-canonical-prefix-refinement-reproducer-20261106.md)
+does identify one precise mechanism: losing a B2 child demand removes a finer
+F3 entry and delays its finding from run-3 to run-5. Both variants converge with
+that finding. It is a regression check for refinement progress, not a small
+reproduction of the final Conductor loss. The separate
+[loop test](bidirectional-loop-boundary-normality-loss-20261106.md) misses a
+feasible finding at natural convergence in run-5 in both variants.
+
 ## Inherited Stirling limits remain separate
 
 The main report's three inherited f945 Stirling misses are not waived. Two
