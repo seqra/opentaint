@@ -62,7 +62,7 @@ class AliasTransfer(val tables: AliasTables, private val cancellation: AnalysisC
 
         AliasInstr.StaticWrite, AliasInstr.Nop, is AliasInstr.Return, is AliasInstr.Throw -> st
 
-        // The calls need the closure budget and (step T6) the inlining: DirectedFixpoint.evaluate.
+        // The calls need the closure budget and the inlining: DirectedFixpoint.evaluate and DirectedFixpoint.inline.
         is AliasInstr.UnresolvedCall, is AliasInstr.ResolvedCall ->
             throw NotImplementedError("A call is evaluated by DirectedFixpoint.evaluate: $instr")
     }

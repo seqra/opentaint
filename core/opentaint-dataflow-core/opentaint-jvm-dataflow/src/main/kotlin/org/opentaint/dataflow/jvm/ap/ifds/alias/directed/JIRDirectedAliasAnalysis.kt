@@ -21,8 +21,8 @@ import org.opentaint.jvm.graph.JApplicationGraph
  * The directed alias analysis of one method (IMPL §2). It takes the inputs of the DSU backend.
  *
  * It builds the alias CFG and runs the fixpoint with the passive unresolved call and the
- * pass-through models of [modelProvider] (IMPL §4.4, §4.5). It has no inlining yet (step T6):
- * [callResolver] is for that step.
+ * pass-through models of [modelProvider] (IMPL §4.4, §4.5). A call that [callResolver] resolves
+ * within `Params.aliasAnalysisInterProcCallDepth` is inlined (IMPL §5.5, [JIRAliasInliner]).
  *
  * The queries (IMPL §6) run the analysis one time, at the first query ([JIRAliasAnswers]). A query
  * gives `null` if the time limit or the cancellation stops the analysis, if the statement has no
@@ -33,7 +33,7 @@ import org.opentaint.jvm.graph.JApplicationGraph
 internal class JIRDirectedAliasAnalysis(
     private val entryPoint: JIRInst,
     private val graph: JApplicationGraph,
-    @Suppress("unused") private val callResolver: JIRCallResolver,
+    private val callResolver: JIRCallResolver,
     private val modelProvider: TaintRulesProvider?,
     private val localVariableReachability: JIRLocalVariableReachability,
     private val cancellation: Cancellation,
@@ -82,10 +82,8 @@ internal class JIRDirectedAliasAnalysis(
         val tables = AliasTables(params.symDepth)
         val transfer = AliasTransfer(tables, analysisCancellation)
         val callModels = TaintRulesCallModelProvider(modelProvider)
-        val lowering = JIRAliasLowering(tables, models = callModels::provideModel)
-        val cfg = AliasCfg.build(
-            tables, lowering, entryPoint.location.method, entryPoint, graph, languageManager,
-        )
+        val inliner = JIRAliasInliner(tables, graph, languageManager, callResolver, callModels, params)
+        val cfg = inliner.rootCfg(entryPoint)
         return DirectedFixpoint(transfer, analysisCancellation, params.maxCallClosure).run(cfg, verifyPostFix)
     }
 

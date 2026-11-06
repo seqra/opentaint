@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias.directed
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
+import org.opentaint.dataflow.graph.CompactGraph
 import org.opentaint.dataflow.graph.MethodInstGraph
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLanguageManager
 import org.opentaint.ir.api.common.CommonMethod
@@ -40,13 +41,33 @@ internal fun AliasCfg.Companion.build(
 ): AliasCfg {
     @Suppress("UNCHECKED_CAST")
     val mig = MethodInstGraph.build(languageManager, graph as ApplicationGraph<CommonMethod, CommonInst>, method)
-    val n = mig.instructions.size
-    val insts = Array(n) { mig.instructions[it] as JIRInst }
+    return build(
+        tables, lowering, mig.instructions.map { it as JIRInst }, mig.graph,
+        languageManager.getInstIndex(entry), context, callOnCycle,
+    )
+}
+
+/**
+ * The alias CFG of a body with the instructions [statements] and the graph [graph] of
+ * `MethodInstGraph` (the same indices), with the entry node [entryIndex]. The inlining builds a
+ * callee body from the graph of the call resolution (`JIRInstGraph`).
+ */
+internal fun AliasCfg.Companion.build(
+    tables: AliasTables,
+    lowering: JIRAliasLowering,
+    statements: List<JIRInst>,
+    graph: CompactGraph,
+    entryIndex: Int,
+    context: Int,
+    callOnCycle: Boolean,
+): AliasCfg {
+    val n = statements.size
+    val insts = Array(n) { statements[it] }
     val isCatch = BooleanArray(n) { insts[it] is JIRCatchInst }
 
     val succ = Array(n) { v ->
         val out = IntArrayList()
-        mig.graph.forEachSuccessor(v) { w -> if (!isCatch[w]) out.add(w) }
+        graph.forEachSuccessor(v) { w -> if (!isCatch[w]) out.add(w) }
         out.toIntArray()
     }
 
@@ -71,7 +92,7 @@ internal fun AliasCfg.Companion.build(
         exc = exc,
         extraUses = extraUses,
         extraDefs = extraDefs,
-        entry = languageManager.getInstIndex(entry),
+        entry = entryIndex,
         context = context,
         callOnCycle = callOnCycle,
     )

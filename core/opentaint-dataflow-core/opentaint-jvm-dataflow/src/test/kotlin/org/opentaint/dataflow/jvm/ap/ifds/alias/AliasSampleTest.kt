@@ -606,6 +606,65 @@ class AliasSampleTest : BasicTestUtils() {
         assertTrue { aa.sinkArgApAliases(sink).isNotEmpty() }
     }
 
+    // The inlining samples in DIRECTED mode (IMPL §5.5). Each test sets the mode and the depth.
+
+    @Test
+    fun `directed test getter aliases this field`() {
+        val method = findMethod(INTERPROC_SAMPLE, "testGetterAlias")
+        val aa = aaForMethod(method, directedParams(depth = 1))
+
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
+
+        assertTrue {
+            apAliases.any {
+                it.base == AccessPathBase.This && it.accessors.singleFieldNamed(FIELD_INTERPROC)
+            }
+        }
+    }
+
+    @Test
+    fun `directed test setter then getter`() {
+        val method = findMethod(INTERPROC_SAMPLE, "testSetterThenGetter")
+        val aa = aaForMethod(method, directedParams(depth = 1))
+
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
+
+        assertTrue { apAliases.any { it.base == Argument(0) } }
+    }
+
+    @Test
+    fun `directed test identity same-class call`() {
+        val method = findMethod(INTERPROC_SAMPLE, "testIdentityCall")
+        val aa = aaForMethod(method, directedParams(depth = 1))
+
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
+
+        assertTrue { apAliases.any { it.isPlainBase(Argument(0)) } }
+    }
+
+    @Test
+    fun `directed HeaderValues addAll fixpoint must terminate`() {
+        val method = findMethod(HEADER_VALUES_SAMPLE, "addAllEntry")
+
+        val aa = aaForMethod(method, directedParams(depth = 1))
+        val sink = method.findSinkCall("sinkOneValue")
+        assertTrue { aa.sinkArgApAliases(sink).isNotEmpty() }
+    }
+
+    @Test
+    fun `directed write enters flushBufferWithUserData and fixpoint must terminate`() {
+        val method = findMethod(FLAKY_SAMPLE, "write")
+
+        for (depth in listOf(0, 1)) {
+            val aa = aaForMethod(method, directedParams(depth))
+            val sink = method.findSinkCall("sinkOneValue")
+            assertTrue("depth $depth") { aa.sinkArgAliases(sink).isNotEmpty() }
+        }
+    }
+
     @Test
     fun `field write through an alias adds the value forward and keeps the alias path backward`() {
         val method = findMethod(HEAP_SAMPLE, "writeThroughFieldAlias")
@@ -840,6 +899,13 @@ class AliasSampleTest : BasicTestUtils() {
             useAliasAnalysis = true,
             aliasAnalysisInterProcCallDepth = depth,
             mode = AliasAnalysisMode.fromTestProperty(),
+        )
+
+    private fun directedParams(depth: Int) =
+        JIRLocalAliasAnalysis.Params(
+            useAliasAnalysis = true,
+            aliasAnalysisInterProcCallDepth = depth,
+            mode = AliasAnalysisMode.DIRECTED,
         )
 
     private fun JIRMethod.findSinkCall(sinkName: String): JIRCallInst =

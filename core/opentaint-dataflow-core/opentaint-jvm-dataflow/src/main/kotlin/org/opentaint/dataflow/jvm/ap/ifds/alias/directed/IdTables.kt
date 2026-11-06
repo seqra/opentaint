@@ -106,10 +106,12 @@ class SiteTable {
 
     /**
      * Marks [s] as a loop site. Call it before the `AllocNew` origin of [s] exists: the holders
-     * index ([LoopAllocTracker]) caches the tracked origins of each node.
+     * index ([LoopAllocTracker]) caches the tracked origins of each node. A site that is a loop
+     * site already does not change, so a second mark has no effect.
      */
     fun markLoopSite(s: SiteId) {
         check(!frozen) { "SiteTable is frozen" }
+        if (loopSites.get(s)) return
         check(!allocated.get(s)) { "Site $s has an AllocNew origin: mark the loop sites before the fixpoint" }
         loopSites.set(s)
     }

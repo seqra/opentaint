@@ -37,10 +37,12 @@ import org.opentaint.ir.api.jvm.cfg.JIRStringConstant
  * - [bodyContext] is the context of the sites of the body.
  * - [contextOf] gives the engine context of a `RefValue.Local`.
  * - [models] gives the pass-through models of a callee (`ExternalCallModelProvider.provideModel`).
+ * - [resolve] gives the bodies of the overrides of a call, or `null` if the call is not resolved
+ *   (the resolution of main: `CallTreeNode.resolveCall`, IMPL §5.5).
  *
- * Calls: this step does not resolve calls. Each call is an [AliasInstr.UnresolvedCall] (a resolved
- * call is treated as unresolved until the step T6). The call carries the pass-through models of its
- * callee as JIR-free [PassThrough] data (IMPL §4.5).
+ * Calls: a resolved call is an [AliasInstr.ResolvedCall], another call is an
+ * [AliasInstr.UnresolvedCall]. Both carry the pass-through models of the callee as JIR-free
+ * [PassThrough] data (IMPL §4.5): a resolved call without a return state uses them.
  */
 internal class JIRAliasLowering(
     private val tables: AliasTables,
@@ -48,6 +50,7 @@ internal class JIRAliasLowering(
     private val bodyContext: Int = ROOT_CONTEXT,
     private val contextOf: (ContextInfo) -> Int = { ROOT_CONTEXT },
     private val models: (JIRMethod) -> List<ExternalAssign> = { emptyList() },
+    private val resolve: (Stmt.Call) -> CalleeBodies? = { null },
 ) {
     private val vars = tables.vars
     private val bases = tables.bases
@@ -76,7 +79,13 @@ internal class JIRAliasLowering(
                 val args = ArrayList<AliasValue>(stmt.args.size + 1)
                 stmt.instance?.let { v -> value(v, inst)?.let(args::add) }
                 for (a in stmt.args) value(a, inst)?.let(args::add)
-                AliasInstr.UnresolvedCall(site(inst), stmt.lValue?.let(::local), args, passThrough(stmt, inst))
+                val result = stmt.lValue?.let(::local)
+                val callees = resolve(stmt)
+                if (callees != null) {
+                    AliasInstr.ResolvedCall(site(inst), result, args, passThrough(stmt, inst), callees)
+                } else {
+                    AliasInstr.UnresolvedCall(site(inst), result, args, passThrough(stmt, inst))
+                }
             }
         }
     }

@@ -318,7 +318,7 @@ class AliasCallTest {
     }
 
     @Test
-    fun `resolved call uses the unresolved call rule until inlining`() {
+    fun `resolved call without a callee body uses the unresolved call rule`() {
         val st0 = run(fx.store(x, f, y))
         val un = run(call(1, x, result = r), from = st0)
         val res = run(AliasInstr.ResolvedCall(fx.site(1), r.v, listOf(x)), from = st0)

@@ -40,7 +40,8 @@ class AliasCfg private constructor(
     private val defs: Array<IntArray>,
     val entry: Int,
     val context: Int,
-    callOnCycle: Boolean,
+    /** True if this body is inlined at a call on a cycle of a caller: each site of the body is a loop site. */
+    val callOnCycle: Boolean,
 ) {
     /** A node of the direct builder. [extraUses] are reads of the source statement that [instr] does not have. */
     class Node(
@@ -69,6 +70,9 @@ class AliasCfg private constructor(
         markLoopSites(callOnCycle)
     }
 
+    /** The CFGs of the inlined bodies of the call at each node: built at the first use, then kept. */
+    private val calleeCfgs = arrayOfNulls<List<AliasCfg>>(size)
+
     fun instr(v: Int): AliasInstr = instrs[v]
 
     /** The normal successors of [v]. */
@@ -96,6 +100,23 @@ class AliasCfg private constructor(
 
     /** The locals that are live at the entry of [v] (IMPL §5.3). The caller must not change it. */
     fun liveIn(v: Int): BitSet = live[v]
+
+    /**
+     * The CFGs of the bodies of the resolved call at [v] (IMPL §5.5), or an empty list. The first
+     * call builds them ([CalleeBodies.build]) and the CFG keeps them, so a caller loop that evaluates
+     * the call again runs the same CFGs, and the loop sites of each body are marked one time, before
+     * its first run. A body is inlined at a call on a cycle if [v] is on a cycle of this CFG or if
+     * this body is itself inlined at a call on a cycle ([callOnCycle], IMPL §5.4).
+     *
+     * The fixpoint calls it before the tables are frozen. It is not thread safe.
+     */
+    fun callees(v: Int): List<AliasCfg> {
+        calleeCfgs[v]?.let { return it }
+        val call = instrs[v] as? AliasInstr.ResolvedCall ?: return emptyList()
+        val built = call.callees.build(callOnCycle || cyclic.get(v))
+        calleeCfgs[v] = built
+        return built
+    }
 
     /** True if the kill at [v] keeps [x]: a reserved key, a local of another context, or a live local. */
     fun keepsAt(v: Int, x: VarId): Boolean {
@@ -377,7 +398,10 @@ fun AliasInstr.uses(): IntArray {
             args.forEach(::add)
             models.forEach { m -> m.values { add(it) } }
         }
-        is AliasInstr.ResolvedCall -> args.forEach(::add)
+        is AliasInstr.ResolvedCall -> {
+            args.forEach(::add)
+            models.forEach { m -> m.values { add(it) } }
+        }
     }
     return out.toIntArray()
 }
@@ -417,6 +441,7 @@ fun AliasInstr.forEachSite(body: (SiteId) -> Unit) {
         is AliasInstr.ResolvedCall -> {
             body(site)
             args.forEach(::visit)
+            models.forEach { m -> m.values { visit(it) } }
         }
         else -> Unit
     }

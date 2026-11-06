@@ -199,7 +199,7 @@ class DirectedFixpointTest {
     }
 
     @Test
-    fun `resolved call uses the unresolved call rule until inlining`() {
+    fun `resolved call without a callee body uses the unresolved call rule`() {
         val s0 = fx.site(0)
         val g = cfg(
             node(AliasInstr.ResolvedCall(s0, r.v, listOf(fx.arg(0))), 1),

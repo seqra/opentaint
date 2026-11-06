@@ -71,7 +71,7 @@ sealed interface AliasInstr {
 
     /**
      * `return value` ([value] is `null` for a `void` return or a primitive value). No change in the
-     * analyzed method. An inlined callee uses the value as the call result (IMPL §5.5, a later step).
+     * analyzed method. An inlined callee gives the value to the result of the call (IMPL §5.5).
      */
     data class Return(val value: AliasValue?) : AliasInstr
 
@@ -94,10 +94,37 @@ sealed interface AliasInstr {
     ) : AliasInstr
 
     /**
-     * A resolved call at [site] (IMPL §5.5). Until the inlining step (T6), [DirectedFixpoint]
-     * evaluates it with the rule of the unresolved call, without models.
+     * A resolved call at [site] (IMPL §5.5). [args] has the receiver first, if the call has one.
+     * [callees] gives the CFG of each override with a body. [DirectedFixpoint] inlines each override
+     * from the state before the call. If no override gives a return state, it uses the rule of the
+     * unresolved call with the pass-through [models] (IMPL §4.4, §4.5), as main does.
      */
-    data class ResolvedCall(val site: SiteId, val result: VarId?, val args: List<AliasValue>) : AliasInstr
+    data class ResolvedCall(
+        val site: SiteId,
+        val result: VarId?,
+        val args: List<AliasValue>,
+        val models: List<PassThrough> = emptyList(),
+        val callees: CalleeBodies = CalleeBodies.NONE,
+    ) : AliasInstr
+}
+
+/**
+ * The bodies of the overrides of a resolved call (IMPL §5.5). The JIR adapter makes them: each body
+ * has its own context, and its `this` and its arguments are the values of the call.
+ *
+ * [AliasCfg.callees] calls [build] one time for each call statement, before the first run of the
+ * bodies, and keeps the result. [build] marks the loop sites of the bodies (IMPL §5.4): if
+ * `callOnCycle` is true, the call is on a cycle of the caller (or of a caller of the caller), and
+ * each site of the bodies is a loop site.
+ */
+fun interface CalleeBodies {
+    /** The CFG of each override with a body. An empty list: the call has no body to inline. */
+    fun build(callOnCycle: Boolean): List<AliasCfg>
+
+    companion object {
+        /** No body: the call uses the rule of the unresolved call. */
+        val NONE: CalleeBodies = CalleeBodies { emptyList() }
+    }
 }
 
 /**

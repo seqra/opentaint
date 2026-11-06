@@ -17,6 +17,16 @@ package org.opentaint.dataflow.jvm.ap.ifds.alias.directed
  * - liveness: the live sets of the kills are a liveness certificate with the handler rule (Lean
  *   `liveOKB`; the kill rule of `live_spec_unsound` fails it).
  *
+ * Inlined calls (IMPL §5.5). The proof sees an inlined call as a spliced CFG: the callee nodes
+ * replace the call node. The checker runs each override again from `statesBefore[c]` (the run is a
+ * function of this state) and checks the spliced conditions:
+ * - callee entry and callee nodes: the conditions above on the callee CFG, from `statesBefore[c]`;
+ * - normal exit: each return state, with the result and without the callee variables, is below
+ *   `statesAfter[c]` (the node condition of `c` with [DirectedFixpoint.inline]);
+ * - exceptional exit: for each handler `h` of `c` and each callee node `t` (also the nodes of a
+ *   nested inlined call), `kill_h(statesBefore[t])` and `kill_h(statesAfter[t])` without the callee
+ *   variables are below `statesBefore[h]`. The partial call condition does not apply to `c`.
+ *
  * These conditions give an `EPostFix` certificate of the CFG with kills at the node entries: the
  * certificate state before `w` is `statesBefore[w]` plus, for each local that `w` kills, the union
  * of its values on the edges into `w`. A pass is a soundness certificate for the method
@@ -29,6 +39,11 @@ class PostFixChecker(private val fixpoint: DirectedFixpoint) {
     /** The violations of the post-fixpoint conditions. An empty list is a pass. */
     fun check(cfg: AliasCfg, states: FixpointStates, initial: AliasState = AliasState.EMPTY): List<String> {
         val out = ArrayList<String>()
+        check(cfg, states, initial, out)
+        return out
+    }
+
+    private fun check(cfg: AliasCfg, states: FixpointStates, initial: AliasState, out: MutableList<String>) {
         val sb = states.statesBefore
         val sa = states.statesAfter
 
@@ -56,7 +71,13 @@ class PostFixChecker(private val fixpoint: DirectedFixpoint) {
             if (fixpoint.kill(cfg, v, before) != before) out += "node $v: a dead local in the state before"
 
             val instr = cfg.instr(v)
-            le(out, fixpoint.evaluate(before, instr), after, "node $v")
+            val inlined = fixpoint.inline(cfg, v, before, exitNeeded = false)
+            le(out, inlined?.after ?: fixpoint.evaluate(before, instr), after, "node $v")
+            inlined?.runs?.forEachIndexed { i, run ->
+                val sub = ArrayList<String>()
+                check(run.cfg, run.states, before, sub)
+                sub.mapTo(out) { "callee $i of node $v: $it" }
+            }
 
             for (w in cfg.successors(v)) {
                 val bw = sb[w]
@@ -74,11 +95,34 @@ class PostFixChecker(private val fixpoint: DirectedFixpoint) {
                     continue
                 }
                 le(out, fixpoint.kill(cfg, h, before), bh, "exceptional edge $v -> $h")
+                if (inlined != null) {
+                    forEachSpliced(inlined) { st, where ->
+                        le(out, fixpoint.kill(cfg, h, st), bh, "exceptional edge from $where of node $v -> $h")
+                    }
+                    continue
+                }
                 val partial = fixpoint.partialCall(before, instr) ?: continue
                 le(out, fixpoint.kill(cfg, h, partial), bh, "exceptional edge $v -> $h (call)")
             }
         }
-        return out
+    }
+
+    /**
+     * Calls [body] for the states before and after each callee node of [inlined], without the
+     * callee variables. A callee node that is an inlined call adds the nodes of its own callees
+     * (the spliced CFG of a nested call).
+     */
+    private fun forEachSpliced(inlined: InlinedCall, body: (AliasState, String) -> Unit) {
+        inlined.runs.forEachIndexed { i, run ->
+            val ctx = run.cfg.context
+            for (t in 0 until run.cfg.size) {
+                val bt = run.states.statesBefore[t] ?: continue
+                body(fixpoint.removeContext(bt, ctx), "callee $i node $t (before)")
+                run.states.statesAfter[t]?.let { body(fixpoint.removeContext(it, ctx), "callee $i node $t (after)") }
+                val nested = fixpoint.inline(run.cfg, t, bt, exitNeeded = false) ?: continue
+                forEachSpliced(nested) { st, where -> body(fixpoint.removeContext(st, ctx), "callee $i node $t: $where") }
+            }
+        }
     }
 
     /**
