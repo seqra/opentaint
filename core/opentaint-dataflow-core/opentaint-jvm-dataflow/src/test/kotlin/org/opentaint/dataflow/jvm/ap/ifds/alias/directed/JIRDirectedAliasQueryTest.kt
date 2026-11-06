@@ -36,8 +36,10 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlin.time.Duration
 
@@ -141,6 +143,64 @@ class JIRDirectedAliasQueryTest : BasicTestUtils() {
         assertEquals(setOf("new(y)", "x.value", "y"), assertNotNull(all.findAlias(p.local("z").idx, stmt, false)).map { p.show(it) }.toSet())
         val withoutY = JIRAliasAnswers(result, { base, idx -> base != y || idx != stmt }, maxAccessors = 6)
         assertEquals(setOf("new(y)", "x.value"), assertNotNull(withoutY.findAlias(p.local("z").idx, stmt, false)).map { p.show(it) }.toSet())
+    }
+
+    @Test
+    fun `heap queries do not change a later findAlias`() {
+        val roles = listOf("x", "y", "t", "u", "s")
+        val p = Probe(SAMPLE, "manyLocals", roles)
+        val unknown = AliasAccessor.Field("Unknown", "u", OBJECT)
+        // Heap queries that make query-local origins and query-local cells.
+        p.aa.findHeapAlias(p.local("x"), listOf(field(BOX, "next"), field(BOX, "value"), unknown, unknown), p.call)
+        p.aa.findHeapAlias(p.local("y"), listOf(unknown, AliasAccessor.Array), p.call)
+        p.aa.findArrayElementAliases(p.local("t"), p.call)
+        val fresh = Probe(SAMPLE, "manyLocals", roles)
+        for (role in roles) assertEquals(fresh.aliases(role), p.aliases(role), role)
+    }
+
+    @Test
+    fun `a cached answer is one unmodifiable list for all callers`() {
+        val p = Probe(SAMPLE, "heapChainAllocs", listOf("z", "y", "x"))
+        val first = assertNotNull(p.aliases("z"))
+        assertSame(first, p.aliases("z"))
+        assertFailsWith<UnsupportedOperationException> {
+            @Suppress("UNCHECKED_CAST")
+            (first as MutableList<AliasInfo>).add(AliasAllocInfo(0))
+        }
+        val elements = assertNotNull(p.aa.findArrayElementAliases(p.local("x"), p.call))
+        assertFailsWith<UnsupportedOperationException> {
+            @Suppress("UNCHECKED_CAST")
+            (elements as MutableList<AliasInfo>).clear()
+        }
+    }
+
+    @Test
+    fun `one query-local cell id for each unknown accessor of a heap path`() {
+        val p = Probe(SAMPLE, "heapChainAllocs", listOf("z", "y", "x"))
+        val analysis = JIRDirectedAliasAnalysis(
+            p.method.instList.first(), graph,
+            JIRCallResolver(cp, SingleLocationUnit(p.method.enclosingClass.declaration.location)),
+            null, JIRLocalVariableReachability(p.method, graph, languageManager),
+            Cancellation().also { it.activate() }, languageManager, JIRLocalAliasAnalysis.Params(),
+        )
+        val result = assertNotNull(analysis.compute())
+        val answers = JIRAliasAnswers(result, { _, _ -> true }, maxAccessors = 6)
+        val u = AliasAccessor.Field("Unknown", "u", OBJECT)
+        val w = AliasAccessor.Field("Unknown", "w", OBJECT)
+        val value = field(BOX, "value")
+
+        val uu = assertNotNull(answers.heapCells(listOf(u, value, u)))
+        assertEquals(uu.ids[0], uu.ids[2])
+        assertEquals(result.tables.cells.size, uu.ids[0])
+        assertEquals(mapOf(uu.ids[0] to u), uu.extra)
+        assertEquals(result.tables.cells.find(BOX, "value", OBJECT), uu.ids[1])
+
+        val uw = assertNotNull(answers.heapCells(listOf(u, w, AliasAccessor.Array)))
+        assertTrue(uw.ids[0] != uw.ids[1])
+        assertEquals(mapOf(uw.ids[0] to u, uw.ids[1] to w), uw.extra)
+        assertEquals(ELEM_CELL, uw.ids[2])
+
+        assertNull(answers.heapCells(listOf(value, AliasAccessor.Static("C"))))
     }
 
     @Test

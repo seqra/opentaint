@@ -7,6 +7,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAllocInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasInfo
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -26,10 +27,10 @@ import java.util.concurrent.ConcurrentHashMap
  *   `box(s)` of the root context: `AliasAllocInfo(s)`. `NULL`, `FRESH`, `ALLOC_CHILD` bases and
  *   their cells: nothing.
  *
- * The answer is sorted with [AliasInfoOrder] and has no duplicates. A cache keyed by the
- * statement, before or after, the local and the query kind keeps the full answers. So the answers
- * do not depend on the query order. The cache is a [ConcurrentHashMap]: the queries can run in
- * parallel threads.
+ * The answer is an unmodifiable list, sorted with [AliasInfoOrder], with no duplicates. A cache
+ * keyed by the statement, before or after, the local and the query kind keeps the full answers. So
+ * the answers do not depend on the query order. The cache is a [ConcurrentHashMap]: the queries can
+ * run in parallel threads, and they share the cached lists.
  */
 internal class JIRAliasAnswers(
     private val result: DirectedAliasResult,
@@ -85,20 +86,38 @@ internal class JIRAliasAnswers(
      */
     fun findHeapAlias(localIdx: Int, path: List<AliasAccessor>, stmt: Int): List<AliasInfo>? {
         val v = rootLocal(localIdx, stmt, after = false) ?: return null
-        val extraCells = HashMap<CellId, AliasAccessor>()
-        val cells = IntArray(path.size)
+        val cells = heapCells(path) ?: return emptyList()
+        val answer = query.findHeapAlias(stmt, false, PathRoot.Var(v), cells.ids) ?: return null
+        return convert(answer, stmt, items = false, extraCells = cells.extra)
+    }
+
+    /** The cells of a heap path: [ids] for the query, and the accessor of each query-local cell id. */
+    class HeapCells(val ids: IntArray, val extra: Map<CellId, AliasAccessor>)
+
+    /**
+     * The cells of [path], or `null` for a path with a static accessor. A field that the table does
+     * not have gets a query-local cell id (from the size of [CellTable]). Equal accessors get one id,
+     * so `x.u.u` uses one id for `u`.
+     */
+    fun heapCells(path: List<AliasAccessor>): HeapCells? {
+        val idOf = HashMap<AliasAccessor, CellId>()
+        val extra = HashMap<CellId, AliasAccessor>()
+        val ids = IntArray(path.size)
         for ((i, accessor) in path.withIndex()) {
-            cells[i] = when (accessor) {
+            ids[i] = when (accessor) {
                 AliasAccessor.Array -> ELEM_CELL
                 is AliasAccessor.Field -> {
                     val c = tables.cells.find(accessor.className, accessor.fieldName, accessor.fieldType)
-                    if (c != NO_ID) c else (tables.cells.size + extraCells.size).also { extraCells[it] = accessor }
+                    if (c != NO_ID) {
+                        c
+                    } else {
+                        idOf.getOrPut(accessor) { (tables.cells.size + extra.size).also { extra[it] = accessor } }
+                    }
                 }
-                is AliasAccessor.Static -> return emptyList()
+                is AliasAccessor.Static -> return null
             }
         }
-        val answer = query.findHeapAlias(stmt, false, PathRoot.Var(v), cells) ?: return null
-        return convert(answer, stmt, items = false, extraCells = extraCells)
+        return HeapCells(ids, extra)
     }
 
     /** The root-context variable of a local, or `null` if the state or the variable is absent. */
@@ -128,7 +147,8 @@ internal class JIRAliasAnswers(
                 addItems(o, out)
             }
         }
-        return out.toList()
+        // The cache shares the list with all callers and threads: it must not change.
+        return Collections.unmodifiableList(ArrayList(out))
     }
 
     private fun convertPath(p: AliasPath, stmt: Int, extraCells: Map<CellId, AliasAccessor>): AliasApInfo? {

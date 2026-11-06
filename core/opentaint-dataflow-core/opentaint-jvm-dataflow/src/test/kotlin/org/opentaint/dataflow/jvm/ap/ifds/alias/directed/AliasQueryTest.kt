@@ -321,6 +321,54 @@ class AliasQueryTest {
         assertEquals(setOf("C.f", "u"), p.aliases(3, t))
     }
 
+    // The universe of the search (ruling of the Task 5 review).
+
+    /** K = 2: `t = x.f; y = x; while (c) y = y.next`. y holds deep(x). t is local 0 and y is local 1. */
+    private fun deepLoopWithField(): Program {
+        val p = Program(symDepth = 2, maxAccessors = 3)
+        val x = p.arg("x")
+        val t = p.local("t")
+        val y = p.local("y")
+        p.solve(
+            p.node(p.fx.load(t, x, p.f), 1),
+            p.node(p.fx.assign(y, x), 2),
+            p.node(AliasInstr.Nop, 3, 4),
+            p.node(p.fx.load(y, y, p.next), 2),
+            p.node(AliasInstr.Nop, uses = listOf(t, y)),
+        )
+        return p
+    }
+
+    @Test
+    fun `the default parents of a deep origin are only the depth K origins of the table`() {
+        val p = deepLoopWithField()
+        val y = AliasValue.Local(p.tables.vars.find(Y_LOCAL))
+        val answer = p.aliases(4, y)
+        assertTrue("x" in answer && "y.next" in answer, answer.toString())
+        // Ruling of the Task 5 review: the Lean search also gives t.g.c (for each cell c) through the
+        // depth-K origin <x.f.g>, the default parent of deep(x). No state holds <x.f.g>, so it is not
+        // in the universe. By A1 it is not an object that deep(x) stands for: no real alias is lost.
+        assertTrue(answer.none { it.startsWith("t.") }, answer.toString())
+    }
+
+    @Test
+    fun `query-local origins of a heap query do not change a later findAlias`() {
+        val p = deepLoopWithField()
+        val x = AliasValue.Arg(0)
+        val t = AliasValue.Local(p.tables.vars.find(T_LOCAL))
+        val y = AliasValue.Local(p.tables.vars.find(Y_LOCAL))
+        // These heap queries make query-local origins: <x.f.g>, <x.f.g.h> (deep(x)), <x.h>, <x.h.g>.
+        p.heapAliases(4, t, p.g, p.h)
+        p.heapAliases(4, x, p.h, p.g)
+        p.query.findArrayElementAliases(4, false, p.root(t))
+        val fresh = deepLoopWithField()
+        val freshT = AliasValue.Local(fresh.tables.vars.find(T_LOCAL))
+        val freshY = AliasValue.Local(fresh.tables.vars.find(Y_LOCAL))
+        assertEquals(fresh.aliases(4, freshY), p.aliases(4, y))
+        assertEquals(fresh.aliases(4, freshT), p.aliases(4, t))
+        assertEquals(fresh.aliases(4, AliasValue.Arg(0)), p.aliases(4, x))
+    }
+
     // Query-local defaults (IMPL §6.4).
 
     @Test
@@ -454,5 +502,10 @@ class AliasQueryTest {
         }
         assertEquals(originsBefore, p.tables.origins.size)
         assertEquals(nodesBefore, p.tables.nodes.nodeCount)
+    }
+
+    private companion object {
+        const val T_LOCAL = 0
+        const val Y_LOCAL = 1
     }
 }

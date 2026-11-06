@@ -42,11 +42,23 @@ class QueryAnswer(val paths: List<AliasPath>, val seeds: IntArray)
  * 3. Prefix the cell to the suffix, up to D = [maxAccessors] cells.
  * The search gives each path one time (`search_nodup`). The answer does not have the queried path.
  *
- * The universe of the search is the origins of the frozen tables, and the query-local origins of
- * the query. A query never changes the tables: a read of a default cell that the analysis did not
- * make gives a query-local origin (IMPL §6.4). The cells are the cells of the table and the cells
- * of the queried path. A cell id from the size of [CellTable] is a query-local cell: the caller
- * gives its meaning.
+ * The universe of the search (ruling of the Task 5 review): the origins of the frozen tables, and
+ * the query-local origins of this query (only a heap-path query makes them). The cells are the cells
+ * of the table and the cells of the queried path. A cell id from the size of [CellTable] is a
+ * query-local cell: the caller gives its meaning.
+ * - The Lean search (`findAlias_iff`) has a wider universe: all paths up to K. There, the default
+ *   parents of `Deep(b)` are all `Sym(b, q)` with `|q| = K`. Here they are only the depth-K origins
+ *   of this universe. So the Lean answer has more paths: the paths through a depth-K origin that no
+ *   state holds.
+ * - This loses no real alias. Such an origin `⟨b.q⟩` is an entry path that no state ever held. By
+ *   assumption A1 (the entry heap is a tree), it is a different object from each object that
+ *   `deep(b)` stands for (the values deeper than K below `b` on the paths that the method reads).
+ * - An enumeration of the depth-K origins would add up to `|cells|^k` paths of volume.
+ * - The answer of a query does not depend on other queries: the query-local origins of one query are
+ *   in its own [Scratch], never in the tables, in the reverse indexes or in a cache.
+ *
+ * A query never changes the tables: a read of a default cell that the analysis did not make gives a
+ * query-local origin (IMPL §6.4).
  *
  * Thread safety: the tables are frozen. The reverse index of a state is made on the first query
  * of the state and kept in an [AtomicReferenceArray]. Each query has its own query-local table.
