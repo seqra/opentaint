@@ -14,3 +14,12 @@ if echo "$out" | grep -E 'Classical|sorryAx|ofReduceBool'; then
   echo "non-constructive axiom found"; exit 1
 fi
 echo "$out" | sed -E 's/.*depends on axioms: (.*)/\1/; s/.*does not depend.*/none/' | sort | uniq -c
+# The Lean test vectors of the engine (Export/Vectors.lean, not part of the library) must equal the
+# committed test resource of LeanVectorTest.
+vectors=../../core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/test/resources/org/opentaint/dataflow/jvm/ap/ifds/alias/directed/lean-vectors.txt
+if ! "$LAKE" env lean Export/Vectors.lean | diff -q - "$vectors" > /dev/null; then
+  echo "lean-vectors.txt differs from Export/Vectors.lean: regenerate it with"
+  echo "  lake env lean Export/Vectors.lean > $vectors"
+  exit 1
+fi
+echo "lean vectors: up to date"
