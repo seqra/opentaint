@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/seqra/opentaint/internal/models"
+	"github.com/seqra/opentaint/internal/output"
 	"github.com/seqra/opentaint/internal/utils/log"
 	"github.com/spf13/cobra"
 )
@@ -19,9 +20,10 @@ var compileModelsCmd = &cobra.Command{
 		projectPath := log.AbsPathOrExit(args[0], "model-project")
 
 		if !models.IsProject(projectPath) {
-			out.Fatalf("%s is not a model project: it has no build.gradle.kts declaring the "+
-				"dependencies its models are written against.\nCreate one with 'opentaint model init %s "+
-				"--dependency <group:artifact:version>'", projectPath, args[0])
+			failWith(1, fmt.Sprintf("`%s` is not a model project", args[0]), nil, output.Suggestion{
+				Description: "To create a model project, run:",
+				Command:     fmt.Sprintf("opentaint model init %s --dependency <group:artifact:version>", shellQuote(args[0])),
+			})
 		}
 
 		outputPath := compileModelsOutput
@@ -33,11 +35,11 @@ var compileModelsCmd = &cobra.Command{
 
 		analyzerJarPath, err := ensureAnalyzerAvailable()
 		if err != nil {
-			out.Fatalf("Failed to resolve analyzer: %s", err)
+			out.Fatal("Failed to get the analyzer", err)
 		}
 
 		if err := models.Build(projectPath, outputPath, newModelBuilder(analyzerJarPath)); err != nil {
-			out.Fatalf("Model compilation failed: %s", err)
+			out.Fatal("Failed to compile the model project", err)
 		}
 
 		out.Section("Model Compile Summary").

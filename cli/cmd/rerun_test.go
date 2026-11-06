@@ -110,17 +110,17 @@ func TestRetrySuggestion(t *testing.T) {
 	if !ok || timeoutRetry.Description != "To retry with a longer timeout, run:" {
 		t.Fatalf("timeout retry = %+v ok=%t", timeoutRetry, ok)
 	}
-	want := "opentaint scan . --max-memory 8G --timeout 15m0s"
+	want := "opentaint scan . --max-memory 8G --timeout 15m"
 	if timeoutRetry.Command != want {
 		t.Fatalf("timeout retry command = %q, want %q", timeoutRetry.Command, want)
 	}
-	if _, ok := retrySuggestion(analyzer.ExitTimeout, 15*time.Minute, "8G"); ok {
-		t.Fatal("timeout at cap must not produce a retry suggestion")
+	if retry, ok := retrySuggestion(analyzer.ExitTimeout, 15*time.Minute, "8G"); !ok || retry.Command != "" {
+		t.Fatalf("timeout at cap retry = %+v ok=%t, want a suggestion with no command", retry, ok)
 	}
 	if _, ok := retrySuggestion(analyzer.ExitOOM, 15*time.Minute, "16G"); ok {
 		t.Fatal("memory at cap must not produce a retry suggestion")
 	}
-	if retry, ok := retrySuggestion(analyzer.ExitTimeout, 10*time.Minute, "8G"); !ok || retry.Command != "opentaint scan . --max-memory 8G --timeout 15m0s" {
+	if retry, ok := retrySuggestion(analyzer.ExitTimeout, 10*time.Minute, "8G"); !ok || retry.Command != "opentaint scan . --max-memory 8G --timeout 15m" {
 		t.Fatalf("timeout cap retry = %+v ok=%t", retry, ok)
 	}
 
@@ -153,6 +153,35 @@ func TestShellQuoteQuotesShellMetacharacters(t *testing.T) {
 	for in, want := range cases {
 		if got := shellQuote(in); got != want {
 			t.Errorf("shellQuote(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestShortDuration(t *testing.T) {
+	for d, want := range map[time.Duration]string{
+		4 * time.Minute:            "4m",
+		90 * time.Second:           "1m30s",
+		2 * time.Hour:              "2h",
+		90 * time.Minute:           "1h30m",
+		45 * time.Second:           "45s",
+		time.Hour + 30*time.Second: "1h0m30s",
+	} {
+		if got := shortDuration(d); got != want {
+			t.Errorf("shortDuration(%v) = %q, want %q", d, got, want)
+		}
+	}
+}
+
+func TestJoinUserPathKeepsTheDotSlash(t *testing.T) {
+	for base, want := range map[string]string{
+		"./models":    "./models/src",
+		"models":      "models/src",
+		"/abs/models": "/abs/models/src",
+		"../models":   "../models/src",
+		"./a/../b":    "./b/src",
+	} {
+		if got := joinUserPath(base, "src"); got != want {
+			t.Errorf("joinUserPath(%q) = %q, want %q", base, got, want)
 		}
 	}
 }

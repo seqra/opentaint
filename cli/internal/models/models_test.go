@@ -556,3 +556,20 @@ func (b *collidingBuilder) Compile(projectDir, projectModelDir string) error {
 	writeModuleClasses(b.t, projectModelDir, map[string][]string{"c0_main": {"Model"}, "c1_main": {"Model"}})
 	return nil
 }
+
+func TestBuildFailsBeforeCompilingAProjectWithoutModels(t *testing.T) {
+	project := newProject(t, t.TempDir())
+	if err := os.RemoveAll(filepath.Join(project, "src")); err != nil {
+		t.Fatal(err)
+	}
+	builder := newFakeBuilder(t)
+
+	err := Build(project, filepath.Join(t.TempDir(), "out"), builder)
+
+	if err == nil || !strings.Contains(err.Error(), "no models in") {
+		t.Fatalf("Build error = %v, want no models", err)
+	}
+	if len(builder.compiled) != 0 {
+		t.Errorf("compiled %v, want no compile step", builder.compiled)
+	}
+}

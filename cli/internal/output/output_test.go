@@ -56,7 +56,7 @@ func TestPrinterErrorNotSuppressedByQuiet(t *testing.T) {
 	p := NewWithWriter(&buf)
 	p.Configure("never", true)
 
-	p.Error("fatal problem")
+	p.Error("fatal problem", nil)
 
 	got := buf.String()
 	if !strings.Contains(got, "fatal problem") {

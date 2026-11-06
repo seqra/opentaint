@@ -172,52 +172,10 @@ func (p *Printer) InteractiveBlank() {
 	}
 }
 
-// Error prints an error-styled message.
-func (p *Printer) Error(a ...any) {
-	text := fmt.Sprint(a...)
-	fmt.Fprintln(p.w, p.theme.Error.Render(text)) //nolint:errcheck
-}
-
-// ErrorErr prints an error value as a human-friendly, capitalized message.
-func (p *Printer) ErrorErr(err error) {
-	p.Error(Humanize(err))
-}
-
-// FatalErr prints an error value as a human-friendly, capitalized message
-// and terminates the process with exit code 1.
-func (p *Printer) FatalErr(err error) {
-	p.ErrorErr(err)
-	os.Exit(1)
-}
-
-// Warn prints a warning-styled message.
-func (p *Printer) Warn(a ...any) {
-	text := fmt.Sprint(a...)
-	fmt.Fprintln(p.w, p.theme.Warning.Render(text)) //nolint:errcheck
-}
-
-// Warnf prints a formatted warning message.
-func (p *Printer) Warnf(format string, a ...any) {
-	text := fmt.Sprintf(format, a...)
-	fmt.Fprintln(p.w, p.theme.Warning.Render(text)) //nolint:errcheck
-}
-
 // Successf prints a formatted success message.
 func (p *Printer) Successf(format string, a ...any) {
 	text := fmt.Sprintf(format, a...)
 	fmt.Fprintln(p.w, p.theme.Success.Render(text)) //nolint:errcheck
-}
-
-// Fatal prints an error-styled message and terminates the process with exit code 1.
-func (p *Printer) Fatal(a ...any) {
-	p.Error(a...)
-	os.Exit(1)
-}
-
-// Fatalf prints a formatted error-styled message and terminates the process with exit code 1.
-func (p *Printer) Fatalf(format string, a ...any) {
-	p.Error(fmt.Sprintf(format, a...))
-	os.Exit(1)
 }
 
 // resolveColor determines whether colors should be enabled.

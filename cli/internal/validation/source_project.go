@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -128,13 +129,13 @@ func allMarkerNames() string {
 func validateDirectoryExists(absPath string) error {
 	info, err := os.Stat(absPath)
 	if os.IsNotExist(err) {
-		return fmt.Errorf("project directory does not exist: %s", absPath)
+		return fmt.Errorf("project directory `%s` does not exist", absPath)
 	}
 	if err != nil {
-		return fmt.Errorf("cannot access project directory: %s", err)
+		return fmt.Errorf("failed to access project directory `%s`: %w", absPath, err)
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("path is not a directory: %s", absPath)
+		return fmt.Errorf("`%s` is not a directory", absPath)
 	}
 	return nil
 }
@@ -155,20 +156,14 @@ func validateSourceDir(absProjectRoot string, checkProjectModel bool) error {
 	}
 
 	if checkProjectModel && IsProjectModel(absProjectRoot) {
-		return fmt.Errorf(
-			"the path %s appears to be a compiled project model (contains project.yaml), not a source project",
-			absProjectRoot,
-		)
+		return fmt.Errorf("`%s` is a project model, not a source project", absProjectRoot)
 	}
 
 	if langs := detectLanguages(absProjectRoot); len(langs) > 0 {
 		return nil
 	}
 
-	return fmt.Errorf(
-		"no supported build files found in %s\n  expected one of: %s",
-		absProjectRoot, allMarkerNames(),
-	)
+	return fmt.Errorf("no build file in `%s`: %w", absProjectRoot, errors.New("expected one of: "+allMarkerNames()))
 }
 
 // ValidateSourceProject checks that absProjectRoot looks like a supported

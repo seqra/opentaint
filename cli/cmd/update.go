@@ -39,7 +39,7 @@ var updateCmd = &cobra.Command{
 
 		currentVersion := version.GetVersion()
 		if currentVersion == "dev" || currentVersion == "" {
-			out.Warn("Cannot determine current version. Update is not supported for development builds.")
+			out.Warn("Cannot update a development build")
 			return
 		}
 
@@ -59,14 +59,14 @@ var updateCmd = &cobra.Command{
 			out.Print("Checking for updates...")
 			targetVersion, targetTag, err = utils.GetLatestRelease(globals.Config.Owner, globals.Config.Repo, globals.Config.Github.Token)
 			if err != nil {
-				out.Fatalf("Failed to check for updates: %s", err)
+				out.Fatal("Failed to check for updates", err)
 			}
 		}
 
 		// Compare versions
 		cmp, err := version.CompareVersions(currentVersion, targetVersion)
 		if err != nil {
-			out.Warnf("Could not compare versions: %s", err)
+			out.Warnf("Cannot compare version %s with %s", currentVersion, targetVersion)
 			out.Printf("Current: %s, Latest: %s", currentVersion, targetVersion)
 			if !updateYes {
 				suggest("To proceed anyway, run:", withFlag(rerunWithoutDryRun(), "--yes"))
@@ -80,7 +80,7 @@ var updateCmd = &cobra.Command{
 		}
 
 		if cmp > 0 {
-			out.Warnf("Target version v%s is older than current version v%s. Downgrading is not supported.", targetVersion, currentVersion)
+			out.Warnf("Version v%s is older than the installed v%s. Downgrades are not supported.", targetVersion, currentVersion)
 			return
 		}
 
@@ -108,21 +108,21 @@ var updateCmd = &cobra.Command{
 		// Download the release archive
 		tmpDir, err := os.MkdirTemp("", "opentaint-update-*")
 		if err != nil {
-			out.Fatalf("Failed to create temp directory: %s", err)
+			out.Fatal("Failed to create a temporary directory", err)
 		}
 		defer func() { _ = os.RemoveAll(tmpDir) }()
 
 		out.Print("Downloading...")
 		archivePath, err := utils.DownloadReleaseArchive(globals.Config.Owner, globals.Config.Repo, targetTag, globals.Config.Github.Token, tmpDir, globals.Config.SkipVerify, out)
 		if err != nil {
-			out.Fatalf("Failed to download release: %s", err)
+			out.Fatal("Failed to download the release", err)
 		}
 
 		// Perform self-update
 		installDir := filepath.Dir(exePath)
 		out.Print("Installing...")
 		if err := utils.SelfUpdate(archivePath, installDir); err != nil {
-			out.Fatalf("Failed to update: %s", err)
+			out.Fatal("Failed to install the update", err)
 		}
 
 		out.Successf("Successfully updated to v%s", targetVersion)

@@ -33,7 +33,7 @@ var pullCmd = &cobra.Command{
 		installCurrent := utils.IsInstallCurrent()
 		if !installCurrent {
 			if err := utils.CleanInstallDir(); err != nil {
-				failf("Failed to clean install directory: %s", err)
+				fail("Failed to clean the install directory", err)
 			}
 		}
 
@@ -43,20 +43,20 @@ var pullCmd = &cobra.Command{
 		for _, spec := range artifacts {
 			node, err := downloadArtifact(spec, installNextToBinary, installCurrent)
 			if err != nil {
-				failf("Failed to download %s: %s", spec.Kind(), err)
+				fail("Failed to download the "+spec.Kind(), err)
 			}
 			summaryNodes = append(summaryNodes, node)
 		}
 
 		javaNode, err := downloadJava(installNextToBinary, installCurrent)
 		if err != nil {
-			failf("Failed to download Java: %s", err)
+			fail("Failed to download Java", err)
 		}
 		summaryNodes = append(summaryNodes, javaNode)
 
 		// Write version marker after all downloads succeed
 		if err := utils.WriteInstallVersionMarker(); err != nil {
-			failf("Failed to write install version marker: %s", err)
+			fail("Failed to record the installed version", err)
 		}
 
 		out.Blank()

@@ -20,12 +20,12 @@ func activateLogging(logFilePath string, logDir string) {
 	if logFilePath != "" {
 		logPath = log.AbsPathOrExit(logFilePath, "log file")
 		if _, err = log.OpenLogFileAt(logPath); err != nil {
-			out.Fatalf("Failed to open log file: %s", err)
+			out.Fatal("Failed to open the log file", err)
 		}
 	} else if logDir != "" {
 		logPath, err = log.OpenProjectLog(logDir)
 		if err != nil {
-			out.Fatalf("Failed to open project log file: %s", err)
+			out.Fatal("Failed to open the project log file", err)
 		}
 	}
 

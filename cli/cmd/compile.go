@@ -89,12 +89,12 @@ var compileCmd = &cobra.Command{
 
 		autobuilderJarPath, err := ensureAutobuilderAvailable()
 		if err != nil {
-			failf("Native compile preparation failed: %s", err)
+			fail("Failed to get the autobuilder", err)
 		}
 
 		compileJavaRunner := newAutobuilderJavaRunner()
 		if _, err := compileJavaRunner.EnsureJava(); err != nil {
-			failf("Failed to resolve Java for compilation: %s", err)
+			fail("Failed to find Java for the autobuilder", err)
 		}
 
 		if err := out.RunWithSpinner("Compiling project model", func() error {
@@ -104,8 +104,7 @@ var compileCmd = &cobra.Command{
 			printCompileSummary(absOutputProjectModelPath)
 			suggest(compileNextStep(absProjectRoot, projectRoot, absOutputProjectModelPath))
 		} else {
-			out.InteractiveBlank()
-			failWith(1, fmt.Sprintf("Native compile has failed: %s", err), dockerCompileSuggestion())
+			failWith(1, "Failed to compile the project", err, dockerCompileSuggestion())
 		}
 	},
 }
