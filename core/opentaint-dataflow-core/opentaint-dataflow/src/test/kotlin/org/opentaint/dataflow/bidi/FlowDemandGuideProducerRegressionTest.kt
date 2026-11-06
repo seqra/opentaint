@@ -87,7 +87,7 @@ class FlowDemandGuideProducerRegressionTest {
             assertTrue(group.addAll(flow(listOf(childPath), Layer.NORMAL, Tail.ANY_TAINT)).isEmpty())
         }
     }
-    @Test fun `concrete TAINT MAY and MUST keep existing prefix coverage`() {
+    @Test fun `concrete DEMAND MAY keeps guides while NORMAL MUST keeps data coverage`() {
         for ((layer, tail) in listOf(Layer.DEMAND to Tail.ANY, Layer.NORMAL to Tail.ANY_TAINT)) {
             fun taint(paths: List<List<Int>>): TaintTree {
                 val leaf = m.taintAlg.leafNode(m.taintLeaves(MarkSet.EMPTY, m.markSetOf(tag)))
@@ -103,7 +103,8 @@ class FlowDemandGuideProducerRegressionTest {
                 }
                 val group = TaintGroup(m, m.newInterners().taint)
                 inputs.forEach(group::addAll)
-                assertEquals(setOf(rootPath), paths(group.all().toList()), "$order concrete $layer/$tail")
+                val expected = if (layer == Layer.DEMAND && tail == Tail.ANY) both else setOf(rootPath)
+                assertEquals(expected, paths(group.all().toList()), "$order concrete $layer/$tail")
                 assertTrue(group.addAll(taint(listOf(childPath))).isEmpty())
             }
         }
@@ -194,7 +195,7 @@ class FlowDemandGuideProducerRegressionTest {
     @Test fun `frozen handoff preserves each entry and its own paired exit`() {
         Arrival.entries.forEach(::checkFrozenHandoff)
     }
-    @Test fun `packed TAINT FLOW geometry surrogate remains canonical`() {
+    @Test fun `packed concrete DEMAND MAY geometry retains supplied guide heads`() {
         val shape = m.initial(x, null, Tail.STAR, ExclusionSet.Empty, MarkSlot.STAR)
         val packet = DiagonalDelta(shape, x, Layer.DEMAND, flow(listOf(rootPath, childPath)).root,
             m.markSetOf(tag), false, Tail.ANY)
@@ -203,7 +204,7 @@ class FlowDemandGuideProducerRegressionTest {
         val decoded = store.all().toList()
         assertEquals(1, store.rowCount)
         assertEquals(1, store.markMembershipCount)
-        assertEquals(setOf(rootPath), paths(decoded.map { it.second }))
+        assertEquals(both, paths(decoded.map { it.second }))
         assertTrue(decoded.all { (premise, facts) ->
             !premise.isFlow && facts is TaintTree && facts.layer == Layer.DEMAND && facts.anyTail == Tail.ANY
         }, "packed FLOW geometry is a typed TAINT surrogate, not a demand-guide FLOW packet")

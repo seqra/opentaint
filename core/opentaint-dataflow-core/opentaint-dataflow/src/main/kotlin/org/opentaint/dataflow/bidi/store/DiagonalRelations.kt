@@ -113,10 +113,10 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
      * subtraction/protection adapter and is deliberately not guessed here. */
     fun addDiagonal(offered: DiagonalDelta): List<DiagonalDelta>? {
         m.cancellation.checkpoint()
-        val delta = if (offered.tail == Tail.ANY) {
-            val packet = m.flowTree(offered.base,offered.layer,offered.exclusion,MarkExclusions.EMPTY,offered.geometry,Tail.ANY)
-            offered.copy(geometry = m.canonicalFlowDataPacket(packet).root)
-        } else offered
+        // Every legal ANY packet is DEMAND and each supplied head is a guide.
+        // Uniformly protected packets also retain their literal coordinates.
+        if (offered.tail == Tail.ANY && offered.layer != Layer.DEMAND) return null
+        val delta = offered
         if (!RuntimeDataDomain.initial(delta.initialShape) || !RuntimeDataDomain.base(delta.base)) return emptyList()
         require(delta.initialShape.manager === m) { "A diagonal packet must use this AP manager" }
         val header = Header(delta.initialShape, delta.base, delta.layer, delta.tail, delta.exclusion)
@@ -164,17 +164,19 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
         if (!RuntimeDataDomain.packet(premise,facts)) return emptyList()
         require(supports(premise,facts)) { "Only admitted diagonal STAR or ANY relations use this store" }
         val f = facts as TaintTree
-        if (f.anyTail != Tail.ANY) return addOne(premise,f)?.let(::listOf) ?: emptyList()
         val initial = premise as InitialAp
         val mark = (initial.mark as MarkSlot.Concrete).mark
         val scope = Scope(checkNotNull(flowInitialForCoverage(m,premise)), f.base, f.layer)
+        val header = Header(scope, f.anyTail, f.exclusion)
+        val scalar = f.anyTail == Tail.ANY || f.nonSubsumable != null ||
+            hasOtherHeader(header, m.markSetOf(mark)) || scopedRows(scope).any { (_, rows) ->
+                rows.values.any { mark in it.protected }
+            }
+        if (!scalar) return addOne(premise, f)?.let(::listOf) ?: emptyList()
         val before = currentAtom(scope,mark)
-        // Preserve the existing diagonal late-flag policy, then canonicalize
-        // its exact resulting support. This must not invent parent protection.
-        val delta = addOne(premise,m.canonicalTaintPacket(f)) as? TaintTree ?: return emptyList()
         val temporary = TaintGroup(m,interners.taint)
         before.values.forEach(temporary::restoreCurrent)
-        val changes = temporary.addAll(delta)
+        val changes = temporary.addAll(m.canonicalTaintPacket(f))
         val after = LinkedHashMap<Header,TaintTree>()
         for (value in temporary.all()) after[Header(scope.initial,value.base,value.layer,value.anyTail,value.exclusion)] = value
         replaceAtom(scope,mark,after)
@@ -189,13 +191,9 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
         val mark = (initial.mark as MarkSlot.Concrete).mark
         val one = m.markSetOf(mark)
         val header = Header(checkNotNull(flowInitialForCoverage(m, premise)), f.base, f.layer, f.anyTail, f.exclusion)
-        if (hasOtherHeader(header, one)) return addAcrossHeaders(header, mark, f)
         val rows = rowsFor(header)
         val offered = geometry(f.root)
-        val offeredFlags = f.nonSubsumable?.let(::geometry)
         var fresh: FlowNode? = offered
-        var freshFlags: FlowNode? = null
-        var upgrades: FlowNode? = null
 
         // Capture only current rows for this operation. Mutations below replace
         // their mask membership; this list is not retained by the owner.
@@ -203,26 +201,10 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
             m.cancellation.checkpoint()
             if (mark !in masks.marks) continue
             fresh = fresh?.let { subtract(it, shape, header.tail) }
-            if (mark in masks.protected) {
-                freshFlags = union(freshFlags, overlap(offered, shape, header.tail))
-                continue
-            }
-            val upgrade = offeredFlags?.let { overlap(shape, it, header.tail) } ?: continue
-            upgrades = union(upgrades, upgrade)
-            removeMark(rows, shape, masks, one)
-            subtractExact(shape, upgrade)?.let { admit(rows, it, one, MarkSet.EMPTY) }
-            admit(rows, upgrade, one, one)
         }
-        if (fresh != null) {
-            if (offeredFlags != null) freshFlags = union(freshFlags, overlap(fresh, offeredFlags, header.tail))
-            freshFlags = freshFlags?.let { overlap(fresh, it, header.tail) }
-            val plain = freshFlags?.let { subtractExact(fresh, it) } ?: if (freshFlags == null) fresh else null
-            if (plain != null) admit(rows, plain, one, MarkSet.EMPTY)
-            if (freshFlags != null) admit(rows, freshFlags, one, one)
-        }
-        val delta = union(fresh, upgrades) ?: return null
-        val protectedDelta = union(freshFlags, upgrades)
-        return decode(header, delta, mark, protectedDelta)
+        val delta = fresh ?: return null
+        admit(rows, delta, one, MarkSet.EMPTY)
+        return decode(header, delta, mark, null)
     }
 
     private fun hasOtherHeader(offered: Header, marks: MarkSet): Boolean {
@@ -238,29 +220,6 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
             current = current.next
         }
         return false
-    }
-
-    /** Only conflicting current typed cells take this scalar adapter. The
-     * existing TaintGroup law owns ANY-prefix/STAR-E coverage and late flags.
-     * Decode one atom's current rows, apply that law once, and encode only its
-     * changed current state. No scalar tree or removed row survives this call. */
-    private fun addAcrossHeaders(offered: Header, mark: TaintMark, facts: TaintTree): Facts? {
-        val before = currentAtom(offered.scope,mark)
-        val temporary = TaintGroup(m, interners.taint)
-        before.values.forEach(temporary::restoreCurrent)
-        val delta = temporary.add(facts)
-        val after = LinkedHashMap<Header, TaintTree>()
-        for (value in temporary.all()) {
-            m.cancellation.checkpoint()
-            after[Header(offered.initial, value.base, value.layer, value.anyTail, value.exclusion)] = value
-        }
-        if (before.keys == after.keys && before.all { (header, value) ->
-                val current = after.getValue(header)
-                value == current && value.nonSubsumable == current.nonSubsumable
-            }) return delta
-
-        replaceAtom(offered.scope,mark,after)
-        return delta
     }
 
     private fun currentAtom(scope: Scope, mark: TaintMark): LinkedHashMap<Header,TaintTree> {
@@ -401,12 +360,6 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
     private fun subtract(a: FlowNode, b: FlowNode, tail: Tail): FlowNode? =
         if (tail == Tail.STAR) subtractExact(a, b) else subtractCovered(a, b)
 
-    private fun overlap(a: FlowNode, b: FlowNode, tail: Tail): FlowNode? {
-        if (tail != Tail.STAR) return overlap(a, b)
-        val outside = subtractExact(a, b) ?: return a
-        return subtractExact(a, outside)
-    }
-
     private fun subtractCovered(a: FlowNode, b: FlowNode): FlowNode? = FlowAlgebra.subtract(a, b, FlowLeaf.NONE,
         at = { it }, below = { it }, cancellation = m.cancellation)
 
@@ -461,42 +414,4 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
         m.taintTree(header.base, header.layer, scalar(shape, mark), header.exclusion, anyTail = header.tail,
             nonSubsumable = protected?.let { scalar(it, mark) })
 
-    private class OverlapKey(val shape: FlowNode, val protected: FlowNode?, val above: Boolean) {
-        override fun hashCode(): Int = (System.identityHashCode(shape) * 31 + System.identityHashCode(protected)) * 31 + above.hashCode()
-        override fun equals(other: Any?): Boolean = other is OverlapKey && shape === other.shape &&
-            protected === other.protected && above == other.above
-    }
-    private class OverlapFrame(val key: OverlapKey, var expanded: Boolean = false)
-
-    /** Keep original output leaves which intersect protected ANY regions.
-     * A protected descendant upgrades the containing original leaf. */
-    private fun overlap(shape: FlowNode, protected: FlowNode): FlowNode? {
-        val memo = HashMap<OverlapKey, FlowNode?>()
-        val stack = ArrayDeque<OverlapFrame>()
-        val initial = OverlapKey(shape, protected, false)
-        stack.addLast(OverlapFrame(initial))
-        while (stack.isNotEmpty()) {
-            m.cancellation.checkpoint()
-            val frame = stack.peekLast()
-            val key = frame.key
-            if (memo.containsKey(key)) { stack.removeLast(); continue }
-            if (key.above) { memo[key] = key.shape; stack.removeLast(); continue }
-            if (key.protected == null) { memo[key] = null; stack.removeLast(); continue }
-            val next = !key.protected.leaf.isEmpty
-            fun childKey(accessor: Int, child: FlowNode) = OverlapKey(child, key.protected.child(accessor), next)
-            if (!frame.expanded) {
-                frame.expanded = true
-                key.shape.accessorData?.forEachIndexed { i, accessor ->
-                    val child = childKey(accessor, key.shape.childData!![i])
-                    if (!memo.containsKey(child)) stack.addLast(OverlapFrame(child))
-                }
-            } else {
-                memo[key] = FlowAlgebra.mapChildren(key.shape, key.shape.leaf, m.cancellation) { accessor, child ->
-                    memo.getValue(childKey(accessor, child))
-                }
-                stack.removeLast()
-            }
-        }
-        return memo.getValue(initial)
-    }
 }

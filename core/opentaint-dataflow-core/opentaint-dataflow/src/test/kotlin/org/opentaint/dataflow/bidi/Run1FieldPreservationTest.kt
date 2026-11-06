@@ -174,8 +174,14 @@ class Run1FieldPreservationTest {
     @Test fun `stored may subsumes descendants without confusing demand must with may`() {
         val groups = ConclusionGroup(m,m.newInterners())
         assertNotNull(groups.add(fact(emptyList(),Tail.ANY,MarkSlot.Concrete(t),Layer.DEMAND)))
-        for (tail in listOf(Tail.EXACT,Tail.ANY_TAINT,Tail.ANY))
+        for (tail in listOf(Tail.EXACT,Tail.ANY_TAINT))
             assertNull(groups.add(fact(listOf(f),tail,MarkSlot.Concrete(t),Layer.DEMAND)))
+        val child = fact(listOf(f),Tail.ANY,MarkSlot.Concrete(t),Layer.DEMAND)
+        assertEquals(setOf(leaf(listOf(f),Tail.ANY,MarkSlot.Concrete(t),Layer.DEMAND)),
+            decoded(listOf(assertNotNull(groups.add(child)))))
+        assertEquals(setOf(leaf(emptyList(),Tail.ANY,MarkSlot.Concrete(t),Layer.DEMAND),
+            leaf(listOf(f),Tail.ANY,MarkSlot.Concrete(t),Layer.DEMAND)), decoded(groups.all().toList()))
+        assertNull(groups.add(child), "The same guide coordinate is not fresh")
         val must = ConclusionGroup(m,m.newInterners())
         assertNotNull(must.add(fact(emptyList(),Tail.ANY_TAINT,MarkSlot.Concrete(t),Layer.DEMAND)))
         assertNotNull(must.add(fact(listOf(f),Tail.EXACT,MarkSlot.Concrete(t),Layer.DEMAND)))

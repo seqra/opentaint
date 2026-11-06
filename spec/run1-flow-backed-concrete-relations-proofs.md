@@ -19,6 +19,13 @@ The extension removes the alias-class guard and proves covered-pair union
 preservation without it. Classification-equality examples below explain the
 historical restriction; they do not impose that guard on the new contract.
 
+The 6 November [storage clarification](concrete-demand-guidance-retention.md)
+requires exact retention of every supplied protected coordinate. The older
+coverage proofs here do not prove that native storage rule. The separate
+incremental H model proves local union/freshness laws with DATA admission as
+a parameter; native embedding and downstream effects need their own checks.
+The current small-program gate remains red after completed run-5.
+
 ## 1. Claim, scope and proof order
 
 The optimization preserves the supported concrete transport relation and

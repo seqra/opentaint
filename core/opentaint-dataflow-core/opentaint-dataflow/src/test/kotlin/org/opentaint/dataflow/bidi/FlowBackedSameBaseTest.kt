@@ -93,7 +93,9 @@ class FlowBackedSameBaseTest {
             if (flowFirst) store.addAdmitted(abstract, flow(listOf(listOf(f))))
             store.addAdmitted(concrete, taint)
             if (!flowFirst) store.addAdmitted(abstract, flow(listOf(listOf(f))))
-            assertEquals(setOf(emptyList()), paths(store.borrow(concrete)))
+            assertEquals(setOf(emptyList(),listOf(g)), paths(store.borrow(concrete)))
+            assertTrue(store.all().all { it.first === concrete || it.first === abstract },
+                "Retained child geometry must keep its complete incoming premise")
         }
     }
 

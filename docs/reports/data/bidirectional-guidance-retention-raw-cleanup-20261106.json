@@ -1,0 +1,189 @@
+{
+  "schema": "owned-guidance-control-raw-jfr-cleanup-v1",
+  "state": "COMPLETE",
+  "timeUTC": "2026-11-06T19:08:28.902034+00:00",
+  "authorization": "task.md: Always cleanup memory snapshot/profiles from the previous runs",
+  "runtimeRevision": "4182adae6152b4600a5401b78512b2b5b581998f",
+  "portableEvidence": {
+    "path": "docs/reports/data/bidirectional-demand-guidance-retention-performance-20261106.json",
+    "sha256": "0c42a5f95f5ed6f7e26ced4764dd4abab7d048480eac264d52dc9275d5e017f1",
+    "profileArtifactsPreserved": [
+      "derived/final-profile-bundle.json",
+      "derived/profile-hotspot-review-20261106.json",
+      "readerStage/profiles"
+    ]
+  },
+  "latestProjectIterations": [
+    {
+      "project": "OWASP",
+      "status": "OK",
+      "latestReached": "run-5",
+      "latestComplete": "run-5",
+      "latestAccepted": "run-5",
+      "uniqueIdentities": 4112,
+      "f945Missing": 0,
+      "f945Added": 0,
+      "currentCensored": false,
+      "controlCensored": false,
+      "provisional": false,
+      "commandWallSeconds": 204.30828765034676,
+      "qualityState": "FINISHED_COMMAND_IDENTITY_COMPARISON"
+    },
+    {
+      "project": "conductor",
+      "status": "TIMEOUT",
+      "latestReached": "run-4",
+      "latestComplete": "run-3",
+      "latestAccepted": "run-3",
+      "uniqueIdentities": 5,
+      "f945Missing": 2,
+      "f945Added": 0,
+      "currentCensored": false,
+      "controlCensored": false,
+      "provisional": true,
+      "commandWallSeconds": 1129.75835596025,
+      "qualityState": "FINISHED_COMMAND_IDENTITY_COMPARISON"
+    },
+    {
+      "project": "thingsboard",
+      "status": "TIMEOUT",
+      "latestReached": "run-1",
+      "latestComplete": null,
+      "latestAccepted": null,
+      "uniqueIdentities": 0,
+      "f945Missing": 14,
+      "f945Added": 0,
+      "currentCensored": true,
+      "controlCensored": false,
+      "provisional": true,
+      "commandWallSeconds": 1131.9036553353071,
+      "qualityState": "FINISHED_COMMAND_IDENTITY_COMPARISON"
+    },
+    {
+      "project": "Stirling-PDF",
+      "status": "TIMEOUT",
+      "latestReached": "run-5",
+      "latestComplete": "run-4",
+      "latestAccepted": "run-3",
+      "uniqueIdentities": 21,
+      "f945Missing": 4,
+      "f945Added": 8,
+      "currentCensored": false,
+      "controlCensored": false,
+      "provisional": true,
+      "commandWallSeconds": 1109.6063667684793,
+      "qualityState": "FINISHED_COMMAND_IDENTITY_COMPARISON"
+    }
+  ],
+  "allowedRoots": [
+    "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects",
+    "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/guidance-retention-gradle-stop-investigation-20261106/retry/projects"
+  ],
+  "openReadersBeforeDeletion": [],
+  "count": 20,
+  "bytes": 1407557034,
+  "files": [
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/guidance-retention-gradle-stop-investigation-20261106/retry/projects/conductor/bidi/continuous.jfr",
+      "bytes": 252450223,
+      "sha256": "e83e9feb3db25f219958ae310c43f7ec578935d75d9653e22918c6cffcfb328a"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/guidance-retention-gradle-stop-investigation-20261106/retry/projects/conductor/bidi/run-2-end.jfr",
+      "bytes": 36631081,
+      "sha256": "52f630d1ba5b34ca159ab8dbfcd6e41b640a92162cbf2285a85ca8e2be8c5eb0"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/guidance-retention-gradle-stop-investigation-20261106/retry/projects/conductor/bidi/run-3-end.jfr",
+      "bytes": 53169242,
+      "sha256": "147309034ccba36e8dccab1561b1936c4efc0a5459e1f72d3a7eac6e56840abf"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/guidance-retention-gradle-stop-investigation-20261106/retry/projects/conductor/bidi/run-4-end.jfr",
+      "bytes": 251473202,
+      "sha256": "b43d07df71b21ad656dfb53fad2605166bd1af0afd0e727caf3fce05c58645d7"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/guidance-retention-gradle-stop-investigation-20261106/retry/projects/conductor/bidi/run1.jfr",
+      "bytes": 20916691,
+      "sha256": "0ae4daf45b25fb51ac380dc70d2a7030bf2c13bf619bc7f6b9791a5820184d92"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects/OWASP/bidi/continuous.jfr",
+      "bytes": 31827670,
+      "sha256": "ae4198494adeaa698dccf269db80958b4e24a19b2fcb6e540985976fc74cf603"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects/OWASP/bidi/run-2-end.jfr",
+      "bytes": 24871156,
+      "sha256": "3c6576d6977f67cdc03ae51adc63cb42e16a4bf9d3d387877431f65751963ec2"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects/OWASP/bidi/run-3-end.jfr",
+      "bytes": 27621780,
+      "sha256": "af243fa6afc69dc94d18bfb3073010807e4452e0b78dfdebbc9a85f29b07d368"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects/OWASP/bidi/run-4-end.jfr",
+      "bytes": 28431009,
+      "sha256": "ceded0ee39cc0465838d27067a50d7bd2932fae91eb22a8cf1c273bcdb060e44"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects/OWASP/bidi/run-5-end.jfr",
+      "bytes": 29220512,
+      "sha256": "bff8b54606ddc547ce786ba127023b0af24861403da3f56c6de08aaab058708f"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects/OWASP/bidi/run1.jfr",
+      "bytes": 20174578,
+      "sha256": "a61552d053824b730a9b0018b5d0d5e3939e5ef9aca28d19e0315486ec9f7818"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects/Stirling-PDF/bidi/continuous.jfr",
+      "bytes": 101909012,
+      "sha256": "fe5df81ee93e9a097b6a902c45ce0094291118818285da6c54fca71fa7a1e05b"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects/Stirling-PDF/bidi/run-2-end.jfr",
+      "bytes": 23105049,
+      "sha256": "967aae7bf84330ba122736218584d5a195accded248d842e164423b0bfb94cae"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects/Stirling-PDF/bidi/run-3-end.jfr",
+      "bytes": 27045258,
+      "sha256": "9c7889d9f58bd8a95cefa13188ae651d42db0291dd133f4250fe0d89766a6be8"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects/Stirling-PDF/bidi/run-4-end.jfr",
+      "bytes": 59807437,
+      "sha256": "205c5a11a31adac5a049b6038e2ccd8a7bafcf743629d2460950b7245f93a59c"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects/Stirling-PDF/bidi/run-5-end.jfr",
+      "bytes": 101059582,
+      "sha256": "110c981add6d4cae8fb9d3847ceee29af447bb6563451255c069a05a2cdec001"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects/Stirling-PDF/bidi/run1.jfr",
+      "bytes": 15931035,
+      "sha256": "ed9b899a4c917f827ded37b07f217c409de98d69b0b0d631efe0381674e16910"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects/conductor/bidi/continuous.jfr",
+      "bytes": 24473949,
+      "sha256": "a88242263d15d482def4864e22dd763c611bd3ca8a7c9d968fae205b3b6b64ce"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects/conductor/bidi/run1.jfr",
+      "bytes": 22446840,
+      "sha256": "526e25afa8b4512150e50c3a783dce62be39a24cc7cea33d90705cd42000bb6a"
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/guidance-retention-campaign-20261106/projects/thingsboard/bidi/continuous.jfr",
+      "bytes": 254991728,
+      "sha256": "3c3fba38a7f2de46313776840345cb181c08b496f6a67da812ece95b0bb5a1f8"
+    }
+  ],
+  "scope": "Only exact owned old campaign JFR files; diagnostic JFRs, source snapshots, logs, SARIF, derived profiles and all user-owned files remain untouched",
+  "allListedFilesAbsent": true
+}

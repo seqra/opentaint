@@ -81,7 +81,7 @@ class EmissionTest {
     private fun check(input: Input, demand: DemandPattern, name: String = ""): List<InitialAp> {
         // These packets have one E header and no protection. Test normalization
         // independently, without asking the production trie canonicalizer.
-        val canonical = input.leaves.distinct().filter { leaf -> input.leaves.none { cover ->
+        val dataCanonical = input.leaves.distinct().filter { leaf -> input.leaves.none { cover ->
             val a = cover.fact; val b = leaf.fact
             cover != leaf && a.base == b.base && a.mark == b.mark &&
                 a.path.size <= b.path.size && b.path.take(a.path.size) == a.path &&
@@ -89,6 +89,8 @@ class EmissionTest {
                     (a.path == b.path && cover.exclusion.isSubsetOf(leaf.exclusion) ||
                         a.path.size < b.path.size && cover.exclusion.admits(b.path[a.path.size])))
         } }
+        val suppliedGuides = input.leaves.filter { it.demand && it.fact.tail == Tail.ANY }
+        val canonical = (dataCanonical + suppliedGuides).distinct()
         val expected = canonical.mapNotNull { emit(demand.entry, Pattern(it.fact, it.exclusion)) }.toSet()
         val before = decoded(input.facts)
         val actual = ops.emit(demand, input.facts)
@@ -182,7 +184,7 @@ class EmissionTest {
         val expected = listOf(
             setOf(pattern(p(f),Tail.EXACT,star),pattern(p(f),Tail.ANY_TAINT,star,ex(g)),
                 pattern(p(f,h),Tail.STAR,star)),
-            setOf(pattern(p(f),Tail.ANY,star)),
+            setOf(pattern(p(f),Tail.ANY,star),pattern(p(f,h),Tail.STAR,star)),
             setOf(pattern(p(f,h),Tail.STAR,star)))
         val shared = linkedMapOf<Pattern,InitialAp>()
         for ((index,added) in listOf(input,demandInput,abstractAdded).withIndex()) for (exit in exits) {
@@ -217,7 +219,10 @@ class EmissionTest {
         val demandAdded = pack(input.leaves.map {
             value(it.fact.path, if (it.fact.tail == Tail.ANY_TAINT) Tail.ANY else Tail.EXACT, it.fact.mark, demand = true)
         })
-        val may = check(demandAdded, demand).single { it.pathArray.toList() == p(f) && it.tail == Tail.ANY }
+        val demandInitials = check(demandAdded, demand)
+        assertEquals(setOf(pattern(p(f),Tail.ANY),pattern(p(f,h),Tail.STAR)),
+            demandInitials.map { it.toPattern() }.toSet())
+        val may = demandInitials.single { it.pathArray.toList() == p(f) && it.tail == Tail.ANY }
         assertNotSame(empty, may)
         assertEquals(Layer.NORMAL, ops.startFact(empty).layer)
         assertEquals(Layer.DEMAND, ops.startFact(may).layer)

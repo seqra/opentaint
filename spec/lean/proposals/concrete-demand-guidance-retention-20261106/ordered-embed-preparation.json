@@ -1,0 +1,123 @@
+{
+  "schema": "ordered-embed-raw-protection-preparation-v1",
+  "state": "PREPARED_CORRECTED_AFTER_ROOT_REJECTION_NOT_RERUN",
+  "preparedBy": "conductor_admission_capsule",
+  "rootOnlyExecution": true,
+  "productionEdited": false,
+  "nativeTestEdited": false,
+  "oldModelsOrReceiptsChanged": false,
+  "files": {
+    "EmbedRawProtectionOrdered.lean": {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/concrete-demand-guidance-retention-20261106/EmbedRawProtectionOrdered.lean",
+      "sha256": "7df55b2174a9343c6ffd5a6a8e8f767f41451dcb1d8937970f010ac5d24ce696",
+      "bytes": 25581
+    },
+    "check-ordered-embed.py": {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/concrete-demand-guidance-retention-20261106/check-ordered-embed.py",
+      "sha256": "9e15484830cb7ff0b0f115d18a061ca0e9f36324e5df5f01b3eb712921d95e89",
+      "bytes": 4564
+    },
+    "OrderedEmbed-README.md": {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/concrete-demand-guidance-retention-20261106/OrderedEmbed-README.md",
+      "sha256": "27302a7505dee9cd91408593eb5021b681f523fd0e5e21aaca35c227ed189a75",
+      "bytes": 3847
+    }
+  },
+  "nativeBinding": {
+    "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/SpatialCanonical.kt",
+    "fileSha256": "daea564174ac8bd837c70ed4ca3598fd63690686db855047f96810c7318a1608",
+    "function": "ApManager.embedRawProtection",
+    "functionSha256": "c1bea4e38b38fbb7e4ffb6876e6348696aec170aa23a098c741e0c74c9749449",
+    "sourceLine": 408
+  },
+  "toolchain": "leanprover/lean4:v4.33.1",
+  "theoremCountPrepared": 50,
+  "theoremNames": [
+    "unique_mem",
+    "unique_nodup",
+    "allExact_mem",
+    "effective_EXACT_ignores_wrapper",
+    "span_key_retains_header",
+    "data_first_match",
+    "data_skip_nonmatch",
+    "firstData_has_witness",
+    "firstOriginal_has_witness",
+    "exact_DATA_priority",
+    "exact_existing_original_priority",
+    "exact_fallback_only_after_both_searches",
+    "flags_append",
+    "data_rows_have_no_flags",
+    "exactRows_mem",
+    "exactRows_no_spans",
+    "spanRows_no_exact",
+    "spanRows_literal_header",
+    "raw_exact_literal_union",
+    "raw_span_literal_union",
+    "merge_flags_membership",
+    "insert_flags_membership",
+    "coalesceAux_flags_membership",
+    "coalesce_flags_membership",
+    "H_exact_literal_union",
+    "H_span_literal_union",
+    "embed_H_inventory",
+    "native_H_inventory",
+    "no_H_fast_path_returns_DATA",
+    "H_exact_no_invention",
+    "H_span_no_invention",
+    "row_flags_in_payload",
+    "flags_in_payload",
+    "payload_before_mask_clipping",
+    "countExact_append",
+    "countExact_insert",
+    "countExact_coalesceAux",
+    "countExact_coalesce",
+    "countExact_data_zero",
+    "countExact_span_zero",
+    "countExact_allocations",
+    "exact_flag_allocated_at_most_once",
+    "native_exact_flag_allocated_at_most_once",
+    "witness_first_DATA_exact",
+    "witness_second_DATA_exact",
+    "witness_existing_original_exact",
+    "witness_exact_only_fallback",
+    "witness_repeated_DATA_exact_removed",
+    "witness_span_header_not_rewritten",
+    "executable_ordered_embedding_witness"
+  ],
+  "proofScope": "Unbounded finite ordered bags; opaque complete coordinate identities within one fixed owner/full-P/base/layer; typed ANY/Empty, MUST/E and STAR/E; effective EXACT wrapper independence; ordered DATA duplicate removal and first matching DATA/original/fallback selector; raw span-header protection; bag coalescing, literal H image, exact allocation count and payload-before-clipping. DATA admission remains arbitrary, not modeled or normalized.",
+  "DATAConfluenceOrGlobalIdempotenceAssumed": false,
+  "nativeGaps": [
+    "Native DATA exact-only canonical wrapper invariant and DAG mask/leaf identity adapter.",
+    "Deferred exact writes versus actual in-loop mask placement and mutable LinkedHashMap implementation refinement.",
+    "Native generic add path for noncanonical exact-only DATA under an existing nonempty-span cohort is outside the stated input adapter scope.",
+    "Native sorted accessor/mark packing, interning, packet serialization order, cancellation and allocation behavior.",
+    "Ordinary DATA admission, full native delta/current filtering/handOff correctness, C2/C5 effects, whole-engine convergence and project recovery."
+  ],
+  "staticPreparationChecks": {
+    "checkerPythonAstParsed": true,
+    "StdOnlyImports": true,
+    "theoremAuditNamesMatch": true,
+    "noForbiddenSourceProofTokens": true,
+    "LeanRan": false,
+    "checkerRan": false,
+    "nativeRan": false
+  },
+  "rootCommand": [
+    "python3",
+    "spec/lean/proposals/concrete-demand-guidance-retention-20261106/check-ordered-embed.py",
+    "--root-owned-execution",
+    "--output",
+    "spec/lean/proposals/concrete-demand-guidance-retention-20261106/ordered-embed-checks.json"
+  ],
+  "correctionHistory": [
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/concrete-demand-guidance-retention-20261106/ordered-embed-correction-1.json",
+      "sha256": "8a9744a59fb778ee72b1d03267438a1e1d5cdda6bdb245a7ed5e071a9289113a",
+      "originalModelSha256": "47f95c46c393eaa5956bea984563373afe476b22de5057eef3df3d219b7d0764",
+      "correctedModelSha256": "7df55b2174a9343c6ffd5a6a8e8f767f41451dcb1d8937970f010ac5d24ce696",
+      "rootFailedAttempt": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/concrete-demand-guidance-design-20261106/ordered-embed-proof-validation/first-attempt.json"
+    }
+  ],
+  "correctedModelLeanRan": false,
+  "firstRootAttemptWasRejected": true
+}

@@ -13,6 +13,14 @@ The correction is committed as `4182adae6`. It passes 3,009 native tests.
 The four configured project commands have ended; quality and performance
 review remain open. The shared-loop reproducer still fails its finding check.
 
+A further selected [storage clarification](../../spec/concrete-demand-guidance-retention.md)
+keeps supplied concrete TAINT/DEMAND/ANY positions and forbids all storage
+subsumption of protected coordinates. It also forbids pass rules from adding
+protection. Its local prototype is under review. These rules supersede the
+protected-prefix/flag-fill clauses below; their older proofs keep their stated
+historical scope. C2, fields and layers are unchanged. The native example
+still completes run-5 with zero NORMAL reports.
+
 This document implements the three selected changes from the
 [field-path design](bidirectional-flow-antichains-and-demand-discharge-20261104.md)
 and the [relation and matching audit](../reports/bidirectional-normal-star-subsumption-direction-policy-20261105.md).
