@@ -17,7 +17,7 @@ func ValidateCompileInputs(absProjectRoot, absOutputProjectModelPath string) err
 	}
 
 	if !utils.IsSupportedArch() {
-		return fmt.Errorf("unsupported architecture found: %s! only arm64 and amd64 are supported", utils.GetArch())
+		return fmt.Errorf("unsupported architecture `%s`, OpenTaint runs on amd64 and arm64", utils.GetArch())
 	}
 
 	return nil
@@ -45,7 +45,7 @@ func ValidateScanInputs(absUserProjectRoot, absProjectModelPath, absSarifReportP
 		switch severity {
 		case "error", "warning", "note":
 		default:
-			return "", fmt.Errorf(`each "severity" flag should be one of note, warning, or error`)
+			return "", fmt.Errorf("invalid --severity value `%s`, use note, warning, or error", severity)
 		}
 	}
 
@@ -55,7 +55,7 @@ func ValidateScanInputs(absUserProjectRoot, absProjectModelPath, absSarifReportP
 
 	parsedMaxMemory, err := utils.ParseMemoryValue(maxMemoryValue)
 	if err != nil {
-		return "", fmt.Errorf("invalid max-memory value: %w", err)
+		return "", fmt.Errorf("invalid --max-memory value `%s`: %w", maxMemoryValue, err)
 	}
 
 	return parsedMaxMemory, nil

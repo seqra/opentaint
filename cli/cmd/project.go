@@ -45,7 +45,7 @@ func (b *JavaAutobuilderBuilder) WithSourceRoot(root string) *JavaAutobuilderBui
 	cleanRoot := filepath.Clean(root)
 	absRoot := log.AbsPathOrExit(cleanRoot, "source root")
 	if _, err := os.Stat(absRoot); os.IsNotExist(err) {
-		out.Fatalf("Source root directory does not exist: %s", absRoot)
+		out.Fatalf("Source root `%s` does not exist", absRoot)
 	}
 	b.config.sourceRoot = absRoot
 	return b
@@ -56,10 +56,10 @@ func (b *JavaAutobuilderBuilder) WithDependencies(deps []string) *JavaAutobuilde
 	for i, dep := range deps {
 		absDep, err := filepath.Abs(dep)
 		if err != nil {
-			out.Fatalf("Failed to resolve absolute path for dependency '%s': %s", dep, err)
+			out.Fatal(fmt.Sprintf("Failed to resolve the dependency path `%s`", dep), err)
 		}
 		if _, err := os.Stat(absDep); os.IsNotExist(err) {
-			out.Fatalf("Dependency file does not exist: %s", absDep)
+			out.Fatalf("Dependency `%s` does not exist", absDep)
 		}
 		absDeps[i] = absDep
 	}
@@ -77,10 +77,10 @@ func (b *JavaAutobuilderBuilder) WithClasspath(classpath []string) *JavaAutobuil
 	for i, cp := range classpath {
 		absCP, err := filepath.Abs(cp)
 		if err != nil {
-			out.Fatalf("Failed to resolve absolute path for classpath entry '%s': %s", cp, err)
+			out.Fatal(fmt.Sprintf("Failed to resolve the classpath entry `%s`", cp), err)
 		}
 		if _, err := os.Stat(absCP); os.IsNotExist(err) {
-			out.Fatalf("Classpath entry does not exist: %s", absCP)
+			out.Fatalf("Classpath entry `%s` does not exist", absCP)
 		}
 		absClasspath[i] = absCP
 	}
@@ -105,7 +105,7 @@ func (c *JavaAutobuilderConfig) validate() error {
 		return fmt.Errorf("output directory is required")
 	}
 	if _, err := os.Stat(c.outputDir); err == nil {
-		return fmt.Errorf("output directory already exists: %s. Please provide a non-existent path", c.outputDir)
+		return fmt.Errorf("output directory `%s` already exists", c.outputDir)
 	}
 	if c.sourceRoot == "" {
 		return fmt.Errorf("source root is required")
@@ -269,7 +269,7 @@ var projectCmd = &cobra.Command{
 		}
 
 		if err := config.Execute(); err != nil {
-			failf("Failed to generate project configuration: %s", err)
+			fail("Failed to write the project model", err)
 		}
 	},
 }

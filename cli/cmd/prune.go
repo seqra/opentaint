@@ -26,7 +26,7 @@ var (
 func resolveCategories() (utils.PruneCategory, error) {
 	specific := pruneArtifacts || pruneRules || pruneJDK || pruneModels || pruneLogs || pruneInstall
 	if pruneAll && specific {
-		return 0, fmt.Errorf("--all cannot be combined with specific category flags (--artifacts, --rules, --jdk, --models, --logs, --install)")
+		return 0, fmt.Errorf("cannot use --all with --artifacts, --rules, --jdk, --models, --logs, or --install")
 	}
 	if pruneAll {
 		return utils.PruneCategoriesAll, nil
@@ -73,23 +73,23 @@ var pruneCmd = &cobra.Command{
 		// Acquire global prune lock
 		pruneLockPath, err := utils.PruneLockPath()
 		if err != nil {
-			failf("Failed to resolve prune lock path: %s", err)
+			fail("Failed to find the prune lock", err)
 		}
 		pruneLock, err := utils.TryLockExclusive(pruneLockPath, utils.LockMeta{
 			PID:     os.Getpid(),
 			Command: "prune",
 		})
 		if err == utils.ErrLocked {
-			failWith(1, "Another prune is already running")
+			fail("Another prune is running", nil)
 		}
 		if err != nil {
-			failf("Failed to acquire prune lock: %s", err)
+			fail("Failed to take the prune lock", err)
 		}
 		defer pruneLock.Unlock()
 
 		result, err := utils.ScanForStaleArtifacts(categories)
 		if err != nil {
-			failf("Failed to scan for stale artifacts: %s", err)
+			fail("Failed to find stale artifacts", err)
 		}
 
 		// Display skipped projects
@@ -133,7 +133,7 @@ var pruneCmd = &cobra.Command{
 		}
 
 		if err := utils.DeleteArtifacts(result.Stale); err != nil {
-			failf("Failed to delete artifacts: %s", err)
+			fail("Failed to delete the artifacts", err)
 		}
 
 		out.Successf("Pruned %d items, freed %s", result.TotalCount, output.FormatSize(result.TotalSize))

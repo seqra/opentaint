@@ -7,7 +7,7 @@ import (
 
 func failOnInvalidInputs(validate func() error) {
 	if err := validate(); err != nil {
-		out.Fatalf("Input validation failed: %s", err)
+		out.FatalErr(err)
 	}
 }
 

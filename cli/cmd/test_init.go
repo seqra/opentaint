@@ -26,7 +26,7 @@ var testRuleInitCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if initRuleSinksOnly && initRuleSourcesOnly {
-			out.Fatalf("--sinks-only and --sources-only are mutually exclusive")
+			out.Fatalf("Cannot use --sinks-only with --sources-only")
 		}
 		kinds := []string{"sinks", "sources"}
 		if initRuleSinksOnly {
@@ -37,10 +37,10 @@ var testRuleInitCmd = &cobra.Command{
 		for _, kind := range kinds {
 			dir := filepath.Join(args[0], kind)
 			if err := testproject.Bootstrap(dir, "opentaint-rule-test-"+kind, initRuleProjectDeps); err != nil {
-				out.Fatalf("Failed to bootstrap test project: %s", err)
+				out.Fatal("Failed to create the test project", err)
 			}
 			if err := testrule.Scaffold(dir); err != nil {
-				out.Fatalf("Failed to scaffold rule test project: %s", err)
+				out.Fatal("Failed to create the test samples", err)
 			}
 			out.Printf("Rule test project (%s) initialized at %s", kind, dir)
 		}
@@ -68,10 +68,10 @@ var testModelInitCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := testproject.Bootstrap(args[0], "model-test-project", initModelProjectDeps); err != nil {
-			out.Fatalf("Failed to bootstrap test project: %s", err)
+			out.Fatal("Failed to create the test project", err)
 		}
 		if err := testmodel.Scaffold(args[0]); err != nil {
-			out.Fatalf("Failed to scaffold model test project: %s", err)
+			out.Fatal("Failed to create the test samples", err)
 		}
 		out.Printf("Model test project initialized at %s", args[0])
 		dir := args[0]

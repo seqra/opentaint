@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/seqra/opentaint/internal/globals"
+	"github.com/seqra/opentaint/internal/output"
 	"github.com/seqra/opentaint/internal/utils"
 	"github.com/spf13/cobra"
 )
@@ -129,7 +130,7 @@ func resolveRulesComponent() healthComponent {
 	path, err := utils.EnsureRulesPath(out)
 	c.path = path
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to prepare built-in rules: %s\n", err)
+		fmt.Fprint(os.Stderr, output.FormatError(fmt.Errorf("failed to prepare the built-in rules: %w", err)))
 		return c
 	}
 	c.present = utils.PathExists(path)

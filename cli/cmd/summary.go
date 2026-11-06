@@ -26,22 +26,22 @@ var summaryCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		for _, s := range summarySeverities {
 			if err := sarif.ValidateSeverity(s); err != nil {
-				out.Fatalf("%s", err)
+				out.FatalErr(err)
 			}
 		}
 		dim, err := sarif.ParseGroupDimension(summaryGroupBy)
 		if err != nil {
-			out.Fatalf("%s", err)
+			out.FatalErr(err)
 		}
 		codeFlowSel, err := sarif.ParseCodeFlowSelection(summaryCodeFlow)
 		if err != nil {
-			out.Fatalf("%s", err)
+			out.FatalErr(err)
 		}
 
 		absSarifPath := log.AbsPathOrExit(args[0], "sarif path")
 		report, err := sarif.LoadReport(absSarifPath)
 		if err != nil {
-			out.Fatalf("Failed to load SARIF report: %s", err)
+			out.Fatal("Failed to load the SARIF report", err)
 		}
 		printSarifSummary(report, absSarifPath, summaryFilters(), summaryListingOptions(dim, codeFlowSel))
 

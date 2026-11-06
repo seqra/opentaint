@@ -75,27 +75,27 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 
 	if _, err := os.Stat(nativeProjectPath); err != nil {
 		if os.IsNotExist(err) {
-			out.Fatalf("Project model not found: %s", nativeProjectPath)
+			out.Fatalf("No project model at `%s`", projectModelArg)
 		}
-		out.Fatalf("Cannot access project model %s: %s", nativeProjectPath, err)
+		out.Fatal(fmt.Sprintf("Failed to access the project model `%s`", projectModelArg), err)
 	}
 
 	maxMemory, err := utils.ParseMemoryValue(opts.maxMemory)
 	if err != nil {
-		out.Fatalf("Invalid --max-memory value: %s", err)
+		out.FatalErr(err)
 	}
 
 	outputDir := opts.outputDir
 	if outputDir == "" {
 		tmpDir, err := os.MkdirTemp("", opts.tempDir)
 		if err != nil {
-			out.Fatalf("Failed to create temp dir: %s", err)
+			out.Fatal("Failed to create a temporary directory", err)
 		}
 		outputDir = tmpDir
 	} else {
 		outputDir = log.AbsPathOrExit(outputDir, "output")
 		if err := os.MkdirAll(outputDir, 0o755); err != nil {
-			out.Fatalf("Failed to create output directory: %s", err)
+			out.Fatal("Failed to create the output directory", err)
 		}
 	}
 
@@ -114,7 +114,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	if opts.includeBuiltinRules {
 		rulesPath, err := utils.EnsureRulesPath(out)
 		if err != nil {
-			failf("Failed to prepare built-in rules: %s", err)
+			fail("Failed to prepare the built-in rules", err)
 		}
 		builder.AddRuleSet(rulesPath)
 	}
@@ -134,7 +134,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 
 	analyzerJarPath, err := ensureAnalyzerAvailable()
 	if err != nil {
-		failf("Failed to resolve analyzer: %s", err)
+		fail("Failed to get the analyzer", err)
 	}
 	builder.SetJarPath(analyzerJarPath)
 
@@ -143,12 +143,12 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 
 	javaRunner := newAnalyzerJavaRunner()
 	if _, err := javaRunner.EnsureJava(); err != nil {
-		failf("Failed to resolve Java for analyzer: %s", err)
+		fail("Failed to find Java for the analyzer", err)
 	}
 
 	cmdErr, err := scanProject(builder, javaRunner)
 	if err != nil {
-		failf("%s failed: %s", opts.label, err)
+		fail("Failed to run the analyzer", err)
 	}
 	analyzerFail := analyzer.Classify(cmdErr)
 
@@ -157,7 +157,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	out.Printf("Test results:     %s", resultPath)
 
 	if analyzerFail != nil {
-		out.Error(analyzerFail.Message)
+		out.Errorf("%s", analyzerFail.Message)
 		suggestions := appendLogSuggestion(nil)
 		if analyzerLog, ok := analyzerLogSuggestion(analyzerFail, builder.LogsFile()); ok {
 			suggestions = append(suggestions, analyzerLog)
@@ -175,7 +175,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 
 	tr, err := analyzer.LoadTestResult(resultPath)
 	if err != nil {
-		failf("%s produced no readable test-result.json: %s", opts.label, err)
+		fail("Failed to read the test results", err)
 	}
 	out.Printf("Passed: %d, failed: %d (false negatives: %d, false positives: %d, skipped: %d), disabled: %d",
 		len(tr.Success), tr.Failed(), len(tr.FalseNegative), len(tr.FalsePositive), len(tr.Skipped), len(tr.Disabled))
@@ -183,7 +183,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	viewResultsCommand := utils.NewSummaryCommand(filepath.Join(outputDir, "test-results.sarif")).WithShowFindings().Build()
 
 	if tr.Failed() > 0 {
-		out.Error(fmt.Sprintf("%s failed", opts.label))
+		out.Printf("%s failed", opts.label)
 		out.Suggestions(append(appendLogSuggestion(nil), output.Suggestion{
 			Description: "To inspect the failing samples, run:",
 			Command:     viewResultsCommand,

@@ -144,6 +144,12 @@ func build(projectDir, outputDir string, inputs stamp, builder Builder) error {
 	}
 	sweepStaging(outputDir)
 
+	// Fail before the compile step, which would succeed on a project without models.
+	sourcesDir := filepath.Join(projectDir, "src", "main", "java")
+	if _, found := firstJavaSource(sourcesDir); !found {
+		return fmt.Errorf("no models in `%s`", sourcesDir)
+	}
+
 	buildTempDir, err := os.MkdirTemp("", "opentaint-model-build-*")
 	if err != nil {
 		return fmt.Errorf("failed to create temp directory for model build: %w", err)
@@ -172,7 +178,7 @@ func build(projectDir, outputDir string, inputs stamp, builder Builder) error {
 		return err
 	}
 	if !containsClassFiles(ClassesDir(staging)) {
-		return fmt.Errorf("model project %s compiled to no classes; it has no models under src/main/java", projectDir)
+		return fmt.Errorf("model project `%s` compiled to no classes", projectDir)
 	}
 
 	if err := writeDescriptor(staging, descriptor{

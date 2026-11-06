@@ -32,7 +32,7 @@ func addDataflowModels(b *AnalyzerBuilder, paths []string, analyzerJarPath strin
 
 	classDirs, err := models.ResolveAll(absPaths, newModelBuilder(analyzerJarPath))
 	if err != nil {
-		out.Fatalf("Failed to apply dataflow models: %s", err)
+		out.Fatal("Failed to load the dataflow models", err)
 	}
 	for _, classDir := range classDirs {
 		b.AddDataflowApproximations(classDir)

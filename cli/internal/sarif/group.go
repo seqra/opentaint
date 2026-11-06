@@ -36,7 +36,7 @@ func ParseGroupDimension(s string) (GroupDimension, error) {
 	case "rule-id":
 		return groupByRuleID, nil
 	default:
-		return 0, fmt.Errorf("invalid --group-by %q: valid values are severity, rule-id, file-path", s)
+		return 0, fmt.Errorf("invalid --group-by value `%s`, use severity, rule-id, or file-path", s)
 	}
 }
 

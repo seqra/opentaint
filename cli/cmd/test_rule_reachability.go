@@ -21,7 +21,7 @@ var testRuleReachabilityCmd = &cobra.Command{
 	Args:        cobra.RangeArgs(1, 2),
 	Run: func(cmd *cobra.Command, args []string) {
 		if reachabilityEntryPoint != "" {
-			out.Warn("on Spring projects this method is added to the auto-discovered entry points, not used to restrict them")
+			out.Warn("On Spring projects, this method is added to the auto-discovered entry points, not used to restrict them")
 		}
 		cfg := reachabilityScanConfig(scanFlags, args[0], reachabilityEntryPoint)
 		runScan(cmd, prepareScanConfig(cfg, args[1:]))

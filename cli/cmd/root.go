@@ -48,6 +48,12 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("failed to set up logging: %w", err)
 		}
 
+		switch strings.ToLower(strings.TrimSpace(globals.Config.Output.Color)) {
+		case "", "auto", "always", "never":
+		default:
+			return fmt.Errorf("invalid --color value `%s`, use auto, always, or never", globals.Config.Output.Color)
+		}
+
 		// Configure the output printer.
 		out.Configure(globals.Config.Output.Color, globals.Config.Output.Quiet)
 		out.SetDebug(globals.Config.Output.Debug)
@@ -88,7 +94,7 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %s\n", output.Humanize(err))
+		fmt.Fprint(os.Stderr, output.FormatError(err))
 		fmt.Fprintln(os.Stderr, "Run `opentaint --help` for usage.")
 		os.Exit(1)
 	}

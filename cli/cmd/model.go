@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/seqra/opentaint/internal/models"
 	"github.com/seqra/opentaint/internal/output"
@@ -30,19 +29,19 @@ var modelInitCmd = &cobra.Command{
 
 		analyzerJarPath, err := ensureAnalyzerAvailable()
 		if err != nil {
-			out.Fatalf("Failed to resolve analyzer: %s", err)
+			out.Fatal("Failed to get the analyzer", err)
 		}
 
 		// Init replaces the build file but keeps the model sources.
 		// Warn the user because this removes dependency pins that they added manually.
 		existing := models.IsProject(projectPath)
 		if existing {
-			out.Warnf("Replacing the build file of the existing model project at %s. "+
-				"Pass every dependency that the models need, not only the new ones", projectPath)
+			out.Warnf("Replacing the build file of the model project at `%s`. "+
+				"Use --dependency for every library that the models need, not only the new ones.", projectPath)
 		}
 
 		if err := models.Scaffold(projectPath, initModelDeps, analyzerJarPath); err != nil {
-			out.Fatalf("Failed to create model project: %s", err)
+			out.Fatal("Failed to create the model project", err)
 		}
 
 		if existing {
@@ -51,8 +50,8 @@ var modelInitCmd = &cobra.Command{
 			fmt.Printf("Model project initialized at %s\n", projectPath)
 		}
 		out.Suggestions(
-			output.Suggestion{Description: "To add the models, write them in:", Command: filepath.Join(args[0], "src", "main", "java")},
-			output.Suggestion{Description: "To test the models, run:", Command: fmt.Sprintf("opentaint test model run <project-model> --dataflow-models %s", shellQuote(args[0]))},
+			output.Suggestion{Description: "To add the models, write them in:", Command: shellQuote(joinUserPath(args[0], "src", "main", "java"))},
+			output.Suggestion{Description: "To test the models, run:", Command: fmt.Sprintf("opentaint test model run <test-project-model> --dataflow-models %s", shellQuote(args[0]))},
 		)
 	},
 }

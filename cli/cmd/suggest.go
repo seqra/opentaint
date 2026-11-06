@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -42,8 +43,9 @@ func retrySuggestion(exitCode int, timeout time.Duration, maxMemory string) (out
 			Command:     rerunReplacingFlag(next, "--max-memory"),
 		}, true
 	case analyzer.ExitTimeout:
+		// Past the default timeout, a longer one rarely helps: suggest it with no command.
 		if timeout >= maxRetryTimeout {
-			return output.Suggestion{}, false
+			return output.Suggestion{Description: "To give the analysis more time, use a longer --timeout"}, true
 		}
 		next := timeout * 2
 		if next <= timeout || next > maxRetryTimeout {
@@ -51,10 +53,32 @@ func retrySuggestion(exitCode int, timeout time.Duration, maxMemory string) (out
 		}
 		return output.Suggestion{
 			Description: "To retry with a longer timeout, run:",
-			Command:     rerunReplacingFlag(next.String(), "--timeout", "-t"),
+			Command:     rerunReplacingFlag(shortDuration(next), "--timeout", "-t"),
 		}, true
 	}
 	return output.Suggestion{}, false
+}
+
+// joinUserPath joins elems to a path that the user wrote, and keeps its ./ prefix, so that the
+// path in a next step looks like the one that the user wrote.
+func joinUserPath(base string, elems ...string) string {
+	joined := filepath.Join(append([]string{base}, elems...)...)
+	if strings.HasPrefix(base, "./") && !filepath.IsAbs(joined) && !strings.HasPrefix(joined, "../") {
+		joined = "./" + joined
+	}
+	return joined
+}
+
+// shortDuration formats d the way a user writes it: 4m, not 4m0s.
+func shortDuration(d time.Duration) string {
+	text := d.String()
+	if strings.HasSuffix(text, "m0s") {
+		text = strings.TrimSuffix(text, "0s")
+	}
+	if strings.HasSuffix(text, "h0m") {
+		text = strings.TrimSuffix(text, "0m")
+	}
+	return text
 }
 
 func rerunReplacingFlag(value string, names ...string) string {
@@ -166,12 +190,15 @@ func buildFailSuggestions(contextual []output.Suggestion) []output.Suggestion {
 	return append(appendLogSuggestion(nil), contextual...)
 }
 
-func failWith(code int, message string, contextual ...output.Suggestion) {
-	out.Error(message)
+// failWith prints the error with its causes from err, which may be nil, and the next steps, and
+// exits with code.
+func failWith(code int, message string, err error, contextual ...output.Suggestion) {
+	out.Error(message, err)
 	out.Suggestions(buildFailSuggestions(contextual)...)
 	os.Exit(code)
 }
 
-func failf(format string, args ...any) {
-	failWith(1, fmt.Sprintf(format, args...))
+// fail prints the error with its causes from err and the log file, and exits with code 1.
+func fail(message string, err error) {
+	failWith(1, message, err)
 }

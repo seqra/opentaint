@@ -31,10 +31,10 @@ var testModelRunCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		ruleDir, err := os.MkdirTemp("", "opentaint-model-rule-*")
 		if err != nil {
-			out.Fatalf("Failed to create temp dir for harness rule: %s", err)
+			out.Fatal("Failed to create a temporary directory for the harness rule", err)
 		}
 		if _, err := testmodel.WriteFixedRule(ruleDir); err != nil {
-			out.Fatalf("Failed to materialize harness rule: %s", err)
+			out.Fatal("Failed to write the harness rule", err)
 		}
 
 		runTestProject(args[0], testProjectOptions{
