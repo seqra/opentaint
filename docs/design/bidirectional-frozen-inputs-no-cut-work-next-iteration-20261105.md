@@ -105,6 +105,18 @@ is RED on current code and passes the proper-prefix-off control. A proposed
 repair must account for this concrete progression case. Do not infer permanent
 loss or select a C2 repair from it: the Conductor first-loss chain is still open.
 
+A separate [direct loop convergence test](../reports/bidirectional-loop-boundary-normality-loss-20261106.md)
+now exposes a shared coverage gap with one mark and no ND condition. Both
+current and prefix-off code stop at run-5 with zero reports for a valid path.
+The actual NORMAL `s.f.g.$/T` packet is rewritten to a DEMAND packet before
+AL; the same frozen AL admission also selects a coarse DEMAND initial from
+the uncut packet. A correctness design must preserve progress and a NORMAL
+report across this internal block boundary. A current-run observation-equality
+check alone does not prove that obligation. The new optional convergence
+assertion is RED in both versions. No change to C2, loop restriction, Target
+routing or stopping is selected from this observation alone. The exact
+Conductor first-loss chain is still a separate obligation.
+
 The user behavior decision is pending between:
 
 - allowing required implied C2 refinements from canonical facts, revising the

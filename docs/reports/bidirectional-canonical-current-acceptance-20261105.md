@@ -93,6 +93,16 @@ current code. It does not change the default module tests or their historical
 2,992-test receipt. This is not a permanent finding loss or a completed
 Conductor causal trace.
 
+A separate [one-marker loop reproducer](bidirectional-loop-boundary-normality-loss-20261106.md)
+now fails after natural convergence: both current and prefix-off code reach,
+complete and accept run-5 with zero NORMAL reports. The valid one-iteration
+path needs only two concrete fields. The DIRECT native trace records a NORMAL
+`s.f.g.$/T` loop result, its rewrite to DEMAND `s.f.[any]/T`, and the coarse
+DEMAND `s.f.*/T` after-loop initial. The native raw/cut admission results are
+already equal, so the limiter alone is not a proved cause. This is a shared
+coverage gap, not evidence that prefix removal introduced it. Its separate
+optional regression also remains RED. No production repair is implemented.
+
 The semantic repair choice is still pending. The selected canonical-only C2
 policy permits literal initial images to disappear. Changing that policy or
 adding separate refinement guidance needs an explicit design under the
