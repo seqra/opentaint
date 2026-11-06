@@ -18,7 +18,8 @@ package org.opentaint.dataflow.jvm.ap.ifds.alias.directed
  *
  * It runs on the same [AliasCfg] with the same WTO and the same edge rules as [DirectedFixpoint]
  * (entry, handlers, loop heads, kills). Only the state domain and the transfer are different.
- * It does not run inlined calls.
+ * It does not run inlined calls. It applies the pass-through models of a call (IMPL §4.5) as weak
+ * copies after the call.
  *
  * @param tables the tables of the CFG. The concept reads only the keys of the ids (sites, cells,
  *   bases of constants and statics), never the origins or the nodes of the engine.
@@ -176,14 +177,45 @@ class NaiveConcept(
             storeWeak(s, value(s, instr.base), ELEM_CELL, v)
         }
         AliasInstr.StaticWrite, AliasInstr.Nop, is AliasInstr.Return, is AliasInstr.Throw -> st
-        is AliasInstr.UnresolvedCall -> {
-            require(instr.models.isEmpty()) { "The naive concept has no pass-through models" }
-            call(st, instr.site, instr.result, instr.args)
-        }
+        is AliasInstr.UnresolvedCall -> models(st, call(st, instr.site, instr.result, instr.args), instr.result, instr.models)
         is AliasInstr.ResolvedCall -> {
-            require(instr.callees === CalleeBodies.NONE && instr.models.isEmpty()) { "The naive concept does not inline" }
-            call(st, instr.site, instr.result, instr.args)
+            require(instr.callees === CalleeBodies.NONE) { "The naive concept does not inline" }
+            models(st, call(st, instr.site, instr.result, instr.args), instr.result, instr.models)
         }
+    }
+
+    /**
+     * The pass-through models of a call (IMPL §4.5): after the call, a weak copy `to ∪= pts(from)`
+     * for each model, in its order. `pts(from)` reads [before] (the state before the call), except
+     * a `from` on the result: it reads the current state. A target without cells is a variable: the
+     * result or a local (`this`, an argument and a constant are not in `env`: no change). A target
+     * with cells `c1..ck` is `storeWeak(load(val(base), c1..c(k-1)), ck, pts(from))`. A model on the
+     * result of a call without a result variable has no effect.
+     */
+    private fun models(before: State, after: State, result: VarId?, models: List<PassThrough>): State {
+        var cur = after
+        for (m in models) {
+            val fromState = if (m.from.base == ModelBase.Result) cur else before
+            val fromBase = modelBase(fromState, m.from.base, result) ?: continue
+            val from = m.from.cells.fold(fromBase) { s, c -> load(fromState, s, c) }
+            if (m.to.cells.isEmpty()) {
+                val v = when (val b = m.to.base) {
+                    ModelBase.Result -> result
+                    is ModelBase.Value -> (b.value as? AliasValue.Local)?.v
+                } ?: continue
+                cur = cur.setVar(v, (cur.env[v] ?: emptySet()) + from)
+                continue
+            }
+            var base = modelBase(cur, m.to.base, result) ?: continue
+            for (c in m.to.cells.dropLast(1)) base = load(cur, base, c)
+            cur = storeWeak(cur, base, m.to.cells.last(), from)
+        }
+        return cur
+    }
+
+    private fun modelBase(st: State, base: ModelBase, result: VarId?): Set<Origin>? = when (base) {
+        ModelBase.Result -> result?.let { st.env[it] ?: emptySet() }
+        is ModelBase.Value -> evaluate(st, base.value).second
     }
 
     /** `x = m(args)` at `s`: `retireV s (callVS X args)`, then the result `⟨s⟩`. */

@@ -401,6 +401,41 @@ class AliasSampleTest : BasicTestUtils() {
     }
 
     @Test
+    fun `directed test swap fields`() {
+        // Design §9.2, D1: both stores on the arguments are strong (entryUnique). So the value read
+        // from a.value aliases only arg0.value, and the value read from b.value aliases only arg1.value.
+        // The second and the third assertion of `test swap fields` are inverted.
+        val method = findMethod(HEAP_SAMPLE, "swapFields")
+        val aa = aaForMethod(method, directedParams(depth = 0))
+
+        val sink = method.findSinkCall("sinkTwoValues")
+
+        val aValueAliases = aa.valueApAliases(sink.callExpr.args[0], sink)
+        assertTrue {
+            aValueAliases.any {
+                it.base == Argument(0) && it.accessors.singleFieldNamed(FIELD_VALUE)
+            }
+        }
+        assertFalse {
+            aValueAliases.any {
+                it.base == Argument(1) && it.accessors.singleFieldNamed(FIELD_VALUE)
+            }
+        }
+
+        val bValueAliases = aa.valueApAliases(sink.callExpr.args[1], sink)
+        assertFalse {
+            bValueAliases.any {
+                it.base == Argument(0) && it.accessors.singleFieldNamed(FIELD_VALUE)
+            }
+        }
+        assertTrue {
+            bValueAliases.any {
+                it.base == Argument(1) && it.accessors.singleFieldNamed(FIELD_VALUE)
+            }
+        }
+    }
+
+    @Test
     fun `test array element to field`() {
         val method = findMethod(HEAP_SAMPLE, "arrayToField")
         val aa = aaForMethod(method)
@@ -587,6 +622,20 @@ class AliasSampleTest : BasicTestUtils() {
         val apAliases = aa.sinkArgApAliases(sink)
 
         assertFalse { apAliases.any { it.isPlainBase(Argument(0)) } }
+    }
+
+    @Test
+    fun `directed test external call invalidates heap aliases`() {
+        // Design §9.2, D2: the unresolved call is passive. It does not remove the heap aliases of its
+        // arguments, so dst aliases arg0. The assertion of `test external call invalidates heap aliases`
+        // is inverted.
+        val method = findMethod(INTERPROC_SAMPLE, "testExternalCallInvalidatesHeap")
+        val aa = aaForMethod(method, directedParams(depth = 0))
+
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
+
+        assertTrue { apAliases.any { it.isPlainBase(Argument(0)) } }
     }
 
     @Test
