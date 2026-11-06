@@ -1,7 +1,8 @@
 # Avoid repeated work on frozen inputs and bounded facts
 
-Status: proposal only. Priority 0 has a selected behavior direction; its storage
-design is pending. Performance proposals 1 and 2 are not selected or implemented.
+Status: performance proposals 1 and 2 are not selected or implemented.
+Priority 0's FLOW/DEMAND/ANY producer correction is implemented and passes native
+validation. Its configured project validation and wider coverage gate remain open.
 
 The measured analyzer is `8331bf9e326ddd1bd5083dbc50456963d6b26b52`.
 The latest reached/completed/accepted iterations are OWASP run-5/run-5/run-5,
@@ -21,7 +22,8 @@ unimplemented and unselected; neither claims to fix the missing findings.
 ## 0. Correctness first: preserve required refinement guidance
 
 **Priority 0 is an acceptance obligation. Keep STAR and repair demand guidance
-is selected. The storage design and required proofs remain pending.**
+is selected. The demonstrated FLOW/DEMAND/ANY producer path is corrected;
+configured project validation and the wider required-effect proof remain open.**
 The [Conductor investigation](../reports/bidirectional-conductor-canonical-quality-regression-20261105.md)
 and [portable evidence](../reports/data/bidirectional-conductor-canonical-quality-regression-20261105.json)
 show that the verified external rollback changes only `canonicalSpans`' final
@@ -162,8 +164,14 @@ The [complete local snapshot](../reports/bidirectional-conductor-must-demand-sna
 now confirms the missing child guide for the same Conductor input. Both
 diagnostics reach run-4 and complete and accept run-3. The
 [guidance-retention design](bidirectional-demand-guidance-retention-implementation-20261106.md)
-sets out the proposed storage boundaries and the remaining proof work.
-It is a design draft; no source repair is included.
+now specifies the implemented three-file correction for the demonstrated
+FLOW/DEMAND/ANY path. It preserves explicit guide positions at point, summary,
+publication and handoff admission, and keeps packed TAINT on the old DATA path.
+The scalar emitter stays unchanged. Both two-method regressions now report at
+run-3 and converge at run-5. All 3,009 native module tests pass, and 39 local Lean
+lemmas pass. The separate shared-loop finding assertion still fails at run-5.
+No configured project result for the correction is available yet. Do not infer
+final Conductor recovery or a performance result from these native checks.
 
 Before performance acceptance, establish the required operational preservation
 contract for the chosen repair: full premise, scope/ports, mark/tail, E/mx,
@@ -179,15 +187,15 @@ Performance proposals 1 and 2 keep the approved semantic contract. They do not
 change C2 initial admission, C5 restriction, field limits, layers, protection, summary roles,
 alias handling, static supplies, or report identity. They do not introduce an
 input history, a second request authority, or a general identity cache.
-Priority 0 is separate. Its direction is selected above; the storage repair
-and its adapter/effect proofs are not complete.
+Priority 0 is separate. Its bounded producer correction is implemented; the
+wider adapter/effect and project quality gates are not complete.
 
 The order below uses the measured avoidable work, not a promised wall-time
 speedup. Sample shares are not seconds and are not retained-memory shares.
 
 | Priority | Change | Measured evidence | Work to remove |
 | --- | --- | --- | --- |
-| 0 | Preserve required refinement guidance; keep STAR selected, storage design pending | B restores R3 guidance/native R5 seven; actual B2 summary removal and frozen local guide differences are traced; matched R3 input returns an extra precise initial, but its final report chain is open; main still fails | Correctness gate, not a performance claim |
+| 0 | Preserve required refinement guidance; keep STAR, correct FLOW/DEMAND/ANY producer admission | The correction passes 3,009 native tests and restores both small programs' run-3 findings; shared-loop and configured project gates remain open | Correctness gate, not a performance claim |
 | 1 | Canonicalize frozen joined inputs once | Thingsboard's observed run-1 static-completion window: 440.336 s; 33,403 Java samples; canonical packet/state work 48.97% of samples and 51.07% of weighted allocation bytes | Repeated normalization of the same immutable joined input for different writer visits |
 | 2 | Return bounded packets before protection transport | Conductor's logged top-24 method rows at run-12: 4,944,767 limit offers, zero over-limit offers; the run-12 capture contains 5,196 of 10,466 sample weights under `ApOps.limit` | Splitting, walking, and reattaching protection when the field limiter returns the original packet |
 

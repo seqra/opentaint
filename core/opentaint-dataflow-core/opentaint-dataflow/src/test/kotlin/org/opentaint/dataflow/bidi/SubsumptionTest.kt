@@ -43,7 +43,7 @@ class SubsumptionTest {
     private val locationCache = HashMap<Conclusion, Set<ObservedLocation>>()
 
     @Test
-    fun `flow subsumption agrees with direct leaves across path exclusion and mark exclusion cells`() {
+    fun `flow admission keeps guide positions and follows direct data coverage elsewhere`() {
         for (layer in Layer.entries) {
             val leaves = buildList {
                 for (path in paths) for (mx in markExclusions) {
@@ -214,7 +214,7 @@ class SubsumptionTest {
     }
 
     @Test
-    fun `canonical demand ancestor removes old descendants and rejects covered incoming leaves`() {
+    fun `demand ancestors retain FLOW guide positions and still canonicalize concrete MAY data`() {
         for (mark in listOf(MarkSlot.STAR, mt)) {
             val descendant = conclusion(listOf(g), Tail.ANY, mark)
             val ancestor = conclusion(emptyList(), Tail.ANY, mark)
@@ -222,11 +222,18 @@ class SubsumptionTest {
             val group = group()
             assertNotNull(group.add(typed(descendant)))
             assertNotNull(group.add(typed(ancestor)))
-            assertEquals(setOf(ancestor), decode(group.all().toList()))
+            val flowGuide = mark is MarkSlot.Star
+            assertEquals(if (flowGuide) setOf(ancestor,descendant) else setOf(ancestor), decode(group.all().toList()))
             val stored = group.all().toList()
-            assertNull(group.add(typed(later)))
-            assertEquals(stored.size, group.all().count())
-            stored.zip(group.all().toList()).forEach { (before, after) -> assertSame(before, after) }
+            if (flowGuide) {
+                assertEquals(setOf(later),decode(listOf(assertNotNull(group.add(typed(later))))))
+                assertEquals(setOf(ancestor,descendant,later),decode(group.all().toList()))
+            } else {
+                assertNull(group.add(typed(later)))
+                assertEquals(stored.size, group.all().count())
+                stored.zip(group.all().toList()).forEach { (before, after) -> assertSame(before, after) }
+            }
+            assertNull(group.add(typed(later)),"An identical offered coordinate is never fresh")
             assertEquals(observed(listOf(descendant, ancestor, later)), observed(decode(group.all().toList())))
         }
     }
@@ -324,7 +331,9 @@ class SubsumptionTest {
             val first = typed(stored)
             assertSame(first, group.add(first), label)
             val delta = group.add(typed(incoming))
-            assertEquals(subsumes(stored, incoming), delta == null, label)
+            val keepGuidePosition = incoming.demand && incoming.fact.mark is MarkSlot.Star &&
+                incoming.fact.tail == Tail.ANY && stored.fact.path != incoming.fact.path
+            assertEquals(subsumes(stored, incoming) && !keepGuidePosition, delta == null, label)
             assertEquals(observed(listOf(stored, incoming)), observed(decode(group.all().toList())), label)
         }
     }

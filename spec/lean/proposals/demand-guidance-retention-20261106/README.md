@@ -15,12 +15,21 @@ then checks this model. It checks every printed axiom dependency. It permits
 only the existing constructive foundations `propext` and `Quot.sound`. It
 does not write to `formal/` or change the scalar model.
 
-The 16 lemmas prove finite C2-image and paired-label properties. Exact row
+The first 16 lemmas prove finite C2-image and paired-label properties. Exact row
 union keeps root and child demand positions in either arrival order. Data
 prefix removal can lose the child's C2 image. The model also checks the
 existing handoff selector, MUST-to-ANY guidance projection, and a same-point
 concrete MAY/EXACT counterexample. Exit labels are complete opaque identities.
 The model cannot borrow an exit from a different row.
+
+`ProducerGuidance.lean` adds 23 lemmas for exact coordinate add/delta,
+freshness, duplicates, both arrival orders, and the handoff of already supplied
+paired coordinates. It also checks the existing same-head mx intersection:
+the allowed T/U request set is the union of its inputs in the finite FULL
+table. A separate counterexample shows why equal projected demand rows alone
+do not prove equal runtime requests. The same-head exact-input cell is checked
+too: its existing EXACT/FLOW initial can appear beside the parent's STAR/FLOW
+initial. The checker runs all 39 lemmas.
 
 The scope is FULL scalar facts, ordinary nonstatic bases, counted fields,
 empty field exclusions, and finite lists. No production C5 restriction,

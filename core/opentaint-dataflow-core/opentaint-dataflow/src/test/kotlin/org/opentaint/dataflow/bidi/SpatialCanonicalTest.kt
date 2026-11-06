@@ -32,7 +32,7 @@ class SpatialCanonicalTest {
     private fun leaves(values: Sequence<Facts>) = values.flatMap { f.ops.leaves(it) }.toSet()
     private fun expected(vararg values: Facts) = leaves(values.asSequence())
 
-    @Test fun `FLOW one packet and both arrival orders remove same-tail descendants`() {
+    @Test fun `FLOW one packet and both arrival orders keep demand positions and compact data`() {
         for (tail in listOf(Tail.ANY, Tail.ANY_TAINT)) {
             val root = flow(emptyList(), tail = tail)
             val child = flow(listOf(a, b), tail = tail)
@@ -40,7 +40,8 @@ class SpatialCanonicalTest {
                 listOf(root, child), listOf(child, root))) {
                 val group = FlowGroup(m, m.newInterners().flow)
                 packets.forEach(group::addAll)
-                assertEquals(expected(root), leaves(group.all()))
+                val retained = if (tail == Tail.ANY) expected(root, child) else expected(root)
+                assertEquals(retained, leaves(group.all()))
                 assertNull(group.add(root))
             }
         }

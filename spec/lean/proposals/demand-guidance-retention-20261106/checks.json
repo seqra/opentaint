@@ -5,7 +5,19 @@
   "base": "proposals/initial-emission/RestrictedInitialPolicy.lean",
   "baseSha256": "3a42cc1eb3209c82400ba528bdb1e80ba17bc09540e19e59b0d5272f9fd7c5f0",
   "leanToolchain": "leanprover/lean4:v4.33.1",
-  "theorems": 16,
+  "theorems": 39,
+  "modules": [
+    {
+      "file": "GuidanceFrontier.lean",
+      "sha256": "0c0b07284fbbc7ad9eddc74049370edfc9ccab1eb91ed2241d81a2127fad551a",
+      "theorems": 16
+    },
+    {
+      "file": "ProducerGuidance.lean",
+      "sha256": "f551a2c43a4d1e555df689ef12fd06b84a34d1302a18f47a416bdc0a46df2c5f",
+      "theorems": 23
+    }
+  ],
   "axiomAudit": [
     "'GuidanceFrontier.contains_guide_union' does not depend on any axioms",
     "'GuidanceFrontier.guide_union_both_orders' does not depend on any axioms",
@@ -22,13 +34,36 @@
     "'GuidanceFrontier.source_handoff_selector_table' depends on axioms: [propext]",
     "'GuidanceFrontier.guidance_MUST_ANY_and_other_heads' does not depend on any axioms",
     "'GuidanceFrontier.same_point_MAY_EXACT_guide_countercell' depends on axioms: [propext]",
-    "'GuidanceFrontier.retained_rows_are_an_executable_witness' depends on axioms: [propext]"
+    "'GuidanceFrontier.retained_rows_are_an_executable_witness' depends on axioms: [propext]",
+    "'ProducerGuidance.raw_view_append' depends on axioms: [Quot.sound]",
+    "'ProducerGuidance.raw_add_preserves_old' depends on axioms: [propext]",
+    "'ProducerGuidance.raw_add_preserves_incoming' depends on axioms: [propext]",
+    "'ProducerGuidance.raw_delta_is_exact_coordinate_freshness' depends on axioms: [propext]",
+    "'ProducerGuidance.exact_duplicate_has_no_delta' depends on axioms: [propext, Quot.sound]",
+    "'ProducerGuidance.raw_add_is_idempotent' depends on axioms: [propext, Quot.sound]",
+    "'ProducerGuidance.raw_add_is_order_independent' depends on axioms: [Quot.sound]",
+    "'ProducerGuidance.delta_reconstructs_added_memberships' depends on axioms: [propext, Quot.sound]",
+    "'ProducerGuidance.root_first_child_is_fresh' does not depend on any axioms",
+    "'ProducerGuidance.child_first_root_is_fresh' does not depend on any axioms",
+    "'ProducerGuidance.cold_packet_preserves_both_coordinates' does not depend on any axioms",
+    "'ProducerGuidance.full_header_mx_path_and_exit_are_coordinates' does not depend on any axioms",
+    "'ProducerGuidance.DATA_coverage_and_GUIDE_freshness_are_different' depends on axioms: [propext]",
+    "'ProducerGuidance.handoff_preserves_exact_rows_for_any_observation' depends on axioms: [propext]",
+    "'ProducerGuidance.handoff_paired_admission_image_equivalence' depends on axioms: [propext]",
+    "'ProducerGuidance.handoff_root_child_both_orders' does not depend on any axioms",
+    "'ProducerGuidance.current_STAR_policy_and_child_MUST_image_are_unchanged' depends on axioms: [propext]",
+    "'ProducerGuidance.retained_child_keeps_existing_exact_FLOW_image' depends on axioms: [propext]",
+    "'ProducerGuidance.handoff_projection_drops_mx' does not depend on any axioms",
+    "'ProducerGuidance.same_head_mx_union_only_after_projection' depends on axioms: [propext]",
+    "'ProducerGuidance.same_head_mx_intersection_preserves_T_request_union' depends on axioms: [propext]",
+    "'ProducerGuidance.same_head_mx_intersection_preserves_U_request_union' depends on axioms: [propext]",
+    "'ProducerGuidance.same_mx_projection_does_not_prove_runtime_request_equivalence' does not depend on any axioms"
   ],
   "allowedFoundationAxioms": [
     "propext",
     "Quot.sound"
   ],
-  "scope": "finite C2 images and exact paired-label union, both arrival orders; unchanged scalar emit",
+  "scope": "finite C2 images, coordinate add/delta, exact paired-label handoff and same-head mx request union; unchanged scalar emit",
   "notProved": [
     "producer retention before normalization",
     "production C5 restriction and budgets",
