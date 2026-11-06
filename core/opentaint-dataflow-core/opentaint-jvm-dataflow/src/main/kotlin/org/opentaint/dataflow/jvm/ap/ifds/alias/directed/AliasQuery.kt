@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongArrayList
+import java.util.BitSet
 import java.util.concurrent.atomic.AtomicReferenceArray
 
 /** The root of an answer path (IMPL §6.1 step 2). */
@@ -25,9 +26,10 @@ data class AliasPath(val root: PathRoot, val cells: List<CellId>)
  * The seeds are sorted. A seed with an id from [AliasQuery.originCount] is a query-local origin.
  * The conversion (IMPL §6.2) reads the items (allocations and constants) from the seeds.
  *
- * [nullOnly] (statistics, `nullOnlyPaths` of `AliasVolumeStats`): for each path, true if the value
- * of the path shares with the seeds only null-valued origins: origins of a `NULL` base or of an
- * `ALLOC_CHILD` base (design R17). `null` if no seed is null-valued: then no path is null-only.
+ * [nullOnly] (statistics, `nullOnlyPaths` of `AliasVolumeStats`): for each path, true if the search
+ * reaches the path only from null-valued seeds: origins of a `NULL` base or of an `ALLOC_CHILD`
+ * base (design R17). `null` if no seed is null-valued: then no path is null-only. The search
+ * computes the flags ([AliasQuery]); they do not change the paths.
  */
 class QueryAnswer(val paths: List<AliasPath>, val seeds: IntArray, val nullOnly: BooleanArray? = null)
 
@@ -45,6 +47,14 @@ class QueryAnswer(val paths: List<AliasPath>, val seeds: IntArray, val nullOnly:
  *    parent of a cell that is not written. Never expand the self cell of a `Deep` origin.
  * 3. Prefix the cell to the suffix, up to D = [maxAccessors] cells.
  * The search gives each path one time (`search_nodup`). The answer does not have the queried path.
+ *
+ * The null-only flags ([QueryAnswer.nullOnly]): if a seed is null-valued, each search node also
+ * keeps the set `G'` of the origins from which `σ` reaches a seed that is not null-valued. `G'` uses
+ * the full read relation: unlike `G`, it also expands the self cells of a `Deep` origin, as a read
+ * of the path does. A path is null-only if no origin of its holder is in `G'`. If `G'` contains
+ * `G`, the node and its subtree do not keep `G'`: no path below it is null-only. So the flags cost
+ * no second pass over the paths. The flags use the universe of the search (see below): a depth-K
+ * origin that the search does not know is not a holder.
  *
  * The universe of the search (ruling of the Task 5 review): the origins of the frozen tables, and
  * the query-local origins of this query (only a heap-path query makes them). The cells are the cells
@@ -160,33 +170,11 @@ class AliasQuery(val result: DirectedAliasResult, val maxAccessors: Int) {
         exclude: AliasPath,
     ): QueryAnswer {
         val search = Search(st, index(node, after, st), scratch, exclude)
-        search.node(maxAccessors, emptyList(), seeds)
-        return QueryAnswer(search.out, seeds.copyOf(), nullOnly(st, scratch, seeds, search.out))
-    }
-
-    /**
-     * The null-only flags of [paths] ([QueryAnswer.nullOnly]). If no seed is null-valued, it is
-     * `null` and costs one pass over the seeds. Else it reads the value of each path.
-     */
-    private fun nullOnly(st: AliasState, scratch: Scratch, seeds: IntArray, paths: List<AliasPath>): BooleanArray? {
-        if (seeds.none { scratch.isNullValued(it) }) return null
-        val flags = BooleanArray(paths.size)
-        for ((i, p) in paths.withIndex()) {
-            var value = rootValue(st, p.root, scratch)
-            for (c in p.cells) value = read(st, value, c, scratch)
-            var shared = false
-            var onlyNull = true
-            for (o in value) {
-                if (seeds.binarySearch(o) < 0) continue
-                shared = true
-                if (!scratch.isNullValued(o)) {
-                    onlyNull = false
-                    break
-                }
-            }
-            flags[i] = shared && onlyNull
-        }
-        return flags
+        val notNull = seeds.filter { !scratch.isNullValued(it) }.toIntArray()
+        val tracked = notNull.size != seeds.size
+        search.node(maxAccessors, emptyList(), seeds, if (tracked) notNull else null)
+        val flags = if (tracked) BooleanArray(search.out.size) { search.nullOnly.get(it) } else null
+        return QueryAnswer(search.out, seeds.copyOf(), flags)
     }
 
     private inner class Search(
@@ -197,19 +185,59 @@ class AliasQuery(val result: DirectedAliasResult, val maxAccessors: Int) {
     ) {
         val out = ArrayList<AliasPath>()
 
-        /** The search node with remaining depth [j], suffix [suffix] and origin set [g] (sorted). */
-        fun node(j: Int, suffix: List<CellId>, g: IntArray) {
+        /** The null-only flag of each path of [out], by index ([QueryAnswer.nullOnly]). */
+        val nullOnly = BitSet()
+
+        /**
+         * The search node with remaining depth [j], suffix [suffix] and origin set [g] (sorted).
+         * [notNull]: the subset `G'` of [g] that reaches a seed that is not null-valued, or `null`
+         * if it is equal to [g] (see the KDoc of [AliasQuery]).
+         */
+        fun node(j: Int, suffix: List<CellId>, g: IntArray, notNull: IntArray?) {
+            val roots = roots(g)
+            val notNullRoots = notNull?.let { roots(it) }
+            for (r in roots) {
+                val p = AliasPath(r, suffix)
+                if (p == exclude) continue
+                if (notNullRoots != null && r !in notNullRoots) nullOnly.set(out.size)
+                out.add(p)
+            }
+            if (j == 0) return
+
+            val pre = predecessors(g, selfCells = false)
+            val notNullPre = if (notNull != null && notNull.isNotEmpty()) predecessors(notNull, selfCells = true) else null
+            val cells = pre.keys.toIntArray().also { it.sort() }
+            for (c in cells) {
+                val next = pre.get(c).toIntArray().also { it.sort() }
+                // G' of the next node: none (all paths below are null-only), a superset of G (`null`), or other.
+                val n = notNullPre?.get(c)
+                val nextNotNull = when {
+                    notNull == null -> null
+                    n == null -> EMPTY_ORIGINS
+                    next.all { n.contains(it) } -> null
+                    else -> n.toIntArray().also { it.sort() }
+                }
+                val nextSuffix = ArrayList<CellId>(suffix.size + 1).also { it.add(c); it.addAll(suffix) }
+                node(j - 1, nextSuffix, next, nextNotNull)
+            }
+        }
+
+        /** The holder variables of the origins of [g]: the state variables and the root variables by rule. */
+        private fun roots(g: IntArray): LinkedHashSet<PathRoot> {
             val roots = LinkedHashSet<PathRoot>()
             for (o in g) {
                 if (o < originCount) index.forEachVar(o) { roots.add(PathRoot.Var(it)) }
                 scratch.ruleRoot(o)?.let(roots::add)
             }
-            for (r in roots) {
-                val p = AliasPath(r, suffix)
-                if (p != exclude) out.add(p)
-            }
-            if (j == 0) return
+            return roots
+        }
 
+        /**
+         * For each cell `c`: the holders `p` of `(p, c)` that hold an origin of [g] (step 2). If
+         * [selfCells] is false, it does not expand the self cells of a `Deep` origin. If it is true,
+         * it gives the full read relation: a self cell of `Deep(b)` holds `Deep(b)`.
+         */
+        private fun predecessors(g: IntArray, selfCells: Boolean): Int2ObjectOpenHashMap<IntOpenHashSet> {
             val pre = Int2ObjectOpenHashMap<IntOpenHashSet>()
             fun add(c: CellId, p: OriginId) {
                 (pre.get(c) ?: IntOpenHashSet().also { pre.put(c, it) }).add(p)
@@ -219,19 +247,17 @@ class AliasQuery(val result: DirectedAliasResult, val maxAccessors: Int) {
                 if (o < originCount) {
                     index.forEachKey(o) { key ->
                         val p = heapKeyOrigin(key)
-                        if (!deep || p != o) add(heapKeyCell(key), p)
+                        if (selfCells || !deep || p != o) add(heapKeyCell(key), p)
                     }
                 }
                 scratch.forEachDefaultParent(o) { p, c ->
                     if (p >= originCount || !st.isWritten(heapKey(p, c))) add(c, p)
                 }
+                if (selfCells && deep) {
+                    scratch.forEachCell { c -> if (o >= originCount || !st.isWritten(heapKey(o, c))) add(c, o) }
+                }
             }
-            val cells = pre.keys.toIntArray().also { it.sort() }
-            for (c in cells) {
-                val next = pre.get(c).toIntArray().also { it.sort() }
-                val nextSuffix = ArrayList<CellId>(suffix.size + 1).also { it.add(c); it.addAll(suffix) }
-                node(j - 1, nextSuffix, next)
-            }
+            return pre
         }
     }
 
@@ -394,7 +420,7 @@ class AliasQuery(val result: DirectedAliasResult, val maxAccessors: Int) {
         }
 
         /** The cells of the universe of this query. */
-        private inline fun forEachCell(body: (CellId) -> Unit) {
+        inline fun forEachCell(body: (CellId) -> Unit) {
             for (c in 0 until cellCount) body(c)
             for (c in extraCells) body(c)
         }
@@ -442,6 +468,7 @@ class AliasQuery(val result: DirectedAliasResult, val maxAccessors: Int) {
 
     private companion object {
         val EMPTY_CELLS = IntArray(0)
+        val EMPTY_ORIGINS = IntArray(0)
         const val SYM = 1
         const val DEEP = 2
     }
