@@ -436,8 +436,10 @@ by a mark alone. A separate design must cover late writer admission and cycles.
 
 ## 5. Acceptance
 
-First resolve Priority0 and the explicit behavior choice; no C2 repair has
-been selected by this document. Then prove the selected
+First complete the Priority0 quality review. The user selected **keep STAR;
+repair demand guidance**, and the bounded producer correction is committed
+as `4182adae6`. Scalar C2 stays unchanged. This document does not select
+proposals 1 or 2. Before either is implemented, prove the selected
 work-removal laws in Lean before implementation. Run native identity and
 cancellation controls, then repeat the four fixed real-project configurations.
 Keep FULL, 16 GiB, `1,1,2,...`, aliases and statics. Reuse the fixed quality and

@@ -9,7 +9,9 @@ guidance**. The [producer correction](bidirectional-demand-guidance-retention-im
 keeps explicit FLOW/DEMAND/ANY positions through cold, warm and fresh-delta
 admission. It revises the guidance part of the canonicalization contract below.
 It keeps the scalar emitter and concrete TAINT/data normalization unchanged.
-Its native correction is in progress; configured project acceptance is pending.
+The correction is committed as `4182adae6`. It passes 3,009 native tests.
+The four configured project commands have ended; quality and performance
+review remain open. The shared-loop reproducer still fails its finding check.
 
 This document implements the three selected changes from the
 [field-path design](bidirectional-flow-antichains-and-demand-discharge-20261104.md)

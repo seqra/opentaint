@@ -1,5 +1,9 @@
 # Canonical facts, NORMAL relations and directional inside: main campaign
 
+This is the historical `8331bf9e3` campaign. The later
+[`4182adae6` report](bidirectional-demand-guidance-retention-performance-20261106.md)
+records the selected demand-guide correction and its fresh measurements.
+
 **Status: main quality FAIL; proper-prefix subtraction contribution isolated.** Runtime `8331bf9e326ddd1bd5083dbc50456963d6b26b52` preserves OWASP and recent Stirling report identities, but its latest accepted Conductor report still misses two identities present in all five saved quality controls. Finer control B restores required R3 guidance and seven native R5 report projections by disabling only proper-prefix subtraction in `canonicalSpans`; same-point and cross-header behavior remain enabled. Control A, same-point removal off alone, retains five reports. A later cold B2 capture proves seven paired point/summary-store removals and a complete frozen explicit view: both captured contexts retain the root FLOW pair and omit the taskDefinition child pair. The later C2/report causal chain remains untraced. These diagnostics are not an accepted fix or performance result; the main campaign is not a completed correctness acceptance. Thingsboard has no accepted forward report.
 
 The [portable evidence](data/bidirectional-canonical-facts-normal-relations-directional-inside-performance-20261105.json) embeds exact identity sets, changed SARIF entries, per-run sample/allocation/resource data, memory signals, launch/source/helper/capture hashes, and executed reader commands. No baseline was rerun. All raw captures remain preserved.
@@ -333,10 +337,10 @@ The portable JSON contains the full strict identity sets once each, with hashed 
 
 The [next-iteration proposal](../design/bidirectional-frozen-inputs-no-cut-work-next-iteration-20261105.md)
 now places preservation of required refinement guidance at Priority0, before
-performance acceptance. A user behavior decision is pending: allow required
-implied C2 refinements from canonical facts, or keep current C2 outputs while
-repairing other guidance. The mechanism is UNDESIGNED/UNSELECTED; this is not
-a silent replacement of the prior canonical-only policy. The two measured
+performance acceptance. On 6 November, the user selected **keep STAR; repair
+demand guidance**. The bounded FLOW/DEMAND/ANY producer correction is committed
+as `4182adae6`; it keeps scalar C2 unchanged. Its fresh project measurements
+are separate from this historical `8331bf9e3` campaign. The two measured
 frozen-input/no-cut performance proposals remain unimplemented and unselected.
 Acceptance requires a designed and verified correction plus the required
 strict quality rerun. The diagnostic native-seven projection does not waive

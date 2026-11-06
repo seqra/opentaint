@@ -1,6 +1,6 @@
 # Demand-guide producer validation — 2026-11-06
 
-The selected producer repair passes **3,009 native tests** and restores the run-3 report checkpoint in both small prefix fixtures. Their natural traces finish run 5 with one normal report. The separate shared-loop fixture remains unresolved: it naturally completes run 5 with zero reports and fails its expected-one-report assertion. **Full-project quality and performance validation have not started.**
+The selected producer repair passes **3,009 native tests** and restores the run-3 report checkpoint in both small prefix fixtures. Their natural traces finish run 5 with one normal report. The separate shared-loop fixture remains unresolved: it naturally completes run 5 with zero reports and fails its expected-one-report assertion. This report seals the native validation before the project campaign. The fresh `4182adae6` project commands have now ended; their quality and performance review is separate.
 
 The [portable evidence bundle](data/bidirectional-demand-guidance-producer-validation-20261106.json) records the tested working-tree hashes, commands, XML counts and hashes, both new test classes and their complete final XML, the finite-model sources and checks, and complete program/shared-loop logs. Tests ran on the uncommitted correction over `f07e82139`; the commit that contains this report includes those tested source bytes. Report collection started no Gradle, JVM or Lean process and changed no production source or existing log.
 
@@ -65,4 +65,4 @@ RESULT firstReport=null normalReports=0 terminal=AnalysisEnd(status=COMPLETE, ru
 
 The analysis completed; its program assertion failed. The guide repair therefore does not resolve this reproducer. The full native pass must not be reported as all program or project quality passing.
 
-OWASP, Conductor, ThingsBoard and Stirling-PDF still require the committed-runtime campaign for baseline-relative quality, latest reached/completed/accepted iterations, OOM/timeouts, profiles and performance. No baseline was rerun here. There is no final Conductor-recovery, broad convergence or performance-improvement claim in this validation.
+The later committed-runtime campaign covers OWASP, Conductor, ThingsBoard and Stirling-PDF. Its baseline-relative quality, latest reached/completed/accepted iterations, OOM/timeouts, profiles and performance require a separate report. No baseline was rerun here. There is no final Conductor-recovery, broad convergence or performance-improvement claim in this native validation.
