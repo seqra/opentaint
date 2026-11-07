@@ -1,0 +1,227 @@
+{
+  "state": "PASS_LOCAL_SELECTED_SAME_HEAD_OVERLAP_ONLY",
+  "runs": [
+    {
+      "module": "Relations",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/subsumption-initial-demand-20261107",
+        "-M2048",
+        "-o",
+        "/tmp/star-head-overlap-_bvlgil7/Relations.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/subsumption-initial-demand-20261107/Relations.lean"
+      ]
+    },
+    {
+      "module": "Matching",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/subsumption-initial-demand-20261107",
+        "-M2048",
+        "-o",
+        "/tmp/star-head-overlap-_bvlgil7/Matching.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/subsumption-initial-demand-20261107/Matching.lean"
+      ]
+    },
+    {
+      "module": "ExclusionCorrelatedInclusion",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-joint-demand-redesign-20261107/formal/exclusion-correlated-inclusion/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/star-head-overlap-_bvlgil7/ExclusionCorrelatedInclusion.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-joint-demand-redesign-20261107/formal/exclusion-correlated-inclusion/proof-fix-attempt3/ExclusionCorrelatedInclusion.lean"
+      ]
+    },
+    {
+      "module": "StarHeadOverlap",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/star-head-overlap/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/star-head-overlap-_bvlgil7/StarHeadOverlap.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/star-head-overlap/proof-fix-attempt3/StarHeadOverlap.lean"
+      ]
+    }
+  ],
+  "axioms": [
+    {
+      "theorem": "StarHeadOverlap.admits_append_exact_intersection",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.matched_slice_is_exact_read_overlap",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.effective_E_requires_both_endpoints",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.output_retains_actual_and_both_endpoint_Es",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.output_using_matched_slice_is_equivalent",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.same_head_overlap_is_always_nonempty_at_root",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.equal_head_and_mark_are_sufficient_to_accept",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.base_mismatch_still_rejects",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.different_head_still_rejects_this_lane",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.excluded_mark_still_rejects",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.successful_application_retains_original_storage_value",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.output_does_not_change_tail_mark_or_H",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.DEMAND_actual_never_becomes_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.DEMAND_record_never_produces_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.NORMAL_support_stays_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.inverse_result_still_contains_both_endpoint_Es",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.checked_pair_cover_preserves_every_actual_effect",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.checked_pair_cover_is_symmetric_under_generic_reversal",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.inverse_checked_cover_keeps_every_actual_effect",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.same_head_role_guard_is_unchanged",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.proper_ancestor_STAR_current_lane_remains_blocked",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.incomparable_E_now_matches_without_losing_E",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.incoming_STAR_uses_the_same_overlap_without_a_MUST_upgrade",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.slice_does_not_change_actual_tail_layer_mark_or_H",
+      "axioms": []
+    },
+    {
+      "theorem": "StarHeadOverlap.inverse_has_no_invented_reader_E",
+      "axioms": []
+    }
+  ],
+  "scope": "Same-head incoming STAR or MUST through correlated STAR/STAR FLOW records. Exact E overlap, original actual/layer/H preserved, generic inverse headers and checked pair-effect inclusion only. No native store/driver theorem or proper-ancestor CURRENT change.",
+  "nativeAnalyzerProved": false,
+  "checkedTheorems": 25
+}

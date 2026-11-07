@@ -9,8 +9,10 @@ intersection specification with the required proofs. The
 is the new implementation target, with explicit native validation gates.
 No ANY premise and no
 new tail kind are permitted. Accepted same-head ANY and STAR inputs under
-an ANY demand produce an ordinary STAR identity start. Concrete-only
-admission remains. The STAR_OR_ANY design is historical, not a rule of the
+an ANY demand produce an ordinary STAR identity start. Primary concrete
+admission remains mark-specific. The reviewed design adds an explicit
+same-geometry FLOW/NORMAL companion for a concrete STAR/DEMAND primary in
+restricted runs; it also selects same-head exclusion-overlap matching. The STAR_OR_ANY design is historical, not a rule of the
 new design. The baseline reset does not change runtime source.
 
 Next-iteration summary restriction is specified in

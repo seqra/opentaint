@@ -84,6 +84,7 @@ empty method result.
 | E26 | Static setter/getter/consumer, marked demand and typed ZERO closure | Static erasure/completion contracts and native regression destinations |
 | E27 | Unprotected DEMAND STAR identity is not a NORMAL transfer proof | Conditional serialized pass rule; operational/native adapter obligation |
 | E28 | Complete paired FLOW permission for a cross-base transfer | New demand-completion interface control; no native result |
+| E29 | Two missed Conductor Graal findings; lost child demand and weaker C2 admission | Real frozen Current/B snapshot run-4/3/3; main run-15/14/13; later recovery run-4/3/3 |
 
 “Original proposal” means the frozen
 [implementation proposal](baselines/subsumption-20261105/original-implementation-proposal.md).
@@ -168,8 +169,10 @@ S exists only in saved records; L is current
 ```
 
 The original S1 aligned-law domain has nonstatic, nonzero singleton FLOW STAR
-endpoints, empty E and equal canonical mx. Broader cross-mx treatment is not
-silently part of that original domain.
+endpoints, empty E and equal canonical mx. The review explicitly extends
+that domain to legal statics, admitted nonempty E and mx subset coverage.
+This extension includes the selected overlap-matching bridge; it is not
+silently attributed to S1. See the unified spec §3 for its counterexamples.
 
 ## E03. Transitivity includes FLOW-backed concrete rows
 
@@ -197,7 +200,8 @@ For partial marks, let both A and B have the same mx excluding U. They may
 cover an unprotected T diagonal when T is admitted; they cannot cover a U
 diagonal. If only the T part is covered, keep the other actual marks and
 their flags. The implementation-time extension from equal mx to a subset
-test is not silently part of the original S1 aligned-law domain.
+test is not part of the original S1 proof domain. It is now an explicit
+reviewed extension, with a separate proof obligation.
 
 Already queued work can finish once. The original design does not add
 downstream retraction. Current publication, saved direct/reverse indexes and
@@ -652,7 +656,8 @@ must not taint child `C.g.h`; that negative control reports zero. Preserve
 all three programs, the real source action and actual field write. The
 static-carry adapter is not evidence that the later path has been repaired.
 
-R2 adds the complete named-field ANY/FLOW permission. C2 starts its NORMAL
+R2 adds the complete named-field ANY/FLOW permission. The review also adds
+an explicit FLOW companion when a primary concrete STAR/DEMAND is emitted. C2 starts its NORMAL
 FLOW identity. The disjoint write preserves g, paired C5 admits the inferred
 NORMAL g frame, and its later saved application transports the actual precise
 T descendant. `StaticFlowCompletion` checks this route and the strong-same-field
@@ -686,7 +691,9 @@ The later delivery C2 return list is not directly captured.
 ```
 
 L1 is write-only with respect to statics. It has no activated static FLOW
-read seed. Run-2 concrete-only admission does not invent FLOW. The getter's
+read seed. In that captured version, run-2 concrete-only admission did not
+invent FLOW. The review now adds an explicit companion for concrete STAR
+primaries; that does not relabel the old capture. The getter's
 FLOW row has another owner and relation. Implicit static carry is demand,
 not an available executable NORMAL S-to-S summary. A universal normal static
 identity is invalid through arbitrary strong writes.
@@ -1045,8 +1052,8 @@ The ordinary return is the actual transfer. No predefined summary is used.
 Adding only `(p.ANY/FLOW, p.ANY/FLOW)` and
 `(ret.ANY/FLOW, ret.ANY/FLOW)` is insufficient. The first admits the FLOW
 initial `p.g.STAR/FLOW,N`, but its paired output rejects `ret.g` by base.
-The second rejects the p-based premise. The original T pair cannot admit
-the FLOW premise either. C5 must not mix the first row's entry with the
+The second rejects the p-based premise. The original T pair has no primary on this deeper actual, so it also has no
+new companion. It cannot admit this FLOW premise through that branch. C5 must not mix the first row's entry with the
 second row's exit.
 
 The proposed demand completion adds the complete pair
@@ -1063,12 +1070,147 @@ It must not infer p-to-ret FLOW. A marked assignment or cleaner can also
 retain protected concrete dependencies; the added permission cannot remove
 their H flags or promote their support layer.
 
+## E29. Conductor: a covered location set can lose a refinement head
+
+Read-only evidence review, 7 November 2026. No new run was launched. This is
+a required real-project example for the unified redesign. The exact local
+guidance/admission defect is observed; its complete necessity for the two
+missing findings is not proved.
+
+### Required identities and saved routes
+
+Both identities use rule `java.security.graaljs-polyglot-code-injection`.
+
+| Sink method | Exact saved sink | Fingerprint |
+| --- | --- | --- |
+| `com.netflix.conductor.core.execution.evaluators.PythonEvaluator#evaluate(java.lang.String, java.lang.Object)` | IR58, `context.eval("python", wrappedExpression.toString())`; `PythonEvaluator.java:63` | `8rLVjoe1V3DqzuJubn3Pc1RsFnegW1yHtQ/fuKX0gXQ=` |
+| `com.netflix.conductor.core.events.ScriptEvaluator#getSource(java.lang.String)` | IR12, `Source.newBuilder("js", script, "inline")`; `ScriptEvaluator.java:253` | `EzmrpG1FD3CwGwVTQXyOH0FmoHson/4xsYBeDYPJbF8=` |
+
+The saved Python witness starts at `WorkflowResource.testWorkflow` line 444,
+through `WorkflowTestService` and `WorkflowServiceImpl.startWorkflow`. The
+saved Script witness starts at `WorkflowResource.rerun` line 311, through
+rerun task input and `tasks.StartWorkflow`. Both reach
+`WorkflowExecutorOps.startWorkflow(StartWorkflowInput)` and the workflow
+definition/model path. These are historical saved witness routes, not a new
+executed first-loss trace.
+
+```java
+// Abbreviated source path, with separate expression and task-input fields.
+workflow = createWorkflowModel(input, workflowDefinition, id);
+createAndEvaluate(workflow);                  // actual diagnostic call 9
+  createAndEvaluateWithLock(workflow);
+    decide(workflow);
+      decider.startWorkflow(workflow);
+        task = workflow.workflowDefinition.tasks.get(0);
+        getTasksToBeScheduled(workflow, task, 0);
+          mapper.getMappedTasks(context);
+            evaluator.evaluate(task.expression, context.taskInput);
+```
+
+Python also appends task-input map keys into its code text. The Script route
+uses GraalJSEvaluator and forwards expression to ScriptEvaluator. A
+taskDefinition field is a sibling, not an expression value. The pinned source
+audit has 37 exact snippets and 20 matched historical source pins.
+
+### Historical report and control ledger
+
+R/C/A means latest **reached/completed/accepted** iteration. It is not a claim
+of natural convergence or a measurement of the proposed redesign.
+
+| Runtime or diagnostic | R/C/A | Result and qualification |
+| --- | --- | --- |
+| Main 8331 canonical implementation | 15/14/13 | Accepted strict report has five rather than seven identities; both exact keys above absent. |
+| Same-point-only rollback A over 8331 | 6/5/5 | Both missing native R5 sink-signature report projections still absent. |
+| Proper-prefix-only rollback B over 8331 | 6/5/5 | Both native R5 report projections recover. This changes one `canonicalSpans` expression; not a strict new SARIF acceptance or performance result. |
+| Exact Current/B demand snapshot over production 8331 | 4/3/3 each | One complete event per side; 77 versus 175 paired local rows, 2 versus 3 initials, no drop/cap/error. |
+| Later selected storage runtime 7069 | 4/3/3 | Accepted strict report has all seven exact reference identities. Backward run 4 times out; convergence is not established. |
+
+Proper-prefix-off is a sufficient isolated intervention for the historical
+native report projection recovery. It also changes NORMAL actual packet
+normalization, so it is broader than a guidance-only repair. Later 7069
+recovers the strict identities but contains the selected storage changes;
+that campaign does not prove which individual transition is necessary for
+either finding. These facts must not be relabelled as a full native causal
+lineage for the particular query below.
+
+### Exact local missing coordinate and initializer
+
+Let `T` be the full atom
+`java/security/graaljs-polyglot-code-injection.yaml:graaljs-polyglot-code-injection#spring-source;0;$UNTRUSTED;2`.
+Let `wfDef` be the full typed field
+`WorkflowModel.workflowDefinition:WorkflowDef`.
+
+The equal F3 query is Ops `startWorkflow` to Ops `createAndEvaluate`, Empty
+context, physical call 9, stage 3, ROOT scope `(0,-1)`, global limit 2:
+
+```text
+Actual in BOTH: arg0.wfDef.MUST/T, NORMAL, E={}, H=null.
+Native DAG: empty root -> typed wfDef field -> uniform T leaf; no exact T.
+
+Current row15: arg0.ANY/FLOW -> this.taskStatusListener.ANY/FLOW.
+B row0:       the same root pair.
+B row16:      arg0.wfDef.ANY/FLOW -> the SAME taskStatusListener exit.
+Current complete local list has no wfDef.ANY/FLOW entry.
+
+Current initials: wfDef.STAR/FLOW,N + wfDef.STAR/T,D.
+B initials:       those same two + wfDef.MUST/FLOW,N.
+```
+
+This snapshot is the complete explicit local DATA/ZERO projection. Static
+completion/shared carry are absent; Target-entry rows are omitted by the API
+and cannot match this nonzero DATA query. It is not a global callee census.
+
+The query digest is
+`2d4642a06869395d21b1a14a86f54d47f4eeede366566207f111787138675a6e`.
+The unchanged emitter's root ANY rule advances one field and emits STAR;
+the child ANY rule is at the actual MUST head and can preserve MUST. The
+snapshot observes the complete demand lists and actual returned lists, but
+does not log which individual row produced each initializer.
+
+B later uses initializer ID 4784 as the original ROOT premise in an actual
+call to `createAndEvaluateWithLock` (sequence 1403, raw JSONL line 1414).
+This is a same-JVM positive identity association, not unique event lineage.
+
+The raw snapshot records are at JSONL line 2 in the two
+`conductor-must-demand-snapshot-*-20261106T110322460795Z` attempts. Exact
+records, typed catalogs, unchanged C2 code and controls are already embedded
+in the repository's snapshot JSON. The companion evidence index records
+their exact byte hashes, JSON pointers and all source package hashes.
+
+### What the new demand completion must prove
+
+Completion starts from final retained endpoint heads. Applied only to the
+displayed Current root-to-listener pair, it adds root and listener-prefix
+FLOW self-pairs and a paired root-to-listener erasure. It does **not** recreate
+the missing `arg0.wfDef.ANY` coordinate. The proposed root ANY C2 rule still
+returns wfDef.STAR/FLOW,N for this deeper MUST actual; that initializer was
+already present in Current. Merely adding a FLOW duplicate is not this
+example's recovery proof.
+
+A possible different route is to infer a genuine NORMAL root/field transport
+under a new explicit FLOW self-permission and the new STAR/NORMAL identity
+start in B2. Its actual saved-first application might preserve the source
+MUST packet before F3 current admission. That is an obligation, not an
+installed provider: show the real ordinary body transfer, C5 pair, aliases,
+owner/ports, publication and application. The full original P and actual
+T/E/H/support must remain. No discarded child coordinate may be reused as
+an endpoint, and no unconditional NORMAL frame may be invented.
+
+Acceptance requires both exact Graal identities and their negative controls,
+plus a real route through the selected canonical basis. Existing local
+MUST-versus-STAR repros show a refinement delay, not necessity for these final
+Conductor findings. No new performance, complete-program proof or redesign
+runtime result is claimed by E29.
+
+Required validation sources: [exact frozen snapshot](../docs/reports/bidirectional-conductor-must-demand-snapshot-20261106.md), [upstream admission](../docs/reports/bidirectional-conductor-upstream-admission-20261106.md), [quality/control investigation](../docs/reports/bidirectional-conductor-canonical-quality-regression-20261105.md), and [uniform small reproducer](../docs/reports/bidirectional-uniform-prefix-refinement-reproducer-20261106.md).
+The snapshot [portable JSON](../docs/reports/data/bidirectional-conductor-must-demand-snapshot-20261106.json) embeds the complete paired rows and actuals. The [E29 evidence index](lean/proposals/subsumption-initial-demand-20261107/conductor-e29-evidence-index.json) pins the existing artifacts; it is not another analyzer run.
+
 ## Closing ledger: design and validation
 
 | Area | Selected route | Proof or validation boundary |
 | --- | --- | --- |
 | C2 and C5 entry | One relative-input image; no ANY initial; ordinary STAR identity; same-head ANY/STAR accepted | 47-law image plus 30-law legal FLOW EXACT/E bridge; static/group adapters require native checks |
-| Precise STAR | Keep concrete-only admission and later strict-descendant rejection | E19/E20 recover through separately demanded and ordinarily inferred FLOW providers |
+| Precise STAR | Keep mark-specific primary admission, explicit STAR/FLOW companions and later strict-descendant rejection | E19/E20 recover through separately demanded and ordinarily inferred FLOW providers |
 | Deep Target | Keep exact Target geometry and real physical ports | Producer arrival and finite consumer proofs plus ALL-family depth bounds; native producer coverage must match the stated grammar |
 | Ordinary wrappers | Admit both FLOW and concrete STAR under same-head ANY | Loop-free wrapper derivation and concrete source/action route; no implicit FLOW converter |
 | Canonicalization | Canonical input only; no raw leaf archive | Original spatial/relation proofs, literal H/pass and E07 operational identity witness |
@@ -1076,6 +1218,12 @@ their H flags or promote their support layer.
 | FLOW demand completion | Complete all final DATA endpoints, preserve paired heads and ports | Proven provenance/count bounds and actual provider models; added selectors are not outgoing records |
 | Layers and sources | Conditional hypotheses do not upgrade actual support | E27 anti-promotion control and unchanged source compiler/gates; source permission still requires actual SourceHit |
 | Stopping | Stop when inferred outgoing refinement demand is empty | Scoped E22 no-D family; arbitrary Java and whole-driver convergence are not claimed |
+
+E29 is an explicit unresolved recovery obligation. The new companion alone
+returns a FLOW STAR command which Current already had; root-prefix completion
+alone does not reconstruct the missing wfDef head. A saved NORMAL route must
+be proved from the actual body, or the demand design must be revised. Do not
+label E29 fixed by the smaller examples.
 
 The combined spec defines each selected change and its unchanged mechanisms.
 The proof package states the exact domains of its theorems. Implement from

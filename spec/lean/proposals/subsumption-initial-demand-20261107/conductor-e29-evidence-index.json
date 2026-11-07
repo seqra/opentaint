@@ -1,0 +1,2068 @@
+{
+  "schema": "conductor-principal-example-design-review-v1",
+  "state": "HISTORICAL_LOCAL_CAUSAL_MECHANISM_PLUS_REPORT_RECOVERY_NOT_COMPLETE_REQUIRED_FACT_LINEAGE",
+  "createdUTC": "2026-11-07T17:27:20.994126+00:00",
+  "noJobsLaunched": true,
+  "identities": [
+    {
+      "family": "ScriptEvaluator.getSource",
+      "rule": "java.security.graaljs-polyglot-code-injection",
+      "fingerprints": {
+        "vulnerabilitySinkHash/v1": "EzmrpG1FD3CwGwVTQXyOH0FmoHson/4xsYBeDYPJbF8=",
+        "vulnerabilityWithTraceHash/v1": "q9Pyl4dGeg7dEU3aSD+tU45PyU3rJ9184w63ntZNZlA=",
+        "vulnerabilitySourceSinkHash/v1": "XwZ5Hp7oRb/d9Epw+EWzlpXu/eCaHJ6y1HnTzrXrLNM="
+      },
+      "sink": [
+        {
+          "logicalLocations": [
+            {
+              "decoratedName": "com.netflix.conductor.core.events.ScriptEvaluator#getSource(java.lang.String):12:(%8 = org.graalvm.polyglot.Source.newBuilder(\"js\", script, \"inline\"))",
+              "fullyQualifiedName": "com.netflix.conductor.core.events.ScriptEvaluator#getSource"
+            }
+          ],
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "core/src/main/java/com/netflix/conductor/core/events/ScriptEvaluator.java",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "endColumn": 66,
+              "endLine": 253,
+              "startColumn": 25,
+              "startLine": 253
+            }
+          }
+        }
+      ],
+      "firstHistoricalSource": {
+        "signature": "com.netflix.conductor.rest.controllers.WorkflowResource#rerun(java.lang.String, com.netflix.conductor.common.metadata.workflow.RerunWorkflowRequest)",
+        "source": "/drive-testcomp/opentaint-go-rules/opentaint-test/opentaint-test-conductor/opentaint-project/sources/rest/src/main/java/com/netflix/conductor/rest/controllers/WorkflowResource.java",
+        "line": 311,
+        "executionOrder": 0
+      },
+      "sourceQualification": "Historical saved shortest witness, not a currently executed first-loss path."
+    },
+    {
+      "family": "PythonEvaluator.evaluate",
+      "rule": "java.security.graaljs-polyglot-code-injection",
+      "fingerprints": {
+        "vulnerabilitySinkHash/v1": "8rLVjoe1V3DqzuJubn3Pc1RsFnegW1yHtQ/fuKX0gXQ=",
+        "vulnerabilityWithTraceHash/v1": "266HvS++FG1kCFOnjA96mlt+2v7b0e99dRKkXF6WCvU=",
+        "vulnerabilitySourceSinkHash/v1": "5Z0paTcbpFWw375Xtahij/4976Syl9AHL06SimS7cHU="
+      },
+      "sink": [
+        {
+          "logicalLocations": [
+            {
+              "decoratedName": "com.netflix.conductor.core.execution.evaluators.PythonEvaluator#evaluate(java.lang.String, java.lang.Object):58:(%54 = context.eval(\"python\", %53))",
+              "fullyQualifiedName": "com.netflix.conductor.core.execution.evaluators.PythonEvaluator#evaluate"
+            }
+          ],
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "core/src/main/java/com/netflix/conductor/core/execution/evaluators/PythonEvaluator.java",
+              "uriBaseId": "%SRCROOT%"
+            },
+            "region": {
+              "endColumn": 69,
+              "endLine": 63,
+              "startColumn": 17,
+              "startLine": 63
+            }
+          }
+        }
+      ],
+      "firstHistoricalSource": {
+        "signature": "com.netflix.conductor.rest.controllers.WorkflowResource#testWorkflow(com.netflix.conductor.common.run.WorkflowTestRequest)",
+        "source": "/drive-testcomp/opentaint-go-rules/opentaint-test/opentaint-test-conductor/opentaint-project/sources/rest/src/main/java/com/netflix/conductor/rest/controllers/WorkflowResource.java",
+        "line": 444,
+        "executionOrder": 0
+      },
+      "sourceQualification": "Historical saved shortest witness, not a currently executed first-loss path."
+    }
+  ],
+  "main8331": {
+    "revision": "8331bf9e326ddd1bd5083dbc50456963d6b26b52",
+    "labels": {
+      "reached": "run-15",
+      "complete": "run-14",
+      "accepted": "run-13"
+    },
+    "status": "TIMEOUT",
+    "currentIdentities": [
+      [
+        "sink_fingerprint_and_signature",
+        "java.lib.spring.conductor-grpc-request-sources",
+        "GZq7l1SODxinboaulKsDv0IJkTl6JvLI1dgEvLNcE1Y=",
+        "com.netflix.conductor.core.storage.DummyPayloadStorage#download(java.lang.String)"
+      ],
+      [
+        "sink_fingerprint_and_signature",
+        "java.security.path-traversal",
+        "A+3He/9p1s0sYKPSmpIfTV02cko39mJCFbeQmP9nGpE=",
+        "com.netflix.conductor.core.storage.DummyPayloadStorage#download(java.lang.String)"
+      ],
+      [
+        "sink_fingerprint_and_signature",
+        "java.security.ssrf",
+        "8chXSO0sp476Fj4IIm/lOnASKH6RTCFtLhpqvqHNNcU=",
+        "com.netflix.conductor.tasks.http.HttpTask#httpCall(com.netflix.conductor.tasks.http.HttpTask$Input)"
+      ],
+      [
+        "sink_fingerprint_and_signature",
+        "java.security.stacktrace-printing-in-error-message",
+        "bn66z7sgP+CR6l17RWo6NU+Zh14ar79s4Cm4aygf3Bg=",
+        "com.netflix.conductor.postgres.dao.PostgresQueueDAO#lambda$processAllUnacks$20(java.sql.Connection)"
+      ],
+      [
+        "sink_fingerprint_and_signature",
+        "java.security.stacktrace-printing-in-error-message",
+        "tOvnaMZ8jLHU1m1rPbpXfXBkPOyyRWi0ff8MaA8A3Ag=",
+        "com.netflix.conductor.sqlite.dao.SqliteQueueDAO#lambda$processAllUnacks$20(java.sql.Connection)"
+      ]
+    ],
+    "missingIdentities": [
+      [
+        "sink_fingerprint_and_signature",
+        "java.security.graaljs-polyglot-code-injection",
+        "8rLVjoe1V3DqzuJubn3Pc1RsFnegW1yHtQ/fuKX0gXQ=",
+        "com.netflix.conductor.core.execution.evaluators.PythonEvaluator#evaluate(java.lang.String, java.lang.Object)"
+      ],
+      [
+        "sink_fingerprint_and_signature",
+        "java.security.graaljs-polyglot-code-injection",
+        "EzmrpG1FD3CwGwVTQXyOH0FmoHson/4xsYBeDYPJbF8=",
+        "com.netflix.conductor.core.events.ScriptEvaluator#getSource(java.lang.String)"
+      ]
+    ]
+  },
+  "properPrefixFeatureControls": {
+    "A": {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-same-point-rollback-R3-R5-20261105T193820514936Z/actual-canonical-isolation-A-audit.json",
+      "sha256": "ef190eb31fb71526a46d84ab3bc7beb03892d04c754ba717331bbb8be887572e",
+      "labels": {
+        "latest_bidi_iteration": "run-6",
+        "latest_complete_bidi_iteration": "run-5",
+        "latest_accepted_forward_report": "run-5"
+      },
+      "R5RecoveredGraalCount": 0,
+      "nativeProjectionComparison": "Only rule suffix+fullJava sink signature compared across native snapshots/SARIF; full source line/instruction retained. No fingerprint fabricated.",
+      "qualification": [
+        "Only the selected one-line canonicalSpans leaf change is applied; exact source delta and native T/FLOW C2 controls are embedded. A removes same-point MAY/EXACT deletion only. B removes proper-prefix deletion only, including canonicalRegions same-header uses; cross-header canonicalRegions policy is unchanged. Other Group warm/fresh behavior remains.",
+        "E/mx/header joins/fills, protection, canonicalRegions below-coordinate logic, NORMAL relation/transitivity, canonical-only C2, reverse-MUST overlap and opposite-only STAR remain enabled.",
+        "Single-feature control results do not by themselves identify the first lost AP/reader edge or exclude interactions.",
+        "A missing/dropped collection is unavailable, never empty. Global NormalTarget membership is not itself a report; authoritative identities come from committed terminals.entries.",
+        "All counts/timings belong only to this diagnostic schedule, excluded from main performance comparison. Main quality gate remains unresolved until runtime fix and required rerun."
+      ]
+    },
+    "B": {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-packet-prefix-rollback-R3-R5-20261105T194238311896Z/actual-canonical-isolation-B-audit.json",
+      "sha256": "8b47aadad780be310632e9d16177e869e2417555329eafa3bb0b56dcb0b65ee3",
+      "labels": {
+        "latest_bidi_iteration": "run-6",
+        "latest_complete_bidi_iteration": "run-5",
+        "latest_accepted_forward_report": "run-5"
+      },
+      "R5RecoveredGraalCount": 2,
+      "nativeProjectionComparison": "Only rule suffix+fullJava sink signature compared across native snapshots/SARIF; full source line/instruction retained. No fingerprint fabricated.",
+      "qualification": [
+        "Only the selected one-line canonicalSpans leaf change is applied; exact source delta and native T/FLOW C2 controls are embedded. A removes same-point MAY/EXACT deletion only. B removes proper-prefix deletion only, including canonicalRegions same-header uses; cross-header canonicalRegions policy is unchanged. Other Group warm/fresh behavior remains.",
+        "E/mx/header joins/fills, protection, canonicalRegions below-coordinate logic, NORMAL relation/transitivity, canonical-only C2, reverse-MUST overlap and opposite-only STAR remain enabled.",
+        "Single-feature control results do not by themselves identify the first lost AP/reader edge or exclude interactions.",
+        "A missing/dropped collection is unavailable, never empty. Global NormalTarget membership is not itself a report; authoritative identities come from committed terminals.entries.",
+        "All counts/timings belong only to this diagnostic schedule, excluded from main performance comparison. Main quality gate remains unresolved until runtime fix and required rerun."
+      ]
+    }
+  },
+  "exactSnapshot": {
+    "summary": {
+      "schema": "opentaint.conductor-must-demand-snapshot-positive-witness.v1",
+      "state": "COMPLETE_PAIRED_LOCAL_SNAPSHOT_WITNESS",
+      "selectedContract": "KEEP_STAR_REPAIR_DEMAND_GUIDANCE",
+      "semanticPolicyChanged": false,
+      "checks": {
+        "completeCurrent": true,
+        "completeB": true,
+        "noInvalidRecords": true,
+        "oneExactFullInputMatch": true,
+        "fullCallKeyEqual": true,
+        "crossJvmPrerequisitesEqual": true,
+        "oneRootChildPairWithEqualTypedExit": true,
+        "currentRowsStrictSubsetOfB": true,
+        "allRowsPaired": true,
+        "BExtraIsOneMustNormalFlow": true,
+        "rollbackSourceOneExpressionOnly": true,
+        "rollbackAbiChecksPass": true,
+        "onlyCanonicalSpansBytecodeChanges": true
+      },
+      "latestReachedCompletedAccepted": {
+        "current": [
+          4,
+          3,
+          3
+        ],
+        "pairedB": [
+          4,
+          3,
+          3
+        ]
+      },
+      "semanticInput": {
+        "run": 3,
+        "direction": "FORWARD",
+        "hook": "enterCallees",
+        "fieldLimit": 2,
+        "markMode": "FULL",
+        "caller": {
+          "method": "com.netflix.conductor.core.execution.WorkflowExecutorOps#startWorkflow(com.netflix.conductor.core.execution.StartWorkflowInput)",
+          "methodName": "startWorkflow",
+          "parameters": [
+            "com.netflix.conductor.core.execution.StartWorkflowInput"
+          ],
+          "returnType": "java.lang.String",
+          "entryIndex": 40,
+          "contextCodec": "org.opentaint.dataflow.jvm.ap.ifds.JIRMethodContextSerializer",
+          "contextNativeBase64": "AA=="
+        },
+        "callee": {
+          "method": "com.netflix.conductor.core.execution.WorkflowExecutorOps#createAndEvaluate(com.netflix.conductor.model.WorkflowModel)",
+          "methodName": "createAndEvaluate",
+          "parameters": [
+            "com.netflix.conductor.model.WorkflowModel"
+          ],
+          "returnType": "void",
+          "entryIndex": 18,
+          "contextCodec": "org.opentaint.dataflow.jvm.ap.ifds.JIRMethodContextSerializer",
+          "contextNativeBase64": "AA=="
+        },
+        "physicalCallIndex": 9,
+        "callerScopeBlock": 0,
+        "callerScopeEntry": -1,
+        "stageOrdinal": 3,
+        "originalP": {
+          "kind": "INITIAL",
+          "members": [
+            {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.core.execution.StartWorkflowInput",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "ANY_TAINT",
+              "E": [],
+              "mark": {
+                "kind": "CONCRETE",
+                "mark": {
+                  "kind": "FULL",
+                  "name": "java/security/graaljs-polyglot-code-injection.yaml:graaljs-polyglot-code-injection#spring-source;0;$UNTRUSTED;2"
+                }
+              }
+            }
+          ]
+        },
+        "actualFacts": {
+          "kind": "TAINT",
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+          "base": "arg(0)",
+          "layer": "NORMAL",
+          "tail": "ANY_TAINT",
+          "E": [],
+          "rootDigest": "be6c8da77e0823f9efbda07bc9f0144bdc3bb4b47b38512baa54776cae756e2e",
+          "protectionDigest": null
+        },
+        "actualLayer": "NORMAL",
+        "callerLayer": "NORMAL",
+        "linkLayer": "NORMAL",
+        "zeroOnly": false
+      },
+      "admissionQuery": {
+        "run": 3,
+        "direction": "FORWARD",
+        "fieldLimit": 2,
+        "markMode": "FULL",
+        "callee": {
+          "method": "com.netflix.conductor.core.execution.WorkflowExecutorOps#createAndEvaluate(com.netflix.conductor.model.WorkflowModel)",
+          "methodName": "createAndEvaluate",
+          "parameters": [
+            "com.netflix.conductor.model.WorkflowModel"
+          ],
+          "returnType": "void",
+          "entryIndex": 18,
+          "contextCodec": "org.opentaint.dataflow.jvm.ap.ifds.JIRMethodContextSerializer",
+          "contextNativeBase64": "AA=="
+        },
+        "actualFacts": {
+          "kind": "TAINT",
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+          "base": "arg(0)",
+          "layer": "NORMAL",
+          "tail": "ANY_TAINT",
+          "E": [],
+          "rootDigest": "be6c8da77e0823f9efbda07bc9f0144bdc3bb4b47b38512baa54776cae756e2e",
+          "protectionDigest": null
+        }
+      },
+      "current": {
+        "raw": {
+          "file": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-current-20261106T110322460795Z/admission-capture.jsonl",
+          "line": 2,
+          "byteOffset": 1043,
+          "bytes": 50847,
+          "sha256": "15bbce9aa35d63869f3b47e0f19e273b8f814b74b75c9fc230c2d9b0bef52c66"
+        },
+        "sequence": 1,
+        "semanticInputDigest": "1d8e7aef9dd923c7136a9ef38dc26d49e8cf3033718d0b951d06e9e8c2cb890b",
+        "admissionQueryDigest": "2d4642a06869395d21b1a14a86f54d47f4eeede366566207f111787138675a6e",
+        "initialSet": [
+          {
+            "pattern": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "CONCRETE",
+                "mark": {
+                  "kind": "FULL",
+                  "name": "java/security/graaljs-polyglot-code-injection.yaml:graaljs-polyglot-code-injection#spring-source;0;$UNTRUSTED;2"
+                }
+              }
+            },
+            "layer": "DEMAND"
+          },
+          {
+            "pattern": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            },
+            "layer": "NORMAL"
+          }
+        ],
+        "initialOrder": [
+          {
+            "pattern": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            },
+            "layer": "NORMAL"
+          },
+          {
+            "pattern": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "CONCRETE",
+                "mark": {
+                  "kind": "FULL",
+                  "name": "java/security/graaljs-polyglot-code-injection.yaml:graaljs-polyglot-code-injection#spring-source;0;$UNTRUSTED;2"
+                }
+              }
+            },
+            "layer": "DEMAND"
+          }
+        ],
+        "localReturnedInitialIds": [
+          3147,
+          4540
+        ],
+        "snapshot": {
+          "projection": "EXPLICIT_LOCAL_NONSTATIC_DATA_AND_ZERO_ROWS",
+          "hasStaticCompletion": false,
+          "hasSharedStaticCarry": false,
+          "targetEntryRowsOmitted": true,
+          "targetEntryCannotMatchSelectedData": true,
+          "complete": true,
+          "rowCount": 77,
+          "pairedRowCount": 77,
+          "entryOnlyRowCount": 0,
+          "rowSetDigest": "a5124d039304db65b4915c2b0407af3cb196f35c6d4d324411ed1bb7d6e5dd16",
+          "rowMultisetDigest": "a5124d039304db65b4915c2b0407af3cb196f35c6d4d324411ed1bb7d6e5dd16",
+          "rowOrderDigest": "f25edebc82bc067f8ee334d2ac99e72cc32e17dbddbb5fd328cacbd3ed41a7b3"
+        },
+        "selectedFlowRows": [
+          {
+            "ordinal": 15,
+            "coordinate": "ROOT_ANY_FLOW",
+            "row": {
+              "entry": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+                "base": "arg(0)",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              },
+              "exit": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$This",
+                "base": "<this>",
+                "path": [
+                  {
+                    "kind": "FIELD",
+                    "className": "com.netflix.conductor.core.execution.WorkflowExecutorOps",
+                    "fieldName": "taskStatusListener",
+                    "fieldType": "com.netflix.conductor.core.listener.TaskStatusListener"
+                  }
+                ],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            }
+          },
+          {
+            "ordinal": 30,
+            "coordinate": "ROOT_ANY_FLOW",
+            "row": {
+              "entry": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+                "base": "arg(0)",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              },
+              "exit": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$This",
+                "base": "<this>",
+                "path": [
+                  {
+                    "kind": "FIELD",
+                    "className": "com.netflix.conductor.core.execution.WorkflowExecutorOps",
+                    "fieldName": "workflowStatusListener",
+                    "fieldType": "com.netflix.conductor.core.listener.WorkflowStatusListener"
+                  }
+                ],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            }
+          }
+        ]
+      },
+      "pairedB": {
+        "raw": {
+          "file": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-pairedB-20261106T110322460795Z/admission-capture.jsonl",
+          "line": 2,
+          "byteOffset": 1043,
+          "bytes": 103017,
+          "sha256": "8c23e20c83492e8831d3404bfe6951ddd8a1076a0d6bf94b37d1e88307d8791a"
+        },
+        "sequence": 1,
+        "semanticInputDigest": "1d8e7aef9dd923c7136a9ef38dc26d49e8cf3033718d0b951d06e9e8c2cb890b",
+        "admissionQueryDigest": "2d4642a06869395d21b1a14a86f54d47f4eeede366566207f111787138675a6e",
+        "initialSet": [
+          {
+            "pattern": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "CONCRETE",
+                "mark": {
+                  "kind": "FULL",
+                  "name": "java/security/graaljs-polyglot-code-injection.yaml:graaljs-polyglot-code-injection#spring-source;0;$UNTRUSTED;2"
+                }
+              }
+            },
+            "layer": "DEMAND"
+          },
+          {
+            "pattern": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "ANY_TAINT",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            },
+            "layer": "NORMAL"
+          },
+          {
+            "pattern": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            },
+            "layer": "NORMAL"
+          }
+        ],
+        "initialOrder": [
+          {
+            "pattern": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            },
+            "layer": "NORMAL"
+          },
+          {
+            "pattern": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "CONCRETE",
+                "mark": {
+                  "kind": "FULL",
+                  "name": "java/security/graaljs-polyglot-code-injection.yaml:graaljs-polyglot-code-injection#spring-source;0;$UNTRUSTED;2"
+                }
+              }
+            },
+            "layer": "DEMAND"
+          },
+          {
+            "pattern": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "ANY_TAINT",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            },
+            "layer": "NORMAL"
+          }
+        ],
+        "localReturnedInitialIds": [
+          3276,
+          4654,
+          4659
+        ],
+        "snapshot": {
+          "projection": "EXPLICIT_LOCAL_NONSTATIC_DATA_AND_ZERO_ROWS",
+          "hasStaticCompletion": false,
+          "hasSharedStaticCarry": false,
+          "targetEntryRowsOmitted": true,
+          "targetEntryCannotMatchSelectedData": true,
+          "complete": true,
+          "rowCount": 175,
+          "pairedRowCount": 175,
+          "entryOnlyRowCount": 0,
+          "rowSetDigest": "250ee63a91cf2888cd55223376ce0398f2237734501ccc19c90c6261b737a5a6",
+          "rowMultisetDigest": "250ee63a91cf2888cd55223376ce0398f2237734501ccc19c90c6261b737a5a6",
+          "rowOrderDigest": "d7d4be195393c3ab333729a1c43451bb61b53fffc6ff7122af1fbd5b2b904d3c"
+        },
+        "selectedFlowRows": [
+          {
+            "ordinal": 0,
+            "coordinate": "ROOT_ANY_FLOW",
+            "row": {
+              "entry": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+                "base": "arg(0)",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              },
+              "exit": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$This",
+                "base": "<this>",
+                "path": [
+                  {
+                    "kind": "FIELD",
+                    "className": "com.netflix.conductor.core.execution.WorkflowExecutorOps",
+                    "fieldName": "taskStatusListener",
+                    "fieldType": "com.netflix.conductor.core.listener.TaskStatusListener"
+                  }
+                ],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            }
+          },
+          {
+            "ordinal": 16,
+            "coordinate": "WORKFLOW_DEFINITION_ANY_FLOW",
+            "row": {
+              "entry": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+                "base": "arg(0)",
+                "path": [
+                  {
+                    "kind": "FIELD",
+                    "className": "com.netflix.conductor.model.WorkflowModel",
+                    "fieldName": "workflowDefinition",
+                    "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                  }
+                ],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              },
+              "exit": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$This",
+                "base": "<this>",
+                "path": [
+                  {
+                    "kind": "FIELD",
+                    "className": "com.netflix.conductor.core.execution.WorkflowExecutorOps",
+                    "fieldName": "taskStatusListener",
+                    "fieldType": "com.netflix.conductor.core.listener.TaskStatusListener"
+                  }
+                ],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            }
+          },
+          {
+            "ordinal": 55,
+            "coordinate": "ROOT_ANY_FLOW",
+            "row": {
+              "entry": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+                "base": "arg(0)",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              },
+              "exit": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$This",
+                "base": "<this>",
+                "path": [
+                  {
+                    "kind": "FIELD",
+                    "className": "com.netflix.conductor.core.execution.WorkflowExecutorOps",
+                    "fieldName": "workflowStatusListener",
+                    "fieldType": "com.netflix.conductor.core.listener.WorkflowStatusListener"
+                  }
+                ],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            }
+          }
+        ]
+      },
+      "samePairedExitRootChild": {
+        "currentRootRow": {
+          "ordinal": 15,
+          "coordinate": "ROOT_ANY_FLOW",
+          "row": {
+            "entry": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [],
+              "tail": "ANY",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            },
+            "exit": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$This",
+              "base": "<this>",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.core.execution.WorkflowExecutorOps",
+                  "fieldName": "taskStatusListener",
+                  "fieldType": "com.netflix.conductor.core.listener.TaskStatusListener"
+                }
+              ],
+              "tail": "ANY",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            }
+          }
+        },
+        "pairedBChildRow": {
+          "ordinal": 16,
+          "coordinate": "WORKFLOW_DEFINITION_ANY_FLOW",
+          "row": {
+            "entry": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "ANY",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            },
+            "exit": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$This",
+              "base": "<this>",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.core.execution.WorkflowExecutorOps",
+                  "fieldName": "taskStatusListener",
+                  "fieldType": "com.netflix.conductor.core.listener.TaskStatusListener"
+                }
+              ],
+              "tail": "ANY",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            }
+          }
+        },
+        "pairedExitEqual": true,
+        "emissionAttributionObserved": false
+      },
+      "rowDifferenceCounts": {
+        "current": 77,
+        "pairedB": 175,
+        "extraB": 98,
+        "extraCurrent": 0
+      },
+      "rollbackSourceAndAbi": {
+        "oldExpression": "val leaf = samePoint(minus(key.node.leaf, key.above))",
+        "controlExpression": "val leaf = samePoint(key.node.leaf)",
+        "baseSource": {
+          "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/SpatialCanonical.kt",
+          "sha256": "2a915fc4eac7be13471891f111cf8d84bbfe4ecda9be37d6da3e8e4947e09a83",
+          "bytes": 23255
+        },
+        "overlaySource": {
+          "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/packet-prefix-rollback-capsule-20261105/overlay-src/org/opentaint/dataflow/bidi/ap/SpatialCanonical.kt",
+          "sha256": "721dad9240d50d5ced51ec20561759b1cc81234505426ddc138044e1f445396d",
+          "bytes": 23237
+        },
+        "verification": {
+          "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/preparation/packet-prefix-rollback-capsule-20261105/abi-and-smoke-verification.json",
+          "sha256": "d5d296730216b7e3aae1d97faefa842456ea0345be052848cc43df55165c0320",
+          "bytes": 146321
+        },
+        "verificationState": "PASS",
+        "checks": 60,
+        "changedExecutableMethods": [
+          {
+            "className": "org/opentaint/dataflow/bidi/ap/SpatialCanonicalKt.class",
+            "method": [
+              "canonicalSpans",
+              "(Lorg/opentaint/dataflow/bidi/ap/LeafAlgebra;Lorg/opentaint/dataflow/bidi/ap/TrieNode;Lorg/opentaint/dataflow/bidi/ap/ExclusionSet;Lorg/opentaint/dataflow/bidi/ap/ApManager;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Lorg/opentaint/dataflow/bidi/ap/TrieNode;"
+            ]
+          }
+        ],
+        "interpretation": "Difference across paired executions is controlled by this verified rollback; snapshots do not capture a single earlier B2 mutation transaction."
+      },
+      "artifacts": {
+        "decode.py": {
+          "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/conductor-must-demand-snapshot-20261106/decode.py",
+          "sha256": "8a80a5ce7d58b51859912f0c27f99feafa51a496aef81bd4209bcab1309247f4",
+          "bytes": 54978
+        },
+        "test_decoder.py": {
+          "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/conductor-must-demand-snapshot-20261106/test_decoder.py",
+          "sha256": "d6f1800ce5a02199572ffa5b9a98c5e1db3b4508a80d20e9c919059f87188359",
+          "bytes": 9523
+        },
+        "source-provenance.json": {
+          "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/conductor-must-demand-snapshot-20261106/source-provenance.json",
+          "sha256": "9e680f6471b4f7b69375d59bd3ac1f3dd7a84dfdbcc5cb237446c03d39666284",
+          "bytes": 1243
+        },
+        "baseline-RestrictedInitialPolicy.kt.txt": {
+          "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/conductor-must-demand-snapshot-20261106/baseline-RestrictedInitialPolicy.kt.txt",
+          "sha256": "dcbaee551ecdae33590c56ef0154bfd0ef419c8c8fa3dc7b38127006a73ad44e",
+          "bytes": 7862
+        },
+        "current-decoded.json": {
+          "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/conductor-must-demand-snapshot-20261106/current-decoded.json",
+          "sha256": "bd92cb0d878e40a0f3ae99f5e62b6ff110c179cec61927837ebf6a2614a6d98b",
+          "bytes": 230735
+        },
+        "pairedB-decoded.json": {
+          "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/conductor-must-demand-snapshot-20261106/pairedB-decoded.json",
+          "sha256": "88ca4504ae1f9bc0765626d94164cf8320b49974af207946d7ed2823f2fdc408",
+          "bytes": 536709
+        },
+        "paired-comparison.json": {
+          "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/conductor-must-demand-snapshot-20261106/paired-comparison.json",
+          "sha256": "c4be14c2937d04f61537552569165ac343c953fc84a4edcb8d520a5e8610628a",
+          "bytes": 847163
+        }
+      },
+      "rawInputs": {
+        "current": {
+          "admission-capture.jsonl": {
+            "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-current-20261106T110322460795Z/admission-capture.jsonl",
+            "sha256": "8dde3cbaf480a0b2bede347828d7055c9df49818cc8d00b2c8465c254f49c294",
+            "bytes": 51890
+          },
+          "analyzer.log": {
+            "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-current-20261106T110322460795Z/analyzer.log",
+            "sha256": "df275265c5d4d47fd6cde8f3de6a1648fe0a46bda82b9b2e51309406af35805f",
+            "bytes": 9177477
+          },
+          "manifest.json": {
+            "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-current-20261106T110322460795Z/manifest.json",
+            "sha256": "ea90fcf128fca61516a8524d88d4be8c0151d7c4011303d109b295449da181d9",
+            "bytes": 69356
+          },
+          "overlay-runtime-verification.json": {
+            "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-current-20261106T110322460795Z/overlay-runtime-verification.json",
+            "sha256": "6d6a1b36c8c42b1fa4ac03f08b547590d7baa6568e43c2ab6d376378da3479ee",
+            "bytes": 57615
+          },
+          "artifact-hashes.json": {
+            "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-current-20261106T110322460795Z/artifact-hashes.json",
+            "sha256": "e1f770bd83e41669c1c9ae80e17a5fd188bf68bd245bf4d8547ec8d42a4b6a46",
+            "bytes": 1454
+          },
+          "progress-evidence.json": {
+            "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-current-20261106T110322460795Z/progress-evidence.json",
+            "sha256": "237d79a6e7a4f4f5d36e113e8325e4e16cfe0b05252698e0575bebf6335ab8bb",
+            "bytes": 11160
+          }
+        },
+        "pairedB": {
+          "admission-capture.jsonl": {
+            "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-pairedB-20261106T110322460795Z/admission-capture.jsonl",
+            "sha256": "42c72bc4b95ecbd98e70ac1ba2084878e7a72bb54cef584666ba0373aff1d2ab",
+            "bytes": 104060
+          },
+          "analyzer.log": {
+            "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-pairedB-20261106T110322460795Z/analyzer.log",
+            "sha256": "2cb714dadcf135f83632a60c119faf9ab2fccdd940d4b2b1c581cf2c40843e51",
+            "bytes": 9268537
+          },
+          "manifest.json": {
+            "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-pairedB-20261106T110322460795Z/manifest.json",
+            "sha256": "f51a9b06ed3b9f37324312f49bfffe4908c1361e1dc59b79ca321bdf8f80da56",
+            "bytes": 70310
+          },
+          "overlay-runtime-verification.json": {
+            "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-pairedB-20261106T110322460795Z/overlay-runtime-verification.json",
+            "sha256": "b4dd2e0eaf80c0a9156aaba83a5a2f762594a4a1165d989613e416c0a2093dfa",
+            "bytes": 58566
+          },
+          "artifact-hashes.json": {
+            "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-pairedB-20261106T110322460795Z/artifact-hashes.json",
+            "sha256": "63e62adcab15d1fe30c1b26cd3b1021ae3b1efda13856f6374494bfde7b1d885",
+            "bytes": 1456
+          },
+          "progress-evidence.json": {
+            "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-pairedB-20261106T110322460795Z/progress-evidence.json",
+            "sha256": "fe33eeeca51e5de43f085e795ada6c293962ee6121699ce25dd1b2f63e53144b",
+            "bytes": 11183
+          }
+        }
+      },
+      "limits": [
+        "Explicit local nonstatic DATA/ZERO projection; Target-entry rows omitted and cannot match selected DATA query.",
+        "No global history, final missing-finding necessity, full-run quality/performance or convergence result.",
+        "Row-to-initial rule attribution uses unchanged source reasoning; no native per-row emission query was added.",
+        "No direct observation of a prior B2 normalization mutation or unique delivery event."
+      ]
+    },
+    "productionRevision": "8331bf9e326ddd1bd5083dbc50456963d6b26b52",
+    "evidenceRepositoryRevision": "94dc8549fa520b78a4f3e0436551473ae1a2d744",
+    "variants": {
+      "current": {
+        "rawReference": {
+          "file": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-current-20261106T110322460795Z/admission-capture.jsonl",
+          "line": 2,
+          "byteOffset": 1043,
+          "bytes": 50847,
+          "sha256": "15bbce9aa35d63869f3b47e0f19e273b8f814b74b75c9fc230c2d9b0bef52c66"
+        },
+        "exactRecordInExistingPortableEvidence": {
+          "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/docs/reports/data/bidirectional-conductor-must-demand-snapshot-20261106.json",
+          "jsonPointer": "/records/current/exactRawJsonlLine"
+        },
+        "admissionQueryDigest": "2d4642a06869395d21b1a14a86f54d47f4eeede366566207f111787138675a6e",
+        "semanticInputDigest": "1d8e7aef9dd923c7136a9ef38dc26d49e8cf3033718d0b951d06e9e8c2cb890b",
+        "initialSet": [
+          {
+            "pattern": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "CONCRETE",
+                "mark": {
+                  "kind": "FULL",
+                  "name": "java/security/graaljs-polyglot-code-injection.yaml:graaljs-polyglot-code-injection#spring-source;0;$UNTRUSTED;2"
+                }
+              }
+            },
+            "layer": "DEMAND"
+          },
+          {
+            "pattern": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            },
+            "layer": "NORMAL"
+          }
+        ],
+        "selectedFlowRows": [
+          {
+            "ordinal": 15,
+            "coordinate": "ROOT_ANY_FLOW",
+            "row": {
+              "entry": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+                "base": "arg(0)",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              },
+              "exit": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$This",
+                "base": "<this>",
+                "path": [
+                  {
+                    "kind": "FIELD",
+                    "className": "com.netflix.conductor.core.execution.WorkflowExecutorOps",
+                    "fieldName": "taskStatusListener",
+                    "fieldType": "com.netflix.conductor.core.listener.TaskStatusListener"
+                  }
+                ],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            }
+          },
+          {
+            "ordinal": 30,
+            "coordinate": "ROOT_ANY_FLOW",
+            "row": {
+              "entry": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+                "base": "arg(0)",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              },
+              "exit": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$This",
+                "base": "<this>",
+                "path": [
+                  {
+                    "kind": "FIELD",
+                    "className": "com.netflix.conductor.core.execution.WorkflowExecutorOps",
+                    "fieldName": "workflowStatusListener",
+                    "fieldType": "com.netflix.conductor.core.listener.WorkflowStatusListener"
+                  }
+                ],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            }
+          }
+        ],
+        "progressEvidence": {
+          "notCompleteQualityOrPerformanceTiming": true,
+          "sourceControlLines": [
+            "11:14:19.826 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=17m 35.691640881s markMode=FULL",
+            "11:14:38.651 |I| RunManager - BIDI_STATIC_WRITER_BIND run=1 bindingTime=1.485347617s status=COMPLETE observedCandidates=12669 lostCandidates=4784 peakCandidateMemberships=12669 pruneTime=78.560200ms writerTime=1.143436660s closureFreezeTime=105.860819ms Statistics(writerOffers=103771, admittedWriters=17138, processedWriters=17138, candidateInputs=1563443, duplicateInputs=0, matchedInputs=105989, boundOutputs=108229)",
+            "11:14:38.658 |I| IterationDriver - BIDI_JOINED_RELEASE run=1 sealReleaseTime=177.542354ms status=COMPLETE",
+            "11:14:38.659 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=17.346907532s",
+            "11:14:40.251 |I| FrontierKt$frontierLogger$1 - Run 1 (FORWARD) frontier: analysed 11129, demand edges 114242 in 6763 method keys, left 4900, record crossings 0, target demand 7896, reports 2, seeds 60, zero only 6335 (99755 edges)",
+            "11:14:40.449 |I| IterationDriver - BIDI_TARGET_STATISTICS run=1 raw=8063 outgoing=5705 reports=2 blockRaw=2689 blockOutgoing=2191",
+            "11:14:40.455 |I| IterationDriver - BIDI_BARRIER_END run=1 barrierTime=1.686820445s iterationTime=20.628586011s",
+            "11:14:40.455 |I| IterationDriver - BIDI_RUN_START run=2 direction=BACKWARD limit=1 timeout=17m 15.062895517s markMode=FULL",
+            "11:15:04.685 |I| IterationDriver - BIDI_JOINED_RELEASE run=2 sealReleaseTime=145.226887ms status=COMPLETE",
+            "11:15:04.685 |I| IterationDriver - BIDI_RUN_END run=2 status=COMPLETE engineTime=24.230208695s",
+            "11:15:05.756 |I| FrontierKt$frontierLogger$1 - Run 2 (BACKWARD) frontier: analysed 9336, demand edges 228634 in 9366 method keys, left 70, record crossings 124046, target demand 404, reports 2, seeds 1588, zero only 101 (20789 edges)",
+            "11:15:05.928 |I| IterationDriver - BIDI_TARGET_STATISTICS run=2 raw=344 outgoing=344 reports=2 blockRaw=60 blockOutgoing=60",
+            "11:15:05.928 |I| IterationDriver - BIDI_BARRIER_END run=2 barrierTime=1.193096629s iterationTime=25.473247013s",
+            "11:15:05.928 |I| IterationDriver - BIDI_RUN_START run=3 direction=FORWARD limit=2 timeout=16m 49.589627931s markMode=FULL",
+            "11:15:13.098 |I| IterationDriver - BIDI_JOINED_RELEASE run=3 sealReleaseTime=48.709305ms status=COMPLETE",
+            "11:15:13.098 |I| IterationDriver - BIDI_RUN_END run=3 status=COMPLETE engineTime=7.170322990s",
+            "11:15:13.781 |I| FrontierKt$frontierLogger$1 - Run 3 (FORWARD) frontier: analysed 7282, demand edges 12936 in 634 method keys, left 6663, record crossings 265743, target demand 1671, reports 5, seeds 9, zero only 18 (1209 edges)",
+            "11:15:13.808 |I| IterationDriver - BIDI_TARGET_STATISTICS run=3 raw=1015 outgoing=882 reports=5 blockRaw=855 blockOutgoing=789",
+            "11:15:13.810 |I| IterationDriver - BIDI_BARRIER_END run=3 barrierTime=693.412343ms iterationTime=7.881965119s",
+            "11:15:13.810 |I| IterationDriver - BIDI_RUN_START run=4 direction=BACKWARD limit=3 timeout=16m 41.707616697s markMode=FULL"
+          ],
+          "run4StartProvesAcceptedForward3": true,
+          "terminal_status": "DIAGNOSTIC_STOP",
+          "analysis_ends": [],
+          "latest_bidi_iteration": "run-4",
+          "latest_complete_bidi_iteration": "run-3",
+          "latest_accepted_forward_report": "run-3",
+          "bidi_iteration_progress": {
+            "state": "AVAILABLE",
+            "latest_reached": {
+              "state": "AVAILABLE",
+              "label": "run-4",
+              "source": "BIDI_RUN_START",
+              "engine_end_seen": false,
+              "engine_status": null,
+              "run": 4,
+              "direction": "BACKWARD",
+              "limit": 3,
+              "timeout": "16m 41.707616697s markMode=FULL",
+              "timeout_seconds": 1001.707616697,
+              "start_line": "11:15:13.810 |I| IterationDriver - BIDI_RUN_START run=4 direction=BACKWARD limit=3 timeout=16m 41.707616697s markMode=FULL"
+            },
+            "latest_complete_engine": {
+              "state": "AVAILABLE",
+              "label": "run-3",
+              "source": "BIDI_RUN_END status=COMPLETE",
+              "engine_end_seen": true,
+              "engine_status": "COMPLETE",
+              "run": 3,
+              "direction": "FORWARD",
+              "limit": 2,
+              "timeout": "16m 49.589627931s markMode=FULL",
+              "timeout_seconds": 1009.589627931,
+              "start_line": "11:15:05.928 |I| IterationDriver - BIDI_RUN_START run=3 direction=FORWARD limit=2 timeout=16m 49.589627931s markMode=FULL",
+              "status": "COMPLETE",
+              "engine_time": "7.170322990s",
+              "engine_seconds": 7.17032299,
+              "end_line": "11:15:13.098 |I| IterationDriver - BIDI_RUN_END run=3 status=COMPLETE engineTime=7.170322990s"
+            },
+            "latest_accepted_forward_report": {
+              "state": "AVAILABLE",
+              "label": "run-3",
+              "source": "Terminal snapshot followed by next-run start or completed driver return",
+              "engine_end_seen": true,
+              "engine_status": "COMPLETE",
+              "run": 3,
+              "direction": "FORWARD",
+              "limit": 2,
+              "timeout": "16m 49.589627931s markMode=FULL",
+              "timeout_seconds": 1009.589627931,
+              "start_line": "11:15:05.928 |I| IterationDriver - BIDI_RUN_START run=3 direction=FORWARD limit=2 timeout=16m 49.589627931s markMode=FULL",
+              "status": "COMPLETE",
+              "engine_time": "7.170322990s",
+              "engine_seconds": 7.17032299,
+              "end_line": "11:15:13.098 |I| IterationDriver - BIDI_RUN_END run=3 status=COMPLETE engineTime=7.170322990s",
+              "forward_frontier_line": "11:15:13.781 |I| FrontierKt$frontierLogger$1 - Run 3 (FORWARD) frontier: analysed 7282, demand edges 12936 in 634 method keys, left 6663, record crossings 265743, target demand 1671, reports 5, seeds 9, zero only 18 (1209 edges)",
+              "target_statistics": {
+                "raw": 1015,
+                "outgoing": 882,
+                "reports": 5,
+                "line": "11:15:13.808 |I| IterationDriver - BIDI_TARGET_STATISTICS run=3 raw=1015 outgoing=882 reports=5 blockRaw=855 blockOutgoing=789"
+              },
+              "commit_evidence": "11:15:13.810 |I| IterationDriver - BIDI_RUN_START run=4 direction=BACKWARD limit=3 timeout=16m 41.707616697s markMode=FULL"
+            },
+            "invalid_run_start_lines": [],
+            "limits": "Latest reached follows actual start-marker order, including failed or unfinished engines. Target frontiers are prepared state. Accept them only after a following run starts or the driver completes. Missing report-commit evidence is unavailable, not proof of an empty report."
+          },
+          "iterations": [
+            {
+              "run": 1,
+              "direction": "FORWARD",
+              "limit": 1,
+              "timeout": "17m 35.691640881s markMode=FULL",
+              "timeout_seconds": 1055.691640881,
+              "start_line": "11:14:19.826 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=17m 35.691640881s markMode=FULL",
+              "joined_static_binding_time": "1.485347617s",
+              "joined_static_binding_seconds": 1.485347617,
+              "joined_static_binding_status": "COMPLETE",
+              "joined_static_binding_line": "11:14:38.651 |I| RunManager - BIDI_STATIC_WRITER_BIND run=1 bindingTime=1.485347617s status=COMPLETE observedCandidates=12669 lostCandidates=4784 peakCandidateMemberships=12669 pruneTime=78.560200ms writerTime=1.143436660s closureFreezeTime=105.860819ms Statistics(writerOffers=103771, admittedWriters=17138, processedWriters=17138, candidateInputs=1563443, duplicateInputs=0, matchedInputs=105989, boundOutputs=108229)",
+              "static_candidate_prune_seconds": 0.0785602,
+              "static_writer_apply_seconds": 1.14343666,
+              "static_closure_freeze_seconds": 0.10586081900000001,
+              "observedCandidates": 12669,
+              "lostCandidates": 4784,
+              "peakCandidateMemberships": 12669,
+              "status": "COMPLETE",
+              "engine_time": "17.346907532s",
+              "engine_seconds": 17.346907532,
+              "end_line": "11:14:38.659 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=17.346907532s",
+              "target_statistics": {
+                "raw": 8063,
+                "outgoing": 5705,
+                "reports": 2,
+                "line": "11:14:40.449 |I| IterationDriver - BIDI_TARGET_STATISTICS run=1 raw=8063 outgoing=5705 reports=2 blockRaw=2689 blockOutgoing=2191"
+              },
+              "barrier_time": "1.686820445s",
+              "barrier_seconds": 1.686820445,
+              "iteration_time": "20.628586011s",
+              "iteration_seconds": 20.628586011,
+              "barrier_line": "11:14:40.455 |I| IterationDriver - BIDI_BARRIER_END run=1 barrierTime=1.686820445s iterationTime=20.628586011s"
+            },
+            {
+              "run": 2,
+              "direction": "BACKWARD",
+              "limit": 1,
+              "timeout": "17m 15.062895517s markMode=FULL",
+              "timeout_seconds": 1035.062895517,
+              "start_line": "11:14:40.455 |I| IterationDriver - BIDI_RUN_START run=2 direction=BACKWARD limit=1 timeout=17m 15.062895517s markMode=FULL",
+              "status": "COMPLETE",
+              "engine_time": "24.230208695s",
+              "engine_seconds": 24.230208695,
+              "end_line": "11:15:04.685 |I| IterationDriver - BIDI_RUN_END run=2 status=COMPLETE engineTime=24.230208695s",
+              "target_statistics": {
+                "raw": 344,
+                "outgoing": 344,
+                "reports": 2,
+                "line": "11:15:05.928 |I| IterationDriver - BIDI_TARGET_STATISTICS run=2 raw=344 outgoing=344 reports=2 blockRaw=60 blockOutgoing=60"
+              },
+              "barrier_time": "1.193096629s",
+              "barrier_seconds": 1.193096629,
+              "iteration_time": "25.473247013s",
+              "iteration_seconds": 25.473247013,
+              "barrier_line": "11:15:05.928 |I| IterationDriver - BIDI_BARRIER_END run=2 barrierTime=1.193096629s iterationTime=25.473247013s"
+            },
+            {
+              "run": 3,
+              "direction": "FORWARD",
+              "limit": 2,
+              "timeout": "16m 49.589627931s markMode=FULL",
+              "timeout_seconds": 1009.589627931,
+              "start_line": "11:15:05.928 |I| IterationDriver - BIDI_RUN_START run=3 direction=FORWARD limit=2 timeout=16m 49.589627931s markMode=FULL",
+              "status": "COMPLETE",
+              "engine_time": "7.170322990s",
+              "engine_seconds": 7.17032299,
+              "end_line": "11:15:13.098 |I| IterationDriver - BIDI_RUN_END run=3 status=COMPLETE engineTime=7.170322990s",
+              "target_statistics": {
+                "raw": 1015,
+                "outgoing": 882,
+                "reports": 5,
+                "line": "11:15:13.808 |I| IterationDriver - BIDI_TARGET_STATISTICS run=3 raw=1015 outgoing=882 reports=5 blockRaw=855 blockOutgoing=789"
+              },
+              "barrier_time": "693.412343ms",
+              "barrier_seconds": 0.693412343,
+              "iteration_time": "7.881965119s",
+              "iteration_seconds": 7.881965119,
+              "barrier_line": "11:15:13.810 |I| IterationDriver - BIDI_BARRIER_END run=3 barrierTime=693.412343ms iterationTime=7.881965119s"
+            },
+            {
+              "run": 4,
+              "direction": "BACKWARD",
+              "limit": 3,
+              "timeout": "16m 41.707616697s markMode=FULL",
+              "timeout_seconds": 1001.707616697,
+              "start_line": "11:15:13.810 |I| IterationDriver - BIDI_RUN_START run=4 direction=BACKWARD limit=3 timeout=16m 41.707616697s markMode=FULL"
+            }
+          ],
+          "reported_states": [],
+          "trace_generation_stats": [],
+          "invalid_vulnerability_locations": [],
+          "phases": {},
+          "unfinished_phases": [],
+          "signals": [],
+          "prescan_errors": [],
+          "masked_prescan_error": false,
+          "bidi_started_after_prescan_error": false,
+          "runner_empty_marker_is_not_completion": false
+        },
+        "artifactHashes": {
+          "files": {
+            "console.log": {
+              "bytes": 9200511,
+              "sha256": "3dbcad28fb203b574bcc56c3e2586932a2bcdda81e83f854337c4cbac68a8af7"
+            },
+            "class-load.log": {
+              "bytes": 3141211,
+              "sha256": "467c019be079bdc5a6cc7391e6dca8bb10440e88b66f270e7c4415879b9981ff"
+            },
+            "manifest.json": {
+              "bytes": 69356,
+              "sha256": "ea90fcf128fca61516a8524d88d4be8c0151d7c4011303d109b295449da181d9"
+            },
+            "analyzer.log": {
+              "bytes": 9177477,
+              "sha256": "df275265c5d4d47fd6cde8f3de6a1648fe0a46bda82b9b2e51309406af35805f"
+            },
+            "overlay-runtime-verification.json": {
+              "bytes": 57615,
+              "sha256": "6d6a1b36c8c42b1fa4ac03f08b547590d7baa6568e43c2ab6d376378da3479ee"
+            },
+            "admission-capture.jsonl": {
+              "bytes": 51890,
+              "sha256": "8dde3cbaf480a0b2bede347828d7055c9df49818cc8d00b2c8465c254f49c294"
+            },
+            "progress-evidence.json": {
+              "bytes": 11160,
+              "sha256": "237d79a6e7a4f4f5d36e113e8325e4e16cfe0b05252698e0575bebf6335ab8bb"
+            },
+            "admission-capture.log": {
+              "bytes": 51844,
+              "sha256": "1ddeb0d423cc680dfacdc01eb6b912940ef58f4b398e4d879182124ea5891b31"
+            },
+            "analyzer-classpath.json": {
+              "bytes": 43161,
+              "sha256": "f48ee2beb62c753eb7517995058bb7536dab895d2c9b126343bf018b661c37f5"
+            },
+            "gc.log": {
+              "bytes": 421424,
+              "sha256": "d3c5a156adec8943d6363da2b1f12582efc0bd83c929cd4d2167035b0d129fad"
+            }
+          },
+          "profilesPreserved": true
+        }
+      },
+      "pairedB": {
+        "rawReference": {
+          "file": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-must-demand-snapshot-pairedB-20261106T110322460795Z/admission-capture.jsonl",
+          "line": 2,
+          "byteOffset": 1043,
+          "bytes": 103017,
+          "sha256": "8c23e20c83492e8831d3404bfe6951ddd8a1076a0d6bf94b37d1e88307d8791a"
+        },
+        "exactRecordInExistingPortableEvidence": {
+          "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/docs/reports/data/bidirectional-conductor-must-demand-snapshot-20261106.json",
+          "jsonPointer": "/records/pairedB/exactRawJsonlLine"
+        },
+        "admissionQueryDigest": "2d4642a06869395d21b1a14a86f54d47f4eeede366566207f111787138675a6e",
+        "semanticInputDigest": "1d8e7aef9dd923c7136a9ef38dc26d49e8cf3033718d0b951d06e9e8c2cb890b",
+        "initialSet": [
+          {
+            "pattern": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "CONCRETE",
+                "mark": {
+                  "kind": "FULL",
+                  "name": "java/security/graaljs-polyglot-code-injection.yaml:graaljs-polyglot-code-injection#spring-source;0;$UNTRUSTED;2"
+                }
+              }
+            },
+            "layer": "DEMAND"
+          },
+          {
+            "pattern": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "ANY_TAINT",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            },
+            "layer": "NORMAL"
+          },
+          {
+            "pattern": {
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+              "base": "arg(0)",
+              "path": [
+                {
+                  "kind": "FIELD",
+                  "className": "com.netflix.conductor.model.WorkflowModel",
+                  "fieldName": "workflowDefinition",
+                  "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                }
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            },
+            "layer": "NORMAL"
+          }
+        ],
+        "selectedFlowRows": [
+          {
+            "ordinal": 0,
+            "coordinate": "ROOT_ANY_FLOW",
+            "row": {
+              "entry": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+                "base": "arg(0)",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              },
+              "exit": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$This",
+                "base": "<this>",
+                "path": [
+                  {
+                    "kind": "FIELD",
+                    "className": "com.netflix.conductor.core.execution.WorkflowExecutorOps",
+                    "fieldName": "taskStatusListener",
+                    "fieldType": "com.netflix.conductor.core.listener.TaskStatusListener"
+                  }
+                ],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            }
+          },
+          {
+            "ordinal": 16,
+            "coordinate": "WORKFLOW_DEFINITION_ANY_FLOW",
+            "row": {
+              "entry": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+                "base": "arg(0)",
+                "path": [
+                  {
+                    "kind": "FIELD",
+                    "className": "com.netflix.conductor.model.WorkflowModel",
+                    "fieldName": "workflowDefinition",
+                    "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+                  }
+                ],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              },
+              "exit": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$This",
+                "base": "<this>",
+                "path": [
+                  {
+                    "kind": "FIELD",
+                    "className": "com.netflix.conductor.core.execution.WorkflowExecutorOps",
+                    "fieldName": "taskStatusListener",
+                    "fieldType": "com.netflix.conductor.core.listener.TaskStatusListener"
+                  }
+                ],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            }
+          },
+          {
+            "ordinal": 55,
+            "coordinate": "ROOT_ANY_FLOW",
+            "row": {
+              "entry": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+                "base": "arg(0)",
+                "path": [],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              },
+              "exit": {
+                "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$This",
+                "base": "<this>",
+                "path": [
+                  {
+                    "kind": "FIELD",
+                    "className": "com.netflix.conductor.core.execution.WorkflowExecutorOps",
+                    "fieldName": "workflowStatusListener",
+                    "fieldType": "com.netflix.conductor.core.listener.WorkflowStatusListener"
+                  }
+                ],
+                "tail": "ANY",
+                "E": [],
+                "mark": {
+                  "kind": "FLOW",
+                  "mx": []
+                }
+              }
+            }
+          }
+        ],
+        "progressEvidence": {
+          "notCompleteQualityOrPerformanceTiming": true,
+          "sourceControlLines": [
+            "11:16:36.682 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=17m 36.216335256s markMode=FULL",
+            "11:16:54.458 |I| RunManager - BIDI_STATIC_WRITER_BIND run=1 bindingTime=2.312902787s status=COMPLETE observedCandidates=12671 lostCandidates=4784 peakCandidateMemberships=12671 pruneTime=127.715279ms writerTime=1.679085080s closureFreezeTime=131.491426ms Statistics(writerOffers=103770, admittedWriters=17138, processedWriters=17138, candidateInputs=1563764, duplicateInputs=0, matchedInputs=106006, boundOutputs=108246)",
+            "11:16:54.465 |I| IterationDriver - BIDI_JOINED_RELEASE run=1 sealReleaseTime=167.809301ms status=COMPLETE",
+            "11:16:54.465 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=15.470026745s",
+            "11:16:56.418 |I| FrontierKt$frontierLogger$1 - Run 1 (FORWARD) frontier: analysed 11129, demand edges 116036 in 6763 method keys, left 4900, record crossings 0, target demand 7896, reports 2, seeds 60, zero only 6335 (100191 edges)",
+            "11:16:56.522 |I| IterationDriver - BIDI_TARGET_STATISTICS run=1 raw=8063 outgoing=5705 reports=2 blockRaw=2689 blockOutgoing=2191",
+            "11:16:56.528 |I| IterationDriver - BIDI_BARRIER_END run=1 barrierTime=1.962809535s iterationTime=19.845488975s",
+            "11:16:56.528 |I| IterationDriver - BIDI_RUN_START run=2 direction=BACKWARD limit=1 timeout=17m 16.370707588s markMode=FULL",
+            "11:17:21.361 |I| IterationDriver - BIDI_JOINED_RELEASE run=2 sealReleaseTime=148.907346ms status=COMPLETE",
+            "11:17:21.361 |I| IterationDriver - BIDI_RUN_END run=2 status=COMPLETE engineTime=24.833114237s",
+            "11:17:22.448 |I| FrontierKt$frontierLogger$1 - Run 2 (BACKWARD) frontier: analysed 9336, demand edges 236283 in 9366 method keys, left 70, record crossings 127027, target demand 404, reports 2, seeds 1589, zero only 101 (20846 edges)",
+            "11:17:22.656 |I| IterationDriver - BIDI_TARGET_STATISTICS run=2 raw=344 outgoing=344 reports=2 blockRaw=60 blockOutgoing=60",
+            "11:17:22.657 |I| IterationDriver - BIDI_BARRIER_END run=2 barrierTime=1.238375986s iterationTime=26.129207702s",
+            "11:17:22.657 |I| IterationDriver - BIDI_RUN_START run=3 direction=FORWARD limit=2 timeout=16m 50.241450993s markMode=FULL",
+            "11:17:43.145 |I| IterationDriver - BIDI_JOINED_RELEASE run=3 sealReleaseTime=85.906671ms status=COMPLETE",
+            "11:17:43.145 |I| IterationDriver - BIDI_RUN_END run=3 status=COMPLETE engineTime=20.488164093s",
+            "11:17:44.006 |I| FrontierKt$frontierLogger$1 - Run 3 (FORWARD) frontier: analysed 7282, demand edges 36093 in 660 method keys, left 6637, record crossings 447451, target demand 3623, reports 5, seeds 9, zero only 18 (1209 edges)",
+            "11:17:44.036 |I| IterationDriver - BIDI_TARGET_STATISTICS run=3 raw=2055 outgoing=1852 reports=5 blockRaw=1837 blockOutgoing=1771",
+            "11:17:44.037 |I| IterationDriver - BIDI_BARRIER_END run=3 barrierTime=872.967729ms iterationTime=21.380475164s",
+            "11:17:44.037 |I| IterationDriver - BIDI_RUN_START run=4 direction=BACKWARD limit=3 timeout=16m 28.860920468s markMode=FULL"
+          ],
+          "run4StartProvesAcceptedForward3": true,
+          "terminal_status": "DIAGNOSTIC_STOP",
+          "analysis_ends": [],
+          "latest_bidi_iteration": "run-4",
+          "latest_complete_bidi_iteration": "run-3",
+          "latest_accepted_forward_report": "run-3",
+          "bidi_iteration_progress": {
+            "state": "AVAILABLE",
+            "latest_reached": {
+              "state": "AVAILABLE",
+              "label": "run-4",
+              "source": "BIDI_RUN_START",
+              "engine_end_seen": false,
+              "engine_status": null,
+              "run": 4,
+              "direction": "BACKWARD",
+              "limit": 3,
+              "timeout": "16m 28.860920468s markMode=FULL",
+              "timeout_seconds": 988.860920468,
+              "start_line": "11:17:44.037 |I| IterationDriver - BIDI_RUN_START run=4 direction=BACKWARD limit=3 timeout=16m 28.860920468s markMode=FULL"
+            },
+            "latest_complete_engine": {
+              "state": "AVAILABLE",
+              "label": "run-3",
+              "source": "BIDI_RUN_END status=COMPLETE",
+              "engine_end_seen": true,
+              "engine_status": "COMPLETE",
+              "run": 3,
+              "direction": "FORWARD",
+              "limit": 2,
+              "timeout": "16m 50.241450993s markMode=FULL",
+              "timeout_seconds": 1010.241450993,
+              "start_line": "11:17:22.657 |I| IterationDriver - BIDI_RUN_START run=3 direction=FORWARD limit=2 timeout=16m 50.241450993s markMode=FULL",
+              "status": "COMPLETE",
+              "engine_time": "20.488164093s",
+              "engine_seconds": 20.488164093,
+              "end_line": "11:17:43.145 |I| IterationDriver - BIDI_RUN_END run=3 status=COMPLETE engineTime=20.488164093s"
+            },
+            "latest_accepted_forward_report": {
+              "state": "AVAILABLE",
+              "label": "run-3",
+              "source": "Terminal snapshot followed by next-run start or completed driver return",
+              "engine_end_seen": true,
+              "engine_status": "COMPLETE",
+              "run": 3,
+              "direction": "FORWARD",
+              "limit": 2,
+              "timeout": "16m 50.241450993s markMode=FULL",
+              "timeout_seconds": 1010.241450993,
+              "start_line": "11:17:22.657 |I| IterationDriver - BIDI_RUN_START run=3 direction=FORWARD limit=2 timeout=16m 50.241450993s markMode=FULL",
+              "status": "COMPLETE",
+              "engine_time": "20.488164093s",
+              "engine_seconds": 20.488164093,
+              "end_line": "11:17:43.145 |I| IterationDriver - BIDI_RUN_END run=3 status=COMPLETE engineTime=20.488164093s",
+              "forward_frontier_line": "11:17:44.006 |I| FrontierKt$frontierLogger$1 - Run 3 (FORWARD) frontier: analysed 7282, demand edges 36093 in 660 method keys, left 6637, record crossings 447451, target demand 3623, reports 5, seeds 9, zero only 18 (1209 edges)",
+              "target_statistics": {
+                "raw": 2055,
+                "outgoing": 1852,
+                "reports": 5,
+                "line": "11:17:44.036 |I| IterationDriver - BIDI_TARGET_STATISTICS run=3 raw=2055 outgoing=1852 reports=5 blockRaw=1837 blockOutgoing=1771"
+              },
+              "commit_evidence": "11:17:44.037 |I| IterationDriver - BIDI_RUN_START run=4 direction=BACKWARD limit=3 timeout=16m 28.860920468s markMode=FULL"
+            },
+            "invalid_run_start_lines": [],
+            "limits": "Latest reached follows actual start-marker order, including failed or unfinished engines. Target frontiers are prepared state. Accept them only after a following run starts or the driver completes. Missing report-commit evidence is unavailable, not proof of an empty report."
+          },
+          "iterations": [
+            {
+              "run": 1,
+              "direction": "FORWARD",
+              "limit": 1,
+              "timeout": "17m 36.216335256s markMode=FULL",
+              "timeout_seconds": 1056.216335256,
+              "start_line": "11:16:36.682 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=17m 36.216335256s markMode=FULL",
+              "joined_static_binding_time": "2.312902787s",
+              "joined_static_binding_seconds": 2.312902787,
+              "joined_static_binding_status": "COMPLETE",
+              "joined_static_binding_line": "11:16:54.458 |I| RunManager - BIDI_STATIC_WRITER_BIND run=1 bindingTime=2.312902787s status=COMPLETE observedCandidates=12671 lostCandidates=4784 peakCandidateMemberships=12671 pruneTime=127.715279ms writerTime=1.679085080s closureFreezeTime=131.491426ms Statistics(writerOffers=103770, admittedWriters=17138, processedWriters=17138, candidateInputs=1563764, duplicateInputs=0, matchedInputs=106006, boundOutputs=108246)",
+              "static_candidate_prune_seconds": 0.127715279,
+              "static_writer_apply_seconds": 1.67908508,
+              "static_closure_freeze_seconds": 0.131491426,
+              "observedCandidates": 12671,
+              "lostCandidates": 4784,
+              "peakCandidateMemberships": 12671,
+              "status": "COMPLETE",
+              "engine_time": "15.470026745s",
+              "engine_seconds": 15.470026745,
+              "end_line": "11:16:54.465 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=15.470026745s",
+              "target_statistics": {
+                "raw": 8063,
+                "outgoing": 5705,
+                "reports": 2,
+                "line": "11:16:56.522 |I| IterationDriver - BIDI_TARGET_STATISTICS run=1 raw=8063 outgoing=5705 reports=2 blockRaw=2689 blockOutgoing=2191"
+              },
+              "barrier_time": "1.962809535s",
+              "barrier_seconds": 1.962809535,
+              "iteration_time": "19.845488975s",
+              "iteration_seconds": 19.845488975,
+              "barrier_line": "11:16:56.528 |I| IterationDriver - BIDI_BARRIER_END run=1 barrierTime=1.962809535s iterationTime=19.845488975s"
+            },
+            {
+              "run": 2,
+              "direction": "BACKWARD",
+              "limit": 1,
+              "timeout": "17m 16.370707588s markMode=FULL",
+              "timeout_seconds": 1036.370707588,
+              "start_line": "11:16:56.528 |I| IterationDriver - BIDI_RUN_START run=2 direction=BACKWARD limit=1 timeout=17m 16.370707588s markMode=FULL",
+              "status": "COMPLETE",
+              "engine_time": "24.833114237s",
+              "engine_seconds": 24.833114237,
+              "end_line": "11:17:21.361 |I| IterationDriver - BIDI_RUN_END run=2 status=COMPLETE engineTime=24.833114237s",
+              "target_statistics": {
+                "raw": 344,
+                "outgoing": 344,
+                "reports": 2,
+                "line": "11:17:22.656 |I| IterationDriver - BIDI_TARGET_STATISTICS run=2 raw=344 outgoing=344 reports=2 blockRaw=60 blockOutgoing=60"
+              },
+              "barrier_time": "1.238375986s",
+              "barrier_seconds": 1.238375986,
+              "iteration_time": "26.129207702s",
+              "iteration_seconds": 26.129207702,
+              "barrier_line": "11:17:22.657 |I| IterationDriver - BIDI_BARRIER_END run=2 barrierTime=1.238375986s iterationTime=26.129207702s"
+            },
+            {
+              "run": 3,
+              "direction": "FORWARD",
+              "limit": 2,
+              "timeout": "16m 50.241450993s markMode=FULL",
+              "timeout_seconds": 1010.241450993,
+              "start_line": "11:17:22.657 |I| IterationDriver - BIDI_RUN_START run=3 direction=FORWARD limit=2 timeout=16m 50.241450993s markMode=FULL",
+              "status": "COMPLETE",
+              "engine_time": "20.488164093s",
+              "engine_seconds": 20.488164093,
+              "end_line": "11:17:43.145 |I| IterationDriver - BIDI_RUN_END run=3 status=COMPLETE engineTime=20.488164093s",
+              "target_statistics": {
+                "raw": 2055,
+                "outgoing": 1852,
+                "reports": 5,
+                "line": "11:17:44.036 |I| IterationDriver - BIDI_TARGET_STATISTICS run=3 raw=2055 outgoing=1852 reports=5 blockRaw=1837 blockOutgoing=1771"
+              },
+              "barrier_time": "872.967729ms",
+              "barrier_seconds": 0.872967729,
+              "iteration_time": "21.380475164s",
+              "iteration_seconds": 21.380475164,
+              "barrier_line": "11:17:44.037 |I| IterationDriver - BIDI_BARRIER_END run=3 barrierTime=872.967729ms iterationTime=21.380475164s"
+            },
+            {
+              "run": 4,
+              "direction": "BACKWARD",
+              "limit": 3,
+              "timeout": "16m 28.860920468s markMode=FULL",
+              "timeout_seconds": 988.860920468,
+              "start_line": "11:17:44.037 |I| IterationDriver - BIDI_RUN_START run=4 direction=BACKWARD limit=3 timeout=16m 28.860920468s markMode=FULL"
+            }
+          ],
+          "reported_states": [],
+          "trace_generation_stats": [],
+          "invalid_vulnerability_locations": [],
+          "phases": {},
+          "unfinished_phases": [],
+          "signals": [],
+          "prescan_errors": [],
+          "masked_prescan_error": false,
+          "bidi_started_after_prescan_error": false,
+          "runner_empty_marker_is_not_completion": false
+        },
+        "artifactHashes": {
+          "files": {
+            "console.log": {
+              "bytes": 9291570,
+              "sha256": "5199075d7be4f28a3fc5921b1ab54b4496a1a12a6f10b67a6a5f2430904f61fd"
+            },
+            "class-load.log": {
+              "bytes": 3155517,
+              "sha256": "4b33d212f9def42a541b5502234d264b9f8c55de7c1c3e6eaae51b14ce3291e7"
+            },
+            "manifest.json": {
+              "bytes": 70310,
+              "sha256": "f51a9b06ed3b9f37324312f49bfffe4908c1361e1dc59b79ca321bdf8f80da56"
+            },
+            "analyzer.log": {
+              "bytes": 9268537,
+              "sha256": "2cb714dadcf135f83632a60c119faf9ab2fccdd940d4b2b1c581cf2c40843e51"
+            },
+            "overlay-runtime-verification.json": {
+              "bytes": 58566,
+              "sha256": "b4dd2e0eaf80c0a9156aaba83a5a2f762594a4a1165d989613e416c0a2093dfa"
+            },
+            "admission-capture.jsonl": {
+              "bytes": 104060,
+              "sha256": "42c72bc4b95ecbd98e70ac1ba2084878e7a72bb54cef584666ba0373aff1d2ab"
+            },
+            "progress-evidence.json": {
+              "bytes": 11183,
+              "sha256": "fe33eeeca51e5de43f085e795ada6c293962ee6121699ce25dd1b2f63e53144b"
+            },
+            "admission-capture.log": {
+              "bytes": 104014,
+              "sha256": "63388e5e4e8f3d9e940e37ed2f6508fca41a7049c6b3782a9f99d6f8c86e01a8"
+            },
+            "analyzer-classpath.json": {
+              "bytes": 43650,
+              "sha256": "a9be3d5abb2e91154f1dac43888ca83f3242cce7381bd96d44dc1951563ff350"
+            },
+            "gc.log": {
+              "bytes": 301130,
+              "sha256": "b7f516610bfa3a5f01479a17d6c2eedebd15d3fcc26fc35b0a737606f2165f55"
+            }
+          },
+          "profilesPreserved": true
+        }
+      }
+    }
+  },
+  "upstreamWitness": {
+    "queryDigest": "2d4642a06869395d21b1a14a86f54d47f4eeede366566207f111787138675a6e",
+    "admissionQuery": {
+      "run": 3,
+      "direction": "FORWARD",
+      "fieldLimit": 2,
+      "markMode": "FULL",
+      "callee": {
+        "method": "com.netflix.conductor.core.execution.WorkflowExecutorOps#createAndEvaluate(com.netflix.conductor.model.WorkflowModel)",
+        "methodName": "createAndEvaluate",
+        "parameters": [
+          "com.netflix.conductor.model.WorkflowModel"
+        ],
+        "returnType": "void",
+        "entryIndex": 18,
+        "contextCodec": "org.opentaint.dataflow.jvm.ap.ifds.JIRMethodContextSerializer",
+        "contextNativeBase64": "AA=="
+      },
+      "actualFacts": {
+        "kind": "TAINT",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+        "base": "arg(0)",
+        "layer": "NORMAL",
+        "tail": "ANY_TAINT",
+        "E": [],
+        "rootDigest": "be6c8da77e0823f9efbda07bc9f0144bdc3bb4b47b38512baa54776cae756e2e",
+        "protectionDigest": null
+      }
+    },
+    "extraPairedB": [
+      {
+        "admission": {
+          "pattern": {
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+            "base": "arg(0)",
+            "path": [
+              {
+                "kind": "FIELD",
+                "className": "com.netflix.conductor.model.WorkflowModel",
+                "fieldName": "workflowDefinition",
+                "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+              }
+            ],
+            "tail": "ANY_TAINT",
+            "E": [],
+            "mark": {
+              "kind": "FLOW",
+              "mx": []
+            }
+          },
+          "layer": "NORMAL"
+        },
+        "localInitialId": 4784,
+        "blockScopeMatchCountWithPropagationUnproven": 0
+      }
+    ],
+    "requiredForFinalMissingFindingProven": false,
+    "frozenDemandCoordinateNowObservedByLaterSnapshot": true,
+    "BROOTPremiseUses": [
+      {
+        "sequence": 1403,
+        "callerKey": {
+          "method": "com.netflix.conductor.core.execution.WorkflowExecutorOps#createAndEvaluate(com.netflix.conductor.model.WorkflowModel)",
+          "methodName": "createAndEvaluate",
+          "parameters": [
+            "com.netflix.conductor.model.WorkflowModel"
+          ],
+          "returnType": "void",
+          "entryIndex": 18,
+          "contextCodec": "org.opentaint.dataflow.jvm.ap.ifds.JIRMethodContextSerializer",
+          "contextNativeBase64": "AA=="
+        },
+        "calleeKey": {
+          "method": "com.netflix.conductor.core.execution.WorkflowExecutorOps#createAndEvaluateWithLock(com.netflix.conductor.model.WorkflowModel)",
+          "methodName": "createAndEvaluateWithLock",
+          "parameters": [
+            "com.netflix.conductor.model.WorkflowModel"
+          ],
+          "returnType": "void",
+          "entryIndex": 12,
+          "contextCodec": "org.opentaint.dataflow.jvm.ap.ifds.JIRMethodContextSerializer",
+          "contextNativeBase64": "AA=="
+        },
+        "callerScope": [
+          0,
+          -1
+        ],
+        "localOriginalInitialId": 4784,
+        "normalizedOriginalPattern": {
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+          "base": "arg(0)",
+          "path": [
+            {
+              "kind": "FIELD",
+              "className": "com.netflix.conductor.model.WorkflowModel",
+              "fieldName": "workflowDefinition",
+              "fieldType": "com.netflix.conductor.common.metadata.workflow.WorkflowDef"
+            }
+          ],
+          "tail": "ANY_TAINT",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        },
+        "uniqueDeliveryOrCausalityProven": false,
+        "exactEventReference": {
+          "file": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/diagnostics/conductor-upstream-admission-pairedB-20261106T095351413708Z/admission-capture.jsonl",
+          "line": 1414,
+          "byteOffset": 10383553,
+          "bytes": 4847,
+          "sha256": "ebcb287657936fe001fbe0a66553ce4eacd32a58f183f8df1350ad1640be004e"
+        }
+      }
+    ]
+  },
+  "later7069": {
+    "revision": "7069fe2d73a32443d98163fc67970a3114983712",
+    "conductor": {
+      "status": "TIMEOUT",
+      "reached": 4,
+      "engineComplete": 3,
+      "acceptedForward": 3,
+      "resultCount": 7,
+      "uniqueIdentities": 7,
+      "comparisons": {
+        "f945": {
+          "missingCount": 0,
+          "addedCount": 0,
+          "missingIdentities": [],
+          "addedIdentities": [],
+          "provisional": true,
+          "currentCensored": false,
+          "controlCensored": false
+        },
+        "52f": {
+          "missingCount": 0,
+          "addedCount": 0,
+          "missingIdentities": [],
+          "addedIdentities": [],
+          "provisional": true,
+          "currentCensored": false,
+          "controlCensored": false
+        },
+        "8331": {
+          "missingCount": 0,
+          "addedCount": 2,
+          "missingIdentities": [],
+          "addedIdentities": [
+            [
+              "sink_fingerprint_and_signature",
+              "java.security.graaljs-polyglot-code-injection",
+              "8rLVjoe1V3DqzuJubn3Pc1RsFnegW1yHtQ/fuKX0gXQ=",
+              "com.netflix.conductor.core.execution.evaluators.PythonEvaluator#evaluate(java.lang.String, java.lang.Object)"
+            ],
+            [
+              "sink_fingerprint_and_signature",
+              "java.security.graaljs-polyglot-code-injection",
+              "EzmrpG1FD3CwGwVTQXyOH0FmoHson/4xsYBeDYPJbF8=",
+              "com.netflix.conductor.core.events.ScriptEvaluator#getSource(java.lang.String)"
+            ]
+          ],
+          "provisional": true,
+          "currentCensored": false,
+          "controlCensored": false
+        },
+        "4182": {
+          "missingCount": 0,
+          "addedCount": 2,
+          "missingIdentities": [],
+          "addedIdentities": [
+            [
+              "sink_fingerprint_and_signature",
+              "java.security.graaljs-polyglot-code-injection",
+              "8rLVjoe1V3DqzuJubn3Pc1RsFnegW1yHtQ/fuKX0gXQ=",
+              "com.netflix.conductor.core.execution.evaluators.PythonEvaluator#evaluate(java.lang.String, java.lang.Object)"
+            ],
+            [
+              "sink_fingerprint_and_signature",
+              "java.security.graaljs-polyglot-code-injection",
+              "EzmrpG1FD3CwGwVTQXyOH0FmoHson/4xsYBeDYPJbF8=",
+              "com.netflix.conductor.core.events.ScriptEvaluator#getSource(java.lang.String)"
+            ]
+          ],
+          "provisional": true,
+          "currentCensored": false,
+          "controlCensored": false
+        }
+      }
+    }
+  },
+  "confirmed": [
+    "Proper-prefix-off alone recovers both native R5 sink-signature projections in the qualified historical control.",
+    "A complete later local frozen view contains rootANY/FLOW but lacks wfDefANY/FLOW Current77 vs B175.",
+    "Equal current/control query actual is wfDef.MUST/Graal NORMAL with Empty E and no protection; unchanged C2 returns2 vs3 initials, extraBwfDefMUST/FLOW NORMAL.",
+    "B later uses that local initialID4784 as ROOT original P in createAndEvaluateWithLock; positive association not unique lineage.",
+    "7069 acceptedF3 strict report identities recoverboth vs8331/4182; noConductorconvergenceclaim."
+  ],
+  "notProven": [
+    "This specific wfDef guide/initial is necessary for either final Graal finding.",
+    "A complete source-to-ROOT-query-to-terminal native fact lineage or first globally missing required fact.",
+    "Current proposed explicit FLOW completion recovers E29; missing child is not reconstructed directly from root-only final rows."
+  ],
+  "proposedDesignObligation": "Infer a genuine ordinary NORMAL provider under a newly legal completed FLOW pair, then prove its actual saved-first application preserves the required MUST before current C2. No provider may be installed by default and no discarded wfDef child is an available endpoint.",
+  "references": [
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/docs/reports/data/bidirectional-conductor-canonical-quality-regression-20261105.json",
+      "sha256": "e397da65c89e6af3b896a15111228647134abba85c42d9854184da4521489c96",
+      "bytes": 65033984
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/docs/reports/data/bidirectional-conductor-must-demand-snapshot-20261106.json",
+      "sha256": "3af2d9f0124b5e5d8926f68d7f90d68e795a0511f547d358552f04574d87ec18",
+      "bytes": 633134
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/docs/reports/data/bidirectional-conductor-upstream-admission-20261106.json",
+      "sha256": "0eb40d1d75edcb288e6345af0a750b59a35a9632063fa73507b830cb1627353e",
+      "bytes": 631496
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/docs/reports/data/bidirectional-protected-guidance-storage-performance-20261106.json",
+      "sha256": "25069119d1507129456a1441f585140e8f5f727be8255444bcf943cd0e30c867",
+      "bytes": 72206509
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/conductor-call-admission-20261106/source-routes-checkpoint-20261106.json",
+      "sha256": "a53555d8e4c471c27551f6353ecc6a09b886543b2f2572b079f044c01ce710ab",
+      "bytes": 282323
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/docs/reports/bidirectional-conductor-canonical-quality-regression-20261105.md",
+      "sha256": "1b4d9fba6ee8ef946b006d819e3649fac0d1709860f12e852275de0c523ca299",
+      "bytes": 74778
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/docs/reports/bidirectional-conductor-must-demand-snapshot-20261106.md",
+      "sha256": "8887fa125ee84518e3ce22de627cf8f0b46a6a0e4375e96e8c4bbbda74e580df",
+      "bytes": 5929
+    },
+    {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/docs/reports/bidirectional-protected-guidance-storage-performance-20261106.md",
+      "sha256": "0e097eb00b16ea017e5a9e6619bd40815a3126b805d57fe2e864d7bdd09b459c",
+      "bytes": 18968
+    }
+  ]
+}

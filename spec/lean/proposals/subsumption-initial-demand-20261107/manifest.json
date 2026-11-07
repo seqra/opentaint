@@ -1,7 +1,7 @@
 {
   "schema": "combined-subsumption-admission-components-v1",
   "baselineRevision": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
-  "proofScope": "Original compatible MAY/MUST/matching/relations; selected scalar FULL C2/image and annotated C5; exact FLOW/E bridge; literal H/pass; transitive coverage; explicit FLOW demand completion; scoped wrapper/converter/static/two-loop/uniform/deep producer/consumer and loop-mapper routes. Native adapters, GROUP and whole-driver equivalence are implementation obligations.",
+  "proofScope": "Historical scoped components (684 declarations) plus reviewed companion C2/C5 image, finite-E/mx correlated inclusion, maximal combined-E criterion, same-head STAR/MUST overlap and same-actual effect bridge. Primary-only laws apply to primary emit, not expanded C2. E29 recovery, native store/driver equality and global convergence remain open.",
   "checkerSha256": "63e4e7c8c1367a17b7eff2251366e47da341ed2f31de1cb40480d62f590bf800",
   "modules": {
     "RestrictedInitialPolicy": {
@@ -847,6 +847,128 @@
         "ConcreteConverterWrapper.the_mark_changing_rows_have_no_ANY_original"
       ],
       "sourceAdaptation": "Import alias only: PlainStarRelativeAdmissionProofFixed3 -> RelativeAdmission."
+    },
+    "ConcreteStarFlowCompanion": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/ConcreteStarFlowCompanion.lean",
+      "sha256": "ac2d745c71d0699610fe1a97efd7be89906efcddd31b5051840af1ff9e6da8dd",
+      "checkedTheorems": [
+        "ConcreteStarFlowCompanion.primary_always_in_expansion",
+        "ConcreteStarFlowCompanion.companion_always_in_expansion",
+        "ConcreteStarFlowCompanion.expansion_membership",
+        "ConcreteStarFlowCompanion.primary_is_preserved",
+        "ConcreteStarFlowCompanion.no_primary_means_no_companion",
+        "ConcreteStarFlowCompanion.companion_has_same_geometry_and_NORMAL_FLOW",
+        "ConcreteStarFlowCompanion.companion_requires_concrete_STAR",
+        "ConcreteStarFlowCompanion.companion_seed_is_intrinsically_NORMAL",
+        "ConcreteStarFlowCompanion.concrete_STAR_primary_remains_DEMAND",
+        "ConcreteStarFlowCompanion.raw_permission_has_executable_actual",
+        "ConcreteStarFlowCompanion.every_executable_emission_has_raw_permission",
+        "ConcreteStarFlowCompanion.raw_permission_exactly_matches_C2",
+        "ConcreteStarFlowCompanion.stored_permission_has_normalized_executable_actual",
+        "ConcreteStarFlowCompanion.old_stored_permission_is_preserved",
+        "ConcreteStarFlowCompanion.stored_permission_exactly_matches_normalized_C2",
+        "ConcreteStarFlowCompanion.original_actual_is_not_replaced",
+        "ConcreteStarFlowCompanion.companion_NORMAL_does_not_upgrade_DEMAND_actual",
+        "ConcreteStarFlowCompanion.positive_source_guard_cannot_use_companion_FLOW",
+        "ConcreteStarFlowCompanion.mismatching_mark_cannot_create_companion",
+        "ConcreteStarFlowCompanion.mismatching_base_cannot_create_companion",
+        "ConcreteStarFlowCompanion.precise_later_STAR_rejection_still_has_no_companion"
+      ]
+    },
+    "ExclusionCorrelatedInclusion": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/ExclusionCorrelatedInclusion.lean",
+      "sha256": "9a58a23f518710bae1d52566d54af69463dfb9e833e2c614d242e25b55e5252a",
+      "checkedTheorems": [
+        "ExclusionCorrelatedInclusion.subsetB_sound",
+        "ExclusionCorrelatedInclusion.subsetB_refl",
+        "ExclusionCorrelatedInclusion.admits_mono",
+        "ExclusionCorrelatedInclusion.markAdmits_mono",
+        "ExclusionCorrelatedInclusion.proper_residual_discharges_field_exclusions",
+        "ExclusionCorrelatedInclusion.exclusion_guard_transports_both_ends",
+        "ExclusionCorrelatedInclusion.generalized_cover_transports_every_pair",
+        "ExclusionCorrelatedInclusion.executable_witness_keeps_original_geometry_check",
+        "ExclusionCorrelatedInclusion.executable_witness_implies_pair_inclusion",
+        "ExclusionCorrelatedInclusion.every_checked_correlated_residual_is_found",
+        "ExclusionCorrelatedInclusion.restricted_guard_supplies_generalized_pair_guard",
+        "ExclusionCorrelatedInclusion.restricted_guard_transports_every_pair",
+        "ExclusionCorrelatedInclusion.generic_STAR_inverse_reader_E_is_empty",
+        "ExclusionCorrelatedInclusion.generic_STAR_inverse_result_keeps_both_endpoint_Es",
+        "ExclusionCorrelatedInclusion.opaque_bases_and_two_nonempty_Es_have_a_checked_cover",
+        "ExclusionCorrelatedInclusion.short_input_exclusion_cannot_be_ignored",
+        "ExclusionCorrelatedInclusion.short_output_exclusion_cannot_be_ignored",
+        "ExclusionCorrelatedInclusion.both_long_exclusions_can_change_after_an_admitted_proper_residual",
+        "ExclusionCorrelatedInclusion.equal_E_at_different_heads_does_not_imply_cover",
+        "ExclusionCorrelatedInclusion.excluded_long_mark_cannot_be_reintroduced",
+        "ExclusionCorrelatedInclusion.unequal_mx_can_still_give_safe_mark_inclusion",
+        "ExclusionCorrelatedInclusion.unmatched_endpoint_residual_is_rejected",
+        "ExclusionCorrelatedInclusion.different_owner_is_rejected",
+        "ExclusionCorrelatedInclusion.componentwise_E_is_pair_sufficient_not_native_inside_completeness"
+      ]
+    },
+    "CombinedExclusionCoverage": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/CombinedExclusionCoverage.lean",
+      "sha256": "9d1115629a24c23d8b5427c480058608236dbd4e0f069bafd05dace6056c6f11",
+      "checkedTheorems": [
+        "CombinedExclusionCoverage.admits_append_iff_both",
+        "CombinedExclusionCoverage.combined_E_admits_iff_both_endpoints",
+        "CombinedExclusionCoverage.same_head_combined_E_subset_transports_both_exclusions",
+        "CombinedExclusionCoverage.proper_residual_combined_E_is_exactly_both_first_field_tests",
+        "CombinedExclusionCoverage.exclusion_criterion_transports_both_endpoints",
+        "CombinedExclusionCoverage.combined_criterion_transports_every_pair",
+        "CombinedExclusionCoverage.computed_witness_is_sound",
+        "CombinedExclusionCoverage.every_checked_residual_is_computed",
+        "CombinedExclusionCoverage.computed_witness_iff_checked_criterion",
+        "CombinedExclusionCoverage.computed_witness_supplies_every_pair",
+        "CombinedExclusionCoverage.checked_criterion_gives_pair_inclusion",
+        "CombinedExclusionCoverage.pair_inclusion_is_transitive",
+        "CombinedExclusionCoverage.checked_rows_compose_without_an_admitted_intermediate",
+        "CombinedExclusionCoverage.composed_suffix_is_an_executable_geometry_witness",
+        "CombinedExclusionCoverage.redistributed_same_effective_E_is_covered",
+        "CombinedExclusionCoverage.redistributed_E_was_outside_pair24_componentwise_guard",
+        "CombinedExclusionCoverage.proper_residual_keeps_pair24_general_two_endpoint_test",
+        "CombinedExclusionCoverage.actual_exclusion_differences_are_not_erased_from_rows"
+      ]
+    },
+    "StarHeadOverlap": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/StarHeadOverlap.lean",
+      "sha256": "55b7604e9354cd107c80c5a06eb3e5380099e69c8576716423296d392741ba06",
+      "checkedTheorems": [
+        "StarHeadOverlap.admits_append_exact_intersection",
+        "StarHeadOverlap.matched_slice_is_exact_read_overlap",
+        "StarHeadOverlap.effective_E_requires_both_endpoints",
+        "StarHeadOverlap.output_retains_actual_and_both_endpoint_Es",
+        "StarHeadOverlap.output_using_matched_slice_is_equivalent",
+        "StarHeadOverlap.same_head_overlap_is_always_nonempty_at_root",
+        "StarHeadOverlap.equal_head_and_mark_are_sufficient_to_accept",
+        "StarHeadOverlap.base_mismatch_still_rejects",
+        "StarHeadOverlap.different_head_still_rejects_this_lane",
+        "StarHeadOverlap.excluded_mark_still_rejects",
+        "StarHeadOverlap.slice_does_not_change_actual_tail_layer_mark_or_H",
+        "StarHeadOverlap.successful_application_retains_original_storage_value",
+        "StarHeadOverlap.output_does_not_change_tail_mark_or_H",
+        "StarHeadOverlap.DEMAND_actual_never_becomes_NORMAL",
+        "StarHeadOverlap.DEMAND_record_never_produces_NORMAL",
+        "StarHeadOverlap.NORMAL_support_stays_NORMAL",
+        "StarHeadOverlap.inverse_has_no_invented_reader_E",
+        "StarHeadOverlap.inverse_result_still_contains_both_endpoint_Es",
+        "StarHeadOverlap.checked_pair_cover_preserves_every_actual_effect",
+        "StarHeadOverlap.checked_pair_cover_is_symmetric_under_generic_reversal",
+        "StarHeadOverlap.inverse_checked_cover_keeps_every_actual_effect",
+        "StarHeadOverlap.same_head_role_guard_is_unchanged",
+        "StarHeadOverlap.proper_ancestor_STAR_current_lane_remains_blocked",
+        "StarHeadOverlap.incomparable_E_now_matches_without_losing_E",
+        "StarHeadOverlap.incoming_STAR_uses_the_same_overlap_without_a_MUST_upgrade"
+      ]
+    },
+    "CombinedOverlapBridge": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/CombinedOverlapBridge.lean",
+      "sha256": "344ca0db3437aa5019086ce81798f5a710a96ca33c913a7ad9302e290582204c",
+      "checkedTheorems": [
+        "CombinedOverlapBridge.combined_criterion_preserves_every_actual_effect",
+        "CombinedOverlapBridge.combined_exclusion_criterion_survives_reversal",
+        "CombinedOverlapBridge.combined_pair_coverage_survives_generic_reversal",
+        "CombinedOverlapBridge.inverse_combined_criterion_keeps_every_actual_effect"
+      ]
     }
   },
   "baselineHelpers": [
