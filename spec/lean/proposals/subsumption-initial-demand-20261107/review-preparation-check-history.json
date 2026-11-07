@@ -1,0 +1,23 @@
+{
+  "state": "FAILURES_PRESERVED_SEPARATELY_NOT_PROOF_RESULTS",
+  "failures": [
+    {
+      "artifact": "/tmp/subsumption-review-853-check-20261107-1",
+      "module": "ScalarChainIntersectionExamples",
+      "receiptSha256": "5a3a2906c6191d783b5dacdb12846b2683a0169bdf93b8bec33591298b543c89",
+      "failedSourceSha256": "86d162faa0357bc42abce8d7b63ad54c63902632c279b337968cbdf0caac0dc3",
+      "logSha256": "7237d98bdfc4b087ae57e27838fa50ff6356754a7a8301ecc00140287ff606fe",
+      "reason": "Accessor constructor was qualified through an abbreviation. Fixed the constructor qualification; no theorem statement or operator behavior changed."
+    },
+    {
+      "artifact": "/tmp/subsumption-review-874-check-20261107-1",
+      "module": "CurrentCoverageInvariant",
+      "receiptSha256": "de58ac250548c700d0700b498543df8962306405fbf87eaed2495c029582fc55",
+      "failedSourceSha256": "a47277dab666a9cb1f76a4071c8e7e68a82f44a7cc5008fdaf485a8cbc054133",
+      "logSha256": "d49691af0e0394be2f8e9a2d7225a7b026d959d2fda53a8cd2823f2de2bd7be5",
+      "reason": "Bool.and_eq_true needed explicit arguments; mem_cons_self had no explicit arguments. Proof-body elaboration repairs only; all operators and statements unchanged."
+    }
+  ],
+  "finalReceipt": "component-checks-874.json",
+  "semanticChangesDuringProofRepair": false
+}

@@ -3,7 +3,7 @@
 7 November 2026. This package checks the declared component domains and the
 scoped principal routes for the [combined specification](../../../edge-subsumption-initial-emission-demand-intersection.md).
 Read the [examples E01–E29](../../../subsumption-principal-examples-20261107.md)
-and [proof map P01–P26](../../../subsumption-initial-demand-proof-obligations.md).
+and [proof map P01–P27](../../../subsumption-initial-demand-proof-obligations.md).
 No runtime implementation or project measurement is included.
 
 ## Repeat the check
@@ -21,8 +21,14 @@ python3 spec/lean/proposals/subsumption-initial-demand-20261107/check.py \
   --output-directory /tmp/subsumption-initial-demand-check
 ```
 
-The reviewed root check passed with **776 declared laws**. Read the
-[receipt](component-checks-776.json) and [complete axiom audit](component-axioms-776.log).
+The latest root check passed with **874 declared laws**. Read its
+[receipt](component-checks-874.json) and [complete axiom audit](component-axioms-874.log).
+It includes 98 declarations added to the earlier 776-law check. The new
+E21 law checks eight local transactions; it is not a full-driver proof.
+The [preparation history](review-preparation-check-history.json) records two
+failed elaboration attempts and their proof-only corrections.
+The preceding [776-law receipt](component-checks-776.json) and
+[axiom audit](component-axioms-776.log) remain available.
 The preceding revision's 684-law receipt and earlier component receipts remain
 as history. The old primary-only C2 laws describe `emit`, not the new expanded
 `emitSeeds` stream. The 92 review laws are listed below. E29 recovery remains
@@ -35,20 +41,20 @@ it is not a count of whole-analyzer soundness theorems.
 
 | Model | Laws | Checked domain |
 | --- | ---: | --- |
-| [Canonical](Canonical.lean), [Relations](Relations.lean), [Matching](Matching.lean), [Reachability](Reachability.lean) | 162 | Byte-identical original 528 sources. Compatible MAY/MUST/E laws, aligned relation suffixes, native-role filter and finite relation paths. Original protected-prefix removal is superseded by literal H. |
-| [RelativeAdmission](RelativeAdmission.lean) | 47 | Arbitrary Nat field paths/full marks, finite E, restricted FULL C2 and constructive normalized C5 image; 24 executable cells |
+| [Canonical](Canonical.lean), [Relations](Relations.lean), [Matching](Matching.lean), [Reachability](Reachability.lean) | 162 | Byte-identical original 528 sources. Compatible MAY/MUST/E laws, aligned relation suffixes, native-role filter and finite relation paths. Historical protection assumptions are not the revised same-flag policy. |
+| [RelativeAdmission](RelativeAdmission.lean) | 47 | Pre-review primary C2 and constructive normalized image; the current strict-ancestor STAR precheck is in RejectAncestorStarAdmission |
 | [ExactFlowInputBridge](ExactFlowInputBridge.lean) | 30 | Existing legal EXACT/FLOW actuals with nonempty E; query-local erasure only, original actual preserved |
 | [AnnotatedC5Exit](AnnotatedC5Exit.lean) | 57 | Typed counted accessors, mark/E/H/support-preserving exit selection, complete ND P, complete row union and DEMAND cuts; entry image is a callback |
-| [LiteralProtection](LiteralProtection.lean) | 19 | Literal typed H, freshness, arrival orders and pass transport; unchanged DATA operation is a parameter |
+| [LiteralProtection](LiteralProtection.lean) | 19 | Historical literal-H retention, freshness and pass transport. Its no-protected-pruning rule is superseded by same-flag compaction |
 | [SelectedTransitiveSubsumption](SelectedTransitiveSubsumption.lean) | 38 | A→B→C without stored B, equal-mx aligned guards, T exclusions/H, local marked work and both arrival orders |
 | [FlowDemandCompletion](FlowDemandCompletion.lean) | 50 | Final-source provenance, both DATA endpoints, legal static prefixes, one paired erasure, exact interfaces and linear row-count bound |
 | [WrapperRecovery](WrapperRecovery.lean) | 34 | Real loop-free source/read/call/permission/finding bootstrap at 1,1,2 for arbitrary finite ordinary wrapper chains |
 | [ConcreteConverterWrapper](ConcreteConverterWrapper.lean) | 17 | E18 actual guarded T→U source kernels, C2/C5 publication, finite wrappers and wrong-mark controls; source occurrence callback is an adapter obligation |
-| [StaticFlowCompletion](StaticFlowCompletion.lean) | 20 | Actual E19 C2/body/C5 NORMAL provider; same-field kill, exact-parent and E28 paired cross-base controls |
+| [StaticFlowCompletion](StaticFlowCompletion.lean) | 20 | Conditional E19 provider, same-field kill, exact-parent and paired cross-base controls; E28's absent-saved-provider assumption is not a trace of ordinary id |
 | [TwoLoopHeaderFlow](TwoLoopHeaderFlow.lean) | 27 | E20 header10→4 versus repeat4→4, real source permission/getter/sink path, weak fixture and strong negative |
 | [OwaspUniformCompletion](OwaspUniformCompletion.lean) | 24 | Arbitrary H-depth uniform source/body, paired C5 no-cut invariant, real FLOW backing and plain-T arm removal |
 | [DeepFlowCompletion](DeepFlowCompletion.lean) | 35 | Supplied whole completed query, fine-versus-cut distinction, derived NORMAL shrinker and finite source/read/sink chain |
-| [DeepGuidanceArrival](DeepGuidanceArrival.lean) | 35 | Actual F1/B2/F3/B4 source/Target/ZERO arrival and physical ports under global limits 1,1,2,3,4 |
+| [DeepGuidanceArrival](DeepGuidanceArrival.lean) | 35 | Necessary source/Target/ZERO route and physical ports under limits 1,1,2,3,4; not the complete final canonical authority |
 | [GeneralLoopAdmissionBound](GeneralLoopAdmissionBound.lean) | 19 | ALL labelled query families under a head bound; canonical E07 root MUST finding in both orders |
 | [GeneralLoopAdmissionOneStep](GeneralLoopAdmissionOneStep.lean) | 8 | Every C2/public key has depth≤demand depth+1 independently of actual depth; B4 global3 actual-depth3 cell |
 | [LoopMapperRecovery](LoopMapperRecovery.lean) | 13 | E16 actual loop-write result, B2-derived adjacent demand, ALL extra-family cut distinction and NORMAL mapper/sink pipeline |
@@ -64,6 +70,23 @@ it is not a count of whole-analyzer soundness theorems.
 | [CombinedExclusionCoverage](CombinedExclusionCoverage.lean) | 18 | Full same-head combined-E criterion, executable witness and pair-inclusion composition |
 | [StarHeadOverlap](StarHeadOverlap.lean) | 25 | Same-head STAR/MUST overlap, union E, retained actual/mark/H/layer, generic inverse and unchanged role guard |
 | [CombinedOverlapBridge](CombinedOverlapBridge.lean) | 4 | Combined-E coverage preserves the same actual effect in direct and generic reverse directions |
+
+## Latest review components
+
+| Model | Laws | Scope |
+| --- | ---: | --- |
+| [RejectAncestorStarAdmission](RejectAncestorStarAdmission.lean) | 20 | Ordinary STAR strict ancestors reject; no companion on rejection. Unblocked cells and the constructive raw/normalized image are unchanged |
+| [FlagMatchedSubsumption](FlagMatchedSubsumption.lean) | 16 | Same-H scalar MAY rule and a negative arrival-order witness for destructive exact OR; not the selected update algorithm |
+| [PlainCoverageFlagViews](PlainCoverageFlagViews.lean) | 23 | Separate current canonical U/H regions, one visible exact OR row, both orders, cross-H negatives, invisible plain certificate and pass transport |
+| [CurrentCoverageInvariant](CurrentCoverageInvariant.lean) | 20 | Generic prefix transitivity, insertion region union, constructive representative, arbitrary fold/permutation coverage independence; fixed MAY/T/DEMAND/Empty-E domain |
+| [ScalarChainIntersectionExamples](ScalarChainIntersectionExamples.lean) | 18 | Sixteen scalar C5 table cells, complete-pair splitting provenance and no borrowed output budget |
+| [E21OperatorLedger](E21OperatorLedger.lean) | 1 | Eight executable local transactions all pass. Includes omitted B2 FLOW family, B4 ZERO-exit rejection and raw/cut distinction. No complete fixed point or finding proof |
+
+The U/H views are current coverage metadata. Their fold input is a proof
+witness; the design stores no raw offer history and emits no duplicate row.
+Coverage equality is independent of offer order in the stated local domain.
+List ordering, native freshness/delivery/restore and generalized packed
+E/mx/relation coverage still require correspondence checks.
 
 These are finite-field/mark-exclusion local models. Native cofinite mx,
 packed storage, writer/source hooks and whole-program correspondence remain
@@ -87,8 +110,12 @@ That is not the native run-4 global limit. `DeepGuidanceArrival` uses the
 actual run-4 global limit 3 and pair-relative caps. `DeepExtraFrontier` connects ALL relevant family heads within the source,
 cap/read and nonexpanding read-replay grammar. It proves the fine F5 key is
 not masked by any additional bounded query family. Native producer/store
-coverage and final-basis preservation remain explicit adapter obligations;
-a supplied recorded row list is not assumed exhaustive.
+coverage and final-basis preservation remain explicit adapter obligations.
+In particular, the old supplied three-row E21 list omits FLOW families. The
+[BL/L/AL ledger](../../../subsumption-e21-block-ledger-20261107.md) includes
+those families and marks complete J/R enumeration open. A saved F3 NORMAL
+shrinker can exist without completion. Its existence does not prove that a
+growing source result passes the earlier gate and reaches repeat replay.
 
 The OWASP component proves the stated uniform producer family, not arbitrary
 Java. In the principal 1,1,2 schedule, every reversed B2 DATA entry has depth
@@ -100,9 +127,11 @@ correspondence remain explicit implementation checks.
 
 `StaticCarryGap` deliberately keeps its no-other-DATA-provider assumption.
 The old interface then has no run-3 DATA output despite source permission
-and saved ZERO replay. The new demand completion refutes that assumption
-by enabling ordinary analysis to infer a real NORMAL FLOW provider. It does
-not change later precise-STAR rejection or promote a concrete DEMAND row.
+and saved ZERO replay. A supplied completed view enables a conditional real
+NORMAL provider derivation. This does not establish the complete new handoff
+or completion necessity. E28's ordinary id already has NORMAL FLOW from
+run-1 and is retired as a justification for extra completion. The local
+conditional derivation does not change precise-STAR rejection or promote T/D.
 The conditional-pass control also proves why STAR shape and H=false do not
 justify such promotion.
 

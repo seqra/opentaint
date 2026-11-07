@@ -18,9 +18,11 @@ is not a proof that the new analyzer recovers every project finding.
 | --- | --- | --- |
 | NORMAL relation subsumption | Nonstatic endpoints, Empty E and equal mx | Legal static endpoints are allowed. Compare both endpoint exclusions and the admitted marks. Use the common-suffix rule in §3. |
 | Same-head summary matching | Some incomparable field exclusions reject | Match the overlap of STAR/MUST actuals with a STAR endpoint. Union their exclusions; retain the actual support. This is a matching change. |
+| Protection classes | Literal protected coordinates could not be removed | Subsumption compares equal protection classes. Keep exact OR-upgrade in the visible row and retain its canonical plain coverage. |
+| Ancestor STAR admission | A STAR actual could sample a deeper exact/STAR demand | Reject an ordinary STAR actual strictly above the demand. Wait for a matching-head/deeper fact or an ANY/MUST actual. |
 | Restricted initial emission | One primary initial | If the primary is concrete STAR/DEMAND, also emit its same-geometry FLOW/STAR/NORMAL identity. |
 | C5 entry check | Existing normalized C2-image test | Keep that mechanism and include the new companion in its image. |
-| FLOW demand completion | Endpoint-prefix self-pairs and one paired-head permission | Keep both. A companion does not cover a rejected primary or a DATA endpoint paired with control. |
+| FLOW demand completion | Earlier draft proposed endpoint-prefix self-pairs and a paired-head permission | Keep this as a candidate pending the complete E21 trace. E28's identity is already handled in run-1. Do not assume completion is necessary. |
 
 Keep ordinary field transfer, cleaners, aliases, complete ND conditions,
 source permissions, Target IDs, liveness, loop gates and stopping rules.
@@ -59,8 +61,10 @@ owner/ports, complete P, conclusion base/path/tail/mark/E and support layer.
 It is not another access-path component or a new analysis mechanism.
 
 ```text
-same edge offered without H, then with H -> one edge with H
-parent ANY without H, child ANY with H  -> retain the child's H
+same edge offered without H, then with H -> one visible edge with H (OR)
+parent ANY without H, child ANY with H  -> neither subsumes the other
+parent ANY with H, child ANY without H  -> neither subsumes the other
+parent ANY with H, child ANY with H     -> ordinary same-flag coverage applies
 pass an unprotected edge               -> still unprotected
 ```
 
@@ -83,11 +87,56 @@ left-to-result dependency needed by the next backward run. The existing
 assignment, cleaner-survivor and mark-cycle producers keep their rules.
 A pass carries an existing flag and never creates one.
 
-Ordinary compatible facts keep the existing laws: MAY covers its descendants;
+Apply subsumption separately to the H=false and H=true coverage views.
+An H=true edge never subsumes an H=false edge, or the reverse. Protected
+edges can cover protected edges when all ordinary coverage tests pass.
+This replaces the older rule which retained every literal protected child.
+
+Keep one OR-upgraded visible row for exact duplicates. Its flag is not the
+coverage authority. Retain canonical plain coverage U and canonical protected
+coverage H separately; render their exact duplicates with OR. Updating H must
+not delete U. A plain parent in U can still cover a later plain child after
+its visible row becomes protected. A protected-only parent cannot do so.
+These are current coverage views, not discarded-edge history or extra emitted
+facts. Caches, restore and freshness must use the views, not reconstruct U
+from the OR-rendered flag. If a protected child is covered by a protected
+parent, a separately retained plain child can render plain: the protected
+region remains represented by the parent, rather than by a sticky child flag.
+
+```text
+offer(edge):
+    view = H if edge.protected else U
+    canonicalInsert(view, edge.geometry)  // same-flag subsumption only
+    if view changed: invalidate coverage-dependent caches
+    publish changes to render(U,H)         // one exact row; flag = OR
+
+render(U,H):
+    return one row per exact geometry in union(U,H),
+           protected = exact geometry is in H
+```
+
+`geometry` here includes all ordinary coverage headers, not only its field
+path. In the following fixed-premise MAY example, A is the root and B its
+child. Both offer orders must leave U={A}, H={A}, visible={A protected}:
+
+```text
+A plain; B plain; A protected
+A protected; A plain; B plain
+```
+
+The plain A certificate removes plain B in both cases. If only protected A
+was ever offered, it cannot remove plain B. A hidden new U certificate can
+change coverage even when the visible rows do not change. Restoring only the
+visible rows would therefore be incorrect. Save the current coverage views
+with their owner; do not save an offer log. Native delivery still publishes
+the OR-upgraded row, and a pass never creates protection.
+
+Within each protection class, ordinary compatible facts keep the existing
+laws: MAY covers its descendants;
 MUST covers admitted descendant regions; same-head MUST exclusion sets merge
 by intersection. A complete immediate child can fill one excluded field;
-a deeper child or a child with a remaining hole cannot. These laws never
-remove H. Exact duplicate flags merge by OR. A new H-only upgrade must be
+a deeper child or a child with a remaining hole cannot. These laws do not cross protection classes. Exact visible duplicates merge
+by OR without deleting their plain coverage. A new H-only upgrade must be
 delivered; a repeated identical flag need not be delivered again.
 
 ## 3. Relation subsumption
@@ -106,6 +155,8 @@ L: a.u.r.* / EiL -> b.v.r.* / EoL
 The **same r** extends both endpoints. Let `ES=EiS union EoS` and
 `EL=EiL union EoL`. S covers L when:
 
+- Both compared coverage witnesses have the same protection flag. Never
+  use a protected-only row to back an unprotected row, or the reverse.
 - The input bases agree and the output bases agree. They can be legal named
   statics. Do not remove a static class/field anchor while factoring r.
 - Every mark admitted by L is admitted by S. For FLOW mark exclusions this
@@ -156,8 +207,9 @@ T is not excluded and the FLOW has sufficient support. NORMAL FLOW can cover
 NORMAL or DEMAND T; DEMAND FLOW cannot replace NORMAL T. Compare the same
 initial geometry after a valid common-suffix specialization. STAR requires
 the same correlated output coordinate and compatible E. ANY allows a covering
-output prefix. EXACT, MUST, mark-changing and protected rows keep their
-existing separate rules.
+output prefix. EXACT, MUST and mark-changing rows keep their existing separate rules.
+Every backing test also requires equal protection flags. A plain FLOW
+companion cannot remove a protected T relation.
 
 If A covers B and B covers C, test C directly against A's computed correlated
 view. B need not have been stored. Do not publish a fabricated B. This must
@@ -178,7 +230,7 @@ cleaners and source hooks even when their summary is FLOW-backed.
 | Preserve support | A DEMAND-only route cannot replace a NORMAL route: the next call would lose its NORMAL result/report. |
 | Same complete interface | A loop-header record at ports 10→4 cannot replace repeat4→4. It does not deliver to the repeat port. The same applies to different methods or contexts. |
 | Real admitted provider | A guessed `p.* -> ret.*` for a method which clears p is not a provider. Removing its marked row on that assumption loses the actual transfer. |
-| H remains literal | In §2.1, right-side FLOW does not replace the protected left-side rule dependency. |
+| Equal protection flags | A plain FLOW relation does not replace the protected left-side dependency in §2.1. A protected-only parent also cannot remove a plain child. |
 | Full ND matching | `{p/T,q/U} -> ret/V` cannot execute when only p/T is supplied. A one-member admission ticket never removes q/U from P. The aligned rule above is unary; it does not invent ND entailment. |
 | Correlated STAR versus ANY | STAR maps a shared suffix tau. An ANY conclusion can independently choose another suffix. The common-suffix proof cannot replace that independent relation by STAR. |
 | Opposite-only STAR inside | This is the selected workload policy, not a claim that every inside approximation is unsound. Applying `p.f.* -> q.f.f.*` to ancestor p.* can introduce q.f.f.ANY/DEMAND without a concrete f suffix. The selected CURRENT lane avoids that extra work. |
@@ -227,7 +279,8 @@ head. Its mark is the accepted demand mark.
 | p extends q | ANY | ANY | p.STAR, Empty E |
 | p extends q | ANY | MUST | p.MUST, normalized demand E |
 | p extends q | ANY | Ordinary STAR or EXACT | Reject |
-| p extends q | STAR or concrete EXACT | STAR or MUST | p.EXACT |
+| p extends q | STAR or concrete EXACT | MUST | p.EXACT |
+| p extends q | Any | Ordinary STAR | Reject |
 | p extends q | STAR or concrete EXACT | ANY | p.EXACT |
 | p extends q | Any | EXACT | Reject |
 
@@ -258,113 +311,164 @@ FLOW is not evidence for CM(T). A conditional pass cannot become a NORMAL
 transfer through this companion. A cleaner which excludes T yields FLOW mx
 containing T; the original T exit demand rejects that result in §5.
 
-**Why accept a deeper demand from STAR?** For demand p.f.EXACT/T and actual
-p.STAR/T,DEMAND, the suffix could be f. The emitted p.f.EXACT/T is therefore a
-DEMAND hypothesis, not definite taint at every child. With FLOW the hypothesis
-is a conditional NORMAL relation; actual support is still joined on replay.
-This is the existing C2 selection policy. CURRENT summary application can
-still reject a strict inside use. We have not established that rejecting this
-whole C2 cell preserves refinement, so this review does not change it or
-claim that a necessity counterexample has been demonstrated.
+**Do not guess a deeper point from STAR.** Demand `p.f.EXACT/T` with
+submitted `p.STAR/T,DEMAND` emits nothing. It also emits no companion.
+The previous demand was propagated to the caller. If that route exists,
+wait for `p.f.STAR/T` or a more precise fact, or for an actual `p.ANY/T`
+which admits that refinement. A MUST ancestor remains different: it already
+proves membership at admitted children. Same-head STAR handling is unchanged.
+The finite structural C2 image can remain the same: the removed ancestor
+STAR case emitted an EXACT at the demand head, for which a legal same-head
+EXACT witness already exists. The actual admission decision does change.
 
-## 5. One demand-edge intersection
+## 5. Intersection after splitting field chains
 
-Let the previous-run edge be `Dp -> Dc`. In the current direction it gives
-one demand pair `(Dc,Dp)`: entry permission Dc and paired output permission
-Dp. Intersect it with the current summary candidate `P -> C`. Keep that pair's owner, scope, ports and field budget.
+A previous-run edge is `Dp -> Dc`. Dp is one field chain; Dc can contain
+many. A current candidate is `P -> C`. P is one field chain; C can contain
+many. Split Dc and C first. Each inner operation then sees exactly four
+scalar chains: `(dp -> dc)` and `(p -> c)`. Keep the original pair's owner,
+ports, mark/exclusion headers and Dp budget. Never flatten different demand
+edges into one unrelated pool of entry and exit chains.
 
-The C5 entry test already exists in `canEmitInitial`/`canStoreInitial`.
-It asks whether a member of P can be a normalized output of C2 for Dc.
-It does not ask whether feeding that member back into C2 emits itself.
-The new part is the companion branch. Check its valid primary T/STAR witness,
-then replace the mark. Do not repeat `markSub(T,FLOW)` on the companion.
-Raw geometric containment and legality still apply. Keep the existing raw
-EXACT/FLOW preimage of stored STAR/FLOW. No runtime witness object, actual
-history or enumeration of hypothetical facts is required.
+The split is a reference presentation. A native trie implementation can
+perform the same operation without materializing every scalar combination.
 
-The following is the complete operation for ONE demand pair. `image(Dc)`
-means that constructive normalized image of §4. `admits(t,E,s)` accepts an
-empty suffix; for a nonempty suffix EXACT rejects, ANY accepts, and STAR/MUST
-check its first field against E.
+**FLOW companion handling is an entry check, not mark synthesis.** A
+concrete dc can admit a FLOW p only if that p is an authorized companion:
+replace its FLOW mark by dc's concrete T, check the concrete STAR primary's
+C2 image and raw containment, then restore FLOW. Do not reject it afterward
+with `markSub(T,FLOW)`. The paired dp stays unchanged. In particular, a T
+exit rejects a FLOW result whose mx excludes T.
+
+`primaryImage(dc)` below is the existing normalized C2 primary image, with
+the existing raw EXACT/FLOW preimage of stored STAR/FLOW. The ancestor-STAR
+rejection changes actual admission, but not that finite structural image:
+EXACT-at-head results still have a legal same-head EXACT witness. The
+companion is the additional image branch.
 
 ```text
-intersect(demand=(Dc,Dp), candidate=(P,C), run, direction, L):
-    if owner/context/direction/scope/entryPort/exitPort differ: return {}
-    if shapes, marks, exclusions or static anchors are invalid: return {}
-    if C is NormalTarget:
-        keep (P,C) only for the existing NORMAL forward witness,
-        with NORMAL composition and no identical persisted owned row
-        return that result
-    if run == 1: return existing first-run/global-limit admission(P,C)
+intersectEdge(previous=(dp -> Dc), current=(p -> C), run, L):
+    require matching owner/context/direction/scope/physical ports
+    require p and dp are single legal DATA chains
+    (p,C) = existing whole-FLOW-pair normalization(p,C)
+    entries = splitFieldChains(Dc)      // each dc keeps its original headers
+    outputs = splitFieldChains(C)      // each c keeps mark/mx, E, layer and H
+    result = empty exact union
+    for dc in entries:
+        entryKind = NONE
+        if p belongs to primaryImage(dc):
+            entryKind = PRIMARY
+        else if p is STAR/FLOW and dc requires concrete T:
+            twin = p with mark=T
+            if twin is a legal concrete STAR primary in primaryImage(dc):
+                entryKind = FLOW_COMPANION   // explicit second C2 output
+        if entryKind == NONE: continue
+        for c in outputs:
+            selected = intersectChain(c,dp)
+            if selected is empty: continue
+            k = min(L, fieldDepth(dp)+1)     // this original pair's dp only
+            if fieldDepth(selected) > k:
+                selected.path = prefixThroughKFieldsKeepingStaticAnchor
+                selected.tail = ANY
+                selected.E = empty
+                selected.layer = DEMAND
+            if selected is EXACT/FLOW: selected.tail = STAR
+            result += (unchanged p -> selected)
+    return packExactUnion(result)
 
-    (P,C) = normalizeWholeFlowPair(P,C)
-    // Unary FLOW DATA pair only: EXACT -> STAR at either endpoint.
-    // Preserve each endpoint's own path/E/mx; preserve C's layer/H.
-    if Dc is DATA:
-        if P is ZERO or no member of complete P belongs to image(Dc): return {}
-    else if Dc is ZERO or Target:
-        if P is not canonical ZERO: return {}
-    else: return {}
-    // Keep complete P. ND still requires all members during application.
-
-    if Dp is ZERO:
-        return {(P,C)} if C is Reach or DemandTarget else {}
-    if Dp is not legal DATA or C is not DATA: return {}
-    d = Dp with E cleared only for FLOW/STAR
-    results = empty exact union
-    for each scalar membership c in C:
-        if c.base != d.base or their mark slots have no overlap: continue
-        // T/U must agree. T meets FLOW only if T is not excluded.
-        // Native mx/GROUP overlap applies. Keep c's mark/mx, layer and H.
-        p=d.path; q=c.path; Ed=d.E; Ec=c.E; selected=none
-        if p == q:
-            if c.tail is EXACT or STAR: selected=c
-            if c.tail == ANY:
-                selected=c with tail=(EXACT if d.tail==EXACT else ANY), E=empty
-            if c.tail == MUST:
-                if d.tail == EXACT:
-                    selected=c with tail=EXACT, E=(Ec if c is FLOW else empty)
-                if d.tail == STAR: selected=c with E=(Ec union Ed)
-                if d.tail == ANY:  selected=c
-        else if q == p + nonempty suffix:
-            if admits(d.tail,Ed,suffix): selected=c
-        else if p == q + nonempty suffix:
-            if c.tail != EXACT and admits(c.tail,Ec,suffix):
-                if c.tail == STAR: selected=c
-                else if d.tail == EXACT:
-                    selected=c with path=p, tail=EXACT, E=empty
-                else:
-                    selected=c with path=p,
-                        E=(Ed if c.tail==MUST and d.tail==STAR else empty)
-        if selected is none: continue
-        k=min(L, countedDepth(d.path)+1)
-        if countedDepth(selected.path) > k:
-            selected=selected with path=prefixThroughKFieldsKeepingStaticAnchor,
-                tail=ANY, E=empty, layer=DEMAND
-        if selected is EXACT/FLOW: selected.tail=STAR
-        results += selected
-    return {(complete P, packExactUnion(results))} if results is nonempty else {}
+intersectChain(c,d):                    // one conclusion and one dp chain
+    d = d with E cleared only for FLOW/STAR
+    if bases differ or mark slots have no overlap: return empty
+    // Keep c's mark/mx, support and supplied H. Never create a concrete mark.
+    if c.path == d.path:
+        if c.tail in {EXACT,STAR}: return c
+        if c.tail == ANY:
+            return c with tail=(EXACT if d.tail==EXACT else ANY), E=empty
+        if c.tail == MUST:
+            if d.tail == EXACT:
+                return c with tail=EXACT, E=(c.E if c is FLOW else empty)
+            if d.tail == STAR: return c with E=(c.E union d.E)
+            return c                           // d.tail == ANY
+    if c.path extends d.path by nonempty suffix:
+        return c if d.tail/E admits suffix else empty
+    if d.path extends c.path by nonempty suffix:
+        if c.tail == EXACT or c.tail/E excludes suffix: return empty
+        if c.tail == STAR: return c             // retain correlation
+        if d.tail == EXACT: return c with path=d.path, tail=EXACT, E=empty
+        return c with path=d.path,
+            E=(d.E if c.tail==MUST and d.tail==STAR else empty)
+    return empty                               // incomparable field chains
 ```
 
-This operation preserves candidate marks; it does not turn FLOW into T.
-An entry ticket can admit an ND member without dropping the rest of P.
-The selected output keeps its actual support and supplied H. Only a real
-field cut changes support to DEMAND. ZERO is not an unlimited-field exception.
+Here EXACT admits only an empty suffix, ANY admits every suffix, and
+STAR/MUST admit a nonempty suffix when its first field is not excluded.
+Full marks T and U overlap only if equal. T overlaps FLOW only if T is not
+excluded. Keep native catalog-aware mx/GROUP overlap operations.
 
-The caller unions results over ALL matching complete pairs, then applies
-summary subsumption. One pair can retain a NORMAL leaf while another cuts it
-to DEMAND. Never combine one pair's entry with another pair's exit or stop
-at the first DATA match. Rejected raw candidates are not stored providers.
+### 5.1 Scalar examples
 
-Whole-FLOW normalization retains strong-write exclusions and legal whole-
-position RemoveAll residuals. It does not normalize concrete EXACT endpoints
-or exact Target originals. The existing source compiler, SourceHit callback
-and NormalTarget reporting protocol remain unchanged.
+Except where shown, E and mx are empty, H=false and marks are T. These are
+conclusion intersections after the independent entry check has passed.
 
-## 6. Demand completion and delivery
+| c from current summary | dp from previous demand | Scalar result | Reason |
+| --- | --- | --- | --- |
+| `x.$/T,N` | `x.ANY/T` | `x.$/T,N` | Exact result is already inside the selector. |
+| `x.ANY/T,D` | `x.$/T` | `x.$/T,D` | Provisional exact result stays DEMAND. |
+| `x.*/T,D` | `x.$/T` | `x.*/T,D` | Do not break the premise/conclusion suffix correlation. |
+| `x.MUST/T {f},N` | `x.*/T {g}` | `x.MUST/T {f,g},N` | Both exclusion sets apply. |
+| `x.f.g.$/T,N` | `x.f.ANY/T` | `x.f.g.$/T,N` | One extra field fits the paired budget. |
+| `x.f.g.h.$/T,N` | `x.f.ANY/T`, L>=2 | `x.f.g.ANY/T,D` | The pair's budget is 2; cut the third field. |
+| `x.f.g.$/T,N` | `x.f.$/T` | empty | An exact parent does not select a descendant. |
+| `x.MUST/T,N` | `x.f.ANY/T` | `x.f.MUST/T,N` | Uniform taint includes f. |
+| `x.ANY/T,D` | `x.f.$/T` | `x.f.$/T,D` | The unknown suffix can contain f; support stays D. |
+| `x.*/T,D` | `x.f.$/T` | `x.*/T,D` | C5 conclusion selection keeps the correlation; this is not C2 admission from a STAR actual. |
+| `x.$/T,N` | `x.f.ANY/T` | empty | Exact x does not taint x.f. |
+| `x.MUST/T {f},N` | `x.f.ANY/T` | empty | The actual excludes f. |
+| `x.f.$/T,N` | `x.g.ANY/T` | empty | Different branches. |
+| `x.$/U,N` | `x.ANY/T`, U!=T | empty | Different concrete marks. |
+| `x.*/FLOW,N`, mx={} | `x.ANY/T` | `x.*/FLOW,N` | Keep FLOW, not T; the original T exit can accept it. |
+| `x.*/FLOW,N`, mx={T} | `x.ANY/T` | empty | FLOW excludes the requested T. |
 
-The companion is not the only FLOW permission. Keep the existing completion
-view built once from final admitted handoff rows:
+All selected outputs retain the supplied H. Subsumption after packing uses
+the same-protection coverage views from §2.1. A real field cut sets DEMAND;
+no operation upgrades an actual DEMAND witness to NORMAL.
+
+### 5.2 Controls and the current implementation
+
+The scalar DATA kernel does not turn ZERO or Target into field chains.
+Keep these typed cases: Dc ZERO/Target admits only canonical ZERO P; a DATA
+Dc rejects ZERO P; Dp ZERO accepts only Reach or DemandTarget. NormalTarget
+keeps its NORMAL-forward, NORMAL-composition, persisted-dedup protocol.
+Run-1 has no previous demand snapshot and uses its existing global limit.
+
+P is unary in the kernel. An existing ND adapter can check a member while
+retaining the complete ND original. It still requires all ND arms during
+application; do not enumerate premise combinations or replace ND by one arm.
+
+Compared with the current implementation:
+
+- The normalized C2-image check, paired output selection, paired FL+1 cut and
+  FLOW stored-form normalization already exist.
+- The new entry branch is the explicit FLOW companion. Strict-ancestor STAR
+  rejection changes which submitted facts can start analysis.
+- Splitting Dc/C here makes the reference algorithm readable. It does not
+  require native unpacking or alter existing scalar-chain output geometry.
+- All matching complete demand rows still contribute. One can keep NORMAL
+  output while another cuts the same candidate to DEMAND. Do not borrow a
+  different row's dp or stop after the first DATA match.
+- Strong-write exclusions and whole-position RemoveAll residuals keep their
+  existing normalization. Rejected raw candidates are not stored providers.
+
+## 6. Delivery and the open completion candidate
+
+Replay saved NORMAL records on the original actual first. Then obtain C2
+commands, analyze new commands through ordinary transfer and intersect each
+candidate by §5. Store and publish only admitted results. The actual's layer
+joins each applied summary's layer. A NORMAL FLOW hypothesis is not a NORMAL
+T input. Existing current subscriptions, source permissions and static writer
+registration keep their owners.
+
+The earlier draft proposed this extra view over final admitted handoff rows:
 
 ```text
 complete(row):
@@ -375,30 +479,34 @@ complete(row):
         add complete pair (entry.ANY/FLOW, exit.ANY/FLOW) at that interface
 ```
 
-These are selector pairs, with Empty E/mx, not facts or inferred summaries.
+These would be selector pairs, with Empty E/mx, not facts or inferred summaries.
 Use legal register heads or complete named-static anchors. Add no broad
 static root/class query. Keep the same complete pair in C2 and C5. Deduplicate
 across marks and do not recursively complete generated rows. The offered
 row count is linear in the source endpoint depths; use shared paths.
-The run-2 shared static carry exposes this view for encountered named fields.
-Later transitions retain local demand ownership.
+The run-2 shared static carry candidate exposes this view only for encountered
+named fields. Later transitions retain local demand ownership.
 
-Two examples show why the companion alone is insufficient:
+**Its whole-program necessity and sufficiency remain open.** E28's ordinary
+`id` already infers NORMAL `p.* / FLOW -> ret.* / FLOW` in run-1. Saved-first
+application handles its later marked descendant. The earlier artificial
+"no saved provider" premise is not a trace of that program.
 
-- **E21:** `(ZERO, DATA(x.f.f.STAR/T))` cannot start a DATA initial. Its
-  DATA endpoint still needs a FLOW/ANY self permission at the repeat port.
-- **E28:** a later `(p.STAR/T, ret.STAR/T)` demand rejects `p.g.EXACT/T` before
-  emitting a primary. A p-to-p self permission cannot publish p-to-ret.
-  The complete paired FLOW permission is needed for that actual return.
+E21's FLOW families can also infer its NORMAL shrinking record without this
+completion. A DATA endpoint paired with ZERO still cannot publish a DATA
+result, even when a companion initial exists. To prove completion necessary,
+check all other final paired DATA rows, not only that control row. The
+[per-run block ledger](subsumption-e21-block-ledger-20261107.md) records the
+known families and the exact remaining proof boundary.
 
-Delivery remains: replay saved NORMAL records on the original actual first;
-then obtain C2 commands; analyze new commands through ordinary transfer;
-intersect candidates by §5; store and publish only admitted results. The
-actual's layer joins each applied summary's layer. A NORMAL FLOW hypothesis
-is not a NORMAL T input. Existing current subscriptions, loop ports, source
-permissions and static writer registration keep their owners.
+There is a separate delivery question: the present growing-output gate runs
+before repeat delivery. Saved-first application inside the next input handler
+does not move saved shrinking replay before that gate. The choice between
+repairing demand guidance and moving saved non-growing replay before this
+gate is pending. This spec does not silently change loop order or add another
+observer. Do not implement completion as a proved repair on these examples.
 
-Generated selectors do not count as outgoing summaries. Newly inferred
+If selected, generated selectors do not count as outgoing summaries. Newly inferred
 DEMAND summaries do count. Keep the existing empty-outgoing-demand stop rule.
 Do not use stable demand counts or a fixed desired iteration number.
 
@@ -425,9 +533,11 @@ uncompleted fact-by-fact causal chain to each sink. Conductor recovery is an
 explicit acceptance gate; this review does not claim it is proved fixed.
 
 The original 684-law package checks the preceding revision's scoped models.
-Its primary-only C2 laws are not laws about the new two-result emitter.
-The review supplements check the expanded image, common-suffix exclusions
-and overlap projection in their stated domains. Native adapter equality,
+Its primary-only C2 laws are not laws about the new two-result emitter; its
+literal-H laws do not prove the revised same-flag compaction. The review
+supplements check the expanded image, strict-ancestor STAR rejection, scalar
+intersection examples, common-suffix exclusions, overlap projection and the
+plain/protected coverage repair in their stated domains. Native adapter equality,
 all principal program routes, GROUP and whole-driver convergence remain
 explicit validation obligations. No new project run or speedup is claimed.
 

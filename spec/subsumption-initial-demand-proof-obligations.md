@@ -2,9 +2,10 @@
 
 7 November 2026. Status: proof map for the combined specification.
 The checked domains and remaining implementation obligations are stated below.
-Review update: companion emission and overlap matching are explicit new rules.
-The earlier 684-law receipt describes the preceding component set. E29 adds a
-real Conductor recovery obligation; it is not closed by that receipt.
+Review update: companion emission, overlap matching, strict-ancestor STAR
+rejection and same-flag coverage with visible OR are explicit revised rules.
+Earlier receipts describe their stated operators. E21's complete final
+authority and E29's Conductor recovery remain open.
 Follow [proof-guide.md](proof-guide.md). Use the
 [frozen pre-implementation baseline](subsumption-redesign-baseline-20261107.md)
 and [principal examples](subsumption-principal-examples-20261107.md).
@@ -41,11 +42,11 @@ axiom, classical choice or assumed native-equivalence theorem.
 | ID | Required statement | Principal cases |
 | --- | --- | --- |
 | P01 | Canonical MAY/MUST union preserves represented positions and marks under the selected E laws. A partial child cannot fill a whole excluded field. | E04–E06 |
-| P02 | Protected coordinates cannot be subsumed. Protection is joined at the exact selected coordinate; a pass rule never creates protection. | E10–E11 |
+| P02 | Subsumption compares equal protection flags. Exact visible duplicates OR-upgrade while retaining canonical plain coverage. Neither flag class covers the other; a pass never creates protection. | E06, E10–E11 |
 | P03 | An admitted aligned NORMAL relation covers its specialization by an executable common-suffix witness. Include both endpoint E, legal static bases and admitted-mark inclusion. An absent or rejected provider cannot cover anything. | E01–E02 |
 | P04 | Coverage is transitive, including NORMAL FLOW followed by FLOW-backed concrete coverage. Final coverage works in one packet and both arrival orders without retaining an intermediate row. | E03, E06 |
 | P05 | Current, saved-direct and opposite matching have exactly their selected roles. All incoming STAR facts obey the strict-ancestor restriction; MAY/MUST keep their own rules. | E08–E09 |
-| P06 | Primary C2 emits no ANY initial or premise, creates no full mark from FLOW or a different full mark, and respects base, E reachability, direction and field limits. | E12–E13 |
+| P06 | Primary C2 emits no ANY initial or premise, creates no full mark from FLOW or another full mark, and respects base, E, direction and limits. An ordinary STAR strict ancestor of the demand rejects, with no companion. | E12–E13 |
 | P07 | Both selected same-head ANY/STAR inputs under ANY demand yield the same ordinary STAR identity start. FLOW starts NORMAL; concrete STAR starts DEMAND. No MAY start or new tail is used. | E12, E17–E18, E25 |
 | P08 | C5's normalized entry predicate is exactly the constructive image of the same C2 operation. Its witness works for arbitrary paths and full marks in the declared domain, including FLOW EXACT normalization and run-2 requested STAR at the cap. | E12–E15, E19 |
 | P09 | Entry acceptance uses one complete paired row. A seed's layer is not a constraint on the later output layer. Complete ND premises remain complete during publication and application. | E14, E23 |
@@ -55,17 +56,18 @@ axiom, classical choice or assumed native-equivalence theorem.
 | P13 | Canonical input and canonical relation selection preserve required admission effects. If an initial disappears, give another executable route through a retained normal record or valid new demand. Literal input denotation alone is insufficient. | E07, E16–E18, E22 |
 | P14 | Saved replay precedes current admission. It preserves the original actual and support layer; an empty current demand does not erase an applicable saved effect. | E17–E24 |
 | P15 | A loop observation which keeps or cuts a fact has a real continuation at the same scope and physical ports. Repeated shrinking saved steps, changed growth classifications and current admission must be checked together. | E16, E20–E22, E24 |
-| P16 | Static carry selects its genuine paired family without inventing a NORMAL provider, unselected FLOW companion, root seed or unrelated field. The proposed explicit FLOW demand view follows P21. Real strong writes still kill overwritten fields and keep disjoint fields. | E13, E19–E20 |
+| P16 | Static carry selects its genuine paired family without inventing a NORMAL provider, root seed or unrelated field. Only the explicit authorized companion can add FLOW. The completion candidate follows P21. Real strong writes kill overwritten fields and keep disjoint fields. | E13, E19–E20 |
 | P17 | Typed ZERO/Target pairing preserves source permissions and reports. Provisional EXACT witnesses remain DEMAND. NormalTarget composes only with NORMAL support and is ignored backward. | E21, E23–E24 |
 | P18 | Handoff retains precise STAR relations without inventing MAY refinement. Any additional guidance route must have a separate selected derivation. | E19–E21, E25 |
 | P19 | Each complete principal program retains its required positive finding and negative controls under the combined rules, not only under an isolated shape calculation. | E01–E29 |
 | P20 | The finite convergence examples finish naturally with the required report. No stable-count or arbitrary iteration cap replaces the outgoing-demand stop rule. | E16–E23 |
-| P21 | Explicit FLOW demand completion uses only final retained DATA endpoints and legal counted prefixes, preserves exact owner/ports and complete paired heads, and creates no fact, provider, mark, source permission or frontier root. It also completes provisional FLOW rows which can cover T/DEMAND. | E19–E21, E28 |
-| P22 | Ordinary analysis under the completed FLOW permission actually infers the required NORMAL transfer. A disjoint write preserves g; a write to g kills it. Cross-base p-to-ret transfer uses a single complete paired row. | E13, E19–E20, E28 |
+| P21 | If selected, FLOW completion uses only final retained DATA endpoints and legal counted prefixes, preserves exact owner/ports and complete paired heads, and creates no fact, provider, mark, source permission or frontier root. Prove its necessity separately. | E19–E21; candidate |
+| P22 | Under an explicitly supplied completed FLOW permission, ordinary analysis infers the stated transfer. A disjoint write preserves g; a write to g kills it. E28's actual id already has its provider from run-1. | E13, E19–E20, E28 |
 | P23 | New demand permissions preserve the whole loop-observation continuation and do not sustain a new outgoing DEMAND frontier. Excluding selector copies from the frontier is not enough to prove this result. | E16, E20–E22 |
 | P24 | STAR/STAR summary overlap selects actual STAR/MUST with Eactual union Eread, preserves original actual/mark/H/layer, and retains direct and opposite application effects required by generalized E subsumption. Do not enable CURRENT strict-ancestor STAR matching. | E02, E08–E09 |
 | P25 | Expanded C2 emits exactly the primary plus its authorized concrete-STAR FLOW companion. Its normalized image is the C5 entry classifier, including the companion's primary witness and unchanged paired exit marks. | E12, E19, E25, E28 |
 | P26 | The E29 canonical basis preserves a real route to both Conductor Graal identities. Show retained finer demand or derive actual saved NORMAL transfer; a duplicate STAR/FLOW command is insufficient. | E29; open recovery gate |
+| P27 | Canonical plain/protected views preserve each class's current region under insertion, duplicates and arbitrary offer permutations. Visible OR cannot be used to reconstruct plain coverage. Native cache, restore and delivery preserve those views. | E06, E11; local region proof, native bridge open |
 
 Source/store lifetime, immutable run snapshots, exact owner boundaries and
 existing aliases are assumptions only where the baseline contract already
@@ -165,7 +167,7 @@ scoped producer/consumer program models must not be relabelled as that theorem.
 
 | Component | Laws | Obligations and exact boundary |
 | --- | ---: | --- |
-| Original Canonical/Relations/Matching/Reachability | 162 | P01/P03/P05 and relation-path witnesses; byte-identical to 528; native eligibility is an input; original protected-prefix law is superseded by literal H |
+| Original Canonical/Relations/Matching/Reachability | 162 | P01/P03/P05 and relation-path witnesses; byte-identical to 528; protection policy is historical, not the revised same-flag rule |
 | Relative C2/image | 47 | P06–P08 for arbitrary Nat fields, full marks, finite E and restricted FULL runs; 24 executable cells; no static/group adapter theorem |
 | Annotated C5 exits | 57 | P09–P11: typed controls, complete ND originals, paired rows, selection, layers/H and counted cuts; entry image is a callback |
 | Native FLOW EXACT/E input bridge | 30 | P06/P08: legal nonempty-E exact FLOW uses only a query-local Empty-E view; original actual unchanged |
@@ -174,7 +176,7 @@ scoped producer/consumer program models must not be relabelled as that theorem.
 | FLOW demand completion | 50 | P21: final-row provenance, both DATA endpoints, legal prefixes, one complete paired erasure, exact ports and row-count bounds |
 | Wrapper pipeline | 34 | P13/P14: real loop-free 1,1,2 source/read/call/permission/finding route for arbitrary finite ordinary wrappers |
 | Concrete converter wrapper | 17 | P13/P14/P19: E18 actual T→U source/summary kernels, C2/C5, finite wrappers, accepted-source preconditions and wrong-mark negatives |
-| Static/cross-base provider | 20 | P16/P22: actual C2/body/C5 derives E19/E28 NORMAL provider; same-field kill and exact-parent controls |
+| Static/cross-base provider | 20 | P16/P22: conditional provider derivations; its artificial E28 no-saved-provider premise is not reachable evidence for ordinary id |
 | Two-loop header flow | 27 | P14/P16: E20 actual header versus repeat ports, weak fixture versus strong negative, real source permission and marked sink path |
 | Uniform OWASP/C5 | 24 | P20/P23: arbitrary H depth, actual uniform body/C5 and no-D cut under the paired depth bound; no arbitrary driver theorem |
 | Finite Deep consumer union | 35 | P15/P18: complete supplied family, fine-key versus all proper cuts, real inferred shrinker and finite NORMAL shrinking chain |
@@ -185,15 +187,14 @@ scoped producer/consumer program models must not be relabelled as that theorem.
 | One-step C2 bound | 8 | P08/P15: every C2/public key depth≤demand depth+1, independent of actual depth; B4 actual depth3 may produce only a depth2 key |
 | Static negative interface | 22 | Old E19 no-provider counterexample and E27 anti-promotion control; not positive soundness laws |
 
-The preceding revision's portable audit passed 684 declared laws. The
-reviewed component set now passes **776 declared laws**, including 92 new
-local review laws. Its receipt and complete axiom list are in the package
-README. P26 remains open. Counts include reused original,
+The earlier portable audits passed 684 and then 776 declared laws. The latest
+checked component set and complete axiom list are in the package README.
+P15/P19/P23's complete E21 route and P26 remain open. Counts include reused original,
 negative, representation and local laws. They do not measure proof strength.
 
 ## 7. Constructive proof arguments
 
-### Canonical data and literal H: P01–P02
+### Canonical data and the two coverage views: P01–P02, P27
 
 For MAY, map each covered descendant location to the retained prefix. For
 MUST, test the first suffix field against E. At the same head, a location is
@@ -202,19 +203,27 @@ which is absence from their intersection. A whole immediate child fills its
 one excluded branch; a deeper or partial child does not. Apply these arguments
 per compatible ordinary mark/header cell.
 
-H is a separate finite set of typed coordinates. Its update is set union.
-Every supplied coordinate remains present, an exact duplicate adds nothing,
-and a pass maps only existing coordinates. This proof does not apply the old
-ordinary prefix-pruning operation to H. The packet delta must preserve the
-old ordinary carrier deliveries and the new exact H upgrades.
+The old LiteralProtection model preserves every historical H coordinate.
+It is no longer the current compaction rule. Apply current canonicalization
+independently to U and H. For any candidate region, insertion preserves the
+previous region or adds the offered region in that flag class. Transitivity
+gives a retained witness when insertion removes a covered child. Folding this
+law makes coverage depend on the offered set, not its order. That input list
+is a proof witness, not a stored offer history.
+
+Render exact duplicates once, with OR. Rendering loses which plain
+certificates were present, so it cannot be the authority for later coverage
+or restore. The local MAY model proves the counterexample and repair.
+Native E/mx/packed storage, fresh deliveries and restore remain bridge checks.
+A pass still carries its supplied flag and creates none.
 
 ### Correlated relations and native roles: P03–P05
 
 Given a long suffix tau, use r++tau in the short NORMAL provider. Equality
-of the compared mx cells and Empty E establish the same suffix admission.
+of the compatible field/mark regions establishes the same suffix admission.
 For A→B→C, compute B's correlated view from A and apply the existing FLOW/T
 membership test at C. This view is a witness, not an admitted or persisted
-row. Protected C is retained. Testing C against the same admitted A in either
+row. A and C must have the same flag in their coverage view. Testing C against the same admitted A in either
 arrival order gives the same final visible basis. Stale queues consult that
 basis before delivery.
 
@@ -239,6 +248,13 @@ at the field cap there is none. Normalize the complete FLOW pair only after
 this raw witness check. The FLOW EXACT/E query bridge preserves the relevant
 path/mark tests while the real actual keeps E. This proves both directions
 of the C2/C5 entry image within the declared scalar domain.
+
+The review rejects ordinary STAR actuals strictly above the demand before
+emission. MUST/ANY and every unblocked cell keep the old operation. Every
+old structural image template has an executable unblocked witness: its
+EXACT-at-head witness is sufficient where the ancestor STAR was removed.
+Thus actual admission changes while the finite raw/normalized image stays
+the same. The companion still requires a successful concrete STAR primary.
 
 ### Paired C5 and whole-pair normalization: P09–P12
 
@@ -266,15 +282,18 @@ FLOW provider derivations and saved-first marked application. The actual
 binding joins support, so a NORMAL symbolic FLOW provider cannot upgrade a
 DEMAND actual into a NORMAL sink witness.
 
-In E21, derive source and Target rows at their real ports, complete their
-DATA endpoints, and distinguish the fine query key from every proper cut.
-The ordinary inferred saved read then decreases chain length until a concrete
-NORMAL actor can reach the sink. Target DATA output is not treated as a DATA
-entry. The B4 Reach/Target producers are typed controls, outside diagonal
-FLOW-backed T-to-T DATA replacement; they cannot be removed to hide the
-needed endpoint. The completed query emits STAR keys, so ordinary MAY/MUST
-leaf canonicalization does not prune those keys. A real backward source
-action, not a FLOW permission, grants the source permission. NormalTarget composes with NORMAL only and is ignored backward.
+E21's existing models derive necessary source/Target routes and distinguish
+a supplied fine query from a cut. They do not enumerate every final retained
+DATA pair. The reviewed operator checks include omitted B2 FLOW rows which
+can already produce the F3 shrinker without completion. They also show that
+a B4 ZERO exit rejects all DATA outputs, including a companion. Neither fact
+proves that the complete final authority has no other route.
+
+The [block ledger](subsumption-e21-block-ledger-20261107.md) states this open
+boundary and the repeat-order decision. Do not assume the raw source reaches
+saved shrinking replay when an earlier growing-output gate can drop it.
+Real backward SourceHit remains necessary; FLOW alone grants no source
+permission. NormalTarget composes with NORMAL only and is ignored backward.
 
 For E22's uniform producer family at limits 1,1,2, canonical body depth is
 max(n-1,0). Every B2 DATA output has depth≤1 by the global limit, so every
@@ -298,7 +317,8 @@ A derived pair grants only analysis permission. Its identity query is a
 conditional relation; ordinary transfer and C5 must produce the provider.
 Actual support still controls application. Strong same-field kill, negative
 mark controls and provisional concrete STAR/D starts remain unchanged.
-The static and loop models demonstrate the required progress routes. No
+The static models demonstrate conditional routes under their supplied views.
+The complete E21 route and completion necessity remain open. No
 selector itself creates an outgoing frontier item or a SourceHit. Newly
 inferred DEMAND results still count normally. Thus this argument does not
 replace the principal no-cycle proof with an indexing convention.
@@ -308,6 +328,8 @@ replace the principal no-cycle proof with an indexing convention.
 The native implementation must validate static anchors, real mx/group
 catalogs, scalar/packed equality, complete ND and alias application, stored
 FLOW normalization, SourceHit/report adapters, and exact loop-port lookup.
+It must also preserve both current protection coverage views across freshness,
+cache invalidation, publication and restore while rendering one exact OR row.
 For Deep, the producer grammar must cover every relevant native current and
 saved row before an all-family bound is used. These are explicit proof/model
 to code obligations. They are not permission to change field transfer,

@@ -19,12 +19,15 @@ This catalog separates three things:
   input under an ANY demand. The selected STAR initial starts with an
   identity edge: its start conclusion is STAR too. There is no SOA or other
   new tail. The [combined specification](edge-subsumption-initial-emission-demand-intersection.md)
-  defines the complete C2/C5 tables and explicit FLOW demand completion.
+  defines the C2/C5 tables. Extra FLOW demand completion remains a candidate
+  while the complete E21 trace is open.
 
 Later native captures use their stated revisions. They are not B0 results.
-The later choices “protected coordinates cannot be subsumed” and “pass rules
-cannot add protection” must be included explicitly in the new proposal. Do not
-silently attribute their implementation to B0 or S1.
+The current protection decision permits subsumption only within the same
+flag class. Exact visible duplicates keep OR-upgrade; canonical plain
+coverage remains available separately. This supersedes the earlier rule
+which retained every literal protected coordinate. Pass rules cannot add
+protection. Do not silently attribute these later decisions to B0 or S1.
 
 ## Notation and evidence rules
 
@@ -66,7 +69,7 @@ empty method result.
 | E08 | Opposite MUST overlap, typed outputs and read metadata | Original proposal §3.4 |
 | E09 | Directional strict-ancestor STAR matching | Original proposal §5; original relation audit §§4–5 |
 | E10 | Correlated concrete STAR and protection | Original correlated/concrete and FLOW-backed specs |
-| E11 | Sticky H coordinates and pass-role correction | Later selected decisions; not silently B0 |
+| E11 | Same-flag coverage, exact visible OR and pass-role correction | Later selected decisions; not silently B0 |
 | E12 | Initial table, marks, field limit and static grammar | Original AP policy; R2 selected output cells |
 | E13 | Requested run-2 STAR and sibling overwrite | `OwaspDemandCycleTest`, sibling-overwrite control |
 | E14 | Paired C5, normalization and cap | Original demand-relative restriction contract |
@@ -83,7 +86,7 @@ empty method result.
 | E25 | Initial key versus start conclusion; selected STAR identity and rejected independent start | Historical AP §6.5 versus the correlated extension and R2 decision |
 | E26 | Static setter/getter/consumer, marked demand and typed ZERO closure | Static erasure/completion contracts and native regression destinations |
 | E27 | Unprotected DEMAND STAR identity is not a NORMAL transfer proof | Conditional serialized pass rule; operational/native adapter obligation |
-| E28 | Complete paired FLOW permission for a cross-base transfer | New demand-completion interface control; no native result |
+| E28 | Run-1 NORMAL identity and saved-first replay | Correction of the artificial missing-provider premise |
 | E29 | Two missed Conductor Graal findings; lost child demand and weaker C2 admission | Real frozen Current/B snapshot run-4/3/3; main run-15/14/13; later recovery run-4/3/3 |
 
 “Original proposal” means the frozen
@@ -192,7 +195,8 @@ let A cover C even after B is removed. Its transient specialized cover is
 offer C; offer A      -> C is removed from the final plain authority.
 offer A; offer C      -> no retained C.
 offer {A,B,C}         -> the same final plain basis.
-offer C with H=true  -> retain that protected coordinate.
+offer C with H=true  -> plain A cannot cover C; a protected provider can do so
+                       only through the same-flag coverage rule.
 only C exists        -> do not synthesize A or B.
 ```
 
@@ -266,11 +270,23 @@ plain coordinate, then same coordinate with H
     -> one fresh protection upgrade; repeat -> no new upgrade.
 ```
 
-The later selected H rule is stronger than the original protected-prefix
-canonicalization: neither a protected ancestor nor an E join/fill may remove
-or relocate a protected child. Keep each exact typed H coordinate. This later
-decision must be stated in the new proposal. It does not restore a raw input
-archive or authorize replay of discarded ordinary facts.
+Apply canonicalization independently to plain and protected coverage. A
+protected parent can remove a covered protected child; it cannot remove a
+plain child. An exact duplicate is one visible OR-upgraded row, while its
+canonical plain coverage remains available. No discarded-fact archive is used.
+
+Let A be a MAY root and B its MAY child, with all other headers fixed:
+
+```text
+A plain; B plain; A protected -> U={A}, H={A}, visible={A protected}
+A protected; A plain; B plain -> U={A}, H={A}, visible={A protected}
+A protected; B plain          -> U={B}, H={A}, visible={A protected,B plain}
+```
+
+Destructive OR would lose U={A} in the first order and leave B in the
+second. The retained U certificate closes that conflict without two visible
+rows or duplicate propagation. Invisible U changes still invalidate coverage
+caches. Reloading only visible rows would lose this information.
 
 ## E07. Canonical input can remove a literal C2 initial
 
@@ -398,8 +414,10 @@ the reset baseline. It must not silently assume the later fix is present.
 
 At one premise and mark, an unprotected `q.MAY/T` and protected
 `q.f.MAY/T` keep the protected child. If a protected parent is also present,
-the later selected exact-coordinate law still keeps both protected positions.
-Apply it to NORMAL and DEMAND and all effective tails. Mixed packet EXACT
+the protected coverage view can remove the covered protected child. Neither
+flag class removes a member of the other. Keep canonical plain coverage when
+exact duplicates render as one protected row. Apply the rule to NORMAL and
+DEMAND and all effective tails. Mixed packet EXACT
 leaves have Empty E even if their span wrapper has a different E.
 
 ## E12. The new C2 boundary cells and their negative controls
@@ -416,7 +434,8 @@ an admission specification, not an injected native demand snapshot.
 | p.MAY/M | p.f.g.$/T, eligible mark | Existing: stop at first field, p.f.STAR/M |
 | p.MAY/T | p.f.$/T | Existing concrete exact exception: p.f.$/T |
 | p.f.MAY/M | p.MAY/T, eligible mark | Old ANY output becomes p.f.STAR/M |
-| p.f.MAY/M | p.STAR/T | A separate inverse-prefix decision; do not infer it from the selected equal-head cell |
+| p.f.MAY/M | p.STAR/T | Reject the ordinary STAR strict ancestor; no companion |
+| p.f.EXACT/T | p.STAR/T,D | Reject; wait for a matching-head/deeper fact or an ANY/MUST actual |
 | p.STAR/T, run-3+ | p.f.$/T | Keep the selected strict-descendant rejection |
 | p.$/T | p.MAY/T,D | Existing provisional p.$/T,D; see E21/E23 |
 | p.MAY/U | any fact with only T, U != T | Nothing |
@@ -656,13 +675,14 @@ must not taint child `C.g.h`; that negative control reports zero. Preserve
 all three programs, the real source action and actual field write. The
 static-carry adapter is not evidence that the later path has been repaired.
 
-R2 adds the complete named-field ANY/FLOW permission. The review also adds
+The completion candidate adds a complete named-field ANY/FLOW permission. The review also adds
 an explicit FLOW companion when a primary concrete STAR/DEMAND is emitted. C2 starts its NORMAL
 FLOW identity. The disjoint write preserves g, paired C5 admits the inferred
 NORMAL g frame, and its later saved application transports the actual precise
 T descendant. `StaticFlowCompletion` checks this route and the strong-same-field
 and exact-parent negatives. It does not synthesize a frame or promote the T
-identity. See the combined specification §9.1; no native rerun is claimed.
+identity. This is a conditional provider derivation, not a proof that the
+complete new handoff needs or supplies that permission. No native rerun is claimed.
 
 ## E20. Two static loops: no FLOW cover, and ZERO does replay
 
@@ -710,7 +730,8 @@ R2's `TwoLoopHeaderFlow` model derives the NORMAL FLOW header at backward
 Its saved opposite application is 4→10, not repeat4→4. The fixture's existing
 weak static transfer also permits a separate repeat frame; the strong-write
 negative kills that frame. The actual marked source/write/getter route reaches
-the sink. This is the checked program model in §9.2, not a new native run.
+the sink under that supplied permission. This is a scoped conditional model,
+not a complete new-design handoff proof or a new native run.
 
 ## E21. Deep no-leave loop creates an exact Target obligation
 
@@ -781,15 +802,18 @@ records the complete handoff explanation. The
 embeds the prior Deep trace, its source and its receipt separately from the
 current 59-record two-loop probe. Neither is a run of the proposed R2 design.
 
-R2's `DeepGuidanceArrival` derives the required three F5 rows from source,
-read, scoped ZERO/Target and handoff under limits 1,1,2,3,4. Completion of the
-repeat row's DATA exit provides a real same-port FLOW query. The finite
-consumer model derives the shrinking NORMAL frame and distinguishes the fine
-F5 depth3 key from every proper cut. The general ALL-family bounds cover
-additional rows with bounded heads; the producer supplement establishes that
-bound in the stated read/source grammar. This changes neither Target's exact
-projection nor the growth gate. Native store/dispatcher correspondence remains
-an implementation check. See §9.3 of the combined specification.
+The [per-run BL/L/AL ledger](subsumption-e21-block-ledger-20261107.md) puts
+demands and submitted facts above each block and emitted families below it.
+It includes the FLOW rows omitted from the earlier three-row argument.
+In particular, B2's FLOW DATA family can infer F3's NORMAL shrinker without
+completion. A companion under a ZERO exit still publishes no DATA.
+
+The complete final retained basis is not enumerated by the existing
+`DeepGuidanceArrival` and consumer models. Their necessary route and depth
+bounds do not prove that other paired rows are absent. E21 recovery and
+completion necessity remain open. Repeat delivery ordering also needs the
+stated decision; saved-first at an input is not replay before its preceding
+growing-output gate. Do not claim an unconditional run-5 recovery.
 
 ## E22. Do not restore the OWASP demand cycle
 
@@ -1032,43 +1056,30 @@ or concrete provider. Do not invent a NORMAL default or upgrade a DEMAND
 identity to repair E19–E21. Such a change needs its own actual-input and
 reporting proof, including conditional passes and selected cleaners.
 
-## E28. FLOW permission must preserve a complete cross-base pair
+## E28. Run-1 identity already handles the cross-base transfer
 
 ```java
-// Restricted run-i, i > 2. No saved NORMAL DATA provider in this interface.
-// Demand pair: (p.STAR/T, ret.STAR/T).
-// Submitted: p.g.EXACT/T, NORMAL.
+// Run-1 submitted: actual p.g.EXACT/T; ordinary abstraction starts p.*/FLOW.
 Object id(Object p) {
     return p;
 }
-// Required real FLOW relation, once inferred:
-//   p.g.STAR/FLOW -> ret.g.STAR/FLOW, NORMAL.
-// The original precise T/STAR selector still rejects the deeper input.
+// Produced and saved: p.*/FLOW -> ret.*/FLOW, NORMAL.
+
+// Later run-i: submitted p.g.EXACT/T,N.
+// Saved-first application: ret.g.EXACT/T,N.
+// A current precise p.STAR/T demand can reject the deeper input;
+// that rejection does not suppress the earlier saved result.
 ```
 
-This is a complete-pair interface control, not a new native failure result.
-The ordinary return is the actual transfer. No predefined summary is used.
+The earlier example assumed this ordinary `id` had no saved DATA provider.
+That artificial interface assumption is not a trace of the program. Run-1
+already supplies the provider. E28 therefore does not justify completion.
 
-Adding only `(p.ANY/FLOW, p.ANY/FLOW)` and
-`(ret.ANY/FLOW, ret.ANY/FLOW)` is insufficient. The first admits the FLOW
-initial `p.g.STAR/FLOW,N`, but its paired output rejects `ret.g` by base.
-The second rejects the p-based premise. The original T pair has no primary on this deeper actual, so it also has no
-new companion. It cannot admit this FLOW premise through that branch. C5 must not mix the first row's entry with the
-second row's exit.
-
-The proposed demand completion adds the complete pair
-`(p.ANY/FLOW, ret.ANY/FLOW)`. C2 now emits that same FLOW STAR initial from
-the real submitted T fact. Ordinary return transfer produces the displayed
-NORMAL FLOW candidate. C5 checks both ends against the one derived row.
-Its relative output budget is one counted field, so the `.g` result fits.
-The result can then cover an eligible unprotected concrete specialization
-and replay the precise actual on a later offer. This is a derivation to
-prove, not permission to install the NORMAL result as a default.
-
-The negative control overwrites p before returning a new clean object.
-It must not infer p-to-ret FLOW. A marked assignment or cleaner can also
-retain protected concrete dependencies; the added permission cannot remove
-their H flags or promote their support layer.
+Keep the paired C5 rule separately: `(p.ANY/FLOW,p.ANY/FLOW)` and
+`(ret.ANY/FLOW,ret.ANY/FLOW)` cannot be mixed to publish p-to-ret. The archived
+local model checks that algebraic limit; it does not prove a reachable
+missing-provider state for `id`. A method which clears p and returns a clean
+object must still infer no p-to-ret provider.
 
 ## E29. Conductor: a covered location set can lose a refinement head
 
@@ -1177,7 +1188,7 @@ records, typed catalogs, unchanged C2 code and controls are already embedded
 in the repository's snapshot JSON. The companion evidence index records
 their exact byte hashes, JSON pointers and all source package hashes.
 
-### What the new demand completion must prove
+### What the redesign must prove
 
 Completion starts from final retained endpoint heads. Applied only to the
 displayed Current root-to-listener pair, it adds root and listener-prefix
@@ -1210,12 +1221,12 @@ The snapshot [portable JSON](../docs/reports/data/bidirectional-conductor-must-d
 | Area | Selected route | Proof or validation boundary |
 | --- | --- | --- |
 | C2 and C5 entry | One relative-input image; no ANY initial; ordinary STAR identity; same-head ANY/STAR accepted | 47-law image plus 30-law legal FLOW EXACT/E bridge; static/group adapters require native checks |
-| Precise STAR | Keep mark-specific primary admission, explicit STAR/FLOW companions and later strict-descendant rejection | E19/E20 recover through separately demanded and ordinarily inferred FLOW providers |
-| Deep Target | Keep exact Target geometry and real physical ports | Producer arrival and finite consumer proofs plus ALL-family depth bounds; native producer coverage must match the stated grammar |
+| Precise STAR | Keep mark-specific primary admission, explicit STAR/FLOW companions and later strict-descendant rejection | E19/E20 provider routes are conditional on the supplied FLOW view; full handoff validation remains required |
+| Deep Target | Keep exact Target geometry and real physical ports | Necessary route/operator proofs only; complete final authority and repeat ordering remain open |
 | Ordinary wrappers | Admit both FLOW and concrete STAR under same-head ANY | Loop-free wrapper derivation and concrete source/action route; no implicit FLOW converter |
-| Canonicalization | Canonical input only; no raw leaf archive | Original spatial/relation proofs, literal H/pass and E07 operational identity witness |
+| Canonicalization | Canonical input only; same-flag coverage, visible OR and retained current plain certificate | Local coverage models and E07 identity witness; no raw leaf archive |
 | Transitivity | A directly covers C through a computed B view | Equal-mx aligned domain, both arrival orders, no stored/published B; H is retained |
-| FLOW demand completion | Complete all final DATA endpoints, preserve paired heads and ports | Proven provenance/count bounds and actual provider models; added selectors are not outgoing records |
+| FLOW demand completion | Candidate over final DATA endpoints and complete paired heads | Proven local provenance/count bounds; necessity and whole-driver sufficiency remain open |
 | Layers and sources | Conditional hypotheses do not upgrade actual support | E27 anti-promotion control and unchanged source compiler/gates; source permission still requires actual SourceHit |
 | Stopping | Stop when inferred outgoing refinement demand is empty | Scoped E22 no-D family; arbitrary Java and whole-driver convergence are not claimed |
 

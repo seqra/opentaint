@@ -1,7 +1,7 @@
 {
   "schema": "combined-subsumption-admission-components-v1",
   "baselineRevision": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
-  "proofScope": "Historical scoped components (684 declarations) plus reviewed companion C2/C5 image, finite-E/mx correlated inclusion, maximal combined-E criterion, same-head STAR/MUST overlap and same-actual effect bridge. Primary-only laws apply to primary emit, not expanded C2. E29 recovery, native store/driver equality and global convergence remain open.",
+  "proofScope": "Historical scoped components plus reviewed companion/overlap, strict-ancestor STAR admission rejection with unchanged structural image, scalar paired-output tables, same-flag negative OR countermodel and canonical U/H coverage with visible exact OR rendering. Old literal-H laws are historical; revised protected pruning is same-flag. E21 full final authority and repeat ordering, E29 recovery, native store/driver equality and convergence remain open.",
   "checkerSha256": "63e4e7c8c1367a17b7eff2251366e47da341ed2f31de1cb40480d62f590bf800",
   "modules": {
     "RestrictedInitialPolicy": {
@@ -968,6 +968,140 @@
         "CombinedOverlapBridge.combined_exclusion_criterion_survives_reversal",
         "CombinedOverlapBridge.combined_pair_coverage_survives_generic_reversal",
         "CombinedOverlapBridge.inverse_combined_criterion_keeps_every_actual_effect"
+      ]
+    },
+    "ScalarChainIntersectionExamples": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/ScalarChainIntersectionExamples.lean",
+      "sha256": "81c7f254fded15f0adb2e27ebe3fe4c171297b68bb8aa1cc8c1b52a744112ca7",
+      "checkedTheorems": [
+        "ScalarChainIntersectionExamples.exact_under_ANY_stays_NORMAL",
+        "ScalarChainIntersectionExamples.MAY_to_exact_stays_DEMAND",
+        "ScalarChainIntersectionExamples.STAR_under_exact_keeps_correlation",
+        "ScalarChainIntersectionExamples.MUST_collects_both_exclusions",
+        "ScalarChainIntersectionExamples.one_new_field_fits_the_paired_budget",
+        "ScalarChainIntersectionExamples.overflow_cuts_at_dp_depth_plus_one",
+        "ScalarChainIntersectionExamples.exact_selector_rejects_deeper_conclusion",
+        "ScalarChainIntersectionExamples.uniform_ancestor_rebases_at_demand",
+        "ScalarChainIntersectionExamples.MAY_ancestor_refines_with_DEMAND_support",
+        "ScalarChainIntersectionExamples.STAR_ancestor_conclusion_keeps_its_whole_relation",
+        "ScalarChainIntersectionExamples.exact_ancestor_does_not_taint_child",
+        "ScalarChainIntersectionExamples.excluded_child_is_rejected",
+        "ScalarChainIntersectionExamples.different_branches_reject",
+        "ScalarChainIntersectionExamples.different_marks_reject",
+        "ScalarChainIntersectionExamples.FLOW_is_not_converted_to_T",
+        "ScalarChainIntersectionExamples.FLOW_excluding_T_is_rejected",
+        "ScalarChainIntersectionExamples.each_split_output_uses_ONE_original_pair",
+        "ScalarChainIntersectionExamples.unrelated_long_exit_budget_cannot_be_borrowed"
+      ]
+    },
+    "RejectAncestorStarAdmission": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/RejectAncestorStarAdmission.lean",
+      "sha256": "d66e207b002d7a0efa5abc63a908d016b21ce22e02ab17acefd9a637581b2663",
+      "checkedTheorems": [
+        "RejectAncestorStarAdmission.strict_ancestor_STAR_is_blocked",
+        "RejectAncestorStarAdmission.same_head_is_not_blocked",
+        "RejectAncestorStarAdmission.actual_at_or_below_demand_is_not_blocked",
+        "RejectAncestorStarAdmission.non_STAR_actual_is_not_blocked",
+        "RejectAncestorStarAdmission.new_stream_is_only_a_precheck",
+        "RejectAncestorStarAdmission.unblocked_primary_and_layer_are_identical",
+        "RejectAncestorStarAdmission.blocked_primary_has_no_companion",
+        "RejectAncestorStarAdmission.same_head_stream_is_unchanged",
+        "RejectAncestorStarAdmission.MUST_and_ANY_actual_streams_are_unchanged",
+        "RejectAncestorStarAdmission.no_new_seed_or_layer_is_introduced",
+        "RejectAncestorStarAdmission.original_actual_is_not_modified",
+        "RejectAncestorStarAdmission.template_witness_is_never_blocked",
+        "RejectAncestorStarAdmission.old_raw_image_has_an_unblocked_executable_primary",
+        "RejectAncestorStarAdmission.original_raw_permission_still_has_an_executable_new_seed",
+        "RejectAncestorStarAdmission.structural_C2_image_is_unchanged",
+        "RejectAncestorStarAdmission.normalized_C5_image_is_unchanged",
+        "RejectAncestorStarAdmission.no_ANY_initial_is_introduced",
+        "RejectAncestorStarAdmission.H_free_identity_start_is_unchanged",
+        "RejectAncestorStarAdmission.selected_concrete_ancestor_example_now_rejects",
+        "RejectAncestorStarAdmission.same_head_STAR_keeps_primary_and_FLOW_companion"
+      ]
+    },
+    "FlagMatchedSubsumption": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/FlagMatchedSubsumption.lean",
+      "sha256": "86e74bdbfd71b5423d1c181a4aa9cd5360e47be4323a22202e30ad97987f27db",
+      "checkedTheorems": [
+        "FlagMatchedSubsumption.subsumption_requires_same_flag",
+        "FlagMatchedSubsumption.opposite_flags_never_subsume",
+        "FlagMatchedSubsumption.changing_both_flags_together_keeps_geometry_test",
+        "FlagMatchedSubsumption.pass_keeps_the_input_flag",
+        "FlagMatchedSubsumption.pass_cannot_introduce_H",
+        "FlagMatchedSubsumption.same_plain_parent_child_both_orders",
+        "FlagMatchedSubsumption.same_protected_parent_child_both_orders",
+        "FlagMatchedSubsumption.cross_flag_coverage_is_rejected_both_ways",
+        "FlagMatchedSubsumption.mixed_flag_rows_are_kept_in_both_orders",
+        "FlagMatchedSubsumption.exact_duplicate_flag_OR_still_wins",
+        "FlagMatchedSubsumption.repeated_identical_flag_is_not_new_state",
+        "FlagMatchedSubsumption.pruned_plain_child_is_missing_after_late_parent_flag_upgrade",
+        "FlagMatchedSubsumption.same_plain_child_is_retained_if_offered_after_parent_upgrade",
+        "FlagMatchedSubsumption.exact_OR_plus_strict_flag_partition_is_not_arrival_invariant",
+        "FlagMatchedSubsumption.both_histories_still_keep_the_exact_protected_parent",
+        "FlagMatchedSubsumption.wrong_owner_never_supplies_coverage"
+      ]
+    },
+    "PlainCoverageFlagViews": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/PlainCoverageFlagViews.lean",
+      "sha256": "dc2d8282fb7db01bb67a5866d1c4cc16f3c89538b00824e0966dc3fe68e287ac",
+      "checkedTheorems": [
+        "PlainCoverageFlagViews.geometry_of_lift",
+        "PlainCoverageFlagViews.flagged_offer_preserves_plain_current_view",
+        "PlainCoverageFlagViews.plain_offer_preserves_flagged_current_view",
+        "PlainCoverageFlagViews.plain_subsumption_reads_only_plain_certificates",
+        "PlainCoverageFlagViews.flagged_subsumption_reads_only_flagged_certificates",
+        "PlainCoverageFlagViews.pass_transports_flag",
+        "PlainCoverageFlagViews.plain_pass_cannot_introduce_H",
+        "PlainCoverageFlagViews.old_negative_histories_now_have_identical_current_views",
+        "PlainCoverageFlagViews.old_negative_histories_render_one_OR_upgraded_row",
+        "PlainCoverageFlagViews.upgraded_parent_keeps_plain_child_coverage_certificate",
+        "PlainCoverageFlagViews.protected_parent_alone_does_not_cover_plain_child",
+        "PlainCoverageFlagViews.plain_parent_alone_does_not_cover_protected_child",
+        "PlainCoverageFlagViews.same_plain_arrivals_are_canonical_in_both_orders",
+        "PlainCoverageFlagViews.same_protected_arrivals_are_canonical_in_both_orders",
+        "PlainCoverageFlagViews.mixed_plain_parent_protected_child_keep_both_in_both_orders",
+        "PlainCoverageFlagViews.mixed_protected_parent_plain_child_keep_both_in_both_orders",
+        "PlainCoverageFlagViews.exact_flag_upgrade_has_one_visible_edge_and_both_certificates",
+        "PlainCoverageFlagViews.rendering_is_not_a_plain_coverage_authority",
+        "PlainCoverageFlagViews.invisible_plain_certificate_can_change_current_view",
+        "PlainCoverageFlagViews.protected_child_can_be_compacted_and_visible_plain_child_stays_plain",
+        "PlainCoverageFlagViews.changed_visible_child_flag_is_not_sticky_history",
+        "PlainCoverageFlagViews.pass_of_visible_plain_child_does_not_inherit_parent_H",
+        "PlainCoverageFlagViews.duplicate_offers_do_not_add_a_second_visible_edge"
+      ]
+    },
+    "CurrentCoverageInvariant": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/CurrentCoverageInvariant.lean",
+      "sha256": "3b47bd6ead869d5093bb687d94e880083a4f7805de74b6fcac50075bf7fab57c",
+      "checkedTheorems": [
+        "CurrentCoverageInvariant.prefix_reflexive",
+        "CurrentCoverageInvariant.prefix_transitive",
+        "CurrentCoverageInvariant.geometry_cover_reflexive",
+        "CurrentCoverageInvariant.geometry_cover_transitive",
+        "CurrentCoverageInvariant.region_true_iff_computed_member",
+        "CurrentCoverageInvariant.addCurrent_never_invents_geometry",
+        "CurrentCoverageInvariant.addCurrent_represents_each_input",
+        "CurrentCoverageInvariant.addCurrent_region_iff",
+        "CurrentCoverageInvariant.bool_equality_of_true_iff",
+        "CurrentCoverageInvariant.addCurrent_region_union",
+        "CurrentCoverageInvariant.matching_offer_requires_same_H",
+        "CurrentCoverageInvariant.offer_logical_region_union",
+        "CurrentCoverageInvariant.fold_logical_region_union",
+        "CurrentCoverageInvariant.empty_current_view_has_no_region",
+        "CurrentCoverageInvariant.run_coverage_equals_any_same_H_input",
+        "CurrentCoverageInvariant.matchingOffer_true_iff_computed_input",
+        "CurrentCoverageInvariant.current_coverage_depends_only_on_input_membership",
+        "CurrentCoverageInvariant.arbitrary_arrival_permutation_preserves_logical_coverage",
+        "CurrentCoverageInvariant.duplicate_input_does_not_change_logical_coverage",
+        "CurrentCoverageInvariant.cross_H_offer_does_not_change_this_logical_region"
+      ]
+    },
+    "E21OperatorLedger": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/E21OperatorLedger.lean",
+      "sha256": "9cf79b22fe77513591a8ca84ac29d0e341e79ad4c36b4acd8bbdff0a7e3dc303",
+      "checkedTheorems": [
+        "E21OperatorLedger.all_declared_operator_checks_pass"
       ]
     }
   },

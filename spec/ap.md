@@ -14,6 +14,10 @@ admission remains mark-specific. The reviewed design adds an explicit
 same-geometry FLOW/NORMAL companion for a concrete STAR/DEMAND primary in
 restricted runs; it also selects same-head exclusion-overlap matching. The STAR_OR_ANY design is historical, not a rule of the
 new design. The baseline reset does not change runtime source.
+The latest review rejects ordinary STAR actuals strictly above their demand.
+Subsumption uses equal protection flags. Exact visible duplicates keep
+OR-upgrade; canonical plain coverage remains available separately. Extra
+FLOW completion is a candidate while the complete E21 trace is open.
 
 Next-iteration summary restriction is specified in
 [Demand-relative summary restriction](demand-relative-summary-restriction.md).
