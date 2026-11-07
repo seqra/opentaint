@@ -2,6 +2,9 @@
 
 7 November 2026. Status: proof map for the combined specification.
 The checked domains and remaining implementation obligations are stated below.
+Review update: companion emission and overlap matching are explicit new rules.
+The earlier 684-law receipt describes the preceding component set. E29 adds a
+real Conductor recovery obligation; it is not closed by that receipt.
 Follow [proof-guide.md](proof-guide.md). Use the
 [frozen pre-implementation baseline](subsumption-redesign-baseline-20261107.md)
 and [principal examples](subsumption-principal-examples-20261107.md).
@@ -39,10 +42,10 @@ axiom, classical choice or assumed native-equivalence theorem.
 | --- | --- | --- |
 | P01 | Canonical MAY/MUST union preserves represented positions and marks under the selected E laws. A partial child cannot fill a whole excluded field. | E04–E06 |
 | P02 | Protected coordinates cannot be subsumed. Protection is joined at the exact selected coordinate; a pass rule never creates protection. | E10–E11 |
-| P03 | An admitted aligned NORMAL relation covers its specialization by an executable common-suffix witness. An absent or rejected provider cannot cover anything. | E01–E02 |
+| P03 | An admitted aligned NORMAL relation covers its specialization by an executable common-suffix witness. Include both endpoint E, legal static bases and admitted-mark inclusion. An absent or rejected provider cannot cover anything. | E01–E02 |
 | P04 | Coverage is transitive, including NORMAL FLOW followed by FLOW-backed concrete coverage. Final coverage works in one packet and both arrival orders without retaining an intermediate row. | E03, E06 |
 | P05 | Current, saved-direct and opposite matching have exactly their selected roles. All incoming STAR facts obey the strict-ancestor restriction; MAY/MUST keep their own rules. | E08–E09 |
-| P06 | C2 emits no ANY initial or premise, creates no full mark from FLOW or a different full mark, and respects base, E reachability, direction and field limits. | E12–E13 |
+| P06 | Primary C2 emits no ANY initial or premise, creates no full mark from FLOW or a different full mark, and respects base, E reachability, direction and field limits. | E12–E13 |
 | P07 | Both selected same-head ANY/STAR inputs under ANY demand yield the same ordinary STAR identity start. FLOW starts NORMAL; concrete STAR starts DEMAND. No MAY start or new tail is used. | E12, E17–E18, E25 |
 | P08 | C5's normalized entry predicate is exactly the constructive image of the same C2 operation. Its witness works for arbitrary paths and full marks in the declared domain, including FLOW EXACT normalization and run-2 requested STAR at the cap. | E12–E15, E19 |
 | P09 | Entry acceptance uses one complete paired row. A seed's layer is not a constraint on the later output layer. Complete ND premises remain complete during publication and application. | E14, E23 |
@@ -52,14 +55,17 @@ axiom, classical choice or assumed native-equivalence theorem.
 | P13 | Canonical input and canonical relation selection preserve required admission effects. If an initial disappears, give another executable route through a retained normal record or valid new demand. Literal input denotation alone is insufficient. | E07, E16–E18, E22 |
 | P14 | Saved replay precedes current admission. It preserves the original actual and support layer; an empty current demand does not erase an applicable saved effect. | E17–E24 |
 | P15 | A loop observation which keeps or cuts a fact has a real continuation at the same scope and physical ports. Repeated shrinking saved steps, changed growth classifications and current admission must be checked together. | E16, E20–E22, E24 |
-| P16 | Static carry selects its genuine paired family without inventing a NORMAL provider, implicit FLOW companion, root seed or unrelated field. The proposed explicit FLOW demand view follows P21. Real strong writes still kill overwritten fields and keep disjoint fields. | E13, E19–E20 |
+| P16 | Static carry selects its genuine paired family without inventing a NORMAL provider, unselected FLOW companion, root seed or unrelated field. The proposed explicit FLOW demand view follows P21. Real strong writes still kill overwritten fields and keep disjoint fields. | E13, E19–E20 |
 | P17 | Typed ZERO/Target pairing preserves source permissions and reports. Provisional EXACT witnesses remain DEMAND. NormalTarget composes only with NORMAL support and is ignored backward. | E21, E23–E24 |
 | P18 | Handoff retains precise STAR relations without inventing MAY refinement. Any additional guidance route must have a separate selected derivation. | E19–E21, E25 |
-| P19 | Each complete principal program retains its required positive finding and negative controls under the combined rules, not only under an isolated shape calculation. | E01–E28 |
+| P19 | Each complete principal program retains its required positive finding and negative controls under the combined rules, not only under an isolated shape calculation. | E01–E29 |
 | P20 | The finite convergence examples finish naturally with the required report. No stable-count or arbitrary iteration cap replaces the outgoing-demand stop rule. | E16–E23 |
 | P21 | Explicit FLOW demand completion uses only final retained DATA endpoints and legal counted prefixes, preserves exact owner/ports and complete paired heads, and creates no fact, provider, mark, source permission or frontier root. It also completes provisional FLOW rows which can cover T/DEMAND. | E19–E21, E28 |
 | P22 | Ordinary analysis under the completed FLOW permission actually infers the required NORMAL transfer. A disjoint write preserves g; a write to g kills it. Cross-base p-to-ret transfer uses a single complete paired row. | E13, E19–E20, E28 |
 | P23 | New demand permissions preserve the whole loop-observation continuation and do not sustain a new outgoing DEMAND frontier. Excluding selector copies from the frontier is not enough to prove this result. | E16, E20–E22 |
+| P24 | STAR/STAR summary overlap selects actual STAR/MUST with Eactual union Eread, preserves original actual/mark/H/layer, and retains direct and opposite application effects required by generalized E subsumption. Do not enable CURRENT strict-ancestor STAR matching. | E02, E08–E09 |
+| P25 | Expanded C2 emits exactly the primary plus its authorized concrete-STAR FLOW companion. Its normalized image is the C5 entry classifier, including the companion's primary witness and unchanged paired exit marks. | E12, E19, E25, E28 |
+| P26 | The E29 canonical basis preserves a real route to both Conductor Graal identities. Show retained finer demand or derive actual saved NORMAL transfer; a duplicate STAR/FLOW command is insufficient. | E29; open recovery gate |
 
 Source/store lifetime, immutable run snapshots, exact owner boundaries and
 existing aliases are assumptions only where the baseline contract already
@@ -179,8 +185,10 @@ scoped producer/consumer program models must not be relabelled as that theorem.
 | One-step C2 bound | 8 | P08/P15: every C2/public key depth≤demand depth+1, independent of actual depth; B4 actual depth3 may produce only a depth2 key |
 | Static negative interface | 22 | Old E19 no-provider counterexample and E27 anti-promotion control; not positive soundness laws |
 
-The final portable root audit passes **684 declared laws**. Its receipt and
-complete axiom list are in the package README. Counts include reused original,
+The preceding revision's portable audit passed 684 declared laws. The
+reviewed component set now passes **776 declared laws**, including 92 new
+local review laws. Its receipt and complete axiom list are in the package
+README. P26 remains open. Counts include reused original,
 negative, representation and local laws. They do not measure proof strength.
 
 ## 7. Constructive proof arguments
@@ -309,3 +317,31 @@ Run every principal native program with its original strict assertion after
 implementation. A historical run-3/run-5 failure and a new Lean model are
 different evidence. Record the latest reached/completed run labels in every
 new runtime report. No real-project result is added by this proof package.
+
+## 9. Review delta and the Conductor gate
+
+The reviewed spec retains the existing normalized-image architecture. The
+new emitter is a stream of primary plus optional companion. A companion has
+a concrete STAR primary witness, identical path/E, FLOW with empty mx and
+NORMAL identity support. Check raw containment on that primary. Do not apply
+the primary's concrete-to-FLOW mark test a second time. The original paired
+exit remains unchanged and rejects FLOW which excludes the requested T.
+The companion has the primary's depth, so the old max-depth and first-new-
+field bounds lift to the expanded stream.
+
+The generalized E pair proof uses both endpoint exclusions. The selected
+matching bridge projects the same-head STAR/MUST actual to the overlap,
+with union E and unchanged layer. This bridge is a semantic matching change;
+the former nonstatic/Empty-E/equal-mx limits are not mathematical necessities.
+Strict-ancestor CURRENT STAR matching is still disabled.
+
+E29 is not just the root/child identity example E07. It has the same complete
+uniform actual and one paired root-to-listener demand, but the lost child
+entry changes C2 from MUST/FLOW to STAR/FLOW. The historical one-expression
+rollback recovers both native report projections; a later strict report also
+recovers both identities. The exact end-to-end necessity of the captured
+child row for each sink remains unproved. The current completion function
+cannot reconstruct that child from the retained root row alone. The new
+companion duplicates Current's existing STAR/FLOW command. P26 therefore
+remains an explicit acceptance gate. No normal frame or discarded history
+may be assumed to close it.

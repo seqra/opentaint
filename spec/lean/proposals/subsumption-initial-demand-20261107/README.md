@@ -2,8 +2,8 @@
 
 7 November 2026. This package checks the declared component domains and the
 scoped principal routes for the [combined specification](../../../edge-subsumption-initial-emission-demand-intersection.md).
-Read the [examples E01–E28](../../../subsumption-principal-examples-20261107.md)
-and [proof map P01–P23](../../../subsumption-initial-demand-proof-obligations.md).
+Read the [examples E01–E29](../../../subsumption-principal-examples-20261107.md)
+and [proof map P01–P26](../../../subsumption-initial-demand-proof-obligations.md).
 No runtime implementation or project measurement is included.
 
 ## Repeat the check
@@ -21,11 +21,14 @@ python3 spec/lean/proposals/subsumption-initial-demand-20261107/check.py \
   --output-directory /tmp/subsumption-initial-demand-check
 ```
 
-The final root check passed with **684 declared laws**, including the 162
-reused original laws and the negative interface checks. Read the
-[receipt](component-checks-684.json) and [complete axiom audit](component-axioms-684.log).
-Earlier 126, 308, 471, 619, 627 and 640-law receipts remain as historical
-evidence. A count includes negative and representation laws;
+The reviewed root check passed with **776 declared laws**. Read the
+[receipt](component-checks-776.json) and [complete axiom audit](component-axioms-776.log).
+The preceding revision's 684-law receipt and earlier component receipts remain
+as history. The old primary-only C2 laws describe `emit`, not the new expanded
+`emitSeeds` stream. The 92 review laws are listed below. E29 recovery remains
+open; this count does not close it.
+
+A count includes negative and representation laws;
 it is not a count of whole-analyzer soundness theorems.
 
 ## Models and limits
@@ -51,6 +54,28 @@ it is not a count of whole-analyzer soundness theorems.
 | [LoopMapperRecovery](LoopMapperRecovery.lean) | 13 | E16 actual loop-write result, B2-derived adjacent demand, ALL extra-family cut distinction and NORMAL mapper/sink pipeline |
 | [DeepExtraFrontier](DeepExtraFrontier.lean) | 27 | F3 cap/read producer grammar, independent B4 initial/output bounds, ALL additional F5 families and actual F5 limit4 cut distinction |
 | [StaticCarryGap](StaticCarryGap.lean) | 22 | Old no-FLOW-route counterexample and conditional-pass anti-promotion control |
+
+## Review components
+
+| Model | Laws | Scope |
+| --- | ---: | --- |
+| [ConcreteStarFlowCompanion](ConcreteStarFlowCompanion.lean) | 21 | Exact primary-plus-companion stream and normalized C5 image; unchanged actual and support; mark/base/rejected-primary negatives |
+| [ExclusionCorrelatedInclusion](ExclusionCorrelatedInclusion.lean) | 24 | Both endpoint E, opaque static-capable bases, mark subset and common-suffix witness; initial componentwise same-head guard |
+| [CombinedExclusionCoverage](CombinedExclusionCoverage.lean) | 18 | Full same-head combined-E criterion, executable witness and pair-inclusion composition |
+| [StarHeadOverlap](StarHeadOverlap.lean) | 25 | Same-head STAR/MUST overlap, union E, retained actual/mark/H/layer, generic inverse and unchanged role guard |
+| [CombinedOverlapBridge](CombinedOverlapBridge.lean) | 4 | Combined-E coverage preserves the same actual effect in direct and generic reverse directions |
+
+These are finite-field/mark-exclusion local models. Native cofinite mx,
+packed storage, writer/source hooks and whole-program correspondence remain
+adapter checks. No native matcher or project run was changed or executed.
+The review explicitly changes matching and emission semantics; it is not
+only a representation optimization.
+
+[E29's evidence index](conductor-e29-evidence-index.json) pins the existing
+Conductor captures. They establish the guide-loss/admission difference and
+historical report recovery controls. A complete fact trace to both sinks and
+a recovery proof for this new design remain P26. Neither a duplicate FLOW
+STAR companion nor completion of a retained root row alone is that proof.
 
 `Discovery`, `LoopGeometry` and `ExceptionalControlDemand` are pinned existing
 control helpers for the arrival model. `LoopGeometry` is a module-name alias
