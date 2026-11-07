@@ -101,11 +101,11 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
         val nextAccessors = request.suffix?.let { setOf(it) }
             ?: delta.relevantStartAccessors(mark)
 
-        // The demand for one question only grows. An accessor already demanded for it does not
-        // refine the abstraction a second time -- the split it asks for ends in `[any]` again,
-        // one accessor further down, and re-raises the same question. See [MarkUnfoldDemand].
+        // The demand for one question only grows. An accessor already demanded for it, or
+        // already on the fact's path, does not refine the abstraction -- the split it asks for
+        // ends in `[any]` again, one accessor further down. See [MarkUnfoldDemand].
         val newAccessors = analysisContext.markUnfoldDemand.demand(
-            request.method, request.fact.base, mark, nextAccessors
+            request.method, request.fact, mark, nextAccessors
         )
 
         // Nothing fresh: this answer asks for a split that has already been asked for. The
