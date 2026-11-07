@@ -1,0 +1,51 @@
+{
+  "state": "PASS_READ_ONLY_SOURCE_PINS",
+  "baseline": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+  "sources": [
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRRuleForms.kt",
+      "unchanged": true
+    },
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRRulePredicates.kt",
+      "unchanged": true
+    },
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/taint/SignedConditionNormalizer.kt",
+      "unchanged": true
+    },
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/SourceRuleOccurrence.kt",
+      "unchanged": true
+    },
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/MarkGate.kt",
+      "unchanged": true
+    },
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/EdgeApplication.kt",
+      "unchanged": false
+    },
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/MarkCheck.kt",
+      "unchanged": false
+    },
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodLocalServices.kt",
+      "unchanged": false
+    },
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/EngineAlgebra.kt",
+      "unchanged": false
+    },
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockRunState.kt",
+      "unchanged": false
+    },
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApOps.kt",
+      "unchanged": false
+    }
+  ],
+  "nativeExperimentRan": false
+}

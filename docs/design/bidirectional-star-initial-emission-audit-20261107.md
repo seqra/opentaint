@@ -1,8 +1,20 @@
 # STAR in place of MAY initials
 
-Date: 7 November 2026. Status: investigation; no production policy change.
+Date: 7 November 2026. Status: pre-implementation audit; core unchanged at capture.
 Language: ASD-STE100 Simplified Technical English. Runtime source: `7069fe2d7`;
 repository HEAD: `dd9059f1e`.
+
+Selection update: the user selected the **FULL strategy** after reviewing the
+examples in section 2.1. Convert both FLOW and concrete MAY initials. FLOW
+STAR starts NORMAL; concrete STAR stays DEMAND. The source-bound experiments
+below were run before this selection; their original diagnostic status is
+retained. The earlier FLOW-only recommendation is superseded.
+
+The next user decision replaces the raw plain-STAR design with
+[STAR_OR_ANY](../../spec/intra-procedural-star-or-any.md), a special
+intra-procedural tail normalized to STAR at public boundaries. The tables
+below remain measurements/definitions of the earlier plain-STAR candidates,
+not results of the new marker implementation.
 
 **The FLOW-only change fixes the original four-method loop reproducer.**
 It reports the finding in run-3 and stops normally at run-5. The full-mark
@@ -184,6 +196,13 @@ The original native program and both final assertions returned successfully.
 Neither candidate admits the previously rejected same-path STAR input under
 a MAY demand. That additional admission change is not needed for this case.
 
+A later [nested-call check](../reports/bidirectional-star-initial-nested-calls-20261107.md)
+finds a gap outside this original case: current policy passes all four
+straight-line getter programs, while FULL conversion loses the finding in
+three wrapper variants. Both policies stop at run-3. The new STAR input is
+rejected at the inner MAY demand. The selected conversion cannot land with
+that additional admission cell left unresolved.
+
 These are bounded native diagnostics, not new real-project measurements.
 There is no new Conductor, Stirling-PDF, Thingsboard or OWASP result. In
 particular, this does not identify the first lost fact for the separate
@@ -310,17 +329,21 @@ change has no negative workload effects. It does not establish an inevitable
 correctness defect. A production decision must state whether it selects
 FLOW-only conversion or the full conversion and its storage cost.
 
-**Recommended next design: convert the two FLOW/MAY emission cells to STAR,
-with the current intrinsic NORMAL start and the coordinated image update.**
-Keep the other admission cells unchanged. Specify the loop certificate update
-or its fallback explicitly. Treat full-mark conversion as a separate extension;
-its measured protected-exclusion cost needs an explicit storage decision.
+**Selected next design: convert both MAY emission cells to STAR_OR_ANY for
+FLOW and concrete marks, then normalize public endpoints to STAR.** Keep the
+intrinsic STAR start layers and ordinary STAR admission rules. The marker
+adds the special admission capability described by its new spec. Specify the
+loop certificate update or fallback explicitly. Keep literal protected storage;
+the measured exclusion cost is part of the tradeoff.
 
-This recommendation is not a proof that no other program can regress. No
-correctness counterexample to the coordinated conversion was found in these
-bounded tests. A full soundness/progress proof remains open.
+The original positive tests did not prove that no other program can regress.
+The later nested-call tests now establish a concrete counterexample to the
+post-map-plus-image change alone. The user selected STAR_OR_ANY to preserve
+special admission without broadening ordinary STAR input admission. Its
+formal/native validation must precede the selected core patch.
 
-The analyzer implementation and its normative specification remain unchanged.
+At this capture, analyzer code is unchanged. The new selected specification
+is separate from these historical plain-STAR experiment results.
 
 ## 9. Portable evidence
 
@@ -330,3 +353,4 @@ proof logs, native test source/receipts/XML/typed traces, both exact candidate
 diffs, the byte-identical program, wrappers, classpath/source pins and complete
 candidate console/results. It also contains the root ABI and terminal review.
 No compiled binary, heap snapshot or raw profile is needed to read the report.
+The separate nested-call report carries its own frozen negative-test evidence.

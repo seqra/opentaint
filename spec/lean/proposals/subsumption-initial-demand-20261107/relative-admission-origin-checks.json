@@ -1,0 +1,336 @@
+{
+  "state": "PASS_ORDINARY_RELATIVE_C2_C5_COMPONENT_ONLY",
+  "localOnly": true,
+  "globalProgressProved": false,
+  "modelSha256": "320487f0f4eb37c1a6f6e44fcd213f083cdd02c380d20d286f069c0eeb059343",
+  "baselineRevision": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+  "modules": [
+    {
+      "module": "RestrictedInitialPolicy",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/plain-star-relative-nhho8k4w/RestrictedInitialPolicy.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/RestrictedInitialPolicy.lean"
+      ]
+    },
+    {
+      "module": "PlainStarRelativeAdmissionProofFixed3",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/plain-star-relative-nhho8k4w/PlainStarRelativeAdmissionProofFixed3.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/PlainStarRelativeAdmissionProofFixed3.lean"
+      ]
+    }
+  ],
+  "theoremAxiomAudit": [
+    {
+      "theorem": "PlainStarRelativeAdmission.member_bounded_by_maxField",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.freshField_not_member",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.freshField_is_admitted",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.selected_is_allowed",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.same_path_relation",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.one_child_relation",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.allowed_template_has_legal_executable_witness",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.render_is_in_relative_templates",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.raw_image_iff_relative_allowed_template",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.arbitrary_actual_emission_is_in_raw_image",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.raw_image_supplies_actual_witness",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.raw_image_exactly_characterizes_arbitrary_emission",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.raw_image_preserves_base_mark_budget_and_has_no_ANY",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.join_demand_left",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.join_demand_right",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.legal_actual_may_be_relayered_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.selected_implies_common_legal",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.concrete_emission_keeps_DEMAND_relayering",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.admission_layer_satisfies_joint_layer",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.joint_layer_has_constructive_alternative",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.joint_image_has_executable_actual_witness",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.joint_image_exactly_characterizes_arbitrary_admission",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.exclusions_include_themselves",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.every_raw_image_is_inside_its_demand",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.raw_is_in_public_preimages",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.listed_preimages_normalize_to_public",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.C5_permission_has_executable_raw_actual_witness",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.C5_permission_iff_normalized_actual_emission",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.C5_entry_permission_preserves_supplied_output_and_H",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.concrete_STAR_start_is_identity_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.FLOW_STAR_start_is_identity_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.concrete_STAR_actual_requires_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.FLOW_admission_uses_intrinsic_only",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.EXACT_on_MAY_concrete_support_is_kept",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.mark_mismatch_never_emits",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.base_mismatch_never_emits",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.illegal_actual_never_emits",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.later_STAR_demand_rejects_every_strict_descendant",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.ordinary_STAR_ancestor_does_not_gain_MAY_capability",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.precise_STAR_deeper_actual_still_rejects",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.same_head_ANY_accepts_legal_concrete_STAR_as_identity_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.concrete_demand_never_admits_companion_FLOW",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.FLOW_EXACT_preimage_is_needed_at_later_STAR_cap",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.seed_and_output_layers_are_not_equal_by_contract",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.STAR_identity_uses_correlated_continuations",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.STAR_identity_cannot_invent_an_independent_continuation",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.handoff_does_not_refine_precise_STAR",
+      "axioms": []
+    }
+  ],
+  "checkedLaws": 47,
+  "executableCells": 24,
+  "nativeAdapterEquivalenceProved": false,
+  "canonicalBasisProgressProved": false,
+  "allPrincipalProgramsProved": false
+}

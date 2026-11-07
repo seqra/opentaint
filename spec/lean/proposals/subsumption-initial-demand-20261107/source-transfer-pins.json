@@ -1,0 +1,87 @@
+{
+  "schema": "negative-source-normal-layer-source-review-v1",
+  "state": "READ_ONLY_SOURCE_DERIVED_NO_RUNTIME_COUNTEREXAMPLE",
+  "preparedAtUTC": "2026-11-07T15:12:46.269485+00:00",
+  "baseline": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+  "currentHead": "0a2846c4427210c0a13fd3b2fd360a81ff641e37",
+  "sources": [
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRRuleForms.kt",
+      "currentSha256": "ea7b00d4c50ba407771b8ebed85beb21d32ab5fde3f7bec791566f45b265edd6",
+      "baselineSha256": "ea7b00d4c50ba407771b8ebed85beb21d32ab5fde3f7bec791566f45b265edd6",
+      "byteIdenticalTo528": true,
+      "bytes": 36619
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRRulePredicates.kt",
+      "currentSha256": "e50beeb82741231a58d2b20c61d8e5dc282d41ba964532cdeea17d77fbeeaa5f",
+      "baselineSha256": "e50beeb82741231a58d2b20c61d8e5dc282d41ba964532cdeea17d77fbeeaa5f",
+      "byteIdenticalTo528": true,
+      "bytes": 3360
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/taint/SignedConditionNormalizer.kt",
+      "currentSha256": "3e0716bea268b99dc06b18e9d0728472e0d0ace54765d3b27aeff186adbfb625",
+      "baselineSha256": "3e0716bea268b99dc06b18e9d0728472e0d0ace54765d3b27aeff186adbfb625",
+      "byteIdenticalTo528": true,
+      "bytes": 13443
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/SourceRuleOccurrence.kt",
+      "currentSha256": "1d57b46d521f202f4ec8876a14411f4dccd3777f609e756380234c0b3466edb5",
+      "baselineSha256": "1d57b46d521f202f4ec8876a14411f4dccd3777f609e756380234c0b3466edb5",
+      "byteIdenticalTo528": true,
+      "bytes": 1901
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/MarkGate.kt",
+      "currentSha256": "a1616332e35cb91d68d8a8bc39884a004a5f0ee3ac8954c54e5160a6782c227b",
+      "baselineSha256": "a1616332e35cb91d68d8a8bc39884a004a5f0ee3ac8954c54e5160a6782c227b",
+      "byteIdenticalTo528": true,
+      "bytes": 2206
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/EdgeApplication.kt",
+      "currentSha256": "bd9774f9acb1d2a7295fd94490fbd9b9e80a34e87f410769a8f0a11b2690c152",
+      "baselineSha256": "a9dac26784fe001055bcb4a8fabae5ea88877941aab66c244bbc6d756850fcc5",
+      "byteIdenticalTo528": false,
+      "bytes": 10608
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/MarkCheck.kt",
+      "currentSha256": "26259f885d9b98f7cac481e064a37eca650c93ebff283fef1b2affc9e80a8fa0",
+      "baselineSha256": "5eec52dbcee27b7e241c0c6c60a5bdd23ceb4fe9b47a484763515822185a420e",
+      "byteIdenticalTo528": false,
+      "bytes": 5090
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodLocalServices.kt",
+      "currentSha256": "369d98deb10313dcb1696fef98c17dc83c301e6a81620473787389614426feab",
+      "baselineSha256": "dd4580aa83a9a9a0594811013575ba9380053ddc84ebcede8bf21469a8a0cc04",
+      "byteIdenticalTo528": false,
+      "bytes": 26576
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/EngineAlgebra.kt",
+      "currentSha256": "66bcde62f400e2037b952bcf3256c6c8357f09bc6714e6ada0183eda8f0e57e8",
+      "baselineSha256": "52209d150c1e987648e89c83da5e0498e27facb289b4b51ff2c12bea34304f50",
+      "byteIdenticalTo528": false,
+      "bytes": 5765
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockRunState.kt",
+      "currentSha256": "e5d1de614fdc540f6ec05034db18c127d2fd7272bd6f4c429a4d2c8b2aaf2c71",
+      "baselineSha256": "abe974f542f1e6f1824b3dc69bed0a52a3036b9281f19a0aa5353c4e804dc1aa",
+      "byteIdenticalTo528": false,
+      "bytes": 60949
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApOps.kt",
+      "currentSha256": "53c55bdf0201cd079af6d98685b1823373919c6d3f24c10312c67530661f6099",
+      "baselineSha256": "9ecf5a0a403f8b0b76c5e0bfe79ca94ccba8eb9d5700bc18fb88c11f482d0dc4",
+      "byteIdenticalTo528": false,
+      "bytes": 12112
+    }
+  ],
+  "executedNativeOrProofJobs": false
+}

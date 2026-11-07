@@ -1,0 +1,52 @@
+{
+  "state": "FROZEN_PRE_IMPLEMENTATION_SPECIFICATION",
+  "preImplementationRevision": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+  "reviewedRuntime": "52f32dd437d438aec4a700a02c18d94c31d58093",
+  "firstImplementationCommit": "8331bf9e326ddd1bd5083dbc50456963d6b26b52",
+  "identicalCoreTree": "6a3e587954faf5a5f9bcaf34f47e919edf69b95b",
+  "sourceWorktree": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-joint-demand-redesign-20261107/pre-implementation",
+  "runtimeModified": false,
+  "testsOrCampaignExecutedOnBaseline": false,
+  "files": [
+    {
+      "file": "original-implementation-proposal.md",
+      "originalPath": "docs/design/bidirectional-canonical-facts-normal-relations-directional-inside-implementation-20261105.md",
+      "revision": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "gitBlob": "0388fdfb716346b249d838e9045d273257c20c6d",
+      "sha256": "be4531d72dbd919b4646f3b8854d46444655c294b9f3344f3ff7800159ec5995",
+      "bytes": 52034
+    },
+    {
+      "file": "original-field-path-design.md",
+      "originalPath": "docs/design/bidirectional-flow-antichains-and-demand-discharge-20261104.md",
+      "revision": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "gitBlob": "282e96e695d8c85a9ea1da6a03dca065d8de43a3",
+      "sha256": "fa6542da668dbe30050aee9c30e5644c6eaae5e5173735efc3b67cba7cf731e8",
+      "bytes": 19720
+    },
+    {
+      "file": "original-relation-and-matching-audit.md",
+      "originalPath": "docs/reports/bidirectional-normal-star-subsumption-direction-policy-20261105.md",
+      "revision": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "gitBlob": "4f3da0dc522bc2fc7a93ef8ad3e4c1e317d906e6",
+      "sha256": "b98b117214bb386cd51a9be0df1aa5fb2ec6dfe3db71ec2041f24b30ca6c4945",
+      "bytes": 15736
+    },
+    {
+      "file": "original-flow-backed-spec.md",
+      "originalPath": "spec/run1-flow-backed-concrete-relations.md",
+      "revision": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "gitBlob": "128c15649e73799c3ca6573ae8abea5c1d0a1e9d",
+      "sha256": "0d2381e1153dd69c4b43114208f10d9ffd27991b6a30df74388fdcd4f816572f",
+      "bytes": 35330
+    },
+    {
+      "file": "original-correlated-concrete-spec.md",
+      "originalPath": "spec/run1-correlated-concrete-initials.md",
+      "revision": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "gitBlob": "1b412c587ac83e74ca2a79f7b94af7626d593a6b",
+      "sha256": "3ba7acdc0246ce8257038dfa8ed6652732bad0ef9da67743b21867f9b0787642",
+      "bytes": 39004
+    }
+  ]
+}
