@@ -1,0 +1,184 @@
+{
+  "state": "PASS_SCOPED_E18_CONCRETE_ACTION_WRAPPER_ONLY",
+  "modules": [
+    {
+      "module": "RestrictedInitialPolicy",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/E18-concrete-converter-wupxmq4s/RestrictedInitialPolicy.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/RestrictedInitialPolicy.lean"
+      ]
+    },
+    {
+      "module": "PlainStarRelativeAdmissionProofFixed3",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/E18-concrete-converter-wupxmq4s/PlainStarRelativeAdmissionProofFixed3.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/PlainStarRelativeAdmissionProofFixed3.lean"
+      ]
+    },
+    {
+      "module": "Geometry",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/demand-relative-summary-restriction-20261101",
+        "-M2048",
+        "-o",
+        "/tmp/E18-concrete-converter-wupxmq4s/Geometry.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/demand-relative-summary-restriction-20261101/Geometry.lean"
+      ]
+    },
+    {
+      "module": "AnnotatedC5Exit",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/subsumption-initial-demand-20261107",
+        "-M2048",
+        "-o",
+        "/tmp/E18-concrete-converter-wupxmq4s/AnnotatedC5Exit.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/subsumption-initial-demand-20261107/AnnotatedC5Exit.lean"
+      ]
+    },
+    {
+      "module": "ConcreteConverterWrapper",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/concrete-converter-wrapper/elaboration-fix-attempt2",
+        "-M2048",
+        "-o",
+        "/tmp/E18-concrete-converter-wupxmq4s/ConcreteConverterWrapper.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/concrete-converter-wrapper/elaboration-fix-attempt2/ConcreteConverterWrapper.lean"
+      ]
+    }
+  ],
+  "theoremAxiomAudit": [
+    {
+      "theorem": "ConcreteConverterWrapper.guard_requests_T_but_emits_no_FLOW_to_U",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.leaf_rows_are_actually_inferred",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.internal_C2_admits_each_phase",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.ordinary_wrapper_composition_keeps_the_inferred_row",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.arbitrary_finite_wrappers_derive_the_row",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.initial_T_is_from_the_real_ZERO_source_action",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.R1_sink_candidate_is_DEMAND_not_NormalTarget",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.actual_U_sink_reverse_supplies_the_coarse_offer",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.R1_actual_offer_is_request_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.R2_actual_ANY_offer_is_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.R3_actual_exact_T_is_admitted_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.accepted_backward_actions_derive_both_source_hit_preconditions",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.arbitrary_finite_wrappers_keep_exact_U_finding",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.U_result_is_not_a_T_result",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.wrong_input_mark_cannot_trigger_the_source",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.marks_are_distinct",
+      "axioms": []
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.the_mark_changing_rows_have_no_ANY_original",
+      "axioms": []
+    }
+  ],
+  "newRuntimePolicy": false,
+  "nativeSourceCallbackEquivalenceProved": false,
+  "scope": "E18-FULL-scalar-guarded-T-to-U-action-raw-kernel-C2-C5-finite-wrapper-closure",
+  "checkedLaws": 17,
+  "sourceSha256": "f398ed0b58a81c45431329cce64d1036cfe5531fe52c6e0ea15479157b4531ca"
+}

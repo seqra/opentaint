@@ -1,7 +1,12 @@
 # Next iteration: avoid repeated queries and review STAR admission
 
-Date: 7 November 2026. Status: proposal; no candidate is selected here.
+Date: 7 November 2026. Status: E2 selected; A–D remain proposals.
 Language: ASD-STE100 Simplified Technical English.
+
+The selected E2/SOA working-tree patch has an open
+[native handoff gap](../reports/bidirectional-star-or-any-handoff-gap-20261107.md).
+Its positive tests pass, but it loses an existing two-loop finding at run-3.
+Do not land it or treat it as a completed project experiment yet.
 
 The current implementation is `7069fe2d7`. Its configured project campaign
 is complete. Quality acceptance is open. The
@@ -86,8 +91,26 @@ policy copies both report in run-3 and complete naturally at run-5.
 
 | Candidate | Changed initial outputs | FLOW start | Concrete start | Current bounded result |
 | --- | --- | --- | --- | --- |
-| E1 | Convert only emitted MAY/FLOW to STAR/FLOW | NORMAL | Unchanged | Original program passes |
-| E2 | Convert emitted MAY for FLOW and concrete marks to STAR | NORMAL | DEMAND | Original program passes; native protected-header family grows 1 -> 32 |
+| E1, not selected | Convert only emitted MAY/FLOW to STAR/FLOW | NORMAL | Unchanged | Original program passes |
+| E2, selected by the user | Convert emitted MAY for FLOW and concrete marks to STAR | NORMAL | DEMAND | Original program passes; native protected-header family grows 1 -> 32 |
+
+The user selected the FULL strategy after reviewing the four emission
+examples. This means E2, not a new mark mode. Keep the existing literal
+protected-storage contract and measure its cost. Do not add a protected
+subsumption rule to hide the new exclusion variants.
+
+The subsequent user decision adds an intra-procedural STAR_OR_ANY tail.
+The selected raw initials use that marker; their public summary form is
+STAR. See the [complete spec](../../spec/intra-procedural-star-or-any.md)
+and [implementation proposal](bidirectional-star-or-any-initials-implementation-20261107.md).
+The E2 experiments in the table are the earlier plain-STAR prototype.
+
+The later [nested-call experiment](../reports/bidirectional-star-initial-nested-calls-20261107.md)
+is a failing gate: current policy reports all four programs; E2 reports only
+the direct case and loses three wrapper variants, all ending at run-3.
+The new STAR input cannot enter the inner MAY demand. A separate concrete
+wrapper also fails. The selected marker design closes this capability gap;
+do not land the known incomplete plain-STAR patch.
 
 The relevant normal relation comes from ordinary code:
 
@@ -153,18 +176,20 @@ can map to one new STAR command.
 ## 4. Proof and validation gates
 
 No A–D implementation is selected here. Their exact-result proofs and native
-adapter tests must pass before landing. No E contract is selected here either.
+adapter tests must pass before landing. E2 is selected; its core change still
+requires the emission/image and pipeline validation below.
 The current audit has 26 checked constructive Lean laws, five passing native
 AP/store tests and two passing original-program candidate runs. The model's
 ordinary FULL/empty-exclusion scope does not prove whole-driver equivalence.
 
-Before selecting/implementing E, check at least:
+Before landing E2, check at least:
 
 - Exact emission/image and joint initial/layer behavior for both changed cells.
 - Method, block, loop and run-2 static demand routes; full original and ports.
 - Nested calls after a new STAR initial: same-path MAY-demand/STAR-input
-  rejection remains and could remove a former inner admission. Test the
-  complete driver, including saved-first and opposite-record alternatives.
+  rejection now demonstrably removes required inner admission in the three
+  wrapper tests. Resolve its rule, then repeat the complete driver checks,
+  including saved-first and opposite-record alternatives.
 - Native C5/Target entry checks and loop-observation/certificate behavior.
 - Source, cleaner, ND, suffix correlation and protected-storage effects.
 - Original regression with its unchanged expected-one NORMAL finding; exact
@@ -197,6 +222,8 @@ claim. Its timeout itself is established; it does not identify 14 separate
 semantic omissions. Reducing query work may make that report reachable, but
 the current samples cannot promise a completion time.
 
-The pending initial-emission scope decision does not block source inspection
-or diagnostic tests. It does block an unselected core policy change, as
-required by `task.md` and the proof guide's semantic-scope rule.
+The initial-emission scope decision is resolved: implement E2 with its stated
+layer and storage behavior through STAR_OR_ANY. Ordinary STAR input admission,
+fields, source/cleaner rules and Target behavior stay unchanged. The new
+marker's normalization covers public Target premises as a storage requirement.
+Core implementation follows its new constructive model and native gates.

@@ -1,0 +1,242 @@
+{
+  "state": "PASS_EXISTING_NATIVE_EXACT_FLOW_E_DOMAIN_BRIDGE_ONLY",
+  "modules": [
+    {
+      "module": "RestrictedInitialPolicy",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/exact-flow-E-bridge-s1w19xq6/RestrictedInitialPolicy.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/RestrictedInitialPolicy.lean"
+      ]
+    },
+    {
+      "module": "PlainStarRelativeAdmissionProofFixed3",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/exact-flow-E-bridge-s1w19xq6/PlainStarRelativeAdmissionProofFixed3.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/PlainStarRelativeAdmissionProofFixed3.lean"
+      ]
+    },
+    {
+      "module": "ExactFlowInputBridge",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/exact-flow-input-bridge/proof-fix-attempt2",
+        "-M2048",
+        "-o",
+        "/tmp/exact-flow-E-bridge-s1w19xq6/ExactFlowInputBridge.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/exact-flow-input-bridge/proof-fix-attempt2/ExactFlowInputBridge.lean"
+      ]
+    }
+  ],
+  "theoremAxiomAudit": [
+    {
+      "theorem": "ExactFlowInputBridge.queryView_is_idempotent",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.old_legal_view_iff_native_legal",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.queryView_is_identity_on_old_domain",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.old_legal_is_native_legal",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.old_table_is_guarded_geometry",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.native_geometry_ignores_only_FLOW_EXACT_actual_E",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.EXACT_ancestor_still_cannot_reach_a_deeper_demand",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.common_legal_query_iff_native",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.native_table_is_old_query_table",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.selected_table_is_unchanged_geometry",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.admission_layer_is_unchanged",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.native_table_emitter_is_old_query_emitter",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.old_emitter_rejects_illegal_actual",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.old_emission_has_legal_actual",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.native_emit_is_old_query_emit",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.native_emit_is_geometry_table_emit",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.native_emit_preserves_old_legal_behavior",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.raw_image_has_same_native_actual_witnesses",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.joint_image_has_same_native_actual_witnesses",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.normalized_C5_image_has_same_native_witnesses",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.native_emission_has_the_same_base_mark_budget_and_no_ANY",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.initial_identity_start_and_its_new_H_are_unchanged",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.unchanged_C5_permission_keeps_output_layer_and_H",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.bound_submitted_actual_is_literal_original",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.original_E_layer_mark_H_are_not_rewritten",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.concrete_EXACT_nonempty_E_is_still_rejected",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.scenario_initial_is_emitted_from_real_exact_T",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.scenario_existing_strong_write_keeps_raw_EXACT_E",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.scenario_old_formal_domain_did_not_cover_the_input",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.scenario_native_query_admits_but_binding_retains_E",
+      "axioms": [
+        "propext"
+      ]
+    }
+  ],
+  "nativeRuntimeChanged": false,
+  "nativeEngineEquivalenceProved": false,
+  "scope": "existing-native-FLOW-EXACT-field-E-query-domain-bridge-FULL-scalar",
+  "checked47SourceUntouched": true,
+  "checkedLaws": 30,
+  "sourceSha256": "40927c62ce968136722778ef0a3c65c0e3335704b82c13435773d2189556c564"
+}

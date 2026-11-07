@@ -1,5 +1,18 @@
 # Access paths and storages — specification
 
+Design reset, 7 November 2026: start from the
+[pre-implementation subsumption baseline](subsumption-redesign-baseline-20261107.md)
+and its [principal examples](subsumption-principal-examples-20261107.md).
+The new goal is one combined subsumption, initial-emission and demand-
+intersection specification with the required proofs. The
+[combined design and proof map](edge-subsumption-initial-emission-demand-intersection.md)
+is the new implementation target, with explicit native validation gates.
+No ANY premise and no
+new tail kind are permitted. Accepted same-head ANY and STAR inputs under
+an ANY demand produce an ordinary STAR identity start. Concrete-only
+admission remains. The STAR_OR_ANY design is historical, not a rule of the
+new design. The baseline reset does not change runtime source.
+
 Next-iteration summary restriction is specified in
 [Demand-relative summary restriction](demand-relative-summary-restriction.md).
 It selects exact paired C5 followed by an exit-relative field cut and

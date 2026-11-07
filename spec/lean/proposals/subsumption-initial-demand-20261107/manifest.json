@@ -1,0 +1,1086 @@
+{
+  "schema": "combined-subsumption-admission-components-v1",
+  "baselineRevision": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+  "proofScope": "Original compatible MAY/MUST/matching/relations; selected scalar FULL C2/image and annotated C5; exact FLOW/E bridge; literal H/pass; transitive coverage; explicit FLOW demand completion; scoped wrapper/converter/static/two-loop/uniform/deep producer/consumer and loop-mapper routes. Native adapters, GROUP and whole-driver equivalence are implementation obligations.",
+  "checkerSha256": "63e4e7c8c1367a17b7eff2251366e47da341ed2f31de1cb40480d62f590bf800",
+  "modules": {
+    "RestrictedInitialPolicy": {
+      "source": "spec/lean/proposals/initial-emission/RestrictedInitialPolicy.lean",
+      "sha256": "3a42cc1eb3209c82400ba528bdb1e80ba17bc09540e19e59b0d5272f9fd7c5f0",
+      "checkedTheorems": []
+    },
+    "RelativeAdmission": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/RelativeAdmission.lean",
+      "sha256": "320487f0f4eb37c1a6f6e44fcd213f083cdd02c380d20d286f069c0eeb059343",
+      "checkedTheorems": [
+        "PlainStarRelativeAdmission.member_bounded_by_maxField",
+        "PlainStarRelativeAdmission.freshField_not_member",
+        "PlainStarRelativeAdmission.freshField_is_admitted",
+        "PlainStarRelativeAdmission.selected_is_allowed",
+        "PlainStarRelativeAdmission.same_path_relation",
+        "PlainStarRelativeAdmission.one_child_relation",
+        "PlainStarRelativeAdmission.allowed_template_has_legal_executable_witness",
+        "PlainStarRelativeAdmission.render_is_in_relative_templates",
+        "PlainStarRelativeAdmission.raw_image_iff_relative_allowed_template",
+        "PlainStarRelativeAdmission.arbitrary_actual_emission_is_in_raw_image",
+        "PlainStarRelativeAdmission.raw_image_supplies_actual_witness",
+        "PlainStarRelativeAdmission.raw_image_exactly_characterizes_arbitrary_emission",
+        "PlainStarRelativeAdmission.raw_image_preserves_base_mark_budget_and_has_no_ANY",
+        "PlainStarRelativeAdmission.join_demand_left",
+        "PlainStarRelativeAdmission.join_demand_right",
+        "PlainStarRelativeAdmission.legal_actual_may_be_relayered_DEMAND",
+        "PlainStarRelativeAdmission.selected_implies_common_legal",
+        "PlainStarRelativeAdmission.concrete_emission_keeps_DEMAND_relayering",
+        "PlainStarRelativeAdmission.admission_layer_satisfies_joint_layer",
+        "PlainStarRelativeAdmission.joint_layer_has_constructive_alternative",
+        "PlainStarRelativeAdmission.joint_image_has_executable_actual_witness",
+        "PlainStarRelativeAdmission.joint_image_exactly_characterizes_arbitrary_admission",
+        "PlainStarRelativeAdmission.exclusions_include_themselves",
+        "PlainStarRelativeAdmission.every_raw_image_is_inside_its_demand",
+        "PlainStarRelativeAdmission.raw_is_in_public_preimages",
+        "PlainStarRelativeAdmission.listed_preimages_normalize_to_public",
+        "PlainStarRelativeAdmission.C5_permission_has_executable_raw_actual_witness",
+        "PlainStarRelativeAdmission.C5_permission_iff_normalized_actual_emission",
+        "PlainStarRelativeAdmission.C5_entry_permission_preserves_supplied_output_and_H",
+        "PlainStarRelativeAdmission.concrete_STAR_start_is_identity_DEMAND",
+        "PlainStarRelativeAdmission.FLOW_STAR_start_is_identity_NORMAL",
+        "PlainStarRelativeAdmission.concrete_STAR_actual_requires_DEMAND",
+        "PlainStarRelativeAdmission.FLOW_admission_uses_intrinsic_only",
+        "PlainStarRelativeAdmission.EXACT_on_MAY_concrete_support_is_kept",
+        "PlainStarRelativeAdmission.STAR_identity_uses_correlated_continuations",
+        "PlainStarRelativeAdmission.STAR_identity_cannot_invent_an_independent_continuation",
+        "PlainStarRelativeAdmission.mark_mismatch_never_emits",
+        "PlainStarRelativeAdmission.base_mismatch_never_emits",
+        "PlainStarRelativeAdmission.illegal_actual_never_emits",
+        "PlainStarRelativeAdmission.later_STAR_demand_rejects_every_strict_descendant",
+        "PlainStarRelativeAdmission.ordinary_STAR_ancestor_does_not_gain_MAY_capability",
+        "PlainStarRelativeAdmission.handoff_does_not_refine_precise_STAR",
+        "PlainStarRelativeAdmission.precise_STAR_deeper_actual_still_rejects",
+        "PlainStarRelativeAdmission.same_head_ANY_accepts_legal_concrete_STAR_as_identity_DEMAND",
+        "PlainStarRelativeAdmission.concrete_demand_never_admits_companion_FLOW",
+        "PlainStarRelativeAdmission.FLOW_EXACT_preimage_is_needed_at_later_STAR_cap",
+        "PlainStarRelativeAdmission.seed_and_output_layers_are_not_equal_by_contract"
+      ]
+    },
+    "Geometry": {
+      "source": "spec/lean/proposals/demand-relative-summary-restriction-20261101/Geometry.lean",
+      "sha256": "4fcf998c1eb3539b76b523cbef545ed2b23205f6147b52e4a8da2b9ffe36158d",
+      "checkedTheorems": []
+    },
+    "AnnotatedC5Exit": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/AnnotatedC5Exit.lean",
+      "sha256": "3f259448e97a6a7be7b5b958cb940e77b51bdbe012ee560a922fe5c29d5832dd",
+      "checkedTheorems": [
+        "AnnotatedC5Exit.common_full_mark_passes",
+        "AnnotatedC5Exit.admits_empty",
+        "AnnotatedC5Exit.admits_union",
+        "AnnotatedC5Exit.allows_prefix",
+        "AnnotatedC5Exit.selector_base_path_slot_tail_unchanged",
+        "AnnotatedC5Exit.concrete_selector_E_unchanged",
+        "AnnotatedC5Exit.FLOW_STAR_selector_E_only_is_cleared",
+        "AnnotatedC5Exit.selector_normalization_keeps_requested_points",
+        "AnnotatedC5Exit.selector_normalization_keeps_requested_membership",
+        "AnnotatedC5Exit.installed_metadata",
+        "AnnotatedC5Exit.meet_preserves_layer_slot_H",
+        "AnnotatedC5Exit.meet_never_creates_a_full_mark",
+        "AnnotatedC5Exit.backwards_MUST_is_rejected",
+        "AnnotatedC5Exit.selector_MUST_is_rejected",
+        "AnnotatedC5Exit.MAY_same_head_EXACT",
+        "AnnotatedC5Exit.FLOW_MUST_same_head_EXACT_keeps_E",
+        "AnnotatedC5Exit.full_MUST_same_head_EXACT_clears_E",
+        "AnnotatedC5Exit.MUST_same_head_STAR_unions_E",
+        "AnnotatedC5Exit.EXACT_and_STAR_stay_whole",
+        "AnnotatedC5Exit.same_head_keeps_every_requested_point",
+        "AnnotatedC5Exit.rebase_keeps_selector_points",
+        "AnnotatedC5Exit.point_head_is_prefix",
+        "AnnotatedC5Exit.comparable_prefixes",
+        "AnnotatedC5Exit.prefix_append_drop",
+        "AnnotatedC5Exit.selector_allows_candidate_head",
+        "AnnotatedC5Exit.actual_allows_selector_head",
+        "AnnotatedC5Exit.selection_keeps_every_requested_point",
+        "AnnotatedC5Exit.meet_retains_requested_membership",
+        "AnnotatedC5Exit.cut_is_pinned_scalar_limit",
+        "AnnotatedC5Exit.cut_preserves_base_slot_H",
+        "AnnotatedC5Exit.cut_depth_bound",
+        "AnnotatedC5Exit.within_cut_is_identity",
+        "AnnotatedC5Exit.real_cut_is_MAY_DEMAND_EmptyE",
+        "AnnotatedC5Exit.cut_never_promotes_DEMAND",
+        "AnnotatedC5Exit.NORMAL_cut_was_unchanged",
+        "AnnotatedC5Exit.cut_retains_possible_membership",
+        "AnnotatedC5Exit.positive_pair_budget",
+        "AnnotatedC5Exit.pair_budget_limits",
+        "AnnotatedC5Exit.restricted_has_one_computed_meet",
+        "AnnotatedC5Exit.restricted_depth_uses_its_own_exit",
+        "AnnotatedC5Exit.restricted_retains_requested_membership",
+        "AnnotatedC5Exit.DATA_ND_ticket_is_one_member",
+        "AnnotatedC5Exit.control_entry_cannot_admit_DATA_original",
+        "AnnotatedC5Exit.whole_original_and_owner_kept",
+        "AnnotatedC5Exit.every_union_result_has_one_complete_row",
+        "AnnotatedC5Exit.each_complete_row_result_is_in_union",
+        "AnnotatedC5Exit.row_union_is_append_not_cross_product",
+        "AnnotatedC5Exit.ZERO_exit_rejects_DATA",
+        "AnnotatedC5Exit.DATA_exit_rejects_control",
+        "AnnotatedC5Exit.ZERO_exit_keeps_typed_controls",
+        "AnnotatedC5Exit.ZERO_original_DATA_is_still_intersected_and_capped",
+        "AnnotatedC5Exit.both_budgets_keep_distinct_final_results",
+        "AnnotatedC5Exit.first_DATA_result_does_not_saturate",
+        "AnnotatedC5Exit.selector_FLOW_STAR_E_is_ignored_but_concrete_STAR_E_is_not",
+        "AnnotatedC5Exit.wrong_FULL_mark_is_not_created",
+        "AnnotatedC5Exit.correlated_STAR_is_not_exact_set_intersection",
+        "AnnotatedC5Exit.concrete_selector_does_not_narrow_FLOW_slot"
+      ]
+    },
+    "StaticCarryGap": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/StaticCarryGap.lean",
+      "sha256": "e2b558f1c7bfafa041eb2741557c6a2c7e8cf0409b30743aa7eb8390cb9ae876",
+      "checkedTheorems": [
+        "PlainStarStaticCarryGap.fields_are_distinct",
+        "PlainStarStaticCarryGap.concrete_program_reports",
+        "PlainStarStaticCarryGap.write_removes_f_subtree",
+        "PlainStarStaticCarryGap.coarse_source_is_real_cut",
+        "PlainStarStaticCarryGap.selected_same_head_ANY",
+        "PlainStarStaticCarryGap.selected_same_head_STAR",
+        "PlainStarStaticCarryGap.same_head_FULL_mark_mismatch",
+        "PlainStarStaticCarryGap.same_head_precise_STAR_emits_EXACT",
+        "PlainStarStaticCarryGap.source_fits_run3_field_limit",
+        "PlainStarStaticCarryGap.later_precise_STAR_rejects_descendant",
+        "PlainStarStaticCarryGap.actual_coarse_pair_and_cap",
+        "PlainStarStaticCarryGap.paired_C5_has_actual_witness",
+        "PlainStarStaticCarryGap.handoff_does_not_widen_precise_STAR",
+        "PlainStarStaticCarryGap.saved_ZERO_replay_exists",
+        "PlainStarStaticCarryGap.saved_ZERO_cannot_carry_DATA",
+        "PlainStarStaticCarryGap.no_admitted_NORMAL_FLOW_provider",
+        "PlainStarStaticCarryGap.no_S1_cover_witness",
+        "PlainStarStaticCarryGap.current_relation_is_not_the_missing_piece",
+        "PlainStarStaticCarryGap.actual_call_has_no_DATA_output",
+        "PlainStarStaticCarryGap.any_C2_with_selected_rejection_loses_this_call",
+        "PlainStarStaticCarryGap.missing_finding_even_with_source_permission",
+        "PlainStarStaticCarryGap.blanket_normal_promotion_has_concrete_counterexample"
+      ]
+    },
+    "FlowDemandCompletion": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/FlowDemandCompletion.lean",
+      "sha256": "be21875412483d34f7d47714eb14b8c8eddd8991fb5f5779b9761ddd7427d4f3",
+      "checkedTheorems": [
+        "FlowDemandCompletion.raw_prefixes_contain_source",
+        "FlowDemandCompletion.raw_prefixes_contain_empty",
+        "FlowDemandCompletion.raw_prefix_count",
+        "FlowDemandCompletion.each_raw_head_is_a_prefix",
+        "FlowDemandCompletion.valid_prefix_has_source_and_shape",
+        "FlowDemandCompletion.valid_prefix_depth_bound",
+        "FlowDemandCompletion.source_head_is_a_valid_prefix",
+        "FlowDemandCompletion.local_empty_head_is_valid",
+        "FlowDemandCompletion.static_empty_head_is_invalid",
+        "FlowDemandCompletion.static_class_only_head_is_invalid",
+        "FlowDemandCompletion.static_array_without_named_field_is_invalid",
+        "FlowDemandCompletion.static_named_field_head_is_valid",
+        "FlowDemandCompletion.self_pair_is_complete_FLOW_ANY",
+        "FlowDemandCompletion.self_result_has_one_real_endpoint",
+        "FlowDemandCompletion.eligible_endpoint_gets_its_full_head",
+        "FlowDemandCompletion.original_rows_are_kept",
+        "FlowDemandCompletion.generated_row_has_one_final_complete_source",
+        "FlowDemandCompletion.paired_result_keeps_both_heads",
+        "FlowDemandCompletion.paired_rows_are_not_a_prefix_product",
+        "FlowDemandCompletion.no_incoming_rows_give_no_completed_view",
+        "FlowDemandCompletion.self_completion_is_mark_independent",
+        "FlowDemandCompletion.paired_completion_is_mark_independent",
+        "FlowDemandCompletion.controls_do_not_become_DATA_endpoints",
+        "FlowDemandCompletion.self_result_keeps_exact_interface",
+        "FlowDemandCompletion.prefix_result_keeps_exact_interface",
+        "FlowDemandCompletion.all_additions_keep_exact_interface",
+        "FlowDemandCompletion.generated_scopes_and_ports_have_a_final_source",
+        "FlowDemandCompletion.generated_has_no_history_witness",
+        "FlowDemandCompletion.filter_length_bound",
+        "FlowDemandCompletion.valid_prefix_count_bound",
+        "FlowDemandCompletion.self_count_bound",
+        "FlowDemandCompletion.endpoint_flatmap_bound",
+        "FlowDemandCompletion.additions_count_is_linear_in_endpoint_budget",
+        "FlowDemandCompletion.generated_count_is_linear_in_final_budget",
+        "FlowDemandCompletion.virtual_carry_is_single_query_row",
+        "FlowDemandCompletion.virtual_carry_has_no_run3plus_completion",
+        "FlowDemandCompletion.virtual_carry_is_mark_independent",
+        "FlowDemandCompletion.paired_exit_alone_supplies_repeat_self_guidance",
+        "FlowDemandCompletion.exit_derived_guidance_keeps_repeat_scope_and_ports",
+        "FlowDemandCompletion.prefix_closure_includes_root_and_intermediate",
+        "FlowDemandCompletion.fine_next_key_differs_from_depth_two_cut_key",
+        "FlowDemandCompletion.static_prefixes_start_at_named_field_and_include_full_head",
+        "FlowDemandCompletion.concrete_class_marker_is_not_a_completion_source",
+        "FlowDemandCompletion.virtual_static_carry_uses_actual_named_field_not_root",
+        "FlowDemandCompletion.self_only_completion_cannot_retain_cross_base_FLOW",
+        "FlowDemandCompletion.paired_erasure_preserves_the_original_cross_base_pair",
+        "FlowDemandCompletion.paired_completion_supplies_cross_base_FLOW_permission",
+        "FlowDemandCompletion.completion_has_no_crossed_prefix_product",
+        "FlowDemandCompletion.marked_only_filter_misses_final_provisional_FLOW_permission",
+        "FlowDemandCompletion.removed_long_FLOW_row_is_not_reopened_from_final_short_row"
+      ]
+    },
+    "WrapperRecovery": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/WrapperRecovery.lean",
+      "sha256": "a3258285d16659551a69c46e257ddb25aa36e8eda0cdb0a0d26bb5733903645b",
+      "checkedTheorems": [
+        "PlainStarWrapperRecovery.all_run1_wrappers_are_derived",
+        "PlainStarWrapperRecovery.all_B2_guides_are_generated",
+        "PlainStarWrapperRecovery.b2_G_leaf_is_NORMAL",
+        "PlainStarWrapperRecovery.b2_F_leaf_is_DEMAND",
+        "PlainStarWrapperRecovery.f3_F_leaf_is_NORMAL",
+        "PlainStarWrapperRecovery.g_wrapper_fixed_step",
+        "PlainStarWrapperRecovery.f_wrapper_B2_fixed_step",
+        "PlainStarWrapperRecovery.f_wrapper_F3_fixed_step",
+        "PlainStarWrapperRecovery.G_internal_STAR_is_admitted",
+        "PlainStarWrapperRecovery.F_B2_internal_STAR_is_admitted",
+        "PlainStarWrapperRecovery.F_F3_internal_STAR_is_admitted",
+        "PlainStarWrapperRecovery.all_B2_G_wrappers_NORMAL",
+        "PlainStarWrapperRecovery.all_B2_F_wrappers_DEMAND",
+        "PlainStarWrapperRecovery.all_F3_F_wrappers_NORMAL",
+        "PlainStarWrapperRecovery.all_F3_F_guides_are_generated",
+        "PlainStarWrapperRecovery.R1_has_real_cut_and_target",
+        "PlainStarWrapperRecovery.B2_G_has_real_MAY_offer",
+        "PlainStarWrapperRecovery.B2_F_has_real_g_MAY_offer",
+        "PlainStarWrapperRecovery.source_permission_is_derived",
+        "PlainStarWrapperRecovery.G_external_MAY_is_admitted",
+        "PlainStarWrapperRecovery.F_B2_external_MAY_is_admitted",
+        "PlainStarWrapperRecovery.F_F3_exact_source_is_admitted",
+        "PlainStarWrapperRecovery.arbitrary_wrappers_reach_actual_source",
+        "PlainStarWrapperRecovery.arbitrary_wrappers_source_permission",
+        "PlainStarWrapperRecovery.F_then_G_precise_application",
+        "PlainStarWrapperRecovery.MAY_application_stays_DEMAND",
+        "PlainStarWrapperRecovery.MAY_application_cannot_create_NormalTarget",
+        "PlainStarWrapperRecovery.arbitrary_finite_wrappers_recover",
+        "PlainStarWrapperRecovery.arbitrary_finite_wrappers_report_NORMAL",
+        "PlainStarWrapperRecovery.operational_three_runs_recover",
+        "PlainStarWrapperRecovery.operational_three_runs_report_NORMAL",
+        "PlainStarWrapperRecovery.emitted_and_published_keys_are_not_ANY",
+        "PlainStarWrapperRecovery.concrete_wrappers_are_returns",
+        "PlainStarWrapperRecovery.concrete_root_reaches_exact_T"
+      ]
+    },
+    "LiteralProtection": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/LiteralProtection.lean",
+      "sha256": "e1f3e25ef837bd7c7174548ca694ada5d09306dd0b560d8062a3633b3d002eb1",
+      "checkedTheorems": [
+        "LiteralProtection.H_is_exact_literal_union",
+        "LiteralProtection.H_cannot_be_created_by_DATA",
+        "LiteralProtection.old_H_survives",
+        "LiteralProtection.incoming_H_survives",
+        "LiteralProtection.H_always_has_a_carrier",
+        "LiteralProtection.arbitrary_DATA_update_keeps_valid_H",
+        "LiteralProtection.DATA_rejection_cannot_remove_H",
+        "LiteralProtection.H_arrival_orders_agree",
+        "LiteralProtection.repeated_H_is_idempotent",
+        "LiteralProtection.exact_fresh_flag_delta",
+        "LiteralProtection.repeated_flag_has_no_new_flag_delta",
+        "LiteralProtection.singleton_has_no_different_coordinate",
+        "LiteralProtection.marked_key_does_not_flag_another_mark",
+        "LiteralProtection.changed_span_E_is_a_distinct_flag",
+        "LiteralProtection.pass_H_is_exact_transport",
+        "LiteralProtection.pass_plain_input_stays_plain",
+        "LiteralProtection.pass_unmapped_output_has_no_H",
+        "LiteralProtection.pass_preserves_validity",
+        "LiteralProtection.pass_reversal_needs_no_introduction_policy"
+      ]
+    },
+    "StaticFlowCompletion": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/StaticFlowCompletion.lean",
+      "sha256": "69307151ed14ac9cb50805854d33b3c7e6c09fa7610c97458d5359cbdf065378",
+      "checkedTheorems": [
+        "FlowCompletionOperational.adapter_counts_fields_and_arrays",
+        "FlowCompletionOperational.E19_FLOW_row_is_derived_from_final_T_row",
+        "FlowCompletionOperational.E19_query_local_FLOW_row_is_derived",
+        "FlowCompletionOperational.remaining_pure_FLOW_DEMAND_also_gets_completion",
+        "FlowCompletionOperational.E19_source_cut_is_actual_query",
+        "FlowCompletionOperational.E19_normal_provider_is_inferred",
+        "FlowCompletionOperational.E19_same_field_overwrite_infers_no_NORMAL_provider",
+        "FlowCompletionOperational.E19_concrete_selector_remains_concrete_only",
+        "FlowCompletionOperational.E19_MAY_application_keeps_DEMAND",
+        "FlowCompletionOperational.E19_actual_source_permission_is_derived",
+        "FlowCompletionOperational.E19_saved_first_replay_recovers_exact_finding",
+        "FlowCompletionOperational.exact_static_parent_does_not_taint_child",
+        "FlowCompletionOperational.paired_copy_FLOW_row_is_derived",
+        "FlowCompletionOperational.self_only_completion_does_not_mix_endpoints",
+        "FlowCompletionOperational.paired_copy_PROVIDER_is_inferred",
+        "FlowCompletionOperational.paired_copy_actual_exact_mark_is_preserved",
+        "FlowCompletionOperational.copied_normal_record_keys_are_not_ANY",
+        "FlowCompletionOperational.canonical_uniform_packet_admits_root_MUST_not_child_STAR",
+        "FlowCompletionOperational.Target_self_completion_cannot_publish_crossbase_copy",
+        "FlowCompletionOperational.Target_self_completion_cannot_publish_crossbase_H"
+      ]
+    },
+    "OwaspUniformCompletion": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/OwaspUniformCompletion.lean",
+      "sha256": "a725fee4927bf84c1c05e56627dd88bba949ee79ad7e10efc03c1a66f954a259",
+      "checkedTheorems": [
+        "OwaspUniformCompletion.actual_uniform_admits_demanded_MUST_prefix",
+        "OwaspUniformCompletion.path_depth",
+        "OwaspUniformCompletion.path_prefix_of_le",
+        "OwaspUniformCompletion.path_equality_implies_depth_equality",
+        "OwaspUniformCompletion.MUST_packet_union_is_prefix",
+        "OwaspUniformCompletion.getBytes_strips_at_most_one_H",
+        "OwaspUniformCompletion.constructor_addition_is_MUST_subsumed",
+        "OwaspUniformCompletion.body_never_grows",
+        "OwaspUniformCompletion.every_intermediate_depth_fits",
+        "OwaspUniformCompletion.selected_uniform_initial_is_not_ANY",
+        "OwaspUniformCompletion.real_uniform_source_covers_every_requested_prefix",
+        "OwaspUniformCompletion.actual_C5_projects_ancestor_MUST",
+        "OwaspUniformCompletion.actual_C5_restricts_without_DEMAND_cut",
+        "OwaspUniformCompletion.all_results_are_NORMAL_and_unprotected",
+        "OwaspUniformCompletion.prefix_self_row_has_relative_budget",
+        "OwaspUniformCompletion.paired_erasure_keeps_original_budget",
+        "OwaspUniformCompletion.B2_actual_C2_emits_NORMAL_FLOW_identity",
+        "OwaspUniformCompletion.B2_NORMAL_H_transport_is_inferred",
+        "OwaspUniformCompletion.B2_NORMAL_FLOW_covers_plain_T_DEMAND_H_arm",
+        "OwaspUniformCompletion.protected_arm_still_cannot_be_subsumed",
+        "OwaspUniformCompletion.covered_plain_T_STAR_H_is_removed_before_completion",
+        "OwaspUniformCompletion.plain_pass_never_creates_H",
+        "OwaspUniformCompletion.pass_preserves_existing_H",
+        "OwaspUniformCompletion.uniform_body_contributes_no_outgoing_refinement"
+      ]
+    },
+    "DeepFlowCompletion": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/DeepFlowCompletion.lean",
+      "sha256": "3e871ced07de8edf9581fe37aa0d1416bcb35dd21ec3ec933df56ae96cb219dc",
+      "checkedTheorems": [
+        "DeepFlowCompletion.source_read_has_real_R3_MAY_support",
+        "DeepFlowCompletion.source_read_has_real_R5_exact_NORMAL_support",
+        "DeepFlowCompletion.F3_exact_on_MAY_keeps_exact_Target_original_and_DEMAND",
+        "DeepFlowCompletion.F3_provisional_Target_is_not_a_NORMAL_report",
+        "DeepFlowCompletion.all_three_final_rows_are_kept_literally",
+        "DeepFlowCompletion.Target_row_keeps_its_own_entry_not_repeat5",
+        "DeepFlowCompletion.completed_whole_input_has_eleven_rows",
+        "DeepFlowCompletion.original_whole_repeat_query_is_empty_for_raw_and_cut",
+        "DeepFlowCompletion.completed_whole_query_has_fine_raw_key",
+        "DeepFlowCompletion.completed_whole_depth_two_query_has_no_fine_key",
+        "DeepFlowCompletion.completed_whole_depth_one_query_has_no_fine_key",
+        "DeepFlowCompletion.depth_two_cut_changes_every_full_observation",
+        "DeepFlowCompletion.depth_one_cut_changes_every_full_observation",
+        "DeepFlowCompletion.depth_three_trial_is_raw_identity",
+        "DeepFlowCompletion.depth_three_keeps_every_full_observation",
+        "DeepFlowCompletion.all_proper_scalar_trials_reject",
+        "DeepFlowCompletion.provider_pair_is_generated_from_final_F3_row",
+        "DeepFlowCompletion.ordinary_body_C2_and_paired_C5_derive_NORMAL_shrinker",
+        "DeepFlowCompletion.concrete_selector_does_not_accept_the_FLOW_provider",
+        "DeepFlowCompletion.concrete_source_support_is_NOT_promoted_to_NORMAL",
+        "DeepFlowCompletion.derived_saved_read_shrinks_one_actual_field",
+        "DeepFlowCompletion.applying_NORMAL_FLOW_shrinker_to_MAY_keeps_DEMAND",
+        "DeepFlowCompletion.finite_saved_read_chain_reaches_root_NORMAL",
+        "DeepFlowCompletion.exact_four_source_then_three_saved_reads_reaches_NORMAL_root",
+        "DeepFlowCompletion.finite_source_read_chain_has_a_NORMAL_sink",
+        "DeepFlowCompletion.exact_four_chain_preserves_ZERO_source_origin_at_NORMAL_sink",
+        "DeepFlowCompletion.B4_incoming_has_the_recorded_F3_source_support",
+        "DeepFlowCompletion.B4_first_admission_is_plain_STAR_DEMAND",
+        "DeepFlowCompletion.B4_identity_reverse_read_grows_to_ff_STAR_DEMAND",
+        "DeepFlowCompletion.B4_growing_STAR_has_legal_C2_reentry",
+        "DeepFlowCompletion.B4_growing_key_is_in_shared_image_and_not_ANY",
+        "DeepFlowCompletion.B4_growing_key_contains_the_physical_four_field_source",
+        "DeepFlowCompletion.captured_B4_Target_pair_reverses_to_its_own_F5_ports",
+        "DeepFlowCompletion.captured_B4_repeat_pair_reverses_to_repeat5",
+        "DeepFlowCompletion.generated_completion_never_changes_interface"
+      ]
+    },
+    "ExactFlowInputBridge": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/ExactFlowInputBridge.lean",
+      "sha256": "89cef36ec0d471ccb6b1ce3a6a6ed876d63b953d8ea0b62e5e556e5526b4a11d",
+      "checkedTheorems": [
+        "ExactFlowInputBridge.queryView_is_idempotent",
+        "ExactFlowInputBridge.old_legal_view_iff_native_legal",
+        "ExactFlowInputBridge.queryView_is_identity_on_old_domain",
+        "ExactFlowInputBridge.old_legal_is_native_legal",
+        "ExactFlowInputBridge.old_table_is_guarded_geometry",
+        "ExactFlowInputBridge.native_geometry_ignores_only_FLOW_EXACT_actual_E",
+        "ExactFlowInputBridge.EXACT_ancestor_still_cannot_reach_a_deeper_demand",
+        "ExactFlowInputBridge.common_legal_query_iff_native",
+        "ExactFlowInputBridge.native_table_is_old_query_table",
+        "ExactFlowInputBridge.selected_table_is_unchanged_geometry",
+        "ExactFlowInputBridge.admission_layer_is_unchanged",
+        "ExactFlowInputBridge.native_table_emitter_is_old_query_emitter",
+        "ExactFlowInputBridge.old_emitter_rejects_illegal_actual",
+        "ExactFlowInputBridge.old_emission_has_legal_actual",
+        "ExactFlowInputBridge.native_emit_is_old_query_emit",
+        "ExactFlowInputBridge.native_emit_is_geometry_table_emit",
+        "ExactFlowInputBridge.native_emit_preserves_old_legal_behavior",
+        "ExactFlowInputBridge.raw_image_has_same_native_actual_witnesses",
+        "ExactFlowInputBridge.joint_image_has_same_native_actual_witnesses",
+        "ExactFlowInputBridge.normalized_C5_image_has_same_native_witnesses",
+        "ExactFlowInputBridge.native_emission_has_the_same_base_mark_budget_and_no_ANY",
+        "ExactFlowInputBridge.initial_identity_start_and_its_new_H_are_unchanged",
+        "ExactFlowInputBridge.unchanged_C5_permission_keeps_output_layer_and_H",
+        "ExactFlowInputBridge.bound_submitted_actual_is_literal_original",
+        "ExactFlowInputBridge.original_E_layer_mark_H_are_not_rewritten",
+        "ExactFlowInputBridge.concrete_EXACT_nonempty_E_is_still_rejected",
+        "ExactFlowInputBridge.scenario_initial_is_emitted_from_real_exact_T",
+        "ExactFlowInputBridge.scenario_existing_strong_write_keeps_raw_EXACT_E",
+        "ExactFlowInputBridge.scenario_old_formal_domain_did_not_cover_the_input",
+        "ExactFlowInputBridge.scenario_native_query_admits_but_binding_retains_E"
+      ]
+    },
+    "TwoLoopHeaderFlow": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/TwoLoopHeaderFlow.lean",
+      "sha256": "5498838d82f9860bb09e5a598f943ead4234237bba19d4f6d892e7cbc37525a9",
+      "checkedTheorems": [
+        "TwoLoopHeaderFlow.actual_CFG_ports_and_feedback",
+        "TwoLoopHeaderFlow.logical_exit10_uses_existing_leave_edge_not_a_new_CFG_edge",
+        "TwoLoopHeaderFlow.loop1_and_loop2_own_different_write_and_sink_nodes",
+        "TwoLoopHeaderFlow.zero_iteration_header_does_not_execute_the_write",
+        "TwoLoopHeaderFlow.physical_record_reversal_is_adjacent_not_repeat",
+        "TwoLoopHeaderFlow.class_anchor_counts_zero_and_leaf_counts_one",
+        "TwoLoopHeaderFlow.run2_FLOW_permission_is_query_local_and_complete",
+        "TwoLoopHeaderFlow.B2_HEADER_NORMAL_identity_is_inferred_from_header_transfer",
+        "TwoLoopHeaderFlow.B2_HEADER_does_not_grant_a_source_permission",
+        "TwoLoopHeaderFlow.B2_REPEAT_write_redirects_static_to_local_a",
+        "TwoLoopHeaderFlow.actual_fixture_weak_frame_is_derived_not_invented",
+        "TwoLoopHeaderFlow.actual_weak_REPEAT_can_infer_its_separate_NORMAL_identity",
+        "TwoLoopHeaderFlow.explicit_strong_touched_REPEAT_has_no_static_NORMAL_identity",
+        "TwoLoopHeaderFlow.source_permission_comes_from_real_reverse_write_and_source2",
+        "TwoLoopHeaderFlow.saved_opposite_header_replays_FG_to_adjacent_exit10",
+        "TwoLoopHeaderFlow.header_record_is_not_a_repeat4_to4_record",
+        "TwoLoopHeaderFlow.old_precise_concrete_STAR_gate_still_rejects_FG",
+        "TwoLoopHeaderFlow.replay_result_survives_the_empty_original_T_initial_gate",
+        "TwoLoopHeaderFlow.AL1_actual_precise_T_starts_NORMAL",
+        "TwoLoopHeaderFlow.L2_getter_NORMAL_flow_is_inferred_by_actual_static_read",
+        "TwoLoopHeaderFlow.configured_root_has_the_existing_control_path_to_source2",
+        "TwoLoopHeaderFlow.permission_or_control_alone_cannot_emit_the_source",
+        "TwoLoopHeaderFlow.F3_source_action_and_real_write_produce_the_exact_static_fact",
+        "TwoLoopHeaderFlow.E20_finite_path_reaches_physical_sink6_with_NORMAL_T",
+        "TwoLoopHeaderFlow.MAY_actual_is_not_upgraded_by_a_NORMAL_header_record",
+        "TwoLoopHeaderFlow.wrong_mark_source_permission_is_not_granted",
+        "TwoLoopHeaderFlow.header_record_never_impersonates_the_repeat_even_with_weak_write"
+      ]
+    },
+    "Relations": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/Relations.lean",
+      "sha256": "1502636596e6742267684a92750b909dc79b90232965cdfde609c5e3494f94ba",
+      "checkedTheorems": [
+        "FlowAntichains.Relations.produced_specialization",
+        "FlowAntichains.Relations.specialization_subrelation",
+        "FlowAntichains.Relations.union_specialization_is_short",
+        "FlowAntichains.Relations.every_specialization_is_covered",
+        "FlowAntichains.Relations.empty_specialization",
+        "FlowAntichains.Relations.specialize_twice",
+        "FlowAntichains.Relations.reverse_geometry_specializes",
+        "FlowAntichains.Relations.reverse_specialization_subrelation",
+        "FlowAntichains.Relations.counted_append",
+        "FlowAntichains.Relations.specialization_growth_iff",
+        "FlowAntichains.Relations.reverse_specialization_growth_iff",
+        "FlowAntichains.Relations.strip_append",
+        "FlowAntichains.Relations.exact_descendant_applications_equal",
+        "FlowAntichains.Relations.exact_descendant_result",
+        "FlowAntichains.Relations.aligned_example",
+        "FlowAntichains.Relations.unaligned_example_changes_result",
+        "FlowAntichains.Relations.pair_metadata_preserved",
+        "FlowAntichains.Relations.covers_refl",
+        "FlowAntichains.Relations.covers_trans",
+        "FlowAntichains.Relations.cover_denotation",
+        "FlowAntichains.Relations.strip_sound",
+        "FlowAntichains.Relations.coverWitness_sound",
+        "FlowAntichains.Relations.coverWitness_complete",
+        "FlowAntichains.Relations.coversB_iff",
+        "FlowAntichains.Relations.cancelHeads_reconstruct",
+        "FlowAntichains.Relations.cancelHeads_common",
+        "FlowAntichains.Relations.factorPaths_reconstruct",
+        "FlowAntichains.Relations.factorPaths_append",
+        "FlowAntichains.Relations.family_specialize",
+        "FlowAntichains.Relations.residual_specialize",
+        "FlowAntichains.Relations.cover_has_index_witness",
+        "FlowAntichains.Relations.index_witness_is_cover",
+        "FlowAntichains.Relations.index_cover_iff",
+        "FlowAntichains.Relations.prefixCandidates_complete_and_sound",
+        "FlowAntichains.Relations.below_payload_applications_equal",
+        "FlowAntichains.Relations.below_ordered_packet_applications_equal",
+        "FlowAntichains.Relations.insert_never_invents",
+        "FlowAntichains.Relations.insert_covers_every_input",
+        "FlowAntichains.Relations.insert_preserves_relation",
+        "FlowAntichains.Relations.insert_antichain",
+        "FlowAntichains.Relations.build_antichain",
+        "FlowAntichains.Relations.build_never_invents",
+        "FlowAntichains.Relations.build_preserves_relation",
+        "FlowAntichains.Relations.canonical_is_antichain",
+        "FlowAntichains.Relations.canonical_relation",
+        "FlowAntichains.Relations.canonical_has_input_witness",
+        "FlowAntichains.Relations.late_short_row_replaces_long_without_inventing_base",
+        "FlowAntichains.Relations.long_rows_do_not_invent_missing_base",
+        "FlowAntichains.Relations.distinct_interfaces_do_not_merge"
+      ]
+    },
+    "SelectedTransitiveSubsumption": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/SelectedTransitiveSubsumption.lean",
+      "sha256": "3ef9185bfdc6a12af17c1f5ada4fb2c8a8720ae0d2404007b476085aa1efea08",
+      "checkedTheorems": [
+        "SelectedTransitiveSubsumption.specialized_geometry_is_original_correlated_specialization",
+        "SelectedTransitiveSubsumption.implicit_view_is_not_an_admitted_row",
+        "SelectedTransitiveSubsumption.implicit_view_keeps_mx_and_layer",
+        "SelectedTransitiveSubsumption.implicit_view_keeps_domain",
+        "SelectedTransitiveSubsumption.selected_aligned_guard_requires_equal_mx",
+        "SelectedTransitiveSubsumption.proper_cross_mx_aligned_removal_is_rejected",
+        "SelectedTransitiveSubsumption.selected_equal_mx_aligned_coverage_is_transitive",
+        "SelectedTransitiveSubsumption.actual_provider_covers_its_implicit_view",
+        "SelectedTransitiveSubsumption.concrete_view_has_computed_suffix",
+        "SelectedTransitiveSubsumption.computed_implicit_B_backs_C",
+        "SelectedTransitiveSubsumption.aligned_A_and_direct_B_backing_compute_A_cover_without_B_storage",
+        "SelectedTransitiveSubsumption.A_covers_C_without_an_admitted_or_stored_B",
+        "SelectedTransitiveSubsumption.common_suffix_witness_is_executable",
+        "SelectedTransitiveSubsumption.excluded_mark_cannot_be_covered",
+        "SelectedTransitiveSubsumption.cross_mark_relation_cannot_be_removed",
+        "SelectedTransitiveSubsumption.rejected_A_is_not_a_provider",
+        "SelectedTransitiveSubsumption.cell_admission_commutes",
+        "SelectedTransitiveSubsumption.provider_keeps_ordinary_local_membership",
+        "SelectedTransitiveSubsumption.protected_coordinate_is_always_residual",
+        "SelectedTransitiveSubsumption.late_exact_typed_flag_upgrade_is_fresh",
+        "SelectedTransitiveSubsumption.repeated_exact_flag_is_not_fresh",
+        "SelectedTransitiveSubsumption.C_then_A_and_A_then_C_agree",
+        "SelectedTransitiveSubsumption.source_processing_membership_survives_summary_coverage",
+        "SelectedTransitiveSubsumption.protected_C_survives_both_orders",
+        "SelectedTransitiveSubsumption.covered_plain_C_is_removed_in_both_orders",
+        "SelectedTransitiveSubsumption.a_borrowed_B_cannot_be_registered_as_an_actual_provider",
+        "SelectedTransitiveSubsumption.A_has_a_computed_B_cover_and_B_backs_C",
+        "SelectedTransitiveSubsumption.C_then_A_removes_plain_C_without_ever_storing_B",
+        "SelectedTransitiveSubsumption.A_then_C_removes_plain_C_without_ever_storing_B",
+        "SelectedTransitiveSubsumption.protected_C_is_kept_in_both_concrete_arrivals",
+        "SelectedTransitiveSubsumption.late_flag_upgrade_wins_after_plain_C_was_compacted",
+        "SelectedTransitiveSubsumption.ordinary_source_membership_remains_in_both_orders",
+        "SelectedTransitiveSubsumption.covering_NORMAL_support_does_not_require_C_to_be_DEMAND",
+        "SelectedTransitiveSubsumption.excluded_T_and_wrong_owner_and_unaligned_rows_are_not_removed",
+        "SelectedTransitiveSubsumption.cofinite_mx_tests_one_owned_mark_without_enumeration",
+        "SelectedTransitiveSubsumption.unequal_canonical_mx_is_not_selected_for_FLOW_to_FLOW_removal",
+        "SelectedTransitiveSubsumption.static_ZERO_nonempty_E_and_unadmitted_providers_are_outside_selected_bridge",
+        "SelectedTransitiveSubsumption.absent_A_cannot_remove_only_C"
+      ],
+      "sourceAdaptation": "Alpha rename of the standalone model helper admit to admitCell; avoids proof-hole token scanner collision. Native code and theorem meaning unchanged."
+    },
+    "GeneralLoopAdmissionBound": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/GeneralLoopAdmissionBound.lean",
+      "sha256": "6cba7ca0a1a24f9b05b46378fcf0cd8f707aeaf3bacbed71587ea0bd76b94cc2",
+      "checkedTheorems": [
+        "GeneralLoopAdmissionBound.geometric_key_depth_bound",
+        "GeneralLoopAdmissionBound.selected_has_same_table_result",
+        "GeneralLoopAdmissionBound.raw_C2_key_depth_bound",
+        "GeneralLoopAdmissionBound.native_C2_key_depth_bound",
+        "GeneralLoopAdmissionBound.public_normalization_keeps_key_depth",
+        "GeneralLoopAdmissionBound.native_public_key_depth_bound",
+        "GeneralLoopAdmissionBound.each_command_keeps_a_real_query_family",
+        "GeneralLoopAdmissionBound.ALL_cut_commands_are_bounded_by_the_entire_query",
+        "GeneralLoopAdmissionBound.fine_first_field_emits_a_real_deeper_STAR_key",
+        "GeneralLoopAdmissionBound.fine_key_depth_is_h_plus_one",
+        "GeneralLoopAdmissionBound.fine_command_is_present_with_its_own_label",
+        "GeneralLoopAdmissionBound.NO_cut_from_ANY_other_family_reproduces_the_fine_key",
+        "GeneralLoopAdmissionBound.E07_root_then_child_is_root",
+        "GeneralLoopAdmissionBound.E07_child_then_root_is_root",
+        "GeneralLoopAdmissionBound.E07_only_root_MUST_initial_is_emitted",
+        "GeneralLoopAdmissionBound.E07_child_first_emits_the_same_initial",
+        "GeneralLoopAdmissionBound.E07_identity_is_inferred_from_MUST_not_STAR",
+        "GeneralLoopAdmissionBound.E07_arbitrary_full_mark_field_finding_survives",
+        "GeneralLoopAdmissionBound.E07_requires_definite_MUST_not_ordinary_STAR"
+      ]
+    },
+    "Canonical": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/Canonical.lean",
+      "sha256": "aeed0cc86918dc23ffa1ee27fa0ed0f797c72b60da0b244593141be4d965f596",
+      "checkedTheorems": [
+        "FlowAntichains.Canonical.pathCovers_refl",
+        "FlowAntichains.Canonical.pathCovers_trans",
+        "FlowAntichains.Canonical.pathCovers_antisymm",
+        "FlowAntichains.Canonical.covers_refl",
+        "FlowAntichains.Canonical.covers_header",
+        "FlowAntichains.Canonical.covers_trans",
+        "FlowAntichains.Canonical.covers_antisymm",
+        "FlowAntichains.Canonical.covered_iff",
+        "FlowAntichains.Canonical.insert_subset",
+        "FlowAntichains.Canonical.insert_denotes",
+        "FlowAntichains.Canonical.normalize_subset",
+        "FlowAntichains.Canonical.normalize_denotes",
+        "FlowAntichains.Canonical.no_member_covers",
+        "FlowAntichains.Canonical.insert_reduced",
+        "FlowAntichains.Canonical.normalize_reduced",
+        "FlowAntichains.Canonical.normalize_idempotent_denotation",
+        "FlowAntichains.Canonical.different_header_never_covers",
+        "FlowAntichains.Canonical.excluded_first_field_not_covered",
+        "FlowAntichains.Canonical.may_prefix_covers",
+        "FlowAntichains.Canonical.plain_cannot_cover_protected",
+        "FlowAntichains.Canonical.meet_membership",
+        "FlowAntichains.Canonical.fill_membership",
+        "FlowAntichains.Canonical.same_anchor_union",
+        "FlowAntichains.Canonical.complete_root",
+        "FlowAntichains.Canonical.direct_child_fill",
+        "FlowAntichains.Canonical.admitted_descendant",
+        "FlowAntichains.Canonical.descendant_union",
+        "FlowAntichains.Canonical.mergePaths_exact",
+        "FlowAntichains.Canonical.mergeRegions_key",
+        "FlowAntichains.Canonical.mergeRegions_exact",
+        "FlowAntichains.Canonical.mergeWith_exact",
+        "FlowAntichains.Canonical.mergeOne_exact",
+        "FlowAntichains.Canonical.normalizeRegionsFuel_exact",
+        "FlowAntichains.Canonical.normalizeRegions_exact",
+        "FlowAntichains.Canonical.unequal_keys_never_join",
+        "FlowAntichains.Canonical.cross_E_must_cover",
+        "FlowAntichains.Canonical.complete_direct_child_fills",
+        "FlowAntichains.Canonical.longer_child_does_not_fill",
+        "FlowAntichains.Canonical.excluded_child_does_not_fill",
+        "FlowAntichains.Canonical.longer_child_missing_anchor",
+        "FlowAntichains.Canonical.excluded_child_missing_descendant",
+        "FlowAntichains.Canonical.mergeWith_length",
+        "FlowAntichains.Canonical.mergeOne_length",
+        "FlowAntichains.Canonical.normalizeRegionsFuel_irreducible",
+        "FlowAntichains.Canonical.normalizeRegions_irreducible",
+        "FlowAntichains.Canonical.normalizeRegionsFuel_stable",
+        "FlowAntichains.Canonical.normalizeRegions_idempotent",
+        "FlowAntichains.Canonical.headerBucket_union",
+        "FlowAntichains.Canonical.indexed_reference_equivalent",
+        "FlowAntichains.Canonical.indexed_candidate_bound",
+        "FlowAntichains.Canonical.unrelated_headers_cost_zero",
+        "FlowAntichains.Canonical.inherited_context_matters",
+        "FlowAntichains.Canonical.overlapWitness_sound",
+        "FlowAntichains.Canonical.overlapWitness_complete",
+        "FlowAntichains.Canonical.overlapWitness_iff",
+        "FlowAntichains.Canonical.equal_anchor_overlap",
+        "FlowAntichains.Canonical.blocked_child_no_overlap",
+        "FlowAntichains.Canonical.mx_support",
+        "FlowAntichains.Canonical.flow_fill_guard",
+        "FlowAntichains.Canonical.flow_descendant_guard",
+        "FlowAntichains.Canonical.narrower_flow_child_cannot_fill",
+        "FlowAntichains.Canonical.ordinary_reader_unchanged",
+        "FlowAntichains.Canonical.same_direction_overlap_disabled"
+      ]
+    },
+    "Matching": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/Matching.lean",
+      "sha256": "70ff0ec53bc1b6e56ee28a84456491135bb9c13b6430df9177717c2521f3571a",
+      "checkedTheorems": [
+        "FlowAntichains.Matching.pathPrefix_refl",
+        "FlowAntichains.Matching.strict_irrefl",
+        "FlowAntichains.Matching.empty_strict_nonempty",
+        "FlowAntichains.Matching.role_same",
+        "FlowAntichains.Matching.role_forward_backward",
+        "FlowAntichains.Matching.role_backward_forward",
+        "FlowAntichains.Matching.opposite_never_blocks",
+        "FlowAntichains.Matching.opposite_keep_native",
+        "FlowAntichains.Matching.opposite_exact_list",
+        "FlowAntichains.Matching.current_direct_same",
+        "FlowAntichains.Matching.run_independent",
+        "FlowAntichains.Matching.preserve_nonstar",
+        "FlowAntichains.Matching.preserve_may",
+        "FlowAntichains.Matching.preserve_must",
+        "FlowAntichains.Matching.preserve_exact",
+        "FlowAntichains.Matching.preserve_at",
+        "FlowAntichains.Matching.preserve_not_strict",
+        "FlowAntichains.Matching.only_native",
+        "FlowAntichains.Matching.exact_delta",
+        "FlowAntichains.Matching.reject_blocked",
+        "FlowAntichains.Matching.selected_member",
+        "FlowAntichains.Matching.selected_is_native",
+        "FlowAntichains.Matching.selected_payload_exact",
+        "FlowAntichains.Matching.select_stable_sublist",
+        "FlowAntichains.Matching.select_idempotent",
+        "FlowAntichains.Matching.product_nil",
+        "FlowAntichains.Matching.empty_arm_no_binding",
+        "FlowAntichains.Matching.product_length",
+        "FlowAntichains.Matching.complete_binding_length",
+        "FlowAntichains.Matching.opposite_bindings_exact",
+        "FlowAntichains.Matching.preserve_empty_query",
+        "FlowAntichains.Matching.run1_ordinary_vacuous",
+        "FlowAntichains.Matching.preserve_not_above_depth",
+        "FlowAntichains.Matching.product_native_inclusion",
+        "FlowAntichains.Matching.binding_empty_first_arm",
+        "FlowAntichains.Matching.per_arm_uses_same_role",
+        "FlowAntichains.Matching.no_replacement_candidate",
+        "FlowAntichains.Matching.concrete_full_profile_star_current_drops",
+        "FlowAntichains.Matching.same_example_opposite_survives",
+        "FlowAntichains.Matching.run1_current_star_changes",
+        "FlowAntichains.Matching.no_layer_veto"
+      ]
+    },
+    "Reachability": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/Reachability.lean",
+      "sha256": "93d5929df1c0ccc31206a99c2c70d69a81314c5a625e957bf6aa1e4a3e6f5cd1",
+      "checkedTheorems": [
+        "FlowAntichains.Reachability.canonical_edge",
+        "FlowAntichains.Reachability.canonical_path",
+        "FlowAntichains.Reachability.exact_intermediate_positions",
+        "FlowAntichains.Reachability.no_new_concrete_path",
+        "FlowAntichains.Reachability.canonical_observation",
+        "FlowAntichains.Reachability.observation_witness_unchanged",
+        "FlowAntichains.Reachability.edge_preserves_full_mark",
+        "FlowAntichains.Reachability.path_nil",
+        "FlowAntichains.Reachability.path_single"
+      ]
+    },
+    "Discovery": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/Discovery.lean",
+      "sha256": "ec0a0c8bc4e0785c5b50ffa8f9d872891875dcc9bb3a6572e578d9593bf39f9b",
+      "checkedTheorems": []
+    },
+    "LoopGeometry": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/LoopGeometry.lean",
+      "sha256": "ea6eca6d3855efdca501cdd59f3e31694083b32e4779841b24be152e0e45baea",
+      "checkedTheorems": []
+    },
+    "ExceptionalControlDemand": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/ExceptionalControlDemand.lean",
+      "sha256": "282094d58dffddb472821d0f681a9301228f03077951519d3a538f5c9d15be0e",
+      "checkedTheorems": []
+    },
+    "DeepGuidanceArrival": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/DeepGuidanceArrival.lean",
+      "sha256": "95a7e85d9216395bd96eff03df406cc081b9367e32a146ee63c1a8c8b90fe14d",
+      "checkedTheorems": [
+        "DeepGuidanceArrival.forward_graph_has_no_normal_or_exceptional_leave",
+        "DeepGuidanceArrival.discovery_reaches_the_real_sink_without_a_forward_edge",
+        "DeepGuidanceArrival.F1_source_produces_actual_MAY_before_block_abstraction",
+        "DeepGuidanceArrival.F1_FLOW_hypothesis_is_derived_from_that_actual_arrival",
+        "DeepGuidanceArrival.F1_sink_requests_T_from_real_FLOW_MAY",
+        "DeepGuidanceArrival.F1_requested_concrete_STAR_identity_is_DEMAND",
+        "DeepGuidanceArrival.F1_marked_Target_is_generated_without_a_method_local_default",
+        "DeepGuidanceArrival.B2_real_normal_control_and_FLOW_pairs_are_generated",
+        "DeepGuidanceArrival.B2_FLOW_body_and_paired_C5_generate_MAY_result",
+        "DeepGuidanceArrival.B2_normal_ZERO_sink_seed_keeps_exact_T_at_real_discovery_port",
+        "DeepGuidanceArrival.B2_normal_ZERO_feedback_seed_keeps_exact_T_at_repeat_port",
+        "DeepGuidanceArrival.B2_FLOW_result_drives_concrete_STAR_source_hit",
+        "DeepGuidanceArrival.B2_source_hook_has_real_feedback_Target_permission",
+        "DeepGuidanceArrival.B3_ZERO_STAR_and_precise_control_rows_arrive_with_original_ports",
+        "DeepGuidanceArrival.root_Target_chain_uses_previous_scoped_ZERO_permission",
+        "DeepGuidanceArrival.F3_saved_normal_ZERO_reverse_replay_keeps_DEMAND",
+        "DeepGuidanceArrival.F3_source_MAY_is_published_in_actual_repeat_scope",
+        "DeepGuidanceArrival.F3_exact_Target_original_and_permission_are_generated",
+        "DeepGuidanceArrival.B4_ANY_zero_and_exact_Target_handoff_are_computed",
+        "DeepGuidanceArrival.actual_B4_global_limit_is_three",
+        "DeepGuidanceArrival.B4_borrowed_exact_Target_accepts_real_ZERO_data_without_widening",
+        "DeepGuidanceArrival.B4_opposite_NORMAL_read_derives_growing_exact_actual",
+        "DeepGuidanceArrival.F3_NORMAL_shrinker_is_derived_from_the_generated_frontier",
+        "DeepGuidanceArrival.B4_whole_generated_query_has_the_needed_concrete_key",
+        "DeepGuidanceArrival.B4_depth_one_cut_loses_that_key_in_the_whole_query",
+        "DeepGuidanceArrival.B4_depth_two_cut_preserves_that_key_in_the_whole_query",
+        "DeepGuidanceArrival.B4_raw_and_any_possible_depth_two_trial_have_same_source_effect",
+        "DeepGuidanceArrival.B4_current_plain_STAR_actor_executes_physical_source",
+        "DeepGuidanceArrival.B4_Target_permission_uses_complete_physical_ZERO_exit_pair",
+        "DeepGuidanceArrival.actual_F5_required_three_rows_are_produced_not_supplied",
+        "DeepGuidanceArrival.source_reach_of_MAY_and_plain_STAR_is_a_real_AP_operation",
+        "DeepGuidanceArrival.Source_FLOW_hypothesis_does_not_invent_Reach_or_Target",
+        "DeepGuidanceArrival.concrete_Target_cannot_be_admitted_by_FLOW_completion",
+        "DeepGuidanceArrival.borrowed_CONTROL_does_not_alias_nonzero_DATA_admission",
+        "DeepGuidanceArrival.precise_Target_row_is_never_replaced_by_MAY"
+      ]
+    },
+    "GeneralLoopAdmissionOneStep": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/GeneralLoopAdmissionOneStep.lean",
+      "sha256": "2dfb8c84f5622c11202522e3ed382afe46b5c89d7bf915dd55afb0fbae078a56",
+      "checkedTheorems": [
+        "GeneralLoopAdmissionOneStep.raw_C2_key_at_most_one_past_demand",
+        "GeneralLoopAdmissionOneStep.native_C2_key_at_most_one_past_demand",
+        "GeneralLoopAdmissionOneStep.native_public_key_at_most_one_past_demand",
+        "GeneralLoopAdmissionOneStep.C5_queried_member_at_most_one_past_demand",
+        "GeneralLoopAdmissionOneStep.ALL_commands_at_most_one_past_query_heads",
+        "GeneralLoopAdmissionOneStep.ALL_public_keys_at_most_one_past_query_heads",
+        "GeneralLoopAdmissionOneStep.ALL_B4_initials_at_most_two_from_depth_one_heads",
+        "GeneralLoopAdmissionOneStep.actual_B4_depth_three_can_emit_only_the_first_new_field"
+      ],
+      "sourceAdaptation": "Import alias only: PlainStarRelativeAdmissionProofFixed3 -> RelativeAdmission. Existing definitions unchanged."
+    },
+    "LoopMapperRecovery": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/LoopMapperRecovery.lean",
+      "sha256": "37787a9bfcb017b036cc01017409506776ae26709b9977ceb0152c7217c8b213",
+      "checkedTheorems": [
+        "LoopMapperRecovery.one_loop_body_derives_the_precise_NORMAL_fact",
+        "LoopMapperRecovery.one_loop_body_has_the_actual_run1_cut",
+        "LoopMapperRecovery.adjacent_demand_is_the_handoff_of_the_real_B2_getter",
+        "LoopMapperRecovery.adjacent_entry_is_the_fine_FLOW_query",
+        "LoopMapperRecovery.real_loop_output_matches_the_general_fine_input",
+        "LoopMapperRecovery.ALL_families_keep_the_fine_adjacent_command",
+        "LoopMapperRecovery.NO_extra_cut_family_can_reproduce_that_key",
+        "LoopMapperRecovery.proper_cut_changes_the_whole_labelled_observation",
+        "LoopMapperRecovery.actual_adjacent_C2_keeps_the_fine_key",
+        "LoopMapperRecovery.actual_coarse_C2_does_not_keep_the_fine_key",
+        "LoopMapperRecovery.loop_gate_keeps_the_precise_NORMAL_output",
+        "LoopMapperRecovery.feasible_loop_mapper_path_keeps_the_required_NORMAL_finding",
+        "LoopMapperRecovery.wrong_full_mark_still_cannot_trigger_the_sink"
+      ]
+    },
+    "DeepExtraFrontier": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/DeepExtraFrontier.lean",
+      "sha256": "ae6028bf57971e6b562cc4fa686bb492715f5fc51a016353c43dc84d568ee0a0",
+      "checkedTheorems": [
+        "DeepExtraFrontier.encoded_counted_depth",
+        "DeepExtraFrontier.public_initial_keeps_counted_depth",
+        "DeepExtraFrontier.endpoint_member_is_bounded",
+        "DeepExtraFrontier.prefix_addition_keeps_both_head_bounds",
+        "DeepExtraFrontier.paired_addition_keeps_both_head_bounds",
+        "DeepExtraFrontier.ALL_completed_rows_keep_both_head_bounds",
+        "DeepExtraFrontier.every_raw_B2_public_initial_and_Target_head_has_depth_at_most_one",
+        "DeepExtraFrontier.every_B2_C5_DATA_output_has_depth_at_most_one",
+        "DeepExtraFrontier.read_after_global_cap_two_has_depth_at_most_one",
+        "DeepExtraFrontier.ordinary_forward_or_opposite_read_never_increases_depth",
+        "DeepExtraFrontier.every_F3_grammar_boundary_has_depth_at_most_one",
+        "DeepExtraFrontier.every_F3_grammar_initial_and_Target_head_has_depth_at_most_one",
+        "DeepExtraFrontier.every_F3_grammar_publication_handoff_has_both_heads_at_most_one",
+        "DeepExtraFrontier.every_F3_grammar_Target_handoff_keeps_exact_original_head_bound",
+        "DeepExtraFrontier.ALL_B4_queried_origins_are_at_most_two",
+        "DeepExtraFrontier.ALL_B4_queried_C5_premises_are_at_most_two",
+        "DeepExtraFrontier.ALL_B4_DATA_results_use_their_own_exit_head_bound",
+        "DeepExtraFrontier.complete_B4_pair_reversal_keeps_both_independent_bounds",
+        "DeepExtraFrontier.ALL_F5_extra_completion_heads_stay_at_most_two",
+        "DeepExtraFrontier.ALL_F5_cut_commands_from_ANY_bounded_family_have_depth_at_most_two",
+        "DeepExtraFrontier.NO_F5_extra_bounded_family_can_mask_the_real_depth_three_key",
+        "DeepExtraFrontier.F5_full_actual_has_its_real_labelled_fine_key",
+        "DeepExtraFrontier.every_proper_F5_scalar_trial_rejects_for_the_entire_bounded_query",
+        "DeepExtraFrontier.every_proper_F5_trial_changes_the_entire_labelled_query",
+        "DeepExtraFrontier.arbitrary_other_observer_components_cannot_hide_the_repeat_difference",
+        "DeepExtraFrontier.actual_F5_mode_is_four_and_not_the_earlier_local_B4_cell",
+        "DeepExtraFrontier.computed_arrival_supplies_the_required_scope_and_saved_shrinker"
+      ]
+    },
+    "ConcreteConverterWrapper": {
+      "source": "spec/lean/proposals/subsumption-initial-demand-20261107/ConcreteConverterWrapper.lean",
+      "sha256": "297d2f52fa1ff9c260bf1f58bf486230be423e02e94a9d981111c2e65bb93594",
+      "checkedTheorems": [
+        "ConcreteConverterWrapper.marks_are_distinct",
+        "ConcreteConverterWrapper.guard_requests_T_but_emits_no_FLOW_to_U",
+        "ConcreteConverterWrapper.leaf_rows_are_actually_inferred",
+        "ConcreteConverterWrapper.internal_C2_admits_each_phase",
+        "ConcreteConverterWrapper.ordinary_wrapper_composition_keeps_the_inferred_row",
+        "ConcreteConverterWrapper.arbitrary_finite_wrappers_derive_the_row",
+        "ConcreteConverterWrapper.initial_T_is_from_the_real_ZERO_source_action",
+        "ConcreteConverterWrapper.R1_sink_candidate_is_DEMAND_not_NormalTarget",
+        "ConcreteConverterWrapper.actual_U_sink_reverse_supplies_the_coarse_offer",
+        "ConcreteConverterWrapper.R1_actual_offer_is_request_admitted",
+        "ConcreteConverterWrapper.R2_actual_ANY_offer_is_admitted",
+        "ConcreteConverterWrapper.R3_actual_exact_T_is_admitted_NORMAL",
+        "ConcreteConverterWrapper.accepted_backward_actions_derive_both_source_hit_preconditions",
+        "ConcreteConverterWrapper.arbitrary_finite_wrappers_keep_exact_U_finding",
+        "ConcreteConverterWrapper.U_result_is_not_a_T_result",
+        "ConcreteConverterWrapper.wrong_input_mark_cannot_trigger_the_source",
+        "ConcreteConverterWrapper.the_mark_changing_rows_have_no_ANY_original"
+      ],
+      "sourceAdaptation": "Import alias only: PlainStarRelativeAdmissionProofFixed3 -> RelativeAdmission."
+    }
+  },
+  "baselineHelpers": [
+    {
+      "source": "spec/lean/ApSpec/CorrelatedConcreteImplementation.lean",
+      "sha256": "53b9d73a3d4194bf3f46b56fcef3b9d391b3134d4e8aeffa3b134ddbb5e1acfd"
+    },
+    {
+      "source": "spec/lean/ApSpec/Run1CorrelatedConcreteInitials.lean",
+      "sha256": "dac9749a602f97cbb94d08c390c288405f4c47ae0f4bc22577196577cb96fb29"
+    },
+    {
+      "source": "spec/lean/ApSpec/FlowBackedAp.lean",
+      "sha256": "39d1ec54a70d1af190b5d438bf695b6ddc5ce0a49f0bf3a3a2c1e413671f153a"
+    },
+    {
+      "source": "spec/lean/ApSpec/Run1FlowTaintCoverage.lean",
+      "sha256": "2e98d521e0d61a425f04ab180870540da0900433f3323d4bbafe889cc565b9a2"
+    },
+    {
+      "source": "spec/lean/ApSpec/AbsWitness.lean",
+      "sha256": "f684f1d9272e843946d70263b95a9c232a3b11985797764630ff5bf2829873ea"
+    },
+    {
+      "source": "spec/lean/ApSpec/AbsDefs.lean",
+      "sha256": "d1abb8f63d0dde949527f08d13b6267b0c097c97deb389d35726a956f1dfcd90"
+    },
+    {
+      "source": "spec/lean/ApSpec/HandoffRestrict.lean",
+      "sha256": "72e8afdada19f6ce92baec79e1ef8aa167cb642e1f1a7512b633e8d0efa70ecc"
+    },
+    {
+      "source": "spec/lean/ApSpec/HandoffDefs.lean",
+      "sha256": "185a83ce163187ac5ef8b0ea8b09b336e34a5aa8fcda8ad30fee4d9da16a6c64"
+    },
+    {
+      "source": "spec/lean/ApSpec/Backward.lean",
+      "sha256": "5b27f8311a97280577eb8cd935289fd6c843054d5ba696fdcf4fd28352b69554"
+    },
+    {
+      "source": "spec/lean/ApSpec/RestrictedMain.lean",
+      "sha256": "f863ad22d06b991e9c20da0e371428838f8dfe7f069aa9c5a953814efe4e6a96"
+    },
+    {
+      "source": "spec/lean/ApSpec/RestrictedCore.lean",
+      "sha256": "2527b35281064afa5bd72462605a995b6f411ad9e93b8580a472a4fed688d45e"
+    },
+    {
+      "source": "spec/lean/ApSpec/Restricted.lean",
+      "sha256": "725c673162fdb767002d12d5515b37dae180329a48fb500d9462646a1fb4f1cd"
+    },
+    {
+      "source": "spec/lean/ApSpec/Basic.lean",
+      "sha256": "96baa7c33f2804be5fe5e891ffe7b7846d5cd90fd41df285ca7f07ba9be2db8e"
+    },
+    {
+      "source": "spec/lean/ApSpec/Core.lean",
+      "sha256": "3c8e2bc3cf3bdb3ab1da481d95fe291653ce4754ee4766345d5ec525084160c1"
+    },
+    {
+      "source": "spec/lean/ApSpec/Reverse.lean",
+      "sha256": "0eaa80776d00e03209e016d62b5e01ae272db8782a910cac03ebd4abd49db75c"
+    },
+    {
+      "source": "spec/lean/ApSpec/Store.lean",
+      "sha256": "d21f91b632b8333c717b78e95be10f9e23640200b5484c97783ef283faddd454"
+    },
+    {
+      "source": "spec/lean/ApSpec/Invariant.lean",
+      "sha256": "2a3f66453f2b6ae6a53bdaa2ce663dc522a06a620580698d3b592de29259b7cd"
+    },
+    {
+      "source": "spec/lean/ApSpec/RestrictedCoverage.lean",
+      "sha256": "f6a84baa88fcf50002693f1a3ad6d1e8d773f8d0c3fb33fa93bccf52e234b614"
+    },
+    {
+      "source": "spec/lean/ApSpec/Coverage.lean",
+      "sha256": "0e2be71c88d49e50ad541175135fa1ed0cbf3382de9028461ec4cad275324281"
+    },
+    {
+      "source": "spec/lean/ApSpec/RestrictedExact.lean",
+      "sha256": "f7b0ce577714717533b6203187f8cf65bde4a690a87646de0f855fb31c62cbb9"
+    },
+    {
+      "source": "spec/lean/ApSpec/Exact.lean",
+      "sha256": "12be0e49e5ec297d6249c5261375db6c5022c21ba0cd0b614c9d559553d4d5d5"
+    },
+    {
+      "source": "spec/lean/ApSpec/Confirmed.lean",
+      "sha256": "788b97f79c1789ba7dfd644dbf30db8b177ab8c7d1249030b0a66c82a90ef2bb"
+    },
+    {
+      "source": "spec/lean/ApSpec/RestrictedCases.lean",
+      "sha256": "14af0ddbfe3212e6b9b02b5694a56761f76a9a15644ddb5c7336ac2527eb4bfb"
+    },
+    {
+      "source": "spec/lean/ApSpec/HandoffNoStar.lean",
+      "sha256": "8de3dba928785b18e0b7f7039ec45d0b598ca9a7a2b6d2df33d8a9dede485910"
+    },
+    {
+      "source": "spec/lean/ApSpec/HandoffMain.lean",
+      "sha256": "07f4579ca2158b5c0271931b2fcf88caa8719395eb2039a914efa973efc85ec9"
+    },
+    {
+      "source": "spec/lean/ApSpec/HandoffBackward.lean",
+      "sha256": "21bf403660383a4ccda8c819da087611e3059d93d9f745a8b01cd055651b8f98"
+    },
+    {
+      "source": "spec/lean/ApSpec/HandoffIter.lean",
+      "sha256": "d6fd2c039ef2b47ddabfc5fea7db7a2024f4815885d9982122df1191be9fb1bb"
+    },
+    {
+      "source": "spec/lean/ApSpec/HandoffExclusion.lean",
+      "sha256": "cdc8ebf0295e5d09de95ef1b0a02da8f410705154d8843f2131d0cc62d2e84f3"
+    },
+    {
+      "source": "spec/lean/ApSpec/BackwardExact.lean",
+      "sha256": "7ec541d192ca64f5db6f9993f7935f5446c37d081539b2e8bb6d986dea633f16"
+    },
+    {
+      "source": "spec/lean/ApSpec/StaticsIter.lean",
+      "sha256": "fca59cf4eeb2cb538fc14f2356c11e1257b0aae2afbed12912d98a053a435219"
+    },
+    {
+      "source": "spec/lean/ApSpec/Statics.lean",
+      "sha256": "0f350223363c881e3ccef17bb4b012f2eba1d34df54ad2f56e9e19d87e011c9c"
+    },
+    {
+      "source": "spec/lean/ApSpec/HandoffCoverage.lean",
+      "sha256": "16eeb3881a54e14aa77e36d6b1c3c886daa6a6be74fdd70d1eca6bb8cb5e2d84"
+    },
+    {
+      "source": "spec/lean/ApSpec/HandoffXMain.lean",
+      "sha256": "344f71d97ba069ea0617cb80f3005077c7e5c4c7f5cc9c39742a01f9e36f6d2c"
+    },
+    {
+      "source": "spec/lean/ApSpec/HandoffXIter.lean",
+      "sha256": "d21d431954ceaacde4f6a60ec76fa62a0c284921a528af91ca291130281d41f6"
+    },
+    {
+      "source": "spec/lean/ApSpec/HandoffXCoverage.lean",
+      "sha256": "b64821fd8d3a6058f503e49c6e3a11d7490cac8e75b04b3378be36496b7c8099"
+    },
+    {
+      "source": "spec/lean/ApSpec/HandoffXRestrict.lean",
+      "sha256": "e840c7bbe08867161ef50cfd4400113ecf11343bb6d14cf4f5d762753ba0299e"
+    },
+    {
+      "source": "spec/lean/ApSpec/AnyTaintExCov.lean",
+      "sha256": "7e485608c2dbb794b1cbbca737b0d874e1a91aff3b908f3d1093766f880d7dc9"
+    },
+    {
+      "source": "spec/lean/ApSpec/AnyTaintExDefs.lean",
+      "sha256": "2bac9f129e1e10a3d957e7cef80cd66b3f2e598b23e9e9620768308adef11b34"
+    },
+    {
+      "source": "spec/lean/ApSpec/AnyTaintDefs.lean",
+      "sha256": "a3392721d90b01617624d0b84f139e512902ff177e7150193d22888cb349f2c5"
+    },
+    {
+      "source": "spec/lean/ApSpec/W6.lean",
+      "sha256": "4599400ace31b0bf4ddb2c419f1cfa0dac9163f78a3df448504ffdbbb240c6d1"
+    },
+    {
+      "source": "spec/lean/ApSpec/ForwardSeeds.lean",
+      "sha256": "de77dfa0a242795e34390fbff0e09e9af6f05ad5d087ef4163489314c642306a"
+    },
+    {
+      "source": "spec/lean/ApSpec/AnyTaintSim.lean",
+      "sha256": "6f8101f189c807e74ffef245f01532ccdb1a48e0a9cb8905507c627f98fd0039"
+    },
+    {
+      "source": "spec/lean/ApSpec/Kinds.lean",
+      "sha256": "6b4fbb96232ff8f1019fbd8bcca72db4117aaa605b77c7f2e097b9c4ee05e62e"
+    },
+    {
+      "source": "spec/lean/ApSpec/NDExact.lean",
+      "sha256": "de3c05f685b63e544f2de14920515e0c22c3b65233df6c36178ddd0f8336e96e"
+    },
+    {
+      "source": "spec/lean/ApSpec/ND.lean",
+      "sha256": "2134699fc6bae5bc6b743c6ec7f5eb94ec4e4a6c49693728af040ff4ca23953d"
+    },
+    {
+      "source": "spec/lean/ApSpec/NDZ.lean",
+      "sha256": "07b317e5c619407bb9b3b0265af53f5bcdfe30593a8aa81dafb2ecbd7dd8f295"
+    },
+    {
+      "source": "spec/lean/ApSpec/AnyTaintExExact.lean",
+      "sha256": "af2814622fcd98fb1f95f088a28a73fb762535e69cf46d6e3eeed4a30f647e89"
+    },
+    {
+      "source": "spec/lean/ApSpec/AnyTaintExact.lean",
+      "sha256": "c7f827d10f7cec839d35b47ae0a35cbd002cd0c4f1d1614cf4c581363ac9d523"
+    },
+    {
+      "source": "spec/lean/ApSpec/AnyTaintExKinds.lean",
+      "sha256": "ce6992ad678ac8d2282d49bcf1175fb5884982b59321fdc15251eb4ef8f7dd06"
+    },
+    {
+      "source": "spec/lean/ApSpec/CurrentDemand.lean",
+      "sha256": "23ba389105498a0592d2f6ba2d7f8e13c0f519ccd7bb06cce89b446af9a67abb"
+    },
+    {
+      "source": "spec/lean/ApSpec/AbsStore.lean",
+      "sha256": "0096b629fa62757172e26ba3b66136c812e226906a33de9a2aac9d17516d42c8"
+    },
+    {
+      "source": "spec/lean/ApSpec/RestrictedStore.lean",
+      "sha256": "5e5388df5e7740802bf59db1c4a21760e11433c30cdcb1ec6d41716e5a6c67e3"
+    },
+    {
+      "source": "spec/lean/ApSpec/Tree.lean",
+      "sha256": "cd97261abbb5b842f5a15a1f1fa90a6a7a8469e5bae1282ff76c03e283628cf2"
+    },
+    {
+      "source": "spec/lean/ApSpec/PipelineStore.lean",
+      "sha256": "270f0d15b32e7c8e3402a6b8d4f3b1677f0ee617cb12d5ab2e09f7becff2ea19"
+    },
+    {
+      "source": "spec/lean/ApSpec/Run1SummaryAliasAdmission.lean",
+      "sha256": "fc50eba187b0862c5334966f19ff7aa54ded23b90295c2a6117a4640698a0ec3"
+    },
+    {
+      "source": "spec/lean/ApSpec/FlowBackedHandoff.lean",
+      "sha256": "e8063959eea307511973fbc3a04f0da96e1e79af1026e415973f17a45701fafd"
+    },
+    {
+      "source": "spec/lean/ApSpec/FlowBackedProtection.lean",
+      "sha256": "8cf75e5052b8e99bfba2ac3a70a100a868aadcfa2453eb0abfc97afd19263765"
+    },
+    {
+      "source": "spec/lean/ApSpec/FlowBackedStore.lean",
+      "sha256": "373a130edb821dba6bdf50a61bc9c55fac2f8ad78338e8a4d9b0bed8f4724935"
+    }
+  ]
+}

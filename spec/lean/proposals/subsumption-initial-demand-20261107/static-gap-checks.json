@@ -1,0 +1,56 @@
+{
+  "state": "ROOT_KERNEL_CHECKED_FINITE_INTERFACE_COUNTEREXAMPLE",
+  "toolchain": "leanprover/lean4:v4.33.1",
+  "exitCode": 0,
+  "theoremCount": 22,
+  "theorems": [
+    "fields_are_distinct",
+    "concrete_program_reports",
+    "write_removes_f_subtree",
+    "coarse_source_is_real_cut",
+    "selected_same_head_ANY",
+    "selected_same_head_STAR",
+    "same_head_FULL_mark_mismatch",
+    "same_head_precise_STAR_emits_EXACT",
+    "source_fits_run3_field_limit",
+    "later_precise_STAR_rejects_descendant",
+    "actual_coarse_pair_and_cap",
+    "paired_C5_has_actual_witness",
+    "handoff_does_not_widen_precise_STAR",
+    "saved_ZERO_replay_exists",
+    "saved_ZERO_cannot_carry_DATA",
+    "no_admitted_NORMAL_FLOW_provider",
+    "no_S1_cover_witness",
+    "current_relation_is_not_the_missing_piece",
+    "actual_call_has_no_DATA_output",
+    "any_C2_with_selected_rejection_loses_this_call",
+    "missing_finding_even_with_source_permission",
+    "blanket_normal_promotion_has_concrete_counterexample"
+  ],
+  "axiomAudit": "Every declared theorem printed; no sorryAx/Classical/custom axiom; printed dependencies limited to propext.",
+  "result": {
+    "concreteProgramHasFinding": true,
+    "selectedInterfaceHasFinding": false
+  },
+  "proofScope": "One finite interface and generic rejection theorem. Explicit no-other-DATA-route/retained-R2-carry assumptions. Not a complete native-engine proof, not a proposed repair.",
+  "nativeEvidence": {
+    "noLoopLatestComplete": "run-3",
+    "twoLoopLatestComplete": "run-3",
+    "deepSeparatePriorComplete": "run-5"
+  },
+  "artifacts": {
+    "static-gap-axiom-audit.log": {
+      "sha256": "22d6edd4badf05fc10ded0595973a9e7730d39c11ef273cede5ef46b1554dc69",
+      "bytes": 2311
+    },
+    "StaticCarryGap.lean": {
+      "sha256": "e2b558f1c7bfafa041eb2741557c6a2c7e8cf0409b30743aa7eb8390cb9ae876",
+      "bytes": 12445
+    },
+    "static-gap-check.log": {
+      "sha256": "381a0587d0d734fbc1534a2ed6fdebaaf871ff75e3d3a9b4601549c6a9f74b83",
+      "bytes": 404
+    }
+  },
+  "failedAttemptsPreservedAt": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-joint-demand-redesign-20261107/formal/static-carry-gap"
+}
