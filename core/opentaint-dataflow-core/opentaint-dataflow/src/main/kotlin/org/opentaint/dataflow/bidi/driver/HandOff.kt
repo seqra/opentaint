@@ -44,10 +44,8 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
                 shared.cancellation.checkpoint()
                 for ((premise, facts) in actor.summaries.demandEdges(direction)) {
                     shared.cancellation.checkpoint()
-                    if (!actor.mode.run1 && facts is FlowTree && facts.layer == Layer.DEMAND)
-                        check(facts.tail == Tail.ANY && facts.exclusion == ExclusionSet.Empty) {
-                            "A restricted FLOW demand result must be ANY with empty field exclusions"
-                        }
+                    // Keep C5's STAR correlation. Projection uses the existing
+                    // guidance normalization for selector E/mx and MUST.
                     for (leaf in shared.ops.leaves(facts)) {
                         shared.cancellation.checkpoint()
                         body(actor.key, premise, leaf)

@@ -563,6 +563,27 @@ boundary candidate
 No raw rejected relation is stored as a semantic provider. Run-1 has no
 previous demand snapshot and keeps its ordinary global limit.
 
+### 6.4 Handoff format closure
+
+C5 can select an EXACT/FLOW result on DEMAND from a raw ANY/FLOW
+candidate. Whole-pair normalization then publishes STAR/FLOW on DEMAND.
+A correlated STAR candidate can also remain STAR on DEMAND. These are
+legal selected results; the handoff must not require every FLOW demand to
+have ANY tail.
+
+Reuse the existing guidance projection. It preserves STAR correlation,
+clears FLOW selector E/mx, converts MUST guidance by its existing rule, and
+keeps the complete pair and physical block ports. Accept STAR or ANY FLOW
+entries at every restricted run. Do not widen STAR to ANY, drop the pair,
+or promote DEMAND to NORMAL.
+
+Update the old validators in BlockRunState.retainSummary,
+HandOff.forEachDemandPiece, block handoff, and
+DemandStore.validateIncoming. Keep the typed constructors and all C2/C5
+checks. Add a native raw-ANY-to-EXACT-to-STAR test through both method and
+block handoff and the next RunConfig. The constructive format bridge is
+in spec/lean/proposals/flow-star-demand-handoff-20261108/.
+
 ## 7. Cleaner and loop changes
 
 ### 7.1 Selected PART STAR survivor

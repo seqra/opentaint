@@ -926,10 +926,7 @@ open class BlockRunState internal constructor(
         }
         bodyWork?.candidate(premise, facts, internalBlock = !isRootScope)
         assertCanonicalFlowSummary(premise, facts)
-        if (!config.run1 && facts is FlowTree && facts.layer == Layer.DEMAND)
-            check(facts.tail == Tail.ANY && facts.exclusion == ExclusionSet.Empty) {
-                "Restricted FLOW DEMAND must have an uncertain ANY tail"
-            }
+        // DEMAND does not imply ANY: paired C5 can preserve a correlated STAR.
         checkKinds(premise, facts)
         if (isRootScope && !context.shared.interpreter.isSummaryBase(facts.base)) return
         // Existing computed summary supplies are independent of local write

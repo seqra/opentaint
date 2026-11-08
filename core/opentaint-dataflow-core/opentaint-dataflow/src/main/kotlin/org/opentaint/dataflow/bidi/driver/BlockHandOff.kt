@@ -34,10 +34,7 @@ fun projectBlockHandOff(
         val next = producer.reversed()
         for ((premise, facts) in store.demandEdges(direction)) {
             ap.cancellation.checkpoint()
-            if (!run1 && facts is FlowTree && facts.layer == Layer.DEMAND)
-                check(facts.tail == Tail.ANY && facts.exclusion == ExclusionSet.Empty) {
-                    "A restricted block FLOW demand result must be ANY with empty field exclusions"
-                }
+            // The same selected STAR/ANY guidance grammar applies at every scope.
             if (direction == Direction.BACKWARD)
                 check(premise is InitialAp) { "The backward run has no multi-premise summary (ap.md §9.2)" }
             for (leaf in ops.leaves(facts)) {

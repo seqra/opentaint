@@ -1,0 +1,105 @@
+{
+  "state": "PASS_NATIVE_COMPONENTS_ONLY",
+  "checkedAtUTC": "2026-11-08T19:23:41.652429+00:00",
+  "baselineRevision": "e1838296f",
+  "fullConductorReplayPerformed": false,
+  "scope": "Three native C5/handoff component tests, with method run-3/run-4 and block forward/backward cases; raw ANY-to-EXACT-to-public-STAR traced separately. Exact synthetic rows are not the captured Conductor failing row. No analyzer transfer or C2 rule changes.",
+  "totalTests": 36,
+  "suites": [
+    {
+      "suite": "CorrelatedFlowDemandHandOffTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "seconds": "0.053",
+      "cases": [
+        "C5 exact FLOW selection normalizes a raw MAY demand before method handoff()",
+        "paired C5 STAR demand reaches the next method run without losing correlation()",
+        "block C5 STAR demand reverses its exact ports and validates in the next run()"
+      ],
+      "resultSha256": "29d931a3ee11b2cba34130878457b0f75ab01060bc34a04a7387daae1e57466b"
+    },
+    {
+      "suite": "NormalizedHandOffTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "seconds": "0.03",
+      "cases": [
+        "forward normal multi premise must sides become may Empty E while exact and concrete marks stay distinct()",
+        "both handoff directions retain concrete STAR field exclusions and full mark identities()",
+        "backward selected abstract leaves normalize mark exclusions and ignore STAR demand field E()",
+        "cancelled nonempty leaf member and hit walks preserve the frozen inputs for later activation()",
+        "concrete selected marks remain separate and admitted normal singleton summaries never enter hand off counts()",
+        "backward multi premise summaries are rejected rather than split into independent forward demand()",
+        "empty hand off construction checks cancellation before enumerating actors and remains usable after activation()",
+        "backward singleton and zero summaries retain both paired endpoints()",
+        "forward selected abstract leaves normalize once and merge ignored STAR exit field exclusions()"
+      ],
+      "resultSha256": "5ea094cf2adf637877e47a397cc67126c53efddcc0321309f71f9417030a4bc8"
+    },
+    {
+      "suite": "BlockHandOffTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "seconds": "0.04",
+      "cases": [
+        "forward block demands reverse both control ports and whole paired AP rows()",
+        "normal backward ZERO rows retain existing source continuation selection()",
+        "typed terminal keeps logical exit separate from physical data ports()",
+        "forward ND guidance views each arm but count ignores duplicate exact normalized rows()"
+      ],
+      "resultSha256": "00bb8c5341474d689ef8636bc939002a95ab06f230941d88e6f2b1a72947f0fe"
+    },
+    {
+      "suite": "RunConfigTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "seconds": "0.024",
+      "cases": [
+        "only run one has no demand snapshot()",
+        "constructor wraps a mutable record port in a read only live view()",
+        "closing shared objects shuts down the owned executor()",
+        "unresolved observer is the exact optional interpreter hook()",
+        "positive limits must match the group and exact run schedule()",
+        "roots are an owned immutable list with order and multiplicity intact()",
+        "nonpositive run indexes are rejected before a mode can be used()",
+        "shared services retain analysis owners and create one usable dispatcher()",
+        "positive run rows choose the complete forward backward and seed modes()",
+        "shared construction does not reactivate analysis cancellation()",
+        "every run rejects nonpositive field limits()"
+      ],
+      "resultSha256": "40d99c767eebe39e59fa63d484095277db5bc6593096c6c05c77b296563265b7"
+    },
+    {
+      "suite": "RedesignedInitialEmissionTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "seconds": "0.056",
+      "cases": [
+        "first-field concrete STAR has both FLOW companions and preserves the submitted packet()",
+        "concrete exact one-field exception gets only the exact FLOW prefix()",
+        "coverage waits for every command in the full family()",
+        "finite primary image has executable witnesses and cannot contain MAY()",
+        "paired C5 keeps both a precise normal output and a separate cut output()",
+        "C5 authorizes a concrete STAR companion without marking an excluded T output()",
+        "same-head MAY accepts STAR and MAY as a STAR identity without a prefix command()",
+        "exact FLOW prefix records a child write exclusion before whole-summary normalization()",
+        "rejected primaries never get companion commands()"
+      ],
+      "resultSha256": "7c9cdd918a6b6e03cb9c65d114ffc36b16be0f2dd19f43f04105f81c7cee0dee"
+    }
+  ],
+  "productionSourceSha256": {
+    "driver/HandOff.kt": "2c3f93008b5d5e5adbd23af31dbadfa6ae6b18998b98b03ded117f20aac55080",
+    "driver/BlockHandOff.kt": "5422c8aa326a4ab51872fb0291d9e150d267060bcd190cd628c6ab5880a04a44",
+    "engine/BlockRunState.kt": "26994c38ceaf4ed502772177815a5c3a02deedc49add9a5ae97bae8986802d05",
+    "store/DemandStore.kt": "a664e74e3c32f2d07f9b18ef626cd46c8f44d857ea7798e95a80795a91737e68"
+  },
+  "principalTestSha256": "8436f77d75324ef6ab9cd0ac9cf62cbd57801e76f4e1aa8f403ca37dd7f8bd9c",
+  "latestAnalyzedComponentRun": "run-4",
+  "latestConfigValidated": "run-5"
+}
