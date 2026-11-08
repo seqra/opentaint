@@ -1,5 +1,14 @@
 # Method-owned loop blocks
 
+**8 November 2026 update:** the
+[combined specification](edge-subsumption-initial-emission-demand-intersection.md#63-zero-premise-loop-output-bypass)
+selects an own-ZERO-premise bypass for the extra loop output gate. It also
+keeps plain/protected edges separately and widens selected PART STAR cleaner
+survivors. Those narrow changes override earlier unchanged-policy claims
+below. C5, field limits, physical ports and ordinary DATA growth checks stay
+active. No implementation change is made by this document.
+
+
 Date: 2 November 2026. Status: selected design. The boundary corrections
 pass 2,372 common and 453 JVM tests. These native controls do not prove all
 AP adapters or project quality. The latest attempted project campaign (`3750b73a`) reached OWASP **run-1 FAILED**,
@@ -635,7 +644,8 @@ scheduler:
 ```kotlin
 fun leaveLoop(loop, row, parentPrefix, actualPort) {
     val F = applyBlockSummary(parentPrefix, row)
-    val values = if (!grows(row)) listOf(F) else restrictLoop(loop, F)
+    val values = if (row.effectivePremise.isZero || !grows(row)) listOf(F)
+                 else restrictLoop(loop, F)
     for (value in values) {
         storeFreshAtLoopOutput(actualPort, value) { fresh ->
             routeToActualDestination(actualPort, fresh)
@@ -643,7 +653,8 @@ fun leaveLoop(loop, row, parentPrefix, actualPort) {
     }
 }
 
-fun grows(row) = FL(row.conclusion) > FL(row.premise) // FL(Zero) = 0.
+fun grows(row) = FL(row.conclusion) > FL(row.effectivePremise) // FL(Zero) = 0.
+// For ND, keep the existing arm-based test. Never use parentOriginal here.
 ```
 
 This applies to the repeat and leave output routes. The actual port is
@@ -691,7 +702,8 @@ read-only checks. Hypothetical AL/BL composition executes no instruction,
 exit rule, static write or Target report. Actual routing and replay at
 the selected destination still follow the ordinary policy.
 
-Equal/shrinking rows bypass this extra loop restriction. Growing rows use
+ZERO-premise and equal/shrinking rows bypass this extra loop restriction.
+Growing DATA-premise rows use
 the existing projection contract: retain the required concrete prefix,
 cut only an actual suffix to MAY/DEMAND, and preserve all selected images.
 If all families reject, drop the value. Do not force an unmatched exact

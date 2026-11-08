@@ -1,6 +1,7 @@
 # Principal examples for subsumption and initial/demand redesign
 
-Date: 7 November 2026. Status: principal examples for the combined specification.
+Date: 7 November 2026. Finalization status updated 8 November 2026.
+These are the principal examples for the finalized combined specification.
 Language: ASD-STE100 Simplified Technical English.
 
 The implementation baseline is **52829d5890ec3b3145cc996a1d8162d85cb8ceda**.
@@ -19,15 +20,23 @@ This catalog separates three things:
   input under an ANY demand. The selected STAR initial starts with an
   identity edge: its start conclusion is STAR too. There is no SOA or other
   new tail. The [combined specification](edge-subsumption-initial-emission-demand-intersection.md)
-  defines the C2/C5 tables. Extra FLOW demand completion remains a candidate
-  while the complete E21 trace is open.
+  defines the C2/C5 tables. FLOW demand completion is not selected. The ZERO-premise loop bypass
+  and partial selected-cleaner STAR-to-ANY survivor are selected. Native
+  correspondence and complete-policy convergence remain open.
 
 Later native captures use their stated revisions. They are not B0 results.
 The current protection decision permits subsumption only within the same
-flag class. Exact visible duplicates keep OR-upgrade; canonical plain
-coverage remains available separately. This supersedes the earlier rule
-which retained every literal protected coordinate. Pass rules cannot add
+flag class. Exact plain and protected memberships both remain stored
+and published. This supersedes OR-upgrade and the earlier rule which retained
+every literal protected coordinate. Pass rules cannot add
 protection. Do not silently attribute these later decisions to B0 or S1.
+
+**Current known-gap status:** no further unresolved FN-producing
+counterexample is known in the reviewed FULL-mode cases. E21 and E31 use
+the selected loop/cleaner repairs; the Conductor-shaped uniform example
+has a NORMAL route at run-5. Historical failures remain regression cases,
+not new results for this final design. Full native/project validation
+and universal proof obligations are separate.
 
 ## Notation and evidence rules
 
@@ -69,7 +78,7 @@ empty method result.
 | E08 | Opposite MUST overlap, typed outputs and read metadata | Original proposal §3.4 |
 | E09 | Directional strict-ancestor STAR matching | Original proposal §5; original relation audit §§4–5 |
 | E10 | Correlated concrete STAR and protection | Original correlated/concrete and FLOW-backed specs |
-| E11 | Same-flag coverage, exact visible OR and pass-role correction | Later selected decisions; not silently B0 |
+| E11 | Same-flag coverage, separate exact classes and pass-role correction | Later selected decisions; not silently B0 |
 | E12 | Initial table, marks, field limit and static grammar | Original AP policy; R2 selected output cells |
 | E13 | Requested run-2 STAR and sibling overwrite | `OwaspDemandCycleTest`, sibling-overwrite control |
 | E14 | Paired C5, normalization and cap | Original demand-relative restriction contract |
@@ -85,9 +94,11 @@ empty method result.
 | E24 | Saved-first replay, aliases, liveness and owner boundaries | Original proposal unchanged contracts; actual loop/call pipeline |
 | E25 | Initial key versus start conclusion; selected STAR identity and rejected independent start | Historical AP §6.5 versus the correlated extension and R2 decision |
 | E26 | Static setter/getter/consumer, marked demand and typed ZERO closure | Static erasure/completion contracts and native regression destinations |
-| E27 | Unprotected DEMAND STAR identity is not a NORMAL transfer proof | Conditional serialized pass rule; operational/native adapter obligation |
+| E27 | Unprotected DEMAND STAR identity is not a NORMAL transfer proof | Abstract guarded-pass control only; native compiler removes a residual mark guard |
 | E28 | Run-1 NORMAL identity and saved-first replay | Correction of the artificial missing-provider premise |
 | E29 | Two missed Conductor Graal findings; lost child demand and weaker C2 admission | Real frozen Current/B snapshot run-4/3/3; main run-15/14/13; later recovery run-4/3/3 |
+| E30 | Two reads need a correlated STAR return under a deeper output selector, or another refinement bridge | Constructive FULL policy comparison; modeled through run-5, no new native run |
+| E31 | Direct exact-root selected cleaning blocks a precise marked child | Latest-emitter source/helper/sink catalog through run-3, completion off/on; native adapter open |
 
 “Original proposal” means the frozen
 [implementation proposal](baselines/subsumption-20261105/original-implementation-proposal.md).
@@ -267,26 +278,30 @@ root/E{f}, then complete child f/E{}
 same final packet again
     -> no fresh ordinary work.
 plain coordinate, then same coordinate with H
-    -> one fresh protection upgrade; repeat -> no new upgrade.
+    -> retain both; publish the fresh protected membership.
+protected coordinate, then same coordinate without H
+    -> retain both; publish the fresh plain membership.
+repeat the same geometry and class
+    -> no fresh work.
 ```
 
 Apply canonicalization independently to plain and protected coverage. A
 protected parent can remove a covered protected child; it cannot remove a
-plain child. An exact duplicate is one visible OR-upgraded row, while its
-canonical plain coverage remains available. No discarded-fact archive is used.
+plain child. Exact plain/protected duplicates remain two memberships. No
+discarded-fact archive or hidden plain certificate is used.
 
 Let A be a MAY root and B its MAY child, with all other headers fixed:
 
 ```text
-A plain; B plain; A protected -> U={A}, H={A}, visible={A protected}
-A protected; A plain; B plain -> U={A}, H={A}, visible={A protected}
-A protected; B plain          -> U={B}, H={A}, visible={A protected,B plain}
+A plain; B plain; A protected -> retain A/plain and A/protected
+A protected; A plain; B plain -> retain A/plain and A/protected
+A protected; B plain          -> retain A/protected and B/plain
 ```
 
-Destructive OR would lose U={A} in the first order and leave B in the
-second. The retained U certificate closes that conflict without two visible
-rows or duplicate propagation. Invisible U changes still invalidate coverage
-caches. Reloading only visible rows would lose this information.
+Each fresh class is published even when the other class already exists.
+A pass carries both classes independently. Both producer and subscriber
+therefore retain the same plain coverage in either arrival order. Queue
+keys, caches and restore must preserve that distinction too.
 
 ## E07. Canonical input can remove a literal C2 initial
 
@@ -397,8 +412,9 @@ Object survivor(Object p) { removeSelectedT(p.f); return p; }
 
 A complete cleaner kill emits no survivor. Ordinary field/call transport
 preserves existing H. A protected summary conclusion protects its application.
-Equal edges merge with flag-wins; do not protect U merely because a packed
-leaf also contains protected T. Caller H must not contaminate a shared callee
+Equal edges with the same flag deduplicate. Equal plain/protected edges
+remain two memberships. Do not protect U because a packed leaf contains
+protected T. Caller H must not contaminate a shared callee
 initial or global static mark availability.
 
 ## E11. Later pass and exact-coordinate protection decisions
@@ -415,8 +431,8 @@ the reset baseline. It must not silently assume the later fix is present.
 At one premise and mark, an unprotected `q.MAY/T` and protected
 `q.f.MAY/T` keep the protected child. If a protected parent is also present,
 the protected coverage view can remove the covered protected child. Neither
-flag class removes a member of the other. Keep canonical plain coverage when
-exact duplicates render as one protected row. Apply the rule to NORMAL and
+flag class removes a member of the other. Keep and publish both exact
+plain/protected duplicates. Apply the rule to NORMAL and
 DEMAND and all effective tails. Mixed packet EXACT
 leaves have Empty E even if their span wrapper has a different E.
 
@@ -735,6 +751,16 @@ not a complete new-design handoff proof or a new native run.
 
 ## E21. Deep no-leave loop creates an exact Target obligation
 
+**Latest diagnosis:** the
+[saved-repeat report](subsumption-loop-saved-replay-root-cause-20261108.md)
+isolates the run-5 loop gate. It omits saved repeat effects and can drop
+the actual source before the saved-first repeat input handler. The existing
+NORMAL `x.f.* -> x.*` reader can reach the exact-f demand and a NORMAL sink
+Target without completion. The selected ZERO-premise bypass delivers that source result. Eight native
+component tests check the old failure and the new test-only policy, ordinary
+source/read/C5, saved replay, real sink evaluation and Target joins. They
+are not a full native multi-iteration run of the redesign.
+
 ```java
 // Source rule: exact T at x.f.f.f.f. All runs use the same physical source.
 void deep(Node x) {
@@ -808,12 +834,23 @@ It includes the FLOW rows omitted from the earlier three-row argument.
 In particular, B2's FLOW DATA family can infer F3's NORMAL shrinker without
 completion. A companion under a ZERO exit still publishes no DATA.
 
-The complete final retained basis is not enumerated by the existing
-`DeepGuidanceArrival` and consumer models. Their necessary route and depth
-bounds do not prove that other paired rows are absent. E21 recovery and
-completion necessity remain open. Repeat delivery ordering also needs the
-stated decision; saved-first at an input is not replay before its preceding
-growing-output gate. Do not claim an unconditional run-5 recovery.
+The [corrected run-4 trace](subsumption-loop-and-gap-audit-20261108.md#24-run-4-backward-field-limit-3-close-saved-replay-first)
+includes saved-repeat delivery, which the older one-body catalogs did not
+execute. It reaches `x.f.f.[any]/T,D` in the parent's completion store and
+deduplicates the next identical result. That value is not automatically a
+local summary. The corrected packet yields three local families and only
+the precise NORMAL source image in run-5. The older five-family catalog
+and shorter DEMAND image are transaction upper-bound cases, not proved
+reached results. Their off/on gate theorems keep that conditional scope.
+Entry/discovery/leave ports, enclosing publication and whole-program
+stopping remain open.
+
+The [run-2/run-3 fixed-point review](subsumption-loop-and-gap-audit-20261108.md#22-run-2-backward-field-limit-1-publication-replay-to-fixed-point)
+also closes new publications against standing inputs and saved replay.
+It reaches the coarse T input organically in run-2 and the shorter parent
+point facts in run-3. The local publication families remain eight and five;
+the paired handoffs remain seven and three. The old extra exact/T/DEMAND
+run-2 initial is not produced by the reached MAY input.
 
 ## E22. Do not restore the OWASP demand cycle
 
@@ -1007,6 +1044,14 @@ normal-exit rule path and immediate write-point pool supply separate.
 
 ## E27. Do not promote a DEMAND row to NORMAL from its shape
 
+**8 November correction:** this program is an abstract rule-language control,
+not a native guarded-pass counterexample. At the selected baseline,
+`JIRCallPlanBuilder.passRules()` diagnoses a remaining mark condition and
+applies the pass without it. `JIRRuleForms.pass()` emits an unconditional
+copy. The serialized type alone does not prove the shown runtime semantics.
+The [gap audit](subsumption-loop-and-gap-audit-20261108.md#42-e27-is-not-a-native-guarded-pass-counterexample)
+records this correction. No compiler behavior is changed.
+
 The absence of protection is not proof that a transfer is NORMAL. The
 serialized rule type permits a condition on a pass rule; see
 [SerializedRule.PassThrough](../core/opentaint-configuration-rules/configuration-rules-jvm/src/main/kotlin/org/opentaint/dataflow/configuration/jvm/serialized/SerializedRule.kt).
@@ -1043,18 +1088,17 @@ The sink then gets a false NORMAL witness and a false NormalTarget.
 ```
 
 This is a rule-semantics counterexample to blanket promotion. It is **not a
-captured native execution** of that coarse guard. The native adapter must
-check that the pass action permits the shown source/target geometry and that
-the current condition matcher can derive the coarse row. If a compiled pass
-restriction changes that geometry, state it and adapt the negative control;
-do not claim that an unexecuted fixture produced the row. The independent
+captured native execution** of that coarse guard. The native compiler does
+not implement this guarded pass, so this fixture cannot supply native
+evidence against a repair. The independent abstract
 concrete fact remains: an unconditional NORMAL identity is not justified by
 a conditional pass whose guard can be false.
 
 Thus neither `H=false` nor equal STAR endpoints establishes a NORMAL FLOW
 or concrete provider. Do not invent a NORMAL default or upgrade a DEMAND
 identity to repair E19–E21. Such a change needs its own actual-input and
-reporting proof, including conditional passes and selected cleaners.
+reporting proof, including the actual source/cleaner kernels. E31 supplies a
+legal selected-cleaner continuation counterexample without a guarded pass.
 
 ## E28. Run-1 identity already handles the cross-base transfer
 
@@ -1087,6 +1131,17 @@ Read-only evidence review, 7 November 2026. No new run was launched. This is
 a required real-project example for the unified redesign. The exact local
 guidance/admission defect is observed; its complete necessity for the two
 missing findings is not proved.
+
+The [small code example and inline fact trace](conductor-must-admission-fact-trace-20261108.md)
+show how root ANY demand removes a MUST-selecting child head. They include
+run-1/run-2 demand generation and run-3 admission, with latest-spec versus
+historical-runtime evidence kept separate.
+
+The small trace continues through run-4/run-5. It derives the NORMAL
+read and regenerated child demand rather than assuming either. Both routes
+can give the small example its NORMAL witness in run-5. A separate DEMAND
+return remains possible; no latest whole-driver stop or Conductor recovery
+claim follows from this local result.
 
 ### Required identities and saved routes
 
@@ -1216,25 +1271,95 @@ runtime result is claimed by E29.
 Required validation sources: [exact frozen snapshot](../docs/reports/bidirectional-conductor-must-demand-snapshot-20261106.md), [upstream admission](../docs/reports/bidirectional-conductor-upstream-admission-20261106.md), [quality/control investigation](../docs/reports/bidirectional-conductor-canonical-quality-regression-20261105.md), and [uniform small reproducer](../docs/reports/bidirectional-uniform-prefix-refinement-reproducer-20261106.md).
 The snapshot [portable JSON](../docs/reports/data/bidirectional-conductor-must-demand-snapshot-20261106.json) embeds the complete paired rows and actuals. The [E29 evidence index](lean/proposals/subsumption-initial-demand-20261107/conductor-e29-evidence-index.json) pins the existing artifacts; it is not another analyzer run.
 
+## E30. Rejecting an ancestor STAR conclusion can remove a needed return route
+
+The [descendant-intersection review](descendant-intersection-and-flow-completion-review-20261107.md)
+gives the full source/sink rules and run-1 through run-5 trace:
+
+```java
+void main() {
+    Node b = new Node();
+    b.f = new Node(); b.f.f = new Node(); b.f.f.f = new Node();
+    sourceFFF(b);             // Assign exact T at b.f.f.f.
+    Node r = getFF(b);
+    sinkT(r.f);
+}
+Node getFF(Node p) { return p.f.f; }
+```
+
+Run-1 has a NORMAL unchanged-argument summary, but no NORMAL return
+provider. In run-3 the real Flow start `p.f.f.*` gives `ret.*`, NORMAL.
+Its paired output demand is `ret.f.*`. Rejecting the ancestor STAR removes
+that return; preserving the argument p does not supply ret. An extra
+completion-derived analysis can instead infer a DEMAND return bridge.
+
+`GetFFC5Policy` checks all argument/return candidates in this finite helper
+model, real source/sink actions and the three policy comparisons. Caller
+ZERO/Target scheduling and dead-local projection are native adapters. The
+latest modeled report is run-5; no native result or natural-stop claim for
+completion is inferred from it.
+
+The follow-up `GetFFCoarseFlowRun2` confirms that current run-2 starts only
+`ret.f.*`, never `ret.*`. An additional coarse FLOW start would infer
+`ret.* -> p.f.ANY,D`; its reversed root-ret demand admits the NORMAL run-3
+return even under STAR rejection. This is a counterfactual admission change,
+not a current command. E30 therefore does not force the STAR output rule if
+initial admission is redesigned at the same time.
+
+The selected version emits raw `ret.$/FLOW,N` as an additional prefix
+identity after successful ANY-demand descendant admission. Its run-2 result
+normalizes to that coarse STAR summary at the complete FLOW boundary.
+`GetFFExactFlowPrefix` checks this actual emitter, preserves the fine primary
+and recovers the modeled run-5 NORMAL finding without completion. The raw
+EXACT prefix remains a read barrier; this does not change field processing.
+
+## E31. A direct exact-root selected cleaner blocks a precise child
+
+The complete [code and per-run trace](subsumption-loop-and-gap-audit-20261108.md#3-a-separate-counterexample-direct-exact-root-selected-cleaning)
+uses a source at `p.g.$/T`, `m(p){ RemoveMark(p,T,Exact); return p; }`, and
+an exact sink at `ret.g`. The source is already in budget in run-1.
+The root-only cleaner does not clean the concrete child g.
+
+Run-1 answers its T request with root STAR/T,D. Its surviving concrete rows
+are protected; its NORMAL FLOW argument/return rows all exclude T. Run-2
+starts requested STAR and preserves a protected STAR/T demand. In run-3
+that STAR selector rejects the real exact g input. Saved NORMAL replay has
+no T transport. Optional completion starts extra FLOW probes, including
+the latest exact prefix, but the same cleaner makes all of them exclude T.
+
+`RootExactCleanerGap` computes this finite phase catalog with the actual
+cleaner/AP operators, paired C5, source permission and saved replay. It
+establishes the missing run-3 continuation with completion off/on. Native
+root, Target, storage and stopping correspondence remain open. The selected repair below changes only the partial selected STAR survivor;
+initial admission stays unchanged.
+
+The selected [STAR-to-ANY cleaner rule](subsumption-loop-and-gap-audit-20261108.md#34-selected-change-a-partial-start-survivor-to-anyt)
+keeps the STAR premise, DEMAND layer and H. Its finer run-2 NORMAL result
+restores this example in run-3 through saved replay. The original candidate
+model checks that local route. The selected generic rule also checks PART
+provenance, the selected mark, Empty E, unchanged other results and retained H.
+The native integration and whole-driver stopping checks remain required.
+
 ## Closing ledger: design and validation
 
 | Area | Selected route | Proof or validation boundary |
 | --- | --- | --- |
 | C2 and C5 entry | One relative-input image; no ANY initial; ordinary STAR identity; same-head ANY/STAR accepted | 47-law image plus 30-law legal FLOW EXACT/E bridge; static/group adapters require native checks |
 | Precise STAR | Keep mark-specific primary admission, explicit STAR/FLOW companions and later strict-descendant rejection | E19/E20 provider routes are conditional on the supplied FLOW view; full handoff validation remains required |
-| Deep Target | Keep exact Target geometry and real physical ports | Necessary route/operator proofs only; complete final authority and repeat ordering remain open |
+| Deep Target | Keep exact Target geometry; ZERO-premise summaries bypass only the extra loop gate | Checked run-5 source/read/sink route and native component tests; full ports/root and stopping remain open |
 | Ordinary wrappers | Admit both FLOW and concrete STAR under same-head ANY | Loop-free wrapper derivation and concrete source/action route; no implicit FLOW converter |
-| Canonicalization | Canonical input only; same-flag coverage, visible OR and retained current plain certificate | Local coverage models and E07 identity witness; no raw leaf archive |
+| Canonicalization | Canonical input only; same-flag coverage; retain both exact plain/protected memberships | Separate-class publication and pass checks; native packed-store integration remains required |
 | Transitivity | A directly covers C through a computed B view | Equal-mx aligned domain, both arrival orders, no stored/published B; H is retained |
-| FLOW demand completion | Candidate over final DATA endpoints and complete paired heads | Proven local provenance/count bounds; necessity and whole-driver sufficiency remain open |
-| Layers and sources | Conditional hypotheses do not upgrade actual support | E27 anti-promotion control and unchanged source compiler/gates; source permission still requires actual SourceHit |
+| FLOW demand completion | Not selected | Historical comparison only; no new selectors are added by this revision |
+| Layers and sources | Conditional hypotheses do not upgrade actual support; selected PART STAR/T becomes ANY/T,DEMAND,H | E31 recovers the local run-3 NORMAL result through precise saved replay; no NORMAL promotion |
 | Stopping | Stop when inferred outgoing refinement demand is empty | Scoped E22 no-D family; arbitrary Java and whole-driver convergence are not claimed |
 
-E29 is an explicit unresolved recovery obligation. The new companion alone
+E29 is a mandatory real-project implementation acceptance check. The new companion alone
 returns a FLOW STAR command which Current already had; root-prefix completion
-alone does not reconstruct the missing wfDef head. A saved NORMAL route must
-be proved from the actual body, or the demand design must be revised. Do not
-label E29 fixed by the smaller examples.
+alone does not reconstruct the missing wfDef head. The small example now derives a saved NORMAL route and regenerated child
+demand in run-4, with NORMAL transport in run-5. The actual project must
+still pass its exact report checks. Do not label the full project fixed by
+the smaller example, or label its local delay a new permanent-FN proof.
 
 The combined spec defines each selected change and its unchanged mechanisms.
 The proof package states the exact domains of its theorems. Implement from

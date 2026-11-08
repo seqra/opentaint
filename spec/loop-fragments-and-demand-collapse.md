@@ -1,5 +1,13 @@
 # Loop fragments and demand-guided feedback
 
+**8 November 2026 update:** the
+[combined specification](edge-subsumption-initial-emission-demand-intersection.md#63-zero-premise-loop-output-bypass)
+adds one exception to this extra gate: summaries with their own effective
+ZERO premise bypass it. FL(ZERO) remains zero; DATA-row shape classification,
+C5 and the global limit remain unchanged. Earlier ZERO growth examples below
+explain the original gate and must be read with this exception.
+
+
 Date: 2 November 2026. Status: selected design with scoped local proofs.
 The boundary-span and nearest-publication corrections pass the complete
 native suites: 2,372 common and 453 JVM tests. A fresh project campaign is
@@ -215,7 +223,8 @@ uncounted. For this classifier, define:
 ```text
 FL(Zero) = 0
 FL(DATA path) = number of counted concrete fields in that path
-needsLoopCheck(I -> C) = FL(C) > FL(I)
+shapeGrows(I -> C) = FL(C) > FL(I)
+needsLoopCheck(I -> C) = I != ZERO and shapeGrows(I -> C)
 ```
 
 This is a local definition for loop-summary shape. It does not change
@@ -225,7 +234,7 @@ keep their existing protocol; they are not DATA paths to cut to MAY.
 
 ```text
 Body summary                 Shape              Loop-output check
-Zero -> x.f.$/T              0 -> 1             required
+Zero -> x.f.$/T              0 -> 1             bypass: own ZERO premise
 Zero -> x.$/T                0 -> 0             bypass
 x.f.*/FLOW -> x.*/FLOW       1 -> 0             bypass
 x.*/FLOW -> x.*/FLOW         0 -> 0             bypass
@@ -306,6 +315,9 @@ selected destination is entered:
 
 ```text
 onLoopOutput(summaryArm, F, actualPort):
+    if summaryArm.effectivePremise == ZERO:
+        propagate globally bounded F through actualPort
+        return
     if FL(summaryArm.conclusion) <= FL(summaryArm.premise):
         propagate F unchanged through actualPort
         return
@@ -451,8 +463,9 @@ The existing global limit still applies inside the body.
 
 AL and B-end tests alone do not cover every in-loop observation.
 The selected third test closes that missing consumer family.
-The case matters also for ZERO-source summaries, because
-`FL(Zero) = 0`:
+Under the original gate, this case also required the third consumer test
+for ZERO-source summaries because `FL(Zero)=0`. Under the selected
+8 November update, that own-ZERO row bypasses the extra gate directly:
 
 ```java
 void B(Node x) {
@@ -491,10 +504,12 @@ show that current C5 is not a general reason to declare this shape
 impossible. They do not test an implemented outlining pass or gate; those
 do not exist yet. The proof dossier records the exact tested scope.
 
-The selected repair is the third check against L demand. It uses the same
-C2 mechanism as the AL check. Do not add a separate obligation store,
-source permission or ZERO exception for this case. The exact-path model
-proves that retaining the L image preserves the second-iteration sink.
+The original repair was the third check against L demand. It uses the same
+C2 mechanism as the AL check and remains active for growing DATA-premise
+rows. Under the selected 8 November rule, this own-ZERO source row instead
+bypasses the extra gate. Neither path adds an obligation store or a source
+permission. The original exact-path model checks L-image retention; the
+new selected dossier checks the explicit own-ZERO bypass.
 Production correspondence still requires the outlined demand/port adapter
 to carry that image, as stated in section 10.
 

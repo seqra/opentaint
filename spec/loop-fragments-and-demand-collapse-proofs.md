@@ -1,6 +1,7 @@
 # Loop fragments and feedback projection: proof dossier
 
-Date: 2 November 2026. Status: scoped local proofs for the selected design.
+Date: 2 November 2026. Status: historical scoped local proofs, with the
+selected 8 November ZERO-gate exception below.
 No runtime implementation is changed.
 
 Read [the specification](loop-fragments-and-demand-collapse.md),
@@ -17,6 +18,7 @@ summary arm `I -> C`, at either repeat or leave output:
 
 ```text
 FL(Zero) = 0
+if I == ZERO: propagate the globally bounded result unchanged
 if FL(C) <= FL(I): propagate its result unchanged
 otherwise: retain the union of images selected by
     (1) AL demand,
@@ -83,8 +85,10 @@ entry/exit law. The finite example has two relevant arms, but only the
 complete two-member input emits the result.
 
 `Shape` defines typed ZERO depth as zero and DATA depth as counted path
-length. It proves the strict growth classifier, equal/shrinking bypass,
-and ZERO-to-field versus ZERO-to-root examples. Exact suffix application
+length. It proves the historical strict growth classifier and equal/shrinking
+bypass. Its old ZERO-to-field versus ZERO-to-root examples do not prove
+the later exemption. The [selected resolution dossier](selected-gap-resolutions-proof-dossier-20261108.md)
+checks that own-ZERO exception after C5 and the global limit. Exact suffix application
 has the same length delta as its summary. Equal/shrinking summaries do
 not increase such a definite matched input. Separate executable ancestor
 MAY cells show why that statement cannot be generalized to all inputs:

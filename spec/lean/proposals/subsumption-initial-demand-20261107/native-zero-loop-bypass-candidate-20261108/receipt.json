@@ -1,0 +1,51 @@
+{
+  "schema": "zero-premise-loop-bypass-candidate-components-v1",
+  "checkedAtUTC": "2026-11-08T09:46:41.904776+00:00",
+  "baselineRevision": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+  "productionChanged": false,
+  "candidateAdapterOnly": true,
+  "nativeFullIterationExecuted": false,
+  "latestAnalyzedIteration": "run-5",
+  "result": {
+    "tests": 8,
+    "failures": 0,
+    "errors": 0,
+    "seconds": "0.08",
+    "cases": [
+      "DEMAND replay cannot produce a normal witness and an identity is no progress()",
+      "saved first repeat delivery reaches existing exact admission without completion()",
+      "candidate ZERO bypass delivers source to the existing normal sink route()",
+      "gate drops NORMAL GEN before an applicable saved repeat read()",
+      "existing NormalTarget joins preserve ZERO origin in both arrival orders()",
+      "actual ZERO source and read survive paired C5 before the loop gate()",
+      "candidate still applies the global bound before the ZERO bypass()",
+      "candidate does not confuse enclosing ZERO origin with a DATA summary premise()"
+    ]
+  },
+  "command": [
+    "./gradlew",
+    ":opentaint-dataflow-core:opentaint-dataflow:test",
+    "--tests",
+    "org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest",
+    "--offline",
+    "--no-daemon",
+    "--max-workers=2"
+  ],
+  "commandWorkingDirectory": "<baseline528 worktree>/core",
+  "proofReceipt": "../component-checks-1132.json",
+  "scope": "Existing five native diagnosis tests plus a test-only effective-ZERO gate decision. Positive source-to-existing-sink route, nonzero grower still restricted under parent ZERO, global cut before bypass. No production modification or whole-iteration assertion.",
+  "artifacts": {
+    "LoopSavedRepeatGateDiagnosisTest.kt": {
+      "sha256": "74893e0e65b67ed2b0d93da8d618458f114579d9ea6a10463ea451edde45c5f4",
+      "bytes": 12770
+    },
+    "gradle.txt": {
+      "sha256": "9ae423f141f0a683b0c5c4717c41e8baa4d51e5c696bddc8b0aa94beb3486658",
+      "bytes": 9144
+    },
+    "tests.xml": {
+      "sha256": "87ccdc8bac8a9cbefb8bafbcf9218d97f3ef59bba9bed2027cc0dc2825c6e443",
+      "bytes": 1775
+    }
+  }
+}

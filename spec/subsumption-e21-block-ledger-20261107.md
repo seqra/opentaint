@@ -4,7 +4,13 @@
 The latest historical native capture completed **run-5** without the finding.
 This document supports [E21](subsumption-principal-examples-20261107.md#e21-deep-no-leave-loop-creates-an-exact-target-obligation).
 
-**This is not an enumerated final fixed point.** The comments give the known
+**This earlier ledger is not an enumerated final fixed point.** The new
+[closed-family review](descendant-intersection-and-flow-completion-review-20261107.md#3-a-counterexample-to-removing-all-completion-under-the-current-loop-gate)
+computes one-body reference transaction families through run-4 and compares
+the run-5 gate. It does not close saved-repeat delivery. The
+[corrected run-4 fixed point](subsumption-loop-and-gap-audit-20261108.md#24-run-4-backward-field-limit-3-close-saved-replay-first)
+reaches ANY and separates parent completion from exported local rows.
+Native grammar/port/root correspondence remains open. The comments below give the known
 commands and complete one-body candidate families. The complete retained
 sets, after current/saved replay, loop feedback and subsumption, remain to be
 computed. A three-row necessary route is not a complete handoff snapshot.
@@ -259,15 +265,16 @@ all their DATA by ZERO exit; the conditional self-pair's B4 FLOW result;
 the F5 raw/cut command difference; and ancestor-STAR rejection.
 These are operator checks, not a complete driver proof.
 
-Two obligations remain:
+The new review computes every scalar family in its declared reference
+grammar and proves a kept-gate counterexample, including both source C5
+images. It does not supply a native all-port fixed point. Native grammar,
+physical ports and root scheduling remain correspondence obligations.
 
-1. Compute all final Jk/Rk sets and confirm which DATA pairs survive. The
-   earlier three-row route omitted FLOW families and does not prove absence.
-2. Resolve repeat ordering. The present gate checks a growing source result
-   before routing it to the next input. Saved-first application inside that
-   input handler does not bypass this earlier gate. Moving saved non-growing
-   replay before the gate is a distinct policy from keeping the gate and
-   proving enough current demand. The decision is pending.
+The present gate checks a growing result before repeat delivery. The new
+proof keeps that order. Moving saved non-growing replay before it remains
+a different design. The completed case can retain both NormalTarget and
+DemandTarget; a finding proof is not a natural-stop proof.
 
-Do not infer completion necessity from E28 or from absence in an incomplete
-E21 row list. No runtime change follows from this document.
+Do not infer necessity from E28 or the old incomplete list. Use the new
+closed-family result within its stated scope. No runtime change follows
+from this earlier ledger.

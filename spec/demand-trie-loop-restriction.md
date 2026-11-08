@@ -1,5 +1,12 @@
 # Demand trie for loop restriction
 
+**8 November 2026 integration:** apply the selected
+[own-ZERO loop bypass](edge-subsumption-initial-emission-demand-intersection.md#63-zero-premise-loop-output-bypass)
+before invoking this trie-based extra restriction. DATA-row queries and
+first-safe-prefix behavior below remain unchanged. Plain/protected result
+memberships stay separate under section 2.1 of the combined spec.
+
+
 The current [unified loop proposal](../docs/design/bidirectional-loop-propagation-demand-trie-proposal-20261104.md)
 is the single design entry point. This document retains the detailed trie
 contracts and proof obligations.

@@ -1,0 +1,126 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :opentaint-common-build:checkKotlinGradlePluginConfigurationErrors
+> Task :opentaint-jvm-autobuilder:buildSrc:checkKotlinGradlePluginConfigurationErrors
+> Task :opentaint-jvm-autobuilder:buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :opentaint-jvm-autobuilder:buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :opentaint-jvm-autobuilder:buildSrc:pluginDescriptors UP-TO-DATE
+> Task :opentaint-jvm-autobuilder:buildSrc:processResources UP-TO-DATE
+> Task :opentaint-common-build:compileKotlin UP-TO-DATE
+> Task :opentaint-common-build:compileJava NO-SOURCE
+> Task :opentaint-common-build:pluginDescriptors UP-TO-DATE
+> Task :opentaint-common-build:processResources NO-SOURCE
+> Task :opentaint-common-build:classes UP-TO-DATE
+> Task :opentaint-common-build:jar UP-TO-DATE
+> Task :opentaint-jvm-autobuilder:buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :opentaint-jvm-autobuilder:buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :opentaint-jvm-autobuilder:buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :opentaint-jvm-autobuilder:buildSrc:compileKotlin UP-TO-DATE
+> Task :opentaint-jvm-autobuilder:buildSrc:compileJava NO-SOURCE
+> Task :opentaint-jvm-autobuilder:buildSrc:compileGroovy NO-SOURCE
+> Task :opentaint-jvm-autobuilder:buildSrc:classes UP-TO-DATE
+> Task :opentaint-jvm-autobuilder:buildSrc:jar UP-TO-DATE
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :opentaint-ir:buildSrc:checkKotlinGradlePluginConfigurationErrors
+> Task :opentaint-ir:buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :opentaint-ir:buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :opentaint-ir:buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :opentaint-ir:buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :opentaint-ir:buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :opentaint-ir:buildSrc:compileKotlin UP-TO-DATE
+> Task :opentaint-ir:buildSrc:compileJava NO-SOURCE
+> Task :opentaint-ir:buildSrc:compileGroovy NO-SOURCE
+> Task :opentaint-ir:buildSrc:pluginDescriptors UP-TO-DATE
+> Task :opentaint-ir:buildSrc:processResources UP-TO-DATE
+> Task :opentaint-ir:buildSrc:classes UP-TO-DATE
+> Task :opentaint-ir:buildSrc:jar UP-TO-DATE
+> Task :opentaint-dataflow-core:buildSrc:checkKotlinGradlePluginConfigurationErrors
+> Task :opentaint-dataflow-core:buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :opentaint-dataflow-core:buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :opentaint-dataflow-core:buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :opentaint-dataflow-core:buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :opentaint-dataflow-core:buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :opentaint-dataflow-core:buildSrc:compileKotlin UP-TO-DATE
+> Task :opentaint-dataflow-core:buildSrc:compileJava NO-SOURCE
+> Task :opentaint-dataflow-core:buildSrc:compileGroovy NO-SOURCE
+> Task :opentaint-dataflow-core:buildSrc:pluginDescriptors UP-TO-DATE
+> Task :opentaint-dataflow-core:buildSrc:processResources UP-TO-DATE
+> Task :opentaint-dataflow-core:buildSrc:classes UP-TO-DATE
+> Task :opentaint-dataflow-core:buildSrc:jar UP-TO-DATE
+> Task :opentaint-utils:buildSrc:checkKotlinGradlePluginConfigurationErrors
+> Task :opentaint-utils:buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :opentaint-utils:buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :opentaint-utils:buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :opentaint-utils:buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :opentaint-utils:buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :opentaint-utils:buildSrc:compileKotlin UP-TO-DATE
+> Task :opentaint-utils:buildSrc:compileJava NO-SOURCE
+> Task :opentaint-utils:buildSrc:compileGroovy NO-SOURCE
+> Task :opentaint-utils:buildSrc:pluginDescriptors UP-TO-DATE
+> Task :opentaint-utils:buildSrc:processResources UP-TO-DATE
+> Task :opentaint-utils:buildSrc:classes UP-TO-DATE
+> Task :opentaint-utils:buildSrc:jar UP-TO-DATE
+> Task :opentaint-configuration-rules:buildSrc:checkKotlinGradlePluginConfigurationErrors
+> Task :opentaint-configuration-rules:buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :opentaint-configuration-rules:buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :opentaint-configuration-rules:buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :opentaint-configuration-rules:buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :opentaint-configuration-rules:buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :opentaint-configuration-rules:buildSrc:compileKotlin UP-TO-DATE
+> Task :opentaint-configuration-rules:buildSrc:compileJava NO-SOURCE
+> Task :opentaint-configuration-rules:buildSrc:compileGroovy NO-SOURCE
+> Task :opentaint-configuration-rules:buildSrc:pluginDescriptors UP-TO-DATE
+> Task :opentaint-configuration-rules:buildSrc:processResources UP-TO-DATE
+> Task :opentaint-configuration-rules:buildSrc:classes UP-TO-DATE
+> Task :opentaint-configuration-rules:buildSrc:jar UP-TO-DATE
+> Task :opentaint-utils:common-util:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :opentaint-configuration-rules:configuration-rules-common:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :opentaint-configuration-rules:configuration-rules-common:processResources NO-SOURCE
+> Task :opentaint-ir:opentaint-ir-api-common:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :opentaint-dataflow-core:opentaint-dataflow:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :opentaint-dataflow-core:opentaint-dataflow:processResources NO-SOURCE
+> Task :opentaint-dataflow-core:opentaint-dataflow:processTestResources NO-SOURCE
+> Task :opentaint-ir:opentaint-ir-api-common:compileKotlin UP-TO-DATE
+> Task :opentaint-utils:common-util:compileKotlin UP-TO-DATE
+> Task :opentaint-ir:opentaint-ir-api-common:compileJava NO-SOURCE
+> Task :opentaint-utils:common-util:compileJava NO-SOURCE
+> Task :opentaint-ir:opentaint-ir-api-common:processResources NO-SOURCE
+> Task :opentaint-ir:opentaint-ir-api-common:classes UP-TO-DATE
+> Task :opentaint-utils:common-util:processResources NO-SOURCE
+> Task :opentaint-utils:common-util:classes UP-TO-DATE
+> Task :opentaint-ir:opentaint-ir-api-common:jar UP-TO-DATE
+> Task :opentaint-utils:common-util:jar UP-TO-DATE
+> Task :opentaint-configuration-rules:configuration-rules-common:compileKotlin UP-TO-DATE
+> Task :opentaint-configuration-rules:configuration-rules-common:compileJava NO-SOURCE
+> Task :opentaint-configuration-rules:configuration-rules-common:classes UP-TO-DATE
+> Task :opentaint-configuration-rules:configuration-rules-common:jar UP-TO-DATE
+> Task :opentaint-dataflow-core:opentaint-dataflow:compileKotlin UP-TO-DATE
+> Task :opentaint-dataflow-core:opentaint-dataflow:compileJava UP-TO-DATE
+> Task :opentaint-dataflow-core:opentaint-dataflow:classes UP-TO-DATE
+> Task :opentaint-dataflow-core:opentaint-dataflow:jar UP-TO-DATE
+> Task :opentaint-dataflow-core:opentaint-dataflow:compileTestKotlin
+> Task :opentaint-dataflow-core:opentaint-dataflow:compileTestJava NO-SOURCE
+> Task :opentaint-dataflow-core:opentaint-dataflow:testClasses UP-TO-DATE
+
+> Task :opentaint-dataflow-core:opentaint-dataflow:test
+
+ConductorUniformLateIterationsTest > run5 opposite normal replay transports uniform T and run4 reaches its real source() PASSED
+
+ConductorUniformLateIterationsTest > run5 regenerated child demand admits MUST and keeps an additional capped demand return() PASSED
+
+ConductorUniformLateIterationsTest > run4 exact body generates both precise normal and shorter demand results() PASSED
+
+BUILD SUCCESSFUL in 11s
+75 actionable tasks: 9 executed, 66 up-to-date

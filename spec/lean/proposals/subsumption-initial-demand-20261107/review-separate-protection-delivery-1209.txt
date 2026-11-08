@@ -1,0 +1,34 @@
+'PlainCoverageDelivery.prefix_self' depends on axioms: [propext]
+'PlainCoverageDelivery.geometry_covers_itself' depends on axioms: [propext]
+'PlainCoverageDelivery.current_insert_covers_its_offer' depends on axioms: [propext]
+'PlainCoverageDelivery.covered_offer_keeps_its_class_authority' depends on axioms: [propext, Quot.sound]
+'PlainCoverageDelivery.every_offer_is_covered_in_its_own_class' depends on axioms: [propext, Quot.sound]
+'PlainCoverageDelivery.exact_duplicate_has_no_second_delivery' depends on axioms: [propext, Quot.sound]
+'PlainCoverageDelivery.a_fresh_class_membership_changes_authority' depends on axioms: [propext, Quot.sound]
+'PlainCoverageDelivery.an_unchanged_authority_has_no_delivery' depends on axioms: [propext, Quot.sound]
+'PlainCoverageDelivery.every_delivery_is_the_incoming_membership' depends on axioms: [propext]
+'PlainCoverageDelivery.delivery_keeps_the_memberships_own_flag' depends on axioms: [propext]
+'PlainCoverageDelivery.plain_rendered_rows_have_plain_identity' depends on axioms: [propext, Quot.sound]
+'PlainCoverageDelivery.protected_rendered_rows_have_protected_identity' depends on axioms: [propext, Quot.sound]
+'PlainCoverageDelivery.rendered_classes_are_disjoint' depends on axioms: [propext, Quot.sound]
+'PlainCoverageDelivery.exact_geometry_with_both_flags_has_two_different_row_identities' does not depend on any axioms
+'PlainCoverageDelivery.rendering_keeps_both_exact_memberships' does not depend on any axioms
+'PlainCoverageDelivery.rendering_does_not_collapse_the_two_flags' does not depend on any axioms
+'PlainCoverageDelivery.one_delivery_preserves_synchronized_authority' depends on axioms: [propext, Quot.sound]
+'PlainCoverageDelivery.every_delivery_sequence_preserves_synchronized_authority' depends on axioms: [propext,
+ Quot.sound]
+'PlainCoverageDelivery.delivery_never_changes_the_producers_canonical_insert' does not depend on any axioms
+'PlainCoverageDelivery.every_execution_has_the_complete_authority' depends on axioms: [propext, Quot.sound]
+'PlainCoverageDelivery.downstream_has_every_class_coverage_predicate' depends on axioms: [propext, Quot.sound]
+'PlainCoverageDelivery.both_exact_flag_orders_have_the_same_producer_and_consumer' does not depend on any axioms
+'PlainCoverageDelivery.both_exact_flag_orders_render_both_memberships' does not depend on any axioms
+'PlainCoverageDelivery.both_arrival_orders_publish_each_class' does not depend on any axioms
+'PlainCoverageDelivery.exact_flag_publication_orders_differ_only_by_permutation' does not depend on any axioms
+'PlainCoverageDelivery.a_late_plain_row_is_a_real_separate_publication' does not depend on any axioms
+'PlainCoverageDelivery.repeated_exact_plain_and_protected_offers_emit_nothing_more' does not depend on any axioms
+'PlainCoverageDelivery.plain_child_coverage_is_independent_of_parent_flag_arrival_order' does not depend on any axioms
+'PlainCoverageDelivery.child_and_parent_orders_have_the_same_complete_downstream_authority' does not depend on any axioms
+'PlainCoverageDelivery.a_protected_parent_does_not_cover_a_plain_child' does not depend on any axioms
+'PlainCoverageDelivery.a_plain_parent_does_not_cover_a_protected_child' does not depend on any axioms
+'PlainCoverageDelivery.ordinary_pass_keeps_delivery_class' depends on axioms: [propext]
+'PlainCoverageDelivery.ordinary_plain_pass_cannot_create_protection' depends on axioms: [propext]

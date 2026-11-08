@@ -1,0 +1,50 @@
+{
+  "schema": "conductor-uniform-late-iterations-components-v1",
+  "checkedAtUTC": "2026-11-08T11:25:45.331446+00:00",
+  "baselineRevision": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+  "productionChanged": false,
+  "latestAnalyzedIteration": "run-5",
+  "fullNativeDriverExecuted": false,
+  "scope": "Two input paired F3 mapper rows are preconditions. Real native mapper forms and C5 derive both B4 publications; saved opposite NORMAL application accepts the real ancestor-MUST T input; reversed uniform-source row discharges the precise requirement to DemandTarget. Handoff of B4 DEMAND generates child C2, and real native F5 mapper forms/C5 derive NORMAL MUST and capped ANY/DEMAND returns. Not a full root/callee driver, full Conductor or natural convergence run. All three selected redesign fixes are inactive in this loop/cleaner-free H=false fragment; the checked admission cells agree with the current spec.",
+  "command": [
+    "./gradlew",
+    ":opentaint-dataflow-core:opentaint-dataflow:test",
+    "--tests",
+    "org.opentaint.dataflow.bidi.ConductorUniformLateIterationsTest",
+    "--offline",
+    "--no-daemon",
+    "--max-workers=2"
+  ],
+  "cwd": "<baseline528 worktree>/core",
+  "result": {
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "seconds": "0.094",
+    "cases": [
+      "run5 opposite normal replay transports uniform T and run4 reaches its real source()",
+      "run5 regenerated child demand admits MUST and keeps an additional capped demand return()",
+      "run4 exact body generates both precise normal and shorter demand results()"
+    ]
+  },
+  "artifacts": {
+    "ConductorUniformLateIterationsTest.kt": {
+      "sha256": "33d3339119d3b04ca7ba67054bc8c55c7bb0786c4c57a52e06ce23a87fffc2c5",
+      "bytes": 8123
+    },
+    "gradle.txt": {
+      "sha256": "94be0dbf6702c5fb5f99d08fc8e8aca86599cece00dd1c1f0929ac7d85529d12",
+      "bytes": 8597
+    },
+    "tests.xml": {
+      "sha256": "ac6739d7009cda259903fe8978c8718cbb3fcf58b9c23d47954047da3af613f1",
+      "bytes": 2071
+    }
+  },
+  "qualifications": [
+    "Given F3 paired snapshot; body/C5 publications are generated, not injected.",
+    "The reader Record in the native assertion is backed by a matching generated B4 NORMAL row.",
+    "Typed backward source discharge is an AP/Target component check, not a source occurrence callback or root handoff execution.",
+    "Historical F5 natural stop does not establish current-spec stopping with its extra DEMAND output."
+  ]
+}

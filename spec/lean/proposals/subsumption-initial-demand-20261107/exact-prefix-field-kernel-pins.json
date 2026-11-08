@@ -1,0 +1,195 @@
+{
+  "schema": "exact-flow-prefix-companion-source-review-v1",
+  "state": "SOURCE_ONLY_NO_EXECUTION",
+  "baselineCommit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+  "finding": "NO_FIELD_KERNEL_CHANGE_REQUIRED_EXISTING_EXACT_FLOW_DOMAIN",
+  "reviewSha256": "ec66288aa3ae691d0dd7256f9fce363ad46795b3ee9ab43c16100fa0608ddf60",
+  "pins": [
+    {
+      "kind": "exact-baseline-source",
+      "commit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/EdgeApplication.kt",
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-joint-demand-redesign-20261107/pre-implementation/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/EdgeApplication.kt",
+      "sha256": "a9dac26784fe001055bcb4a8fabae5ea88877941aab66c244bbc6d756850fcc5",
+      "bytes": 10521,
+      "ranges": [
+        {
+          "first": 65,
+          "last": 132,
+          "text": "    fun flow(c: FlowTree, staticAt: Int) {\n        // F78: exclusion creation also creates interest on the original abstract\n        // slot. Do this before the positional/mark tests and before any output.\n        // The engine's collector applies the normal-origin and static-root guards.\n        if (mode.run1) (ce.toMark as? MarkSlot.Star)?.excluded?.data?.forEach { id ->\n            m.cancellation.checkpoint()\n            out.markRequest(m.marks.runtimeAtom(TaintMark(id), mode.markMode))\n            if ((ce.fromMark as? MarkSlot.Concrete)?.mark?.id == id) requested = true\n        }\n        val mx = gate.flowMarks(c.markExclusion)\n        val exact = c.tail == Tail.EXACT\n        val must = c.tail == Tail.ANY_TAINT\n        val normal = c.tail != Tail.ANY\n        val writeKeep = ce.fromBase == ce.toBase && ce.fromTail == Tail.STAR &&\n            ce.toTail == Tail.STAR && ce.fromPathData.contentEquals(ce.toPath?.toIntArray() ?: EMPTY_PATH) &&\n            ce.exclusion != ExclusionSet.Empty\n        val layer = c.layer or edgeDemand\n        val unchanged = if (mode.run1 && mode.markMode == MarkMode.FULL) unchangedStaticFlowPath(c, unchangedStaticInitial) else null\n        val u = c.root.walk(ce.fromPathData) { d, n ->\n            m.cancellation.checkpoint()\n            if (n.leaf.isEmpty || (normal && !c.exclusion.admits(ce.fromPathData[d]))) return@walk\n            if (normal && d == staticAt) {\n                // Prescan catalog emission replaces the old position request. This parent gives no fact.\n            } else if (!exact || writeKeep) flowHit(mx, c, { !sameFlowLeaf(m, unchanged, ce.fromPathData, d) }) {\n                if (must) {\n                    val tail = if (layer == Layer.DEMAND) Tail.ANY else mustAboveTail\n                    results.flow(if (tail == Tail.ANY) Layer.DEMAND else layer,\n                        if (tail == Tail.ANY || tail == Tail.EXACT) ExclusionSet.Empty else aboveExclusion, it, flagAtTarget(), tail)\n                } else results.flow(Layer.DEMAND, ExclusionSet.Empty, it, flagAtTarget())\n            }\n        } ?: return\n        val kids = FlowAlgebra.retainChildren(u, m.cancellation, admitsRest)\n        when (ce.toTail) {\n            Tail.STAR -> {\n                if (kids != null) flowHit(mx, c, { changedFlowSubtree(m, kids, ce.fromPathData, unchanged) }) {\n                    if (layer == Layer.DEMAND && (exact || must))\n                        results.flow(Layer.DEMAND, ExclusionSet.Empty, it, FlowAlgebra.prepend(m, ce.toPath, kids), Tail.ANY)\n                    else results.flow(layer, c.exclusion, it, FlowAlgebra.prepend(m, ce.toPath, kids), c.tail)\n                }\n                if (!u.leaf.isEmpty) flowHit(mx, c, {\n                    !sameFlowLeaf(m, unchanged, ce.fromPathData, ce.fromPathData.size)\n                }) {\n                    if (mode.run1 && ce.exclusion != ExclusionSet.Empty && c.tail != Tail.ANY)\n                        results.flow(Layer.DEMAND, ExclusionSet.Empty, it, flagAtTarget(), c.tail)\n                    else if (layer == Layer.DEMAND && (exact || must))\n                        results.flow(Layer.DEMAND, ExclusionSet.Empty, it, flagAtTarget(), Tail.ANY)\n                    else results.flow(layer, c.exclusion.union(ce.exclusion), it, flagAtTarget(), c.tail)\n                }\n            }\n            else -> if (kids != null || !u.leaf.isEmpty) flowHit(mx, c, {\n                (!u.leaf.isEmpty && !sameFlowLeaf(m, unchanged, ce.fromPathData, ce.fromPathData.size)) ||\n                    (kids != null && changedFlowSubtree(m, kids, ce.fromPathData, unchanged))\n            }) {\n                val tail = if (layer == Layer.DEMAND && ce.toTail != Tail.ANY) Tail.ANY else ce.toTail\n                val exclusion = when (tail) {\n                    Tail.ANY_TAINT -> ce.toExclusion\n                    Tail.EXACT -> ExclusionSet.Empty\n                    else -> ExclusionSet.Empty\n                }\n                results.flow(if (tail == Tail.ANY) Layer.DEMAND else layer, exclusion, it, flagAtTarget(), tail)\n            }\n        }\n    }\n\n    private inline fun flowHit(mx: MarkExclusions?, c: FlowTree, changed: () -> Boolean, add: (MarkExclusions) -> Unit) {\n        if (mx != null) { add(mx); return }\n        val mark = gate.flowRequest(c.markExclusion) ?: return\n        if (mode.run1 && !requested && changed()) { out.markRequest(mark); requested = true }\n"
+        }
+      ]
+    },
+    {
+      "kind": "exact-baseline-source",
+      "commit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt",
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-joint-demand-redesign-20261107/pre-implementation/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt",
+      "sha256": "c4a2547aeb7e03d2daf13bc8fe811b3a4bc8026d74bd162a6cd3f06a9bbc90f0",
+      "bytes": 35714,
+      "ranges": [
+        {
+          "first": 267,
+          "last": 310,
+          "text": "private class Shape(val path: List<AccessorIdx>, val tail: Tail, val exclusion: ExclusionSet, val demand: Boolean)\n\nprivate fun below(c: Conclusion, edge: PathEdge, r: List<AccessorIdx>): Shape? {\n    if (!edge.premiseAdmits(r)) return null\n    val to = edge.to\n    if (to.tail == Tail.STAR && r.isNotEmpty() && !edge.exclusion.admits(r)) return null\n    return when (to.tail) {\n        Tail.STAR -> when {\n            r.isNotEmpty() -> Shape(to.path + r, c.fact.tail, c.exclusion, demand = false)   // keeps Ec (W8)\n            c.fact.tail == Tail.EXACT -> Shape(to.path, Tail.EXACT,\n                if (c.fact.mark is MarkSlot.Star) c.exclusion.union(edge.exclusion) else ExclusionSet.Empty, false)\n            c.fact.tail == Tail.ANY -> Shape(to.path, Tail.ANY, ExclusionSet.Empty, demand = true)   // W6\n            else -> Shape(to.path, c.fact.tail, c.exclusion.union(edge.exclusion), false)  // `STAR/Ec`, or the exclusion\n        }                                                                                 // edge on `[any-taint]/Ec` (W8)\n        Tail.ANY -> Shape(to.path, Tail.ANY, ExclusionSet.Empty, demand = true)               // W6: a may\n        Tail.ANY_TAINT, Tail.EXACT -> Shape(to.path, to.tail,                                  // a must, or `$`\n            if (to.tail == Tail.ANY_TAINT) edge.toExclusion else ExclusionSet.Empty,           // Et (W8)\n            demand = false)        // W2 and the concrete premise gate reject STAR input; geometry still precedes that gate\n    }\n}\n\nprivate fun PathEdge.isExcludedIdentityKeep(): Boolean =\n    from.base == to.base && from.path == to.path && from.tail == Tail.STAR &&\n        to.tail == Tail.STAR && exclusion != ExclusionSet.Empty\n\nprivate fun above(c: Conclusion, edge: PathEdge, r: List<AccessorIdx>): Shape? {\n    val admitted = when (c.fact.tail) {\n        Tail.STAR, Tail.ANY_TAINT -> c.exclusion.admits(r); Tail.ANY -> true; Tail.EXACT -> false\n    }\n    if (!admitted) {\n        // An excluded identity keep is the existing field-write effect, not a read.\n        if (c.fact.tail == Tail.EXACT && c.fact.mark is MarkSlot.Star && edge.isExcludedIdentityKeep() && c.exclusion.admits(r))\n            return Shape(edge.to.path, Tail.ANY, ExclusionSet.Empty, demand = true)\n        return null\n    }\n    val to = edge.to\n    if (c.fact.tail != Tail.ANY_TAINT) {           // a `*` fact loses its correlation; an `[any]` fact is demand (W6)\n        val tail = if (to.tail == Tail.EXACT) Tail.EXACT else Tail.ANY\n        return Shape(to.path, tail, ExclusionSet.Empty, demand = true)\n    }\n    return when (to.tail) {                        // every admitted location of c carries its mark: nothing is lost\n        Tail.EXACT -> Shape(to.path, Tail.EXACT,\n            if (c.fact.mark is MarkSlot.Star && r.isEmpty()) c.exclusion else ExclusionSet.Empty, demand = false)\n        Tail.ANY_TAINT -> Shape(to.path, Tail.ANY_TAINT, edge.toExclusion, demand = false)    // Et\n"
+        },
+        {
+          "first": 353,
+          "last": 389,
+          "text": "            }\n        }\n    }\n    val mark = compose(edge.to.mark, c.fact.mark) ?: return EdgeOutcome.None  // step 5\n    val cover = run1 && shape.exclusion != ExclusionSet.Empty\n    return EdgeOutcome.Fact(normalize(PathFact(edge.to.base, shape.path, shape.tail, mark),\n        if (cover) ExclusionSet.Empty else shape.exclusion, c.demand || edgeDemand || shape.demand || cover))\n}\n\nfun compose(to: MarkSlot, c: MarkSlot): MarkSlot? = when (to) {\n    is MarkSlot.Concrete -> to\n    is MarkSlot.Star -> when (c) {\n        is MarkSlot.Star -> MarkSlot.Star(to.excluded + c.excluded)\n        is MarkSlot.Concrete -> if (c.mark in to.excluded) null else c\n    }\n}\n\nfun normalize(f: PathFact, exclusion: ExclusionSet, demand: Boolean): Conclusion = when {\n    demand && f.mark is MarkSlot.Star && (f.tail == Tail.EXACT || f.tail == Tail.ANY_TAINT) ->\n        Conclusion(f.copy(tail = Tail.ANY), ExclusionSet.Empty, demand = true)\n    f.tail == Tail.ANY -> Conclusion(f, ExclusionSet.Empty, demand = true)                                  // W6\n    f.tail == Tail.ANY_TAINT -> {\n        Conclusion(f, exclusion, demand)\n    }\n    else -> Conclusion(f, if (f.tail == Tail.EXACT && f.mark is MarkSlot.Concrete) ExclusionSet.Empty else exclusion, demand)\n}\n\n/** ap.md \u00a76.5 (Lean startFact; a must-premise: AnyTaint.startT, with the exclusion AnyTaintEx.startX). No direction\n *  parameter: a must-premise occurs only in a forward restricted run (A1), and no other row reads the run. */\nfun startFact(i: Pattern): Conclusion = when (i.fact.tail) {\n    Tail.STAR -> Conclusion(i.fact, i.exclusion, demand = i.fact.mark is MarkSlot.Concrete)\n    Tail.ANY -> Conclusion(i.fact, ExclusionSet.Empty, demand = true)\n    Tail.ANY_TAINT -> Conclusion(i.fact, i.exclusion, demand = false)                // a must-premise: itself, normal\n    Tail.EXACT -> Conclusion(i.fact, ExclusionSet.Empty, demand = false)\n}\n\n/** ap.md \u00a74.4 (Lean cutPath, limitF; with the exclusion AnyTaintEx.limitFX). An `[any-taint]/E` fact over the limit\n"
+        },
+        {
+          "first": 430,
+          "last": 477,
+          "text": "        CleanOut(listOf(c), null) else cleanResRaw(cl, c)\n    return if (!run1) raw else CleanOut(raw.facts.map { value ->\n        if (value.exclusion == ExclusionSet.Empty) value\n        else value.copy(exclusion = ExclusionSet.Empty, demand = true)\n    }, raw.request)\n}\n\nprivate fun cleanResRaw(cl: Cleaner, c: Conclusion): CleanOut {\n    if (c.fact.base != cl.base) return CleanOut(listOf(c), null)\n    val abstractMark = c.fact.mark as? MarkSlot.Star\n    val selected = cl.mark\n    if (abstractMark != null && selected != null)\n        return CleanOut(listOf(c.copy(fact = c.fact.copy(mark = MarkSlot.Star(abstractMark.excluded + selected)))), selected)\n        // The caller records this request only in run 1. Do not test the path or T \u2208 X first.\n    if (abstractMark != null && selected == null) {\n        return CleanOut(wholeFlowClean(cl, c), null)\n    }\n    val pos = cleanPos(cl, c.fact, c.exclusion)\n    if (pos == Pos.DISJOINT) return CleanOut(listOf(c), null)\n    return when (val mk = c.fact.mark) {\n        is MarkSlot.Concrete ->\n            if (cl.mark != null && cl.mark != mk.mark) CleanOut(listOf(c), null)                  // T' not cleaned\n            else if (pos == Pos.INSIDE) CleanOut(emptyList(), null)\n            else CleanOut(concPart(cl, c), null)                                                  // one or two facts (A2)\n        is MarkSlot.Star -> {\n            check(cl.mark == null)                                               // selected mark handled before cleanPos\n            CleanOut(if (pos == Pos.INSIDE) emptyList() else listOf(normalize(c.fact, c.exclusion, demand = true)), null)\n        }\n    }\n}\n\n/** Whole-position FLOW kill. Retain one uncertain inner residual, which covers deeper ones. */\ninternal fun wholeFlowClean(cl: Cleaner, c: Conclusion): List<Conclusion> {\n    val path = cl.path?.toList().orEmpty()\n    val q = c.fact.path\n    if (q.startsWith(path)) return emptyList()\n    if (!path.startsWith(q) || !c.exclusion.admits(path.drop(q.size))) return listOf(c)\n    if (c.fact.tail == Tail.ANY) return listOf(c)\n    val result = ArrayList<Conclusion>()\n    result += c.copy(exclusion = c.exclusion.union(ExclusionSet.of(path[q.size])))\n    if (q.size + 1 < path.size) {\n        if (c.fact.tail == Tail.ANY_TAINT) {\n            for (depth in q.size + 1 until path.size)\n                result += c.copy(fact = c.fact.copy(path = path.take(depth)), exclusion = ExclusionSet.of(path[depth]))\n        } else result += c.copy(fact = c.fact.copy(path = path.take(q.size + 1), tail = Tail.ANY),\n            exclusion = ExclusionSet.Empty, demand = true)\n    }\n    return result\n"
+        }
+      ]
+    },
+    {
+      "kind": "exact-baseline-source",
+      "commit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/FlowSummaryNormalization.kt",
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-joint-demand-redesign-20261107/pre-implementation/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/FlowSummaryNormalization.kt",
+      "sha256": "42ebef857f4c695cd260dea3738927b512ef843ebb597409e3ac62607404b86e",
+      "bytes": 1695,
+      "ranges": [
+        {
+          "first": 1,
+          "last": 34,
+          "text": "package org.opentaint.dataflow.bidi.ap\n\n/** A complete summary pair has one canonical storage key. Point keys stay unchanged. */\ndata class FlowSummaryForm(val premise: PremiseKey, val facts: Facts)\n\nfun normalizeFlowSummary(manager: ApManager, premise: PremiseKey, facts: Facts): FlowSummaryForm {\n    if (!premise.isFlow || facts !is FlowTree) return FlowSummaryForm(premise, facts)\n    val initial = premise as InitialAp\n    val key = if (initial.tail == Tail.EXACT)\n        manager.initial(initial.base, initial.path, Tail.STAR, initial.exclusion, initial.mark)\n    else initial\n    val result = if (facts.tail == Tail.EXACT)\n        manager.flowTree(facts.base, facts.layer, facts.exclusion, facts.markExclusion, facts.root, Tail.STAR)\n    else facts\n    return FlowSummaryForm(key, result)\n}\n\nfun normalizeFlowSummaryConclusion(c: Conclusion): Conclusion =\n    if (c.fact.mark is MarkSlot.Star && c.fact.tail == Tail.EXACT)\n        c.copy(fact = c.fact.copy(tail = Tail.STAR)) else c\n\nfun assertCanonicalFlowSummary(premise: PremiseKey, facts: Facts) {\n    if (!premise.isFlow || facts !is FlowTree) return\n    check((premise as InitialAp).tail != Tail.EXACT && facts.tail != Tail.EXACT) {\n        \"Normalize the complete FLOW pair before summary storage\"\n    }\n}\n\n/** Guidance comparisons use the same pair form as summaries. Raw writer keys stay raw. */\nfun normalizeFlowSummaryPatterns(from: Pattern, to: Pattern): Pair<Pattern, Pattern> {\n    if (from.fact.mark !is MarkSlot.Star || to.fact.mark !is MarkSlot.Star) return from to to\n    fun normal(p: Pattern) = if (p.fact.tail == Tail.EXACT) p.copy(fact = p.fact.copy(tail = Tail.STAR)) else p\n    return normal(from) to normal(to)\n}\n"
+        }
+      ]
+    },
+    {
+      "kind": "exact-baseline-source",
+      "commit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Clean.kt",
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-joint-demand-redesign-20261107/pre-implementation/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Clean.kt",
+      "sha256": "58f335a6e906edb80788a9b9b2745be699ab71edf6cca1a5202cf70052400998",
+      "bytes": 9642,
+      "ranges": [
+        {
+          "first": 93,
+          "last": 147,
+          "text": "/** The selected-mark branch changes the header and shares every path. */\nprivate class FlowClean(private val m: ApManager, private val c: FlowTree, private val cl: Cleaner,\n                        private val mode: ApMode, private val out: ApOut) {\n    private val results = Results(m, c.base)\n\n    fun run() {\n        val selected = cl.mark?.let { m.marks.runtimeAtom(it, mode.markMode) }\n        if (selected != null) {\n            if (mode.run1 && c.base == STATIC) { selectedStatic(selected); return }\n            results.flow(c.layer, c.exclusion, m.intern(c.markExclusion + selected), c.root, c.tail)\n            if (mode.run1) out.markRequest(selected)\n            results.flush(out)\n            return\n        }\n        FlowAlgebra.cleanSpine(c.root, cl.pathArray, cl.reach, 0, m.cancellation,\n            { depth, leaf ->\n                if (leaf.isEmpty) leaf else {\n                    val pattern = PathFact(c.base, cl.pathArray.copyOf(depth).asList(), c.tail,\n                        MarkSlot.Star(c.markExclusion))\n                    for (kept in wholeFlowClean(cl, Conclusion(pattern, c.exclusion, c.layer == Layer.DEMAND))) {\n                        val node = FlowAlgebra.prepend(m, m.path(kept.fact.path), FlowAlgebra.LEAF_NODE)\n                        results.flow(if (kept.demand) Layer.DEMAND else Layer.NORMAL, kept.exclusion,\n                            c.markExclusion, node, kept.fact.tail)\n                    }\n                    FlowLeaf.NONE\n                }\n            }, { null })?.let { results.flow(c.layer, c.exclusion, c.markExclusion, it, c.tail) }\n        results.flush(out.run1Policy(m, mode))\n    }\n\n    /** A disjoint static field is not a mark-interest producer. Split selected\n     * leaves before changing mx so an unrelated sibling keeps its own header. */\n    private fun selectedStatic(selected: TaintMark) {\n        val mx = m.intern(c.markExclusion + selected)\n        var matched = false\n        fun add(node: FlowNode) {\n            matched = true\n            results.flow(c.layer, c.exclusion, mx, node, c.tail)\n        }\n        val kept = FlowAlgebra.cleanSpine(c.root, cl.pathArray, cl.reach, 0, m.cancellation,\n            { depth, leaf ->\n                if (leaf.isEmpty || cleanPosAt(cl, c.tail, depth,\n                        depth < cl.pathArray.size && c.exclusion.admits(cl.pathArray[depth])) == Pos.DISJOINT) leaf\n                else {\n                    add(FlowAlgebra.prepend(m, m.path(cl.pathArray.copyOf(depth)), FlowAlgebra.LEAF_NODE))\n                    FlowLeaf.NONE\n                }\n            },\n            { children ->\n                add(FlowAlgebra.prepend(m, cl.path, children))\n                null\n            })\n        kept?.let { results.flow(c.layer, c.exclusion, c.markExclusion, it, c.tail) }\n        if (matched) out.markRequest(selected)\n        results.flush(out)\n"
+        }
+      ]
+    },
+    {
+      "kind": "exact-baseline-source",
+      "commit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/MarkGate.kt",
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-joint-demand-redesign-20261107/pre-implementation/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/MarkGate.kt",
+      "sha256": "a1616332e35cb91d68d8a8bc39884a004a5f0ee3ac8954c54e5160a6782c227b",
+      "bytes": 2206,
+      "ranges": [
+        {
+          "first": 15,
+          "last": 25,
+          "text": "    init {\n        check(premise !is MarkSlot.Star || premise.excluded.isEmpty) { \"S7: a premise cannot exclude marks\" }\n        check(premise is MarkSlot.Concrete || target is MarkSlot.Star) { \"S7: a selected target needs a selected premise\" }\n    }\n    fun flowMarks(x: MarkExclusions): MarkExclusions? =\n        if (premise is MarkSlot.Concrete) null else m.intern(x + (target as MarkSlot.Star).excluded)\n    fun flowMarks(x: MarkSet): MarkExclusions? = flowMarks(MarkExclusions.fromMarks(x, m.marks))\n    fun flowRequest(x: MarkSet): TaintMark? = flowRequest(MarkExclusions.fromMarks(x, m.marks))\n    fun flowRequest(x: MarkExclusions): TaintMark? = (premise as? MarkSlot.Concrete)?.mark?.takeIf {\n        mode.markMode == MarkMode.GROUP || it !in x\n    }\n"
+        }
+      ]
+    },
+    {
+      "kind": "exact-baseline-source",
+      "commit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Primitives.kt",
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-joint-demand-redesign-20261107/pre-implementation/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Primitives.kt",
+      "sha256": "4dac1ad114711fdd1467b35c829f8e47801fd38e5348f031a5fcd92ae2e760e4",
+      "bytes": 3588,
+      "ranges": [
+        {
+          "first": 7,
+          "last": 14,
+          "text": "enum class CleanReach { EXACT, BELOW, AT_AND_BELOW }\n\n/** A cleaner targets one program value, optionally for one mark. */\nclass Cleaner(val base: AccessPathBase, val path: PathNode?, val reach: CleanReach, val mark: TaintMark?) {\n    init {\n        check(base != AccessPathBase.Zero) { \"S11: a cleaner cannot target zero\" }\n        require(mark != null || reach == CleanReach.AT_AND_BELOW) { \"RemoveAll requires the whole position\" }\n    }\n"
+        }
+      ]
+    },
+    {
+      "kind": "exact-baseline-source",
+      "commit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/MicroEdge.kt",
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-joint-demand-redesign-20261107/pre-implementation/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/MicroEdge.kt",
+      "sha256": "4a1523f257fafa2c51ce6fb227fa3f5b001d6c921dc925e04c6d83afc3d687a3",
+      "bytes": 2621,
+      "ranges": [
+        {
+          "first": 41,
+          "last": 64,
+          "text": "/** Helper-created facts own their paths; supplied MicroEdge objects keep their original identities. */\nfun starSide(b: AccessPathBase, p: List<AccessorIdx> = emptyList()): PathFact =\n    PathFact(b, Collections.unmodifiableList(ArrayList(p)), Tail.STAR, MarkSlot.STAR)\n\nfun keepEdge(b: AccessPathBase, p: List<AccessorIdx> = emptyList(), e: ExclusionSet = ExclusionSet.Empty): PathEdge {\n    val side = starSide(b, p)\n    return PathEdge(side, side, e)\n}\n\n/** Each proper prefix keeps every continuation except the next step of the written path. */\nfun strongKeep(b: AccessPathBase, path: List<AccessorIdx>): List<PathEdge> =\n    Collections.unmodifiableList(path.indices.map { k -> keepEdge(b, path.take(k), ExclusionSet.of(path[k])) })\n\nfun starEdge(from: AccessPathBase, fp: List<AccessorIdx>, to: AccessPathBase, tp: List<AccessorIdx>): PathEdge =\n    PathEdge(starSide(from, fp), starSide(to, tp), ExclusionSet.Empty)\n"
+        }
+      ]
+    },
+    {
+      "kind": "exact-baseline-source",
+      "commit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/MicroEdgeBuilder.kt",
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-joint-demand-redesign-20261107/pre-implementation/core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/MicroEdgeBuilder.kt",
+      "sha256": "557f90c24c2b1aa0182afffa2039344b4b5c3e9b75a3bbf1d148b09b798c2963",
+      "bytes": 5709,
+      "ranges": [
+        {
+          "first": 58,
+          "last": 84,
+          "text": "    /** A read retains its source, except when the read replaces that same base. It adds no exclusion. */\n    fun read(to: AccessPathBase, base: AccessPathBase, path: List<AccessorIdx>) {\n        touch(to)\n        touch(base)\n        if (base != to) keep(base)\n        edge(starEdge(base, path, to, emptyList()))\n    }\n\n    /** Strong writes keep proper prefixes. Alias targets get value edges and remain untouched by the write. */\n    fun write(\n        base: AccessPathBase,\n        path: List<AccessorIdx>,\n        weak: Boolean,\n        values: List<AccessPathBase>,\n        aliasPaths: List<Pair<AccessPathBase, List<AccessorIdx>>>,\n    ) {\n        touch(base)\n        if (weak) keep(base) else strongKeep(base, path).forEach(::edge)\n        for (v in values) {\n            if (v != base) keep(v) else touch(v)\n            edge(starEdge(v, emptyList(), base, path))\n        }\n        for ((c, q) in aliasPaths) {\n            if (c == base) continue\n            for (v in values) edge(starEdge(v, emptyList(), c, q + path))\n        }\n    }\n"
+        },
+        {
+          "first": 109,
+          "last": 132,
+          "text": "/** A named field cleaner is an ordinary read, one temporary cleaner, and an ordinary strong write. */\nfun fieldCleanStep(\n    base: AccessPathBase,\n    path: List<AccessorIdx>,\n    reach: CleanReach,\n    mark: TaintMark?,\n    baseFilter: TypeFilter? = null,\n    valueFilter: TypeFilter? = null,\n    aliasPaths: List<Pair<AccessPathBase, List<AccessorIdx>>> = emptyList(),\n    temporaryKey: TemporaryKey? = null,\n): CleanStep.Field {\n    check(base != AccessPathBase.ClassStatic && path.isNotEmpty() && path.last().isFieldAccessor())\n    val tmp = temporaryKey?.let(AccessPathBase.CleanerTemporary::keyed) ?: AccessPathBase.CleanerTemporary()\n    val read = MicroEdgeBuilder().apply {\n        read(tmp, base, path)\n        operandFilter(base, baseFilter)\n        resultFilter(tmp, valueFilter)\n    }.build()\n    val write = MicroEdgeBuilder().apply {\n        write(base, path, weak = false, values = listOf(tmp), aliasPaths = aliasPaths)\n        operandFilter(base, baseFilter)\n        operandFilter(tmp, valueFilter)\n    }.build()\n    return CleanStep.Field(tmp, read, Cleaner(tmp, null, reach, mark), write)\n"
+        }
+      ]
+    },
+    {
+      "kind": "exact-baseline-source",
+      "commit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/FlowSummaryNormalizationTest.kt",
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-joint-demand-redesign-20261107/pre-implementation/core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/FlowSummaryNormalizationTest.kt",
+      "sha256": "ed59f06e72d20a2c11222ace92e6095a506b4c5f76ecabf72f36c9089eae9e33",
+      "bytes": 7886,
+      "ranges": [
+        {
+          "first": 30,
+          "last": 80,
+          "text": "    @Test fun `raw exact FLOW is a read barrier and strong write records the exclusion`() {\n        val exact = fact(pattern())\n        assertTrue(apply(exact, starEdge(p, listOf(f), ret, emptyList())).isEmpty())\n        val written = apply(exact, strongKeep(p, listOf(f)).single()).single() as FlowTree\n        assertEquals(Tail.EXACT, written.tail)\n        assertEquals(ExclusionSet.of(f), written.exclusion)\n        assertEquals(Layer.NORMAL, written.layer)\n        val s = normalizeFlowSummary(m, m.initial(pattern()), written)\n        assertEquals(Tail.STAR, (s.premise as InitialAp).tail)\n        assertEquals(Tail.STAR, (s.facts as FlowTree).tail)\n        assertEquals(ExclusionSet.of(f), s.facts.exclusion)\n        assertSame(s.premise, normalizeFlowSummary(m, s.premise, s.facts).premise)\n        val store = RunSummaryStore(m)\n        assertFails { store.addAdmitted(m.initial(pattern()), written) }\n        assertNotNull(store.addAdmitted(s.premise, s.facts))\n    }\n\n    @Test fun `nested write retains outer exclusion and inner ANY demand`() {\n        val exact = fact(pattern())\n        val outputs = strongKeep(p, listOf(f, g)).flatMap { apply(exact, it) }\n        assertEquals(setOf(pattern(e = ExclusionSet.of(f)), pattern(path = listOf(f), tail = Tail.ANY)), leaves(outputs))\n        assertEquals(setOf(Layer.NORMAL, Layer.DEMAND), outputs.map { it.layer }.toSet())\n        val scalar = strongKeep(p, listOf(f, g)).mapNotNull {\n            (concat(Conclusion(pattern().fact, empty, false), it) as? EdgeOutcome.Fact)?.conclusion\n        }.map { Pattern(it.fact, it.exclusion) }.toSet()\n        assertEquals(leaves(outputs), scalar)\n    }\n\n    @Test fun `uniform FLOW query requires a definite uniform actual and preserves its exclusions`() {\n        val j = m.initial(pattern(tail = Tail.ANY_TAINT, e = ExclusionSet.of(f)))\n        for (tail in listOf(Tail.STAR, Tail.ANY, Tail.EXACT))\n            assertNull(ops.satisfying(m.factsOf(pattern(tail = tail).fact, empty,\n                if (tail == Tail.ANY) Layer.DEMAND else Layer.NORMAL), j, mode))\n        val uniform = fact(pattern(tail = Tail.ANY_TAINT, e = ExclusionSet.of(f)))\n        assertNotNull(ops.satisfying(uniform, j, mode))\n        assertNull(ops.satisfying(fact(pattern(tail = Tail.ANY_TAINT, e = ExclusionSet.of(g))), j, mode))\n    }\n\n    @Test fun `whole field RemoveAll shares write residuals and rejects below-only all-mark primitive`() {\n        val input = fact(pattern())\n        val out = CollectingOut()\n        ops.clean(input, m.initial(pattern()), Cleaner(p, m.path(listOf(f, g)), CleanReach.AT_AND_BELOW, null), mode, out)\n        assertEquals(setOf(pattern(e = ExclusionSet.of(f)), pattern(path = listOf(f), tail = Tail.ANY)), leaves(out.results))\n        assertFails { Cleaner(p, null, CleanReach.BELOW, null) }\n        assertFails { Cleaner(p, null, CleanReach.EXACT, null) }\n    }\n\n    @Test fun `native uniform FLOW views are transient may demands`() {\n        for ((input, output) in listOf(Tail.ANY_TAINT to Tail.STAR,\n            Tail.ANY_TAINT to Tail.ANY_TAINT, Tail.STAR to Tail.ANY_TAINT)) {\n            val j = pattern(tail = input, e = ExclusionSet.of(f))\n"
+        }
+      ]
+    },
+    {
+      "kind": "exact-baseline-source",
+      "commit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/BuilderTransferVectorsTest.kt",
+      "path": "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-joint-demand-redesign-20261107/pre-implementation/core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/BuilderTransferVectorsTest.kt",
+      "sha256": "84809ba90a30c85b3d0aed086d2e6c4103fbbc7c5ce37d6f22ed91e9ca970cde",
+      "bytes": 20657,
+      "ranges": [
+        {
+          "first": 141,
+          "last": 176,
+          "text": "    @Test fun `strong write regenerates value paths and keeps their marks layers and exclusions`(): Unit {\n        val strong = write(y, p(f))\n        val inputs = listOf(c(x, p(g), mark = mu), c(x, p(g), demand = true),\n            flow(x, p(g), ex(h), mx), must(x, p(g), ex(h), mu), c(x, p(g), Tail.ANY, mu))\n        for (input in inputs) {\n            val generated = c(y, p(f, g), input.fact.tail, input.fact.mark, input.exclusion, input.demand)\n            assertExpected(strong, input, setOf(input, generated))\n        }\n    }\n\n    @Test fun `weak element write retains all old locations and generates value under the element`(): Unit {\n        val weak = write(y, p(ELEMENT_ACCESSOR_IDX), weak = true)\n        for (input in listOf(c(y, p(ELEMENT_ACCESSOR_IDX, f)), flow(y, exclusion = ex(g), mark = mx),\n            must(y, p(ELEMENT_ACCESSOR_IDX), ex(h)), c(y, tail = Tail.ANY, mark = mu)))\n            assertExpected(weak, input, setOf(input))\n        val value = must(x, p(g), ex(h), mu)\n        assertExpected(weak, value, setOf(value, must(y, p(ELEMENT_ACCESSOR_IDX, g), ex(h), mu)))\n    }\n\n    @Test fun `synthetic two field strong write keeps each proper prefix with its own exclusion`(): Unit {\n        val strong = write(y, p(f, g), values = emptyList())\n        assertExpected(strong, flow(y, exclusion = ex(h), mark = mx), setOf(\n            flow(y, exclusion = ex(f, h), mark = mx), c(y, p(f), Tail.ANY, mx)))\n        assertExpected(strong, must(y, exclusion = ex(h)), setOf(\n            must(y, exclusion = ex(f, h)), must(y, p(f), ex(g))))\n        assertExpected(strong, flow(y, p(f), ex(h), mx), setOf(flow(y, p(f), ex(g, h), mx)))\n        assertExpected(strong, c(y, p(f)), setOf(c(y, p(f))))\n        assertExpected(strong, c(y, p(f, h)), setOf(c(y, p(f, h))))\n        assertExpected(strong, c(y, p(h, g)), setOf(c(y, p(h, g))))\n        assertExpected(strong, c(y, p(f, g)), emptySet())\n        assertExpected(strong, must(y, p(f, g, h)), emptySet())\n        val firstExcluded = must(y, exclusion = ex(f))\n        assertExpected(strong, firstExcluded, setOf(firstExcluded))\n    }\n\n    @Test fun `self writes copy the original value while strong and weak old content differ`(): Unit {\n"
+        }
+      ]
+    },
+    {
+      "kind": "existing-formal-component-source-not-new-execution",
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/subsumption-initial-demand-20261107/ExactFlowInputBridge.lean",
+      "repositoryPath": "spec/lean/proposals/subsumption-initial-demand-20261107/ExactFlowInputBridge.lean",
+      "sha256": "89cef36ec0d471ccb6b1ce3a6a6ed876d63b953d8ea0b62e5e556e5526b4a11d",
+      "bytes": 17854,
+      "ranges": [
+        {
+          "first": 271,
+          "last": 294,
+          "text": "/- Reachable native state, not a fabricated initial: ANY/FLOW plus exact T\nemits p.$/FLOW,N; existing strong write p.f=null adds E={f} to that raw FLOW\nEXACT conclusion. Ordinary bind-in preserves E. The new formal bridge admits\nthis existing native input and keeps it in the actual command unchanged. -/\ndef forwardMode : Mode := \u27e83,2,.forward\u27e9\ndef outerDemand : Demand := \u27e80,[],.any,.flow,[]\u27e9\ndef actualRootT : Actual := \u27e8\u27e80,[],.exact,.full 7,[]\u27e9,.normal,false\u27e9\ndef exactFlowSeed : Seed := \u27e8\u27e80,[],.exact,.flow,[]\u27e9,.normal\u27e9\ndef existingStrongWrite (input : Actual) : Actual :=\n  {input with pattern := {input.pattern with exclusion := input.pattern.exclusion ++ [5]}}\ndef written : Actual := existingStrongWrite (start exactFlowSeed)\ndef boundInput : Actual := {written with pattern := {written.pattern with base := 1}}\ndef innerDemand : Demand := \u27e81,[],.any,.flow,[]\u27e9\ndef innerSeed : Seed := \u27e8\u27e81,[],.exact,.flow,[]\u27e9,.normal\u27e9\n\ntheorem scenario_initial_is_emitted_from_real_exact_T :\n    nativeEmit forwardMode outerDemand actualRootT = some exactFlowSeed := by decide\ntheorem scenario_existing_strong_write_keeps_raw_EXACT_E :\n    boundInput = \u27e8\u27e81,[],.exact,.flow,[5]\u27e9,.normal,false\u27e9 := by decide\ntheorem scenario_old_formal_domain_did_not_cover_the_input :\n    emit forwardMode innerDemand boundInput = none := by decide\ntheorem scenario_native_query_admits_but_binding_retains_E :\n    nativeCommand forwardMode innerDemand boundInput =\n      some \u27e8innerSeed,\u27e8\u27e81,[],.exact,.flow,[5]\u27e9,.normal,false\u27e9\u27e9 := by decide\n"
+        }
+      ]
+    }
+  ],
+  "commandsNotRun": [
+    "Gradle",
+    "JVM",
+    "Lean",
+    "native analyzer",
+    "profiler"
+  ]
+}

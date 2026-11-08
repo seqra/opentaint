@@ -1,0 +1,189 @@
+{
+  "schema": "root-exact-cleaner-gap-source-pins-v1",
+  "state": "BASELINE_SOURCE_AUDIT_WITH_SCOPED_MODEL_CHECK",
+  "nativeExecuted": false,
+  "sourcePins": [
+    {
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Run1Abstraction.kt",
+      "baselineCommit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "sha256": "e66424d651f4457902367bf30aaa1a427be0532a183b519c2ccdea4bf3514e31",
+      "ranges": [
+        {
+          "first": 27,
+          "last": 49,
+          "text": "\n    /** A local link has an original premise, but no physical call instruction. */\n    fun emit(original: PremiseKey, input: Facts) {\n        check(!released)\n        val ap = ops.manager\n        ap.cancellation.checkpoint()\n        if (!RuntimeDataDomain.packet(original, input)) return\n        validateRun1Supplier(ap, original, input)\n        validateRun1Input(ap, input)\n        if (input.base == STATIC) return // static reads/refinements are operation-local, never callee entry seeds\n        answer(AdmittedInitial(ops.policy(input), Layer.NORMAL))\n        if (input is Reach) return\n        if (input is TaintTree) {\n            // Read after any synchronous abstraction starts; later P admission is\n            // covered by registered caller-input replay, never by an emitter memo.\n            val rows = borrowRequests(input)\n            val counts = statistics?.let { RequestBatchStatistics.Counts() }\n            forEachConcreteAnswer(ap, input, rows, counts) { initial ->\n                if (counts != null) counts.answers++\n                answer(initial)\n            }\n            if (counts != null) statistics?.record(counts)\n        }\n"
+        }
+      ]
+    },
+    {
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/Run1RequestMatching.kt",
+      "baselineCommit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "sha256": "fd000a5b854212685b79d7a9979fe885081eee375bd72f16108d7d586afeaf80",
+      "ranges": [
+        {
+          "first": 33,
+          "last": 72,
+          "text": " * Exact and nonexact alternatives remain distinct; every nonexact answer is STAR. */\ninternal fun forEachConcreteAnswer(\n    ap: ApManager, input: Facts, rows: List<RequestedRow>,\n    statistics: RequestBatchStatistics.Counts? = null, emit: (AdmittedInitial) -> Unit,\n) {\n    if (input !is TaintTree || rows.isEmpty()) return\n    val stack = ArrayDeque<Pair<TaintNode, IntArray>>()\n    stack.addLast(input.root to EMPTY_PATH)\n    while (stack.isNotEmpty()) {\n        ap.cancellation.checkpoint()\n        val (node, path) = stack.removeLast()\n        fun branch(marks: MarkSet, exact: Boolean) {\n            if (marks.isEmpty) return\n            for (row in rows) {\n                ap.cancellation.checkpoint()\n                if (statistics != null) statistics.groupGeometrySteps++\n                val slot = row.slot\n                if (slot.base != input.base) continue\n                val tail = if (exact && path.isEmpty()) Tail.EXACT else Tail.STAR\n                var canonicalPath: PathNode? = null\n                var prepared = false\n                for (id in marks.data) {\n                    ap.cancellation.checkpoint()\n                    if (statistics != null) statistics.memberScans++\n                    val mark = TaintMark(id)\n                    if (mark !in row.marks) continue\n                    if (!prepared) { canonicalPath = ap.path(slot.pathData); prepared = true }\n                    val initial = ap.initial(slot.base, canonicalPath, tail, ExclusionSet.Empty, MarkSlot.Concrete(mark))\n                    val layer = input.layer or (tail != Tail.EXACT)\n                    emit(AdmittedInitial(initial, layer))\n                }\n            }\n        }\n        branch(node.leaf.exact, exact = true)\n        branch(node.leaf.any, exact = false)\n        val children = node.childData ?: continue\n        val accessors = checkNotNull(node.accessorData)\n        for (i in children.indices.reversed()) {\n            ap.cancellation.checkpoint()\n            stack.addLast(children[i] to (path + accessors[i]))\n"
+        },
+        {
+          "first": 78,
+          "last": 100,
+          "text": "internal fun validateRun1Initial(initial: InitialAp, fieldLimit: Int) {\n    check(fieldLimit == 1) { \"F78 run 1 requires field limit 1\" }\n    check(initial.exclusion == ExclusionSet.Empty) { \"A run-1 initial has no field exclusion\" }\n    check(initial.tail == Tail.EXACT || initial.tail == Tail.STAR) { \"A run-1 initial is EXACT or STAR\" }\n    check(initial.base !is AccessPathBase.CleanerTemporary)\n    if (initial.isZero) {\n        check(initial.path == null && initial.tail == Tail.EXACT && initial.mark == MarkSlot.Concrete(TaintMark.ZERO))\n        return\n    }\n    val path = initial.pathData\n    if (initial.base != STATIC) {\n        check(path.isEmpty()) { \"A non-static run-1 initial has an empty path\" }\n    } else {\n        check(path.size <= 2 && (path.isEmpty() || path[0].isClass()) &&\n            (path.size < 2 || path[1].isFieldAccessor())) { \"Invalid run-1 static initial layout\" }\n    }\n    when (val mark = initial.mark) {\n        is MarkSlot.Star -> {\n            check(mark.excluded.isEmpty && initial.tail == Tail.STAR)\n            check(initial.base != STATIC || path.size == 2) { \"Run 1 has only abstract static-field initials\" }\n        }\n        is MarkSlot.Concrete -> {\n            check(initial.base != STATIC || path.isNotEmpty()) {\n"
+        }
+      ]
+    },
+    {
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Clean.kt",
+      "baselineCommit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "sha256": "58f335a6e906edb80788a9b9b2745be699ab71edf6cca1a5202cf70052400998",
+      "ranges": [
+        {
+          "first": 93,
+          "last": 105,
+          "text": "/** The selected-mark branch changes the header and shares every path. */\nprivate class FlowClean(private val m: ApManager, private val c: FlowTree, private val cl: Cleaner,\n                        private val mode: ApMode, private val out: ApOut) {\n    private val results = Results(m, c.base)\n\n    fun run() {\n        val selected = cl.mark?.let { m.marks.runtimeAtom(it, mode.markMode) }\n        if (selected != null) {\n            if (mode.run1 && c.base == STATIC) { selectedStatic(selected); return }\n            results.flow(c.layer, c.exclusion, m.intern(c.markExclusion + selected), c.root, c.tail)\n            if (mode.run1) out.markRequest(selected)\n            results.flush(out)\n            return\n"
+        },
+        {
+          "first": 155,
+          "last": 193,
+          "text": "                         private val mode: ApMode, private val out: ApOut, private val selected: MarkSet? = null) {\n    private val results = Results(m, c.base)\n    private val anyTail = c.anyTail\n\n    private fun gone(marks: MarkSet): MarkSet = when {\n        selected != null -> marks intersect selected\n        cl.mark == null || marks.isEmpty -> marks\n        mode.markMode == MarkMode.GROUP -> MarkSet.EMPTY // selected full mark cannot kill wildcard group\n        else -> marks.intersect(m.markSetOf(cl.mark))\n    }\n\n    fun run() {\n        m.taintAlg.cleanSpine(c.root, cl.pathArray, cl.reach, 0, m.cancellation, ::row) { kids ->\n            m.taintAlg.mapLeaves(kids, m.cancellation) {\n                m.taintLeaves(it.exact - gone(it.exact), it.any - gone(it.any))\n            }\n        }?.let { results.taint(c.layer, it, c.exclusion, c.anyTail) }\n        results.flush(out)\n    }\n\n    private fun row(d: Int, leaf: TaintLeaves): TaintLeaves =\n        m.taintLeaves(cut(d, Tail.EXACT, leaf.exact), cut(d, anyTail, leaf.any))\n\n    private fun cut(d: Int, tail: Tail, marks: MarkSet): MarkSet {\n        val removed = gone(marks)\n        if (removed.isEmpty) return marks\n        val path = cl.pathArray\n        when (cleanPosAt(cl, tail, d, d >= path.size || c.exclusion.admits(path[d]))) {\n            Pos.DISJOINT -> return marks\n            Pos.INSIDE -> Unit\n            Pos.PART -> {\n                val at = m.path(path.copyOf(d))\n                when {\n                    tail == Tail.ANY_TAINT && d == path.size - 1 && cl.reach != CleanReach.EXACT -> {\n                        if (mode.run1) put(Layer.DEMAND, at, Tail.ANY_TAINT, removed)\n                        else put(c.layer, at, Tail.ANY_TAINT, removed, c.exclusion.union(ExclusionSet.of(path[d])))\n                        if (cl.reach == CleanReach.BELOW) put(c.layer, cl.path, Tail.EXACT, removed)\n                    }\n                    (tail.isAny || tail == Tail.STAR) && cl.reach == CleanReach.BELOW && d == path.size ->\n"
+        }
+      ]
+    },
+    {
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt",
+      "baselineCommit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "sha256": "c4a2547aeb7e03d2daf13bc8fe811b3a4bc8026d74bd162a6cd3f06a9bbc90f0",
+      "ranges": [
+        {
+          "first": 401,
+          "last": 457,
+          "text": "\n/** ap.md \u00a74.7 (Lean cleanPos; with the exclusion AnyTaintEx.cleanPosX: a cleaner strictly below an `[any-taint]/E` fact\n *  through an accessor in E is `disjoint`). The tree form is cleanPosAt (Part I \u00a75.6). */\nfun cleanPos(cl: Cleaner, c: PathFact, exclusion: ExclusionSet): Pos {\n    if (c.base != cl.base) return Pos.DISJOINT\n    val p = cl.path?.toList().orEmpty()\n    val q = c.path\n    return when {\n        q.size > p.size && q.startsWith(p) -> if (cl.reach == CleanReach.EXACT) Pos.DISJOINT else Pos.INSIDE\n        q == p -> when {\n            cl.reach == CleanReach.AT_AND_BELOW -> Pos.INSIDE\n            c.tail == Tail.EXACT -> if (cl.reach == CleanReach.EXACT) Pos.INSIDE else Pos.DISJOINT\n            else -> Pos.PART\n        }\n        p.startsWith(q) -> when (c.tail) {\n            Tail.EXACT -> Pos.DISJOINT\n            Tail.STAR, Tail.ANY, Tail.ANY_TAINT ->                                  // `[any]`: the Empty exclusion admits\n                if (exclusion.admits(p.drop(q.size))) Pos.PART else Pos.DISJOINT\n        }\n        else -> Pos.DISJOINT\n    }\n}\n\nclass CleanOut(val facts: List<Conclusion>, val request: TaintMark?)\n\n/** ap.md \u00a74.7, F75 selected-mark split (BaseCleaner.cleanRes); concrete/all-marks rows keep concPart. */\nfun cleanRes(cl: Cleaner, c: Conclusion, run1: Boolean = false): CleanOut {\n    val raw = if (run1 && c.fact.base == STATIC && cl.base == STATIC &&\n        c.fact.mark is MarkSlot.Star && cl.mark != null && cleanPos(cl, c.fact, c.exclusion) == Pos.DISJOINT)\n        CleanOut(listOf(c), null) else cleanResRaw(cl, c)\n    return if (!run1) raw else CleanOut(raw.facts.map { value ->\n        if (value.exclusion == ExclusionSet.Empty) value\n        else value.copy(exclusion = ExclusionSet.Empty, demand = true)\n    }, raw.request)\n}\n\nprivate fun cleanResRaw(cl: Cleaner, c: Conclusion): CleanOut {\n    if (c.fact.base != cl.base) return CleanOut(listOf(c), null)\n    val abstractMark = c.fact.mark as? MarkSlot.Star\n    val selected = cl.mark\n    if (abstractMark != null && selected != null)\n        return CleanOut(listOf(c.copy(fact = c.fact.copy(mark = MarkSlot.Star(abstractMark.excluded + selected)))), selected)\n        // The caller records this request only in run 1. Do not test the path or T \u2208 X first.\n    if (abstractMark != null && selected == null) {\n        return CleanOut(wholeFlowClean(cl, c), null)\n    }\n    val pos = cleanPos(cl, c.fact, c.exclusion)\n    if (pos == Pos.DISJOINT) return CleanOut(listOf(c), null)\n    return when (val mk = c.fact.mark) {\n        is MarkSlot.Concrete ->\n            if (cl.mark != null && cl.mark != mk.mark) CleanOut(listOf(c), null)                  // T' not cleaned\n            else if (pos == Pos.INSIDE) CleanOut(emptyList(), null)\n            else CleanOut(concPart(cl, c), null)                                                  // one or two facts (A2)\n        is MarkSlot.Star -> {\n            check(cl.mark == null)                                               // selected mark handled before cleanPos\n            CleanOut(if (pos == Pos.INSIDE) emptyList() else listOf(normalize(c.fact, c.exclusion, demand = true)), null)\n        }\n"
+        },
+        {
+          "first": 509,
+          "last": 541,
+          "text": "                            else { check(i.fact.mark is MarkSlot.Star); CheckResult.Request(t) }\n    }\n}\n\n/** ap.md \u00a74.6 (Lean ND.conjLayer; with the `[any-taint]` rule AnyTaintND.conjLayerT): the layer of one input of a literal\n *  that holds on it. Demand if the input is in the demand layer, or if the literal does not cover it and it is not\n *  `[any-taint]` (a normal `[any-taint]` input that overlaps its literal and passes its mark gate keeps the result\n *  normal: every location of it carries the mark, AnyTaintND.lit_loc). The overlap of `markCheck` reads the exclusion of\n *  an `[any-taint]/E` input (A2), so an input in the excluded part never reaches here.\n *  For the legal matched TAINT literal shapes, CurrentProposal.LiteralLayer proves this equals f.demand. */\nfun conjDemand(f: Conclusion, lit: Pattern): Boolean =\n    f.demand || (!covers(lit, Pattern(f.fact, f.exclusion)) && f.fact.tail != Tail.ANY_TAINT)\n\n/** ap.md \u00a74.5 chain answer (Lean answerInit) and \u00a74.10 item 4 (Lean Statics.SCtx.ansInit). Precondition: a overlaps i, a.mark = t.\n *  Run 1 has no must-premise (W8 (c)): an `[any-taint]/E` `a` gives the static mark answer with the tail `[any]` and no\n *  exclusion (a larger premise, demand: sound). */\nfun answer(i: Pattern, a: Pattern, t: TaintMark): Pattern = when {\n    i.fact.base == STATIC && a.fact.path.startsWith(i.fact.path) ->          // a at or below a static premise: a itself\n        if (a.fact.tail == Tail.ANY_TAINT) Pattern(a.fact.copy(mark = MarkSlot.Concrete(t), tail = Tail.ANY), ExclusionSet.Empty)   // `[any]`: no E\n        else Pattern(a.fact.copy(mark = MarkSlot.Concrete(t)), a.exclusion)\n    a.fact.tail == Tail.EXACT && a.fact.path == i.fact.path ->\n        Pattern(PathFact(i.fact.base, i.fact.path, Tail.EXACT, MarkSlot.Concrete(t)), ExclusionSet.Empty)\n    else -> Pattern(i.fact.copy(mark = MarkSlot.Concrete(t)), i.exclusion)   // the request chain and kind, mark t\n}\n\n/** ap.md \u00a76.2 (Lean policy1). */\nfun policy(a: Pattern): Pattern =\n    if (a.fact.base == AccessPathBase.Zero) a\n    else Pattern(PathFact(a.fact.base, emptyList(), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty)\n\n/** Generic micro-edge reversal (Lean revEdge, revKinds, MarkRev), unchanged by record read views.\n *  It rejects a must premise and a must conclusion with nonempty exclusion; reverseRecordLeaf handles the supported\n *  native forward must shapes separately (\u00a77.8). A forward must micro target still reverses to ordinary ANY.\n"
+        },
+        {
+          "first": 542,
+          "last": 558,
+          "text": " *  MicroEdge.may reads the forward target for pass-rule demand handling. */\nfun revEdge(e: PathEdge): PathEdge? {\n    if (e.from.tail == Tail.ANY_TAINT) return null                          // generic reversal only\n    if (e.to.tail == Tail.ANY_TAINT && (e.toExclusion != ExclusionSet.Empty || e.exclusion != ExclusionSet.Empty))\n        return null                                                         // generic reversal only\n    val fAbstract = e.to.mark is MarkSlot.Star\n    if (!fAbstract && e.from.mark !is MarkSlot.Concrete) return null       // no_rev_of_star_conc\n    val (pt, ct) = revTails(e.from.tail, e.to.tail)\n    val pm = if (fAbstract) e.from.mark else e.to.mark                     // the new premise never has `*\u2216X`\n    val cm = if (fAbstract) e.to.mark else e.from.mark\n    val excl = if (pt == Tail.STAR || ct == Tail.STAR) e.exclusion else ExclusionSet.Empty   // the exclusion goes to the new conclusion (W1)\n    return PathEdge(PathFact(e.to.base, e.to.path, pt, pm), PathFact(e.from.base, e.from.path, ct, cm), excl)\n}\n\nfun revTails(i: Tail, f: Tail): Pair<Tail, Tail> = when (i) {             // the table of \u00a79.1\n    Tail.STAR -> when (f) {\n        Tail.STAR -> Tail.STAR to Tail.STAR; Tail.EXACT -> Tail.EXACT to Tail.ANY; Tail.ANY -> Tail.ANY to Tail.ANY\n"
+        }
+      ]
+    },
+    {
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApOps.kt",
+      "baselineCommit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "sha256": "9ecf5a0a403f8b0b76c5e0bfe79ca94ccba8eb9d5700bc18fb88c11f482d0dc4",
+      "ranges": [
+        {
+          "first": 120,
+          "last": 133,
+          "text": "    fun reverse(e: PathEdge): PathEdge? = revEdge(e)\n    fun leaves(f: Facts): Sequence<Pattern> = leafViews(manager, f)\n    fun leavesNear(f: Facts, p: IntArray): Sequence<Pattern> = nearLeafViews(manager, f, p)\n\n    fun clean(c: Facts, premise: PremiseKey, cl: Cleaner, mode: ApMode, out: ApOut) {\n        val protect = c.base == cl.base\n        val sink = if (!protect) out else object : ApOut {\n            override fun result(f: Facts) = out.result(manager.selectedProtection(f, cl.mark?.let { manager.markSetOf(manager.marks.runtimeAtom(it, mode.markMode)) }))\n            override fun markRequest(mark: TaintMark) = out.markRequest(mark)\n        }\n        manager.transportProtection(c, sink) { part, target ->\n            cleanFacts(manager, part, premise, cl, mode, target.run1Policy(manager, mode))\n        }\n    }\n"
+        }
+      ]
+    },
+    {
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodCallServices.kt",
+      "baselineCommit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "sha256": "3f7745a9ad5389aa70dde5cb3bb469deaa670c7b48735a953f4e85540b63897c",
+      "ranges": [
+        {
+          "first": 326,
+          "last": 355,
+          "text": "    private fun enterCallees(ctx: CallContext, stage: CallStage.Callees, fact: PlanFact) {\n        val core = active()\n        val ref = CallerRef(core.key, fact.premise, ctx.callerLayer, ctx.node, ctx.plan.stages.indexOf(stage), core.scope)\n        for (callee in stage.callees) {\n            core.ap.cancellation.checkpoint()\n            val part = Subscription(callee, ref, fact.facts.layer, fact.facts)\n            if (!RuntimeDataDomain.packet(ref.premise, fact.facts)) continue\n            check(part.added.base !is AccessPathBase.CleanerTemporary) {\n                \"A field-action temporary cannot enter an added link\"\n            }\n            check(part.linkLayer == part.added.layer) { \"The link layer must be the added fact's layer\" }\n            if (core.config.run1) {\n                core.runnerPort.subscribe(part)\n                core.ap.cancellation.checkpoint()\n                core.runnerPort.link(callee, ref, part.linkLayer, part.added)\n                continue\n            }\n\n            val statistics = core.context.shared.n2Statistics\n            statistics?.selectedCallOffered()\n            // Saved NORMAL records apply to every offer, without standing input admission.\n            replayPersistedSummaries(core.config, core.ops, part, core, statistics)\n            if (core.forward) for ((row, member) in core.config.normalTargets.candidates(callee, part, core.mode)) {\n                core.ap.cancellation.checkpoint()\n                if (!row.premise.isZero) applyTarget(part, row, member, saved = true)\n            }\n            // Demand admission uses the complete original offer, never a live merge delta.\n            val initials = emitRestrictedInitials(core.config, core.ops, callee, part.added, statistics)\n            if (initials.isEmpty()) continue\n\n"
+        }
+      ]
+    },
+    {
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/FlowSummaryNormalization.kt",
+      "baselineCommit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "sha256": "42ebef857f4c695cd260dea3738927b512ef843ebb597409e3ac62607404b86e",
+      "ranges": [
+        {
+          "first": 1,
+          "last": 20,
+          "text": "package org.opentaint.dataflow.bidi.ap\n\n/** A complete summary pair has one canonical storage key. Point keys stay unchanged. */\ndata class FlowSummaryForm(val premise: PremiseKey, val facts: Facts)\n\nfun normalizeFlowSummary(manager: ApManager, premise: PremiseKey, facts: Facts): FlowSummaryForm {\n    if (!premise.isFlow || facts !is FlowTree) return FlowSummaryForm(premise, facts)\n    val initial = premise as InitialAp\n    val key = if (initial.tail == Tail.EXACT)\n        manager.initial(initial.base, initial.path, Tail.STAR, initial.exclusion, initial.mark)\n    else initial\n    val result = if (facts.tail == Tail.EXACT)\n        manager.flowTree(facts.base, facts.layer, facts.exclusion, facts.markExclusion, facts.root, Tail.STAR)\n    else facts\n    return FlowSummaryForm(key, result)\n}\n\nfun normalizeFlowSummaryConclusion(c: Conclusion): Conclusion =\n    if (c.fact.mark is MarkSlot.Star && c.fact.tail == Tail.EXACT)\n        c.copy(fact = c.fact.copy(tail = Tail.STAR)) else c\n"
+        }
+      ]
+    },
+    {
+      "repositoryPath": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRRuleForms.kt",
+      "baselineCommit": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "sha256": "ea7b00d4c50ba407771b8ebed85beb21d32ab5fde3f7bec791566f45b265edd6",
+      "ranges": [
+        {
+          "first": 580,
+          "last": 630,
+          "text": "    }\n\n    /** Only a rewritten true condition permits a cleaner; no remaining mark literal can request or clean. */\n    fun cleanSteps(rule: TaintCleaner, cond: ExprOrConstant, types: PositionTypeResolver,\n                   id: RuleOccurrenceId? = null): List<CleanStep> =\n        if (cond.isTrue) rule.actionsAfter.flatMapIndexed { ordinal, action ->\n            unconditional(rule, action, types, id?.let { ActionId(it, ActionRole.BOUND_CLEANER, rule.actionOrdinal(ordinal)) })\n        } else emptyList()\n\n    fun unconditional(rule: TaintConfigurationItem, a: Action, types: PositionTypeResolver,\n                      actionId: ActionId? = null): List<CleanStep> = when (a) {\n        is RemoveMark -> {\n            val p = checkNotNull(pos(rule, a.position)) { \"a rejected rule reaches the forms (\u00a71.3): $rule\" }\n            val t = mark(a.mark)\n            val reach = when {\n                p.any -> CleanReach.BELOW\n                a.reach == TaintCleanReach.Exact -> CleanReach.EXACT\n                else -> CleanReach.AT_AND_BELOW\n            }\n            val bytes = stringBytes(p, types)\n            listOfNotNull(Cleaner(p.base, node(p.path), reach, t),\n                bytes?.let { Cleaner(p.base, node(p.path + it), reach, t) }).mapIndexed { substep, cl ->\n                lowerCleaner(cl, types, actionId?.let { TemporaryKey(it, substep) })\n            }\n        }\n        is RemoveAllMarks -> {\n            val p = checkNotNull(pos(rule, a.position)) { \"a rejected rule reaches the forms (\u00a71.3): $rule\" }\n            when {\n                p.any -> error(\"a rejected below-only RemoveAll reaches the forms: $rule\")\n                p.base == AccessPathBase.ClassStatic -> listOf(CleanStep.Kill(MicroEdgeBuilder().apply {\n                    touch(AccessPathBase.ClassStatic)\n                    strongKeep(AccessPathBase.ClassStatic, p.path).forEach { edge(it) }\n                }.build()))\n                else -> listOf(lowerCleaner(Cleaner(p.base, node(p.path),\n                    CleanReach.AT_AND_BELOW, mark = null), types,\n                    actionId?.let { TemporaryKey(it) }))\n            }\n        }\n        else -> emptyList()\n    }\n\n    /** Named nonstatic terminal fields use a typed field-value temporary. */\n    fun lowerCleaner(cl: Cleaner, types: PositionTypeResolver, temporaryKey: TemporaryKey? = null): CleanStep {\n        val path = cl.path?.toList().orEmpty()\n        if (cl.base == AccessPathBase.ClassStatic || path.isEmpty() || !path.last().isFieldAccessor())\n            return CleanStep.Clean(cl)\n        val baseType = types.resolve(PositionAccess.Simple(cl.base)) as? JIRType\n        val (baseFilter, valueFilter) = typeFilters.forField(baseType, path)\n        return fieldCleanStep(cl.base, path, cl.reach, cl.mark, baseFilter = baseFilter, valueFilter = valueFilter,\n            temporaryKey = temporaryKey)\n    }\n"
+        }
+      ]
+    }
+  ],
+  "formalPreparation": {
+    "model": "RootExactCleanerGap.lean",
+    "checker": "check.py",
+    "manifest": "manifest.json"
+  },
+  "scope": "Direct selected root EXACT cleaner, FULL, empty E, source+sink depth1, legal initialized Box graph, one helper. No loop, no field lowering substitution, no missing NORMAL provider assumption.",
+  "nativePassConditionAudit": {
+    "baseline": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+    "sameCurrentAndBaseline": true,
+    "snippetSha256": "79c8d12a81660012eea81c29bbe321771aa2ef91c4247020f6c6e2a67518198b",
+    "text": " MicroEdgeBuilder().apply {\n        val supplied = forms.rules.passTroughRulesForMethod(callee, s, fact = null)\n        val valid = supplied.filter(forms::valid)\n        val defaultOffset = if (supplied is org.opentaint.dataflow.configuration.jvm.SpecializedRules<*> ||\n            valid.any { it.specialization != null }) supplied.originalRuleCount() else valid.size\n        val rules = valid.mapIndexed { ordinal, rule ->\n            Triple(rule, rewriter.rewrite(rule.condition), true to rule.ruleOrdinal(ordinal))\n        } +\n            defaultGetModel?.defaultPropagationRules(callee).orEmpty().filter { forms.valid(it.rule) }\n                .mapIndexed { ordinal, rule -> Triple(rule.rule, rule.condition, false to (defaultOffset + ordinal)) }\n        val read = LinkedHashSet<AccessPathBase>()\n        val written = LinkedHashSet<AccessPathBase>()\n        for (item in rules) {\n            val (rule, cond, identity) = item\n            val (ofRuleSet, ruleOrdinal) = identity\n            if (cond.isFalse) continue\n            if (!cond.isTrue)\n                forms.errors.applied(rule, \"pass rule with a mark literal (interpreter.md \u00a74.2, D24): applied without it\")\n            for ((actionOrdinal, a) in rule.actionsAfter.withIndex()) {\n                val actionId = ActionId(occurrence(RuleKind.PASS_THROUGH, ruleOrdinal),\n                    ActionRole.PASS_THROUGH, rule.actionOrdinal(actionOrdinal))\n                val (from, to) = forms.pass(this, rule, a, OperationId(formKey, action = actionId)) ?: continue\n                read += from\n                written += to\n                if (ofRuleSet) passReads += from\n            }\n        }\n        fun declared(base: AccessPathBase) = filter(types.resolve(PositionAccess.Simple(base)) as? JIRType)\n        read.forEach { operandFilter(it, declared(it)) }\n        written.forEach { resultFilter(it, declared(it)) }\n    }.buildStage()\n\n"
+  },
+  "nativeAuditSourceHashes": [
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRCallPlanBuilder.kt",
+      "sha256": "58eefab7cfe915f02676edea716909c9c52fadc093418993cb699ed4f5bb4362"
+    },
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRRuleForms.kt",
+      "sha256": "ea7b00d4c50ba407771b8ebed85beb21d32ab5fde3f7bec791566f45b265edd6"
+    },
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/SourceRuleOccurrence.kt",
+      "sha256": "1d57b46d521f202f4ec8876a14411f4dccd3777f609e756380234c0b3466edb5"
+    },
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodLocalServices.kt",
+      "sha256": "369d98deb10313dcb1696fef98c17dc83c301e6a81620473787389614426feab"
+    },
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/MicroEdge.kt",
+      "sha256": "130660434dea0ca22f743ddfb6a859d2d066ce51efc8af041391abfba47d6a9c"
+    }
+  ],
+  "typedZeroNativeGeometryAudit": [
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Reference.kt",
+      "baseline": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "sha256": "c4a2547aeb7e03d2daf13bc8fe811b3a4bc8026d74bd162a6cd3f06a9bbc90f0",
+      "ranges": [
+        {
+          "first": 272,
+          "last": 291,
+          "text": "    if (to.tail == Tail.STAR && r.isNotEmpty() && !edge.exclusion.admits(r)) return null\n    return when (to.tail) {\n        Tail.STAR -> when {\n            r.isNotEmpty() -> Shape(to.path + r, c.fact.tail, c.exclusion, demand = false)   // keeps Ec (W8)\n            c.fact.tail == Tail.EXACT -> Shape(to.path, Tail.EXACT,\n                if (c.fact.mark is MarkSlot.Star) c.exclusion.union(edge.exclusion) else ExclusionSet.Empty, false)\n            c.fact.tail == Tail.ANY -> Shape(to.path, Tail.ANY, ExclusionSet.Empty, demand = true)   // W6\n            else -> Shape(to.path, c.fact.tail, c.exclusion.union(edge.exclusion), false)  // `STAR/Ec`, or the exclusion\n        }                                                                                 // edge on `[any-taint]/Ec` (W8)\n        Tail.ANY -> Shape(to.path, Tail.ANY, ExclusionSet.Empty, demand = true)               // W6: a may\n        Tail.ANY_TAINT, Tail.EXACT -> Shape(to.path, to.tail,                                  // a must, or `$`\n            if (to.tail == Tail.ANY_TAINT) edge.toExclusion else ExclusionSet.Empty,           // Et (W8)\n            demand = false)        // W2 and the concrete premise gate reject STAR input; geometry still precedes that gate\n    }\n}\n\nprivate fun PathEdge.isExcludedIdentityKeep(): Boolean =\n    from.base == to.base && from.path == to.path && from.tail == Tail.STAR &&\n        to.tail == Tail.STAR && exclusion != ExclusionSet.Empty\n\n"
+        },
+        {
+          "first": 352,
+          "last": 378,
+          "text": "                return EdgeOutcome.Request(premiseMark.mark)\n            }\n        }\n    }\n    val mark = compose(edge.to.mark, c.fact.mark) ?: return EdgeOutcome.None  // step 5\n    val cover = run1 && shape.exclusion != ExclusionSet.Empty\n    return EdgeOutcome.Fact(normalize(PathFact(edge.to.base, shape.path, shape.tail, mark),\n        if (cover) ExclusionSet.Empty else shape.exclusion, c.demand || edgeDemand || shape.demand || cover))\n}\n\nfun compose(to: MarkSlot, c: MarkSlot): MarkSlot? = when (to) {\n    is MarkSlot.Concrete -> to\n    is MarkSlot.Star -> when (c) {\n        is MarkSlot.Star -> MarkSlot.Star(to.excluded + c.excluded)\n        is MarkSlot.Concrete -> if (c.mark in to.excluded) null else c\n    }\n}\n\nfun normalize(f: PathFact, exclusion: ExclusionSet, demand: Boolean): Conclusion = when {\n    demand && f.mark is MarkSlot.Star && (f.tail == Tail.EXACT || f.tail == Tail.ANY_TAINT) ->\n        Conclusion(f.copy(tail = Tail.ANY), ExclusionSet.Empty, demand = true)\n    f.tail == Tail.ANY -> Conclusion(f, ExclusionSet.Empty, demand = true)                                  // W6\n    f.tail == Tail.ANY_TAINT -> {\n        Conclusion(f, exclusion, demand)\n    }\n    else -> Conclusion(f, if (f.tail == Tail.EXACT && f.mark is MarkSlot.Concrete) ExclusionSet.Empty else exclusion, demand)\n}\n"
+        }
+      ]
+    },
+    {
+      "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApManager.kt",
+      "baseline": "52829d5890ec3b3145cc996a1d8162d85cb8ceda",
+      "sha256": "d8a575de8fc4f65d7d589f82784e1614a1728f6284b6865e055749a02b8b02b0",
+      "ranges": [
+        {
+          "first": 163,
+          "last": 170,
+          "text": "    /** Build one normalized typed leaf, including exact and uniform FLOW query shapes. */\n    fun factsOf(f: PathFact, exclusion: ExclusionSet, layer: Layer): Facts {\n        if (f.base == AccessPathBase.Zero) {\n            check(f.path.isEmpty() && f.tail == Tail.EXACT && exclusion == ExclusionSet.Empty &&\n                f.mark == MarkSlot.Concrete(TaintMark.ZERO)) { \"The zero base has only the canonical zero fact\" }\n            return Reach.of(layer)\n        }\n        val c = normalize(f, exclusion, layer == Layer.DEMAND)\n"
+        }
+      ]
+    }
+  ],
+  "typedZeroQualification": "Borrowed raw-model terminal differs. Local adapter is typed-Zero-only. Whole native matching/source/port correspondence remains open."
+}
