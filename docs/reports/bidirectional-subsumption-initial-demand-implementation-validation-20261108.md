@@ -1,12 +1,14 @@
-# Subsumption and STAR-only admission: implementation validation
+# Subsumption and restricted admission without ANY premises: validation
 
-8 November 2026. State: **NATIVE_CHECKS_PASS / PROJECT_CAMPAIGN_PENDING**.
+8 November 2026. State: **NATIVE_CHECKS_PASS / PROJECT_ACCEPTANCE_FAIL**.
 
 The selected implementation uses the pinned `52829d5890ec3b3145cc996a1d8162d85cb8ceda`
 core. It is in the isolated `task/subsumption-initial-demand-20261108` branch.
 The original worktree and withdrawn STAR_OR_ANY prototype remain unchanged.
-No new project run has started. Latest reached, engine-complete, committed
-and accepted project iterations are **none** for this runtime.
+The final campaign measures runtime 334234c24. Latest reached / committed /
+accepted: OWASP run-5 / run-5 / run-5; Conductor run-14 / run-13 / run-13;
+Thingsboard run-2 / run-1 / run-1; Stirling run-52 / run-51 / run-51.
+See the [final report](bidirectional-subsumption-initial-demand-performance-20261108.md).
 
 ## Selected changes
 
@@ -36,7 +38,7 @@ The constructive package passes **1,245 component declarations**. Its state
 is `PASS_LOCAL_COMPONENTS_ONLY`; `allPrincipalProgramsProved=false`. It does
 not prove the full Kotlin analyzer or universal convergence.
 
-The final native command passes **2,507 common-core tests and 461 JVM tests**,
+The final native command passes **2,510 common-core tests and 461 JVM tests**,
 with zero failures, errors or skips:
 
 ```bash
@@ -73,7 +75,8 @@ limitation. FULL is the project acceptance mode. The GROUP F76 check keeps
 its strict finding/exclusion assertions and checks raw admission provenance
 with an independent bound FULL-mark witness.
 
-Project quality, timing, CPU/allocation profiles, memory evidence and the
-next iteration proposal remain pending. Reuse the fixed f945 reports. Run
-only OWASP, Conductor, Thingsboard and Stirling-PDF, with the saved FULL/16 GiB
-configuration and budgets, through `runProjectAnalyzer`.
+Project measurement and profile review are complete. Three commands time out;
+four strict baseline identities remain missing. No OOM occurs. The final
+report and linked next proposal record the evidence and unresolved traces.
+The campaign reused f945 and ran only OWASP, Conductor, Thingsboard and
+Stirling-PDF with the saved FULL/16 GiB settings through `runProjectAnalyzer`.

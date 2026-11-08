@@ -8,7 +8,7 @@ old ANY-only handoff assertion. Conductor reached and engine-completed
     IllegalStateException:
     A restricted FLOW demand result must be ANY with empty field exclusions
 
-OWASP completed and accepted **run-5**, with 4,112 reported identities.
+OWASP completed and accepted **run-5**, with 4,112 reported entries.
 Its initial run-1 engine time was 84.796 seconds. Exact final quality and
 performance comparisons use the repaired runtime. Thingsboard was stopped
 by the owner when the Conductor error was found. Stirling-PDF did not start.
@@ -47,6 +47,8 @@ They do not prove the complete native analyzer or universal convergence.
 
 The initial attempt metadata and error are retained under the campaign
 directory. All owned initial-attempt processes were verified stopped.
-The repaired runtime must be committed, packaged and measured again on all
-four fixed FULL/16 GiB configurations. Latest project iterations for the
-repaired runtime are **none** until those commands start.
+The repaired runtime was committed, packaged and measured on all four fixed
+FULL/16 GiB configurations. Latest reached / committed / accepted: OWASP
+run-5 / run-5 / run-5; Conductor run-14 / run-13 / run-13; Thingsboard
+run-2 / run-1 / run-1; Stirling run-52 / run-51 / run-51. See the
+[final report](bidirectional-subsumption-initial-demand-performance-20261108.md).

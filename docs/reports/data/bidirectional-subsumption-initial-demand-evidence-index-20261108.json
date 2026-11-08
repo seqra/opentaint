@@ -1,0 +1,113 @@
+{
+  "schema": "portable-evidence-index-v1",
+  "runtimeRevision": "334234c24e9008f4a2614b8213b8b2e73b6ba9e1",
+  "coreTree": "8b38a03586138acbbf5aaadd94b5fb301d6c9cad",
+  "generator": {
+    "path": "/drive-testcomp/opentaint-go-rules/subsumption-initial-demand-20261108/analysis/build_portable_evidence.py",
+    "bytes": 11290,
+    "sha256": "3572adb9cff417b307d41d218d69d856cb0a5e905cbfc2d921036d37357f1778"
+  },
+  "sourceArtifacts": {
+    "performance-quality.json": {
+      "path": "/drive-testcomp/opentaint-go-rules/subsumption-initial-demand-20261108/handoff-fixed/analysis/performance-quality.json",
+      "bytes": 14531651,
+      "sha256": "d512f74b90179b5acf73a665b8a3c281b57b1669a025840e3e97cc97711e88dc"
+    },
+    "final-work-counters.json": {
+      "path": "/drive-testcomp/opentaint-go-rules/subsumption-initial-demand-20261108/handoff-fixed/analysis/final-work-counters.json",
+      "bytes": 132590714,
+      "sha256": "c30b4c63019af54858a950718af5b67c11af4625076c20c1937f08ad5962d885"
+    },
+    "final-reader-independent-review.json": {
+      "path": "/drive-testcomp/opentaint-go-rules/subsumption-initial-demand-20261108/handoff-fixed/analysis/final-reader-independent-review.json",
+      "bytes": 22410,
+      "sha256": "e92580efe3ea65e30f24006d88ca469b039e8d41879d6b6a78129026568e13e9"
+    },
+    "stirling-xss-return-coordinate-audit.json": {
+      "path": "/drive-testcomp/opentaint-go-rules/subsumption-initial-demand-20261108/handoff-fixed/analysis/stirling-xss-return-coordinate-audit.json",
+      "bytes": 114702,
+      "sha256": "40ac8db3b9d2d59e13d936dde927ea207139db93a4bba36dc481da6abcde9f88"
+    }
+  },
+  "artifacts": [
+    {
+      "file": "bidirectional-subsumption-initial-demand-quality-20261108.json",
+      "bytes": 5096242,
+      "sha256": "82f07cd2efcfa29b76f83c994f1814d4333ebd229046c19acda2e4b638381044"
+    },
+    {
+      "file": "bidirectional-subsumption-initial-demand-work-20261108.json",
+      "bytes": 8298341,
+      "sha256": "705930f97a749129ef80a8fb66ab42d21d562cf21472a2eb1d9219953e5e31ce"
+    },
+    {
+      "file": "bidirectional-subsumption-c5-samples-20261108.json",
+      "bytes": 2491451,
+      "sha256": "8b4386699cc5c90dcb1d354c4663846a6f888674d673ba0f7a25aa46983b8970"
+    },
+    {
+      "file": "bidirectional-subsumption-initial-demand-principal-evidence-20261108.json",
+      "bytes": 2045276,
+      "sha256": "7669374adffe1f18c7251c0740105618f71e501a3beb3fbfe9e3ffc39b739a33"
+    }
+  ],
+  "preservedTally": {
+    "runs": 73,
+    "aggregateRecords": 1390,
+    "loopOwnerRows": 1274,
+    "bodyNumericRows": 1192,
+    "nativeC5Samples": 4237,
+    "omittedBodySampleRows": 64248
+  },
+  "omissions": {
+    "OWASP": {
+      "omittedFullBodySampleRingRows": 5368,
+      "scope": "Coordinates used in principal explanations remain embedded there; all native C5 sample coordinates remain in the C5 file. Unselected body rings remain only in the content-pinned external full counter artifact."
+    },
+    "conductor": {
+      "omittedFullBodySampleRingRows": 14433,
+      "scope": "Coordinates used in principal explanations remain embedded there; all native C5 sample coordinates remain in the C5 file. Unselected body rings remain only in the content-pinned external full counter artifact."
+    },
+    "thingsboard": {
+      "omittedFullBodySampleRingRows": 2564,
+      "scope": "Coordinates used in principal explanations remain embedded there; all native C5 sample coordinates remain in the C5 file. Unselected body rings remain only in the content-pinned external full counter artifact."
+    },
+    "Stirling-PDF": {
+      "omittedFullBodySampleRingRows": 41883,
+      "scope": "Coordinates used in principal explanations remain embedded there; all native C5 sample coordinates remain in the C5 file. Unselected body rings remain only in the content-pinned external full counter artifact."
+    }
+  },
+  "portability": "All exact identity sets, current concise locations, iteration/control/timing data, native contracts, aggregate counters, loop counters, numeric body histograms, C5 samples and selected principal evidence are embedded. External paths identify provenance, not a requirement to resolve reported numeric evidence.",
+  "allCommittedDataFiles": [
+    {
+      "name": "bidirectional-subsumption-c5-samples-20261108.json",
+      "bytes": 2491451,
+      "sha256": "8b4386699cc5c90dcb1d354c4663846a6f888674d673ba0f7a25aa46983b8970"
+    },
+    {
+      "name": "bidirectional-subsumption-coverage-causes-20261108.json",
+      "bytes": 114806,
+      "sha256": "3c699f94e00daa189e73155846e5cd072e3d8a6495ed21c7e1f8cd616e6d49fb"
+    },
+    {
+      "name": "bidirectional-subsumption-initial-demand-principal-evidence-20261108.json",
+      "bytes": 2045276,
+      "sha256": "7669374adffe1f18c7251c0740105618f71e501a3beb3fbfe9e3ffc39b739a33"
+    },
+    {
+      "name": "bidirectional-subsumption-initial-demand-quality-20261108.json",
+      "bytes": 5096242,
+      "sha256": "82f07cd2efcfa29b76f83c994f1814d4333ebd229046c19acda2e4b638381044"
+    },
+    {
+      "name": "bidirectional-subsumption-initial-demand-work-20261108.json",
+      "bytes": 8298341,
+      "sha256": "705930f97a749129ef80a8fb66ab42d21d562cf21472a2eb1d9219953e5e31ce"
+    },
+    {
+      "name": "bidirectional-subsumption-profiles-20261108.json",
+      "bytes": 7511784,
+      "sha256": "3e72ead1627145bb2eb4ea0760c5042dc281c5ada1e6d5fb58b6e75aa2e5a4a0"
+    }
+  ]
+}
