@@ -31,17 +31,3 @@ check for spec creation. Proofs of a changed model do not authorize a new
 semantic contract. If implementation requires an unselected major change,
 highlight it and obtain the intended behavior before implementing it, or
 redesign within the selected scope. Do not add it silently to close a gap.
-
-## Canonicalization and refinement
-
-A proof of fact-set inclusion is not a proof of analyzer progress. Check
-whether represented positions select initial facts, NORMAL/DEMAND layers,
-native summary reads, or loop observations. Prove that their combined effect
-keeps the required refinement paths and source/sink observations. Cover one
-packet and both arrival orders in native checks.
-
-Literal initial sets and callback counts can differ under the selected
-contract. If an initial disappears, prove that its required effect is
-redundant or that another route preserves it through the next iteration.
-State any remaining proof limit. Equal stored denotations alone do not close
-this obligation.
