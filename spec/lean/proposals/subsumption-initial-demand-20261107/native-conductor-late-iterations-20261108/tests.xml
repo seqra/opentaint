@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="org.opentaint.dataflow.bidi.ConductorUniformLateIterationsTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-08T11:20:40" hostname="dev-1" time="0.094">
+  <properties/>
+  <testcase name="run5 opposite normal replay transports uniform T and run4 reaches its real source()" classname="org.opentaint.dataflow.bidi.ConductorUniformLateIterationsTest" time="0.082"/>
+  <testcase name="run5 regenerated child demand admits MUST and keeps an additional capped demand return()" classname="org.opentaint.dataflow.bidi.ConductorUniformLateIterationsTest" time="0.007"/>
+  <testcase name="run4 exact body generates both precise normal and shorter demand results()" classname="org.opentaint.dataflow.bidi.ConductorUniformLateIterationsTest" time="0.002"/>
+  <system-out><![CDATA[F5_RETURN_ROWS [Row(initial=Pattern(fact=PathFact(base=arg(0), path=[0], tail=ANY_TAINT, mark=Star(excluded={})), exclusion=Empty), output=Pattern(fact=PathFact(base=ret, path=[11, 8], tail=ANY_TAINT, mark=Star(excluded={})), exclusion=Empty), layer=NORMAL), Row(initial=Pattern(fact=PathFact(base=arg(0), path=[0], tail=ANY_TAINT, mark=Star(excluded={})), exclusion=Empty), output=Pattern(fact=PathFact(base=ret, path=[11, 8, 12], tail=ANY, mark=Star(excluded={})), exclusion=Empty), layer=DEMAND)]
+B4_ARG_ROWS [Row(initial=Pattern(fact=PathFact(base=ret, path=[11, 8], tail=STAR, mark=Star(excluded={})), exclusion=Empty), output=Pattern(fact=PathFact(base=arg(0), path=[0, 4], tail=STAR, mark=Star(excluded={})), exclusion=Empty), layer=NORMAL), Row(initial=Pattern(fact=PathFact(base=ret, path=[11, 8], tail=STAR, mark=Star(excluded={})), exclusion=Empty), output=Pattern(fact=PathFact(base=arg(0), path=[0], tail=ANY, mark=Star(excluded={})), exclusion=Empty), layer=DEMAND)]
+]]></system-out>
+  <system-err><![CDATA[SLF4J: No SLF4J providers were found.
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See https://www.slf4j.org/codes.html#noProviders for further details.
+]]></system-err>
+</testsuite>

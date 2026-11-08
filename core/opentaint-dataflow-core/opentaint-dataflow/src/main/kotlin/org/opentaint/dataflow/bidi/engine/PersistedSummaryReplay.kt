@@ -18,7 +18,7 @@ internal fun replayPersistedSummaries(
     val cancellation = ops.manager.cancellation
     statistics?.persistedReplayStarted()
     val seen = HashSet<Record>()
-    val seenViews = HashMap<RecordLeafView, Boolean>()
+    val seenViews = HashSet<Pair<RecordLeafView, Boolean>>()
     for (leaf in ops.leaves(part.added)) {
         cancellation.checkpoint()
         for (record in records.byEntry(part.callee, leaf)) {
@@ -35,10 +35,8 @@ internal fun replayPersistedSummaries(
             if (record.direction == direction) continue
             record.forEachReversedAt(leaf) { view, nonSubsumable ->
                 cancellation.checkpoint()
-                val previous = seenViews[view]
-                if (previous == true || previous == false && !nonSubsumable) return@forEachReversedAt
-                seenViews[view] = previous == true || nonSubsumable
-                val added = ops.satisfying(part.added, view.premise, mode, record = true)
+                if (!seenViews.add(view to nonSubsumable)) return@forEachReversedAt
+                val added = ops.satisfying(part.added, view.premise, mode, record = true, role = SummaryReadRole.SAVED_OPPOSITE)
                     ?: return@forEachReversedAt
                 statistics?.persistedReplayMatched()
                 applier.applyRecordView(part.copy(added = added), view, nonSubsumable)

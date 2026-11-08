@@ -11,7 +11,7 @@ class FlowGroup(private val m: ApManager, private val interner: TrieInterner<Flo
     fun all(): Sequence<FlowTree> = trees[0].asSequence() + trees[1].asSequence()
 
     /** T4: return the new part, or the merged value when T2 changes an annotation. */
-    fun add(t: FlowTree): FlowTree? {
+    private fun insert(t: FlowTree): FlowTree? {
         val list = trees[t.layer.ordinal]
         var pending = t
         while (true) {
@@ -50,6 +50,105 @@ class FlowGroup(private val m: ApManager, private val interner: TrieInterner<Flo
         }
     }
 
+    fun add(t: FlowTree): FlowTree? = addAll(t).also {
+        check(it.size <= 1) { "Use addAll for multiple canonical FLOW headers" }
+    }.singleOrNull()
+
+    fun addAll(t: FlowTree): List<FlowTree> {
+        val list = trees[t.layer.ordinal]
+        val before = list.toList()
+        insert(t)
+        // Fill one complete immediate MUST branch at a time. Each promotion
+        // strictly reduces a finite exclusion; admitted headers are canonical.
+        while (true) {
+            val canonical = list.mapNotNull { row ->
+                subtractSubsumed(compactPacket(row),list.filter { it !== row })
+            }
+            list.clear(); list.addAll(canonical)
+            if (mergeMustOverlap(list)) continue
+            var promoted: FlowTree? = null
+            outer@ for (parent in list.toList()) {
+                if (parent.tail != Tail.ANY_TAINT) continue
+                val fields = (parent.exclusion as? ExclusionSet.Concrete)?.ids ?: continue
+                m.forEachLeafPosition(parent) { _, path ->
+                    if (promoted != null) return@forEachLeafPosition
+                    for (field in fields) {
+                        val full = list.any { child ->
+                            child.tail == Tail.ANY_TAINT && child.exclusion == ExclusionSet.Empty &&
+                                child.markExclusion.isSubsetOf(parent.markExclusion) &&
+                                child.root.walk(path + field) { _, _ -> m.cancellation.checkpoint() }
+                                    ?.leaf?.isEmpty == false
+                        }
+                        if (!full) continue
+                        val e = ExclusionSet.of(fields.filter { it != field }.toIntArray())
+                        val root = FlowAlgebra.prepend(m,m.path(path.asList()),FlowAlgebra.LEAF_NODE)
+                        val candidate = m.flowTree(parent.base,parent.layer,e,parent.markExclusion,root,parent.tail)
+                        if (subtractSubsumed(candidate,list) != null) { promoted = candidate; break }
+                    }
+                }
+                if (promoted != null) break@outer
+            }
+            if (promoted == null) break
+            insert(promoted!!)
+        }
+        // Prune old descendants too. This makes parent-first and child-first
+        // insertion expose the same current basis.
+        val canonical = list.mapNotNull { row ->
+            subtractSubsumed(compactPacket(row),list.filter { it !== row })
+        }
+        list.clear(); list.addAll(canonical)
+        return canonical.mapNotNull { row ->
+            var root: FlowNode? = row.root
+            for (old in before) {
+                if (old.groupKey == row.groupKey) root = root?.let {
+                    FlowAlgebra.minusNode(it,old.root,m.cancellation)
+                }
+            }
+            root?.let { row.withRoot(it) }
+        }
+    }
+
+    private fun mergeMustOverlap(list: MutableList<FlowTree>): Boolean {
+        for (i in list.indices) for (j in i+1 until list.size) {
+            val a = list[i]; val b = list[j]
+            if (a.tail != Tail.ANY_TAINT || b.tail != Tail.ANY_TAINT ||
+                a.exclusion == b.exclusion && a.markExclusion == b.markExclusion ||
+                a.exclusion != b.exclusion && a.markExclusion != b.markExclusion) continue
+            val diff = FlowAlgebra.minusNode(a.root,b.root,m.cancellation)
+            val common = if (diff == null) a.root else
+                FlowAlgebra.minusNode(a.root,diff,m.cancellation) ?: continue
+            val merged = m.flowTree(a.base,a.layer,a.exclusion.intersect(b.exclusion),
+                a.markExclusion.intersect(b.markExclusion),common,a.tail)
+            val ar = FlowAlgebra.minusNode(a.root,common,m.cancellation)
+            val br = FlowAlgebra.minusNode(b.root,common,m.cancellation)
+            if (br == null) list.removeAt(j) else list[j] = b.withRoot(br)
+            if (ar == null) list.removeAt(i) else list[i] = a.withRoot(ar)
+            insert(merged)
+            return true
+        }
+        return false
+    }
+
+    private fun compactPacket(row: FlowTree): FlowTree {
+        if (row.tail != Tail.ANY && row.tail != Tail.ANY_TAINT) return row
+        var root = row.root
+        FlowAlgebra.forEachLeafPosition(row.root,m.cancellation) { path ->
+            var node = row.root
+            var covered = false
+            for (field in path) {
+                if (!node.leaf.isEmpty && (row.tail == Tail.ANY || row.exclusion.admits(field))) {
+                    covered = true; break
+                }
+                node = checkNotNull(node.child(field))
+            }
+            if (covered) {
+                val at = FlowAlgebra.prepend(m,m.path(path.asList()),FlowAlgebra.LEAF_NODE)
+                root = checkNotNull(FlowAlgebra.minusNode(root,at,m.cancellation))
+            }
+        }
+        return if (root === row.root) row else row.withRoot(root)
+    }
+
     private fun subtractSubsumed(t: FlowTree, others: List<FlowTree>): FlowTree? {
         var root = t.root
         for (stored in others) {
@@ -61,11 +160,12 @@ class FlowGroup(private val m: ApManager, private val interner: TrieInterner<Flo
                 Tail.EXACT -> t.tail == Tail.EXACT && stored.exclusion.isSubsetOf(t.exclusion)
                 Tail.ANY_TAINT -> t.tail == Tail.ANY_TAINT && stored.exclusion.isSubsetOf(t.exclusion)
             }
-            val belowOk = marks && stored.tail == Tail.ANY
+            val belowOk = marks && (stored.tail == Tail.ANY ||
+                stored.tail == Tail.ANY_TAINT && t.tail == Tail.ANY_TAINT)
             root = FlowAlgebra.subtract(root, stored.root, FlowLeaf.NONE,
                 at = { if (atOk) it else FlowLeaf.NONE },
                 below = { if (belowOk) it else FlowLeaf.NONE },
-                cancellation = m.cancellation) ?: return null
+                admits = stored.exclusion::admits, cancellation = m.cancellation) ?: return null
         }
         return if (root === t.root) t else t.withRoot(root)
     }
@@ -85,107 +185,176 @@ private fun admittedTree(
 
 /** TAINT values for one base. STAR and must spans keep distinct suffix semantics. */
 class TaintGroup(private val m: ApManager, private val interner: TrieInterner<TaintLeaves>) {
-    private val trees = arrayOf(ArrayList<TaintTree>(1), ArrayList<TaintTree>(1))
+    private val trees = Array(4) { ArrayList<TaintTree>(1) }
+    private fun lane(t: TaintTree) = t.layer.ordinal * 2 + if (t.protectionClass()) 1 else 0
+    fun all(): Sequence<TaintTree> = trees.asSequence().flatMap { it.asSequence() }
 
-    fun all(): Sequence<TaintTree> = trees[0].asSequence() + trees[1].asSequence()
-
-    /** Restore one complete current typed header for a temporary admission
-     * adapter. Do not re-admit the snapshot: that would compact old STAR rows
-     * merely because a later ANY row is already present. No history is kept. */
     internal fun restoreCurrent(t: TaintTree) {
-        m.cancellation.checkpoint()
-        val list = trees[t.layer.ordinal]
+        val list = trees[lane(t)]
         check(list.none { it.anyTail == t.anyTail && it.exclusion == t.exclusion })
         list += t
     }
 
-    fun add(t: TaintTree): TaintTree? {
-        val alg = m.taintAlg
-        val list = trees[t.layer.ordinal]
-        var pending = t
+    /** Convenience for a scalar/header offer. Runtime owners use the complete batch API. */
+    fun add(t: TaintTree): TaintTree? = addAll(t).let { result ->
+        check(result.size <= 1) { "Canonical TAINT admission produced several headers; use addAll" }
+        result.singleOrNull()
+    }
+
+    fun addAll(t: TaintTree): List<TaintTree> {
+        m.cancellation.checkpoint()
+        val result = ArrayList<TaintTree>()
+        for (part in t.membershipPackets(m)) {
+            val packet = part as TaintTree
+            val authority = trees[lane(packet)]
+            val before = authority.toList()
+            val list = authority.toMutableList()
+            if (!mergeHeader(list, packet)) continue
+            canonicalize(list)
+            authority.clear()
+            authority.addAll(list)
+            for (retained in list) {
+                val old = before.firstOrNull { sameHeader(it, retained) }
+                val fresh = if (old == null) retained.root else
+                    m.taintAlg.minusNode(retained.root, old.root, m.cancellation) ?: continue
+                result += packet(retained, fresh)
+            }
+        }
+        return result
+    }
+
+    private fun sameHeader(a: TaintTree, b: TaintTree) =
+        a.anyTail == b.anyTail && a.exclusion == b.exclusion
+
+    private fun packet(header: TaintTree, root: TaintNode,
+                       exclusion: ExclusionSet = header.exclusion): TaintTree {
+        if (root === header.root && exclusion == header.exclusion) return header
+        val owned = interner.internIfRequired(root)
+        return admittedTree(m, header, owned,
+            if (header.protectionClass()) owned else null, exclusion)
+    }
+
+    private fun mergeHeader(list: MutableList<TaintTree>, value: TaintTree): Boolean {
+        val index = list.indexOfFirst { sameHeader(it, value) }
+        if (index < 0) list += value else {
+            val old = list[index]
+            val merged = m.taintAlg.mergeAdd(old.root, value.root, m.cancellation)
+            if (merged === old.root || merged == old.root) return false
+            list[index] = packet(old, merged)
+        }
+        return true
+    }
+
+    private fun removeCoordinates(list: MutableList<TaintTree>, index: Int, mask: TaintNode) {
+        val old = list[index]
+        val remaining = m.taintAlg.minusNode(old.root, mask, m.cancellation)
+        if (remaining == null) list.removeAt(index) else list[index] = packet(old, remaining)
+    }
+
+    private fun canonicalize(list: MutableList<TaintTree>) {
         while (true) {
             m.cancellation.checkpoint()
-            val sameKey = list.indexOfFirst {
-                m.cancellation.checkpoint()
-                it.anyTail == pending.anyTail && it.exclusion == pending.exclusion
-            }
-            if (sameKey < 0) {
-                val k = list.indexOfFirst {
-                    m.cancellation.checkpoint()
-                    it.anyTail == pending.anyTail && it.root == pending.root
-                }
-                if (k >= 0) {
-                    val stored = list[k]
-                    val exclusion = stored.exclusion.intersect(pending.exclusion)
-                    // Equal ordinary content can still carry a new protected membership.
-                    if (exclusion == stored.exclusion) {
-                        val rest = subtractSubsumed(pending, list) ?: return null
-                        val protection = mergeProtection(stored.nonSubsumable, rest.nonSubsumable)
-                        val root = alg.mergeAdd(stored.root, rest.root, m.cancellation)
-                        list[k] = admittedTree(m, stored, interner.internIfRequired(root), protection)
-                        return rest
-                    }
-                    list.removeAt(k)
-                    pending = admittedTree(m, pending, stored.root,
-                        mergeProtection(stored.nonSubsumable, pending.nonSubsumable), exclusion)
-                    continue
+            if (mergeEqualHeaders(list) || mergeSpanExclusions(list) || fillMustHole(list)) continue
+            var changed = false
+            for (i in list.indices) {
+                val value = list[i]
+                if (value.anyTail == Tail.ANY || value.anyTail == Tail.ANY_TAINT) {
+                    val may = value.anyTail == Tail.ANY
+                    val compact = m.taintAlg.subtract(value.root, value.root, TaintLeaves.EMPTY,
+                        at = { leaf -> if (may) m.taintLeaves(leaf.any, MarkSet.EMPTY) else TaintLeaves.EMPTY },
+                        below = { leaf -> m.taintLeaves(if (may) leaf.any else MarkSet.EMPTY, leaf.any) },
+                        admits = value.exclusion::admits, cancellation = m.cancellation)
+                    checkNotNull(compact) { "An ancestor-canonical packet retains its first leaf" }
+                    if (compact != value.root) { list[i] = packet(value, compact); changed = true }
                 }
             }
-
-            val rest = subtractSubsumed(pending, list) ?: return null
-            // Subtraction can remove the last must leaf. Its canonical key is then Empty E.
-            val i = list.indexOfFirst {
-                m.cancellation.checkpoint()
-                it.anyTail == rest.anyTail && it.exclusion == rest.exclusion
+            for (i in list.indices.reversed()) {
+                val old = list[i]
+                val kept = subtractSubsumed(old, list.filterIndexed { index, _ -> index != i })
+                if (kept == null) { list.removeAt(i); changed = true }
+                else if (kept.root != old.root) { list[i] = kept; changed = true }
             }
-            if (i < 0) {
-                list += admittedTree(m, rest, interner.internIfRequired(rest.root), rest.nonSubsumable)
-                return rest
-            }
-            val stored = list[i]
-            val (merged, delta) = alg.mergeAddDelta(stored.root, rest.root, m.cancellation)
-            val protection = mergeProtection(stored.nonSubsumable, rest.nonSubsumable)
-            val deltaRoot = mergeProtection(delta, rest.nonSubsumable) ?: return null
-            list[i] = admittedTree(m, stored, interner.internIfRequired(merged), protection)
-            return admittedTree(m, rest, deltaRoot, rest.nonSubsumable)
+            if (!changed) return
         }
+    }
+
+    private fun mergeEqualHeaders(list: MutableList<TaintTree>): Boolean {
+        for (i in list.indices) for (j in i + 1 until list.size) {
+            if (!sameHeader(list[i], list[j])) continue
+            list[i] = packet(list[i], m.taintAlg.mergeAdd(list[i].root, list[j].root, m.cancellation))
+            list.removeAt(j)
+            return true
+        }
+        return false
+    }
+
+    /** Compare mark masks at equal coordinates; do not enumerate runtime marks. */
+    private fun mergeSpanExclusions(list: MutableList<TaintTree>): Boolean {
+        for (i in list.indices) {
+            val a = list[i]
+            if ((a.anyTail != Tail.ANY_TAINT && a.anyTail != Tail.STAR) || !a.root.hasAny) continue
+            for (j in i + 1 until list.size) {
+                val b = list[j]
+                if (b.anyTail != a.anyTail || a.exclusion == b.exclusion) continue
+                val overlap = intersectTaintMask(a.root, b.root, m.cancellation)?.let {
+                    m.taintAlg.mapLeaves(it, m.cancellation) { leaf -> m.taintLeaves(MarkSet.EMPTY, leaf.any) }
+                } ?: continue
+                val merged = packet(a, overlap, a.exclusion.intersect(b.exclusion))
+                // Remove common coordinates first; the replacement owns their union.
+                removeCoordinates(list, j, overlap)
+                removeCoordinates(list, i, overlap)
+                mergeHeader(list, merged)
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun fillMustHole(list: MutableList<TaintTree>): Boolean {
+        for (i in list.indices) {
+            val parent = list[i]
+            val excluded = parent.exclusion as? ExclusionSet.Concrete ?: continue
+            if (parent.anyTail != Tail.ANY_TAINT) continue
+            val child = list.firstOrNull { it.anyTail == Tail.ANY_TAINT && it.exclusion == ExclusionSet.Empty }
+                ?: continue
+            var fill: Pair<TaintNode, Int>? = null
+            m.taintAlg.forEachLeaf(parent.root, EMPTY_PATH, m.cancellation) { path, leaf ->
+                if (fill == null && !leaf.any.isEmpty) for (field in excluded.data) {
+                    val childLeaf = child.root.walk(path + field)?.leaf ?: continue
+                    val marks = leaf.any intersect childLeaf.any
+                    if (!marks.isEmpty) {
+                        fill = m.taintAlg.prepend(m, m.path(path),
+                            m.taintAlg.leafNode(m.taintLeaves(MarkSet.EMPTY, marks))) to field
+                        break
+                    }
+                }
+            }
+            val (mask, field) = fill ?: continue
+            val merged = packet(parent, mask, ExclusionSet.of(excluded.data.filter { it != field }.toIntArray()))
+            removeCoordinates(list, i, mask)
+            mergeHeader(list, merged)
+            return true
+        }
+        return false
     }
 
     private fun subtractSubsumed(t: TaintTree, others: List<TaintTree>): TaintTree? {
-        val ordinary = subtract(t.root, t, others, protectedOnly = false)
-        // Ordinary ANY coverage cannot consume a fresh protected EXACT dependency.
-        val protection = t.nonSubsumable?.let { subtract(it, t, others, protectedOnly = true) }
-        val root = mergeProtection(ordinary, protection) ?: return null
-        if (root === t.root && protection === t.nonSubsumable) return t
-        return admittedTree(m, t, root, protection)
-    }
-
-    private fun mergeProtection(a: TaintNode?, b: TaintNode?): TaintNode? = when {
-        a == null -> b
-        b == null -> a
-        else -> m.taintAlg.mergeAdd(a, b, m.cancellation)
-    }
-
-    private fun subtract(root: TaintNode, t: TaintTree, others: List<TaintTree>,
-                         protectedOnly: Boolean): TaintNode? {
         val alg = m.taintAlg
-        var remaining = root
+        var remaining = t.root
         for (stored in others) {
             m.cancellation.checkpoint()
-            val storedRoot = if (protectedOnly) stored.nonSubsumable ?: continue else stored.root
-            val storedMay = stored.anyTail == Tail.ANY
-            val storedStar = stored.anyTail == Tail.STAR
-            val coversAny = storedMay || stored.anyTail == t.anyTail
-            val anyAt = coversAny && (storedMay || stored.exclusion.isSubsetOf(t.exclusion))
-            remaining = alg.subtract(remaining, storedRoot, TaintLeaves.EMPTY,
-                at = { alg.leaves(if (storedMay) it.exact + it.any else it.exact,
-                    if (anyAt) it.any else MarkSet.EMPTY) },
-                below = { alg.leaves(if (storedMay) it.any else MarkSet.EMPTY,
-                    if (coversAny && !storedStar) it.any else MarkSet.EMPTY) },
-                admits = stored.exclusion::admits,
-                cancellation = m.cancellation) ?: return null
+            val may = stored.anyTail == Tail.ANY
+            val star = stored.anyTail == Tail.STAR
+            val coversAny = may || stored.anyTail == t.anyTail
+            val atAny = coversAny && (may || stored.exclusion.isSubsetOf(t.exclusion))
+            remaining = alg.subtract(remaining, stored.root, TaintLeaves.EMPTY,
+                at = { alg.leaves(if (may) it.exact + it.any else it.exact,
+                    if (atAny) it.any else MarkSet.EMPTY) },
+                below = { alg.leaves(if (may) it.any else MarkSet.EMPTY,
+                    if (coversAny && !star) it.any else MarkSet.EMPTY) },
+                admits = stored.exclusion::admits, cancellation = m.cancellation) ?: return null
         }
-        return remaining
+        return if (remaining === t.root) t else packet(t, remaining)
     }
 }
 
@@ -194,6 +363,14 @@ class ConclusionGroup(private val m: ApManager, private val interners: StoreInte
     private val reach = BooleanArray(2)
     private val flow = HashMap<AccessPathBase, FlowGroup>(2)
     private val taint = HashMap<AccessPathBase, TaintGroup>(2)
+
+    fun addAll(f: Facts): List<Facts> = f.membershipPackets(m).flatMap {
+        when (it) {
+            is TaintTree -> taint.getOrPut(it.base) { TaintGroup(m, interners.taint) }.addAll(it)
+            is FlowTree -> flow.getOrPut(it.base) { FlowGroup(m, interners.flow) }.addAll(it)
+            is Reach -> listOfNotNull(add(it))
+        }
+    }
 
     fun add(f: Facts): Facts? {
         m.cancellation.checkpoint()

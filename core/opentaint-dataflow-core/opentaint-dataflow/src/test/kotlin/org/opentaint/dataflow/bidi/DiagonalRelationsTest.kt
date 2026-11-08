@@ -65,7 +65,8 @@ class DiagonalRelationsTest {
         assertEquals(setOf(listOf(g)), paths(delta))
         assertEquals(setOf(listOf(f), listOf(g)), stored(store, initial()))
         assertNull(store.add(initial(), facts(paths = listOf(listOf(f, h)))))
-        assertEquals(2, store.markMembershipCount)
+        assertEquals(1, store.markMembershipCount)
+        assertEquals(2, store.census().concreteOutputMemberships)
     }
 
     @Test
@@ -88,15 +89,16 @@ class DiagonalRelationsTest {
     }
 
     @Test
-    fun `a narrower protected ANY offer upgrades its existing containing leaf only`() {
+    fun `a narrower protected ANY offer retains its own class coordinate`() {
         val store = DiagonalRelations(m)
         store.add(initial(), facts(paths = listOf(listOf(f), listOf(g))))
         val child = facts(paths = listOf(listOf(f, h)))
         val delta = assertNotNull(store.add(initial(), child.withProtection(child.root)))
-        assertEquals(setOf(listOf(f)), paths(delta))
-        assertEquals(setOf(listOf(f)), flags(delta))
+        assertEquals(setOf(listOf(f, h)), paths(delta))
+        assertEquals(setOf(listOf(f, h)), flags(delta))
         assertNull(store.add(initial(), child.withProtection(child.root)))
-        assertEquals(setOf(listOf(f)), store.borrow(initial()).flatMap { flags(it).asSequence() }.toSet())
+        assertEquals(setOf(listOf(f, h)), store.borrow(initial()).flatMap { flags(it).asSequence() }.toSet())
+        assertTrue(store.borrow(initial()).any { it is TaintTree && it.nonSubsumable == null && listOf(f) in paths(it) })
     }
 
     @Test

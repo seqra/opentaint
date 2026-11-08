@@ -129,15 +129,17 @@ class Run1RequestMatchingTest {
         // Public JVM pass rules reject this class endpoint; no class request slot is invented.
     }
 
-    @Test fun `restricted abstract ANY demand does not reopen an unrefined STAR`() {
+    @Test fun `restricted abstract ANY demand admits the same STAR identity from STAR or MAY`() {
         val f = StoreFixtures(); val m = f.manager
         val cls = m.accessors.index(ClassStaticAccessor("Box")); val field = f.field("f")
         for (path in listOf(emptyList(),listOf(cls),listOf(cls,field))) {
             val demand = DemandPattern(f.pattern(STATIC,path,Tail.ANY,MarkSlot.STAR),null)
-            assertTrue(f.ops.emit(demand,f.fact(STATIC,path,Tail.STAR,MarkSlot.STAR)).isEmpty())
+            val fromStar=f.ops.emit(demand,f.fact(STATIC,path,Tail.STAR,MarkSlot.STAR)).single()
+            assertEquals(Tail.STAR,fromStar.tail)
             val initial=f.ops.emit(demand,f.fact(STATIC,path,Tail.ANY,MarkSlot.STAR,layer=Layer.DEMAND)).single()
-            assertEquals(Tail.ANY,initial.tail)
-            assertEquals(Layer.DEMAND,f.ops.startFact(initial).layer)
+            assertSame(fromStar,initial)
+            assertEquals(Tail.STAR,initial.tail)
+            assertEquals(Layer.NORMAL,f.ops.startFact(initial).layer)
         }
     }
 }

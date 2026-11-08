@@ -49,7 +49,7 @@ class RunSummaryStoreTest {
     }
 
     @Test fun `REACH and premise tail exclusion keys remain independent`(): Unit = with(v) {
-        val keys = listOf(m.zero, premise(), premise(tail = Tail.ANY), premise(tail = Tail.ANY_TAINT),
+        val keys = listOf(m.zero, premise(), premise(tail = Tail.STAR), premise(tail = Tail.ANY_TAINT),
             premise(tail = Tail.ANY_TAINT, e = ex(g)), premise(tail = Tail.ANY_TAINT, e = ex(h)))
         val store = RunSummaryStore(m)
         for (key in keys) for (layer in Layer.entries) {
@@ -114,9 +114,9 @@ class RunSummaryStoreTest {
             assertNotNull(store.addAdmitted(key, pack(general)))
             assertNull(store.addAdmitted(key, pack(specific)))
             assertNotNull(store.addAdmitted(key, pack(normal)))
-            // Existing TAINT storage retains an earlier exact sibling, but a
-            // newly offered exact sibling under ANY contributes no fresh delta.
-            val demand = if (broadFirst) setOf(general) else setOf(general, specific)
+            // Canonical MAY coverage removes an earlier covered child too.
+            // The final admitted authority is independent of arrival order.
+            val demand = setOf(general)
             assertEquals((demand + normal).map { key to it }.toSet(), observed(store.all()))
             assertEquals(demand.map { key to it }.toSet(), observed(store.demandEdges(Direction.FORWARD)))
         }

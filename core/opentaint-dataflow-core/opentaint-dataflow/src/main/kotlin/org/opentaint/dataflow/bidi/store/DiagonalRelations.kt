@@ -17,7 +17,9 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
         val base get() = scope.base
         val layer get() = scope.layer
     }
-    private class Masks(var marks: MarkSet, var protected: MarkSet)
+    private class Masks(var plain: MarkSet, var protected: MarkSet) {
+        val marks: MarkSet get() = plain + protected
+    }
     /** The common case reuses the geometry map object. Siblings allocate no
      * second index, per-scope map or per-header entry; they stay in this scope. */
     private class Rows(val tail: Tail, val exclusion: ExclusionSet) : LinkedHashMap<FlowNode, Masks>() {
@@ -81,7 +83,7 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
 
     val isEmpty: Boolean get() = headers.isEmpty()
     val rowCount: Int get() = allRows().sumOf { it.second.size }
-    val markMembershipCount: Int get() = allRows().sumOf { (_, rows) -> rows.values.sumOf { it.marks.size } }
+    val markMembershipCount: Int get() = allRows().sumOf { (_, rows) -> rows.values.sumOf { it.plain.size + it.protected.size } }
 
     /** Scan exact masks without constructing their scalar decoded trees. */
     fun census(): RelationCensus = census(RelationCensusCounter(m.cancellation))
@@ -97,10 +99,10 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
                 m.cancellation.checkpoint()
                 val outputs = counter.flowAnnotations(shape)
                 result += RelationCensus(
-                    concreteOutputMemberships = Math.multiplyExact(outputs, masks.marks.size.toLong()),
+                    concreteOutputMemberships = Math.multiplyExact(outputs, (masks.plain.size + masks.protected.size).toLong()),
                     protectedOutputMemberships = Math.multiplyExact(outputs, masks.protected.size.toLong()),
                     diagonalGeometryRows = 1,
-                    diagonalMarkRows = masks.marks.size.toLong(),
+                    diagonalMarkRows = (masks.plain.size + masks.protected.size).toLong(),
                 )
             }
         }
@@ -125,16 +127,13 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
             if (!(masks.marks intersect delta.marks).isEmpty && shape != delta.geometry) return null
         }
         val old = previous?.get(delta.geometry)
-        val fresh = m.intern(delta.marks - (old?.marks ?: MarkSet.EMPTY))
-        val flagged = if (delta.protected)
-            m.intern(delta.marks - (old?.protected ?: MarkSet.EMPTY)) else MarkSet.EMPTY
-        if (fresh.isEmpty && flagged.isEmpty) return emptyList()
+        val stored = if (delta.protected) old?.protected else old?.plain
+        val fresh = m.intern(delta.marks - (stored ?: MarkSet.EMPTY))
+        if (fresh.isEmpty) return emptyList()
         val rows = previous ?: rowsFor(header)
-        admit(rows, delta.geometry, delta.marks, if (delta.protected) delta.marks else MarkSet.EMPTY)
-        val output = ArrayList<DiagonalDelta>(2)
-        if (!delta.protected && !fresh.isEmpty) output += delta.copy(marks = fresh, protected = false)
-        if (!flagged.isEmpty) output += delta.copy(marks = flagged, protected = true)
-        return output
+        admit(rows, delta.geometry, if (delta.protected) MarkSet.EMPTY else fresh,
+            if (delta.protected) fresh else MarkSet.EMPTY)
+        return listOf(delta.copy(marks = fresh))
     }
 
     fun supports(premise: PremiseKey, facts: Facts): Boolean {
@@ -150,161 +149,85 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
         return flags == null || (flags.exact.isEmpty && flags.any.isSubsetOf(all.any))
     }
 
-    /** Admit geometry/mask memberships before constructing the one scalar
-     * delta needed by the current interpreter interface. */
-    fun add(premise: PremiseKey, facts: Facts): Facts? {
-        if (!RuntimeDataDomain.packet(premise, facts)) return null
-        require(supports(premise, facts)) { "Only admitted diagonal STAR or ANY relations use this store" }
-        val f = facts as TaintTree
+    /** Scalar adapter preserves each class while retaining shared mark masks. */
+    fun add(premise: PremiseKey, facts: Facts): Facts? = addAll(premise, facts).let {
+        check(it.size <= 1) { "Diagonal admission produced multiple packets; use addAll" }
+        it.singleOrNull()
+    }
+
+    fun addAll(premise: PremiseKey, facts: Facts): List<Facts> {
+        if (!RuntimeDataDomain.packet(premise, facts)) return emptyList()
+        require(supports(premise, facts))
         val initial = premise as InitialAp
         val mark = (initial.mark as MarkSlot.Concrete).mark
         val one = m.markSetOf(mark)
-        val header = Header(checkNotNull(flowInitialForCoverage(m, premise)), f.base, f.layer, f.anyTail, f.exclusion)
-        if (hasOtherHeader(header, one)) return addAcrossHeaders(header, mark, f)
-        val rows = rowsFor(header)
-        val offered = geometry(f.root)
-        val offeredFlags = f.nonSubsumable?.let(::geometry)
-        var fresh: FlowNode? = offered
-        var freshFlags: FlowNode? = null
-        var upgrades: FlowNode? = null
-
-        // Capture only current rows for this operation. Mutations below replace
-        // their mask membership; this list is not retained by the owner.
-        for ((shape, masks) in rows.entries.toList()) {
-            m.cancellation.checkpoint()
-            if (mark !in masks.marks) continue
-            fresh = fresh?.let { subtract(it, shape, header.tail) }
-            if (mark in masks.protected) {
-                freshFlags = union(freshFlags, overlap(offered, shape, header.tail))
-                continue
+        val output = ArrayList<Facts>()
+        for (part in facts.membershipPackets(m)) {
+            val f = part as TaintTree
+            val protected = f.protectionClass()
+            val scope = Scope(checkNotNull(flowInitialForCoverage(m, premise)), f.base, f.layer)
+            val temporary = TaintGroup(m, interners.taint)
+            for ((header, rows) in scopedRows(scope)) {
+                var root: FlowNode? = null
+                for ((shape, masks) in rows) {
+                    val selected = if (protected) masks.protected else masks.plain
+                    if (mark in selected) root = union(root, shape)
+                }
+                root?.let { temporary.restoreCurrent(decode(header, it, mark, if (protected) it else null)) }
             }
-            val upgrade = offeredFlags?.let { overlap(shape, it, header.tail) } ?: continue
-            upgrades = union(upgrades, upgrade)
-            removeMark(rows, shape, masks, one)
-            subtractExact(shape, upgrade)?.let { admit(rows, it, one, MarkSet.EMPTY) }
-            admit(rows, upgrade, one, one)
+            val fresh = temporary.addAll(f)
+            if (fresh.isEmpty()) continue
+            // Prepare the complete replacement before mutating shared rows.
+            val retained = temporary.all().toList()
+            for ((header, rows) in scopedRows(scope).toList()) {
+                for ((shape, masks) in rows.entries.toList()) {
+                    if (protected) masks.protected = m.intern(masks.protected - one)
+                    else masks.plain = m.intern(masks.plain - one)
+                    if (masks.marks.isEmpty) rows.remove(shape)
+                }
+                if (rows.isEmpty()) removeHeader(header)
+            }
+            for (value in retained) {
+                val header = Header(scope, value.anyTail, value.exclusion)
+                admit(rowsFor(header), geometry(value.root),
+                    if (protected) MarkSet.EMPTY else one, if (protected) one else MarkSet.EMPTY)
+            }
+            output += fresh
         }
-        if (fresh != null) {
-            if (offeredFlags != null) freshFlags = union(freshFlags, overlap(fresh, offeredFlags, header.tail))
-            freshFlags = freshFlags?.let { overlap(fresh, it, header.tail) }
-            val plain = freshFlags?.let { subtractExact(fresh, it) } ?: if (freshFlags == null) fresh else null
-            if (plain != null) admit(rows, plain, one, MarkSet.EMPTY)
-            if (freshFlags != null) admit(rows, freshFlags, one, one)
-        }
-        val delta = union(fresh, upgrades) ?: return null
-        val protectedDelta = union(freshFlags, upgrades)
-        return decode(header, delta, mark, protectedDelta)
+        return output
     }
 
     private fun hasOtherHeader(offered: Header, marks: MarkSet): Boolean {
-        var current = headers[offered.scope]
-        while (current != null) {
-            m.cancellation.checkpoint()
-            if (current.tail != offered.tail || current.exclusion != offered.exclusion) {
-                for (masks in current.values) {
-                    m.cancellation.checkpoint()
-                    if (!(masks.marks intersect marks).isEmpty) return true
-                }
-            }
-            current = current.next
+        for ((header, rows) in scopedRows(offered.scope)) {
+            if (header.tail == offered.tail && header.exclusion == offered.exclusion) continue
+            for (masks in rows.values) if (!(masks.marks intersect marks).isEmpty) return true
         }
         return false
     }
 
-    /** Only conflicting current typed cells take this scalar adapter. The
-     * existing TaintGroup law owns ANY-prefix/STAR-E coverage and late flags.
-     * Decode one atom's current rows, apply that law once, and encode only its
-     * changed current state. No scalar tree or removed row survives this call. */
-    private fun addAcrossHeaders(offered: Header, mark: TaintMark, facts: TaintTree): Facts? {
-        val before = LinkedHashMap<Header, TaintTree>()
-        for ((header, rows) in scopedRows(offered.scope)) {
-            m.cancellation.checkpoint()
-            var root: FlowNode? = null
-            var flags: FlowNode? = null
-            for ((shape, masks) in rows) {
-                m.cancellation.checkpoint()
-                if (mark !in masks.marks) continue
-                root = union(root, shape)
-                if (mark in masks.protected) flags = union(flags, shape)
-            }
-            if (root != null) before[header] = decode(header, root, mark, flags)
-        }
-        val temporary = TaintGroup(m, interners.taint)
-        before.values.forEach(temporary::restoreCurrent)
-        val delta = temporary.add(facts)
-        val after = LinkedHashMap<Header, TaintTree>()
-        for (value in temporary.all()) {
-            m.cancellation.checkpoint()
-            after[Header(offered.initial, value.base, value.layer, value.anyTail, value.exclusion)] = value
-        }
-        if (before.keys == after.keys && before.all { (header, value) ->
-                val current = after.getValue(header)
-                value == current && value.nonSubsumable == current.nonSubsumable
-            }) return delta
-
-        // Prepare the replacement off-store. Cancellation must not leave an
-        // empty header, a stale sibling, or a half-rewritten shared T/U mask.
-        val one = m.markSetOf(mark)
-        val replacement = LinkedHashMap<Header, Rows>()
-        for ((header, rows) in scopedRows(offered.scope)) {
-            m.cancellation.checkpoint()
-            val kept = Rows(header.tail, header.exclusion)
-            for ((shape, masks) in rows) {
-                m.cancellation.checkpoint()
-                // Masks are mutable. Keep immutable sets, but do not let
-                // local re-encoding change a still-published shared mask.
-                if (mark !in masks.marks) kept[shape] = Masks(masks.marks, masks.protected) else {
-                    val rest = m.intern(masks.marks - one)
-                    if (!rest.isEmpty) kept[shape] = Masks(rest, m.intern(masks.protected - one))
+    fun all(): Sequence<Pair<PremiseKey, Facts>> = sequence {
+        for ((header, rows) in allRows()) for ((shape, masks) in rows) {
+            for (protected in listOf(false, true)) {
+                val selected = if (protected) masks.protected else masks.plain
+                for (id in selected.ids) {
+                    m.cancellation.checkpoint()
+                    val mark = TaintMark(id)
+                    yield(markedInitial(header.initial, mark) to decode(header, shape, mark,
+                        if (protected) shape else null))
                 }
             }
-            if (kept.isNotEmpty()) replacement[header] = kept
-        }
-        for ((header, value) in after) {
-            m.cancellation.checkpoint()
-            val root = geometry(value.root)
-            val flags = value.nonSubsumable?.let(::geometry)
-            val plain = if (flags == null) root else subtractExact(root, flags)
-            val rows = replacement.getOrPut(header) { Rows(header.tail, header.exclusion) }
-            if (plain != null) admit(rows, plain, one, MarkSet.EMPTY)
-            if (flags != null) admit(rows, flags, one, one)
-        }
-        var head: Rows? = null
-        var previous: Rows? = null
-        for (rows in replacement.values) {
-            m.cancellation.checkpoint()
-            if (previous == null) head = rows else previous.next = rows
-            previous = rows
-        }
-        m.cancellation.checkpoint()
-        if (head == null) headers.remove(offered.scope) else headers[offered.scope] = head
-        return delta
-    }
-
-    fun all(): Sequence<Pair<PremiseKey, Facts>> = sequence {
-        m.cancellation.checkpoint()
-        for ((header, rows) in allRows()) for ((shape, masks) in rows) for (id in masks.marks.ids) {
-            m.cancellation.checkpoint()
-            val mark = TaintMark(id)
-            yield(markedInitial(header.initial, mark) to decode(header, shape, mark,
-                if (mark in masks.protected) shape else null))
         }
     }
 
     fun borrow(premise: PremiseKey): Sequence<Facts> = sequence {
-        m.cancellation.checkpoint()
         val initial = premise as? InitialAp ?: return@sequence
         val mark = (initial.mark as? MarkSlot.Concrete)?.mark ?: return@sequence
         val flow = flowInitialForCoverage(m, initial) ?: return@sequence
         for (scope in headers.keys) {
-            m.cancellation.checkpoint()
             if (scope.initial !== flow) continue
-            for ((header, rows) in scopedRows(scope)) {
-                for ((shape, masks) in rows) {
-                    m.cancellation.checkpoint()
-                    if (mark in masks.marks) yield(decode(header, shape, mark,
-                        if (mark in masks.protected) shape else null))
-                }
+            for ((header, rows) in scopedRows(scope)) for ((shape, masks) in rows) {
+                if (mark in masks.plain) yield(decode(header, shape, mark, null))
+                if (mark in masks.protected) yield(decode(header, shape, mark, shape))
             }
         }
     }
@@ -320,10 +243,10 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
             val scope = Scope(flowInitial, flowFacts.base, layer)
             for ((header, rows) in scopedRows(scope).toList()) {
                 if (header.tail != flowFacts.tail ||
-                    (header.tail == Tail.STAR && !flowFacts.exclusion.isSubsetOf(header.exclusion))) continue
+                    (header.tail == Tail.STAR && !flowFacts.exclusion.isSubsetOf(flowInitial.exclusion.union(header.exclusion)))) continue
                 for ((shape, masks) in rows.entries.toList()) {
                     m.cancellation.checkpoint()
-                    val selected = m.intern((masks.marks - masks.protected) - flowFacts.markExclusion)
+                    val selected = m.intern(masks.plain - flowFacts.markExclusion)
                     if (selected.isEmpty) continue
                     val rest = subtract(shape, flowFacts.root, header.tail)
                     if (rest === shape || rest == shape) continue
@@ -339,17 +262,16 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
         m.initial(flow.base, flow.path, flow.tail, flow.exclusion, MarkSlot.Concrete(mark))
 
     private fun removeMark(rows: MutableMap<FlowNode, Masks>, shape: FlowNode, masks: Masks, marks: MarkSet) {
-        masks.marks = m.intern(masks.marks - marks)
-        masks.protected = m.intern(masks.protected - marks)
+        masks.plain = m.intern(masks.plain - marks)
         if (masks.marks.isEmpty) rows.remove(shape)
     }
 
-    private fun admit(rows: MutableMap<FlowNode, Masks>, geometry: FlowNode, marks: MarkSet, protected: MarkSet) {
+    private fun admit(rows: MutableMap<FlowNode, Masks>, geometry: FlowNode, plain: MarkSet, protected: MarkSet) {
         val shape = interners.flow.internIfRequired(geometry)
         val masks = rows[shape]
-        if (masks == null) rows[shape] = Masks(m.intern(marks), m.intern(protected))
+        if (masks == null) rows[shape] = Masks(m.intern(plain), m.intern(protected))
         else {
-            masks.marks = m.intern(masks.marks + marks)
+            masks.plain = m.intern(masks.plain + plain)
             masks.protected = m.intern(masks.protected + protected)
         }
     }
@@ -362,12 +284,6 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
 
     private fun subtract(a: FlowNode, b: FlowNode, tail: Tail): FlowNode? =
         if (tail == Tail.STAR) subtractExact(a, b) else subtractCovered(a, b)
-
-    private fun overlap(a: FlowNode, b: FlowNode, tail: Tail): FlowNode? {
-        if (tail != Tail.STAR) return overlap(a, b)
-        val outside = subtractExact(a, b) ?: return a
-        return subtractExact(a, outside)
-    }
 
     private fun subtractCovered(a: FlowNode, b: FlowNode): FlowNode? = FlowAlgebra.subtract(a, b, FlowLeaf.NONE,
         at = { it }, below = { it }, cancellation = m.cancellation)
@@ -423,42 +339,4 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
         m.taintTree(header.base, header.layer, scalar(shape, mark), header.exclusion, anyTail = header.tail,
             nonSubsumable = protected?.let { scalar(it, mark) })
 
-    private class OverlapKey(val shape: FlowNode, val protected: FlowNode?, val above: Boolean) {
-        override fun hashCode(): Int = (System.identityHashCode(shape) * 31 + System.identityHashCode(protected)) * 31 + above.hashCode()
-        override fun equals(other: Any?): Boolean = other is OverlapKey && shape === other.shape &&
-            protected === other.protected && above == other.above
-    }
-    private class OverlapFrame(val key: OverlapKey, var expanded: Boolean = false)
-
-    /** Keep original output leaves which intersect protected ANY regions.
-     * A protected descendant upgrades the containing original leaf. */
-    private fun overlap(shape: FlowNode, protected: FlowNode): FlowNode? {
-        val memo = HashMap<OverlapKey, FlowNode?>()
-        val stack = ArrayDeque<OverlapFrame>()
-        val initial = OverlapKey(shape, protected, false)
-        stack.addLast(OverlapFrame(initial))
-        while (stack.isNotEmpty()) {
-            m.cancellation.checkpoint()
-            val frame = stack.peekLast()
-            val key = frame.key
-            if (memo.containsKey(key)) { stack.removeLast(); continue }
-            if (key.above) { memo[key] = key.shape; stack.removeLast(); continue }
-            if (key.protected == null) { memo[key] = null; stack.removeLast(); continue }
-            val next = !key.protected.leaf.isEmpty
-            fun childKey(accessor: Int, child: FlowNode) = OverlapKey(child, key.protected.child(accessor), next)
-            if (!frame.expanded) {
-                frame.expanded = true
-                key.shape.accessorData?.forEachIndexed { i, accessor ->
-                    val child = childKey(accessor, key.shape.childData!![i])
-                    if (!memo.containsKey(child)) stack.addLast(OverlapFrame(child))
-                }
-            } else {
-                memo[key] = FlowAlgebra.mapChildren(key.shape, key.shape.leaf, m.cancellation) { accessor, child ->
-                    memo.getValue(childKey(accessor, child))
-                }
-                stack.removeLast()
-            }
-        }
-        return memo.getValue(initial)
-    }
 }

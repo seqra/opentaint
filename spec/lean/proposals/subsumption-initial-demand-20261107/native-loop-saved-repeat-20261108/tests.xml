@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-08T09:29:33" hostname="dev-1" time="0.074">
+  <properties/>
+  <testcase name="DEMAND replay cannot produce a normal witness and an identity is no progress()" classname="org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest" time="0.02"/>
+  <testcase name="saved first repeat delivery reaches existing exact admission without completion()" classname="org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest" time="0.002"/>
+  <testcase name="gate drops NORMAL GEN before an applicable saved repeat read()" classname="org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest" time="0.006"/>
+  <testcase name="existing NormalTarget joins preserve ZERO origin in both arrival orders()" classname="org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest" time="0.04"/>
+  <testcase name="actual ZERO source and read survive paired C5 before the loop gate()" classname="org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

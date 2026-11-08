@@ -246,6 +246,7 @@ open class BlockRunState internal constructor(
 
     internal fun addInitial(admitted: AdmittedInitial) {
         val initial = admitted.initial
+        check(initial.tail != Tail.ANY) { "An owned initial cannot have an ANY tail" }
         if (!RuntimeDataDomain.initial(initial)) return
         ap.cancellation.checkpoint()
         initialize()
@@ -275,7 +276,8 @@ open class BlockRunState internal constructor(
             override fun result(f: Facts) {
                 if (!RuntimeDataDomain.packet(premise, input) || !RuntimeDataDomain.packet(premise, f)) return
                 val runtime = forceRun1Layer(premise, f)
-                if (config.run1) ops.run1Cover(runtime) { sink(premise, it) } else sink(premise, runtime)
+                if (config.run1) ops.run1Cover(runtime) { value -> value.membershipPackets(ap).forEach { sink(premise, it) } }
+                else runtime.membershipPackets(ap).forEach { sink(premise, it) }
             }
             override fun markRequest(mark: TaintMark): Unit = raiseMark(premise, input, mark)
         }
@@ -309,7 +311,8 @@ open class BlockRunState internal constructor(
             override fun result(f: Facts) {
                 if (!RuntimeDataDomain.packet(at.premise, at.facts) || !RuntimeDataDomain.packet(at.premise, f)) return
                 val value = forceRun1Layer(at.premise, f)
-                if (config.run1) ops.run1Cover(value) { sink(at.premise, it) } else sink(at.premise, value)
+                if (config.run1) ops.run1Cover(value) { covered -> covered.membershipPackets(ap).forEach { sink(at.premise, it) } }
+                else value.membershipPackets(ap).forEach { sink(at.premise, it) }
             }
             override fun markRequest(mark: TaintMark) = needGroups(at, mark)
         }
@@ -322,7 +325,8 @@ open class BlockRunState internal constructor(
             override fun result(f: Facts) {
                 if (!RuntimeDataDomain.packet(at.premise, at.facts) || !RuntimeDataDomain.packet(at.premise, f)) return
                 val value = if (config.run1) run1Layer(at.premise, f) else f
-                if (config.run1) ops.run1Cover(value) { sink(at.premise, it) } else sink(at.premise, value)
+                if (config.run1) ops.run1Cover(value) { covered -> covered.membershipPackets(ap).forEach { sink(at.premise, it) } }
+                else value.membershipPackets(ap).forEach { sink(at.premise, it) }
             }
             override fun markRequest(mark: TaintMark) = needGroups(at, mark)
         }
@@ -681,21 +685,22 @@ open class BlockRunState internal constructor(
 
     /** One durable result row per producer. Identity output uses this gate too. */
     private fun completeOutput(premise: PremiseKey, node: CommonInst, facts: Facts) {
-        val fresh = admitOutput(node, premise, facts) ?: return
-        // Complete fan-out while the current Work reservation is held.
-        if (binding != null) binding.successors(this, node, premise, fresh)
-        else if (rootRouting != null) checkNotNull(rootRouting).successors(node, premise, fresh)
-        else context.forEachSuccessor(node) { deliverAt(it, premise, fresh) }
+        for (fresh in admitOutputs(node, premise, facts)) {
+            // Complete fan-out while the current Work reservation is held.
+            if (binding != null) binding.successors(this, node, premise, fresh)
+            else if (rootRouting != null) checkNotNull(rootRouting).successors(node, premise, fresh)
+            else context.forEachSuccessor(node) { deliverAt(it, premise, fresh) }
+        }
     }
 
-    private fun admitOutput(node: CommonInst, premise: PremiseKey, facts: Facts): Facts? {
-        if (!RuntimeDataDomain.packet(premise, facts)) return null
+    private fun admitOutputs(node: CommonInst, premise: PremiseKey, facts: Facts): List<Facts> {
+        if (!RuntimeDataDomain.packet(premise, facts)) return emptyList()
         checkKinds(premise, facts)
-        val fresh = edges.add(node, premise, facts) ?: return null
-        bodyWork?.fresh(context.shared.language.getInstIndex(node), premise, fresh)
-        localEdgeDeltas++
-        if (fresh.layer == Layer.DEMAND) localDemandLayerEdges++
-        return fresh
+        return edges.addAll(node, premise, facts).onEach { fresh ->
+            bodyWork?.fresh(context.shared.language.getInstIndex(node), premise, fresh)
+            localEdgeDeltas++
+            if (fresh.layer == Layer.DEMAND) localDemandLayerEdges++
+        }
     }
 
     private fun deliverAt(start: CommonInst, premise: PremiseKey, facts: Facts) {
@@ -795,8 +800,8 @@ open class BlockRunState internal constructor(
                 if (!summary) {
                     // Exceptional rules and observations still run, but normal
                     // summary adjustment and killed-write guidance do not.
-                    val fresh = admitOutput(node, pr, value)
-                    if (fresh != null && binding != null) retainBlockSummary(PortId(-4), pr, fresh)
+                    for (fresh in admitOutputs(node, pr, value))
+                        if (binding != null) retainBlockSummary(PortId(-4), pr, fresh)
                     return@drain
                 }
                 if (config.run1) checkNotNull(staticWriteCandidates).observe(pr, value)
@@ -805,8 +810,8 @@ open class BlockRunState internal constructor(
                 val result = if (isRootScope) finishMethodData(ops, mode, pr, value, exit, triggers.parts) else value
                 result?.let { completed ->
                     boundedSummaryResult(pr, completed) { boundedPremise, bounded ->
-                        val fresh = admitOutput(node, boundedPremise, bounded)
-                        if (fresh != null) retainSummary(boundedPremise, fresh, binding?.terminalExit ?: PortId.ROOT_EXIT)
+                        for (fresh in admitOutputs(node, boundedPremise, bounded))
+                            retainSummary(boundedPremise, fresh, binding?.terminalExit ?: PortId.ROOT_EXIT)
                     }
                 }
             }
@@ -866,9 +871,10 @@ open class BlockRunState internal constructor(
 
     private fun routeBoundedRun1StaticToExit(node: CommonInst, premise: PremiseKey, bounded: Facts) {
         check(config.run1 && bounded.base == STATIC)
-        val fresh = admitOutput(node, premise, bounded) ?: return
-        if (binding != null) binding.routeStaticToExit(this, node, premise, fresh)
-        else enqueueInput(context.normalExit, premise, fresh)
+        for (fresh in admitOutputs(node, premise, bounded)) {
+            if (binding != null) binding.routeStaticToExit(this, node, premise, fresh)
+            else enqueueInput(context.normalExit, premise, fresh)
+        }
     }
 
     internal fun summaryDelta(premise: PremiseKey, value: Facts) =
@@ -950,11 +956,12 @@ open class BlockRunState internal constructor(
                 this.facts("F", piece)
             }
             val store = if (isRootScope) summaries else portSummaries.at(exit)
-            val delta = store.addAdmitted(premise, piece) ?: continue
-            localEdgeDeltas++
-            if (delta.layer == Layer.DEMAND) localDemandLayerEdges++
-            if (isRootScope) pending += Publication(premise, delta)
-            else localPublications.getOrPut(exit, ::ArrayList).add(Publication(premise, delta))
+            for (delta in store.addAdmittedAll(premise, piece)) {
+                localEdgeDeltas++
+                if (delta.layer == Layer.DEMAND) localDemandLayerEdges++
+                if (isRootScope) pending += Publication(premise, delta)
+                else localPublications.getOrPut(exit, ::ArrayList).add(Publication(premise, delta))
+            }
         }
         if (pending.isNotEmpty() || localPublications.isNotEmpty()) requestWork()
     }

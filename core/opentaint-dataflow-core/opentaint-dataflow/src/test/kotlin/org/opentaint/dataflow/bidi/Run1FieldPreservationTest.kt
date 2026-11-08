@@ -168,7 +168,11 @@ class Run1FieldPreservationTest {
         val group = FlowGroup(m,m.newInterners().flow)
         assertNotNull(group.add(star))
         assertNotNull(group.add(any))
-        assertEquals(setOf(Tail.STAR,Tail.ANY),group.all().map { it.tail }.toSet())
+        assertEquals(setOf(Tail.ANY),group.all().map { it.tail }.toSet(),
+            "The selected MAY canonicalization removes the covered same-layer STAR")
+        assertNotNull(group.add(star.withLayer(Layer.NORMAL) as FlowTree))
+        assertEquals(setOf(Layer.NORMAL to Tail.STAR,Layer.DEMAND to Tail.ANY),
+            group.all().map { it.layer to it.tail }.toSet())
     }
 
     @Test fun `stored may subsumes descendants without confusing demand must with may`() {

@@ -1,0 +1,182 @@
+{
+  "state": "PASS_LOCAL_SELECTED_COMPANION_IMAGE_ONLY",
+  "runs": [
+    {
+      "module": "RestrictedInitialPolicy",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/initial-emission",
+        "-M2048",
+        "-o",
+        "/tmp/concrete-star-companion-ukahcdnt/RestrictedInitialPolicy.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/initial-emission/RestrictedInitialPolicy.lean"
+      ]
+    },
+    {
+      "module": "RelativeAdmission",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/subsumption-initial-demand-20261107",
+        "-M2048",
+        "-o",
+        "/tmp/concrete-star-companion-ukahcdnt/RelativeAdmission.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/subsumption-initial-demand-20261107/RelativeAdmission.lean"
+      ]
+    },
+    {
+      "module": "ConcreteStarFlowCompanion",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/concrete-star-flow-companion",
+        "-M2048",
+        "-o",
+        "/tmp/concrete-star-companion-ukahcdnt/ConcreteStarFlowCompanion.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/concrete-star-flow-companion/ConcreteStarFlowCompanion.lean"
+      ]
+    }
+  ],
+  "axioms": [
+    {
+      "theorem": "ConcreteStarFlowCompanion.primary_always_in_expansion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.companion_always_in_expansion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.expansion_membership",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.primary_is_preserved",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.no_primary_means_no_companion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.companion_has_same_geometry_and_NORMAL_FLOW",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.companion_requires_concrete_STAR",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.companion_seed_is_intrinsically_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.concrete_STAR_primary_remains_DEMAND",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.raw_permission_has_executable_actual",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.every_executable_emission_has_raw_permission",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.raw_permission_exactly_matches_C2",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.stored_permission_has_normalized_executable_actual",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.old_stored_permission_is_preserved",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.stored_permission_exactly_matches_normalized_C2",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.original_actual_is_not_replaced",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.companion_NORMAL_does_not_upgrade_DEMAND_actual",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.mismatching_mark_cannot_create_companion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.mismatching_base_cannot_create_companion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.precise_later_STAR_rejection_still_has_no_companion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.positive_source_guard_cannot_use_companion_FLOW",
+      "axioms": []
+    }
+  ],
+  "scope": "Exact expanded scalar FULL C2 raw and normalized C5 entry image. Original complete paired exit unchanged. Native source/Target/store/driver adapters not proved. Old47 remains a frozen component, including its old no-companion law.",
+  "nativeAnalyzerProved": false,
+  "checkedTheorems": 21
+}

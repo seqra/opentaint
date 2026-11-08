@@ -5,7 +5,7 @@ import org.opentaint.dataflow.bidi.store.*
 import org.opentaint.dataflow.graph.PortId
 import java.util.Collections
 
-/** Equality of semantic Facts does not include its protection annotation. */
+/** Query identity keeps the packet's protection class explicitly, as do retained Facts. */
 internal data class LoopPacketKey(val facts: Facts, val protection: TaintNode? = (facts as? TaintTree)?.nonSubsumable)
 private class IdentityKey(private val value: Any) {
     override fun equals(other: Any?): Boolean = other is IdentityKey && value === other.value

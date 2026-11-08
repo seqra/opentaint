@@ -135,9 +135,15 @@ class Run1MarkModeTest {
                 val cleanT = CollectingOut(); val cleanU = CollectingOut()
                 f.ops.clean(input, initial, Cleaner(x, null, CleanReach.EXACT, t), mode, cleanT)
                 f.ops.clean(input, initial, Cleaner(x, null, CleanReach.EXACT, u), mode, cleanU)
-                assertEquals(listOf(input), cleanU.results)
-                if (selected == MarkMode.FULL) assertTrue(cleanT.results.isEmpty())
-                else assertEquals(listOf(input), cleanT.results)
+                if (selected == MarkMode.FULL) {
+                    assertEquals(listOf(input), cleanU.results)
+                    assertTrue(cleanT.results.isEmpty())
+                } else {
+                    val group = input as TaintTree
+                    val protected = group.withProtection(group.root)
+                    assertEquals(listOf<Facts>(protected), cleanU.results)
+                    assertEquals(listOf<Facts>(protected), cleanT.results)
+                }
                 val generated = CollectingOut()
                 f.ops.applyEdge(Reach.NORMAL, f.ap.zero,
                     PathEdge(ZERO_FACT, pattern(t).fact,

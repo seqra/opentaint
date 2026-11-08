@@ -4,6 +4,7 @@ import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.engine.*
 import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.bidi.interp.StatementSummary
 import org.opentaint.dataflow.bidi.interp.MicroEdge
 import org.opentaint.dataflow.bidi.interp.ZERO_FACT
 import org.opentaint.dataflow.bidi.interp.keepEdge
@@ -69,11 +70,21 @@ class MethodWorkTest {
 
     @Test fun `cancellation on an untouched statement stops the actor before successor propagation`(): Unit {
         MethodAnalysisFixtures().use { f ->
+            // Use DATA and an explicit relevant identity. The first processed
+            // packet is at entry 0; cancellation must stop it before the next point.
+            val base=AccessPathBase.Argument(0)
+            f.statement(1,StatementSummary.identities(listOf(base)))
             val core = f.core()
-            core.addInitial(f.manager.zero) // Already-admitted ZERO for this local transfer test.
-            f.onProcess = { _, _ -> f.cancellation.cancel() }
+            val initial=f.manager.initial(f.pattern(base,tail=Tail.STAR,mark=MarkSlot.STAR))
+            core.addInitial(initial)
+            f.onProcess = { _, edge ->
+                assertSame(initial,edge.premise)
+                assertEquals(base,edge.facts.base)
+                f.cancellation.cancel()
+            }
             assertFailsWith<Cancellation.Cancelled> { core.work(1000) }
             assertEquals(1L, core.steps)
+            assertEquals(listOf(0),f.processed.map { it.node.location.index })
             assertTrue(f.publications.isEmpty())
             assertFailsWith<Cancellation.Cancelled> { core.summaries.all().none() }
             f.cancellation.activate()

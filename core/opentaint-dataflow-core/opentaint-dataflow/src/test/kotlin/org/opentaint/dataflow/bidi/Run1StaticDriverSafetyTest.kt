@@ -324,17 +324,22 @@ class Run1StaticDriverSafetyTest {
             assertEquals(3,report.end.run)
             assertTrue(seen.records.filter { it.run == 2 }.none { it.record.conclusion is TaintTree },
                 "Group taint effects are D and cannot become NORMAL records; ordinary eligible F1 records remain allowed")
-            assertTrue(seen.results.filter { it.runIndex in 2..3 }.all { result ->
-                result.analyzers.single { it.key == callee }.nonZeroInitial
-            }, "Actual callee queries are independent of missing F1 static field summaries")
+            assertTrue(seen.results.single { it.runIndex == 2 }.analyzers.single { it.key == callee }.nonZeroInitial,
+                "The real B2 query emits the conditional FLOW companion")
+            assertTrue(seen.results.single { it.runIndex == 3 }.analyzers.none { it.key == callee },
+                "The retained NORMAL static FLOW identity answers F3 without a current callee analysis")
             val exact = p.pattern(STATIC, gp + deeper, mark = MarkSlot.Concrete(t))
             assertTrue(seen.results.single { it.runIndex == 4 }.analyzers.isEmpty(),
                 "The settled F3 report has no outgoing refinement; forced B4 has no explicit ZERO admission")
             assertTrue(seen.views.none { it.run == 4 }, "No submitted input means no saved-record application")
-            assertTrue(seen.configs.single { it.index == 4 }.records.byEntry(callee, exact).any { record ->
-                record.direction == Direction.FORWARD && record.premise.toPattern() == exact &&
-                    record.conclusion.layer == Layer.NORMAL && exact in f.ops.leaves(record.conclusion).toSet()
-            }, "The transient view is backed by an actual persisted F3 native record")
+            val fieldFlow = p.pattern(STATIC, gp, Tail.STAR, MarkSlot.STAR)
+            assertTrue(seen.configs.single { it.index == 3 }.records.byExit(callee, exact).any { record ->
+                record.direction == Direction.BACKWARD && record.premise.toPattern() == fieldFlow &&
+                    record.conclusion.layer == Layer.NORMAL && fieldFlow in f.ops.leaves(record.conclusion).toSet()
+            }, "The precise F3 actual is answered by the genuine persisted B2 FLOW companion")
+            assertTrue(seen.views.any { it.run == 3 && it.part.callee == callee &&
+                it.view.premise == fieldFlow && it.view.result.fact == fieldFlow.fact },
+                "F3 must actually apply that opposite-direction NORMAL provider")
             val backward = seen.results.single { it.runIndex == 2 }.analyzers.single { it.key == root }
             assertTrue(checkNotNull(backward.sourceHits).entries().any { (method, node, edge) ->
                 method == root && node == p.inst(root, 0) && edge.to == exact.fact

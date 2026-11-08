@@ -112,7 +112,9 @@ class GroupedMarkViewsTest {
         val initial = m.initial(Pattern(p(x, g), ExclusionSet.Empty))
         val selected = CollectingOut()
         ops.clean(input, initial, Cleaner(x, null, CleanReach.EXACT, u), group, selected)
-        assertEquals(listOf(input), selected.results)
+        assertEquals(listOf(input), selected.results.map { it.withoutProtection() })
+        assertTrue(selected.results.all { it is TaintTree && it.nonSubsumable == it.root },
+            "The selected cleaner still protects its surviving group")
         val all = CollectingOut()
         ops.clean(input, initial, Cleaner(x, null, CleanReach.AT_AND_BELOW, null), group, all)
         assertTrue(all.results.isEmpty())

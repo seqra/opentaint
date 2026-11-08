@@ -43,14 +43,14 @@ class SavedRecordSelectionTest {
     @Test fun `position selection equals native record discovery and leaf mark protection order`() {
         val store = PersistentRecordStore(ap)
         val protected = f.fact(y, listOf(a), mark=t) as TaintTree
-        val output = ap.mergeAddDelta(protected.withProtection(protected.root),
-            f.fact(y, listOf(a,b), mark=u)).first
-        val first = Record(f.method, Direction.FORWARD, ap.initial(f.pattern(x,mark=t)), output, entry, exit)
+        val initial = ap.initial(f.pattern(x,mark=t))
+        val first = Record(f.method, Direction.FORWARD, initial, protected.withProtection(protected.root), entry, exit)
+        val plain = Record(f.method, Direction.FORWARD, initial, f.fact(y, listOf(a,b), mark=u), entry, exit)
         val second = Record(f.method, Direction.BACKWARD, ap.initial(f.pattern(y,listOf(a),mark=t)),
             f.fact(x,mark=u), reverseScope, entry.entry)
         val third = Record(f.method, Direction.FORWARD, ap.initial(f.pattern(x,mark=u)),
             f.fact(y,listOf(c),mark=t), entry, exit)
-        listOf(first,second,third).forEach(store::add)
+        listOf(first,plain,second,third).forEach(store::add)
         val actual = ap.mergeAddDelta(f.fact(y,listOf(a),Tail.ANY,t),
             f.fact(y,listOf(c),Tail.ANY,t)).first
         val stats = SavedRecordSelectionStatistics()

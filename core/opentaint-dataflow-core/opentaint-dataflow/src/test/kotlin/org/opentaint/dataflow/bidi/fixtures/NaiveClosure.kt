@@ -16,6 +16,9 @@ class NaiveClosure(
     private val initialAdmission: InitialAdmission = InitialAdmission.HISTORICAL,
     private val semantics: Semantics = Semantics.HISTORICAL,
     private val rawInputs: ProgramRunInputs? = null,
+    // Explicit syntactically pure readers only: no assignment or cleaner can
+    // create H here. Other methods retain their complete marked observations.
+    private val plainFlowMethods: Set<MethodKey> = emptySet(),
 ) {
     enum class Semantics {
         HISTORICAL,
@@ -55,6 +58,7 @@ class NaiveClosure(
     private val work = ArrayDeque<() -> Unit>()
     private val processed = LinkedHashSet<ObservedEdge>()
     private val initials = LinkedHashSet<ObservedInitial>()
+    private val initialLanes = LinkedHashSet<Triple<MethodKey,Pattern,Layer>>()
     private val rawSummaries = LinkedHashSet<ObservedEdge>()
     private val publications = LinkedHashSet<ObservedEdge>()
     private val selectedDemand = LinkedHashSet<ObservedEdge>()
@@ -101,9 +105,44 @@ class NaiveClosure(
             work.removeFirst().invoke()
         }
         return RunObservation(processed = processed.toSet(), initials = initials.toSet(),
-            rawSummaries = rawSummaries.toSet(), publications = publications.toSet(),
-            selectedDemand = selectedDemand.toSet(), links = links.toSet(), requests = requests.toSet(),
+            rawSummaries = compactPureFlowReaders(rawSummaries), publications = compactPureFlowReaders(publications),
+            selectedDemand = compactPureFlowReaders(selectedDemand), links = links.toSet(), requests = requests.toSet(),
             sourceHits = sourceHits.toSet(), witnesses = witnesses.toSet())
+    }
+
+    /** Independent scalar specialization witness for a pure FLOW reader. No
+     * production owner, coverage function or candidate index is used. */
+    private fun compactPureFlowReaders(rows: Set<ObservedEdge>): Set<ObservedEdge> {
+        if (plainFlowMethods.isEmpty()) return rows.toSet()
+        val flow = rawSummaries.filter { it.method in plainFlowMethods &&
+            it.premise.singleOrNull()?.fact?.mark is MarkSlot.Star &&
+            it.premise.single().fact.tail == Tail.STAR && it.conclusion.fact.mark is MarkSlot.Star }
+        return rows.filterNotTo(linkedSetOf()) { edge ->
+            if (edge.method !in plainFlowMethods) return@filterNotTo false
+            val initial = edge.premise.singleOrNull() ?: return@filterNotTo false
+            val atom = (initial.fact.mark as? MarkSlot.Concrete)?.mark ?: return@filterNotTo false
+            val output = edge.conclusion
+            if (initial.fact.tail != Tail.STAR || output.fact.mark != MarkSlot.Concrete(atom) ||
+                output.fact.tail !in setOf(Tail.STAR,Tail.ANY)) return@filterNotTo false
+            flow.any { provider ->
+                val p = provider.premise.single(); val c = provider.conclusion
+                val mx = (c.fact.mark as MarkSlot.Star).excluded
+                if (provider.method != edge.method || atom in mx || c.demand && !output.demand ||
+                    initial.fact.base != p.fact.base || output.fact.base != c.fact.base ||
+                    !initial.fact.path.startsWith(p.fact.path)) return@any false
+                val shift = initial.fact.path.drop(p.fact.path.size)
+                if (shift.isNotEmpty() && c.demand) return@any false
+                val e = p.exclusion.union(c.exclusion)
+                if (shift.isNotEmpty() && !e.admits(shift[0])) return@any false
+                val outputHead = c.fact.path + shift
+                when (output.fact.tail) {
+                    Tail.STAR -> c.fact.tail == Tail.STAR && output.fact.path == outputHead &&
+                        (shift.isNotEmpty() || e.isSubsetOf(initial.exclusion.union(output.exclusion)))
+                    Tail.ANY -> c.fact.tail == Tail.ANY && shift.isEmpty() && output.fact.path.startsWith(outputHead)
+                    else -> false
+                }
+            }
+        }
     }
 
     private fun algebra(method: MethodKey): ReferenceAlgebra = algebras.getOrPut(method) {
@@ -136,14 +175,17 @@ class NaiveClosure(
         FormsReference(program.ops, algebra(method), run1AliasAdmission = selected && config.run1)
     }
 
-    private fun addInitial(method: MethodKey, offered: Pattern) {
+    private fun addInitial(method: MethodKey, offered: Pattern, admittedLayer: Layer? = null) {
         val initial = if (selected && config.run1) InitialAdmission.RUN1_CONCRETE_CHAIN.admit(offered, true)
             else initialAdmission.admit(offered, config.run1)
         reach(method)
-        if (!program.isKnown(method) || !initials.add(ObservedInitial(method, initial))) return
+        if (!program.isKnown(method)) return
+        val initialLayer = admittedLayer ?: if (startFact(initial).demand) Layer.DEMAND else Layer.NORMAL
+        if (!initialLanes.add(Triple(method,initial,initialLayer))) return
+        initials.add(ObservedInitial(method,initial))
         check(initial.fact.tail != Tail.ANY_TAINT || (config.restricted && forward))
         work += {
-            val rawStart = startFact(initial)
+            val rawStart = startFact(initial).copy(demand=initialLayer==Layer.DEMAND)
             val value = if (targetControls && config.run1 && config.mode.markMode == MarkMode.FULL)
                 cover(rawStart, setOf(initial)) else rawStart
             val model = program.programMethod(method)
@@ -166,7 +208,13 @@ class NaiveClosure(
 
     private fun putEdge(method: MethodKey, node: CommonInst, premise: Set<Pattern>, conclusion: Conclusion) {
         val edge = ObservedEdge(method, premise, cover(conclusion, premise), node)
-        if (processed.add(edge)) work += { process(edge) }
+        if (processed.add(edge)) {
+            // A pure reader uses the selected FLOW-first owner policy. Start
+            // commands still form the same complete admission family.
+            if (method in plainFlowMethods && conclusion.fact.mark is MarkSlot.Star)
+                work.addFirst { process(edge) }
+            else work += { process(edge) }
+        }
     }
 
     private fun process(edge: ObservedEdge) {
@@ -314,6 +362,7 @@ class NaiveClosure(
         }
         for (piece in pieces) {
             val pub = ObservedEdge(method, premise, piece)
+            if (method in plainFlowMethods && compactPureFlowReaders(setOf(pub)).isEmpty()) continue
             if (targetControls) rawSummaries += pub
             val finalSelected = if (targetControls)
                 piece.demand || premise.size > 1 || (!forward && isZero(premise)) else selectedForDemand
@@ -391,7 +440,9 @@ class NaiveClosure(
         work += {
             when {
                 selected && config.run1 -> emitSelected(link)
-                selected -> currentInitials(part.callee, added).forEach { addInitial(part.callee, it) }
+                selected -> currentAdmissions(part.callee,part.added).forEach { (pattern,support) ->
+                    addInitial(part.callee,pattern,support)
+                }
                 config.run1 -> addInitial(part.callee, policy(added))
                 added.fact.base == AccessPathBase.Zero -> addInitial(part.callee, ZERO_PATTERN)
                 else -> for ((method, demand) in inputs.demand) if (method == part.callee)
@@ -447,7 +498,9 @@ class NaiveClosure(
 
     private fun native(part: Part, record: RawRecord) {
         val added = Pattern(part.added.fact, part.added.exclusion)
-        if (!applicable(record.premise, added) && !inside(record.premise, added)) return
+        if (targetControls) {
+            if (!satisfies(record.premise,added,false,SummaryReadRole.SAVED_DIRECT)) return
+        } else if (!applicable(record.premise, added) && !inside(record.premise, added)) return
         val pending = record.premise.fact.tail == Tail.ANY_TAINT && !inside(record.premise, added)
         val result = reduce(part, record.premise, record.conclusion) ?: return
         resume(part, listOf(if (pending) result.copy(identityCandidate = false) else result), pending)
@@ -455,7 +508,9 @@ class NaiveClosure(
 
     private fun view(part: Part, view: RecordLeafView) {
         val added = Pattern(part.added.fact, part.added.exclusion)
-        if (!applicable(view.premise, added) && !inside(view.premise, added)) return
+        if (targetControls) {
+            if (!satisfies(view.premise,added,false,SummaryReadRole.SAVED_OPPOSITE)) return
+        } else if (!applicable(view.premise, added) && !inside(view.premise, added)) return
         val outcome = concat(part.added, summaryEdge(view.premise, view.result), edgeDemand = view.result.demand,
             restricted = config.restricted)
         check(outcome !is EdgeOutcome.Request && outcome !is EdgeOutcome.PositionRequest)
@@ -636,8 +691,17 @@ class NaiveClosure(
         val input = limit(normalize(actual.fact, actual.exclusion, demand = actual.fact.tail == Tail.ANY), config.fieldLimit)
         val leaf = Pattern(input.fact, input.exclusion)
         val guides = inputs.demand.filter { it.first == method }.map { it.second } + listOfNotNull(staticCarry(leaf))
-        return guides.mapNotNullTo(linkedSetOf()) { demandReference.emit(it.entry, leaf) }
+        return guides.flatMapTo(linkedSetOf()) { demandReference.family(it.entry,leaf,layer(input)).map { it.first } }
     }
+    private fun currentAdmissions(method: MethodKey,actual: Conclusion): List<Pair<Pattern,Layer>> {
+        if (actual.fact.base == AccessPathBase.Zero)
+            return currentInitials(method,Pattern(actual.fact,actual.exclusion)).map { it to Layer.NORMAL }
+        val input = limit(actual,config.fieldLimit)
+        val leaf = Pattern(input.fact,input.exclusion)
+        val guides = inputs.demand.filter { it.first == method }.map { it.second } + listOfNotNull(staticCarry(leaf))
+        return guides.flatMap { demandReference.family(it.entry,leaf,layer(input)) }.distinct()
+    }
+
     /** A family is instantiated at this actual slot; a root probe is never a stored universal pair. */
     private fun staticCarry(actual: Pattern): DemandPattern? {
         if (!selected || !inputs.hasSharedStaticCarry || actual.fact.base != STATIC) return null

@@ -121,17 +121,47 @@ class PersistentRecordStore(private val m: ApManager) : RecordStore {
     private val entry = HashMap<MethodKey, PathTrie<Record>>()
     private val exit = HashMap<MethodKey, PathTrie<RecordOutputPosition>>()
     private data class ScopedIndexKey(val method: MethodKey, val block: BlockId, val port: PortId)
-    private data class MergeKey(val method: MethodKey, val direction: Direction, val premise: InitialAp,
+    private data class MergeKey(val method: MethodKey, val direction: Direction,
                                 val scope: BlockScope?, val exit: PortId?)
     private val scopedEntry = HashMap<ScopedIndexKey, PathTrie<Record>>()
     private val scopedExit = HashMap<ScopedIndexKey, PathTrie<RecordOutputPosition>>()
-    private val merged = HashMap<MergeKey, ConclusionGroup>()
-    private val interners = m.newInterners()
+    private val merged = HashMap<MergeKey, FlowBackedSummaries>()
+    private data class RecordKey(val method: MethodKey,val direction: Direction,val premise: InitialAp,
+                                 val conclusion: Facts,val scope: BlockScope?,val exit: PortId?)
+    private var retainedRecords = HashMap<RecordKey,Record>()
+    private fun key(record: Record) = RecordKey(record.method,record.direction,record.premise,
+                                               record.conclusion,record.scope,record.exit)
 
     override fun add(record: Record) {
         m.cancellation.checkpoint()
         if (!RuntimeDataDomain.packet(record.premise, record.conclusion)) return
         checkNativeRecord(record.direction, record.premise, record.conclusion)
+        retain(record)
+        rebuildIndexes(record)
+    }
+
+    private fun retain(record: Record) {
+        merged.getOrPut(MergeKey(record.method,record.direction,record.scope,record.exit)) {
+            FlowBackedSummaries(m)
+        }.addAll(record.premise,record.conclusion)
+    }
+
+    private fun rebuildIndexes(preferred: Record? = null) {
+        val previous = retainedRecords
+        val current = HashMap<RecordKey,Record>()
+        entry.clear(); exit.clear(); scopedEntry.clear(); scopedExit.clear()
+        for ((key, rows) in merged) for ((premise, facts) in rows.all()) {
+            m.cancellation.checkpoint()
+            val recordKey = RecordKey(key.method,key.direction,premise as InitialAp,facts,key.scope,key.exit)
+            val record = previous[recordKey] ?: preferred?.takeIf { key(it) == recordKey }
+                ?: Record(key.method,key.direction,premise,facts,key.scope,key.exit)
+            current[recordKey] = record
+            index(record)
+        }
+        retainedRecords = current
+    }
+
+    private fun index(record: Record) {
         val input = if (record.scope == null) entry.getOrPut(record.method) { PathTrie(m.cancellation) }
             else scopedEntry.getOrPut(ScopedIndexKey(record.method, record.scope.block, record.scope.entry)) {
                 PathTrie(m.cancellation)
@@ -208,11 +238,13 @@ class PersistentRecordStore(private val m: ApManager) : RecordStore {
     /** R1 reads admitted summaries, merges eligible native values and indexes their propagation delta. */
     override fun persist(direction: Direction, summaries: Sequence<Pair<MethodKey, RunSummaryStore>>) {
         for ((method, store) in summaries) persistOne(direction, method, null, null, store)
+        rebuildIndexes()
     }
 
     override fun persistScoped(direction: Direction, summaries: Sequence<ScopedRunSummary>) {
         for ((key, store) in summaries)
             persistOne(direction, key.method, key.scope, key.exit, store)
+        rebuildIndexes()
     }
 
     private fun persistOne(direction: Direction, method: MethodKey, scope: BlockScope?, exit: PortId?,
@@ -224,10 +256,7 @@ class PersistentRecordStore(private val m: ApManager) : RecordStore {
             val initial = premise as? InitialAp ?: continue
             if (direction == Direction.BACKWARD && initial.isZero) continue
             checkNativeRecord(direction, initial, facts)
-            val delta = merged.getOrPut(MergeKey(method, direction, initial, scope, exit)) {
-                ConclusionGroup(m, interners)
-            }.add(facts) ?: continue
-            add(Record(method, direction, initial, delta, scope, exit))
+            retain(Record(method, direction, initial, facts, scope, exit))
         }
     }
 }

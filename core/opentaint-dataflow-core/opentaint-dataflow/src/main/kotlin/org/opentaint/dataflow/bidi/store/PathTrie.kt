@@ -28,6 +28,34 @@ class PathTrie<V : Any>(private val cancellation: Cancellation? = null) {
         return node.values.add(value)
     }
 
+    val isEmpty: Boolean get() = roots.isEmpty()
+
+    /** Remove one exact posting and release its now-empty path. No retained
+     * historical key remains after the owner removes its last relation. */
+    fun remove(base: AccessPathBase, path: IntArray, value: V): Boolean {
+        cancellation?.checkpoint()
+        val root = roots[base] ?: return false
+        val parents = ArrayList<Node<V>>(path.size)
+        var node = root
+        for (accessor in path) {
+            cancellation?.checkpoint()
+            parents += node
+            node = node.child(accessor) ?: return false
+        }
+        cancellation?.checkpoint()
+        if (!node.values.remove(value)) return false
+        // Finish pruning without another cancellable operation after mutation.
+        for (i in path.indices.reversed()) {
+            if (node.values.isNotEmpty() || node.children?.isNotEmpty() == true) break
+            val parent = parents[i]
+            parent.children?.remove(path[i])
+            if (parent.children?.isEmpty() == true) parent.children = null
+            node = parent
+        }
+        if (root.values.isEmpty() && root.children == null) roots.remove(base)
+        return true
+    }
+
     fun lookupPrefixes(base: AccessPathBase, path: IntArray): MutableList<V> {
         cancellation?.checkpoint()
         val out = ArrayList<V>()

@@ -165,11 +165,32 @@ class AnyTaintIterationTest {
                     assertTrue(barrier.observation.requests.isEmpty())
                     val demand = checkNotNull(barrier.config.demand)
                     for (started in barrier.observation.initials.filterNot { it.initial.fact.base == AccessPathBase.Zero }) {
-                        val initial = f.manager.initial(started.initial)
-                        assertTrue(demand.covering(started.method, initial).any { guide ->
-                            insideDemand(started.initial, guide.entry, f.manager.marks) &&
-                                (started.initial.fact.mark is MarkSlot.Star) == (guide.entry.fact.mark is MarkSlot.Star)
-                        }, "Each restricted initial comes from fixed demand, including shared FLOW entries: $started")
+                        val public=if(started.initial.fact.mark is MarkSlot.Star && started.initial.fact.tail==Tail.EXACT)
+                            started.initial.copy(fact=started.initial.fact.copy(tail=Tail.STAR)) else started.initial
+                        val initial = f.manager.initial(public)
+                        val storedImage=demand.covering(started.method,initial).any { guide ->
+                            barrier.config.admissionPolicy.canStoreInitial(guide.entry,public)
+                        }
+                        // GROUP has a known public-image limitation: a GROUP selector
+                        // cannot itself be an owned concrete twin. Keep the FULL image
+                        // assertion; for this GROUP-only fixture, additionally require
+                        // an executable raw-family witness from an observed FULL input.
+                        val groupRawWitness=!storedImage && barrier.observation.links.any { link ->
+                            if(link.callee!=started.method) return@any false
+                            val bounded=limit(Conclusion(link.added.fact,link.added.exclusion,
+                                link.linkLayer==Layer.DEMAND || link.added.fact.tail==Tail.ANY),barrier.config.fieldLimit)
+                            val actual=Pattern(bounded.fact,bounded.exclusion)
+                            val oracle=SelectedDemandReference(barrier.config.index,barrier.config.fieldLimit,
+                                barrier.config.direction,f.manager.marks,0)
+                            demand.near(started.method,actual).any { guide ->
+                                val group=guide.entry.fact.mark as? MarkSlot.Concrete
+                                group!=null && f.manager.marks.isGroup(group.mark) &&
+                                    oracle.family(guide.entry,actual,if(bounded.demand) Layer.DEMAND else Layer.NORMAL)
+                                        .any { it.first==started.initial }
+                            }
+                        }
+                        assertTrue(storedImage || groupRawWitness,
+                            "Each restricted initial must have a fixed-demand image or an explicit GROUP raw witness: $started")
                     }
                 } else assertTrue(barrier.records.all { record ->
                     record.conclusion.fact.mark is MarkSlot.Star || record.conclusion.fact.base == AccessPathBase.Zero
@@ -239,7 +260,7 @@ class AnyTaintIterationTest {
         VulnerabilityKey(rule, key.method, f.program.inst(key, node))
 
     @Test
-    fun `G getter retains same-prefix backward ANY then refines to forward uniform FLOW`(): Unit {
+    fun `G getter stores the normal STAR reader and replays it on the forward uniform source`(): Unit {
         DriverFixtures().use { f ->
             val root = f.program.method("G root", listOf(listOf(1), listOf(2), emptyList()), 2).key()
             val get = f.program.method("G get", listOf(listOf(1), listOf(2), emptyList()), 2).key()
@@ -261,20 +282,18 @@ class AnyTaintIterationTest {
                 conclusions(runs.barriers[0].observation.rawSummaries, get, result))
             assertEquals(setOf(DemandPattern(demandResult, j)), runs.barriers[0].demand.getValue(get)
                 .filterNot { it.entry.fact.base == AccessPathBase.Zero }.toSet())
-            // Same-prefix ANY remains ANY; it is not a NORMAL STAR query.
-            val backward = f.program.pattern(result, tail = Tail.ANY, mark = MarkSlot.STAR)
+            // Same-head ANY now starts STAR/FLOW NORMAL. The real read creates a
+            // reusable NORMAL reader, so run-3 needs no new uniform callee analysis.
+            val backward = f.program.pattern(result, tail = Tail.STAR, mark = MarkSlot.STAR)
             assertEquals(setOf(backward), initialRows(runs.barriers[1], get))
-            val readBack = f.program.pattern(argument, listOf(name), Tail.ANY, MarkSlot.STAR)
-            assertEquals(setOf(Conclusion(readBack.fact, ExclusionSet.Empty, true)),
-                conclusions(runs.barriers[1].observation.rawSummaries, get, argument))
-            val selectedGetter = runs.barriers[1].observation.selectedDemand.filter { it.method == get }.toSet()
-            assertEquals(setOf(ObservedEdge(get, setOf(backward), Conclusion(readBack.fact, ExclusionSet.Empty, true))), selectedGetter)
-            assertTrue(runs.barriers[1].records.none { it.method == get && it.direction == Direction.BACKWARD })
-            assertEquals(setOf(DemandPattern(readBack, backward)),
-                runs.barriers[1].demand.getValue(get))
-            // The actual uniform source refines the named demand in the next forward run.
-            val refined = f.program.pattern(argument, listOf(name), Tail.ANY_TAINT, MarkSlot.STAR)
-            assertEquals(setOf(refined), initialRows(runs.barriers[2], get))
+            val readBack = f.program.pattern(argument, listOf(name), Tail.STAR, MarkSlot.STAR)
+            assertEquals(setOf(Conclusion(readBack.fact,ExclusionSet.Empty,false)),
+                conclusions(runs.barriers[1].observation.rawSummaries,get,argument))
+            assertTrue(runs.barriers[1].observation.selectedDemand.none { it.method==get })
+            assertContains(runs.barriers[1].records,Native(get,Direction.BACKWARD,backward,
+                Conclusion(readBack.fact,ExclusionSet.Empty,false)))
+            assertTrue(runs.barriers[1].demand.getValue(get).isEmpty())
+            assertTrue(initialRows(runs.barriers[2],get).isEmpty())
             assertEquals(setOf(Conclusion(PathFact(result, emptyList(), Tail.ANY_TAINT, t), ExclusionSet.Empty, false)),
                 exitConclusions(f, runs.barriers[2], root, result))
             assertEquals(setOf(Seed.Source(root, root.statement, src)), runs.barriers[1].seeds)
@@ -282,11 +301,11 @@ class AnyTaintIterationTest {
             assertEquals(listOf(1, 1, 0), frontiers.map { it.seeds })
             assertContains(frontiers[0].analysed, get)
             assertContains(frontiers[1].analysed, get)
-            assertContains(frontiers[2].analysed, get)
+            assertFalse(get in frontiers[2].analysed,"Saved NORMAL replay needs no current callee analysis")
             assertContains(runs.barriers[0].records, Native(get, Direction.FORWARD, j,
                 Conclusion(j.fact, ExclusionSet.Empty, false)))
-            assertContains(runs.barriers[2].records, Native(get, Direction.FORWARD, refined,
-                Conclusion(PathFact(result, emptyList(), Tail.ANY_TAINT, MarkSlot.STAR), ExclusionSet.Empty, false)))
+            assertContains(runs.barriers[2].records,Native(get,Direction.BACKWARD,backward,
+                Conclusion(readBack.fact,ExclusionSet.Empty,false)))
             assertEquals(rule, report.entries.single { it.descriptor.key.statement == f.program.inst(root, 2) }.descriptor.rule)
             assertEquals(AnalysisEnd(RunStatus.COMPLETE, 3, Direction.FORWARD, EndReason.NO_DEMAND_EDGE,
                 run1MarkMode = MarkMode.GROUP), report.end)

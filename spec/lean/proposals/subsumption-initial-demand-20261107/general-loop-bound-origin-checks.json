@@ -1,0 +1,195 @@
+{
+  "state": "PASS_GENERAL_C2_KEY_BOUND_AND_E07_IDENTITY_SUBDOMAIN_ONLY",
+  "modules": [
+    {
+      "module": "RestrictedInitialPolicy",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/general-loop-key-bound-jlho3p8c/RestrictedInitialPolicy.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/RestrictedInitialPolicy.lean"
+      ]
+    },
+    {
+      "module": "PlainStarRelativeAdmissionProofFixed3",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/general-loop-key-bound-jlho3p8c/PlainStarRelativeAdmissionProofFixed3.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/PlainStarRelativeAdmissionProofFixed3.lean"
+      ]
+    },
+    {
+      "module": "ExactFlowInputBridge",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/exact-flow-input-bridge/proof-fix-attempt2",
+        "-M2048",
+        "-o",
+        "/tmp/general-loop-key-bound-jlho3p8c/ExactFlowInputBridge.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/exact-flow-input-bridge/proof-fix-attempt2/ExactFlowInputBridge.lean"
+      ]
+    },
+    {
+      "module": "GeneralLoopAdmissionBound",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/general-loop-admission-bound/proof-fix-attempt2",
+        "-M2048",
+        "-o",
+        "/tmp/general-loop-key-bound-jlho3p8c/GeneralLoopAdmissionBound.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/general-loop-admission-bound/proof-fix-attempt2/GeneralLoopAdmissionBound.lean"
+      ]
+    }
+  ],
+  "theoremAxiomAudit": [
+    {
+      "theorem": "GeneralLoopAdmissionBound.geometric_key_depth_bound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.selected_has_same_table_result",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.raw_C2_key_depth_bound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.native_C2_key_depth_bound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.public_normalization_keeps_key_depth",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.native_public_key_depth_bound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.each_command_keeps_a_real_query_family",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.ALL_cut_commands_are_bounded_by_the_entire_query",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.fine_first_field_emits_a_real_deeper_STAR_key",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.fine_key_depth_is_h_plus_one",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.fine_command_is_present_with_its_own_label",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.NO_cut_from_ANY_other_family_reproduces_the_fine_key",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.E07_root_then_child_is_root",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.E07_child_then_root_is_root",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.E07_only_root_MUST_initial_is_emitted",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.E07_child_first_emits_the_same_initial",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.E07_identity_is_inferred_from_MUST_not_STAR",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.E07_arbitrary_full_mark_field_finding_survives",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.E07_requires_definite_MUST_not_ordinary_STAR",
+      "axioms": [
+        "propext"
+      ]
+    }
+  ],
+  "newRuntimePolicy": false,
+  "globalProgramProgressProved": false,
+  "scope": "ALL-labelled-query-C2-key-depth-bound-and-E07-emptyE-unprotected-identity-uniform-subdomain",
+  "checkedLaws": 19,
+  "sourceSha256": "6cba7ca0a1a24f9b05b46378fcf0cd8f707aeaf3bacbed71587ea0bd76b94cc2"
+}

@@ -1,0 +1,7388 @@
+{
+  "state": "PASS_LOCAL_COMPONENTS_ONLY",
+  "proofScope": "Scoped historical components plus selected companion/overlap/same-flag coverage, strict STAR admission, scalar C5 examples, proposed descendant-selector delta, complete finite getFF argument/return policy comparison, E19 original-pair companion control, and E21 all-family scalar grammar with pre-canonical subset laws, actual source/read witnesses and fixed-order loop-gate comparison. Native grammar/port/driver correspondence, E29 recovery and global convergence remain open. A separate counterfactual GetFFCoarseFlowRun2 checks that explicitly adding a coarse FLOW run-2 start repairs E30 under proposed STAR rejection without completion; current C2 does not emit that start. Selected ExactFlowPrefixCompanion preserves old seeds and normalized C5 image while adding raw EXACT/FLOW prefix identities. GetFFExactFlowPrefix checks the actual new emitter; E21PrefixExactCompanion delegates to that same generic emitter and recomputes all scalar families and source images. The 20261108 review adds the direct exact-root selected-cleaner phase catalog (19 statements, latest C2 and actual cleaner/mx/H) and the E29 latest-emitter local observation audit (7 statements, not a new whole-program false negative). RenderedDeliveryCounterexample adds six local distributed-delivery contract counterexamples: hidden U insertion is lost under render-only publication. No native bug or report loss is claimed. E21LateLocalAudit adds eight local diagnostic laws for F5 FLOW/DEMAND feedback, a typed-Zero borrowed-model corner and the NT/DT distinction. The larger failed B6/F7 attempt is preserved unverified; no later closure or convergence proof is claimed. CleanerMaySurvivorCandidate adds ten laws for an unselected partial-cleaner STAR/T-to-MAY/T conclusion candidate: relation inclusion, unchanged H/layer, full local 1,1,2 catalog and a recovered NORMAL finding. No runtime or selected cleaner semantics are changed. E21Run4SavedReplayClosure adds eighteen local laws for the omitted run-4 saved-replay/gate fixed point. It distinguishes raw candidates, parent completions, local originals and current publication, computes three current families for its closed five-shape input domain, and finds only the NORMAL source image at run-5. Historical broad catalogs remain transaction upper bounds, not proved reachable global fixed points. Other ports/driver closure remain open. E21Run2Run3WorklistClosure adds 24 component laws: reached ZERO control, no supplied DATA frame, C2/body/C5/publication/standing-input join rounds, native ancestor-ANY AP matching, global and loop bounds, actual reached run-2/run-3 DATA fixed points, source permission, backward-ZERO DATA persistence exclusion, and unchanged seven/three handoff pairs. Scalar offers are proof witnesses, not a proposed runtime archive; all-port/packed/native-driver adapters remain open. E21SavedRepeatGateDiagnosis compares the kept gate order with a bounded no-completion saved-repeat diagnostic route: derived source/reader, source dropped before replay, native AP shrinking NORMAL applications, existing exact admission and NORMAL sink, unchanged ZERO origin and DEMAND negative. It selects no general repair and does not prove a whole native iteration. ZeroPremiseLoopBypassCandidate checks an unimplemented local loop policy: own effective ZERO-premise rows bypass only the extra loop gate; DATA rows, global bound, C5 and layers stay unchanged. The reached run-2/run-3 fixed points are unchanged in the declared component; the run-5 source reaches existing exact admission and sink. Parent ZERO does not exempt a DATA grower. No all-port/native whole-driver or global workload guarantee.",
+  "nativeAnalyzerProved": false,
+  "allPrincipalProgramsProved": false,
+  "checkedAtUTC": "2026-11-08T09:43:58.284301+00:00",
+  "manifestSha256": "98b5336b1a0d9a934534c207cc63ebcf918d7f4515c15e95dee7daeb6607b05b",
+  "runs": [
+    {
+      "module": "BaselineImports",
+      "exitCode": 0,
+      "logSha256": "468198fce1766834f702b598e6010e33763a2d3d0f40c5e68d2f5268132cf049"
+    },
+    {
+      "module": "RestrictedInitialPolicy",
+      "exitCode": 0,
+      "logSha256": "1577e2f43a177d130cc83307db872b5c018824522f26eb72c48ec4b78c705261"
+    },
+    {
+      "module": "RelativeAdmission",
+      "exitCode": 0,
+      "logSha256": "f99301bcc7ad1cfb5a43afabfc8a5726b079c3a18ea48df9b3f316200b7b9a02"
+    },
+    {
+      "module": "Geometry",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "AnnotatedC5Exit",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "StaticCarryGap",
+      "exitCode": 0,
+      "logSha256": "381a0587d0d734fbc1534a2ed6fdebaaf871ff75e3d3a9b4601549c6a9f74b83"
+    },
+    {
+      "module": "FlowDemandCompletion",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "WrapperRecovery",
+      "exitCode": 0,
+      "logSha256": "b23a6fabd125158950a82bd462a970e6cc1e79a2a64f4542070c6c071c682299"
+    },
+    {
+      "module": "LiteralProtection",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "StaticFlowCompletion",
+      "exitCode": 0,
+      "logSha256": "5590d37d5b2ebc43065e3e841c49b9034e3ebcbf6d20e9c11015e08384252af2"
+    },
+    {
+      "module": "OwaspUniformCompletion",
+      "exitCode": 0,
+      "logSha256": "7f1a445c53ff2e5d96295cf6cb065f17b155565f1806aee30ec4f5828b795fb7"
+    },
+    {
+      "module": "DeepFlowCompletion",
+      "exitCode": 0,
+      "logSha256": "84cd1fe46a30f69ed5718ce9723fbc8faa9a34b68d54bac58322ff40ffc78fef"
+    },
+    {
+      "module": "ExactFlowInputBridge",
+      "exitCode": 0,
+      "logSha256": "0c94dbe7c88687a3a9e79940d44033b07ed71e0dcf8085e05333a35ea2933c2d"
+    },
+    {
+      "module": "TwoLoopHeaderFlow",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "Relations",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "SelectedTransitiveSubsumption",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "GeneralLoopAdmissionBound",
+      "exitCode": 0,
+      "logSha256": "7a87a0103d240ce3bfebcd29919f54fcc64b45cf269ec42b644427a94431d2bc"
+    },
+    {
+      "module": "Canonical",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "Matching",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "Reachability",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "Discovery",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "LoopGeometry",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "ExceptionalControlDemand",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "DeepGuidanceArrival",
+      "exitCode": 0,
+      "logSha256": "96c48c4438f2c3e8945c48e82fcc9223a563fb3e80652cd9e6a1aefe0afa7972"
+    },
+    {
+      "module": "GeneralLoopAdmissionOneStep",
+      "exitCode": 0,
+      "logSha256": "c763266a3c736eae4096866756084c063d07aa82529e58df61fd3e9fafba7c60"
+    },
+    {
+      "module": "LoopMapperRecovery",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "DeepExtraFrontier",
+      "exitCode": 0,
+      "logSha256": "1afab4eb588fa399a53645ec6e133feff696db9e403321010ec94bc4f40a081a"
+    },
+    {
+      "module": "ConcreteConverterWrapper",
+      "exitCode": 0,
+      "logSha256": "dd24ecab7c670e67e70fcb04743d412dcaa3cbc568682011ac21470a62257e05"
+    },
+    {
+      "module": "ConcreteStarFlowCompanion",
+      "exitCode": 0,
+      "logSha256": "a13313d304cd538db6af0618d3e3d0aa5f10afe14c030eebb05f417ec3e1f65e"
+    },
+    {
+      "module": "ExclusionCorrelatedInclusion",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "CombinedExclusionCoverage",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "StarHeadOverlap",
+      "exitCode": 0,
+      "logSha256": "127d33d75418e68913ee901b5adfc8f1ed9a21bf8fcb49e4b3c3f78277114ba9"
+    },
+    {
+      "module": "CombinedOverlapBridge",
+      "exitCode": 0,
+      "logSha256": "7e862c46c658235af815d8b84cdc3bd4e01d66d264f3bdec07180df900a60951"
+    },
+    {
+      "module": "ScalarChainIntersectionExamples",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "RejectAncestorStarAdmission",
+      "exitCode": 0,
+      "logSha256": "ea81c1d279405daaa13c17a57141364548a69383917e9e1b23b82fd997333293"
+    },
+    {
+      "module": "FlagMatchedSubsumption",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "PlainCoverageFlagViews",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "CurrentCoverageInvariant",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "E21OperatorLedger",
+      "exitCode": 0,
+      "logSha256": "60db1782e2bb4144c1df433d6fa93d3b3b8911a5e2a4d998045ec982a0b70ed7"
+    },
+    {
+      "module": "DescendantExitReview",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "GetFFC5Policy",
+      "exitCode": 0,
+      "logSha256": "af06e1b087e79283625041e0a721ee558cc11f0af37337f7274156f3709db6a3"
+    },
+    {
+      "module": "E19CompanionControl",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "E21ClosedFamilies",
+      "exitCode": 0,
+      "logSha256": "64a7580a2419dc9fa48ae73f6ce70deb628708b10deffb22ccdf20c1a8ab012c"
+    },
+    {
+      "module": "E21AllSourceImages",
+      "exitCode": 0,
+      "logSha256": "2ef9bc362043f11134827eadfe8a264befcd9942a29ae083c92005b830f3661c"
+    },
+    {
+      "module": "GetFFCoarseFlowRun2",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "ExactFlowPrefixCompanion",
+      "exitCode": 0,
+      "logSha256": "925ba852bf956ad4d73bcf4059fb2d93c921e4630b1db1f8034948664f09dc27"
+    },
+    {
+      "module": "GetFFExactFlowPrefix",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "E21PrefixExactCompanion",
+      "exitCode": 0,
+      "logSha256": "ed8bb3d5e65ea7184ab543864414ae55df0dec32b31d769f2ad1327951b27e80"
+    },
+    {
+      "module": "RootExactCleanerGap",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "MustAdmissionAudit",
+      "exitCode": 0,
+      "logSha256": "8958625b5d0b62659b53271f39eeb0955675143d4f18aca0d75ca227a52a0ccb"
+    },
+    {
+      "module": "RenderedDeliveryCounterexample",
+      "exitCode": 0,
+      "logSha256": "1e3d429fdf070489c6b18b8eafdf2e6a26688bc291d8acff8705d21c2e0491be"
+    },
+    {
+      "module": "E21LateLocalAudit",
+      "exitCode": 0,
+      "logSha256": "92d7d76137800771ca240acbece5b2b115c87ce2cd830930762cac8bc6b93d99"
+    },
+    {
+      "module": "CleanerMaySurvivorCandidate",
+      "exitCode": 0,
+      "logSha256": "03ae35c038974ed083c3285611878fd8cb543606977b24fd019f0673f916d062"
+    },
+    {
+      "module": "E21Run4SavedReplayClosure",
+      "exitCode": 0,
+      "logSha256": "432931457e6ab367909eb0d8748795506207fd903d1f18cb130ce72b35bdd4e9"
+    },
+    {
+      "module": "E21Run2Run3WorklistClosure",
+      "exitCode": 0,
+      "logSha256": "555e6806dbf2e5d20f24e43aa5999079de652f493cf1503f86a777847fbc40df"
+    },
+    {
+      "module": "E21SavedRepeatGateDiagnosis",
+      "exitCode": 0,
+      "logSha256": "a05c5018d3a5df8dfb9c8e9f31da23b9cf808e12f86c06928189ef6836563889"
+    },
+    {
+      "module": "ZeroPremiseLoopBypassCandidate",
+      "exitCode": 0,
+      "logSha256": "6cae33c2adb9a407c693658fc3859971c443c7796095323c5267ebcb7f8ac97b"
+    },
+    {
+      "module": "Audit",
+      "exitCode": 0,
+      "logSha256": "d4e09395de0af471fec44f1192dcef458c2eeee6717b95bd321d718f3d5a582f"
+    }
+  ],
+  "theoremAxioms": [
+    {
+      "theorem": "PlainStarRelativeAdmission.member_bounded_by_maxField",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.freshField_not_member",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.freshField_is_admitted",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.selected_is_allowed",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.same_path_relation",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.one_child_relation",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.allowed_template_has_legal_executable_witness",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.render_is_in_relative_templates",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.raw_image_iff_relative_allowed_template",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.arbitrary_actual_emission_is_in_raw_image",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.raw_image_supplies_actual_witness",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.raw_image_exactly_characterizes_arbitrary_emission",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.raw_image_preserves_base_mark_budget_and_has_no_ANY",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.join_demand_left",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.join_demand_right",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.legal_actual_may_be_relayered_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.selected_implies_common_legal",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.concrete_emission_keeps_DEMAND_relayering",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.admission_layer_satisfies_joint_layer",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.joint_layer_has_constructive_alternative",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.joint_image_has_executable_actual_witness",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.joint_image_exactly_characterizes_arbitrary_admission",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.exclusions_include_themselves",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.every_raw_image_is_inside_its_demand",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.raw_is_in_public_preimages",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.listed_preimages_normalize_to_public",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.C5_permission_has_executable_raw_actual_witness",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.C5_permission_iff_normalized_actual_emission",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.C5_entry_permission_preserves_supplied_output_and_H",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.concrete_STAR_start_is_identity_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.FLOW_STAR_start_is_identity_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.concrete_STAR_actual_requires_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.FLOW_admission_uses_intrinsic_only",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.EXACT_on_MAY_concrete_support_is_kept",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.mark_mismatch_never_emits",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.base_mismatch_never_emits",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.illegal_actual_never_emits",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.later_STAR_demand_rejects_every_strict_descendant",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.ordinary_STAR_ancestor_does_not_gain_MAY_capability",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.precise_STAR_deeper_actual_still_rejects",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.same_head_ANY_accepts_legal_concrete_STAR_as_identity_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.concrete_demand_never_admits_companion_FLOW",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.FLOW_EXACT_preimage_is_needed_at_later_STAR_cap",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.seed_and_output_layers_are_not_equal_by_contract",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.common_full_mark_passes",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.admits_empty",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.admits_union",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.allows_prefix",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.selector_base_path_slot_tail_unchanged",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.concrete_selector_E_unchanged",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.FLOW_STAR_selector_E_only_is_cleared",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.selector_normalization_keeps_requested_points",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.selector_normalization_keeps_requested_membership",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.meet_preserves_layer_slot_H",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.meet_never_creates_a_full_mark",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.backwards_MUST_is_rejected",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.selector_MUST_is_rejected",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.MAY_same_head_EXACT",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.FLOW_MUST_same_head_EXACT_keeps_E",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.full_MUST_same_head_EXACT_clears_E",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.MUST_same_head_STAR_unions_E",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.EXACT_and_STAR_stay_whole",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.same_head_keeps_every_requested_point",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.rebase_keeps_selector_points",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.prefix_append_drop",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.selector_allows_candidate_head",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.actual_allows_selector_head",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.selection_keeps_every_requested_point",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.meet_retains_requested_membership",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.cut_is_pinned_scalar_limit",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.cut_depth_bound",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.within_cut_is_identity",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.real_cut_is_MAY_DEMAND_EmptyE",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.cut_never_promotes_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.NORMAL_cut_was_unchanged",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.cut_retains_possible_membership",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.positive_pair_budget",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.pair_budget_limits",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.restricted_has_one_computed_meet",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.restricted_depth_uses_its_own_exit",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.restricted_retains_requested_membership",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.DATA_ND_ticket_is_one_member",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.control_entry_cannot_admit_DATA_original",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.whole_original_and_owner_kept",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.every_union_result_has_one_complete_row",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.each_complete_row_result_is_in_union",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.row_union_is_append_not_cross_product",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.ZERO_exit_rejects_DATA",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.DATA_exit_rejects_control",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.ZERO_exit_keeps_typed_controls",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.ZERO_original_DATA_is_still_intersected_and_capped",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.both_budgets_keep_distinct_final_results",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.first_DATA_result_does_not_saturate",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.selector_FLOW_STAR_E_is_ignored_but_concrete_STAR_E_is_not",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.wrong_FULL_mark_is_not_created",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.correlated_STAR_is_not_exact_set_intersection",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "AnnotatedC5Exit.concrete_selector_does_not_narrow_FLOW_slot",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.selected_same_head_ANY",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.selected_same_head_STAR",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.same_head_FULL_mark_mismatch",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.same_head_precise_STAR_emits_EXACT",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.later_precise_STAR_rejects_descendant",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.paired_C5_has_actual_witness",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.handoff_does_not_widen_precise_STAR",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.saved_ZERO_replay_exists",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.saved_ZERO_cannot_carry_DATA",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.no_admitted_NORMAL_FLOW_provider",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.no_S1_cover_witness",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.actual_call_has_no_DATA_output",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.any_C2_with_selected_rejection_loses_this_call",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.missing_finding_even_with_source_permission",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.raw_prefixes_contain_source",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.raw_prefixes_contain_empty",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.raw_prefix_count",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.each_raw_head_is_a_prefix",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.valid_prefix_has_source_and_shape",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.valid_prefix_depth_bound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.source_head_is_a_valid_prefix",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.local_empty_head_is_valid",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.static_empty_head_is_invalid",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.static_class_only_head_is_invalid",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.static_array_without_named_field_is_invalid",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.static_named_field_head_is_valid",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.self_result_has_one_real_endpoint",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.eligible_endpoint_gets_its_full_head",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.original_rows_are_kept",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.generated_row_has_one_final_complete_source",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.paired_result_keeps_both_heads",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.paired_rows_are_not_a_prefix_product",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.no_incoming_rows_give_no_completed_view",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.self_completion_is_mark_independent",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.paired_completion_is_mark_independent",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.controls_do_not_become_DATA_endpoints",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.self_result_keeps_exact_interface",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.prefix_result_keeps_exact_interface",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.all_additions_keep_exact_interface",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.generated_scopes_and_ports_have_a_final_source",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.generated_has_no_history_witness",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.filter_length_bound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.valid_prefix_count_bound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.self_count_bound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.endpoint_flatmap_bound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.additions_count_is_linear_in_endpoint_budget",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.generated_count_is_linear_in_final_budget",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.virtual_carry_is_single_query_row",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.virtual_carry_has_no_run3plus_completion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.virtual_carry_is_mark_independent",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.paired_exit_alone_supplies_repeat_self_guidance",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.prefix_closure_includes_root_and_intermediate",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.fine_next_key_differs_from_depth_two_cut_key",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.static_prefixes_start_at_named_field_and_include_full_head",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.concrete_class_marker_is_not_a_completion_source",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.virtual_static_carry_uses_actual_named_field_not_root",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.self_only_completion_cannot_retain_cross_base_FLOW",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.paired_erasure_preserves_the_original_cross_base_pair",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.paired_completion_supplies_cross_base_FLOW_permission",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.completion_has_no_crossed_prefix_product",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.marked_only_filter_misses_final_provisional_FLOW_permission",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowDemandCompletion.removed_long_FLOW_row_is_not_reopened_from_final_short_row",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.all_run1_wrappers_are_derived",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.all_B2_guides_are_generated",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.b2_G_leaf_is_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.b2_F_leaf_is_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.f3_F_leaf_is_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.g_wrapper_fixed_step",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.f_wrapper_B2_fixed_step",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.f_wrapper_F3_fixed_step",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.G_internal_STAR_is_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.F_B2_internal_STAR_is_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.F_F3_internal_STAR_is_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.all_B2_G_wrappers_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.all_B2_F_wrappers_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.all_F3_F_wrappers_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.all_F3_F_guides_are_generated",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.R1_has_real_cut_and_target",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.B2_G_has_real_MAY_offer",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.B2_F_has_real_g_MAY_offer",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.source_permission_is_derived",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.G_external_MAY_is_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.F_B2_external_MAY_is_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.F_F3_exact_source_is_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.arbitrary_wrappers_reach_actual_source",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.arbitrary_wrappers_source_permission",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.F_then_G_precise_application",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.MAY_application_stays_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.MAY_application_cannot_create_NormalTarget",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.arbitrary_finite_wrappers_recover",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.arbitrary_finite_wrappers_report_NORMAL",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.operational_three_runs_recover",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.operational_three_runs_report_NORMAL",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.concrete_root_reaches_exact_T",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "theorem": "LiteralProtection.H_cannot_be_created_by_DATA",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LiteralProtection.old_H_survives",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LiteralProtection.incoming_H_survives",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LiteralProtection.H_always_has_a_carrier",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LiteralProtection.arbitrary_DATA_update_keeps_valid_H",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LiteralProtection.DATA_rejection_cannot_remove_H",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LiteralProtection.repeated_flag_has_no_new_flag_delta",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LiteralProtection.singleton_has_no_different_coordinate",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LiteralProtection.marked_key_does_not_flag_another_mark",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LiteralProtection.changed_span_E_is_a_distinct_flag",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LiteralProtection.pass_unmapped_output_has_no_H",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LiteralProtection.pass_preserves_validity",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.adapter_counts_fields_and_arrays",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_FLOW_row_is_derived_from_final_T_row",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_query_local_FLOW_row_is_derived",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.remaining_pure_FLOW_DEMAND_also_gets_completion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_source_cut_is_actual_query",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_normal_provider_is_inferred",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_same_field_overwrite_infers_no_NORMAL_provider",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_concrete_selector_remains_concrete_only",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_MAY_application_keeps_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_actual_source_permission_is_derived",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_saved_first_replay_recovers_exact_finding",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.exact_static_parent_does_not_taint_child",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.paired_copy_FLOW_row_is_derived",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.self_only_completion_does_not_mix_endpoints",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.paired_copy_PROVIDER_is_inferred",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.paired_copy_actual_exact_mark_is_preserved",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.canonical_uniform_packet_admits_root_MUST_not_child_STAR",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.Target_self_completion_cannot_publish_crossbase_copy",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.Target_self_completion_cannot_publish_crossbase_H",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.actual_uniform_admits_demanded_MUST_prefix",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.path_prefix_of_le",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.path_equality_implies_depth_equality",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.MUST_packet_union_is_prefix",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.getBytes_strips_at_most_one_H",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.constructor_addition_is_MUST_subsumed",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.body_never_grows",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.every_intermediate_depth_fits",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.selected_uniform_initial_is_not_ANY",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.real_uniform_source_covers_every_requested_prefix",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.actual_C5_projects_ancestor_MUST",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.actual_C5_restricts_without_DEMAND_cut",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.all_results_are_NORMAL_and_unprotected",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.B2_actual_C2_emits_NORMAL_FLOW_identity",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.B2_NORMAL_H_transport_is_inferred",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.B2_NORMAL_FLOW_covers_plain_T_DEMAND_H_arm",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.protected_arm_still_cannot_be_subsumed",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.covered_plain_T_STAR_H_is_removed_before_completion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.uniform_body_contributes_no_outgoing_refinement",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.F3_exact_on_MAY_keeps_exact_Target_original_and_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.F3_provisional_Target_is_not_a_NORMAL_report",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.all_three_final_rows_are_kept_literally",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.completed_whole_input_has_eleven_rows",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.original_whole_repeat_query_is_empty_for_raw_and_cut",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.completed_whole_query_has_fine_raw_key",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.completed_whole_depth_two_query_has_no_fine_key",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.completed_whole_depth_one_query_has_no_fine_key",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.depth_two_cut_changes_every_full_observation",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.depth_one_cut_changes_every_full_observation",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.depth_three_keeps_every_full_observation",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.all_proper_scalar_trials_reject",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.provider_pair_is_generated_from_final_F3_row",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.ordinary_body_C2_and_paired_C5_derive_NORMAL_shrinker",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.concrete_selector_does_not_accept_the_FLOW_provider",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.derived_saved_read_shrinks_one_actual_field",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.applying_NORMAL_FLOW_shrinker_to_MAY_keeps_DEMAND",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.finite_saved_read_chain_reaches_root_NORMAL",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.exact_four_source_then_three_saved_reads_reaches_NORMAL_root",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.finite_source_read_chain_has_a_NORMAL_sink",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.exact_four_chain_preserves_ZERO_source_origin_at_NORMAL_sink",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.B4_first_admission_is_plain_STAR_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.B4_identity_reverse_read_grows_to_ff_STAR_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.B4_growing_STAR_has_legal_C2_reentry",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.B4_growing_key_is_in_shared_image_and_not_ANY",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepFlowCompletion.generated_completion_never_changes_interface",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.queryView_is_idempotent",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.old_legal_view_iff_native_legal",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.queryView_is_identity_on_old_domain",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.old_legal_is_native_legal",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.old_table_is_guarded_geometry",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.native_geometry_ignores_only_FLOW_EXACT_actual_E",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.EXACT_ancestor_still_cannot_reach_a_deeper_demand",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.common_legal_query_iff_native",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.native_table_is_old_query_table",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.selected_table_is_unchanged_geometry",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.admission_layer_is_unchanged",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.native_table_emitter_is_old_query_emitter",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.old_emitter_rejects_illegal_actual",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.old_emission_has_legal_actual",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.native_emit_is_old_query_emit",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.native_emit_is_geometry_table_emit",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.native_emit_preserves_old_legal_behavior",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.raw_image_has_same_native_actual_witnesses",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.joint_image_has_same_native_actual_witnesses",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.normalized_C5_image_has_same_native_witnesses",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.native_emission_has_the_same_base_mark_budget_and_no_ANY",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.initial_identity_start_and_its_new_H_are_unchanged",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.unchanged_C5_permission_keeps_output_layer_and_H",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.bound_submitted_actual_is_literal_original",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.original_E_layer_mark_H_are_not_rewritten",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.concrete_EXACT_nonempty_E_is_still_rejected",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.scenario_initial_is_emitted_from_real_exact_T",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.scenario_existing_strong_write_keeps_raw_EXACT_E",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.scenario_old_formal_domain_did_not_cover_the_input",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowInputBridge.scenario_native_query_admits_but_binding_retains_E",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.actual_CFG_ports_and_feedback",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.logical_exit10_uses_existing_leave_edge_not_a_new_CFG_edge",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.loop1_and_loop2_own_different_write_and_sink_nodes",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.zero_iteration_header_does_not_execute_the_write",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.run2_FLOW_permission_is_query_local_and_complete",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.B2_HEADER_NORMAL_identity_is_inferred_from_header_transfer",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.B2_HEADER_does_not_grant_a_source_permission",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.actual_weak_REPEAT_can_infer_its_separate_NORMAL_identity",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.explicit_strong_touched_REPEAT_has_no_static_NORMAL_identity",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.source_permission_comes_from_real_reverse_write_and_source2",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.saved_opposite_header_replays_FG_to_adjacent_exit10",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.header_record_is_not_a_repeat4_to4_record",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.old_precise_concrete_STAR_gate_still_rejects_FG",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.replay_result_survives_the_empty_original_T_initial_gate",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.AL1_actual_precise_T_starts_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.L2_getter_NORMAL_flow_is_inferred_by_actual_static_read",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.configured_root_has_the_existing_control_path_to_source2",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.F3_source_action_and_real_write_produce_the_exact_static_fact",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.E20_finite_path_reaches_physical_sink6_with_NORMAL_T",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.MAY_actual_is_not_upgraded_by_a_NORMAL_header_record",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.header_record_never_impersonates_the_repeat_even_with_weak_write",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.produced_specialization",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.specialization_subrelation",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.union_specialization_is_short",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.every_specialization_is_covered",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.empty_specialization",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.specialize_twice",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.reverse_specialization_subrelation",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.counted_append",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.specialization_growth_iff",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.reverse_specialization_growth_iff",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.strip_append",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.exact_descendant_applications_equal",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.exact_descendant_result",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.covers_refl",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.covers_trans",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.cover_denotation",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.strip_sound",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.coverWitness_sound",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.coverWitness_complete",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.coversB_iff",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.cancelHeads_reconstruct",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.cancelHeads_common",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.factorPaths_reconstruct",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.factorPaths_append",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.family_specialize",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.residual_specialize",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.cover_has_index_witness",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.index_witness_is_cover",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.index_cover_iff",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.prefixCandidates_complete_and_sound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.below_payload_applications_equal",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.below_ordered_packet_applications_equal",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.insert_never_invents",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.insert_covers_every_input",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.insert_preserves_relation",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.insert_antichain",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.build_antichain",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.build_never_invents",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.build_preserves_relation",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.canonical_is_antichain",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.canonical_relation",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Relations.canonical_has_input_witness",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.implicit_view_keeps_domain",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.selected_aligned_guard_requires_equal_mx",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.proper_cross_mx_aligned_removal_is_rejected",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.selected_equal_mx_aligned_coverage_is_transitive",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.actual_provider_covers_its_implicit_view",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.concrete_view_has_computed_suffix",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.computed_implicit_B_backs_C",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.aligned_A_and_direct_B_backing_compute_A_cover_without_B_storage",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.A_covers_C_without_an_admitted_or_stored_B",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.common_suffix_witness_is_executable",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.excluded_mark_cannot_be_covered",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.cross_mark_relation_cannot_be_removed",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.rejected_A_is_not_a_provider",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.cell_admission_commutes",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.protected_coordinate_is_always_residual",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.late_exact_typed_flag_upgrade_is_fresh",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.repeated_exact_flag_is_not_fresh",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.C_then_A_and_A_then_C_agree",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.source_processing_membership_survives_summary_coverage",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.protected_C_survives_both_orders",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.covered_plain_C_is_removed_in_both_orders",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.a_borrowed_B_cannot_be_registered_as_an_actual_provider",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.A_has_a_computed_B_cover_and_B_backs_C",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.C_then_A_removes_plain_C_without_ever_storing_B",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.A_then_C_removes_plain_C_without_ever_storing_B",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.protected_C_is_kept_in_both_concrete_arrivals",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.late_flag_upgrade_wins_after_plain_C_was_compacted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.ordinary_source_membership_remains_in_both_orders",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.covering_NORMAL_support_does_not_require_C_to_be_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.excluded_T_and_wrong_owner_and_unaligned_rows_are_not_removed",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.cofinite_mx_tests_one_owned_mark_without_enumeration",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.unequal_canonical_mx_is_not_selected_for_FLOW_to_FLOW_removal",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.static_ZERO_nonempty_E_and_unadmitted_providers_are_outside_selected_bridge",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.geometric_key_depth_bound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.selected_has_same_table_result",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.raw_C2_key_depth_bound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.native_C2_key_depth_bound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.public_normalization_keeps_key_depth",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.native_public_key_depth_bound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.each_command_keeps_a_real_query_family",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.ALL_cut_commands_are_bounded_by_the_entire_query",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.fine_first_field_emits_a_real_deeper_STAR_key",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.fine_key_depth_is_h_plus_one",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.fine_command_is_present_with_its_own_label",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.NO_cut_from_ANY_other_family_reproduces_the_fine_key",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.E07_root_then_child_is_root",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.E07_child_then_root_is_root",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.E07_only_root_MUST_initial_is_emitted",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.E07_child_first_emits_the_same_initial",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.E07_identity_is_inferred_from_MUST_not_STAR",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.E07_arbitrary_full_mark_field_finding_survives",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionBound.E07_requires_definite_MUST_not_ordinary_STAR",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.pathCovers_refl",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.pathCovers_trans",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.pathCovers_antisymm",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.covers_refl",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.covers_header",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.covers_trans",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.covers_antisymm",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.covered_iff",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.insert_subset",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.insert_denotes",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.normalize_subset",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.normalize_denotes",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.no_member_covers",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.insert_reduced",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.normalize_reduced",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.normalize_idempotent_denotation",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.different_header_never_covers",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.excluded_first_field_not_covered",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.may_prefix_covers",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.plain_cannot_cover_protected",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.meet_membership",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.fill_membership",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.same_anchor_union",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.complete_root",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.direct_child_fill",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.admitted_descendant",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.descendant_union",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.mergePaths_exact",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.mergeRegions_key",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.mergeRegions_exact",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.mergeWith_exact",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.mergeOne_exact",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.normalizeRegionsFuel_exact",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.normalizeRegions_exact",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.unequal_keys_never_join",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.cross_E_must_cover",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.complete_direct_child_fills",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.longer_child_does_not_fill",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.excluded_child_does_not_fill",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.longer_child_missing_anchor",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.excluded_child_missing_descendant",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.mergeWith_length",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.mergeOne_length",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.normalizeRegionsFuel_irreducible",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.normalizeRegions_irreducible",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.normalizeRegionsFuel_stable",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.normalizeRegions_idempotent",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.headerBucket_union",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.indexed_reference_equivalent",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.indexed_candidate_bound",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.unrelated_headers_cost_zero",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.inherited_context_matters",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.overlapWitness_sound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.overlapWitness_complete",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.overlapWitness_iff",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.equal_anchor_overlap",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.blocked_child_no_overlap",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.mx_support",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.flow_fill_guard",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.flow_descendant_guard",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.narrower_flow_child_cannot_fill",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.ordinary_reader_unchanged",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Canonical.same_direction_overlap_disabled",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.pathPrefix_refl",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.strict_irrefl",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.empty_strict_nonempty",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.opposite_never_blocks",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.opposite_keep_native",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.opposite_exact_list",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.preserve_nonstar",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.preserve_may",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.preserve_must",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.preserve_exact",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.preserve_at",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.preserve_not_strict",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.only_native",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.exact_delta",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.reject_blocked",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.selected_member",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.selected_is_native",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.selected_payload_exact",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.select_stable_sublist",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.select_idempotent",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.product_length",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.complete_binding_length",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.opposite_bindings_exact",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.preserve_empty_query",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.run1_ordinary_vacuous",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.preserve_not_above_depth",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.product_native_inclusion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Matching.no_replacement_candidate",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Reachability.canonical_edge",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Reachability.canonical_path",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Reachability.exact_intermediate_positions",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Reachability.no_new_concrete_path",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Reachability.canonical_observation",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowAntichains.Reachability.observation_witness_unchanged",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.forward_graph_has_no_normal_or_exceptional_leave",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.discovery_reaches_the_real_sink_without_a_forward_edge",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.F1_FLOW_hypothesis_is_derived_from_that_actual_arrival",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.F1_sink_requests_T_from_real_FLOW_MAY",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.F1_requested_concrete_STAR_identity_is_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.F1_marked_Target_is_generated_without_a_method_local_default",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B2_real_normal_control_and_FLOW_pairs_are_generated",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B2_FLOW_body_and_paired_C5_generate_MAY_result",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B2_normal_ZERO_sink_seed_keeps_exact_T_at_real_discovery_port",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B2_normal_ZERO_feedback_seed_keeps_exact_T_at_repeat_port",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B2_FLOW_result_drives_concrete_STAR_source_hit",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B2_source_hook_has_real_feedback_Target_permission",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B3_ZERO_STAR_and_precise_control_rows_arrive_with_original_ports",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.root_Target_chain_uses_previous_scoped_ZERO_permission",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.F3_saved_normal_ZERO_reverse_replay_keeps_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.F3_source_MAY_is_published_in_actual_repeat_scope",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.F3_exact_Target_original_and_permission_are_generated",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B4_ANY_zero_and_exact_Target_handoff_are_computed",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B4_borrowed_exact_Target_accepts_real_ZERO_data_without_widening",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B4_opposite_NORMAL_read_derives_growing_exact_actual",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.F3_NORMAL_shrinker_is_derived_from_the_generated_frontier",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B4_whole_generated_query_has_the_needed_concrete_key",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B4_depth_one_cut_loses_that_key_in_the_whole_query",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B4_depth_two_cut_preserves_that_key_in_the_whole_query",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B4_raw_and_any_possible_depth_two_trial_have_same_source_effect",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B4_current_plain_STAR_actor_executes_physical_source",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.B4_Target_permission_uses_complete_physical_ZERO_exit_pair",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.actual_F5_required_three_rows_are_produced_not_supplied",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.source_reach_of_MAY_and_plain_STAR_is_a_real_AP_operation",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.Source_FLOW_hypothesis_does_not_invent_Reach_or_Target",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.concrete_Target_cannot_be_admitted_by_FLOW_completion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepGuidanceArrival.precise_Target_row_is_never_replaced_by_MAY",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.raw_C2_key_at_most_one_past_demand",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.native_C2_key_at_most_one_past_demand",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.native_public_key_at_most_one_past_demand",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.C5_queried_member_at_most_one_past_demand",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.ALL_commands_at_most_one_past_query_heads",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.ALL_public_keys_at_most_one_past_query_heads",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.ALL_B4_initials_at_most_two_from_depth_one_heads",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.actual_B4_depth_three_can_emit_only_the_first_new_field",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LoopMapperRecovery.ALL_families_keep_the_fine_adjacent_command",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LoopMapperRecovery.NO_extra_cut_family_can_reproduce_that_key",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LoopMapperRecovery.proper_cut_changes_the_whole_labelled_observation",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LoopMapperRecovery.actual_adjacent_C2_keeps_the_fine_key",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LoopMapperRecovery.actual_coarse_C2_does_not_keep_the_fine_key",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LoopMapperRecovery.loop_gate_keeps_the_precise_NORMAL_output",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LoopMapperRecovery.feasible_loop_mapper_path_keeps_the_required_NORMAL_finding",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "LoopMapperRecovery.wrong_full_mark_still_cannot_trigger_the_sink",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.public_initial_keeps_counted_depth",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.endpoint_member_is_bounded",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.prefix_addition_keeps_both_head_bounds",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.paired_addition_keeps_both_head_bounds",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.ALL_completed_rows_keep_both_head_bounds",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.every_raw_B2_public_initial_and_Target_head_has_depth_at_most_one",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.every_B2_C5_DATA_output_has_depth_at_most_one",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.read_after_global_cap_two_has_depth_at_most_one",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.ordinary_forward_or_opposite_read_never_increases_depth",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.every_F3_grammar_boundary_has_depth_at_most_one",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.every_F3_grammar_initial_and_Target_head_has_depth_at_most_one",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.every_F3_grammar_publication_handoff_has_both_heads_at_most_one",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.every_F3_grammar_Target_handoff_keeps_exact_original_head_bound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.ALL_B4_queried_origins_are_at_most_two",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.ALL_B4_queried_C5_premises_are_at_most_two",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.ALL_B4_DATA_results_use_their_own_exit_head_bound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.ALL_F5_extra_completion_heads_stay_at_most_two",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.ALL_F5_cut_commands_from_ANY_bounded_family_have_depth_at_most_two",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.NO_F5_extra_bounded_family_can_mask_the_real_depth_three_key",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.F5_full_actual_has_its_real_labelled_fine_key",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.every_proper_F5_scalar_trial_rejects_for_the_entire_bounded_query",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.every_proper_F5_trial_changes_the_entire_labelled_query",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.arbitrary_other_observer_components_cannot_hide_the_repeat_difference",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DeepExtraFrontier.computed_arrival_supplies_the_required_scope_and_saved_shrinker",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.guard_requests_T_but_emits_no_FLOW_to_U",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.leaf_rows_are_actually_inferred",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.internal_C2_admits_each_phase",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.ordinary_wrapper_composition_keeps_the_inferred_row",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.arbitrary_finite_wrappers_derive_the_row",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.initial_T_is_from_the_real_ZERO_source_action",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.R1_sink_candidate_is_DEMAND_not_NormalTarget",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.actual_U_sink_reverse_supplies_the_coarse_offer",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.R1_actual_offer_is_request_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.R2_actual_ANY_offer_is_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.R3_actual_exact_T_is_admitted_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.accepted_backward_actions_derive_both_source_hit_preconditions",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.arbitrary_finite_wrappers_keep_exact_U_finding",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.U_result_is_not_a_T_result",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.wrong_input_mark_cannot_trigger_the_source",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.primary_always_in_expansion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.companion_always_in_expansion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.expansion_membership",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.primary_is_preserved",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.no_primary_means_no_companion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.companion_has_same_geometry_and_NORMAL_FLOW",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.companion_requires_concrete_STAR",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.companion_seed_is_intrinsically_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.concrete_STAR_primary_remains_DEMAND",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.raw_permission_has_executable_actual",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.every_executable_emission_has_raw_permission",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.raw_permission_exactly_matches_C2",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.stored_permission_has_normalized_executable_actual",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.old_stored_permission_is_preserved",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.stored_permission_exactly_matches_normalized_C2",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.original_actual_is_not_replaced",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.companion_NORMAL_does_not_upgrade_DEMAND_actual",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.mismatching_mark_cannot_create_companion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.mismatching_base_cannot_create_companion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.precise_later_STAR_rejection_still_has_no_companion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.subsetB_sound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.subsetB_refl",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.admits_mono",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.markAdmits_mono",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.proper_residual_discharges_field_exclusions",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.exclusion_guard_transports_both_ends",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.generalized_cover_transports_every_pair",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.executable_witness_keeps_original_geometry_check",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.executable_witness_implies_pair_inclusion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.every_checked_correlated_residual_is_found",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.restricted_guard_supplies_generalized_pair_guard",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.restricted_guard_transports_every_pair",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.opaque_bases_and_two_nonempty_Es_have_a_checked_cover",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.short_input_exclusion_cannot_be_ignored",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.short_output_exclusion_cannot_be_ignored",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.both_long_exclusions_can_change_after_an_admitted_proper_residual",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.equal_E_at_different_heads_does_not_imply_cover",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.excluded_long_mark_cannot_be_reintroduced",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.unequal_mx_can_still_give_safe_mark_inclusion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.unmatched_endpoint_residual_is_rejected",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.different_owner_is_rejected",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.componentwise_E_is_pair_sufficient_not_native_inside_completeness",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.admits_append_iff_both",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.combined_E_admits_iff_both_endpoints",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.same_head_combined_E_subset_transports_both_exclusions",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.proper_residual_combined_E_is_exactly_both_first_field_tests",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.exclusion_criterion_transports_both_endpoints",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.combined_criterion_transports_every_pair",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.computed_witness_is_sound",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.every_checked_residual_is_computed",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.computed_witness_iff_checked_criterion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.computed_witness_supplies_every_pair",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.checked_criterion_gives_pair_inclusion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.pair_inclusion_is_transitive",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.checked_rows_compose_without_an_admitted_intermediate",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.composed_suffix_is_an_executable_geometry_witness",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.redistributed_same_effective_E_is_covered",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.redistributed_E_was_outside_pair24_componentwise_guard",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.proper_residual_keeps_pair24_general_two_endpoint_test",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.admits_append_exact_intersection",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.matched_slice_is_exact_read_overlap",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.effective_E_requires_both_endpoints",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.output_retains_actual_and_both_endpoint_Es",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.output_using_matched_slice_is_equivalent",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.same_head_overlap_is_always_nonempty_at_root",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.equal_head_and_mark_are_sufficient_to_accept",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.base_mismatch_still_rejects",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.different_head_still_rejects_this_lane",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.excluded_mark_still_rejects",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.successful_application_retains_original_storage_value",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.output_does_not_change_tail_mark_or_H",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.DEMAND_actual_never_becomes_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.DEMAND_record_never_produces_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.NORMAL_support_stays_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.inverse_result_still_contains_both_endpoint_Es",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.checked_pair_cover_preserves_every_actual_effect",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.checked_pair_cover_is_symmetric_under_generic_reversal",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.inverse_checked_cover_keeps_every_actual_effect",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.same_head_role_guard_is_unchanged",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.proper_ancestor_STAR_current_lane_remains_blocked",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.incomparable_E_now_matches_without_losing_E",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "StarHeadOverlap.incoming_STAR_uses_the_same_overlap_without_a_MUST_upgrade",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedOverlapBridge.combined_criterion_preserves_every_actual_effect",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedOverlapBridge.combined_exclusion_criterion_survives_reversal",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedOverlapBridge.combined_pair_coverage_survives_generic_reversal",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CombinedOverlapBridge.inverse_combined_criterion_keeps_every_actual_effect",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.exact_under_ANY_stays_NORMAL",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.MAY_to_exact_stays_DEMAND",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.STAR_under_exact_keeps_correlation",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.MUST_collects_both_exclusions",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.one_new_field_fits_the_paired_budget",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.overflow_cuts_at_dp_depth_plus_one",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.exact_selector_rejects_deeper_conclusion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.uniform_ancestor_rebases_at_demand",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.MAY_ancestor_refines_with_DEMAND_support",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.STAR_ancestor_conclusion_keeps_its_whole_relation",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.exact_ancestor_does_not_taint_child",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.excluded_child_is_rejected",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.different_branches_reject",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.different_marks_reject",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.FLOW_is_not_converted_to_T",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.FLOW_excluding_T_is_rejected",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.each_split_output_uses_ONE_original_pair",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ScalarChainIntersectionExamples.unrelated_long_exit_budget_cannot_be_borrowed",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.strict_ancestor_STAR_is_blocked",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.same_head_is_not_blocked",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.actual_at_or_below_demand_is_not_blocked",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.non_STAR_actual_is_not_blocked",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.new_stream_is_only_a_precheck",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.unblocked_primary_and_layer_are_identical",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.blocked_primary_has_no_companion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.same_head_stream_is_unchanged",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.MUST_and_ANY_actual_streams_are_unchanged",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.no_new_seed_or_layer_is_introduced",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.original_actual_is_not_modified",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.template_witness_is_never_blocked",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.old_raw_image_has_an_unblocked_executable_primary",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.original_raw_permission_still_has_an_executable_new_seed",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.structural_C2_image_is_unchanged",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.normalized_C5_image_is_unchanged",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.no_ANY_initial_is_introduced",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.H_free_identity_start_is_unchanged",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.selected_concrete_ancestor_example_now_rejects",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RejectAncestorStarAdmission.same_head_STAR_keeps_primary_and_FLOW_companion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.subsumption_requires_same_flag",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.opposite_flags_never_subsume",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.changing_both_flags_together_keeps_geometry_test",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.mixed_flag_rows_are_kept_in_both_orders",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.pruned_plain_child_is_missing_after_late_parent_flag_upgrade",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.same_plain_child_is_retained_if_offered_after_parent_upgrade",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.both_histories_still_keep_the_exact_protected_parent",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.flagged_offer_preserves_plain_current_view",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.plain_offer_preserves_flagged_current_view",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.old_negative_histories_render_one_OR_upgraded_row",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.same_plain_arrivals_are_canonical_in_both_orders",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.same_protected_arrivals_are_canonical_in_both_orders",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.mixed_plain_parent_protected_child_keep_both_in_both_orders",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.mixed_protected_parent_plain_child_keep_both_in_both_orders",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.exact_flag_upgrade_has_one_visible_edge_and_both_certificates",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.rendering_is_not_a_plain_coverage_authority",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.invisible_plain_certificate_can_change_current_view",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.protected_child_can_be_compacted_and_visible_plain_child_stays_plain",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.changed_visible_child_flag_is_not_sticky_history",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.duplicate_offers_do_not_add_a_second_visible_edge",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.prefix_reflexive",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.prefix_transitive",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.geometry_cover_reflexive",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.geometry_cover_transitive",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.region_true_iff_computed_member",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.addCurrent_never_invents_geometry",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.addCurrent_represents_each_input",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.addCurrent_region_iff",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.bool_equality_of_true_iff",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.addCurrent_region_union",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.matching_offer_requires_same_H",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.offer_logical_region_union",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.fold_logical_region_union",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.empty_current_view_has_no_region",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.run_coverage_equals_any_same_H_input",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.matchingOffer_true_iff_computed_input",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.current_coverage_depends_only_on_input_membership",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.arbitrary_arrival_permutation_preserves_logical_coverage",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.duplicate_input_does_not_change_logical_coverage",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CurrentCoverageInvariant.cross_H_offer_does_not_change_this_logical_region",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21OperatorLedger.all_declared_operator_checks_pass",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DescendantExitReview.non_STAR_cells_are_unchanged",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DescendantExitReview.MAY_cells_are_unchanged",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DescendantExitReview.MUST_cells_are_unchanged",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DescendantExitReview.same_head_cells_are_unchanged",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DescendantExitReview.proposed_success_is_an_original_success",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DescendantExitReview.proposed_keeps_supplied_mark_layer_H",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DescendantExitReview.MAY_rebases_then_meets_EXACT",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DescendantExitReview.MAY_rebases_then_meets_STAR",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DescendantExitReview.MUST_rebases_then_meets_EXACT",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DescendantExitReview.MUST_rebases_then_meets_STAR_with_E",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DescendantExitReview.excluded_MUST_branch_still_rejects",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DescendantExitReview.EXACT_ancestor_already_rejected",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DescendantExitReview.STAR_ancestor_is_the_changed_cell",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DescendantExitReview.NORMAL_FLOW_has_a_requested_descendant_witness",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "DescendantExitReview.NORMAL_FLOW_descendant_is_rejected_only_by_proposal",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFC5Policy.source_chain_is_derived_at_each_real_limit",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFC5Policy.run1_catalog_has_no_NORMAL_return_provider",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFC5Policy.even_optional_requested_T_only_yields_a_DEMAND_diagonal",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFC5Policy.run1_sink_and_backward_offer_are_real_actions",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFC5Policy.B2_completion_changes_no_admitted_helper_family",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFC5Policy.B2_source_permission_is_from_actual_backward_source_acceptance",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFC5Policy.old_C5_without_completion_derives_the_NORMAL_read2_provider",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFC5Policy.proposed_C5_without_completion_has_no_helper_DATA_or_Target_at_F3",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFC5Policy.completion_derives_only_the_required_F3_DEMAND_bridge",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFC5Policy.B4_old_provider_returns_precise_source_path",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFC5Policy.B4_completed_bridge_retains_a_finer_demand_and_source_permission",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFC5Policy.F5_completed_policy_derives_a_NORMAL_provider_and_finding",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFC5Policy.F5_old_policy_uses_its_derived_saved_NORMAL_provider",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E19CompanionControl.FLOW_provider_exists_under_the_original_T_pair",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E19CompanionControl.original_pair_also_keeps_the_primary_T_DEMAND_before_backing",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E19CompanionControl.strong_same_field_write_still_kills_both_seeds",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E19CompanionControl.inferred_NORMAL_FLOW_transports_the_real_precise_descendant",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.DATA_admission_does_not_mint_local_ZERO",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.R1_raw_has_six_families",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.R1_canonical_drops_requested_T_DATA",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.B2_has_no_root_DATA_initial",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.F3_ALL_FLOW_DATA_is_NORMAL",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.F3_ALL_nonzero_Targets_have_exact_f_original",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.F3_has_real_NORMAL_shrinker",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.B4_ALL_DATA_entries_have_ZERO_exits",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.B4_ALL_local_ZERO_DATA_is_exact_f_NORMAL",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.B4_real_ff_STAR_source_Reach_is_produced",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.F5_ALL_DATA_entries_are_exact_f",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.F5_no_completion_raw_and_cut_both_have_no_DATA_command",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.F5_completed_Reach_endpoint_supplies_fine_command",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.real_R2_source_hit_enables_the_same_SOURCE",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.B4_growing_actual_comes_from_real_sink_seed_and_derived_NORMAL_record",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.real_R4_source_hit_enables_the_same_SOURCE",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.fresh_R5_SOURCE_is_exact_NORMAL_without_promotion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.completed_view_distinguishes_every_proper_scalar_cut",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.retained_fresh_actual_and_derived_NORMAL_record_reach_root",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.the_derived_root_witness_is_a_NORMAL_Target",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.real_B4_growing_input_itself_produces_ff_source_Reach",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.no_completion_kept_gate_rejects_precise_SOURCE",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.completion_kept_gate_retains_precise_SOURCE_at_budget_three",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.no_completion_reference_program_has_no_NORMAL_Target",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.completion_reference_program_has_the_real_NORMAL_Target",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.F3_precanonical_ALL_FLOW_DATA_is_NORMAL",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.F3_precanonical_ALL_T_Targets_have_exact_f_original",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.B4_precanonical_ALL_local_ZERO_DATA_is_exact_f_NORMAL",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.subset_cannot_invent_a_forbidden_precanonical_family",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.real_current_FLOW_application_is_a_parent_MAY_not_local_ZERO",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.real_R2_fine_FLOW_DEMAND_is_individually_produced",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.real_R3_NORMAL_shrinker_and_exact_Target_are_individually_produced",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.arbitrary_extra_ZERO_entry_cannot_mint_DATA_command",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21ClosedFamilies.arbitrary_extra_Target_entry_cannot_mint_DATA_command",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21AllSourceImages.all_C5_source_images_include_the_cut_and_the_NORMAL_actual",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21AllSourceImages.every_admitted_source_image_fails_the_kept_gate_without_completion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21AllSourceImages.no_hidden_cut_source_image_supplies_a_Target_without_completion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21AllSourceImages.completion_keeps_the_real_precise_NORMAL_source_image",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21AllSourceImages.completion_restores_the_NORMAL_Target_among_all_source_images",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFCoarseFlowRun2.actual_run2_commands_contain_only_the_field_initial",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFCoarseFlowRun2.coarse_start_is_not_a_current_command_for_that_offer",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFCoarseFlowRun2.additional_coarse_analysis_passes_unchanged_C5",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFCoarseFlowRun2.proposed_STAR_rejection_now_keeps_the_NORMAL_getter",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFCoarseFlowRun2.the_restored_forward3_route_has_a_DEMAND_sink",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFCoarseFlowRun2.saved_opposite_row_reaches_the_actual_source",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFCoarseFlowRun2.the_additional_run2_start_restores_the_run5_NORMAL_finding",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.old_seed_and_layer_are_retained",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.extra_requires_a_real_primary",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.no_primary_means_no_extra",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.no_strict_descendant_means_old_stream",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.same_head_is_unchanged",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.non_ANY_demand_is_unchanged",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.prefix_start_is_an_H_free_exact_identity",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.public_prefix_uses_only_existing_FLOW_normalization",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.original_actual_E_layer_mark_and_H_are_retained",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.latest_primary_retains_old_common_legality",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.emitted_prefix_is_bounded_and_has_a_new_field_witness",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.emitted_prefix_normalized_key_was_already_in_C5_image",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.every_new_public_key_has_existing_C5_permission",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.complete_normalized_C5_image_is_unchanged",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.full_mark_prefix_EXACT_is_not_in_the_old_raw_image",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.no_ANY_initial_is_added",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.wrong_mark_has_no_new_prefix",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.wrong_base_has_no_new_prefix",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.concrete_descendant_keeps_both_old_seeds_and_adds_raw_prefix",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.FLOW_descendant_also_adds_raw_prefix",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFExactFlowPrefix.backward_emission_has_fine_primary_and_RAW_exact_companion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFExactFlowPrefix.coarse_identity_starts_EXACT_not_STAR",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFExactFlowPrefix.exact_companion_body_is_executed_before_normalization",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFExactFlowPrefix.both_backward_summaries_are_derived",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFExactFlowPrefix.backward_inputs_really_permit_the_run3_source",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFExactFlowPrefix.next_forward_run_has_the_root_ret_output_selector",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFExactFlowPrefix.raw_forward_prefix_does_not_read_an_unrepresented_child",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFExactFlowPrefix.new_forward_commands_retain_the_descendant_primary",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFExactFlowPrefix.proposed_STAR_rejection_accepts_the_real_NORMAL_return",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFExactFlowPrefix.no_completion_or_argument_DEMAND_is_needed_for_this_return",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFExactFlowPrefix.actual_source_permission_is_recovered_by_saved_opposite",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GetFFExactFlowPrefix.raw_EXACT_companion_restores_the_run5_NORMAL_finding",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.B2_new_prefix_initial_is_genuinely_root_EXACT_FLOW",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.B2_new_prefix_initial_builds_NORMAL_grower_through_C5",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.B2_new_grower_is_in_full_final_authority",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.B2_new_grower_is_saved_not_a_forward_demand",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.B2_final_has_one_extra_NORMAL_row",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.ALL_B2_prefix_public_premises_fit_the_existing_C5_image",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.ALL_B4_prefix_public_premises_fit_the_existing_C5_image",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.no_extra_forward_demand_is_created_by_the_B2_NORMAL_grower",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.F3_all_families_are_unchanged_under_new_emitter",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.F3_precanonical_FLOW_DATA_still_has_only_NORMAL_support",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.F3_precanonical_Target_origins_are_still_exact_f",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.B4_new_prefix_initial_is_f_EXACT_FLOW",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.B4_new_prefix_raw_DATA_is_NORMAL_ff",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.SAME_complete_ZERO_exit_rejects_ALL_new_B4_prefix_DATA",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.B4_precanonical_no_FLOW_DATA_is_sneaked_through_another_row",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.B4_all_admitted_families_are_unchanged",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.F5_ALL_demand_rows_are_unchanged",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.F5_no_completion_has_no_DATA_command_for_raw_or_cut",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.ALL_admitted_SOURCE_images_include_the_NORMAL_and_cut_branches",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.no_completion_kept_gate_rejects_EVERY_admitted_SOURCE_image",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.no_completion_has_no_public_Target_in_the_reference_source_route",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.completion_still_separates_the_fine_command_from_every_proper_cut",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.completion_retains_the_precise_NORMAL_source_under_the_kept_gate",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.completion_preserves_the_real_NORMAL_Target_among_ALL_source_images",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.ALL_new_B4_prefix_bodies_fail_the_complete_paired_C5",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21PrefixExactCompanion.no_completion_is_empty_for_ANY_post_gate_saved_continuation",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.direct_actual_body_keeps_the_NORMAL_child",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.real_cleaner_requests_T_from_the_F1_FLOW_probe",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.descendant_answer_is_STAR_DEMAND_not_a_precise_child",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.complete_R1_argument_return_and_control_catalog",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.ALL_R1_NORMAL_DATA_rows_exclude_T_and_T_survivors_are_protected_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.real_R1_sink_is_provisional_and_supplies_the_backward_phase",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.B2_uncompleted_commands_are_requested_STAR_and_FLOW_companion_only",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.complete_B2_without_completion_has_only_the_protected_T_row",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.B2_FLOW_body_is_rejected_by_the_original_paired_T_exit",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.real_source_permission_is_derived_in_both_query_variants",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.ANY_completion_can_add_prefix_probes_but_all_NORMAL_results_exclude_T",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.later_precise_STAR_rejects_the_real_F3_actual_before_any_companion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.completed_F3_query_really_uses_the_latest_EXACT_prefix_companion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.ALL_saved_NORMAL_rows_cannot_deliver_T_to_the_sink",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.ALL_new_F3_rows_are_NORMAL_FLOW_excluding_T",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.both_current_query_variants_miss_the_NORMAL_finding",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.actual_source_is_in_budget_NORMAL_in_F1_and_F3",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RootExactCleanerGap.ZERO_control_is_not_a_DATA_provider",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "MustAdmissionAudit.complete_coarse_stream_still_does_not_preserve_uniformness",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "MustAdmissionAudit.complete_fine_stream_preserves_the_actual_MUST",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "MustAdmissionAudit.latest_prefix_does_not_replace_the_removed_MUST_command",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "MustAdmissionAudit.spatially_covered_child_changes_the_complete_C2_observation",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "MustAdmissionAudit.retained_STAR_query_loses_uniformness_on_the_second_read",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "MustAdmissionAudit.exact_prefix_cannot_read_the_missing_first_field",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "MustAdmissionAudit.observed_query_has_legal_normal_uniform_source_support",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RenderedDeliveryCounterexample.both_orders_have_the_same_complete_producer_authority",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RenderedDeliveryCounterexample.both_orders_have_the_same_single_visible_producer_row",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RenderedDeliveryCounterexample.late_plain_certificate_changes_authority_without_a_visible_delta",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RenderedDeliveryCounterexample.downstream_loses_plain_authority_only_in_protected_first_order",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RenderedDeliveryCounterexample.downstream_plain_child_coverage_is_arrival_order_dependent",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "RenderedDeliveryCounterexample.downstream_visible_basis_is_different_after_the_same_plain_child",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21LateLocalAudit.old_readToZero_misses_the_same_head_STAR_zero_normal_form",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21LateLocalAudit.typed_ZERO_adapter_recovers_same_head_STAR_source_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21LateLocalAudit.typed_ZERO_adapter_keeps_exact_source_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21LateLocalAudit.typed_ZERO_adapter_does_not_satisfy_source_with_FLOW",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21LateLocalAudit.typed_ZERO_adapter_preserves_pre_R6_backward_source_cells",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21LateLocalAudit.the_shorter_F5_SOURCE_image_reaches_a_real_root_MAY",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21LateLocalAudit.the_new_F5_FLOW_DEMAND_family_is_accepted_by_a_complete_pair",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21LateLocalAudit.normal_target_persistence_does_not_suppress_DemandTarget",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CleanerMaySurvivorCandidate.STAR_relation_is_contained_in_MAY_relation",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CleanerMaySurvivorCandidate.widening_retains_layer_and_protection",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CleanerMaySurvivorCandidate.exact_and_FLOW_cleaner_results_are_unchanged",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CleanerMaySurvivorCandidate.partial_STAR_survivor_becomes_protected_MAY_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CleanerMaySurvivorCandidate.first_phase_keeps_STAR_premises_and_widens_only_T_conclusions",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CleanerMaySurvivorCandidate.second_phase_admits_exact_child_and_exact_FLOW_prefix",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CleanerMaySurvivorCandidate.second_phase_recovers_the_precise_NORMAL_relation",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CleanerMaySurvivorCandidate.real_source_permission_is_retained",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CleanerMaySurvivorCandidate.saved_opposite_relation_transports_the_precise_NORMAL_source",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "CleanerMaySurvivorCandidate.the_third_forward_phase_has_a_NORMAL_finding",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.saved_shrinker_is_really_derived_before_run4",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.first_saved_application_delivers_the_precise_two_field_fact",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.second_saved_application_cuts_before_repeat_delivery",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.depth_two_MAY_preserves_all_repeat_commands",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.saved_replay_reaches_an_actual_fixed_point",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.every_further_saved_application_returns_the_same_fact",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.all_five_packet_shapes_are_closed_under_saved_replay",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.both_layers_of_the_regenerated_sink_packet_are_in_the_domain",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.STAR_feedback_also_reaches_that_MAY_fixed_point",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.the_existing_completion_is_no_longer_fresh",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.saved_application_keeps_the_parent_original",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.delivered_MAY_selects_the_real_ff_STAR_source_actor",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.this_replay_route_does_not_deliver_the_shallower_MAY",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.current_rows_for_the_closed_replay_packet_have_three_families",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.no_new_local_DATA_row_is_the_parent_MAY_completion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.the_next_source_has_no_shorter_DEMAND_image_from_this_packet",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.that_precise_source_still_fails_the_supplied_next_gate",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run2_begins_without_a_DATA_frame",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run2_reached_ZERO_generates_the_actual_sink_read",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run2_publication_replays_to_the_standing_exact_input",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run2_FLOW_DEMAND_read_is_an_organic_MAY_producer",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run2_NORMAL_grower_independently_produces_the_same_capped_MAY",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run2_late_MAY_admits_the_STAR_actor_not_a_DEMAND_exact_actor",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run2_both_real_input_shapes_reach_a_fixed_point",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run2_stabilizes_the_same_eight_publication_families",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run2_current_publications_are_closed_on_every_standing_input",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run2_both_DATA_publications_stabilize_the_MAY_input",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run2_completed_source_actors_supply_run3_permission",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.backward_ZERO_DATA_is_guidance_not_a_saved_DATA_provider",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run3_handoff_has_all_seven_complete_pairs",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run3_ZERO_source_selects_both_original_C5_images",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.saved_and_current_shrinkers_add_the_missing_parent_point_facts",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.native_MAY_inside_matching_closes_the_root_repeat",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run3_never_promotes_a_real_T_input_to_NORMAL",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run3_conditional_FLOW_initials_do_not_become_real_FLOW_inputs",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run3_is_closed_under_saved_current_and_ZERO_DATA_replay",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run3_has_the_same_five_local_publication_families",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run3_outgoing_demand_preserves_the_same_three_paired_rows",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.run3_does_not_need_a_separate_exact_offer_for_these_publications",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.every_further_run2_round_is_unchanged",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21Run2Run3WorklistClosure.every_further_run3_round_is_unchanged",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21SavedRepeatGateDiagnosis.reader_is_a_reached_NORMAL_publication",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21SavedRepeatGateDiagnosis.source_and_permission_are_derived_without_completion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21SavedRepeatGateDiagnosis.current_repeat_C2_rejects_the_precise_source_image",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21SavedRepeatGateDiagnosis.current_gate_drops_before_saved_repeat_delivery",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21SavedRepeatGateDiagnosis.reader_is_not_growing_even_on_the_deep_source_suffix",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21SavedRepeatGateDiagnosis.native_saved_application_reaches_depth_two_NORMAL",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21SavedRepeatGateDiagnosis.native_saved_application_then_reaches_existing_exact_demand",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21SavedRepeatGateDiagnosis.existing_exact_actor_is_admitted_NORMAL_without_completion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21SavedRepeatGateDiagnosis.current_body_emits_a_NORMAL_sink_Target",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21SavedRepeatGateDiagnosis.existing_paired_guidance_does_not_reject_that_NORMAL_sink",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21SavedRepeatGateDiagnosis.applying_the_same_reader_to_DEMAND_cannot_confirm_a_sink",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21SavedRepeatGateDiagnosis.ZERO_and_Target_controls_do_not_admit_DATA_as_ZERO",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "E21SavedRepeatGateDiagnosis.reader_cannot_read_an_absent_concrete_field",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ZeroPremiseLoopBypassCandidate.ZERO_row_bypasses_only_the_extra_gate",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ZeroPremiseLoopBypassCandidate.DATA_row_keeps_the_existing_global_bound_and_gate",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ZeroPremiseLoopBypassCandidate.checked_run2_still_reaches_the_same_fixed_point",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ZeroPremiseLoopBypassCandidate.checked_run3_still_reaches_the_same_fixed_point",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ZeroPremiseLoopBypassCandidate.checked_run5_source_is_delivered_NORMAL_with_no_completion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ZeroPremiseLoopBypassCandidate.the_same_saved_reads_still_reach_the_exact_NORMAL_actor",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ZeroPremiseLoopBypassCandidate.ordinary_sink_and_Target_rules_need_no_change",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ZeroPremiseLoopBypassCandidate.bypass_does_not_remove_the_global_limit",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ZeroPremiseLoopBypassCandidate.bypass_does_not_promote_a_DEMAND_supply",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ZeroPremiseLoopBypassCandidate.a_DATA_grower_is_still_restricted_even_if_its_parent_original_is_ZERO",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "ZeroPremiseLoopBypassCandidate.repeating_the_same_ZERO_supply_is_not_new_feedback_geometry",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.STAR_identity_uses_correlated_continuations",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.STAR_identity_cannot_invent_an_independent_continuation",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainStarRelativeAdmission.handoff_does_not_refine_precise_STAR",
+      "axioms": []
+    },
+    {
+      "theorem": "AnnotatedC5Exit.installed_metadata",
+      "axioms": []
+    },
+    {
+      "theorem": "AnnotatedC5Exit.point_head_is_prefix",
+      "axioms": []
+    },
+    {
+      "theorem": "AnnotatedC5Exit.comparable_prefixes",
+      "axioms": []
+    },
+    {
+      "theorem": "AnnotatedC5Exit.cut_preserves_base_slot_H",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.fields_are_distinct",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.concrete_program_reports",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.write_removes_f_subtree",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.coarse_source_is_real_cut",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.source_fits_run3_field_limit",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.actual_coarse_pair_and_cap",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.current_relation_is_not_the_missing_piece",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainStarStaticCarryGap.blanket_normal_promotion_has_concrete_counterexample",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowDemandCompletion.self_pair_is_complete_FLOW_ANY",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowDemandCompletion.exit_derived_guidance_keeps_repeat_scope_and_ports",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.emitted_and_published_keys_are_not_ANY",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.concrete_wrappers_are_returns",
+      "axioms": []
+    },
+    {
+      "theorem": "LiteralProtection.H_is_exact_literal_union",
+      "axioms": []
+    },
+    {
+      "theorem": "LiteralProtection.H_arrival_orders_agree",
+      "axioms": []
+    },
+    {
+      "theorem": "LiteralProtection.repeated_H_is_idempotent",
+      "axioms": []
+    },
+    {
+      "theorem": "LiteralProtection.exact_fresh_flag_delta",
+      "axioms": []
+    },
+    {
+      "theorem": "LiteralProtection.pass_H_is_exact_transport",
+      "axioms": []
+    },
+    {
+      "theorem": "LiteralProtection.pass_plain_input_stays_plain",
+      "axioms": []
+    },
+    {
+      "theorem": "LiteralProtection.pass_reversal_needs_no_introduction_policy",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowCompletionOperational.copied_normal_record_keys_are_not_ANY",
+      "axioms": []
+    },
+    {
+      "theorem": "OwaspUniformCompletion.path_depth",
+      "axioms": []
+    },
+    {
+      "theorem": "OwaspUniformCompletion.prefix_self_row_has_relative_budget",
+      "axioms": []
+    },
+    {
+      "theorem": "OwaspUniformCompletion.paired_erasure_keeps_original_budget",
+      "axioms": []
+    },
+    {
+      "theorem": "OwaspUniformCompletion.plain_pass_never_creates_H",
+      "axioms": []
+    },
+    {
+      "theorem": "OwaspUniformCompletion.pass_preserves_existing_H",
+      "axioms": []
+    },
+    {
+      "theorem": "DeepFlowCompletion.source_read_has_real_R3_MAY_support",
+      "axioms": []
+    },
+    {
+      "theorem": "DeepFlowCompletion.source_read_has_real_R5_exact_NORMAL_support",
+      "axioms": []
+    },
+    {
+      "theorem": "DeepFlowCompletion.Target_row_keeps_its_own_entry_not_repeat5",
+      "axioms": []
+    },
+    {
+      "theorem": "DeepFlowCompletion.depth_three_trial_is_raw_identity",
+      "axioms": []
+    },
+    {
+      "theorem": "DeepFlowCompletion.concrete_source_support_is_NOT_promoted_to_NORMAL",
+      "axioms": []
+    },
+    {
+      "theorem": "DeepFlowCompletion.B4_incoming_has_the_recorded_F3_source_support",
+      "axioms": []
+    },
+    {
+      "theorem": "DeepFlowCompletion.B4_growing_key_contains_the_physical_four_field_source",
+      "axioms": []
+    },
+    {
+      "theorem": "DeepFlowCompletion.captured_B4_Target_pair_reverses_to_its_own_F5_ports",
+      "axioms": []
+    },
+    {
+      "theorem": "DeepFlowCompletion.captured_B4_repeat_pair_reverses_to_repeat5",
+      "axioms": []
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.physical_record_reversal_is_adjacent_not_repeat",
+      "axioms": []
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.class_anchor_counts_zero_and_leaf_counts_one",
+      "axioms": []
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.B2_REPEAT_write_redirects_static_to_local_a",
+      "axioms": []
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.actual_fixture_weak_frame_is_derived_not_invented",
+      "axioms": []
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.permission_or_control_alone_cannot_emit_the_source",
+      "axioms": []
+    },
+    {
+      "theorem": "TwoLoopHeaderFlow.wrong_mark_source_permission_is_not_granted",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Relations.reverse_geometry_specializes",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Relations.aligned_example",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Relations.unaligned_example_changes_result",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Relations.pair_metadata_preserved",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Relations.late_short_row_replaces_long_without_inventing_base",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Relations.long_rows_do_not_invent_missing_base",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Relations.distinct_interfaces_do_not_merge",
+      "axioms": []
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.specialized_geometry_is_original_correlated_specialization",
+      "axioms": []
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.implicit_view_is_not_an_admitted_row",
+      "axioms": []
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.implicit_view_keeps_mx_and_layer",
+      "axioms": []
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.provider_keeps_ordinary_local_membership",
+      "axioms": []
+    },
+    {
+      "theorem": "SelectedTransitiveSubsumption.absent_A_cannot_remove_only_C",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Matching.role_same",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Matching.role_forward_backward",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Matching.role_backward_forward",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Matching.current_direct_same",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Matching.run_independent",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Matching.product_nil",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Matching.empty_arm_no_binding",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Matching.binding_empty_first_arm",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Matching.per_arm_uses_same_role",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Matching.concrete_full_profile_star_current_drops",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Matching.same_example_opposite_survives",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Matching.run1_current_star_changes",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Matching.no_layer_veto",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Reachability.edge_preserves_full_mark",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Reachability.path_nil",
+      "axioms": []
+    },
+    {
+      "theorem": "FlowAntichains.Reachability.path_single",
+      "axioms": []
+    },
+    {
+      "theorem": "DeepGuidanceArrival.F1_source_produces_actual_MAY_before_block_abstraction",
+      "axioms": []
+    },
+    {
+      "theorem": "DeepGuidanceArrival.actual_B4_global_limit_is_three",
+      "axioms": []
+    },
+    {
+      "theorem": "DeepGuidanceArrival.borrowed_CONTROL_does_not_alias_nonzero_DATA_admission",
+      "axioms": []
+    },
+    {
+      "theorem": "LoopMapperRecovery.one_loop_body_derives_the_precise_NORMAL_fact",
+      "axioms": []
+    },
+    {
+      "theorem": "LoopMapperRecovery.one_loop_body_has_the_actual_run1_cut",
+      "axioms": []
+    },
+    {
+      "theorem": "LoopMapperRecovery.adjacent_demand_is_the_handoff_of_the_real_B2_getter",
+      "axioms": []
+    },
+    {
+      "theorem": "LoopMapperRecovery.adjacent_entry_is_the_fine_FLOW_query",
+      "axioms": []
+    },
+    {
+      "theorem": "LoopMapperRecovery.real_loop_output_matches_the_general_fine_input",
+      "axioms": []
+    },
+    {
+      "theorem": "DeepExtraFrontier.encoded_counted_depth",
+      "axioms": []
+    },
+    {
+      "theorem": "DeepExtraFrontier.complete_B4_pair_reversal_keeps_both_independent_bounds",
+      "axioms": []
+    },
+    {
+      "theorem": "DeepExtraFrontier.actual_F5_mode_is_four_and_not_the_earlier_local_B4_cell",
+      "axioms": []
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.marks_are_distinct",
+      "axioms": []
+    },
+    {
+      "theorem": "ConcreteConverterWrapper.the_mark_changing_rows_have_no_ANY_original",
+      "axioms": []
+    },
+    {
+      "theorem": "ConcreteStarFlowCompanion.positive_source_guard_cannot_use_companion_FLOW",
+      "axioms": []
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.generic_STAR_inverse_reader_E_is_empty",
+      "axioms": []
+    },
+    {
+      "theorem": "ExclusionCorrelatedInclusion.generic_STAR_inverse_result_keeps_both_endpoint_Es",
+      "axioms": []
+    },
+    {
+      "theorem": "CombinedExclusionCoverage.actual_exclusion_differences_are_not_erased_from_rows",
+      "axioms": []
+    },
+    {
+      "theorem": "StarHeadOverlap.slice_does_not_change_actual_tail_layer_mark_or_H",
+      "axioms": []
+    },
+    {
+      "theorem": "StarHeadOverlap.inverse_has_no_invented_reader_E",
+      "axioms": []
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.pass_keeps_the_input_flag",
+      "axioms": []
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.pass_cannot_introduce_H",
+      "axioms": []
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.same_plain_parent_child_both_orders",
+      "axioms": []
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.same_protected_parent_child_both_orders",
+      "axioms": []
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.cross_flag_coverage_is_rejected_both_ways",
+      "axioms": []
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.exact_duplicate_flag_OR_still_wins",
+      "axioms": []
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.repeated_identical_flag_is_not_new_state",
+      "axioms": []
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.exact_OR_plus_strict_flag_partition_is_not_arrival_invariant",
+      "axioms": []
+    },
+    {
+      "theorem": "FlagMatchedSubsumption.wrong_owner_never_supplies_coverage",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.geometry_of_lift",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.plain_subsumption_reads_only_plain_certificates",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.flagged_subsumption_reads_only_flagged_certificates",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.pass_transports_flag",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.plain_pass_cannot_introduce_H",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.old_negative_histories_now_have_identical_current_views",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.upgraded_parent_keeps_plain_child_coverage_certificate",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.protected_parent_alone_does_not_cover_plain_child",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.plain_parent_alone_does_not_cover_protected_child",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainCoverageFlagViews.pass_of_visible_plain_child_does_not_inherit_parent_H",
+      "axioms": []
+    },
+    {
+      "theorem": "E21ClosedFamilies.caller_binding_stays_in_parent",
+      "axioms": []
+    },
+    {
+      "theorem": "E21ClosedFamilies.every_B2_physical_DATA_body_returns_f_head",
+      "axioms": []
+    },
+    {
+      "theorem": "E21ClosedFamilies.real_F3_GEN_is_MAY_DEMAND",
+      "axioms": []
+    },
+    {
+      "theorem": "E21ClosedFamilies.real_sink_boundary_is_f_exact_NORMAL",
+      "axioms": []
+    },
+    {
+      "theorem": "ExactFlowPrefixCompanion.prefix_is_raw_EXACT_FLOW_NORMAL_with_empty_E",
+      "axioms": []
+    },
+    {
+      "theorem": "RootExactCleanerGap.exact_root_cleaner_does_not_clean_the_real_child",
+      "axioms": []
+    },
+    {
+      "theorem": "E21Run4SavedReplayClosure.global_limit_is_not_the_cut_in_that_transaction",
+      "axioms": []
+    },
+    {
+      "theorem": "E21SavedRepeatGateDiagnosis.saved_read_preserves_the_parent_ZERO_origin",
+      "axioms": []
+    }
+  ],
+  "checkedTheorems": 1132
+}

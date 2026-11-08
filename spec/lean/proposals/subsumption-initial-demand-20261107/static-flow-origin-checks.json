@@ -1,0 +1,201 @@
+{
+  "state": "PASS_SCOPED_FLOW_COMPLETION_OPERATIONAL_ONLY",
+  "modules": [
+    {
+      "module": "RestrictedInitialPolicy",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/flow-completion-positive-5qvglexr/RestrictedInitialPolicy.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/RestrictedInitialPolicy.lean"
+      ]
+    },
+    {
+      "module": "PlainStarRelativeAdmissionProofFixed3",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/flow-completion-positive-5qvglexr/PlainStarRelativeAdmissionProofFixed3.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/PlainStarRelativeAdmissionProofFixed3.lean"
+      ]
+    },
+    {
+      "module": "Geometry",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/demand-relative-summary-restriction-20261101",
+        "-M2048",
+        "-o",
+        "/tmp/flow-completion-positive-5qvglexr/Geometry.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/demand-relative-summary-restriction-20261101/Geometry.lean"
+      ]
+    },
+    {
+      "module": "FlowDemandCompletion",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/flow-completion-positive/dependency-bind-attempt2/dependencies",
+        "-M2048",
+        "-o",
+        "/tmp/flow-completion-positive-5qvglexr/FlowDemandCompletion.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/flow-completion-positive/dependency-bind-attempt2/dependencies/FlowDemandCompletion.lean"
+      ]
+    },
+    {
+      "module": "FlowCompletionOperational",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/flow-completion-positive/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/flow-completion-positive-5qvglexr/FlowCompletionOperational.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/flow-completion-positive/proof-fix-attempt3/FlowCompletionOperational.lean"
+      ]
+    }
+  ],
+  "theoremAxiomAudit": [
+    {
+      "theorem": "FlowCompletionOperational.adapter_counts_fields_and_arrays",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_FLOW_row_is_derived_from_final_T_row",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_query_local_FLOW_row_is_derived",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.remaining_pure_FLOW_DEMAND_also_gets_completion",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_source_cut_is_actual_query",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_normal_provider_is_inferred",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_same_field_overwrite_infers_no_NORMAL_provider",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_concrete_selector_remains_concrete_only",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_MAY_application_keeps_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_actual_source_permission_is_derived",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.E19_saved_first_replay_recovers_exact_finding",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.exact_static_parent_does_not_taint_child",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.paired_copy_FLOW_row_is_derived",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.self_only_completion_does_not_mix_endpoints",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.paired_copy_PROVIDER_is_inferred",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.paired_copy_actual_exact_mark_is_preserved",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.canonical_uniform_packet_admits_root_MUST_not_child_STAR",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.Target_self_completion_cannot_publish_crossbase_copy",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.Target_self_completion_cannot_publish_crossbase_H",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "FlowCompletionOperational.copied_normal_record_keys_are_not_ANY",
+      "axioms": []
+    }
+  ],
+  "nativeAdapterEquivalenceProved": false,
+  "globalProgressProved": false,
+  "allPrincipalProgramsProved": false,
+  "scope": "E19-paired-completion-static-disjoint-write-plus-cross-base-copy-and-bounded-OWASP-negatives",
+  "checkedLaws": 20,
+  "sourceSha256": "d9ec13fc039e164ea9ed76f541b6e740dfac27786bc0760585bc412f5cf86f3d"
+}

@@ -231,7 +231,7 @@ class DemandRelativeWorkloadControlsTest {
         }
     }
 
-    @Test fun `EXACT before ANY can retain a covered stored representative without changing this simple union`() {
+    @Test fun `MAY canonicalization removes a covered exact representative in both arrival orders`() {
         MethodAnalysisFixtures().use { f ->
             val t=MarkSlot.Concrete(f.mark("T"))
             val premise=f.manager.initial(f.pattern(AccessPathBase.Return,mark=t))
@@ -248,14 +248,14 @@ class DemandRelativeWorkloadControlsTest {
             }
             val exactFirst=stored(listOf(exact,any))
             val anyFirst=stored(listOf(any,exact))
-            assertEquals(2,exactFirst.size,"A later broad input does not evict an older stored header")
+            assertEquals(1,exactFirst.size,"A later MAY prunes the older covered exact header")
             assertEquals(1,anyFirst.size,"A broad row can suppress an incoming covered narrow row")
             fun union(rows:Set<Conclusion>)=rows.filterTo(linkedSetOf()) { candidate ->
                 rows.none { it!=candidate && subsumes(it,candidate) }
             }
             assertEquals(union(anyFirst),union(exactFirst))
-            // No rule, cleaner, metadata or downstream C2 is executed here.
-            // This is a representation witness, not a global compaction law.
+            assertEquals(anyFirst,exactFirst,"The retained canonical basis is independent of arrival order")
+            // This is a local selected MAY law; no rule or cleaner is executed here.
         }
     }
 

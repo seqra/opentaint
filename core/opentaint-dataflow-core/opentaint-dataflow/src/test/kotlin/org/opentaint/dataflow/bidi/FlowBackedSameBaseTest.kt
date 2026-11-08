@@ -93,7 +93,8 @@ class FlowBackedSameBaseTest {
             if (flowFirst) store.addAdmitted(abstract, flow(listOf(listOf(f))))
             store.addAdmitted(concrete, taint)
             if (!flowFirst) store.addAdmitted(abstract, flow(listOf(listOf(f))))
-            assertEquals(setOf(emptyList(), listOf(g)), paths(store.borrow(concrete)))
+            assertEquals(setOf(emptyList<Int>()), paths(store.borrow(concrete)),
+                "The canonical MAY root already covers both longer siblings")
         }
     }
 

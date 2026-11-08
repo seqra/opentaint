@@ -94,8 +94,13 @@ class AbstractDemandExclusionTest {
             assertNull(emit(entry, blocked, m.marks))
             assertTrue(ops.emit(DemandPattern(entry, null), pack(blocked)).isEmpty())
             assertNull(ops.satisfying(pack(blocked), m.initial(expected), ApMode(false, Direction.FORWARD, 2)))
-            assertEquals(expected, emit(entry, admitted, m.marks))
-            assertEquals(listOf(expected), ops.emit(DemandPattern(entry, null), pack(admitted)).map { it.toPattern() })
+            if(tail==Tail.STAR) {
+                assertNull(emit(entry,admitted,m.marks),"An ordinary STAR ancestor cannot guess a deeper point")
+                assertTrue(ops.emit(DemandPattern(entry,null),pack(admitted)).isEmpty())
+            } else {
+                assertEquals(expected,emit(entry,admitted,m.marks))
+                assertEquals(listOf(expected),ops.emit(DemandPattern(entry,null),pack(admitted)).map { it.toPattern() })
+            }
             assertEquals(e(g), blocked.exclusion)
             assertEquals(e(f), admitted.exclusion)
         }

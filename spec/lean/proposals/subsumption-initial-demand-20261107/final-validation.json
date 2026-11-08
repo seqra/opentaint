@@ -1,0 +1,16 @@
+{
+  "state": "PASS_DOCUMENTS_AND_PORTABLE_COMPONENTS",
+  "declaredLaws": 684,
+  "reusedOriginalLaws": 162,
+  "principalExamples": 28,
+  "obligations": 23,
+  "brokenLocalLinks": [],
+  "markdownLinkCheck": "Exclude fenced/inline code; P.[any](U) in ap.md is notation, not a link.",
+  "archivedBaselineFiles": 5,
+  "nativeAnalyzerProved": false,
+  "projectExperimentsPerformed": false,
+  "runtimeChangesInThisSpecTask": false,
+  "manifestSha256": "007f2e33874537ca83c533c3093b0a658adf12739e6bb98d38a6d91476217cde",
+  "latestHistoricalStaticRun": "run-3",
+  "latestHistoricalDeepRun": "run-5"
+}

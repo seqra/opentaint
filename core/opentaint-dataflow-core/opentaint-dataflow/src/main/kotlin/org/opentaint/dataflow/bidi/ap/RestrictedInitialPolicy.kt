@@ -29,9 +29,9 @@ class RestrictedInitialPolicy(
         }
         if (q == p) return when (d.fact.tail) {
             Tail.ANY -> when (actual.fact.tail) {
-                Tail.STAR -> null
+                Tail.STAR -> result(p, Tail.STAR)
                 Tail.EXACT -> result(p, Tail.EXACT)
-                Tail.ANY -> result(p, Tail.ANY)
+                Tail.ANY -> result(p, Tail.STAR)
                 Tail.ANY_TAINT -> result(p, Tail.ANY_TAINT, actual.exclusion)
             }
             Tail.STAR, Tail.EXACT -> result(p, Tail.EXACT)
@@ -50,9 +50,10 @@ class RestrictedInitialPolicy(
                 else -> null
             }
         }
-        if (p.startsWith(q) && actual.tailAdmits(p.drop(q.size))) return when (d.fact.tail) {
+        if (p.startsWith(q) && actual.fact.tail in setOf(Tail.ANY, Tail.ANY_TAINT) &&
+            actual.tailAdmits(p.drop(q.size))) return when (d.fact.tail) {
             Tail.ANY -> when (actual.fact.tail) {
-                Tail.ANY -> result(p, Tail.ANY)
+                Tail.ANY -> result(p, Tail.STAR)
                 Tail.ANY_TAINT -> result(p, Tail.ANY_TAINT, d.exclusion)
                 else -> null
             }
@@ -62,11 +63,27 @@ class RestrictedInitialPolicy(
         return null
     }
 
-    /** Preserve concrete support without interning an AP. Actuals are legal ApOps.leaves views:
-     * exact concrete leaves have Empty E even in a mixed tree; MAY headers also have Empty E. */
+    /** The scalar primary is kept for reference checks. Production uses the complete family. */
     fun emitAdmission(demand: Pattern, actual: Pattern, actualLayer: Layer): InitialEmission? {
         val emitted = emit(demand, actual) ?: return null
         return InitialEmission(emitted, admissionLayer(emitted, actual, actualLayer))
+    }
+
+    /** Every admitted start is an identity. Companions require a successful primary. */
+    fun emitAdmissions(demand: Pattern, actual: Pattern, actualLayer: Layer): List<InitialEmission> {
+        val primary = emitAdmission(demand, actual, actualLayer) ?: return emptyList()
+        val result = linkedSetOf(primary)
+        val shape = primary.pattern
+        if (shape.fact.tail == Tail.STAR && shape.fact.mark is MarkSlot.Concrete) {
+            result += InitialEmission(shape.copy(fact = shape.fact.copy(mark = MarkSlot.STAR)), Layer.NORMAL)
+        }
+        if (demand.fact.tail == Tail.ANY && actual.fact.path.size > demand.fact.path.size &&
+            actual.fact.path.startsWith(demand.fact.path)) {
+            result += InitialEmission(Pattern(PathFact(demand.fact.base, demand.fact.path, Tail.EXACT,
+                MarkSlot.STAR), ExclusionSet.Empty), Layer.NORMAL)
+        }
+        check(result.none { it.pattern.fact.tail == Tail.ANY })
+        return result.toList()
     }
 
     /** Complete structural output image, including the non-idempotent run-2 requested STAR. */
@@ -79,9 +96,10 @@ class RestrictedInitialPolicy(
         val q = initial.fact.path
         if (q == p) return when (initial.fact.tail) {
             Tail.EXACT -> initial.exclusion == ExclusionSet.Empty && d.fact.tail != Tail.ANY_TAINT
-            Tail.ANY -> d.fact.tail == Tail.ANY && initial.exclusion == ExclusionSet.Empty
+            Tail.ANY -> false
             Tail.ANY_TAINT -> d.fact.tail == Tail.ANY
-            Tail.STAR -> run == 2 && d.fact.tail == Tail.STAR && initial.exclusion == d.exclusion &&
+            Tail.STAR -> initial.exclusion == ExclusionSet.Empty && d.fact.tail == Tail.ANY ||
+                run == 2 && d.fact.tail == Tail.STAR && initial.exclusion == d.exclusion &&
                 p.count { it.isCounted() } < fieldLimit &&
                 !(initial.fact.base == STATIC && p.size == 1)
         }
@@ -91,13 +109,21 @@ class RestrictedInitialPolicy(
             (initial.fact.tail == Tail.STAR || initial.fact.tail == Tail.EXACT && initial.fact.mark is MarkSlot.Concrete)
     }
 
-    /** Summary keys are normalized, but the containment test belongs to their raw preimage. */
+    /** Public C5 keys use the complete normalized C2 image, without interning query witnesses. */
     fun canStoreInitial(entry: Pattern, stored: Pattern): Boolean {
+        fun primaryImage(candidate: Pattern): Boolean {
+            fun fits(raw: Pattern): Boolean = canEmitInitial(entry, raw) && insideDemand(raw, entry, catalog)
+            if (fits(candidate)) return true
+            return candidate.fact.mark is MarkSlot.Star && candidate.fact.tail == Tail.STAR &&
+                candidate.exclusion == ExclusionSet.Empty &&
+                fits(candidate.copy(fact = candidate.fact.copy(tail = Tail.EXACT)))
+        }
         if (!validDemand(entry)) return false
-        fun fits(raw: Pattern): Boolean = canEmitInitial(entry, raw) && insideDemand(raw, entry, catalog)
-        if (fits(stored)) return true
-        return stored.fact.mark is MarkSlot.Star && stored.fact.tail == Tail.STAR &&
-            stored.exclusion == ExclusionSet.Empty && fits(stored.copy(fact = stored.fact.copy(tail = Tail.EXACT)))
+        if (primaryImage(stored)) return true
+        if (stored.fact.mark !is MarkSlot.Star || !stored.fact.mark.excluded.isEmpty ||
+            stored.fact.tail != Tail.STAR || entry.fact.mark !is MarkSlot.Concrete) return false
+        // A concrete STAR primary authorizes exactly its FLOW companion. This does not synthesize T.
+        return primaryImage(stored.copy(fact = stored.fact.copy(mark = entry.fact.mark)))
     }
 
     private fun boundMark(required: MarkSlot, actual: MarkSlot): MarkSlot =
@@ -118,7 +144,7 @@ class RestrictedInitialPolicy(
         p.exclusion == ExclusionSet.Empty && p.fact.mark == MarkSlot.Concrete(TaintMark.ZERO)
 
     private fun legalInitial(p: Pattern): Boolean {
-        if (!fitsBudget(p) || p.fact.tail == Tail.ANY_TAINT && direction == Direction.BACKWARD) return false
+        if (!fitsBudget(p) || p.fact.tail == Tail.ANY || p.fact.tail == Tail.ANY_TAINT && direction == Direction.BACKWARD) return false
         if (p.fact.mark is MarkSlot.Concrete && catalog?.isGroup(p.fact.mark.mark) == true) return false
         if (p.fact.tail != Tail.STAR && p.fact.tail != Tail.ANY_TAINT && p.exclusion != ExclusionSet.Empty) return false
         if (p.fact.mark is MarkSlot.Star && !p.fact.mark.excluded.isEmpty) return false

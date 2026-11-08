@@ -62,11 +62,13 @@ class ApOps(val manager: ApManager) {
         app.results.flush(sink)
     }
 
-    fun satisfying(a: Facts, j: InitialAp, mode: ApMode, record: Boolean = false): Facts? =
-        satisfying(a, j.toPattern(), mode, record)
+    fun satisfying(a: Facts, j: InitialAp, mode: ApMode, record: Boolean = false,
+                   role: SummaryReadRole = if (record) SummaryReadRole.SAVED_DIRECT else SummaryReadRole.CURRENT): Facts? =
+        satisfying(a, j.toPattern(), mode, record, role)
 
-    fun satisfying(a: Facts, j: Pattern, mode: ApMode, record: Boolean = false): Facts? =
-        satisfyingPart(manager, a, j, mode, record)?.let { retainProtection(a, it, manager.cancellation) }
+    fun satisfying(a: Facts, j: Pattern, mode: ApMode, record: Boolean = false,
+                   role: SummaryReadRole = if (record) SummaryReadRole.SAVED_DIRECT else SummaryReadRole.CURRENT): Facts? =
+        satisfyingPart(manager, a, j, mode, record, role)?.let { retainProtection(a, it, manager.cancellation) }
 
     fun applySummary(a: Facts, j: InitialAp, g: Facts, mode: ApMode, out: ApOut,
                      original: PremiseKey? = null) {

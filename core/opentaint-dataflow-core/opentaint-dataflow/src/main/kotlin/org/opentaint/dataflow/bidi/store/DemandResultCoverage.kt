@@ -152,23 +152,15 @@ internal class DemandQueryStatistics : DemandScalarWork {
         }
 }
 
-/** Facts equality omits protection. Join only that annotation for exactly equal ordinary payloads. */
+/** Exact query union retains both protection memberships. */
 internal class ExactDemandResults(private val ap: ApManager) {
-    private val values = LinkedHashMap<Facts, Facts>()
+    private val values = LinkedHashSet<Facts>()
     val hasResults: Boolean get() = values.isNotEmpty()
     fun add(value: Facts) {
         ap.cancellation.checkpoint()
-        val old = values[value]
-        values[value] = if (old is TaintTree && value is TaintTree) {
-            val mask = when {
-                old.nonSubsumable == null -> value.nonSubsumable
-                value.nonSubsumable == null -> old.nonSubsumable
-                else -> ap.taintAlg.mergeAdd(old.nonSubsumable, value.nonSubsumable, ap.cancellation)
-            }
-            old.withProtection(mask, ap.cancellation)
-        } else old ?: value
+        values.addAll(value.membershipPackets(ap))
     }
-    fun all(): List<Facts> = values.values.toList()
+    fun all(): List<Facts> = values.toList()
 }
 
 /** Compare structural keys from the scalar emitter. This check never interns hypothetical APs. */
@@ -184,21 +176,21 @@ internal class InitialDemandResults(private val ap: ApManager, private val polic
     fun offer(entry: Pattern, actual: Pattern) {
         ap.cancellation.checkpoint()
         if (!offered.add(entry to actual)) return
-        val emitted = policy.emitAdmission(entry, actual, actualLayer)
-        statistics?.admission(entry, actual, emitted?.pattern)
-        if (emitted == null) return
-        if (keys.add(emitted)) initials += AdmittedInitial(ap.initial(emitted.pattern), emitted.layer)
-        missing.remove(emitted)
+        val emissions = policy.emitAdmissions(entry, actual, actualLayer)
+        statistics?.admission(entry, actual, emissions.firstOrNull()?.pattern)
+        for (emitted in emissions) {
+            if (keys.add(emitted)) initials += AdmittedInitial(ap.initial(emitted.pattern), emitted.layer)
+            missing.remove(emitted)
+        }
     }
     fun has(entry: Pattern, actual: Pattern): Boolean {
         ap.cancellation.checkpoint()
-        val emitted = policy.emitAdmission(entry, actual, actualLayer) ?: return true
-        return emitted in keys
+        return policy.emitAdmissions(entry, actual, actualLayer).all { it in keys }
     }
     fun requireFamily(target: Pattern, flow: Boolean, actual: Pattern) {
         fun require(entry: Pattern) {
-            val potential = policy.emitAdmission(entry, actual, actualLayer) ?: return
-            if (potential !in keys) missing += potential
+            for (potential in policy.emitAdmissions(entry, actual, actualLayer))
+                if (potential !in keys) missing += potential
         }
         require(target)
         if (flow && actual.fact.mark is MarkSlot.Concrete && actual.fact.mark.mark != TaintMark.ZERO)

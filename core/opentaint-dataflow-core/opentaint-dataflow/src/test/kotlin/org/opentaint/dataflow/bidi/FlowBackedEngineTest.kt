@@ -179,7 +179,7 @@ class FlowBackedEngineTest {
             val input = f.ops.startFact(marked, actor.mode) as TaintTree
             actor.emitAfter(marked, f.inst(0), input.withProtection(input.root))
             f.drain(actor, quantum = 1)
-            assertNotNull(markedSummary(actor, marked).single().nonSubsumable)
+            assertEquals(setOf(false, true), markedSummary(actor, marked).map { it.nonSubsumable != null }.toSet())
             assertEquals(terminals, actor.targets)
             assertEquals(1, actor.targets.size)
         }
@@ -228,7 +228,7 @@ class FlowBackedEngineTest {
             actor.emitAfter(first, f.inst(0), input.withProtection(input.root))
             f.drain(actor, quantum = 1)
             for (origin in listOf(first, second)) {
-                assertNotNull(markedSummary(actor, origin).single().nonSubsumable)
+                assertEquals(setOf(false, true), markedSummary(actor, origin).map { it.nonSubsumable != null }.toSet())
                 assertTrue(actor.summaries.demandEdges(actor.mode.direction).any { it.first == origin && it.second.base == ret })
             }
             val steps = actor.steps
@@ -254,7 +254,7 @@ class FlowBackedEngineTest {
             val exact = f.fact(x, mark = MarkSlot.Concrete(t), layer = Layer.DEMAND)
             actor.emitAfter(marked, f.inst(0), exact)
             f.drain(actor, quantum = 1)
-            assertNotNull(markedSummary(actor, marked).single().nonSubsumable)
+            assertEquals(setOf(true), markedSummary(actor, marked).map { it.nonSubsumable != null }.toSet())
             assertTrue(actor.summaries.demandEdges(actor.mode.direction).any { it.first == marked && it.second.base == ret })
         }
     }

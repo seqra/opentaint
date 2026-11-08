@@ -183,7 +183,8 @@ class RunMethodHandlersTest {
             h.handler.handle(delivery)
             val applied = h.applications.single()
             assertEquals(sub, applied.first)
-            assertSame(pub.conclusion, applied.second.conclusion)
+            assertEquals(pub.conclusion,applied.second.conclusion,
+                "Canonical publication preserves the payload and protection class, not allocation identity")
             assertEquals(0, applied.third)
             assertEquals(setOf(f.a), h.actors.keys, "The subscribed caller owns the resume service")
         }

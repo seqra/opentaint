@@ -54,7 +54,7 @@ class GeneralFlowCoverageTest {
 
     @Test fun `full and group atoms keep complete initial geometry in both arrival orders`() {
         val group = m.marks.runtimeAtom(t, MarkMode.GROUP)
-        for (atom in listOf(t, group)) for (tail in listOf(Tail.STAR, Tail.ANY)) for (flowFirst in listOf(false, true)) {
+        for (atom in listOf(t, group)) for (tail in listOf(Tail.STAR)) for (flowFirst in listOf(false, true)) {
             val inputE = if (tail == Tail.STAR) ExclusionSet.of(g) else ExclusionSet.Empty
             val i = initial(atom, tail, inputE)
             val counterpart = checkNotNull(flowInitialForCoverage(m, i))

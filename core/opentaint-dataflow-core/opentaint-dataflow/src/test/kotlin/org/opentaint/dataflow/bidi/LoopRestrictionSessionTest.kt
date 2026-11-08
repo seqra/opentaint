@@ -26,8 +26,8 @@ class LoopRestrictionSessionTest {
                     f.pattern(x, demandPath.take(1), Tail.ANY, MarkSlot.STAR))
                 val trie = FrozenDemandTrie.Builder<Pattern>(f.cancellation).apply { demands.forEach { add(it, it) } }.build()
                 fun observe(value: Facts): LoopObservation<String> {
-                    val initial = f.ops.leaves(value).flatMap { actual -> demands.mapNotNull { demand ->
-                        policy.emitAdmission(demand, actual, value.layer)?.let { AdmittedInitial(f.manager.initial(it.pattern), it.layer) }
+                    val initial = f.ops.leaves(value).flatMap { actual -> demands.flatMap { demand ->
+                        policy.emitAdmissions(demand,actual,value.layer).map { AdmittedInitial(f.manager.initial(it.pattern),it.layer) }
                     }.asSequence() }.toSet()
                     return LoopObservation(initial, listOf("enclosing witness"), emptyList(), initial.map {
                         LoopLabelledAdmission(scope, LoopAdmissionFamily.ADJACENT, it)
@@ -64,8 +64,8 @@ class LoopRestrictionSessionTest {
         val scope = BlockScope(BlockId(1), PortId(2))
         val policy = RestrictedInitialPolicy(3, 8, Direction.FORWARD, f.manager.marks)
         fun observe(value: Facts): LoopObservation<String> {
-            val initial = f.ops.leaves(value).flatMap { actual -> demands.mapNotNull { demand ->
-                policy.emitAdmission(demand, actual, value.layer)?.let { AdmittedInitial(f.manager.initial(it.pattern), it.layer) }
+            val initial = f.ops.leaves(value).flatMap { actual -> demands.flatMap { demand ->
+                policy.emitAdmissions(demand,actual,value.layer).map { AdmittedInitial(f.manager.initial(it.pattern),it.layer) }
             }.asSequence() }.toSet()
             return LoopObservation(initial, listOf("complete enclosing result"), emptyList(), initial.map {
                 LoopLabelledAdmission(scope, LoopAdmissionFamily.ADJACENT, it)
@@ -75,14 +75,14 @@ class LoopRestrictionSessionTest {
         val session = LoopRestrictionSession(f.ops, policy, ::observe) { actual ->
             trie.precisionCursors(actual, f.manager.marks).map { LoopPrecisionCursor(scope, LoopAdmissionFamily.ADJACENT, it) }
         }
-        assertEquals(3, session.certifiedFirstBudget(raw, observe(raw)))
+        assertNull(session.certifiedFirstBudget(raw, observe(raw)),"The old scalar ANY certificate is unsupported for the expanded family")
         val reference = LoopOutputRestriction(f.ops)
         val optimized = LoopOutputRestriction(f.ops)
         val expected = reference.restrict(false, true, raw, ::observe)
         assertEquals(expected, optimized.restrict(false, true, raw, session))
         assertEquals(3L, reference.statistics.trials)
-        assertEquals(1L, optimized.statistics.trials)
-        assertEquals(2L, optimized.statistics.budgetsSkipped)
+        assertEquals(reference.statistics.trials, optimized.statistics.trials)
+        assertEquals(0L, optimized.statistics.budgetsSkipped)
     }
 
     @Test

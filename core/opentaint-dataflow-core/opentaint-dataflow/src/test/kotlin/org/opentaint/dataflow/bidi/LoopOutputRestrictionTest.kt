@@ -52,6 +52,18 @@ class LoopOutputRestrictionTest {
     }
 
     @Test
+    fun `own ZERO summary bypasses the extra gate even with no DATA consumer`() {
+        val raw = fixture.fact(x, listOf(f, f, f), mark = t)
+        val kept = gate.restrict(false, ap.zero, fixture.pattern(x, listOf(f, f, f), mark = t), raw) {
+            error("An own-ZERO result keeps its saved NORMAL repeat continuation")
+            @Suppress("UNREACHABLE_CODE") observation()
+        }
+        assertSame(raw, kept.single())
+        assertEquals(1L, gate.statistics.bypasses)
+        assertEquals(0L, gate.statistics.observations)
+    }
+
+    @Test
     fun `native C2 keeps its first-field image while the raw binary path is cut`() {
         val demand = fixture.pattern(x, tail = Tail.ANY, mark = t)
         val raw = fixture.fact(x, listOf(f, g, h), mark = t)
@@ -72,7 +84,7 @@ class LoopOutputRestrictionTest {
         // sourceFF(x); x=x.f; sinkRootT(x): the first body leaves x.f/T for the next read.
         val raw = fixture.fact(x, listOf(f), mark = t)
         val bodyDemand = fixture.pattern(x, listOf(f), Tail.ANY, t)
-        val result = gate.restrict(false, ap.zero, fixture.pattern(x, listOf(f), mark = t), raw) { candidate ->
+        val result = gate.restrict(false, growingInitial, fixture.pattern(x, listOf(f), mark = t), raw) { candidate ->
             LoopObservation(emptyList(), emptyList<String>(), admissions(bodyDemand, candidate))
         }
         assertEquals(raw, result.single())
@@ -96,7 +108,7 @@ class LoopOutputRestrictionTest {
     fun `rejected precise fact is dropped without manufacturing a wider match`() {
         val raw = fixture.fact(x, listOf(f), mark = t)
         val demand = fixture.pattern(x, listOf(f, g), Tail.ANY, t)
-        val kept = gate.restrict(false, ap.zero, fixture.pattern(x, listOf(f), mark = t), raw) { candidate ->
+        val kept = gate.restrict(false, growingInitial, fixture.pattern(x, listOf(f), mark = t), raw) { candidate ->
             LoopObservation(admissions(demand, candidate), emptyList<String>(), emptyList())
         }
         assertTrue(kept.isEmpty())
@@ -164,15 +176,17 @@ class LoopOutputRestrictionTest {
     }
 
     @Test
-    fun `frozen observations distinguish protection while exact duplicates union the bit`() {
+    fun `frozen observations retain both protection classes while exact same-class duplicates deduplicate`() {
         val raw = fixture.fact(x, listOf(f), mark = t) as TaintTree
         val protected = raw.withProtection(raw.root)
-        assertEquals(raw, protected, "Ordinary fact equality deliberately ignores protection")
+        assertNotEquals(raw, protected, "Retained fact equality includes the protection membership")
         val plainSignature = LoopObservedFacts(ops).also { it.add(raw) }.freeze()
         val union = LoopObservedFacts(ops).also { it.add(raw); it.add(protected); it.add(raw) }.freeze()
         assertNotEquals(plainSignature, union)
-        assertEquals(1, union.size)
-        assertTrue(union.single().nonSubsumable)
+        assertEquals(2, union.size)
+        assertEquals(setOf(false, true), union.map { it.nonSubsumable }.toSet())
+        val reverse = LoopObservedFacts(ops).also { it.add(protected); it.add(raw); it.add(protected) }.freeze()
+        assertEquals(union, reverse, "Either arrival order preserves both independent classes")
         val source = arrayListOf(AdmittedInitial(growingInitial, Layer.NORMAL))
         val frozen = LoopObservation(source, union, emptyList())
         source.clear()
@@ -188,7 +202,7 @@ class LoopOutputRestrictionTest {
         val results = LoopObservedFacts(ops)
         for (path in inputs) {
             val raw = fixture.fact(x, path, mark = t)
-            for (kept in gate.restrict(false, ap.zero, fixture.pattern(x, path, mark = t), raw) { value ->
+            for (kept in gate.restrict(false, growingInitial, fixture.pattern(x, path, mark = t), raw) { value ->
                 LoopObservation(emptyList(), emptyList<String>(), admissions(demand, value))
             }) results.add(kept)
         }
@@ -204,7 +218,7 @@ class LoopOutputRestrictionTest {
         val clazz = ap.accessors.index(ClassStaticAccessor("C"))
         val raw = fixture.fact(STATIC, listOf(clazz, f, g, h), mark = t)
         val demand = fixture.pattern(STATIC, listOf(clazz, f), Tail.ANY, t)
-        val kept = gate.restrict(false, ap.zero, fixture.pattern(STATIC, listOf(clazz, f), mark = t), raw) { value ->
+        val kept = gate.restrict(false, growingInitial, fixture.pattern(STATIC, listOf(clazz, f), mark = t), raw) { value ->
             LoopObservation(admissions(demand, value), emptyList<String>(), emptyList())
         }.single()
         assertEquals(listOf(clazz, f, g), ops.leaves(kept).single().fact.path)

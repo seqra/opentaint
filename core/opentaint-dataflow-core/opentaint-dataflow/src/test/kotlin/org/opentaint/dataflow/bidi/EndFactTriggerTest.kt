@@ -55,14 +55,14 @@ class EndFactTriggerTest {
             f.exitRules(2, ExitRules(localRules(listOf(a, b)), false, emptySet()))
             val core = localCore(f, index = 2)
             val exact = f.manager.initial(f.pattern(result, mark = v))
-            val any = f.manager.initial(f.pattern(result, tail = Tail.ANY, mark = v))
+            val star = f.manager.initial(f.pattern(result, tail = Tail.STAR, mark = v))
             core.addInitial(exact)
             f.drain(core)
-            core.addInitial(any)
+            core.addInitial(star)
             f.drain(core, quantum = 1)
             assertEquals(0L, core.triggerSeeds, "End actions do not create alternative triggers")
             assertEquals(setOf(exact to Conclusion(target, ExclusionSet.Empty, false),
-                any to Conclusion(target.copy(tail = Tail.ANY), ExclusionSet.Empty, true)),
+                star to Conclusion(target.copy(tail = Tail.STAR), ExclusionSet.Empty, true)),
                 methodEntries(f.ops, f.completedBoundary(core)))
             assertEquals(0, f.cuts.count { it.first == Cut.SEED })
             assertTrue(core.targets.isEmpty())
@@ -81,17 +81,17 @@ class EndFactTriggerTest {
             f.exitRules(2, ExitRules(localRules(listOf(sink)), false, emptySet()))
             val core = localCore(f, index = 2)
             val exact = f.manager.initial(f.pattern(result, mark = u))
-            val any = f.manager.initial(f.pattern(result, tail = Tail.ANY, mark = u))
+            val star = f.manager.initial(f.pattern(result, tail = Tail.STAR, mark = u))
             core.addInitial(exact)
             f.drain(core, quantum = 1)
             assertEquals(0L, core.triggerSeeds)
             assertEquals(0, f.cuts.count { it.first == Cut.SEED })
-            core.addInitial(any)
+            core.addInitial(star)
             f.drain(core, quantum = 1)
             assertEquals(0L, core.triggerSeeds)
             assertEquals(0, f.cuts.count { it.first == Cut.SEED })
             assertEquals(setOf(exact to Conclusion(target, ExclusionSet.Empty, false),
-                any to Conclusion(target.copy(tail = Tail.ANY), ExclusionSet.Empty, true)),
+                star to Conclusion(target.copy(tail = Tail.STAR), ExclusionSet.Empty, true)),
                 methodEntries(f.ops, f.completedBoundary(core)))
         }
     }
@@ -132,7 +132,7 @@ class EndFactTriggerTest {
             f.entryRules(localRules(listOf(sink), StatementSummary(setOf(AccessPathBase.Zero),
                 listOf(MicroEdge.of(ZERO_KEEP), rootSource, fieldSource), emptyList(), emptyMap())))
             val core = localCore(f, index = 2)
-            val initial = f.manager.initial(f.pattern(argument, tail = Tail.ANY, mark = t))
+            val initial = f.manager.initial(f.pattern(argument, tail = Tail.STAR, mark = t))
             core.addInitial(initial)
             f.drain(core, quantum = 1)
             val hits = core.sourceHits!!.entries().toList()

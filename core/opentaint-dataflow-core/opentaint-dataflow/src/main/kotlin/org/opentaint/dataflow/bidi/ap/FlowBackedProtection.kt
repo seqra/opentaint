@@ -3,7 +3,21 @@ package org.opentaint.dataflow.bidi.ap
 import java.util.ArrayDeque
 import org.opentaint.dataflow.util.Cancellation
 
-/** Exact output coordinates. An annotation is never part of ordinary Facts identity. */
+/** Exact output coordinates. Retained memberships keep the protection class. */
+internal fun TaintTree.protectionClass(): Boolean {
+    check(nonSubsumable == null || nonSubsumable == root) { "A retained TAINT packet must have one protection class" }
+    return nonSubsumable != null
+}
+
+/** Split a fresh producer result before any class-aware merge or owner admission. */
+internal fun Facts.membershipPackets(m: ApManager): List<Facts> {
+    if (this !is TaintTree || nonSubsumable == null || nonSubsumable == root) return listOf(this)
+    val protected = intersectTaintMask(nonSubsumable, root, m.cancellation) ?: return listOf(withoutProtection())
+    val plain = m.taintAlg.minusNode(root, protected, m.cancellation)
+    return listOfNotNull(plain?.let { withRoot(it).withoutProtection() },
+        withRoot(protected).withProtection(protected, m.cancellation))
+}
+
 fun TaintTree.withProtection(mask: TaintNode?, cancellation: Cancellation? = null): TaintTree {
     val kept = mask?.let { intersectTaintMask(it, root, cancellation) }
     if (kept === nonSubsumable) return this
@@ -86,14 +100,14 @@ internal class ProtectionOutputs(private val m: ApManager) : ApOut {
             m.taintLeaves(it.exact, MarkSet.EMPTY)
         }
         add(exact, f.base to f.layer, ex)
-        if (f.root.hasAny) add(any, f.groupKey, m.taintAlg.mapLeaves(f.root, m.cancellation) {
+        if (f.root.hasAny) add(any, f.withoutProtection().groupKey, m.taintAlg.mapLeaves(f.root, m.cancellation) {
             m.taintLeaves(MarkSet.EMPTY, it.any)
         })
     }
     fun attach(f: Facts): Facts {
         if (f !is TaintTree) return f
         var root = f.nonSubsumable
-        for (offered in listOfNotNull(exact[f.base to f.layer], any[f.groupKey])) {
+        for (offered in listOfNotNull(exact[f.base to f.layer], any[f.withoutProtection().groupKey])) {
             root = root?.let { m.taintAlg.mergeAdd(it, offered, m.cancellation) } ?: offered
         }
         return if (root == null) f else f.withProtection(root, m.cancellation)

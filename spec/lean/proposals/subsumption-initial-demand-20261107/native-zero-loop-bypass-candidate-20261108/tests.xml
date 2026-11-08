@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-08T09:42:58" hostname="dev-1" time="0.08">
+  <properties/>
+  <testcase name="DEMAND replay cannot produce a normal witness and an identity is no progress()" classname="org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest" time="0.022"/>
+  <testcase name="saved first repeat delivery reaches existing exact admission without completion()" classname="org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest" time="0.002"/>
+  <testcase name="candidate ZERO bypass delivers source to the existing normal sink route()" classname="org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest" time="0.005"/>
+  <testcase name="gate drops NORMAL GEN before an applicable saved repeat read()" classname="org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest" time="0.005"/>
+  <testcase name="existing NormalTarget joins preserve ZERO origin in both arrival orders()" classname="org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest" time="0.037"/>
+  <testcase name="actual ZERO source and read survive paired C5 before the loop gate()" classname="org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest" time="0.003"/>
+  <testcase name="candidate still applies the global bound before the ZERO bypass()" classname="org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest" time="0.001"/>
+  <testcase name="candidate does not confuse enclosing ZERO origin with a DATA summary premise()" classname="org.opentaint.dataflow.bidi.LoopSavedRepeatGateDiagnosisTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

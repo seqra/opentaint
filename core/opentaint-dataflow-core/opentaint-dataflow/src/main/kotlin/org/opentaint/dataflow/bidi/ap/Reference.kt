@@ -185,7 +185,12 @@ fun commonPart(d: Pattern, a: Pattern, catalog: MarkTable? = null): Pattern? {
     }
 }
 
-fun satisfies(j: Pattern, a: Pattern, restricted: Boolean): Boolean {
+fun satisfies(j: Pattern, a: Pattern, restricted: Boolean,
+              role: SummaryReadRole = SummaryReadRole.CURRENT): Boolean {
+    if (a.fact.tail == Tail.STAR && j.fact.path.size > a.fact.path.size &&
+        j.fact.path.startsWith(a.fact.path) && role != SummaryReadRole.SAVED_OPPOSITE) return false
+    if (j.fact.tail == Tail.STAR && a.fact.tail in setOf(Tail.STAR,Tail.ANY_TAINT) &&
+        j.fact.base == a.fact.base && j.fact.path == a.fact.path && markSub(j.fact.mark,a.fact.mark)) return true
     if (j.fact.tail == Tail.ANY_TAINT && j.fact.mark is MarkSlot.Star)
         return a.fact.tail == Tail.ANY_TAINT && markSub(j.fact.mark, a.fact.mark) &&
             covers(a.copy(fact = a.fact.copy(mark = MarkSlot.STAR)), j.copy(fact = j.fact.copy(mark = MarkSlot.STAR)))
@@ -480,8 +485,8 @@ internal fun wholeFlowClean(cl: Cleaner, c: Conclusion): List<Conclusion> {
 /** ap.md §4.7 (Lean concPart; with the exclusion AnyTaintEx.partX): a normal `[any-taint]/E` fact at x.p and a cleaner ONE
  *  accessor below it, at x.p.f: `atAndBelow` gives the fact with `E ∪ {f}`, `below` gives it and `(x, p.f, $, T)`, in
  *  the layer of c (A2). An any-tail fact at x.p under a `below` cleaner AT x.p keeps `(x, p, $, T)` in its layer. Any
- *  other `part` result (the `exact` cleaner one accessor below too) goes to the demand layer: an `[any-taint]` fact as
- *  `[any]`, with no exclusion (W8). */
+ *  other `part` result (the `exact` cleaner one accessor below too) goes to the demand layer. A selected
+ *  remaining STAR/T becomes ANY/T with Empty E; all other existing survivor shapes stay unchanged. */
 fun concPart(cl: Cleaner, c: Conclusion): List<Conclusion> {
     val p = cl.path?.toList().orEmpty()
     val q = c.fact.path
@@ -493,6 +498,8 @@ fun concPart(cl: Cleaner, c: Conclusion): List<Conclusion> {
     return listOf(
         if ((c.fact.tail.isAny || c.fact.tail == Tail.STAR) && cl.reach == CleanReach.BELOW && q == p)
             c.copy(fact = c.fact.copy(tail = Tail.EXACT), exclusion = ExclusionSet.Empty)   // in the layer of c
+        else if (c.fact.tail == Tail.STAR && cl.mark != null)
+            c.copy(fact = c.fact.copy(tail = Tail.ANY), exclusion = ExclusionSet.Empty, demand = true)
         else c.copy(demand = true))
 }
 

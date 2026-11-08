@@ -17,6 +17,12 @@ class CumulativeSubscriptionReference(private val universe: BoundedDenotation) {
         if (premise.fact.tail == Tail.ANY_TAINT && premise.fact.mark is MarkSlot.Star)
             return a.fact.tail == Tail.ANY_TAINT && aPositions.containsAll(pPositions) &&
                 universe.markedValues(premise.fact.mark).containsAll(universe.markedValues(a.fact.mark))
+        // Current summaries cannot sample an ordinary ancestor STAR.
+        if (a.fact.tail == Tail.STAR && premise.fact.path.size > a.fact.path.size &&
+            premise.fact.path.startsWith(a.fact.path)) return false
+        if (premise.fact.tail == Tail.STAR && a.fact.tail in setOf(Tail.STAR,Tail.ANY_TAINT) &&
+            premise.fact.base == a.fact.base && premise.fact.path == a.fact.path &&
+            universe.markedValues(premise.fact.mark).containsAll(universe.markedValues(a.fact.mark))) return true
         if (!restricted) return applicable || inside
         val canonicalFlow = premise.fact.tail == Tail.STAR && premise.exclusion == ExclusionSet.Empty &&
             premise.fact.mark == MarkSlot.STAR

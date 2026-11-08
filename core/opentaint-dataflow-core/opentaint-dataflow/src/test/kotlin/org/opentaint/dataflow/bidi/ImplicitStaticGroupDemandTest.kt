@@ -48,8 +48,14 @@ class ImplicitStaticGroupDemandTest {
                 val actual = pattern(mark, tail = tail)
                 val input = m.factsOf(actual.fact, actual.exclusion, Layer.DEMAND)
                 val starts = store.near(method, actual).flatMap { ops.emit(it, input) }
-                assertEquals(setOf(m.initial(if (tail == Tail.STAR) actual.copy(fact=actual.fact.copy(tail=Tail.EXACT)) else actual)), starts.toSet())
-                assertEquals(tail == Tail.STAR, starts.single().tail == Tail.EXACT)
+                val primary=actual.copy(fact=actual.fact.copy(tail=if(tail==Tail.STAR) Tail.EXACT else Tail.STAR))
+                val expected=buildSet {
+                    add(m.initial(primary))
+                    if(tail==Tail.ANY && mark is MarkSlot.Concrete)
+                        add(m.initial(primary.copy(fact=primary.fact.copy(mark=MarkSlot.STAR))))
+                }
+                assertEquals(expected,starts.toSet())
+                assertTrue(starts.all { (it.tail==Tail.EXACT)==(tail==Tail.STAR) })
             }
         }
     }
@@ -57,7 +63,7 @@ class ImplicitStaticGroupDemandTest {
     @Test fun `carry cannot connect different static fields or exact class markers`() {
         val store = enabled()
         val actual = pattern(MarkSlot.Concrete(fulls[0]))
-        val initial = m.initial(actual)
+        val initial=m.initial(actual.copy(fact=actual.fact.copy(tail=Tail.STAR)))
         val guide = store.covering(method, initial).single()
         for (other in listOf(pattern(actual.fact.mark, listOf(cls, g)),
             pattern(actual.fact.mark, listOf(cls), Tail.EXACT))) {

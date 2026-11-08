@@ -86,7 +86,7 @@ class DeltaWorklistTest {
         val plain = edge(1)
         val facts = plain.facts as TaintTree
         val protected = plain.copy(facts = facts.withProtection(facts.root))
-        assertEquals(plain, protected)
+        assertNotEquals(plain, protected)
         work.add(plain)
         work.add(protected)
         assertEquals(2, work.size)

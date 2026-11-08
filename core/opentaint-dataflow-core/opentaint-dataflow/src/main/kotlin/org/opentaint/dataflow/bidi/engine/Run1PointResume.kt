@@ -47,11 +47,11 @@ internal class Run1PointResume(private val core: BlockRunState) {
     private val conditional = HashMap<Long, ConditionalJoin>()
     private val joinInputs = HashMap<Long, JoinInput>()
     private sealed interface CallResultKey {
-        data class Ap(val output: Pattern, val layer: Layer) : CallResultKey
+        data class Ap(val output: Pattern, val layer: Layer, val protected: Boolean) : CallResultKey
         data class Terminal(val target: Target) : CallResultKey
     }
     private data class CallKey(val callee: MethodKey, val ref: org.opentaint.dataflow.bidi.store.CallerRef,
-                               val linkLayer: Layer, val premise: PremiseKey, val result: CallResultKey, val member: Int)
+                               val linkLayer: Layer, val premise: PremiseKey, val result: CallResultKey, val member: Int, val inputClass: GroupKey)
     private class CallContinuation(val key: CallKey, var part: Subscription, var result: StaticCallResult,
                                    val member: Int) { var waiting = MarkSet.EMPTY }
     private val callKeys = HashMap<CallKey, Long>()
@@ -70,14 +70,14 @@ internal class Run1PointResume(private val core: BlockRunState) {
                     val plain = core.ap.factsOf(leaf.fact, leaf.exclusion, pub.layer)
                     val conclusion = if (plain is TaintTree && pub.conclusion is TaintTree)
                         plain.withProtection(pub.conclusion.nonSubsumable) else plain
-                    CallResultKey.Ap(leaf, pub.layer) to StaticCallResult.Ap(pub.copy(conclusion = conclusion))
+                    CallResultKey.Ap(leaf, pub.layer, conclusion is TaintTree && conclusion.nonSubsumable != null) to StaticCallResult.Ap(pub.copy(conclusion = conclusion))
                 }.toList()
             }
             is StaticCallResult.Terminal -> listOf(CallResultKey.Terminal(result.summary.target) to result)
         }
         for ((resultKey, piece) in pieces) {
             statistics?.staticGroupCallOffered()
-            val key = CallKey(part.callee, part.ref, part.linkLayer, result.premise, resultKey, member)
+            val key = CallKey(part.callee, part.ref, part.linkLayer, result.premise, resultKey, member, part.added.groupKey)
             val id = callKeys.getOrPut(key) {
                 (core.nextStaticTicket()).also { calls[it] = CallContinuation(key, part, piece, member) }
             }

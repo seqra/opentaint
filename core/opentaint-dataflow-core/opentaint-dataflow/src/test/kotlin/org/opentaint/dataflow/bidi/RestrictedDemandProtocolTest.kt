@@ -34,7 +34,7 @@ class RestrictedDemandProtocolTest {
             val exit = f.pattern(tail = Tail.ANY, mark = mark)
             val demand = DemandStore.Builder(f.manager).apply { add(f.key, DemandPattern(entry, exit)) }.build()
             val actor = f.core(index = 6, L = 5, demand = demand)
-            val initial = f.manager.initial(entry)
+            val initial = f.manager.initial(entry.copy(fact=entry.fact.copy(tail=Tail.STAR)))
             val path = listOf(f.field("a"), f.field("b"), f.field("c"))
             val raw = f.fact(path = path, mark = mark)
             actor.summaryDelta(initial, raw)
@@ -73,7 +73,7 @@ class RestrictedDemandProtocolTest {
             repeat(3) { for (name in listOf("T", "U"))
                 arrive(f, actor, f.fact(tail = Tail.ANY, mark = MarkSlot.Concrete(f.mark(name)), layer = Layer.DEMAND)) }
             assertEquals(1, actor.initials.all().size)
-            assertTrue(actor.initials.all().contains(f.manager.initial(entry)))
+            assertTrue(actor.initials.all().contains(f.manager.initial(entry.copy(fact=entry.fact.copy(tail=Tail.STAR)))))
         }
     }
 
@@ -88,8 +88,9 @@ class RestrictedDemandProtocolTest {
             arrive(f, actor, f.fact(tail = Tail.ANY, mark = MarkSlot.Concrete(f.mark("U"))))
             assertEquals(0, actor.initials.all().size)
             arrive(f, actor, f.fact(tail = Tail.ANY, mark = MarkSlot.Concrete(t), layer = Layer.DEMAND))
-            assertTrue(actor.initials.all().contains(f.manager.initial(entry)))
-            assertEquals(1, actor.initials.all().size)
+            assertTrue(actor.initials.all().contains(f.manager.initial(entry.copy(fact=entry.fact.copy(tail=Tail.STAR)))))
+            assertEquals(2, actor.initials.all().size)
+            assertTrue(actor.initials.all().any { it.mark==MarkSlot.STAR && it.tail==Tail.STAR })
         }
     }
 
@@ -100,8 +101,9 @@ class RestrictedDemandProtocolTest {
             val demand = DemandStore.Builder(f.manager).apply { add(f.key, DemandPattern(entry, null)) }.build()
             val actor = f.core(index = 2, demand = demand)
             arrive(f, actor, f.fact(STATIC, path, Tail.ANY, entry.fact.mark, layer = Layer.DEMAND))
-            assertEquals(1, actor.initials.all().size)
-            assertTrue(actor.initials.all().contains(f.manager.initial(entry)))
+            assertEquals(2, actor.initials.all().size)
+            assertTrue(actor.initials.all().contains(f.manager.initial(entry.copy(fact=entry.fact.copy(tail=Tail.STAR)))))
+            assertTrue(actor.initials.all().any { it.mark==MarkSlot.STAR && it.tail==Tail.STAR })
             assertFalse(actor.initials.all().contains(f.manager.initial(entry.copy(fact = entry.fact.copy(tail = Tail.EXACT)))))
         }
     }

@@ -29,7 +29,10 @@ class ReturnImageCollapseTest {
                 f.fact(returned, listOf(field), tail, t, layer = Layer.DEMAND)
             }
             assertNotEquals(actuals[0].groupKey, actuals[1].groupKey)
-            val initials = actuals.map { emitRestrictedInitials(config, f.ops, f.key, it).single() }
+            val families=actuals.map { emitRestrictedInitials(config,f.ops,f.key,it) }
+            assertEquals(2,families[0].size)
+            assertEquals(families[0],families[1])
+            val initials=families.map { it.single { emission -> emission.initial.tail==Tail.STAR } }
             assertEquals(initials[0], initials[1])
             assertSame(initials[0].initial, initials[1].initial)
             assertEquals(Layer.NORMAL, initials[0].layer, "FLOW admission keeps its existing intrinsic policy")

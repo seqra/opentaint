@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi.engine
 
+import org.opentaint.dataflow.bidi.ap.Tail
+
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
@@ -74,6 +76,7 @@ class UnitRunner<A : RunActor> internal constructor(
         check(!run.ended && !closed.get()) { "The runner is closed" }
         check(config.restricted) { "Completed initial delivery is for restricted runs" }
         shared.cancellation.checkpoint()
+        check(initials.none { it.initial.tail == Tail.ANY }) { "An owned initial cannot have an ANY tail" }
         val valid = initials.filter { org.opentaint.dataflow.bidi.ap.RuntimeDataDomain.initial(it.initial) }
         if (valid.isEmpty()) return
         val event = RunEvent.InitialsIn(callee, valid)

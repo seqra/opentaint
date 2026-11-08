@@ -95,20 +95,20 @@ class NormalRuleContributorStoreTest {
         assertEquals(Tail.ANY_TAINT, retained.anyTail)
     }
 
-    @Test fun `equal geometry merges protection growth instead of using fact equality as deduplication`() {
+    @Test fun `equal geometry retains both protection classes in contributor snapshots`() {
         val store = NormalRuleContributorStore(f.manager)
         val plainInput = input()
         val plain = plainInput.facts as TaintTree
         val protected = plain.withProtection(plain.root, f.cancellation)
-        assertEquals(plain, protected)
+        assertNotEquals(plain, protected)
         store.publish(frozen(0 to plainInput))
         val earlier = store.snapshot()
         assertTrue(store.publish(frozen(0 to plainInput.copy(facts = protected))))
-        assertEquals(1L, store.retainedRows)
+        assertEquals(2L, store.retainedRows)
         assertNull((earlier.allRows().single().input.facts as TaintTree).nonSubsumable)
-        assertNotNull((store.snapshot().allRows().single().input.facts as TaintTree).nonSubsumable)
+        assertEquals(setOf(plain, protected), store.snapshot().allRows().map { it.input.facts }.toSet())
         assertFalse(store.publish(frozen(0 to plainInput)))
-        assertNotNull((store.snapshot().allRows().single().input.facts as TaintTree).nonSubsumable)
+        assertEquals(setOf(plain, protected), store.snapshot().allRows().map { it.input.facts }.toSet())
     }
 
     @Test fun `checked trees merge only within the same leaf origin and group`() {

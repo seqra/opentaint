@@ -1,0 +1,226 @@
+{
+  "state": "PASS_SCOPED_OWASP_UNIFORM_COMPONENT_ONLY",
+  "modules": [
+    {
+      "module": "RestrictedInitialPolicy",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/owasp-uniform-h_melbds/RestrictedInitialPolicy.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/RestrictedInitialPolicy.lean"
+      ]
+    },
+    {
+      "module": "PlainStarRelativeAdmissionProofFixed3",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/owasp-uniform-h_melbds/PlainStarRelativeAdmissionProofFixed3.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/PlainStarRelativeAdmissionProofFixed3.lean"
+      ]
+    },
+    {
+      "module": "Geometry",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/demand-relative-summary-restriction-20261101",
+        "-M2048",
+        "-o",
+        "/tmp/owasp-uniform-h_melbds/Geometry.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/demand-relative-summary-restriction-20261101/Geometry.lean"
+      ]
+    },
+    {
+      "module": "AnnotatedC5Exit",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/subsumption-initial-demand-20261107",
+        "-M2048",
+        "-o",
+        "/tmp/owasp-uniform-h_melbds/AnnotatedC5Exit.olean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/subsumption-initial-demand-20261107/AnnotatedC5Exit.lean"
+      ]
+    },
+    {
+      "module": "OwaspUniformCompletion",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/owasp-uniform-completion/proof-fix-attempt2",
+        "-M2048",
+        "-o",
+        "/tmp/owasp-uniform-h_melbds/OwaspUniformCompletion.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/owasp-uniform-completion/proof-fix-attempt2/OwaspUniformCompletion.lean"
+      ]
+    }
+  ],
+  "theoremAxiomAudit": [
+    {
+      "theorem": "OwaspUniformCompletion.actual_uniform_admits_demanded_MUST_prefix",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.path_prefix_of_le",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.path_equality_implies_depth_equality",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.MUST_packet_union_is_prefix",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.getBytes_strips_at_most_one_H",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.constructor_addition_is_MUST_subsumed",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.body_never_grows",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.every_intermediate_depth_fits",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.selected_uniform_initial_is_not_ANY",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.real_uniform_source_covers_every_requested_prefix",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.actual_C5_projects_ancestor_MUST",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.actual_C5_restricts_without_DEMAND_cut",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.all_results_are_NORMAL_and_unprotected",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.B2_actual_C2_emits_NORMAL_FLOW_identity",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.B2_NORMAL_H_transport_is_inferred",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.B2_NORMAL_FLOW_covers_plain_T_DEMAND_H_arm",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.protected_arm_still_cannot_be_subsumed",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.covered_plain_T_STAR_H_is_removed_before_completion",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.uniform_body_contributes_no_outgoing_refinement",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "OwaspUniformCompletion.path_depth",
+      "axioms": []
+    },
+    {
+      "theorem": "OwaspUniformCompletion.prefix_self_row_has_relative_budget",
+      "axioms": []
+    },
+    {
+      "theorem": "OwaspUniformCompletion.paired_erasure_keeps_original_budget",
+      "axioms": []
+    },
+    {
+      "theorem": "OwaspUniformCompletion.plain_pass_never_creates_H",
+      "axioms": []
+    },
+    {
+      "theorem": "OwaspUniformCompletion.pass_preserves_existing_H",
+      "axioms": []
+    }
+  ],
+  "nativeAdapterEquivalenceProved": false,
+  "globalDriverTerminationProved": false,
+  "scope": "OWASP-H-only-canonical-uniform-packet-C2-actual-C5-no-driver-or-native-progress-claim",
+  "checkedLaws": 24,
+  "sourceSha256": "9907a024743ebc09f24661df09a219840cd93eefc7fcbcdb7b72b207e85c046b"
+}

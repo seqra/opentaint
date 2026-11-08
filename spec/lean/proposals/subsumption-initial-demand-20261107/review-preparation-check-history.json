@@ -1,0 +1,115 @@
+{
+  "state": "FAILURES_PRESERVED_SEPARATELY_NOT_PROOF_RESULTS",
+  "failures": [
+    {
+      "artifact": "/tmp/subsumption-review-853-check-20261107-1",
+      "module": "ScalarChainIntersectionExamples",
+      "receiptSha256": "5a3a2906c6191d783b5dacdb12846b2683a0169bdf93b8bec33591298b543c89",
+      "failedSourceSha256": "86d162faa0357bc42abce8d7b63ad54c63902632c279b337968cbdf0caac0dc3",
+      "logSha256": "7237d98bdfc4b087ae57e27838fa50ff6356754a7a8301ecc00140287ff606fe",
+      "reason": "Accessor constructor was qualified through an abbreviation. Fixed the constructor qualification; no theorem statement or operator behavior changed."
+    },
+    {
+      "artifact": "/tmp/subsumption-review-874-check-20261107-1",
+      "module": "CurrentCoverageInvariant",
+      "receiptSha256": "de58ac250548c700d0700b498543df8962306405fbf87eaed2495c029582fc55",
+      "failedSourceSha256": "a47277dab666a9cb1f76a4071c8e7e68a82f44a7cc5008fdaf485a8cbc054133",
+      "logSha256": "d49691af0e0394be2f8e9a2d7225a7b026d959d2fda53a8cd2823f2de2bd7be5",
+      "reason": "Bool.and_eq_true needed explicit arguments; mem_cons_self had no explicit arguments. Proof-body elaboration repairs only; all operators and statements unchanged."
+    },
+    {
+      "artifact": "/tmp/descendant-review-889-check-20261107-1",
+      "module": "DescendantExitReview",
+      "receiptSha256": "614efa0dfc5dc4ac139b3d5fc48c2113df42664f513b265956bebd52f8cf9e27",
+      "failedSourceSha256": "c02c113462e23a4d5aeb76059db7ee00a07a73b2722a6adb865a320d561dd208",
+      "logSha256": "2ae7a15a48443d2ea461554d90dfff33c51730d0c9822632fe064f28532cc5f5",
+      "reason": "The requested-suffix witness proof needed geometry unfolded in simp. Operator definitions and theorem statements were unchanged."
+    },
+    {
+      "artifact": "/tmp/exact-flow-prefix-988-check-20261107-1",
+      "module": "ExactFlowPrefixCompanion",
+      "receiptSha256": "0bb78757dd5afca52171cb4a71074e004190257d35860d9abda2a21ed61565ea",
+      "failedSourceSha256": "28bcdf2a786ea75890f5ae9314ddc331c9cd5f07bf5f14d74629819e14dbdb0f",
+      "logSha256": "0d3671bcf32ba70afe005e7842a89ed68c0b20c0ab2cffcf0b8cd3ea4c6dcb65",
+      "reason": "Two proof elaboration repairs: use rfl after cases rewrites the existential equality; parenthesize the rintro disjunction pattern. Operator definitions and theorem statements are unchanged."
+    },
+    {
+      "artifact": "/tmp/exact-flow-prefix-1015-check-20261107-1",
+      "module": "E21PrefixExactCompanion",
+      "receiptSha256": "56fdccc74e3f0ac459134faac8605977f7508adf9d853c4e14fde8bfe2995bea",
+      "failedSourceSha256": "70b5cc433743783a9c4be3f238a2f4d636262621226dd5bc3ab58bd607f075d8",
+      "logSha256": "eb622d5d967ad5cef4c9ca35e9a01b7b0312cb7541200df07653fcfad946d055",
+      "reason": "Rename the reserved Lean binder continue to savedContinuation. Proposition is alpha-equivalent; definitions are unchanged."
+    },
+    {
+      "artifact": "/tmp/subsumption-loop-gap-audit-1041-20261108-1",
+      "module": "RootExactCleanerGap",
+      "receiptSha256": "544bdb4786376296b4c64b5f5ea4c06f27ce84083309a95679b97b487efb55fa",
+      "failedSourceSha256": "31e8fb1fb407c38f7eaeba7920911432b0077a7d5c2d594b5fc430abdfcf6c67",
+      "logSha256": "3b1eea8376dbc201d7334b64dbc5e81356c3f0f7fc399a9ea0407249c44c45b5",
+      "reason": "Three multi-line match expressions used the wrong branch indentation. Parser repair only; the intended cases and all theorem statements remain unchanged."
+    },
+    {
+      "artifact": "/tmp/subsumption-loop-gap-audit-1047-20261108-1",
+      "module": "RenderedDeliveryCounterexample",
+      "receiptSha256": "0377a85302a24c3b43fd8dd3f334548fff0f88952b3c011347a7c7cfcda2de15",
+      "failedSourceSha256": "00de82847fd72694c1ee545dd048da231747fcdf59ec6f4af82d7c9e008ff9eb",
+      "logSha256": "ff5f4d963e5073965f4c9da183534f3c79b3ab4ba6a91aae7a34fbf8204dfb1d",
+      "reason": "Narrow the opened FlagMatchedSubsumption namespace to Row. Its parent/child/offer names conflicted with the intended PlainCoverageFlagViews operations. Definitions now resolve to those same prepared U/H operators; all six statements unchanged."
+    },
+    {
+      "artifact": "/tmp/subsumption-loop-gap-audit-1066-20261108-1",
+      "module": "E21LatestContinuation",
+      "receiptSha256": "ad46e38f62eeea0414325a79f38b35984183c736a8f68ddb5c9bb174cc3d0fdf",
+      "failedSourceSha256": "d2384eff7043d8a128ac9ef23fd858f86b9fcb341d2a713d4cf8552704f7af28",
+      "logSha256": "448d46e16f901853eca6610b9cd0845a20a3ee7aad89a6abbdd9f7d8cc7d3307",
+      "reason": "The larger conditional B6/F7 continuation expansion exceeded the Lean 2GB kernel limit and then failed compiler IR generation. Preserve the complete attempted source separately. The checked package includes only a new eight-law local audit: first seven transaction statements and the typed NT/DT distinction. No B6/F7 or convergence result is claimed."
+    },
+    {
+      "artifact": "/tmp/cleaner-may-candidate-20261108-1.txt",
+      "module": "CleanerMaySurvivorCandidate",
+      "logSha256": "dab03f9ed25c1c1807de5c07429283a3e2db16cf5792dc373c4faa90c1b176be",
+      "reason": "Unused assumption renamed _shape. Replace an unavailable Bool lemma and split simplified Kind cases explicitly. Proof/elaboration repairs only; candidate operations and all ten theorem statements are unchanged."
+    },
+    {
+      "artifact": "/tmp/e21-run2-run3-closure-20261108-1.txt",
+      "module": "E21Run2Run3WorklistClosure",
+      "failedSourceSha256": "5909205e353e853e5a78d5a869e674017aa90f59c3d8dbe099b53c26c2f4bb53",
+      "failedSourceSnapshot": "/tmp/e21-run2-run3-closure-failed-source-20261108-1.lean",
+      "logSha256": "80122656d63815f1353584c1abd7da95b8ec316d801ab6cf27a075d7aa16161e",
+      "reason": "Qualify the full-mark constructor through its expected alias type instead of the alias namespace. An elaboration repair only; operations and theorem statements unchanged."
+    },
+    {
+      "artifact": "/tmp/selected-gap-resolutions-20261108-1/cleaner-compile.txt",
+      "module": "SelectedCleanerStarSurvivor",
+      "failedSourceSha256": "88e669abcc96006aeb4ac6bff4b89dfd2c6c0ecad668db73ad3f993f5d6e95e0",
+      "logSha256": "7ed7950ea1e483ae91df377ec5c82b439abc1b09ee64a9ce2bf270e892cbd60e",
+      "reason": "After cases had rewritten equalities, two branches needed rfl rather than the old named equality; proof-only elaboration repair."
+    },
+    {
+      "artifact": "/tmp/selected-gap-resolutions-20261108-1/cleaner-compile-attempt3.txt",
+      "module": "SelectedCleanerStarSurvivor",
+      "failedSourceSha256": "5292a7b26fb8ee12e9ed8c74f4d86869567727f7c21303ab7cb1b4efed9a78d6",
+      "logSha256": "599aac2397f220a4b09171395dabbae3f52c5d076b7206f97f2fc5226a5ccacf",
+      "reason": "Normalize the scalar guard assumptions using the same actual encoder before simp unfolds that encoder in the goal; proof-only bridge repair."
+    },
+    {
+      "artifact": "/tmp/conductor-late-iterations-20261108-1/lean-compile.txt",
+      "module": "ConductorLateIterations",
+      "failedSourceSha256": "c45d7d42b77d84194077b97a98582a5954c944623239af325448516192f5b536",
+      "logSha256": "a0d9a1dac4b68de5ae613f6cbaed0cc3b007fbfe23122a8e03ba4c5da0da62d2",
+      "reason": "Prepared draft used a module doc before imports. Before any proof claim, also corrected its unverified F3 adapter: execute the selected root EXACT prefix through the real deep-copy branch, not a normalized root STAR through the read branch. Added exact C2 seed equality and retained both real branches. This repairs the model to the existing selected spec; no runtime or selected semantic contract change.",
+      "modelScopeCorrection": true,
+      "selectedSemanticsChanged": false
+    }
+  ],
+  "finalReceipt": "component-checks-1245.json",
+  "semanticChangesDuringProofRepair": false,
+  "portableModelAdapters": [
+    {
+      "module": "E21PrefixExactCompanion",
+      "preparedSourceSha256": "bbadb062648b70da00488405e9f377d4cf79eb86b5bd6f87bd4b527732116be5",
+      "change": "Delegate prefixExtra and emitSeeds to the generic ExactFlowPrefixCompanion. All 26 prepared statements are rechecked with that same selected emitter."
+    }
+  ]
+}

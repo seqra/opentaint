@@ -167,7 +167,7 @@ class LoopBlockBreakFindingTest {
     @Test fun `deep entry source with array and value survives boundary inclusive prefix guidance`() = cookieArray(true, deepSource = true)
     @Test fun `deep entry source with array and value reaches sink without feedback`() = cookieArray(true, withLoop = false, deepSource = true)
 
-    @Test fun `existing concrete MAY admission accepts an equal MAY carrier without NORMAL promotion`() {
+    @Test fun `concrete MAY boundary emits STAR demand and its conditional FLOW companion`() {
         DriverFixtures().use { f ->
             val p = f.program
             val method = p.method("same MAY boundary guide", listOf(listOf(1), emptyList()), normalExit = 1).key()
@@ -180,11 +180,15 @@ class LoopBlockBreakFindingTest {
                 add(method, DemandPattern(selected, f.manager.zero.toPattern()))
             }.build()
             val actual = f.manager.factsOf(selected.fact, ExclusionSet.Empty, Layer.DEMAND)
-            val admitted = demand.initials(method, actual, policy).single()
-            assertEquals(selected, admitted.initial.toPattern())
-            assertEquals(Layer.DEMAND, admitted.layer)
-            assertTrue(demand.acceptsTarget(method, admitted.initial, policy),
-                "The existing complete MAY-to-ZERO pair also permits its terminal result")
+            val admitted = demand.initials(method, actual, policy).toSet()
+            val concrete = selected.copy(fact = selected.fact.copy(tail = Tail.STAR))
+            val companion = concrete.copy(fact = concrete.fact.copy(mark = MarkSlot.STAR))
+            assertEquals(setOf(
+                AdmittedInitial(f.manager.initial(concrete), Layer.DEMAND),
+                AdmittedInitial(f.manager.initial(companion), Layer.NORMAL)), admitted)
+            assertTrue(admitted.none { it.initial.tail == Tail.ANY })
+            assertTrue(admitted.all { demand.acceptsTarget(method, it.initial, policy) },
+                "The complete command family uses the same constructive entry image for Target admission")
         }
     }
 

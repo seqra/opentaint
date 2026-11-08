@@ -143,13 +143,13 @@ class ScopedStaticCompletionTest {
         val producer = first.copy(exit = PortId.STATIC_SHORTCUT)
         val demand = shortcutDemand(producer to StaticGuidanceEdge.of(ap.zero.toPattern(), c(f).copy(
             fact = c(f).fact.copy(tail = Tail.ANY))))
-        val original = ap.initial(c(f).copy(fact = c(f).fact.copy(tail = Tail.ANY)))
+        val original=ap.initial(c(f)) // ANY selector starts an owned STAR identity.
         val policy = RestrictedInitialPolicy(2, 1, Direction.BACKWARD, ap.marks)
         assertTrue(demand.acceptsStaticShortcutTarget(method, block, first.scope.entry, original, policy))
         assertFalse(demand.acceptsStaticShortcutTarget(method, block, second.scope.entry, original, policy))
         assertFalse(demand.acceptsStaticShortcutTarget(method, BlockId(9), first.scope.entry, original, policy))
         assertFalse(demand.acceptsStaticShortcutTarget(method, block, first.scope.entry,
-            ap.initial(c(f, u).copy(fact = c(f, u).fact.copy(tail = Tail.ANY))), policy))
+            ap.initial(c(f,u)),policy))
         assertFalse(demand.acceptsStaticShortcutTarget(method, block, first.scope.entry, ap.initial(local(x)), policy))
         assertFalse(demand.acceptsStaticShortcutTarget(method, block, first.scope.entry, original,
             RestrictedInitialPolicy(3, 2, Direction.FORWARD, ap.marks)))

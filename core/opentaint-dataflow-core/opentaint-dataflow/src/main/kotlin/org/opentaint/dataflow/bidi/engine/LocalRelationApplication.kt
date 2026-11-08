@@ -90,7 +90,7 @@ internal class LocalRelationApplication(private val ops: ApOps, private val mode
         ap.cancellation.checkpoint()
         if (!RuntimeDataDomain.packet(original, actual) || !RuntimeDataDomain.base(view.premise.fact.base) ||
             !RuntimeDataDomain.base(view.result.fact.base)) return false
-        val matched = ops.satisfying(actual, view.premise, mode, record = true) ?: return false
+        val matched = ops.satisfying(actual, view.premise, mode, record = true, role = SummaryReadRole.SAVED_OPPOSITE) ?: return false
         var applied = false
         ops.applyRecordLeaf(matched, view, nonSubsumable, mode,
             sink(original, matched, view.premise.fact.base == AccessPathBase.Zero,
@@ -155,7 +155,7 @@ internal class LocalRelationApplication(private val ops: ApOps, private val mode
                 val committed = if (pendingDemotion) value.withLayer(Layer.DEMAND) else value
                 if (mode.direction == Direction.BACKWARD && !zeroPremise && committed is Reach)
                     out.target(original, Target.DemandTarget)
-                else out.data(original, committed)
+                else for (packet in committed.membershipPackets(ap)) out.data(original, packet)
             }
             if (!mode.run1) emit(f) else {
                 val runtime = ops.runtimeFact(f, mode)

@@ -230,17 +230,35 @@ class Run1StaticGroupProtocolRemovalTest {
         }
     }
 
-    @Test fun `accepted exact payload remains selectable after same-path marks and broader tails arrive`() = Fixture().use { t ->
+    @Test fun `canonical MAY replaces a covered exact summary without losing static mark support`() = Fixture().use { t ->
         val store = RunSummaryStore(t.f.manager)
         val exact = t.f.run1Fact(STATIC, t.target)
         val selected = t.f.ops.leaves(exact).single()
-        assertNotNull(store.addAdmitted(t.initial, exact))
-        for (value in listOf(t.f.run1Fact(STATIC, t.target, full = t.f.mark("output")),
-            t.f.run1Fact(STATIC, t.target, Tail.ANY_TAINT), t.f.run1Fact(STATIC, t.target, Tail.ANY))) {
-            store.addAdmitted(t.initial, value)
-            assertTrue(store.borrow(t.initial).any { current -> t.f.ops.leaves(current).any { it == selected } },
-                "Incoming subsumption and delta subtraction cannot remove the accepted exact leaf")
+        val other = t.f.run1Fact(STATIC, t.target, full = t.f.mark("output"))
+        val must = t.f.run1Fact(STATIC, t.target, Tail.ANY_TAINT)
+        val may = t.f.run1Fact(STATIC, t.target, Tail.ANY)
+        val offered = arrayListOf(exact)
+        val marks = listOf(t.atom, t.f.groupMark(t.f.mark("output")).mark)
+        val universe = org.opentaint.dataflow.bidi.fixtures.BoundedDenotation(
+            listOf(STATIC), (t.path + t.target).distinct(), marks, 4)
+        fun locations(values: List<Facts>) = values.flatMap { value ->
+            t.f.ops.leaves(value).flatMap { universe.marked(it).asSequence() }.toList()
+        }.toSet()
+        assertTrue(store.addAdmittedAll(t.initial, exact).isNotEmpty())
+        for (value in listOf(other, must, may)) {
+            offered += value
+            store.addAdmittedAll(t.initial, value)
+            val retained = store.borrow(t.initial).toList()
+            assertEquals(locations(offered), locations(retained), "Canonical storage preserves each group's region")
+            val leaves = retained.flatMap { t.f.ops.leaves(it).toList() }
+            if (value === may) {
+                assertFalse(selected in leaves, "The selected MAY law removes same-head exact support")
+                assertTrue(selected.copy(fact = selected.fact.copy(tail = Tail.ANY)) in leaves)
+            } else assertTrue(selected in leaves, "MUST does not replace an exact membership")
+            assertTrue(t.f.ops.leaves(other).single() in leaves, "A different group's exact result stays distinct")
         }
+        // This is a summary-storage test. It does not defer a source or write
+        // occurrence: the operation-local static supply protocol runs before it.
     }
 
     @Test fun `exact field fallback still waits and static ablation precedes the direct branch`() {

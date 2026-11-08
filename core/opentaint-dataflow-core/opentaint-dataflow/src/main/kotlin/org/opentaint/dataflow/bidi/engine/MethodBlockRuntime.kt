@@ -100,7 +100,7 @@ internal class MethodBlockRuntime(
                 .also { stateOrNull = it }
         }
         val links = BlockSummaryLinks(ops, mode, scope, ::onData, ::onTerminal, ::onRequest, localMatchCounts)
-        fun addCompletion(child: BlockId, exit: PortId, original: PremiseKey, value: Facts): Facts? {
+        fun addCompletion(child: BlockId, exit: PortId, original: PremiseKey, value: Facts): List<Facts> {
             val point = ChildPoint(child, exit)
             val store = completions.getOrPut(point) {
                 val directory = object : PointDirectory<ChildPoint> {
@@ -115,7 +115,7 @@ internal class MethodBlockRuntime(
                     flowBacked = mode.run1 && mode.markMode == MarkMode.FULL,
                     collectStatistics = port.shared.n2Statistics != null)
             }
-            return store.add(point, original, value)
+            return store.addAll(point, original, value)
         }
     }
 
@@ -470,9 +470,10 @@ internal class MethodBlockRuntime(
             pattern("I", view.premise); pattern("O", Pattern(view.result.fact, view.result.exclusion))
             flag("resultDemand", view.result.demand); flag("protected", protected)
         }
-        val grows = loopFieldLength(Pattern(view.result.fact, view.result.exclusion)) > loopFieldLength(view.premise)
+        val needsGate = view.premise.fact.base != org.opentaint.dataflow.ap.ifds.AccessPathBase.Zero &&
+            loopFieldLength(Pattern(view.result.fact, view.result.exclusion)) > loopFieldLength(view.premise)
         application.applyRecordView(actual, link.original, view, protected, object : LocalRelationOut {
-            override fun data(original: PremiseKey, value: Facts) = onApplied(link, exit, grows, original, value)
+            override fun data(original: PremiseKey, value: Facts) = onApplied(link, exit, needsGate, original, value)
             override fun target(original: PremiseKey, target: Target) = onTerminal(link, original, target)
             override fun markRequest(mark: TaintMark) = onRequest(link, actual, mark)
         })
@@ -485,10 +486,10 @@ internal class MethodBlockRuntime(
             number("exit", exit.ordinal); number("point", link.point.ordinal)
             premise("I", row); pattern("O", geometry); premise("P", original); facts("applied", value)
         }
-        onApplied(link, exit, loopSummaryGrows(row, geometry), original, value)
+        onApplied(link, exit, !row.isZero && loopSummaryGrows(row, geometry), original, value)
     }
 
-    private fun onApplied(link: LocalLink, exit: PortId, grows: Boolean, original: PremiseKey, value: Facts) {
+    private fun onApplied(link: LocalLink, exit: PortId, needsGate: Boolean, original: PremiseKey, value: Facts) {
         val parent = entries.getValue(link.parent)
         val child = layout[link.child.block]
         val completionExit = if (isEmptyBlock(child.id)) link.point else exit
@@ -496,7 +497,7 @@ internal class MethodBlockRuntime(
         if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "local-applied") {
             catalog(ap); text("parent", link.parent.toString()); text("child", link.child.toString())
             number("exit", exit.ordinal); number("point", completionExit.ordinal)
-            premise("P", original); facts("value", value); flag("grows", grows)
+            premise("P", original); facts("value", value); flag("needsGate", needsGate)
             text("prepared", routes.javaClass.simpleName)
         }
         if (routes === PreparedExit.DeadData) return
@@ -514,7 +515,7 @@ internal class MethodBlockRuntime(
         ops.limit(value, config.fieldLimit, object : ApOut {
             override fun result(bounded: Facts) {
                 val values = if (!child.isLoop || exit.ordinal < 0) listOf(bounded) else
-                    restriction.restrict(config.run1, grows, bounded, LoopRestrictionSession(ops, config.admissionPolicy,
+                    restriction.restrict(config.run1, needsGate, bounded, LoopRestrictionSession(ops, config.admissionPolicy,
                         { candidate -> observe(parent, child, link, exit, original, candidate) },
                         { actual -> observers[parent.scope to child.id]?.precisionCursors(actual) }))
                 for (kept in values) {
@@ -527,11 +528,10 @@ internal class MethodBlockRuntime(
                     if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "local-completion") {
                         catalog(ap); text("parent", link.parent.toString()); text("child", link.child.toString())
                         number("exit", exit.ordinal); number("point", completionExit.ordinal)
-                        premise("P", original); facts("offered", kept); flag("fresh", fresh != null)
-                        if (fresh != null) facts("delta", fresh)
+                        premise("P", original); facts("offered", kept); flag("fresh", fresh.isNotEmpty())
+                        fresh.forEachIndexed { index, delta -> facts("delta$index", delta) }
                     }
-                    if (fresh == null) continue
-                    queue { routeCompleted(parent, child, link, exit, original, fresh, routes) }
+                    for (delta in fresh) queue { routeCompleted(parent, child, link, exit, original, delta, routes) }
                 }
             }
             override fun markRequest(mark: TaintMark) = error("A global local-boundary field limit cannot request a mark")

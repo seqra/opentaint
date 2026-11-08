@@ -11,11 +11,11 @@ class FlowBackedProtectionTest {
     private val ops = fixture.ops
     private val mode = ApMode(true, Direction.FORWARD, 1)
 
-    @Test fun `annotation does not change fact or edge identity`(): Unit = with(v) {
+    @Test fun `protection class changes logical fact and edge identity`(): Unit = with(v) {
         val plain = pack(leaf(p(), Tail.ANY, layer = Layer.DEMAND)) as TaintTree
         val protected = plain.withProtection(plain.root)
-        assertEquals(plain, protected)
-        assertEquals(plain.hashCode(), protected.hashCode())
+        assertNotEquals(plain, protected)
+        assertNotEquals(plain.groupKey, protected.groupKey)
         assertNotNull(protected.nonSubsumable)
         assertNull(plain.nonSubsumable)
     }
@@ -119,14 +119,17 @@ class FlowBackedProtectionTest {
         assertEquals(setOf(leaf(p(g), Tail.EXACT, mu)), decoded(checkNotNull(ops.withoutMarks(input.withProtection(input.root), marks(t.id)))))
     }
 
-    @Test fun `protection only merge is a real delta and repeat delivery is empty`(): Unit = with(v) {
+    @Test fun `a fresh protection class is delivered without deleting its plain copy`(): Unit = with(v) {
         val input = pack(leaf(p(), Tail.EXACT, mt), leaf(p(g), Tail.EXACT, mu)) as TaintTree
         val flag = pack(leaf(p(g), Tail.EXACT, mu)) as TaintTree
-        val (stored, delta) = m.mergeAddDelta(input, input.withProtection(flag.root))
-        assertEquals(input, stored)
-        assertEquals(setOf(leaf(p(g), Tail.EXACT, mu)), decoded(checkNotNull(delta)))
-        assertNotNull((delta as TaintTree).nonSubsumable)
-        assertNull(m.mergeAddDelta(stored, input.withProtection(flag.root)).second)
+        val group = ConclusionGroup(m, m.newInterners())
+        group.addAll(input)
+        val delta = group.addAll(input.withProtection(flag.root))
+        assertEquals(setOf(leaf(p(g), Tail.EXACT, mu)), delta.flatMap { decoded(it) }.toSet())
+        assertTrue(delta.all { it is TaintTree && it.nonSubsumable == it.root })
+        assertEquals(2, group.all().count())
+        assertTrue(group.all().any { it == input })
+        assertTrue(group.addAll(input.withProtection(flag.root)).isEmpty())
     }
 
     @Test fun `complete cleaner kill has no protected result`(): Unit = with(v) {

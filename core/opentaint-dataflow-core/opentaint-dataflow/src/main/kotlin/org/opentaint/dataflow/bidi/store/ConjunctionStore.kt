@@ -7,10 +7,9 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import java.util.Collections
 
 /** The semantic E6 member after full matching; no accepted Facts version is retained. */
-internal data class NdBinding(val ref: CallerRef, val linkLayer: Layer) {
+internal data class NdBinding(val ref: CallerRef, val linkLayer: Layer, val nonSubsumable: Boolean = false) {
     // Invocation metadata never changes the accepted E6 member key.
     var triggering: TaintMark? = null
-    var nonSubsumable: Boolean = false
 }
 
 /** Standing literal inputs for one method and run. One writer owns this store. */
@@ -141,9 +140,9 @@ class NdSummaryJoin<S : Any>(private val m: ApManager, arity: Int, private val s
     fun addConclusion(g: TaintTree): List<Pair<List<S>, TaintTree>> {
         m.cancellation.checkpoint()
         if (!RuntimeDataDomain.base(g.base)) return emptyList()
-        val delta = conclusion.getOrPut(g.base) { TaintGroup(m, interners.taint) }.add(g) ?: return emptyList()
+        val deltas = conclusion.getOrPut(g.base) { TaintGroup(m, interners.taint) }.addAll(g)
         val out = ArrayList<Pair<List<S>, TaintTree>>(full.size)
-        for (combination in full) {
+        for (combination in full) for (delta in deltas) {
             m.cancellation.checkpoint()
             out += combination to delta
         }

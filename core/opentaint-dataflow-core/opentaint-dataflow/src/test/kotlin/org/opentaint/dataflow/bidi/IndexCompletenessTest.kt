@@ -312,10 +312,13 @@ class IndexCompletenessTest {
         val incomparable = sub(f, f.fact(tail = Tail.STAR, mark = MarkSlot.STAR, exclusion = ExclusionSet.of(b)), 2)
         verifyBoth(f, pubs, listOf(above, below, incomparable), modes.drop(1))
         for (mode in modes.drop(1)) {
-            assertEquals(above.added, matches(above, pubs[0], 0, f.ops, mode))
+            assertNull(matches(above, pubs[0], 0, f.ops, mode),
+                "Current STAR inputs do not sample a strictly deeper summary premise")
             assertEquals(below.added, matches(below, pubs[0], 0, f.ops, mode))
-            assertEquals(above.added, matches(above, pubs[1], 0, f.ops, mode))
-            assertNull(matches(incomparable, pubs[2], 0, f.ops, mode))
+            assertNull(matches(above, pubs[1], 0, f.ops, mode),
+                "The inside restriction applies to every incoming STAR tail")
+            assertEquals(incomparable.added, matches(incomparable, pubs[2], 0, f.ops, mode),
+                "Same-head STAR matching accepts the overlapping region")
             assertNull(matches(above, pubs[3], 0, f.ops, mode))
         }
     }
@@ -436,8 +439,8 @@ class IndexCompletenessTest {
         }
         val run1 = delivery(f, index, listOf(pub), modes[0])
         val matchedGroup = run1.single { it.subscription.ref == root.ref && it.subscription.added.groupKey == root.added.groupKey }
-        assertEquals(decoded(root.added) + decoded(deeper.added), decoded(matchedGroup.selected),
-            "Both actual nonexact ancestor and direct descendant survive the complete match")
+        assertEquals(decoded(deeper.added), decoded(matchedGroup.selected),
+            "Only the direct descendant matches this CURRENT summary; the ancestor STAR waits for an opposite record")
         val before = index.candidates(pub, 0, modes[1]).toList()
         val late = root.copy(ref = root.ref.copy(caller = f.key("late")))
         assertEquals(late, index.add(late))

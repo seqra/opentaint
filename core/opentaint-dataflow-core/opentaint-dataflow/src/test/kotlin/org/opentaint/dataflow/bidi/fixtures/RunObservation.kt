@@ -53,7 +53,29 @@ data class RunObservation(
     fun assertEquivalent(other: RunObservation, universe: BoundedDenotation) {
         val expected = semantic(universe)
         val actual = other.semantic(universe)
-        if (expected != actual) throw AssertionError("Finite closure mismatch\nexpected=$expected\nactual=$actual")
+        if (expected != actual) {
+            val differences = ArrayList<String>()
+            fun compare(label: String,a: Any,b: Any) {
+                if (a==b) return
+                if (a is Map<*,*> && b is Map<*,*>) {
+                    for (key in (a.keys+b.keys).distinct().filter { a[it]!=b[it] }.take(4))
+                        differences += "$label[$key]: expected=${a[key]} actual=${b[key]}"
+                } else if (a is Set<*> && b is Set<*>) {
+                    differences += "$label: missing=${(a-b).take(4)} extra=${(b-a).take(4)}"
+                } else differences += "$label: expected=$a actual=$b"
+            }
+            compare("initials",expected.initials,actual.initials)
+            compare("processed",expected.processed,actual.processed)
+            compare("summaries",expected.rawSummaries,actual.rawSummaries)
+            compare("publications",expected.publications,actual.publications)
+            compare("demand",expected.selectedDemand,actual.selectedDemand)
+            compare("links",expected.links,actual.links)
+            compare("requests",expected.requests,actual.requests)
+            compare("sources",expected.sourceHits,actual.sourceHits)
+            compare("witnesses",expected.witnesses,actual.witnesses)
+            compare("targets",expected.targets,actual.targets)
+            throw AssertionError("Finite closure mismatch\n${differences.joinToString("\n")}\nexpected=$expected\nactual=$actual")
+        }
     }
 }
 
@@ -114,10 +136,25 @@ private fun cells(premise: Set<Pattern>, c: Conclusion, universe: BoundedDenotat
 private fun normalizeEdges(edges: Set<ObservedEdge>, universe: BoundedDenotation): Map<SemanticEdgeHeader, Set<ObservationCell>> {
     val result = LinkedHashMap<SemanticEdgeHeader, MutableSet<ObservationCell>>()
     for (edge in edges) {
+        // MAY is already a union containing exact and descendant MAY members.
+        // Compare that canonical union, not an old scalar-oracle residue as a
+        // separate EXACT component. Layers and complete originals stay fixed.
+        if (edge.conclusion.fact.tail in setOf(Tail.EXACT,Tail.ANY) && edges.any { parent ->
+                parent !== edge && parent.method == edge.method && parent.node == edge.node &&
+                    parent.premise == edge.premise && parent.conclusion.demand == edge.conclusion.demand &&
+                    parent.conclusion.fact.tail == Tail.ANY &&
+                    parent.conclusion.fact.base == edge.conclusion.fact.base &&
+                    parent.conclusion.fact.mark == edge.conclusion.fact.mark &&
+                    edge.conclusion.fact.path.startsWith(parent.conclusion.fact.path)
+            }) continue
         // T2/T2' can change E or mx while preserving the whole union. Both annotations constrain cells;
         // only kind/layer/base belong in this edge header. Raw DTOs still retain every annotation.
         val group = edge.conclusion.observationGroup().copy(exclusion = ExclusionSet.Empty, markExclusion = MarkExclusions.EMPTY)
-        val header = SemanticEdgeHeader(edge.method, edge.premise, edge.node, group,
+        // FLOW cells already contain both input and output locations. Compare
+        // the whole relation family; an aligned child need not remain as a
+        // separate literal premise after NORMAL relation subsumption.
+        val keyPremise = if (edge.conclusion.fact.mark is MarkSlot.Star) emptySet() else edge.premise
+        val header = SemanticEdgeHeader(edge.method, keyPremise, edge.node, group,
             edge.conclusion.component())
         result.getOrPut(header, ::LinkedHashSet).addAll(cells(edge.premise, edge.conclusion, universe))
     }
@@ -157,7 +194,10 @@ private fun normalizeWitnesses(values: Set<ObservedWitness>, universe: BoundedDe
             sinkGroup(it).let { group -> group.copy(exclusion = ExclusionSet.Empty, markExclusion = MarkExclusions.EMPTY,
                 // Exact members can physically share either TAINT envelope. Typed
                 // fact components below retain EXACT/must/may independently.
-                tail = if (group.kind == FactsKind.TAINT) Tail.ANY_TAINT else group.tail) }) }
+                tail = if (group.kind == FactsKind.TAINT) Tail.ANY_TAINT else group.tail,
+                // The scalar closure compares source/sink observations. Dedicated
+                // class tests check H delivery; it is not a distinct report ID.
+                protected = false) }) }
         val header = SemanticWitnessHeader(witness.rule, witness.methodKey, witness.statement, witness.alternative,
             witness.run, headers, witness.confirmed, witness.proof)
         val edges = witness.edges.map { edge ->

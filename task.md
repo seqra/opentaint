@@ -6,7 +6,7 @@ Our current goal: implement optimization and repeat major testing on real projec
 Always cleanup memory snapshot/profiles from the previous runs.
 
 # Optimization:
-Implement optimization wrt the [bidirectional-canonical-facts-normal-relations-directional-inside-implementation-20261105.md](docs/design/bidirectional-canonical-facts-normal-relations-directional-inside-implementation-20261105.md)
+Implement optimization wrt the [bidirectional-subsumption-initial-emission-demand-intersection-implementation-20261108.md](docs/design/bidirectional-subsumption-initial-emission-demand-intersection-implementation-20261108.md)
 Commit after implementation.  
 Avoid changes in the analyzer core, that were not proposed and designed.
 If you have an optimization idea, write a proposal. Then we will include it into the next iteration.

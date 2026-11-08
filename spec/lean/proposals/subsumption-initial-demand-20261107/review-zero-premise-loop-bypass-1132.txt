@@ -1,0 +1,4 @@
+("ZERO_BYPASS_RUN5_SUPPLY",
+ "[{ pattern := { base := 0,\n                path := [0, 0, 0],\n                tail := PlainStarRelativeAdmission.Tail.exact,\n                mark := RestrictedInitialPolicy.Mark.full 1,\n                exclusion := [] },\n   layer := PlainStarRelativeAdmission.Layer.normal,\n   hasProtection := false }]")
+("ZERO_BYPASS_RUN5_AFTER_SAVED_READS",
+ "[{ pattern := { base := 0,\n                path := [0],\n                tail := PlainStarRelativeAdmission.Tail.exact,\n                mark := RestrictedInitialPolicy.Mark.full 1,\n                exclusion := [] },\n   layer := PlainStarRelativeAdmission.Layer.normal,\n   hasProtection := false }]")

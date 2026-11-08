@@ -12,12 +12,16 @@ class RunSummaryStore(private val m: ApManager, flowBacked: Boolean = false) {
     private val backed = if (flowBacked) FlowBackedSummaries(m) else null
 
     /** Add a candidate only after the actor has completed demand restriction. */
-    fun addAdmitted(premise: PremiseKey, g: Facts): Facts? {
+    fun addAdmitted(premise: PremiseKey, g: Facts): Facts? = addAdmittedAll(premise,g).also {
+        check(it.size <= 1) { "Use addAdmittedAll for multi-packet deltas" }
+    }.singleOrNull()
+
+    fun addAdmittedAll(premise: PremiseKey, g: Facts): List<Facts> {
         m.cancellation.checkpoint()
-        if (!RuntimeDataDomain.packet(premise, g)) return null
+        if (!RuntimeDataDomain.packet(premise, g)) return emptyList()
         checkShape(premise, g)
-        backed?.let { return it.add(premise, g) }
-        return groups.getOrPut(premise) { ConclusionGroup(m, interners) }.add(g)
+        backed?.let { return it.addAll(premise, g) }
+        return groups.getOrPut(premise) { ConclusionGroup(m, interners) }.addAll(g)
     }
 
     fun all(): Sequence<Pair<PremiseKey, Facts>> = backed?.all() ?: entries(groups)
@@ -51,6 +55,7 @@ class RunSummaryStore(private val m: ApManager, flowBacked: Boolean = false) {
 
     private fun checkShape(premise: PremiseKey, facts: Facts) {
         assertCanonicalFlowSummary(premise, facts)
+        premise.forEachMember { check(it.tail != Tail.ANY) { "An owned summary premise cannot be ANY" } }
         check(facts.base !is AccessPathBase.CleanerTemporary) { "A field-action temporary cannot enter a summary" }
         check((facts is FlowTree) == premise.isFlow) { "K6: the conclusion kind follows the premise" }
         check(premise !is PremiseSet || facts is TaintTree) { "A multi-premise summary must be TAINT" }

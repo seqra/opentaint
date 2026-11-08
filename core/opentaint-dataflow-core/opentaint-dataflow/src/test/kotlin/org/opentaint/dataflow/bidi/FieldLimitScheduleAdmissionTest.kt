@@ -43,8 +43,9 @@ class FieldLimitScheduleAdmissionTest {
             f.submitRestricted(actor, actual)
 
             val expected = if (schedule == FieldLimitSchedule.RUN_INDEX)
-                f.pattern(STATIC, nested, Tail.EXACT) else oldDemand
-            assertEquals(setOf(f.manager.initial(expected)), actor.initials.all().toSet())
+                setOf(f.pattern(STATIC,nested,Tail.EXACT),f.pattern(STATIC,path,Tail.EXACT,MarkSlot.STAR))
+            else setOf(f.pattern(STATIC,path,Tail.STAR),f.pattern(STATIC,path,Tail.STAR,MarkSlot.STAR))
+            assertEquals(expected.map(f.manager::initial).toSet(),actor.initials.all().toSet())
             assertEquals(nested, f.ops.leaves(actual).single().fact.path,
                 "The configured cut must not mutate the supplied actual value")
         }
@@ -84,7 +85,8 @@ class FieldLimitScheduleAdmissionTest {
             f.submitRestricted(actor, actual)
 
             val expected = f.pattern(AccessPathBase.Argument(0), path + f.field("nested"), Tail.STAR, MarkSlot.STAR)
-            assertEquals(setOf(f.manager.initial(expected)), actor.initials.all().toSet())
+            assertEquals(setOf(f.manager.initial(expected),f.manager.initial(
+                f.pattern(AccessPathBase.Argument(0),path,Tail.EXACT,MarkSlot.STAR))),actor.initials.all().toSet())
         }
     }
 

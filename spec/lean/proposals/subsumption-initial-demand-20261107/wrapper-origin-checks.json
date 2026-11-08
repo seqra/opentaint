@@ -1,0 +1,262 @@
+{
+  "state": "PASS_OPERATIONAL_E17_WRAPPERS_ONLY",
+  "modules": [
+    {
+      "module": "RestrictedInitialPolicy",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/plain-star-wrapper-0pee7git/RestrictedInitialPolicy.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/RestrictedInitialPolicy.lean"
+      ]
+    },
+    {
+      "module": "PlainStarRelativeAdmissionProofFixed3",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/plain-star-wrapper-0pee7git/PlainStarRelativeAdmissionProofFixed3.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/PlainStarRelativeAdmissionProofFixed3.lean"
+      ]
+    },
+    {
+      "module": "PlainStarWrapperRecoveryProofFixed4",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/wrapper-recovery/proof-fix-attempt4",
+        "-M2048",
+        "-o",
+        "/tmp/plain-star-wrapper-0pee7git/PlainStarWrapperRecoveryProofFixed4.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/wrapper-recovery/proof-fix-attempt4/PlainStarWrapperRecoveryProofFixed4.lean"
+      ]
+    }
+  ],
+  "theoremAxiomAudit": [
+    {
+      "theorem": "PlainStarWrapperRecovery.all_run1_wrappers_are_derived",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.all_B2_guides_are_generated",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.b2_G_leaf_is_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.b2_F_leaf_is_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.f3_F_leaf_is_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.g_wrapper_fixed_step",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.f_wrapper_B2_fixed_step",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.f_wrapper_F3_fixed_step",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.G_internal_STAR_is_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.F_B2_internal_STAR_is_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.F_F3_internal_STAR_is_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.all_B2_G_wrappers_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.all_B2_F_wrappers_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.all_F3_F_wrappers_NORMAL",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.all_F3_F_guides_are_generated",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.R1_has_real_cut_and_target",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.B2_G_has_real_MAY_offer",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.B2_F_has_real_g_MAY_offer",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.source_permission_is_derived",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.G_external_MAY_is_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.F_B2_external_MAY_is_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.F_F3_exact_source_is_admitted",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.arbitrary_wrappers_reach_actual_source",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.arbitrary_wrappers_source_permission",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.F_then_G_precise_application",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.MAY_application_stays_DEMAND",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.MAY_application_cannot_create_NormalTarget",
+      "axioms": [
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.arbitrary_finite_wrappers_recover",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.arbitrary_finite_wrappers_report_NORMAL",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.operational_three_runs_recover",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.operational_three_runs_report_NORMAL",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.concrete_root_reaches_exact_T",
+      "axioms": [
+        "Quot.sound"
+      ]
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.emitted_and_published_keys_are_not_ANY",
+      "axioms": []
+    },
+    {
+      "theorem": "PlainStarWrapperRecovery.concrete_wrappers_are_returns",
+      "axioms": []
+    }
+  ],
+  "nativeAdapterEquivalenceProved": false,
+  "allPrincipalProgramsProved": false,
+  "operationalScope": "E17-loop-free-FULL-1-1-2-arbitrary-finite-F-and-G-wrappers",
+  "checkedLaws": 34,
+  "sourceSha256": "80a7b98affb54de8b78aefa44e117eacadf8e8f8541106bdf6367bb3444095bf"
+}

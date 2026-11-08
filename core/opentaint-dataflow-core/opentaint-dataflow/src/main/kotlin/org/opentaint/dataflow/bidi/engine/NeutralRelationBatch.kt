@@ -225,6 +225,7 @@ class NeutralRelationBatch private constructor(
             val initial = premise as? InitialAp ?: return null
             val mark = (initial.mark as? MarkSlot.Concrete)?.mark ?: return null
             val f = facts as? TaintTree ?: return null
+            if (f.nonSubsumable != null && f.nonSubsumable != f.root) return null
             if (initial.manager !== m || mark == TaintMark.ZERO || m.marks.isGroup(mark) || initial.tail != Tail.STAR ||
                 initial.exclusion != ExclusionSet.Empty || f.exclusion != ExclusionSet.Empty || f.base == STATIC ||
                 f.base is AccessPathBase.CleanerTemporary) return null

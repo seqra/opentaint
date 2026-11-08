@@ -52,7 +52,9 @@ class Run1GroundingTest {
             f.ops.clean(input, f.manager.zero,
                 Cleaner(input.base, null, CleanReach.AT_AND_BELOW, full),
                 ApMode(true, Direction.FORWARD, 1, markMode = MarkMode.GROUP), out)
-            assertEquals(listOf(input), out.results)
+            val selectedSurvivor = input as TaintTree
+            assertEquals(listOf<Facts>(selectedSurvivor.withProtection(selectedSurvivor.root)), out.results,
+                "The unchanged GROUP survivor keeps its existing selected-cleaner protection")
             assertTrue(out.results.all { it.layer == Layer.DEMAND })
         }
     }

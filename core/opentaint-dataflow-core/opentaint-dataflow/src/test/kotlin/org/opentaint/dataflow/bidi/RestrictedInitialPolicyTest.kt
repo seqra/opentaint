@@ -25,7 +25,7 @@ class RestrictedInitialPolicyTest {
         assertEquals(p(Tail.STAR, t, listOf(a)), q.emit(p(Tail.ANY, t), p(Tail.EXACT, t, listOf(a,b))))
         assertEquals(p(Tail.EXACT, t, listOf(a)), q.emit(p(Tail.ANY, t), p(Tail.EXACT, t, listOf(a))))
         assertNull(q.emit(p(Tail.ANY, u), p(Tail.EXACT, t, listOf(a))))
-        assertNull(q.emit(p(Tail.ANY, t), p(Tail.STAR, t)))
+        assertEquals(p(Tail.STAR,t),q.emit(p(Tail.ANY,t),p(Tail.STAR,t)))
         assertEquals(p(Tail.EXACT), q.emit(p(Tail.ANY), p(Tail.EXACT, t)))
     }
 
@@ -47,7 +47,7 @@ class RestrictedInitialPolicyTest {
         assertNull(q.emit(p(Tail.STAR,t,e=ExclusionSet.of(a)), p(Tail.EXACT,t,listOf(a))))
         assertEquals(p(Tail.STAR), q.emit(p(Tail.STAR,e=ExclusionSet.of(a)), p(Tail.EXACT,t,listOf(a))))
         assertEquals(p(Tail.STAR,t), q.emit(p(Tail.STAR,t), p(Tail.STAR,t,listOf(a),ExclusionSet.of(b))))
-        assertEquals(p(Tail.ANY, path=listOf(a)), q.emit(p(Tail.ANY,path=listOf(a)),p(Tail.ANY,t)))
+        assertEquals(p(Tail.STAR, path=listOf(a)), q.emit(p(Tail.ANY,path=listOf(a)),p(Tail.ANY,t)))
     }
 
     @Test fun `uniform starts require a forward run and preserve their own exclusion`() {

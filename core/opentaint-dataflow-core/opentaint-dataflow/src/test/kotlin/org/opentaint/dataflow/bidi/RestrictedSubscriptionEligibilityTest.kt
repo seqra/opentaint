@@ -59,7 +59,10 @@ class RestrictedSubscriptionEligibilityTest {
                 f.fact(path = listOf(field, f.field(child)), tail = Tail.EXACT,
                     mark = MarkSlot.Concrete(f.mark(mark)))
             }
-            val emitted = actuals.map { demand.initials(f.key, it, policy).single() }
+            val families=actuals.map { demand.initials(f.key,it,policy) }
+            assertEquals(2,families[0].size)
+            assertEquals(families[0],families[1])
+            val emitted=families.map { it.single { command -> command.initial.tail==Tail.STAR } }
             assertEquals(emitted[0], emitted[1])
             assertSame(emitted[0].initial, emitted[1].initial)
             assertEquals(listOf(field), emitted[0].initial.pathArray.asList())
@@ -78,7 +81,7 @@ class RestrictedSubscriptionEligibilityTest {
     }
 
     @Test
-    fun `normalized publication applicability does not establish current demand admission`() {
+    fun `same-head STAR has its own current admission after exact FLOW normalization`() {
         MethodAnalysisFixtures().use { f ->
             val entry = f.pattern(tail = Tail.ANY, mark = MarkSlot.STAR)
             val exit = f.pattern(AccessPathBase.Return, tail = Tail.ANY, mark = MarkSlot.STAR)
@@ -96,15 +99,13 @@ class RestrictedSubscriptionEligibilityTest {
             assertEquals(Tail.STAR, (pub.premise as InitialAp).tail)
 
             val broad = f.fact(tail = Tail.STAR, mark = MarkSlot.STAR)
-            assertTrue(demand.initials(f.key, broad, policy).isEmpty())
+            assertEquals(setOf(AdmittedInitial(pub.premise as InitialAp,Layer.NORMAL)),demand.initials(f.key,broad,policy))
             val sub = Subscription(f.key,
                 org.opentaint.dataflow.bidi.store.CallerRef(f.store.key("caller"), f.manager.zero,
                     Layer.NORMAL, f.inst(1)), broad.layer, broad)
             assertNotNull(matches(sub, pub, 0, f.ops, ApMode(false, Direction.FORWARD, 2)))
-            // Applicability alone does not authorize replay or subscription.
-            // The selected call policy applies persisted records first, then skips
-            // current-run work when demand admission is empty. This control is
-            // not a counterexample to that policy.
+            // The selected same-head ANY/STAR cell now admits the STAR identity.
+            // Empty/unrelated demand still prevents a current subscription in the other controls.
         }
     }
 

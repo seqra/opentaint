@@ -108,7 +108,9 @@ class InitialEmissionContractTest {
             AdmittedInitial(ap.initial(p()), Layer.DEMAND)), out.initials)
         val nonRefining = InitialDemandResults(ap, q, Layer.NORMAL)
         nonRefining.requireFamily(p(tail = Tail.ANY), flow = false, actual = p(tail = Tail.STAR))
-        assertTrue(nonRefining.fullyCovered, "An impossible C2 family must not become unanswered work")
+        assertFalse(nonRefining.fullyCovered, "Same-head STAR now has a concrete primary and FLOW companion")
+        nonRefining.offer(p(tail = Tail.ANY), p(tail = Tail.STAR))
+        assertTrue(nonRefining.fullyCovered)
     }
 
     @Test fun `demand lookup emits both entry lanes over separate actual offers and C5 retains only its paired D output`() {

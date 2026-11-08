@@ -60,7 +60,7 @@ class DiagonalTypedAdmissionTest {
         val oracle = TaintGroup(m,m.newInterners().taint)
         val store = DiagonalRelations(m)
         for ((step,offered) in sequence.withIndex()) {
-            val expected = listOfNotNull(oracle.add(offered))
+            val expected = oracle.addAll(offered)
             val actual = if(usePackets && (offered.nonSubsumable == null || offered.nonSubsumable == offered.root)) {
                 val value = packet(offered)
                 val before = observe(store.all().map { it.second })
@@ -68,9 +68,9 @@ class DiagonalTypedAdmissionTest {
                 store.addDiagonal(value)?.flatMap { scalar(it).map { it.second } } ?: run {
                     assertEquals(before,observe(store.all().map { it.second }),"Fallback must precede mutation")
                     assertEquals(census,store.census(),"Fallback must precede mask mutation")
-                    scalar(value).mapNotNull { (key,facts) -> store.add(key,facts) }
+                    scalar(value).flatMap { (key,facts) -> store.addAll(key,facts) }
                 }
-            } else listOfNotNull(store.add(initial(),offered))
+            } else store.addAll(initial(),offered)
             assertEquals(observe(expected.asSequence()),observe(actual.asSequence()),"delta at step $step packets=$usePackets")
             assertEquals(observe(oracle.all()),observe(store.all().map { it.second }),"state at step $step packets=$usePackets")
         }
@@ -129,7 +129,7 @@ class DiagonalTypedAdmissionTest {
             assertNull(store.addDiagonal(offered))
             assertEquals(before,store.census())
             val deltas=scalar(offered).mapNotNull { (key,facts) -> store.add(key,facts)?.let { key to it } }
-            val expected=if(packetFlag && !anyFlag)listOf(t,u)else listOf(u)
+            val expected=if(packetFlag != anyFlag)listOf(t,u)else listOf(u)
             assertEquals(expected,deltas.map { ((it.first.mark)as MarkSlot.Concrete).mark })
             assertEquals(1+expected.size.toLong(),store.census().concreteOutputMemberships)
         }
@@ -167,9 +167,9 @@ class DiagonalTypedAdmissionTest {
             assertNull(store.addDiagonal(packet(update)))
             assertEquals(before,store.census())
             val delta=assertNotNull(store.add(initial(),update))
-            assertEquals(ExclusionSet.Empty,(delta as TaintTree).exclusion)
+            assertEquals(if(sharedFlag) ExclusionSet.Empty else eh,(delta as TaintTree).exclusion)
             assertEquals(beforeU,observe(store.borrow(initial(u))))
-            assertEquals(2,store.census().concreteOutputMemberships)
+            assertEquals(if(sharedFlag) 2L else 3L,store.census().concreteOutputMemberships)
             assertNull(store.add(initial(),update))
         }
     }

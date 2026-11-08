@@ -60,8 +60,9 @@ class TaintTree internal constructor(
     internal fun withRoot(root: TaintNode) = TaintTree(base, layer, root, if (root.hasAny) exclusion else ExclusionSet.Empty,
         if (root.hasAny) anyTail else Tail.ANY_TAINT, nonSubsumable?.let { intersectTaintMask(it, root) })
     override fun equals(other: Any?): Boolean = this === other || (other is TaintTree && layer == other.layer &&
-        base == other.base && anyTail == other.anyTail && exclusion == other.exclusion && root == other.root)
-    override fun hashCode(): Int = ((root.hashCode() * 31 + base.hashCode()) * 31 + exclusion.hashCode()) * 2 + layer.ordinal + anyTail.ordinal * 17
+        base == other.base && anyTail == other.anyTail && exclusion == other.exclusion && root == other.root &&
+        nonSubsumable == other.nonSubsumable)
+    override fun hashCode(): Int = (((root.hashCode() * 31 + base.hashCode()) * 31 + exclusion.hashCode()) * 2 + layer.ordinal + anyTail.ordinal * 17) * 31 + (nonSubsumable?.hashCode() ?: 0)
 }
 
 enum class FactsKind { REACH, FLOW, TAINT }
@@ -76,6 +77,7 @@ data class GroupKey(
         FactsKind.FLOW -> if (layer == Layer.NORMAL) Tail.STAR else Tail.ANY
         FactsKind.TAINT -> if (layer == Layer.NORMAL) Tail.ANY_TAINT else Tail.ANY
     },
+    val protected: Boolean = false,
 ) {
     constructor(kind: FactsKind, layer: Layer, base: AccessPathBase, exclusion: ExclusionSet,
                 markExclusion: MarkSet, tail: Tail = when (kind) {
@@ -86,9 +88,9 @@ data class GroupKey(
 }
 
 val Facts.groupKey: GroupKey get() = when (this) {
-    is Reach -> GroupKey(FactsKind.REACH, layer, base)
-    is FlowTree -> GroupKey(FactsKind.FLOW, layer, base, exclusion, markExclusion, tail)
-    is TaintTree -> GroupKey(FactsKind.TAINT, layer, base, exclusion, tail = anyTail)
+    is Reach -> GroupKey(kind = FactsKind.REACH, layer = layer, base = base)
+    is FlowTree -> GroupKey(kind = FactsKind.FLOW, layer = layer, base = base, exclusion = exclusion, markExclusion = markExclusion, tail = tail)
+    is TaintTree -> GroupKey(kind = FactsKind.TAINT, layer = layer, base = base, exclusion = exclusion, tail = anyTail, protected = protectionClass())
 }
 
 /** Layer changes never change known geometry or either exclusion annotation. */

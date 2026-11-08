@@ -1,0 +1,137 @@
+{
+  "state": "PASS_GENERAL_C2_ONE_DEMAND_FIELD_BOUND_ONLY",
+  "modules": [
+    {
+      "module": "RestrictedInitialPolicy",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/general-C2-one-step-bndhwjlx/RestrictedInitialPolicy.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/RestrictedInitialPolicy.lean"
+      ]
+    },
+    {
+      "module": "PlainStarRelativeAdmissionProofFixed3",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3",
+        "-M2048",
+        "-o",
+        "/tmp/general-C2-one-step-bndhwjlx/PlainStarRelativeAdmissionProofFixed3.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/formal/proof-fix-attempt3/PlainStarRelativeAdmissionProofFixed3.lean"
+      ]
+    },
+    {
+      "module": "ExactFlowInputBridge",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/exact-flow-input-bridge/proof-fix-attempt2",
+        "-M2048",
+        "-o",
+        "/tmp/general-C2-one-step-bndhwjlx/ExactFlowInputBridge.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/exact-flow-input-bridge/proof-fix-attempt2/ExactFlowInputBridge.lean"
+      ]
+    },
+    {
+      "module": "GeneralLoopAdmissionBound",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/general-loop-admission-bound/proof-fix-attempt2",
+        "-M2048",
+        "-o",
+        "/tmp/general-C2-one-step-bndhwjlx/GeneralLoopAdmissionBound.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/general-loop-admission-bound/proof-fix-attempt2/GeneralLoopAdmissionBound.lean"
+      ]
+    },
+    {
+      "module": "GeneralLoopAdmissionOneStep",
+      "returnCode": 0,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--root=/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/general-loop-admission-one-step",
+        "-M2048",
+        "-o",
+        "/tmp/general-C2-one-step-bndhwjlx/GeneralLoopAdmissionOneStep.olean",
+        "/drive-testcomp/opentaint-go-rules/canonical-relations-directional-inside-20261105/analysis-tools/may-initial-to-star-audit-20261107/plain-star-relative-admission-20261107/operational/general-loop-admission-one-step/GeneralLoopAdmissionOneStep.lean"
+      ]
+    }
+  ],
+  "theoremAxiomAudit": [
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.raw_C2_key_at_most_one_past_demand",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.native_C2_key_at_most_one_past_demand",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.native_public_key_at_most_one_past_demand",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.C5_queried_member_at_most_one_past_demand",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.ALL_commands_at_most_one_past_query_heads",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.ALL_public_keys_at_most_one_past_query_heads",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.ALL_B4_initials_at_most_two_from_depth_one_heads",
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ]
+    },
+    {
+      "theorem": "GeneralLoopAdmissionOneStep.actual_B4_depth_three_can_emit_only_the_first_new_field",
+      "axioms": [
+        "propext"
+      ]
+    }
+  ],
+  "checkedDefinitionsUntouched": true,
+  "newRuntimePolicy": false,
+  "scope": "existing-C2-key-at-most-one-new-demand-field-all-labelled-query-rows",
+  "checkedLaws": 8,
+  "sourceSha256": "2dfb8c84f5622c11202522e3ed382afe46b5c89d7bf915dd55afb0fbae078a56"
+}

@@ -154,23 +154,12 @@ internal fun ApManager.mergeAddDelta(old: Facts, new: Facts): Pair<Facts, Facts?
             .let { (root, delta) -> old.withRoot(root) to delta?.let(old::withRoot) }
         is TaintTree -> {
             new as TaintTree
-            val (root, ordinaryDelta) = taintAlg.mergeAddDelta(old.root, new.root, cancellation)
-            val protected = when {
-                old.nonSubsumable == null -> new.nonSubsumable
-                new.nonSubsumable == null -> old.nonSubsumable
-                else -> taintAlg.mergeAdd(old.nonSubsumable, new.nonSubsumable, cancellation)
+            val (root, delta) = taintAlg.mergeAddDelta(old.root, new.root, cancellation)
+            val protected = old.protectionClass()
+            taintTree(old.base, old.layer, root, old.exclusion, old.anyTail,
+                if (protected) root else null) to delta?.let {
+                taintTree(old.base, old.layer, it, old.exclusion, old.anyTail, if (protected) it else null)
             }
-            val annotationDelta = new.nonSubsumable?.let { offered ->
-                if (old.nonSubsumable == null) offered
-                else taintAlg.minusNode(offered, old.nonSubsumable, cancellation)
-            }
-            val deltaRoot = when {
-                ordinaryDelta == null -> annotationDelta
-                annotationDelta == null -> ordinaryDelta
-                else -> taintAlg.mergeAdd(ordinaryDelta, annotationDelta, cancellation)
-            }
-            taintTree(old.base, old.layer, root, old.exclusion, old.anyTail, protected) to
-                deltaRoot?.let { taintTree(old.base, old.layer, it, old.exclusion, old.anyTail, protected) }
         }
     }
 }

@@ -245,7 +245,8 @@ class ReferenceOperationsTest {
         val rows = listOf(
             Triple(Tail.EXACT, Tail.EXACT, Tail.EXACT), Triple(Tail.EXACT, Tail.ANY, Tail.EXACT),
             Triple(Tail.EXACT, Tail.STAR, Tail.EXACT), Triple(Tail.ANY, Tail.EXACT, Tail.EXACT),
-            Triple(Tail.ANY, Tail.ANY, Tail.ANY), Triple(Tail.ANY, Tail.STAR, Tail.EXACT),
+            Triple(Tail.STAR, Tail.ANY, Tail.STAR),
+            Triple(Tail.ANY, Tail.ANY, Tail.STAR), Triple(Tail.ANY, Tail.STAR, Tail.EXACT),
             Triple(Tail.ANY_TAINT, Tail.EXACT, Tail.EXACT), Triple(Tail.ANY_TAINT, Tail.ANY, Tail.ANY_TAINT),
         )
         for ((addedTail, demandTail, outputTail) in rows) {
@@ -258,7 +259,7 @@ class ReferenceOperationsTest {
             }
             val addedE = if (addedTail == Tail.ANY_TAINT) ex(g) else empty
             val demandE = if (demandTail == Tail.STAR) ex(h) else empty
-            val outputE = when (outputTail) { Tail.ANY_TAINT -> ex(g); Tail.STAR -> ex(h); else -> empty }
+            val outputE = when (outputTail) { Tail.ANY_TAINT -> ex(g); else -> empty }
             assertEquals(p(listOf(f), outputTail, exclusion = outputE),
                 emit(p(listOf(f), demandTail, exclusion = demandE), p(listOf(f), addedTail, exclusion = addedE)))
         }
@@ -286,7 +287,7 @@ class ReferenceOperationsTest {
             val result = emit(p(listOf(g), Tail.ANY), actual)
             assertEquals(if (tail == Tail.ANY_TAINT) p(listOf(g), tail) else null, result)
             assertNull(emit(p(listOf(f), Tail.ANY), actual))
-            assertEquals(p(listOf(g), Tail.EXACT),
+            assertEquals(if (tail==Tail.ANY_TAINT) p(listOf(g),Tail.EXACT) else null,
                 emit(p(listOf(g), Tail.STAR, exclusion = ex(h)), actual))
             assertEquals(p(emptyList(), Tail.EXACT),
                 emit(p(emptyList(), Tail.STAR, exclusion = ex(h)), actual))
@@ -296,7 +297,7 @@ class ReferenceOperationsTest {
 
     @Test
     fun `AP 6_4 restriction checks whole premise and both mark gates`() {
-        val premise = p(emptyList(), Tail.ANY)
+        val premise = p(emptyList(), Tail.EXACT)
         val result = c(listOf(f), Tail.EXACT, base = y)
         assertNull(restrict(premise, result, DemandPattern(premise, null)))
         assertNull(restrict(premise, result, DemandPattern(p(listOf(f), Tail.EXACT),
@@ -465,8 +466,8 @@ class ReferenceOperationsTest {
         val flow = c(listOf(f), Tail.STAR, MarkSlot.Star(marks(u.id)), ex(g), base = y)
         assertSame(flow, restrict(premise, flow, DemandPattern(premise, p(listOf(f), Tail.EXACT, base = y))))
         assertNull(restrict(premise, flow, DemandPattern(premise, p(listOf(f), Tail.EXACT, mu, base = y))))
-        assertNull(restrict(premise, flow, DemandPattern(p(emptyList(), Tail.ANY),
-            p(listOf(f), Tail.EXACT, base = y))))
+        assertSame(flow,restrict(premise, flow, DemandPattern(p(emptyList(), Tail.ANY),
+            p(listOf(f), Tail.EXACT, base = y))),"The concrete STAR primary authorizes its FLOW companion")
         val concrete = c(listOf(f), Tail.EXACT, base = y)
         assertNull(restrict(p(emptyList(), Tail.EXACT), concrete,
             DemandPattern(p(emptyList(), Tail.EXACT), p(listOf(f), Tail.ANY, MarkSlot.Star(marks(t.id)), base = y))))

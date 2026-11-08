@@ -46,7 +46,7 @@ fun removeFlowCovered(m: ApManager, initial: PremiseKey, facts: TaintTree,
         m.cancellation.checkpoint()
         if (candidate.base != facts.base || candidate.tail != facts.anyTail || mark in candidate.markExclusion ||
             (candidate.layer != Layer.NORMAL && facts.layer != Layer.DEMAND) ||
-            (facts.anyTail == Tail.STAR && !candidate.exclusion.isSubsetOf(facts.exclusion))) continue
+            (facts.anyTail == Tail.STAR && !candidate.exclusion.isSubsetOf((initial as InitialAp).exclusion.union(facts.exclusion)))) continue
         root = if (facts.anyTail == Tail.STAR)
             removeCoveredStar(m, root, candidate.root, protection, mark) ?: return null
         else removeCoveredDiagonal(m, root, candidate.root, protection, mark) ?: return null

@@ -1,0 +1,14 @@
+{
+  "state": "PASS_REVIEW_DOCUMENTS_AND_LOCAL_MODELS",
+  "declaredLaws": 776,
+  "newReviewLaws": 92,
+  "principalExamples": 29,
+  "obligations": 26,
+  "P26ConductorRecoveryProved": false,
+  "nativeAnalyzerProved": false,
+  "runtimeChangesInReview": false,
+  "projectExperimentsPerformed": false,
+  "brokenLocalLinks": [],
+  "conductorEvidenceReferencesVerified": 8,
+  "manifestSha256": "9908a0a72567ac6cfea66b337d52e18f29a3abc856e7944f8e47f1e47c841908"
+}
