@@ -1,0 +1,16 @@
+{
+  "base_revision": "14b8ac8354bfc824080e790c7d71f6cfae0f401a",
+  "main_revision": "54ad708fe1c4f551956d3d572866de1534415fa1",
+  "lean_version": "4.33.1",
+  "files": {
+    "spec/main-migration.md": "42b8709e7a10ad8db5d9ac7027f8336fca6723ff6557fe4535e14bb8852016e3",
+    "spec/main-migration-proofs.md": "671791397caa1017928b7c9563ce60647251f7b9be75622018bde90141aafd99",
+    "spec/proof-guide.md": "c51296c2773f7a09bc96e3a4679c0b97610c38baf792b39e0de7ef2bf4787dcd",
+    "spec/lean/proposals/main-migration-20261109/AxiomAudit.lean": "418e95bc9b6dd862050f214e589cb248c6ab863a4a8576b3abbb8cffdac01383",
+    "spec/lean/proposals/main-migration-20261109/MainMigration.lean": "b76c70e0e40f027ffa01f99d1b5bff7d755881c1d2962e300b67e034e1a50230",
+    "spec/lean/proposals/main-migration-20261109/README.md": "b4b9855a01f80aaaf25d20776155e0e93c70c1dc830e0fb3599c2eea6e6a3da4",
+    "spec/lean/proposals/main-migration-20261109/check.py": "4462406ac09fa729dbf11851933629cdd951c29e5802c9c4eb5de96b05f2df9d"
+  },
+  "expected_theorem_count": 51,
+  "expected_example_count": 11
+}
