@@ -1,0 +1,34 @@
+{
+  "time": "2026-11-09T16:44:57.179392+00:00",
+  "runtime": "9b21b3716",
+  "head": "03cf52fa90f9eb5273334bb37b2cc4914100e1cd",
+  "coreModified": false,
+  "nativeSourcePins": {
+    "ap/RestrictedInitialPolicy.kt": "8473d936c94d3e96c543e495309da53501098ad2a69fc29c82f3e3a32f392cbd",
+    "ap/Facts.kt": "9aa496dcd49a96333843a2fa70ffc0b2284bcad7aec92a7b990667b9c3af7cf1",
+    "store/FrozenDemandTrie.kt": "f260e08cbde6024c1aacca83e21d8c90c4d6116504eeecf22edb64e6bfd52b62",
+    "store/DemandStore.kt": "a664e74e3c32f2d07f9b18ef626cd46c8f44d857ea7798e95a80795a91737e68",
+    "store/DemandResultCoverage.kt": "0809b9680c2758022580806028bf2e269bb3057f8bba33800b1a8a432f918f6d",
+    "store/StaticEntryLookup.kt": "90bbb026bcfd6f7b9a295111e75aebe5ab069af28ef692883384d90b7c33f02d",
+    "engine/LoopOutputRestriction.kt": "c9381026696953188374d5fa4f170f252967ffcbfcf5903792a05623d82f7c28",
+    "engine/LoopConsumerObservation.kt": "6d98f705f055f6223ab97a061dd278a41fb0d5797375c4189b19b2691555518c",
+    "engine/LoopQueryScratch.kt": "f8c534f3d99f503e11a035ff5d839769932b81ad9bbdbcf88675a27a4fb521bf",
+    "engine/LoopRestrictionSession.kt": "8c08677a54a48a96967d1fe04cd358b66f74ec0b52e3c29768314df9b8fd2686",
+    "engine/MethodBlockRuntime.kt": "6485035a5ca56adfe5a744a42c3df2260f13fb2f3bff8a5d80e4ba94cb1b716a",
+    "engine/BlockBoundaryDemandView.kt": "114895ad7b24beb970bc5bb8794bd3300ecc58b0ad1a8f0dfd4513fb64a52ec4"
+  },
+  "files": {
+    "loop-first-witness-example.json": "25b175f5445f60f91d3e0f385ecb379de3a53797eda22b69095143760c454668",
+    "source-proof.md": "cb8a8a81da424e87f1c7522b120b2a7d73206d51d024847a6b4dd1f5238f9ce0",
+    "C2Descendants.lean": "a6c098df1050f81cb59e1445201a5f470c9a9bf5d17e3d7fa20d0d7cb1dd1424",
+    "axioms.txt": "40556e9ddbe028e51afddc5163b8ef4b5a0d04219acbf7cc503193f6ffbc6776"
+  },
+  "leanVersion": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+  "leanResult": "PASS; 9 named laws, four executable examples; no Classical.choice; source-correspondence audit is separate",
+  "proofScope": "Local branch/ordered stream and monotone negative witness, not the full AP/trie/driver or measured speedup.",
+  "externalOriginalSourceProofSha256": "24db973739270cda9d8a2a3cc0f0229383d56396f4944bb6e3249d7b374894b3",
+  "repositoryCopyNote": "The proof note says candidate instead of selected and names final campaign iteration status. Lean source, log and executable example are exact copies.",
+  "externalOriginalFileNames": {
+    "axioms.txt": "lean.log"
+  }
+}

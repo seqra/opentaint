@@ -1,0 +1,77 @@
+{
+  "snapshotRun": 8,
+  "methodKey": 52269309,
+  "scope": {
+    "block": 2,
+    "entry": 40
+  },
+  "base": {
+    "kind": "LocalVar",
+    "index": 3
+  },
+  "rawConstructedFromCapturedEntry": {
+    "path": [
+      580,
+      536
+    ],
+    "tail": "STAR",
+    "mark": "FLOW",
+    "layer": "NORMAL"
+  },
+  "candidateCut": {
+    "path": [
+      580
+    ],
+    "tail": "ANY",
+    "mark": "FLOW",
+    "layer": "DEMAND"
+  },
+  "baselineFamily": [
+    [
+      [],
+      "EXACT",
+      "NORMAL"
+    ],
+    [
+      [
+        580
+      ],
+      "EXACT",
+      "NORMAL"
+    ],
+    [
+      [
+        580
+      ],
+      "STAR",
+      "NORMAL"
+    ],
+    [
+      [
+        580,
+        536
+      ],
+      "STAR",
+      "NORMAL"
+    ]
+  ],
+  "candidateFamilyCount": 466,
+  "firstChosenWitness": {
+    "demandPath": [
+      580,
+      580
+    ],
+    "tail": "ANY",
+    "emission": [
+      [
+        [
+          580,
+          580
+        ],
+        "STAR",
+        "NORMAL"
+      ]
+    ]
+  },
+  "scopeLimit": "A native C2 cell reconstructed from actual captured demand entries, not a claim that this exact raw value was observed as a live loop trial. Other observation families do not erase this extra admission."
+}

@@ -1,0 +1,9 @@
+'C2Descendants.star_deeper_primary_rejects' does not depend on any axioms
+'C2Descendants.exact_deeper_primary_rejects' does not depend on any axioms
+'C2Descendants.no_primary_has_no_companion' does not depend on any axioms
+'C2Descendants.blocked_descendant_has_no_family' depends on axioms: [propext]
+'C2Descendants.filter_empty_families' depends on axioms: [propext]
+'C2Descendants.removed_empty_families_create_no_new_result' depends on axioms: [propext]
+'C2Descendants.visited_nodes_removed' depends on axioms: [propext]
+'C2Descendants.first_extra_witness_survives' does not depend on any axioms
+'C2Descendants.first_extra_witness_rejects_only_this_candidate' does not depend on any axioms
