@@ -25,7 +25,10 @@ fat JARs. `runProjectAnalyzer` also builds the Go server and sets its absolute
 The workflow's final gate does not fail for `disabled` tests. The local gate has
 the same policy. It also rejects a missing file, malformed result lists or a
 completely empty result. Analyzer exit status alone does not prove that the rule
-expectations pass. The JSON check is required.
+expectations pass. The JSON check is required. Conversely, zero JSON failures
+do not prove that all analyses completed: a timed-out sample can retain a
+matching finding. Require both a successful analyzer task and a successful
+JSON gate. The combined Gradle command below enforces that order.
 
 ## Prerequisites
 
@@ -149,3 +152,8 @@ Before the runner fix, the flag was ignored by Java rule analysis. The
 [first local validation](reports/rules-gradle-validation-20261109.md) is a legacy
 result and remains historical evidence. This suite supplements the native
 bidirectional tests and bidirectional real-project scans.
+
+The [runner validation](reports/bidirectional-rule-runner-validation-20261109.md)
+verifies actual bidirectional entry for all 353 collected Java samples. It also
+records two convergence timeouts. Those failures remain open; matching the
+legacy sample classifications does not make the new-core suite pass.

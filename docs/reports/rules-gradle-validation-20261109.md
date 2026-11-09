@@ -2,6 +2,10 @@
 
 9 November 2026. State: **CI POLICY PASS**, with two harness coverage limits.
 
+This is the legacy-engine result before the runner fix. The later
+[bidirectional validation](bidirectional-rule-runner-validation-20261109.md)
+uses the corrected runner and records two analysis timeouts.
+
 The rule suite ran from the primary checkout through Gradle tasks. The analyzer,
 autobuilder and Go server came from local source builds. No CI artifacts were
 downloaded. The sample build, rule coverage check, analyzer and result gate all
