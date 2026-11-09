@@ -1,29 +1,29 @@
 {
   "schema": "opentaint.provisional-rule-log-results.v1",
-  "created_utc": "2026-11-09T17:38:42.928864+00:00",
-  "started_utc": "2026-11-09T17:38:32.872224+00:00",
-  "stream_wall_seconds": 10.056655749678612,
+  "created_utc": "2026-11-09T18:27:56.779225+00:00",
+  "started_utc": "2026-11-09T18:27:44.690369+00:00",
+  "stream_wall_seconds": 12.088870450854301,
   "source_revision": "03cf52fa90f9eb5273334bb37b2cc4914100e1cd",
   "implementation_commit": "9b21b3716",
   "log": "/drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/analyzer.log",
-  "snapshot_byte_limit": 1409494614,
-  "bytes_streamed": 1409494614,
-  "lines_streamed": 8693212,
+  "snapshot_byte_limit": 1927157904,
+  "bytes_streamed": 1927157904,
+  "lines_streamed": 11958030,
   "source_manifest_declaration_count": 609,
   "source_manifest_sha256": "1cb5c8b0eb5e677222ba42192a0318975ae677a2a104634036dbea28fa8d96e2",
   "actual_json_classification": false,
   "pass_gate": false,
   "caveat": "Provisional log-based identity counts only. TestProjectAnalyzer writes final JSON after all samples. Classification uses traces.isEmpty; current JIRBidiAnalysis maps each accepted report identity to a Simple trace, but conversion/report generation can still fail or change final artifacts. Missing/ambiguous declarations, duplicate runtime entry/mode keys, incomplete/active/resource-stopped samples are excluded, not called passes. No change to the running JVM, observer, source, or budgets.",
   "completion_policy": "Eligible only when BIDI_ANALYSIS_END status=COMPLETE, final Bidi analysis: N reported sink identities, and Finish IFDS markers all belong to one uniquely declared and uniquely observed entry/rule key.",
-  "sample_starts": 349,
-  "analysis_complete": 348,
-  "eligible_completed_samples": 348,
+  "sample_starts": 362,
+  "analysis_complete": 360,
+  "eligible_completed_samples": 360,
   "counts": {
-    "matchingExpectationByIdentityCount": 348,
-    "excluded": 1
+    "matchingExpectationByIdentityCount": 360,
+    "excluded": 2
   },
   "kind_mode_counts": {
-    "positive:default": 194,
+    "positive:default": 206,
     "negative:default": 154
   },
   "flags": [],
@@ -36,30 +36,87 @@
       "startLine": 16939,
       "startOffset": 2191231,
       "startLogLine": "15:37:16.310 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.pathtraversal.PathTraversalServletSamples$UnsafeFileUploadServlet#doPost rule=java/security/path-traversal.yaml:path-traversal",
-      "runStarts": 964027,
-      "runEnds": 964027,
+      "runStarts": 1275423,
+      "runEnds": 1275423,
       "latestReached": {
-        "run": 964027,
-        "label": "run-964027",
+        "run": 1275423,
+        "label": "run-1275423",
         "direction": "FORWARD",
-        "limit": 964026
+        "limit": 1275422
       },
-      "latestEngineComplete": "run-964027",
-      "latestBarrierComplete": "run-964026",
-      "latestAcceptedForwardReportRun": "run-964025",
-      "analysisEnd": null,
-      "reportedSinkIdentities": null,
-      "ifdsFinished": false,
+      "latestEngineComplete": "run-1275422",
+      "latestBarrierComplete": "run-1275422",
+      "latestAcceptedForwardReportRun": "run-1275421",
+      "analysisEnd": {
+        "run": 1275423,
+        "label": "run-1275423",
+        "status": "TIMEOUT",
+        "reason": "ABNORMAL",
+        "elapsed": "2h 46m 39.936391194s",
+        "line": 11495777
+      },
+      "reportedSinkIdentities": 1,
+      "ifdsFinished": true,
       "lastTargetStatistics": {
-        "run": 964026,
+        "run": 1275422,
         "reports": 1,
-        "line": 8693206
+        "line": 11495770
       },
+      "analysisEndLogLine": "18:23:56.314 |I| IterationDriver - BIDI_ANALYSIS_END run=1275423 status=TIMEOUT reason=ABNORMAL elapsed=2h 46m 39.936391194s",
+      "reportedSinkIdentitiesLine": 11495778,
+      "reportedSinkIdentitiesLogLine": "18:23:56.314 |I| JIRBidiAnalysis - Bidi analysis: 1 reported sink identities",
+      "finishIFDSLine": 11495779,
+      "finishIFDSLogLine": "18:23:56.315 |I| ProjectAnalyzerBase - Finish IFDS analysis for project: /drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/project/java_0/sources",
       "declarationCandidates": [
         {
           "language": "java",
           "rule": "java/security/path-traversal.yaml#path-traversal",
           "entrypoint": "security.pathtraversal.PathTraversalServletSamples$UnsafeFileUploadServlet#doPost",
+          "mode": "default",
+          "kind": "positive"
+        }
+      ],
+      "exclusionReasons": [
+        "analysis not COMPLETE"
+      ],
+      "eligibleProvisionalClassification": false,
+      "declaredKind": "positive",
+      "declaredMode": "default",
+      "declaredRule": "java/security/path-traversal.yaml#path-traversal",
+      "provisionalClassification": "excluded"
+    },
+    {
+      "ordinal": 362,
+      "engine": "BIDIRECTIONAL",
+      "sample": "security.passthrough.PassthroughFileModelSamples#fileToStringUnsafe",
+      "rule": "java/security/path-traversal.yaml:path-traversal",
+      "startLine": 11496524,
+      "startOffset": 1866573251,
+      "startLogLine": "18:23:57.063 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.passthrough.PassthroughFileModelSamples#fileToStringUnsafe rule=java/security/path-traversal.yaml:path-traversal",
+      "runStarts": 51276,
+      "runEnds": 51275,
+      "latestReached": {
+        "run": 51276,
+        "label": "run-51276",
+        "direction": "BACKWARD",
+        "limit": 51275
+      },
+      "latestEngineComplete": "run-51275",
+      "latestBarrierComplete": "run-51275",
+      "latestAcceptedForwardReportRun": "run-51275",
+      "analysisEnd": null,
+      "reportedSinkIdentities": null,
+      "ifdsFinished": false,
+      "lastTargetStatistics": {
+        "run": 51275,
+        "reports": 1,
+        "line": 11958027
+      },
+      "declarationCandidates": [
+        {
+          "language": "java",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "entrypoint": "security.passthrough.PassthroughFileModelSamples#fileToStringUnsafe",
           "mode": "default",
           "kind": "positive"
         }
@@ -19226,30 +19283,747 @@
       "startLine": 16939,
       "startOffset": 2191231,
       "startLogLine": "15:37:16.310 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.pathtraversal.PathTraversalServletSamples$UnsafeFileUploadServlet#doPost rule=java/security/path-traversal.yaml:path-traversal",
-      "runStarts": 964027,
-      "runEnds": 964027,
+      "runStarts": 1275423,
+      "runEnds": 1275423,
       "latestReached": {
-        "run": 964027,
-        "label": "run-964027",
+        "run": 1275423,
+        "label": "run-1275423",
         "direction": "FORWARD",
-        "limit": 964026
+        "limit": 1275422
       },
-      "latestEngineComplete": "run-964027",
-      "latestBarrierComplete": "run-964026",
-      "latestAcceptedForwardReportRun": "run-964025",
-      "analysisEnd": null,
-      "reportedSinkIdentities": null,
-      "ifdsFinished": false,
+      "latestEngineComplete": "run-1275422",
+      "latestBarrierComplete": "run-1275422",
+      "latestAcceptedForwardReportRun": "run-1275421",
+      "analysisEnd": {
+        "run": 1275423,
+        "label": "run-1275423",
+        "status": "TIMEOUT",
+        "reason": "ABNORMAL",
+        "elapsed": "2h 46m 39.936391194s",
+        "line": 11495777
+      },
+      "reportedSinkIdentities": 1,
+      "ifdsFinished": true,
       "lastTargetStatistics": {
-        "run": 964026,
+        "run": 1275422,
         "reports": 1,
-        "line": 8693206
+        "line": 11495770
       },
+      "analysisEndLogLine": "18:23:56.314 |I| IterationDriver - BIDI_ANALYSIS_END run=1275423 status=TIMEOUT reason=ABNORMAL elapsed=2h 46m 39.936391194s",
+      "reportedSinkIdentitiesLine": 11495778,
+      "reportedSinkIdentitiesLogLine": "18:23:56.314 |I| JIRBidiAnalysis - Bidi analysis: 1 reported sink identities",
+      "finishIFDSLine": 11495779,
+      "finishIFDSLogLine": "18:23:56.315 |I| ProjectAnalyzerBase - Finish IFDS analysis for project: /drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/project/java_0/sources",
       "declarationCandidates": [
         {
           "language": "java",
           "rule": "java/security/path-traversal.yaml#path-traversal",
           "entrypoint": "security.pathtraversal.PathTraversalServletSamples$UnsafeFileUploadServlet#doPost",
+          "mode": "default",
+          "kind": "positive"
+        }
+      ],
+      "exclusionReasons": [
+        "analysis not COMPLETE"
+      ],
+      "eligibleProvisionalClassification": false,
+      "declaredKind": "positive",
+      "declaredMode": "default",
+      "declaredRule": "java/security/path-traversal.yaml#path-traversal",
+      "provisionalClassification": "excluded"
+    },
+    {
+      "ordinal": 350,
+      "engine": "BIDIRECTIONAL",
+      "sample": "security.pathtraversal.PathTraversalServletSamples$UnsafeHeaderDownloadServlet#doGet",
+      "rule": "java/security/path-traversal.yaml:path-traversal",
+      "startLine": 11495780,
+      "startOffset": 1866468895,
+      "startLogLine": "18:23:56.315 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.pathtraversal.PathTraversalServletSamples$UnsafeHeaderDownloadServlet#doGet rule=java/security/path-traversal.yaml:path-traversal",
+      "runStarts": 3,
+      "runEnds": 3,
+      "latestReached": {
+        "run": 3,
+        "label": "run-3",
+        "direction": "FORWARD",
+        "limit": 2
+      },
+      "latestEngineComplete": "run-3",
+      "latestBarrierComplete": "run-3",
+      "latestAcceptedForwardReportRun": "run-3",
+      "analysisEnd": {
+        "run": 3,
+        "label": "run-3",
+        "status": "COMPLETE",
+        "reason": "NO_DEMAND_EDGE",
+        "elapsed": "47.379783ms",
+        "line": 11495842
+      },
+      "reportedSinkIdentities": 2,
+      "ifdsFinished": true,
+      "lastTargetStatistics": {
+        "run": 3,
+        "reports": 2,
+        "line": 11495840
+      },
+      "analysisEndLogLine": "18:23:56.459 |I| IterationDriver - BIDI_ANALYSIS_END run=3 status=COMPLETE reason=NO_DEMAND_EDGE elapsed=47.379783ms",
+      "reportedSinkIdentitiesLine": 11495843,
+      "reportedSinkIdentitiesLogLine": "18:23:56.460 |I| JIRBidiAnalysis - Bidi analysis: 2 reported sink identities",
+      "finishIFDSLine": 11495844,
+      "finishIFDSLogLine": "18:23:56.460 |I| ProjectAnalyzerBase - Finish IFDS analysis for project: /drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/project/java_0/sources",
+      "declarationCandidates": [
+        {
+          "language": "java",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "entrypoint": "security.pathtraversal.PathTraversalServletSamples$UnsafeHeaderDownloadServlet#doGet",
+          "mode": "default",
+          "kind": "positive"
+        }
+      ],
+      "exclusionReasons": [],
+      "eligibleProvisionalClassification": true,
+      "declaredKind": "positive",
+      "declaredMode": "default",
+      "declaredRule": "java/security/path-traversal.yaml#path-traversal",
+      "provisionalClassification": "matchingExpectationByIdentityCount"
+    },
+    {
+      "ordinal": 351,
+      "engine": "BIDIRECTIONAL",
+      "sample": "security.pathtraversal.PathTraversalServletSamples$UnsafeParamDownloadServlet#doGet",
+      "rule": "java/security/path-traversal.yaml:path-traversal",
+      "startLine": 11495845,
+      "startOffset": 1866478725,
+      "startLogLine": "18:23:56.460 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.pathtraversal.PathTraversalServletSamples$UnsafeParamDownloadServlet#doGet rule=java/security/path-traversal.yaml:path-traversal",
+      "runStarts": 3,
+      "runEnds": 3,
+      "latestReached": {
+        "run": 3,
+        "label": "run-3",
+        "direction": "FORWARD",
+        "limit": 2
+      },
+      "latestEngineComplete": "run-3",
+      "latestBarrierComplete": "run-3",
+      "latestAcceptedForwardReportRun": "run-3",
+      "analysisEnd": {
+        "run": 3,
+        "label": "run-3",
+        "status": "COMPLETE",
+        "reason": "NO_DEMAND_EDGE",
+        "elapsed": "42.782591ms",
+        "line": 11495917
+      },
+      "reportedSinkIdentities": 3,
+      "ifdsFinished": true,
+      "lastTargetStatistics": {
+        "run": 3,
+        "reports": 3,
+        "line": 11495915
+      },
+      "analysisEndLogLine": "18:23:56.564 |I| IterationDriver - BIDI_ANALYSIS_END run=3 status=COMPLETE reason=NO_DEMAND_EDGE elapsed=42.782591ms",
+      "reportedSinkIdentitiesLine": 11495918,
+      "reportedSinkIdentitiesLogLine": "18:23:56.564 |I| JIRBidiAnalysis - Bidi analysis: 3 reported sink identities",
+      "finishIFDSLine": 11495919,
+      "finishIFDSLogLine": "18:23:56.564 |I| ProjectAnalyzerBase - Finish IFDS analysis for project: /drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/project/java_0/sources",
+      "declarationCandidates": [
+        {
+          "language": "java",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "entrypoint": "security.pathtraversal.PathTraversalServletSamples$UnsafeParamDownloadServlet#doGet",
+          "mode": "default",
+          "kind": "positive"
+        }
+      ],
+      "exclusionReasons": [],
+      "eligibleProvisionalClassification": true,
+      "declaredKind": "positive",
+      "declaredMode": "default",
+      "declaredRule": "java/security/path-traversal.yaml#path-traversal",
+      "provisionalClassification": "matchingExpectationByIdentityCount"
+    },
+    {
+      "ordinal": 352,
+      "engine": "BIDIRECTIONAL",
+      "sample": "security.pathtraversal.PathTraversalServletSamples$UnsafeReadSymbolicLinkServlet#doGet",
+      "rule": "java/security/path-traversal.yaml:path-traversal",
+      "startLine": 11495920,
+      "startOffset": 1866490410,
+      "startLogLine": "18:23:56.564 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.pathtraversal.PathTraversalServletSamples$UnsafeReadSymbolicLinkServlet#doGet rule=java/security/path-traversal.yaml:path-traversal",
+      "runStarts": 3,
+      "runEnds": 3,
+      "latestReached": {
+        "run": 3,
+        "label": "run-3",
+        "direction": "FORWARD",
+        "limit": 2
+      },
+      "latestEngineComplete": "run-3",
+      "latestBarrierComplete": "run-3",
+      "latestAcceptedForwardReportRun": "run-3",
+      "analysisEnd": {
+        "run": 3,
+        "label": "run-3",
+        "status": "COMPLETE",
+        "reason": "NO_DEMAND_EDGE",
+        "elapsed": "8.436366ms",
+        "line": 11495987
+      },
+      "reportedSinkIdentities": 1,
+      "ifdsFinished": true,
+      "lastTargetStatistics": {
+        "run": 3,
+        "reports": 1,
+        "line": 11495985
+      },
+      "analysisEndLogLine": "18:23:56.606 |I| IterationDriver - BIDI_ANALYSIS_END run=3 status=COMPLETE reason=NO_DEMAND_EDGE elapsed=8.436366ms",
+      "reportedSinkIdentitiesLine": 11495988,
+      "reportedSinkIdentitiesLogLine": "18:23:56.606 |I| JIRBidiAnalysis - Bidi analysis: 1 reported sink identities",
+      "finishIFDSLine": 11495989,
+      "finishIFDSLogLine": "18:23:56.606 |I| ProjectAnalyzerBase - Finish IFDS analysis for project: /drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/project/java_0/sources",
+      "declarationCandidates": [
+        {
+          "language": "java",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "entrypoint": "security.pathtraversal.PathTraversalServletSamples$UnsafeReadSymbolicLinkServlet#doGet",
+          "mode": "default",
+          "kind": "positive"
+        }
+      ],
+      "exclusionReasons": [],
+      "eligibleProvisionalClassification": true,
+      "declaredKind": "positive",
+      "declaredMode": "default",
+      "declaredRule": "java/security/path-traversal.yaml#path-traversal",
+      "provisionalClassification": "matchingExpectationByIdentityCount"
+    },
+    {
+      "ordinal": 353,
+      "engine": "BIDIRECTIONAL",
+      "sample": "security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafeHeaderDownload",
+      "rule": "java/security/path-traversal.yaml:path-traversal",
+      "startLine": 11495990,
+      "startOffset": 1866500586,
+      "startLogLine": "18:23:56.606 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafeHeaderDownload rule=java/security/path-traversal.yaml:path-traversal",
+      "runStarts": 3,
+      "runEnds": 3,
+      "latestReached": {
+        "run": 3,
+        "label": "run-3",
+        "direction": "FORWARD",
+        "limit": 2
+      },
+      "latestEngineComplete": "run-3",
+      "latestBarrierComplete": "run-3",
+      "latestAcceptedForwardReportRun": "run-3",
+      "analysisEnd": {
+        "run": 3,
+        "label": "run-3",
+        "status": "COMPLETE",
+        "reason": "NO_DEMAND_EDGE",
+        "elapsed": "19.118862ms",
+        "line": 11496057
+      },
+      "reportedSinkIdentities": 2,
+      "ifdsFinished": true,
+      "lastTargetStatistics": {
+        "run": 3,
+        "reports": 2,
+        "line": 11496055
+      },
+      "analysisEndLogLine": "18:23:56.669 |I| IterationDriver - BIDI_ANALYSIS_END run=3 status=COMPLETE reason=NO_DEMAND_EDGE elapsed=19.118862ms",
+      "reportedSinkIdentitiesLine": 11496058,
+      "reportedSinkIdentitiesLogLine": "18:23:56.669 |I| JIRBidiAnalysis - Bidi analysis: 2 reported sink identities",
+      "finishIFDSLine": 11496059,
+      "finishIFDSLogLine": "18:23:56.669 |I| ProjectAnalyzerBase - Finish IFDS analysis for project: /drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/project/java_0/sources",
+      "declarationCandidates": [
+        {
+          "language": "java",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "entrypoint": "security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafeHeaderDownload",
+          "mode": "default",
+          "kind": "positive"
+        }
+      ],
+      "exclusionReasons": [],
+      "eligibleProvisionalClassification": true,
+      "declaredKind": "positive",
+      "declaredMode": "default",
+      "declaredRule": "java/security/path-traversal.yaml#path-traversal",
+      "provisionalClassification": "matchingExpectationByIdentityCount"
+    },
+    {
+      "ordinal": 354,
+      "engine": "BIDIRECTIONAL",
+      "sample": "security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafeParamDownload",
+      "rule": "java/security/path-traversal.yaml:path-traversal",
+      "startLine": 11496060,
+      "startOffset": 1866510826,
+      "startLogLine": "18:23:56.669 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafeParamDownload rule=java/security/path-traversal.yaml:path-traversal",
+      "runStarts": 3,
+      "runEnds": 3,
+      "latestReached": {
+        "run": 3,
+        "label": "run-3",
+        "direction": "FORWARD",
+        "limit": 2
+      },
+      "latestEngineComplete": "run-3",
+      "latestBarrierComplete": "run-3",
+      "latestAcceptedForwardReportRun": "run-3",
+      "analysisEnd": {
+        "run": 3,
+        "label": "run-3",
+        "status": "COMPLETE",
+        "reason": "NO_DEMAND_EDGE",
+        "elapsed": "20.880696ms",
+        "line": 11496127
+      },
+      "reportedSinkIdentities": 2,
+      "ifdsFinished": true,
+      "lastTargetStatistics": {
+        "run": 3,
+        "reports": 2,
+        "line": 11496125
+      },
+      "analysisEndLogLine": "18:23:56.732 |I| IterationDriver - BIDI_ANALYSIS_END run=3 status=COMPLETE reason=NO_DEMAND_EDGE elapsed=20.880696ms",
+      "reportedSinkIdentitiesLine": 11496128,
+      "reportedSinkIdentitiesLogLine": "18:23:56.732 |I| JIRBidiAnalysis - Bidi analysis: 2 reported sink identities",
+      "finishIFDSLine": 11496129,
+      "finishIFDSLogLine": "18:23:56.732 |I| ProjectAnalyzerBase - Finish IFDS analysis for project: /drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/project/java_0/sources",
+      "declarationCandidates": [
+        {
+          "language": "java",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "entrypoint": "security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafeParamDownload",
+          "mode": "default",
+          "kind": "positive"
+        }
+      ],
+      "exclusionReasons": [],
+      "eligibleProvisionalClassification": true,
+      "declaredKind": "positive",
+      "declaredMode": "default",
+      "declaredRule": "java/security/path-traversal.yaml#path-traversal",
+      "provisionalClassification": "matchingExpectationByIdentityCount"
+    },
+    {
+      "ordinal": 355,
+      "engine": "BIDIRECTIONAL",
+      "sample": "security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafePathVariableDownload",
+      "rule": "java/security/path-traversal.yaml:path-traversal",
+      "startLine": 11496130,
+      "startOffset": 1866521061,
+      "startLogLine": "18:23:56.732 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafePathVariableDownload rule=java/security/path-traversal.yaml:path-traversal",
+      "runStarts": 3,
+      "runEnds": 3,
+      "latestReached": {
+        "run": 3,
+        "label": "run-3",
+        "direction": "FORWARD",
+        "limit": 2
+      },
+      "latestEngineComplete": "run-3",
+      "latestBarrierComplete": "run-3",
+      "latestAcceptedForwardReportRun": "run-3",
+      "analysisEnd": {
+        "run": 3,
+        "label": "run-3",
+        "status": "COMPLETE",
+        "reason": "NO_DEMAND_EDGE",
+        "elapsed": "16.714973ms",
+        "line": 11496197
+      },
+      "reportedSinkIdentities": 2,
+      "ifdsFinished": true,
+      "lastTargetStatistics": {
+        "run": 3,
+        "reports": 2,
+        "line": 11496195
+      },
+      "analysisEndLogLine": "18:23:56.789 |I| IterationDriver - BIDI_ANALYSIS_END run=3 status=COMPLETE reason=NO_DEMAND_EDGE elapsed=16.714973ms",
+      "reportedSinkIdentitiesLine": 11496198,
+      "reportedSinkIdentitiesLogLine": "18:23:56.789 |I| JIRBidiAnalysis - Bidi analysis: 2 reported sink identities",
+      "finishIFDSLine": 11496199,
+      "finishIFDSLogLine": "18:23:56.790 |I| ProjectAnalyzerBase - Finish IFDS analysis for project: /drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/project/java_0/sources",
+      "declarationCandidates": [
+        {
+          "language": "java",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "entrypoint": "security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafePathVariableDownload",
+          "mode": "default",
+          "kind": "positive"
+        }
+      ],
+      "exclusionReasons": [],
+      "eligibleProvisionalClassification": true,
+      "declaredKind": "positive",
+      "declaredMode": "default",
+      "declaredRule": "java/security/path-traversal.yaml#path-traversal",
+      "provisionalClassification": "matchingExpectationByIdentityCount"
+    },
+    {
+      "ordinal": 356,
+      "engine": "BIDIRECTIONAL",
+      "sample": "security.passthrough.PassthroughFileModelSamples#fileGetNameUnsafe",
+      "rule": "java/security/path-traversal.yaml:path-traversal",
+      "startLine": 11496200,
+      "startOffset": 1866531352,
+      "startLogLine": "18:23:56.790 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.passthrough.PassthroughFileModelSamples#fileGetNameUnsafe rule=java/security/path-traversal.yaml:path-traversal",
+      "runStarts": 3,
+      "runEnds": 3,
+      "latestReached": {
+        "run": 3,
+        "label": "run-3",
+        "direction": "FORWARD",
+        "limit": 2
+      },
+      "latestEngineComplete": "run-3",
+      "latestBarrierComplete": "run-3",
+      "latestAcceptedForwardReportRun": "run-3",
+      "analysisEnd": {
+        "run": 3,
+        "label": "run-3",
+        "status": "COMPLETE",
+        "reason": "NO_DEMAND_EDGE",
+        "elapsed": "8.016929ms",
+        "line": 11496257
+      },
+      "reportedSinkIdentities": 1,
+      "ifdsFinished": true,
+      "lastTargetStatistics": {
+        "run": 3,
+        "reports": 1,
+        "line": 11496255
+      },
+      "analysisEndLogLine": "18:23:56.837 |I| IterationDriver - BIDI_ANALYSIS_END run=3 status=COMPLETE reason=NO_DEMAND_EDGE elapsed=8.016929ms",
+      "reportedSinkIdentitiesLine": 11496258,
+      "reportedSinkIdentitiesLogLine": "18:23:56.837 |I| JIRBidiAnalysis - Bidi analysis: 1 reported sink identities",
+      "finishIFDSLine": 11496259,
+      "finishIFDSLogLine": "18:23:56.837 |I| ProjectAnalyzerBase - Finish IFDS analysis for project: /drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/project/java_0/sources",
+      "declarationCandidates": [
+        {
+          "language": "java",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "entrypoint": "security.passthrough.PassthroughFileModelSamples#fileGetNameUnsafe",
+          "mode": "default",
+          "kind": "positive"
+        }
+      ],
+      "exclusionReasons": [],
+      "eligibleProvisionalClassification": true,
+      "declaredKind": "positive",
+      "declaredMode": "default",
+      "declaredRule": "java/security/path-traversal.yaml#path-traversal",
+      "provisionalClassification": "matchingExpectationByIdentityCount"
+    },
+    {
+      "ordinal": 357,
+      "engine": "BIDIRECTIONAL",
+      "sample": "security.passthrough.PassthroughFileModelSamples#fileCanonicalPathUnsafe",
+      "rule": "java/security/path-traversal.yaml:path-traversal",
+      "startLine": 11496260,
+      "startOffset": 1866539207,
+      "startLogLine": "18:23:56.837 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.passthrough.PassthroughFileModelSamples#fileCanonicalPathUnsafe rule=java/security/path-traversal.yaml:path-traversal",
+      "runStarts": 3,
+      "runEnds": 3,
+      "latestReached": {
+        "run": 3,
+        "label": "run-3",
+        "direction": "FORWARD",
+        "limit": 2
+      },
+      "latestEngineComplete": "run-3",
+      "latestBarrierComplete": "run-3",
+      "latestAcceptedForwardReportRun": "run-3",
+      "analysisEnd": {
+        "run": 3,
+        "label": "run-3",
+        "status": "COMPLETE",
+        "reason": "NO_DEMAND_EDGE",
+        "elapsed": "7.422788ms",
+        "line": 11496317
+      },
+      "reportedSinkIdentities": 1,
+      "ifdsFinished": true,
+      "lastTargetStatistics": {
+        "run": 3,
+        "reports": 1,
+        "line": 11496315
+      },
+      "analysisEndLogLine": "18:23:56.883 |I| IterationDriver - BIDI_ANALYSIS_END run=3 status=COMPLETE reason=NO_DEMAND_EDGE elapsed=7.422788ms",
+      "reportedSinkIdentitiesLine": 11496318,
+      "reportedSinkIdentitiesLogLine": "18:23:56.884 |I| JIRBidiAnalysis - Bidi analysis: 1 reported sink identities",
+      "finishIFDSLine": 11496319,
+      "finishIFDSLogLine": "18:23:56.884 |I| ProjectAnalyzerBase - Finish IFDS analysis for project: /drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/project/java_0/sources",
+      "declarationCandidates": [
+        {
+          "language": "java",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "entrypoint": "security.passthrough.PassthroughFileModelSamples#fileCanonicalPathUnsafe",
+          "mode": "default",
+          "kind": "positive"
+        }
+      ],
+      "exclusionReasons": [],
+      "eligibleProvisionalClassification": true,
+      "declaredKind": "positive",
+      "declaredMode": "default",
+      "declaredRule": "java/security/path-traversal.yaml#path-traversal",
+      "provisionalClassification": "matchingExpectationByIdentityCount"
+    },
+    {
+      "ordinal": 358,
+      "engine": "BIDIRECTIONAL",
+      "sample": "security.passthrough.PassthroughFileModelSamples#fileParentUnsafe",
+      "rule": "java/security/path-traversal.yaml:path-traversal",
+      "startLine": 11496320,
+      "startOffset": 1866547112,
+      "startLogLine": "18:23:56.884 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.passthrough.PassthroughFileModelSamples#fileParentUnsafe rule=java/security/path-traversal.yaml:path-traversal",
+      "runStarts": 3,
+      "runEnds": 3,
+      "latestReached": {
+        "run": 3,
+        "label": "run-3",
+        "direction": "FORWARD",
+        "limit": 2
+      },
+      "latestEngineComplete": "run-3",
+      "latestBarrierComplete": "run-3",
+      "latestAcceptedForwardReportRun": "run-3",
+      "analysisEnd": {
+        "run": 3,
+        "label": "run-3",
+        "status": "COMPLETE",
+        "reason": "NO_DEMAND_EDGE",
+        "elapsed": "9.284842ms",
+        "line": 11496377
+      },
+      "reportedSinkIdentities": 1,
+      "ifdsFinished": true,
+      "lastTargetStatistics": {
+        "run": 3,
+        "reports": 1,
+        "line": 11496375
+      },
+      "analysisEndLogLine": "18:23:56.932 |I| IterationDriver - BIDI_ANALYSIS_END run=3 status=COMPLETE reason=NO_DEMAND_EDGE elapsed=9.284842ms",
+      "reportedSinkIdentitiesLine": 11496378,
+      "reportedSinkIdentitiesLogLine": "18:23:56.932 |I| JIRBidiAnalysis - Bidi analysis: 1 reported sink identities",
+      "finishIFDSLine": 11496379,
+      "finishIFDSLogLine": "18:23:56.932 |I| ProjectAnalyzerBase - Finish IFDS analysis for project: /drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/project/java_0/sources",
+      "declarationCandidates": [
+        {
+          "language": "java",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "entrypoint": "security.passthrough.PassthroughFileModelSamples#fileParentUnsafe",
+          "mode": "default",
+          "kind": "positive"
+        }
+      ],
+      "exclusionReasons": [],
+      "eligibleProvisionalClassification": true,
+      "declaredKind": "positive",
+      "declaredMode": "default",
+      "declaredRule": "java/security/path-traversal.yaml#path-traversal",
+      "provisionalClassification": "matchingExpectationByIdentityCount"
+    },
+    {
+      "ordinal": 359,
+      "engine": "BIDIRECTIONAL",
+      "sample": "security.passthrough.PassthroughFileModelSamples#fileGetParentFileUnsafe",
+      "rule": "java/security/path-traversal.yaml:path-traversal",
+      "startLine": 11496380,
+      "startOffset": 1866554965,
+      "startLogLine": "18:23:56.933 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.passthrough.PassthroughFileModelSamples#fileGetParentFileUnsafe rule=java/security/path-traversal.yaml:path-traversal",
+      "runStarts": 3,
+      "runEnds": 3,
+      "latestReached": {
+        "run": 3,
+        "label": "run-3",
+        "direction": "FORWARD",
+        "limit": 2
+      },
+      "latestEngineComplete": "run-3",
+      "latestBarrierComplete": "run-3",
+      "latestAcceptedForwardReportRun": "run-3",
+      "analysisEnd": {
+        "run": 3,
+        "label": "run-3",
+        "status": "COMPLETE",
+        "reason": "NO_DEMAND_EDGE",
+        "elapsed": "7.265037ms",
+        "line": 11496437
+      },
+      "reportedSinkIdentities": 1,
+      "ifdsFinished": true,
+      "lastTargetStatistics": {
+        "run": 3,
+        "reports": 1,
+        "line": 11496435
+      },
+      "analysisEndLogLine": "18:23:56.979 |I| IterationDriver - BIDI_ANALYSIS_END run=3 status=COMPLETE reason=NO_DEMAND_EDGE elapsed=7.265037ms",
+      "reportedSinkIdentitiesLine": 11496438,
+      "reportedSinkIdentitiesLogLine": "18:23:56.979 |I| JIRBidiAnalysis - Bidi analysis: 1 reported sink identities",
+      "finishIFDSLine": 11496439,
+      "finishIFDSLogLine": "18:23:56.979 |I| ProjectAnalyzerBase - Finish IFDS analysis for project: /drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/project/java_0/sources",
+      "declarationCandidates": [
+        {
+          "language": "java",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "entrypoint": "security.passthrough.PassthroughFileModelSamples#fileGetParentFileUnsafe",
+          "mode": "default",
+          "kind": "positive"
+        }
+      ],
+      "exclusionReasons": [],
+      "eligibleProvisionalClassification": true,
+      "declaredKind": "positive",
+      "declaredMode": "default",
+      "declaredRule": "java/security/path-traversal.yaml#path-traversal",
+      "provisionalClassification": "matchingExpectationByIdentityCount"
+    },
+    {
+      "ordinal": 360,
+      "engine": "BIDIRECTIONAL",
+      "sample": "security.passthrough.PassthroughFileModelSamples#fileToPathUnsafe",
+      "rule": "java/security/path-traversal.yaml:path-traversal",
+      "startLine": 11496440,
+      "startOffset": 1866562875,
+      "startLogLine": "18:23:56.979 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.passthrough.PassthroughFileModelSamples#fileToPathUnsafe rule=java/security/path-traversal.yaml:path-traversal",
+      "runStarts": 1,
+      "runEnds": 1,
+      "latestReached": {
+        "run": 1,
+        "label": "run-1",
+        "direction": "FORWARD",
+        "limit": 1
+      },
+      "latestEngineComplete": "run-1",
+      "latestBarrierComplete": "run-1",
+      "latestAcceptedForwardReportRun": "run-1",
+      "analysisEnd": {
+        "run": 1,
+        "label": "run-1",
+        "status": "COMPLETE",
+        "reason": "NO_DEMAND_EDGE",
+        "elapsed": "3.249277ms",
+        "line": 11496479
+      },
+      "reportedSinkIdentities": 1,
+      "ifdsFinished": true,
+      "lastTargetStatistics": {
+        "run": 1,
+        "reports": 1,
+        "line": 11496477
+      },
+      "analysisEndLogLine": "18:23:57.021 |I| IterationDriver - BIDI_ANALYSIS_END run=1 status=COMPLETE reason=NO_DEMAND_EDGE elapsed=3.249277ms",
+      "reportedSinkIdentitiesLine": 11496480,
+      "reportedSinkIdentitiesLogLine": "18:23:57.021 |I| JIRBidiAnalysis - Bidi analysis: 1 reported sink identities",
+      "finishIFDSLine": 11496481,
+      "finishIFDSLogLine": "18:23:57.021 |I| ProjectAnalyzerBase - Finish IFDS analysis for project: /drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/project/java_0/sources",
+      "declarationCandidates": [
+        {
+          "language": "java",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "entrypoint": "security.passthrough.PassthroughFileModelSamples#fileToPathUnsafe",
+          "mode": "default",
+          "kind": "positive"
+        }
+      ],
+      "exclusionReasons": [],
+      "eligibleProvisionalClassification": true,
+      "declaredKind": "positive",
+      "declaredMode": "default",
+      "declaredRule": "java/security/path-traversal.yaml#path-traversal",
+      "provisionalClassification": "matchingExpectationByIdentityCount"
+    },
+    {
+      "ordinal": 361,
+      "engine": "BIDIRECTIONAL",
+      "sample": "security.passthrough.PassthroughFileModelSamples#fileFromUriUnsafe",
+      "rule": "java/security/path-traversal.yaml:path-traversal",
+      "startLine": 11496482,
+      "startOffset": 1866568057,
+      "startLogLine": "18:23:57.021 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.passthrough.PassthroughFileModelSamples#fileFromUriUnsafe rule=java/security/path-traversal.yaml:path-traversal",
+      "runStarts": 1,
+      "runEnds": 1,
+      "latestReached": {
+        "run": 1,
+        "label": "run-1",
+        "direction": "FORWARD",
+        "limit": 1
+      },
+      "latestEngineComplete": "run-1",
+      "latestBarrierComplete": "run-1",
+      "latestAcceptedForwardReportRun": "run-1",
+      "analysisEnd": {
+        "run": 1,
+        "label": "run-1",
+        "status": "COMPLETE",
+        "reason": "NO_DEMAND_EDGE",
+        "elapsed": "4.812088ms",
+        "line": 11496521
+      },
+      "reportedSinkIdentities": 1,
+      "ifdsFinished": true,
+      "lastTargetStatistics": {
+        "run": 1,
+        "reports": 1,
+        "line": 11496519
+      },
+      "analysisEndLogLine": "18:23:57.063 |I| IterationDriver - BIDI_ANALYSIS_END run=1 status=COMPLETE reason=NO_DEMAND_EDGE elapsed=4.812088ms",
+      "reportedSinkIdentitiesLine": 11496522,
+      "reportedSinkIdentitiesLogLine": "18:23:57.063 |I| JIRBidiAnalysis - Bidi analysis: 1 reported sink identities",
+      "finishIFDSLine": 11496523,
+      "finishIFDSLogLine": "18:23:57.063 |I| ProjectAnalyzerBase - Finish IFDS analysis for project: /drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/project/java_0/sources",
+      "declarationCandidates": [
+        {
+          "language": "java",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "entrypoint": "security.passthrough.PassthroughFileModelSamples#fileFromUriUnsafe",
+          "mode": "default",
+          "kind": "positive"
+        }
+      ],
+      "exclusionReasons": [],
+      "eligibleProvisionalClassification": true,
+      "declaredKind": "positive",
+      "declaredMode": "default",
+      "declaredRule": "java/security/path-traversal.yaml#path-traversal",
+      "provisionalClassification": "matchingExpectationByIdentityCount"
+    },
+    {
+      "ordinal": 362,
+      "engine": "BIDIRECTIONAL",
+      "sample": "security.passthrough.PassthroughFileModelSamples#fileToStringUnsafe",
+      "rule": "java/security/path-traversal.yaml:path-traversal",
+      "startLine": 11496524,
+      "startOffset": 1866573251,
+      "startLogLine": "18:23:57.063 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.passthrough.PassthroughFileModelSamples#fileToStringUnsafe rule=java/security/path-traversal.yaml:path-traversal",
+      "runStarts": 51276,
+      "runEnds": 51275,
+      "latestReached": {
+        "run": 51276,
+        "label": "run-51276",
+        "direction": "BACKWARD",
+        "limit": 51275
+      },
+      "latestEngineComplete": "run-51275",
+      "latestBarrierComplete": "run-51275",
+      "latestAcceptedForwardReportRun": "run-51275",
+      "analysisEnd": null,
+      "reportedSinkIdentities": null,
+      "ifdsFinished": false,
+      "lastTargetStatistics": {
+        "run": 51275,
+        "reports": 1,
+        "line": 11958027
+      },
+      "declarationCandidates": [
+        {
+          "language": "java",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "entrypoint": "security.passthrough.PassthroughFileModelSamples#fileToStringUnsafe",
           "mode": "default",
           "kind": "positive"
         }

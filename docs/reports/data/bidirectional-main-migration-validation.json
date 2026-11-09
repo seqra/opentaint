@@ -1,6 +1,6 @@
 {
   "status": "implementation and measured project investigation complete; acceptance FAILED/PENDING; full rule suite still running",
-  "updated_utc": "2026-11-09T17:42:12.425456+00:00",
+  "updated_utc": "2026-11-09T18:31:39.713190+00:00",
   "source": {
     "selected_before_migration": "13357151d14400fcabab2a24389326fc861ade8a",
     "main": "54ad708fe1c4f551956d3d572866de1534415fa1",
@@ -4377,7 +4377,7 @@
     "actual_bidi_events_observed": true,
     "not_passed": true,
     "progress_observation": {
-      "time": "2026-11-09T16:32:17.280951+00:00",
+      "time": "2026-11-09T18:29:56.184424+00:00",
       "implementationCommit": "9b21b3716",
       "sourceHead": "03cf52fa90f9eb5273334bb37b2cc4914100e1cd",
       "configuredHeap": "8g",
@@ -10069,13 +10069,14 @@
         }
       ],
       "collectedButUndeclared": [],
-      "javaSampleStarts": 349,
-      "javaSampleComplete": 348,
+      "javaSampleStarts": 362,
+      "javaSampleComplete": 360,
       "javaStatuses": {
-        "COMPLETE": 348,
+        "COMPLETE": 360,
+        "TIMEOUT": 1,
         "INTERRUPTED": 1
       },
-      "javaLatestReachedMaximum": 490337,
+      "javaLatestReachedMaximum": 1275423,
       "javaActiveJSONWithoutStart": [],
       "javaStartsWithoutActiveJSON": [
         {
@@ -11820,6 +11821,71 @@
         },
         {
           "sample": "security.pathtraversal.PathTraversalServletSamples.UnsafeFileUploadServlet#doPost",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "count": 1
+        },
+        {
+          "sample": "security.pathtraversal.PathTraversalServletSamples.UnsafeHeaderDownloadServlet#doGet",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "count": 1
+        },
+        {
+          "sample": "security.pathtraversal.PathTraversalServletSamples.UnsafeParamDownloadServlet#doGet",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "count": 1
+        },
+        {
+          "sample": "security.pathtraversal.PathTraversalServletSamples.UnsafeReadSymbolicLinkServlet#doGet",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "count": 1
+        },
+        {
+          "sample": "security.pathtraversal.PathTraversalSpringSamples.UnsafeFileDownloadController#unsafeHeaderDownload",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "count": 1
+        },
+        {
+          "sample": "security.pathtraversal.PathTraversalSpringSamples.UnsafeFileDownloadController#unsafeParamDownload",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "count": 1
+        },
+        {
+          "sample": "security.pathtraversal.PathTraversalSpringSamples.UnsafeFileDownloadController#unsafePathVariableDownload",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "count": 1
+        },
+        {
+          "sample": "security.passthrough.PassthroughFileModelSamples#fileGetNameUnsafe",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "count": 1
+        },
+        {
+          "sample": "security.passthrough.PassthroughFileModelSamples#fileCanonicalPathUnsafe",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "count": 1
+        },
+        {
+          "sample": "security.passthrough.PassthroughFileModelSamples#fileParentUnsafe",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "count": 1
+        },
+        {
+          "sample": "security.passthrough.PassthroughFileModelSamples#fileGetParentFileUnsafe",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "count": 1
+        },
+        {
+          "sample": "security.passthrough.PassthroughFileModelSamples#fileToPathUnsafe",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "count": 1
+        },
+        {
+          "sample": "security.passthrough.PassthroughFileModelSamples#fileFromUriUnsafe",
+          "rule": "java/security/path-traversal.yaml#path-traversal",
+          "count": 1
+        },
+        {
+          "sample": "security.passthrough.PassthroughFileModelSamples#fileToStringUnsafe",
           "rule": "java/security/path-traversal.yaml#path-traversal",
           "count": 1
         }
@@ -20182,16 +20248,328 @@
           "sample": "security.pathtraversal.PathTraversalServletSamples$UnsafeFileUploadServlet#doPost",
           "rule": "java/security/path-traversal.yaml:path-traversal",
           "startLine": 16939,
-          "runStarts": 490337,
-          "runEnds": 490336,
+          "runStarts": 1275423,
+          "runEnds": 1275423,
           "latestReached": {
-            "run": 490337,
-            "label": "run-490337",
+            "run": 1275423,
+            "label": "run-1275423",
             "direction": "FORWARD",
-            "limit": 490336
+            "limit": 1275422
           },
-          "latestEngineComplete": "run-490336",
-          "latestCompleted": "run-490336",
+          "latestEngineComplete": "run-1275422",
+          "latestCompleted": "run-1275422",
+          "analysisEnd": {
+            "run": 1275423,
+            "label": "run-1275423",
+            "status": "TIMEOUT",
+            "reason": "ABNORMAL",
+            "elapsed": "2h 46m 39.936391194s",
+            "line": 11495777
+          }
+        },
+        {
+          "engine": "BIDIRECTIONAL",
+          "sample": "security.pathtraversal.PathTraversalServletSamples$UnsafeHeaderDownloadServlet#doGet",
+          "rule": "java/security/path-traversal.yaml:path-traversal",
+          "startLine": 11495780,
+          "runStarts": 3,
+          "runEnds": 3,
+          "latestReached": {
+            "run": 3,
+            "label": "run-3",
+            "direction": "FORWARD",
+            "limit": 2
+          },
+          "latestEngineComplete": "run-3",
+          "latestCompleted": "run-3",
+          "analysisEnd": {
+            "run": 3,
+            "label": "run-3",
+            "status": "COMPLETE",
+            "reason": "NO_DEMAND_EDGE",
+            "elapsed": "47.379783ms",
+            "line": 11495842
+          }
+        },
+        {
+          "engine": "BIDIRECTIONAL",
+          "sample": "security.pathtraversal.PathTraversalServletSamples$UnsafeParamDownloadServlet#doGet",
+          "rule": "java/security/path-traversal.yaml:path-traversal",
+          "startLine": 11495845,
+          "runStarts": 3,
+          "runEnds": 3,
+          "latestReached": {
+            "run": 3,
+            "label": "run-3",
+            "direction": "FORWARD",
+            "limit": 2
+          },
+          "latestEngineComplete": "run-3",
+          "latestCompleted": "run-3",
+          "analysisEnd": {
+            "run": 3,
+            "label": "run-3",
+            "status": "COMPLETE",
+            "reason": "NO_DEMAND_EDGE",
+            "elapsed": "42.782591ms",
+            "line": 11495917
+          }
+        },
+        {
+          "engine": "BIDIRECTIONAL",
+          "sample": "security.pathtraversal.PathTraversalServletSamples$UnsafeReadSymbolicLinkServlet#doGet",
+          "rule": "java/security/path-traversal.yaml:path-traversal",
+          "startLine": 11495920,
+          "runStarts": 3,
+          "runEnds": 3,
+          "latestReached": {
+            "run": 3,
+            "label": "run-3",
+            "direction": "FORWARD",
+            "limit": 2
+          },
+          "latestEngineComplete": "run-3",
+          "latestCompleted": "run-3",
+          "analysisEnd": {
+            "run": 3,
+            "label": "run-3",
+            "status": "COMPLETE",
+            "reason": "NO_DEMAND_EDGE",
+            "elapsed": "8.436366ms",
+            "line": 11495987
+          }
+        },
+        {
+          "engine": "BIDIRECTIONAL",
+          "sample": "security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafeHeaderDownload",
+          "rule": "java/security/path-traversal.yaml:path-traversal",
+          "startLine": 11495990,
+          "runStarts": 3,
+          "runEnds": 3,
+          "latestReached": {
+            "run": 3,
+            "label": "run-3",
+            "direction": "FORWARD",
+            "limit": 2
+          },
+          "latestEngineComplete": "run-3",
+          "latestCompleted": "run-3",
+          "analysisEnd": {
+            "run": 3,
+            "label": "run-3",
+            "status": "COMPLETE",
+            "reason": "NO_DEMAND_EDGE",
+            "elapsed": "19.118862ms",
+            "line": 11496057
+          }
+        },
+        {
+          "engine": "BIDIRECTIONAL",
+          "sample": "security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafeParamDownload",
+          "rule": "java/security/path-traversal.yaml:path-traversal",
+          "startLine": 11496060,
+          "runStarts": 3,
+          "runEnds": 3,
+          "latestReached": {
+            "run": 3,
+            "label": "run-3",
+            "direction": "FORWARD",
+            "limit": 2
+          },
+          "latestEngineComplete": "run-3",
+          "latestCompleted": "run-3",
+          "analysisEnd": {
+            "run": 3,
+            "label": "run-3",
+            "status": "COMPLETE",
+            "reason": "NO_DEMAND_EDGE",
+            "elapsed": "20.880696ms",
+            "line": 11496127
+          }
+        },
+        {
+          "engine": "BIDIRECTIONAL",
+          "sample": "security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController#unsafePathVariableDownload",
+          "rule": "java/security/path-traversal.yaml:path-traversal",
+          "startLine": 11496130,
+          "runStarts": 3,
+          "runEnds": 3,
+          "latestReached": {
+            "run": 3,
+            "label": "run-3",
+            "direction": "FORWARD",
+            "limit": 2
+          },
+          "latestEngineComplete": "run-3",
+          "latestCompleted": "run-3",
+          "analysisEnd": {
+            "run": 3,
+            "label": "run-3",
+            "status": "COMPLETE",
+            "reason": "NO_DEMAND_EDGE",
+            "elapsed": "16.714973ms",
+            "line": 11496197
+          }
+        },
+        {
+          "engine": "BIDIRECTIONAL",
+          "sample": "security.passthrough.PassthroughFileModelSamples#fileGetNameUnsafe",
+          "rule": "java/security/path-traversal.yaml:path-traversal",
+          "startLine": 11496200,
+          "runStarts": 3,
+          "runEnds": 3,
+          "latestReached": {
+            "run": 3,
+            "label": "run-3",
+            "direction": "FORWARD",
+            "limit": 2
+          },
+          "latestEngineComplete": "run-3",
+          "latestCompleted": "run-3",
+          "analysisEnd": {
+            "run": 3,
+            "label": "run-3",
+            "status": "COMPLETE",
+            "reason": "NO_DEMAND_EDGE",
+            "elapsed": "8.016929ms",
+            "line": 11496257
+          }
+        },
+        {
+          "engine": "BIDIRECTIONAL",
+          "sample": "security.passthrough.PassthroughFileModelSamples#fileCanonicalPathUnsafe",
+          "rule": "java/security/path-traversal.yaml:path-traversal",
+          "startLine": 11496260,
+          "runStarts": 3,
+          "runEnds": 3,
+          "latestReached": {
+            "run": 3,
+            "label": "run-3",
+            "direction": "FORWARD",
+            "limit": 2
+          },
+          "latestEngineComplete": "run-3",
+          "latestCompleted": "run-3",
+          "analysisEnd": {
+            "run": 3,
+            "label": "run-3",
+            "status": "COMPLETE",
+            "reason": "NO_DEMAND_EDGE",
+            "elapsed": "7.422788ms",
+            "line": 11496317
+          }
+        },
+        {
+          "engine": "BIDIRECTIONAL",
+          "sample": "security.passthrough.PassthroughFileModelSamples#fileParentUnsafe",
+          "rule": "java/security/path-traversal.yaml:path-traversal",
+          "startLine": 11496320,
+          "runStarts": 3,
+          "runEnds": 3,
+          "latestReached": {
+            "run": 3,
+            "label": "run-3",
+            "direction": "FORWARD",
+            "limit": 2
+          },
+          "latestEngineComplete": "run-3",
+          "latestCompleted": "run-3",
+          "analysisEnd": {
+            "run": 3,
+            "label": "run-3",
+            "status": "COMPLETE",
+            "reason": "NO_DEMAND_EDGE",
+            "elapsed": "9.284842ms",
+            "line": 11496377
+          }
+        },
+        {
+          "engine": "BIDIRECTIONAL",
+          "sample": "security.passthrough.PassthroughFileModelSamples#fileGetParentFileUnsafe",
+          "rule": "java/security/path-traversal.yaml:path-traversal",
+          "startLine": 11496380,
+          "runStarts": 3,
+          "runEnds": 3,
+          "latestReached": {
+            "run": 3,
+            "label": "run-3",
+            "direction": "FORWARD",
+            "limit": 2
+          },
+          "latestEngineComplete": "run-3",
+          "latestCompleted": "run-3",
+          "analysisEnd": {
+            "run": 3,
+            "label": "run-3",
+            "status": "COMPLETE",
+            "reason": "NO_DEMAND_EDGE",
+            "elapsed": "7.265037ms",
+            "line": 11496437
+          }
+        },
+        {
+          "engine": "BIDIRECTIONAL",
+          "sample": "security.passthrough.PassthroughFileModelSamples#fileToPathUnsafe",
+          "rule": "java/security/path-traversal.yaml:path-traversal",
+          "startLine": 11496440,
+          "runStarts": 1,
+          "runEnds": 1,
+          "latestReached": {
+            "run": 1,
+            "label": "run-1",
+            "direction": "FORWARD",
+            "limit": 1
+          },
+          "latestEngineComplete": "run-1",
+          "latestCompleted": "run-1",
+          "analysisEnd": {
+            "run": 1,
+            "label": "run-1",
+            "status": "COMPLETE",
+            "reason": "NO_DEMAND_EDGE",
+            "elapsed": "3.249277ms",
+            "line": 11496479
+          }
+        },
+        {
+          "engine": "BIDIRECTIONAL",
+          "sample": "security.passthrough.PassthroughFileModelSamples#fileFromUriUnsafe",
+          "rule": "java/security/path-traversal.yaml:path-traversal",
+          "startLine": 11496482,
+          "runStarts": 1,
+          "runEnds": 1,
+          "latestReached": {
+            "run": 1,
+            "label": "run-1",
+            "direction": "FORWARD",
+            "limit": 1
+          },
+          "latestEngineComplete": "run-1",
+          "latestCompleted": "run-1",
+          "analysisEnd": {
+            "run": 1,
+            "label": "run-1",
+            "status": "COMPLETE",
+            "reason": "NO_DEMAND_EDGE",
+            "elapsed": "4.812088ms",
+            "line": 11496521
+          }
+        },
+        {
+          "engine": "BIDIRECTIONAL",
+          "sample": "security.passthrough.PassthroughFileModelSamples#fileToStringUnsafe",
+          "rule": "java/security/path-traversal.yaml:path-traversal",
+          "startLine": 11496524,
+          "runStarts": 87465,
+          "runEnds": 87464,
+          "latestReached": {
+            "run": 87465,
+            "label": "run-87465",
+            "direction": "FORWARD",
+            "limit": 87464
+          },
+          "latestEngineComplete": "run-87464",
+          "latestCompleted": "run-87464",
           "analysisEnd": null
         }
       ],
@@ -20199,7 +20577,7 @@
       "workflowGatePassed": false,
       "accepted": false
     },
-    "progress_observation_limits": "The last sample is alive. Missing end-marker INTERRUPTED is not a terminal failure. Final result and Gradle gate unavailable.",
+    "progress_observation_limits": "Snapshot 2026-11-09 18:29 UTC. Upload ended TIMEOUT at run-1275423, complete1275422, accepted forward1275421; excluded from completed-pass prefix. FileToStringUnsafe is alive: missing end marker INTERRUPTED is not terminal. Final JSON and Gradle gate unavailable.",
     "provisional_prefix_data": "bidirectional-main-migration-rule-prefix.json",
     "upload_cycle_data": "bidirectional-main-migration-upload-cycle.json",
     "memory_observer": {
@@ -20212,7 +20590,18 @@
     "fixture_eligibility_data": "bidirectional-main-migration-java-fixtures.json",
     "expected_java_analyses": 585,
     "expected_java_disabled": 22,
-    "unresolved_java_fixture_declarations": 2
+    "unresolved_java_fixture_declarations": 2,
+    "terminal_timeout_samples": [
+      {
+        "sample": "security.pathtraversal.PathTraversalServletSamples$UnsafeFileUploadServlet#doPost",
+        "status": "TIMEOUT",
+        "latest_reached": "run-1275423",
+        "latest_completed": "run-1275422",
+        "latest_accepted_forward": "run-1275421",
+        "reported_sink_identities": 1
+      }
+    ],
+    "straight_line_cycle_data": "bidirectional-main-migration-file-tostring-cycle.json"
   },
   "performance_report_complete": true,
   "next_iteration_proposal": "docs/design/bidirectional-main-migration-next-iteration-20261109.md",

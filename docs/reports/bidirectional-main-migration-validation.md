@@ -1,8 +1,8 @@
 # Main migration: implementation and validation
 
 9 November 2026. The implementation is committed. **Acceptance has not passed.**
-All eight baseline/current project commands and all offline heap/profile
-analyses have stopped. The full rule suite is still in progress. This report keeps
+All eight baseline/current project commands have stopped. Offline heap and JFR
+decoding is complete. The full rule suite is still in progress. This report keeps
 real finding failures visible and selects no unplanned core fix.
 
 ## Source and scope
@@ -403,7 +403,8 @@ The 4.10 million sink objects versus 2.05 million `TaintSinkMeta` objects is
 consistent with an original/selected-copy multiplier. It is not proof of
 4.10 million independent method queries. Resolver caches use method and
 role/flags, not caller context. Prescan and actual exit processing both bind
-exit rules; the exact per-epoch distribution is still being checked.
+exit rules. The existing census does not classify bound rows by resolver epoch;
+that exact attribution remains a follow-up.
 
 The [heap data](data/bidirectional-main-migration-thingsboard-heap.json) embeds
 the complete class histogram and the displayed dominator partition. The
@@ -599,9 +600,13 @@ its times are diagnostic and are not project performance measurements. Its
 heap remains 8 GiB and default timeout remains 10,000 s per Java sample. Fresh
 sample build, coverage, Go source build, autobuilder and Java/Go model checks
 passed. Current declarations are 609 Java and 201 Go samples; older 353-Java
-counts are stale. Declarations do not prove collection or successful execution. The actual Java analyzer emits bidirectional events. At 16:32 UTC, 348 Java analyses had completed and the upload sample had
-reached **run-490337**, completed **run-490336** and accepted forward
-**run-490335**. Its final result was unavailable; the full gate is still live.
+counts are stale. Declarations do not prove collection or successful execution.
+The actual Java analyzer emits bidirectional events. At 18:29 UTC, 360 Java
+analyses had completed. The upload sample ended with TIMEOUT at
+**run-1275423**, completed **run-1275422** and accepted forward
+**run-1275421**, with one finding. The next slow sample, `fileToStringUnsafe`,
+was active at **run-87465**, complete through **run-87464**. The full gate is
+still live.
 The auditor calls a missing end marker INTERRUPTED, but the observed process
 is alive, so that label is not a terminal interruption or timeout. Neither
 completed analysis counts nor a partial matching finding prove the JSON gate.
@@ -624,16 +629,18 @@ proof. No C2 optimization is implemented in the measured runtime.
 
 ## Additional rule-suite evidence while the full gate runs
 
-At 17:38 UTC, the original rule-suite JVM was still active. A bounded streaming
-audit covered 348 completed Java analyses: 194 declared positive and 154
+At 18:27 UTC, the original rule-suite JVM was still active. A bounded streaming
+audit covered 360 completed Java analyses: 206 declared positive and 154
 negative. Their final accepted report-identity counts all match the declared
 expectation. This is **provisional**, not the final `test-result.json`
 classification: trace conversion and final output still matter. The
 [per-sample evidence](data/bidirectional-main-migration-rule-prefix.json)
-records each completed run and excludes the active sample.
+records each completed run and excludes both the timed-out and active samples.
 
-The active upload case had reached **run-964027** at that observation. Its
-configured 10,000 s budget is unchanged. An external observer now watches the
+The upload case ended at 18:23:56 UTC with TIMEOUT at **run-1275423**.
+Its configured 10,000 s budget was unchanged. Twelve further samples then
+completed. `fileToStringUnsafe` started at 18:23:57 UTC and remained active.
+An external observer watches the
 original process for memory warnings/OOM without changing JVM arguments or
 restarting it. Post-status captures are labelled as possibly after release.
 No OOM had been observed when the observer started.
@@ -721,6 +728,42 @@ exists. A future repair must distinguish a settled root report from a merely
 conditional NormalTarget, and preserve other unresolved sinks and source
 guards. The [complete case data](data/bidirectional-main-migration-upload-cycle.json)
 keeps these limits explicit.
+
+### A straight-line Target cycle
+
+The next slow sample has no CFG loop, collection or recursive call:
+
+```java
+void fileToStringUnsafe(String input) throws IOException {
+    File file = new File(BASE_DIR, input);
+    new FileInputStream(file.toString()).close();
+}
+```
+
+It produced one accepted finding in **run-1**. At 18:33 UTC, it had reached
+**run-129444**, completed **run-129443**, and retained the same report count.
+The source rule taints the request parameter. File models have both root-copy
+and named-storage routes. These routes are present in the selected models;
+the log alone does not identify the final uncertain witness.
+
+| Completed runs | Direction | Normalized handoff patterns | Outgoing Targets | Reports | Seeds | ZERO-only actor edge deltas |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| run-3 / run-5 / run-7 | Forward | 1 | 1 | 1 | 3 | 38 |
+| run-2 / run-4 / run-6 | Backward | 2 | 1 | 1 | 18 | 101 |
+
+There are no block outputs. `HandOff.projectTargets` inserts at least one
+Target-entry control for a nonempty outgoing Target. Ordinary DATA entries
+have a different type. Thus a total of one normalized insertion proves that
+these forward handoffs have **one Target control and zero DATA pairs**.
+This argument does not classify the second backward row. It also does not
+prove full native state equality across runs.
+
+This case rules out loop path enumeration as a necessary cause of continued
+refinement. Faster loop lookup cannot remove this work. The anonymous Target
+can keep the driver active after a root NORMAL report exists. A repair needs
+a proved obligation-lifetime policy; do not stop on matching counts alone.
+The [bounded log and source data](data/bidirectional-main-migration-file-tostring-cycle.json)
+include the first eight runs, later markers and the partition argument.
 
 ### Native bridge for the next C2 proposal
 

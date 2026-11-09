@@ -317,6 +317,16 @@ the full cycle. A small native reproduction and dependency/progress model
 are required before selecting that candidate. Do not stop on equal counts,
 report stability, the expected test result or an arbitrary iteration limit.
 
+The later rule sample `fileToStringUnsafe` shows this problem without a loop:
+`new File(BASE_DIR, input)` then `new FileInputStream(file.toString())`.
+It reports in run-1 but was still active at **run-129444**. Forward runs
+3/5/7 each have exactly one normalized Target control and no DATA pairs;
+backward runs 2/4/6 have two patterns and one outgoing Target. The singleton
+partition follows from the typed handoff builder, not equality between two
+unrelated counters. Exact witness/state equality is not yet proved. This
+straight-line case must be a regression case for the future lifetime design.
+It shows why loop-probe work reduction alone cannot establish convergence.
+
 ## Correctness work before acceptance
 
 These are separate semantic/reporting decisions. They are not hidden inside

@@ -1,0 +1,606 @@
+{
+  "schema": "opentaint.rule-straight-line-cycle.log.v1",
+  "created_utc": "2026-11-09T18:33:16.670457+00:00",
+  "runtime_revision": "9b21b3716404b490d522bd65d7df916a8069dfe6",
+  "process_pid": 2037901,
+  "sample": "security.passthrough.PassthroughFileModelSamples#fileToStringUnsafe",
+  "rule": "java/security/path-traversal.yaml:path-traversal",
+  "start_log_line": "18:23:57.063 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.passthrough.PassthroughFileModelSamples#fileToStringUnsafe rule=java/security/path-traversal.yaml:path-traversal",
+  "default_sample_timeout_seconds": 10000,
+  "source_modified": false,
+  "configuration_changed": false,
+  "source_file": "rules/test/src/main/java/security/passthrough/PassthroughFileModelSamples.java",
+  "source_lines": {
+    "124": "    /** File#toString() is the accessor most call sites use implicitly. */",
+    "125": "    @GetMapping(\"/to-string/unsafe\")",
+    "126": "    public void fileToStringUnsafe(@RequestParam String input) throws IOException {",
+    "127": "        File file = new File(BASE_DIR, input);",
+    "128": "        new FileInputStream(file.toString()).close();",
+    "129": "    }"
+  },
+  "log": "/drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/analyzer.log",
+  "snapshot_log_bytes": 2019971547,
+  "start_byte_offset": 1866573251,
+  "first_eight_run_log_lines": [
+    "18:23:57.100 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=2h 46m 39.964140899s markMode=FULL",
+    "18:23:57.107 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=6.357315ms",
+    "18:23:57.107 |I| FrontierKt$frontierLogger$1 - Run 1 (FORWARD) frontier: analysed 0, demand edges 1 in 1 method keys, left 0, record crossings 0, target demand 1, reports 1, seeds 3, zero only 1 (44 edges)",
+    "18:23:57.107 |I| IterationDriver - BIDI_TARGET_STATISTICS run=1 raw=2 outgoing=1 reports=1 blockRaw=0 blockOutgoing=0",
+    "18:23:57.107 |I| IterationDriver - BIDI_RUN_START run=2 direction=BACKWARD limit=1 timeout=2h 46m 39.957601792s markMode=FULL",
+    "18:23:57.110 |I| IterationDriver - BIDI_RUN_END run=2 status=COMPLETE engineTime=3.627712ms",
+    "18:23:57.111 |I| FrontierKt$frontierLogger$1 - Run 2 (BACKWARD) frontier: analysed 0, demand edges 2 in 1 method keys, left 0, record crossings 0, target demand 1, reports 1, seeds 18, zero only 1 (101 edges)",
+    "18:23:57.111 |I| IterationDriver - BIDI_TARGET_STATISTICS run=2 raw=1 outgoing=1 reports=1 blockRaw=0 blockOutgoing=0",
+    "18:23:57.111 |I| IterationDriver - BIDI_RUN_START run=3 direction=FORWARD limit=2 timeout=2h 46m 39.953847371s markMode=FULL",
+    "18:23:57.112 |I| IterationDriver - BIDI_RUN_END run=3 status=COMPLETE engineTime=1.705578ms",
+    "18:23:57.112 |I| FrontierKt$frontierLogger$1 - Run 3 (FORWARD) frontier: analysed 0, demand edges 1 in 1 method keys, left 0, record crossings 0, target demand 1, reports 1, seeds 3, zero only 1 (38 edges)",
+    "18:23:57.112 |I| IterationDriver - BIDI_TARGET_STATISTICS run=3 raw=1 outgoing=1 reports=1 blockRaw=0 blockOutgoing=0",
+    "18:23:57.112 |I| IterationDriver - BIDI_RUN_START run=4 direction=BACKWARD limit=3 timeout=2h 46m 39.952048820s markMode=FULL",
+    "18:23:57.115 |I| IterationDriver - BIDI_RUN_END run=4 status=COMPLETE engineTime=2.655598ms",
+    "18:23:57.115 |I| FrontierKt$frontierLogger$1 - Run 4 (BACKWARD) frontier: analysed 0, demand edges 2 in 1 method keys, left 0, record crossings 0, target demand 1, reports 1, seeds 18, zero only 1 (101 edges)",
+    "18:23:57.115 |I| IterationDriver - BIDI_TARGET_STATISTICS run=4 raw=1 outgoing=1 reports=1 blockRaw=0 blockOutgoing=0",
+    "18:23:57.115 |I| IterationDriver - BIDI_RUN_START run=5 direction=FORWARD limit=4 timeout=2h 46m 39.949254058s markMode=FULL",
+    "18:23:57.117 |I| IterationDriver - BIDI_RUN_END run=5 status=COMPLETE engineTime=1.338044ms",
+    "18:23:57.117 |I| FrontierKt$frontierLogger$1 - Run 5 (FORWARD) frontier: analysed 0, demand edges 1 in 1 method keys, left 0, record crossings 0, target demand 1, reports 1, seeds 3, zero only 1 (38 edges)",
+    "18:23:57.117 |I| IterationDriver - BIDI_TARGET_STATISTICS run=5 raw=1 outgoing=1 reports=1 blockRaw=0 blockOutgoing=0",
+    "18:23:57.117 |I| IterationDriver - BIDI_RUN_START run=6 direction=BACKWARD limit=5 timeout=2h 46m 39.947803818s markMode=FULL",
+    "18:23:57.119 |I| IterationDriver - BIDI_RUN_END run=6 status=COMPLETE engineTime=2.628203ms",
+    "18:23:57.119 |I| FrontierKt$frontierLogger$1 - Run 6 (BACKWARD) frontier: analysed 0, demand edges 2 in 1 method keys, left 0, record crossings 0, target demand 1, reports 1, seeds 18, zero only 1 (101 edges)",
+    "18:23:57.119 |I| IterationDriver - BIDI_TARGET_STATISTICS run=6 raw=1 outgoing=1 reports=1 blockRaw=0 blockOutgoing=0",
+    "18:23:57.119 |I| IterationDriver - BIDI_RUN_START run=7 direction=FORWARD limit=6 timeout=2h 46m 39.945072051s markMode=FULL",
+    "18:23:57.121 |I| IterationDriver - BIDI_RUN_END run=7 status=COMPLETE engineTime=1.319477ms",
+    "18:23:57.121 |I| FrontierKt$frontierLogger$1 - Run 7 (FORWARD) frontier: analysed 0, demand edges 1 in 1 method keys, left 0, record crossings 0, target demand 1, reports 1, seeds 3, zero only 1 (38 edges)",
+    "18:23:57.121 |I| IterationDriver - BIDI_TARGET_STATISTICS run=7 raw=1 outgoing=1 reports=1 blockRaw=0 blockOutgoing=0",
+    "18:23:57.121 |I| IterationDriver - BIDI_RUN_START run=8 direction=BACKWARD limit=7 timeout=2h 46m 39.943671548s markMode=FULL",
+    "18:23:57.123 |I| IterationDriver - BIDI_RUN_END run=8 status=COMPLETE engineTime=2.409239ms",
+    "18:23:57.123 |I| FrontierKt$frontierLogger$1 - Run 8 (BACKWARD) frontier: analysed 0, demand edges 2 in 1 method keys, left 0, record crossings 0, target demand 1, reports 1, seeds 18, zero only 1 (101 edges)",
+    "18:23:57.123 |I| IterationDriver - BIDI_TARGET_STATISTICS run=8 raw=1 outgoing=1 reports=1 blockRaw=0 blockOutgoing=0"
+  ],
+  "latest_bounded_log_lines": [
+    "18:33:16.667 |I| IterationDriver - BIDI_RUN_START run=129444 direction=BACKWARD limit=129443 timeout=2h 37m 20.397703501s markMode=FULL",
+    "18:33:16.667 |I| IterationDriver - BIDI_RUN_END run=129443 status=COMPLETE engineTime=936.108us",
+    "18:33:16.667 |I| IterationDriver - BIDI_TARGET_STATISTICS run=129443 raw=1 outgoing=1 reports=1 blockRaw=0 blockOutgoing=0",
+    "18:33:16.667 |I| FrontierKt$frontierLogger$1 - Run 129443 (FORWARD) frontier: analysed 0, demand edges 1 in 1 method keys, left 0, record crossings 0, target demand 1, reports 1, seeds 3, zero only 1 (38 edges)"
+  ],
+  "limits": [
+    "Still running. No final sample status or test JSON.",
+    "No complete native two-run state equality proof.",
+    "Counts do not identify the exact backward DATA/control row."
+  ],
+  "forward_singleton_partition_source_proof": {
+    "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/HandOff.kt",
+    "argument": [
+      "No block outgoing Targets or block rows in these printed runs.",
+      "outgoingTargets contains DemandTarget rows; every premise has at least one member.",
+      "projectTargets adds a Target-entry paired demand for every member.",
+      "Target-entry controls and ordinary DATA-entry pairs have disjoint typed entries.",
+      "A positive outgoing Target guarantees at least one normalized Target control. Total handoff insertions equal one, so there are no normalized DATA pairs."
+    ],
+    "scope": "Forward runs whose total handoff count is one and outgoing Target count is positive; observed run-1/3/5/7 and late File runs only."
+  },
+  "source_audit": {
+    "sample": "security.passthrough.PassthroughFileModelSamples#fileToStringUnsafe",
+    "selectedRule": "java/security/path-traversal.yaml#path-traversal",
+    "sourceStartUTC": "2026-11-09T18:23:57Z",
+    "observationUTC": "2026-11-09T18:29:12Z",
+    "process": 2037901,
+    "latestReachedAtObservation": "run-75319",
+    "latestCompletedAtObservation": "run-75318",
+    "acceptedForwardAtObservation": "run-75317",
+    "finalResult": "UNAVAILABLE_STILL_RUNNING",
+    "source": "rules/test/src/main/java/security/passthrough/PassthroughFileModelSamples.java",
+    "sourceSHA256": "d4dc276eaebf8977d2ff661c2e7ddb4f1ef7b52ea75e6d45663bb2d51f06b101",
+    "recentFrontiers": [
+      {
+        "run": 75313,
+        "direction": "FORWARD",
+        "analysed": 0,
+        "normalizedDemandInsertions": 1,
+        "ownerKeys": 1,
+        "left": 0,
+        "recordCrossings": 0,
+        "rawOutgoingTargets": 1,
+        "acceptedReports": 1,
+        "outgoingSeeds": 3,
+        "zeroOnlyActors": 1,
+        "zeroOnlyEdgeDeltas": 38,
+        "line": "18:29:12.320 |I| FrontierKt$frontierLogger$1 - Run 75313 (FORWARD) frontier: analysed 0, demand edges 1 in 1 method keys, left 0, record crossings 0, target demand 1, reports 1, seeds 3, zero only 1 (38 edges)"
+      },
+      {
+        "run": 75314,
+        "direction": "BACKWARD",
+        "analysed": 0,
+        "normalizedDemandInsertions": 2,
+        "ownerKeys": 1,
+        "left": 0,
+        "recordCrossings": 0,
+        "rawOutgoingTargets": 1,
+        "acceptedReports": 1,
+        "outgoingSeeds": 18,
+        "zeroOnlyActors": 1,
+        "zeroOnlyEdgeDeltas": 101,
+        "line": "18:29:12.323 |I| FrontierKt$frontierLogger$1 - Run 75314 (BACKWARD) frontier: analysed 0, demand edges 2 in 1 method keys, left 0, record crossings 0, target demand 1, reports 1, seeds 18, zero only 1 (101 edges)"
+      },
+      {
+        "run": 75315,
+        "direction": "FORWARD",
+        "analysed": 0,
+        "normalizedDemandInsertions": 1,
+        "ownerKeys": 1,
+        "left": 0,
+        "recordCrossings": 0,
+        "rawOutgoingTargets": 1,
+        "acceptedReports": 1,
+        "outgoingSeeds": 3,
+        "zeroOnlyActors": 1,
+        "zeroOnlyEdgeDeltas": 38,
+        "line": "18:29:12.325 |I| FrontierKt$frontierLogger$1 - Run 75315 (FORWARD) frontier: analysed 0, demand edges 1 in 1 method keys, left 0, record crossings 0, target demand 1, reports 1, seeds 3, zero only 1 (38 edges)"
+      },
+      {
+        "run": 75316,
+        "direction": "BACKWARD",
+        "analysed": 0,
+        "normalizedDemandInsertions": 2,
+        "ownerKeys": 1,
+        "left": 0,
+        "recordCrossings": 0,
+        "rawOutgoingTargets": 1,
+        "acceptedReports": 1,
+        "outgoingSeeds": 18,
+        "zeroOnlyActors": 1,
+        "zeroOnlyEdgeDeltas": 101,
+        "line": "18:29:12.327 |I| FrontierKt$frontierLogger$1 - Run 75316 (BACKWARD) frontier: analysed 0, demand edges 2 in 1 method keys, left 0, record crossings 0, target demand 1, reports 1, seeds 18, zero only 1 (101 edges)"
+      },
+      {
+        "run": 75317,
+        "direction": "FORWARD",
+        "analysed": 0,
+        "normalizedDemandInsertions": 1,
+        "ownerKeys": 1,
+        "left": 0,
+        "recordCrossings": 0,
+        "rawOutgoingTargets": 1,
+        "acceptedReports": 1,
+        "outgoingSeeds": 3,
+        "zeroOnlyActors": 1,
+        "zeroOnlyEdgeDeltas": 38,
+        "line": "18:29:12.328 |I| FrontierKt$frontierLogger$1 - Run 75317 (FORWARD) frontier: analysed 0, demand edges 1 in 1 method keys, left 0, record crossings 0, target demand 1, reports 1, seeds 3, zero only 1 (38 edges)"
+      },
+      {
+        "run": 75318,
+        "direction": "BACKWARD",
+        "analysed": 0,
+        "normalizedDemandInsertions": 2,
+        "ownerKeys": 1,
+        "left": 0,
+        "recordCrossings": 0,
+        "rawOutgoingTargets": 1,
+        "acceptedReports": 1,
+        "outgoingSeeds": 18,
+        "zeroOnlyActors": 1,
+        "zeroOnlyEdgeDeltas": 101,
+        "line": "18:29:12.330 |I| FrontierKt$frontierLogger$1 - Run 75318 (BACKWARD) frontier: analysed 0, demand edges 2 in 1 method keys, left 0, record crossings 0, target demand 1, reports 1, seeds 18, zero only 1 (101 edges)"
+      }
+    ],
+    "lastMarkers": {
+      "BIDI_RUN_START": "18:29:12.330 |I| IterationDriver - BIDI_RUN_START run=75319 direction=FORWARD limit=75318 timeout=2h 41m 24.734847342s markMode=FULL",
+      "BIDI_RUN_END": "18:29:12.330 |I| IterationDriver - BIDI_RUN_END run=75318 status=COMPLETE engineTime=1.881246ms",
+      "BIDI_BARRIER_END": "18:29:12.330 |I| IterationDriver - BIDI_BARRIER_END run=75318 barrierTime=59.054us iterationTime=1.946213ms"
+    },
+    "models": [
+      {
+        "ordinal": 8,
+        "rule": {
+          "function": "java.io.File#<init>",
+          "signature": "(java.lang.String, java.io.File) void",
+          "copy": [
+            {
+              "from": "arg(1)",
+              "to": "this"
+            },
+            {
+              "from": "arg(0)",
+              "to": [
+                "this",
+                ".java.io.File#path#java.lang.Object"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "ordinal": 11,
+        "rule": {
+          "function": "java.io.File#toString",
+          "signature": "() java.lang.String",
+          "taintCopyOnly": true,
+          "copy": [
+            {
+              "from": "this",
+              "to": "result"
+            }
+          ]
+        }
+      },
+      {
+        "ordinal": 15,
+        "rule": {
+          "function": "java.io.File#<init>",
+          "signature": "(java.lang.String, java.lang.String) void",
+          "taintCopyOnly": true,
+          "copy": [
+            {
+              "from": "arg(1)",
+              "to": "this"
+            },
+            {
+              "from": "arg(0)",
+              "to": "this"
+            }
+          ]
+        }
+      },
+      {
+        "ordinal": 24,
+        "rule": {
+          "function": "java.io.File#<init>",
+          "signature": "(java.io.File, java.lang.String) void",
+          "taintCopyOnly": true,
+          "copy": [
+            {
+              "from": "arg(1)",
+              "to": "this"
+            }
+          ]
+        }
+      },
+      {
+        "ordinal": 25,
+        "rule": {
+          "function": "java.io.File#<init>",
+          "signature": {
+            "params": [
+              {
+                "index": 1,
+                "type": "java.lang.String"
+              }
+            ]
+          },
+          "copy": [
+            {
+              "from": "arg(1)",
+              "to": [
+                "this",
+                ".java.io.File#path#java.lang.String"
+              ]
+            },
+            {
+              "from": "arg(1)",
+              "to": [
+                "this",
+                ".java.io.File#uri#java.net.URI",
+                ".java.net.URI#value#java.lang.String"
+              ]
+            },
+            {
+              "from": "arg(1)",
+              "to": [
+                "this",
+                ".java.io.File#path#java.lang.String"
+              ]
+            },
+            {
+              "from": "arg(1)",
+              "to": [
+                "this",
+                ".java.io.File#uri#java.net.URI",
+                ".java.net.URI#value#java.lang.String"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "ordinal": 37,
+        "rule": {
+          "function": "java.io.File#<init>",
+          "signature": "(java.lang.String, java.lang.String) void",
+          "copy": [
+            {
+              "from": "arg(0)",
+              "to": [
+                "this",
+                ".java.io.File#path#java.lang.Object"
+              ]
+            },
+            {
+              "from": "arg(1)",
+              "to": [
+                "this",
+                ".java.io.File#path#java.lang.Object"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "ordinal": 39,
+        "rule": {
+          "function": "java.io.File#<init>",
+          "signature": "(java.io.File, java.lang.String) void",
+          "copy": [
+            {
+              "from": "arg(1)",
+              "to": [
+                "this",
+                ".java.io.File#path#java.lang.Object"
+              ]
+            },
+            {
+              "from": "arg(0)",
+              "to": "this"
+            }
+          ]
+        }
+      },
+      {
+        "ordinal": 46,
+        "rule": {
+          "function": "java.io.File#<init>",
+          "signature": "(java.net.URI) void",
+          "copy": [
+            {
+              "from": [
+                "arg(0)",
+                ".java.net.URI#path#java.lang.String"
+              ],
+              "to": [
+                "this",
+                ".java.io.File#path#java.lang.Object"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "ordinal": 49,
+        "rule": {
+          "function": "java.io.File#<init>",
+          "signature": {
+            "params": [
+              {
+                "index": 0,
+                "type": "java.lang.String"
+              }
+            ]
+          },
+          "copy": [
+            {
+              "from": "arg(0)",
+              "to": [
+                "this",
+                ".java.io.File#path#java.lang.String"
+              ]
+            },
+            {
+              "from": "arg(0)",
+              "to": [
+                "this",
+                ".java.io.File#uri#java.net.URI",
+                ".java.net.URI#value#java.lang.String"
+              ]
+            },
+            {
+              "from": "arg(0)",
+              "to": [
+                "this",
+                ".java.io.File#path#java.lang.String"
+              ]
+            },
+            {
+              "from": "arg(0)",
+              "to": [
+                "this",
+                ".java.io.File#uri#java.net.URI",
+                ".java.net.URI#value#java.lang.String"
+              ]
+            },
+            {
+              "from": "arg(0)",
+              "to": [
+                "this",
+                ".java.io.File#path#java.lang.String"
+              ]
+            },
+            {
+              "from": "arg(0)",
+              "to": [
+                "this",
+                ".java.io.File#uri#java.net.URI",
+                ".java.net.URI#value#java.lang.String"
+              ]
+            },
+            {
+              "from": "arg(0)",
+              "to": [
+                "this",
+                ".java.io.File#path#java.lang.String"
+              ]
+            },
+            {
+              "from": "arg(0)",
+              "to": [
+                "this",
+                ".java.io.File#uri#java.net.URI",
+                ".java.net.URI#value#java.lang.String"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "ordinal": 50,
+        "rule": {
+          "function": "java.io.File#toString",
+          "signature": {
+            "return": "java.lang.String"
+          },
+          "copy": [
+            {
+              "from": [
+                "this",
+                ".java.io.File#path#java.lang.String"
+              ],
+              "to": "result"
+            },
+            {
+              "from": [
+                "this",
+                ".java.io.File#uri#java.net.URI",
+                ".java.net.URI#value#java.lang.String"
+              ],
+              "to": "result"
+            }
+          ]
+        }
+      },
+      {
+        "ordinal": 59,
+        "rule": {
+          "function": "java.io.File#<init>",
+          "signature": "(java.lang.String, java.io.File) void",
+          "taintCopyOnly": true,
+          "copy": [
+            {
+              "from": "arg(0)",
+              "to": "this"
+            }
+          ]
+        }
+      },
+      {
+        "ordinal": 60,
+        "rule": {
+          "function": "java.io.File#toString",
+          "signature": "() java.lang.String",
+          "copy": [
+            {
+              "from": [
+                "this",
+                ".java.io.File#path#java.lang.Object"
+              ],
+              "to": "result"
+            }
+          ]
+        }
+      },
+      {
+        "ordinal": 65,
+        "rule": {
+          "function": "java.io.File#<init>",
+          "signature": "(java.lang.String) void",
+          "copy": [
+            {
+              "from": "arg(0)",
+              "to": [
+                "this",
+                ".java.io.File#path#java.lang.Object"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "ordinal": 67,
+        "rule": {
+          "function": "java.io.File#<init>",
+          "signature": "(java.lang.String, int) void",
+          "taintCopyOnly": true,
+          "copy": [
+            {
+              "from": "arg(0)",
+              "to": "this"
+            }
+          ]
+        }
+      },
+      {
+        "ordinal": 74,
+        "rule": {
+          "function": "java.io.File#<init>",
+          "signature": "(java.lang.String, int) void",
+          "copy": [
+            {
+              "from": "arg(1)",
+              "to": "this"
+            },
+            {
+              "from": "arg(0)",
+              "to": [
+                "this",
+                ".java.io.File#path#java.lang.Object"
+              ]
+            },
+            {
+              "from": "arg(1)",
+              "to": [
+                "this",
+                ".java.io.File#path#java.lang.Object"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "ordinal": 78,
+        "rule": {
+          "function": "java.io.File#<init>",
+          "signature": "(java.lang.String) void",
+          "taintCopyOnly": true,
+          "copy": [
+            {
+              "from": "arg(0)",
+              "to": "this"
+            }
+          ]
+        }
+      }
+    ],
+    "sourcePaths": {
+      "path:String": "java.io.File#path#java.lang.String",
+      "path:Object": "java.io.File#path#java.lang.Object",
+      "uriValue": "java.io.File#uri#java.net.URI / java.net.URI#value#java.lang.String"
+    },
+    "interpretation": [
+      "Straight-line source; no loop or recursive helper. A loop-MUST admission explanation cannot be inferred from the Upload case.",
+      "Recent forward/backward engines have38/101 zero-only edge deltas,1/2normalized handoff insertions,one raw outgoing Target andone accepted report. Both showzero record crossings. These are bounded per-run work with many iterations.",
+      "The singleton forward total and typedTargetprojection prove exactlyoneTargetcontrol andzeroAPDATApairs; backwardrow2andTargetexit/witnessremainunclassified. Noheapwastaken.",
+      "Current File models have broad dependency root copies plus structured path/URI copies. Symmetric CopyAllMarks alias extraction provides a path-cycle mechanism, but the live log does not prove it caused the continuation.",
+      "A plausible demand lifetime is a fresh DEMAND sink witness producing anonymous DemandTarget after a NORMAL witness has already yielded a persisted report. Persisted NormalTarget suppression does not by itself suppress anonymous Target. Exact File operands need a later selected observation.",
+      "Do not merge path:String andpath:Object. They are distinct native accessors. Do not remove synthetic paths as invalid physical fields."
+    ],
+    "scope": "Read-only source/model and80KB existing live-log tail. No scan,heap,process change,timeout change or core edit.",
+    "forwardPartitionProof": {
+      "applicableFirstRuns": [
+        3,
+        5,
+        7
+      ],
+      "applicableRecentRuns": [
+        75313,
+        75315,
+        75317
+      ],
+      "normalizedTargetControls": 1,
+      "normalizedPairedAPDataRows": 0,
+      "otherNormalizedControls": 0,
+      "assumptions": [
+        "No blockoutputs in source/observed run",
+        "outgoingTargets stores onlyDemandTarget",
+        "PremiseKey hasnonempty members",
+        "projectTargets typedTargetentry cannotcollidewithAPDemandPattern",
+        "complete normalizedcount1"
+      ],
+      "limits": "DoesnotdecodeTargetexit/premise,identifyeachwitnessorprovefullcross-runsemanticstateequality. Backwardtotal2remainsunclassified."
+    }
+  }
+}
