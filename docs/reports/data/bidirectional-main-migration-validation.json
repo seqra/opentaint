@@ -1,6 +1,6 @@
 {
   "status": "implementation and measured project investigation complete; acceptance FAILED/PENDING; full rule suite still running",
-  "updated_utc": "2026-11-09T16:53:41.518151+00:00",
+  "updated_utc": "2026-11-09T17:42:12.425456+00:00",
   "source": {
     "selected_before_migration": "13357151d14400fcabab2a24389326fc861ade8a",
     "main": "54ad708fe1c4f551956d3d572866de1534415fa1",
@@ -20199,7 +20199,20 @@
       "workflowGatePassed": false,
       "accepted": false
     },
-    "progress_observation_limits": "The last sample is alive. Missing end-marker INTERRUPTED is not a terminal failure. Final result and Gradle gate unavailable."
+    "progress_observation_limits": "The last sample is alive. Missing end-marker INTERRUPTED is not a terminal failure. Final result and Gradle gate unavailable.",
+    "provisional_prefix_data": "bidirectional-main-migration-rule-prefix.json",
+    "upload_cycle_data": "bidirectional-main-migration-upload-cycle.json",
+    "memory_observer": {
+      "pid": 2081436,
+      "original_java_pid": 2037901,
+      "source_or_jvm_arguments_changed": false,
+      "output": "/drive-testcomp/opentaint-go-rules/main-migration-20261109/rules",
+      "race_limit": "Post-status OOM dumps can be after state release."
+    },
+    "fixture_eligibility_data": "bidirectional-main-migration-java-fixtures.json",
+    "expected_java_analyses": 585,
+    "expected_java_disabled": 22,
+    "unresolved_java_fixture_declarations": 2
   },
   "performance_report_complete": true,
   "next_iteration_proposal": "docs/design/bidirectional-main-migration-next-iteration-20261109.md",
@@ -21663,5 +21676,6 @@
     }
   },
   "baseline_oom_data": "bidirectional-main-migration-baseline-oom.json",
-  "next_candidate_proof_data": "spec/lean/proposals/main-migration-work-reduction-20261109"
+  "next_candidate_proof_data": "spec/lean/proposals/main-migration-work-reduction-20261109",
+  "native_c2_operator_probe_data": "bidirectional-main-migration-native-c2-probe.json"
 }

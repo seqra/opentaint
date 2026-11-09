@@ -621,3 +621,155 @@ separate reconstructed prefix example has four baseline C2 starts and 466
 candidate starts; one actual extra descriptor proves that budget cannot
 match. These are local work bounds, not measured speedups or a whole-program
 proof. No C2 optimization is implemented in the measured runtime.
+
+## Additional rule-suite evidence while the full gate runs
+
+At 17:38 UTC, the original rule-suite JVM was still active. A bounded streaming
+audit covered 348 completed Java analyses: 194 declared positive and 154
+negative. Their final accepted report-identity counts all match the declared
+expectation. This is **provisional**, not the final `test-result.json`
+classification: trace conversion and final output still matter. The
+[per-sample evidence](data/bidirectional-main-migration-rule-prefix.json)
+records each completed run and excludes the active sample.
+
+The active upload case had reached **run-964027** at that observation. Its
+configured 10,000 s budget is unchanged. An external observer now watches the
+original process for memory warnings/OOM without changing JVM arguments or
+restarting it. Post-status captures are labelled as possibly after release.
+No OOM had been observed when the observer started.
+
+### A small control/Target refinement cycle
+
+The existing live-only upload heap identifies its actual run as **run-57799**
+forward, field limit 57,798. The receipt's pre-jcmd log was ten runs earlier;
+the frozen active RunManager is authoritative. Its incoming state has **zero
+paired DATA rows and 26 controls**, all paths of depth at most two. Those
+controls are 24 DATA-to-ZERO, one ZERO-to-ZERO and one Target-to-ZERO. There
+are no incoming seeds, including source permissions.
+
+```java
+void doPost(HttpServletRequest request, HttpServletResponse response) {
+    ServletFileUpload upload = new ServletFileUpload();
+    List<FileItem> files = upload.parseRequest(request); // source T2
+    for (FileItem file : files) {
+        File targetFile = new File("/var/www/uploads/" + file.getName());
+        streamFile(response, targetFile);
+    }
+}
+
+void streamFile(HttpServletResponse response, File file) {
+    try (FileInputStream fis = new FileInputStream(file)) { // report key 0
+        // Copy bytes to the response.
+    }
+}
+```
+
+The native IR maps local4 to the implicit iterator. Use `iterator` below only
+as that proved desugared variable. All following exclusions are empty.
+
+```text
+retained NORMAL prefix producer, doPost BL:
+  ZERO -> iterator.Element.[any-taint]/T2
+
+root repeat demand:
+  iterator.[any]/T2 -> ZERO
+
+production C2 family for that offered NORMAL producer fact:
+  iterator.Element.*/T2, DEMAND
+  iterator.Element.*/FLOW, NORMAL
+  iterator.$/FLOW, NORMAL
+
+same-path demand iterator.Element.[any]/T2 instead emits:
+  iterator.Element.[any-taint]/T2, NORMAL
+```
+
+This cell is executed by the current production emitter, not only inferred
+from its source. It shows how a known uniform fact can also create an
+uncertain initial under another demand. It does not prove that this exact
+packet arrived at the later sink in the sampled iteration.
+
+The retained records include NORMAL FLOW STAR and MUST identities and empty
+mark exclusions, so a missing FLOW provider or excluded T2 does not explain
+the continuation. The root already retains `ZERO -> NormalTarget(0)`. All
+19 saved NormalTarget memberships use ID 0. Source/IR inspection identifies
+the selected physical sink at `streamFile`, instruction5, line375.
+
+| Completed run | Direction | Normalized handoff patterns | Raw outgoing Targets | Reports | Seeds |
+| --- | --- | ---: | ---: | ---: | ---: |
+| run-57798 | Backward | 26 | 1 | 1 | 0 |
+| run-57799 | Forward | 27 | 27 | 1 | 3 |
+| run-57800 | Backward | 26 | 1 | 1 | 0 |
+| run-57801 | Forward | 27 | 27 | 1 | 3 |
+
+These are separate counters. Equal values in the forward rows do not prove a
+normalized DATA/control partition. The captured configuration is the only
+retained RunConfig; the next backward demand store is absent. The 27 outgoing
+Targets alone provide continued control guidance.
+
+`RunMethodLocalServices.witness` gives a NORMAL witness a stable report ID,
+but a DEMAND witness captures sink seeds and emits an anonymous DemandTarget.
+The existing persisted-NormalTarget suppression does not compare that anonymous
+Target with the already reported key. DATA/FLOW subsumption does not retract
+such a Target either. This is a concrete demand-lifetime issue to investigate;
+more field capacity cannot expose a missing depth-57,798 path here.
+
+The early snapshot has no current sink seeds or Targets yet. The three final
+seeds and 27 final Target rows are known from logs, not frozen native objects.
+Thus final anonymous provenance and a complete two-run fixed-point proof are
+still unproved. Do not suppress arbitrary DemandTargets because some report
+exists. A future repair must distinguish a settled root report from a merely
+conditional NormalTarget, and preserve other unresolved sinks and source
+guards. The [complete case data](data/bidirectional-main-migration-upload-cycle.json)
+keeps these limits explicit.
+
+### Native bridge for the next C2 proposal
+
+A small isolated JVM invoked production `RestrictedInitialPolicy.emitAdmissions`
+from the measured 92-entry runtime classpath. It made no analyzer/project run
+and changed no source. It confirms the three/one upload families above and
+the four/466 Conductor families, preserving captured field IDs and exclusions.
+The [native receipt](data/bidirectional-main-migration-native-c2-probe.json)
+records class hashes, exact origins and complete output. This strengthens the
+operator correspondence; it does not prove the whole optimized observer.
+
+## Acceptance audit at this checkpoint
+
+| Required part | Evidence | State |
+| --- | --- | --- |
+| Selected migration and inventory | Runtime commit, source comparison, file classifications | Implemented; no extra core algorithm applied |
+| Wrapper, explicit reach, fallback, cap controls | Native JVM/configuration/compiler results | Passing focused controls |
+| Spring and complete native quality | Eleven unchanged real finding expectations fail | **Failed; no waiver** |
+| Exact project locations and completion | Fixed-config receipts and comparisons | Recorded; no-FN/completion acceptance not established |
+| Full Java/Go rules | Original source Gradle driver is live | **Pending** |
+| Profiles and OOM root causes | Current and baseline decoded packets | Complete for measured project scans |
+| Next proposal | Ranked work reduction, explicit semantic gaps, local laws | Written; not selected or implemented |
+
+The successful build, component laws and provisional rule prefix do not close
+the failed or pending gates. The current iteration does not silently add a
+cleaner, Target, alias, admission or stopping-policy change to make them pass.
+
+### Exact declared Java coverage
+
+A classfile audit of the frozen source build covers all 609 Java declarations
+and all 326 compiled classes. It finds 585 analysis-eligible declarations,
+22 declarations in 11 explicitly disabled rules, and two unresolved fixtures.
+All use default mode; no Spring-app mode needs generated entrypoints here.
+
+The two unresolved declarations are RMI interfaces:
+
+- Positive `UnsafeDeserializationSamples.DangerousRemoteService#invoke`,
+  source line235.
+- Negative `UnsafeDeserializationSamples.SafeRemoteService#invokeById`,
+  source line252.
+
+Both methods exist, but their classes are abstract interfaces and their
+methods have no Code/LineNumberTable. `resolveMethods` rejects those classes
+before method selection. Both also have exact preamble `No sample found`
+markers. There are no other missing classes, missing methods, anonymous-class
+rejections or normalized-name collisions. This is a runner/fixture coverage
+gap, not an executed pass, disabled case or observed new-core false negative.
+The [fixture data](data/bidirectional-main-migration-java-fixtures.json)
+contains all declaration outcomes, class flags/hashes and method descriptors.
+The final result must still reconcile 585 executed analyses, 22 disabled
+records and these two explicit omissions; declaration counts alone do not
+prove execution.

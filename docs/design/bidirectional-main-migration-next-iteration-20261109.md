@@ -281,6 +281,42 @@ alias semantic change**, can affect field updates and findings, and requires
 explicit selection and per-model completeness proofs. No string-based path
 shortening or new alias filter is included in the four optimizations above.
 
+## Target/refinement lifetime is an acceptance blocker
+
+The current rule-suite upload sample has a retained root report but continues
+through hundreds of thousands of runs. Its run-57799 input contains no paired
+DATA rows, only 26 controls. Completed forward runs emit 27 raw Targets and
+27 normalized patterns; those counters are not a proven partition. Frozen
+paths are at most two accessors despite field limit57,798. The separate
+[rule-cycle evidence](../reports/data/bidirectional-main-migration-upload-cycle.json)
+contains the source and native operators.
+
+One retained NORMAL producer supplies `iterator.Element.MUST/T2`. The root
+ANY/T2 demand emits STAR/T2 DEMAND, while a same-path demand retains MUST/T2
+NORMAL. Production C2 confirms both. Preserve the selected STAR policy in this
+iteration; do not silently choose the previously rejected MUST-admission
+strategy. A new admission decision needs an explicit specification and proofs.
+
+A NORMAL sink witness has a stable report key. A DEMAND witness becomes an
+anonymous Target. Thus its later obligations cannot be matched directly to an
+already settled root report. More field depth does not remove this class of
+continuation. The four performance optimizations can reduce its per-run cost;
+they do not by themselves prove convergence.
+
+The next design should decide how an obligation becomes answered. A candidate
+is to retain or check its physical sink identity before anonymization, then
+stop refinement whose only observable goal is already settled. This is a
+**major refinement-policy change**, not a cache optimization. Do not use a
+conditional `P -> NormalTarget(id)` as a settled report; require an accepted
+entrypoint `ZERO -> NormalTarget(id)`. Prove preservation with multiple sinks,
+shared source guards, late inputs and later source permissions. Normalized
+DATA/control dependencies must remain live for other unresolved goals.
+
+The current early heap cannot identify each final anonymous witness or prove
+the full cycle. A small native reproduction and dependency/progress model
+are required before selecting that candidate. Do not stop on equal counts,
+report stability, the expected test result or an arbitrary iteration limit.
+
 ## Correctness work before acceptance
 
 These are separate semantic/reporting decisions. They are not hidden inside
