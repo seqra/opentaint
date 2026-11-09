@@ -27,6 +27,14 @@ The current native driver establishes the following correspondence:
 - nextConfig asks the policy for the next field limit. A cutoff at run-11 must
   return Next.End and must not construct run-12.
 
+The model decision describes the barrier body. The existing enclosing memory
+guard can throw from cleanup after report.commit. Preserve that contract: the
+outer driver reports an abnormal end while retaining already committed NORMAL
+entries. Reports.lean models snapshot replacement with an explicit committed
+flag; its uncommitted-barrier law does not cover a completed commit followed
+by cleanup failure. Its no-provisional-before-limit law still applies to the
+abnormal result. This clarification requires no native behavior change.
+
 Implementation mapping:
 
 1. HardRunLimitPolicy delegates fieldLimitSchedule, fieldLimit and timeout.

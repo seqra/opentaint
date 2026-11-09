@@ -6,5 +6,5 @@
 'Run11Reports.empty_latest_preserves_confirmed' depends on axioms: [propext, Quot.sound]
 'Run11Reports.completed_forward_replaces' does not depend on any axioms
 'Run11Reports.backward_keeps_latest' does not depend on any axioms
-'Run11Reports.failed_barrier_keeps_latest' does not depend on any axioms
+'Run11Reports.uncommitted_barrier_keeps_latest' does not depend on any axioms
 'Run11Reports.later_forward_discards_candidate_history' does not depend on any axioms

@@ -31,7 +31,7 @@ theorem backward_keeps_latest (committed : Bool) (previous fresh : List Nat) :
     nextLatest committed false previous fresh = previous := by
   cases committed <;> rfl
 
-theorem failed_barrier_keeps_latest (forward : Bool) (previous fresh : List Nat) :
+theorem uncommitted_barrier_keeps_latest (forward : Bool) (previous fresh : List Nat) :
     nextLatest false forward previous fresh = previous := rfl
 
 theorem later_forward_discards_candidate_history (older previous fresh : List Nat) :
@@ -84,5 +84,5 @@ end Run11Reports
 #print axioms Run11Reports.empty_latest_preserves_confirmed
 #print axioms Run11Reports.completed_forward_replaces
 #print axioms Run11Reports.backward_keeps_latest
-#print axioms Run11Reports.failed_barrier_keeps_latest
+#print axioms Run11Reports.uncommitted_barrier_keeps_latest
 #print axioms Run11Reports.later_forward_discards_candidate_history

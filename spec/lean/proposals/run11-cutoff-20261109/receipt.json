@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-09T19:21:45.812719+00:00",
+  "date": "2026-11-09T20:37:51.474248+00:00",
   "lean_version": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
   "cap_laws": 12,
   "report_laws": 10,
@@ -8,10 +8,11 @@
   "scope": "Finite cutoff decisions and report selection/snapshot laws; no proof of concrete path for provisional witnesses",
   "classical_choice": false,
   "sources": {
-    "source-proof.md": "9681cb88f4d7b19e8fd09dab1df22cec62cc04de41ceadf4c7137de8a1dbe3f8",
-    "Reports.lean": "ef189d28521f1244665ec069a37fe4a0f56b9d9962d7c85cf872bc76be57a307",
+    "source-proof.md": "f13235c166799a7611794bdb0e61983a8b742cf7121b2f2b3d10cf9c35d1b163",
+    "Reports.lean": "f122744edba9d6005b0c41549ed5f1549b33beb24bec0d1cbf297f08ed627aa5",
     "Cap.lean": "8eecc7836f41787d5799d18374444787abaf14e0c803a0a1301c7036971afd7b",
-    "README.md": "75223700c44916c6de12f127028f6cd5260fe4ba17c99494dc9f7de6e821941b",
-    "Reports.axioms.txt": "89cc528acaf37bd767b5fdf49e1085f7a790c5b0565eda59da5c2fed58e453cc"
-  }
+    "README.md": "726c5f3755a60c2094b18f96d98c98c4b6521e44b535cfc7aca411e0dd15d7fe",
+    "Reports.axioms.txt": "24b67b9fae041506f057b127435aea7c43e9a7208361272461bd937ea506c81c"
+  },
+  "clarification": "Snapshot committed flag is explicit. Post-commit guard cleanup can preserve NORMAL state with abnormal end; provisional entries remain hidden."
 }

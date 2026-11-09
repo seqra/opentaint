@@ -1,5 +1,11 @@
 # Next iteration after the main migration
 
+Historical record for the earlier uncapped runtime. Use the latest
+[run-11 validation report](../reports/bidirectional-run11-cutoff-validation-20261109.md)
+and [replacement next-iteration proposal](../design/bidirectional-run11-next-iteration-20261109.md).
+The newer measurements supersede this document for optimization selection.
+
+
 9 November 2026. Status: proposal, not selected for implementation. Runtime
 pin: `9b21b3716`; measured source HEAD: `03cf52fa9`. The
 [validation report](../reports/bidirectional-main-migration-validation.md)

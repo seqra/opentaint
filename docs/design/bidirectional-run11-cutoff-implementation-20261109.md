@@ -36,7 +36,9 @@ return next
 ```
 
 Run-12 is not constructed after a complete run-11 policy stop. A failed
-engine or barrier cannot commit its candidate snapshot. Keep explicit native
+engine or pre-commit barrier failure cannot commit its candidate snapshot.
+Existing guard cleanup can fail after commit; preserve its committed normal
+state and abnormal ending. Provisional entries remain hidden. Keep explicit native
 finite policies for tests. The legacy iteration-limit option stays separate.
 
 ## Observe witnesses; keep propagation unchanged

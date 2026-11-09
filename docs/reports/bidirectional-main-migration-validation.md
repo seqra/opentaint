@@ -6,8 +6,11 @@ decoding is complete. The unbounded rule campaign was superseded at 19:03 UTC
 by the selected default run-11 limit and provisional-report policy. Its final
 state is 360 complete Java samples, one timeout and one controlled stop; no
 final Java/Go JSON gate exists. Earlier live checkpoints below are historical.
-New validation must use the new committed runtime. This report keeps
-real finding failures visible and selects no unplanned core fix.
+The [final run-11 validation](bidirectional-run11-cutoff-validation-20261109.md)
+now records all fresh results at `14d7b6336`. Use that report and its
+[replacement proposal](../design/bidirectional-run11-next-iteration-20261109.md)
+for the next iteration. This historical report keeps real finding failures
+visible and selects no unplanned core fix.
 
 ## Source and scope
 

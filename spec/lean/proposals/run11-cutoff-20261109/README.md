@@ -19,8 +19,9 @@ control-flow laws; native tests connect them to the driver barrier.
 
 Reports.lean proves ten finite report/snapshot laws and has three executable
 examples. It proves confirmed retention/priority, latest-only provisional
-membership, forward replacement, backward retention and failed-barrier
-retention. It uses executable list operations, with no classical choice.
+membership, forward replacement, backward retention and uncommitted-barrier
+retention. Post-commit cleanup failures keep the existing native contract.
+It uses executable list operations, with no classical choice.
 Reports.axioms.txt records its standard Lean dependencies. These laws do not
 prove concrete reachability of a provisional local sink witness.
 

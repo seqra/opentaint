@@ -45,8 +45,10 @@ prescan, an unexecuted rule, a backward source permission, or a seed alone.
 Collect IDs per run owner and include nested block owners. Read this state
 only after all owners join. At a successful forward barrier, replace the
 latest reached-ID snapshot. Do not union it with earlier candidate snapshots.
-Backward barriers keep the latest forward snapshot unchanged. Failed barriers
-commit neither new normal reports nor a new candidate snapshot.
+Backward barriers keep the latest forward snapshot unchanged. A failure before
+the atomic commit keeps the previous snapshot. If existing guard cleanup fails
+after commit, keep the committed normal state, as before. An abnormal ending
+does not expose provisional entries in either case.
 
 Nested block states share the method owner's current-run reached-ID set. The
 joined method snapshot therefore includes them without a new Target delivery
@@ -111,7 +113,9 @@ latest-only provisional membership, confirmed priority, absence of provisional
 output before a limit stop, removal of discarded candidates and the empty
 candidate case. It uses executable finite lists, with no classical choice.
 The cap model must prove forward parity and the bounded next-run decision.
-These local proofs do not prove concrete reachability of provisional reports.
+These local proofs do not prove concrete reachability of provisional reports
+or equivalence to unlimited refinement. The selected report set is C plus L
+from this bounded execution.
 
 Source correspondence must show: capture follows complete witness validation;
 joined snapshots cover method and nested block owners; forward replacement is
