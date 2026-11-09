@@ -2,6 +2,7 @@ package org.opentaint.jvm.sast.dataflow
 
 import org.opentaint.dataflow.jvm.ap.ifds.taint.forBidirectionalCore
 import kotlinx.coroutines.runBlocking
+import mu.KotlinLogging
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
@@ -42,7 +43,17 @@ class JIRTaintAnalyzer(
     val analysisUnit: JIRUnitResolver = PackageUnitResolver(projectClasses),
     externalMethodTracker: ExternalMethodTracker? = null,
     val bidiPolicy: IterationPolicy? = null,
-): TaintAnalyzer<JIRMethod, JIRInst>(options, externalMethodTracker) {
+): TaintAnalyzer<JIRMethod, JIRInst>(
+    if (bidiPolicy == null) options else options.copy(iterationLimit = null), externalMethodTracker,
+) {
+    init {
+        if (bidiPolicy != null && options.iterationLimit != null) {
+            migrationLogger.warn {
+                "--iteration-limit is ignored by the bidirectional engine; " +
+                    "the bidirectional field-limit schedule is used"
+            }
+        }
+    }
     override fun analysisGraph(): ApplicationGraph<JIRMethod, JIRInst> {
         val usages = runBlocking { cp.usagesExt() }
         val mainGraph = JApplicationGraphImpl(cp, usages)
@@ -103,6 +114,8 @@ class JIRTaintAnalyzer(
     }
 
     companion object {
+        private val migrationLogger = KotlinLogging.logger(JIRTaintAnalyzer::class.java.name)
+
         class PackageUnitResolver(private val projectLocations: ClassLocationChecker) : JIRUnitResolver {
             override fun resolve(method: JIRMethod): UnitType {
                 if (!projectLocations.isProjectClass(method.enclosingClass) && !isApproximation(method) && method !is JIRLambdaMethod) {

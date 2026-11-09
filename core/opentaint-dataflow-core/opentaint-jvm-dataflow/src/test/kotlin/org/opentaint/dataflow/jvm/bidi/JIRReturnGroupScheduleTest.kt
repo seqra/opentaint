@@ -52,9 +52,9 @@ class JIRReturnGroupScheduleTest : BidiJIRTestUtils() {
         val target = method("target", owner)
         val rules = CallRules().apply {
             sources = List(2) { TaintMethodSource(target, mkTrue(),
-                listOf(AssignMark(RuleMark("T"), Result)), info()) }
+                listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result))), info()) }
             cleaners = listOf(TaintCleaner(target, mkTrue(),
-                listOf(RemoveMark(RuleMark("T"), Argument(0)), RemoveMark(RuleMark("U"), Argument(0))), null))
+                listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(Argument(0))), RemoveMark(RuleMark("U"), ActionPosition.Exact(Argument(0)))), null))
         }
         val (forms, at) = forms(rules)
         val expression = checkNotNull(at.callExpr)
@@ -89,8 +89,8 @@ class JIRReturnGroupScheduleTest : BidiJIRTestUtils() {
         val target = method("target", owner)
         val rules = CallRules().apply {
             sources = listOf(TaintMethodSource(target, mkTrue(), listOf(
-                AssignMark(RuleMark("T"), Result), AssignMark(RuleMark("T"), field),
-                AssignMark(RuleMark("T"), Result)), info()))
+                AssignMark(RuleMark("T"), ActionPosition.Exact(Result)), AssignMark(RuleMark("T"), ActionPosition.Exact(field)),
+                AssignMark(RuleMark("T"), ActionPosition.Exact(Result))), info()))
         }
         val (forms, at) = forms(rules)
         val expression = checkNotNull(at.callExpr)

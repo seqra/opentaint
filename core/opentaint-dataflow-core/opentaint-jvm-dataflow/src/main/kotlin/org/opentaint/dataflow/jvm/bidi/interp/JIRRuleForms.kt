@@ -44,11 +44,11 @@ import org.opentaint.dataflow.bidi.interp.fieldCleanStep
 import org.opentaint.dataflow.bidi.interp.keepEdge
 import org.opentaint.dataflow.bidi.interp.strongKeep
 import org.opentaint.dataflow.configuration.CommonCondition
-import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.configuration.isTrue
 import org.opentaint.dataflow.configuration.mkFalse
 import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.configuration.jvm.Action
+import org.opentaint.dataflow.configuration.jvm.ActionPosition
 import org.opentaint.dataflow.configuration.jvm.AssignMark
 import org.opentaint.dataflow.configuration.jvm.Condition
 import org.opentaint.dataflow.configuration.jvm.ContainsMark
@@ -112,25 +112,23 @@ internal class JIRRuleForms(
 
     fun pos(rule: Any, p: Position): RulePos? = pos(rule, p.resolveAp())
 
+    fun pos(rule: Any, p: ActionPosition): RulePos? = when (p) {
+        is ActionPosition.Exact -> pos(rule, p.position)
+        is ActionPosition.AnyAccessorAfter -> pos(rule, p.position)?.copy(any = true)
+    }
+
     fun pos(rule: Any, p: PositionAccess): RulePos? {
-        val accessors = p.accessors()
-        val anyCount = accessors.count { it == AnyAccessor }
-        if (anyCount > 1) {
-            errors.reject(rule, "two AnyField accessors in a position (§1.3)")
+        val path = p.accessors()
+        if (path.any { it == AnyAccessor }) {
+            errors.reject(rule, "ordinary JVM positions must contain only concrete accessors")
             return null
         }
-        if (anyCount == 1 && accessors.last() != AnyAccessor) {
-            errors.reject(rule, "an accessor after AnyField in a position (§1.3)")
-            return null
-        }
-        val any = anyCount == 1
-        val path = if (any) accessors.dropLast(1) else accessors
         val base = p.base().let { if (it == AccessPathBase.Return) resultBase else it }
         if (base == AccessPathBase.ClassStatic && path.size > 1 && path[1] !is FieldAccessor) {
             errors.reject(rule, "a static class accessor must be followed by a named field (F78 §1.1)")
             return null
         }
-        return RulePos(base, owned(path.map { manager.accessors.index(it) }), any)
+        return RulePos(base, owned(path.map { manager.accessors.index(it) }), any = false)
     }
 
     fun node(path: List<AccessorIdx>): PathNode? = manager.path(path)
@@ -352,11 +350,11 @@ internal class JIRRuleForms(
         return checkNotNull(done[condition])
     }
 
-    private fun fullPredicate(rule: Any, cond: ExprOrConstant, mayBeArray: (Int) -> Boolean = { false }): RulePredicate =
+    private fun fullPredicate(rule: Any, cond: ExprOrConstant): RulePredicate =
         JIRRulePredicates(manager, if (view == RuleView.FULL) statistics else null) {
             checkNotNull(literal(rule, it)) { "A rejected rule reaches predicate compilation" }
         }
-            .compile(normalizedSourceOrSink(cond), mayBeArray)
+            .compile(normalizedSourceOrSink(cond))
 
     private fun groupConditions(): GroupRuleConditions = (rules as? EffectiveBidiRulesProvider)?.groupConditions(manager.cancellation)
         ?: GroupRuleConditions(manager.marks, manager.cancellation)
@@ -366,8 +364,8 @@ internal class JIRRuleForms(
             statistics?.compiledPredicate(it.nodeCount, it.leaves.size)
         }
 
-    fun predicate(rule: Any, cond: ExprOrConstant, mayBeArray: (Int) -> Boolean = { false }): RulePredicate =
-        selectedPredicate(fullPredicate(rule, cond, mayBeArray))
+    fun predicate(rule: Any, cond: ExprOrConstant): RulePredicate =
+        selectedPredicate(fullPredicate(rule, cond))
 
     // Providers can return transient bound copies. Validate each input without retaining those rules.
     fun valid(rule: TaintConfigurationItem): Boolean = validate(rule)
@@ -375,7 +373,7 @@ internal class JIRRuleForms(
     private fun validate(rule: TaintConfigurationItem): Boolean {
         var ok = true
         fun reject(reason: String) { errors.reject(rule, reason); ok = false }
-        fun at(p: Position): RulePos? = pos(rule, p).also { if (it == null) ok = false }
+        fun at(p: ActionPosition): RulePos? = pos(rule, p).also { if (it == null) ok = false }
 
         // An ignored action still has a raw rule position, which must be checked before rewriting.
         val actions: List<Action> = when (rule) {
@@ -394,7 +392,10 @@ internal class JIRRuleForms(
 
         val literals = markLiterals(rule.rawCondition)
         // Read every raw literal, including negated and statically discarded alternatives.
-        val anyLiteral = literals.map { (p, onAny) -> at(p)?.any == true || onAny }.any { it }
+        val anyLiteral = literals.map { (p, onAny) ->
+            if (pos(rule, p) == null) ok = false
+            onAny
+        }.any { it }
         fun target(a: AssignMark, premises: Boolean) {
             val to = at(a.position) ?: return
             if (to.isClass && to.any) reject("[any-taint] target on a class position (§1.4)")
@@ -538,9 +539,8 @@ internal class JIRRuleForms(
         }
     }
 
-    fun sinks(rule: TaintConfigurationSink, cond: ExprOrConstant, id: RuleOccurrenceId,
-              mayBeArray: (Int) -> Boolean = { false }): List<SinkRule> {
-        val predicate = predicate(rule, cond, mayBeArray)
+    fun sinks(rule: TaintConfigurationSink, cond: ExprOrConstant, id: RuleOccurrenceId): List<SinkRule> {
+        val predicate = predicate(rule, cond)
         if (predicate.isFalse) return emptyList()
         return listOf(SinkRule(rule, 0, if (predicate.isTrue) listOf(ZERO_PATTERN) else predicate.leaves,
             endFacts(rule), id, predicate))
@@ -591,16 +591,9 @@ internal class JIRRuleForms(
         is RemoveMark -> {
             val p = checkNotNull(pos(rule, a.position)) { "a rejected rule reaches the forms (§1.3): $rule" }
             val t = mark(a.mark)
-            val reach = when {
-                p.any -> CleanReach.BELOW
-                a.reach == TaintCleanReach.Exact -> CleanReach.EXACT
-                else -> CleanReach.AT_AND_BELOW
-            }
-            val bytes = stringBytes(p, types)
-            listOfNotNull(Cleaner(p.base, node(p.path), reach, t),
-                bytes?.let { Cleaner(p.base, node(p.path + it), reach, t) }).mapIndexed { substep, cl ->
-                lowerCleaner(cl, types, actionId?.let { TemporaryKey(it, substep) })
-            }
+            val reach = if (p.any) CleanReach.BELOW else CleanReach.EXACT
+            listOf(lowerCleaner(Cleaner(p.base, node(p.path), reach, t), types,
+                actionId?.let(::TemporaryKey)))
         }
         is RemoveAllMarks -> {
             val p = checkNotNull(pos(rule, a.position)) { "a rejected rule reaches the forms (§1.3): $rule" }
@@ -629,12 +622,19 @@ internal class JIRRuleForms(
             temporaryKey = temporaryKey)
     }
 
-    private fun stringBytes(p: RulePos, types: PositionTypeResolver): AccessorIdx? {
-        if (p.any) return null
-        val rootType = types.resolve(PositionAccess.Simple(p.base)) as? JIRType
-        if (typeFilters.valueType(rootType, p.path)?.typeName != "java.lang.String") return null
-        return manager.accessors.index(FieldAccessor("java.lang.String", "<string-bytes>", "byte[]"))
+    /** Return rewriting resets a source's complete defined region. Configured cleaners
+     * still use exact or below-only reach. Both use the existing core primitive. */
+    fun definitionReset(rule: TaintConfigurationItem, position: ActionPosition, source: Boolean,
+                        resetMark: RuleMark, types: PositionTypeResolver, actionId: ActionId): CleanStep {
+        val p = checkNotNull(pos(rule, position)) { "a rejected definition reaches reset lowering: $rule" }
+        val reach = when {
+            !p.any -> CleanReach.EXACT
+            source -> CleanReach.AT_AND_BELOW
+            else -> CleanReach.BELOW
+        }
+        return lowerCleaner(Cleaner(p.base, node(p.path), reach, mark(resetMark)), types, TemporaryKey(actionId))
     }
+
 }
 
 private fun <T> owned(xs: List<T>): List<T> = Collections.unmodifiableList(ArrayList(xs))

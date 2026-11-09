@@ -1,7 +1,5 @@
 package org.opentaint.dataflow.jvm.bidi.interp
 
-import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.bidi.ap.ApManager
 import org.opentaint.dataflow.bidi.ap.ExclusionSet
 import org.opentaint.dataflow.bidi.ap.PathFact
@@ -12,11 +10,11 @@ import org.opentaint.dataflow.taint.RuleConditionRewriter.ExprOrConstant
 import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr
 import java.util.IdentityHashMap
 
-/** Bind positive NNF once. Array alternatives are local OR nodes, never a clause product. */
+/** Bind positive NNF once. Reach comes only from explicit rule positions. */
 internal class JIRRulePredicates(private val manager: ApManager,
                                  private val statistics: FormCacheStatistics? = null,
                                  private val literal: (TaintMarkAwareConditionExpr.Literal) -> PathFact) {
-    fun compile(condition: ExprOrConstant, mayBeArray: (Int) -> Boolean = { false }): RulePredicate {
+    fun compile(condition: ExprOrConstant): RulePredicate {
         val builder = RulePredicate.Builder(manager.cancellation, manager.marks)
         fun built(root: Int): RulePredicate = builder.build(root).also {
             statistics?.compiledPredicate(it.nodeCount, it.leaves.size)
@@ -44,13 +42,7 @@ internal class JIRRulePredicates(private val manager: ApManager,
                 is TaintMarkAwareConditionExpr.Literal -> {
                     check(!node.negated) { "Positive source/sink NNF expected" }
                     val fact = literal(node)
-                    val root = builder.leaf(Pattern(fact, ExclusionSet.Empty))
-                    val argument = fact.base as? AccessPathBase.Argument
-                    if (argument == null || !mayBeArray(argument.idx)) root else {
-                        val element = manager.accessors.index(ElementAccessor)
-                        val prefixed = builder.leaf(Pattern(fact.copy(path = listOf(element) + fact.path), ExclusionSet.Empty))
-                        builder.or(listOf(root, prefixed))
-                    }
+                    builder.leaf(Pattern(fact, ExclusionSet.Empty))
                 }
                 is TaintMarkAwareConditionExpr.And -> builder.and(children.map { checkNotNull(done[it]) })
                 is TaintMarkAwareConditionExpr.Or -> builder.or(children.map { checkNotNull(done[it]) })

@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.jvm.bidi.interp
 
+import org.opentaint.dataflow.configuration.jvm.ActionPosition
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
@@ -30,9 +32,6 @@ import org.opentaint.dataflow.bidi.interp.StageKind.*
 import org.opentaint.dataflow.bidi.interp.StatementSummary
 import org.opentaint.dataflow.bidi.interp.keepEdge
 import org.opentaint.dataflow.bidi.interp.starEdge
-import org.opentaint.dataflow.configuration.TaintCleanReach
-import org.opentaint.dataflow.configuration.jvm.Position
-import org.opentaint.dataflow.configuration.jvm.PositionWithAccess
 import org.opentaint.dataflow.configuration.jvm.RemoveMark
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
 import org.opentaint.dataflow.configuration.jvm.TaintMark as RuleMark
@@ -139,12 +138,11 @@ internal class HistoricalJIRCallPlanBuilder(
     }
 
     private fun sinks(): List<org.opentaint.dataflow.bidi.interp.SinkRule> {
-        val mayBeArray = { i: Int -> checker.callArgumentMayBeArray(call, AccessPathBase.Argument(i)) }
         return forms.rules.sinkRulesForMethod(callee, s, fact = null).withIndex()
             .flatMap { (ordinal, rule) ->
                 if (!forms.valid(rule)) emptyList() else forms.sinks(rule,
                     forms.rewriteSourceOrSink(rule, rewriter, potentialMarkLiteral = metadataSinkLiteral),
-                    occurrence(RuleKind.CALL_SINK, ordinal), mayBeArray)
+                    occurrence(RuleKind.CALL_SINK, ordinal))
             }
     }
 
@@ -234,14 +232,10 @@ internal class HistoricalJIRCallPlanBuilder(
     private fun rewriterSteps(): List<CleanStep> {
         val out = ArrayList<CleanStep>()
         fun add(rule: TaintConfigurationItem, id: RuleOccurrenceId,
-                positions: List<Pair<Int, Position>>, source: Boolean) {
+                positions: List<Pair<Int, ActionPosition>>, source: Boolean) {
             val info = rule.info as? UserDefinedRuleInfo ?: return
             for ((actionOrdinal, p) in positions) for ((markOrdinal, m) in info.relevantTaintMarks.withIndex()) {
-                val anyTarget = source && forms.pos(rule, p)?.any == true
-                val action = if (anyTarget)
-                    RemoveMark(RuleMark(m), (p as PositionWithAccess).base, TaintCleanReach.ExactAndAnyField)
-                else RemoveMark(RuleMark(m), p, TaintCleanReach.Exact)
-                out += forms.unconditional(rule, action, types,
+                out += forms.definitionReset(rule, p, source, RuleMark(m), types,
                     ActionId(id, ActionRole.RETURN_REWRITER, actionOrdinal, markOrdinal))
             }
         }
@@ -296,15 +290,16 @@ internal class HistoricalJIRCallPlanBuilder(
 
     /** The default identity is in its own unfiltered stage. */
     private fun passRules(): StatementSummary = MicroEdgeBuilder().apply {
-        val rules = forms.rules.passTroughRulesForMethod(callee, s, fact = null).filter(forms::valid)
-            .map { Triple(it, rewriter.rewrite(it.condition), true) } +
-            defaultGetModel?.defaultPropagationRules(callee).orEmpty().filter { forms.valid(it.rule) }
+        val prepared = forms.rules.passTroughRulesForMethod(callee, s, fact = null)
+            .map { Triple(it, rewriter.rewrite(it.condition), true) }.filterNot { it.second.isFalse }
+        val rules = if (prepared.isNotEmpty()) prepared else
+            defaultGetModel?.defaultPropagationRules(callee).orEmpty()
                 .map { Triple(it.rule, it.condition, false) }
         val read = LinkedHashSet<AccessPathBase>()
         val written = LinkedHashSet<AccessPathBase>()
         for ((ruleOrdinal, item) in rules.withIndex()) {
             val (rule, cond, ofRuleSet) = item
-            if (cond.isFalse) continue
+            if (!forms.valid(rule) || cond.isFalse) continue
             if (!cond.isTrue)
                 forms.errors.applied(rule, "pass rule with a mark literal (interpreter.md §4.2, D24): applied without it")
             for ((actionOrdinal, a) in rule.actionsAfter.withIndex()) {

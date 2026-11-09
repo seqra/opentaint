@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.jvm.Argument
+import org.opentaint.dataflow.configuration.jvm.ActionPosition
 import org.opentaint.dataflow.configuration.jvm.ContainsMark
 import org.opentaint.dataflow.configuration.jvm.RemoveMark
 import org.opentaint.dataflow.configuration.jvm.TaintCleaner
@@ -95,8 +96,8 @@ class CleanerNormalisationTest : AnalysisTest() {
         val markM = TaintMark("M")
         val markN = TaintMark("N")
 
-        val cleanerOfM = cleaners.single { it.actionsAfter == listOf(RemoveMark(markM, Argument(0))) }
-        val cleanerOfN = cleaners.single { it.actionsAfter == listOf(RemoveMark(markN, Argument(1))) }
+        val cleanerOfM = cleaners.single { it.actionsAfter == listOf(RemoveMark(markM, ActionPosition.Exact(Argument(0)))) }
+        val cleanerOfN = cleaners.single { it.actionsAfter == listOf(RemoveMark(markN, ActionPosition.Exact(Argument(1)))) }
 
         assertEquals(CommonCondition.Atom(ContainsMark(Argument(1), markN)), cleanerOfM.condition)
         assertEquals(CommonCondition.Atom(ContainsMark(Argument(0), markM)), cleanerOfN.condition)

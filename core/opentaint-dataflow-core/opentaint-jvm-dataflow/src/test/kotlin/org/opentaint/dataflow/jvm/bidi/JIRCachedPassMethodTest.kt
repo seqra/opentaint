@@ -26,7 +26,7 @@ class JIRCachedPassMethodTest : BasicTestUtils() {
         val owner = FormOwner()
         fun plan(rawMethod: CommonMethod): CallPlan {
             val pass = TaintPassThrough(rawMethod, mkTrue(),
-                (0..20).map { CopyAllMarks(Argument(it), Result) }, null)
+                (0..20).map { CopyAllMarks(ActionPosition.Exact(Argument(it)), ActionPosition.Exact(Result)) }, null)
             val rules = object : TaintRulesProvider by NoTaintRules {
                 override fun passTroughRulesForMethod(method: CommonMethod, statement: CommonInst?,
                     fact: FactAp?, allRelevant: Boolean): Iterable<TaintPassThrough> {

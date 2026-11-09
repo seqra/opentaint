@@ -12,6 +12,7 @@ import org.opentaint.dataflow.configuration.go.serialized.GoUserDefinedRuleInfo
 import org.opentaint.dataflow.configuration.isTrue
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
 import org.opentaint.dataflow.configuration.selection.ReducedMarkPlan
 import org.opentaint.dataflow.configuration.selection.RuleSelectionSnapshot
 import org.opentaint.dataflow.go.GoFunctionSignature
@@ -42,7 +43,7 @@ class GoSelectedRuleViewTest {
     private fun source(id: String, mark: String = "T", condition: GoSerializedCondition? = null,
                        info: GoUserDefinedRuleInfo? = null) = GoSerializedRule.Source(
         matcher, GoNameMatcher.Simple("f"), condition,
-        listOf(GoSerializedAssignAction.Direct(mark, result)), info, id)
+        listOf(GoSerializedAssignAction(mark, result)), info, id)
 
     @Test
     fun `true and false source caches cannot choose each others selected rows`() {
@@ -61,7 +62,7 @@ class GoSelectedRuleViewTest {
     @Test
     fun `unsafe selected out global source keeps original validation error`() {
         val invalid = GoSerializedGlobalSource(matcher, GoNameMatcher.Simple("global"), null,
-            listOf(GoSerializedAssignAction.Direct("T", argument)), null, "discarded")
+            listOf(GoSerializedAssignAction("T", argument)), null, "discarded")
         val config = GoTaintConfiguration().apply { loadConfig(GoSerializedTaintConfig(globalSource = listOf(invalid))) }
         val sig = GoGlobalFieldSignature("test.global", GoIRUnsafePointerType)
         assertFailsWith<IllegalStateException> { config.selectedView(snapshot()).sourceForGlobal(sig) }
@@ -102,7 +103,7 @@ class GoSelectedRuleViewTest {
 
     @Test
     fun `executable CM any accessor and negative CM fold after binding without altering retained actions`() {
-        val guard = GoSerializedCondition.Not(GoSerializedCondition.ContainsMarkOnAnyAccessor("U", argument))
+        val guard = GoSerializedCondition.Not(GoSerializedCondition.ContainsMark("U", PositionBaseWithModifiers.WithModifiers(argument.base, listOf(PositionModifier.AnyField))))
         val config = GoTaintConfiguration().apply {
             loadConfig(GoSerializedTaintConfig(source = listOf(source("selected", "T", guard))))
         }
@@ -142,7 +143,7 @@ class GoSelectedRuleViewTest {
             val executable = view.cleanerForFunction(signature(), false).single()
             assertTrue(metadata.condition is CommonCondition.Not)
             assertEquals(setOf("T"), metadata.effectiveRelevantTaintMarks)
-            assertEquals(RemoveMark("U", Position.Result), metadata.actionsAfter.single())
+            assertEquals(RemoveMark("U", ActionPosition.Exact(Position.Result)), metadata.actionsAfter.single())
             assertTrue(executable.condition.isTrue())
             assertEquals(metadata.actionsAfter, executable.actionsAfter)
             assertSame(info, metadata.info)
@@ -186,7 +187,7 @@ class GoSelectedRuleViewTest {
         val positive = GoSerializedCondition.ContainsMark("T", argument)
         val second = GoSerializedCondition.ContainsMark("T",
             PositionBaseWithModifiers.BaseOnly(PositionBase.Argument(1)))
-        val otherKind = GoSerializedCondition.ContainsMarkOnAnyAccessor("T", argument)
+        val otherKind = GoSerializedCondition.ContainsMark("T", PositionBaseWithModifiers.WithModifiers(argument.base, listOf(PositionModifier.AnyField)))
         fun condition(guard: GoSerializedCondition): List<TaintRule.Source> = GoTaintConfiguration().apply {
             loadConfig(GoSerializedTaintConfig(source = listOf(source("selected", "T", guard))))
         }.selectedView(snapshot(live = setOf("T"))).sourceForFunction(sig, false)

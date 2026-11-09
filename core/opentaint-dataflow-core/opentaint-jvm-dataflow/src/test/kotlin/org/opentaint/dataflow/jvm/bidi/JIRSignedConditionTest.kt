@@ -39,7 +39,7 @@ class JIRSignedConditionTest : BasicTestUtils() {
 
     @Test fun `source and sink fold contradictions before residual negative projection`(): Unit {
         val p = atom(Argument(0))
-        for (rule in listOf(fixture.source(listOf(AssignMark(mark, Result)), CommonCondition.And(listOf(p, CommonCondition.Not(p)))),
+        for (rule in listOf(fixture.source(listOf(AssignMark(mark, ActionPosition.Exact(Result))), CommonCondition.And(listOf(p, CommonCondition.Not(p)))),
             fixture.sink(condition = CommonCondition.And(listOf(p, CommonCondition.Not(p)))))) {
             assertTrue(forms.rewriteSourceOrSink(rule, rewriter).isFalse)
         }
@@ -50,9 +50,9 @@ class JIRSignedConditionTest : BasicTestUtils() {
     }
 
     @Test fun `raw validation precedes false folding and prevents static evaluator invocation`(): Unit {
-        val bad = PositionWithAccess(PositionWithAccess(Argument(0), PositionAccessor.AnyFieldAccessor), PositionAccessor.AnyFieldAccessor)
+        val bad = PositionWithAccess(ClassStatic("sample.bidi.BidiRuleSample"), PositionAccessor.ElementAccessor)
         val p = atom(bad)
-        val rule = fixture.source(listOf(AssignMark(mark, Result)), CommonCondition.And(listOf(p, CommonCondition.Not(p))))
+        val rule = fixture.source(listOf(AssignMark(mark, ActionPosition.Exact(Result))), CommonCondition.And(listOf(p, CommonCondition.Not(p))))
         var calls = 0
         val evaluator = object : RuleConditionRewriter<JirCondition> {
             override fun rewriteAtom(atom: JirCondition, negated: Boolean): RuleConditionRewriter.ExprOrConstant {
@@ -76,7 +76,7 @@ class JIRSignedConditionTest : BasicTestUtils() {
             val and = CommonCondition.And(listOf(positive, CommonCondition.Not(other)))
             val or = CommonCondition.Or(listOf(positive, CommonCondition.Not(other)))
             fun rule(condition: Condition): TaintConfigurationItem = if (source)
-                fixture.source(listOf(AssignMark(mark, Result)), condition) else fixture.sink(condition = condition)
+                fixture.source(listOf(AssignMark(mark, ActionPosition.Exact(Result))), condition) else fixture.sink(condition = condition)
             val signedAnd = forms.rewriteSourceOrSink(rule(and), rewriter, projectNegatives = false)
             val signedOr = forms.rewriteSourceOrSink(rule(or), rewriter, projectNegatives = false)
             assertFalse(signedAnd.isFalse || signedAnd.isTrue, "Distinct signed atoms must remain in $and")
@@ -131,8 +131,7 @@ class JIRSignedConditionTest : BasicTestUtils() {
     }
 
     @Test fun `deep invalid raw rule diagnostics keep the reason without recursive rendering`(): Unit {
-        var condition = atom(PositionWithAccess(PositionWithAccess(Argument(0),
-            PositionAccessor.AnyFieldAccessor), PositionAccessor.AnyFieldAccessor))
+        var condition = atom(PositionWithAccess(ClassStatic("sample.bidi.BidiRuleSample"), PositionAccessor.ElementAccessor))
         repeat(32768) { condition = CommonCondition.Not(condition) }
         val rule = fixture.sink(condition = condition).copy(serializedId = "deep-invalid")
         assertFalse(forms.valid(rule))
@@ -143,8 +142,7 @@ class JIRSignedConditionTest : BasicTestUtils() {
     @Test fun `transient rule copies validate independently and diagnostics retain detached identifiers`(): Unit {
         val local = fixture.forms()
         val rule = fixture.sink(condition = atom(Argument(0))).copy(serializedId = "transient-rule")
-        val bad = rule.copy(condition = atom(PositionWithAccess(PositionWithAccess(Argument(0),
-            PositionAccessor.AnyFieldAccessor), PositionAccessor.AnyFieldAccessor)))
+        val bad = rule.copy(condition = atom(PositionWithAccess(ClassStatic("sample.bidi.BidiRuleSample"), PositionAccessor.ElementAccessor)))
         repeat(3) {
             assertTrue(local.valid(rule.copy()))
             assertFalse(local.valid(bad.copy()))

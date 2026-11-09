@@ -36,7 +36,7 @@ class PrescanCopyTest : BidiJIRTestUtils() {
             TaintMethodSource(callee, mkFalse(), emptyList(), null, "false-source"),
             TaintMethodSource(callee, mkTrue(), emptyList(), null, null),
         )
-        val pass = TaintPassThrough(callee, mkTrue(), listOf(CopyAllMarks(Argument(0), Result)), null, "pass-B")
+        val pass = TaintPassThrough(callee, mkTrue(), listOf(CopyAllMarks(ActionPosition.Exact(Argument(0)), ActionPosition.Exact(Result))), null, "pass-B")
         val rules = object : TaintRulesProvider by NoTaintRules {
             override fun sourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?,
                 allRelevant: Boolean): Iterable<TaintMethodSource> = if (method == callee) sources else emptyList()

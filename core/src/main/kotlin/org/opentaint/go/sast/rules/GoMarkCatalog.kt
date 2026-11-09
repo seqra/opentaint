@@ -51,7 +51,6 @@ internal fun GoSerializedItem.markCatalogRow(): MarkCatalogRow {
 private fun GoSerializedCondition?.markExpression(): MarkExpression = when (this) {
     null, GoSerializedCondition.True -> MarkExpression.Truth(true)
     is GoSerializedCondition.ContainsMark -> MarkExpression.ContainsMark(tainted, this)
-    is GoSerializedCondition.ContainsMarkOnAnyAccessor -> MarkExpression.ContainsMark(tainted, this)
     is GoSerializedCondition.And -> MarkExpression.And(allOf.map { it.markExpression() })
     is GoSerializedCondition.Or -> MarkExpression.Or(anyOf.map { it.markExpression() })
     is GoSerializedCondition.Not -> MarkExpression.Not(not.markExpression())

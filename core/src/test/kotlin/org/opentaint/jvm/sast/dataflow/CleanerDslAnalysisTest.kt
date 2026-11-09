@@ -10,7 +10,6 @@ import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.bidi.ap.Layer
-import org.opentaint.dataflow.bidi.driver.ReportState
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
@@ -464,17 +463,14 @@ open class CleanerDslAnalysisTest : AnalysisTest() {
 
         if (useBidiEntry) {
             val result = runBidiAcceptance(config, TEST_CLS, "returningPlainCleaner", bidiLimits)
-            assertEquals(mapOf(
-                "returning-unrelated-exact" to ReportState.DEMAND,
-                "returning-cleaned-any" to ReportState.DEMAND,
-            ), result.report.entries.associate { it.key.rule.id to it.state })
-            assertEquals(setOf("returning-unrelated-exact", "returning-cleaned-any"),
+            assertEquals(setOf("returning-unrelated-exact"),
+                result.report.entries.mapTo(linkedSetOf()) { it.descriptor.key.ruleId })
+            assertEquals(setOf("returning-unrelated-exact"),
                 result.output.mapTo(linkedSetOf()) { it.vulnerability.ruleId })
-            assertTrue(result.witnesses.all { !it.confirmed },
-                "Both actual findings remain unproved candidates under the minimal policy")
-            assertTrue(result.witnesses.any { it.rule.id == "returning-unrelated-exact" &&
-                it.literals.isNotEmpty() && it.literals.all { literal -> literal.layer == Layer.NORMAL } },
-                "The unrelated mark still has observed NORMAL literal support")
+            assertTrue(result.sinkHits.any { it.rule.id == "returning-unrelated-exact" &&
+                it.layer == Layer.NORMAL }, "The unrelated mark must create a NORMAL terminal")
+            assertTrue(result.sinkHits.any { it.rule.id == "returning-cleaned-any" &&
+                it.layer == Layer.DEMAND }, "The uncertain below-mark survivor must retain its rule-specific demand")
         } else {
             assertEquals(
                 setOf("returning-unrelated-exact"),

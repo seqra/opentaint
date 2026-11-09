@@ -469,7 +469,7 @@ class JIRFormsContractTest : BidiJIRTestUtils() {
     }
 
     private fun richRules(target: JIRMethod): TaintRulesProvider {
-        fun any(p: Position) = PositionWithAccess(p, PositionAccessor.AnyFieldAccessor)
+        fun any(p: Position) = ActionPosition.AnyAccessorAfter(p)
         fun field(p: Position, name: String) = PositionWithAccess(p,
             PositionAccessor.FieldAccessor("sample.bidi.BidiCallSample", name, "java.lang.Object"))
         fun contains(p: Position, mark: String): Condition = CommonCondition.Atom(ContainsMark(p, RuleMark(mark)))
@@ -477,13 +477,13 @@ class JIRFormsContractTest : BidiJIRTestUtils() {
         val meta = TaintSinkMeta("construction sink", CommonTaintConfigurationSinkMeta.Severity.Error, null)
         val info = object : UserDefinedRuleInfo { override val relevantTaintMarks = setOf("T") }
         val sources = listOf(TaintMethodSource(target, condition, listOf(AssignMark(RuleMark("T"), any(Result))), null),
-            TaintMethodSource(target, mkTrue(), listOf(AssignMark(RuleMark("U"), Result)), null),
-            TaintMethodSource(target, mkTrue(), listOf(AssignMark(RuleMark("T"), field(Result, "f"))), info))
+            TaintMethodSource(target, mkTrue(), listOf(AssignMark(RuleMark("U"), ActionPosition.Exact(Result))), null),
+            TaintMethodSource(target, mkTrue(), listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(field(Result, "f")))), info))
         val sinks = listOf(TaintMethodSink(target, condition, listOf(AssignMark(RuleMark("U"), any(Result))), "scan", meta, null))
-        val passes = listOf(TaintPassThrough(target, mkTrue(), listOf(CopyAllMarks(Argument(0), any(Result)),
-            CopyMark(RuleMark("T"), Argument(1), Result)), null))
-        val cleaners = listOf(TaintCleaner(target, mkTrue(), listOf(RemoveMark(RuleMark("T"), field(Argument(0), "f")),
-            RemoveMark(RuleMark("T"), field(Argument(0), "g"))), null))
+        val passes = listOf(TaintPassThrough(target, mkTrue(), listOf(CopyAllMarks(ActionPosition.Exact(Argument(0)), any(Result)),
+            CopyMark(RuleMark("T"), ActionPosition.Exact(Argument(1)), ActionPosition.Exact(Result))), null))
+        val cleaners = listOf(TaintCleaner(target, mkTrue(), listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(field(Argument(0), "f"))),
+            RemoveMark(RuleMark("T"), ActionPosition.Exact(field(Argument(0), "g")))), null))
         return object : TaintRulesProvider by NoTaintRules {
             override fun sourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
                 if (method == target) sources else emptyList()
@@ -498,7 +498,7 @@ class JIRFormsContractTest : BidiJIRTestUtils() {
             override fun exitSourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
                 if (method == target) listOf(TaintMethodExitSource(target, condition, listOf(AssignMark(RuleMark("W"), any(Result))), null)) else emptyList()
             override fun sinkRulesForMethodExit(method: CommonMethod, statement: CommonInst, fact: FactAp?, initialFacts: Set<InitialFactAp>?, allRelevant: Boolean) =
-                if (method == target) listOf(TaintMethodExitSink(target, condition, listOf(AssignMark(RuleMark("U"), Result)), "exit-scan", meta, null)) else emptyList()
+                if (method == target) listOf(TaintMethodExitSink(target, condition, listOf(AssignMark(RuleMark("U"), ActionPosition.Exact(Result))), "exit-scan", meta, null)) else emptyList()
         }
     }
 }

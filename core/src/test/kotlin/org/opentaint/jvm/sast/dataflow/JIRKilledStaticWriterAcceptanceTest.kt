@@ -53,9 +53,9 @@ class JIRKilledStaticWriterAcceptanceTest : AnalysisTest() {
             assertEquals(RunStatus.COMPLETE, result.report.end.status, "$entry/$mode")
             assertEquals(listOf(1, 2, 3), result.runs.map { it.index }, "$entry/$mode")
             assertTrue(result.runs.all { it.status == RunStatus.COMPLETE })
-            assertTrue(result.witnesses.any { it.run == 1 && it.rule.id == sinkId },
+            assertTrue(result.sinkHits.any { it.run == 1 && it.rule.id == sinkId },
                 "The run-1 candidate must exist: $entry/$mode")
-            assertTrue(result.witnesses.any { it.run == 3 && it.rule.id == sinkId },
+            assertTrue(result.sinkHits.any { it.run == 3 && it.rule.id == sinkId },
                 "Static demand completion must keep the real returned flow: $entry/$mode")
             assertTrue(result.output.any { it.vulnerability.ruleId == sinkId })
             val writer = result.method("writeRead")

@@ -2,7 +2,6 @@ package org.opentaint.jvm.sast.dataflow
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
-import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
@@ -25,7 +24,7 @@ class CleanerNormalisationReachTest : AnalysisTest() {
     private val field = PositionBaseWithModifiers.WithModifiers(Argument(0),
         listOf(PositionModifier.Field("test.samples.DeepCleanSummarySample\$Box", "f", "java.lang.String")))
 
-    private fun config(reach: TaintCleanReach, markRoot: Boolean): SerializedTaintConfig = SerializedTaintConfig(
+    private fun config(below: Boolean, markRoot: Boolean): SerializedTaintConfig = SerializedTaintConfig(
         entryPoint = listOf(SerializedRule.EntryPoint(
             function = functionMatcher(sample, entry),
             taint = buildList {
@@ -35,26 +34,27 @@ class CleanerNormalisationReachTest : AnalysisTest() {
         cleaner = listOf(SerializedRule.Cleaner(
             function = functionMatcher(sample, "clean"),
             condition = SerializedCondition.ContainsMark(mark, root),
-            cleans = listOf(SerializedTaintCleanAction(mark, root, reach)))),
+            cleans = listOf(SerializedTaintCleanAction(mark, if (below)
+                PositionBaseWithModifiers.WithModifiers(Argument(0), listOf(PositionModifier.AnyField)) else root)))),
         sink = listOf(sinkRule(sample, "sink", ruleId, listOf(Argument(0) to mark))),
     )
 
     @Test
     fun `exact self-conditioned removal keeps the field mark`() {
-        assertReachable(config(TaintCleanReach.Exact, markRoot = false), sample, entry, ruleId,
+        assertReachable(config(false, markRoot = false), sample, entry, ruleId,
             "Exact root removal must retain the field mark")
     }
 
     @Test
-    fun `broad removal with an absent root mark keeps the field mark`() {
-        assertReachable(config(TaintCleanReach.ExactAndAnyField, markRoot = false), sample, entry, ruleId,
+    fun `below removal with an absent root mark keeps the field mark`() {
+        assertReachable(config(true, markRoot = false), sample, entry, ruleId,
             "A false root condition must retain the field mark")
     }
 
     @Test
-    fun `unconditional broad removal clears the field mark`(): Unit {
-        val conditional = config(TaintCleanReach.ExactAndAnyField, markRoot = true)
+    fun `unconditional below removal clears the field mark`(): Unit {
+        val conditional = config(true, markRoot = true)
         val unconditional = conditional.copy(cleaner = conditional.cleaner.orEmpty().map { it.copy(condition = null) })
-        assertNotReachable(unconditional, sample, entry, "Broad removal control must clear the field mark")
+        assertNotReachable(unconditional, sample, entry, "Below removal control must clear the field mark")
     }
 }

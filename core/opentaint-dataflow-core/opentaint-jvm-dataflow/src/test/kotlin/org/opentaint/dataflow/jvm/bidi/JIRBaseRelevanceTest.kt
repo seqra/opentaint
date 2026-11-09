@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.jvm.bidi
 
+import org.opentaint.dataflow.configuration.jvm.ActionPosition
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.bidi.ap.Direction
@@ -113,7 +115,7 @@ class JIRBaseRelevanceTest : BidiJIRTestUtils() {
         val at = method.instList.instructions.filterIsInstance<JIRAssignInst>().first { it.rhv is JIRFieldRef }
         val rules = object : TaintRulesProvider by NoTaintRules {
             override fun sourceRulesForStaticField(field: JIRField, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
-                listOf(TaintStaticFieldSource(field, mkTrue(), listOf(AssignMark(TaintMark("READ"), Result)), null))
+                listOf(TaintStaticFieldSource(field, mkTrue(), listOf(AssignMark(TaintMark("READ"), ActionPosition.Exact(Result))), null))
         }
         val owner = interp(rules)
         val lhs = assertNotNull(accessPathBase(at.lhv))

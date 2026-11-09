@@ -72,7 +72,6 @@ import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.configuration.simplify
 import org.opentaint.dataflow.jvm.ap.ifds.taint.ContainsMarkOnAnyField
 import org.opentaint.dataflow.configuration.toNnf
-
 import org.opentaint.ir.api.jvm.JIRAnnotated
 import org.opentaint.ir.api.jvm.JIRAnnotation
 import org.opentaint.ir.api.jvm.JIRClassType
@@ -204,7 +203,6 @@ class MethodTaintConfigurationResolver(
 
         is SerializedRule.MethodExitSource -> {
             listOf(TaintMethodExitSource(method, condition, taint.flatMap { it.resolve(ctx) }, info, serializedId))
-
         }
 
         is SerializedRule.Sink -> {
@@ -251,13 +249,11 @@ class MethodTaintConfigurationResolver(
 
     private fun Action.assumedLiterals(): Set<JirCondition> {
         if (this !is RemoveMark) return emptySet()
-        val position = position
-        if (position is PositionWithAccess && position.access == PositionAccessor.AnyFieldAccessor) {
-            return setOf(ContainsMarkOnAnyField(position.base, mark), ContainsMark(position, mark))
+        return when (val p = position) {
+            is Exact -> setOf(ContainsMark(p.position, mark))
+            // A descendant mark does not imply a mark on the prefix itself.
+            is AnyAccessorAfter -> setOf(ContainsMarkOnAnyField(p.position, mark))
         }
-        // An absent root mark does not make a removal of descendant marks a no-op.
-        if (reach != TaintCleanReach.Exact) return emptySet()
-        return setOf(ContainsMark(position, mark))
     }
 
     private fun Condition.assume(assumed: Set<JirCondition>): Condition = when (this) {

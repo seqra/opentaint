@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.jvm.bidi
 
+import org.opentaint.dataflow.configuration.jvm.ActionPosition
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
@@ -76,7 +78,9 @@ class JIRRuleValidationTest : BasicTestUtils() {
     private val arg0: Position = Argument(0)
     private val arg1: Position = Argument(1)
     private val cls: Position = ClassStatic(JIRFormsTestFixtures.SAMPLE_CLASS)
-    private fun any(p: Position) = PositionWithAccess(p, PositionAccessor.AnyFieldAccessor)
+    private fun any(p: Position) = ActionPosition.AnyAccessorAfter(p)
+    private fun exact(p: Position) = ActionPosition.Exact(p)
+    private fun invalidStatic() = element(cls)
     private fun element(p: Position) = PositionWithAccess(p, PositionAccessor.ElementAccessor)
     private fun field(p: Position, name: String = "f") = PositionWithAccess(p,
         PositionAccessor.FieldAccessor(JIRFormsTestFixtures.SAMPLE_CLASS, name, "java.lang.Object"))
@@ -95,10 +99,10 @@ class JIRRuleValidationTest : BasicTestUtils() {
         JIRRuleForms(provider, f.manager, errors, f.typeFilters, resultBase)
 
     @Test
-    fun `rule positions retain every concrete accessor and remove only terminal AnyField`(): Unit {
+    fun `rule positions retain concrete accessors and decode action reach`(): Unit {
         val forms = forms()
         val owner = Any()
-        val paths = listOf(arg0, This, Result, cls, field(element(arg0)), any(field(element(arg0))))
+        val paths = listOf(exact(arg0), exact(This), exact(Result), exact(cls), exact(field(element(arg0))), any(field(element(arg0))))
         val expectedBases = listOf(AccessPathBase.Argument(0), AccessPathBase.This, AccessPathBase.Return,
             AccessPathBase.ClassStatic, AccessPathBase.Argument(0), AccessPathBase.Argument(0))
         val expectedPaths = listOf(emptyList(), emptyList(), emptyList(), listOf(f.cls),
@@ -114,8 +118,8 @@ class JIRRuleValidationTest : BasicTestUtils() {
             .pos(owner, any(Result))).base)
         val accessed = PositionAccess.Complex(PositionAccess.Complex(
             PositionAccess.Simple(AccessPathBase.Argument(0)), ElementAccessor), AnyAccessor)
-        assertEquals(listOf(f.element), assertNotNull(forms.pos(owner, accessed)).path)
-        for (bad in listOf(field(any(arg0)), element(any(arg0)), any(any(arg0)), any(field(any(arg0))))) {
+        assertNull(forms.pos(owner, accessed))
+        for (bad in listOf(exact(invalidStatic()), any(invalidStatic()), exact(field(invalidStatic())))) {
             assertNull(forms.pos(owner, bad), "$bad")
         }
         assertNull(forms.pos(owner, PositionAccess.Complex(PositionAccess.Complex(
@@ -126,33 +130,33 @@ class JIRRuleValidationTest : BasicTestUtils() {
     @Test
     fun `each raw action position is validated even when its action kind is ignored`(): Unit {
         val forms = forms()
-        for (bad in listOf(field(any(arg0)), element(any(arg0)), any(any(arg0)))) {
+        for (bad in listOf(invalidStatic(), field(invalidStatic()))) {
             val sourceCases = listOf<TaintConfigurationItem>(
-                source(listOf(AssignMark(t, Result), AssignMark(u, bad))),
-                TaintEntryPointSource(method, mkTrue(), listOf(AssignMark(t, arg1), AssignMark(u, bad)), null),
-                TaintMethodExitSource(method, mkTrue(), listOf(AssignMark(t, Result), AssignMark(u, bad)), null),
+                source(listOf(AssignMark(t, ActionPosition.Exact(Result)), AssignMark(u, ActionPosition.Exact(bad)))),
+                TaintEntryPointSource(method, mkTrue(), listOf(AssignMark(t, ActionPosition.Exact(arg1)), AssignMark(u, ActionPosition.Exact(bad))), null),
+                TaintMethodExitSource(method, mkTrue(), listOf(AssignMark(t, ActionPosition.Exact(Result)), AssignMark(u, ActionPosition.Exact(bad))), null),
             )
-            val badActions: List<Action> = listOf(CopyAllMarks(bad, arg1), CopyAllMarks(arg1, bad),
-                CopyMark(t, bad, arg1), CopyMark(t, arg1, bad), AssignMark(t, bad), RemoveMark(t, bad), RemoveAllMarks(bad))
+            val badActions: List<Action> = listOf(CopyAllMarks(ActionPosition.Exact(bad), ActionPosition.Exact(arg1)), CopyAllMarks(ActionPosition.Exact(arg1), ActionPosition.Exact(bad)),
+                CopyMark(t, ActionPosition.Exact(bad), ActionPosition.Exact(arg1)), CopyMark(t, ActionPosition.Exact(arg1), ActionPosition.Exact(bad)), AssignMark(t, ActionPosition.Exact(bad)), RemoveMark(t, ActionPosition.Exact(bad)), RemoveAllMarks(ActionPosition.Exact(bad)))
             val cases = sourceCases + badActions.flatMap { action -> listOf(
-                pass(listOf(CopyAllMarks(arg0, arg1), action)),
-                cleaner(listOf(RemoveMark(t, arg1), action)),
+                pass(listOf(CopyAllMarks(ActionPosition.Exact(arg0), ActionPosition.Exact(arg1)), action)),
+                cleaner(listOf(RemoveMark(t, ActionPosition.Exact(arg1)), action)),
             ) }
             for (rule in cases) assertFalse(forms.valid(rule), "$rule")
             // A statically false branch cannot hide the bad action either.
-            assertFalse(forms.valid(source(listOf(AssignMark(t, Result), AssignMark(u, bad)), mkFalse())))
-            assertFalse(forms.valid(pass(listOf(CopyAllMarks(arg0, arg1), AssignMark(u, bad)), mkFalse())))
-            assertFalse(forms.valid(cleaner(listOf(RemoveMark(t, arg1), CopyAllMarks(arg0, bad)), mkFalse())))
+            assertFalse(forms.valid(source(listOf(AssignMark(t, ActionPosition.Exact(Result)), AssignMark(u, ActionPosition.Exact(bad))), mkFalse())))
+            assertFalse(forms.valid(pass(listOf(CopyAllMarks(ActionPosition.Exact(arg0), ActionPosition.Exact(arg1)), AssignMark(u, ActionPosition.Exact(bad))), mkFalse())))
+            assertFalse(forms.valid(cleaner(listOf(RemoveMark(t, ActionPosition.Exact(arg1)), CopyAllMarks(ActionPosition.Exact(arg0), ActionPosition.Exact(bad))), mkFalse())))
         }
-        assertTrue(forms.valid(source(listOf(AssignMark(t, Result)))))
-        assertTrue(forms.valid(pass(listOf(CopyAllMarks(arg0, arg1), AssignMark(t, Result)))))
-        assertTrue(forms.valid(cleaner(listOf(RemoveMark(t, arg0), CopyMark(t, arg0, arg1)))))
+        assertTrue(forms.valid(source(listOf(AssignMark(t, ActionPosition.Exact(Result))))))
+        assertTrue(forms.valid(pass(listOf(CopyAllMarks(ActionPosition.Exact(arg0), ActionPosition.Exact(arg1)), AssignMark(t, ActionPosition.Exact(Result))))))
+        assertTrue(forms.valid(cleaner(listOf(RemoveMark(t, ActionPosition.Exact(arg0)), CopyMark(t, ActionPosition.Exact(arg0), ActionPosition.Exact(arg1))))))
     }
 
     @Test
     fun `negated literals and every discarded condition alternative are validated first`(): Unit {
         val forms = forms()
-        for (bad in listOf(field(any(arg0)), any(any(arg0)))) {
+        for (bad in listOf(invalidStatic(), field(invalidStatic()))) {
             val conditions = listOf(contains(bad), containsAny(bad),
                 CommonCondition.Not(contains(bad)), CommonCondition.Not(containsAny(bad)),
                 CommonCondition.Or(listOf(mkTrue(), contains(bad))),
@@ -160,14 +164,14 @@ class JIRRuleValidationTest : BasicTestUtils() {
                 CommonCondition.And(listOf(mkFalse(), contains(bad))))
             for (condition in conditions) {
                 val cases = listOf<TaintConfigurationItem>(
-                    source(listOf(AssignMark(t, Result)), condition),
-                    TaintEntryPointSource(method, condition, listOf(AssignMark(t, arg1)), null),
-                    TaintMethodExitSource(method, condition, listOf(AssignMark(t, Result)), null),
+                    source(listOf(AssignMark(t, ActionPosition.Exact(Result))), condition),
+                    TaintEntryPointSource(method, condition, listOf(AssignMark(t, ActionPosition.Exact(arg1))), null),
+                    TaintMethodExitSource(method, condition, listOf(AssignMark(t, ActionPosition.Exact(Result))), null),
                     sink(condition = condition),
                     TaintMethodEntrySink(method, condition, emptyList(), "entry", meta, null),
                     TaintMethodExitSink(method, condition, emptyList(), "exit", meta, null),
-                    pass(listOf(CopyAllMarks(arg0, arg1)), condition),
-                    cleaner(listOf(RemoveMark(t, arg1)), condition),
+                    pass(listOf(CopyAllMarks(ActionPosition.Exact(arg0), ActionPosition.Exact(arg1))), condition),
+                    cleaner(listOf(RemoveMark(t, ActionPosition.Exact(arg1))), condition),
                 )
                 for (rule in cases) assertFalse(forms.valid(rule), "$rule")
             }
@@ -177,12 +181,12 @@ class JIRRuleValidationTest : BasicTestUtils() {
     @Test
     fun `whole rule rejection gives no partial source pass cleaner sink or end forms`(): Unit {
         val forms = forms()
-        val bad = field(any(arg0))
-        val src = source(listOf(AssignMark(t, Result), AssignMark(u, bad)))
-        val ps = pass(listOf(CopyAllMarks(arg0, arg1), CopyMark(u, arg0, bad)))
-        val cl = cleaner(listOf(RemoveMark(t, arg1), RemoveAllMarks(bad)))
-        val sk = sink(listOf(AssignMark(t, Result), AssignMark(u, bad)), contains(arg1))
-        val conditionSink = sink(listOf(AssignMark(t, Result)), CommonCondition.Or(listOf(contains(arg1), contains(bad))))
+        val bad = invalidStatic()
+        val src = source(listOf(AssignMark(t, ActionPosition.Exact(Result)), AssignMark(u, ActionPosition.Exact(bad))))
+        val ps = pass(listOf(CopyAllMarks(ActionPosition.Exact(arg0), ActionPosition.Exact(arg1)), CopyMark(u, ActionPosition.Exact(arg0), ActionPosition.Exact(bad))))
+        val cl = cleaner(listOf(RemoveMark(t, ActionPosition.Exact(arg1)), RemoveAllMarks(ActionPosition.Exact(bad))))
+        val sk = sink(listOf(AssignMark(t, ActionPosition.Exact(Result)), AssignMark(u, ActionPosition.Exact(bad))), contains(arg1))
+        val conditionSink = sink(listOf(AssignMark(t, ActionPosition.Exact(Result))), CommonCondition.Or(listOf(contains(arg1), contains(bad))))
         val occurrence = org.opentaint.dataflow.bidi.interp.RuleOccurrenceId(
             org.opentaint.dataflow.bidi.interp.FormKey(org.opentaint.dataflow.bidi.interp.FormOwner(), method, null,
                 (method as org.opentaint.ir.api.jvm.JIRMethod).instList.first()),
@@ -200,7 +204,7 @@ class JIRRuleValidationTest : BasicTestUtils() {
         assertEquals(1, sinks.size)
         assertTrue(sinks.single().endFacts.isEmpty())
         assertTrue(conditionSinks.isEmpty())
-        val validSource = source(listOf(AssignMark(t, Result)))
+        val validSource = source(listOf(AssignMark(t, ActionPosition.Exact(Result))))
         assertTrue(forms.valid(validSource))
         val accepted = MicroEdgeBuilder()
         forms.source(accepted, validSource, occurrence, RuleConditionRewriter.trueExpr)
@@ -216,17 +220,17 @@ class JIRRuleValidationTest : BasicTestUtils() {
         // A provider can construct this bound rule even though the current YAML
         // text parser does not expose a class base. Reject before catalog setup.
         assertNull(forms.pos("class array",bad))
-        for (position in listOf(bad,any(bad),field(bad))) {
+        for (position in listOf(exact(bad),any(bad),exact(field(bad)))) {
             assertFalse(forms.valid(source(listOf(AssignMark(t,position)))))
-            assertFalse(forms.valid(pass(listOf(CopyAllMarks(arg0,position)))))
+            assertFalse(forms.valid(pass(listOf(CopyAllMarks(ActionPosition.Exact(arg0),position)))))
             assertFalse(forms.valid(cleaner(listOf(RemoveMark(t,position)))))
-            assertFalse(forms.valid(sink(condition=contains(position))))
+            assertFalse(forms.valid(sink(condition=contains(bad))))
         }
         val good = element(field(cls))
         assertEquals(listOf(f.cls,f.field("f"),f.element),assertNotNull(forms.pos("static array field",good)).path)
-        assertTrue(forms.valid(source(listOf(AssignMark(t,good)))))
-        assertTrue(forms.valid(pass(listOf(CopyAllMarks(arg0,good)))))
-        assertTrue(forms.valid(cleaner(listOf(RemoveMark(t,good)))))
+        assertTrue(forms.valid(source(listOf(AssignMark(t,ActionPosition.Exact(good))))))
+        assertTrue(forms.valid(pass(listOf(CopyAllMarks(ActionPosition.Exact(arg0),ActionPosition.Exact(good))))))
+        assertTrue(forms.valid(cleaner(listOf(RemoveMark(t,ActionPosition.Exact(good))))))
         assertTrue(forms.valid(sink(condition=contains(good))))
     }
 
@@ -235,37 +239,37 @@ class JIRRuleValidationTest : BasicTestUtils() {
         val forms = forms()
         for (condition in listOf<Condition>(mkTrue(), contains(arg0),
             CommonCondition.And(listOf(contains(arg0), contains(arg1))))) {
-            assertTrue(forms.valid(source(listOf(AssignMark(t, cls)), condition)))
-            assertFalse(forms.valid(source(listOf(AssignMark(t, Result), AssignMark(u, any(cls))), condition)))
+            assertTrue(forms.valid(source(listOf(AssignMark(t, ActionPosition.Exact(cls))), condition)))
+            assertFalse(forms.valid(source(listOf(AssignMark(t, ActionPosition.Exact(Result)), AssignMark(u, any(cls))), condition)))
         }
-        for (literal in listOf(contains(any(arg0)), containsAny(arg0), CommonCondition.Not(containsAny(arg0)),
+        for (literal in listOf(containsAny(arg0), CommonCondition.Not(containsAny(arg0)),
             CommonCondition.Or(listOf(mkTrue(), containsAny(arg0))))) {
-            assertFalse(forms.valid(source(listOf(AssignMark(t, cls)), literal)), "$literal")
+            assertFalse(forms.valid(source(listOf(AssignMark(t, ActionPosition.Exact(cls))), literal)), "$literal")
         }
-        assertTrue(forms.valid(sink(listOf(AssignMark(t, cls)), containsAny(arg0))))
-        assertTrue(forms.valid(sink(listOf(AssignMark(t, Result), AssignMark(u, any(cls))))))
-        for (position in listOf(field(cls), field(field(cls)), any(field(cls)), any(field(field(cls))))) {
+        assertTrue(forms.valid(sink(listOf(AssignMark(t, ActionPosition.Exact(cls))), containsAny(arg0))))
+        assertTrue(forms.valid(sink(listOf(AssignMark(t, ActionPosition.Exact(Result)), AssignMark(u, any(cls))))))
+        for (position in listOf(exact(field(cls)), exact(field(field(cls))), any(field(cls)), any(field(field(cls))))) {
             assertTrue(forms.valid(source(listOf(AssignMark(t, position)))))
             assertTrue(forms.valid(sink(listOf(AssignMark(t, position)))))
         }
         // A class sink/literal itself may be exact or may; only its source/end target is constrained.
         assertTrue(forms.valid(sink(condition = containsAny(cls))))
-        assertTrue(forms.valid(source(listOf(AssignMark(t, Result)), containsAny(cls))))
+        assertTrue(forms.valid(source(listOf(AssignMark(t, ActionPosition.Exact(Result))), containsAny(cls))))
     }
 
     @Test
     fun `pass rules reject bare classes and every AnyField premise before forms`(): Unit {
         val forms = forms()
-        for (bare in listOf(cls, any(cls))) for ((from, to) in listOf(bare to arg0, arg0 to bare)) {
-            assertFalse(forms.valid(pass(listOf(CopyAllMarks(arg0, arg1), CopyAllMarks(from, to)))))
-            assertFalse(forms.valid(pass(listOf(CopyAllMarks(arg0, arg1), CopyMark(t, from, to)))))
+        for (bare in listOf(exact(cls), any(cls))) for ((from, to) in listOf(bare to exact(arg0), exact(arg0) to bare)) {
+            assertFalse(forms.valid(pass(listOf(CopyAllMarks(ActionPosition.Exact(arg0), ActionPosition.Exact(arg1)), CopyAllMarks(from, to)))))
+            assertFalse(forms.valid(pass(listOf(CopyAllMarks(ActionPosition.Exact(arg0), ActionPosition.Exact(arg1)), CopyMark(t, from, to)))))
         }
-        for (from in listOf(any(arg0), any(field(arg0)), any(field(cls)))) for (to in listOf(arg1, any(arg1))) {
-            assertFalse(forms.valid(pass(listOf(CopyAllMarks(arg0, arg1), CopyAllMarks(from, to)))))
-            assertFalse(forms.valid(pass(listOf(CopyAllMarks(arg0, arg1), CopyMark(t, from, to)))))
+        for (from in listOf(any(arg0), any(field(arg0)), any(field(cls)))) for (to in listOf(exact(arg1), any(arg1))) {
+            assertFalse(forms.valid(pass(listOf(CopyAllMarks(ActionPosition.Exact(arg0), ActionPosition.Exact(arg1)), CopyAllMarks(from, to)))))
+            assertFalse(forms.valid(pass(listOf(CopyAllMarks(ActionPosition.Exact(arg0), ActionPosition.Exact(arg1)), CopyMark(t, from, to)))))
         }
-        for ((from, to) in listOf(field(cls) to field(cls, "g"), field(cls) to arg0,
-            arg0 to field(cls), field(field(cls)) to any(field(cls)))) {
+        for ((from, to) in listOf(exact(field(cls)) to exact(field(cls, "g")), exact(field(cls)) to exact(arg0),
+            exact(arg0) to exact(field(cls)), exact(field(field(cls))) to any(field(cls)))) {
             assertTrue(forms.valid(pass(listOf(CopyAllMarks(from, to)))))
             assertTrue(forms.valid(pass(listOf(CopyMark(t, from, to)))))
         }
@@ -275,10 +279,10 @@ class JIRRuleValidationTest : BasicTestUtils() {
     fun `static all-mark AnyField cleaners reject while named cleaners and strong kills remain valid`(): Unit {
         val forms = forms()
         for (position in listOf(cls, field(cls), field(field(cls)))) {
-            assertTrue(forms.valid(cleaner(listOf(RemoveAllMarks(position)))))
-            assertTrue(forms.valid(cleaner(listOf(RemoveMark(t, position)))))
+            assertTrue(forms.valid(cleaner(listOf(RemoveAllMarks(ActionPosition.Exact(position))))))
+            assertTrue(forms.valid(cleaner(listOf(RemoveMark(t, ActionPosition.Exact(position))))))
             assertTrue(forms.valid(cleaner(listOf(RemoveMark(t, any(position))))))
-            assertFalse(forms.valid(cleaner(listOf(RemoveMark(t, arg0), RemoveAllMarks(any(position))))))
+            assertFalse(forms.valid(cleaner(listOf(RemoveMark(t, ActionPosition.Exact(arg0)), RemoveAllMarks(any(position))))))
             assertFalse(forms.valid(cleaner(listOf(RemoveAllMarks(any(position))), mkFalse())))
         }
         assertFalse(forms.valid(cleaner(listOf(RemoveAllMarks(any(arg0))))))
@@ -288,27 +292,27 @@ class JIRRuleValidationTest : BasicTestUtils() {
     @Test
     fun `static read sources reject conditions wrong bases and invalid sibling actions as complete rules`(): Unit {
         val forms = forms()
-        for (position in listOf(Result, any(Result), field(Result), any(field(Result)))) {
+        for (position in listOf(exact(Result), any(Result), exact(field(Result)), any(field(Result)))) {
             assertTrue(forms.valid(TaintStaticFieldSource(field, mkTrue(), listOf(AssignMark(t, position)), null)))
         }
         for (condition in listOf<Condition>(mkFalse(), contains(arg0), CommonCondition.Not(contains(arg0)),
             CommonCondition.Or(listOf(mkTrue(), contains(arg0))))) {
-            assertFalse(forms.valid(TaintStaticFieldSource(field, condition, listOf(AssignMark(t, Result)), null)))
+            assertFalse(forms.valid(TaintStaticFieldSource(field, condition, listOf(AssignMark(t, ActionPosition.Exact(Result))), null)))
         }
-        for (position in listOf(arg0, This, cls, any(arg0), field(any(Result)), any(any(Result)))) {
+        for (position in listOf(exact(arg0), exact(This), exact(cls), any(arg0), exact(invalidStatic()))) {
             assertFalse(forms.valid(TaintStaticFieldSource(field, mkTrue(),
-                listOf(AssignMark(t, Result), AssignMark(u, position)), null)), "$position")
+                listOf(AssignMark(t, ActionPosition.Exact(Result)), AssignMark(u, position)), null)), "$position")
         }
         val exceptional = forms(resultBase = AccessPathBase.Exception)
-        assertTrue(exceptional.valid(TaintStaticFieldSource(field, mkTrue(), listOf(AssignMark(t, Result)), null)))
+        assertTrue(exceptional.valid(TaintStaticFieldSource(field, mkTrue(), listOf(AssignMark(t, ActionPosition.Exact(Result))), null)))
     }
 
     @Test
     fun `read query ignores invalid rules entirely and still emits an independently valid sibling rule`(): Unit {
         val read = f.assign("staticRead") { (it.rhv as? JIRFieldRef)?.field?.name == "sField" }
         val bad = TaintStaticFieldSource(field, mkTrue(),
-            listOf(AssignMark(u, Result), AssignMark(u, field(any(Result)))), null)
-        val wrong = TaintStaticFieldSource(field, contains(arg0), listOf(AssignMark(u, Result)), null)
+            listOf(AssignMark(u, ActionPosition.Exact(Result)), AssignMark(u, ActionPosition.Exact(invalidStatic()))), null)
+        val wrong = TaintStaticFieldSource(field, contains(arg0), listOf(AssignMark(u, ActionPosition.Exact(Result))), null)
         val good = TaintStaticFieldSource(field, mkTrue(), listOf(AssignMark(t, any(Result))), null)
         var queries = 0
         val provider = object : EmptyProvider() {
@@ -345,7 +349,7 @@ class JIRRuleValidationTest : BasicTestUtils() {
     fun `pass mark-condition exception stays applied at the RuleErrors boundary`(): Unit {
         val errors = RuleErrors()
         val forms = forms(errors = errors)
-        for (action in listOf<Action>(CopyAllMarks(arg0, arg1), CopyMark(t, arg0, arg1))) {
+        for (action in listOf<Action>(CopyAllMarks(ActionPosition.Exact(arg0), ActionPosition.Exact(arg1)), CopyMark(t, ActionPosition.Exact(arg0), ActionPosition.Exact(arg1)))) {
             val rule = pass(listOf(action), CommonCondition.And(listOf(contains(arg0), CommonCondition.Not(containsAny(arg1)))))
             assertTrue(forms.valid(rule))
             repeat(3) { errors.applied(rule, "pass rule has mark literals (§4.2, D24)") }
@@ -356,7 +360,7 @@ class JIRRuleValidationTest : BasicTestUtils() {
             assertTrue(builder.build().conjunctions.isEmpty())
             assertTrue(forms.valid(rule))
         }
-        val malformed = pass(listOf(CopyAllMarks(arg0, arg1)), CommonCondition.Not(contains(field(any(arg0)))))
+        val malformed = pass(listOf(CopyAllMarks(ActionPosition.Exact(arg0), ActionPosition.Exact(arg1))), CommonCondition.Not(contains(invalidStatic())))
         assertFalse(forms.valid(malformed))
         repeat(3) { assertFalse(errors.reject(malformed, "invalid raw position")) }
         assertFalse(forms.valid(malformed))
@@ -367,7 +371,7 @@ class JIRRuleValidationTest : BasicTestUtils() {
         val errors = RuleErrors()
         val forms = forms(errors = errors)
         val valid = source(listOf(AssignMark(t, any(Result))), contains(arg0))
-        val invalid = source(listOf(AssignMark(t, Result), AssignMark(u, any(any(arg1)))))
+        val invalid = source(listOf(AssignMark(t, ActionPosition.Exact(Result)), AssignMark(u, exact(invalidStatic()))))
         assertTrue(forms.valid(valid))
         assertFalse(forms.valid(invalid))
         val start = CountDownLatch(1)

@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.jvm.bidi
 
+import org.opentaint.dataflow.configuration.jvm.ActionPosition
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
@@ -41,8 +43,8 @@ class JIRStaticDomainProducerTest : BidiJIRTestUtils() {
         val v = JIRRuleTestFixtures(cp)
         val cls = ClassStatic("sample.bidi.BidiStaticMetadataSample\$Processes")
         for ((from, to) in listOf(Argument(0) to cls, cls to Argument(0))) {
-            assertFalse(v.forms().valid(v.pass(listOf(CopyAllMarks(from, to)))))
-            assertFalse(v.forms().valid(v.pass(listOf(CopyMark(TaintMark("T"), from, to)))))
+            assertFalse(v.forms().valid(v.pass(listOf(CopyAllMarks(ActionPosition.Exact(from), ActionPosition.Exact(to))))))
+            assertFalse(v.forms().valid(v.pass(listOf(CopyMark(TaintMark("T"), ActionPosition.Exact(from), ActionPosition.Exact(to))))))
         }
     }
 
@@ -65,7 +67,7 @@ class JIRStaticDomainProducerTest : BidiJIRTestUtils() {
     fun `class point source GEN has no input residual field`(): Unit {
         val v = JIRRuleTestFixtures(cp)
         val className = "sample.bidi.BidiStaticMetadataSample\$Processes"
-        val rule = v.source(listOf(AssignMark(TaintMark("T"), ClassStatic(className))))
+        val rule = v.source(listOf(AssignMark(TaintMark("T"), ActionPosition.Exact(ClassStatic(className)))))
         val forms = v.forms()
         assertTrue(forms.valid(rule))
         val action = forms.markTarget(rule, rule.actionsAfter.single())

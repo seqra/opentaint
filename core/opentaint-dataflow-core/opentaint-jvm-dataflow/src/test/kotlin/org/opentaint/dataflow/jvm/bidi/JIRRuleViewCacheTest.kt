@@ -29,14 +29,14 @@ class JIRRuleViewCacheTest : BidiJIRTestUtils() {
             CommonCondition.Atom<JirCondition>(ContainsMark(Argument(0), RuleMark("U")))))
         val delegate = object : TaintRulesProvider by NoTaintRules {
             override fun entryPointRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
-                listOf(TaintEntryPointSource(method, mkTrue(), listOf(AssignMark(RuleMark("T"), Argument(0)),
-                    AssignMark(RuleMark("U"), Argument(0))), null))
+                listOf(TaintEntryPointSource(method, mkTrue(), listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Argument(0))),
+                    AssignMark(RuleMark("U"), ActionPosition.Exact(Argument(0)))), null))
             override fun exitSourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
-                listOf(TaintMethodExitSource(method, predicate, listOf(AssignMark(RuleMark("T"), Result)), null))
+                listOf(TaintMethodExitSource(method, predicate, listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result))), null))
             override fun sourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
-                listOf(TaintMethodSource(method, predicate, listOf(AssignMark(RuleMark("T"), Result)), null))
+                listOf(TaintMethodSource(method, predicate, listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result))), null))
             override fun sourceRulesForStaticField(field: JIRField, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
-                listOf(TaintStaticFieldSource(field, mkTrue(), listOf(AssignMark(RuleMark("T"), Result)), null))
+                listOf(TaintStaticFieldSource(field, mkTrue(), listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result))), null))
         }
         val interpreter = interp(EffectiveBidiRulesProvider(delegate, manager.marks))
         val method = method("copy")

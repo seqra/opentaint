@@ -53,10 +53,10 @@ class JIRStaticMetadataTest : BidiJIRTestUtils() {
         val deep = PositionWithAccess(p, PositionAccessor.FieldAccessor(owner, "f", "java.lang.Object"))
         val atom: Condition = CommonCondition.Atom(ContainsMark(deep, TaintMark("T")))
         val falseCond: Condition = CommonCondition.And(listOf(atom, CommonCondition.Not(atom)))
-        val source = v.source(listOf(AssignMark(TaintMark("U"), Result)), atom, target)
+        val source = v.source(listOf(AssignMark(TaintMark("U"), ActionPosition.Exact(Result))), atom, target)
         val sink = v.sink(condition = CommonCondition.Or(listOf(atom,
             CommonCondition.Atom(ContainsMarkOnAnyField(p, TaintMark("V"))))), method = target)
-        val never = v.source(listOf(AssignMark(TaintMark("NEVER"), ClassStatic("never.Owner"))), falseCond, target)
+        val never = v.source(listOf(AssignMark(TaintMark("NEVER"), ActionPosition.Exact(ClassStatic("never.Owner")))), falseCond, target)
         val rules = object : org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider by NoTaintRules {
             override fun sourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
                 if (method == target) listOf(source, never) else emptyList()
@@ -75,9 +75,9 @@ class JIRStaticMetadataTest : BidiJIRTestUtils() {
     fun `selected class cleaner keeps exact point scope and no cleaner target creates a read request`(): Unit {
         val v = JIRRuleTestFixtures(cp)
         val target = method("target", "sample.bidi.BidiPrescanSample")
-        val selected = v.cleaner(listOf(RemoveMark(TaintMark("T"), ClassStatic(owner), org.opentaint.dataflow.configuration.TaintCleanReach.Exact)),
+        val selected = v.cleaner(listOf(RemoveMark(TaintMark("T"), ActionPosition.Exact(ClassStatic(owner)) )),
             mkTrue(), target)
-        val all = v.cleaner(listOf(RemoveAllMarks(ClassStatic(owner))),
+        val all = v.cleaner(listOf(RemoveAllMarks(ActionPosition.Exact(ClassStatic(owner)))),
             mkTrue(), target)
         val queries = ArrayList<Boolean>()
         val rules = object : org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider by NoTaintRules {
@@ -152,9 +152,9 @@ class JIRStaticMetadataTest : BidiJIRTestUtils() {
         val m = method("copy")
         val p = PositionWithAccess(ClassStatic(owner), PositionAccessor.FieldAccessor(owner, "sField", "java.lang.Object"))
         val cond: Condition = CommonCondition.Atom(ContainsMark(p, TaintMark("BOUNDARY")))
-        val source = TaintMethodExitSource(m, cond, listOf(AssignMark(TaintMark("OUT"), Result)), null)
+        val source = TaintMethodExitSource(m, cond, listOf(AssignMark(TaintMark("OUT"), ActionPosition.Exact(Result))), null)
         val entrySource = TaintEntryPointSource(m, cond,
-            listOf(AssignMark(TaintMark("IN"), ClassStatic("never.Owner"))), null)
+            listOf(AssignMark(TaintMark("IN"), ActionPosition.Exact(ClassStatic("never.Owner")))), null)
         val rules = object : org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider by NoTaintRules {
             override fun exitSourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
                 if (method == m) listOf(source) else emptyList()
@@ -173,7 +173,7 @@ class JIRStaticMetadataTest : BidiJIRTestUtils() {
     fun `all marks static kill contributes its exact slot without selected mark interest`(): Unit {
         val target = method("target", "sample.bidi.BidiPrescanSample")
         val p = PositionWithAccess(ClassStatic(owner), PositionAccessor.FieldAccessor(owner, "sField", "java.lang.Object"))
-        val kill = TaintCleaner(target, mkTrue(), listOf(RemoveAllMarks(p)), null)
+        val kill = TaintCleaner(target, mkTrue(), listOf(RemoveAllMarks(ActionPosition.Exact(p))), null)
         val rules = object : org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider by NoTaintRules {
             override fun cleanerRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
                 if (method == target) listOf(kill) else emptyList()
@@ -192,8 +192,7 @@ class JIRStaticMetadataTest : BidiJIRTestUtils() {
         val target = checkNotNull(caller.instList.instructions.first { it.callExpr != null }.callExpr).method.method
         val position = PositionWithAccess(ClassStatic(owner),
             PositionAccessor.FieldAccessor(owner, "sField", "java.lang.Object"))
-        val cleaner = v.cleaner(listOf(RemoveMark(TaintMark("T"), position,
-            org.opentaint.dataflow.configuration.TaintCleanReach.ExactAndAnyField)), mkTrue(), target)
+        val cleaner = v.cleaner(listOf(RemoveMark(TaintMark("T"), ActionPosition.AnyAccessorAfter(position))), mkTrue(), target)
         val rules = object : org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider by NoTaintRules {
             override fun cleanerRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
                 if (method == target) listOf(cleaner) else emptyList()
@@ -229,7 +228,7 @@ class JIRStaticMetadataTest : BidiJIRTestUtils() {
         val target = checkNotNull(caller.instList.instructions.first { it.callExpr != null }.callExpr).method.method
         val field = PositionWithAccess(ClassStatic(owner),
             PositionAccessor.FieldAccessor(owner, "sField", "java.lang.Object"))
-        val pass = v.pass(listOf(CopyAllMarks(field, field)), mkTrue(), target)
+        val pass = v.pass(listOf(CopyAllMarks(ActionPosition.Exact(field), ActionPosition.Exact(field))), mkTrue(), target)
         val rules = object : org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider by NoTaintRules {
             override fun passTroughRulesForMethod(method: CommonMethod, statement: CommonInst?, fact: FactAp?, allRelevant: Boolean) =
                 if (method == target) listOf(pass) else emptyList()
@@ -252,7 +251,7 @@ class JIRStaticMetadataTest : BidiJIRTestUtils() {
             PositionWithAccess(ClassStatic(owner), PositionAccessor.FieldAccessor(owner, "sField", "java.lang.Object")),
             TaintMark(name)))
         fun source(name: String, cond: Condition) = TaintMethodSource(target,
-            CommonCondition.And(listOf(marked(name), cond)), listOf(AssignMark(TaintMark("OUT"), Result)), null)
+            CommonCondition.And(listOf(marked(name), cond)), listOf(AssignMark(TaintMark("OUT"), ActionPosition.Exact(Result))), null)
         val rules = object : org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider by NoTaintRules {
             override fun sourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
                 if (method == target) listOf(source("P", unknown), source("N", CommonCondition.Not(unknown)),

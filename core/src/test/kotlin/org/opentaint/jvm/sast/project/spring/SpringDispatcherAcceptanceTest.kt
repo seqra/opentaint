@@ -44,6 +44,7 @@ import org.opentaint.jvm.graph.JApplicationSingleExitGraph
 import org.opentaint.jvm.sast.ast.BasicTestUtils
 import org.opentaint.jvm.sast.dataflow.ClassLocationChecker
 import org.opentaint.jvm.sast.dataflow.JIRTaintAnalyzer
+import org.opentaint.jvm.sast.dataflow.J03ObservedDriverBridge
 import kotlin.test.*
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -98,12 +99,13 @@ open class SpringDispatcherAcceptanceTest : BasicTestUtils() {
         val rules = provider()
         val params = JIRAnalysisManager.Params(aliasAnalysisParams = JIRLocalAliasAnalysis.Params(useAliasAnalysis = false))
         var report: Report? = null
+        val bridge = J03ObservedDriverBridge()
         val analyzer = object : TaintAnalyzer<JIRMethod, JIRInst>(options()) {
             override fun analysisGraph() = graph
             override fun analysisManager() = JIRAnalysisManager(cp, refManager, rules, params = params)
             override fun unitResolver() = units
             override fun bidiEntry(): BidiEntry {
-                val actual = JIRBidiAnalysis(cp, graph, units, rules, params, FixedLimits(listOf(1, 1, 2)), refManager)
+                val actual = bridge.createEntry(cp, graph, units, rules, params, FixedLimits(listOf(1, 1, 2)), refManager)
                 return object : BidiEntry {
                     override fun gather(manager: TaintAnalysisManager, startMethods: List<MethodWithContext>) =
                         error("The real joined prescan graph must be supplied")
@@ -126,13 +128,17 @@ open class SpringDispatcherAcceptanceTest : BasicTestUtils() {
         analyzer.use {
             val (output, status) = analyzer.analyzeWithIfds(listOf(dispatch))
             assertEquals(TaintAnalysisUnitRunnerManager.Status.OK, status.analysisStatus)
-            assertEquals(EXPECTED, output.map { it.vulnerability.ruleId }.toSet())
+            val trace = bridge.runs.joinToString("\n") { run ->
+                "run-${run.index} ${run.direction} limit=${run.fieldLimit} " +
+                    "initials=${run.initials} sourceHits=${run.sourceHits} " +
+                    "targets=${run.targets} outgoingDemand=${run.outgoingDemand} " +
+                    "summaries=${run.rawSummaries}"
+            }
+            assertEquals(EXPECTED, output.map { it.vulnerability.ruleId }.toSet(), trace)
             val completed = assertNotNull(report)
-            assertEquals(EXPECTED, completed.entries.map { it.key.rule.id }.toSet())
-            assertTrue(completed.entries.all { it.state == ReportState.DEMAND },
-                "The selected minimal policy retains candidates without a completed trace proof")
-            assertTrue(completed.entries.all { e -> e.witnesses.any { !it.confirmed } })
-            assertTrue(completed.entries.none { it.key.rule.id == "outside" })
+            assertEquals(EXPECTED, completed.entries.map { it.descriptor.key.ruleId }.toSet())
+            assertTrue(completed.entries.all { it.descriptor.key.method in setOf(store, read) })
+            assertTrue(completed.entries.none { it.descriptor.key.ruleId == "outside" })
             assertTrue(analyzer.ifdsEngine.allUnits().isEmpty())
             assertFailsWith<IllegalStateException> { analyzer.ifdsEngine.apManager }
         }
@@ -165,12 +171,12 @@ open class SpringDispatcherAcceptanceTest : BasicTestUtils() {
         val delegate = object : TaintRulesProvider by AcceptanceEmptyRules {
             override val markDeclarations = RawMarkDeclarations(setOf(mark.name), emptyMap(), emptyMap())
             override fun entryPointRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
-                if (method == store) listOf(TaintEntryPointSource(method, mkTrue(), listOf(AssignMark(mark, Argument(0))),
+                if (method == store) listOf(TaintEntryPointSource(method, mkTrue(), listOf(AssignMark(mark, ActionPosition.Exact(Argument(0)))),
                     null, "controller-entry")) else emptyList()
 
             override fun sourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
                 if (method == findMethod(SAMPLE, "source")) listOf(TaintMethodSource(method, mkTrue(),
-                    listOf(AssignMark(mark, Result)), null, "registry-source")) else emptyList()
+                    listOf(AssignMark(mark, ActionPosition.Exact(Result))), null, "registry-source")) else emptyList()
 
             override fun sinkRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean): Iterable<TaintMethodSink> {
                 val id = when (method) {

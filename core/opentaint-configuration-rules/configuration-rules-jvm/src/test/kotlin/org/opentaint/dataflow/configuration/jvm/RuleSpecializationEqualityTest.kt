@@ -15,7 +15,7 @@ class RuleSpecializationEqualityTest {
     private val method = proxy<CommonMethod>("method")
     private val field = proxy<JIRField>("field")
     private val condition: Condition = mkTrue()
-    private val actions = listOf(AssignMark(TaintMark("T"), Argument(0)))
+    private val actions = listOf(AssignMark(TaintMark("T"), ActionPosition.Exact(Argument(0))))
     private val meta = TaintSinkMeta("message", CommonTaintConfigurationSinkMeta.Severity.Warning, listOf(1))
 
     private fun rows(): List<TaintConfigurationItem> = listOf(
@@ -101,7 +101,7 @@ class RuleSpecializationEqualityTest {
         is CommonMethod -> proxy<CommonMethod>("different-method")
         is JIRField -> proxy<JIRField>("different-field")
         is CommonCondition<*> -> mkFalse<JirCondition>()
-        is List<*> -> listOf(AssignMark(TaintMark("different-mark"), Argument(1)))
+        is List<*> -> listOf(AssignMark(TaintMark("different-mark"), ActionPosition.Exact(Argument(1))))
         is String -> "$value-different"
         is CommonTaintConfigurationSinkMeta -> meta.copy(message = "different-message")
         null -> object : ItemInfo {}

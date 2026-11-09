@@ -162,7 +162,7 @@ class JVMRuleSelectionSpecializationTest : BasicTestUtils() {
     @Test fun `wrapper expansion uses original discarded action prefix`() {
         val method = findMethod(owner, "text")
         val original = TaintEntryPointSource(method, org.opentaint.dataflow.configuration.mkTrue(),
-            listOf(AssignMark(TaintMark("U"), Argument(0)), AssignMark(TaintMark("T"), Result)), null)
+            listOf(AssignMark(TaintMark("U"), ActionPosition.Exact(Argument(0))), AssignMark(TaintMark("T"), ActionPosition.Exact(Result))), null)
         val row = JVMRuleSpecialization.normalize(JVMRuleSpecialization.indexed(original, 0, 1), false,
             ReducedMarkPlan(setOf("T"), setOf("T", "U"))) as TaintEntryPointSource
         val expanded = expandSpecializedActions(row, row.actionsAfter,
@@ -175,7 +175,7 @@ class JVMRuleSelectionSpecializationTest : BasicTestUtils() {
         val base = JIRTaintRulesProvider(TaintConfiguration(cp))
         val method = findMethod(owner, "text")
         val custom = TaintPassThrough(method, org.opentaint.dataflow.configuration.mkTrue(),
-            listOf(CopyAllMarks(Argument(0), Result)), null)
+            listOf(CopyAllMarks(ActionPosition.Exact(Argument(0)), ActionPosition.Exact(Result))), null)
         val opaque = object : TaintRulesProvider by base {
             override fun passTroughRulesForMethod(method: CommonMethod, statement: CommonInst?, fact: FactAp?,
                                                   allRelevant: Boolean): Iterable<TaintPassThrough> = listOf(custom)

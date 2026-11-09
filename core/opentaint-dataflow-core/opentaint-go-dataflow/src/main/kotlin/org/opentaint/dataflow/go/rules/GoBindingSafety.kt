@@ -30,7 +30,6 @@ internal object GoBindingSafety {
             is GoSerializedCondition.Or -> condition.anyOf.all { GoBindingSafety.condition(it, field) }
             is GoSerializedCondition.Not -> GoBindingSafety.condition(condition.not, field)
             is GoSerializedCondition.ContainsMark -> pos(condition.pos)
-            is GoSerializedCondition.ContainsMarkOnAnyAccessor -> pos(condition.pos)
             is GoSerializedCondition.NumberOfArgs -> true
             is GoSerializedCondition.IsNull -> simple(condition.pos)
             is GoSerializedCondition.IsConstant -> simple(condition.pos)

@@ -8,7 +8,6 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isF
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.ap.TaintMark
 import org.opentaint.dataflow.bidi.interp.*
-import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.configuration.jvm.*
 import org.opentaint.dataflow.configuration.jvm.TaintMark as RuleMark
 import org.opentaint.dataflow.jvm.BasicTestUtils
@@ -35,7 +34,7 @@ class JIRCleanerMappingTest : BasicTestUtils() {
         m.accessors.index(FieldAccessor(owner, name, type))
     private fun at(base: Position, name: String, type: String = "java.lang.Object", owner: String = CLS) =
         PositionWithAccess(base, PositionAccessor.FieldAccessor(owner, name, type))
-    private fun any(position: Position) = PositionWithAccess(position, PositionAccessor.AnyFieldAccessor)
+    private fun any(position: Position) = ActionPosition.AnyAccessorAfter(position)
     private fun cleaner(actions: List<Action>, condition: Condition = JIRRuleTestFixtures.trueCondition) =
         fixture.cleaner(actions, condition)
     private fun lower(rule: TaintCleaner, condition: ExprOrConstant = RuleConditionRewriter.trueExpr,
@@ -56,13 +55,10 @@ class JIRCleanerMappingTest : BasicTestUtils() {
             Triple(ClassStatic(CLS), AccessPathBase.ClassStatic, p(cls)),
             Triple(at(ClassStatic(CLS), "sField"), AccessPathBase.ClassStatic, p(cls, idx("sField"))),
         )
-        for ((position, base, path) in rows) for (ruleReach in TaintCleanReach.entries) for (trailingAny in listOf(false, true)) {
-            val rule = cleaner(listOf(RemoveMark(mark, if (trailingAny) any(position) else position, ruleReach)))
+        for ((position, base, path) in rows) for (trailingAny in listOf(false, true)) {
+            val rule = cleaner(listOf(RemoveMark(mark, if (trailingAny) any(position) else ActionPosition.Exact(position))))
             val step = lower(rule).single()
-            val reach = if (trailingAny) CleanReach.BELOW else when (ruleReach) {
-                TaintCleanReach.Exact -> CleanReach.EXACT
-                TaintCleanReach.ExactAndAnyField -> CleanReach.AT_AND_BELOW
-            }
+            val reach = if (trailingAny) CleanReach.BELOW else CleanReach.EXACT
             assertMapped(step, base, path, reach, t)
         }
     }
@@ -75,7 +71,7 @@ class JIRCleanerMappingTest : BasicTestUtils() {
             at(Argument(0), "f") to p(f),
         )
         for ((position, path) in rows) {
-            val step = lower(cleaner(listOf(RemoveAllMarks(position)))).single()
+            val step = lower(cleaner(listOf(RemoveAllMarks(ActionPosition.Exact(position))))).single()
             assertMapped(step, x, path, CleanReach.AT_AND_BELOW, null)
             assertFalse(forms.valid(cleaner(listOf(RemoveAllMarks(any(position))))))
         }
@@ -88,7 +84,7 @@ class JIRCleanerMappingTest : BasicTestUtils() {
         val classPosition = ClassStatic(CLS)
         val fieldPosition = at(classPosition, "sField")
         val deepPosition = at(fieldPosition, "g")
-        val steps = lower(cleaner(listOf(RemoveAllMarks(classPosition), RemoveAllMarks(fieldPosition), RemoveAllMarks(deepPosition))))
+        val steps = lower(cleaner(listOf(RemoveAllMarks(ActionPosition.Exact(classPosition)), RemoveAllMarks(ActionPosition.Exact(fieldPosition)), RemoveAllMarks(ActionPosition.Exact(deepPosition)))))
         assertEquals(3, steps.size)
         for ((step, path) in steps.zip(listOf(p(cls), p(cls, field), p(cls, field, g)))) {
             val kill = assertIs<CleanStep.Kill>(step)
@@ -109,27 +105,22 @@ class JIRCleanerMappingTest : BasicTestUtils() {
         for (negated in listOf(false, true)) for (onAny in listOf(false, true)) {
             val literal = if (onAny) ContainsMarkOnAnyAccessorLiteral(Argument(0).resolveAp(), TaintMarkAccessor("T"), negated)
                           else ContainsMarkLiteral(Argument(0).resolveAp(), TaintMarkAccessor("T"), negated)
-            assertTrue(lower(cleaner(listOf(RemoveMark(mark, position))), ExprOrConstant(literal)).isEmpty())
+            assertTrue(lower(cleaner(listOf(RemoveMark(mark, ActionPosition.Exact(position)))), ExprOrConstant(literal)).isEmpty())
         }
-        assertTrue(lower(cleaner(listOf(RemoveAllMarks(position))), RuleConditionRewriter.falseExpr).isEmpty())
+        assertTrue(lower(cleaner(listOf(RemoveAllMarks(ActionPosition.Exact(position)))), RuleConditionRewriter.falseExpr).isEmpty())
         assertTrue(lower(cleaner(emptyList())).isEmpty())
-        assertTrue(lower(cleaner(listOf(AssignMark(mark, Argument(0)), CopyAllMarks(Argument(0), Result)))).isEmpty())
+        assertTrue(lower(cleaner(listOf(AssignMark(mark, ActionPosition.Exact(Argument(0))), CopyAllMarks(ActionPosition.Exact(Argument(0)), ActionPosition.Exact(Result))))).isEmpty())
     }
 
-    @Test fun `String selected cleaner expands in order to string bytes while AnyField has no companion`(): Unit {
-        val bytes = idx("<string-bytes>", "byte[]", "java.lang.String")
+    @Test fun `String selected cleaners use only explicit positions`(): Unit {
         val text = idx("text", "java.lang.String")
         val stringTypes = JIRMethodPositionBaseTypeResolver(findMethod(CLS, "stringArg"))
-        val root = lower(cleaner(listOf(RemoveMark(mark, Argument(0)))), resolver = stringTypes)
-        assertEquals(2, root.size)
-        assertMapped(root[0], x, emptyList(), CleanReach.EXACT, t)
-        assertMapped(root[1], x, p(bytes), CleanReach.EXACT, t)
-        val field = lower(cleaner(listOf(RemoveMark(mark, at(Argument(0), "text", "java.lang.String"),
-            TaintCleanReach.ExactAndAnyField))))
-        assertEquals(2, field.size)
-        assertMapped(field[0], x, p(text), CleanReach.AT_AND_BELOW, t)
-        assertMapped(field[1], x, p(text, bytes), CleanReach.AT_AND_BELOW, t)
-        assertNotSame(assertIs<CleanStep.Field>(field[0]).temporary, assertIs<CleanStep.Field>(field[1]).temporary)
+        val root = lower(cleaner(listOf(RemoveMark(mark, ActionPosition.Exact(Argument(0))))), resolver = stringTypes)
+        assertEquals(1, root.size)
+        assertMapped(root.single(), x, emptyList(), CleanReach.EXACT, t)
+        val field = lower(cleaner(listOf(RemoveMark(mark, ActionPosition.Exact(at(Argument(0), "text", "java.lang.String"))))))
+        assertEquals(1, field.size)
+        assertMapped(field.single(), x, p(text), CleanReach.EXACT, t)
         val trailing = lower(cleaner(listOf(RemoveMark(mark, any(at(Argument(0), "text", "java.lang.String"))))))
         assertEquals(1, trailing.size)
         assertMapped(trailing.single(), x, p(text), CleanReach.BELOW, t)
@@ -143,7 +134,7 @@ class JIRCleanerMappingTest : BasicTestUtils() {
         for ((fieldName, fieldType, last) in listOf(
             ValueCase("value", "java.lang.Object", value), ValueCase("primitive", "int", primitive))) {
             val position = at(at(Argument(0), "holder", HOLDER), fieldName, fieldType, HOLDER)
-            val step = assertIs<CleanStep.Field>(lower(cleaner(listOf(RemoveMark(mark, position)))).single())
+            val step = assertIs<CleanStep.Field>(lower(cleaner(listOf(RemoveMark(mark, ActionPosition.Exact(position))))).single())
             assertEquals(p(holder, last), step.read.edges.single { it.edge.to.base === step.temporary }.edge.from.path)
             val input = fixture.manager.accessors.accessor(holder)
             assertEquals(org.opentaint.dataflow.ap.ifds.FactTypeChecker.FilterResult.Accept,
@@ -157,8 +148,8 @@ class JIRCleanerMappingTest : BasicTestUtils() {
     }
 
     @Test fun `lowered actions keep rule order own cached paths use fresh temporaries and share them in reversal`(): Unit {
-        val actions = arrayListOf<Action>(RemoveMark(mark, at(Argument(0), "f")),
-            RemoveAllMarks(at(Argument(0), "g")), RemoveMark(RuleMark("U"), at(Argument(0), "f")))
+        val actions = arrayListOf<Action>(RemoveMark(mark, ActionPosition.Exact(at(Argument(0), "f"))),
+            RemoveAllMarks(ActionPosition.Exact(at(Argument(0), "g"))), RemoveMark(RuleMark("U"), ActionPosition.Exact(at(Argument(0), "f"))))
         val steps = lower(cleaner(actions))
         val fields = steps.map { assertIs<CleanStep.Field>(it) }
         assertEquals(listOf(p(idx("f")), p(idx("g")), p(idx("f"))), fields.map { field ->
@@ -183,7 +174,7 @@ class JIRCleanerMappingTest : BasicTestUtils() {
             assertFails { (path as MutableList).clear() }
             assertFailsWith<UnsupportedOperationException> { (path as java.util.List<*>).clear() }
         }
-        val again = assertIs<CleanStep.Field>(lower(cleaner(listOf(RemoveMark(mark, at(Argument(0), "f"))))).single())
+        val again = assertIs<CleanStep.Field>(lower(cleaner(listOf(RemoveMark(mark, ActionPosition.Exact(at(Argument(0), "f")))))).single())
         assertTrue(fields.none { it.temporary === again.temporary })
     }
 

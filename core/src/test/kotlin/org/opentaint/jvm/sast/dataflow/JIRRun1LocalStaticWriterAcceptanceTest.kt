@@ -5,7 +5,6 @@ import org.junit.jupiter.api.parallel.ResourceLock
 import org.junit.jupiter.api.parallel.Resources
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
-import org.opentaint.dataflow.bidi.driver.ReportState
 import org.opentaint.dataflow.bidi.driver.Seed
 import org.opentaint.dataflow.bidi.engine.RunStatus
 import org.opentaint.dataflow.configuration.jvm.serialized.*
@@ -67,10 +66,10 @@ class JIRRun1LocalStaticWriterAcceptanceTest : AnalysisTest() {
         assertComplete(r)
         assertEquals(listOf(1, 2, 3), r.runs.map { it.index })
         assertEquals(listOf(1, 1, 2), r.runs.map { it.fieldLimit })
-        assertEquals(mapOf(rule to ReportState.DEMAND), r.report.entries.associate { it.key.rule.id to it.state })
+        assertEquals(setOf(rule), r.report.entries.mapTo(linkedSetOf()) { it.descriptor.key.ruleId })
         assertEquals(setOf(rule), r.output.mapTo(linkedSetOf()) { it.vulnerability.ruleId })
-        assertTrue(r.witnesses.any { it.run == 1 && it.rule.id == rule })
-        assertTrue(r.witnesses.any { it.run == 3 && it.rule.id == rule },
+        assertTrue(r.sinkHits.any { it.run == 1 && it.rule.id == rule })
+        assertTrue(r.sinkHits.any { it.run == 3 && it.rule.id == rule },
             "The later FULL run must retain a real sink witness, not only the run-1 candidate")
 
         val f1 = r.runs[0]
@@ -91,11 +90,11 @@ class JIRRun1LocalStaticWriterAcceptanceTest : AnalysisTest() {
                 link.premise.singleOrNull()?.let { p -> isField(p, staticInput) && p.mark == runtimeMark } == true &&
                 link.added.base == AccessPathBase.Argument(0) && link.added.mark == runtimeMark },
                 "The real first setter binding keeps the static original and its projected marked input")
-            assertTrue(r.witnesses.any { witness -> witness.run == 1 && witness.rule.id == rule &&
-                witness.literals.any { literal ->
-                    literal.premise.singleOrNull()?.let { p -> isField(p, outputPath) && p.mark == runtimeMark } == true &&
-                        literal.facts.any { it.value.mark == runtimeMark && it.layer == Layer.DEMAND }
-                } }, "The computed output supply answers the sink's saved static-origin point")
+            assertTrue(r.sinkHits.any { hit -> hit.run == 1 && hit.rule.id == rule &&
+                hit.layer == Layer.DEMAND && hit.requirements.any {
+                    it.base == AccessPathBase.Argument(0) && it.mark == full
+                }
+            }, "The actual sink fires its original FULL requirement after the static supply joins the saved point")
         }
         for (rows in listOf(f1.rawSummaries, f1.selected)) assertTrue(rows.none { edge ->
             edge.conclusion.value.base == AccessPathBase.ClassStatic && edge.premise.isNotEmpty() &&

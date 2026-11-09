@@ -68,7 +68,7 @@ internal class JIRPrescanFixtures(
     @Suppress("UNCHECKED_CAST")
     val engine = TaintAnalysisUnitRunnerManager(refManager, cancellation, manager,
         graph as org.opentaint.util.analysis.ApplicationGraph<CommonMethod, org.opentaint.ir.api.common.cfg.CommonInst>,
-        units as UnitResolver<CommonMethod>, NoStoredSummaries, null)
+        units as UnitResolver<CommonMethod>, NoStoredSummaries, null, iterationLimit = null)
 
     init {
         manager.selectPhase(TaintAnalysisManager.Phase.Prescan)

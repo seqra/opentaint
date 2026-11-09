@@ -61,7 +61,7 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
     private val empty = ExclusionSet.Empty
     private val meta = TaintSinkMeta("boundary sink", CommonTaintConfigurationSinkMeta.Severity.Error, null)
 
-    private fun any(p: Position) = PositionWithAccess(p, PositionAccessor.AnyFieldAccessor)
+    private fun any(p: Position) = ActionPosition.AnyAccessorAfter(p)
     private fun field(p: Position, name: String = "f") = PositionWithAccess(p,
         PositionAccessor.FieldAccessor(owner, name, "java.lang.Object"))
     private fun contains(p: Position, mark: String = "T"): Condition = CommonCondition.Atom(ContainsMark(p, RuleMark(mark)))
@@ -163,9 +163,9 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
         val m = method("copy")
         val p = BoundaryRules().apply {
             entrySources = listOf(
-                entrySource(m, listOf(AssignMark(RuleMark("T"), Argument(0)), AssignMark(RuleMark("U"), any(Argument(0))))),
-                entrySource(m, listOf(AssignMark(RuleMark("V"), Argument(0))), mkFalse()),
-                entrySource(m, listOf(AssignMark(RuleMark("W"), Argument(0))), contains(Argument(0))),
+                entrySource(m, listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Argument(0))), AssignMark(RuleMark("U"), any(Argument(0))))),
+                entrySource(m, listOf(AssignMark(RuleMark("V"), ActionPosition.Exact(Argument(0)))), mkFalse()),
+                entrySource(m, listOf(AssignMark(RuleMark("W"), ActionPosition.Exact(Argument(0)))), contains(Argument(0))),
             )
         }
         val s = start(interp(p), m)
@@ -182,7 +182,7 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
     @Test
     fun `entry sinks are unconditional and ignored end marks are not entry marks`(): Unit {
         val m = method("copy")
-        val accepted = entrySink(m, listOf(AssignMark(RuleMark("U"), field(Argument(0)))))
+        val accepted = entrySink(m, listOf(AssignMark(RuleMark("U"), ActionPosition.Exact(field(Argument(0))))))
         val p = BoundaryRules().apply {
             entrySources = listOf(entrySource(m, listOf(AssignMark(RuleMark("T"), any(Argument(0))))))
             entrySinks = listOf(accepted, entrySink(m, c = mkFalse()), entrySink(m, c = contains(Argument(0))))
@@ -262,7 +262,7 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
         val position = PositionWithAccess(ClassStatic(owner),
             PositionAccessor.FieldAccessor(owner, "sField", "java.lang.Object"))
         val provider = BoundaryRules().apply {
-            exitSources = listOf(exitSource(m, listOf(AssignMark(RuleMark("Out"), Result)), contains(position)))
+            exitSources = listOf(exitSource(m, listOf(AssignMark(RuleMark("Out"), ActionPosition.Exact(Result))), contains(position)))
         }
         val i = interp(provider)
         val entry = start(i, m)
@@ -373,7 +373,7 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
         val m = method("copy")
         val sink = exitSink(m, listOf(AssignMark(RuleMark("U"), any(field(Result)))))
         val p = BoundaryRules().apply {
-            exitSources = listOf(exitSource(m, listOf(AssignMark(RuleMark("T"), Result))))
+            exitSources = listOf(exitSource(m, listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result)))))
             exitSinks = listOf(sink)
         }
         val i = interp(p)
@@ -430,7 +430,7 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
         val contradiction: Condition = CommonCondition.And(listOf(p, CommonCondition.Not(p)))
         val provider = BoundaryRules().apply {
             exitSources = listOf(exitSource(m, listOf(AssignMark(RuleMark("Out"), any(Result))), contradiction))
-            exitSinks = listOf(exitSink(m, listOf(AssignMark(RuleMark("W"), field(Result, "g"))), contradiction))
+            exitSinks = listOf(exitSink(m, listOf(AssignMark(RuleMark("W"), ActionPosition.Exact(field(Result, "g")))), contradiction))
         }
         val i = interp(provider)
         val caller = setOf(Pattern(fact(arg1), empty), Pattern(fact(AccessPathBase.Argument(2), mark = u), empty))
@@ -464,7 +464,7 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
             PositionAccessor.FieldAccessor(owner, "sField", "java.lang.Object")), "U")
         val condition: Condition = CommonCondition.Or(listOf(a, CommonCondition.And(listOf(a, b))))
         val provider = BoundaryRules().apply {
-            exitSinks = listOf(exitSink(m, listOf(AssignMark(RuleMark("W"), Result)), condition))
+            exitSinks = listOf(exitSink(m, listOf(AssignMark(RuleMark("W"), ActionPosition.Exact(Result))), condition))
         }
         val i = interp(provider)
         val caller = setOf(Pattern(fact(arg1), empty), Pattern(fact(AccessPathBase.Argument(2), mark = u), empty))
@@ -611,7 +611,7 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
         val m = method("copy")
         val p = BoundaryRules().apply {
             entrySources = listOf(entrySource(m, listOf(AssignMark(RuleMark("T"), any(Argument(0))))))
-            entrySinks = listOf(entrySink(m, listOf(AssignMark(RuleMark("U"), Argument(0)))))
+            entrySinks = listOf(entrySink(m, listOf(AssignMark(RuleMark("U"), ActionPosition.Exact(Argument(0))))))
             exitSinks = listOf(exitSink(m, c = contains(Argument(0))))
         }
         val i = interp(p)
@@ -636,7 +636,7 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
         val m = method("copy")
         val p = BoundaryRules().apply {
             entrySources = listOf(entrySource(m, listOf(AssignMark(RuleMark("T"), any(Argument(0))))))
-            entrySinks = listOf(entrySink(m, listOf(AssignMark(RuleMark("U"), Argument(0)))))
+            entrySinks = listOf(entrySink(m, listOf(AssignMark(RuleMark("U"), ActionPosition.Exact(Argument(0))))))
         }
         val i = interp(p)
         val removal = assertNotNull(end(i, m, normalExit(m)).entryMarkRemoval(arg0))
@@ -667,7 +667,7 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
         val p = BoundaryRules().apply {
             exitSources = listOf(exitSource(m, listOf(AssignMark(RuleMark("Out"), any(Result))),
                 CommonCondition.And(listOf(contains(Argument(0)), containsAny(Argument(1), "U")))))
-            exitSinks = listOf(exitSink(m, listOf(AssignMark(RuleMark("V"), field(Result))), containsAny(Argument(0))))
+            exitSinks = listOf(exitSink(m, listOf(AssignMark(RuleMark("V"), ActionPosition.Exact(field(Result)))), containsAny(Argument(0))))
         }
         val i = interp(p)
         val entry = start(i, m)
@@ -704,12 +704,12 @@ class JIRBoundaryFormsTest : BidiJIRTestUtils() {
     @Test
     fun `invalid active source rules are omitted while invalid ignored sink end actions keep the sink`(): Unit {
         val m = method("copy")
-        val bad = field(any(Argument(0)))
+        val bad = PositionWithAccess(ClassStatic("sample.bidi.BidiRuleSample"), PositionAccessor.ElementAccessor)
         val p = BoundaryRules().apply {
-            entrySources = listOf(entrySource(m, listOf(AssignMark(RuleMark("T"), Argument(0)), AssignMark(RuleMark("U"), bad))))
-            entrySinks = listOf(entrySink(m, listOf(AssignMark(RuleMark("T"), Argument(0)), AssignMark(RuleMark("U"), bad))))
-            exitSources = listOf(exitSource(m, listOf(AssignMark(RuleMark("T"), Result), AssignMark(RuleMark("U"), bad))))
-            exitSinks = listOf(exitSink(m, listOf(AssignMark(RuleMark("T"), Result), AssignMark(RuleMark("U"), bad))))
+            entrySources = listOf(entrySource(m, listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Argument(0))), AssignMark(RuleMark("U"), ActionPosition.Exact(bad)))))
+            entrySinks = listOf(entrySink(m, listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Argument(0))), AssignMark(RuleMark("U"), ActionPosition.Exact(bad)))))
+            exitSources = listOf(exitSource(m, listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result)), AssignMark(RuleMark("U"), ActionPosition.Exact(bad)))))
+            exitSinks = listOf(exitSink(m, listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result)), AssignMark(RuleMark("U"), ActionPosition.Exact(bad)))))
         }
         val i = interp(p)
         val entry = start(i, m)

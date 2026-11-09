@@ -47,7 +47,7 @@ class JIRCallPlanTest : BasicTestUtils() {
     private fun stage(p: CallPlan, kind: StageKind) = edgeStages(p, kind).single()
     private fun actions(p: CallPlan, from: CallPoint, to: CallPoint) =
         p.stages.filterIsInstance<CallStage.Actions>().single { it.from == from && it.to == to }.steps
-    private fun any(p: Position) = PositionWithAccess(p, PositionAccessor.AnyFieldAccessor)
+    private fun any(p: Position) = ActionPosition.AnyAccessorAfter(p)
     private fun field(p: Position) = PositionWithAccess(p, PositionAccessor.FieldAccessor(owner, "f", "java.lang.Object"))
     private fun condition(p: Position = Argument(0), negated: Boolean = false): Condition =
         CommonCondition.Atom<JirCondition>(ContainsMark(p, RuleMark("T"))).let { if (negated) CommonCondition.Not(it) else it }
@@ -142,7 +142,7 @@ class JIRCallPlanTest : BasicTestUtils() {
     }
 
     @Test fun `unresolved identity and pass rules remain separate parallel stages with distinct filters`(): Unit {
-        val rules = CallRules().apply { passes = listOf(pass(listOf(CopyAllMarks(Argument(0), Result)))) }
+        val rules = CallRules().apply { passes = listOf(pass(listOf(CopyAllMarks(ActionPosition.Exact(Argument(0)), ActionPosition.Exact(Result))))) }
         val p = v.builder(rules = rules).build()
         val stages = edgeStages(p, StageKind.UNRESOLVED)
         assertEquals(2, stages.size)
@@ -271,7 +271,7 @@ class JIRCallPlanTest : BasicTestUtils() {
     @Test fun `positive and negative pass mark conditions apply both copy actions without conjunction`(): Unit {
         for (negated in listOf(false, true)) {
             val rules = CallRules().apply {
-                passes = listOf(pass(listOf(CopyAllMarks(Argument(0), any(Result)), CopyMark(RuleMark("T"), Argument(0), any(Result))), condition(negated = negated)))
+                passes = listOf(pass(listOf(CopyAllMarks(ActionPosition.Exact(Argument(0)), any(Result)), CopyMark(RuleMark("T"), ActionPosition.Exact(Argument(0)), any(Result))), condition(negated = negated)))
             }
             val p = v.builder(rules = rules).build()
             val summary = edgeStages(p, StageKind.UNRESOLVED)[1].summary
@@ -281,7 +281,7 @@ class JIRCallPlanTest : BasicTestUtils() {
             assertTrue(summary.edges.drop(1).all { it.may })
             assertEquals(setOf(arg0), p.passReads)
         }
-        val falseRules = CallRules().apply { passes = listOf(pass(listOf(CopyAllMarks(Argument(0), Result)), mkFalse())) }
+        val falseRules = CallRules().apply { passes = listOf(pass(listOf(CopyAllMarks(ActionPosition.Exact(Argument(0)), ActionPosition.Exact(Result))), mkFalse())) }
         val falsePlan = v.builder(rules = falseRules).build()
         assertTrue(edgeStages(falsePlan, StageKind.UNRESOLVED)[1].summary.edges.isEmpty())
         assertTrue(falsePlan.passReads.isEmpty())
@@ -296,25 +296,87 @@ class JIRCallPlanTest : BasicTestUtils() {
         val element = v.manager.accessors.index(org.opentaint.dataflow.ap.ifds.ElementAccessor)
         assertEquals(listOf(move(STATIC, STATIC), move(AccessPathBase.This, AccessPathBase.This)), summaries[0].edges.map { it.edge })
         assertTrue(summaries[0].typeFilters.isEmpty() && summaries[0].resultFilters.isEmpty())
-        assertEquals(listOf(move(AccessPathBase.This, AccessPathBase.This), move(AccessPathBase.This, ret),
-            move(AccessPathBase.This, ret, listOf(element))), summaries[1].edges.map { it.edge })
+        val slot = v.manager.accessors.index(FieldAccessor(v.expr(v.call("getter")).method.method.enclosingClass.name,
+            "<get-default>", "java.lang.Object"))
+        assertEquals(listOf(move(AccessPathBase.This, AccessPathBase.This),
+            PathEdge(side(AccessPathBase.This, listOf(slot)), side(ret), empty),
+            PathEdge(side(AccessPathBase.This, listOf(slot)), side(ret, listOf(element)), empty)),
+            summaries[1].edges.map { it.edge })
         assertEquals(setOf(AccessPathBase.This), summaries[1].typeFilters.keys)
         assertEquals(setOf(ret), summaries[1].resultFilters.keys)
         assertTrue(p.passReads.isEmpty())
         assertTrue(edgeStages(v.builder("getter").build(), StageKind.UNRESOLVED)[1].summary.edges.isEmpty())
     }
 
-    @Test fun `invalid whole rules give no partial sources passes cleaners sinks or all-relevant rewrites`(): Unit {
-        val bad = field(any(Argument(0)))
-        val info = user("R")
-        val invalidSource = source(listOf(AssignMark(RuleMark("T"), Result), AssignMark(RuleMark("T"), bad)), mkFalse(), info)
-        val invalidPass = pass(listOf(CopyAllMarks(Argument(0), Result), AssignMark(RuleMark("T"), bad)), mkFalse())
-        val invalidCleaner = cleaner(listOf(RemoveMark(RuleMark("T"), Argument(0)), CopyAllMarks(bad, Result)), mkFalse(), info)
+    private fun getterModel() = JIRMethodGetDefault(object : JIRMethodGetDefault.Configuration {
+        override fun enableDefaultPropagationForClass(cls: org.opentaint.ir.api.jvm.JIRClassOrInterface) = true
+    })
+
+    @Test fun `statically false explicit getter rows allow defaults with one provider query`(): Unit {
         val rules = CallRules().apply {
-            sources = listOf(invalidSource, source(listOf(AssignMark(RuleMark("U"), Result))))
+            passes = listOf(pass(listOf(CopyAllMarks(ActionPosition.Exact(This), ActionPosition.Exact(Result))), mkFalse()))
+        }
+        val plan = v.builder("getter", rules = rules, defaultGetModel = getterModel()).build()
+        val output = edgeStages(plan, StageKind.UNRESOLVED)[1].summary
+        assertEquals(3, output.edges.size)
+        assertTrue(plan.passReads.isEmpty(), "Fallback rows are not explicit pass reads")
+        assertEquals(1, rules.queries.count { it.kind == "pass" }, "Prepare consumes the provider query once")
+    }
+
+    @Test fun `nonfalse invalid explicit getter row blocks defaults and emits no partial static operation`(): Unit {
+        val staticField = PositionWithAccess(ClassStatic(owner), PositionAccessor.FieldAccessor(owner, "f", "java.lang.Object"))
+        val rules = CallRules().apply {
+            passes = listOf(pass(listOf(
+                CopyAllMarks(ActionPosition.Exact(This), ActionPosition.Exact(staticField)),
+                CopyAllMarks(any(This), ActionPosition.Exact(Result)))))
+        }
+        val plan = v.builder("getter", rules = rules, defaultGetModel = getterModel()).build()
+        val output = edgeStages(plan, StageKind.UNRESOLVED)[1].summary
+        assertTrue(output.edges.isEmpty())
+        assertTrue(output.staticOperations.isEmpty(), "Validation precedes lowering every action")
+        assertTrue(output.touched.isEmpty())
+        assertTrue(plan.passReads.isEmpty())
+    }
+
+    @Test fun `present valid getter row with no copy output still blocks defaults`(): Unit {
+        val rules = CallRules().apply {
+            passes = listOf(pass(listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result)))))
+        }
+        val plan = v.builder("getter", rules = rules, defaultGetModel = getterModel()).build()
+        assertTrue(edgeStages(plan, StageKind.UNRESOLVED)[1].summary.edges.isEmpty())
+        assertTrue(plan.passReads.isEmpty())
+    }
+
+    @Test fun `prepared explicit getter keeps ordinal gaps and excludes default field`(): Unit {
+        val staticField = PositionWithAccess(ClassStatic(owner), PositionAccessor.FieldAccessor(owner, "f", "java.lang.Object"))
+        val rules = CallRules().apply {
+            passes = listOf(pass(listOf(CopyAllMarks(ActionPosition.Exact(This), ActionPosition.Exact(Result))), mkFalse()),
+                pass(listOf(CopyAllMarks(ActionPosition.Exact(This), ActionPosition.Exact(staticField)))))
+        }
+        val plan = v.builder("getter", rules = rules, defaultGetModel = getterModel()).build()
+        val output = edgeStages(plan, StageKind.UNRESOLVED)[1].summary
+        assertEquals(2, output.edges.size)
+        assertEquals(1, output.staticOperations.size)
+        val operation = output.staticOperations.single() as StaticOperation.Write
+        assertEquals(1, operation.id.action!!.occurrence.ordinal)
+        assertEquals(0, operation.id.action!!.ordinal)
+        assertEquals(setOf(AccessPathBase.This), plan.passReads)
+        assertTrue(output.edges.none { edge -> edge.edge.from.path.any {
+            v.manager.accessors.accessor(it).toString().contains("<get-default>")
+        } })
+    }
+
+    @Test fun `invalid whole rules give no partial sources passes cleaners sinks or all-relevant rewrites`(): Unit {
+        val bad = PositionWithAccess(ClassStatic("sample.bidi.BidiRuleSample"), PositionAccessor.ElementAccessor)
+        val info = user("R")
+        val invalidSource = source(listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result)), AssignMark(RuleMark("T"), ActionPosition.Exact(bad))), mkFalse(), info)
+        val invalidPass = pass(listOf(CopyAllMarks(ActionPosition.Exact(Argument(0)), ActionPosition.Exact(Result)), AssignMark(RuleMark("T"), ActionPosition.Exact(bad))), mkFalse())
+        val invalidCleaner = cleaner(listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(Argument(0))), CopyAllMarks(ActionPosition.Exact(bad), ActionPosition.Exact(Result))), mkFalse(), info)
+        val rules = CallRules().apply {
+            sources = listOf(invalidSource, source(listOf(AssignMark(RuleMark("U"), ActionPosition.Exact(Result)))))
             passes = listOf(invalidPass)
             cleaners = listOf(invalidCleaner)
-            sinks = listOf(sink(listOf(AssignMark(RuleMark("T"), Result), AssignMark(RuleMark("T"), bad)), mkFalse()))
+            sinks = listOf(sink(listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result)), AssignMark(RuleMark("T"), ActionPosition.Exact(bad))), mkFalse()))
         }
         val p = v.builder(rules = rules).build()
         assertEquals(listOf(ZERO_KEEP, PathEdge(ZERO_FACT, fact(ret, mark = u), empty)), stage(p, StageKind.SOURCES).summary.edges.map { it.edge })
@@ -330,19 +392,19 @@ class JIRCallPlanTest : BasicTestUtils() {
         val infoR = user("R")
         val rules = CallRules().apply {
             allSources = listOf(
-                source(listOf(AssignMark(RuleMark("T"), Result))),
-                source(listOf(AssignMark(RuleMark("T"), Result)), mkFalse(), infoR),
-                source(listOf(AssignMark(RuleMark("T"), Result)), mkTrue(), infoR),
+                source(listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result)))),
+                source(listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result))), mkFalse(), infoR),
+                source(listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result))), mkTrue(), infoR),
                 source(listOf(AssignMark(RuleMark("T"), any(Argument(0)))), condition(), infoR),
                 source(listOf(AssignMark(RuleMark("T"), any(Argument(1)))), condition(negated = true), infoR),
             )
             allCleaners = listOf(
-                cleaner(listOf(RemoveMark(RuleMark("T"), Argument(0))), mkTrue(), infoR),
+                cleaner(listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(Argument(0)))), mkTrue(), infoR),
                 cleaner(listOf(RemoveMark(RuleMark("T"), any(Argument(1)))), mkTrue(), user("S")),
-                cleaner(listOf(RemoveMark(RuleMark("T"), Result)), condition(), infoR),
-                cleaner(listOf(RemoveMark(RuleMark("T"), Result)), condition(negated = true), infoR),
-                cleaner(listOf(RemoveMark(RuleMark("T"), Result)), mkFalse(), infoR),
-                cleaner(listOf(RemoveAllMarks(Result)), mkTrue(), infoR),
+                cleaner(listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(Result))), condition(), infoR),
+                cleaner(listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(Result))), condition(negated = true), infoR),
+                cleaner(listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(Result))), mkFalse(), infoR),
+                cleaner(listOf(RemoveAllMarks(ActionPosition.Exact(Result))), mkTrue(), infoR),
             )
         }
         val p = v.builder(rules = rules).build()
@@ -357,7 +419,7 @@ class JIRCallPlanTest : BasicTestUtils() {
     @Test fun `sink end actions are absent and source forms bypass returned actions through the rewritten point`(): Unit {
         val rules = CallRules().apply {
             sources = listOf(source(listOf(AssignMark(RuleMark("T"), any(Result)))))
-            sinks = listOf(sink(listOf(AssignMark(RuleMark("U"), Result))))
+            sinks = listOf(sink(listOf(AssignMark(RuleMark("U"), ActionPosition.Exact(Result)))))
             allSources = listOf(source(listOf(AssignMark(RuleMark("T"), any(Result))), mkTrue(), user("T")))
         }
         val p = v.builder(rules = rules, resolutions = listOf(v.resolved())).build()
@@ -380,8 +442,8 @@ class JIRCallPlanTest : BasicTestUtils() {
         val premise = setOf(Pattern(fact(inputBase), empty))
         for ((condition, falseRule) in listOf(contradiction to true, live to false)) {
             val rules = CallRules().apply {
-                sources = listOf(source(listOf(AssignMark(RuleMark("T"), Result)), condition, user("T")))
-                passes = listOf(pass(listOf(CopyAllMarks(Argument(0), Result))))
+                sources = listOf(source(listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result))), condition, user("T")))
+                passes = listOf(pass(listOf(CopyAllMarks(ActionPosition.Exact(Argument(0)), ActionPosition.Exact(Result)))))
             }
             val plan = v.builder(inst, rules).build()
             val requests = ArrayList<org.opentaint.dataflow.bidi.ap.ReferenceRequestKind>()
@@ -416,22 +478,22 @@ class JIRCallPlanTest : BasicTestUtils() {
         }
     }
 
-    @Test fun `sink array predicate uses caller static argument types and one rule identity`(): Unit {
+    @Test fun `sink predicate keeps explicit argument reach regardless of static array type`(): Unit {
         val rules = CallRules().apply { sinks = listOf(sink(emptyList(), condition())) }
         val p = v.builder(rules = rules).build()
         val element = v.manager.accessors.index(org.opentaint.dataflow.ap.ifds.ElementAccessor)
         val sink = p.sinks.single()
         val predicate = assertNotNull(sink.predicate)
-        assertEquals(RulePredicate.Kind.OR, predicate.kind(predicate.root))
-        assertEquals(listOf(Pattern(fact(arg0), empty), Pattern(fact(arg0).copy(path = listOf(element)), empty)), sink.patterns)
+        assertEquals(RulePredicate.Kind.LEAF, predicate.kind(predicate.root))
+        assertEquals(listOf(Pattern(fact(arg0), empty)), sink.patterns)
         assertTrue(predicate.leaves.indices.all { predicate.isUnary(it) && !predicate.isMulti(it) })
         assertTrue(edgeStages(p, StageKind.END_FACTS).isEmpty())
     }
 
     @Test fun `cleaner rule actions keep declared list order before returned rewriter actions`(): Unit {
         val rules = CallRules().apply {
-            cleaners = listOf(cleaner(listOf(RemoveMark(RuleMark("T"), Argument(0)), RemoveAllMarks(Argument(1)))),
-                cleaner(listOf(RemoveMark(RuleMark("U"), Result))))
+            cleaners = listOf(cleaner(listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(Argument(0))), RemoveAllMarks(ActionPosition.Exact(Argument(1))))),
+                cleaner(listOf(RemoveMark(RuleMark("U"), ActionPosition.Exact(Result)))))
         }
         val p = v.builder(rules = rules).build()
         assertEquals(listOf(Cleaner(arg0, null, CleanReach.EXACT, t), Cleaner(arg1, null, CleanReach.AT_AND_BELOW, null),
@@ -499,8 +561,8 @@ class JIRCallPlanTest : BasicTestUtils() {
 
     @Test fun `reverse call keeps empty sink end actions and reverses cleaners while bindings lose filters`(): Unit {
         val rules = CallRules().apply {
-            sinks = listOf(sink(listOf(AssignMark(RuleMark("U"), Result))))
-            cleaners = listOf(cleaner(listOf(RemoveMark(RuleMark("T"), Argument(0)), RemoveMark(RuleMark("U"), Argument(1)))))
+            sinks = listOf(sink(listOf(AssignMark(RuleMark("U"), ActionPosition.Exact(Result)))))
+            cleaners = listOf(cleaner(listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(Argument(0))), RemoveMark(RuleMark("U"), ActionPosition.Exact(Argument(1))))))
         }
         val p = v.builder(rules = rules).build()
         val reversed = p.reversed()
@@ -543,12 +605,12 @@ class JIRCallPlanTest : BasicTestUtils() {
 
     @Test fun `rule occurrences keep prefilter ordinals and rebuild IDs within one owner`(): Unit {
         val contradiction = CommonCondition.And(listOf(condition(), condition(negated = true)))
-        val bad = any(any(Argument(0)))
+        val bad = PositionWithAccess(ClassStatic("sample.bidi.BidiRuleSample"), PositionAccessor.ElementAccessor)
         val rules = CallRules().apply {
-            sources = listOf(source(listOf(AssignMark(RuleMark("T"), Result)), contradiction),
-                source(listOf(AssignMark(RuleMark("T"), bad))),
+            sources = listOf(source(listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result))), contradiction),
+                source(listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(bad)))),
                 source(listOf(AssignMark(RuleMark("U"), any(Result))), condition()))
-            sinks = listOf(sink(emptyList(), contradiction), sink(listOf(AssignMark(RuleMark("T"), bad))),
+            sinks = listOf(sink(emptyList(), contradiction), sink(listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(bad)))),
                 sink(emptyList(), condition()))
         }
         val owner = FormOwner()
@@ -576,9 +638,9 @@ class JIRCallPlanTest : BasicTestUtils() {
 
     @Test fun `field cleaner temporaries keep action mark stage and owner keys across rebuilds`(): Unit {
         val rules = CallRules().apply {
-            cleaners = listOf(cleaner(listOf(RemoveMark(RuleMark("T"), field(Argument(0))),
-                RemoveMark(RuleMark("T"), field(Argument(0))))))
-            allSources = listOf(source(listOf(AssignMark(RuleMark("U"), field(Argument(0)))),
+            cleaners = listOf(cleaner(listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(field(Argument(0)))),
+                RemoveMark(RuleMark("T"), ActionPosition.Exact(field(Argument(0)))))))
+            allSources = listOf(source(listOf(AssignMark(RuleMark("U"), ActionPosition.Exact(field(Argument(0))))),
                 mkTrue(), user("T", "U")))
         }
         val owner = FormOwner()
@@ -603,9 +665,9 @@ class JIRCallPlanTest : BasicTestUtils() {
 
     @Test fun `managed cache cleanup rebuilds stable keys and binds guards to the new sink payload`(): Unit {
         val rules = CallRules().apply {
-            sources = listOf(source(listOf(AssignMark(RuleMark("U"), Result)), condition()))
-            sinks = listOf(sink(listOf(AssignMark(RuleMark("U"), Result)), condition()))
-            cleaners = listOf(cleaner(listOf(RemoveMark(RuleMark("T"), field(Argument(0))))))
+            sources = listOf(source(listOf(AssignMark(RuleMark("U"), ActionPosition.Exact(Result))), condition()))
+            sinks = listOf(sink(listOf(AssignMark(RuleMark("U"), ActionPosition.Exact(Result))), condition()))
+            cleaners = listOf(cleaner(listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(field(Argument(0)))))))
         }
         val owner = FormOwner()
         val inst = v.call("staticCall")
@@ -647,9 +709,9 @@ class JIRCallPlanTest : BasicTestUtils() {
         val cls = v.manager.accessors.index(org.opentaint.dataflow.ap.ifds.ClassStaticAccessor(owner))
         val sf = v.manager.accessors.index(FieldAccessor(owner, "sField", "java.lang.Object"))
         val rules = CallRules().apply {
-            sources = listOf(source(listOf(AssignMark(RuleMark("T"), classPosition), AssignMark(RuleMark("U"), any(staticField)))))
-            cleaners = listOf(cleaner(listOf(RemoveAllMarks(staticField))))
-            passes = listOf(pass(listOf(CopyAllMarks(staticField, Result))))
+            sources = listOf(source(listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(classPosition)), AssignMark(RuleMark("U"), any(staticField)))))
+            cleaners = listOf(cleaner(listOf(RemoveAllMarks(ActionPosition.Exact(staticField)))))
+            passes = listOf(pass(listOf(CopyAllMarks(ActionPosition.Exact(staticField), ActionPosition.Exact(Result)))))
         }
         val p = v.builder(rules = rules).build()
         assertEquals(listOf(ZERO_KEEP, PathEdge(ZERO_FACT, fact(STATIC).copy(path = listOf(cls)), empty),
@@ -677,7 +739,7 @@ class JIRCallPlanTest : BasicTestUtils() {
             override val method = typed
         }
         val s = JIRAssignInst(original.location, original.lhv, JIRStaticCallExpr(reference, call.args))
-        val rules = CallRules().apply { cleaners = listOf(cleaner(listOf(RemoveMark(RuleMark("T"), Argument(0))))) }
+        val rules = CallRules().apply { cleaners = listOf(cleaner(listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(Argument(0)))))) }
         val p = v.builder(s, rules).build()
         assertEquals(listOf(Cleaner(arg0, null, CleanReach.EXACT, t), direct).map(::cleanerValue),
             actions(p, CallPoint.BOUND, CallPoint.ADDED).map { cleanerValue((it as CleanStep.Clean).cleaner) })

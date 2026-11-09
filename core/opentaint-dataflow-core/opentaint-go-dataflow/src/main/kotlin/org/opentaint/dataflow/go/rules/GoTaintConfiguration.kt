@@ -121,11 +121,11 @@ class GoTaintConfiguration : GoRuleSelectionCapability {
         rule.id != null || !rule.meta?.cwe.isNullOrEmpty()
 
     private fun stableSourceBinding(rule: GoSerializedRule.Source): Boolean =
-        GoBindingSafety.condition(rule.condition) && rule.taint.all { GoBindingSafety.position(it.rawPosition()) }
+        GoBindingSafety.condition(rule.condition) && rule.taint.all { GoBindingSafety.position(it.pos) }
 
     private fun stableSinkBinding(rule: GoSerializedRule.Sink): Boolean =
         stableSinkIdentity(rule) && GoBindingSafety.condition(rule.condition) &&
-            rule.trackFactsReachAnalysisEnd.orEmpty().all { GoBindingSafety.position(it.rawPosition()) }
+            rule.trackFactsReachAnalysisEnd.orEmpty().all { GoBindingSafety.position(it.pos) }
 
     private fun stableCleanerBinding(rule: GoSerializedRule.Cleaner): Boolean =
         GoBindingSafety.condition(rule.condition) && rule.cleans.all { GoBindingSafety.position(it.pos) }
@@ -169,7 +169,7 @@ class GoTaintConfiguration : GoRuleSelectionCapability {
                     .filter { owner.run { it.pkg.matchPackage(pkg) } }
                 bindSelected(raw, RuleRole.SOURCE, false, { it.serializedId }, {
                     GoBindingSafety.condition(it.condition, field = true) && it.taint.all { action ->
-                        action.rawPosition().base is PositionBase.Result && GoBindingSafety.position(action.rawPosition())
+                        action.pos.base is PositionBase.Result && GoBindingSafety.position(action.pos)
                     }
                 }) { owner.specialize(it, signature.name, signature.type) }.also {
                     globalPresence[signature] = it.isNotEmpty()
@@ -182,7 +182,7 @@ class GoTaintConfiguration : GoRuleSelectionCapability {
                 val raw = owner.candidates(signature.name, owner.fieldSourceSimple, owner.fieldSourcePatterns) { field }
                 bindSelected(raw, RuleRole.SOURCE, false, { it.serializedId }, {
                     GoBindingSafety.condition(it.condition, field = true) && it.taint.all { action ->
-                        action.rawPosition().base is PositionBase.Result && GoBindingSafety.position(action.rawPosition())
+                        action.pos.base is PositionBase.Result && GoBindingSafety.position(action.pos)
                     }
                 }) { owner.specialize(it, signature.name, signature.type, signature.receiverType) }
                     .also { fieldPresence[signature] = it.isNotEmpty() }

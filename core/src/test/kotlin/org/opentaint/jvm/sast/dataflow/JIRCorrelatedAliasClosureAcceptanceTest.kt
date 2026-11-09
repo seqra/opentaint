@@ -46,7 +46,7 @@ class JIRCorrelatedAliasClosureAcceptanceTest : AnalysisTest() {
         assertEquals(RunStatus.COMPLETE, r.report.end.status, entry)
         assertTrue(r.runs.all { it.status == RunStatus.COMPLETE }, entry)
         assertEquals(setOf(sinkId), r.output.map { it.vulnerability.ruleId }.toSet(), entry)
-        assertTrue(r.witnesses.any { it.rule.id == sinkId && it.run == 1 }, entry)
+        assertTrue(r.sinkHits.any { it.rule.id == sinkId && it.run == 1 }, entry)
         return r
     }
 
@@ -57,7 +57,7 @@ class JIRCorrelatedAliasClosureAcceptanceTest : AnalysisTest() {
     @Test fun `later demanded alias target survives the identity arm`() {
         val result = check("laterDemandedAlias", entrySource = true)
         assertTrue(result.runs.any { it.index > 1 }, "The nested read must exercise the later demand path")
-        assertTrue(result.witnesses.any { it.rule.id == sinkId && it.run > 1 },
+        assertTrue(result.sinkHits.any { it.rule.id == sinkId && it.run > 1 },
             "The later full-mark phase must still observe the aliased target")
     }
 }

@@ -24,7 +24,6 @@ import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.configuration.jvm.TaintStaticFieldSource
 import org.opentaint.dataflow.configuration.jvm.This
 import org.opentaint.dataflow.configuration.jvm.appendSyntheticRules
-import org.opentaint.dataflow.configuration.jvm.expandSpecializedActions
 import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.taint.originalPassThroughRulesForAliases
@@ -37,7 +36,6 @@ import org.opentaint.dataflow.jvm.ap.ifds.taint.JVMExecutableRuleCatalog
 import org.opentaint.dataflow.jvm.ap.ifds.taint.ExecutableMarkReduction
 import org.opentaint.dataflow.jvm.ap.ifds.taint.BidirectionalRulesProviderFactory
 import org.opentaint.dataflow.jvm.ap.ifds.taint.forBidirectionalCore
-import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveBaseAp
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRField

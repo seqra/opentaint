@@ -121,7 +121,7 @@ class JVMRuleCompositionSelectionTest : BasicTestUtils() {
                 main.sourceRulesForMethod(method, statement, fact, allRelevant).map { row ->
                     row.copy(actionsAfter = listOf(org.opentaint.dataflow.configuration.jvm.AssignMark(
                         org.opentaint.dataflow.configuration.jvm.TaintMark("T"),
-                        org.opentaint.dataflow.configuration.jvm.Result)))
+                        org.opentaint.dataflow.configuration.jvm.ActionPosition.Exact(org.opentaint.dataflow.configuration.jvm.Result))))
                 }
         }
         opaque.selectRulesWithScope(setOf("main-source", "main-sink"))
@@ -139,7 +139,7 @@ class JVMRuleCompositionSelectionTest : BasicTestUtils() {
                 main.sourceRulesForMethod(method, statement, fact, allRelevant).map { row ->
                     row.copy(actionsAfter = listOf(org.opentaint.dataflow.configuration.jvm.AssignMark(
                         org.opentaint.dataflow.configuration.jvm.TaintMark("T"),
-                        org.opentaint.dataflow.configuration.jvm.Result)))
+                        org.opentaint.dataflow.configuration.jvm.ActionPosition.Exact(org.opentaint.dataflow.configuration.jvm.Result))))
                 }
         }
         val known = StringConcatRuleProvider(JIRMethodExitRuleProvider(opaque))

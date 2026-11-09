@@ -39,7 +39,7 @@ class GoSemgrepRuleSelectionTest {
 
     private fun source(id: String, mark: String, condition: GoSerializedCondition? = null,
                        info: GoUserDefinedRuleInfo? = null) = GoSerializedRule.Source(pkg, fn, condition,
-        listOf(GoSerializedAssignAction.Direct(mark, result)), info, id)
+        listOf(GoSerializedAssignAction(mark, result)), info, id)
     private fun sink(id: String, mark: String) = GoSerializedRule.Sink(pkg, fn,
         GoSerializedCondition.ContainsMark(mark, arg), id = "public-$id", info = null, serializedId = id)
     private fun graph(name: String, rows: List<GoSerializedItem>, final: String, vararg marks: String) =
@@ -67,7 +67,7 @@ class GoSemgrepRuleSelectionTest {
 
     @Test
     fun `whole executable catalog cascades after losing last producer`() {
-        val a = source("a", "T", GoSerializedCondition.ContainsMarkOnAnyAccessor("U", arg))
+        val a = source("a", "T", GoSerializedCondition.ContainsMark("U", PositionBaseWithModifiers.WithModifiers(arg.base, listOf(org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier.AnyField))))
         val s = sink("s", "T")
         val provider = GoSemgrepRuleProvider(listOf(graph("r", listOf(a, s), "s", "T", "U")), config(listOf(a), listOf(s)))
         provider.selectRules(setOf("a", "s"))
@@ -203,7 +203,7 @@ class GoSemgrepRuleSelectionTest {
             override fun sourceRulesForCall(signature: GoFunctionSignature, statement: GoIRInst,
                                             allRelevant: Boolean): List<TaintRule.Source> =
                 provider.sourceRulesForCall(signature, statement, allRelevant).map {
-                    it.copy(actionsAfter = listOf(GoAssignAction.Direct("T", Position.Result)))
+                    it.copy(actionsAfter = listOf(GoAssignAction("T", org.opentaint.dataflow.go.rules.ActionPosition.Exact(Position.Result))))
                 }
         }
         val combined = GoCombinedTaintRulesProvider(provider, opaque)
@@ -234,7 +234,7 @@ class GoSemgrepRuleSelectionTest {
             override fun sourceRulesForCall(signature: GoFunctionSignature, statement: GoIRInst,
                                             allRelevant: Boolean): List<TaintRule.Source> =
                 provider.sourceRulesForCall(signature, statement, allRelevant).map {
-                    it.copy(actionsAfter = listOf(GoAssignAction.Direct("T", Position.Result)))
+                    it.copy(actionsAfter = listOf(GoAssignAction("T", org.opentaint.dataflow.go.rules.ActionPosition.Exact(Position.Result))))
                 }
         }
         wrapper.selectRulesWithScope(setOf("a", "s"))
@@ -251,7 +251,7 @@ class GoSemgrepRuleSelectionTest {
             override fun sourceRulesForCall(signature: GoFunctionSignature, statement: GoIRInst,
                 allRelevant: Boolean): List<TaintRule.Source> =
                 provider.sourceRulesForCall(signature, statement, allRelevant).map {
-                    it.copy(actionsAfter = listOf(GoAssignAction.Direct("T", Position.Result)))
+                    it.copy(actionsAfter = listOf(GoAssignAction("T", org.opentaint.dataflow.go.rules.ActionPosition.Exact(Position.Result))))
                 }
         }
         val known = object : GoTaintRulesProvider by opaque,

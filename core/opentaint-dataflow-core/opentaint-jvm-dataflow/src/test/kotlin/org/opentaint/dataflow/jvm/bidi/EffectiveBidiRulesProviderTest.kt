@@ -34,9 +34,8 @@ class EffectiveBidiRulesProviderTest : BasicTestUtils() {
         val method = fixture.method("plain")
         val node = method.instList.first()
         val condition: Condition = CommonCondition.Atom(ContainsMark(Argument(0), RuleMark("ACTIVE")))
-        val invalid = PositionWithAccess(PositionWithAccess(Argument(0), PositionAccessor.AnyFieldAccessor),
-            PositionAccessor.AnyFieldAccessor)
-        val call = fixture.sink(listOf(AssignMark(RuleMark("END_ONLY"), invalid)), condition)
+        val invalid = PositionWithAccess(ClassStatic("sample.bidi.BidiRuleSample"), PositionAccessor.ElementAccessor)
+        val call = fixture.sink(listOf(AssignMark(RuleMark("END_ONLY"), ActionPosition.Exact(invalid))), condition)
         val entry = TaintMethodEntrySink(method, condition, call.trackFactsReachAnalysisEnd,
             "entry", call.meta, null)
         val exit = TaintMethodExitSink(method, condition, call.trackFactsReachAnalysisEnd,
@@ -82,9 +81,8 @@ class EffectiveBidiRulesProviderTest : BasicTestUtils() {
         val info = object : UserDefinedRuleInfo {
             override val relevantTaintMarks = setOf("ACTIVE", "END_ONLY")
         }
-        val invalidPosition = PositionWithAccess(PositionWithAccess(Argument(0), PositionAccessor.AnyFieldAccessor),
-            PositionAccessor.AnyFieldAccessor)
-        val rule = fixture.sink(listOf(AssignMark(RuleMark("END_ONLY"), invalidPosition)),
+        val invalidPosition = PositionWithAccess(ClassStatic("sample.bidi.BidiRuleSample"), PositionAccessor.ElementAccessor)
+        val rule = fixture.sink(listOf(AssignMark(RuleMark("END_ONLY"), ActionPosition.Exact(invalidPosition))),
             CommonCondition.Atom(ContainsMark(Argument(0), RuleMark("ACTIVE")))).copy(info = info)
         val provider = object : TaintRulesProvider by NoTaintRules {
             override val markOwners = mapOf("ACTIVE" to "outer", "END_ONLY" to "outer")

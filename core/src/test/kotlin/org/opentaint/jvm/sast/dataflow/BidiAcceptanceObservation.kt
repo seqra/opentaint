@@ -24,6 +24,8 @@ data class JvmObservedEdge(val method: MethodKey, val premise: Set<JvmObservedPa
 data class JvmObservedRecord(val method: MethodKey, val direction: Direction,
                              val premise: JvmObservedPath, val conclusion: JvmObservedConclusion)
 data class JvmObservedDemand(val method: MethodKey, val entry: JvmObservedPath, val exit: JvmObservedPath?)
+/** Anonymous DEMAND targets have no invented sink identity. */
+data class JvmObservedTarget(val method: MethodKey, val premise: Set<JvmObservedPath>, val normalSink: String?)
 data class JvmObservedLink(val callee: MethodKey, val caller: MethodKey, val call: CommonInst,
                            val premise: Set<JvmObservedPath>, val callerLayer: Layer,
                            val linkLayer: Layer, val added: JvmObservedPath)
@@ -44,7 +46,7 @@ data class JvmObservedMethodCounters(
     val triggerSeeds: Long,
 )
 
-/** Owned snapshots only. Full MethodKeys and ordered literal support stay available in Report. */
+/** Owned snapshots only. Report entries retain physical sink identities. */
 data class CompleteJvmRun(
     val index: Int,
     val fieldLimit: Int,
@@ -73,10 +75,11 @@ data class CompleteJvmRun(
     val markGroups: Map<String, String> = emptyMap(),
     /** Same-position static carry for the incoming run-2 boundary. */
     val outgoingStaticCarry: Boolean? = null,
+    val targets: Set<JvmObservedTarget> = emptySet(),
 )
 data class BidiAcceptanceResult(val output: List<VulnerabilityWithTrace>,
                                val report: Report, val runs: List<CompleteJvmRun>, val frontiers: List<Frontier>,
-                               val witnesses: List<J03ObservedWitness> = emptyList()) {
+                               val sinkHits: List<JvmObservedSinkHit> = emptyList()) {
     fun method(name: String): MethodKey = runs.asSequence().flatMap { run ->
         run.initials.asSequence().map { it.method }
     }.distinct().single { it.method.name == name }

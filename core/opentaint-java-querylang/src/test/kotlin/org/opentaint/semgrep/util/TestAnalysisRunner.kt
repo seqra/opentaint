@@ -162,11 +162,11 @@ class TestAnalysisRunner(
                     println("BIDI_ANALYSIS sample=$sample prescan=$lastPrescanStatus " +
                         "analysis=${status.analysisStatus} findings=${traces.size}")
                     lastReport?.entries?.forEach { finding ->
-                        println("BIDI_FINDING sample=$sample rule=${finding.key.rule.id} state=${finding.state} " +
-                            "method=${finding.key.method} witnesses=${finding.witnesses.map { it.methodKey }} " +
-                            "serialized=${(finding.key.rule as? TaintConfigurationItem)?.serializedId} " +
-                            "endFacts=${finding.witnesses.flatMap { it.endFacts }.distinct()} " +
-                            "statement=${finding.key.statement}")
+                        val descriptor = finding.descriptor
+                        println("BIDI_FINDING sample=$sample rule=${descriptor.rule.id} reportId=${finding.id.value} " +
+                            "method=${descriptor.key.method} " +
+                            "serialized=${(descriptor.rule as? TaintConfigurationItem)?.serializedId} " +
+                            "statement=${descriptor.key.statement}")
                     }
                     assertEquals(TaintAnalysisUnitRunnerManager.Status.OK, status.analysisStatus, sample)
                     assertEquals(TaintAnalysisUnitRunnerManager.Status.OK, status.traceResolutionStatus, sample)

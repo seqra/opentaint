@@ -9,7 +9,6 @@ import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.ap.TaintMark
 import org.opentaint.dataflow.bidi.interp.*
 import org.opentaint.dataflow.bidi.ap.ReferenceRequestKind as RequestKind
-import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.configuration.jvm.*
 import org.opentaint.dataflow.configuration.jvm.TaintMark as RuleMark
 import org.opentaint.dataflow.jvm.BasicTestUtils
@@ -48,7 +47,7 @@ class JIRLoweredCleanerEffectTest : BasicTestUtils() {
         m.accessors.index(FieldAccessor(owner, name, type))
     private fun at(base: Position, name: String, type: String = "java.lang.Object", owner: String = CLS) =
         PositionWithAccess(base, PositionAccessor.FieldAccessor(owner, name, type))
-    private fun any(position: Position) = PositionWithAccess(position, PositionAccessor.AnyFieldAccessor)
+    private fun any(position: Position) = ActionPosition.AnyAccessorAfter(position)
     private fun c(base: AccessPathBase = x, path: List<Int> = emptyList(), tail: Tail = Tail.EXACT,
                   mark: MarkSlot = mt, exclusion: ExclusionSet = ExclusionSet.Empty,
                   demand: Boolean = tail == Tail.ANY) = Conclusion(PathFact(base, path, tail, mark), exclusion, demand)
@@ -63,8 +62,17 @@ class JIRLoweredCleanerEffectTest : BasicTestUtils() {
         assertTrue(forms.valid(rule))
         return forms.cleanSteps(rule, condition, JIRMethodPositionBaseTypeResolver(owner))
     }
-    private fun selected(position: Position, mark: String = "T", reach: TaintCleanReach = TaintCleanReach.Exact) =
-        RemoveMark(RuleMark(mark), position, reach)
+    private fun selected(position: Position, mark: String = "T") =
+        RemoveMark(RuleMark(mark), ActionPosition.Exact(position))
+    private fun selected(position: ActionPosition, mark: String = "T") = RemoveMark(RuleMark(mark), position)
+    private fun sourceReset(position: Position): List<CleanStep> {
+        val method = fixture.method("plain")
+        val rule = fixture.source(listOf(AssignMark(RuleMark("T"), any(position))), method = method)
+        val id = ActionId(RuleOccurrenceId(FormKey(FormOwner(), method, null, method.instList.first()),
+            RuleKind.REWRITER, 0), ActionRole.RETURN_REWRITER, 0)
+        return listOf(forms.definitionReset(rule, any(position), source = true, RuleMark("T"),
+            JIRMethodPositionBaseTypeResolver(method), id))
+    }
 
     @Test fun `selected field action keeps outside FLOW marks and requests on the original incoming premise`(): Unit {
         val action = steps(listOf(selected(at(Argument(0), "f"))))
@@ -91,7 +99,7 @@ class JIRLoweredCleanerEffectTest : BasicTestUtils() {
         check(exact, listOf(input), setOf(must(exclusion = ex(f, g)), must(p(f)).copy(demand = true)))
         val below = steps(listOf(selected(any(position))))
         check(below, listOf(input), setOf(must(exclusion = ex(f, g)), c(path = p(f))))
-        val subtree = steps(listOf(selected(position, reach = TaintCleanReach.ExactAndAnyField)))
+        val subtree = sourceReset(position)
         check(subtree, listOf(input), setOf(must(exclusion = ex(f, g))))
         val blocked = must(exclusion = ex(f, g))
         for (action in listOf(exact, below, subtree)) check(action, listOf(blocked), setOf(blocked))
@@ -105,7 +113,7 @@ class JIRLoweredCleanerEffectTest : BasicTestUtils() {
             val input = c(path = p(f), tail = tail, exclusion = exclusion, demand = demand)
             check(steps(listOf(selected(position))), listOf(input), setOf(input.copy(demand = true)))
             check(steps(listOf(selected(any(position)))), listOf(input), setOf(c(path = p(f), demand = demand)))
-            check(steps(listOf(selected(position, reach = TaintCleanReach.ExactAndAnyField))), listOf(input), emptySet())
+            check(sourceReset(position), listOf(input), emptySet())
             check(steps(listOf(selected(position, mark = "U"))), listOf(input), setOf(input))
         }
     }
@@ -119,9 +127,9 @@ class JIRLoweredCleanerEffectTest : BasicTestUtils() {
         val inputs = listOf(atField, below, sibling, unrelatedMark)
         check(steps(listOf(selected(position))), inputs, setOf(below, sibling, unrelatedMark))
         check(steps(listOf(selected(any(position)))), inputs, setOf(atField, sibling, unrelatedMark))
-        check(steps(listOf(selected(position, reach = TaintCleanReach.ExactAndAnyField))), inputs,
+        check(sourceReset(position), inputs,
             setOf(sibling, unrelatedMark))
-        check(steps(listOf(RemoveAllMarks(position))), inputs, setOf(sibling))
+        check(steps(listOf(RemoveAllMarks(ActionPosition.Exact(position)))), inputs, setOf(sibling))
         assertFails { steps(listOf(RemoveAllMarks(any(position)))) }
     }
 
@@ -213,20 +221,15 @@ class JIRLoweredCleanerEffectTest : BasicTestUtils() {
         check(action, listOf(other), setOf(other), run1 = true)
     }
 
-    @Test fun `String companion is ordered uses separate temporary and requests again after T is excluded`(): Unit {
+    @Test fun `String exact cleaner does not add a byte-field operation`(): Unit {
         val action = steps(listOf(selected(Argument(0))), method = "stringArg")
-        assertEquals(2, action.size)
-        val bytes = idx("<string-bytes>", "byte[]", "java.lang.String")
+        assertEquals(1, action.size)
         val input = flow(mark = marks(u.id))
-        val originalPremise = premise
-        val result = check(action, listOf(input), setOf(flow(mark = marks(t.id, u.id)).copy(demand = true),
-            c(path = p(bytes), tail = Tail.ANY, mark = marks(t.id, u.id))), run1 = true,
-            inputPremise = originalPremise, expectedRequests = listOf(t, t))
-        assertTrue(result.requests.all { it.first === originalPremise })
-        assertEquals(1, result.temporaryInputs.size)
-        assertEquals(marks(t.id, u.id), result.temporaryInputs.single().fact.mark)
-        val already = flow(mark = marks(t.id, u.id))
-        check(action, listOf(already), result.facts, run1 = true, expectedRequests = listOf(t, t))
+        val expected = setOf(flow(mark = marks(t.id, u.id)))
+        val result = check(action, listOf(input), expected, run1 = true,
+            inputPremise = premise, expectedRequests = listOf(t))
+        assertTrue(result.temporaryInputs.isEmpty())
+        check(action, listOf(flow(mark = marks(t.id, u.id))), expected, run1 = true, expectedRequests = listOf(t))
     }
 
     @Test fun `multiple field actions keep rule order and project each temporary before the next action`(): Unit {
@@ -255,7 +258,7 @@ class JIRLoweredCleanerEffectTest : BasicTestUtils() {
         val cls = m.accessors.index(ClassStaticAccessor(CLS))
         val field = idx("sField")
         val stat = AccessPathBase.ClassStatic
-        val action = steps(listOf(RemoveAllMarks(at(ClassStatic(CLS), "sField"))))
+        val action = steps(listOf(RemoveAllMarks(ActionPosition.Exact(at(ClassStatic(CLS), "sField")))))
         assertIs<CleanStep.Kill>(action.single())
         // This bare-static normal must is direct AP geometry outside JVM emission.
         val input = must(exclusion = ex(g), base = stat)
@@ -270,7 +273,7 @@ class JIRLoweredCleanerEffectTest : BasicTestUtils() {
         val cls = m.accessors.index(ClassStaticAccessor(CLS))
         val field = idx("sField")
         val stat = AccessPathBase.ClassStatic
-        val action = steps(listOf(RemoveAllMarks(at(ClassStatic(CLS), "sField"))))
+        val action = steps(listOf(RemoveAllMarks(ActionPosition.Exact(at(ClassStatic(CLS), "sField")))))
         val originalPremise = setOf(Pattern(PathFact(stat, p(cls, field), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty))
         for (demand in listOf(false, true)) {
             val overwritten = flow(p(cls, field), base = stat).copy(demand = demand)

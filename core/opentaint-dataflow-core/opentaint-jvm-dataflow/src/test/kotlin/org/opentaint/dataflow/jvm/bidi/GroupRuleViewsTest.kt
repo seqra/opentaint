@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.jvm.bidi
 
+import org.opentaint.dataflow.configuration.jvm.ActionPosition
+
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
@@ -117,7 +119,7 @@ class GroupRuleViewsTest : BasicTestUtils() {
         val base = AccessPathBase.Argument(0)
         val at = PositionAccess.Complex(PositionAccess.Simple(base), FieldAccessor("Owner", "f", "java.lang.Object"))
         val expression = and(literal(base, path = at), literal(base, "U", path = at))
-        val action = AssignMark(RuleMark("T"), PositionWithAccess(Result, PositionAccessor.AnyFieldAccessor))
+        val action = AssignMark(RuleMark("T"), ActionPosition.AnyAccessorAfter(Result))
         val rule = fixture.source(listOf(action, action))
         val id = occurrence(fixture)
         val summary = MicroEdgeBuilder().also { groups(fixture).source(it, rule, id, ExprOrConstant(expression)) }.buildStage()
@@ -152,7 +154,7 @@ class GroupRuleViewsTest : BasicTestUtils() {
         val p = AccessPathBase.Argument(0)
         val q = AccessPathBase.Argument(1)
         val expression = or(literal(p), and(literal(p, "U"), literal(q)))
-        val rule = fixture.source(listOf(AssignMark(RuleMark("T"), Result)))
+        val rule = fixture.source(listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result))))
         val source = MicroEdgeBuilder().also { groups(fixture).source(it, rule, occurrence(fixture), ExprOrConstant(expression)) }
             .buildStage().sources.single()
         assertEquals(1, source.predicate.leaves.size)

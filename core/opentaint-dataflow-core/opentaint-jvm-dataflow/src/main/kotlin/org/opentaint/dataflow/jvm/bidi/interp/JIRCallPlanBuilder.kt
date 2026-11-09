@@ -36,10 +36,11 @@ import org.opentaint.dataflow.bidi.interp.StageKind.*
 import org.opentaint.dataflow.bidi.interp.StatementSummary
 import org.opentaint.dataflow.bidi.interp.keepEdge
 import org.opentaint.dataflow.bidi.interp.starEdge
-import org.opentaint.dataflow.configuration.TaintCleanReach
-import org.opentaint.dataflow.configuration.jvm.Position
-import org.opentaint.dataflow.configuration.jvm.PositionWithAccess
+import org.opentaint.dataflow.configuration.jvm.ActionPosition
 import org.opentaint.dataflow.configuration.jvm.RemoveMark
+import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
+import org.opentaint.dataflow.configuration.jvm.SpecializedRules
+import org.opentaint.dataflow.taint.RuleConditionRewriter.ExprOrConstant
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
 import org.opentaint.dataflow.configuration.jvm.ruleOrdinal
 import org.opentaint.dataflow.configuration.jvm.actionOrdinal
@@ -153,12 +154,11 @@ internal class JIRCallPlanBuilder(
     }
 
     private fun sinks(): List<org.opentaint.dataflow.bidi.interp.SinkRule> {
-        val mayBeArray = { i: Int -> checker.callArgumentMayBeArray(call, AccessPathBase.Argument(i)) }
         return forms.rules.sinkRulesForMethod(callee, s, fact = null).withIndex()
             .flatMap { (ordinal, rule) ->
                 if (!forms.valid(rule)) emptyList() else forms.sinks(rule,
                     forms.rewriteSourceOrSink(rule, rewriter),
-                    occurrence(RuleKind.CALL_SINK, rule.ruleOrdinal(ordinal)), mayBeArray)
+                    occurrence(RuleKind.CALL_SINK, rule.ruleOrdinal(ordinal)))
             }
     }
 
@@ -235,14 +235,10 @@ internal class JIRCallPlanBuilder(
     private fun rewriterSteps(): List<CleanStep> {
         val out = ArrayList<CleanStep>()
         fun add(rule: TaintConfigurationItem, id: RuleOccurrenceId,
-                positions: List<Pair<Int, Position>>, source: Boolean) {
+                positions: List<Pair<Int, ActionPosition>>, source: Boolean) {
             if (rule.info !is UserDefinedRuleInfo) return
             for ((actionOrdinal, p) in positions) for ((markOrdinal, m) in rule.resetMarks()) {
-                val anyTarget = source && forms.pos(rule, p)?.any == true
-                val action = if (anyTarget)
-                    RemoveMark(RuleMark(m), (p as PositionWithAccess).base, TaintCleanReach.ExactAndAnyField)
-                else RemoveMark(RuleMark(m), p, TaintCleanReach.Exact)
-                out += forms.unconditional(rule, action, types,
+                out += forms.definitionReset(rule, p, source, RuleMark(m), types,
                     ActionId(id, ActionRole.RETURN_REWRITER, actionOrdinal, markOrdinal))
             }
         }
@@ -314,22 +310,28 @@ internal class JIRCallPlanBuilder(
     private fun keys(method: MethodWithContext): List<MethodKey> =
         epResolver.resolveEntryPoints(method.method, method.ctx).map { MethodEntryPoint(method.ctx, it) }
 
-    /** The default identity is in its own unfiltered stage. */
+    private data class PreparedPass(val rule: TaintPassThrough, val condition: ExprOrConstant,
+                                    val fromExplicitSet: Boolean, val originalOrdinal: Int)
+
+    /** Choose defaults only when the prepared explicit set is empty. Presence is
+     * decided before rule validation or any offered-fact/output filtering. */
     private fun passRules(): StatementSummary = MicroEdgeBuilder().apply {
         val supplied = forms.rules.passTroughRulesForMethod(callee, s, fact = null)
-        val valid = supplied.filter(forms::valid)
-        val defaultOffset = if (supplied is org.opentaint.dataflow.configuration.jvm.SpecializedRules<*> ||
-            valid.any { it.specialization != null }) supplied.originalRuleCount() else valid.size
-        val rules = valid.mapIndexed { ordinal, rule ->
-            Triple(rule, rewriter.rewrite(rule.condition), true to rule.ruleOrdinal(ordinal))
-        } +
-            defaultGetModel?.defaultPropagationRules(callee).orEmpty().filter { forms.valid(it.rule) }
-                .mapIndexed { ordinal, rule -> Triple(rule.rule, rule.condition, false to (defaultOffset + ordinal)) }
+        val rows = supplied.toList()
+        val defaultOffset = if (supplied is SpecializedRules<*>) supplied.originalRuleCount
+                            else rows.originalRuleCount()
+        val prepared = rows.mapIndexed { ordinal, rule ->
+            PreparedPass(rule, rewriter.rewrite(rule.condition), true, rule.ruleOrdinal(ordinal))
+        }.filterNot { it.condition.isFalse }
+        val rules = if (prepared.isNotEmpty()) prepared else
+            defaultGetModel?.defaultPropagationRules(callee).orEmpty().mapIndexed { ordinal, rule ->
+                PreparedPass(rule.rule, rule.condition, false, defaultOffset + ordinal)
+            }
         val read = LinkedHashSet<AccessPathBase>()
         val written = LinkedHashSet<AccessPathBase>()
         for (item in rules) {
-            val (rule, cond, identity) = item
-            val (ofRuleSet, ruleOrdinal) = identity
+            val (rule, cond, ofRuleSet, ruleOrdinal) = item
+            if (!forms.valid(rule)) continue
             if (cond.isFalse) continue
             if (!cond.isTrue)
                 forms.errors.applied(rule, "pass rule with a mark literal (interpreter.md §4.2, D24): applied without it")

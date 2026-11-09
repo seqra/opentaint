@@ -31,7 +31,7 @@ class JIRBidiRealEntryTest : BidiJIRTestUtils() {
     fun `copied rules and root produce a settled exit report after prescan owners are released`(): Unit {
         val root = method("normal", JIRPrescanFixtures.SAMPLE)
         val mark = TaintMark("real entry T")
-        val source = TaintEntryPointSource(root, mkTrue(), listOf(AssignMark(mark, Argument(0))),
+        val source = TaintEntryPointSource(root, mkTrue(), listOf(AssignMark(mark, ActionPosition.Exact(Argument(0)))),
             null, "real-entry-source")
         val sink = TaintMethodExitSink(root, CommonCondition.Atom(ContainsMark(Result, mark)), emptyList(),
             "real-entry-sink", TaintSinkMeta("real entry sink", CommonTaintConfigurationSinkMeta.Severity.Warning, null),

@@ -251,7 +251,7 @@ class SpringDispatcherFormsTest : BasicTestUtils() {
         val registryFact = old.createFinalAp(AccessPathBase.ClassStatic,
             org.opentaint.dataflow.ap.ifds.ExclusionSet.Empty).prependAccessor(registry)
         val cleaner = rules.cleanerRulesForMethod(method, statement, outsideFact).single()
-        assertEquals(listOf(RemoveAllMarks(ClassStatic(SAMPLE))), cleaner.actionsAfter)
+        assertEquals(listOf(RemoveAllMarks(ActionPosition.Exact(ClassStatic(SAMPLE)))), cleaner.actionsAfter)
         assertTrue(rules.cleanerRulesForMethod(method, statement, registryFact).none())
     }
 

@@ -24,23 +24,14 @@ import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
 
-/** A literal keeps its exact premise and both its layer and decoded conclusion group. */
-data class J03ObservedLiteral(
-    val premise: Set<JvmObservedPath>,
-    val layer: Layer,
-    val facts: Set<JvmObservedConclusion>,
-)
-
-/** Captured after the actual report barrier; all scalar flags and paths are owned snapshots. */
-data class J03ObservedWitness(
+/** A real sink hit, captured from its NORMAL terminal or its DEMAND seed. No literal proof is retained. */
+data class JvmObservedSinkHit(
     val rule: RuleId,
     val statement: CommonInst,
     val method: MethodKey,
-    val alternative: Int,
     val run: Int,
-    val literals: List<J03ObservedLiteral>,
-    val endFacts: List<JvmObservedPath>,
-    val confirmed: Boolean,
+    val layer: Layer,
+    val requirements: Set<JvmObservedPath> = emptySet(),
 )
 
 /**
@@ -59,14 +50,14 @@ data class J03ObservedWitness(
  */
 class J03ObservedDriverBridge {
     private val snapshots = ArrayList<CompleteJvmRun>()
-    private val witnessSnapshots = ArrayList<J03ObservedWitness>()
+    private val sinkHitSnapshots = LinkedHashSet<JvmObservedSinkHit>()
     private val symbols = ConcurrentHashMap<String, Accessor>()
     private var declaredGroups: Map<String, String> = emptyMap()
     private var driver: IterationDriver? = null
     private var pending: JoinedRun? = null
 
     val runs: List<CompleteJvmRun> get() = ownList(snapshots)
-    val witnesses: List<J03ObservedWitness> get() = ownList(witnessSnapshots)
+    val sinkHits: List<JvmObservedSinkHit> get() = ownList(sinkHitSnapshots)
     val frontiers: List<Frontier> get() = ownList(checkNotNull(driver).frontiers)
 
     fun createEntry(
@@ -90,7 +81,7 @@ class J03ObservedDriverBridge {
     }
 
     fun result(output: List<VulnerabilityWithTrace>, report: Report): BidiAcceptanceResult =
-        BidiAcceptanceResult(ownList(output), report, runs, frontiers, witnesses)
+        BidiAcceptanceResult(ownList(output), report, runs, frontiers, sinkHits)
 
     private fun createDriver(policy: IterationPolicy, shared: SharedObjects, budget: Duration): IterationDriver {
         check(driver == null) { "An observation bridge belongs to one real analysis" }
@@ -122,6 +113,7 @@ class J03ObservedDriverBridge {
                     // after this hook returns; handler.freeze would be too late.
                     for (initial in core.initials.all())
                         live.initials += JvmObservedInitial(core.key, path(shared.ap, initial.toPattern()))
+                    captureSinkSeeds(live, core)
                     actual.freeze()
                 }
             }
@@ -129,6 +121,14 @@ class J03ObservedDriverBridge {
         val actualHandlers = RunMethodHandlers(local, MethodCallServicesFactory(::RunMethodCallServices))
         val factory = RunnerHandlerFactory<RunMethodAnalyzer> { port ->
             val observed = object : RunnerPort<RunMethodAnalyzer> by port {
+                override fun subscribe(sub: Subscription) {
+                    // Restricted calls submit pre-admitted initials directly. The
+                    // subscription owns their original caller and offered input.
+                    shared.ops.leaves(sub.added).forEach {
+                        live.links += link(shared.ap, sub.callee, sub.ref, sub.linkLayer, it)
+                    }
+                    port.subscribe(sub)
+                }
                 override fun link(callee: MethodKey, ref: CallerRef, linkLayer: Layer, added: Facts) {
                     shared.ops.leaves(added).forEach { live.links += link(shared.ap, callee, ref, linkLayer, it) }
                     port.link(callee, ref, linkLayer, added)
@@ -167,8 +167,8 @@ class J03ObservedDriverBridge {
             // Invoke actual candidate report/R1/HandOff/policy inside the existing memory guard.
             val next = unwrap { actualGuard.invoke(null, shared, body) } as Next
             if (shared.cancellation.isActive()) {
-                for ((key, values) in joined.result.witnessesByKey()) for (rawWitness in values)
-                    witnessSnapshots += witness(shared.ops, key, rawWitness)
+                captureNormalTargets(joined)
+                sinkHitSnapshots += joined.live.sinkHits
                 snapshots += snapshot(joined, (next as? Next.Run)?.config, recordSnapshot(shared))
             }
             return next
@@ -183,6 +183,8 @@ class J03ObservedDriverBridge {
         val initials = ConcurrentHashMap.newKeySet<JvmObservedInitial>()
         val links = ConcurrentHashMap.newKeySet<JvmObservedLink>()
         val requests = ConcurrentHashMap.newKeySet<JvmObservedRequest>()
+        val sinkHits = ConcurrentHashMap.newKeySet<JvmObservedSinkHit>()
+        val targets = ConcurrentHashMap.newKeySet<JvmObservedTarget>()
     }
     private class JoinedRun(val live: LiveRun, val result: RunResult<RunMethodAnalyzer>)
 
@@ -198,7 +200,7 @@ class J03ObservedDriverBridge {
             counters[actor.key] = JvmObservedMethodCounters(actor.steps, actor.edgeDeltas, actor.nonZeroInitial,
                 actor.demandLayerEdges, actor.recordCrossings, actor.triggerSeeds)
             for ((premise, facts) in actor.summaries.all()) raw += edges(ops, actor.key, premise, facts)
-            for ((premise, facts) in actor.summaries.demandEdges()) selected += edges(ops, actor.key, premise, facts)
+            for ((premise, facts) in actor.summaries.demandEdges(config.direction)) selected += edges(ops, actor.key, premise, facts)
             actor.sourceHits?.occurrences()?.forEach { (key, statement, forward, action) ->
                 hits += JvmObservedSourceHit(key, statement,
                     path(ops.manager, Pattern(forward.from, forward.fromExclusion)),
@@ -212,7 +214,8 @@ class J03ObservedDriverBridge {
             seedSnapshot(config.seeds), outgoing?.let { seedSnapshot(it.seeds) }, ownMap(counters),
             counters.values.sumOf { it.steps }, counters.values.sumOf { it.edgeDeltas },
             joined.result.demandLayerEdges, joined.result.recordCrossings, counters.values.sumOf { it.triggerSeeds },
-            ownSet(counters.filterValues { it.nonZeroInitial }.keys), ownMap(declaredGroups), outgoing?.demand?.hasSharedStaticCarry)
+            ownSet(counters.filterValues { it.nonZeroInitial }.keys), ownMap(declaredGroups), outgoing?.demand?.hasSharedStaticCarry,
+            ownSet(live.targets))
     }
 
     private fun edges(ops: ApOps, key: MethodKey, premise: PremiseKey, facts: Facts,
@@ -236,14 +239,48 @@ class J03ObservedDriverBridge {
                 position = ownList(kind.path.toIntArray().map { accessor(ap, it) }))
         }
 
-    private fun witness(ops: ApOps, key: VulnerabilityKey, witness: SinkWitness): J03ObservedWitness =
-        J03ObservedWitness(key.rule, key.statement, witness.methodKey, witness.alternative, witness.run,
-            ownList(witness.edges.map { edge -> J03ObservedLiteral(premise(ops.manager, edge.premise), edge.layer,
-                ownSet(ops.leaves(edge.facts).map {
-                    JvmObservedConclusion(path(ops.manager, it), edge.facts.layer)
-                }.toList())) }), ownList(witness.endFacts.map {
-                path(ops.manager, Pattern(it, ExclusionSet.Empty))
-            }), witness.confirmed)
+    private fun captureSinkSeeds(live: LiveRun, core: BlockRunState) {
+        if (live.config.direction != Direction.FORWARD) return
+        for (seed in core.sinkSeeds) when (seed) {
+            is Seed.Sink -> live.sinkHits += JvmObservedSinkHit(seed.rule, seed.statement, seed.method,
+                live.config.index, Layer.DEMAND, ownSet(listOf(path(live.shared.ap, seed.requirement))))
+            is Seed.PredicateSink -> withSinksAt(live.shared, seed.method, seed.statement) { sinks ->
+                val sink = checkNotNull(sinks.singleOrNull { it.occurrenceId == seed.occurrence }) {
+                    "A predicate seed must resolve to its complete FULL rule occurrence"
+                }
+                live.sinkHits += JvmObservedSinkHit(sink.rule, seed.statement, seed.method,
+                    live.config.index, Layer.DEMAND, ownSet((sink.predicate?.leaves ?: sink.patterns).map { path(live.shared.ap, it) }))
+            }
+            is Seed.Source -> Unit
+        }
+    }
+
+    private fun withSinksAt(shared: SharedObjects, key: MethodKey, statement: CommonInst,
+                            use: (List<org.opentaint.dataflow.bidi.interp.SinkRule>) -> Unit) {
+        val forms = shared.contexts.forms(key)
+        val call = shared.language.getCallExpr(statement)
+        when {
+            call != null -> forms.withCall(Direction.FORWARD, statement, call) { use(it.sinks) }
+            shared.interpreter.exitNodes(key).any { it.node == statement } ->
+                forms.withExitRules(Direction.FORWARD, statement) { use(it.rules.sinks) }
+            shared.interpreter.entryNode(key) == statement ->
+                forms.withEntryRules(Direction.FORWARD) { use(it.sinks) }
+            else -> error("A sink seed must name an existing call or boundary form")
+        }
+    }
+
+    private fun captureNormalTargets(joined: JoinedRun) {
+        val live = joined.live
+        for (actor in joined.result.analyzers) for (row in actor.targets) {
+            val normal = row.target as? Target.NormalTarget
+            live.targets += JvmObservedTarget(actor.key, premise(live.shared.ap, row.premise),
+                normal?.let { live.shared.reportCatalog.descriptor(it.id).key.ruleId })
+            if (normal == null) continue
+            val descriptor = live.shared.reportCatalog.descriptor(normal.id)
+            live.sinkHits += JvmObservedSinkHit(descriptor.rule, descriptor.key.statement,
+                descriptor.representativeMethodKey, live.config.index, Layer.NORMAL)
+        }
+    }
 
     private fun path(ap: ApManager, p: Pattern): JvmObservedPath {
         val mark = p.fact.mark

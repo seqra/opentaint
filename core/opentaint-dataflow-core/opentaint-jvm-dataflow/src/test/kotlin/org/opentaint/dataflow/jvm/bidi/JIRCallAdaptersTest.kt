@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.jvm.bidi
 
+import org.opentaint.dataflow.configuration.jvm.ActionPosition
+
 import kotlinx.coroutines.runBlocking
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
@@ -271,7 +273,7 @@ class JIRCallAdaptersTest : BasicTestUtils() {
 
         // This actual call model creates a new result alias to the second argument after the call.
         val external = f.method("external")
-        val model = TaintPassThrough(external, mkTrue(), listOf(CopyAllMarks(Argument(1), Result)), null)
+        val model = TaintPassThrough(external, mkTrue(), listOf(CopyAllMarks(ActionPosition.Exact(Argument(1)), ActionPosition.Exact(Result))), null)
         val provider = object : TaintRulesProvider by NoTaintRules {
             override fun passTroughRulesForMethod(method: CommonMethod, statement: CommonInst?, fact: FactAp?,
                                                  allRelevant: Boolean): Iterable<TaintPassThrough> =

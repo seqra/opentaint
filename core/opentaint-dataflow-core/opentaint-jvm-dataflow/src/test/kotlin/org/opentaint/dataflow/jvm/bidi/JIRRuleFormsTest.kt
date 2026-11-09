@@ -44,7 +44,7 @@ class JIRRuleFormsTest : BasicTestUtils() {
     private val g by lazy { v.manager.accessors.index(FieldAccessor(owner, "g", "java.lang.Object")) }
     private val cls by lazy { v.manager.accessors.index(ClassStaticAccessor(owner)) }
     private val empty = ExclusionSet.Empty
-    private fun any(p: Position) = PositionWithAccess(p, PositionAccessor.AnyFieldAccessor)
+    private fun any(p: Position) = ActionPosition.AnyAccessorAfter(p)
     private fun field(p: Position, name: String = "f") = PositionWithAccess(p,
         PositionAccessor.FieldAccessor(owner, name, "java.lang.Object"))
     private fun element(p: Position) = PositionWithAccess(p, PositionAccessor.ElementAccessor)
@@ -77,11 +77,10 @@ class JIRRuleFormsTest : BasicTestUtils() {
         return values[predicate.root]
     }
 
-    private fun sinks(rule: TaintConfigurationSink, condition: ExprOrConstant,
-                      mayBeArray: (Int) -> Boolean = { false }): List<SinkRule> {
+    private fun sinks(rule: TaintConfigurationSink, condition: ExprOrConstant): List<SinkRule> {
         val method = v.method("plain")
         val id = RuleOccurrenceId(FormKey(FormOwner(), method, null, method.instList.first()), RuleKind.CALL_SINK, 0)
-        return forms.sinks(rule, condition, id, mayBeArray)
+        return forms.sinks(rule, condition, id)
     }
 
     private fun occurrence(rule: TaintConfigurationSource, ordinal: Int = 0): RuleOccurrenceId {
@@ -96,17 +95,17 @@ class JIRRuleFormsTest : BasicTestUtils() {
     }
 
     @Test
-    fun `position table keeps bases complete paths and final AnyField separately`(): Unit {
-        data class Row(val position: Position, val base: AccessPathBase, val path: List<Int>, val any: Boolean)
+    fun `position table keeps concrete paths and action reach separately`(): Unit {
+        data class Row(val position: ActionPosition, val base: AccessPathBase, val path: List<Int>, val any: Boolean)
         val rows = listOf(
-            Row(Argument(0), arg0, emptyList(), false),
-            Row(This, AccessPathBase.This, emptyList(), false),
-            Row(Result, AccessPathBase.Return, emptyList(), false),
-            Row(ClassStatic(owner), STATIC, listOf(cls), false),
+            Row(ActionPosition.Exact(Argument(0)), arg0, emptyList(), false),
+            Row(ActionPosition.Exact(This), AccessPathBase.This, emptyList(), false),
+            Row(ActionPosition.Exact(Result), AccessPathBase.Return, emptyList(), false),
+            Row(ActionPosition.Exact(ClassStatic(owner)), STATIC, listOf(cls), false),
             Row(any(Argument(0)), arg0, emptyList(), true),
             Row(any(field(element(Argument(1)))), arg1, listOf(e, f), true),
-            Row(field(field(Argument(0)), "g"), arg0, listOf(f, g), false),
-            Row(field(ClassStatic(owner)), STATIC, listOf(cls, f), false),
+            Row(ActionPosition.Exact(field(field(Argument(0)), "g")), arg0, listOf(f, g), false),
+            Row(ActionPosition.Exact(field(ClassStatic(owner))), STATIC, listOf(cls, f), false),
         )
         for (row in rows) {
             val p = assertNotNull(forms.pos(row, row.position))
@@ -130,21 +129,20 @@ class JIRRuleFormsTest : BasicTestUtils() {
     }
 
     @Test
-    fun `invalid AnyField placement is a null result for raw and resolved positions`(): Unit {
-        val duplicate = any(any(Argument(0)))
-        val afterAny = field(any(Argument(0)))
-        assertNull(forms.pos("duplicate", duplicate))
-        assertNull(forms.pos("after", afterAny))
-        val raw = PositionAccess.Complex(PositionAccess.Complex(PositionAccess.Simple(arg0), AnyAccessor),
-            FieldAccessor(owner, "f", "java.lang.Object"))
-        assertNull(forms.pos("resolved", raw))
+    fun `ordinary resolved positions reject every AnyAccessor while explicit action reach is legal`(): Unit {
+        val root = PositionAccess.Simple(arg0)
+        val any = PositionAccess.Complex(root, AnyAccessor)
+        for (raw in listOf(any, PositionAccess.Complex(any, AnyAccessor),
+            PositionAccess.Complex(any, FieldAccessor(owner, "f", "java.lang.Object")))) {
+            assertNull(forms.pos("resolved", raw))
+        }
         assertNotNull(forms.pos("valid", any(field(Argument(0)))))
     }
 
     @Test
     fun `position side constructors distinguish literal source and copy-all tails`(): Unit {
         for (any in listOf(false, true)) {
-            val p = assertNotNull(forms.pos("row", if (any) any(field(Argument(0))) else field(Argument(0))))
+            val p = assertNotNull(forms.pos("row", if (any) any(field(Argument(0))) else ActionPosition.Exact(field(Argument(0)))))
             assertEquals(fact(arg0, listOf(f), if (any) Tail.ANY else Tail.EXACT), p.fact(t))
             assertEquals(fact(arg0, listOf(f), if (any) Tail.ANY_TAINT else Tail.EXACT), p.sourceFact(t))
             assertEquals(star(arg0, listOf(f), if (any) Tail.ANY else Tail.STAR), p.star())
@@ -174,7 +172,7 @@ class JIRRuleFormsTest : BasicTestUtils() {
         val raw = PositionAccess.Complex(PositionAccess.Simple(arg0), FieldAccessor(owner, "f", "java.lang.Object"))
         assertEquals(fact(arg0, listOf(f)), forms.literal("exact", ContainsMarkLiteral(raw, TaintMarkAccessor("T"), false)))
         assertEquals(fact(arg0, listOf(f), Tail.ANY), forms.literal("any", ContainsMarkOnAnyAccessorLiteral(raw, TaintMarkAccessor("T"), false)))
-        assertEquals(fact(arg0, listOf(f), Tail.ANY), forms.literal("suffix",
+        assertNull(forms.literal("suffix",
             ContainsMarkLiteral(PositionAccess.Complex(raw, AnyAccessor), TaintMarkAccessor("T"), false)))
         assertNull(forms.literal("bad", ContainsMarkLiteral(PositionAccess.Complex(
             PositionAccess.Complex(raw, AnyAccessor), ElementAccessor), TaintMarkAccessor("T"), false)))
@@ -232,7 +230,7 @@ class JIRRuleFormsTest : BasicTestUtils() {
             TaintMarkAwareConditionExpr.Or(arrayOf(literal(AccessPathBase.Argument(2 * index)),
                 literal(AccessPathBase.Argument(2 * index + 1))))
         })
-        val rule = v.source(listOf(AssignMark(RuleMark("T"), Result), AssignMark(RuleMark("U"), any(Result))))
+        val rule = v.source(listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result)), AssignMark(RuleMark("U"), any(Result))))
         val summary = MicroEdgeBuilder().also { forms.source(it, rule, occurrence(rule), condition(expression)) }.buildStage()
         val source = summary.sources.single()
         assertEquals(40, source.predicate.leaves.size)
@@ -254,11 +252,11 @@ class JIRRuleFormsTest : BasicTestUtils() {
             org.opentaint.dataflow.jvm.bidi.interp.RuleErrors(), v.typeFilters, statistics = statistics)
         counted.predicate("false", RuleConditionRewriter.falseExpr)
         counted.predicate("true", RuleConditionRewriter.trueExpr)
-        counted.predicate("and", condition(TaintMarkAwareConditionExpr.And(arrayOf(literal(arg0), literal(arg1))))) { true }
+        counted.predicate("and", condition(TaintMarkAwareConditionExpr.And(arrayOf(literal(arg0), literal(arg1)))))
         val snapshot = statistics.snapshot()
         assertEquals(3L, snapshot.compiledPredicates)
-        assertEquals(9L, snapshot.compiledNodes)
-        assertEquals(4L, snapshot.compiledLeaves)
+        assertEquals(5L, snapshot.compiledNodes)
+        assertEquals(2L, snapshot.compiledLeaves)
         assertEquals(0L, snapshot.accesses)
         assertEquals(0L, snapshot.buildAttempts)
     }
@@ -278,11 +276,11 @@ class JIRRuleFormsTest : BasicTestUtils() {
 
     @Test
     fun `source target table uses exact or must and retains no may annotation`(): Unit {
-        for (position in listOf<Position>(Result, any(field(Result)))) {
+        for (position in listOf<ActionPosition>(ActionPosition.Exact(Result), any(field(Result)))) {
             val a = AssignMark(RuleMark("U"), position)
             val rule = v.source(listOf(a))
             assertTrue(forms.valid(rule))
-            val expected = if (position == Result) fact(AccessPathBase.Return, mark = u)
+            val expected = if (position == ActionPosition.Exact(Result)) fact(AccessPathBase.Return, mark = u)
                 else fact(AccessPathBase.Return, listOf(f), Tail.ANY_TAINT, u)
             assertEquals(expected, forms.markTarget(rule, a))
             val unconditional = MicroEdgeBuilder().also {
@@ -323,7 +321,7 @@ class JIRRuleFormsTest : BasicTestUtils() {
     @Test
     fun `copy-all pass table uses abstract star source and star or may target`(): Unit {
         for (any in listOf(false, true)) {
-            val action = CopyAllMarks(field(Argument(0)), if (any) any(field(Result, "g")) else field(Result, "g"))
+            val action = CopyAllMarks(ActionPosition.Exact(field(Argument(0))), if (any) any(field(Result, "g")) else ActionPosition.Exact(field(Result, "g")))
             val rule = v.pass(listOf(action))
             assertTrue(forms.valid(rule))
             val b = MicroEdgeBuilder()
@@ -343,7 +341,7 @@ class JIRRuleFormsTest : BasicTestUtils() {
     @Test
     fun `copy-mark pass uses its own literal and ignored action makes no edge`(): Unit {
         for (any in listOf(false, true)) {
-            val action = CopyMark(RuleMark("T"), field(Argument(0)), if (any) any(Result) else Result)
+            val action = CopyMark(RuleMark("T"), ActionPosition.Exact(field(Argument(0))), if (any) any(Result) else ActionPosition.Exact(Result))
             val rule = v.pass(listOf(action))
             val b = MicroEdgeBuilder()
             assertEquals(arg0 to AccessPathBase.Return, forms.pass(b, rule, action))
@@ -355,55 +353,14 @@ class JIRRuleFormsTest : BasicTestUtils() {
                 concat(Conclusion(expected.from, empty, false), expected, edgeDemand = any))
         }
         val b = MicroEdgeBuilder()
-        assertNull(forms.pass(b, v.pass(emptyList()), AssignMark(RuleMark("T"), Result)))
+        assertNull(forms.pass(b, v.pass(emptyList()), AssignMark(RuleMark("T"), ActionPosition.Exact(Result))))
         assertTrue(b.build().edges.isEmpty())
     }
 
     @Test
-    fun `real pass forms transport protection without assigning it`(): Unit {
-        val method = v.method("plain")
-        val form = FormKey(FormOwner(), method, null, method.instList.first())
-        val id = ActionId(RuleOccurrenceId(form, RuleKind.PASS_THROUGH, 0), ActionRole.PASS_THROUGH, 0)
-        for (copyAll in listOf(false, true)) for (mayTarget in listOf(false, true)) {
-            val target = if (mayTarget) any(field(Result, "g")) else field(Result, "g")
-            val action = if (copyAll) CopyAllMarks(field(Argument(0)), target)
-                else CopyMark(RuleMark("T"), field(Argument(0)), target)
-            val rule = v.pass(listOf(action))
-            val builder = MicroEdgeBuilder()
-            forms.pass(builder, rule, action, OperationId(form, action = id))
-            val stage = builder.buildStage()
-            assertTrue(stage.edges.all { it.actionId == null && !it.isSource },
-                "Static operation identity must not change ordinary pass edge identity")
-            for (mode in listOf(ApMode(true, Direction.FORWARD, 1),
-                ApMode(false, Direction.BACKWARD, 1), ApMode(false, Direction.FORWARD, 2))) {
-                val directed = if (mode.direction == Direction.FORWARD) stage else stage.reversed()
-                val me = directed.edges.last()
-                assertFalse(me.isRuleAssignment)
-                val from = me.edge.from.copy(tail = Tail.EXACT, mark = MarkSlot.Concrete(t))
-                val plain = v.manager.factsOf(from, empty, Layer.NORMAL) as TaintTree
-                val premise = v.manager.initial(Pattern(from, empty))
-                for (flagged in listOf(false, true)) {
-                    val input = if (flagged) plain.withProtection(plain.root) else plain
-                    val output = CollectingOut()
-                    v.ops.applyEdge(input, premise, me.edge, false, mode, output, may = me.may,
-                        ruleAssignment = me.isRuleAssignment)
-                    assertTrue(output.results.isNotEmpty())
-                    for (result in output.results) {
-                        val taint = result as TaintTree
-                        assertEquals(me.edge.to.base, taint.base)
-                        assertEquals(flagged, taint.nonSubsumable != null,
-                            "$copyAll/$mayTarget/$mode flagged=$flagged")
-                        if (flagged) assertEquals(taint.root, taint.nonSubsumable)
-                    }
-                }
-            }
-        }
-    }
-
-    @Test
     fun `new core ignores end actions before rule position validation`(): Unit {
-        val invalid = field(any(Argument(0)))
-        val rule = v.sink(listOf(AssignMark(RuleMark("T"), invalid)))
+        val invalid = PositionWithAccess(ClassStatic("sample.bidi.BidiRuleSample"), PositionAccessor.ElementAccessor)
+        val rule = v.sink(listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(invalid))))
         assertTrue(forms.valid(rule))
         assertTrue(forms.endFacts(rule).isEmpty())
         assertTrue(sinks(rule, RuleConditionRewriter.trueExpr).single().endFacts.isEmpty())
@@ -412,7 +369,7 @@ class JIRRuleFormsTest : BasicTestUtils() {
 
     @Test
     fun `equal source action tuples retain separate stable occurrences through reversal`(): Unit {
-        val action = AssignMark(RuleMark("T"), Result)
+        val action = AssignMark(RuleMark("T"), ActionPosition.Exact(Result))
         val rule = v.source(listOf(action, action))
         val id = occurrence(rule)
         val builder = MicroEdgeBuilder()
@@ -440,57 +397,37 @@ class JIRRuleFormsTest : BasicTestUtils() {
     }
 
     @Test
-    fun `single argument sink uses one local root or element predicate with unchanged tail`(): Unit {
+    fun `single argument sink keeps explicit reach and adds no array alternative`(): Unit {
         val rule = v.sink()
         val lit = ContainsMarkOnAnyAccessorLiteral(PositionAccess.Complex(PositionAccess.Simple(arg0),
             FieldAccessor(owner, "f", "java.lang.Object")), TaintMarkAccessor("T"), false)
-        val expected = listOf(listOf(Pattern(fact(arg0, listOf(f), Tail.ANY), empty)),
-            listOf(Pattern(fact(arg0, listOf(e, f), Tail.ANY), empty)))
+        val expected = listOf(Pattern(fact(arg0, listOf(f), Tail.ANY), empty))
         repeat(3) {
-            val sinks = sinks(rule, condition(lit)) { it == 0 }
-            val sink = sinks.single()
-            assertEquals(0, sink.alternative)
-            assertEquals(expected.flatten(), sink.patterns)
-            assertEquals(expected.map { it.toSet() }.toSet(), choices(assertNotNull(sink.predicate)).toSet())
-            assertSame(rule, sink.rule)
-            assertFalse(sink.unconditional)
-            assertTrue(sink.predicate!!.leaves.indices.all { sink.predicate!!.isUnary(it) && !sink.predicate!!.isMulti(it) })
+            val sink = sinks(rule, condition(lit)).single()
+            assertEquals(expected, sink.patterns)
+            assertEquals(setOf(expected.toSet()), choices(assertNotNull(sink.predicate)).toSet())
+            assertTrue(sink.predicate!!.leaves.indices.all { sink.predicate!!.isUnary(it) })
         }
-        assertEquals(expected.take(1), sinks(rule, condition(lit)).map { it.patterns })
     }
 
     @Test
-    fun `conjunctive sink keeps array OR choices without a branch product`(): Unit {
-        val rule = v.sink()
+    fun `conjunctive sink keeps only the explicit argument leaves`(): Unit {
         val p = literal(arg0)
         val q = literal(arg1, "U")
         val expr = TaintMarkAwareConditionExpr.Or(arrayOf(
             TaintMarkAwareConditionExpr.And(arrayOf(p, q, p)),
-            TaintMarkAwareConditionExpr.And(arrayOf(p, q)),
-        ))
-        val sinks = sinks(rule, condition(expr)) { true }
-        val expected = setOf(
-            setOf(Pattern(fact(arg0), empty), Pattern(fact(arg1, mark = u), empty)),
-            setOf(Pattern(fact(arg0, listOf(e)), empty), Pattern(fact(arg1, mark = u), empty)),
-            setOf(Pattern(fact(arg0), empty), Pattern(fact(arg1, listOf(e), mark = u), empty)),
-            setOf(Pattern(fact(arg0, listOf(e)), empty), Pattern(fact(arg1, listOf(e), mark = u), empty)),
-        )
-        val predicate = assertNotNull(sinks.single().predicate)
-        assertEquals(expected, choices(predicate).toSet())
-        assertEquals(4, predicate.leaves.size)
-        assertEquals(7, predicate.nodeCount)
+            TaintMarkAwareConditionExpr.And(arrayOf(p, q))))
+        val predicate = assertNotNull(sinks(v.sink(), condition(expr)).single().predicate)
+        assertEquals(setOf(setOf(Pattern(fact(arg0), empty), Pattern(fact(arg1, mark = u), empty))), choices(predicate).toSet())
+        assertEquals(2, predicate.leaves.size)
         assertTrue(predicate.leaves.indices.all { predicate.isMulti(it) && !predicate.isUnary(it) })
-        assertEquals(sinks.map { it.patterns }, sinks(rule, condition(expr)) { true }.map { it.patterns })
     }
 
     @Test
-    fun `array expansion is not applied to this result or static sink positions`(): Unit {
-        for (base in listOf(AccessPathBase.This, AccessPathBase.Return, STATIC)) {
-            val queries = arrayListOf<Int>()
-            val sinks = sinks(v.sink(), condition(literal(base))) { queries += it; true }
-            assertEquals(listOf(listOf(Pattern(fact(base), empty))), sinks.map { it.patterns })
-            assertTrue(queries.isEmpty())
-        }
+    fun `explicit element sink position remains legal`(): Unit {
+        val raw = PositionAccess.Complex(PositionAccess.Simple(arg0), ElementAccessor)
+        val lit = ContainsMarkLiteral(raw, TaintMarkAccessor("T"), false)
+        assertEquals(listOf(Pattern(fact(arg0, listOf(e)), empty)), sinks(v.sink(), condition(lit)).single().patterns)
     }
 
     @Test
@@ -498,11 +435,11 @@ class JIRRuleFormsTest : BasicTestUtils() {
         val inst = v.method("staticRead").instList.instructions.filterIsInstance<JIRAssignInst>().first { it.rhv is JIRFieldRef }
         val ref = inst.rhv as JIRFieldRef
         val field = ref.field.field
-        val a = AssignMark(RuleMark("T"), Result)
+        val a = AssignMark(RuleMark("T"), ActionPosition.Exact(Result))
         val b = AssignMark(RuleMark("U"), any(Result))
         val first = TaintStaticFieldSource(field, JIRRuleTestFixtures.trueCondition, listOf(a), null)
         val second = TaintStaticFieldSource(field, JIRRuleTestFixtures.trueCondition, listOf(b), null)
-        val invalid = TaintStaticFieldSource(field, JIRRuleTestFixtures.trueCondition, listOf(AssignMark(RuleMark("T"), Argument(0))), null)
+        val invalid = TaintStaticFieldSource(field, JIRRuleTestFixtures.trueCondition, listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Argument(0)))), null)
         val provider = RecordingTaintRules(listOf(first, second, invalid))
         val x = v.forms(provider)
         val lhs = assertNotNull(org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase(inst.lhv))

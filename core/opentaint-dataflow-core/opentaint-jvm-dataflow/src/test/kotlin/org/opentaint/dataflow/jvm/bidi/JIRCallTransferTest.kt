@@ -11,7 +11,6 @@ import org.opentaint.dataflow.bidi.interp.CallPoint.*
 import org.opentaint.dataflow.bidi.ap.ReferenceRequestKind as RequestKind
 import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
-import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.configuration.mkFalse
 import org.opentaint.dataflow.configuration.jvm.*
 import org.opentaint.dataflow.configuration.jvm.TaintMark as RuleMark
@@ -73,7 +72,7 @@ class JIRCallTransferTest : BasicTestUtils() {
     private fun resultBase(s: JIRInst) = base(assertIs<JIRAssignInst>(s).lhv)
     private fun at(position: Position, name: String, type: String = "java.lang.Object") =
         PositionWithAccess(position, PositionAccessor.FieldAccessor(CLS, name, type))
-    private fun any(position: Position) = PositionWithAccess(position, PositionAccessor.AnyFieldAccessor)
+    private fun any(position: Position) = ActionPosition.AnyAccessorAfter(position)
     private fun user(vararg names: String) = object : UserDefinedRuleInfo { override val relevantTaintMarks = names.toSet() }
     private fun copyTo(c: Conclusion, to: AccessPathBase, path: List<Int> = c.fact.path) = c.copy(fact = c.fact.copy(base = to, path = path))
     private fun pass(s: JIRInst, actions: List<Action>) = TaintPassThrough(v.expr(s).method.method, trueCondition, actions, null)
@@ -161,7 +160,7 @@ class JIRCallTransferTest : BasicTestUtils() {
 
     @Test fun `zero passes over enters resolved callee and source results return without a zero binding`(): Unit {
         val s = v.call("staticCall")
-        val rules = CallRules().apply { sources = listOf(source(s, listOf(AssignMark(RuleMark("T"), Result)))) }
+        val rules = CallRules().apply { sources = listOf(source(s, listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result))))) }
         val plan = v.builder(s, rules, listOf(v.resolved())).build()
         val zero = Conclusion(ZERO_FACT, ExclusionSet.Empty, false)
         val result = check(plan, s, listOf(item(zero)), setOf(zero, fact(resultBase(s))), sourceHits = 1,
@@ -190,7 +189,7 @@ class JIRCallTransferTest : BasicTestUtils() {
 
     @Test fun `unresolved default identity and pass result are sibling paths`(): Unit {
         val s = v.call("staticExternal")
-        val rules = CallRules().apply { passes = listOf(pass(s, listOf(CopyAllMarks(Argument(0), Result)))) }
+        val rules = CallRules().apply { passes = listOf(pass(s, listOf(CopyAllMarks(ActionPosition.Exact(Argument(0)), ActionPosition.Exact(Result))))) }
         val plan = v.builder(s, rules).build()
         val input = must(inputBase(s), p(f), ex(g))
         val result = check(plan, s, listOf(item(input)), setOf(input, copyTo(input, resultBase(s))))
@@ -200,7 +199,7 @@ class JIRCallTransferTest : BasicTestUtils() {
 
     @Test fun `unresolved identity has no declared pass filter on the added stage`(): Unit {
         val s = v.call("getter")
-        val rules = CallRules().apply { passes = listOf(pass(s, listOf(CopyAllMarks(This, Result)))) }
+        val rules = CallRules().apply { passes = listOf(pass(s, listOf(CopyAllMarks(ActionPosition.Exact(This), ActionPosition.Exact(Result))))) }
         val plan = v.builder(s, rules).build()
         // A direct ADDED-stage input isolates this contract; the receiver's BIND_IN filter would reject it.
         val input = fact(AccessPathBase.This, p(element))
@@ -215,7 +214,7 @@ class JIRCallTransferTest : BasicTestUtils() {
         val s = v.call("staticExternal")
         val cls = m.accessors.index(ClassStaticAccessor(CLS))
         val staticField = field("sField")
-        val rules = CallRules().apply { passes = listOf(pass(s,listOf(CopyAllMarks(at(ClassStatic(CLS),"sField"),Result)))) }
+        val rules = CallRules().apply { passes = listOf(pass(s,listOf(CopyAllMarks(ActionPosition.Exact(at(ClassStatic(CLS),"sField")),ActionPosition.Exact(Result))))) }
         val plan = v.builder(s,rules).build()
         val original = setOf(Pattern(PathFact(stat,p(cls,staticField),Tail.STAR,MarkSlot.STAR),ExclusionSet.Empty))
         val input = flow(stat,p(cls,staticField))
@@ -231,9 +230,9 @@ class JIRCallTransferTest : BasicTestUtils() {
         val local = localCall()
         val s = local.inst
         val rules = CallRules().apply {
-            sinks = listOf(sink(s, listOf(AssignMark(RuleMark("U"), Result)), contains(Argument(0), "T")))
-            cleaners = listOf(cleaner(s, listOf(RemoveMark(RuleMark("T"), Argument(0)))))
-            passes = listOf(pass(s, listOf(CopyAllMarks(Argument(0), Result))))
+            sinks = listOf(sink(s, listOf(AssignMark(RuleMark("U"), ActionPosition.Exact(Result))), contains(Argument(0), "T")))
+            cleaners = listOf(cleaner(s, listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(Argument(0))))))
+            passes = listOf(pass(s, listOf(CopyAllMarks(ActionPosition.Exact(Argument(0)), ActionPosition.Exact(Result)))))
         }
         val plan = v.builder(s, rules, persistedAliases = { b, _ ->
             if (b == local.result) listOf(alias(other, "next", "next")) else emptyList()
@@ -249,8 +248,8 @@ class JIRCallTransferTest : BasicTestUtils() {
     @Test fun `unresolved pass sees F75 cleaned FLOW and request retains incoming caller premise`(): Unit {
         val s = v.call("staticExternal")
         val rules = CallRules().apply {
-            cleaners = listOf(cleaner(s, listOf(RemoveMark(RuleMark("T"), Argument(0)))))
-            passes = listOf(pass(s, listOf(CopyAllMarks(Argument(0), Result))))
+            cleaners = listOf(cleaner(s, listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(Argument(0))))))
+            passes = listOf(pass(s, listOf(CopyAllMarks(ActionPosition.Exact(Argument(0)), ActionPosition.Exact(Result)))))
         }
         val plan = v.builder(s, rules).build()
         val input = flow(inputBase(s), exclusion = ex(g), mark = mx(u.id))
@@ -267,7 +266,7 @@ class JIRCallTransferTest : BasicTestUtils() {
         val local = localCall()
         val s = local.inst
         val rules = CallRules().apply {
-            sources = listOf(source(s, listOf(AssignMark(RuleMark("T"), Result)), info = user("T")))
+            sources = listOf(source(s, listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result))), info = user("T")))
         }
         val plan = v.builder(s, rules, listOf(v.resolved()), persistedAliases = { b, _ ->
             if (b == local.result) listOf(alias(other, "next", "next")) else emptyList()
@@ -285,8 +284,8 @@ class JIRCallTransferTest : BasicTestUtils() {
         val s = v.call("staticExternal")
         for (condition in listOf<Condition>(contains(Argument(1), "U"), falseCondition)) {
             val rules = CallRules().apply {
-                sources = listOf(source(s, listOf(AssignMark(RuleMark("T"), Result)), condition, user("T")))
-                passes = listOf(pass(s, listOf(CopyAllMarks(Argument(0), Result))))
+                sources = listOf(source(s, listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Result))), condition, user("T")))
+                passes = listOf(pass(s, listOf(CopyAllMarks(ActionPosition.Exact(Argument(0)), ActionPosition.Exact(Result)))))
             }
             val plan = v.builder(s, rules).build()
             val input = fact(inputBase(s))
@@ -298,7 +297,7 @@ class JIRCallTransferTest : BasicTestUtils() {
     @Test fun `constructor cleaned pass over skips rewriter while resolved result takes it`(): Unit {
         val s = v.call("constructor")
         val rules = CallRules().apply {
-            allSources = listOf(source(s, listOf(AssignMark(RuleMark("T"), Argument(0))),
+            allSources = listOf(source(s, listOf(AssignMark(RuleMark("T"), ActionPosition.Exact(Argument(0)))),
                 contains(Argument(0), "U"), user("T")))
         }
         val plan = v.builder(s, rules, listOf(v.resolved("<init>"))).build()
@@ -330,7 +329,7 @@ class JIRCallTransferTest : BasicTestUtils() {
 
     @Test fun `pass and summary memory effects retain full alias path until final positive call cuts`(): Unit {
         val local = localCall()
-        val rules = CallRules().apply { passes = listOf(pass(local.inst, listOf(CopyAllMarks(Argument(0), Result)))) }
+        val rules = CallRules().apply { passes = listOf(pass(local.inst, listOf(CopyAllMarks(ActionPosition.Exact(Argument(0)), ActionPosition.Exact(Result))))) }
         val plan = v.builder(local.inst, rules, persistedAliases = { b, _ ->
             if (b == local.result) listOf(alias(other, "next", "next")) else emptyList()
         }).build()
@@ -369,7 +368,7 @@ class JIRCallTransferTest : BasicTestUtils() {
     @Test fun `returned lowered field action observes pending must E and projects temporary before final demotion`(): Unit {
         val s = v.call("staticCall")
         val rules = CallRules().apply {
-            allCleaners = listOf(cleaner(s, listOf(RemoveMark(RuleMark("T"), at(Result, "f"))), user("T")))
+            allCleaners = listOf(cleaner(s, listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(at(Result, "f")))), user("T")))
         }
         val plan = v.builder(s, rules, listOf(v.resolved())).build()
         val origin = item(fact(inputBase(s))).premise
@@ -387,7 +386,7 @@ class JIRCallTransferTest : BasicTestUtils() {
         val result = check(plan, s, listOf(blocked), setOf(must(resultBase(s),exclusion = ex(f)).copy(demand = true)),from = RETURNED,pending = true)
         assertTrue(result.cleanInputs.none { it.fact.base is AccessPathBase.CleanerTemporary })
         val killRules = CallRules().apply { allCleaners = listOf(cleaner(s,
-            listOf(RemoveMark(RuleMark("T"), Result, TaintCleanReach.ExactAndAnyField)), user("T"))) }
+            listOf(RemoveMark(RuleMark("T"), ActionPosition.Exact(Result))), user("T"))) }
         // The rewriter uses EXACT for a root action; a concrete exact result is surely killed.
         val killPlan = v.builder(s, killRules, listOf(v.resolved())).build()
         check(killPlan, s, listOf(item(fact(ret), true, origin)), emptySet(), from = RETURNED, pending = true)
@@ -417,7 +416,7 @@ class JIRCallTransferTest : BasicTestUtils() {
                 contains(Argument(0), "T")))
         }
         val passRules = CallRules().apply {
-            passes = listOf(pass(s, listOf(CopyMark(RuleMark("T"), Argument(0), any(Result)))))
+            passes = listOf(pass(s, listOf(CopyMark(RuleMark("T"), ActionPosition.Exact(Argument(0)), any(Result)))))
         }
         val sourcePlan = v.builder(s, sourceRules).build()
         val passPlan = v.builder(s, passRules).build()
@@ -458,7 +457,7 @@ class JIRCallTransferTest : BasicTestUtils() {
                 contains(Argument(0), "T")))
         }
         val passRules = CallRules().apply {
-            passes = listOf(pass(s, listOf(CopyMark(RuleMark("T"), Argument(0), any(Result)))))
+            passes = listOf(pass(s, listOf(CopyMark(RuleMark("T"), ActionPosition.Exact(Argument(0)), any(Result)))))
         }
         val forwardSource = v.builder(s, sourceRules).build()
         val forwardPass = v.builder(s, passRules).build()
@@ -502,7 +501,7 @@ class JIRCallTransferTest : BasicTestUtils() {
 
     @Test fun `reverse may pass returns demand requirements through bindings without requests`(): Unit {
         val s = v.call("staticExternal")
-        val rules = CallRules().apply { passes = listOf(pass(s, listOf(CopyAllMarks(Argument(0), any(Result))))) }
+        val rules = CallRules().apply { passes = listOf(pass(s, listOf(CopyAllMarks(ActionPosition.Exact(Argument(0)), any(Result))))) }
         val forward = v.builder(s, rules).build()
         val backward = forward.reversed()
         val input = fact(resultBase(s), p(f))
@@ -525,16 +524,15 @@ class JIRCallTransferTest : BasicTestUtils() {
     @Test fun `backward call keeps the full sink predicate and ignores end triggers without handoff seeds`(): Unit {
         val s = v.call("staticExternal")
         val rules = CallRules().apply {
-            sinks = listOf(sink(s, listOf(AssignMark(RuleMark("U"), Result)), contains(Argument(0), "T")))
+            sinks = listOf(sink(s, listOf(AssignMark(RuleMark("U"), ActionPosition.Exact(Result))), contains(Argument(0), "T")))
         }
         val forward = v.builder(s, rules).build()
         val backward = forward.reversed()
         val sink = forward.sinks.single()
         val predicate = assertNotNull(sink.predicate)
-        assertEquals(RulePredicate.Kind.OR, predicate.kind(predicate.root))
-        assertEquals(setOf(Pattern(fact(arg0).fact, ExclusionSet.Empty),
-            Pattern(fact(arg0, p(element)).fact, ExclusionSet.Empty)), predicate.leaves.toSet(),
-            "An Object argument retains both root and element reads in one original sink (SI1)")
+        assertEquals(RulePredicate.Kind.LEAF, predicate.kind(predicate.root))
+        assertEquals(setOf(Pattern(fact(arg0).fact, ExclusionSet.Empty)), predicate.leaves.toSet(),
+            "An Object argument does not add an implicit element read")
         val input = fact(resultBase(s), mark = mu, demand = true)
         val result = check(backward, s, listOf(item(input)), emptySet(), direction = Direction.BACKWARD)
         assertTrue(sink.endFacts.isEmpty())

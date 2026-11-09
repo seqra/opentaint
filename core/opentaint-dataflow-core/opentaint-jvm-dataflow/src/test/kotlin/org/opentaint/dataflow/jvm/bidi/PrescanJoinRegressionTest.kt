@@ -104,7 +104,7 @@ class PrescanJoinRegressionTest : BidiJIRTestUtils() {
             @Suppress("UNCHECKED_CAST")
             val commonGraph = graph as ApplicationGraph<CommonMethod, CommonInst>
             engine = TaintAnalysisUnitRunnerManager(f.refManager, f.cancellation, f.manager,
-                commonGraph, resolver as UnitResolver<CommonMethod>, NoStoredSummaries, null)
+                commonGraph, resolver as UnitResolver<CommonMethod>, NoStoredSummaries, null, iterationLimit = null)
             try {
                 engine.resetApManager(TreeApManager(AnyAccessorDisabled, f.refManager, f.cancellation))
                 val roots = listOf(MethodWithContext(f.method("normal"), EmptyMethodContext))

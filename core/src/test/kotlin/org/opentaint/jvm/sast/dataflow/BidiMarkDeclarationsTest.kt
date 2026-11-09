@@ -155,7 +155,7 @@ class BidiMarkDeclarationsTest : BasicTestUtils() {
         assertSame(earlier, cached.method)
         assertSame(actual, cold.method)
         assertEquals(cold.condition, cached.condition)
-        val expected = (0..20).map { CopyAllMarks(Argument(it), Result) }
+        val expected = (0..20).map { CopyAllMarks(org.opentaint.dataflow.configuration.jvm.ActionPosition.Exact(Argument(it)), org.opentaint.dataflow.configuration.jvm.ActionPosition.Exact(Result)) }
         assertEquals(expected, cached.actionsAfter)
         assertEquals(expected, cold.actionsAfter)
         assertEquals(cold.actionsAfter.withIndex().toList(), cached.actionsAfter.withIndex().toList())

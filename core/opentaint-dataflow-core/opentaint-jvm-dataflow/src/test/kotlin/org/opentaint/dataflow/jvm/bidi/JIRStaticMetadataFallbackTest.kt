@@ -55,7 +55,7 @@ class JIRStaticMetadataFallbackTest : BidiJIRTestUtils() {
             )
             override fun sourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
                 if (method == target) branches.map { (name, branch) ->
-                    v.source(listOf(AssignMark(TaintMark("OUT"), Result)), condition("SOURCE_$name", branch), target)
+                    v.source(listOf(AssignMark(TaintMark("OUT"), ActionPosition.Exact(Result))), condition("SOURCE_$name", branch), target)
                 } else emptyList()
             override fun sinkRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
                 if (method == target) branches.map { (name, branch) -> v.sink(condition = condition("SINK_$name", branch), method = target) }
@@ -83,8 +83,8 @@ class JIRStaticMetadataFallbackTest : BidiJIRTestUtils() {
             CommonCondition.Atom(ConstantMatches(This, Regex("wanted"))),
             CommonCondition.Atom(ContainsMark(staticPosition, TaintMark("P")))))
         val v = JIRRuleTestFixtures(cp)
-        val source = v.source(listOf(AssignMark(TaintMark("OUT"), ClassStatic("coverage.SourcePoint"))), condition, call.method.method)
-        val sink = v.sink(listOf(AssignMark(TaintMark("END"), ClassStatic("coverage.SinkPoint"))), condition, call.method.method)
+        val source = v.source(listOf(AssignMark(TaintMark("OUT"), ActionPosition.Exact(ClassStatic("coverage.SourcePoint")))), condition, call.method.method)
+        val sink = v.sink(listOf(AssignMark(TaintMark("END"), ActionPosition.Exact(ClassStatic("coverage.SinkPoint")))), condition, call.method.method)
         val rules = object : TaintRulesProvider by NoTaintRules {
             override fun sourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
                 if (method == call.method.method) listOf(source) else emptyList()
@@ -137,7 +137,7 @@ class JIRStaticMetadataFallbackTest : BidiJIRTestUtils() {
             org.opentaint.dataflow.ap.ifds.FieldAccessor(fieldOwner, "sField", "java.lang.Object"))
         val v = JIRRuleTestFixtures(cp)
         for ((condition, expected) in cases) {
-            val source = v.source(listOf(AssignMark(TaintMark("OUT"), ClassStatic("coverage.SymbolicSourcePoint"))), condition, target)
+            val source = v.source(listOf(AssignMark(TaintMark("OUT"), ActionPosition.Exact(ClassStatic("coverage.SymbolicSourcePoint")))), condition, target)
             val sink = v.sink(condition = condition, method = target)
             val rules = object : TaintRulesProvider by NoTaintRules {
                 override fun sourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
@@ -189,10 +189,10 @@ class JIRStaticMetadataFallbackTest : BidiJIRTestUtils() {
         for (signedMark in listOf(mark, CommonCondition.Not(mark))) {
             val condition: Condition = CommonCondition.Or(listOf(falseAtom, signedMark))
             val source = TaintEntryPointSource(m, condition,
-                listOf(AssignMark(TaintMark("OUT"), ClassStatic("coverage.EntrySourcePoint"))), null)
+                listOf(AssignMark(TaintMark("OUT"), ActionPosition.Exact(ClassStatic("coverage.EntrySourcePoint")))), null)
             val ordinarySink = JIRRuleTestFixtures(cp).sink(condition = condition, method = m)
             val sink = TaintMethodEntrySink(m, condition,
-                listOf(AssignMark(TaintMark("END"), ClassStatic("coverage.EntrySinkPoint"))),
+                listOf(AssignMark(TaintMark("END"), ActionPosition.Exact(ClassStatic("coverage.EntrySinkPoint")))),
                 ordinarySink.id, ordinarySink.meta, null)
             val rules = object : TaintRulesProvider by NoTaintRules {
                 override fun entryPointRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =

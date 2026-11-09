@@ -130,7 +130,7 @@ class CatalogResolverOrderTest : BidiJIRTestUtils() {
             val units = units()
             val commonGraph = graph as ApplicationGraph<CommonMethod, CommonInst>
             val engine = TaintAnalysisUnitRunnerManager(refs, cancellation, legacy, commonGraph,
-                units as UnitResolver<CommonMethod>, NoStoredSummaries, null)
+                units as UnitResolver<CommonMethod>, NoStoredSummaries, null, iterationLimit = null)
             engine.use {
                 engine.resetApManager(TreeApManager(AnyAccessorDisabled, refs, cancellation))
                 val roots = listOf("broad", "narrow", "empty").map { MethodWithContext(method(it, SAMPLE), EmptyMethodContext) }

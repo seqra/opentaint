@@ -158,7 +158,7 @@ class JIRMethodCacheTest : BidiJIRTestUtils() {
         val inst = method.instList.instructions.filterIsInstance<JIRAssignInst>().first { it.rhv is JIRFieldRef }
         val field = (inst.rhv as JIRFieldRef).field.field
         val rules = RecordingTaintRules(listOf(TaintStaticFieldSource(field, mkTrue(),
-            listOf(AssignMark(RuleMark("READ"), Result)), null)))
+            listOf(AssignMark(RuleMark("READ"), ActionPosition.Exact(Result))), null)))
         val owner = interp(rules)
         val first = owner.statementSummary(key(method), inst)
         val second = owner.statementSummary(otherKey(method), inst)
@@ -334,7 +334,7 @@ class JIRMethodCacheTest : BidiJIRTestUtils() {
             CommonCondition.Atom<JirCondition>(ContainsMark(Argument(0), RuleMark("T"))),
             CommonCondition.Atom<JirCondition>(ContainsMark(Argument(1), RuleMark("U")))))
         val rules = CallRules().apply {
-            sources = listOf(TaintMethodSource(target, condition, listOf(AssignMark(RuleMark("OUT"), Result)), null))
+            sources = listOf(TaintMethodSource(target, condition, listOf(AssignMark(RuleMark("OUT"), ActionPosition.Exact(Result))), null))
         }
         val owner = interp(rules)
         val forms = owner.forms(key(caller))

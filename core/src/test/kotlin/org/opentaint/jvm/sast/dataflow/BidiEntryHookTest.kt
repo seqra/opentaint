@@ -50,13 +50,7 @@ import kotlin.time.Duration.Companion.seconds
 /** Actual legacy prescan/entry hook; only the supplied phase-3 report is scripted. */
 class BidiEntryHookTest : BasicTestUtils() {
     override val sourceFileExtension: String = "java"
-    private val ap = ApManager(Cancellation().also { it.activate() }, marks = MarkTable(FrozenMarkDeclarations(setOf(
-        "confirmed hook", "demand hook", "matching confirmed", "other demand", "unknown demand",
-        "empty confirmed", "must not output",
-    ).associateWith { name -> org.opentaint.dataflow.bidi.ap.FullKey(
-        org.opentaint.dataflow.bidi.ap.encodeGroup(org.opentaint.dataflow.bidi.ap.MarkGroupKey.Model(name), false), name)
-    })))
-    private val ops = ApOps(ap)
+    private val catalog = org.opentaint.dataflow.bidi.engine.ReportCatalog()
     private val params = JIRAnalysisManager.Params(aliasAnalysisParams = JIRLocalAliasAnalysis.Params(useAliasAnalysis = false))
     private fun sample(): JIRMethod = findMethod("test.samples.AnyFieldPrimitiveSample", "sink")
 
@@ -64,20 +58,17 @@ class BidiEntryHookTest : BasicTestUtils() {
         Report(entries, AnalysisEnd(status, run, Direction.FORWARD,
             if (status == RunStatus.COMPLETE) EndReason.POLICY else EndReason.ABNORMAL))
 
-    private fun item(id: String, state: ReportState, cwe: List<Int>? = null): Report.Entry {
+    private fun item(id: String, cwe: List<Int>? = null): Report.Entry {
         val method = sample()
         val statement = method.instList.last()
         val rule = object : CommonTaintConfigurationSink {
             override val id: String = id
             override val meta = TaintSinkMeta("hook $id", CommonTaintConfigurationSinkMeta.Severity.Warning, cwe)
         }
-        val layer = if (state == ReportState.CONFIRMED) Layer.NORMAL else Layer.DEMAND
-        val target = PathFact(AccessPathBase.Return, emptyList(), Tail.EXACT, MarkSlot.Concrete(ap.marks.mark(id)))
-        val witness = SinkWitness(0, MethodEntryPoint(EmptyMethodContext, method.instList.first()),
-            listOf(SinkEdge(ap.zero, layer, ops.targetTree(target, layer))), 1).also {
-                it.confirmed = state == ReportState.CONFIRMED
-            }
-        return Report.Entry(VulnerabilityKey(rule, method, statement), state, 1, listOf(witness))
+        val key = org.opentaint.dataflow.bidi.engine.SinkKey(method, statement, id)
+        val context = MethodEntryPoint(EmptyMethodContext, method.instList.first())
+        val reportId = catalog.intern(key, rule, context)
+        return Report.Entry(reportId, catalog.descriptor(reportId))
     }
 
     private fun exercise(
@@ -147,8 +138,8 @@ class BidiEntryHookTest : BasicTestUtils() {
     }
 
     @Test
-    fun `phase three returns both states and maps every analysis status while simple trace status stays OK`(): Unit {
-        val entries = listOf(item("confirmed hook", ReportState.CONFIRMED), item("demand hook", ReportState.DEMAND))
+    fun `phase three returns settled sink identities and maps every analysis status while simple trace status stays OK`(): Unit {
+        val entries = listOf(item("confirmed hook"), item("demand hook"))
         for ((status, expected) in listOf(
             RunStatus.COMPLETE to TaintAnalysisUnitRunnerManager.Status.OK,
             RunStatus.TIMEOUT to TaintAnalysisUnitRunnerManager.Status.TIMEOUT,
@@ -164,25 +155,25 @@ class BidiEntryHookTest : BasicTestUtils() {
     }
 
     @Test
-    fun `phase three retains the existing CWE filter for both states and unknown CWE`(): Unit {
-        val entries = listOf(item("matching confirmed", ReportState.CONFIRMED, listOf(89)),
-            item("other demand", ReportState.DEMAND, listOf(79)),
-            item("unknown demand", ReportState.DEMAND),
-            item("empty confirmed", ReportState.CONFIRMED, emptyList()))
+    fun `phase three retains the existing CWE filter for settled findings and unknown CWE`(): Unit {
+        val entries = listOf(item("matching confirmed", listOf(89)),
+            item("other demand", listOf(79)),
+            item("unknown demand"),
+            item("empty confirmed", emptyList()))
         val supplied = report(RunStatus.COMPLETE, entries)
         val filtered = exercise(supplied, cwe = setOf(89))
         assertEquals(setOf("matching confirmed", "unknown demand"), filtered.first.map { it.vulnerability.ruleId }.toSet())
         assertTrue(filtered.first.all { it.trace === TracePathGenerationResult.Simple })
         assertEquals(TaintAnalyzer.Status(TaintAnalysisUnitRunnerManager.Status.OK, TaintAnalysisUnitRunnerManager.Status.OK), filtered.second)
         val all = exercise(supplied)
-        assertEquals(entries.map { it.key.rule.id }.toSet(), all.first.map { it.vulnerability.ruleId }.toSet())
+        assertEquals(entries.map { it.descriptor.key.ruleId }.toSet(), all.first.map { it.vulnerability.ruleId }.toSet())
     }
 
     @Test
     fun `setup exceptions and errors outside the driver return empty output and EXCEPTION with trace OK`(): Unit {
         for (duringGather in listOf(false, true)) for (failure in listOf(
             IllegalStateException("entry setup"), AssertionError("entry setup"), OutOfMemoryError("entry setup"))) {
-            val (output, status, calls) = exercise(report(RunStatus.COMPLETE, listOf(item("must not output", ReportState.CONFIRMED))),
+            val (output, status, calls) = exercise(report(RunStatus.COMPLETE, listOf(item("must not output"))),
                 failure = failure, failInGather = duringGather)
             assertTrue(output.isEmpty())
             assertEquals(TaintAnalyzer.Status(TaintAnalysisUnitRunnerManager.Status.EXCEPTION, TaintAnalysisUnitRunnerManager.Status.OK), status)
@@ -195,7 +186,7 @@ class BidiEntryHookTest : BasicTestUtils() {
         for (failure in listOf(IllegalStateException("entry factory"), AssertionError("entry factory"),
             OutOfMemoryError("entry factory"))) {
             val (output, status, calls) = exercise(
-                report(RunStatus.COMPLETE, listOf(item("must not output", ReportState.CONFIRMED))),
+                report(RunStatus.COMPLETE, listOf(item("must not output"))),
                 failure = failure, failInFactory = true)
             assertTrue(output.isEmpty())
             assertEquals(TaintAnalyzer.Status(TaintAnalysisUnitRunnerManager.Status.EXCEPTION,
