@@ -1,0 +1,42 @@
+import groovy.json.JsonSlurper
+
+// Local equivalent of the final ci-rules.yaml result gate. Opt in with -I.
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    if (root.name != 'opentaint-jvm-sast') {
+        return
+    }
+
+    root.tasks.register('checkRuleTestResults') {
+        group = 'verification'
+        description = 'Checks the analyzer rule-test JSON with the CI failure policy.'
+        mustRunAfter(root.tasks.named('runProjectAnalyzer'))
+
+        doLast {
+            def configured = root.providers.gradleProperty('ruleTestResults').orNull
+            if (!configured) {
+                throw new GradleException('Set -PruleTestResults to the fresh test-result.json path.')
+            }
+            def resultFile = root.file(configured)
+            if (!resultFile.isFile()) {
+                throw new GradleException("Missing rule-test results: ${resultFile}")
+            }
+
+            def results = new JsonSlurper().parse(resultFile)
+            def names = ['success', 'skipped', 'falsePositive', 'falseNegative', 'disabled']
+            if (!(results instanceof Map) || names.any { !(results[it] instanceof List) }) {
+                throw new GradleException("Invalid rule-test result structure: ${resultFile}")
+            }
+            def counts = names.collectEntries { [(it): results[it].size()] }
+            logger.lifecycle("Rule tests: OK ${counts.success} | Skip ${counts.skipped} | FP ${counts.falsePositive} | FN ${counts.falseNegative} | Disabled ${counts.disabled}")
+
+            if (counts.values().sum() == 0) {
+                throw new GradleException('No rule tests were collected.')
+            }
+            def failures = counts.skipped + counts.falsePositive + counts.falseNegative
+            if (failures != 0) {
+                throw new GradleException("Rule tests failed: ${failures}. See ${resultFile}")
+            }
+        }
+    }
+}

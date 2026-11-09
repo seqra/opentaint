@@ -338,7 +338,7 @@ If any active rule is not covered by a positive sample, or if any YAML is invali
 
 This repository exposes a Gradle verification task:
 
-- **`verification/checkRulesCoverage`**
+- **`:checkRulesCoverage`** in `rules/test`
 
 Behavior:
 
@@ -347,11 +347,10 @@ Behavior:
    - All rule YAMLs in `ruleset/` are syntactically valid
   - Every enabled, non-lib rule has at least one positive test sample
 
-Usage (from the `test/root` subdirectory):
+Usage (from the repository root):
 
 ```bash
-cd test/root
-../gradlew verification/checkRulesCoverage
+./rules/test/gradlew -p rules/test :checkRulesCoverage
 ```
 
 On success:
@@ -361,6 +360,9 @@ On success:
 On failure:
 
 - It prints all problems (invalid YAML, uncovered rules) and fails the task.
+
+For the complete CI rule suite with local Gradle builds and no CI artifact
+downloads, see [Run the CI rule tests with Gradle](../docs/rule-testing.md).
 
 ---
 
@@ -386,7 +388,7 @@ When introducing or changing rules, follow these guidelines:
      - `id = "<rule id>"`
 
 5. **Run coverage checks**
-   - From the `test/root` subdirectory execute `../gradlew verification/checkRulesCoverage` to ensure:
+   - From the repository root execute `./rules/test/gradlew -p rules/test :checkRulesCoverage` to ensure:
      - No YAML errors
      - All executable rules are covered by tests
 

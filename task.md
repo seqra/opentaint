@@ -15,6 +15,12 @@ If you have an optimization idea, write a proposal. Then we will include it into
 Take the latest commit. Ignore reports for the previous commits as staled.
 1) Run on OWASP like we do it in .github/workflows/ci-analyzer-owasp.yaml
 2) Run on selected real projects from `../opentaint-test`: conductor, thingsboard, Stirling-PDF. Use parameters, specified in the config (memory, timeout). Don't run on any other configuration. 
+3) Run the rules suite from `.github/workflows/ci-rules.yaml` with local Gradle tasks.
+   Follow [docs/rule-testing.md](docs/rule-testing.md). Do not download CI analyzer,
+   autobuilder or Go-server artifacts. Require zero skipped tests, false positives
+   and false negatives in `test-result.json`. State the engine scope: the current
+   rule-test runner uses the legacy engine and does not select the bidirectional
+   core when given `--ifds-bidirectional`.
 
 Use `runProjectAnalyzer` gradle task directly, don't use the CLI.
 

@@ -1,0 +1,5300 @@
+{
+  "schema": "opentaint.rules-gradle-validation.v1",
+  "createdUTC": "2026-11-09T10:40:34.430302+00:00",
+  "sourceRevision": "e480321794bde6a6225db50edef630b0d6de769c",
+  "coreTree": "8b38a03586138acbbf5aaadd94b5fb301d6c9cad",
+  "rulesTree": "e2a7d29770276ca7d4d0efe974914f687ca67def",
+  "sourceBehaviorChanged": false,
+  "ciArtifactsDownloaded": false,
+  "normalDependencies": "The sample build resolved public Gradle dependencies. The source Go build used normal module resolution. Cached JDK/Go/protoc tools were used; no CI analyzer/autobuilder/server binaries were fetched.",
+  "engine": "legacy Java rule-test runner; Go rule-test runner",
+  "latestReachedIteration": {
+    "state": "NOT_APPLICABLE",
+    "reason": "Rule tests create per-sample legacy analyzers. TestProjectAnalyzer omits bidiPolicy; no BIDI_RUN_START markers exist."
+  },
+  "workflow": {
+    "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/.github/workflows/ci-rules.yaml",
+    "bytes": 6680,
+    "sha256": "84f8445d7bb906c461a038238b14bfee5f7fef805434097e4f5ac4b51e8327f2"
+  },
+  "countPolicy": "skipped + falsePositive + falseNegative must be zero; disabled is allowed",
+  "status": "CI_POLICY_PASS_WITH_KNOWN_HARNESS_COVERAGE_GAPS",
+  "counts": {
+    "success": 554,
+    "falseNegative": 0,
+    "falsePositive": 0,
+    "skipped": 0,
+    "disabled": 22
+  },
+  "byLanguage": {
+    "java": {
+      "success": 353,
+      "falseNegative": 0,
+      "falsePositive": 0,
+      "skipped": 0,
+      "disabled": 22
+    },
+    "go": {
+      "success": 201,
+      "falseNegative": 0,
+      "falsePositive": 0,
+      "skipped": 0,
+      "disabled": 0
+    }
+  },
+  "collectionAudit": {
+    "declared": 578,
+    "collected": 576,
+    "missing": [
+      {
+        "language": "java",
+        "rule": "java/security/unsafe-deserialization.yaml#server-dangerous-object-deserialization",
+        "entrypoint": "security.unsafedeserialization.UnsafeDeserializationSamples$DangerousRemoteService#invoke",
+        "mode": "default",
+        "count": 1
+      },
+      {
+        "language": "java",
+        "rule": "java/security/unsafe-deserialization.yaml#server-dangerous-object-deserialization",
+        "entrypoint": "security.unsafedeserialization.UnsafeDeserializationSamples$SafeRemoteService#invokeById",
+        "mode": "default",
+        "count": 1
+      }
+    ],
+    "extra": [],
+    "declaredByLanguage": {
+      "java": 377,
+      "go": 201
+    },
+    "collectedByLanguage": {
+      "java": 375,
+      "go": 201
+    }
+  },
+  "uncollectedEvidence": [
+    "10:35:08.499 |D| TestProjectAnalyzer - No sample found for security.unsafedeserialization.UnsafeDeserializationSamples$DangerousRemoteService#invoke (mode=default) in this module",
+    "10:35:08.499 |D| TestProjectAnalyzer - No sample found for security.unsafedeserialization.UnsafeDeserializationSamples$SafeRemoteService#invokeById (mode=default) in this module"
+  ],
+  "scopeEvidence": {
+    "core/src/main/kotlin/org/opentaint/jvm/sast/project/TestProjectAnalyzer.kt": {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/main/kotlin/org/opentaint/jvm/sast/project/TestProjectAnalyzer.kt",
+      "bytes": 13122,
+      "sha256": "c39bb02077952fb1f1e3e98001e7e86f00df7eaaf5754c342083f162d6dc8255"
+    },
+    "core/opentaint-jvm-sast-dataflow/src/main/kotlin/org/opentaint/jvm/sast/dataflow/JIRTaintAnalyzer.kt": {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-jvm-sast-dataflow/src/main/kotlin/org/opentaint/jvm/sast/dataflow/JIRTaintAnalyzer.kt",
+      "bytes": 5615,
+      "sha256": "393cb3f9d7c81434613bfaf0d0eb348425178e56aaabba19899a4e06a6c85099"
+    },
+    "core/src/main/kotlin/org/opentaint/jvm/sast/project/JirProjectAnalyzer.kt": {
+      "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/src/main/kotlin/org/opentaint/jvm/sast/project/JirProjectAnalyzer.kt",
+      "bytes": 4523,
+      "sha256": "926a644fbb4ae86d1d0c80ffb6ca989b69c4d89330f65efc593f4fb8ec9d490c"
+    }
+  },
+  "phaseLogLines": [
+    "10:34:45.990 |I| CommonProjectAnalyzer - Start analysis for project: /drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/project/java_0/sources",
+    "10:35:30.921 |I| CommonProjectAnalyzer - Finish analysis for project: /drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/project/java_0/sources",
+    "10:35:30.921 |I| CommonProjectAnalyzer - Start analysis for project: /drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/project/go_0",
+    "10:35:35.399 |I| CommonProjectAnalyzer - Finish analysis for project: /drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/project/go_0"
+  ],
+  "javaProjectElapsedSeconds": 44.931,
+  "goProjectElapsedSeconds": 4.478,
+  "tools": {
+    "java": "Temurin 17.0.18+8",
+    "go": "go1.26.1 linux/amd64",
+    "protoc": "libprotoc 25.1",
+    "gradle": "8.10",
+    "cachedGo": {
+      "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/tools/go",
+      "bytes": 15401334,
+      "sha256": "548e61b2d08ae52043be2f1924ed3c1d2b2c41967e360f3e317667f6fa912fc2"
+    },
+    "cachedProtoc": {
+      "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/tools/protoc",
+      "bytes": 8850640,
+      "sha256": "936e423041c6977036208366507964d5615782b5a450ec8d3d52ff557ffc7101"
+    },
+    "goBuildShellEnvironment": {
+      "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/go-build-env.sh",
+      "bytes": 94,
+      "sha256": "275bef670d51efedacbf1f59a6eff1bf8bb8b734530b98f79870879cc06ee190"
+    }
+  },
+  "verificationHarness": {
+    "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/scripts/rule-tests.init.gradle",
+    "bytes": 1904,
+    "sha256": "3453510fd95ef54a9736c1fe47eee4d7b52535911e85dc4e5352effcf74337a8"
+  },
+  "model": {
+    "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/project/project.yaml",
+    "bytes": 8686,
+    "sha256": "d735b4ab51aa0b47bef2df6017dfbbe32ee7d0db87e8b97bdd4610713db0b4fb"
+  },
+  "goServer": {
+    "path": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core/opentaint-ir/go/go-ssa-server/go-ssa-server",
+    "bytes": 20066768,
+    "sha256": "806b936e81f66ee657ec8da329aada94d1023fd17c20c92a48ebc5d4ed0692ab"
+  },
+  "resultFile": {
+    "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/result/test-result.json",
+    "bytes": 185939,
+    "sha256": "ac954b3ff79eaa22fad05ef1ef6d6545408679882ee87f9fd33b8e1f0aee7fd7"
+  },
+  "sarif": {
+    "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/result/report-ifds.sarif",
+    "bytes": 6607324,
+    "sha256": "f471c2cac00763cab3eed1a345a9c28a3d488d2594678f1e3a133e225c769599"
+  },
+  "logs": {
+    "samples-build.log": {
+      "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/samples-build.log",
+      "bytes": 14377,
+      "sha256": "a2cedd76751cd0019f5e6433b5770623636ef38e90a0f6c0836106c9b80344db"
+    },
+    "samples-build-resolved.log": {
+      "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/samples-build-resolved.log",
+      "bytes": 2051,
+      "sha256": "3104c025e21ab7e029eb005514f3dfca0aefdb8ac3a379c8ec7a88cbd6db8846"
+    },
+    "go-build.log": {
+      "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/go-build.log",
+      "bytes": 3773,
+      "sha256": "6c8bd24addcf0b8cb552898ce46e00f521ba5b55c099cc619e441d7ee9650386"
+    },
+    "go-build-resolved.log": {
+      "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/go-build-resolved.log",
+      "bytes": 3229,
+      "sha256": "a7fca54f755d34aa5e652341d3b19053088fbe7639a57fe8403359304d1d0b14"
+    },
+    "autobuilder-gradle.log": {
+      "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/autobuilder-gradle.log",
+      "bytes": 16104,
+      "sha256": "080051a44164f4ee99ce7e596b0d77ace8712dc80f92852abf6bf14c1c991914"
+    },
+    "autobuild.log": {
+      "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/autobuild.log",
+      "bytes": 9784,
+      "sha256": "684ad58ea4697440fbd43e58faffd892252871afb6462bc23a48bb1d9800d874"
+    },
+    "rules-test-gradle.log": {
+      "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/rules-test-gradle.log",
+      "bytes": 3108102,
+      "sha256": "71595e0b97430b2543af6d88965dadf6e61c6c8b1a8afc334d559fdd9e07137e"
+    },
+    "analyzer.log": {
+      "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/analyzer.log",
+      "bytes": 3085642,
+      "sha256": "1f3ebdb7637d90eac422a749c7e475f269aa210886a11514006741cfb9709e9a"
+    },
+    "synthetic-gate.log": {
+      "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/synthetic-gate.log",
+      "bytes": 3840,
+      "sha256": "50af1ae3b71967179efc94bb6e471818e44c507c144df4d1e4f424184bd60662"
+    }
+  },
+  "results": {
+    "success": [
+      {
+        "className": "security.codeinjection.ElInjectionSamples$UnsafeElServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "el-injection-in-servlet-app"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.ElInjectionSamples$SafeElServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "el-injection-in-servlet-app"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.GroovyInjectionServletSamples$UnsafeGroovyServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "groovy-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.GroovyInjectionSpringSamples$UnsafeGroovyController",
+        "methodName": "unsafeGroovy",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "groovy-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.GroovyInjectionServletSamples$SafeGroovyServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "groovy-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.GroovyInjectionSpringSamples$SafeGroovyController",
+        "methodName": "safeGroovy",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "groovy-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.OgnlInjectionServletSamples$UnsafeOgnlServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "ognl-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.OgnlInjectionSpringSamples$UnsafeOgnlController",
+        "methodName": "unsafeOgnl",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "ognl-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.OgnlInjectionServletSamples$SafeOgnlServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "ognl-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.OgnlInjectionSpringSamples$SafeOgnlController",
+        "methodName": "safeOgnl",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "ognl-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.ScriptEngineInjectionServletSamples$UnsafeScriptEngineServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "script-engine-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.ScriptEngineInjectionSpringSamples$UnsafeScriptEngineController",
+        "methodName": "unsafeScriptEngine",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "script-engine-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.ScriptEngineInjectionServletSamples$SafeScriptEngineServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "script-engine-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.ScriptEngineInjectionSpringSamples$SafeScriptEngineController",
+        "methodName": "safeScriptEngine",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "script-engine-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.SpringElInjectionSamples$UnsafeSpringElController",
+        "methodName": "evalUnsafe",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "spring-el-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.SpringElInjectionSamples$UnsafeSpringElController",
+        "methodName": "evalRawUnsafe",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "spring-el-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.SpringElInjectionSamples$UnsafeSpringElController",
+        "methodName": "evalWithContextUnsafe",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "spring-el-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.SpringElInjectionSamples$SafeSpringElController",
+        "methodName": "evalFromUnrelatedFactory",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "spring-el-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.SpringElInjectionSamples$SafeSpringElController",
+        "methodName": "evalSafe",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "spring-el-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.SpringElInjectionSamples$SafeSpringElController",
+        "methodName": "evalWithSimpleContext",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "spring-el-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.SstiServletSamples$UnsafeTemplateServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "ssti"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.TemplateInjectionSpringSamples$UnsafeTemplateControllerWithResolver",
+        "methodName": "previewUnsafeWithResolver",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "ssti"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.SstiServletSamples$SafeTemplateServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "ssti"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.SstiServletSamples$SafeTemplateServletWithResolver",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "ssti"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.codeinjection.TemplateInjectionSpringSamples$SafeTemplateControllerWithResolver",
+        "methodName": "previewSafeWithResolver",
+        "rule": {
+          "rulePath": "java/security/code-injection.yaml",
+          "ruleId": "ssti"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.commandinjection.CommandInjectionServletSamples$UnsafeCommandServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/command-injection.yaml",
+          "ruleId": "os-command-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.commandinjection.CommandInjectionSpringSamples$UnsafeCommandInjectionController",
+        "methodName": "unsafePing",
+        "rule": {
+          "rulePath": "java/security/command-injection.yaml",
+          "ruleId": "os-command-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crlfinjection.HttpResponseSplittingServletSamples$UnsafeHeaderServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/crlf-injection.yaml",
+          "ruleId": "http-response-splitting"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crlfinjection.HttpResponseSplittingSpringSamples$UnsafeHttpResponseSplittingController",
+        "methodName": "unsafe",
+        "rule": {
+          "rulePath": "java/security/crlf-injection.yaml",
+          "ruleId": "http-response-splitting"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crlfinjection.SmtpCrlfInjectionServletSamples$UnsafeSmtpServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/crlf-injection.yaml",
+          "ruleId": "smtp-crlf-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crlfinjection.SmtpCrlfInjectionSpringSamples$UnsafeSpringSmtpController",
+        "methodName": "unsafe",
+        "rule": {
+          "rulePath": "java/security/crlf-injection.yaml",
+          "ruleId": "smtp-crlf-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "aesWithHardcodedKey",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "aes-hardcoded-key"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "aesWithGeneratedKey",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "aes-hardcoded-key"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.HashRandomAndMiscCryptoSamples$CustomDigestInsecure",
+        "methodName": null,
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "avoid-implementing-custom-digests"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.HashRandomAndMiscCryptoSamples",
+        "methodName": "badHexaConversion",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "bad-hexa-conversion"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.HashRandomAndMiscCryptoSamples",
+        "methodName": "goodHexaConversion",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "bad-hexa-conversion"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "cbcWithPkcs5Padding",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "cbc-padding-oracle"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "gcmModeCipher",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "cbc-padding-oracle"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "createDeprecatedDefaultHttpClient",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "defaulthttpclient-is-deprecated"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "createModernHttpClient",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "defaulthttpclient-is-deprecated"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "useDesCipher",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "des-is-deprecated"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "useAesCipherInsteadOfDes",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "des-is-deprecated"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "useTripleDesCipher",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "desede-is-deprecated"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "useAesInsteadOfTripleDes",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "desede-is-deprecated"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "genericEcbCipher",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "ecb-cipher"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "nonEcbCipher",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "ecb-cipher"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "aesGcmCipherDetected",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "gcm-detection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "otherCipherMode",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "gcm-detection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "reusedGcmNonce",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "gcm-nonce-reuse"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "randomGcmNonce",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "gcm-nonce-reuse"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "insecureHazelcastConfig",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "hazelcast-symmetric-encryption"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "signJwtWithHs256Insecure",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "jjwt-hs256"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "signJwtWithRs256Secure",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "jjwt-hs256"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "buildJwtWithoutSigning",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "jjwt-none-alg"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "buildJwtWithSigning1",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "jjwt-none-alg"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "buildJwtWithSigning2",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "jjwt-none-alg"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "signAuth0JwtWithNone",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "jwt-none-alg"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "signAuth0JwtWithHmac",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "jwt-none-alg"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "insecureMongoSettings",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "mongo-hostname-verification-disabled"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "secureMongoSettings",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "mongo-hostname-verification-disabled"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "nullCipherInsecure",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "no-null-cipher"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "aesGcmCipherSecure",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "no-null-cipher"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "rsaNoPaddingCipher",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "rsa-no-padding"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "rsaOaepCipher",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "rsa-no-padding"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "blowfishCipher",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "use-of-blowfish"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "nonBlowfishCipher",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "use-of-blowfish"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "defaultAesCipher",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "use-of-default-aes"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "explicitAesCipher",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "use-of-default-aes"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.HashRandomAndMiscCryptoSamples",
+        "methodName": "md5DigestUtilsInsecure",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "use-of-md5"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.HashRandomAndMiscCryptoSamples",
+        "methodName": "sha256DigestUtilsSecure",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "use-of-md5"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.HashRandomAndMiscCryptoSamples",
+        "methodName": "rc2CipherInsecure",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "use-of-rc2"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.HashRandomAndMiscCryptoSamples",
+        "methodName": "aesInsteadOfRc2",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "use-of-rc2"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.HashRandomAndMiscCryptoSamples",
+        "methodName": "rc4CipherInsecure",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "use-of-rc4"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.HashRandomAndMiscCryptoSamples",
+        "methodName": "aesInsteadOfRc4",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "use-of-rc4"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.HashRandomAndMiscCryptoSamples",
+        "methodName": "sha1DigestInsecure",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "use-of-sha1"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.HashRandomAndMiscCryptoSamples",
+        "methodName": "sha256DigestPreferred",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "use-of-sha1"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "weakEcKeySize",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "weak-ec-key-size"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "strongEcKeySize",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "weak-ec-key-size"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.HashRandomAndMiscCryptoSamples",
+        "methodName": "weakRandomInt",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "weak-random"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.HashRandomAndMiscCryptoSamples",
+        "methodName": "secureRandomInt",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "weak-random"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.csrf.CsrfSpringSecurityConfigSamples$UnsafeCsrfDisabledConfig",
+        "methodName": "configure",
+        "rule": {
+          "rulePath": "java/security/csrf.yaml",
+          "ruleId": "csrf-disabled-in-spring-app"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.csrf.CsrfSpringSecurityConfigSamples$SafeCsrfEnabledConfig",
+        "methodName": "configure",
+        "rule": {
+          "rulePath": "java/security/csrf.yaml",
+          "ruleId": "csrf-disabled-in-spring-app"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.csrf.CsrfRequestMappingSamples$UnsafeUnrestrictedRequestMappingController",
+        "methodName": "unsafeTransfer",
+        "rule": {
+          "rulePath": "java/security/csrf.yaml",
+          "ruleId": "unrestricted-request-mapping"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.csrf.CsrfRequestMappingSamples$SafeRestrictedRequestMappingController",
+        "methodName": "safeTransfer",
+        "rule": {
+          "rulePath": "java/security/csrf.yaml",
+          "ruleId": "unrestricted-request-mapping"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.csrf.CsrfRequestMappingSamples$SafeRestrictedRequestMappingController",
+        "methodName": "safeTransferShortcut",
+        "rule": {
+          "rulePath": "java/security/csrf.yaml",
+          "ruleId": "unrestricted-request-mapping"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.dataqueryinjection.DataQueryInjectionServletSamples$UnsafeMongoServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/data-query-injection.yaml",
+          "ruleId": "mongodb-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.dataqueryinjection.DataQueryInjectionSpringSamples$UnsafeMongoController",
+        "methodName": "unsafeMongo",
+        "rule": {
+          "rulePath": "java/security/data-query-injection.yaml",
+          "ruleId": "mongodb-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.dataqueryinjection.DataQueryInjectionServletSamples$SafeMongoServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/data-query-injection.yaml",
+          "ruleId": "mongodb-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.dataqueryinjection.DataQueryInjectionSpringSamples$SafeMongoController",
+        "methodName": "safeMongo",
+        "rule": {
+          "rulePath": "java/security/data-query-injection.yaml",
+          "ruleId": "mongodb-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.dataqueryinjection.DataQueryInjectionServletSamples$UnsafeXPathServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/data-query-injection.yaml",
+          "ruleId": "xpath-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.dataqueryinjection.DataQueryInjectionSpringSamples$UnsafeXPathController",
+        "methodName": "unsafeXPath",
+        "rule": {
+          "rulePath": "java/security/data-query-injection.yaml",
+          "ruleId": "xpath-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.dataqueryinjection.DataQueryInjectionServletSamples$SafeXPathServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/data-query-injection.yaml",
+          "ruleId": "xpath-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.dataqueryinjection.DataQueryInjectionSpringSamples$SafeXPathController",
+        "methodName": "safeXPath",
+        "rule": {
+          "rulePath": "java/security/data-query-injection.yaml",
+          "ruleId": "xpath-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.externalconfigurationcontrol.BeanInjectionSamples",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/external-configuration-control.yaml",
+          "ruleId": "bean-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.externalconfigurationcontrol.BeanInjectionSamples",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/external-configuration-control.yaml",
+          "ruleId": "bean-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.externalconfigurationcontrol.SqlCatalogServletSamples$UnsafeCatalogServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/external-configuration-control.yaml",
+          "ruleId": "sql-catalog-external-manipulation"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.externalconfigurationcontrol.SqlCatalogSpringSamples$UnsafeCatalogController",
+        "methodName": "getUsers",
+        "rule": {
+          "rulePath": "java/security/external-configuration-control.yaml",
+          "ruleId": "sql-catalog-external-manipulation"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.externalconfigurationcontrol.SqlCatalogServletSamples$SafeCatalogServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/external-configuration-control.yaml",
+          "ruleId": "sql-catalog-external-manipulation"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.externalconfigurationcontrol.SqlCatalogSpringSamples$SafeCatalogController",
+        "methodName": "getUsers",
+        "rule": {
+          "rulePath": "java/security/external-configuration-control.yaml",
+          "ruleId": "sql-catalog-external-manipulation"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.externalconfigurationcontrol.UnsafeReflectionServletSamples$DynamicLoaderServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/external-configuration-control.yaml",
+          "ruleId": "unsafe-reflection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.externalconfigurationcontrol.UnsafeReflectionSpringSamples$UnsafeReflectionController",
+        "methodName": "loadClass",
+        "rule": {
+          "rulePath": "java/security/external-configuration-control.yaml",
+          "ruleId": "unsafe-reflection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.externalconfigurationcontrol.UnsafeReflectionServletSamples$SafeDynamicLoaderServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/external-configuration-control.yaml",
+          "ruleId": "unsafe-reflection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.externalconfigurationcontrol.UnsafeReflectionSpringSamples$SafeReflectionController",
+        "methodName": "loadClass",
+        "rule": {
+          "rulePath": "java/security/external-configuration-control.yaml",
+          "ruleId": "unsafe-reflection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.hardcodedcredentials.HardcodedCredentialsSamples",
+        "methodName": "connectWithHardcodedDbPassword",
+        "rule": {
+          "rulePath": "java/security/hardcoded-credentials.yaml",
+          "ruleId": "constant-db-password"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.hardcodedcredentials.HardcodedCredentialsSamples",
+        "methodName": "connectWithExternalDbPassword",
+        "rule": {
+          "rulePath": "java/security/hardcoded-credentials.yaml",
+          "ruleId": "constant-db-password"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.hardcodedcredentials.HardcodedCredentialsSamples",
+        "methodName": "useHardcodedPasswordsEverywhere",
+        "rule": {
+          "rulePath": "java/security/hardcoded-credentials.yaml",
+          "ruleId": "hardcoded-password"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.hardcodedcredentials.HardcodedCredentialsSamples",
+        "methodName": "useExternalPasswords",
+        "rule": {
+          "rulePath": "java/security/hardcoded-credentials.yaml",
+          "ruleId": "hardcoded-password"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.hardcodedcredentials.HardcodedCredentialsSamples",
+        "methodName": "connectWithEmptyDbPassword",
+        "rule": {
+          "rulePath": "java/security/hardcoded-credentials.yaml",
+          "ruleId": "java-empty-db-password"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.hardcodedcredentials.HardcodedCredentialsSamples",
+        "methodName": "connectWithNonEmptyDbPassword",
+        "rule": {
+          "rulePath": "java/security/hardcoded-credentials.yaml",
+          "ruleId": "java-empty-db-password"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.hardcodedcredentials.HardcodedCredentialsSamples",
+        "methodName": "issueJwtWithHardcodedSecret",
+        "rule": {
+          "rulePath": "java/security/hardcoded-credentials.yaml",
+          "ruleId": "jwt-hardcoded-secret"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.hardcodedcredentials.HardcodedCredentialsSamples",
+        "methodName": "issueJwtWithExternalSecret",
+        "rule": {
+          "rulePath": "java/security/hardcoded-credentials.yaml",
+          "ruleId": "jwt-hardcoded-secret"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "cookieGeneratorExplicitHttpOnlyFalse",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "cookie-missing-httponly"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "cookieGeneratorWithoutHttpOnly",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "cookie-missing-httponly"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "createSessionCookieWithoutHttpOnlyInsecure",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "cookie-missing-httponly"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "explicitSetHttpOnlyFalse",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "cookie-missing-httponly"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "springResponseCookieHttpOnlyFalse",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "cookie-missing-httponly"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "cookieGeneratorWithHttpOnly",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "cookie-missing-httponly"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "createSessionCookieWithHttpOnlySecure",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "cookie-missing-httponly"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "springResponseCookieHttpOnlyTrue",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "cookie-missing-httponly"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "runWithElevatedPrivilegesInsecure",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "do-privileged-use"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "avoidPrivilegedBlockSecure",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "do-privileged-use"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "setPermissiveCorsHeadersInReactive",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "permissive-cors"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "setPermissiveCorsHeadersInServerWebExchange",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "permissive-cors"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "setPermissiveCorsHeadersInServlet",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "permissive-cors"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "setPermissiveCorsHeadersInSpring",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "permissive-cors"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "setRestrictedCorsHeadersSecure",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "permissive-cors"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "mixesTrustedAndUntrustedInSessionInsecure",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "trust-boundary-violation"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "validateBeforeCrossingTrustBoundarySecure",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "trust-boundary-violation"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.ldap.AnonymousLdapSamples",
+        "methodName": "anonymousBind",
+        "rule": {
+          "rulePath": "java/security/ldap.yaml",
+          "ruleId": "java-anonymous-ldap"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.ldap.AnonymousLdapSamples",
+        "methodName": "authenticatedBind",
+        "rule": {
+          "rulePath": "java/security/ldap.yaml",
+          "ruleId": "java-anonymous-ldap"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.ldap.LdapEntryPoisoningSamples",
+        "methodName": "vulnerableLookup",
+        "rule": {
+          "rulePath": "java/security/ldap.yaml",
+          "ruleId": "ldap-entry-poisoning"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.ldap.LdapEntryPoisoningSamples",
+        "methodName": "safeLookupEmail",
+        "rule": {
+          "rulePath": "java/security/ldap.yaml",
+          "ruleId": "ldap-entry-poisoning"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.ldap.LdapInjectionServletSamples",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/ldap.yaml",
+          "ruleId": "ldap-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.ldap.LdapInjectionSpringSamples$UnsafeLdapSpringController",
+        "methodName": "unsafeSearch",
+        "rule": {
+          "rulePath": "java/security/ldap.yaml",
+          "ruleId": "ldap-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.loginjection.LogInjectionSamples$SpringLogInjectionController",
+        "methodName": "unsafeLogin",
+        "rule": {
+          "rulePath": "java/security/log-injection.yaml",
+          "ruleId": "log-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.loginjection.LogInjectionSamples$UnsafeLogServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/log-injection.yaml",
+          "ruleId": "log-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.loginjection.LogInjectionSamples$SeamServletStyleLoginAction",
+        "methodName": "vulnerableSeamLogging",
+        "rule": {
+          "rulePath": "java/security/log-injection.yaml",
+          "ruleId": "seam-log-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalServletSamples$UnsafeCookieDownloadServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalServletSamples$UnsafeFileUploadServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalServletSamples$UnsafeHeaderDownloadServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalServletSamples$UnsafeParamDownloadServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalServletSamples$UnsafeReadSymbolicLinkServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController",
+        "methodName": "unsafeHeaderDownload",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController",
+        "methodName": "unsafeParamDownload",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController",
+        "methodName": "unsafePathVariableDownload",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalServletSamples$SafeFileCreateTempFilePrefixSuffixServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalServletSamples$SafeFilesCreateTempDirectoryPrefixServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalServletSamples$SafeFilesCreateTempFilePrefixSuffixServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalServletSamples$SafeHeaderDownloadServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalServletSamples$SafeParamDownloadServlet2",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalSpringSamples$SafeFileDownloadController",
+        "methodName": "safeHeaderDownload",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalSpringSamples$SafeTempFileController",
+        "methodName": "safeCreateTempDirectory",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalSpringSamples$SafeTempFileController",
+        "methodName": "safeCreateTempFile",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.pathtraversal.PathTraversalSpringSamples$UnsafeFileDownloadController",
+        "methodName": "safeNonWildcardPathVariable",
+        "rule": {
+          "rulePath": "java/security/path-traversal.yaml",
+          "ruleId": "path-traversal"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.permissions.PermissionsSamples",
+        "methodName": "grantDangerousRuntimeAndReflectPermissions",
+        "rule": {
+          "rulePath": "java/security/permissions.yaml",
+          "ruleId": "dangerous-permissions"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.permissions.PermissionsSamples",
+        "methodName": "grantLimitedSafePermissions",
+        "rule": {
+          "rulePath": "java/security/permissions.yaml",
+          "ruleId": "dangerous-permissions"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.permissions.PermissionsSamples",
+        "methodName": "addExplicitOthersExecutePermission",
+        "rule": {
+          "rulePath": "java/security/permissions.yaml",
+          "ruleId": "overly-permissive-file-permission-inline"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.permissions.PermissionsSamples",
+        "methodName": "createWorldReadableAndWritableFile",
+        "rule": {
+          "rulePath": "java/security/permissions.yaml",
+          "ruleId": "overly-permissive-file-permission-inline"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.permissions.PermissionsSamples",
+        "methodName": "createOwnerOnlyFile",
+        "rule": {
+          "rulePath": "java/security/permissions.yaml",
+          "ruleId": "overly-permissive-file-permission-inline"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "cookieGeneratorExplicitSecureFalse",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "cookie-issecure-false"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "cookieGeneratorWithoutSecure",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "cookie-issecure-false"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "explicitSetSecureFalse",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "cookie-issecure-false"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "insecureSessionCookie",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "cookie-issecure-false"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "rawSetCookieHeaderWithoutSecure",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "cookie-issecure-false"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "springResponseCookieSecureFalse",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "cookie-issecure-false"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "cookieGeneratorWithSecure",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "cookie-issecure-false"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "rawSetCookieHeaderWithSecure",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "cookie-issecure-false"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "secureEmptySessionCookie",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "cookie-issecure-false"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "secureSessionCookie",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "cookie-issecure-false"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "springResponseCookieSecureTrue",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "cookie-issecure-false"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples$FileDisclosureServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "file-disclosure-request-dispatcher"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples$FileDisclosureServlet",
+        "methodName": "doGetSafe",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "file-disclosure-request-dispatcher"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples$FileDisclosureServlet",
+        "methodName": "doGetFixedDispatcher",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "file-disclosure-request-dispatcher"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples$JspFileDisclosureController",
+        "methodName": "mvcVulnerable",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "jsp-file-disclosure"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples$JspFileDisclosureController",
+        "methodName": "mvcSafe",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "jsp-file-disclosure"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "printStackTraceToStdout",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "stacktrace-printing-in-error-message"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "logStackTraceSafely",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "stacktrace-printing-in-error-message"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "createUnencryptedServerSocket",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "unencrypted-socket"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "createUnencryptedSocket",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "unencrypted-socket"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "createEncryptedServerSocket",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "unencrypted-socket"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples",
+        "methodName": "createEncryptedSocket",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "unencrypted-socket"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples$UrlRewritingController",
+        "methodName": "track",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "url-rewriting"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sensitivedataexposure.SensitiveDataExposureSamples$UrlRewritingController",
+        "methodName": "trackSafe",
+        "rule": {
+          "rulePath": "java/security/sensitive-data-exposure.yaml",
+          "ruleId": "url-rewriting"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sqli.SqlInjectionServletSamples$UnsafeSqlServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/sqli.yaml",
+          "ruleId": "sql-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sqli.SqlInjectionSpringSamples$UnsafeSqlSpringController",
+        "methodName": "unsafeSearch",
+        "rule": {
+          "rulePath": "java/security/sqli.yaml",
+          "ruleId": "sql-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sqli.SqlInjectionServletSamples$SafeSqlServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/sqli.yaml",
+          "ruleId": "sql-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.sqli.SqlInjectionSpringSamples$SafeSqlSpringController",
+        "methodName": "safeSearch",
+        "rule": {
+          "rulePath": "java/security/sqli.yaml",
+          "ruleId": "sql-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.ssrf.SsrfSamples$UnsafeParameterPollutionServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/ssrf.yaml",
+          "ruleId": "java-servlet-parameter-pollution"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.ssrf.SsrfSamples$SafeParameterPollutionServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/ssrf.yaml",
+          "ruleId": "java-servlet-parameter-pollution"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.ssrf.SsrfSamples$SsrfSpringController",
+        "methodName": "unsafeProxy",
+        "rule": {
+          "rulePath": "java/security/ssrf.yaml",
+          "ruleId": "ssrf"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.ssrf.SsrfSamples$UnsafeProxyServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/ssrf.yaml",
+          "ruleId": "ssrf"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.ssrf.SsrfSamples$SafeProxyServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/ssrf.yaml",
+          "ruleId": "ssrf"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.strings.StringsSamples$FormatStringServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/strings.yaml",
+          "ruleId": "format-string-external-manipulation"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.strings.StringsSamples$FormatStringSpringController",
+        "methodName": "unsafe",
+        "rule": {
+          "rulePath": "java/security/strings.yaml",
+          "ruleId": "format-string-external-manipulation"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.strings.StringsSamples$FormatStringServlet",
+        "methodName": "doGetSafe",
+        "rule": {
+          "rulePath": "java/security/strings.yaml",
+          "ruleId": "format-string-external-manipulation"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.strings.StringsSamples$FormatStringSpringController",
+        "methodName": "safe",
+        "rule": {
+          "rulePath": "java/security/strings.yaml",
+          "ruleId": "format-string-external-manipulation"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.strings.StringsSamples",
+        "methodName": "normalizeAfterValidation",
+        "rule": {
+          "rulePath": "java/security/strings.yaml",
+          "ruleId": "string-normalize-after-validation"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.strings.StringsSamples",
+        "methodName": "normalizeBeforeValidation",
+        "rule": {
+          "rulePath": "java/security/strings.yaml",
+          "ruleId": "string-normalize-after-validation"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$InsecureApacheXmlRpcConfig",
+        "methodName": "enableExtensionsClient",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "apache-rpc-enabled-extensions"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$InsecureApacheXmlRpcConfig",
+        "methodName": "enableExtensionsServer",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "apache-rpc-enabled-extensions"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$SafeApacheXmlRpcConfig",
+        "methodName": "disableExtensionsClient",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "apache-rpc-enabled-extensions"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$SafeApacheXmlRpcConfig",
+        "methodName": "disableExtensionsServer",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "apache-rpc-enabled-extensions"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$DefaultResteasyResource",
+        "methodName": "unsafeWithoutConsumes",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "default-resteasy-provider-abuse"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$DefaultSafeResteasyResource",
+        "methodName": "safeWithConsumes",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "default-resteasy-provider-abuse"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$InsecureJmsListener",
+        "methodName": "onMessage",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "insecure-jms-deserialization"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$InsecureResteasyResource",
+        "methodName": "handleUnsafe",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "insecure-resteasy-deserialization"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$SafeResteasyResource",
+        "methodName": "handleSafe",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "insecure-resteasy-deserialization"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$UnsafeJacksonServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "unsafe-jackson-deserialization"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$JacksonSpringController",
+        "methodName": "unsafeClassResolver",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "unsafe-jackson-deserialization"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$JacksonSpringController",
+        "methodName": "unsafeMinimalClassResolver",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "unsafe-jackson-deserialization"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$JacksonSpringController",
+        "methodName": "unsafeLaissezFaire",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "unsafe-jackson-deserialization"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$JacksonSpringController",
+        "methodName": "safeJackson",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "unsafe-jackson-deserialization"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$SafeJacksonServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "unsafe-jackson-deserialization"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$ObjectInputStreamSpringController",
+        "methodName": "unsafeDeserialize",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "unsafe-object-mapper"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$UnsafeObjectInputStreamServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "unsafe-object-mapper"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$ObjectInputStreamSpringController",
+        "methodName": "safeDeserialize",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "unsafe-object-mapper"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$SafeObjectInputStreamServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "unsafe-object-mapper"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$SnakeYamlSpringController",
+        "methodName": "unsafeYaml",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "unsafe-snake-yaml-deserialization"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$UnsafeSnakeYamlServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "unsafe-snake-yaml-deserialization"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$SafeSnakeYamlServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "unsafe-snake-yaml-deserialization"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unsafedeserialization.UnsafeDeserializationSamples$SnakeYamlSpringController",
+        "methodName": "safeYaml",
+        "rule": {
+          "rulePath": "java/security/unsafe-deserialization.yaml",
+          "ruleId": "unsafe-snake-yaml-deserialization"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.tagunification.RedirectTagEdgeSamples$SpringParameterToServletResponse",
+        "methodName": "springParamToServletRedirect",
+        "rule": {
+          "rulePath": "java/security/unvalidated-redirect.yaml",
+          "ruleId": "unvalidated-redirect"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeUnvalidatedRedirectServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/unvalidated-redirect.yaml",
+          "ruleId": "unvalidated-redirect"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$UnsafeUnvalidatedRedirectController",
+        "methodName": "unsafeRedirect",
+        "rule": {
+          "rulePath": "java/security/unvalidated-redirect.yaml",
+          "ruleId": "unvalidated-redirect"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$UnsafeUnvalidatedRedirectController",
+        "methodName": "unsafeRedirectView",
+        "rule": {
+          "rulePath": "java/security/unvalidated-redirect.yaml",
+          "ruleId": "unvalidated-redirect"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.tagunification.RedirectTagEdgeSamples$SpringParameterToServletResponse",
+        "methodName": "springParamToConstantServletRedirect",
+        "rule": {
+          "rulePath": "java/security/unvalidated-redirect.yaml",
+          "ruleId": "unvalidated-redirect"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unvalidatedredirect.UnvalidatedRedirectServletSamples$SafeContextPathRedirectServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/unvalidated-redirect.yaml",
+          "ruleId": "unvalidated-redirect"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$SafeValidatedRedirectController",
+        "methodName": "safeInternalRedirect",
+        "rule": {
+          "rulePath": "java/security/unvalidated-redirect.yaml",
+          "ruleId": "unvalidated-redirect"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.weakauthentication.WeakAuthenticationSamples",
+        "methodName": "decodeJwtWithoutVerifyInsecure",
+        "rule": {
+          "rulePath": "java/security/weak-authentication.yaml",
+          "ruleId": "java-jwt-decode-without-verify"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.weakauthentication.WeakAuthenticationSamples",
+        "methodName": "verifyJwtBeforeUseSecure",
+        "rule": {
+          "rulePath": "java/security/weak-authentication.yaml",
+          "ruleId": "java-jwt-decode-without-verify"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.weakauthentication.WeakAuthenticationSamples",
+        "methodName": "samlParserPoolIgnoreCommentsInsecure",
+        "rule": {
+          "rulePath": "java/security/weak-authentication.yaml",
+          "ruleId": "java-saml-ignore-comments"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.weakauthentication.WeakAuthenticationSamples",
+        "methodName": "samlParserPoolDefaultCommentsSecure",
+        "rule": {
+          "rulePath": "java/security/weak-authentication.yaml",
+          "ruleId": "java-saml-ignore-comments"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.tagunification.ResponseXssTagEdgeSamples$SpringResponseEntityController",
+        "methodName": "requestObjectToSpringHtmlResponse",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "response-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController",
+        "methodName": "springParameterToStoredHtmlOutputStream",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "response-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController",
+        "methodName": "springParameterToStoredHtmlWriter",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "response-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController",
+        "methodName": "springParameterToStoredOutputStream",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "response-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController",
+        "methodName": "springParameterToStoredWriter",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "response-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssServletSamples$UnsafeJsonInfoServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "response-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssSpringSamples$UnsafeNoContentTypeSpringController",
+        "methodName": "unsafeNoContentType",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "response-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssSpringSamples$UnsafeResponseEntityController",
+        "methodName": "unsafeResponseEntity",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "response-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.tagunification.ResponseXssTagEdgeSamples$SpringResponseEntityController",
+        "methodName": "springParameterToJsonDto",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "response-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController",
+        "methodName": "springParameterToEscapedHtml",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "response-injection"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.WicketXssSamples$UnsafeWicketPage",
+        "methodName": null,
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "wicket-xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.WicketXssSamples$SafeWicketPage",
+        "methodName": null,
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "wicket-xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.tagunification.ResponseXssTagEdgeSamples$SpringResponseEntityController",
+        "methodName": "requestObjectToSpringHtmlResponse",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController",
+        "methodName": "springParameterToStoredHtmlOutputStream",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController",
+        "methodName": "springParameterToStoredHtmlWriter",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.UnsafeBareBytesController",
+        "methodName": "unsafeBareBytes",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.UnsafeBareResourceController",
+        "methodName": "unsafeBareResource",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.UnsafeHtmlRestController",
+        "methodName": "unsafeHtml",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.UnsafeResponseEntityIsrController",
+        "methodName": "unsafeResponseEntityIsr",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.UnsafeResponseEntityRawController",
+        "methodName": "unsafeResponseEntityRaw",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.UnsafeResponseEntityResourceController",
+        "methodName": "unsafeResponseEntityResource",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row02StringProducesHtmlController",
+        "methodName": "row02",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row09ResponseEntityStringContentTypeHtmlController",
+        "methodName": "row09",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row11ResponseEntityStringHeaderHtmlController",
+        "methodName": "row11",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row14RawResponseEntityNoContentTypeController",
+        "methodName": "row14",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row16StirlingPdfShapeController",
+        "methodName": "row16",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row23StringProducesMediaTypeTextHtmlConstantController",
+        "methodName": "row23",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row25StringProducesSvgController",
+        "methodName": "row25",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row27DeferredResultStringController",
+        "methodName": "row27",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row28CompletableFutureStringController",
+        "methodName": "row28",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row30ServletSetContentTypeHtmlUtf16Controller",
+        "methodName": "row30",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row32RestControllerClassLevelHtmlController",
+        "methodName": "row32",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row34ServletSetHeaderTextHtmlController",
+        "methodName": "row34",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row50ServletSetContentTypeHtmlConstantController",
+        "methodName": "row50",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row51ServletSetHeaderHtmlConstantController",
+        "methodName": "row51",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row52ServletAddHeaderHtmlConstantController",
+        "methodName": "row52",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row53BuilderChainHtmlObjectReturnController",
+        "methodName": "row53",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row54BuilderChainHtmlMultiStatementController",
+        "methodName": "row54",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row56ControllerResponseBodyStringController",
+        "methodName": "row56",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$UnsafeResponseEntityBytesHtmlController",
+        "methodName": "unsafeBytesHtml",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$UnsafeResponseEntityStringController",
+        "methodName": "unsafeResponseEntityString",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$UnsafeSetContentTypeController",
+        "methodName": "unsafeHtmlGreet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$UnsafeSetHeaderController",
+        "methodName": "unsafeSetHeaderGreet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$UnsafeStringReturnController",
+        "methodName": "unsafeStringReturn",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssSpringSamples$UnsafeXssSpringController",
+        "methodName": "unsafeGreet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseServletSamples$UnsafeChainedOutputStreamServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseServletSamples$UnsafeChainedWriterServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseServletSamples$UnsafeHtmlServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseServletSamples$UnsafeNoContentTypeServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseServletSamples$UnsafeOutputStreamLocalServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseServletSamples$UnsafeSendErrorServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseServletSamples$UnsafeTypedPrintWriterServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssServletSamples$UnsafeGreetingServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.tagunification.ResponseXssTagEdgeSamples$SpringResponseEntityController",
+        "methodName": "springParameterToJsonDto",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController",
+        "methodName": "springParameterToEscapedHtml",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.SafeDtoRestController",
+        "methodName": "safeDto",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row04StringProducesTextPlainController",
+        "methodName": "row04",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row05StringProducesPdfController",
+        "methodName": "row05",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row06StringProducesOctetStreamController",
+        "methodName": "row06",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row08ResponseEntityStringProducesJsonController",
+        "methodName": "row08",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row10ResponseEntityStringContentTypeJsonController",
+        "methodName": "row10",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row12ResponseEntityStringHeaderJsonController",
+        "methodName": "row12",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row13NewResponseEntityHeadersJsonController",
+        "methodName": "row13",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row15RawResponseEntityContentTypeJsonController",
+        "methodName": "row15",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row18ResponseEntityBytesContentTypePdfController",
+        "methodName": "row18",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row19ResponseEntityBytesContentTypeOctetStreamController",
+        "methodName": "row19",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row20ServletSetContentTypeJsonController",
+        "methodName": "row20",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row21ServletSetHeaderJsonController",
+        "methodName": "row21",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row22StringProducesMediaTypeJsonConstantController",
+        "methodName": "row22",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row24StringProducesApplicationXmlController",
+        "methodName": "row24",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row31RestControllerClassLevelJsonController",
+        "methodName": "row31",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row35ServletAddHeaderJsonController",
+        "methodName": "row35",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row36ResponseEntityAssignmentJsonController",
+        "methodName": "row36",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row37ServletSetContentTypeJsonAssignmentController",
+        "methodName": "row37",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$Row55BuilderChainHtmlEntityDiscardedController",
+        "methodName": "row55",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$SafeHtmlController",
+        "methodName": "safeHtmlGreet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$SafeJsonStringReturnController",
+        "methodName": "safeJsonStringReturn",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseSpringSamples$SafeStringReturnController",
+        "methodName": "safeStringReturn",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssSpringSamples$SafeXssSpringController",
+        "methodName": "safeGreet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseServletSamples$SafeChainedWriterJsonServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseServletSamples$SafeHtmlServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssHtmlResponseServletSamples$SafeOutputStreamOctetServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssServletSamples$SafeGreetingServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xss"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$DigesterSpringController",
+        "methodName": "processXmlInsecure",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$SaxParserSpringController",
+        "methodName": "processXmlInsecure",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$SaxReaderSpringController",
+        "methodName": "processXmlInsecure",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$StaxSpringController",
+        "methodName": "processXmlInsecure",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$TransformerSpringController",
+        "methodName": "newTransformerInsecure",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$TransformerSpringController",
+        "methodName": "transformInsecure",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$UnsafeDigesterServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$UnsafeSaxParserServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$UnsafeSaxReaderServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$UnsafeStaxServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$UnsafeTransformerFactoryServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$UnsafeTransformerServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$UnsafeXmlDecoderServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$UnsafeXmlReaderServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$UnsafeXmlUploadServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$XmlDecoderSpringController",
+        "methodName": "decodeInsecure",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$XmlReaderSpringController",
+        "methodName": "processXmlInsecure",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$XxeSpringController",
+        "methodName": "processXmlInsecure",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$DigesterSpringController",
+        "methodName": "processXmlSafe",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$SafeDigesterServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$SafeSaxParserServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$SafeSaxReaderServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$SafeStaxServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$SafeTransformerFactoryServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$SafeTransformerServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$SafeTransformerTransformServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$SafeXmlDecoderServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$SafeXmlReaderServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$SafeXmlUploadServlet",
+        "methodName": "doPost",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$SaxParserSpringController",
+        "methodName": "processXmlSafe",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$SaxReaderSpringController",
+        "methodName": "processXmlSafe",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$StaxSpringController",
+        "methodName": "processXmlSafe",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$TransformerSpringController",
+        "methodName": "newTransformerSafe",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$TransformerSpringController",
+        "methodName": "transformSafe",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$TransformerSpringController",
+        "methodName": "transformSafeWithSecureProcessing",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$XmlDecoderSpringController",
+        "methodName": "decodeSafe",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$XmlReaderSpringController",
+        "methodName": "processXmlSafe",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xxe.XxeSamples$XxeSpringController",
+        "methodName": "processXmlSafe",
+        "rule": {
+          "rulePath": "java/security/xxe.yaml",
+          "ruleId": "xxe"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdExecCommand",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdExecCommandContext",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdShellLiteral",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdBashLiteral",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdBinShLiteral",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdExecLookPath",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdOSStartProcess",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdSyscallExec",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdSyscallForkExec",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdSyscallStartProcess",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdCombinedOutput",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdRun",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdOutput",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdStart",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdHelperReturnFlow",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdStructFieldFlow",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveCmdInterfaceDispatchFlow",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeCmdConstantCommand",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeCmdSafeArgv",
+        "ruleId": "go/security/cmdinj.yaml#command-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSOpen",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSOpenFile",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSCreate",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSCreateTempDir",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSCreateTempPattern",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSMkdirTempDir",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSMkdirTempPattern",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSMkdir",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSMkdirAll",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSRemove",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSRemoveAll",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSReadFile",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSWriteFile",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSReadDir",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSStat",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSLstat",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSTruncate",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSChdir",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSChmod",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSChown",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSLchown",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSChtimes",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSReadlink",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSRenameSource",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSRenameTarget",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSLinkSource",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSLinkTarget",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSSymlinkSource",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSSymlinkTarget",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathOSDirFS",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathIoutilReadFile",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathIoutilWriteFile",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathIoutilReadDir",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathIoutilTempFileDir",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathIoutilTempFilePattern",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathIoutilTempDirDir",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathIoutilTempDirPattern",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathHTTPServeFile",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathHelperReturnFlow",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathStructFieldFlow",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositivePathInterfaceDispatchFlow",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativePathConstantPath",
+        "ruleId": "go/security/path-traversal.yaml#path-traversal",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceRequestFormValue",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceRequestPostFormValue",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceRequestCookies",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceRequestReferer",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceRequestUserAgent",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceURLQuery",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceURLQueryGet",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceURLPath",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceURLRawQuery",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceURLRawPath",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceHeaderGet",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceHeaderMap",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceHeaderMapIndex",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceFormMap",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceFormMapIndex",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourcePostFormMap",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourcePostFormMapIndex",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceURLQueryMap",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceURLQueryMapIndex",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceHeaderValues",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceFormGet",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourcePostFormGet",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceBody",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceGetBody",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceForm",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourcePostForm",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceMultipartForm",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceHeader",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceTrailer",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceURL",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceGetenv",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceArgs",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceRequestURI",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceBeegoGetString",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceBeegoGetStringDefault",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceBeegoGetStrings",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceBeegoGetStringsDefault",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceBeegoGetStringsIndex",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceBeegoGetStringsDefaultIndex",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceBeegoGetSession",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceBeegoInput",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceBeegoInputParam",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceBeegoInputParams",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceBeegoInputURI",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceBeegoInputURL",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceBeegoInputRequestBody",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceBeegoInputQuery",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSourceHeaderMethod",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSQLDBQuery",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSQLDBQueryContext",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSQLDBQueryRow",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSQLDBQueryRowContext",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSQLDBExec",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSQLDBExecContext",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSQLDBPrepare",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSQLDBPrepareContext",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSQLTxQuery",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveBytesBufferFlow",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSQLHelperReturnFlow",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSQLStructFieldFlow",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSQLInterfaceDispatchFlow",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeSQLParameterizedArgument",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeSQLConstantQuery",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeSourceUnusedFormValue",
+        "ruleId": "go/security/sql-injection.yaml#sql-injection",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSRFHTTPGet",
+        "ruleId": "go/security/ssrf.yaml#ssrf",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSRFHTTPHead",
+        "ruleId": "go/security/ssrf.yaml#ssrf",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSRFHTTPPost",
+        "ruleId": "go/security/ssrf.yaml#ssrf",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSRFHTTPPostForm",
+        "ruleId": "go/security/ssrf.yaml#ssrf",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSRFClientGet",
+        "ruleId": "go/security/ssrf.yaml#ssrf",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSRFClientHead",
+        "ruleId": "go/security/ssrf.yaml#ssrf",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSRFClientPost",
+        "ruleId": "go/security/ssrf.yaml#ssrf",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSRFClientPostForm",
+        "ruleId": "go/security/ssrf.yaml#ssrf",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSRFNewRequest",
+        "ruleId": "go/security/ssrf.yaml#ssrf",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSRFNewRequestWithContext",
+        "ruleId": "go/security/ssrf.yaml#ssrf",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSRFHelperReturnFlow",
+        "ruleId": "go/security/ssrf.yaml#ssrf",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSRFChannelFlow",
+        "ruleId": "go/security/ssrf.yaml#ssrf",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeSSRFConstantURL",
+        "ruleId": "go/security/ssrf.yaml#ssrf",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSTITemplateParse",
+        "ruleId": "go/security/ssti.yaml#ssti",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSTITemplateMustParse",
+        "ruleId": "go/security/ssti.yaml#ssti",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSTITemplateParseFiles",
+        "ruleId": "go/security/ssti.yaml#ssti",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSTITemplateParseGlob",
+        "ruleId": "go/security/ssti.yaml#ssti",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveSSTIBuilderChainFlow",
+        "ruleId": "go/security/ssti.yaml#ssti",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeSSTIConstantTemplateTaintedData",
+        "ruleId": "go/security/ssti.yaml#ssti",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveTrustSetCookie",
+        "ruleId": "go/security/trust-boundary.yaml#trust-boundary-cwe-501",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveTrustSetSession",
+        "ruleId": "go/security/trust-boundary.yaml#trust-boundary-cwe-501",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveTrustSourceBeegoInputHeader",
+        "ruleId": "go/security/trust-boundary.yaml#trust-boundary-cwe-501",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveTrustCookiePathFlow",
+        "ruleId": "go/security/trust-boundary.yaml#trust-boundary-cwe-501",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeTrustConstantCookie",
+        "ruleId": "go/security/trust-boundary.yaml#trust-boundary-cwe-501",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakCryptoDES",
+        "ruleId": "go/security/weak-crypto.yaml#weak-crypto-cwe-327",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakCryptoTripleDES",
+        "ruleId": "go/security/weak-crypto.yaml#weak-crypto-cwe-327",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakCryptoRC4",
+        "ruleId": "go/security/weak-crypto.yaml#weak-crypto-cwe-327",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakCryptoMD4",
+        "ruleId": "go/security/weak-crypto.yaml#weak-crypto-cwe-327",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakCryptoECBEncrypter",
+        "ruleId": "go/security/weak-crypto.yaml#weak-crypto-cwe-327",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakCryptoECBDecrypter",
+        "ruleId": "go/security/weak-crypto.yaml#weak-crypto-cwe-327",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeWeakCryptoLocalECBEncrypter",
+        "ruleId": "go/security/weak-crypto.yaml#weak-crypto-cwe-327",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeWeakCryptoLocalECBDecrypter",
+        "ruleId": "go/security/weak-crypto.yaml#weak-crypto-cwe-327",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeWeakCryptoAES",
+        "ruleId": "go/security/weak-crypto.yaml#weak-crypto-cwe-327",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakHashMD5New",
+        "ruleId": "go/security/weak-hash.yaml#weak-hash-cwe-328",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakHashMD5Sum",
+        "ruleId": "go/security/weak-hash.yaml#weak-hash-cwe-328",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakHashSHA1New",
+        "ruleId": "go/security/weak-hash.yaml#weak-hash-cwe-328",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakHashSHA1Sum",
+        "ruleId": "go/security/weak-hash.yaml#weak-hash-cwe-328",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakHashMD4New",
+        "ruleId": "go/security/weak-hash.yaml#weak-hash-cwe-328",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeWeakHashSHA256New",
+        "ruleId": "go/security/weak-hash.yaml#weak-hash-cwe-328",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeWeakHashSHA256Sum",
+        "ruleId": "go/security/weak-hash.yaml#weak-hash-cwe-328",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomInt",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomIntn",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomInt31",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomInt31n",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomInt63",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomInt63n",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomFloat64",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomFloat32",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomNormFloat64",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomExpFloat64",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomUint32",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomUint64",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomPerm",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomNew",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomV2Float64",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveWeakRandomV2IntN",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeWeakRandomCryptoInt",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeWeakRandomCryptoRead",
+        "ruleId": "go/security/weak-random.yaml#weak-random-cwe-330",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveXSSWrite",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveXSSWriteString",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveXSSBody",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveXSSFprint",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveXSSFprintf",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveXSSFprintln",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveXSSIOWriteString",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveXSSJSONEncoderEncode",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveXSSOutputJSON",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveXSSResponseWrite",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveXSSHelperReturnFlow",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.PositiveXSSChannelFlow",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeXSSResponseWrite",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeXSSHTMLEscapeString",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeXSSJSEscapeString",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeXSSHTMLEscape",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeXSSURLQueryEscape",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      },
+      {
+        "function": "test/security/all-patterns.NegativeXSSURLPathEscape",
+        "ruleId": "go/security/xss.yaml#reflected-xss",
+        "language": "go",
+        "testSetName": "default"
+      }
+    ],
+    "falseNegative": [],
+    "falsePositive": [],
+    "skipped": [],
+    "disabled": [
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "blowfishWeakKeySize",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "blowfish-insufficient-key-size"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "blowfishStrongKeySize",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "blowfish-insufficient-key-size"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "insecureHostnameVerifierVerify",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "insecure-hostname-verifier"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "secureHostnameVerifier",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "insecure-hostname-verifier"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "insecureEmailClient",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "insecure-smtp"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "secureEmailClient",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "insecure-smtp"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "insecureTrustManager",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "insecure-trust-manager"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "secureTrustManager",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "insecure-trust-manager"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "staticIvInsecure",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "no-static-initialization-vector"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.CipherAndKeyCryptoSamples",
+        "methodName": "randomIvSecure",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "no-static-initialization-vector"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "weakRsaKey",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "use-of-weak-rsa-key"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "strongRsaKey",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "use-of-weak-rsa-key"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "weakSslContextProtocol",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "weak-tls-protocol"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "strongSslContextProtocol",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "weak-tls-protocol"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "enableWeakTlsVersions",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "weak-tls-protocol-version"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.crypto.JwtAndTlsCryptoSamples",
+        "methodName": "enableStrongTlsVersions",
+        "rule": {
+          "rulePath": "java/security/crypto.yaml",
+          "ruleId": "weak-tls-protocol-version"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.hardcodedcredentials.HardcodedCredentialsSamples",
+        "methodName": "encryptWithHardcodedKey",
+        "rule": {
+          "rulePath": "java/security/hardcoded-credentials.yaml",
+          "ruleId": "hardcoded-cryptographic-key"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.hardcodedcredentials.HardcodedCredentialsSamples",
+        "methodName": "encryptWithExternalKey",
+        "rule": {
+          "rulePath": "java/security/hardcoded-credentials.yaml",
+          "ruleId": "hardcoded-cryptographic-key"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "createPersistentSensitiveCookieInsecure",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "persistent-cookie"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.insecuredesign.InsecureDesignSamples",
+        "methodName": "createShortLivedCookieSecure",
+        "rule": {
+          "rulePath": "java/security/insecure-design.yaml",
+          "ruleId": "persistent-cookie"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssRequestWrapperSamples$InsecureWrappedServlet",
+        "methodName": "doGet",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xssrequestwrapper-is-insecure"
+        },
+        "language": "java",
+        "testSetName": "default"
+      },
+      {
+        "className": "security.xss.XssRequestWrapperSamples$SafeEncodingFilter",
+        "methodName": "doFilter",
+        "rule": {
+          "rulePath": "java/security/xss.yaml",
+          "ruleId": "xssrequestwrapper-is-insecure"
+        },
+        "language": "java",
+        "testSetName": "default"
+      }
+    ]
+  },
+  "commands": [
+    {
+      "cwd": "/drive-testcomp/opentaint-go-rules/opentaint-w3/rules/test",
+      "tasks": [
+        ":build",
+        ":checkRulesCoverage"
+      ],
+      "flags": [
+        "--no-daemon",
+        "--max-workers=2",
+        "--console=plain"
+      ],
+      "exitCode": 0,
+      "gradleReportedDuration": "9s"
+    },
+    {
+      "cwd": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core",
+      "tasks": [
+        ":opentaint-ir:go:buildGoServer"
+      ],
+      "flags": [
+        "--offline",
+        "--no-daemon",
+        "--max-workers=2",
+        "--console=plain"
+      ],
+      "exitCode": 0,
+      "gradleReportedDuration": "14s"
+    },
+    {
+      "cwd": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core",
+      "tasks": [
+        ":opentaint-jvm-autobuilder:runAutoBuilder"
+      ],
+      "flags": [
+        "--offline",
+        "--no-daemon",
+        "--max-workers=2",
+        "--console=plain"
+      ],
+      "applicationArgs": [
+        "--project-root-dir",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/rules/test",
+        "--build",
+        "portable",
+        "--result-dir",
+        "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/project",
+        "--build-dir",
+        "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/resolver",
+        "--logs-file",
+        "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/autobuild.log",
+        "--verbosity",
+        "debug"
+      ],
+      "exitCode": 0,
+      "gradleReportedDuration": "28s"
+    },
+    {
+      "cwd": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core",
+      "tasks": [
+        ":runProjectAnalyzer",
+        ":checkRuleTestResults"
+      ],
+      "initScript": "/drive-testcomp/opentaint-go-rules/opentaint-w3/scripts/rule-tests.init.gradle",
+      "properties": {
+        "ruleTestResults": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/result/test-result.json"
+      },
+      "flags": [
+        "--offline",
+        "--no-daemon",
+        "--max-workers=2",
+        "--console=plain"
+      ],
+      "applicationArgs": [
+        "--project",
+        "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/project/project.yaml",
+        "--output-dir",
+        "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/result",
+        "--logs-file",
+        "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/analyzer.log",
+        "--verbosity",
+        "debug",
+        "--semgrep-rule-set",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/rules/ruleset",
+        "--debug-run-rule-tests"
+      ],
+      "exitCode": 0,
+      "gradleReportedDuration": "1m"
+    }
+  ],
+  "preflightFailures": [
+    {
+      "phase": "sample build offline",
+      "exitCode": 1,
+      "reason": "Missing cached third-party dependency JARs. Normal dependency resolution restored the build.",
+      "log": {
+        "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/samples-build.log",
+        "bytes": 14377,
+        "sha256": "a2cedd76751cd0019f5e6433b5770623636ef38e90a0f6c0836106c9b80344db"
+      }
+    },
+    {
+      "phase": "Go source build with GOPROXY=off",
+      "exitCode": 1,
+      "reason": "go install @version needed module metadata absent from cache. Normal Go module resolution restored the build.",
+      "log": {
+        "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/go-build.log",
+        "bytes": 3773,
+        "sha256": "6c8bd24addcf0b8cb552898ce46e00f521ba5b55c099cc619e441d7ee9650386"
+      }
+    }
+  ],
+  "syntheticGateCheck": {
+    "purpose": "Verify nonzero Gradle exit on one synthetic FN, without rerunning or altering the actual analyzer result.",
+    "exitCode": 1,
+    "expectedExitCode": 1,
+    "log": {
+      "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/synthetic-gate.log",
+      "bytes": 3840,
+      "sha256": "50af1ae3b71967179efc94bb6e471818e44c507c144df4d1e4f424184bd60662"
+    },
+    "fixture": {
+      "path": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/synthetic-failure.json",
+      "bytes": 157305,
+      "sha256": "246d8e53054034f589b1ea27351802879410b58d601ebbdcdfafce1606ac36e4"
+    }
+  },
+  "environment": {
+    "JAVA_HOME": "/usr/lib/jvm/temurin-17-jdk-amd64",
+    "GRADLE_USER_HOME": "/home/sobol/.gradle",
+    "BASH_ENV": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/go-build-env.sh",
+    "PATHPrefix": "/drive-testcomp/opentaint-go-rules/rules-gradle-validation-20261109/tools",
+    "GOTOOLCHAIN": "local"
+  },
+  "limits": [
+    "CI policy passes for collected samples. Two interface declarations are silently uncollected.",
+    "This run does not exercise the bidirectional Java core.",
+    "No baseline rules suite was rerun."
+  ]
+}
