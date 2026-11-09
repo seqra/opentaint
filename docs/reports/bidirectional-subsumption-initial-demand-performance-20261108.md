@@ -57,7 +57,9 @@ classpath and references. The coordinator checks unchanged core/artifacts
 before and after each project. Projects ran in sequence. Heavy JFR review
 started after all four commands ended. Old owned captures and the aborted
 attempt's captures were removed with receipts; its logs and status remain.
-The latest campaign's captures remain available.
+The 8 November raw captures were later removed after their decoded evidence
+was preserved. The [post-merge validation](bidirectional-post-merge-project-validation-20261109.md)
+records this cleanup and retains the new campaign's captures.
 
 ## 2. Terminal outcome
 
