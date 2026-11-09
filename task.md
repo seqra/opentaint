@@ -18,9 +18,9 @@ Take the latest commit. Ignore reports for the previous commits as staled.
 3) Run the rules suite from `.github/workflows/ci-rules.yaml` with local Gradle tasks.
    Follow [docs/rule-testing.md](docs/rule-testing.md). Do not download CI analyzer,
    autobuilder or Go-server artifacts. Require zero skipped tests, false positives
-   and false negatives in `test-result.json`. State the engine scope: the current
-   rule-test runner uses the legacy engine and does not select the bidirectional
-   core when given `--ifds-bidirectional`.
+   and false negatives in `test-result.json`. Use `--ifds-bidirectional` for the
+   Java rule samples and verify actual iteration-driver events. Go samples keep
+   their existing engine. Report the latest reached run for each Java sample.
 
 Use `runProjectAnalyzer` gradle task directly, don't use the CLI.
 

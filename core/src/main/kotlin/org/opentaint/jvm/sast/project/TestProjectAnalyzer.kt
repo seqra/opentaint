@@ -21,6 +21,7 @@ import org.opentaint.common.sast.toProjectStatus
 import org.opentaint.config.JavaDefaultConfigLoader
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.bidi.driver.configuredIncreasingLimits
 import org.opentaint.dataflow.configuration.jvm.serialized.JavaConfigurationLoader
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
@@ -214,6 +215,10 @@ class TestProjectAnalyzer(
         rules: List<TaintRuleFromSemgrep<SerializedItem>>,
         sample: TestSample
     ): AnalysisResult {
+        logger.info {
+            "RULE_TEST_START engine=${if (options.ifdsBidirectional) "BIDIRECTIONAL" else "LEGACY"} " +
+                "sample=${sample.className}#${sample.methodName ?: "*"} rule=${rules.joinToString(",") { it.ruleId }}"
+        }
         val loadedConfig = loadTaintConfig(cp, approximations.copy(rules = rules))
         val config = analysisConfig(loadedConfig)
 
@@ -221,6 +226,7 @@ class TestProjectAnalyzer(
             cp, config,
             projectClasses = projectClasses.locationChecker(),
             options = options.taintAnalyzerOptions(),
+            bidiPolicy = if (options.ifdsBidirectional) configuredIncreasingLimits() else null,
         )
 
         return runAnalyzerWithTraceResolver(analyzer, sample.methods)

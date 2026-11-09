@@ -118,15 +118,34 @@ gate can pass with uncollected declarations. The
 two RMI interface samples with this problem. A zero `skipped` count is not proof
 that every declared sample ran.
 
-## Engine scope
+## Bidirectional Java rule validation
 
-This is the workflow's default-engine rule suite. In the current source,
-`TestProjectAnalyzer.analyzeTestSample` creates `JIRTaintAnalyzer` without a
-`bidiPolicy`. That parameter defaults to `null`. Adding
-`--ifds-bidirectional` therefore does not select the new core for Java rule
-samples. It can change Spring setup, so it is not an equivalent second run.
+The command above reproduces the workflow's default engine. For new-core
+validation, add `--ifds-bidirectional` to the analyzer arguments and use a fresh
+result directory. The Java rule runner selects the same configured iteration
+policy as the ordinary project analyzer. Without the flag, it keeps the legacy
+engine. Go samples keep their existing engine in both commands.
 
-Use this suite as an additional validation gate. It does not replace the native
-bidirectional suites or the bidirectional real-project scans. Wiring the rule
-test runner to the bidirectional policy is a separate change. No analyzer
-behavior is changed by this local procedure.
+Reuse the source-built portable project and run:
+
+```bash
+rule_test_bidi_output="$rule_test_output/bidirectional"
+mkdir -p "$rule_test_bidi_output"
+./core/gradlew -p core \
+  -I "$rule_test_repo/scripts/rule-tests.init.gradle" \
+  -PruleTestResults="$rule_test_bidi_output/result/test-result.json" \
+  :runProjectAnalyzer \
+  --args="--project \"$rule_test_output/project/project.yaml\" --output-dir \"$rule_test_bidi_output/result\" --logs-file \"$rule_test_bidi_output/analyzer.log\" --verbosity debug --semgrep-rule-set \"$rule_test_repo/rules/ruleset\" --debug-run-rule-tests --ifds-bidirectional" \
+  :checkRuleTestResults \
+  --no-daemon --max-workers=2 --console=plain
+```
+
+Check actual `BIDI_RUN_START` and `BIDI_ANALYSIS_END` events for each collected
+Java sample. Record its latest reached iteration. Do not use a flag or an engine
+label alone as proof that the new core ran. A rule suite contains many separate
+analyses, so its maximum run label is not one shared project iteration.
+
+Before the runner fix, the flag was ignored by Java rule analysis. The
+[first local validation](reports/rules-gradle-validation-20261109.md) is a legacy
+result and remains historical evidence. This suite supplements the native
+bidirectional tests and bidirectional real-project scans.
