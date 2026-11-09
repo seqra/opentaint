@@ -1,19 +1,19 @@
 {
   "schema": "opentaint.provisional-rule-log-results.v1",
-  "created_utc": "2026-11-09T18:27:56.779225+00:00",
-  "started_utc": "2026-11-09T18:27:44.690369+00:00",
-  "stream_wall_seconds": 12.088870450854301,
+  "created_utc": "2026-11-09T19:05:02.124922+00:00",
+  "started_utc": "2026-11-09T19:04:46.791874+00:00",
+  "stream_wall_seconds": 15.333059310913086,
   "source_revision": "03cf52fa90f9eb5273334bb37b2cc4914100e1cd",
   "implementation_commit": "9b21b3716",
   "log": "/drive-testcomp/opentaint-go-rules/main-migration-20261109/rules/analyzer.log",
-  "snapshot_byte_limit": 1927157904,
-  "bytes_streamed": 1927157904,
-  "lines_streamed": 11958030,
+  "snapshot_byte_limit": 2491490106,
+  "bytes_streamed": 2491490106,
+  "lines_streamed": 16216200,
   "source_manifest_declaration_count": 609,
-  "source_manifest_sha256": "1cb5c8b0eb5e677222ba42192a0318975ae677a2a104634036dbea28fa8d96e2",
+  "source_manifest_sha256": "0e49d01c178bd5ee0ce50781728b866d3345d6ed4f4ec0137347a841f74c9f84",
   "actual_json_classification": false,
   "pass_gate": false,
-  "caveat": "Provisional log-based identity counts only. TestProjectAnalyzer writes final JSON after all samples. Classification uses traces.isEmpty; current JIRBidiAnalysis maps each accepted report identity to a Simple trace, but conversion/report generation can still fail or change final artifacts. Missing/ambiguous declarations, duplicate runtime entry/mode keys, incomplete/active/resource-stopped samples are excluded, not called passes. No change to the running JVM, observer, source, or budgets.",
+  "caveat": "Provisional log-based identity counts only. TestProjectAnalyzer writes final JSON after all samples. Classification uses traces.isEmpty; current JIRBidiAnalysis maps each accepted report identity to a Simple trace, but conversion/report generation can still fail or change final artifacts. Missing/ambiguous declarations, duplicate runtime entry/mode keys, incomplete/active/resource-stopped samples are excluded, not called passes. No change to the running JVM, observer, source, or budgets. Original campaign was stopped under explicit controlled supersession. The final unfinished sample is not a pass/fail classification.",
   "completion_policy": "Eligible only when BIDI_ANALYSIS_END status=COMPLETE, final Bidi analysis: N reported sink identities, and Finish IFDS markers all belong to one uniquely declared and uniquely observed entry/rule key.",
   "sample_starts": 362,
   "analysis_complete": 360,
@@ -93,24 +93,24 @@
       "startLine": 11496524,
       "startOffset": 1866573251,
       "startLogLine": "18:23:57.063 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.passthrough.PassthroughFileModelSamples#fileToStringUnsafe rule=java/security/path-traversal.yaml:path-traversal",
-      "runStarts": 51276,
-      "runEnds": 51275,
+      "runStarts": 524406,
+      "runEnds": 524405,
       "latestReached": {
-        "run": 51276,
-        "label": "run-51276",
+        "run": 524406,
+        "label": "run-524406",
         "direction": "BACKWARD",
-        "limit": 51275
+        "limit": 524405
       },
-      "latestEngineComplete": "run-51275",
-      "latestBarrierComplete": "run-51275",
-      "latestAcceptedForwardReportRun": "run-51275",
+      "latestEngineComplete": "run-524405",
+      "latestBarrierComplete": "run-524405",
+      "latestAcceptedForwardReportRun": "run-524405",
       "analysisEnd": null,
       "reportedSinkIdentities": null,
       "ifdsFinished": false,
       "lastTargetStatistics": {
-        "run": 51275,
+        "run": 524405,
         "reports": 1,
-        "line": 11958027
+        "line": 16216197
       },
       "declarationCandidates": [
         {
@@ -20000,24 +20000,24 @@
       "startLine": 11496524,
       "startOffset": 1866573251,
       "startLogLine": "18:23:57.063 |I| TestProjectAnalyzer - RULE_TEST_START engine=BIDIRECTIONAL sample=security.passthrough.PassthroughFileModelSamples#fileToStringUnsafe rule=java/security/path-traversal.yaml:path-traversal",
-      "runStarts": 51276,
-      "runEnds": 51275,
+      "runStarts": 524406,
+      "runEnds": 524405,
       "latestReached": {
-        "run": 51276,
-        "label": "run-51276",
+        "run": 524406,
+        "label": "run-524406",
         "direction": "BACKWARD",
-        "limit": 51275
+        "limit": 524405
       },
-      "latestEngineComplete": "run-51275",
-      "latestBarrierComplete": "run-51275",
-      "latestAcceptedForwardReportRun": "run-51275",
+      "latestEngineComplete": "run-524405",
+      "latestBarrierComplete": "run-524405",
+      "latestAcceptedForwardReportRun": "run-524405",
       "analysisEnd": null,
       "reportedSinkIdentities": null,
       "ifdsFinished": false,
       "lastTargetStatistics": {
-        "run": 51275,
+        "run": 524405,
         "reports": 1,
-        "line": 11958027
+        "line": 16216197
       },
       "declarationCandidates": [
         {
@@ -20032,13 +20032,16 @@
         "analysis not COMPLETE",
         "no Finish IFDS marker",
         "no final reported-sink-identities count",
-        "active sample at snapshot EOF"
+        "unfinished when original campaign was stopped for controlled supersession"
       ],
       "eligibleProvisionalClassification": false,
       "declaredKind": "positive",
       "declaredMode": "default",
       "declaredRule": "java/security/path-traversal.yaml#path-traversal",
-      "provisionalClassification": "excluded"
+      "provisionalClassification": "excluded",
+      "interruption": "CONTROLLED_SUPERSESSION"
     }
-  ]
+  ],
+  "campaign_status": "CONTROLLED_SUPERSESSION",
+  "supersession_receipt": "supersession-stop-receipt.json"
 }

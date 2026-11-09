@@ -220,7 +220,7 @@ class IterationDriver internal constructor(
         frontier.log()
         val next = when {
             forward && handOff.demandEdges.isEmpty() -> Next.End(RunStatus.COMPLETE, EndReason.NO_DEMAND_EDGE)
-            forward && !policy.continueAfter(config, result, frontiers) -> Next.End(RunStatus.COMPLETE, EndReason.POLICY)
+            forward && !policy.continueAfter(config, result, frontiers) -> Next.End(RunStatus.COMPLETE, policy.stopReason(config))
             else -> Next.Run(nextConfig(config, handOff, terminals.normal))
         }
         logger.info { "BIDI_TARGET_STATISTICS run=${config.index} raw=${result.analyzers.sumOf { it.targets.size }} outgoing=${result.analyzers.sumOf { it.outgoingTargets.size }} reports=${terminals.entries.size} blockRaw=${result.analyzers.asSequence().flatMap { it.blockTargets() }.sumOf { it.rows.size }} blockOutgoing=${result.analyzers.asSequence().flatMap { it.blockOutgoingTargets() }.sumOf { it.rows.size }}" }

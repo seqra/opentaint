@@ -1,0 +1,10 @@
+'Run11Reports.confirmed_member' depends on axioms: [propext, Quot.sound]
+'Run11Reports.provisional_member' depends on axioms: [propext, Quot.sound]
+'Run11Reports.no_provisional_before_limit' depends on axioms: [propext, Quot.sound]
+'Run11Reports.confirmed_wins' depends on axioms: [propext, Quot.sound]
+'Run11Reports.discarded_candidate_absent' depends on axioms: [propext, Quot.sound]
+'Run11Reports.empty_latest_preserves_confirmed' depends on axioms: [propext, Quot.sound]
+'Run11Reports.completed_forward_replaces' does not depend on any axioms
+'Run11Reports.backward_keeps_latest' does not depend on any axioms
+'Run11Reports.failed_barrier_keeps_latest' does not depend on any axioms
+'Run11Reports.later_forward_discards_candidate_history' does not depend on any axioms

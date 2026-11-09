@@ -5,23 +5,25 @@ import org.opentaint.dataflow.bidi.ap.MarkMode
 import org.opentaint.dataflow.bidi.engine.*
 import java.util.Collections
 
-enum class EndReason { STOP_RULE, NO_DEMAND_EDGE, POLICY, ABNORMAL }
+enum class EndReason { STOP_RULE, NO_DEMAND_EDGE, POLICY, RUN_LIMIT, ABNORMAL }
 
 data class AnalysisEnd(
     val status: RunStatus, val run: Int, val direction: Direction, val reason: EndReason,
     val run1MarkMode: MarkMode = MarkMode.FULL,
 )
 
-/** Only settled configured-root ZERO terminal identities enter the report. */
+/** Confirmed root terminals, plus latest forward witnesses at the selected run limit. */
 class Report(entries: List<Entry>, val end: AnalysisEnd) {
     val entries: List<Entry> = Collections.unmodifiableList(ArrayList(entries))
-    data class Entry(val id: ReportId, val descriptor: ReportDescriptor)
+    data class Entry(val id: ReportId, val descriptor: ReportDescriptor, val provisional: Boolean = false)
 }
 
 /** One completed driver barrier commits retained relations and root reports together. */
 class ReportBuilder {
-    class Snapshot internal constructor(val normal: NormalTargetView, entries: Map<ReportId, Report.Entry>) {
+    class Snapshot internal constructor(val normal: NormalTargetView, entries: Map<ReportId, Report.Entry>,
+                                        latestReached: Map<ReportId, Report.Entry> = emptyMap()) {
         internal val entries = Collections.unmodifiableMap(LinkedHashMap(entries))
+        internal val latestReached = Collections.unmodifiableMap(LinkedHashMap(latestReached))
     }
     private var state = Snapshot(NormalTargetView.EMPTY, emptyMap())
     val normalTargets: NormalTargetView get() = state.normal
@@ -56,9 +58,19 @@ class ReportBuilder {
         check(normal.zeroRows().all { it.id in entries }) {
             "Every retained ZERO terminal must reach a configured root before the barrier"
         }
-        return Snapshot(normal, entries)
+        val latest = LinkedHashMap<ReportId, Report.Entry>()
+        for (actor in result.analyzers) for (id in actor.reachedSinkReportIds) {
+            shared.cancellation.checkpoint()
+            latest.putIfAbsent(id, Report.Entry(id, shared.reportCatalog.descriptor(id), provisional = true))
+        }
+        return Snapshot(normal, entries, latest)
     }
 
     fun commit(prepared: Snapshot) { state = prepared }
-    fun build(end: AnalysisEnd): Report = Report(state.entries.values.toList(), end)
+    fun build(end: AnalysisEnd): Report {
+        val entries = LinkedHashMap(state.entries)
+        if (end.reason == EndReason.RUN_LIMIT) for ((id, candidate) in state.latestReached)
+            entries.putIfAbsent(id, candidate)
+        return Report(entries.values.toList(), end)
+    }
 }

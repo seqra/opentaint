@@ -11,6 +11,17 @@ Commit after implementation.
 Avoid changes in the analyzer core, that were not proposed and designed.
 If you have an optimization idea or a fix idea, write a proposal. Then we will include it into the next iteration.
 
+## Additional selected change (9 November 2026)
+
+Use [spec/bidirectional-run11-cutoff.md](spec/bidirectional-run11-cutoff.md).
+Stop all default bidirectional scans after the complete forward run-11 barrier.
+Keep confirmed findings. At this limit, also return provisional sink targets
+from the latest completed forward run only. Mark them as subject to later
+refinement. Do not restore targets discarded on earlier runs. Keep field
+limits, memory, timeouts and the legacy iteration-limit option unchanged.
+Preserve the old unbounded rule campaign as superseded and repeat validation
+from the new committed runtime.
+
 # Test
 Take the latest commit. Ignore reports for the previous commits as staled.
 1) Run on OWASP like we do it in .github/workflows/ci-analyzer-owasp.yaml

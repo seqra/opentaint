@@ -39,8 +39,11 @@ class Run1SinkProjectionTest {
             val second = f.manager.initial(q)
             service.checkSinks(first, f.inst(1), f.manager.factsOf(p.fact, p.exclusion, Layer.NORMAL), listOf(sink))
             assertTrue(actor.targets.isEmpty() && actor.sinkSeeds.isEmpty(), "A partial witness cannot publish")
+            assertTrue(actor.reachedSinkReportIds.isEmpty(), "An incomplete ND cube is not a provisional finding")
             service.checkSinks(second, f.inst(1), f.manager.factsOf(q.fact, q.exclusion, Layer.NORMAL), listOf(sink))
             assertEquals(setOf(TargetSummary(first, Target.DemandTarget), TargetSummary(second, Target.DemandTarget)), actor.targets)
+            val reached = actor.reachedSinkReportIds.single()
+            assertEquals(f.inst(1), f.shared.reportCatalog.descriptor(reached).key.statement)
             if (predicateSink) {
                 assertEquals(Seed.PredicateSink(id, f.key, f.inst(1)), actor.sinkSeeds.single())
             } else {
@@ -87,6 +90,7 @@ class Run1SinkProjectionTest {
                 assertEquals(setOf(origin), actor.targets.map { it.premise }.toSet())
                 assertEquals(1, actor.targets.count { it.target is Target.NormalTarget })
                 assertEquals(1, actor.targets.count { it.target == Target.DemandTarget })
+                assertEquals(1, actor.reachedSinkReportIds.size, "NORMAL and DEMAND share a physical reporting identity")
                 assertEquals(setOf(p, q), actor.sinkSeeds.map { assertIs<Seed.Sink>(it).requirement }.toSet())
             }
     }

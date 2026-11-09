@@ -4,6 +4,7 @@ import io.github.detekt.sarif4k.ArtifactLocation
 import io.github.detekt.sarif4k.CodeFlow
 import io.github.detekt.sarif4k.Level
 import io.github.detekt.sarif4k.Message
+import io.github.detekt.sarif4k.PropertyBag
 import io.github.detekt.sarif4k.Result
 import io.github.detekt.sarif4k.ThreadFlow
 import mu.KLogging
@@ -38,7 +39,9 @@ abstract class SarifGenerator<IL>(
         traces: Sequence<VulnerabilityWithTrace>,
         metadatas: List<RuleMetadata>
     ): LazyToolRunReport {
-        val sarifResults = traces.mapNotNull { generateSarifResult(it.vulnerability, it.trace) }
+        val sarifResults = traces.mapNotNull {
+            generateSarifResult(it.vulnerability, it.trace)?.withProvisionalFinding(it.provisional)
+        }
 
         val uriBase = options.uriBase ?: sourceRoot?.absolutePathString()
         val sourceUri = uriBase?.let {
@@ -197,4 +200,20 @@ abstract class SarifGenerator<IL>(
     companion object {
         val logger = object : KLogging() {}.logger
     }
+}
+
+/** Add report confidence after location, fingerprint and framework annotations. */
+internal fun Result.withProvisionalFinding(provisional: Boolean): Result {
+    if (!provisional) return this
+    val notice = "Provisional finding. Later refinement may discard this finding."
+    val originalProperties = properties ?: PropertyBag()
+    return copy(
+        message = message.copy(
+            text = "${message.text.orEmpty()}\n\n$notice",
+            markdown = message.markdown?.let { "$it\n\n$notice" },
+        ),
+        properties = originalProperties.copy(
+            tags = (originalProperties.tags.orEmpty() + "opentaint:provisional").distinct(),
+        ),
+    )
 }

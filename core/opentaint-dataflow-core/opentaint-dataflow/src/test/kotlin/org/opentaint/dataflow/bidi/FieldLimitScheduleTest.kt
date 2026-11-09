@@ -35,9 +35,13 @@ class FieldLimitScheduleTest {
     }
 
     @Test fun `default selection keeps the repeated first limit and unknown values fail`() {
-        assertSame(IncreasingLimits, configuredIncreasingLimits(null))
-        assertSame(IncreasingLimits, configuredIncreasingLimits("REPEAT_RUN1"))
-        assertSame(RunIndexLimits, configuredIncreasingLimits("RUN_INDEX"))
+        val default = assertIs<HardRunLimitPolicy>(configuredIncreasingLimits(null))
+        assertEquals(11, default.lastForwardRun)
+        assertSame(FieldLimitSchedule.REPEAT_RUN1, default.fieldLimitSchedule)
+        assertSame(FieldLimitSchedule.REPEAT_RUN1,
+            assertIs<HardRunLimitPolicy>(configuredIncreasingLimits("REPEAT_RUN1")).fieldLimitSchedule)
+        assertSame(FieldLimitSchedule.RUN_INDEX,
+            assertIs<HardRunLimitPolicy>(configuredIncreasingLimits("RUN_INDEX")).fieldLimitSchedule)
         assertEquals(listOf(1, 1, 2, 3, 4, 5), (1..6).map(IncreasingLimits::fieldLimit))
         assertEquals((1..6).toList(), (1..6).map(RunIndexLimits::fieldLimit))
         assertFailsWith<IllegalStateException> { configuredIncreasingLimits("RUN_INDEx") }

@@ -126,6 +126,8 @@ open class BlockRunState internal constructor(
     private val outgoingTargetRows = LinkedHashSet<TargetSummary>()
     val outgoingTargets: Set<TargetSummary> get() = Collections.unmodifiableSet(outgoingTargetRows)
     val sinkSeeds = binding?.sinkSeeds ?: LinkedHashSet<org.opentaint.dataflow.bidi.driver.Seed>()
+    /** Report observation only. Blocks share their method owner's current-run set. */
+    internal val reachedSinkReportIds = binding?.reachedSinkReportIds ?: LinkedHashSet<ReportId>()
 
     internal fun emitTarget(premise: PremiseKey, target: Target) {
         if (!RuntimeDataDomain.premise(premise)) return

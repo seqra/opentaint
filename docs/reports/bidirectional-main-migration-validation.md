@@ -2,7 +2,11 @@
 
 9 November 2026. The implementation is committed. **Acceptance has not passed.**
 All eight baseline/current project commands have stopped. Offline heap and JFR
-decoding is complete. The full rule suite is still in progress. This report keeps
+decoding is complete. The unbounded rule campaign was superseded at 19:03 UTC
+by the selected default run-11 limit and provisional-report policy. Its final
+state is 360 complete Java samples, one timeout and one controlled stop; no
+final Java/Go JSON gate exists. Earlier live checkpoints below are historical.
+New validation must use the new committed runtime. This report keeps
 real finding failures visible and selects no unplanned core fix.
 
 ## Source and scope

@@ -182,4 +182,107 @@ class ReportTest {
             assertFailsWith<UnsupportedOperationException> { (report.entries as MutableList<Report.Entry>).clear() }
         }
     }
+    @Test fun `run limit adds latest witnesses with confirmation priority and immutable preparation`() {
+        MethodAnalysisFixtures().use { f ->
+            val builder = ReportBuilder()
+            val confirmed = id(f, "confirmed")
+            val candidate = id(f, "candidate")
+            val late = id(f, "after prepare")
+            val c = config(f, 11)
+            val root = actor(f, c, f.key, TargetSummary(f.manager.zero, Target.NormalTarget(confirmed)))
+            root.reachedSinkReportIds += confirmed
+            root.reachedSinkReportIds += candidate
+            val prepared = builder.prepare(c, result(c, root), f.shared)
+            root.reachedSinkReportIds += late
+            assertTrue(builder.build(end(11, reason = EndReason.RUN_LIMIT)).entries.isEmpty())
+            builder.commit(prepared)
+            val entries = builder.build(end(11, reason = EndReason.RUN_LIMIT)).entries.associateBy { it.id }
+            assertEquals(setOf(confirmed, candidate), entries.keys)
+            assertFalse(entries.getValue(confirmed).provisional)
+            assertTrue(entries.getValue(candidate).provisional)
+            assertEquals(1, builder.reportCount, "Frontier report count keeps its confirmed meaning")
+        }
+    }
+
+    @Test fun `latest forward witnesses replace older candidates and backward does not replace them`() {
+        MethodAnalysisFixtures().use { f ->
+            val builder = ReportBuilder()
+            val old = id(f, "discarded")
+            val current = id(f, "latest")
+            val backwardOnly = id(f, "backward only")
+            val c1 = config(f)
+            val first = actor(f, c1).also { it.reachedSinkReportIds += old }
+            builder.commit(builder.prepare(c1, result(c1, first), f.shared))
+            val c2 = config(f, 2)
+            val backward = actor(f, c2).also { it.reachedSinkReportIds += backwardOnly }
+            builder.commit(builder.prepare(c2, result(c2, backward), f.shared))
+            assertEquals(listOf(old), builder.build(end(11, reason = EndReason.RUN_LIMIT)).entries.map { it.id })
+            val c11 = config(f, 11)
+            val latest = actor(f, c11).also { it.reachedSinkReportIds += current }
+            builder.commit(builder.prepare(c11, result(c11, latest), f.shared))
+            assertEquals(listOf(current), builder.build(end(11, reason = EndReason.RUN_LIMIT)).entries.map { it.id })
+            builder.commit(builder.prepare(c11, result(c11), f.shared))
+            assertTrue(builder.build(end(11, reason = EndReason.RUN_LIMIT)).entries.isEmpty())
+        }
+    }
+
+    @Test fun `provisional witnesses are hidden on early or abnormal endings`() {
+        MethodAnalysisFixtures().use { f ->
+            val builder = ReportBuilder()
+            val candidate = id(f)
+            val c = config(f)
+            val root = actor(f, c).also { it.reachedSinkReportIds += candidate }
+            builder.commit(builder.prepare(c, result(c, root), f.shared))
+            for (reason in EndReason.entries.filter { it != EndReason.RUN_LIMIT }) {
+                assertTrue(builder.build(end(3, reason = reason)).entries.isEmpty(), reason.name)
+            }
+            for (status in listOf(RunStatus.TIMEOUT, RunStatus.OOM, RunStatus.FAILED)) {
+                assertFailsWith<IllegalStateException> {
+                    builder.prepare(config(f, 11), result(c, status = status), f.shared)
+                }
+                assertTrue(builder.build(end(11, status, EndReason.ABNORMAL)).entries.isEmpty())
+            }
+        }
+    }
+
+    @Test fun `conditional normal witness is provisional until a configured root confirms it`() {
+        MethodAnalysisFixtures().use { f ->
+            val builder = ReportBuilder()
+            val reportId = id(f)
+            val premise = f.manager.initial(f.pattern())
+            val c = config(f)
+            val conditional = actor(f, c, f.key, TargetSummary(premise, Target.NormalTarget(reportId)))
+                .also { it.reachedSinkReportIds += reportId }
+            builder.commit(builder.prepare(c, result(c, conditional), f.shared))
+            assertTrue(builder.build(end(11, reason = EndReason.RUN_LIMIT)).entries.single().provisional)
+            val c11 = config(f, 11, retained = builder.normalTargets)
+            val confirmed = actor(f, c11, f.key, TargetSummary(f.manager.zero, Target.NormalTarget(reportId)))
+                .also { it.reachedSinkReportIds += reportId }
+            builder.commit(builder.prepare(c11, result(c11, confirmed), f.shared))
+            val entry = builder.build(end(11, reason = EndReason.RUN_LIMIT)).entries.single()
+            assertEquals(reportId, entry.id)
+            assertFalse(entry.provisional)
+        }
+    }
+
+    @Test fun `provisional catalog observation preserves the first normal representative`() {
+        MethodAnalysisFixtures().use { f ->
+            val catalog = f.shared.reportCatalog
+            val provisionalRule = rule("sink")
+            val normalRule = rule("sink")
+            val provisionalContext = f.store.key("provisional context")
+            val normalContext = f.store.key("normal context")
+            val key = SinkKey(f.key.method, f.inst(1), "sink")
+            val candidate = catalog.internReached(key, provisionalRule, provisionalContext)
+            assertSame(provisionalRule, catalog.descriptor(candidate).rule)
+            assertEquals(candidate, catalog.intern(key, normalRule, normalContext))
+            assertSame(normalRule, catalog.descriptor(candidate).rule)
+            assertEquals(normalContext, catalog.descriptor(candidate).representativeMethodKey)
+            assertEquals(candidate, catalog.internReached(key, provisionalRule, provisionalContext))
+            assertSame(normalRule, catalog.descriptor(candidate).rule)
+            assertEquals(candidate, catalog.intern(key, rule("sink"), provisionalContext))
+            assertSame(normalRule, catalog.descriptor(candidate).rule, "Later normal witnesses keep the first normal descriptor")
+        }
+    }
+
 }

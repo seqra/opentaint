@@ -11,10 +11,31 @@ interface IterationPolicy {
     val fieldLimitSchedule: FieldLimitSchedule get() = FieldLimitSchedule.REPEAT_RUN1
     fun fieldLimit(runIndex: Int): Int
 
-    /** Called only after a complete forward run and the two fixed stop checks. */
+    /** Called only after a complete forward run and the empty-demand stop check. */
     fun continueAfter(run: RunConfig, result: RunResult<RunMethodAnalyzer>, frontiers: List<Frontier>): Boolean
 
+    /** Distinguish a policy cutoff from empty-demand convergence. */
+    fun stopReason(run: RunConfig): EndReason = EndReason.POLICY
+
     fun timeout(run: RunConfig, remaining: Duration): Duration = remaining
+}
+
+/** The complete forward barrier at this index is the final allowed barrier. */
+class HardRunLimitPolicy(
+    private val delegate: IterationPolicy,
+    val lastForwardRun: Int = 11,
+) : IterationPolicy by delegate {
+    init {
+        require(lastForwardRun >= 1 && lastForwardRun % 2 == 1) {
+            "The last allowed run must be a positive forward (odd) run"
+        }
+    }
+
+    override fun continueAfter(run: RunConfig, result: RunResult<RunMethodAnalyzer>, frontiers: List<Frontier>): Boolean =
+        run.index < lastForwardRun && delegate.continueAfter(run, result, frontiers)
+
+    override fun stopReason(run: RunConfig): EndReason =
+        if (run.index >= lastForwardRun) EndReason.RUN_LIMIT else delegate.stopReason(run)
 }
 
 /** RUN_INDEX is an opt-in experiment. The normal schedule stays unchanged. */
@@ -47,11 +68,11 @@ object RunIndexLimits : IterationPolicy {
 /** The project entry point reads the setting once when it selects the policy. */
 fun configuredIncreasingLimits(
     value: String? = System.getProperty("opentaint.bidi.fieldLimitSchedule"),
-): IterationPolicy = when (value) {
+): IterationPolicy = HardRunLimitPolicy(when (value) {
     null, "REPEAT_RUN1" -> IncreasingLimits
     "RUN_INDEX" -> RunIndexLimits
     else -> error("Invalid opentaint.bidi.fieldLimitSchedule=$value; use REPEAT_RUN1 or RUN_INDEX")
-}
+})
 
 class FixedLimits(limits: List<Int>) : IterationPolicy {
     private val limits: List<Int> = Collections.unmodifiableList(ArrayList(limits))

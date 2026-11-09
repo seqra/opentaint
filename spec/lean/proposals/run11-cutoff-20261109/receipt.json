@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-09T19:21:45.812719+00:00",
+  "lean_version": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+  "cap_laws": 12,
+  "report_laws": 10,
+  "examples": 5,
+  "result": "PASS",
+  "scope": "Finite cutoff decisions and report selection/snapshot laws; no proof of concrete path for provisional witnesses",
+  "classical_choice": false,
+  "sources": {
+    "source-proof.md": "9681cb88f4d7b19e8fd09dab1df22cec62cc04de41ceadf4c7137de8a1dbe3f8",
+    "Reports.lean": "ef189d28521f1244665ec069a37fe4a0f56b9d9962d7c85cf872bc76be57a307",
+    "Cap.lean": "8eecc7836f41787d5799d18374444787abaf14e0c803a0a1301c7036971afd7b",
+    "README.md": "75223700c44916c6de12f127028f6cd5260fe4ba17c99494dc9f7de6e821941b",
+    "Reports.axioms.txt": "89cc528acaf37bd767b5fdf49e1085f7a790c5b0565eda59da5c2fed58e453cc"
+  }
+}

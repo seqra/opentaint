@@ -14,6 +14,7 @@ internal interface BlockRuntimeBinding {
     val bodyWork: BodyWorkStatistics?
     val sourceHits: SourceHitStore?
     val sinkSeeds: LinkedHashSet<org.opentaint.dataflow.bidi.driver.Seed>
+    val reachedSinkReportIds: LinkedHashSet<ReportId>
     val demand: ScopeDemandView?
     val terminalExit: PortId get() = if (context.config.direction == Direction.FORWARD)
         PortId.ROOT_EXIT else PortId.ROOT_ENTRY

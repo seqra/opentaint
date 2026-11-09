@@ -369,6 +369,11 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
         if (edges.any { !RuntimeDataDomain.packet(it.premise, it.facts) }) return
         val origins = edges.map { it.premise }.distinct()
         val cubeLayer = if (edges.any { it.layer == Layer.DEMAND }) Layer.DEMAND else Layer.NORMAL
+        if (core.forward) {
+            val id = core.context.shared.reportCatalog.internReached(
+                SinkKey(core.key.method, node, sink.rule.id), sink.rule, core.key)
+            core.reachedSinkReportIds += id
+        }
         var demandSeedCaptured = false
         fun emitArm(premise: PremiseKey, layer: Layer) {
             val target = if (layer == Layer.NORMAL) {

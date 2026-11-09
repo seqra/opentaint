@@ -165,12 +165,17 @@ class JIRBidiAnalysis internal constructor(
 
     override fun toVulnerabilities(report: Report): List<VulnerabilityWithTrace> {
         logger.info { "Bidi analysis: ${report.entries.size} reported sink identities" }
+        logger.info {
+            "BIDI_REPORT_STATISTICS run=${report.end.run} reason=${report.end.reason} " +
+                "confirmed=${report.entries.count { !it.provisional }} " +
+                "provisional=${report.entries.count { it.provisional }}"
+        }
         return report.entries.map { entry ->
             val descriptor = entry.descriptor
             val rule = descriptor.rule
             val node = TaintSinkTracker.TaintVulnerabilityRuleNode.Unconditional(descriptor.representativeMethodKey)
             VulnerabilityWithTrace(TaintSinkTracker.TaintVulnerability(descriptor.key.statement, rule.id,
-                hashMapOf(rule to node)), TracePathGenerationResult.Simple)
+                hashMapOf(rule to node)), TracePathGenerationResult.Simple, provisional = entry.provisional)
         }
     }
 

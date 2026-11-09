@@ -233,6 +233,7 @@ internal class MethodBlockRuntime(
         override val bodyWork get() = root.sharedBodyWork
         override val sourceHits get() = root.sourceHits
         override val sinkSeeds get() = root.sinkSeeds
+        override val reachedSinkReportIds get() = root.reachedSinkReportIds
         override val demand get() = e.demand
         override fun intersectSummary(exit: PortId, original: PremiseKey, raw: Facts): List<Facts>? =
             if (quantumQueries == null) null else intersect(e, exit, original, raw)
