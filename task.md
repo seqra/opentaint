@@ -2,30 +2,25 @@ Use ASD-STE100 Simplified Technical English language
 
 We are working on [bidirectional-task.md](bidirectional-task.md)
 Currently we have a complete implemetation for the phases 1-3 which passes all the tests (no FN, few allowed FP).
-Our current goal: implement optimization and repeat major testing on real projects.
+Our current goal: implement the modification and repeat major testing on real projects.
 Always cleanup memory snapshot/profiles from the previous runs.
 
-# Optimization:
-Implement optimization wrt the [bidirectional-subsumption-initial-emission-demand-intersection-implementation-20261108.md](docs/design/bidirectional-subsumption-initial-emission-demand-intersection-implementation-20261108.md)
+# Modification:
+Implement the modification wrt the [bidirectional-main-migration-implementation-20261109.md](docs/design/bidirectional-main-migration-implementation-20261109.md)
 Commit after implementation.  
 Avoid changes in the analyzer core, that were not proposed and designed.
-If you have an optimization idea, write a proposal. Then we will include it into the next iteration.
+If you have an optimization idea or a fix idea, write a proposal. Then we will include it into the next iteration.
 
 # Test
 Take the latest commit. Ignore reports for the previous commits as staled.
 1) Run on OWASP like we do it in .github/workflows/ci-analyzer-owasp.yaml
 2) Run on selected real projects from `../opentaint-test`: conductor, thingsboard, Stirling-PDF. Use parameters, specified in the config (memory, timeout). Don't run on any other configuration. 
-3) Run the rules suite from `.github/workflows/ci-rules.yaml` with local Gradle tasks.
-   Follow [docs/rule-testing.md](docs/rule-testing.md). Do not download CI analyzer,
-   autobuilder or Go-server artifacts. Require zero skipped tests, false positives
-   and false negatives in `test-result.json`. Use `--ifds-bidirectional` for the
-   Java rule samples and verify actual iteration-driver events. Go samples keep
-   their existing engine. Report the latest reached run for each Java sample.
+3) Run the rules test suite as described in  [docs/rule-testing.md](docs/rule-testing.md)
 
 Use `runProjectAnalyzer` gradle task directly, don't use the CLI.
 
 Measure:
-1) Fix baseline -- analyzer at f945f92c5ae554ff4f5fc7696ee5a269210478bb . Resue report from the previous runs. Don't run the baseline again
+1) Fix baseline -- analyzer at 54ad708fe1c4f551956d3d572866de1534415fa1 . Resue report from the previous runs (if exists). Don't run the baseline again
 2) Reported vulnerability location, comparing to the baseline. We should have no FN. We expect few FP, but not really many.
 3) Overall performance: OOM/timeout events, the time of each run iteration.
 4) Capture profile under the workload, we should understand our hot spots (possible performance optimization points). It is a good idea to measure for 30 sec after 1 minute of analysis (normal behavior), and close to the time limit
@@ -41,7 +36,7 @@ Our goal: for each selected project we should understand:
    - Where we spent time in the code. Maybe we have non-optimal implementation? Or we can observe some unexpected workload pattern (we spent a lot of time in the operation, which shouldn't be so expensive), maybe we shouldn't tune the analysis algorithm itself. 
    - If we have an OOM, what is the source of memory consumption?
 
-# Propose optimizations for the next iteration
+# Propose optimizations/fixes for the next iteration
 Create an optimization proposal wrt the measurements
 1) Rank proposals by the expected impact
 2) Prefer algorithmic optimizations (patch analyzer to avoid huge workload) over the technical ones (optimize representation to better handle huge workload) 
