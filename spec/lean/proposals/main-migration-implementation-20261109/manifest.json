@@ -1,0 +1,24 @@
+{
+  "proposal_revision": "0092f410ce5f5e83a7d1a332d9984aba9e57eb39",
+  "specification_baseline": "14b8ac8354bfc824080e790c7d71f6cfae0f401a",
+  "main_revision": "54ad708fe1c4f551956d3d572866de1534415fa1",
+  "lean_version": "4.33.1",
+  "files": {
+    "spec/main-migration.md": "42b8709e7a10ad8db5d9ac7027f8336fca6723ff6557fe4535e14bb8852016e3",
+    "spec/main-migration-proofs.md": "671791397caa1017928b7c9563ce60647251f7b9be75622018bde90141aafd99",
+    "spec/proof-guide.md": "c51296c2773f7a09bc96e3a4679c0b97610c38baf792b39e0de7ef2bf4787dcd",
+    "spec/impl-proposal-guide.md": "0068a5ea23d3215cab580fc341bbcbfaf64d504920d35d8bf041b166c73ea17a",
+    "spec/lean/proposals/main-migration-20261109/MainMigration.lean": "b76c70e0e40f027ffa01f99d1b5bff7d755881c1d2962e300b67e034e1a50230",
+    "spec/lean/proposals/main-migration-20261109/manifest.json": "9bd7eac637644ece3ad47770712fa6a21e915312c5094bbf7795c09ec3b3b0f1",
+    "docs/reports/data/bidirectional-main-migration-audit-20261109.json": "8c1929661a32a65c71567a5cff2d6d32ca31018d62b9ef1870236395e3f2611e",
+    "docs/design/bidirectional-main-migration-implementation-20261109.md": "e61a4b5b7a7745d4761685c275cff891897d3b1a5b540e27356968400484067f",
+    "docs/design/data/bidirectional-main-migration-files-20261109.csv": "5d45a31dd09669efcd2f68192cb181ebce2ad63d5af8174521f0799ec7a3d255",
+    "spec/lean/proposals/main-migration-implementation-20261109/AxiomAudit.lean": "9f1e620e4626f0bb42c7b9bebe1695145a09ad71431b997c96eeb7b1becfbd85",
+    "spec/lean/proposals/main-migration-implementation-20261109/Plan.lean": "b6e5a1d1b38bbf3a6d2835dcdb11dab43400ce26e595061cdf6db34d8582f7aa",
+    "spec/lean/proposals/main-migration-implementation-20261109/README.md": "9ae473e32dff39cc322fc1c6d65e24d35b0161ae9e9598120db2b5dbf107efee",
+    "spec/lean/proposals/main-migration-implementation-20261109/check.py": "ec9098c34a35abbcc124cfdd545a49360349fd1aa6299581d75e3e71a4e4f27c"
+  },
+  "expected_specification_theorems": 51,
+  "expected_implementation_theorems": 19,
+  "expected_named_finite_examples": 14
+}
