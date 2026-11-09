@@ -1,6 +1,6 @@
 {
   "status": "implementation and measured project investigation complete; acceptance FAILED/PENDING; full rule suite still running",
-  "updated_utc": "2026-11-09T18:31:39.713190+00:00",
+  "updated_utc": "2026-11-09T18:51:36.622276+00:00",
   "source": {
     "selected_before_migration": "13357151d14400fcabab2a24389326fc861ade8a",
     "main": "54ad708fe1c4f551956d3d572866de1534415fa1",
@@ -20601,7 +20601,41 @@
         "reported_sink_identities": 1
       }
     ],
-    "straight_line_cycle_data": "bidirectional-main-migration-file-tostring-cycle.json"
+    "straight_line_cycle_data": "bidirectional-main-migration-file-tostring-cycle.json",
+    "straight_line_native_observation": {
+      "backward_input_run": 129800,
+      "forward_input_run": 129801,
+      "strongly_rooted_both_configs": true,
+      "paired_data_rows": [
+        0,
+        0
+      ],
+      "control_counts": [
+        1,
+        2
+      ],
+      "seed_memberships": [
+        3,
+        18
+      ],
+      "saved_normal_headers": 2,
+      "saved_normal_leaves": 3,
+      "saved_flow_leaves": 0,
+      "settled_report_id": 0,
+      "sink_instruction": 4,
+      "sink_line": 128,
+      "source_or_configuration_modified": false,
+      "snapshot_seconds": 11.94790731370449,
+      "limits": "No current actor, RunResult or exact anonymous witness retained. Full semantic fixed point not proved."
+    },
+    "standalone_final_gate": {
+      "state": "WAITING_ORIGINAL_DRIVER",
+      "watcher_pid": 2121551,
+      "session_id": 76450,
+      "analyzer_rerun": false,
+      "command_task": ":checkRuleTestResults",
+      "reason": "Original aggregate TIMEOUT can stop Gradle before ordered JSON gate."
+    }
   },
   "performance_report_complete": true,
   "next_iteration_proposal": "docs/design/bidirectional-main-migration-next-iteration-20261109.md",

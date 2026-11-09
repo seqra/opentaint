@@ -327,6 +327,17 @@ unrelated counters. Exact witness/state equality is not yet proved. This
 straight-line case must be a regression case for the future lifetime design.
 It shows why loop-probe work reduction alone cannot establish convergence.
 
+A single native snapshot then confirms strongly rooted, consecutive
+**run-129800/129801** configurations with zero paired DATA in both. Backward
+has only `(Target,ZERO)` and three sink seeds. Forward has that control plus
+`(ZERO,ZERO)` and 18 source permissions. All three sink ordinals use report0's
+physical call; `ZERO -> NormalTarget(0)` is retained. No saved FLOW relation
+exists. This narrows the required design to control/source/Target lifetime;
+neither loop restriction nor reverse-FLOW matching can settle this case.
+The snapshot has no current point store or anonymous witness, so its exact
+MAY origin and a complete semantic fixed point are still unproved. Preserve
+that distinction in the regression and future proof.
+
 ## Correctness work before acceptance
 
 These are separate semantic/reporting decisions. They are not hidden inside

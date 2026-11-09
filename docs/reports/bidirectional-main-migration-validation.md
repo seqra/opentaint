@@ -645,6 +645,13 @@ original process for memory warnings/OOM without changing JVM arguments or
 restarting it. Post-status captures are labelled as possibly after release.
 No OOM had been observed when the observer started.
 
+The runner continues with all Java samples and then Go after a Java timeout.
+It writes results before it returns the aggregate failure status. That status
+can stop Gradle before the ordered JSON check. A waiting external helper will
+then run only `:checkRuleTestResults` on the same fresh JSON. It does not run
+the analyzer again. A JSON classification pass cannot cancel a sample timeout
+or close a collection gap.
+
 ### A small control/Target refinement cycle
 
 The existing live-only upload heap identifies its actual run as **run-57799**
@@ -764,6 +771,37 @@ can keep the driver active after a root NORMAL report exists. A repair needs
 a proved obligation-lifetime policy; do not stop on matching counts alone.
 The [bounded log and source data](data/bidirectional-main-migration-file-tostring-cycle.json)
 include the first eight runs, later markers and the partition argument.
+
+One later native decode confirms the exact controls, without inferring them
+from counts. The snapshot is between runs: the completed backward configuration
+**run-129800** is strongly rooted from the analyzer thread. The next forward
+configuration, **run-129801**, is rooted through `Next.Run` from that thread.
+The decoder excludes soft/weak reference referents from these strong paths.
+
+| Native input | DATA pairs | Control rows `(entry, exit)` | Permissions |
+| --- | ---: | --- | --- |
+| run-129800, backward | 0 | `(Target, ZERO)` | 3 sink seeds |
+| run-129801, forward | 0 | `(ZERO, ZERO)`; `(Target, ZERO)` | 18 source permissions |
+
+All three sink seeds use instruction4, source line128, at the same physical
+`FileInputStream` call as report0. They keep distinct call-sink ordinals
+0/1/2. The retained root terminal is `ZERO -> NormalTarget(0)`.
+
+The 18 source permissions comprise 16 conditional `toString()` transfers
+over eight full marks, plus two entry-source actions. They permit future
+actions; they do not prove that all eight marks arrived. Their `[any]` input
+shapes are rule-permission coordinates, not emitted method initials.
+The only saved scalar NORMAL leaves are `ZERO -> ZERO`,
+`ZERO -> input.$/T1` and `ZERO -> input.[any-taint]/T1`.
+There is **no saved FLOW relation** in the complete selected record set.
+Thus this case is distinct from OWASP's saved reverse-MUST/FLOW case.
+
+The capture cost 11.948 s of the unchanged test budget. Its 8.31 GB raw
+`-all` file includes unreachable objects and is not a live-heap measurement.
+The data file embeds every accepted native query row, all 18 action IDs,
+control/record/report rows, strong root paths and capture/query receipts.
+No current actor or result survives at this boundary. The exact anonymous
+witness, its arrival order and a full semantic fixed point remain unproved.
 
 ### Native bridge for the next C2 proposal
 
