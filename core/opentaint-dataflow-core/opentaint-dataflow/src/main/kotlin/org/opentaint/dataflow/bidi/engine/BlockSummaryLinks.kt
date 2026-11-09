@@ -81,10 +81,6 @@ internal class BlockSummaryLinks(
     val inputGroups: Int get() = inputs.size
 
     fun offer(link: LocalLink, actual: Facts) {
-        for (packet in ap.canonicalPackets(actual)) offerCanonical(link, packet)
-    }
-
-    private fun offerCanonical(link: LocalLink, actual: Facts) {
         checkLive()
         matchStatistics?.let { it.offers++ }
         require(link.child == scope)
@@ -106,12 +102,7 @@ internal class BlockSummaryLinks(
         matchStatistics?.let { it.freshInputDeltas++ }
         inputs.recordDelta(key, fresh)
         // Deliver the fresh packet only. The standing row retains the current union.
-        for (packet in ap.canonicalPackets(fresh)) offerFresh(Input(link, packet))
-    }
-
-    private fun offerFresh(offered: Input) {
-        val link = offered.link
-        val fresh = offered.value
+        val offered = Input(link, fresh)
         val matches = HashMap<InitialAp, MatchedInput?>()
         for ((exit, index) in publications) {
             for ((row, member) in index.candidates(link.original, fresh, mode))
@@ -168,8 +159,7 @@ internal class BlockSummaryLinks(
             val input = if (isStaticControl(offered) && initial.base == STATIC)
                 suppliedStaticInput(offered, initial) else offered
             matchStatistics?.let { it.nativeMatches++ }
-            cache[initial] = ops.matchSummary(input.value, initial, mode, nativeRecordRead = false,
-                role = SummaryMatchRole.CURRENT)?.let { MatchedInput(input, it) }
+            cache[initial] = ops.satisfying(input.value, initial, mode)?.let { MatchedInput(input, it) }
         }
         val matched = cache[initial] ?: return
         deliveries += Delivery.Data(matched.input, exit, row, member, matched.facts)
@@ -282,8 +272,7 @@ internal class BlockSummaryLinks(
 
     fun forEachInput(visit: (LocalLink, Facts) -> Unit) {
         checkLive()
-        val snapshot = ArrayList<Pair<LocalLink, Facts>>()
-        inputs.visitCanonical { link, value -> snapshot += link to value }
+        val snapshot = inputs.values.map { it.link to it.value }
         for ((link, value) in snapshot) { ap.cancellation.checkpoint(); visit(link, value) }
     }
 

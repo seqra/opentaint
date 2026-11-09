@@ -90,12 +90,9 @@ internal class OwnedJoinedStaticWriterBinding(
                 }
                 // Do not turn an arbitrary reached ZERO packet into a new source authority.
                 if (row.original.isZero && (!input.original.isZero || input.actual !is Reach)) return@borrow
-                val packets = if (input.zeroOnly) listOfNotNull(input.actual.takeIf { row.original.isZero })
-                    else ap.canonicalPackets(input.actual).mapNotNull {
-                        ops.matchSummary(it, row.original, mode, nativeRecordRead = false,
-                            role = SummaryMatchRole.CURRENT)
-                    }
-                if (packets.isEmpty()) return@borrow
+                val actual = if (input.zeroOnly) input.actual.takeIf { row.original.isZero }
+                    else ops.satisfying(input.actual, row.original, mode)
+                if (actual == null) return@borrow
                 matchedInputs++
                 val out = object : ApOut {
                     override fun result(f: Facts) {
@@ -125,7 +122,7 @@ internal class OwnedJoinedStaticWriterBinding(
                     override fun markRequest(mark: TaintMark) = Unit
                 }
                 if (input.zeroOnly) out.result(conclusion)
-                else for (actual in packets) ops.applySummary(actual, row.original, conclusion, mode, out, original = input.original)
+                else ops.applySummary(actual, row.original, conclusion, mode, out, original = input.original)
             }
         }
         checkpoint()

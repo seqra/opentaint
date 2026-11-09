@@ -9,8 +9,8 @@ import org.opentaint.dataflow.graph.PortId
 /** The router identifies the enclosing region's exit, preserving the saved row's actual port. */
 internal class LoopObservedRecord(val record: Record, val enclosingExit: PortId,
                                   private val selection: SavedRecordSelection? = null) {
-    fun forEachNativeReversedAt(actual: Facts, ops: ApOps, emit: (NativeReverseRead, Boolean) -> Unit) =
-        (selection ?: SavedRecordSelection(record)).forEachNativeReversedAt(actual, ops, emit)
+    fun forEachReversedAt(actual: Facts, ops: ApOps, emit: (RecordLeafView, Boolean) -> Unit) =
+        (selection ?: SavedRecordSelection(record)).forEachReversedAt(actual, ops, emit)
 
     // Selected positions are an invocation annotation. Preserve the existing observation key.
     override fun equals(other: Any?): Boolean = other is LoopObservedRecord &&
@@ -97,8 +97,8 @@ internal class LoopConsumerObservation(
             val output = sink(saved.enclosingExit)
             if (record.direction == mode.direction) application.applyRecord(value, original, record, output)
             else {
-                saved.forEachNativeReversedAt(value, ops) { read, protected ->
-                    application.applyNativeRecordRead(value, original, read, protected, output)
+                saved.forEachReversedAt(value, ops) { view, protected ->
+                    application.applyRecordView(value, original, view, protected, output)
                 }
             }
         }

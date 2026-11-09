@@ -70,16 +70,6 @@ class ApOps(val manager: ApManager) {
                    role: SummaryReadRole = if (record) SummaryReadRole.SAVED_DIRECT else SummaryReadRole.CURRENT): Facts? =
         satisfyingPart(manager, a, j, mode, record, role)?.let { retainProtection(a, it, manager.cancellation) }
 
-    /** Summary role changes only strict-ancestor STAR selection. Operation predicates stay native. */
-    fun matchSummary(a: Facts, j: InitialAp, mode: ApMode, nativeRecordRead: Boolean,
-                     role: SummaryMatchRole): Facts? = matchSummary(a, j.toPattern(), mode, nativeRecordRead, role)
-
-    fun matchSummary(a: Facts, j: Pattern, mode: ApMode, nativeRecordRead: Boolean,
-                     role: SummaryMatchRole): Facts? =
-        satisfyingPart(manager, a, j, mode, nativeRecordRead,
-            allowStrictAncestorStar = role == SummaryMatchRole.OPPOSITE_RECORD)
-            ?.let { retainProtection(a, it, manager.cancellation) }
-
     fun applySummary(a: Facts, j: InitialAp, g: Facts, mode: ApMode, out: ApOut,
                      original: PremiseKey? = null) {
         val masks = (g as? TaintTree)?.protectedPart()?.let { protected ->

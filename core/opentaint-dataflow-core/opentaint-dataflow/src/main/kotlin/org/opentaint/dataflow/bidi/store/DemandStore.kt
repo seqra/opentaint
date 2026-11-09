@@ -142,7 +142,7 @@ class DemandStore private constructor(
             return if (admitted) setOf(existingZeroAdmission(ap.zero)) else emptySet()
         }
         val ops = ApOps(ap)
-        val leaves = ap.canonicalPackets(boundedActual).flatMap { ops.leaves(it).toList() }
+        val leaves = ops.leaves(boundedActual).toList()
         val result = InitialDemandResults(ap, policy, boundedActual.layer, statistics)
         val local = local(query)
         for (leaf in leaves) {

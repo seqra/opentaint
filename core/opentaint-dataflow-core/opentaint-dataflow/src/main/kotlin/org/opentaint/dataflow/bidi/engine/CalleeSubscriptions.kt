@@ -67,8 +67,7 @@ class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Stat
                     ops.manager.cancellation.checkpoint()
                     if (seen.add(handle)) {
                         val value = values.snapshot(handle)
-                        for (packet in ops.manager.canonicalPackets(value.facts))
-                            visit(Subscription(callees[handle], value.ref, value.group.layer, packet))
+                        visit(Subscription(callees[handle], value.ref, value.group.layer, value.facts))
                     }
                 }
             }
@@ -97,8 +96,7 @@ class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Stat
         for (id in ids) {
             ops.manager.cancellation.checkpoint()
             val value = values.snapshot(id)
-            for (packet in ops.manager.canonicalPackets(value.facts))
-                snapshot += Subscription(callees[id], value.ref, value.group.layer, packet)
+            snapshot += Subscription(callees[id], value.ref, value.group.layer, value.facts)
         }
         if (premise.isZero) snapshot.addAll(zeroParts.values)
         for (sub in snapshot) {
@@ -120,8 +118,7 @@ class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Stat
         for (id in ids) {
             ops.manager.cancellation.checkpoint()
             val value = values.snapshot(id)
-            for (packet in ops.manager.canonicalPackets(value.facts))
-                visit(Subscription(callees[id], value.ref, value.group.layer, packet))
+            visit(Subscription(callees[id], value.ref, value.group.layer, value.facts))
         }
         if (initial.isZero) for (part in zeroParts.values) {
             ops.manager.cancellation.checkpoint()

@@ -11,7 +11,10 @@ forward path explosion is much smaller, but later backward work repeats.
 
 ## 1. Runtime, controls and proof scope
 
-Implementation is on branch task/subsumption-initial-demand-20261108.
+The measured implementation was built on branch
+task/subsumption-initial-demand-20261108. It is now integrated into the primary
+checkout on saloed/bidirectional, with the same core tree. See the
+[landing receipt](bidirectional-primary-checkout-landing-20261109.md).
 It starts from selected revision 52829d5890ec3b3145cc996a1d8162d85cb8ceda.
 The selected baseline has the same core as saved 52f32dd437d438aec4a700a02c18d94c31d58093.
 The dirty original worktree and withdrawn special-tail prototype were preserved.

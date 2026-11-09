@@ -3,8 +3,10 @@
 8 November 2026. State: **NATIVE_CHECKS_PASS / PROJECT_ACCEPTANCE_FAIL**.
 
 The selected implementation uses the pinned `52829d5890ec3b3145cc996a1d8162d85cb8ceda`
-core. It is in the isolated `task/subsumption-initial-demand-20261108` branch.
-The original worktree and withdrawn STAR_OR_ANY prototype remain unchanged.
+core. It was measured on `task/subsumption-initial-demand-20261108` and is now
+integrated into the primary checkout on `saloed/bidirectional` with identical
+core source. The withdrawn STAR_OR_ANY prototype has a verified backup.
+See the [landing receipt](bidirectional-primary-checkout-landing-20261109.md).
 The final campaign measures runtime 334234c24. Latest reached / committed /
 accepted: OWASP run-5 / run-5 / run-5; Conductor run-14 / run-13 / run-13;
 Thingsboard run-2 / run-1 / run-1; Stirling run-52 / run-51 / run-51.

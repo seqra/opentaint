@@ -9,7 +9,6 @@ import org.opentaint.dataflow.bidi.fixtures.DriverFixtures
 import org.opentaint.dataflow.bidi.fixtures.settledNormalSink
 import org.opentaint.dataflow.bidi.store.RecordStore
 import org.opentaint.dataflow.bidi.store.RunSummaryStore
-import org.opentaint.dataflow.bidi.store.ScopedRunSummary
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.ir.api.common.CommonMethod
 import kotlin.test.*
@@ -153,10 +152,9 @@ class BarrierFailureTest {
             fun explode(): Nothing = if (memoryError) throw OutOfMemoryError("synthetic guard $phase Error")
                 else throw AssertionError("synthetic guard $phase Error")
             val records = object : RecordStore by f.records {
-                override fun persistCompleted(direction: Direction, summaries: Sequence<Pair<MethodKey, RunSummaryStore>>,
-                                              scoped: Sequence<ScopedRunSummary>) {
+                override fun persist(direction: Direction, summaries: Sequence<Pair<MethodKey, RunSummaryStore>>) {
                     if (phase == GuardPhase.BODY) explode()
-                    f.records.persistCompleted(direction, summaries, scoped)
+                    f.records.persist(direction, summaries)
                 }
             }
             sharedCopy(f.shared, records = records).use { owner ->
@@ -193,8 +191,7 @@ class BarrierFailureTest {
             val demand = f.persistentDemand()
             val confirmed = f.settledNormalSink()
             val records = object : RecordStore by f.records {
-                override fun persistCompleted(direction: Direction, summaries: Sequence<Pair<MethodKey, RunSummaryStore>>,
-                                              scoped: Sequence<ScopedRunSummary>) {
+                override fun persist(direction: Direction, summaries: Sequence<Pair<MethodKey, RunSummaryStore>>) {
                     f.cancellation.cancel()
                     f.cancellation.checkpoint()
                 }

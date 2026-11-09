@@ -137,16 +137,12 @@ internal class LoopOutputRestriction(private val ops: ApOps) {
         val ap = ops.manager
         ap.cancellation.checkpoint()
         statistics.offers++
-        // Native application can create new prefix coverage (for example a
-        // provisional MUST packet becomes MAY). Canonicalize the whole offered
-        // packet before scalarization; no prior-offer history is consulted.
-        val packets = ap.canonicalPackets(appliedValue)
         if (run1 || appliedValue is Reach || !grows) {
             statistics.bypasses++
-            return packets
+            return listOf(appliedValue)
         }
         val result = ExactDemandResults(ap)
-        for (packet in packets) for (scalar in annotatedLoopScalars(ops, packet)) {
+        for (scalar in annotatedLoopScalars(ops, appliedValue)) {
             restrictScalar(scalar, observe, firstBudget)?.let(result::add)
         }
         return result.all()
