@@ -1,0 +1,103 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+  Separate follow-up. Bind 0x7c7bf8178 with bind_bidi_memory_detail.py so
+  compact-form counts use the selected method-context owner's plans cache.
+  Do not sum overlapping retained fields or retained unions. IR rows selected
+  through storage.data.value describe current storage data; global property
+  rows can include shared versions, and are labelled accordingly.
+  Xodus tree root.size is cardinality (props: instance values; valueIndex:
+  distinct values; links: source instances). Committed transactional-map size
+  is not current size when mutated is nonnull. Empty Xodus roots are null.
+-->
+<section xmlns="http://www.eclipse.org/mat/report.xsd" name="Compact form containers and current IR RAM data">
+  <param key="format" value="csv"/>
+  <param key="filename_suffix" value="BidiContainersIR"/>
+  <param key="limit" value="-1"/>
+  <section name="Named plans-cache compact-container cohorts">
+    <query name="All named-cache sink objects">
+      <command>histogram SELECT DISTINCT OBJECTS s FROM OBJECTS (SELECT DISTINCT OBJECTS p.sinks.list.elementData.@referenceArray FROM OBJECTS (SELECT OBJECTS c.slots.@referenceArray FROM OBJECTS 0x7c7bf8178 c) p WHERE (p != null)) s WHERE (s != null)</command>
+    </query>
+    <query name="Sink objects with empty end facts">
+      <command>histogram SELECT DISTINCT OBJECTS s FROM OBJECTS (SELECT DISTINCT OBJECTS p.sinks.list.elementData.@referenceArray FROM OBJECTS (SELECT OBJECTS c.slots.@referenceArray FROM OBJECTS 0x7c7bf8178 c) p WHERE (p != null)) s WHERE (s != null AND s.endFacts.list.size = 0)</command>
+    </query>
+    <query name="Empty end-fact list wrappers">
+      <command>histogram SELECT DISTINCT OBJECTS s.endFacts FROM OBJECTS (SELECT DISTINCT OBJECTS p.sinks.list.elementData.@referenceArray FROM OBJECTS (SELECT OBJECTS c.slots.@referenceArray FROM OBJECTS 0x7c7bf8178 c) p WHERE (p != null)) s WHERE (s != null AND s.endFacts.list.size = 0)</command>
+    </query>
+    <query name="Empty end-fact underlying ArrayLists">
+      <command>histogram SELECT DISTINCT OBJECTS s.endFacts.list FROM OBJECTS (SELECT DISTINCT OBJECTS p.sinks.list.elementData.@referenceArray FROM OBJECTS (SELECT OBJECTS c.slots.@referenceArray FROM OBJECTS 0x7c7bf8178 c) p WHERE (p != null)) s WHERE (s != null AND s.endFacts.list.size = 0)</command>
+    </query>
+    <query name="Sink objects with nonempty end facts">
+      <command>histogram SELECT DISTINCT OBJECTS s FROM OBJECTS (SELECT DISTINCT OBJECTS p.sinks.list.elementData.@referenceArray FROM OBJECTS (SELECT OBJECTS c.slots.@referenceArray FROM OBJECTS 0x7c7bf8178 c) p WHERE (p != null)) s WHERE (s != null AND s.endFacts.list.size &gt; 0)</command>
+    </query>
+    <query name="All edge-stage statement summaries">
+      <command>histogram SELECT DISTINCT OBJECTS s FROM OBJECTS (SELECT DISTINCT OBJECTS e.summary FROM OBJECTS (SELECT OBJECTS p.stages.list.elementData.@referenceArray FROM OBJECTS (SELECT OBJECTS c.slots.@referenceArray FROM OBJECTS 0x7c7bf8178 c) p WHERE (p != null)) e WHERE (e != null AND classof(e).@name = \"org.opentaint.dataflow.bidi.interp.CallStage$Edges\")) s WHERE (s != null)</command>
+    </query>
+    <query name="Edge-stage summaries with empty edges">
+      <command>histogram SELECT DISTINCT OBJECTS s FROM OBJECTS (SELECT DISTINCT OBJECTS e.summary FROM OBJECTS (SELECT OBJECTS p.stages.list.elementData.@referenceArray FROM OBJECTS (SELECT OBJECTS c.slots.@referenceArray FROM OBJECTS 0x7c7bf8178 c) p WHERE (p != null)) e WHERE (e != null AND classof(e).@name = \"org.opentaint.dataflow.bidi.interp.CallStage$Edges\")) s WHERE (s != null AND s.edges.list.size = 0)</command>
+    </query>
+    <query name="Edge-stage summaries with empty conjunctions">
+      <command>histogram SELECT DISTINCT OBJECTS s FROM OBJECTS (SELECT DISTINCT OBJECTS e.summary FROM OBJECTS (SELECT OBJECTS p.stages.list.elementData.@referenceArray FROM OBJECTS (SELECT OBJECTS c.slots.@referenceArray FROM OBJECTS 0x7c7bf8178 c) p WHERE (p != null)) e WHERE (e != null AND classof(e).@name = \"org.opentaint.dataflow.bidi.interp.CallStage$Edges\")) s WHERE (s != null AND s.conjunctions.list.size = 0)</command>
+    </query>
+    <query name="Edge-stage summaries with empty operand filters">
+      <command>histogram SELECT DISTINCT OBJECTS s FROM OBJECTS (SELECT DISTINCT OBJECTS e.summary FROM OBJECTS (SELECT OBJECTS p.stages.list.elementData.@referenceArray FROM OBJECTS (SELECT OBJECTS c.slots.@referenceArray FROM OBJECTS 0x7c7bf8178 c) p WHERE (p != null)) e WHERE (e != null AND classof(e).@name = \"org.opentaint.dataflow.bidi.interp.CallStage$Edges\")) s WHERE (s != null AND s.typeFilters.m.size = 0)</command>
+    </query>
+    <query name="Edge-stage summaries with empty result filters">
+      <command>histogram SELECT DISTINCT OBJECTS s FROM OBJECTS (SELECT DISTINCT OBJECTS e.summary FROM OBJECTS (SELECT OBJECTS p.stages.list.elementData.@referenceArray FROM OBJECTS (SELECT OBJECTS c.slots.@referenceArray FROM OBJECTS 0x7c7bf8178 c) p WHERE (p != null)) e WHERE (e != null AND classof(e).@name = \"org.opentaint.dataflow.bidi.interp.CallStage$Edges\")) s WHERE (s != null AND s.resultFilters.m.size = 0)</command>
+    </query>
+    <query name="Edge-stage summaries with all four fields empty">
+      <command>histogram SELECT DISTINCT OBJECTS s FROM OBJECTS (SELECT DISTINCT OBJECTS e.summary FROM OBJECTS (SELECT OBJECTS p.stages.list.elementData.@referenceArray FROM OBJECTS (SELECT OBJECTS c.slots.@referenceArray FROM OBJECTS 0x7c7bf8178 c) p WHERE (p != null)) e WHERE (e != null AND classof(e).@name = \"org.opentaint.dataflow.bidi.interp.CallStage$Edges\")) s WHERE (s != null AND s.edges.list.size = 0 AND s.conjunctions.list.size = 0 AND s.typeFilters.m.size = 0 AND s.resultFilters.m.size = 0)</command>
+    </query>
+  </section>
+  <section name="Current RAM storage data owners">
+    <query name="Current RAM storage container identity and fields">
+      <command>oql "SELECT s.@objectId AS storageId, toHex(s.@objectAddress) AS storageAddress, s.data.value.@objectId AS containerId, toHex(s.data.value.@objectAddress) AS containerAddress, classof(s.data.value).@name AS containerClass, s.data.value.@retainedHeapSize AS containerRetainedBytes, s.data.value.@fields AS containerFields FROM org.opentaint.ir.impl.storage.ers.ram.RAMEntityRelationshipStorage s"</command>
+    </query>
+    <query name="Current RAM data direct dominator children">
+      <param key="sort_column" value="#3=DESC"/>
+      <command>oql "SELECT c.@objectId AS id, toHex(c.@objectAddress) AS address, classof(c).@name AS ownerClass, c.@retainedHeapSize AS retainedBytes, dominatorof(c) AS owner FROM OBJECTS (SELECT OBJECTS dominators(d) FROM OBJECTS (SELECT DISTINCT OBJECTS s.data.value FROM org.opentaint.ir.impl.storage.ers.ram.RAMEntityRelationshipStorage s) d) c"</command>
+    </query>
+    <query name="Current mutable-container table headers">
+      <command>oql "SELECT d.@objectId AS id, toHex(d.@objectAddress) AS address, d.typeIdCounter AS nextTypeId, d.isMutable AS isMutable, d.properties AS properties, d.properties.committed.size AS committedPropertyNames, d.properties.mutated AS propertyMutation, d.links AS links, d.links.committed.size AS committedLinkNames, d.links.mutated AS linkMutation, d.blobs AS blobs, d.blobs.committed.size AS committedBlobNames, d.blobs.mutated AS blobMutation, d.instances AS instances, d.instances.committed.size AS committedEntityTypes, d.instances.mutated AS instanceMutation, d.types AS types, d.mutableEntities AS uncommittedEntities, d.mutableBlobs AS uncommittedBlobs FROM OBJECTS (SELECT OBJECTS d FROM OBJECTS (SELECT DISTINCT OBJECTS s.data.value FROM org.opentaint.ir.impl.storage.ers.ram.RAMEntityRelationshipStorage s) d WHERE (classof(d).@name = \"org.opentaint.ir.impl.storage.ers.ram.RAMDataContainerMutable\")) d"</command>
+    </query>
+    <query name="Current immutable-container table headers">
+      <command>oql "SELECT d.@objectId AS id, toHex(d.@objectAddress) AS address, d.properties AS properties, d.properties.size AS propertyNames, d.links AS links, d.links.size AS linkNames, d.blobs AS blobs, d.blobs.size AS blobNames, d.instances AS instances, d.types AS types FROM OBJECTS (SELECT OBJECTS d FROM OBJECTS (SELECT DISTINCT OBJECTS s.data.value FROM org.opentaint.ir.impl.storage.ers.ram.RAMEntityRelationshipStorage s) d WHERE (classof(d).@name = \"org.opentaint.ir.impl.storage.ers.ram.RAMDataContainerImmutable\")) d"</command>
+    </query>
+    <query name="Current RAM properties owner union retained set">
+      <command>show_retained_set SELECT DISTINCT OBJECTS d.properties FROM OBJECTS (SELECT DISTINCT OBJECTS s.data.value FROM org.opentaint.ir.impl.storage.ers.ram.RAMEntityRelationshipStorage s) d</command>
+    </query>
+    <query name="Current RAM links owner union retained set">
+      <command>show_retained_set SELECT DISTINCT OBJECTS d.links FROM OBJECTS (SELECT DISTINCT OBJECTS s.data.value FROM org.opentaint.ir.impl.storage.ers.ram.RAMEntityRelationshipStorage s) d</command>
+    </query>
+    <query name="Current RAM blobs owner union retained set">
+      <command>show_retained_set SELECT DISTINCT OBJECTS d.blobs FROM OBJECTS (SELECT DISTINCT OBJECTS s.data.value FROM org.opentaint.ir.impl.storage.ers.ram.RAMEntityRelationshipStorage s) d</command>
+    </query>
+  </section>
+  <section name="IR attribute tree cardinalities including shared versions">
+    <query name="Nonempty property trees with stored instance counts">
+      <param key="sort_column" value="#2=DESC"/>
+      <command>oql "SELECT p.@objectId AS id, toHex(p.@objectAddress) AS address, p.@retainedHeapSize AS retainedBytes, p.props AS props, p.props.set.root.size AS storedInstanceValues, p.valueIndex AS optionalValueIndex FROM org.opentaint.ir.impl.storage.ers.ram.PropertiesMutable p WHERE (classof(p.props).@name = \"jetbrains.exodus.core.dataStructures.persistent.PersistentLong23TreeMap\" AND p.props.set.root != null)"</command>
+    </query>
+    <query name="Property wrappers without a value index">
+      <command>histogram SELECT OBJECTS p FROM org.opentaint.ir.impl.storage.ers.ram.PropertiesMutable p WHERE (p.valueIndex = null)</command>
+    </query>
+    <query name="Property wrappers with a value index">
+      <command>histogram SELECT OBJECTS p FROM org.opentaint.ir.impl.storage.ers.ram.PropertiesMutable p WHERE (p.valueIndex != null)</command>
+    </query>
+    <query name="Nonempty optional value indexes with distinct-value counts">
+      <param key="sort_column" value="#4=DESC"/>
+      <command>oql "SELECT p.@objectId AS propertyId, toHex(p.@objectAddress) AS propertyAddress, p.valueIndex.@objectId AS indexId, toHex(p.valueIndex.@objectAddress) AS indexAddress, p.valueIndex.@retainedHeapSize AS indexRetainedBytes, p.valueIndex.set.root.size AS distinctValues FROM org.opentaint.ir.impl.storage.ers.ram.PropertiesMutable p WHERE (p.valueIndex != null AND p.valueIndex.set.root != null)"</command>
+    </query>
+    <query name="Nonempty link trees with source-instance counts">
+      <param key="sort_column" value="#2=DESC"/>
+      <command>oql "SELECT l.@objectId AS id, toHex(l.@objectAddress) AS address, l.@retainedHeapSize AS retainedBytes, l.targetTypeId AS targetTypeId, l.links AS links, l.links.set.root.size AS sourceInstances FROM org.opentaint.ir.impl.storage.ers.ram.LinksMutable l WHERE (classof(l.links).@name = \"jetbrains.exodus.core.dataStructures.persistent.PersistentLong23TreeMap\" AND l.links.set.root != null)"</command>
+    </query>
+    <query name="Nonempty transactional long-map committed blob counts">
+      <param key="sort_column" value="#2=DESC"/>
+      <command>oql "SELECT b.@objectId AS id, toHex(b.@objectAddress) AS address, b.@retainedHeapSize AS retainedBytes, b.committed AS committed, b.committed.set.root.size AS committedBlobValues, b.mutated AS activeMutation FROM org.opentaint.ir.impl.storage.ers.ram.TransactionalPersistentLongMap b WHERE (classof(b.committed).@name = \"jetbrains.exodus.core.dataStructures.persistent.PersistentLong23TreeMap\" AND b.committed.set.root != null)"</command>
+    </query>
+    <query name="Immutable attribute byte buffers and stored offsets">
+      <param key="sort_column" value="#2=DESC"/>
+      <command>oql "SELECT a.@objectId AS id, toHex(a.@objectAddress) AS address, a.@retainedHeapSize AS retainedBytes, a.values AS values, a.values.capacity AS valueCapacity, a.values.limit AS valueLimit, a.offsetsAndLens AS offsetsAndLens, a.offsetsAndLens.limit AS offsetsBytes, a.instanceIdCollection AS instanceIds, a.sortedByValue AS sortedByValue FROM INSTANCEOF org.opentaint.ir.impl.storage.ers.ram.AttributesImmutable a"</command>
+    </query>
+  </section>
+<section name="Complete boundary rule-statement inventory"><query name="All rule statements with sink and action counts"><param key="sort_column" value="#3=DESC"/><command>oql "SELECT b.@objectId AS id, toHex(b.@objectAddress) AS address, b.@retainedHeapSize AS retainedBytes, b.sinks.list.size AS sinkAlternatives, b.summary AS summary, b.summary.edges.list.size AS summaryEdges, b.endFacts AS endFacts, b.endFacts.edges.list.size AS endEdges, b.sinks.list.elementData AS sinkArray, dominatorof(b) AS immediateDominator FROM org.opentaint.dataflow.bidi.interp.RuleStatement b"</command></query></section></section>

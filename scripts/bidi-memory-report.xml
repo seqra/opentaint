@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Eclipse MAT 1.17 batch report for the unchanged project workloads.
+  Run: ParseHeapDump.sh /absolute/guard-live.hprof /absolute/bidi-memory-report.xml
+  The report is written beside the dump as guard-live_BidiMemory.zip.
+
+  Counts and shallow sizes are different from retained sizes. Grouped top-level
+  dominators partition the heap; retained sets below can overlap and must not
+  be added. They include shared objects only when the selected owner union
+  retains those objects. A class absent from a snapshot can yield an empty
+  result or a logged query error; MAT continues with the other queries.
+
+  Default dominator sizes include reference edges in the parsed heap. Inspect
+  the largest owners with path2gc both with its default reference exclusions
+  and with -excludes ""; before calling a soft cache a strong owner.
+  Do not use object-discard options for an exact retained-size analysis.
+
+  Tables are complete unless a query has an explicit limit. CSV output also
+  obeys MAT's limit parameter; -1 disables MAT's default 25-row limit.
+  A retained forward actor with released work fields is expected support
+  state, not by itself evidence of a leak. Actor tables expose lifecycle
+  fields so that active and completed-run actors can be separated.
+-->
+<section name="Bidirectional live-heap owners"
+         xmlns="http://www.eclipse.org/mat/report.xsd">
+    <param key="format" value="csv" />
+    <param key="filename_suffix" value="BidiMemory" />
+    <param key="limit" value="-1" />
+
+    <query name="Class histogram: all live objects">
+        <command>histogram</command>
+    </query>
+    <query name="Largest top-level dominator objects">
+        <param key="limit" value="1000" />
+        <command>dominator_tree -groupby NONE</command>
+    </query>
+    <query name="Top-level dominators grouped by class">
+        <param key="limit" value="1000" />
+        <command>dominator_tree -groupby BY_CLASS</command>
+    </query>
+    <query name="Top-level dominators grouped by package">
+        <param key="limit" value="1000" />
+        <command>dominator_tree -groupby BY_PACKAGE</command>
+    </query>
+
+    <section name="Retained sets of owner unions">
+        <query name="All bidi common and JVM objects">
+            <command>show_retained_set ^org[.]opentaint[.]dataflow[.](bidi|jvm[.]bidi)[.].*</command>
+        </query>
+        <query name="AP manager and store-local trie interning">
+            <command>show_retained_set org.opentaint.dataflow.bidi.ap.ApManager org.opentaint.dataflow.bidi.ap.StoreInterners org.opentaint.dataflow.bidi.ap.TrieInterner</command>
+        </query>
+        <query name="Context, method-entry, and lowered-form caches">
+            <command>show_retained_set org.opentaint.dataflow.bidi.engine.MethodContextCache org.opentaint.dataflow.jvm.bidi.JIRMethodContextCache org.opentaint.dataflow.jvm.bidi.interp.JIRMethodEntries org.opentaint.dataflow.jvm.bidi.interp.JIRMethodEntry org.opentaint.dataflow.jvm.bidi.interp.JIRMethodForms org.opentaint.dataflow.bidi.interp.FormsCache org.opentaint.dataflow.jvm.bidi.interp.JIRRuleForms org.opentaint.dataflow.jvm.bidi.interp.JIRTypeFilters</command>
+        </query>
+        <query name="Lowered call plans and sink alternatives">
+            <command>show_retained_set org.opentaint.dataflow.bidi.interp.CallPlan org.opentaint.dataflow.bidi.interp.StatementSummary org.opentaint.dataflow.bidi.interp.RuleStatement org.opentaint.dataflow.bidi.interp.ExitRules org.opentaint.dataflow.bidi.interp.SinkRule org.opentaint.dataflow.bidi.ap.ConjunctiveEdge</command>
+        </query>
+        <query name="Active run managers and unit runners">
+            <command>show_retained_set org.opentaint.dataflow.bidi.engine.RunManager org.opentaint.dataflow.bidi.engine.UnitRunner</command>
+        </query>
+        <query name="Current method actors and edge work">
+            <command>show_retained_set org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer org.opentaint.dataflow.bidi.engine.DeltaWorklist org.opentaint.dataflow.bidi.store.MethodEdgeStore org.opentaint.dataflow.bidi.store.InitialFactStore org.opentaint.dataflow.bidi.store.RunSummaryStore</command>
+        </query>
+        <query name="Event queues and buffered coroutine channels">
+            <command>show_retained_set org.opentaint.dataflow.bidi.engine.EventQueue ^org[.]opentaint[.]dataflow[.]bidi[.]engine[.]RunEvent[$].* kotlinx.coroutines.channels.BufferedChannel kotlinx.coroutines.channels.ChannelSegment</command>
+        </query>
+        <query name="Publication, subscription, and replay indexes">
+            <command>show_retained_set org.opentaint.dataflow.bidi.engine.SummaryStorage org.opentaint.dataflow.bidi.engine.PublicationIndex org.opentaint.dataflow.bidi.engine.CalleeSubscriptions org.opentaint.dataflow.bidi.engine.SubscriptionManager</command>
+        </query>
+        <query name="Requests, caller links, and standing joins">
+            <command>show_retained_set org.opentaint.dataflow.bidi.store.RequestStore org.opentaint.dataflow.bidi.store.AddedFactStore org.opentaint.dataflow.bidi.store.StandingJoin org.opentaint.dataflow.bidi.store.ConjunctionStore org.opentaint.dataflow.bidi.store.KaryJoin org.opentaint.dataflow.bidi.store.NdSummaryJoin</command>
+        </query>
+        <query name="Persistent records and current demand inputs">
+            <command>show_retained_set org.opentaint.dataflow.bidi.store.PersistentRecordStore org.opentaint.dataflow.bidi.store.Record org.opentaint.dataflow.bidi.store.DemandStore</command>
+        </query>
+        <query name="Vulnerability witnesses, source hits, and report state">
+            <command>show_retained_set org.opentaint.dataflow.bidi.store.ConcurrentVulnerabilityStore org.opentaint.dataflow.bidi.store.SinkWitness org.opentaint.dataflow.bidi.store.SinkEdge org.opentaint.dataflow.bidi.store.SourceHitStore org.opentaint.dataflow.bidi.driver.ReportBuilder</command>
+        </query>
+        <query name="IR database and storage caches">
+            <command>show_retained_set org.opentaint.ir.impl.JIRDatabaseImpl org.opentaint.ir.impl.JIRClasspathImpl org.opentaint.ir.impl.storage.ers.ram.RAMEntityRelationshipStorage org.opentaint.ir.impl.storage.NoSqlSymbolInterner org.opentaint.ir.impl.vfs.GlobalClassesVfs jetbrains.exodus.core.dataStructures.ConcurrentObjectCache</command>
+        </query>
+        <query name="Resolved rule configuration and Semgrep rules">
+            <command>show_retained_set org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration ^org[.]opentaint[.]dataflow[.]configuration[.].* ^org[.]opentaint[.]semgrep[.].*</command>
+        </query>
+    </section>
+
+    <section name="Immediate dominators of shared shapes">
+        <query name="Trie nodes">
+            <command>immediate_dominators org.opentaint.dataflow.bidi.ap.TrieNode</command>
+        </query>
+        <query name="Trie interner tables">
+            <command>immediate_dominators org.opentaint.dataflow.bidi.ap.TrieInterner$Table</command>
+        </query>
+        <query name="Flow and taint tree wrappers">
+            <command>immediate_dominators org.opentaint.dataflow.bidi.ap.FlowTree org.opentaint.dataflow.bidi.ap.TaintTree</command>
+        </query>
+        <query name="Initial premises, premise sets, and paths">
+            <command>immediate_dominators org.opentaint.dataflow.bidi.ap.InitialAp org.opentaint.dataflow.bidi.ap.PremiseSet org.opentaint.dataflow.bidi.ap.PathNode</command>
+        </query>
+        <query name="Cached sink alternatives">
+            <command>immediate_dominators org.opentaint.dataflow.bidi.interp.SinkRule</command>
+        </query>
+        <query name="Pending work and delivery messages">
+            <command>immediate_dominators ^org[.]opentaint[.]dataflow[.]bidi[.]engine[.]RunEvent[$].*</command>
+        </query>
+        <query name="Reference arrays">
+            <command>immediate_dominators java.lang.Object[]</command>
+        </query>
+        <query name="Integer arrays">
+            <command>immediate_dominators int[]</command>
+        </query>
+        <query name="Byte arrays">
+            <command>immediate_dominators byte[]</command>
+        </query>
+    </section>
+
+    <section name="Object IDs and addresses for follow-up root paths">
+        <query name="Bidi objects retaining at least 1 MiB">
+            <param key="limit" value="1000" />
+            <param key="sort_column" value="#4=DESC" />
+            <command>oql "SELECT o.@objectId AS id, toHex(o.@objectAddress) AS address, classof(o).@name AS ownerClass, o.@usedHeapSize AS shallowBytes, o.@retainedHeapSize AS retainedBytes FROM \"^org[.]opentaint[.]dataflow[.](bidi|jvm[.]bidi)[.].*\" o WHERE (o.@retainedHeapSize &gt;= 1048576)"</command>
+        </query>
+        <query name="Soft references retaining at least 1 MiB">
+            <param key="limit" value="1000" />
+            <param key="sort_column" value="#4=DESC" />
+            <command>oql "SELECT s.@objectId AS id, toHex(s.@objectAddress) AS address, s.referent AS referent, s.@usedHeapSize AS shallowBytes, s.@retainedHeapSize AS retainedBytes FROM java.lang.ref.SoftReference s WHERE (s.@retainedHeapSize &gt;= 1048576)"</command>
+        </query>
+        <query name="AP canonical-key table objects">
+            <command>oql "SELECT m.@objectId AS id, toHex(m.@objectAddress) AS address, m.markSets AS markSets, m.exclusions AS exclusions, m.paths AS paths, m.initials AS initials, m.premiseSets AS premiseSets FROM org.opentaint.dataflow.bidi.ap.ApManager m"</command>
+        </query>
+        <query name="AP hard taint-payload and leaf-node tables">
+            <command>oql "SELECT m.@objectId AS id, toHex(m.@objectAddress) AS address, m.taintAlg AS taintAlgebra, m.taintAlg.table AS payloadTable, m.taintAlg.leafNodes AS leafNodes FROM org.opentaint.dataflow.bidi.ap.ApManager m"</command>
+        </query>
+        <query name="Current run queue and actor-map objects">
+            <command>oql "SELECT r.@objectId AS id, toHex(r.@objectAddress) AS address, r.actors AS actors, r.queue AS queue, r.channel AS channel, r.queued AS queuedActors FROM org.opentaint.dataflow.bidi.engine.UnitRunner r"</command>
+        </query>
+        <query name="Form-cache interleaved forward and reverse slots">
+            <command>oql "SELECT f.@objectId AS id, toHex(f.@objectAddress) AS address, f.size AS statements, f.slots AS slots FROM org.opentaint.dataflow.bidi.interp.FormsCache f"</command>
+        </query>
+        <query name="Bidi class instance counts">
+            <command>oql "SELECT c.@name AS className, c.@numberOfObjects AS instances, c.@heapSizePerInstance AS bytesPerInstance FROM OBJECTS \"^org[.]opentaint[.]dataflow[.](bidi|jvm[.]bidi)[.].*\" c"</command>
+        </query>
+        <query name="Run manager index and owned state">
+            <command>oql "SELECT r.@objectId AS id, toHex(r.@objectAddress) AS address, r.config.index AS runIndex, r.config.fieldLimit AS fieldLimit, r.admitting AS admitting, r.status AS status, r.runners AS runners, r.storages AS storages, r.inFlight AS inFlight FROM org.opentaint.dataflow.bidi.engine.RunManager r"</command>
+        </query>
+        <query name="Method actor direction, counters, and lifecycle fields">
+            <command>oql "SELECT a.@objectId AS id, toHex(a.@objectAddress) AS address, a.key AS methodKey, a.forward AS forward, a.limit AS fieldLimit, a.mode AS mode, a.steps AS steps, a.demandLayerEdges AS demandLayerEdges, a.recordCrossings AS recordCrossings, a.port AS port, a.runContext AS runContext, a.edgeStore AS edgeStore, a.initialStore AS initialStore, a.local AS localServices, a.calls AS callServices, a.publicationSink AS publicationSink, a.linkStore AS links, a.summaries AS summaries, a.sourceHits AS sourceHits FROM org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer a"</command>
+        </query>
+        <query name="Method edge-store dense premise arrays">
+            <command>oql "SELECT s.@objectId AS id, toHex(s.@objectAddress) AS address, s.method AS methodKey, s.size AS statements, s.fieldLimit AS fieldLimit, s.groups AS premiseArrays, s.reach AS reach, s.interners AS trieInterners FROM org.opentaint.dataflow.bidi.store.MethodEdgeStore s"</command>
+        </query>
+    </section>
+
+    <section name="Actor lifecycle counts">
+        <query name="Actors with runner port retained">
+            <command>histogram SELECT OBJECTS a FROM org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer a WHERE (a.port != null)</command>
+        </query>
+        <query name="Actors with method edge store retained">
+            <command>histogram SELECT OBJECTS a FROM org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer a WHERE (a.edgeStore != null)</command>
+        </query>
+        <query name="Actors with local services retained">
+            <command>histogram SELECT OBJECTS a FROM org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer a WHERE (a.local != null)</command>
+        </query>
+        <query name="Actors with run context retained">
+            <command>histogram SELECT OBJECTS a FROM org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer a WHERE (a.runContext != null)</command>
+        </query>
+        <query name="Forward actors with active runner port">
+            <command>histogram SELECT OBJECTS a FROM org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer a WHERE (a.forward = true AND a.port != null)</command>
+        </query>
+        <query name="Backward actors with active runner port">
+            <command>histogram SELECT OBJECTS a FROM org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer a WHERE (a.forward = false AND a.port != null)</command>
+        </query>
+        <query name="Actors with all four work-owner fields released">
+            <command>histogram SELECT OBJECTS a FROM org.opentaint.dataflow.bidi.engine.RunMethodAnalyzer a WHERE (a.port = null AND a.edgeStore = null AND a.local = null AND a.runContext = null)</command>
+        </query>
+    </section>
+</section>

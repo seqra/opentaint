@@ -1,5 +1,25 @@
 # Major JVM test findings
 
+## Real project tests: 12 October 2026
+
+The selected OWASP, Conductor, ThingsBoard and Stirling-PDF runs are now complete as test executions. All main runs finish. All bidi runs stop on the memory guard under the specified heap and timeout. This does not establish that phase 4 passes. Full per-project results, input hashes, iteration times, profiles and optimization points are in [the project test report](docs/reports/bidirectional-project-testing.md), [input inventory](docs/reports/bidirectional-project-inputs.md), and [finding causes](docs/reports/bidirectional-project-findings.md).
+
+| Project | Main unique sinks | Bidi unique sinks | Main locations absent | Added unique sinks | Bidi end |
+| --- | ---: | ---: | ---: | ---: | --- |
+| OWASP | 4112 | 0 | 4112 | 0 | Run 1 OOM |
+| Conductor | 7 | 300 | 0 | 293 | Run 2 OOM |
+| ThingsBoard | 14 | 0 | 14 | 0 | Run 1 OOM |
+| Stirling-PDF | 17 | 61 | 2 | 46 | Run 3 OOM |
+
+Four measured issues need further work:
+
+1. Memory growth prevents completion. OWASP and ThingsBoard have no complete forward report. Conductor and Stirling-PDF retain the earlier complete forward report. Live heaps identify the strong method-form cache as the main shared cost: 6.459 GB in OWASP, 2.412 GB in Conductor, 5.622 GB in ThingsBoard and 4.361 GB in Stirling-PDF. The causes are expanded sink/source alternatives, per-literal copies, small summary containers and reversed conjunction branches. Conductor also has 3.633 GB in the IR owner union; Stirling-PDF has 1.077 GB in its current actor/store union. These unions overlap. All retained actors belong to the active run; old actor stores are not the observed cause. See [retained sizes and owner paths](docs/reports/bidirectional-project-memory.md). Profiles also identify repeated virtual graphs, boxed queue comparisons, alias-set copies and trie copies as CPU/allocation costs.
+2. An incomplete refinement leaves large DEMAND output. Conductor has 3 CONFIRMED and 298 DEMAND entries; Stirling-PDF has 9 CONFIRMED and 141 DEMAND. SARIF exports both states without a state field per result. The added sink counts are not final false-positive counts.
+3. Simple method-exit output selects the last return. Stirling-PDF's two main XSS locations, `ConvertEmlToPDF` lines 133–134 and `PipelineController` lines 90–91, instead appear under the same rule and full method at lines 148–149 and line 130. The latter is `return null`. `TraceMessageBuilder.tryResolveExitLocation()` uses the trace return when available; without one, it picks the last return instruction. Preserve the actual return origin when reporting a boundary sink. The two strict location differences remain in the comparison; no lost taint path is inferred from this mapping defect alone.
+4. A Conductor enriched virtual instruction has no Simple source location. SARIF drops it: 301 internal report entries become 300 results. This extra SQL-injection entry is not one of the seven main sinks. Generated-location resolution handles boundaries and lambda methods but not this enriched virtual call instruction. The log and owner chain are in the findings report.
+
+No timeout or masked prescan error occurs in these eight runs. Limits start at 1 and increase by run index. The exclusion implementation is unchanged. Evidence is under `/drive-testcomp/opentaint-go-rules/bidi-real-20261012`; its `comparison` directory keeps all absent and added locations. The earlier unit-test findings below remain separate and retain their tested coverage limits.
+
 The user requested cleaner normalization from `saloed/cleaner-action-normalisation` on 12 October 2026. The shared JVM resolver now uses commit `25a5307cf`, with a guard for broad removal reach. The normalization and retest results are recorded below.
 
 The latest full default runs pass. The latest bidirectional JVM run has 504 tests and no failure. The query run has 215 tests and 10 failures: seven sample methods and three existing probes. All 188 normal positive sample runs are found. Unexpected negative samples decrease from 28 to 12. Ten remaining samples require an end-fact check. Two report from an unannotated `clean()` callee. The failed-prescan defect in issue 1 also remains.

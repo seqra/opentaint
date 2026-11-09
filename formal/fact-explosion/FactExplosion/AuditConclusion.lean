@@ -1,0 +1,5 @@
+import FactExplosion.Conclusion
+open FactExplosion.Conclusion
+#print axioms FactExplosion.Conclusion.matching_domination_is_not_enough
+#print axioms FactExplosion.Conclusion.collapse_can_be_repaired
+#print axioms FactExplosion.Conclusion.delta_differs

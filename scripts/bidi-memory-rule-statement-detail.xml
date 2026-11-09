@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--Bind __RULE_STATEMENT_ADDRESS__ to one current RuleStatement address selected from the complete inventory. This report exports only that statement, not all sink rules.-->
+<section xmlns="http://www.eclipse.org/mat/report.xsd" name="Single cached rule-statement detail">
+  <param key="format" value="csv"/>
+  <param key="filename_suffix" value="BidiRuleDetail"/>
+  <param key="limit" value="-1"/>
+  <query name="Named rule-statement fields">
+    <command>oql "SELECT b.@objectId AS id, toHex(b.@objectAddress) AS address, b.@retainedHeapSize AS retainedBytes, b.sinks.list.size AS sinkAlternatives, b.@fields AS fields FROM OBJECTS __RULE_STATEMENT_ADDRESS__ b"</command>
+  </query>
+  <section name="Sink detail restricted to the selected statement"><query name="Named-statement sink alternatives by rule identity">
+      <command>oql "SELECT s.@objectId AS sinkId, toHex(s.@objectAddress) AS sinkAddress, s.rule.@objectId AS ruleObjectId, toHex(s.rule.@objectAddress) AS ruleAddress, toString(s.rule.id) AS ruleId, toString(s.rule.serializedId) AS serializedId, s.alternative AS alternative, s.patterns.list.size AS patternCount, s.endFacts.list.size AS endFactCount, s.patterns.list.elementData AS patternArray, s.rule.method AS targetMethod, s.rule.condition AS condition, s.rule.info AS info, dominatorof(s) AS immediateDominator FROM OBJECTS (SELECT OBJECTS b.sinks.list.elementData.@referenceArray FROM OBJECTS __RULE_STATEMENT_ADDRESS__ b) s WHERE (s != null)"</command>
+    </query>
+    <query name="Named-statement distinct rules and condition roots">
+      <command>oql "SELECT r.@objectId AS ruleObjectId, toHex(r.@objectAddress) AS ruleAddress, toString(r.id) AS ruleId, toString(r.serializedId) AS serializedId, classof(r).@name AS ruleClass, r.method AS targetMethod, r.condition AS condition, classof(r.condition).@name AS conditionClass, r.condition.@fields AS conditionFields, r.info AS info, r.trackFactsReachAnalysisEnd AS endActions FROM OBJECTS (SELECT DISTINCT OBJECTS s.rule FROM OBJECTS (SELECT OBJECTS b.sinks.list.elementData.@referenceArray FROM OBJECTS __RULE_STATEMENT_ADDRESS__ b) s WHERE (s != null)) r"</command>
+    </query>
+    <query name="Named-statement bytecode rule target signatures">
+      <command>oql "SELECT r.@objectId AS ruleObjectId, toHex(r.@objectAddress) AS ruleAddress, toString(r.id) AS ruleId, toString(r.method.methodInfo.name) AS methodName, toString(r.method.methodInfo.desc) AS descriptor, toString(r.method.enclosingClass.classSource.className) AS ownerClass FROM OBJECTS (SELECT DISTINCT OBJECTS s.rule FROM OBJECTS (SELECT OBJECTS b.sinks.list.elementData.@referenceArray FROM OBJECTS __RULE_STATEMENT_ADDRESS__ b) s WHERE (s != null)) r WHERE (classof(r.method).@name = \"org.opentaint.ir.impl.bytecode.JIRMethodImpl\")"</command>
+    </query>
+    <query name="Named-statement literal paths and tails">
+      <command>oql "SELECT p.@objectId AS patternId, toHex(p.@objectAddress) AS patternAddress, p.fact.base AS base, toString(p.fact.tail.name) AS tail, p.fact.mark AS mark, p.fact.path.list.size AS pathLength, p.fact.path.list.elementData AS pathArray, p.exclusion AS exclusion, dominatorof(p) AS patternArrayOwner FROM OBJECTS (SELECT OBJECTS s.patterns.list.elementData.@referenceArray FROM OBJECTS (SELECT OBJECTS b.sinks.list.elementData.@referenceArray FROM OBJECTS __RULE_STATEMENT_ADDRESS__ b) s WHERE (s != null)) p WHERE (p != null)"</command>
+    </query>
+    <query name="Named-statement nonempty literal first accessors">
+      <command>oql "SELECT p.@objectId AS patternId, toHex(p.@objectAddress) AS patternAddress, toString(p.fact.tail.name) AS tail, p.fact.path.list.size AS pathLength, p.fact.path.list.elementData[0].value AS firstAccessor FROM OBJECTS (SELECT OBJECTS s.patterns.list.elementData.@referenceArray FROM OBJECTS (SELECT OBJECTS b.sinks.list.elementData.@referenceArray FROM OBJECTS __RULE_STATEMENT_ADDRESS__ b) s WHERE (s != null)) p WHERE (p != null AND p.fact.path.list.size &gt; 0)"</command>
+    </query>
+  </section>
+  <query name="Named rule-statement direct dominator children">
+    <param key="sort_column" value="#4=DESC"/>
+    <command>oql "SELECT c.@objectId AS id, toHex(c.@objectAddress) AS address, classof(c).@name AS ownerClass, c.@usedHeapSize AS shallowBytes, c.@retainedHeapSize AS retainedBytes FROM OBJECTS (SELECT OBJECTS dominators(b) FROM OBJECTS __RULE_STATEMENT_ADDRESS__ b) c"</command>
+  </query>
+  <query name="Named rule-statement strong root paths">
+    <param key="format" value="txt"/>
+    <command>path2gc __RULE_STATEMENT_ADDRESS__ -numberofpaths 5</command>
+  </query>
+</section>
