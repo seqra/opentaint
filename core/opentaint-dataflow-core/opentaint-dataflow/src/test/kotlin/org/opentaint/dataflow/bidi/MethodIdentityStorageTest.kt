@@ -101,20 +101,22 @@ class MethodIdentityStorageTest {
         val guarded = plain.withProtection(plain.root)
         for (events in 0 until 64) {
             val store = MethodEdgeStore(m, fixture.method, fixture.lm, 2)
-            var present = false
-            var protected = false
+            val present = BooleanArray(2)
             for (step in 0 until 6) {
                 val offeredProtected = events and (1 shl step) != 0
                 val offered = if (offeredProtected) guarded else plain
-                val fresh = !present || (offeredProtected && !protected)
+                val lane = if (offeredProtected) 1 else 0
+                val fresh = !present[lane]
                 val delta = store.add(fixture.inst(1), key, offered)
                 assertEquals(fresh, delta != null)
                 if (fresh) assertEquals(annotated(offered), annotated(delta))
-                present = true
-                protected = protected || offeredProtected
-                val stored = store.edgesAt(fixture.inst(1), key).single().second as TaintTree
-                assertEquals(plain, stored)
-                assertEquals(if (protected) plain.root else null, stored.nonSubsumable)
+                present[lane] = true
+                val stored = store.edgesAt(fixture.inst(1), key).map { it.second }.toSet()
+                val expected = buildSet<Facts> {
+                    if (present[0]) add(plain)
+                    if (present[1]) add(guarded)
+                }
+                assertEquals(expected, stored)
             }
         }
     }

@@ -10,7 +10,7 @@ import kotlin.test.*
 /** Keep the selected control table separate from the frozen local-report iteration controls. */
 class SelectedReferenceBoundaryTest {
     @Test
-    fun `selected exact admission rejects MAY while the labelled old table remains frozen`(): Unit =
+    fun `selected concrete exact admission keeps DEMAND support while FLOW exact still rejects MAY`(): Unit =
         FiniteProgramFixtures().use { f ->
             val t = MarkSlot.Concrete(f.mark("T"))
             val exact = f.pattern(AccessPathBase.Argument(0), mark = t)
@@ -18,7 +18,10 @@ class SelectedReferenceBoundaryTest {
             val selected = SelectedDemandReference(3, 2, Direction.FORWARD, f.manager.marks, f.field("witness"))
             val old = SelectedDemandReference(3, 2, Direction.FORWARD, f.manager.marks, f.field("witness"),
                 rejectMayForExact = false)
-            assertNull(selected.emit(exact, may))
+            assertEquals(exact,selected.emit(exact,may))
+            assertEquals(listOf(exact to Layer.DEMAND),selected.family(exact,may,Layer.DEMAND))
+            val exactFlow=exact.copy(fact=exact.fact.copy(mark=MarkSlot.STAR))
+            assertNull(selected.emit(exactFlow,may),"Abstract EXACT cannot be synthesized from MAY")
             assertEquals(exact, selected.emit(may, exact), "EXACT can still refine a MAY demand")
             assertEquals(exact, old.emit(exact, may), "The old table stays labelled, not applied to production")
         }

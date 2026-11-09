@@ -27,7 +27,17 @@ class RestrictedDemandBoundaryTest {
             Layer.DEMAND else Layer.NORMAL
         val packed = m.factsOf(actual.fact, actual.exclusion, layer)
         val result = ops.emit(demand, packed).map { it.toPattern() }.toSet()
-        assertEquals(setOfNotNull(org.opentaint.dataflow.bidi.ap.emit(entry, actual, m.marks)), result)
+        val primary=org.opentaint.dataflow.bidi.ap.emit(entry,actual,m.marks)
+        val expected=buildSet {
+            if(primary!=null) {
+                add(primary)
+                if(primary.fact.tail==Tail.STAR && primary.fact.mark is MarkSlot.Concrete)
+                    add(primary.copy(fact=primary.fact.copy(mark=MarkSlot.STAR)))
+                if(entry.fact.tail==Tail.ANY && actual.fact.path.size>entry.fact.path.size && actual.fact.path.startsWith(entry.fact.path))
+                    add(Pattern(entry.fact.copy(tail=Tail.EXACT,mark=MarkSlot.STAR),ExclusionSet.Empty))
+            }
+        }
+        assertEquals(expected,result)
         return result
     }
 
@@ -38,9 +48,9 @@ class RestrictedDemandBoundaryTest {
         val flowExcludingU = MarkSlot.Star(m.markSetOf(u.mark))
         for (actualMark in listOf(t, u, MarkSlot.STAR, flowExcludingU)) {
             val actual = p(listOf(f), Tail.ANY, actualMark)
-            assertEquals(if (actualMark == t) setOf(actual) else emptySet(), emit(concreteEntry, actual))
+            assertEquals(if (actualMark == t) setOf(p(listOf(f),Tail.STAR),p(listOf(f),Tail.STAR,MarkSlot.STAR)) else emptySet(), emit(concreteEntry, actual))
             assertEquals(setOf(flowEntry.copy(fact = flowEntry.fact.copy(tail = Tail.EXACT))), emit(flowEntry, actual))
-            assertEquals(setOf(p(listOf(f), Tail.ANY, MarkSlot.STAR)), emit(p(listOf(f), Tail.ANY, MarkSlot.STAR), actual))
+            assertEquals(setOf(p(listOf(f), Tail.STAR, MarkSlot.STAR)), emit(p(listOf(f), Tail.ANY, MarkSlot.STAR), actual))
         }
     }
 
@@ -64,7 +74,7 @@ class RestrictedDemandBoundaryTest {
             assertEquals(emptySet(), emit(p(listOf(f)), actual))
             assertEquals(if (tail == Tail.ANY_TAINT) setOf(p(listOf(g), tail)) else emptySet(),
                 emit(p(listOf(g)), actual))
-            assertEquals(setOf(p(listOf(g), Tail.EXACT)),
+            assertEquals(if(tail==Tail.ANY_TAINT) setOf(p(listOf(g), Tail.EXACT)) else emptySet(),
                 emit(p(listOf(g), Tail.STAR, e = ExclusionSet.of(h)), actual))
             assertEquals(ExclusionSet.of(f), actual.exclusion)
         }
@@ -89,18 +99,17 @@ class RestrictedDemandBoundaryTest {
                     p(actualPath, mark = MarkSlot.Star(m.markSetOf(u.mark))))
                 for (entry in entries) for (actual in actuals) {
                     val emitted = emit(entry, actual)
-                    for (initial in emitted) {
-                        if (entry.fact.mark is MarkSlot.Star && initial.fact.tail != Tail.ANY_TAINT)
-                            assertEquals(ExclusionSet.Empty, initial.exclusion)
-                        assertTrue(insideDemand(initial, entry), "$initial must be contained by $entry")
-                        assertTrue(satisfies(initial, actual, restricted = true), "$actual must satisfy $initial")
-                    }
                     val policy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = m.marks)
-                    for (initial in emitted)
-                        assertTrue(policy.canEmitInitial(entry, initial), "Emitted initial must have a submitted witness")
-                    if (entry.fact.tail == Tail.ANY && actual.fact.tail == Tail.STAR &&
-                        entry.fact.path == actual.fact.path)
-                        assertTrue(emitted.isEmpty(), "Unrefined ANY cannot be answered with STAR")
+                    for (initial in emitted) {
+                        assertNotEquals(Tail.ANY,initial.fact.tail)
+                        val normalized=if(initial.fact.mark is MarkSlot.Star && initial.fact.tail==Tail.EXACT)
+                            initial.copy(fact=initial.fact.copy(tail=Tail.STAR)) else initial
+                        assertTrue(policy.canStoreInitial(entry,normalized),
+                            "The complete emitted family must belong to its public C2 image: $entry -> $initial")
+                    }
+                    if(entry.fact.tail==Tail.ANY && actual.fact.tail==Tail.STAR && entry.fact.path==actual.fact.path &&
+                        markSub(entry.fact.mark,actual.fact.mark))
+                        assertTrue(emitted.any { it.fact.tail==Tail.STAR },"Same-head STAR is now an admitted identity")
                 }
             }
         }
@@ -123,9 +132,9 @@ class RestrictedDemandBoundaryTest {
             val restricted = ops.restrict(initial, conclusion, demand)
             assertEquals(if (allowed) listOf(conclusion) else emptyList(), restricted)
         }
-        // A concrete entry never authorizes this FLOW original, even when the exit agrees.
+        // A concrete ANY entry authorizes this exact STAR FLOW companion, without synthesizing T.
         val flow = m.factsOf(p(tail = Tail.STAR, mark = MarkSlot.STAR, base = ret).fact,
             ExclusionSet.Empty, Layer.NORMAL)
-        assertTrue(ops.restrict(initial, flow, DemandPattern(p(), p(mark = t, base = ret))).isEmpty())
+        assertEquals(listOf(flow),ops.restrict(initial,flow,DemandPattern(p(),p(mark=t,base=ret))))
     }
 }

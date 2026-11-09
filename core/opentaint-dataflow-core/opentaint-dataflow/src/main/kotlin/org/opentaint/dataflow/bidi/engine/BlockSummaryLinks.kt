@@ -68,7 +68,7 @@ internal class BlockSummaryLinks(
     }
     private data class NdKey(val parent: BlockScope, val point: PortId, val exit: PortId,
                              val premise: PremiseSet, val layer: Layer)
-    private data class NdInput(val link: LocalLink, val initial: InitialAp, val layer: Layer) {
+    private data class NdInput(val link: LocalLink, val initial: InitialAp, val layer: Layer, val protected: Boolean) {
         lateinit var matched: TaintTree
     }
     private val joins = HashMap<NdKey, NdSummaryJoin<NdInput>>()
@@ -222,7 +222,7 @@ internal class BlockSummaryLinks(
                     val matched = matchedInput as? TaintTree ?: continue
                     val key = NdKey(input.link.parent, input.link.point, exit, premise, scalar.layer)
                     val join = joins.getOrPut(key) { NdSummaryJoin(ap, premise.size) }
-                    val binding = NdInput(input.link, premise.member(member), matched.layer).also { it.matched = matched }
+                    val binding = NdInput(input.link, premise.member(member), matched.layer, matched.nonSubsumable != null).also { it.matched = matched }
                     fun emit(parts: List<NdInput>, value: TaintTree) {
                         matchStatistics?.let { it.ndCombinations++ }
                         var original: PremiseKey = ap.zero
@@ -232,11 +232,9 @@ internal class BlockSummaryLinks(
                             application.applyCombination(parts.map { LocalRelationBinding(it.link.original, it.initial, it.matched) },
                                 piece as TaintTree, output(complete, exit, premise, ops.leaves(piece).single()))
                     }
-                    for ((parts, value) in join.addSubscription(member, binding) { prior, offered ->
-                        val (merged, delta) = ap.mergeAddDelta(prior.matched, offered.matched)
-                        prior.matched = merged as TaintTree
-                        delta != null
-                    }) emit(parts, value)
+                    // The key fixes the literal, origin, support and class. The
+                    // matched geometry is only a validity witness for this full join.
+                    for ((parts, value) in join.addSubscription(member, binding)) emit(parts, value)
                     for ((parts, value) in join.addConclusion(scalar as TaintTree)) emit(parts, value)
                 }
             }

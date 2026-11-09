@@ -192,6 +192,11 @@ private class TaintClean(private val m: ApManager, private val c: TaintTree, pri
                     }
                     (tail.isAny || tail == Tail.STAR) && cl.reach == CleanReach.BELOW && d == path.size ->
                         put(c.layer, at, Tail.EXACT, removed)
+                    // A selected partial STAR survivor loses suffix correlation.
+                    // Keep only the conservative MAY result; its full premise and
+                    // existing protection are carried by the caller.
+                    tail == Tail.STAR && (selected != null || cl.mark != null) ->
+                        put(Layer.DEMAND, at, Tail.ANY, removed)
                     else -> put(Layer.DEMAND, at, tail, removed, c.exclusion)
                 }
             }

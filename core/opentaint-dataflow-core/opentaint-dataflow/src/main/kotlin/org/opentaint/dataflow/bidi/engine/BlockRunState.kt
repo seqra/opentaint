@@ -246,6 +246,7 @@ open class BlockRunState internal constructor(
 
     internal fun addInitial(admitted: AdmittedInitial) {
         val initial = admitted.initial
+        check(initial.tail != Tail.ANY) { "An owned initial cannot have an ANY tail" }
         if (!RuntimeDataDomain.initial(initial)) return
         ap.cancellation.checkpoint()
         initialize()
@@ -275,7 +276,8 @@ open class BlockRunState internal constructor(
             override fun result(f: Facts) {
                 if (!RuntimeDataDomain.packet(premise, input) || !RuntimeDataDomain.packet(premise, f)) return
                 val runtime = forceRun1Layer(premise, f)
-                if (config.run1) ops.run1Cover(runtime) { sink(premise, it) } else sink(premise, runtime)
+                if (config.run1) ops.run1Cover(runtime) { value -> value.membershipPackets(ap).forEach { sink(premise, it) } }
+                else runtime.membershipPackets(ap).forEach { sink(premise, it) }
             }
             override fun markRequest(mark: TaintMark): Unit = raiseMark(premise, input, mark)
         }
@@ -309,7 +311,8 @@ open class BlockRunState internal constructor(
             override fun result(f: Facts) {
                 if (!RuntimeDataDomain.packet(at.premise, at.facts) || !RuntimeDataDomain.packet(at.premise, f)) return
                 val value = forceRun1Layer(at.premise, f)
-                if (config.run1) ops.run1Cover(value) { sink(at.premise, it) } else sink(at.premise, value)
+                if (config.run1) ops.run1Cover(value) { covered -> covered.membershipPackets(ap).forEach { sink(at.premise, it) } }
+                else value.membershipPackets(ap).forEach { sink(at.premise, it) }
             }
             override fun markRequest(mark: TaintMark) = needGroups(at, mark)
         }
@@ -322,7 +325,8 @@ open class BlockRunState internal constructor(
             override fun result(f: Facts) {
                 if (!RuntimeDataDomain.packet(at.premise, at.facts) || !RuntimeDataDomain.packet(at.premise, f)) return
                 val value = if (config.run1) run1Layer(at.premise, f) else f
-                if (config.run1) ops.run1Cover(value) { sink(at.premise, it) } else sink(at.premise, value)
+                if (config.run1) ops.run1Cover(value) { covered -> covered.membershipPackets(ap).forEach { sink(at.premise, it) } }
+                else value.membershipPackets(ap).forEach { sink(at.premise, it) }
             }
             override fun markRequest(mark: TaintMark) = needGroups(at, mark)
         }
@@ -433,11 +437,8 @@ open class BlockRunState internal constructor(
     internal fun composeStaticSummaryWithActualInput(initial: InitialAp, value: Facts, actual: Facts,
                                                     emit: (Facts) -> Unit) {
         checkPremise(initial)
-        for (packet in ap.canonicalPackets(actual)) {
-            val matched = ops.matchSummary(packet, initial, mode, nativeRecordRead = false,
-                role = SummaryMatchRole.CURRENT) ?: continue
-            ops.applySummary(matched, initial, value, mode, boundedStaticSummaryOut(initial, emit))
-        }
+        val matched = ops.satisfying(actual, initial, mode) ?: return
+        ops.applySummary(matched, initial, value, mode, boundedStaticSummaryOut(initial, emit))
     }
 
     /** Apply a complete static tuple on this owner after releasing the service lock. */
@@ -452,12 +453,7 @@ open class BlockRunState internal constructor(
                 val parts = inputs.mapIndexed { i, slice ->
                     ap.cancellation.checkpoint()
                     val initial = premise.member(i)
-                    // Complete tuples use only each matched input's layer (W7). Canonical
-                    // splits preserve that layer, so one existing match witnesses this arm.
-                    val matched = ap.canonicalPackets(staticFacts(slice)).firstNotNullOfOrNull { packet ->
-                        ops.matchSummary(packet, initial, mode, nativeRecordRead = false,
-                            role = SummaryMatchRole.CURRENT)
-                    } ?: return
+                    val matched = ops.satisfying(staticFacts(slice), initial, mode) ?: return
                     matched to initial
                 }
                 ops.applyCombination(parts, value, mode, boundedStaticSummaryOut(premise, emit))
@@ -689,7 +685,7 @@ open class BlockRunState internal constructor(
 
     /** One durable result row per producer. Identity output uses this gate too. */
     private fun completeOutput(premise: PremiseKey, node: CommonInst, facts: Facts) {
-        for (fresh in admitOutput(node, premise, facts)) {
+        for (fresh in admitOutputs(node, premise, facts)) {
             // Complete fan-out while the current Work reservation is held.
             if (binding != null) binding.successors(this, node, premise, fresh)
             else if (rootRouting != null) checkNotNull(rootRouting).successors(node, premise, fresh)
@@ -697,15 +693,13 @@ open class BlockRunState internal constructor(
         }
     }
 
-    private fun admitOutput(node: CommonInst, premise: PremiseKey, facts: Facts): List<Facts> {
+    private fun admitOutputs(node: CommonInst, premise: PremiseKey, facts: Facts): List<Facts> {
         if (!RuntimeDataDomain.packet(premise, facts)) return emptyList()
         checkKinds(premise, facts)
-        return edges.addAll(node, premise, facts).also { deltas ->
-            for (fresh in deltas) {
-                bodyWork?.fresh(context.shared.language.getInstIndex(node), premise, fresh)
-                localEdgeDeltas++
-                if (fresh.layer == Layer.DEMAND) localDemandLayerEdges++
-            }
+        return edges.addAll(node, premise, facts).onEach { fresh ->
+            bodyWork?.fresh(context.shared.language.getInstIndex(node), premise, fresh)
+            localEdgeDeltas++
+            if (fresh.layer == Layer.DEMAND) localDemandLayerEdges++
         }
     }
 
@@ -806,7 +800,7 @@ open class BlockRunState internal constructor(
                 if (!summary) {
                     // Exceptional rules and observations still run, but normal
                     // summary adjustment and killed-write guidance do not.
-                    for (fresh in admitOutput(node, pr, value))
+                    for (fresh in admitOutputs(node, pr, value))
                         if (binding != null) retainBlockSummary(PortId(-4), pr, fresh)
                     return@drain
                 }
@@ -816,7 +810,7 @@ open class BlockRunState internal constructor(
                 val result = if (isRootScope) finishMethodData(ops, mode, pr, value, exit, triggers.parts) else value
                 result?.let { completed ->
                     boundedSummaryResult(pr, completed) { boundedPremise, bounded ->
-                        for (fresh in admitOutput(node, boundedPremise, bounded))
+                        for (fresh in admitOutputs(node, boundedPremise, bounded))
                             retainSummary(boundedPremise, fresh, binding?.terminalExit ?: PortId.ROOT_EXIT)
                     }
                 }
@@ -877,7 +871,7 @@ open class BlockRunState internal constructor(
 
     private fun routeBoundedRun1StaticToExit(node: CommonInst, premise: PremiseKey, bounded: Facts) {
         check(config.run1 && bounded.base == STATIC)
-        for (fresh in admitOutput(node, premise, bounded)) {
+        for (fresh in admitOutputs(node, premise, bounded)) {
             if (binding != null) binding.routeStaticToExit(this, node, premise, fresh)
             else enqueueInput(context.normalExit, premise, fresh)
         }
@@ -932,10 +926,7 @@ open class BlockRunState internal constructor(
         }
         bodyWork?.candidate(premise, facts, internalBlock = !isRootScope)
         assertCanonicalFlowSummary(premise, facts)
-        if (!config.run1 && facts is FlowTree && facts.layer == Layer.DEMAND)
-            check(facts.tail == Tail.ANY && facts.exclusion == ExclusionSet.Empty) {
-                "Restricted FLOW DEMAND must have an uncertain ANY tail"
-            }
+        // DEMAND does not imply ANY: paired C5 can preserve a correlated STAR.
         checkKinds(premise, facts)
         if (isRootScope && !context.shared.interpreter.isSummaryBase(facts.base)) return
         // Existing computed summary supplies are independent of local write

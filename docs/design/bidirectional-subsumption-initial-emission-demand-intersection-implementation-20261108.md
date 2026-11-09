@@ -24,11 +24,18 @@ reviewed `52f32dd437d438aec4a700a02c18d94c31d58093` tree:
 [baseline contract](../../spec/subsumption-redesign-baseline-20261107.md)
 pins the original source and proposals.
 
-Create an isolated implementation checkout from that revision. Preserve the
-dirty working tree and the withdrawn STAR_OR_ANY prototype as evidence.
-Do not copy that prototype into the implementation. Apply the finalized
-contract to the pinned baseline. A source change outside this contract needs
-a separate proposal with a counterexample and the intended behavior.
+Checkout ownership update, 9 November 2026: the user requires the complete
+implementation in the primary repository checkout, on saloed/bidirectional.
+Use that checkout for implementation and commits. Do not create another
+implementation worktree unless the user requests it.
+
+The initial measurement used an isolated checkout from the selected revision.
+Its tested implementation is now integrated into the primary checkout.
+The earlier dirty prototype is preserved in a verified external backup.
+Do not copy that withdrawn STAR_OR_ANY prototype into the implementation.
+Apply the finalized contract to the pinned baseline. A source change outside
+this contract needs a separate proposal with a counterexample and the
+intended behavior.
 
 This document replaces the withdrawn
 [special-tail implementation proposal](bidirectional-star-or-any-initials-implementation-20261107.md)
@@ -562,6 +569,27 @@ boundary candidate
 
 No raw rejected relation is stored as a semantic provider. Run-1 has no
 previous demand snapshot and keeps its ordinary global limit.
+
+### 6.4 Handoff format closure
+
+C5 can select an EXACT/FLOW result on DEMAND from a raw ANY/FLOW
+candidate. Whole-pair normalization then publishes STAR/FLOW on DEMAND.
+A correlated STAR candidate can also remain STAR on DEMAND. These are
+legal selected results; the handoff must not require every FLOW demand to
+have ANY tail.
+
+Reuse the existing guidance projection. It preserves STAR correlation,
+clears FLOW selector E/mx, converts MUST guidance by its existing rule, and
+keeps the complete pair and physical block ports. Accept STAR or ANY FLOW
+entries at every restricted run. Do not widen STAR to ANY, drop the pair,
+or promote DEMAND to NORMAL.
+
+Update the old validators in BlockRunState.retainSummary,
+HandOff.forEachDemandPiece, block handoff, and
+DemandStore.validateIncoming. Keep the typed constructors and all C2/C5
+checks. Add a native raw-ANY-to-EXACT-to-STAR test through both method and
+block handoff and the next RunConfig. The constructive format bridge is
+in spec/lean/proposals/flow-star-demand-handoff-20261108/.
 
 ## 7. Cleaner and loop changes
 

@@ -42,8 +42,7 @@ internal fun emitInitials(ops: ApOps, d: DemandPattern, added: Facts,
     val result = LinkedHashSet<InitialAp>()
     for (packet in m.canonicalPackets(added)) for (a in ops.leaves(packet)) {
         m.cancellation.checkpoint()
-        val j = policy.emit(d.entry, a) ?: continue
-        result += m.initial(j)
+        for (emitted in policy.emitAdmissions(d.entry, a, added.layer)) result += m.initial(emitted.pattern)
     }
     return result.toList()
 }

@@ -51,7 +51,7 @@ class DiagonalDeltaTest {
     }
 
     @Test
-    fun `late packet protection is sticky and grows once for each mark`() {
+    fun `late packet protection retains independent plain membership for each mark`() {
         val store = DiagonalRelations(m)
         store.addDiagonal(packet())
         val first = assertNotNull(store.addDiagonal(packet(listOf(t), protected = true))).single()
@@ -61,9 +61,12 @@ class DiagonalDeltaTest {
         val second = assertNotNull(store.addDiagonal(packet(listOf(t, u, v), protected = true))).single()
         assertEquals(MarkSet(intArrayOf(u.id, v.id)), second.marks)
         assertTrue(second.protected)
+        val plainV = assertNotNull(store.addDiagonal(packet(listOf(t, u, v)))).single()
+        assertEquals(MarkSet.of(v), plainV.marks)
+        assertFalse(plainV.protected)
         assertEquals(emptyList(), store.addDiagonal(packet(listOf(t, u, v))))
         val census = store.census()
-        assertEquals(3, census.concreteOutputMemberships)
+        assertEquals(6, census.concreteOutputMemberships)
         assertEquals(3, census.protectedOutputMemberships)
         assertEquals(1, census.diagonalGeometryRows)
     }

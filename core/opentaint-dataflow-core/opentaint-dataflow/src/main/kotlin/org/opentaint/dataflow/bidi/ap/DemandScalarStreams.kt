@@ -28,17 +28,23 @@ internal fun forEachDemandScalar(ops: ApOps, raw: Facts, work: DemandScalarWork?
         }
         return true
     }
-    (raw as? TaintTree)?.protectedPart()?.let { if (!stream(it, true)) return }
-    stream(raw, false)
+    for (packet in raw.membershipPackets(ops.manager)) {
+        val protected = packet is TaintTree && packet.protectionClass()
+        if (!stream(packet.withoutProtection(), protected)) return
+    }
 }
 
 /** Preserve native whole-program packing, protected masks and first header order. */
 internal fun packProgramStreams(ops: ApOps, bucket: ProgramBucket, work: DemandScalarWork? = null): List<Facts> {
-    val masks = if (bucket.protectedSelections.isEmpty()) null else ProtectionOutputs(ops.manager).also { masks ->
+    val result = ArrayList<Facts>()
+    if (bucket.ordinarySelections.isNotEmpty()) {
         work?.pack()
-        for (value in packRestrictedSelections(ops, bucket.protectedSelections)) masks.result(value)
+        result += packRestrictedSelections(ops, bucket.ordinarySelections)
     }
-    work?.pack()
-    val ordinary = packRestrictedSelections(ops, bucket.ordinarySelections)
-    return if (masks == null) ordinary else ordinary.map(masks::attach)
+    if (bucket.protectedSelections.isNotEmpty()) {
+        work?.pack()
+        for (value in packRestrictedSelections(ops, bucket.protectedSelections))
+            result += if (value is TaintTree) value.withProtection(value.root) else value
+    }
+    return result
 }

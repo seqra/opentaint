@@ -47,6 +47,9 @@ class LoopBlockDeepNoLeaveTest {
             val third = f.results.single { it.runIndex == 3 }.analyzers.single { it.key == b }
             assertTrue(third.outgoingTargets.any { it.premise.isZero && it.target == Target.DemandTarget })
             assertFalse(third.targets.any { it.premise.isZero && it.target is Target.NormalTarget })
+            val fifth = f.results.single { it.runIndex == 5 }.analyzers.single { it.key == b }
+            assertTrue(fifth.targets.any { it.premise.isZero && it.target is Target.NormalTarget },
+                "The own-ZERO local source must reach the real sink through saved shrinking repeats")
             assertEquals(5, result.end.run)
             assertEquals(1, result.entries.size)
             assertTrue(result.entries.any { it.descriptor.key.ruleId == "deep-loop-root-sink" })

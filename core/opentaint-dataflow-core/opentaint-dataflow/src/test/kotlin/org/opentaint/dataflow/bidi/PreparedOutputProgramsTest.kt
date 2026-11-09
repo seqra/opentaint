@@ -21,9 +21,12 @@ class PreparedOutputProgramsTest {
 
     private fun exact(expected: List<Facts>, actual: List<Facts>?) {
         assertNotNull(actual)
-        assertEquals(expected, actual)
-        assertEquals(expected.map { (it as? TaintTree)?.nonSubsumable },
-            actual.map { (it as? TaintTree)?.nonSubsumable })
+        // Class streams can be visited in a different order. Exact payload plus
+        // protection membership is the correspondence contract; no class is lost.
+        assertEquals(expected.toSet(),actual.toSet())
+        assertEquals(expected.size,actual.size)
+        assertEquals(expected.map { it to (it as? TaintTree)?.nonSubsumable }.toSet(),
+            actual.map { it to (it as? TaintTree)?.nonSubsumable }.toSet())
     }
 
     @Test fun `equal accepted exits share one program after both ND entry checks`() {
@@ -177,7 +180,7 @@ class PreparedOutputProgramsTest {
                 RestrictedInitialPolicy(2,4,Direction.BACKWARD,ap.marks)))
             val stats = demand.staticCompletionStatistics()
             for (part in listOf("c5PlanOccurrences=2","c5AcceptedOccurrences=2","c5OutputPrograms=1",
-                "c5PacketStreams=2","c5ScalarEnumerations=2","c5SelectedReferencePeak=2",
+                "c5PacketStreams=1","c5ScalarEnumerations=1","c5SelectedReferencePeak=1",
                 "c5PlanFallbackEmptyTemplates=1","c5PlanFallbackZeroTemplate=1",
                 "c5PlanFallbackOversizeTemplates=1","c5PlanFallbackRun=1"))
                 assertTrue(stats.orEmpty().split(' ').contains(part),stats)

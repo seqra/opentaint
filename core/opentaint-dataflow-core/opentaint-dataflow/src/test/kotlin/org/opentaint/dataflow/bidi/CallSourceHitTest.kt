@@ -51,7 +51,7 @@ class CallSourceHitTest {
                         (it.third === root.forward || it.third === field.forward) })
                 }
             }
-            val premise = f.manager.initial(f.pattern(result, tail = Tail.ANY, mark = t))
+            val premise = f.manager.initial(f.pattern(result, tail = Tail.STAR, mark = t))
             actor.addInitial(premise)
             f.drain(actor, quantum = 1)
             assertTrue(zeroCut)
@@ -62,7 +62,7 @@ class CallSourceHitTest {
             assertEquals(setOf(premise to Conclusion(premise.toPattern().fact, ExclusionSet.Empty, true),
                 premise to Conclusion(ZERO_FACT, ExclusionSet.Empty, true)), methodEntries(f.ops, actor.edges.edgesAt(f.inst(0))))
             val summaries = methodEntries(f.ops, actor.edges.edgesAt(f.inst(0)))
-            actor.emitAfter(premise, f.inst(2), f.fact(result, tail = Tail.ANY, mark = t, layer = Layer.DEMAND))
+            actor.emitAfter(premise, f.inst(2), f.fact(result, tail = Tail.STAR, mark = t, layer = Layer.DEMAND))
             f.drain(actor, quantum = 1)
             assertEquals(expectedHits, actor.sourceHits!!.entries().toSet())
             assertEquals(summaries, methodEntries(f.ops, actor.edges.edgesAt(f.inst(0))))
@@ -159,8 +159,8 @@ class CallSourceHitTest {
             assertEquals(0L, actor.triggerSeeds)
             assertTrue(actor.sourceHits!!.entries().none())
             assertTrue(actor.summaries.all().none(), "The callee has supplied no return summary")
-            val any = f.manager.initial(f.pattern(result, tail = Tail.ANY, mark = t))
-            actor.addInitial(any)
+            val star = f.manager.initial(f.pattern(result, tail = Tail.STAR, mark = t))
+            actor.addInitial(star)
             f.drain(actor, quantum = 1)
             assertEquals(0L, actor.triggerSeeds)
             assertEquals(0, f.cuts.count { it.first == Cut.SEED })

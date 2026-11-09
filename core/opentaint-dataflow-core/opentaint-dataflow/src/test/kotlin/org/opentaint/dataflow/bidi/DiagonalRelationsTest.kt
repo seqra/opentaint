@@ -64,27 +64,9 @@ class DiagonalRelationsTest {
         val delta = assertNotNull(store.add(initial(), facts(paths = listOf(listOf(f), listOf(g)))))
         assertEquals(setOf(listOf(g)), paths(delta))
         assertEquals(setOf(listOf(f), listOf(g)), stored(store, initial()))
-        val fine = facts(paths = listOf(listOf(f, h)))
-        assertEquals(setOf(listOf(f,h)), paths(assertNotNull(store.add(initial(), fine))))
-        assertEquals(setOf(listOf(f),listOf(g),listOf(f,h)),stored(store,initial()))
-        assertNull(store.add(initial(),fine), "An identical supplied guide is not fresh")
-        // Canonical admission re-encodes this mark's complete current geometry
-        // as one packed row; both f and g assertions above remain exact.
+        assertNull(store.add(initial(), facts(paths = listOf(listOf(f, h)))))
         assertEquals(1, store.markMembershipCount)
-    }
-
-    @Test
-    fun `MAY diagonal packet and late broader shape retain canonical geometry`() {
-        val root = facts(paths = listOf(emptyList()))
-        val child = facts(paths = listOf(listOf(f,g)))
-        for (offers in listOf(listOf(facts(paths = listOf(emptyList(),listOf(f,g)))),
-            listOf(root,child),listOf(child,root))) {
-            val store = DiagonalRelations(m)
-            offers.forEach { store.addAll(initial(),it) }
-            assertEquals(setOf(emptyList<Int>(),listOf(f,g)),stored(store,initial()))
-            assertEquals(1,store.rowCount)
-            assertTrue(store.addAll(initial(),root).isEmpty())
-        }
+        assertEquals(2, store.census().concreteOutputMemberships)
     }
 
     @Test
@@ -107,16 +89,16 @@ class DiagonalRelationsTest {
     }
 
     @Test
-    fun `a narrower protected ANY offer keeps only its supplied flag coordinate`() {
+    fun `a narrower protected ANY offer retains its own class coordinate`() {
         val store = DiagonalRelations(m)
         store.add(initial(), facts(paths = listOf(listOf(f), listOf(g))))
         val child = facts(paths = listOf(listOf(f, h)))
         val delta = assertNotNull(store.add(initial(), child.withProtection(child.root)))
-        assertEquals(setOf(listOf(f,h)), paths(delta))
-        assertEquals(setOf(listOf(f,h)), flags(delta))
+        assertEquals(setOf(listOf(f, h)), paths(delta))
+        assertEquals(setOf(listOf(f, h)), flags(delta))
         assertNull(store.add(initial(), child.withProtection(child.root)))
-        assertEquals(setOf(listOf(f),listOf(g),listOf(f,h)),stored(store,initial()))
-        assertEquals(setOf(listOf(f,h)), store.borrow(initial()).flatMap { flags(it).asSequence() }.toSet())
+        assertEquals(setOf(listOf(f, h)), store.borrow(initial()).flatMap { flags(it).asSequence() }.toSet())
+        assertTrue(store.borrow(initial()).any { it is TaintTree && it.nonSubsumable == null && listOf(f) in paths(it) })
     }
 
     @Test

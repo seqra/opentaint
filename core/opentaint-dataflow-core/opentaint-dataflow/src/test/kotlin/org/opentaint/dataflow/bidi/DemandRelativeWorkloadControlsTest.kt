@@ -231,7 +231,7 @@ class DemandRelativeWorkloadControlsTest {
         }
     }
 
-    @Test fun `EXACT before ANY and ANY before EXACT retain the same canonical union`() {
+    @Test fun `MAY canonicalization removes a covered exact representative in both arrival orders`() {
         MethodAnalysisFixtures().use { f ->
             val t=MarkSlot.Concrete(f.mark("T"))
             val premise=f.manager.initial(f.pattern(AccessPathBase.Return,mark=t))
@@ -248,14 +248,14 @@ class DemandRelativeWorkloadControlsTest {
             }
             val exactFirst=stored(listOf(exact,any))
             val anyFirst=stored(listOf(any,exact))
-            assertEquals(1,exactFirst.size,"A later MAY removes covered older exact support")
+            assertEquals(1,exactFirst.size,"A later MAY prunes the older covered exact header")
             assertEquals(1,anyFirst.size,"A broad row can suppress an incoming covered narrow row")
             fun union(rows:Set<Conclusion>)=rows.filterTo(linkedSetOf()) { candidate ->
                 rows.none { it!=candidate && subsumes(it,candidate) }
             }
             assertEquals(union(anyFirst),union(exactFirst))
-            // No rule, cleaner, metadata or downstream C2 is executed here.
-            // This is the selected same-premise, same-layer canonical packet law.
+            assertEquals(anyFirst,exactFirst,"The retained canonical basis is independent of arrival order")
+            // This is a local selected MAY law; no rule or cleaner is executed here.
         }
     }
 

@@ -28,7 +28,7 @@ class RunMethodCallServices(core: BlockRunState) : MethodCallServices {
     private fun planFact(premise: PremiseKey, facts: Facts, identity: Boolean?) =
         PlanFact(premise, facts, identity)
     /** One cleaner step owns this collection. Ordinary identity stays unchanged;
-     * equal results must OR their annotation before the next step sees them. */
+     * equal results in each protection class are deduplicated separately. */
     private class PlanFacts(private val ap: ApManager) : AbstractMutableCollection<PlanFact>() {
         private val values = LinkedHashMap<PlanFact, PlanFact>()
         override val size: Int get() = values.size
@@ -665,7 +665,7 @@ class RunMethodCallServices(core: BlockRunState) : MethodCallServices {
         val core = active()
         if (core.config.run1 && run1Summary) return core.ap.run1SummaryParts(premise, conclusion)
         val start = core.ops.startFact(premise)
-        if (premise.isZero || conclusion.layer != Layer.NORMAL || conclusion.groupKey != start.groupKey)
+        if (premise.isZero || conclusion.layer != Layer.NORMAL || conclusion.withoutProtection().groupKey != start.groupKey)
             return listOf(conclusion to false)
         val effect = core.ops.without(conclusion, start)
         val identity = if (effect == null) conclusion else core.ops.without(conclusion, effect)
@@ -682,17 +682,11 @@ class RunMethodCallServices(core: BlockRunState) : MethodCallServices {
         check(part.linkLayer == matched.layer) { "The matched fact and link have the same layer" }
         val store = checkNotNull(core.localServices.conjunctions) { "Forward calls need their local conjunction store" }
         val join = store.ndJoin<NdBinding>(ConjunctionStore.NdKey(part.callee, premise, pub.layer, part.ref.call, part.ref.stageOrdinal, part.ref.scope))
-        val binding = NdBinding(part.ref, matched.layer).also {
+        val binding = NdBinding(part.ref, matched.layer, matched.nonSubsumable != null).also {
             it.triggering = (premise.member(member).mark as? MarkSlot.Concrete)?.mark
                 ?.let { mark -> core.ap.marks.runtimeAtom(mark, core.mode.markMode) }
-            it.nonSubsumable = matched.nonSubsumable != null
         }
-        val fresh = join.addSubscription(member, binding) { previous, offered ->
-            check(previous.triggering == offered.triggering)
-            val changed = offered.nonSubsumable && !previous.nonSubsumable
-            previous.nonSubsumable = previous.nonSubsumable || offered.nonSubsumable
-            changed
-        }
+        val fresh = join.addSubscription(member, binding)
         for ((parts, result) in fresh) {
             core.ap.cancellation.checkpoint()
             applyCombination(parts, result)

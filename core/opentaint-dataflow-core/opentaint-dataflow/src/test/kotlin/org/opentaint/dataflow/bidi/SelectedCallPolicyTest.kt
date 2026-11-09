@@ -78,7 +78,7 @@ class SelectedCallPolicyTest {
             assertEquals(1, fresh)
             assertEquals(2, f.sentInitials.size)
             assertEquals(f.sentInitials[0].initials, f.sentInitials[1].initials)
-            assertEquals(Tail.STAR, f.sentInitials[0].initials.single().initial.tail)
+            assertEquals(setOf(Tail.STAR,Tail.EXACT),f.sentInitials[0].initials.map { it.initial.tail }.toSet())
             assertTrue(f.sentLinks.isEmpty())
             directory.clear()
         }
@@ -109,8 +109,8 @@ class SelectedCallPolicyTest {
             actuals.forEach { offer(f, actor, it) }
             assertEquals(actuals, f.subscriptions.map { it.added })
             assertEquals(2, f.sentInitials.size)
-            assertEquals(f.sentInitials[0].initials.single(), f.sentInitials[1].initials.single())
-            assertSame(f.sentInitials[0].initials.single().initial, f.sentInitials[1].initials.single().initial)
+            assertEquals(f.sentInitials[0].initials,f.sentInitials[1].initials)
+            for((left,right) in f.sentInitials[0].initials.zip(f.sentInitials[1].initials)) assertSame(left.initial,right.initial)
             val outputs = actor.edges.edgesAt(f.inst(1), f.manager.zero).flatMap { f.ops.leaves(it.second).toList() }.toList()
             assertEquals(setOf(
                 PathFact(result, listOf(f.field("a")), Tail.EXACT, MarkSlot.Concrete(f.mark("T"))),
@@ -125,7 +125,7 @@ class SelectedCallPolicyTest {
             val callee = f.store.key("callee")
             install(f, callee)
             val demand = DemandStore.Builder(f.manager).apply {
-                add(callee, DemandPattern(f.pattern(tail = Tail.ANY, mark = MarkSlot.STAR),
+                add(callee, DemandPattern(f.pattern(path=listOf(f.field("needed")),tail = Tail.ANY, mark = MarkSlot.STAR),
                     f.pattern(result, tail = Tail.ANY, mark = MarkSlot.STAR)))
             }.build()
             val actor = actor(f, demand)

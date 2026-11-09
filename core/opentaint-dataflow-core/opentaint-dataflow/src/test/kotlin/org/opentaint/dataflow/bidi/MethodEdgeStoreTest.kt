@@ -76,11 +76,6 @@ class MethodEdgeStoreTest {
     private val m = fixture.manager
     private fun store(limit: Int = Int.MAX_VALUE): MethodEdgeStore = MethodEdgeStore(m, fixture.method, fixture.lm, limit)
 
-    // Region coverage is unchanged. A different DEMAND MAY guide position must
-    // still be admitted because its next-run initial image can differ.
-    private fun storageSubsumes(stored: Conclusion, incoming: Conclusion): Boolean =
-        subsumes(stored, incoming) && !(incoming.demand && incoming.fact.tail == Tail.ANY && stored.fact.path != incoming.fact.path)
-
     @Test
     fun `K6 and multi-premise TAINT guards reject invalid edges without adding values`(): Unit = with(v) {
         val store = store()
@@ -212,12 +207,14 @@ class MethodEdgeStoreTest {
             val store = store()
             val node = fixture.inst(1)
             store.add(node, case.key, pack(order[0]))
-            val dropped = storageSubsumes(order[0], order[1])
+            val dropped = subsumes(order[0], order[1])
             val delta = store.add(node, case.key, pack(order[1]))
             if (dropped) assertNull(delta) else assertEquals(setOf(order[1]), decoded(assertNotNull(delta)))
-            val expected = order.filter { candidate ->
-                order.none { other -> other != candidate && storageSubsumes(other,candidate) }
-            }.toSet()
+            val expected = when {
+                dropped -> setOf(order[0])
+                subsumes(order[1], order[0]) -> setOf(order[1])
+                else -> order.toSet()
+            }
             assertEquals(expected.map { case.key to it }.toSet(), observed(store.edgesAt(node)))
         }
         val store = store()
@@ -242,12 +239,7 @@ class MethodEdgeStoreTest {
             m.zero to listOf(leaf(p(), mark = MarkSlot.Concrete(TaintMark.ZERO), base = AccessPathBase.Zero)),
         )
         for ((key, leaves) in rows) store.add(node, key, pack(*leaves.toTypedArray()))
-        // Query candidate completeness is relative to the selected canonical
-        // authority. Derive its expected basis from scalar coordinate admission, not
-        // from the optimized store or query under test.
-        val canonicalRows = rows.map { (key, leaves) -> key to leaves.filter { candidate ->
-            leaves.none { other -> other != candidate && storageSubsumes(other,candidate) }
-        } }
+        val canonicalRows = rows.map { (key, _) -> key to store.edgesAt(node, key).flatMap { decoded(it.second).asSequence() }.toList() }
         for (base in listOf(x, y, AccessPathBase.Zero)) for (path in listOf(p(), p(f), p(f, g), p(f, h), p(g), p(h), p(h, f)))
             for (tail in Tail.entries) for (e in listOf(ExclusionSet.Empty, ex(g))) {
                 val query = Pattern(PathFact(base, path, tail, mu), e)

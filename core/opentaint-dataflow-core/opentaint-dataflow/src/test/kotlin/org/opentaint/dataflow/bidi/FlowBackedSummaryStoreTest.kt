@@ -50,9 +50,10 @@ class FlowBackedSummaryStoreTest {
         val flow = pack(leaf(p(f), Tail.ANY, MarkSlot.STAR, Layer.DEMAND, base = y))
         val store = RunSummaryStore(m, flowBacked = true)
         store.addAdmitted(flowInitial, flow)
-        val delta = assertNotNull(store.addAdmitted(markedInitial, marked))
+        val delta = store.addAdmittedAll(markedInitial, marked)
+        assertTrue(delta.isNotEmpty())
         assertEquals(setOf(leaf(p(g), Tail.ANY, mt, Layer.DEMAND, base = y),
-            leaf(p(f), Tail.ANY, mu, Layer.DEMAND, base = y)), decoded(delta))
+            leaf(p(f), Tail.ANY, mu, Layer.DEMAND, base = y)), delta.flatMap { decoded(it) }.toSet())
     }
 
     @Test fun `same base identity is subsumed while unsupported tails keep exact fallback`(): Unit = with(v) {

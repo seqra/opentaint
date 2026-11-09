@@ -72,7 +72,9 @@ class ModesTest {
             val flow = f.manager.initial(f.pattern(x, listOf(field), Tail.STAR, MarkSlot.STAR))
             val flowG = f.manager.initial(f.pattern(x, listOf(g), Tail.STAR, MarkSlot.STAR))
             val currentU = f.manager.initial(f.pattern(x, listOf(g), mark = mu))
-            assertEquals(setOf(concrete, flow, flowG), core.initials.all().toSet())
+            assertEquals(setOf(concrete,flow,flowG,
+                f.manager.initial(f.pattern(x,tail=Tail.EXACT,mark=MarkSlot.STAR)),
+                f.manager.initial(f.pattern(x,tail=Tail.STAR,mark=MarkSlot.STAR))),core.initials.all().toSet())
             assertTrue(core.edges.edgesAt(f.inst(0)).none(), "All three initials are input admissions")
             f.drain(core)
             assertEquals(setOf(Conclusion(PathFact(x, listOf(field), Tail.EXACT, mt), ExclusionSet.Empty, false)),

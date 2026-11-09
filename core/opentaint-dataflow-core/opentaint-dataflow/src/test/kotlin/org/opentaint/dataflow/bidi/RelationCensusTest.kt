@@ -50,20 +50,15 @@ class RelationCensusTest {
             arrayOf(m.taintAlg.leafNode(m.taintLeaves(m.markSetOf(t), MarkSet.EMPTY))))
         val facts = m.taintTree(output, Layer.DEMAND, root, anyTail = Tail.ANY, nonSubsumable = protected)
         val store = RunSummaryStore(m)
-        val admitted = store.addAdmittedAll(initial(), facts)
-        assertEquals(5, admitted.flatMap { fixture.ops.leaves(it).toList() }.toSet().size)
-        assertEquals(2, admitted.sumOf { value ->
-            (value as? TaintTree)?.protectedPart()?.let { fixture.ops.leaves(it).count() } ?: 0
-        })
-        assertTrue(store.all().all { it.first === initial() }, "Keep the full concrete premise")
+        store.addAdmittedAll(initial(), facts)
         val flowLeaf = FlowAlgebra.LEAF_NODE
         val flowRoot = FlowAlgebra.node(FlowLeaf.NONE, intArrayOf(f, g).sortedArray(), arrayOf(flowLeaf, flowLeaf))
         store.addAdmitted(initial(MarkSlot.STAR), m.flowTree(output, Layer.DEMAND, ExclusionSet.Empty, MarkSet.EMPTY, flowRoot, Tail.ANY))
         store.addAdmitted(m.zero, Reach.NORMAL)
-        // MAY U removes both child exact U memberships; child MAY T removes
-        // only the unprotected child exact T. The protected exact coordinate remains.
-        assertEquals(RelationCensus(concreteOutputMemberships = 5, protectedOutputMemberships = 2,
-            scalarConcreteRows = 1, flowOutputAnnotations = 2), store.census())
+        // Same-head plain g/ANY/T covers plain g/EXACT/T. The protected
+        // f/EXACT/T remains in its separate class, so only one row is removed.
+        assertEquals(RelationCensus(concreteOutputMemberships = 7, protectedOutputMemberships = 2,
+            scalarConcreteRows = 2, flowOutputAnnotations = 2), store.census())
         assertEquals(store.census(), store.demandCensus(Direction.FORWARD))
     }
 
@@ -76,14 +71,14 @@ class RelationCensusTest {
         val mixedRoot = m.taintAlg.mergeAdd(m.taintAlg.mergeAdd(plain.root, exact.root), cross.root)
         val mixed = m.taintTree(output, Layer.DEMAND, mixedRoot, anyTail = Tail.ANY, nonSubsumable = exact.root)
         val store = RunSummaryStore(m, flowBacked = true)
-        store.addAdmitted(initial(), mixed)
+        store.addAdmittedAll(initial(), mixed)
         store.addAdmitted(initial(MarkSlot.Concrete(u)), any(u))
         assertEquals(RelationCensus(concreteOutputMemberships = 4, protectedOutputMemberships = 1,
-            diagonalGeometryRows = 1, diagonalMarkRows = 2, scalarConcreteRows = 1), store.census())
+            diagonalGeometryRows = 1, diagonalMarkRows = 2, scalarConcreteRows = 2), store.census())
         store.addAdmitted(initial(MarkSlot.STAR), m.flowTree(output, Layer.DEMAND, ExclusionSet.Empty, MarkSet.EMPTY,
             FlowAlgebra.prepend(m, m.path(listOf(f)), FlowAlgebra.LEAF_NODE), Tail.ANY))
         assertEquals(RelationCensus(concreteOutputMemberships = 2, protectedOutputMemberships = 1,
-            scalarConcreteRows = 1, flowOutputAnnotations = 1), store.census())
+            scalarConcreteRows = 2, flowOutputAnnotations = 1), store.census())
         assertEquals(store.census(), store.demandCensus(Direction.FORWARD))
     }
 

@@ -12,27 +12,20 @@ internal fun replayPersistedSummaries(
     statistics: N2Statistics? = null,
 ) {
     check(config.restricted && !part.zeroOnly)
-    for (packet in ops.manager.canonicalPackets(part.added))
-        replayCanonicalPersistedSummaries(config, ops, part.copy(added = packet), applier, statistics)
-}
-
-private fun replayCanonicalPersistedSummaries(
-    config: RunConfig, ops: ApOps, part: Subscription, applier: SummaryApplier, statistics: N2Statistics?,
-) {
     val records = config.records
     val direction = config.direction
     val mode = config.mode
     val cancellation = ops.manager.cancellation
     statistics?.persistedReplayStarted()
     val seen = HashSet<Record>()
-    val seenViews = HashMap<NativeReadKey, Boolean>()
+    val seenViews = HashSet<Pair<RecordLeafView, Boolean>>()
     for (leaf in ops.leaves(part.added)) {
         cancellation.checkpoint()
         for (record in records.byEntry(part.callee, leaf)) {
             cancellation.checkpoint()
             statistics?.persistedReplayCandidate()
             if (record.direction != direction || !seen.add(record)) continue
-            val added = ops.matchSummary(part.added, record.premise, mode, nativeRecordRead = true, role = SummaryMatchRole.SAVED_DIRECT) ?: continue
+            val added = ops.satisfying(part.added, record.premise, mode, record = true) ?: continue
             statistics?.persistedReplayMatched()
             applier.applyRecord(part.copy(added = added), record)
         }
@@ -40,17 +33,13 @@ private fun replayCanonicalPersistedSummaries(
             cancellation.checkpoint()
             statistics?.persistedReplayCandidate()
             if (record.direction == direction) continue
-            record.forEachNativeReversedAt(leaf) { read, nonSubsumable ->
+            record.forEachReversedAt(leaf) { view, nonSubsumable ->
                 cancellation.checkpoint()
-                val key = read.semanticKey()
-                val previous = seenViews[key]
-                if (previous == true || previous == false && !nonSubsumable) return@forEachNativeReversedAt
-                seenViews[key] = previous == true || nonSubsumable
-                val packets = matchOppositeRecordPackets(ops, part.added, read, mode)
-                if (packets.isEmpty()) return@forEachNativeReversedAt
+                if (!seenViews.add(view to nonSubsumable)) return@forEachReversedAt
+                val added = ops.satisfying(part.added, view.premise, mode, record = true, role = SummaryReadRole.SAVED_OPPOSITE)
+                    ?: return@forEachReversedAt
                 statistics?.persistedReplayMatched()
-                for (added in packets)
-                    applier.applyRecordView(part.copy(added = added), read.view, nonSubsumable)
+                applier.applyRecordView(part.copy(added = added), view, nonSubsumable)
             }
         }
     }

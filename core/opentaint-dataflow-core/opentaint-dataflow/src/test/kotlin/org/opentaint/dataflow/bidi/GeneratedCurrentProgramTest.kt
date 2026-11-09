@@ -40,12 +40,14 @@ class GeneratedCurrentProgramTest {
     }
 
     private fun compare(f: FiniteProgramFixtures, config: RunConfig, seed: Long,
-                        fields: List<Int>, marks: List<TaintMark>, catalogRefinement: Boolean = false): RunObservation {
+                        fields: List<Int>, marks: List<TaintMark>, catalogRefinement: Boolean = false,
+                        plainFlowMethods: Set<MethodKey> = emptySet()): RunObservation {
         check(!catalogRefinement || config.run1) { "Only run-1 static transport is replaced by the catalog" }
         val initialAdmission = if (catalogRefinement)
             NaiveClosure.InitialAdmission.RUN1_CONCRETE_CHAIN
         else NaiveClosure.InitialAdmission.HISTORICAL
-        val expected = NaiveClosure(f, config, initialAdmission, semantics = NaiveClosure.Semantics.SELECTED).run()
+        val expected = NaiveClosure(f, config, initialAdmission, semantics = NaiveClosure.Semantics.SELECTED,
+            plainFlowMethods=plainFlowMethods).run()
         if (catalogRefinement) assertTrue(expected.initials.none {
             it.initial.fact.tail == Tail.ANY || it.initial.fact.tail == Tail.ANY_TAINT
         }, "The independent selected run-1 closure must construct STAR, never ANY, initials")
@@ -124,7 +126,9 @@ class GeneratedCurrentProgramTest {
                 else listOf<Seed>(Seed.Source(caller, root.inst(0), source))
             val config = f.config(index, L = maxOf(1, index - 1), roots = listOf(caller),
                 demand = if (index == 1) emptyList() else demand, seeds = seeds)
-            val actual = compare(f, config, seed, fields, listOf(t.mark, u))
+            // This reader has exactly one ordinary FLOW transfer and no rule or
+            // cleaner. Selected cleaners are on the caller and remain unpruned.
+            val actual = compare(f, config, seed, fields, listOf(t.mark, u),plainFlowMethods=setOf(callee))
             assertTrue(actual.processed.isNotEmpty())
             if (index != 1) assertTrue(actual.requests.isEmpty(), "Restricted runs never request marks or positions")
             if (index == 1 && path.size <= config.fieldLimit) assertContains(actual.links,

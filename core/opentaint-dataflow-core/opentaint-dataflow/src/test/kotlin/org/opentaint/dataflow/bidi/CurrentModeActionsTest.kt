@@ -37,9 +37,14 @@ class CurrentModeActionsTest {
     private fun key(c: CurrentCase, index: Int): SinkKey =
         SinkKey(c.root.method, c.sinks, c.rules[index].id)
     private fun native(f: CurrentModeFixtures, c: CurrentCase, entry: Pattern, output: Pattern): Unit {
+        val actual = f.manager.factsOf(entry.fact, entry.exclusion, Layer.NORMAL)
+        val mode = f.actual.configs.single { it.index == 2 }.mode
         assertTrue(f.actual.records.byEntry(c.callee, entry).any { record ->
-            record.direction == Direction.BACKWARD && record.premise.toPattern() == entry &&
-                record.conclusion.layer == Layer.NORMAL && output in f.ops.leaves(record.conclusion).toSet()
+            if (record.direction != Direction.BACKWARD) return@any false
+            val matched = f.ops.satisfying(actual, record.premise, mode, record = true) ?: return@any false
+            val applied = CollectingOut()
+            f.ops.applySummary(matched, record.premise, record.conclusion, mode, applied)
+            applied.results.any { it.layer == Layer.NORMAL && output in f.ops.leaves(it).toSet() }
         }, "entry=$entry output=$output backward=${f.summaries(2, c.callee)} records=" +
             f.actual.records.byEntry(c.callee, entry).map { record ->
                 Triple(record.direction, record.premise.toPattern(), f.ops.leaves(record.conclusion).toList())
@@ -134,22 +139,18 @@ class CurrentModeActionsTest {
                 assertContains(f.summaries(2, c.callee), CurrentSummary(setOf(entry),
                     Conclusion(coarse.fact, ExclusionSet.Empty, true)))
             }
-            // The retained f/ANY FLOW guide meets the exact f/T input at the
-            // same head. Existing C2 emits an exact FLOW initial as well as
-            // the root guide's first-field STAR initial.
-            assertEquals(fieldReturns.toSet() + f.p(ret, listOf(field), Tail.EXACT) +
-                f.p(ret, listOf(field), mark = MarkSlot.Concrete(c.t)),
-                f.premises(2, c.callee),
-                "Each retained guide uses existing C2; the concrete f/T case tests the cleaner separately")
+            assertEquals(fieldReturns.toSet() + f.p(ret, listOf(field), mark = MarkSlot.Concrete(c.t)) +
+                f.p(ret, tail = Tail.EXACT), f.premises(2, c.callee),
+                "Each child refinement also emits the exact FLOW prefix; f/T tests the selected cleaner separately")
             assertTrue(f.summaries(2, c.callee).none { it.conclusion.fact ==
                 PathFact(arg, listOf(h, field), Tail.EXACT, MarkSlot.Concrete(c.t)) })
             assertTrue(f.patterns(3, c.callee, arg).all { it.entry.fact.mark is MarkSlot.Star },
                 "The selected partial-cleaner demand remains abstract and starts shared FLOW")
             val cleanedInput = f.p(arg, listOf(h, field), mark = MarkSlot.Concrete(c.t))
             val actualInputs = setOf(cleanedInput, gInput, kInput)
-            assertEquals(listOf(field, g, k).map { f.p(arg, listOf(h, it), Tail.STAR) }.toSet(),
-                f.premises(3, c.callee),
-                "Each actual child refines h/ANY with its first new field")
+            assertEquals(listOf(field, g, k).map { f.p(arg, listOf(h, it), Tail.STAR) }.toSet() +
+                f.p(arg, listOf(h), Tail.EXACT), f.premises(3, c.callee),
+                "Each child refines h/ANY and also emits its exact FLOW prefix")
             val sources = f.program.entryInputs.single { it.key == c.root }.rules.summary.edges.map { it.forward }
                 .filter { it.from.base == AccessPathBase.Zero && it.to.base != AccessPathBase.Zero }
             assertEquals(3, sources.size)

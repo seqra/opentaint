@@ -96,8 +96,8 @@ class DemandStore private constructor(
         for (method in byMethod.values + scoped.values.map { it.data }) for (d in method.rows) {
             ap.cancellation.checkpoint()
             if (d.entry.fact.mark !is MarkSlot.Star) continue
-            check(d.entry.fact.tail == Tail.ANY || run == 2 && d.entry.fact.tail == Tail.STAR) {
-                "A run-$run FLOW demand entry must be ANY (STAR is valid only in run-2): $d"
+            check(d.entry.fact.tail == Tail.ANY || d.entry.fact.tail == Tail.STAR) {
+                "A run-$run FLOW demand entry must be STAR or ANY: $d"
             }
             check(d.exit == null || d.exit.fact.mark is MarkSlot.Star &&
                 d.exit.fact.tail in setOf(Tail.STAR, Tail.ANY)) { "Invalid paired FLOW exit: $d" }
@@ -106,8 +106,8 @@ class DemandStore private constructor(
             ap.cancellation.checkpoint()
             val entry = (row.entry as? DemandEntry.Data)?.pattern ?: continue
             if (entry.fact.mark is MarkSlot.Star)
-                check(entry.fact.tail == Tail.ANY || run == 2 && entry.fact.tail == Tail.STAR) {
-                    "A run-$run FLOW demand entry must be ANY (STAR is valid only in run-2): $row"
+                check(entry.fact.tail == Tail.ANY || entry.fact.tail == Tail.STAR) {
+                    "A run-$run FLOW demand entry must be STAR or ANY: $row"
                 }
         }
     }

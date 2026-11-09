@@ -48,7 +48,7 @@ class SelectedCallPolicyHelpersTest {
                 add(f.callee, DemandPattern(f.store.pattern(tail = Tail.ANY, mark = MarkSlot.STAR), null))
             }.build()
             val eligible = f.method.config(index = 3, demand = demand)
-            assertEquals(1, emitRestrictedInitials(eligible, f.ops, f.callee, actual, statistics).size)
+            assertEquals(2, emitRestrictedInitials(eligible, f.ops, f.callee, actual, statistics).size)
             val snapshot = statistics.snapshot()
             assertEquals(2L, snapshot.persistedReplayInvocations)
             assertEquals(2L, snapshot.persistedReplayCandidates)
@@ -73,7 +73,10 @@ class SelectedCallPolicyHelpersTest {
                 f.fact(path = listOf(field, f.field(child)), tail = Tail.EXACT,
                     mark = MarkSlot.Concrete(f.mark(mark)))
             }
-            val answers = actuals.map { emitRestrictedInitials(config, f.ops, f.key, it).single() }
+            val families=actuals.map { emitRestrictedInitials(config,f.ops,f.key,it) }
+            assertEquals(2,families[0].size)
+            assertEquals(families[0],families[1])
+            val answers=families.map { it.single { command -> command.initial.tail==Tail.STAR } }
             assertEquals(answers[0], answers[1])
             assertSame(answers[0].initial, answers[1].initial)
             assertEquals(listOf(field), answers[0].initial.pathArray.asList())

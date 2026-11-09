@@ -82,21 +82,25 @@ class NeutralRelationBatchTest {
         }
     }
 
-    @Test fun `protected exact and ANY paths survive packed field cut`(): Unit = with(v) {
-        fun member(mark: MarkSlot.Concrete): NeutralRelationBatch {
-            val facts = pack(leaf(p(f, g), Tail.EXACT, mark, Layer.DEMAND),
-                leaf(p(h), Tail.ANY, mark, Layer.DEMAND)) as TaintTree
-            val protected = pack(leaf(p(f, g), Tail.EXACT, mark, Layer.DEMAND)) as TaintTree
-            return checkNotNull(NeutralRelationBatch.from(m, premise(tail = Tail.STAR, mark = mark), facts.withProtection(protected.root)))
-        }
-        val a = member(mt)
-        assertTrue(a.mergeIfSameGeometry(member(mu)))
+    @Test fun `partial protection uses the scalar fallback before a packed key is built`(): Unit = with(v) {
+        val input = pack(leaf(p(f, g), Tail.EXACT, mt, Layer.DEMAND),
+            leaf(p(h), Tail.ANY, mt, Layer.DEMAND)) as TaintTree
+        val protected = pack(leaf(p(f, g), Tail.EXACT, mt, Layer.DEMAND)) as TaintTree
+        val original = premise(tail = Tail.STAR, mark = mt)
+        val mixed = input.withProtection(protected.root)
+        assertNull(NeutralRelationBatch.from(m, original, mixed))
+        val packets = mixed.membershipPackets(m)
+        assertEquals(2, packets.size)
+        for (packet in packets) assertNotNull(NeutralRelationBatch.from(m, original, packet))
         val summary = StatementSummary.identities(listOf(x))
-        val expected = scalar(a.decode().toList(), summary)
-        val actual = ArrayList<Pair<PremiseKey, Facts>>()
-        assertTrue(a.apply(ops, summary, mode, { pr, f -> actual += pr to f }))
-        assertEquals(observations(expected), observations(actual))
+        val actual = packets.flatMap { packet ->
+            val batch = checkNotNull(NeutralRelationBatch.from(m, original, packet))
+            val outputs = ArrayList<Pair<PremiseKey, Facts>>()
+            assertTrue(batch.apply(ops, summary, mode, { pr, f -> outputs += pr to f }))
+            outputs
+        }
         assertTrue(actual.any { (it.second as TaintTree).nonSubsumable != null })
+        assertTrue(actual.any { (it.second as TaintTree).nonSubsumable == null })
     }
 
     @Test fun `untouched input uses the unchanged callback and no generated callback`(): Unit = with(v) {

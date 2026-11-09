@@ -60,7 +60,7 @@ class FactKindsTest {
             val u = f.mark("U")
             val mt = MarkSlot.Concrete(t)
             val prems = listOf(
-                f.manager.initial(f.pattern(x, tail = Tail.ANY, mark = mt)),
+                f.manager.initial(f.pattern(x, tail = Tail.STAR, mark = mt)),
                 f.manager.initial(f.pattern(x, tail = Tail.ANY_TAINT, mark = mt)),
                 f.manager.initial(f.pattern(x, tail = Tail.ANY_TAINT, mark = mt, exclusion = ExclusionSet.of(intArrayOf(g)))),
                 f.manager.initial(f.pattern(x, tail = Tail.ANY_TAINT, mark = mt, exclusion = ExclusionSet.of(intArrayOf(h)))),
@@ -71,7 +71,7 @@ class FactKindsTest {
             f.drain(core)
             for (premise in prems) {
                 val initialFacts = core.edges.edgesAt(f.inst(0), premise).single().second
-                assertEquals(setOf(Conclusion(premise.toPattern().fact, premise.exclusion, premise.tail == Tail.ANY)),
+                assertEquals(setOf(Conclusion(premise.toPattern().fact, premise.exclusion, premise.tail == Tail.STAR)),
                     methodLeaves(f.ops, listOf(initialFacts)))
             }
             val flowPremise = f.manager.initial(f.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR))

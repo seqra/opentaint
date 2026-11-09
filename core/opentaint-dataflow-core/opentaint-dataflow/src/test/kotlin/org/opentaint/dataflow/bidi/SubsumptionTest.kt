@@ -18,7 +18,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
-/** Selected canonical prefix admission, decoded independently from typed trie payloads. */
+/** Required incoming subsumption, independently decoded from typed trie payloads. Current MAY/MUST facts are canonical. */
 class SubsumptionTest {
     private val manager = testApManager(Cancellation())
     private val x = AccessPathBase.Argument(0)
@@ -43,7 +43,7 @@ class SubsumptionTest {
     private val locationCache = HashMap<Conclusion, Set<ObservedLocation>>()
 
     @Test
-    fun `flow admission keeps guide positions and follows direct data coverage elsewhere`() {
+    fun `flow subsumption agrees with direct leaves across path exclusion and mark exclusion cells`() {
         for (layer in Layer.entries) {
             val leaves = buildList {
                 for (path in paths) for (mx in markExclusions) {
@@ -89,7 +89,7 @@ class SubsumptionTest {
         for (leaf in leaves) {
             val group = group()
             val original = typed(leaf)
-            assertSame(original, group.add(original))
+            assertEquals(original, group.add(original))
             val stored = group.all().single()
             assertNull(group.add(original))
             assertNull(group.add(typed(leaf)))
@@ -205,19 +205,19 @@ class SubsumptionTest {
         val group = group()
         group.add(typed(stored))
         val delta = assertNotNull(group.add(taintBundle(incoming, empty, Layer.DEMAND)))
-        val referenceDataDelta = incoming.filterNot { subsumes(stored,it) }.filter { candidate ->
-            incoming.none { other -> other != candidate && subsumes(other,candidate) }
+        val referenceDelta = incoming.filterNot { subsumes(stored, it) }.toSet()
+        assertEquals(setOf(incoming[2], incoming[3]), referenceDelta)
+        val canonicalDelta = referenceDelta.filterNot { candidate ->
+            referenceDelta.any { it != candidate && subsumes(it, candidate) }
         }.toSet()
-        assertEquals(setOf(incoming[3]),referenceDataDelta, "The scalar DATA coverage law is unchanged")
-        val suppliedGuides = incoming.filter { it.demand && it.fact.tail == Tail.ANY }
-        val referenceDelta = referenceDataDelta + suppliedGuides
-        assertEquals(referenceDelta,decode(listOf(delta)))
-        assertEquals(setOf(incoming[1],incoming[3]),referenceDelta)
+        assertEquals(setOf(incoming[3]), canonicalDelta)
+        assertEquals(canonicalDelta, decode(listOf(delta)))
+        assertEquals(observed(referenceDelta), observed(decode(listOf(delta))))
         assertEquals(observed(listOf(stored) + incoming), observed(decode(group.all().toList())))
     }
 
     @Test
-    fun `demand ancestors retain supplied FLOW and concrete MAY guide positions`() {
+    fun `MAY canonicalization removes old descendants and rejects covered incoming leaves`() {
         for (mark in listOf(MarkSlot.STAR, mt)) {
             val descendant = conclusion(listOf(g), Tail.ANY, mark)
             val ancestor = conclusion(emptyList(), Tail.ANY, mark)
@@ -225,13 +225,11 @@ class SubsumptionTest {
             val group = group()
             assertNotNull(group.add(typed(descendant)))
             assertNotNull(group.add(typed(ancestor)))
-            assertEquals(setOf(ancestor,descendant), decode(group.all().toList()))
-            assertEquals(setOf(later),decode(listOf(assertNotNull(group.add(typed(later))))))
-            assertEquals(setOf(ancestor,descendant,later),decode(group.all().toList()))
+            assertEquals(setOf(ancestor), decode(group.all().toList()))
             val stored = group.all().toList()
-            assertNull(group.add(typed(later)),"An identical offered coordinate is never fresh")
+            assertNull(group.add(typed(later)))
             assertEquals(stored.size, group.all().count())
-            stored.zip(group.all().toList()).forEach { (before, after) -> assertSame(before, after) }
+            stored.zip(group.all().toList()).forEach { (before, after) -> assertEquals(before, after) }
             assertEquals(observed(listOf(descendant, ancestor, later)), observed(decode(group.all().toList())))
         }
     }
@@ -327,10 +325,9 @@ class SubsumptionTest {
             val label = "$stored then $incoming"
             val group = group()
             val first = typed(stored)
-            assertSame(first, group.add(first), label)
+            assertEquals(first, group.add(first), label)
             val delta = group.add(typed(incoming))
-            val keepGuidePosition = incoming.demand && incoming.fact.tail == Tail.ANY && stored.fact.path != incoming.fact.path
-            assertEquals(subsumes(stored, incoming) && !keepGuidePosition, delta == null, label)
+            assertEquals(subsumes(stored, incoming), delta == null, label)
             assertEquals(observed(listOf(stored, incoming)), observed(decode(group.all().toList())), label)
         }
     }

@@ -238,3 +238,15 @@ Use the same full-suite commands shown above. New local evidence:
 * Final XML and summaries: `/tmp/bidi-cleaner-normalisation/{final-default,final-bidi}`. Each suite has an `xml` directory and `failures.json`. Each mode has `summary.json` and `sample-results.json`.
 * Imported-code false-negative proof: `/tmp/bidi-cleaner-normalisation/reach-imported-bidi/xml` and `/tmp/bidi-cleaner-normalisation-reach-imported-bidi.log`.
 * Guarded focused run: `/tmp/bidi-cleaner-normalisation-reach-fixed.log`.
+
+
+## 2026-11-08: optional GROUP companion image
+
+FULL is the selected acceptance mode. A GROUP demand can admit an exact FLOW
+prefix from an actual bound FULL-mark input. The normalized public STAR/FLOW
+key can fail the structural C5 image check because a GROUP token cannot be
+an owned concrete STAR initial. No GROUP image extension is selected in this
+iteration. The GROUP F76 regression checks the actual raw admission family
+with an independent scalar witness and keeps its finding/exclusion assertions.
+FULL retains the complete constructive image checks. Track this limitation
+before using GROUP for a project quality or performance acceptance claim.

@@ -38,26 +38,22 @@ internal data class LoopLabelledAdmission(val scope: BlockScope, val family: Loo
 private fun <T> frozenSet(values: Collection<T>): Set<T> =
     Collections.unmodifiableSet(LinkedHashSet(values))
 
-/** Exact geometry and annotation. Facts.equals intentionally omits the protection annotation. */
+/** Exact geometry and its independent protection membership. */
 internal data class LoopObservedMember(val pattern: Pattern, val layer: Layer, val nonSubsumable: Boolean)
 
-/** Query-local exact union. A protected copy wins over an otherwise identical plain copy. */
+/** Query-local exact union retains both protection memberships. */
 internal class LoopObservedFacts(private val ops: ApOps) {
-    private data class Key(val pattern: Pattern, val layer: Layer)
-    private val members = LinkedHashMap<Key, Boolean>()
+    private val members = LinkedHashSet<LoopObservedMember>()
 
     fun add(facts: Facts) {
         for (scalar in annotatedLoopScalars(ops, facts)) {
             ops.manager.cancellation.checkpoint()
             val pattern = ops.leaves(scalar).single()
-            val key = Key(pattern, scalar.layer)
-            members[key] = members[key] == true || scalar is TaintTree && scalar.nonSubsumable != null
+            members += LoopObservedMember(pattern, scalar.layer, scalar is TaintTree && scalar.nonSubsumable != null)
         }
     }
 
-    fun freeze(): Set<LoopObservedMember> = frozenSet(members.map { (key, protected) ->
-        LoopObservedMember(key.pattern, key.layer, protected)
-    })
+    fun freeze(): Set<LoopObservedMember> = frozenSet(members)
 }
 
 /** Scalar output memberships with each exact protection coordinate retained before observing it. */
@@ -120,7 +116,7 @@ internal class LoopOutputRestriction(private val ops: ApOps) {
         scalarConclusion: Pattern,
         appliedValue: Facts,
         observe: (Facts) -> LoopObservation<R>,
-    ): List<Facts> = restrict(run1, loopSummaryGrows(rowPremise, scalarConclusion), appliedValue, observe)
+    ): List<Facts> = restrict(run1, !rowPremise.isZero && loopSummaryGrows(rowPremise, scalarConclusion), appliedValue, observe)
 
     /** Native reverse views keep a transient Pattern premise; classify that stored geometry
      * directly rather than interning a query-only MUST initial merely to call the gate. */

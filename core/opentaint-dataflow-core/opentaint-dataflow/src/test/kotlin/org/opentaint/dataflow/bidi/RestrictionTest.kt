@@ -219,7 +219,9 @@ class RestrictionTest {
         assertEquals(decode(conclusion), check(must, conclusion, precise).toSet())
         val moreExcluded = manager.initial(p(emptyList(), Tail.ANY_TAINT, MarkSlot.Concrete(t), ex(f, g)))
         assertEquals(decode(conclusion), check(moreExcluded, conclusion, precise).toSet())
-        assertTrue(check(root, conclusion, DemandPattern(p(emptyList(), Tail.ANY, MarkSlot.Concrete(t)), exit)).isEmpty())
+        assertEquals(decode(conclusion),check(root,conclusion,
+            DemandPattern(p(emptyList(),Tail.ANY,MarkSlot.Concrete(t)),exit)).toSet(),
+            "The normalized STAR/FLOW original is an authorized concrete-STAR companion")
         val underField = manager.initial(p(listOf(f), Tail.ANY_TAINT, MarkSlot.Concrete(t)))
         assertTrue(check(underField, conclusion, DemandPattern(p(emptyList(), Tail.STAR, MarkSlot.Concrete(t), exclusion = ex(f)), exit)).isEmpty())
     }

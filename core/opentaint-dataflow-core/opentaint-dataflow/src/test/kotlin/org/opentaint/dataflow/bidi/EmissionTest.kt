@@ -17,7 +17,7 @@ import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
-/** Scalar prefix normalization precedes the independent reference emitter. */
+/** The added leaves are explicit test data. Expected emission and starts use the raw reference operations. */
 class EmissionTest {
     private val manager = testApManager(Cancellation())
     private val ops = ApOps(manager)
@@ -79,19 +79,19 @@ class EmissionTest {
     }.toSet()
 
     private fun check(input: Input, demand: DemandPattern, name: String = ""): List<InitialAp> {
-        // These packets have one E header and no protection. Test normalization
-        // independently, without asking the production trie canonicalizer.
-        val dataCanonical = input.leaves.distinct().filter { leaf -> input.leaves.none { cover ->
-            val a = cover.fact; val b = leaf.fact
-            cover != leaf && a.base == b.base && a.mark == b.mark &&
-                a.path.size <= b.path.size && b.path.take(a.path.size) == a.path &&
-                (a.tail == Tail.ANY || a.tail == Tail.ANY_TAINT && b.tail == Tail.ANY_TAINT &&
-                    (a.path == b.path && cover.exclusion.isSubsetOf(leaf.exclusion) ||
-                        a.path.size < b.path.size && cover.exclusion.admits(b.path[a.path.size])))
-        } }
-        val suppliedGuides = input.leaves.filter { it.demand && it.fact.tail == Tail.ANY }
-        val canonical = (dataCanonical + suppliedGuides).distinct()
-        val expected = canonical.mapNotNull { emit(demand.entry, Pattern(it.fact, it.exclusion)) }.toSet()
+        // Scalar primary plus the two selected command laws (spec section 4).
+        val expected = buildSet {
+            for (leaf in input.leaves) {
+                val actual = Pattern(leaf.fact, leaf.exclusion)
+                val primary = emit(demand.entry, actual) ?: continue
+                add(primary)
+                if (primary.fact.tail == Tail.STAR && primary.fact.mark is MarkSlot.Concrete)
+                    add(primary.copy(fact = primary.fact.copy(mark = star)))
+                if (demand.entry.fact.tail == Tail.ANY && actual.fact.path.size > demand.entry.fact.path.size &&
+                    actual.fact.path.startsWith(demand.entry.fact.path))
+                    add(pattern(demand.entry.fact.path,Tail.EXACT,star,base=demand.entry.fact.base))
+            }
+        }
         val before = decoded(input.facts)
         val actual = ops.emit(demand, input.facts)
         assertEquals(expected, actual.map { it.toPattern() }.toSet(), "$name emitted patterns")
@@ -184,8 +184,8 @@ class EmissionTest {
         val expected = listOf(
             setOf(pattern(p(f),Tail.EXACT,star),pattern(p(f),Tail.ANY_TAINT,star,ex(g)),
                 pattern(p(f,h),Tail.STAR,star)),
-            setOf(pattern(p(f),Tail.ANY,star),pattern(p(f,h),Tail.STAR,star)),
-            setOf(pattern(p(f,h),Tail.STAR,star)))
+            setOf(pattern(p(f),Tail.EXACT,star),pattern(p(f),Tail.STAR,star),pattern(p(f,h),Tail.STAR,star)),
+            setOf(pattern(p(f),Tail.EXACT,star),pattern(p(f),Tail.STAR,star),pattern(p(f,h),Tail.STAR,star)))
         val shared = linkedMapOf<Pattern,InitialAp>()
         for ((index,added) in listOf(input,demandInput,abstractAdded).withIndex()) for (exit in exits) {
             val initials=check(added,DemandPattern(entry,exit))
@@ -199,19 +199,21 @@ class EmissionTest {
     }
 
     @Test
-    fun `concrete entry uses canonical must support and keeps independent exact premises`() {
+    fun `concrete entry emits multiple exact and must premises with distinct own exclusions`() {
         val input = pack(listOf(value(p(), Tail.ANY_TAINT, exclusion = ex(g)),
             value(p(f), Tail.ANY_TAINT, exclusion = ex(g)), value(p(f), Tail.EXACT),
             value(p(f, h), Tail.ANY_TAINT, exclusion = ex(g)), value(p(f, h), Tail.EXACT),
             value(p(f, g), Tail.EXACT), value(p(h), Tail.EXACT), value(p(f), Tail.EXACT, mu)))
         val demand = DemandPattern(pattern(p(f), Tail.ANY), pattern(p(), Tail.EXACT, mu, base = y))
         val initial = check(input, demand)
-        val expected = setOf(pattern(p(f), Tail.ANY_TAINT), pattern(p(f), Tail.EXACT),
-            pattern(p(f, h), Tail.EXACT), pattern(p(f, g), Tail.EXACT))
+        val expected = setOf(pattern(p(f), Tail.ANY_TAINT), pattern(p(f), Tail.ANY_TAINT, exclusion = ex(g)),
+            pattern(p(f), Tail.EXACT), pattern(p(f, h), Tail.STAR),
+            pattern(p(f, h), Tail.EXACT), pattern(p(f, g), Tail.EXACT),
+            pattern(p(f,h),Tail.STAR,star),pattern(p(f),Tail.EXACT,star))
         assertEquals(expected, initial.map { it.toPattern() }.toSet())
         val byPattern = initial.associateBy { it.toPattern() }
         val empty = byPattern.getValue(pattern(p(f), Tail.ANY_TAINT))
-        val excluded = check(pack(listOf(value(p(f), Tail.ANY_TAINT, exclusion = ex(g)))), demand).single()
+        val excluded = byPattern.getValue(pattern(p(f), Tail.ANY_TAINT, exclusion = ex(g)))
         assertNotSame(empty, excluded)
         assertEquals(setOf(startFact(empty.toPattern())), decoded(ops.startFact(empty)))
         assertEquals(setOf(startFact(excluded.toPattern())), decoded(ops.startFact(excluded)))
@@ -219,10 +221,7 @@ class EmissionTest {
         val demandAdded = pack(input.leaves.map {
             value(it.fact.path, if (it.fact.tail == Tail.ANY_TAINT) Tail.ANY else Tail.EXACT, it.fact.mark, demand = true)
         })
-        val demandInitials = check(demandAdded, demand)
-        assertEquals(setOf(pattern(p(f),Tail.ANY),pattern(p(f,h),Tail.STAR)),
-            demandInitials.map { it.toPattern() }.toSet())
-        val may = demandInitials.single { it.pathArray.toList() == p(f) && it.tail == Tail.ANY }
+        val may = check(demandAdded, demand).single { it.pathArray.toList() == p(f) && it.tail == Tail.STAR && it.mark == mt }
         assertNotSame(empty, may)
         assertEquals(Layer.NORMAL, ops.startFact(empty).layer)
         assertEquals(Layer.DEMAND, ops.startFact(may).layer)
@@ -251,7 +250,8 @@ class EmissionTest {
             pattern(p(f, h), Tail.EXACT) to setOf(pattern(p(f, h), Tail.EXACT)),
             pattern(p(f, g, h), Tail.ANY) to emptySet(),
             pattern(p(f, h, g), Tail.ANY) to setOf(pattern(p(f, h, g), Tail.ANY_TAINT)),
-            pattern(p(), Tail.ANY) to setOf(pattern(p(f), Tail.STAR)),
+            pattern(p(), Tail.ANY) to setOf(pattern(p(f), Tail.STAR),pattern(p(f),Tail.STAR,star),
+                pattern(p(),Tail.EXACT,star)),
         )
         for ((entry, expected) in cases) assertEquals(expected,
             check(input, DemandPattern(entry, null)).map { it.toPattern() }.toSet())
@@ -302,7 +302,8 @@ class EmissionTest {
             val demand = DemandPattern(pattern(p(c), Tail.ANY, star, base = static), null)
             val expected = when (path) {
                 p(c) -> setOf(pattern(p(c),Tail.EXACT,star,base=static))
-                p(c,f) -> setOf(pattern(p(c,f),Tail.STAR,star,base=static))
+                p(c,f) -> setOf(pattern(p(c,f),Tail.STAR,star,base=static),
+                    pattern(p(c),Tail.EXACT,star,base=static))
                 else -> emptySet()
             }
             assertEquals(expected, check(input, demand).map { it.toPattern() }.toSet())

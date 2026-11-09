@@ -29,7 +29,7 @@ class LoopQueryScratchTest {
         val both = f.manager.mergeAddDelta(a,b).first as TaintTree
         val protectedA = both.withProtection(a.root)
         val protectedB = both.withProtection(b.root)
-        assertEquals(protectedA, protectedB)
+        assertNotEquals(protectedA, protectedB)
         scratch.initials(view,protectedA,policy)
         scratch.initials(view,protectedA,policy)
         scratch.initials(view,protectedB,policy)

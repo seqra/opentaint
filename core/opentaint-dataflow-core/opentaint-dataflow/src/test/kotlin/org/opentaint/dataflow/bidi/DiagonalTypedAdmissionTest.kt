@@ -128,8 +128,8 @@ class DiagonalTypedAdmissionTest {
             val before=store.census()
             assertNull(store.addDiagonal(offered))
             assertEquals(before,store.census())
-            val deltas=scalar(offered).flatMap { (key,facts) -> store.addAll(key,facts).map { key to it } }
-            val expected=if(packetFlag)listOf(t,u)else listOf(u)
+            val deltas=scalar(offered).mapNotNull { (key,facts) -> store.add(key,facts)?.let { key to it } }
+            val expected=if(packetFlag != anyFlag)listOf(t,u)else listOf(u)
             assertEquals(expected,deltas.map { ((it.first.mark)as MarkSlot.Concrete).mark })
             assertEquals(1+expected.size.toLong(),store.census().concreteOutputMemberships)
         }
@@ -166,16 +166,11 @@ class DiagonalTypedAdmissionTest {
             val before=store.census()
             assertNull(store.addDiagonal(packet(update)))
             assertEquals(before,store.census())
-            val delta=store.addAll(initial(),update)
-            assertTrue(delta.isNotEmpty())
-            assertEquals(setOf(ExclusionSet.Empty,eh),delta.map { (it as TaintTree).exclusion }.toSet())
-            val expectedT=listOf(facts(Tail.STAR),update) + if(sharedFlag)listOf(shared)else emptyList()
-            assertEquals(observe(expectedT.asSequence()),observe(store.borrow(initial())))
-            assertEquals(observe(sequenceOf(update)).second,observe(delta.asSequence()).second,
-                "Only the newly supplied E header gains protection")
+            val delta=assertNotNull(store.add(initial(),update))
+            assertEquals(if(sharedFlag) ExclusionSet.Empty else eh,(delta as TaintTree).exclusion)
             assertEquals(beforeU,observe(store.borrow(initial(u))))
-            assertEquals(if(sharedFlag)4L else 3L,store.census().concreteOutputMemberships)
-            assertTrue(store.addAll(initial(),update).isEmpty())
+            assertEquals(if(sharedFlag) 2L else 3L,store.census().concreteOutputMemberships)
+            assertNull(store.add(initial(),update))
         }
     }
     @Test fun `FLOW compaction unlinks head and sibling headers before readmission`() {

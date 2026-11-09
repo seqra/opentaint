@@ -20,7 +20,7 @@ internal class SelectedDemandReference(
         val d = normalizeEntry(demand)
         // A MAY region is not evidence for an exact location. This is the selected
         // admission rule; PRE_TARGETS keeps the older table for labelled controls.
-        if (rejectMayForExact && d.fact.tail == Tail.EXACT && actual.fact.tail == Tail.ANY) return null
+        if (rejectMayForExact && d.fact.tail == Tail.EXACT && actual.fact.tail == Tail.ANY && d.fact.mark is MarkSlot.Star) return null
         if (d.fact.base != actual.fact.base || !markSub(d.fact.mark, actual.fact.mark, marks)) return null
         if (listOf(d, actual).any { it.fact.path.count { field -> field.isCounted() } > limit }) return null
         val mark = if (d.fact.mark is MarkSlot.Concrete && marks.isGroup(d.fact.mark.mark)) actual.fact.mark else d.fact.mark
@@ -43,9 +43,9 @@ internal class SelectedDemandReference(
             Tail.STAR, Tail.EXACT -> selected(p, Tail.EXACT)
             Tail.ANY -> when (actual.fact.tail) {
                 Tail.EXACT -> selected(p, Tail.EXACT)
-                Tail.ANY -> selected(p, Tail.ANY)
+                Tail.ANY -> selected(p, if (rejectMayForExact) Tail.STAR else Tail.ANY)
                 Tail.ANY_TAINT -> selected(p, Tail.ANY_TAINT, actual.exclusion)
-                Tail.STAR -> null
+                Tail.STAR -> if (rejectMayForExact) selected(p,Tail.STAR) else null
             }
             Tail.ANY_TAINT -> null
         }
@@ -58,10 +58,11 @@ internal class SelectedDemandReference(
             val exact = mark is MarkSlot.Concrete && actual.fact.tail == Tail.EXACT && chain == q
             return selected(chain, if (exact) Tail.EXACT else Tail.STAR)
         }
-        if (p.startsWith(q) && actual.tailAdmits(p.drop(q.size))) return when (d.fact.tail) {
+        if (p.startsWith(q) && actual.tailAdmits(p.drop(q.size)) &&
+            (!rejectMayForExact || actual.fact.tail in setOf(Tail.ANY,Tail.ANY_TAINT))) return when (d.fact.tail) {
             Tail.STAR, Tail.EXACT -> selected(p, Tail.EXACT)
             Tail.ANY -> when (actual.fact.tail) {
-                Tail.ANY -> selected(p, Tail.ANY)
+                Tail.ANY -> selected(p, if (rejectMayForExact) Tail.STAR else Tail.ANY)
                 Tail.ANY_TAINT -> selected(p, Tail.ANY_TAINT, d.exclusion)
                 else -> null
             }
@@ -70,8 +71,31 @@ internal class SelectedDemandReference(
         return null
     }
 
+    fun family(d: Pattern,a: Pattern,support: Layer): List<Pair<Pattern,Layer>> {
+        val primary = emit(d,a) ?: return emptyList()
+        val layer = when {
+            primary.fact.base == AccessPathBase.Zero || primary.fact.mark is MarkSlot.Star -> Layer.NORMAL
+            primary.fact.tail == Tail.STAR || support == Layer.DEMAND || a.fact.tail == Tail.ANY -> Layer.DEMAND
+            else -> Layer.NORMAL
+        }
+        val rows = linkedSetOf(primary to layer)
+        if (rejectMayForExact && primary.fact.tail == Tail.STAR && primary.fact.mark is MarkSlot.Concrete)
+            rows += primary.copy(fact=primary.fact.copy(mark=MarkSlot.STAR)) to Layer.NORMAL
+        if (rejectMayForExact && d.fact.tail == Tail.ANY && a.fact.path.size > d.fact.path.size &&
+            a.fact.path.startsWith(d.fact.path))
+            rows += Pattern(d.fact.copy(tail=Tail.EXACT,mark=MarkSlot.STAR),ExclusionSet.Empty) to Layer.NORMAL
+        return rows.toList()
+    }
+
     /** Check the emitter image with explicit finite witness forms, then test raw containment. */
     fun stores(entry: Pattern, stored: Pattern): Boolean {
+        if (primaryStores(entry,stored)) return true
+        return rejectMayForExact && stored.fact.tail == Tail.STAR && stored.fact.mark is MarkSlot.Star &&
+            stored.fact.mark.excluded.isEmpty && entry.fact.mark is MarkSlot.Concrete &&
+            primaryStores(entry,stored.copy(fact=stored.fact.copy(mark=entry.fact.mark)))
+    }
+
+    private fun primaryStores(entry: Pattern, stored: Pattern): Boolean {
         val raw = buildList {
             add(stored)
             if (stored.fact.mark is MarkSlot.Star && stored.fact.tail == Tail.STAR && stored.exclusion == ExclusionSet.Empty)

@@ -28,25 +28,29 @@ class PathTrie<V : Any>(private val cancellation: Cancellation? = null) {
         return node.values.add(value)
     }
 
-    /** Remove one current posting and release empty path nodes on the owning writer. */
+    val isEmpty: Boolean get() = roots.isEmpty()
+
+    /** Remove one exact posting and release its now-empty path. No retained
+     * historical key remains after the owner removes its last relation. */
     fun remove(base: AccessPathBase, path: IntArray, value: V): Boolean {
         cancellation?.checkpoint()
         val root = roots[base] ?: return false
-        val spine = ArrayList<Node<V>>(path.size + 1)
-        spine += root
+        val parents = ArrayList<Node<V>>(path.size)
         var node = root
         for (accessor in path) {
             cancellation?.checkpoint()
+            parents += node
             node = node.child(accessor) ?: return false
-            spine += node
         }
+        cancellation?.checkpoint()
         if (!node.values.remove(value)) return false
-        for (index in path.indices.reversed()) {
-            val child = spine[index + 1]
-            if (child.values.isNotEmpty() || child.children?.isNotEmpty() == true) break
-            val parent = spine[index]
-            parent.children?.remove(path[index])
+        // Finish pruning without another cancellable operation after mutation.
+        for (i in path.indices.reversed()) {
+            if (node.values.isNotEmpty() || node.children?.isNotEmpty() == true) break
+            val parent = parents[i]
+            parent.children?.remove(path[i])
             if (parent.children?.isEmpty() == true) parent.children = null
+            node = parent
         }
         if (root.values.isEmpty() && root.children == null) roots.remove(base)
         return true

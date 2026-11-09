@@ -137,15 +137,19 @@ class LoopConsumerObservationTest {
     }
 
     @Test
-    fun `a protected native image wins over its plain duplicate in complete observation`() {
+    fun `plain and protected native images both remain in complete observation`() {
         val initial = ap.initial(fixture.pattern(x, mark = t))
         val result = fixture.fact(ret, listOf(g), mark = t) as TaintTree
         val plain = Record(fixture.method, Direction.FORWARD, initial, result)
         val protected = Record(fixture.method, Direction.FORWARD, initial, result.withProtection(result.root))
         val records = listOf(LoopObservedRecord(plain, PortId(9)), LoopObservedRecord(protected, PortId(9)))
         val signature = LoopConsumerObservation(ops, mode, views(records)).observe(initial, fixture.fact(x, mark = t))
-        val member = (signature.enclosingResults.single() as LoopEnclosingResult.Data).member
-        assertTrue(member.nonSubsumable)
-        assertEquals(listOf(g), member.pattern.fact.path)
+        val members = signature.enclosingResults.map { (it as LoopEnclosingResult.Data).member }
+        assertEquals(2, members.size)
+        assertEquals(setOf(false, true), members.map { it.nonSubsumable }.toSet())
+        assertTrue(members.all { it.pattern.fact.path == listOf(g) })
+        val reverse = LoopConsumerObservation(ops, mode, views(records.reversed()))
+            .observe(initial, fixture.fact(x, mark = t))
+        assertEquals(signature, reverse)
     }
 }

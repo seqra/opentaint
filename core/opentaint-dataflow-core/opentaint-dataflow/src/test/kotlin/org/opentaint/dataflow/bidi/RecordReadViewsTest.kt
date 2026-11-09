@@ -44,13 +44,13 @@ class RecordReadViewsTest {
         assertFalse(recordLeafIdentity(view))
 
         val input = conclusion(y, listOf(g, f, h), Tail.EXACT, mt)
-        val selected = assertNotNull(ops.satisfying(typed(input), view.premise, backward, record = true))
+        val selected = assertNotNull(ops.satisfying(typed(input), view.premise, backward, record = true, role = SummaryReadRole.SAVED_OPPOSITE))
         assertEquals(setOf(input), decode(listOf(selected)))
         assertEquals(setOf(conclusion(x, listOf(f), Tail.EXACT, mu)), apply(view, selected, backward))
         assertNull(ops.satisfying(typed(conclusion(y, listOf(g, h, f), Tail.EXACT, mt)),
-            view.premise, backward, record = true))
+            view.premise, backward, record = true, role = SummaryReadRole.SAVED_OPPOSITE))
         assertNull(ops.satisfying(typed(input.copy(fact = input.fact.copy(mark = mu))),
-            view.premise, backward, record = true))
+            view.premise, backward, record = true, role = SummaryReadRole.SAVED_OPPOSITE))
         assertEquals(ex(h), view.premise.exclusion)
         assertEquals(Tail.STAR, view.premise.fact.tail)
     }
@@ -63,10 +63,10 @@ class RecordReadViewsTest {
         assertEquals(pattern(y, listOf(g), Tail.STAR, mt, ex(h)), view.premise)
         assertEquals(conclusion(x, listOf(f), Tail.ANY, mu), view.result)
         val input = conclusion(y, listOf(g, f), Tail.EXACT, mt)
-        val selected = assertNotNull(ops.satisfying(typed(input), view.premise, backward, record = true))
+        val selected = assertNotNull(ops.satisfying(typed(input), view.premise, backward, record = true, role = SummaryReadRole.SAVED_OPPOSITE))
         assertEquals(setOf(conclusion(x, listOf(f), Tail.ANY, mu)), apply(view, selected, backward))
         assertNull(ops.satisfying(typed(conclusion(y, listOf(g, h), Tail.EXACT, mt)),
-            view.premise, backward, record = true))
+            view.premise, backward, record = true, role = SummaryReadRole.SAVED_OPPOSITE))
         assertEquals(ex(g), source.exclusion)
         assertEquals(ex(h), target.exclusion)
     }
@@ -78,10 +78,10 @@ class RecordReadViewsTest {
         val view = assertNotNull(reverseRecordLeaf(Direction.FORWARD, source, target))
         assertEquals(pattern(y, listOf(g), Tail.EXACT, mt), view.premise)
         assertEquals(conclusion(x, listOf(f), Tail.ANY, mu), view.result)
-        val selected = assertNotNull(ops.satisfying(typed(target), view.premise, backward, record = true))
+        val selected = assertNotNull(ops.satisfying(typed(target), view.premise, backward, record = true, role = SummaryReadRole.SAVED_OPPOSITE))
         assertEquals(setOf(conclusion(x, listOf(f), Tail.ANY, mu)), apply(view, selected, backward))
         assertNull(ops.satisfying(typed(conclusion(y, listOf(g, f), Tail.EXACT, mt)),
-            view.premise, backward, record = true))
+            view.premise, backward, record = true, role = SummaryReadRole.SAVED_OPPOSITE))
     }
 
     @Test
@@ -105,8 +105,8 @@ class RecordReadViewsTest {
         }
         for (view in nativeViews()) for (input in inputs) {
             val a = Pattern(input.fact, input.exclusion)
-            val expectedSelected = applicable(view.premise, a) || inside(view.premise, a)
-            val selected = ops.satisfying(typed(input), view.premise, forward, record = true)
+            val expectedSelected = satisfies(view.premise,a,false,SummaryReadRole.SAVED_OPPOSITE)
+            val selected = ops.satisfying(typed(input), view.premise, forward, record = true, role = SummaryReadRole.SAVED_OPPOSITE)
             assertEquals(if (expectedSelected) setOf(input) else emptySet(),
                 selected?.let { decode(listOf(it)) } ?: emptySet(), "$view on $input")
             if (selected != null) {
@@ -130,10 +130,10 @@ class RecordReadViewsTest {
             conclusion(y, listOf(h), Tail.EXACT, mt),
         )
         val added = taintBundle(inputs, y, Layer.NORMAL, ex(h))
-        val selected = assertNotNull(ops.satisfying(added, view.premise, forward, record = true))
+        val selected = assertNotNull(ops.satisfying(added, view.premise, forward, record = true, role = SummaryReadRole.SAVED_OPPOSITE))
         val expected = inputs.filter {
             val a = Pattern(it.fact, it.exclusion)
-            applicable(view.premise, a) || inside(view.premise, a)
+            satisfies(view.premise,a,false,SummaryReadRole.SAVED_OPPOSITE)
         }.toSet()
         assertEquals(expected, decode(listOf(selected)))
         assertEquals(directResults(view, expected, forward), apply(view, selected, forward))
@@ -157,7 +157,7 @@ class RecordReadViewsTest {
             conclusion(x, listOf(g, f), Tail.ANY_TAINT, mu, ex(h)),
         )
         val added = taintBundle(inputs, x, Layer.NORMAL, ex(h))
-        val recordPart = assertNotNull(ops.satisfying(added, j, forward, record = true))
+        val recordPart = assertNotNull(ops.satisfying(added, j, forward, record = true, role = SummaryReadRole.SAVED_OPPOSITE))
         val insidePart = assertNotNull(ops.satisfying(recordPart, j, forward))
         val onlyPart = assertNotNull(ops.without(recordPart, insidePart))
         val expectedRecord = inputs.filter {
@@ -204,7 +204,7 @@ class RecordReadViewsTest {
         val must = pattern(x, listOf(g), Tail.ANY_TAINT, mt, ex(h))
         val input = typed(conclusion(x, listOf(g), Tail.EXACT, mt))
         for (mode in listOf(ApMode(true, Direction.FORWARD, 64), backward)) {
-            assertFails { ops.satisfying(input, must, mode, record = true) }
+            assertFails { ops.satisfying(input, must, mode, record = true, role = SummaryReadRole.SAVED_OPPOSITE) }
             assertFails { ops.satisfying(input, manager.initial(must), mode) }
         }
         assertNull(reverseRecordLeaf(Direction.BACKWARD, must,

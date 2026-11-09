@@ -126,6 +126,27 @@ class Run1SummaryAliasAdmissionTest {
         }
     }
 
+    @Test fun `later NORMAL identity keeps its alias classification in both protection classes`() {
+        for (protected in listOf(false, true)) MethodAnalysisFixtures().use { f ->
+            f.call(1, plan(f))
+            val mark = MarkSlot.Concrete(f.mark("T"))
+            val raw = f.manager.initial(f.pattern(argument, tail = Tail.EXACT, mark = mark))
+            val caller = f.manager.initial(f.pattern(AccessPathBase.Argument(3), tail = Tail.EXACT, mark = mark))
+            val actor = f.core(index = 3, L = 2,
+                localFactory = MethodLocalServicesFactory(::RunMethodLocalServices),
+                callFactory = MethodCallServicesFactory(::RunMethodCallServices))
+            val plain = f.fact(argument, tail = Tail.EXACT, mark = mark) as TaintTree
+            val value = if (protected) plain.withProtection(plain.root) else plain
+            actor.applySummary(part(f, caller, plain), Publication(raw, value), 0)
+            f.drain(actor)
+            val results = actor.edges.edgesAt(f.inst(1), caller).map { it.second }.toList()
+            assertTrue(results.any { it.base == local }, "Identity still binds back to the caller")
+            assertTrue(results.none { it.base == alias }, "H is not a memory effect")
+            assertEquals(setOf(protected), results.filterIsInstance<TaintTree>()
+                .filter { it.base == local }.map { it.nonSubsumable != null }.toSet())
+        }
+    }
+
     @Test fun `late cleaner and binding replies keep no effect caller layer and pending demotion`() {
         MethodAnalysisFixtures().use { f ->
             val group = f.groupMark()

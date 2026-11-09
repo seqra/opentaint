@@ -35,7 +35,7 @@ class PredefinedSummaryTest {
                 exclusion = ExclusionSet.of(f.field("excluded")), layer = layer) as TaintTree
             val protected = input.withProtection(input.root)
             val actual = apply(protected, backward = backward).single() as TaintTree
-            assertEquals(input, actual)
+            assertEquals(protected, actual)
             assertEquals(protected.nonSubsumable, actual.nonSubsumable)
             assertEquals(input.exclusion, actual.exclusion)
             assertEquals(layer, actual.layer)

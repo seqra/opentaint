@@ -54,9 +54,9 @@ open class ScopedEdgeStore<P>(private val m: ApManager, private val points: Poin
             return fresh
         }
 
-        fun present(layer: Layer, index: Int) = bits(layer, false, false)?.get(index) == true
+        fun present(layer: Layer, index: Int, protection: Boolean = false) = bits(layer, protection, false)?.get(index) == true
         fun isProtected(layer: Layer, index: Int) = bits(layer, true, false)?.get(index) == true
-        fun setPresent(layer: Layer, index: Int) { bits(layer, false, true)!!.set(index) }
+        fun setPresent(layer: Layer, index: Int, protection: Boolean = false) { bits(layer, protection, true)!!.set(index) }
         fun setProtected(layer: Layer, index: Int) { bits(layer, true, true)!!.set(index) }
         fun ensureFull(size: Int): Array<ConclusionGroup?> =
             full ?: arrayOfNulls<ConclusionGroup>(size).also { full = it }
@@ -92,10 +92,15 @@ open class ScopedEdgeStore<P>(private val m: ApManager, private val points: Poin
     }
 
     /** T4: new leaves, or the whole merged value when a T2 annotation changes. */
-    fun add(node: P, premise: PremiseKey, f: Facts): Facts? =
-        addAll(node, premise, f).also { check(it.size <= 1) { "Use addAll for split canonical headers" } }.singleOrNull()
+    fun add(node: P, premise: PremiseKey, f: Facts): Facts? = addAll(node, premise, f).let {
+        check(it.size <= 1) { "Canonical point admission produced multiple packets; use addAll" }
+        it.singleOrNull()
+    }
 
-    fun addAll(node: P, premise: PremiseKey, f: Facts): List<Facts> {
+    fun addAll(node: P, premise: PremiseKey, f: Facts): List<Facts> =
+        f.membershipPackets(m).flatMap { addPacket(node, premise, it) }
+
+    private fun addPacket(node: P, premise: PremiseKey, f: Facts): List<Facts> {
         m.cancellation.checkpoint()
         if (!RuntimeDataDomain.packet(premise, f)) return emptyList()
         check(f.base !is AccessPathBase.CleanerTemporary) { "A field-action temporary cannot enter method storage" }
@@ -123,11 +128,9 @@ open class ScopedEdgeStore<P>(private val m: ApManager, private val points: Poin
         rows.full?.get(index)?.let { return it.addAll(f) }
         val kind = rows.initial?.let { m.identityKind(it, f) } ?: NOT_IDENTITY
         if (kind == NOT_IDENTITY) return promoteAndAdd(rows, index, f)
-        val seen = rows.present(f.layer, index)
         val protected = kind == PROTECTED_IDENTITY
-        if (seen && (!protected || rows.isProtected(f.layer, index))) return emptyList()
-        rows.setPresent(f.layer, index)
-        if (protected) rows.setProtected(f.layer, index)
+        if (rows.present(f.layer, index, protected)) return emptyList()
+        rows.setPresent(f.layer, index, protected)
         return listOf(f)
     }
 
@@ -137,9 +140,9 @@ open class ScopedEdgeStore<P>(private val m: ApManager, private val points: Poin
         var promoted = false
         for (layer in Layer.entries) {
             m.cancellation.checkpoint()
-            if (rows.present(layer, index)) {
+            for (protected in listOf(false, true)) if (rows.present(layer, index, protected)) {
                 promoted = true
-                group.addAll(initialImage(m, checkNotNull(rows.initial), layer, rows.isProtected(layer, index)))
+                group.add(initialImage(m, checkNotNull(rows.initial), layer, protected))
             }
         }
         m.cancellation.checkpoint()
@@ -169,24 +172,18 @@ open class ScopedEdgeStore<P>(private val m: ApManager, private val points: Poin
         var fullArrayCapacity = 0L
         for (rows in groups.values) {
             m.cancellation.checkpoint()
-            val normal = rows.normal?.cardinality()?.toLong() ?: 0L
-            val demand = rows.demand?.cardinality()?.toLong() ?: 0L
+            val plainNormal = rows.normal?.cardinality()?.toLong() ?: 0L
+            val plainDemand = rows.demand?.cardinality()?.toLong() ?: 0L
+            val flaggedNormal = rows.protectedNormal?.cardinality()?.toLong() ?: 0L
+            val flaggedDemand = rows.protectedDemand?.cardinality()?.toLong() ?: 0L
+            val normal = plainNormal + flaggedNormal
+            val demand = plainDemand + flaggedDemand
             compactNormal += normal
             compactDemand += demand
-            var overlap = 0L
-            val smaller = if (normal <= demand) rows.normal else rows.demand
-            val other = if (normal <= demand) rows.demand else rows.normal
-            if (smaller != null && other != null) {
-                var index = smaller.nextSetBit(0)
-                while (index >= 0) {
-                    m.cancellation.checkpoint()
-                    if (other[index]) overlap++
-                    // BitSet indices are nonnegative Int values; do not overflow.
-                    if (index == Int.MAX_VALUE) break
-                    index = smaller.nextSetBit(index + 1)
-                }
-            }
-            compactPoints += normal + demand - overlap
+            val occupied = BitSet()
+            for (bits in listOfNotNull(rows.normal, rows.demand, rows.protectedNormal, rows.protectedDemand))
+                occupied.or(bits)
+            compactPoints += occupied.cardinality().toLong()
             if (rows.initial?.isFlow == true) compactFlow += normal + demand else compactTaint += normal + demand
             protectedNormal += rows.protectedNormal?.cardinality()?.toLong() ?: 0L
             protectedDemand += rows.protectedDemand?.cardinality()?.toLong() ?: 0L
@@ -235,8 +232,8 @@ open class ScopedEdgeStore<P>(private val m: ApManager, private val points: Poin
                 }
             } else for (layer in Layer.entries) {
                 m.cancellation.checkpoint()
-                if (rows.present(layer, index)) yield(key to initialImage(m, checkNotNull(rows.initial), layer,
-                    rows.isProtected(layer, index)))
+                for (protected in listOf(false, true)) if (rows.present(layer, index, protected))
+                    yield(key to initialImage(m, checkNotNull(rows.initial), layer, protected))
             }
         }
     }

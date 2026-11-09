@@ -21,7 +21,7 @@ class FlowBackedOwnersTest {
         val root = m.taintAlg.mergeAdd(m.taintAlg.mergeAdd(any.root, exact.root), other.root)
         val mixed = m.taintTree(y, Layer.DEMAND, root, anyTail = Tail.ANY, nonSubsumable = exact.root)
         val store = RunSummaryStore(m, flowBacked = true)
-        assertNotNull(store.addAdmitted(key, mixed))
+        assertTrue(store.addAdmittedAll(key, mixed).isNotEmpty())
         assertEquals(setOf(leaf(p(f), Tail.ANY, mt, Layer.DEMAND, base = y),
             leaf(p(f, h), Tail.EXACT, mt, Layer.DEMAND, base = y),
             leaf(p(g), Tail.ANY, mu, Layer.DEMAND, base = y)),

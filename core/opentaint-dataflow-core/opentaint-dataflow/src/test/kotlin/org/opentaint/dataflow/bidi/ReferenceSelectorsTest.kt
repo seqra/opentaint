@@ -15,6 +15,7 @@ import org.opentaint.dataflow.bidi.ap.Pattern
 import org.opentaint.dataflow.bidi.ap.Tail
 import org.opentaint.dataflow.bidi.ap.applicable
 import org.opentaint.dataflow.bidi.ap.covers
+import org.opentaint.dataflow.bidi.ap.startsWith
 import org.opentaint.dataflow.bidi.ap.inside
 import org.opentaint.dataflow.bidi.ap.overlap
 import org.opentaint.dataflow.bidi.ap.satisfies
@@ -102,8 +103,21 @@ class ReferenceSelectorsTest {
             val canonicalFlow = j.fact.tail == Tail.STAR && j.exclusion == ExclusionSet.Empty && j.fact.mark == MarkSlot.STAR
             val expectedRestricted = if (canonicalFlow) spatial.getValue(j).any { it in spatial.getValue(a) }
                 else expectedInside || ((j.fact.mark == MarkSlot.STAR || j.fact.tail == Tail.STAR) && expectedApplicable)
-            assertEquals(expectedApplicable || expectedInside, satisfies(j, a, restricted = false), "run1: j=$j a=$a")
-            assertEquals(expectedRestricted, satisfies(j, a, restricted = true), "restricted: j=$j a=$a")
+            val blockedStar = a.fact.tail == Tail.STAR && j.fact.path.size > a.fact.path.size &&
+                j.fact.path.startsWith(a.fact.path)
+            val headOverlap = j.fact.tail == Tail.STAR && a.fact.tail in setOf(Tail.STAR,Tail.ANY_TAINT) &&
+                j.fact.base == a.fact.base && j.fact.path == a.fact.path &&
+                marks.getValue(j.fact.mark).containsAll(marks.getValue(a.fact.mark))
+            val definiteFlowMust = j.fact.tail == Tail.ANY_TAINT && j.fact.mark is MarkSlot.Star
+            val mustMatch = a.fact.tail == Tail.ANY_TAINT &&
+                spatial.getValue(a).containsAll(spatial.getValue(j)) &&
+                marks.getValue(j.fact.mark).containsAll(marks.getValue(a.fact.mark))
+            assertEquals(!blockedStar && if (definiteFlowMust) mustMatch else
+                (headOverlap || expectedApplicable || expectedInside),
+                satisfies(j, a, restricted = false), "run1: j=$j a=$a")
+            assertEquals(!blockedStar && if (definiteFlowMust) mustMatch else
+                (headOverlap || expectedRestricted),
+                satisfies(j, a, restricted = true), "restricted: j=$j a=$a")
         }
     }
 
@@ -124,7 +138,9 @@ class ReferenceSelectorsTest {
     fun `canonical flow is annotated overlap even for excluded abstract added marks`() {
         val flow = p(listOf(g))
         for (a in patterns()) {
-            val expected = universe.spatial(flow).any { it in universe.spatial(a) }
+            val blocked = a.fact.tail == Tail.STAR && flow.fact.path.size > a.fact.path.size &&
+                flow.fact.path.startsWith(a.fact.path)
+            val expected = !blocked && universe.spatial(flow).any { it in universe.spatial(a) }
             assertEquals(expected, satisfies(flow, a, restricted = true), "added=$a")
         }
         val admitted = p(listOf(g), Tail.ANY, MarkSlot.Star(MarkSet(intArrayOf(t.id))))
@@ -134,13 +150,13 @@ class ReferenceSelectorsTest {
     }
 
     @Test
-    fun `noncanonical flow exclusions retain both full guards instead of overlap shortcut`() {
+    fun `same-head flow exclusions select the overlapping region`() {
         val j = p(exclusion = ExclusionSet.of(f))
         val a = p(exclusion = ExclusionSet.of(g))
         assertTrue(overlap(j, a))
         assertFalse(inside(j, a))
         assertFalse(applicable(j, a))
-        assertFalse(satisfies(j, a, restricted = true))
+        assertTrue(satisfies(j, a, restricted = true))
         val narrowerAdded = p(exclusion = ExclusionSet.of(intArrayOf(f, g)))
         assertTrue(applicable(j, narrowerAdded))
         assertTrue(satisfies(j, narrowerAdded, restricted = true))

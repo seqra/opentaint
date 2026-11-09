@@ -87,7 +87,7 @@ class ReturnFullCleanupTest {
         val other = f.field("other")
         val inputPaths = listOf(emptyList(), listOf(field), listOf(other), listOf(field, other))
         val cleanerPaths = listOf(emptyList(), listOf(field), listOf(field, other))
-        for (tail in listOf(Tail.EXACT, Tail.ANY, Tail.ANY_TAINT))
+        for (tail in listOf(Tail.EXACT, Tail.STAR, Tail.ANY, Tail.ANY_TAINT))
             for (reach in CleanReach.entries) for (at in cleanerPaths) {
                 val inputs = inputPaths.flatMap { path -> listOf(t, u).map { mark ->
                     f.fact(x, path, tail, MarkSlot.Concrete(mark), layer = Layer.DEMAND)
@@ -97,7 +97,7 @@ class ReturnFullCleanupTest {
                 val unselected = f.fact(x, listOf(field), Tail.EXACT, MarkSlot.Concrete(v), layer = Layer.DEMAND) as TaintTree
                 val first = inputs.first() as TaintTree
                 val mixed = m.taintTree(x, Layer.DEMAND, m.taintAlg.mergeAdd(first.root, unselected.root, m.cancellation),
-                    anyTail = if (tail.isAny) tail else Tail.ANY_TAINT)
+                    anyTail = if (tail == Tail.EXACT) Tail.ANY_TAINT else tail)
                 for (input in group.all().toList() + listOf(unselected, mixed)) {
                     var old = listOf(input)
                     val geometry = cleaner(t, m.path(at), reach)

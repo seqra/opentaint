@@ -1,0 +1,16 @@
+'FlowStarDemandHandoff.STAR_projection_preserves_base_path_tail' depends on axioms: [propext]
+'FlowStarDemandHandoff.STAR_projection_is_a_legal_stored_FLOW_entry' depends on axioms: [propext]
+'FlowStarDemandHandoff.MAY_projection_is_unchanged_except_mx' depends on axioms: [propext]
+'FlowStarDemandHandoff.existing_MUST_projection_remains_MAY' depends on axioms: [propext]
+'FlowStarDemandHandoff.handoff_keeps_the_complete_pair' depends on axioms: [propext]
+'FlowStarDemandHandoff.C5_preserves_correlated_STAR_DEMAND_in_both_directions' depends on axioms: [propext, Quot.sound]
+'FlowStarDemandHandoff.C5_result_is_not_a_field_cut' does not depend on any axioms
+'FlowStarDemandHandoff.old_ANY_only_assertion_rejects_the_selected_C5_result' does not depend on any axioms
+'FlowStarDemandHandoff.next_pair_keeps_STAR_and_uses_existing_selector_normalization' depends on axioms: [propext]
+'FlowStarDemandHandoff.next_entry_is_legal_at_every_restricted_run' depends on axioms: [propext]
+'FlowStarDemandHandoff.every_offered_pair_has_its_own_projection' depends on axioms: [propext, Quot.sound]
+'FlowStarDemandHandoff.paired_EXACT_selects_EXACT_FLOW_on_DEMAND' depends on axioms: [propext, Quot.sound]
+'FlowStarDemandHandoff.normalized_C5_output_is_STAR_FLOW_on_DEMAND' depends on axioms: [propext, Quot.sound]
+'FlowStarDemandHandoff.raw_ANY_assertion_does_not_imply_an_ANY_publication' does not depend on any axioms
+'FlowStarDemandHandoff.normalized_C5_handoff_preserves_both_STAR_endpoints' depends on axioms: [propext]
+'FlowStarDemandHandoff.normalized_C5_entry_is_legal' depends on axioms: [propext]

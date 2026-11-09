@@ -123,7 +123,7 @@ class SummarySelectorTest {
         for (input in inputs()) for (pattern in patterns) for (mode in modes) for (record in listOf(false, true)) {
             val expected = decode(input).filter { leaf ->
                 val raw = Pattern(leaf.fact, leaf.exclusion)
-                if (record) applicable(pattern, raw) || inside(pattern, raw) else satisfies(pattern, raw, mode.restricted)
+                if (record) satisfies(pattern,raw,false,SummaryReadRole.SAVED_DIRECT) else satisfies(pattern, raw, mode.restricted)
             }.toSet()
             val selected = ops.satisfying(input, pattern, mode, record)
             assertEquals(expected, decode(selected), "$pattern on ${input.groupKey}, ${mode.direction}, run1=${mode.run1}, record=$record")
@@ -137,13 +137,15 @@ class SummarySelectorTest {
     }
 
     @Test
-    fun `canonical flow overlap keeps admitted added E and noncanonical E reads both containment guards`() {
+    fun `current STAR ancestor rejects while same-head exclusion overlap is retained`() {
         val input = flow(emptyList(), e = ex(g), mx = marks(u.id))
-        assertEquals(decode(input), decode(ops.satisfying(input, p(listOf(f), Tail.STAR), forward)))
+        assertNull(ops.satisfying(input, p(listOf(f), Tail.STAR), forward))
+        assertEquals(decode(input), decode(ops.satisfying(input,p(listOf(f),Tail.STAR),forward,
+            record=true,role=SummaryReadRole.SAVED_OPPOSITE)))
         assertNull(ops.satisfying(input, p(listOf(g), Tail.STAR), forward))
         val incomparable = p(emptyList(), Tail.STAR, e = ex(f))
         assertTrue(overlap(incomparable, Pattern(decode(input).single().fact, input.exclusion)))
-        assertNull(ops.satisfying(input, incomparable, forward))
+        assertEquals(decode(input),decode(ops.satisfying(input,incomparable,forward)))
         assertNull(ops.satisfying(input, p(emptyList(), Tail.STAR, MarkSlot.Concrete(t)), forward))
         assertNull(ops.satisfying(input, p(emptyList(), Tail.STAR, MarkSlot.Concrete(t)), modes.first(), record = true))
     }

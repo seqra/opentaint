@@ -110,10 +110,15 @@ class Run1OriginProtectionTest {
             val a = initial(0, t)
             val b = initial(1, t)
             val events = arrayListOf<Triple<InitialAp, Layer, Boolean>>()
+            val retained = linkedSetOf<Triple<InitialAp, Layer, Boolean>>()
             fun add(slot: Int, origin: InitialAp, protected: Boolean = false) {
                 val mark = if (slot == 0) t else u
                 val value = input(slot, mark, origin, protected, Layer.NORMAL)
-                val emit: (InitialAp, Layer, Boolean) -> Unit = { i, layer, flag -> events += Triple(i, layer, flag) }
+                val emit: (InitialAp, Layer, Boolean) -> Unit = { i, layer, flag ->
+                    val membership = Triple(i, layer, flag)
+                    events += membership
+                    retained += membership
+                }
                 if (predicateMode) predicateStore.add(rule, node, p, p.leaves.indexOf(pattern(slot, mark)), value) { cube ->
                     cube.emitProtectedOrigins("assign V", v, emit)
                 } else conjunctionStore.addProtectedOrigins("assign V", node, 2, slot, value, v, mark, emit)
@@ -130,8 +135,13 @@ class Run1OriginProtectionTest {
                 "A new ZERO choice must revisit an older origin, not only the newly arrived ZERO")
             events.clear()
             add(0, a, protected = true)
-            assertEquals(setOf(Triple(a, Layer.NORMAL, true), Triple(a, Layer.DEMAND, true),
-                Triple(b, Layer.NORMAL, true), Triple(b, Layer.DEMAND, true)), events.toSet())
+            // The protected slot contains a, while its ZERO choice belongs to
+            // the independent plain slot. Do not borrow ZERO across classes.
+            assertEquals(setOf(Triple(a, Layer.NORMAL, true), Triple(b, Layer.DEMAND, true)), events.toSet())
+            assertTrue(Triple(a, Layer.NORMAL, false) in retained)
+            assertTrue(Triple(a, Layer.DEMAND, false) in retained)
+            assertTrue(Triple(b, Layer.NORMAL, false) in retained)
+            assertTrue(Triple(b, Layer.DEMAND, false) in retained)
             events.clear()
             add(0, a, protected = true)
             assertTrue(events.isEmpty())

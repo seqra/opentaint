@@ -25,17 +25,19 @@ class RecordOutputPositionTest {
     @Test fun `selected native output positions preserve reversed view order and protection`() {
         val store=PersistentRecordStore(ap)
         val first=f.fact(y,listOf(a),mark=t) as TaintTree
-        val output=ap.mergeAddDelta(first.withProtection(first.root),f.fact(y,listOf(a,b),mark=u)).first
-        val all=ap.mergeAddDelta(output,f.fact(y,listOf(c),mark=t)).first
-        val record=Record(f.method,Direction.FORWARD,ap.initial(f.pattern(x,mark=t)),all,scope,exit)
-        store.add(record)
+        val plain=ap.mergeAddDelta(f.fact(y,listOf(a,b),mark=u),f.fact(y,listOf(c),mark=t)).first
+        val initial=ap.initial(f.pattern(x,mark=t))
+        val records=listOf(
+            Record(f.method,Direction.FORWARD,initial,first.withProtection(first.root),scope,exit),
+            Record(f.method,Direction.FORWARD,initial,plain,scope,exit))
+        records.forEach(store::add)
         val reverseScope=BlockScope(scope.block,exit)
         for (path in listOf(emptyList(),listOf(a),listOf(a,b),listOf(c),listOf(b))) {
             val actual=f.pattern(y,path,Tail.ANY,t)
             val selected=assertNotNull(store.byExitPositions(f.method,reverseScope,actual))
-            assertTrue(selected.all { it.record===record })
+            assertTrue(selected.all { position -> records.any { it === position.record } })
             val expected=ArrayList<Pair<RecordLeafView,Boolean>>()
-            record.forEachReversedAt(actual) { view,protected -> expected+=view to protected }
+            for (record in records) record.forEachReversedAt(actual) { view,protected -> expected+=view to protected }
             val actualViews=ArrayList<Pair<RecordLeafView,Boolean>>()
             for (position in selected.sortedBy { it.ordinal })
                 position.forEachReversedAt(actual) { view,protected -> actualViews+=view to protected }
