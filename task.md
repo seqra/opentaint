@@ -1,65 +1,56 @@
-Use ASD-STE100 Simplified Technical English language.
+Use ASD-STE100 Simplified Technical English language    
 
-# Current task: redundant demand elimination campaign
+We are working on [bidirectional-task.md](bidirectional-task.md)
+Currently we have a complete implemetation for the phases 1-3 which passes all the tests (no FN, few allowed FP).
+Our current goal: implement the modification and repeat major testing on real projects.
+Always cleanup memory snapshot/profiles from the previous runs.
 
-Follow [the campaign specification](docs/design/bidirectional-redundant-demand-elimination-campaign-20261110.md).
-This replaces the completed migration implementation task as the active work.
+# Modification:
+Implement the modification wrt the [bidirectional-main-migration-implementation-20261109.md](docs/design/bidirectional-main-migration-implementation-20261109.md)
+Commit after implementation.  
+Avoid changes in the analyzer core, that were not proposed and designed.
+If you have an optimization idea or a fix idea, write a proposal. Then we will include it into the next iteration.
 
-## Required run pairs
+## Additional selected change (9 November 2026)
 
-- OWASP: run-9 and run-11.
-- Conductor: run-5 and run-7.
-- Stirling-PDF: run-7 and run-9.
+Use [spec/bidirectional-run11-cutoff.md](spec/bidirectional-run11-cutoff.md).
+Stop all default bidirectional scans after the complete forward run-11 barrier.
+Keep confirmed findings. At this limit, also return provisional sink targets
+from the latest completed forward run only. Mark them as subject to later
+refinement. Do not restore targets discarded on earlier runs. Keep field
+limits, memory, timeouts and the legacy iteration-limit option unchanged.
+Preserve the old unbounded rule campaign as superseded and repeat validation
+from the new committed runtime.
 
-Analyze every summarizable unit: each method and each generated inner block
-from loop decomposition, including sequential blocks, loop bodies and nested
-blocks. Use the full method key and stable block identity to match the same
-unit across runs. For each unit, find the nonempty intersection of its final
-outgoing demand sets. The complete sets do not have to be equal.
-Dump all units, their hierarchy, edges, ports, projections and comparisons.
-An inner-block edge is a target even if it has no method-level summary.
+# Test
+Take the latest commit. Ignore reports for the previous commits as staled.
+1) Run on OWASP like we do it in .github/workflows/ci-analyzer-owasp.yaml
+2) Run on selected real projects from `../opentaint-test`: conductor, thingsboard, Stirling-PDF. Use parameters, specified in the config (memory, timeout). Don't run on any other configuration. 
+3) Run the rules test suite as described in  [docs/rule-testing.md](docs/rule-testing.md)
 
-The removal point is after the later run, run-(i+2), completes and before its
-outgoing demand guides the next run. Run-i is evidence of repetition only.
-Keep its demand and execution unchanged. Thus, the selected removal barriers
-are OWASP run-11, Conductor run-7 and Stirling-PDF run-9.
+Use `runProjectAnalyzer` gradle task directly, don't use the CLI.
 
-Evaluate [P: NORMAL replay coverage](spec/normal-backed-flow-demand-retirement.md)
-for every repeated edge at the later barrier, using the NORMAL records retained
-there. Every repeated edge not covered there is an elimination target.
-Keep P's proved scope unchanged; unsupported inner-block cases remain targets.
+Measure:
+1) Fix baseline -- analyzer at 54ad708fe1c4f551956d3d572866de1534415fa1 . Resue report from the previous runs (if exists). Don't run the baseline again
+2) Reported vulnerability location, comparing to the baseline. We should have no FN. We expect few FP, but not really many.
+3) Overall performance: OOM/timeout events, the time of each run iteration.
+4) Capture profile under the workload, we should understand our hot spots (possible performance optimization points). It is a good idea to measure for 30 sec after 1 minute of analysis (normal behavior), and close to the time limit
+5) Capture memory snapshots whenever MemoryManager reports OOM. Investigate the root cause of memory consumption
+6) The latest reached/complete analysis iteration (e.g. run-1, run-7, ...)
 
-Process targets one at a time. Prove each new executable redundancy predicate
-with [spec/proof-guide.md](spec/proof-guide.md), then test it against all remaining
-targets and save each matched witness before selecting the next target.
+Our goal: for each selected project we should understand:
+1) Do we have FN, comparing to the baseline? If we have -- identify the root cause.
+2) What about performance. We have performance improvement or degradation?
+3) Can we optimize something? We have 4 main points here: 
+   - How much time we spent on run-1.
+   - How much resources we spent on a transition from run-1 to run-2.
+   - Where we spent time in the code. Maybe we have non-optimal implementation? Or we can observe some unexpected workload pattern (we spent a lot of time in the operation, which shouldn't be so expensive), maybe we shouldn't tune the analysis algorithm itself. 
+   - If we have an OOM, what is the source of memory consumption?
 
-Continue until every repeated edge has either:
+# Propose optimizations/fixes for the next iteration
+Create an optimization proposal wrt the measurements
+1) Rank proposals by the expected impact
+2) Prefer algorithmic optimizations (patch analyzer to avoid huge workload) over the technical ones (optimize representation to better handle huge workload) 
+3) Describe in short, how the proposal changes the behavior (current vs new) and why it should improve something
 
-1. A checked redundancy predicate and certificate.
-2. A faithful code example, native test and fact trace that reproduce the
-   repetition and show the loss of required behavior when that edge is removed
-   after run-(i+2).
-
-For every necessary-edge example, i must be at least 3. The earliest valid
-pair is run-3/run-5, with removal after run-5. A run-1/run-3 example does not
-satisfy this requirement: run-1 has special handling that can invalidate
-predicates for later runs.
-
-Unsupported or unexplained edges are not complete cases. Follow the detailed
-specification's proof gates, deletion controls, artifact schema and completion
-checks. Keep a durable ledger and resume it across turns.
-
-## Execution constraints
-
-Freeze the reference runtime and configurations from the campaign specification.
-Use source Gradle `runProjectAnalyzer`, FULL mode and the `1,1,2,...` schedule.
-Reuse suitable complete captures. Keep project scans serial. Work in the main
-checkout; retain portable evidence in the repository.
-
-This task is an investigation and proof campaign. Keep production analyzer
-semantics unchanged. Use controlled deletion only in the small test cases.
-Production optimization needs a subsequent implementation proposal and selection.
-Highlight any required major semantic decision and ask for the intended behavior.
-
-Always include the latest reached, completed and accepted forward run in reports.
-Use subagents as specified by the campaign, with one coordinated target queue.
+Use subagents.
