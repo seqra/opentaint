@@ -11,6 +11,11 @@ Thingsboard evidence is from **run-1 OOM**, with no completed or accepted run.
 
 ## 1. OWASP: the fact that answers the repeated demand
 
+The [complete helper trace from run-7](bidirectional-owasp-helper-cycle-20261110.md)
+now lists every incoming demand, submitted fact, returned initial and final
+summary through run-11. It separates redundant cuts of known NORMAL
+specializations from the constructor's recurring MAY transfer.
+
 The earlier complete capture already contains the quoted forward relation in
 **run-7**, before run-9. Its handoff reverses the relation:
 
