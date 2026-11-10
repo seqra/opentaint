@@ -1,0 +1,704 @@
+{
+  "schema": "bidi-backward-admission-static-storage-v1",
+  "createdAt": "2026-11-10T10:42:52.621629+00:00",
+  "runtime": "14d7b63369d94f49d4c551be8405ed7719f267cc",
+  "launch": {
+    "runtime": "14d7b63369d94f49d4c551be8405ed7719f267cc",
+    "head": "675b9054aacb5f4d1c8ffa620853b66a1f7889ed",
+    "purpose": "Read-only exact backward C2 actuals and admissions, runs4/6/8/10, selected OWASP helper; retain narrow C5 provenance. Not a performance benchmark.",
+    "jvm_args": [
+      "-Xmx8g",
+      "-Dorg.opentaint.ir.impl.storage.defaultBatchSize=2000",
+      "-Djdk.util.jar.enableMultiRelease=false",
+      "-XX:FlightRecorderOptions=stackdepth=256",
+      "-XX:+HeapDumpOnOutOfMemoryError",
+      "-Dopentaint.bidi.run1MarkMode=FULL",
+      "-Dopentaint.bidi.fieldLimitSchedule=REPEAT_RUN1",
+      "-Dopentaint.bidi.disableRun1Statics=false",
+      "--add-exports=java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED",
+      "--add-exports=java.base/jdk.internal.org.objectweb.asm.commons=ALL-UNNAMED",
+      "-javaagent:/drive-testcomp/opentaint-go-rules/investigations-20261110/owasp-c2/observe.jar=/drive-testcomp/opentaint-go-rules/investigations-20261110/owasp-c2/trace.jsonl"
+    ],
+    "args": [
+      "--project",
+      "/drive-testcomp/opentaint-go-rules/owasp-ci-investigation/project/project.yaml",
+      "--output-dir",
+      "/drive-testcomp/opentaint-go-rules/investigations-20261110/owasp-c2/reports",
+      "--ifds-analysis-timeout",
+      "1000",
+      "--logs-file",
+      "/drive-testcomp/opentaint-go-rules/investigations-20261110/owasp-c2/analyzer.log",
+      "--verbosity",
+      "debug",
+      "--semgrep-rule-set",
+      "/drive-testcomp/opentaint-go-rules/opentaint-w3/rules/ruleset",
+      "--sarif-generate-fingerprint",
+      "--ifds-bidirectional"
+    ],
+    "source_sha256": "f29f49978a528cc650b100fc1e4ae1757d74c612db57a0b352013e5ce0da9122",
+    "started_utc": "2026-11-10T09:51:13.054346+00:00",
+    "prepared_utc": "2026-11-10T10:36:56.076542+00:00",
+    "jar_sha256": "eb014989b772e8b51085ee4045c44e45d15134352ef7c70fb53cbb5bbbc214da",
+    "completion": "Gradle exit0, run11 COMPLETE/RUN_LIMIT; confirmed2633/provisional0"
+  },
+  "latestReachedRun": 11,
+  "latestCompletedRun": 11,
+  "latestAcceptedForwardRun": 11,
+  "productionChanges": false,
+  "trace": {
+    "artifact": "bidirectional-owasp-backward-admission-20261110.jsonl.gz",
+    "uncompressed_sha256": "a623c6965809d68463a1baa926e62feb7649e3ea31c0e6d6a155a1a76d4af186",
+    "counts": {
+      "C2_ACTUAL": 56,
+      "C2_INITIAL": 80,
+      "BEFORE_RETAIN": 210,
+      "C5_ROW": 148,
+      "C5_BEFORE_LIMIT": 146,
+      "C5_RESULTS": 170,
+      "END": 1
+    },
+    "byRun": {
+      "4": {
+        "C2_ACTUAL": 14,
+        "C2_INITIAL": 16
+      },
+      "6": {
+        "C2_ACTUAL": 14,
+        "C2_INITIAL": 16
+      },
+      "8": {
+        "C2_ACTUAL": 14,
+        "C2_INITIAL": 24,
+        "BEFORE_RETAIN": 35,
+        "C5_ROW": 46,
+        "C5_BEFORE_LIMIT": 46,
+        "C5_RESULTS": 51
+      },
+      "10": {
+        "C2_ACTUAL": 14,
+        "C2_INITIAL": 24,
+        "BEFORE_RETAIN": 35,
+        "C5_ROW": 46,
+        "C5_BEFORE_LIMIT": 46,
+        "C5_RESULTS": 51
+      }
+    },
+    "end": {
+      "event": "END",
+      "rows": 810,
+      "errors": 0
+    }
+  },
+  "findingComparison": {
+    "old": 2633,
+    "new": 2633,
+    "shared": 2633,
+    "missing": 0,
+    "added": 0,
+    "key": "ruleId plus complete SARIF locations, including physical region and logical location"
+  },
+  "previousForwardDemand": [
+    {
+      "artifact": "bidirectional-owasp-recurring-demand-native-20261110.jsonl.gz",
+      "record_index_zero_based": 56679,
+      "native": {
+        "event": "DEMAND_DATA",
+        "run": 7,
+        "method": "org.owasp.benchmark.testcode.BenchmarkTest01000$Test#doSomething(javax.servlet.http.HttpServletRequest, java.lang.String) [{}]",
+        "scope": "ROOT",
+        "entry": {
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "path": [
+            280
+          ],
+          "tail": "ANY",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        },
+        "exit": {
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+          "base": "arg(1)",
+          "path": [
+            280,
+            11
+          ],
+          "tail": "STAR",
+          "E": [],
+          "mark": {
+            "kind": "FLOW",
+            "mx": []
+          }
+        },
+        "nodes": [],
+        "catalogIncluded": true,
+        "fields": [
+          {
+            "id": 280,
+            "name": "String#<string-bytes>"
+          },
+          {
+            "id": 11,
+            "name": "*"
+          }
+        ],
+        "marks": []
+      }
+    }
+  ],
+  "principalAdmissions": [
+    {
+      "record_index_zero_based": 64,
+      "native": {
+        "event": "C2_INITIAL",
+        "run": 8,
+        "method": "org.owasp.benchmark.testcode.BenchmarkTest01000$Test#doSomething(javax.servlet.http.HttpServletRequest, java.lang.String) [{}]",
+        "scope": "ROOT",
+        "actual": {
+          "kind": "TAINT",
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "layer": "DEMAND",
+          "tail": "ANY",
+          "E": [],
+          "root": 0,
+          "protection": null
+        },
+        "initial": {
+          "kind": "INITIAL",
+          "members": [
+            {
+              "id": 1173,
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+              "base": "ret",
+              "path": [
+                248
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            }
+          ]
+        },
+        "layer": "NORMAL",
+        "index": 1,
+        "nodes": [
+          {
+            "id": 0,
+            "exact": [],
+            "any": [
+              25
+            ],
+            "children": []
+          }
+        ],
+        "catalogIncluded": true,
+        "fields": [
+          {
+            "id": 248,
+            "name": "String#<string-bytes>"
+          }
+        ],
+        "marks": [
+          {
+            "id": 25,
+            "name": "java/security/sqli.yaml:sql-injection#source#0;0;$UNTRUSTED;1",
+            "key": "Full(mark=ExactMark(group=GroupId(value=5), full=FullMarkId(value=24)))"
+          }
+        ]
+      }
+    },
+    {
+      "record_index_zero_based": 68,
+      "native": {
+        "event": "C2_INITIAL",
+        "run": 8,
+        "method": "org.owasp.benchmark.testcode.BenchmarkTest01000$Test#doSomething(javax.servlet.http.HttpServletRequest, java.lang.String) [{}]",
+        "scope": "ROOT",
+        "actual": {
+          "kind": "TAINT",
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "layer": "DEMAND",
+          "tail": "ANY",
+          "E": [],
+          "root": 0,
+          "protection": null
+        },
+        "initial": {
+          "kind": "INITIAL",
+          "members": [
+            {
+              "id": 1173,
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+              "base": "ret",
+              "path": [
+                248
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            }
+          ]
+        },
+        "layer": "NORMAL",
+        "index": 1,
+        "nodes": [
+          {
+            "id": 0,
+            "exact": [],
+            "any": [
+              25
+            ],
+            "children": []
+          }
+        ],
+        "catalogIncluded": true,
+        "fields": [
+          {
+            "id": 248,
+            "name": "String#<string-bytes>"
+          }
+        ],
+        "marks": [
+          {
+            "id": 25,
+            "name": "java/security/sqli.yaml:sql-injection#source#0;0;$UNTRUSTED;1",
+            "key": "Full(mark=ExactMark(group=GroupId(value=5), full=FullMarkId(value=24)))"
+          }
+        ]
+      }
+    },
+    {
+      "record_index_zero_based": 72,
+      "native": {
+        "event": "C2_INITIAL",
+        "run": 8,
+        "method": "org.owasp.benchmark.testcode.BenchmarkTest01000$Test#doSomething(javax.servlet.http.HttpServletRequest, java.lang.String) [{}]",
+        "scope": "ROOT",
+        "actual": {
+          "kind": "TAINT",
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "layer": "DEMAND",
+          "tail": "ANY",
+          "E": [],
+          "root": 0,
+          "protection": null
+        },
+        "initial": {
+          "kind": "INITIAL",
+          "members": [
+            {
+              "id": 1173,
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+              "base": "ret",
+              "path": [
+                248
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            }
+          ]
+        },
+        "layer": "NORMAL",
+        "index": 1,
+        "nodes": [
+          {
+            "id": 0,
+            "exact": [],
+            "any": [
+              6
+            ],
+            "children": []
+          }
+        ],
+        "catalogIncluded": true,
+        "fields": [
+          {
+            "id": 248,
+            "name": "String#<string-bytes>"
+          }
+        ],
+        "marks": [
+          {
+            "id": 6,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=5), full=FullMarkId(value=5)))"
+          }
+        ]
+      }
+    },
+    {
+      "record_index_zero_based": 76,
+      "native": {
+        "event": "C2_INITIAL",
+        "run": 8,
+        "method": "org.owasp.benchmark.testcode.BenchmarkTest01000$Test#doSomething(javax.servlet.http.HttpServletRequest, java.lang.String) [{}]",
+        "scope": "ROOT",
+        "actual": {
+          "kind": "TAINT",
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "layer": "DEMAND",
+          "tail": "ANY",
+          "E": [],
+          "root": 0,
+          "protection": null
+        },
+        "initial": {
+          "kind": "INITIAL",
+          "members": [
+            {
+              "id": 1173,
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+              "base": "ret",
+              "path": [
+                248
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            }
+          ]
+        },
+        "layer": "NORMAL",
+        "index": 1,
+        "nodes": [
+          {
+            "id": 0,
+            "exact": [],
+            "any": [
+              6
+            ],
+            "children": []
+          }
+        ],
+        "catalogIncluded": true,
+        "fields": [
+          {
+            "id": 248,
+            "name": "String#<string-bytes>"
+          }
+        ],
+        "marks": [
+          {
+            "id": 6,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=5), full=FullMarkId(value=5)))"
+          }
+        ]
+      }
+    },
+    {
+      "record_index_zero_based": 598,
+      "native": {
+        "event": "C2_INITIAL",
+        "run": 10,
+        "method": "org.owasp.benchmark.testcode.BenchmarkTest01000$Test#doSomething(javax.servlet.http.HttpServletRequest, java.lang.String) [{}]",
+        "scope": "ROOT",
+        "actual": {
+          "kind": "TAINT",
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "layer": "DEMAND",
+          "tail": "ANY",
+          "E": [],
+          "root": 0,
+          "protection": null
+        },
+        "initial": {
+          "kind": "INITIAL",
+          "members": [
+            {
+              "id": 1173,
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+              "base": "ret",
+              "path": [
+                248
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            }
+          ]
+        },
+        "layer": "NORMAL",
+        "index": 1,
+        "nodes": [
+          {
+            "id": 0,
+            "exact": [],
+            "any": [
+              25
+            ],
+            "children": []
+          }
+        ],
+        "catalogIncluded": true,
+        "fields": [
+          {
+            "id": 248,
+            "name": "String#<string-bytes>"
+          }
+        ],
+        "marks": [
+          {
+            "id": 25,
+            "name": "java/security/sqli.yaml:sql-injection#source#0;0;$UNTRUSTED;1",
+            "key": "Full(mark=ExactMark(group=GroupId(value=5), full=FullMarkId(value=24)))"
+          }
+        ]
+      }
+    },
+    {
+      "record_index_zero_based": 602,
+      "native": {
+        "event": "C2_INITIAL",
+        "run": 10,
+        "method": "org.owasp.benchmark.testcode.BenchmarkTest01000$Test#doSomething(javax.servlet.http.HttpServletRequest, java.lang.String) [{}]",
+        "scope": "ROOT",
+        "actual": {
+          "kind": "TAINT",
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "layer": "DEMAND",
+          "tail": "ANY",
+          "E": [],
+          "root": 0,
+          "protection": null
+        },
+        "initial": {
+          "kind": "INITIAL",
+          "members": [
+            {
+              "id": 1173,
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+              "base": "ret",
+              "path": [
+                248
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            }
+          ]
+        },
+        "layer": "NORMAL",
+        "index": 1,
+        "nodes": [
+          {
+            "id": 0,
+            "exact": [],
+            "any": [
+              25
+            ],
+            "children": []
+          }
+        ],
+        "catalogIncluded": true,
+        "fields": [
+          {
+            "id": 248,
+            "name": "String#<string-bytes>"
+          }
+        ],
+        "marks": [
+          {
+            "id": 25,
+            "name": "java/security/sqli.yaml:sql-injection#source#0;0;$UNTRUSTED;1",
+            "key": "Full(mark=ExactMark(group=GroupId(value=5), full=FullMarkId(value=24)))"
+          }
+        ]
+      }
+    },
+    {
+      "record_index_zero_based": 606,
+      "native": {
+        "event": "C2_INITIAL",
+        "run": 10,
+        "method": "org.owasp.benchmark.testcode.BenchmarkTest01000$Test#doSomething(javax.servlet.http.HttpServletRequest, java.lang.String) [{}]",
+        "scope": "ROOT",
+        "actual": {
+          "kind": "TAINT",
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "layer": "DEMAND",
+          "tail": "ANY",
+          "E": [],
+          "root": 0,
+          "protection": null
+        },
+        "initial": {
+          "kind": "INITIAL",
+          "members": [
+            {
+              "id": 1173,
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+              "base": "ret",
+              "path": [
+                248
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            }
+          ]
+        },
+        "layer": "NORMAL",
+        "index": 1,
+        "nodes": [
+          {
+            "id": 0,
+            "exact": [],
+            "any": [
+              6
+            ],
+            "children": []
+          }
+        ],
+        "catalogIncluded": true,
+        "fields": [
+          {
+            "id": 248,
+            "name": "String#<string-bytes>"
+          }
+        ],
+        "marks": [
+          {
+            "id": 6,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=5), full=FullMarkId(value=5)))"
+          }
+        ]
+      }
+    },
+    {
+      "record_index_zero_based": 610,
+      "native": {
+        "event": "C2_INITIAL",
+        "run": 10,
+        "method": "org.owasp.benchmark.testcode.BenchmarkTest01000$Test#doSomething(javax.servlet.http.HttpServletRequest, java.lang.String) [{}]",
+        "scope": "ROOT",
+        "actual": {
+          "kind": "TAINT",
+          "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+          "base": "ret",
+          "layer": "DEMAND",
+          "tail": "ANY",
+          "E": [],
+          "root": 0,
+          "protection": null
+        },
+        "initial": {
+          "kind": "INITIAL",
+          "members": [
+            {
+              "id": 1173,
+              "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+              "base": "ret",
+              "path": [
+                248
+              ],
+              "tail": "STAR",
+              "E": [],
+              "mark": {
+                "kind": "FLOW",
+                "mx": []
+              }
+            }
+          ]
+        },
+        "layer": "NORMAL",
+        "index": 1,
+        "nodes": [
+          {
+            "id": 0,
+            "exact": [],
+            "any": [
+              6
+            ],
+            "children": []
+          }
+        ],
+        "catalogIncluded": true,
+        "fields": [
+          {
+            "id": 248,
+            "name": "String#<string-bytes>"
+          }
+        ],
+        "marks": [
+          {
+            "id": 6,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=5), full=FullMarkId(value=5)))"
+          }
+        ]
+      }
+    }
+  ],
+  "receipts": [
+    "10:39:46.014 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=1m 20.560617162s",
+    "10:40:10.438 |I| IterationDriver - BIDI_RUN_END run=2 status=COMPLETE engineTime=22.027586126s",
+    "10:40:20.949 |I| IterationDriver - BIDI_RUN_END run=3 status=COMPLETE engineTime=9.893726696s",
+    "10:40:25.568 |I| IterationDriver - BIDI_RUN_END run=4 status=COMPLETE engineTime=3.839086258s",
+    "10:40:29.806 |I| IterationDriver - BIDI_RUN_END run=5 status=COMPLETE engineTime=3.674489575s",
+    "10:40:34.087 |I| IterationDriver - BIDI_RUN_END run=6 status=COMPLETE engineTime=3.683654379s",
+    "10:40:38.605 |I| IterationDriver - BIDI_RUN_END run=7 status=COMPLETE engineTime=3.960525385s",
+    "10:40:42.998 |I| IterationDriver - BIDI_RUN_END run=8 status=COMPLETE engineTime=3.798269997s",
+    "10:40:47.326 |I| IterationDriver - BIDI_RUN_END run=9 status=COMPLETE engineTime=3.772176695s",
+    "10:40:51.682 |I| IterationDriver - BIDI_RUN_END run=10 status=COMPLETE engineTime=3.758927936s",
+    "10:40:56.249 |I| IterationDriver - BIDI_RUN_END run=11 status=COMPLETE engineTime=4.001262548s",
+    "10:40:56.850 |I| IterationDriver - BIDI_ANALYSIS_END run=11 status=COMPLETE reason=RUN_LIMIT elapsed=2m 31.734608920s",
+    "10:40:56.852 |I| JIRBidiAnalysis - BIDI_REPORT_STATISTICS run=11 reason=RUN_LIMIT confirmed=2633 provisional=0"
+  ],
+  "observerSources": {
+    "C5Observe.java": "package diag;\nimport static diag.Observe.*;\nimport java.io.*;import java.lang.instrument.*;import java.lang.reflect.*;import java.nio.file.*;import java.security.ProtectionDomain;import java.util.*;\nimport jdk.internal.org.objectweb.asm.*;import jdk.internal.org.objectweb.asm.commons.AdviceAdapter;\npublic final class C5Observe {\n static ThreadLocal<Object[]> active=new ThreadLocal<>();\n public static void premain(String path,Instrumentation inst)throws Exception{\n  Observe.output=new PrintWriter(Files.newBufferedWriter(Path.of(path)));\n  Runtime.getRuntime().addShutdownHook(new Thread(()->{synchronized(Observe.class){output.println(\"{\\\"event\\\":\\\"END\\\",\\\"rows\\\":\"+rows+\",\\\"errors\\\":\"+errors+\"}\");output.close();}}));\n  inst.addTransformer(new ClassFileTransformer(){public byte[] transform(ClassLoader cl,String cn,Class<?> r,ProtectionDomain pd,byte[] bytes){\n   boolean ds=cn.equals(\"org/opentaint/dataflow/bidi/store/DemandStore\"),limit=cn.equals(\"org/opentaint/dataflow/bidi/ap/LimitKt\"),bs=cn.equals(\"org/opentaint/dataflow/bidi/engine/BlockRunState\");\n   if(!ds&&!limit&&!bs)return null;\n   try{ClassReader cr=new ClassReader(bytes);ClassWriter cw=new ClassWriter(cr,ClassWriter.COMPUTE_MAXS);\n    cr.accept(new ClassVisitor(Opcodes.ASM8,cw){public MethodVisitor visitMethod(int acc,String name,String desc,String sig,String[]ex){MethodVisitor mv=super.visitMethod(acc,name,desc,sig,ex);\n     if(ds&&name.equals(\"initials\")&&desc.startsWith(\"(Lorg/opentaint/dataflow/ap/ifds/MethodEntryPoint;\"))return new AdviceAdapter(Opcodes.ASM8,mv,acc,name,desc){\n      protected void onMethodExit(int op){if(op==ARETURN){dup();loadThis();loadArg(0);loadArg(1);loadArg(2);visitMethodInsn(INVOKESTATIC,\"diag/C5Observe\",\"initials\",\"(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V\",false);}}\n     };\n     if(ds&&name.equals(\"offerDataPair\"))return new AdviceAdapter(Opcodes.ASM8,mv,acc,name,desc){\n      protected void onMethodEnter(){for(int i=0;i<7;i++)loadArg(i);visitMethodInsn(INVOKESTATIC,\"diag/C5Observe\",\"rowBegin\",\"(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V\",false);}\n      protected void onMethodExit(int op){visitMethodInsn(INVOKESTATIC,\"diag/C5Observe\",\"rowEnd\",\"()V\",false);}\n     };\n     if(limit&&name.equals(\"limitFacts\"))return new AdviceAdapter(Opcodes.ASM8,mv,acc,name,desc){protected void onMethodEnter(){loadArg(0);loadArg(1);loadArg(2);visitMethodInsn(INVOKESTATIC,\"diag/C5Observe\",\"limit\",\"(Ljava/lang/Object;Ljava/lang/Object;I)V\",false);}};\n     if(bs&&(acc&Opcodes.ACC_STATIC)==0&&name.startsWith(\"retainSummary\"))return new AdviceAdapter(Opcodes.ASM8,mv,acc,name,desc){protected void onMethodEnter(){loadThis();loadArg(0);loadArg(1);visitMethodInsn(INVOKESTATIC,\"diag/C5Observe\",\"raw\",\"(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V\",false);}};\n     if(bs&&name.equals(\"applyRecordView\"))return new AdviceAdapter(Opcodes.ASM8,mv,acc,name,desc){protected void onMethodEnter(){loadThis();loadArg(0);loadArg(1);visitMethodInsn(INVOKESTATIC,\"diag/C5Observe\",\"view\",\"(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V\",false);}};\n     return mv;\n    }},ClassReader.EXPAND_FRAMES);System.err.println(\"C5_TRANSFORM \"+cn);return cw.toByteArray();\n   }catch(Throwable t){error(\"transform\",t);return null;}\n  }});\n }\n public static void initials(Object results,Object ds,Object key,Object actual,Object policy){try{\n  int run=((Number)get(policy,\"run\")).intValue();if(run<4||run%2!=0||!String.valueOf(key).contains(\"BenchmarkTest01000$Test#doSomething\"))return;\n  Object ap=field(ds,\"ap\");Object b=builder(ap,\"C2_ACTUAL\",run,String.valueOf(key),\"ROOT\");call(b,\"facts\",\"actual\",actual);call(b,\"number\",\"count\",((Collection<?>)results).size());emit(b);\n  int i=0;for(Object item:(Collection<?>)results){Object c=builder(ap,\"C2_INITIAL\",run,String.valueOf(key),\"ROOT\");call(c,\"facts\",\"actual\",actual);call(c,\"premise\",\"initial\",get(item,\"initial\"));call(c,\"text\",\"layer\",String.valueOf(get(item,\"layer\")));call(c,\"number\",\"index\",i++);emit(c);}\n  synchronized(Observe.class){output.flush();}\n }catch(Throwable t){error(\"initials\",t);}}\n static boolean selected(int run,Object key){return run>=8&&run<=10&&String.valueOf(key).contains(\"BenchmarkTest01000$Test#doSomething\");}\n static Object pattern(Object c)throws Exception{Class<?> p=Class.forName(\"org.opentaint.dataflow.bidi.ap.Pattern\");return p.getConstructors()[0].newInstance(get(c,\"fact\"),get(c,\"exclusion\"));}\n public static void rowBegin(Object key,Object ops,Object member,Object raw,Object pair,Object policy,Object result){try{\n  int run=((Number)get(policy,\"run\")).intValue();if(!selected(run,key))return;Object ap=get(ops,\"manager\");active.set(new Object[]{key,ap,member,raw,pair,policy,result});\n  Object b=builder(ap,\"C5_ROW\",run,String.valueOf(key),\"ROOT\");call(b,\"number\",\"globalLimit\",get(policy,\"fieldLimit\"));call(b,\"premise\",\"premise\",member);call(b,\"facts\",\"raw\",raw);call(b,\"pattern\",\"entry\",get(pair,\"entry\"));call(b,\"pattern\",\"exit\",get(pair,\"exit\"));emit(b);\n }catch(Throwable t){error(\"rowBegin\",t);}}\n public static void rowEnd(){Object[] a=active.get();if(a==null)return;try{int run=((Number)get(a[5],\"run\")).intValue();int i=0;for(Object fact:(Collection<?>)call(a[6],\"all\")){Object b=builder(a[1],\"C5_RESULTS\",run,String.valueOf(a[0]),\"ROOT\");call(b,\"premise\",\"premise\",a[2]);call(b,\"facts\",\"result\",fact);call(b,\"number\",\"index\",i++);emit(b);}}catch(Throwable t){error(\"rowEnd\",t);}finally{active.remove();synchronized(Observe.class){output.flush();}}}\n public static void limit(Object ap,Object kept,int budget){Object[]a=active.get();if(a==null)return;try{int run=((Number)get(a[5],\"run\")).intValue();Object b=builder(ap,\"C5_BEFORE_LIMIT\",run,String.valueOf(a[0]),\"ROOT\");call(b,\"number\",\"budget\",budget);call(b,\"facts\",\"kept\",kept);call(b,\"premise\",\"premise\",a[2]);call(b,\"pattern\",\"entry\",get(a[4],\"entry\"));call(b,\"pattern\",\"exit\",get(a[4],\"exit\"));emit(b);}catch(Throwable t){error(\"limit\",t);}}\n public static void raw(Object core,Object premise,Object raw){try{int run=((Number)get(get(core,\"config\"),\"index\")).intValue();Object key=get(core,\"key\");if(!selected(run,key))return;Object b=builder(get(core,\"ap\"),\"BEFORE_RETAIN\",run,String.valueOf(key),String.valueOf(get(core,\"scope\")));call(b,\"premise\",\"premise\",premise);call(b,\"facts\",\"raw\",raw);emit(b);}catch(Throwable t){error(\"raw\",t);}}\n public static void view(Object core,Object part,Object view){try{int run=((Number)get(get(core,\"config\"),\"index\")).intValue();Object key=get(core,\"key\");if(!selected(run,key))return;Object b=builder(get(core,\"ap\"),\"SAVED_VIEW\",run,String.valueOf(key),String.valueOf(get(core,\"scope\")));call(b,\"facts\",\"input\",get(part,\"added\"));Object ref=get(part,\"ref\");call(b,\"premise\",\"premise\",get(ref,\"premise\"));call(b,\"text\",\"call\",String.valueOf(get(ref,\"node\")));call(b,\"pattern\",\"viewPremise\",get(view,\"premise\"));call(b,\"pattern\",\"viewResult\",pattern(get(view,\"result\")));call(b,\"flag\",\"demand\",get(get(view,\"result\"),\"demand\"));emit(b);}catch(Throwable t){error(\"view\",t);}}\n}\n",
+    "Observe.java": "package diag;\n\nimport java.io.*;\nimport java.lang.instrument.*;\nimport java.lang.reflect.*;\nimport java.nio.file.*;\nimport java.security.ProtectionDomain;\nimport java.util.*;\nimport jdk.internal.org.objectweb.asm.*;\nimport jdk.internal.org.objectweb.asm.commons.AdviceAdapter;\n\n/** Observational only: copies joined stores and completed forward witnesses. */\npublic final class Observe {\n  static PrintWriter output;\n  static long errors, rows;\n  public static void premain(String path, Instrumentation inst) throws Exception {\n    output=new PrintWriter(Files.newBufferedWriter(Path.of(path)));\n    Runtime.getRuntime().addShutdownHook(new Thread(()->{\n      synchronized(Observe.class){output.println(\"{\\\"event\\\":\\\"END\\\",\\\"rows\\\":\"+rows+\",\\\"errors\\\":\"+errors+\"}\");output.close();}\n    }));\n    inst.addTransformer(new ClassFileTransformer(){\n      public byte[] transform(ClassLoader loader,String name,Class<?> redef,ProtectionDomain domain,byte[] bytes){\n        boolean hand=name.equals(\"org/opentaint/dataflow/bidi/driver/HandOff$Companion\");\n        boolean wit=name.equals(\"org/opentaint/dataflow/bidi/engine/RunMethodLocalServices\");\n        if(!hand&&!wit)return null;\n        try { System.err.println(\"OBSERVE_TRANSFORM \"+name); ClassReader reader=new ClassReader(bytes);ClassWriter writer=new ClassWriter(reader,ClassWriter.COMPUTE_MAXS);\n        reader.accept(new ClassVisitor(Opcodes.ASM8,writer){\n          public MethodVisitor visitMethod(int access,String method,String desc,String sig,String[] exceptions){\n            MethodVisitor delegate=super.visitMethod(access,method,desc,sig,exceptions);\n            if(hand&&method.equals(\"of\"))return new AdviceAdapter(Opcodes.ASM8,delegate,access,method,desc){\n              protected void onMethodExit(int opcode){if(opcode==ARETURN){dup();loadArg(0);loadArg(1);loadArg(2);\n                visitMethodInsn(INVOKESTATIC,\"diag/Observe\",\"handoff\",\"(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V\",false);}}\n            };\n            if(wit&&method.equals(\"witness\"))return new AdviceAdapter(Opcodes.ASM8,delegate,access,method,desc){\n              public void visitMethodInsn(int op,String owner,String mn,String md,boolean itf){\n                super.visitMethodInsn(op,owner,mn,md,itf);\n                if(owner.endsWith(\"/ReportCatalog\")&&mn.startsWith(\"internReached\")){\n                  dup();loadArg(0);loadArg(1);loadArg(2);loadArg(3);\n                  super.visitMethodInsn(INVOKESTATIC,\"diag/Observe\",\"witness\",\"(ILjava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V\",false);\n                }\n              }\n            };\n            return delegate;\n          }\n        },ClassReader.EXPAND_FRAMES);\n        return writer.toByteArray(); } catch(Throwable t) { error(\"transform:\"+name,t);return null;}\n      }\n    });\n  }\n  static Object field(Object o,String name)throws Exception{\n    for(Class<?> c=o.getClass();c!=null;c=c.getSuperclass())try{Field f=c.getDeclaredField(name);f.setAccessible(true);return f.get(o);}catch(NoSuchFieldException e){}\n    throw new NoSuchFieldException(o.getClass()+\".\"+name);\n  }\n  static Method method(Object o,String name,int n)throws Exception{\n    for(Method m:o.getClass().getMethods())if((m.getName().equals(name)||m.getName().startsWith(name+\"$\")||m.getName().startsWith(name+\"-\"))&&m.getParameterCount()==n){m.setAccessible(true);return m;}\n    throw new NoSuchMethodException(o.getClass()+\".\"+name+\"/\"+n);\n  }\n  static Object call(Object o,String name,Object...args)throws Exception{return method(o,name,args.length).invoke(o,args);}\n  static Object get(Object o,String name)throws Exception{return call(o,\"get\"+Character.toUpperCase(name.charAt(0))+name.substring(1));}\n  static Iterable<?> sequence(Object seq)throws Exception{\n    Iterator<?> iter=(Iterator<?>)call(seq,\"iterator\");List<Object> out=new ArrayList<>();iter.forEachRemaining(out::add);return out;\n  }\n  static Object builder(Object ap,String event,int run,String owner,String scope)throws Exception{\n    Class<?> type=Class.forName(\"org.opentaint.dataflow.bidi.engine.LoopPipelineTrace$Fields\");\n    Constructor<?> c=type.getDeclaredConstructor(int.class,int.class);c.setAccessible(true);Object b=c.newInstance(1024*1024,65536);\n    call(b,\"catalog\",ap);call(b,\"text\",\"event\",event);call(b,\"number\",\"run\",run);call(b,\"text\",\"method\",owner);call(b,\"text\",\"scope\",scope);return b;\n  }\n  static synchronized void emit(Object b)throws Exception{output.println(call(b,\"finish\"));rows++;}\n  static synchronized void error(String phase,Throwable t){errors++;output.println(\"{\\\"event\\\":\\\"ERROR\\\",\\\"phase\\\":\\\"\"+phase+\"\\\",\\\"message\\\":\\\"\"+String.valueOf(t).replace(\"\\\\\",\"\\\\\\\\\").replace(\"\\\"\",\"\\\\\\\"\").replace(\"\\n\",\" \")+\"\\\"}\");output.flush();t.printStackTrace(System.err);}\n  public static void witness(int id,Object core,Object sink,Object node,Object edges){\n    try{\n      int run=((Number)get(get(core,\"config\"),\"index\")).intValue();if(run<5)return;\n      Object b=builder(get(core,\"ap\"),\"WITNESS\",run,String.valueOf(get(core,\"key\")),String.valueOf(get(core,\"scope\")));\n      call(b,\"number\",\"reportId\",id);call(b,\"text\",\"sinkRule\",String.valueOf(get(get(sink,\"rule\"),\"id\")));call(b,\"text\",\"statement\",String.valueOf(node));\n      int i=0;for(Object edge:(List<?>)edges){call(b,\"premise\",\"premise\"+i,get(edge,\"premise\"));call(b,\"facts\",\"facts\"+i,get(edge,\"facts\"));call(b,\"text\",\"layer\"+i,String.valueOf(get(edge,\"layer\")));i++;}\n      call(b,\"number\",\"inputs\",i);emit(b);\n    }catch(Throwable t){error(\"witness\",t);}\n  }\n  static void dataRows(Object ap,int run,Object owner,String scope,List<?> rows,List<?> ports)throws Exception{\n    int idx=0;for(Object row:rows){Object b=builder(ap,\"DEMAND_DATA\",run,String.valueOf(owner),scope);\n      call(b,\"pattern\",\"entry\",get(row,\"entry\"));Object exit=get(row,\"exit\");if(exit!=null)call(b,\"pattern\",\"exit\",exit);\n      if(ports!=null)call(b,\"text\",\"port\",String.valueOf(ports.get(idx)));emit(b);idx++;}\n  }\n  static void control(Object ap,int run,Object owner,String scope,Object row,Object port)throws Exception{\n    Object b=builder(ap,\"DEMAND_CONTROL\",run,String.valueOf(owner),scope);\n    if(port!=null)call(b,\"text\",\"port\",String.valueOf(port));\n    for(String key:new String[]{\"entry\",\"exit\"}){Object end=get(row,key);call(b,\"text\",key+\"Kind\",end.getClass().getSimpleName());\n      if(end.getClass().getSimpleName().equals(\"Data\"))call(b,\"pattern\",key,get(end,\"pattern\"));}\n    emit(b);\n  }\n  static void summaries(Object ap,int run,Object key,String scope,Object store)throws Exception{\n    for(Object pair:sequence(call(store,\"all\"))){Object b=builder(ap,\"CURRENT_SUMMARY\",run,String.valueOf(key),scope);\n      call(b,\"premise\",\"premise\",get(pair,\"first\"));call(b,\"facts\",\"facts\",get(pair,\"second\"));emit(b);}\n  }\n  static void targets(Object ap,int run,Object key,String scope,Collection<?> targets)throws Exception{\n    for(Object row:targets){Object b=builder(ap,\"TARGET\",run,String.valueOf(key),scope);call(b,\"premise\",\"premise\",get(row,\"premise\"));\n      call(b,\"text\",\"target\",String.valueOf(get(row,\"target\")));emit(b);}\n  }\n  public static void handoff(Object hand,Object config,Object result,Object shared){\n    try{\n      int run=((Number)get(config,\"index\")).intValue();if(run<5)return;\n      Object ap=get(shared,\"ap\"),ds=get(hand,\"demand\");\n      for(var e:((Map<?,?>)field(ds,\"byMethod\")).entrySet())dataRows(ap,run,e.getKey(),\"ROOT\",(List<?>)field(e.getValue(),\"rows\"),null);\n      for(var e:((Map<?,?>)field(ds,\"controls\")).entrySet())for(Object row:(List<?>)e.getValue())control(ap,run,e.getKey(),\"ROOT\",row,null);\n      for(var e:((Map<?,?>)field(ds,\"scoped\")).entrySet()){\n        Object key=get(e.getKey(),\"method\"),scope=get(e.getKey(),\"local\"),si=e.getValue();\n        dataRows(ap,run,key,String.valueOf(scope),(List<?>)field(field(si,\"data\"),\"rows\"),(List<?>)field(si,\"rowPorts\"));\n        for(Object pair:(List<?>)field(si,\"controls\"))control(ap,run,key,String.valueOf(scope),get(pair,\"second\"),get(pair,\"first\"));\n      }\n      for(Object zero:sequence(call(get(config,\"normalTargets\"),\"zeroRows\"))){Object b=builder(ap,\"CONFIRMED\",run,String.valueOf(get(zero,\"method\")),\"ROOT\");call(b,\"number\",\"reportId\",get(zero,\"id\"));emit(b);}\n      for(Object actor:(List<?>)get(result,\"analyzers\")){\n        Object key=get(actor,\"key\");targets(ap,run,key,\"ROOT\",(Collection<?>)get(actor,\"outgoingTargets\"));\n        for(Object block:sequence(call(actor,\"blockOutgoingTargets\")))targets(ap,run,key,String.valueOf(get(block,\"scope\"))+\" exit=\"+get(block,\"exit\"),(Collection<?>)get(block,\"rows\"));\n        summaries(ap,run,key,\"ROOT\",get(actor,\"summaries\"));\n        for(Object block:sequence(call(actor,\"blockSummaries\")))summaries(ap,run,key,String.valueOf(get(get(block,\"key\"),\"scope\"))+\" exit=\"+get(get(block,\"key\"),\"exit\"),get(block,\"summaries\"));\n      }\n      Object seeds=get(hand,\"seeds\");for(Object list:((Map<?,?>)field(seeds,\"byPlace\")).values())for(Object seed:(List<?>)list){\n        Object b=builder(ap,\"SEED\",run,String.valueOf(get(seed,\"method\")),\"\");call(b,\"text\",\"seedKind\",seed.getClass().getSimpleName());\n        call(b,\"text\",\"statement\",String.valueOf(get(seed,\"statement\")));call(b,\"text\",\"value\",String.valueOf(seed));\n        if(seed.getClass().getSimpleName().equals(\"Sink\"))call(b,\"pattern\",\"requirement\",get(seed,\"requirement\"));emit(b);\n      }\n      Object b=builder(ap,\"HANDOFF_END\",run,\"\",\"\");call(b,\"number\",\"explicitRows\",((Map<?,?>)get(hand,\"demandEdges\")).values().stream().mapToInt(v->((Number)v).intValue()).sum());emit(b);\n      synchronized(Observe.class){output.flush();}\n    }catch(Throwable t){error(\"handoff\",t);}\n  }\n}\n",
+    "Check.java": "import java.lang.instrument.*;\nimport java.lang.reflect.*;\nimport java.nio.file.*;\npublic class Check {public static void main(String[]args)throws Exception{\n Instrumentation inst=(Instrumentation)Proxy.newProxyInstance(Check.class.getClassLoader(),new Class[]{Instrumentation.class},(proxy,method,params)->{if(method.getName().equals(\"addTransformer\")){ClassFileTransformer t=(ClassFileTransformer)params[0];for(String n:new String[]{\"org/opentaint/dataflow/bidi/store/DemandStore\",\"org/opentaint/dataflow/bidi/ap/LimitKt\",\"org/opentaint/dataflow/bidi/engine/BlockRunState\"}){Path p=Path.of(args[0],n+\".class\");byte[] out=t.transform(Check.class.getClassLoader(),n,null,null,Files.readAllBytes(p));System.out.println(n+\" => \"+(out==null?\"FAILED\":out.length));}}return null;});\n diag.C5Observe.premain(\"/tmp/observe-check.jsonl\",inst);\n}}\n",
+    "observe.init.gradle": "gradle.projectsEvaluated {\nif(rootProject.name != \"opentaint-jvm-sast\") return\nrootProject.tasks.named(\"runProjectAnalyzer\",JavaExec).configure {\njvmArgs=[\"-Xmx8g\", \"-Dorg.opentaint.ir.impl.storage.defaultBatchSize=2000\", \"-Djdk.util.jar.enableMultiRelease=false\", \"-XX:FlightRecorderOptions=stackdepth=256\", \"-XX:+HeapDumpOnOutOfMemoryError\", \"-Dopentaint.bidi.run1MarkMode=FULL\", \"-Dopentaint.bidi.fieldLimitSchedule=REPEAT_RUN1\", \"-Dopentaint.bidi.disableRun1Statics=false\", \"--add-exports=java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED\", \"--add-exports=java.base/jdk.internal.org.objectweb.asm.commons=ALL-UNNAMED\", \"-javaagent:/drive-testcomp/opentaint-go-rules/investigations-20261110/owasp-c2/observe.jar=/drive-testcomp/opentaint-go-rules/investigations-20261110/owasp-c2/trace.jsonl\"]\nargs=[\"--project\", \"/drive-testcomp/opentaint-go-rules/owasp-ci-investigation/project/project.yaml\", \"--output-dir\", \"/drive-testcomp/opentaint-go-rules/investigations-20261110/owasp-c2/reports\", \"--ifds-analysis-timeout\", \"1000\", \"--logs-file\", \"/drive-testcomp/opentaint-go-rules/investigations-20261110/owasp-c2/analyzer.log\", \"--verbosity\", \"debug\", \"--semgrep-rule-set\", \"/drive-testcomp/opentaint-go-rules/opentaint-w3/rules/ruleset\", \"--sarif-generate-fingerprint\", \"--ifds-bidirectional\"]\n}\n}\n"
+  },
+  "gradleCommand": [
+    "./gradlew",
+    "--no-daemon",
+    ":runProjectAnalyzer",
+    "-I",
+    "/drive-testcomp/opentaint-go-rules/investigations-20261110/owasp-c2/observe.init.gradle",
+    "-x",
+    ":opentaint-ir:go:buildGoServer"
+  ],
+  "gradleCwd": "/drive-testcomp/opentaint-go-rules/opentaint-w3/core",
+  "interpretationLimits": [
+    "C2 observer captures complete public method entry lookup results, not one result per matching demand row.",
+    "Earlier handoff data supplies the exact paired demand; current admission source identifies the matching C2 cell.",
+    "Byte field IDs differ between diagnostic JVMs and must be resolved through each row catalog.",
+    "This diagnostic changes frontier counts but preserves all2633 finding locations; its timings are not a performance comparison.",
+    "Thingsboard evidence reuses the prior run1 OOM snapshot; storage reduction is not measured until implementation."
+  ]
+}

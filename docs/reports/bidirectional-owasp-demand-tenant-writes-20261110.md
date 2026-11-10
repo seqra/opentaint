@@ -20,6 +20,10 @@ The findings are:
    admitted FLOW writers, concrete taint supplies and pending readers are
    different populations.
 
+The [backward-admission and request-storage follow-up](bidirectional-backward-admission-static-request-storage-20261110.md)
+records the actual fact that answers the repeated OWASP byte-field demand
+in run-8 and run-10, and proposes sharing pending static images across marks.
+
 ## 1. OWASP: why NO_DEMAND_EDGE is not reached
 
 The stop test in `IterationDriver.barrier` is:
