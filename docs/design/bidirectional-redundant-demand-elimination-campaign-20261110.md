@@ -272,9 +272,16 @@ needed by the case. Use real instructions and legal fact shapes. Derive the
 summaries through the current analyzer; do not inject an impossible initial or
 fabricate a summary to force the result.
 
-The example must reproduce the same demand edge at two consecutive forward
-runs, with the intervening backward run. It must preserve the real reason P
-and every accepted Q fail at the later barrier. Include its retained NORMAL providers,
+The example must reproduce the same demand edge at run-i and run-(i+2), with
+the intervening backward run. **Require i >= 3.** The earliest valid pair is
+run-3/run-5, and the earliest removal point is after run-5. A run-1/run-3
+example is not sufficient evidence that a later-run edge is necessary.
+Run-1 has special handling that can invalidate predicates for later runs.
+Keep the normal run-1 initialization and iteration schedule in the fixture;
+do not rename iterations or reset state to meet the minimum index.
+
+The example must preserve the real reason P and every accepted Q fail at
+the later barrier. Include its retained NORMAL providers,
 replay roles, caller context, exclusions, protection and boundary ports.
 Removing a provider which exists in the project does not produce a faithful
 counterexample for that project occurrence.
@@ -302,9 +309,11 @@ project configuration or impossible fixed limit.
 
 Run two controls from the same fixture and runtime:
 
-- Baseline: the edge repeats and the required modeled behavior is reached.
+- Baseline: the edge repeats at run-i and run-(i+2), with i >= 3, and the
+  required modeled behavior is reached.
 - Deletion: keep execution unchanged through the later completed forward run.
-  Then remove only the selected edge from that run's outgoing guidance.
+  Then remove only the selected edge from that run's outgoing guidance,
+  no earlier than after run-5.
   Show the first missing required fact, summary, source permission, Target
   route or valid source-to-sink finding, and trace the loss to the outcome.
 
@@ -374,7 +383,8 @@ and decision-pending are nonterminal.
 
 Completion requires zero open targets, every edge in every D accounted
 for at its later barrier, all predicate proofs/native checks passing, every necessary
-case passing both controls, and every count/link/hash reconciled. Neither a
+case passing both controls with i >= 3 and removal after run-(i+2), and every
+count/link/hash reconciled. Neither a
 representative example nor the discovery of one broad Q ends the campaign.
 
 Use subagents for independent capture preparation, decoding and proof or

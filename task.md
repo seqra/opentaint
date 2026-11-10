@@ -35,6 +35,11 @@ Continue until every repeated edge has either:
    repetition and show the loss of required behavior when that edge is removed
    after run-(i+2).
 
+For every necessary-edge example, i must be at least 3. The earliest valid
+pair is run-3/run-5, with removal after run-5. A run-1/run-3 example does not
+satisfy this requirement: run-1 has special handling that can invalidate
+predicates for later runs.
+
 Unsupported or unexplained edges are not complete cases. Follow the detailed
 specification's proof gates, deletion controls, artifact schema and completion
 checks. Keep a durable ledger and resume it across turns.
