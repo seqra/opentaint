@@ -11,9 +11,13 @@ This replaces the completed migration implementation task as the active work.
 - Conductor: run-5 and run-7.
 - Stirling-PDF: run-7 and run-9.
 
-For every full method key, find the nonempty intersection of its final outgoing
-demand sets in the two runs. The complete sets do not have to be equal.
-Dump all methods, edges, scopes, projections and comparison results.
+Analyze every summarizable unit: each method and each generated inner block
+from loop decomposition, including sequential blocks, loop bodies and nested
+blocks. Use the full method key and stable block identity to match the same
+unit across runs. For each unit, find the nonempty intersection of its final
+outgoing demand sets. The complete sets do not have to be equal.
+Dump all units, their hierarchy, edges, ports, projections and comparisons.
+An inner-block edge is a target even if it has no method-level summary.
 
 The removal point is after the later run, run-(i+2), completes and before its
 outgoing demand guides the next run. Run-i is evidence of repetition only.
@@ -23,6 +27,7 @@ are OWASP run-11, Conductor run-7 and Stirling-PDF run-9.
 Evaluate [P: NORMAL replay coverage](spec/normal-backed-flow-demand-retirement.md)
 for every repeated edge at the later barrier, using the NORMAL records retained
 there. Every repeated edge not covered there is an elimination target.
+Keep P's proved scope unchanged; unsupported inner-block cases remain targets.
 
 Process targets one at a time. Prove each new executable redundancy predicate
 with [spec/proof-guide.md](spec/proof-guide.md), then test it against all remaining
