@@ -1,0 +1,18 @@
+'NormalBackedDemand.checked_all_origins_covered' depends on axioms: [propext, Quot.sound]
+'NormalBackedDemand.dropping_debt_preserves_transfer' depends on axioms: [propext, Quot.sound]
+'NormalBackedDemand.caller_walks_unchanged' depends on axioms: [propext, Quot.sound]
+'NormalBackedDemand.same_direction_deeper_reader_rejected' depends on axioms: [propext]
+'NormalBackedDemand.reverse_reverse' does not depend on any axioms
+'NormalBackedDemand.specialization_covered' depends on axioms: [propext]
+'NormalBackedDemand.reverse_denote' does not depend on any axioms
+'NormalBackedDemand.valid_origin_has_native' depends on axioms: [propext]
+'NormalBackedDemand.checked_all_origins_covered' depends on axioms: [propext, Quot.sound]
+'NormalBackedDemand.dropping_debt_preserves_transfer' depends on axioms: [propext, Quot.sound]
+'NormalBackedDemand.walk_map' does not depend on any axioms
+'NormalBackedDemand.caller_walks_unchanged' depends on axioms: [propext, Quot.sound]
+'NormalBackedDemand.same_direction_deeper_reader_rejected' depends on axioms: [propext]
+'NormalBackedDemand.cut_specialization_example' depends on axioms: [propext]
+'NormalBackedDemand.read_with_opposite_native_example' depends on axioms: [propext]
+'NormalBackedDemand.deeper_direct_reader_is_not_enough' depends on axioms: [propext]
+'NormalBackedDemand.uncovered_second_read_rejects_whole_merged_edge' depends on axioms: [propext]
+'NormalBackedDemand.no_normal_provider_no_retirement' depends on axioms: [propext]

@@ -1,0 +1,8 @@
+gradle.projectsEvaluated {
+    if (rootProject.name != "opentaint-dataflow-core") return
+    def proposal = new File(rootProject.projectDir.parentFile.parentFile,
+        "spec/lean/proposals/normal-backed-demand-20261110")
+    rootProject.project(":opentaint-dataflow").kotlin.sourceSets.named("test").configure {
+        kotlin.srcDir(proposal)
+    }
+}

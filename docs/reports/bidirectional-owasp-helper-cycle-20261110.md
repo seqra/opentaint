@@ -13,6 +13,12 @@ new cuts of NORMAL relations which a persisted NORMAL relation already covers.
 Other rows are already DEMAND before restriction. The second population must
 not be deleted merely because the first population is redundant.
 
+The subsequent [NORMAL replay retirement proposal](../../spec/normal-backed-flow-demand-retirement.md)
+defines the stronger predicate P(X), using the complete compiled copy graph
+and native replay roles. Its check covers both populations: all six forward
+and all eight backward FLOW rows in this helper. The proposal changes no
+runtime code and does not discard concrete-mark or Target guidance.
+
 ## Reading the trace
 
 Each run below contains all incoming paired demand rows, all submitted C2

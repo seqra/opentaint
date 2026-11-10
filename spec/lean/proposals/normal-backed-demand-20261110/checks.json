@@ -1,0 +1,76 @@
+{
+  "createdAt": "2026-11-10T12:19:58.962619+00:00",
+  "runtime": "14d7b63369d94f49d4c551be8405ed7719f267cc",
+  "latestReachedRun": 11,
+  "latestCompletedRun": 11,
+  "latestAcceptedForwardRun": 11,
+  "productionChanges": false,
+  "genericTheorems": 14,
+  "observedCertificates": 34,
+  "clippedOrigins": 124,
+  "allSelectedEdgesPass": true,
+  "modelChecks": [
+    {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/normal-backed-demand-20261110/NormalBackedDemand.lean"
+      ],
+      "exitCode": 0,
+      "log": "NormalBackedDemand.log",
+      "sha256": "60c0c3966164ee1f16886ecea2b171c5ef4f2a478d9b8ab18ed20fdcb15f51ea"
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/proposals/normal-backed-demand-20261110/ObservedCertificates.lean"
+      ],
+      "exitCode": 0,
+      "log": "ObservedCertificates.log",
+      "sha256": "8641d98810c5cf52b54148f0c95b7f56a786b62036ed6a6f8b24a86527931269"
+    }
+  ],
+  "axiomAudit": {
+    "log": "axioms.log",
+    "sha256": "1902ef278503e010bb29294c95d6934342846928b01b4f866d27b11a5f17bb12",
+    "allowed": [
+      "propext",
+      "Quot.sound"
+    ]
+  },
+  "sourceHashes": {
+    "check-copy-closure.py": "a75eba45857bba710f9d5fc11c49df4a7e74078178df711c995b18037595e11f",
+    "NormalBackedDemandReplayProbeTest.kt": "2fe6adbd662d35529aced685b85a86721537a18ca6e99803b646494426b054d1",
+    "native-test.init.gradle": "d5d2def8549973b61b8c2421d9f346880738a3b0c65b4bca5fc86470b5125f21",
+    "ObservedCertificates.lean": "73638753670a614eb03ac5da3762c9a9278c08a1410ebb317501e4ae935f95fd",
+    "generate-observed.py": "47d912a9b553c3840e354c59cda16161812eea84e0419bcdb7ef84a078813725",
+    "check.py": "b5590e921de18eb499b16472ebe7d15af84f3f33e28f80ec336394ef9db1f896",
+    "NormalBackedDemand.lean": "b8c52ba29437450efced4449b1cf5f8cf55c84b579f012deb3ddff8c30aa3bbd"
+  },
+  "nativeAnalyzerProved": false,
+  "arbitraryScopeCompletenessProved": false,
+  "retirementImplemented": false,
+  "scope": "Constructive prefix relation/native replay certificates; source-checked finite pure-copy DATA graph of the selected OWASP helper. Concrete/Zero/Target observations and native runtime require the stated existing contracts.",
+  "nativeProbe": {
+    "tests": 1,
+    "inputLanes": 60,
+    "failures": 0,
+    "errors": 0,
+    "initScript": "native-test.init.gradle",
+    "source": "NormalBackedDemandReplayProbeTest.kt",
+    "xmlSha256": "d114972629aacf83bc39713609cb4272bef5fd9fbffb3528103ad3adf5c2b15c"
+  },
+  "formsCapture": {
+    "records": 1411,
+    "errors": 0,
+    "findingCount": 2633,
+    "missing": 0,
+    "added": 0,
+    "latestCompletedRun": 11,
+    "stopReason": "RUN_LIMIT"
+  },
+  "specSha256": "fb13a5255a8a694e1aa24786f077c7b28c69002c42f22128f577e33b2b9f5f6b"
+}
