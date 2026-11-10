@@ -14,18 +14,28 @@ Classify every repeated outgoing demand edge in these completed forward runs:
 | Conductor | run-5 | run-7 | 4, 6 |
 | Stirling-PDF | run-7 | run-9 | 6, 8 |
 
-For each repeated edge and each of its two occurrences, produce either:
+**The removal point is after run-(i+2), not after run-i.** Keep run-i and
+the intervening analysis unchanged. Use run-i only to establish repetition
+and explain its cause. After the later run completes and its NORMAL records
+are persisted, test whether its repeated demand edge can be omitted from
+the outgoing guidance for the next run. Do not remove current-run effects,
+persisted NORMAL records or reports.
+
+Thus, the removal barriers are OWASP run-11, Conductor run-7 and Stirling-PDF
+run-9. A predicate does not need to justify removal at the earlier barrier.
+
+For each repeated edge at the later barrier, produce either:
 
 1. A checked predicate and witness that prove the edge is redundant at the
    specified removal point.
 2. A faithful code example, native regression test and fact trace that show
-   why removing that occurrence can lose required analysis behavior.
+   why removing the edge after the later run can lose required analysis behavior.
 
 Repeat discovery alone does not establish redundancy or non-termination.
 Unsupported by a predicate does not mean necessary.
 
-The campaign ends only when every repeated edge has this disposition for
-both occurrences. No sampled subset or unexplained residual category satisfies
+The campaign ends only when every repeated edge has this disposition at the
+later barrier. No sampled subset or unexplained residual category satisfies
 the goal.
 
 ## 2. Reference behavior
@@ -147,15 +157,16 @@ Every stream needs a record count, completion marker, error count and hash.
 Detect truncation and dropped records. Preserve canonicalization and decoding
 scripts. A tool's successful exit alone is not proof that a capture is complete.
 
-## 5. Phase B: test P on every occurrence
+## 5. Phase B: test P at the later barrier
 
 Use [P: NORMAL replay coverage](../../spec/normal-backed-flow-demand-retirement.md)
 and its [proof package](../../spec/lean/proposals/normal-backed-demand-20261110/README.md).
 Pin their source versions and respect their declared scope and proof limits.
 
-Evaluate P separately at each selected completed barrier. Use the NORMAL
-records retained at that barrier, after persistence. Never use a provider
-which appears only in the later run to justify deletion in the earlier run.
+Evaluate P only at each pair's later completed barrier. Use the NORMAL
+records retained there, after persistence. A provider first available in the
+later run is valid evidence for removal after that run. Keep the earlier
+state for the repetition trace; no deletion or P verdict is required there.
 
 For a positive result, save the complete copy/origin relation and every native
 replay witness, including scope, direction, direct/opposite role, shared
@@ -166,21 +177,22 @@ loop, static, concrete, ND or Target case remains an elimination target.
 P is a context-dependent predicate, not a table of edge shapes. Do not infer
 it from one matching NORMAL output or from the equal findings count.
 
-Let U be all repeated edge occurrences in the three pairs. Initially:
+Let U contain one target for each repeated edge in the three pairs, at its
+later barrier. Initially:
 
 ```text
-resolved = { occurrence in U | P has a checked certificate there }
+resolved = { X in U | P has a checked certificate at X.laterBarrier }
 targets  = U - resolved
 ```
 
-Each repeated-edge ledger row has an earlier and a later disposition. If P
-holds only in the later run, the earlier occurrence stays open. Different
-proved predicates may eventually resolve the two occurrences.
+Each repeated-edge ledger row retains both snapshot references and one
+disposition for removal after the later run. If P holds there, the target is
+resolved even when P did not hold after the earlier run.
 
 ## 6. Phase C: process uncovered targets one at a time
 
 Maintain one ordered, durable work queue and one coordinator. Select one
-uncovered occurrence and record its ID. Then:
+uncovered later-barrier target and record its ID. Then:
 
 ```text
 while targets is not empty:
@@ -191,13 +203,14 @@ while targets is not empty:
         Q = defineExecutablePredicateWithExplicitGuards(X)
         proveAndValidate(Q)
         addVersionedPredicate(Q)
-        for Y in allRepeatedOccurrences:
+        for Y in allRepeatedLaterBarrierTargets:
             if Y is open and Q has a checked witness for Y:
                 classify(Y, REDUNDANT_Q, witness)
         rebuild targets from the ledger
     else:
         case = buildFaithfulNecessityExample(X)
-        proveAndReplayRequiredBehaviorLoss(case, removeOnly=X)
+        proveAndReplayRequiredBehaviorLoss(case, removeOnly=X,
+                                          after=X.laterBarrier)
         classify(X, NECESSARY_WITH_CASE, case)
         rebuild targets from the ledger
 ```
@@ -208,7 +221,7 @@ remains open. If several producers merged into X, analyze every relevant
 producer and their interactions.
 
 After accepting each Q, filter the entire remaining corpus before selecting
-the next target. Save a witness for each matched occurrence. Shared geometry
+the next target. Save a witness for each matched target. Shared geometry
 alone is not a batch certificate. Re-test all affected rows if a predicate or
 proof changes; a refuted proof reopens its assigned rows.
 
@@ -227,7 +240,7 @@ accepted, provide:
 3. A constructive Lean model, executable witnesses and soundness proof.
 4. A source correspondence argument and native tests of the real operators.
 5. Positive examples and counterexamples to weaker versions of the predicate.
-6. A proof/validation receipt and per-occurrence corpus certificates.
+6. A proof/validation receipt and per-target certificates at the later barrier.
 
 The proof must cover the required later behavior, not only concrete relation
 inclusion. Check NORMAL replay before demand admission, C2/C5, both directions,
@@ -236,7 +249,8 @@ call bindings, aliases, scope/ports and future refinement as applicable.
 Preserve complete ND premises, literal protection and all merged producers.
 Prove provider retention, arrival-order safety and absence of circular support.
 The accepted predicates must remain sound when all their selected edges are
-removed together. A witness must not depend on another removed edge unless a
+removed from guidance after their respective later barriers. A witness must
+not depend on another removed edge unless a
 proved replacement chain ends at independently retained state. Save those
 dependencies and check them again after each new predicate.
 
@@ -260,7 +274,7 @@ fabricate a summary to force the result.
 
 The example must reproduce the same demand edge at two consecutive forward
 runs, with the intervening backward run. It must preserve the real reason P
-and every accepted Q fail. Include the relevant retained NORMAL providers,
+and every accepted Q fail at the later barrier. Include its retained NORMAL providers,
 replay roles, caller context, exclusions, protection and boundary ports.
 Removing a provider which exists in the project does not produce a faithful
 counterexample for that project occurrence.
@@ -289,7 +303,8 @@ project configuration or impossible fixed limit.
 Run two controls from the same fixture and runtime:
 
 - Baseline: the edge repeats and the required modeled behavior is reached.
-- Deletion: remove only the selected edge at the proposed removal point.
+- Deletion: keep execution unchanged through the later completed forward run.
+  Then remove only the selected edge from that run's outgoing guidance.
   Show the first missing required fact, summary, source permission, Target
   route or valid source-to-sink finding, and trace the loss to the outcome.
 
@@ -298,7 +313,7 @@ path is not proof that an edge is necessary. A baseline test that already
 misses the finding is not a valid deletion control. State the concrete valid
 flow or other required semantic observation that is lost.
 
-Link the fixture to the actual project occurrence. A generic counterexample
+Link the fixture to the actual project edge and its later barrier. A generic counterexample
 which only refutes an unsafe shape-based rule leaves the project edge open.
 A case may serve several edges only when each has a checked mapping that
 preserves all relevant preconditions and available replacement routes.
@@ -329,8 +344,8 @@ or external-only scratch path may replace the complete sets and ledger.
 Compressed artifacts must have portable decoders and schemas.
 
 Each ledger entry must identify the project, run pair, full method key,
-scope/ports, exact edge key, both snapshot references, occurrence-specific
-verdicts, predicate/case ID and version, witness/proof/native-test references,
+scope/ports, exact edge key, both snapshot references, the later removal
+barrier and verdict, predicate/case ID and version, witness/proof/native-test references,
 and any pending issue. Keep an audit log of classification changes.
 
 The manifest must pin the runtime, project revisions, configurations,
@@ -343,9 +358,9 @@ The report must contain:
 
 - The complete M and D inventories, with links to all edge records.
 - Totals by project, method, edge kind, layer, mark kind and scope.
-- P coverage and failures, separately for the two occurrences.
+- P coverage and failures at each pair's later barrier.
 - Every accepted Q, its proof domain and newly covered edge/method counts.
-- Every necessary case and its mapped occurrences.
+- Every necessary case and its mapped later-barrier targets.
 - Final reconciliation of the full repeated universe against the ledger.
 
 Do not interpret the percentage of retired edges as a measured CPU or memory
@@ -357,8 +372,8 @@ Terminal dispositions are `REDUNDANT_P`, `REDUNDANT_<Q-name>` and
 `NECESSARY_WITH_CASE`. Unsupported, unknown, proof-pending, reproducer-pending
 and decision-pending are nonterminal.
 
-Completion requires zero open occurrences, every edge in every D accounted
-for at both runs, all predicate proofs/native checks passing, every necessary
+Completion requires zero open targets, every edge in every D accounted
+for at its later barrier, all predicate proofs/native checks passing, every necessary
 case passing both controls, and every count/link/hash reconciled. Neither a
 representative example nor the discovery of one broad Q ends the campaign.
 
@@ -366,4 +381,4 @@ Use subagents for independent capture preparation, decoding and proof or
 counterexample review of the current target. The coordinator still processes
 new target explanations one at a time and applies each accepted predicate
 globally before advancing. Keep measured project scans serial. Preserve the
-ledger across turns and resume at the next unresolved occurrence.
+ledger across turns and resume at the next unresolved later-barrier target.
