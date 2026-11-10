@@ -196,22 +196,86 @@ run-11 FORWARD, limit10:
 ```
 
 `Reference.kt.mustRecordReadView` explicitly gives the NORMAL FLOW/MUST
-record an ANY/DEMAND reverse view. This uncertainty is not a field-limit cut.
-The byte-array path has two counted fields, well below limits 8–10. Other
-String model fields produce parallel rows; the complete packet lists them.
+record an ANY/DEMAND reverse view. That native view is not itself a field-limit
+cut. However, this does **not** explain the immediate production of every
+forward ANY row shown above. The follow-up capture below proves that the
+quoted forward row is newly cut by C5's smaller demand-relative budget.
+Other String model fields produce parallel rows; the complete packet lists them.
 
 Short NORMAL STAR summaries coexist with these rows. Their presence does
 not currently discharge all different-tail/correlation obligations. The
 current selected replacement rules do not turn this handoff into an empty
-set. This is a demand-lifetime/native-reversal issue, not evidence that the
-analysis needs a larger field limit.
+set. This includes demand-lifetime, native-reversal and per-demand-row cutting
+issues; a larger global field limit alone does not remove them.
+
+### Follow-up: exact origin of the run-9 forward ANY row
+
+A second observer captured raw summary admission and C5 before/after limiting
+for the same helper in runs 8–10. It completed **run-11**, accepted forward
+**run-11**, with 674 records, zero observer errors and all 2,633 exact findings
+unchanged. It is a diagnostic, not another performance measurement.
+
+The requested row is a **new C5 cut from a NORMAL edge**:
+
+```text
+run-9, global limit = 8
+
+raw candidate, NORMAL:
+  param.bytes.[].* -> ret.bytes.[].* / FLOW
+
+matching demand row from run-8:
+  Dc = param.bytes.[any] / FLOW
+  Dp = ret.* / FLOW
+
+effective conclusion budget:
+  min(global limit, FL(Dp) + 1) = min(8, 0 + 1) = 1
+
+after exact C5 intersection, before this cut:
+  param.bytes.[].* -> ret.bytes.[].* / FLOW, NORMAL
+
+after the one-field cut:
+  param.bytes.[].* -> ret.bytes.[any] / FLOW, DEMAND
+```
+
+`Dc` accepts the premise because its `[any]` is refined by the next field `[]`.
+`Dp` is a root STAR FLOW pattern. Its exact intersection keeps the correlated
+longer FLOW result; the subsequent demand-relative limit then cuts that result.
+The global limit of eight is not the effective limit for this row.
+
+A separate, deeper matching demand has:
+
+```text
+Dc = param.bytes.[].[any] / FLOW
+Dp = ret.bytes.* / FLOW
+budget = min(8, 1 + 1) = 2
+result includes the full NORMAL ret.bytes.[].* conclusion
+```
+
+The current implementation processes each demand row separately and unions
+its results. Preserving the deeper NORMAL result does not cancel the shallower
+row's ANY/DEMAND result. Thus a shallow demand can recreate a refinement
+obligation even when another matching demand permits the precise raw relation.
+Both facts are visible together in the C5 result family.
+
+The earlier boundary-only capture could not identify this immediate cause.
+The [follow-up data](data/bidirectional-owasp-c5-provenance-20261110.json) contains
+the decisive raw/demand/budget/result records and the
+[complete selected-method trace](data/bidirectional-owasp-c5-provenance-20261110.jsonl.gz).
+`C5_RESULTS` is the cumulative family for the intersect operation, not an
+individual row's delta.
+
+A possible next design is to remove a coarse cut whose corresponding raw
+relation is already preserved by another matching demand. That needs a proof
+about paired entry/output coverage. Taking the largest budget across unrelated
+demand rows is not a sufficient rule. No restriction or subsumption change is
+implemented here.
 
 ### What this establishes
 
 The current no-demand test behaves as implemented. The design gap is that
 the repeated obligations have no proved “answered” state. Sink identity is
-lost when the DEMAND Target is built, and native reverse-MUST uncertainty
-can survive every larger field limit.
+lost when the DEMAND Target is built. Native reverse-MUST uncertainty and
+repeated cuts under shallow demand can survive larger global field limits.
 
 A repair must define which obligations still support an unresolved finding,
 and how saved NORMAL providers can discharge intrinsic uncertainty. Do not
@@ -373,6 +437,71 @@ all final-reference taint effects would change that rule's meaning.
 Therefore, a safe future change must distinguish physical object mutation,
 taint assignment and approximate call aliases. Final alone is not a valid
 reason to delete all taint propagation. There is no such filter in this work.
+
+### Can the enum filter be generalized to immutable targets?
+
+`TenantId` has no reference to a mutable object: its inherited `id` is a final
+UUID reference. Its primitive hash cache does not change its logical value.
+It is a reasonable candidate for an immutable-value policy. `tenants` itself
+does not satisfy that policy: it is a mutable map of these values.
+
+A general classifier must inspect inherited fields and actual possible types.
+Final class alone is insufficient. Final reference alone is insufficient.
+An array or collection can remain mutable through a final reference.
+Unknown types must not be assumed immutable. Cyclic type graphs require a
+checked analysis, rather than declaring a visited class immutable by default.
+
+There are also two different properties:
+
+```text
+no mutable reference state:
+  every reachable reference field is fixed and points to a similarly safe value
+
+no mutable tracked state:
+  primitive fields and modeled/rule-defined locations are safe as well
+```
+
+The first is not enough for a generic alias-target filter when primitive
+tracking is enabled:
+
+```java
+final class Counter { int value; } // No reference fields.
+static final Counter SHARED = new Counter();
+Counter x = SHARED;
+x.value = sourceInt();
+sinkInt(SHARED.value);
+```
+
+Discarding `SHARED` as an alias target loses this flow. The private hash cache
+in TenantId's base is a different, auditable case; that does not justify
+ignoring every mutable primitive field in a generic class.
+
+Even a fully immutable value can receive a configured taint label:
+
+```java
+TenantId x = TenantId.SYS_TENANT_ID;
+markSource(x); // Source rule assigns T to argument0; no Java mutation.
+sink(TenantId.SYS_TENANT_ID); // Existing alias-based mark semantics can see T.
+```
+
+The existing alias stage carries both memory effects and rule mark effects.
+A blanket filter at `EnumAliasTargets.reject` can therefore change findings.
+The existing enum rule is explicitly a dirty hack, not an immutability theorem;
+enums themselves can have mutable fields.
+
+The promising generalization is to omit **derived mutation writeback** for
+proved immutable targets, while preserving reads, explicit static operations
+and required source/pass/cleaner effects. This requires a specified distinction
+at the alias stage. Alternatively, an explicit approximate policy can choose
+to drop all such targets, but that must be stated as a semantic change.
+
+The expected saving also needs care. In this snapshot SYS already has zero
+registered FLOW writers. Filtering its alias destinations would avoid some
+form/descriptor work, but does not by itself eliminate the 1.22 million pending
+memberships whose **origin** is a direct SYS read. A root-static-field type
+check would also retain the mutable `tenants` map. Its `MapValue` model slot
+has declared type Object; proving that the selected value is an immutable
+TenantId needs more information than that simple check.
 
 ### Relation to the OOM
 

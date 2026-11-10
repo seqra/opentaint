@@ -1204,5 +1204,9 @@
     "No sink gate is changed. Confirmed-ID comparison is diagnostic, not permission to delete all anonymous Target obligations.",
     "Thingsboard data are from the same run1 OOM heap, not a completed fixed point. Writer registrations have no instruction provenance. Reached write-operation descriptors are candidates, not proof of an admitted marked write.",
     "Bytecode coverage excludes reflection, Unsafe, native writes and external extensions."
-  ]
+  ],
+  "follow_up": {
+    "data": "docs/reports/data/bidirectional-owasp-c5-provenance-20261110.json",
+    "correction": "The quoted forward param.bytes.[].STAR->ret.bytes.ANY is created by a C5 demand-relative budget1 from a NORMAL two-field raw result, even at global8. Native MUST reversal is a separate source of uncertainty; the previous boundary-only capture did not identify the exact forward cut."
+  }
 }

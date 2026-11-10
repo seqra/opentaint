@@ -1,0 +1,653 @@
+{
+  "runtime": "14d7b63369d94f49d4c551be8405ed7719f267cc",
+  "head": "2e9ea2218de079b984c0ea093ae3cb548e29af27",
+  "latestReached": "run-11",
+  "latestComplete": "run-11",
+  "acceptedForward": "run-11",
+  "scope": "Read-only selected BenchmarkTest01000$Test#doSomething raw summary/C5 inputs and outputs in runs8-10; no production change",
+  "traceEnd": {
+    "event": "END",
+    "rows": 674,
+    "errors": 0
+  },
+  "counts": {
+    "8:BEFORE_RETAIN": 35,
+    "8:C5_ROW": 46,
+    "8:C5_BEFORE_LIMIT": 46,
+    "8:C5_RESULTS": 51,
+    "9:BEFORE_RETAIN": 140,
+    "9:C5_ROW": 56,
+    "9:C5_BEFORE_LIMIT": 54,
+    "9:C5_RESULTS": 68,
+    "10:BEFORE_RETAIN": 35,
+    "10:C5_ROW": 46,
+    "10:C5_BEFORE_LIMIT": 46,
+    "10:C5_RESULTS": 51,
+    "None:END": 1
+  },
+  "findings": {
+    "reference": 2633,
+    "diagnostic": 2633,
+    "shared": 2633,
+    "missing": [],
+    "added": []
+  },
+  "decisive_rows": {
+    "raw_normal": {
+      "event": "C5_ROW",
+      "run": 9,
+      "method": "org.owasp.benchmark.testcode.BenchmarkTest01000$Test#doSomething(javax.servlet.http.HttpServletRequest, java.lang.String) [{}]",
+      "scope": "ROOT",
+      "globalLimit": 8,
+      "premise": {
+        "kind": "INITIAL",
+        "members": [
+          {
+            "id": 1491,
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+            "base": "arg(1)",
+            "path": [
+              244,
+              11
+            ],
+            "tail": "STAR",
+            "E": [],
+            "mark": {
+              "kind": "FLOW",
+              "mx": []
+            }
+          }
+        ]
+      },
+      "raw": {
+        "kind": "FLOW",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+        "base": "ret",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "root": 0,
+        "protection": null
+      },
+      "entry": {
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+        "base": "arg(1)",
+        "path": [
+          244
+        ],
+        "tail": "ANY",
+        "E": [],
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        }
+      },
+      "exit": {
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+        "base": "ret",
+        "path": [],
+        "tail": "STAR",
+        "E": [],
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        }
+      },
+      "nodes": [
+        {
+          "id": 0,
+          "flowLeaf": false,
+          "children": [
+            {
+              "field": 244,
+              "node": 1
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "flowLeaf": false,
+          "children": [
+            {
+              "field": 11,
+              "node": 2
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "flowLeaf": true,
+          "children": []
+        }
+      ],
+      "catalogIncluded": true,
+      "fields": [
+        {
+          "id": 244,
+          "name": "String#<string-bytes>"
+        },
+        {
+          "id": 11,
+          "name": "*"
+        }
+      ],
+      "marks": []
+    },
+    "effective_budget": {
+      "event": "C5_BEFORE_LIMIT",
+      "run": 9,
+      "method": "org.owasp.benchmark.testcode.BenchmarkTest01000$Test#doSomething(javax.servlet.http.HttpServletRequest, java.lang.String) [{}]",
+      "scope": "ROOT",
+      "budget": 1,
+      "kept": {
+        "kind": "FLOW",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+        "base": "ret",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "root": 0,
+        "protection": null
+      },
+      "premise": {
+        "kind": "INITIAL",
+        "members": [
+          {
+            "id": 1491,
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+            "base": "arg(1)",
+            "path": [
+              244,
+              11
+            ],
+            "tail": "STAR",
+            "E": [],
+            "mark": {
+              "kind": "FLOW",
+              "mx": []
+            }
+          }
+        ]
+      },
+      "entry": {
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+        "base": "arg(1)",
+        "path": [
+          244
+        ],
+        "tail": "ANY",
+        "E": [],
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        }
+      },
+      "exit": {
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+        "base": "ret",
+        "path": [],
+        "tail": "STAR",
+        "E": [],
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        }
+      },
+      "nodes": [
+        {
+          "id": 0,
+          "flowLeaf": false,
+          "children": [
+            {
+              "field": 244,
+              "node": 1
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "flowLeaf": false,
+          "children": [
+            {
+              "field": 11,
+              "node": 2
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "flowLeaf": true,
+          "children": []
+        }
+      ],
+      "catalogIncluded": true,
+      "fields": [
+        {
+          "id": 244,
+          "name": "String#<string-bytes>"
+        },
+        {
+          "id": 11,
+          "name": "*"
+        }
+      ],
+      "marks": []
+    },
+    "cut_demand": {
+      "event": "C5_RESULTS",
+      "run": 9,
+      "method": "org.owasp.benchmark.testcode.BenchmarkTest01000$Test#doSomething(javax.servlet.http.HttpServletRequest, java.lang.String) [{}]",
+      "scope": "ROOT",
+      "premise": {
+        "kind": "INITIAL",
+        "members": [
+          {
+            "id": 1491,
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+            "base": "arg(1)",
+            "path": [
+              244,
+              11
+            ],
+            "tail": "STAR",
+            "E": [],
+            "mark": {
+              "kind": "FLOW",
+              "mx": []
+            }
+          }
+        ]
+      },
+      "result": {
+        "kind": "FLOW",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+        "base": "ret",
+        "layer": "DEMAND",
+        "tail": "ANY",
+        "E": [],
+        "mx": [],
+        "root": 0,
+        "protection": null
+      },
+      "index": 0,
+      "nodes": [
+        {
+          "id": 0,
+          "flowLeaf": false,
+          "children": [
+            {
+              "field": 244,
+              "node": 1
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "flowLeaf": true,
+          "children": []
+        }
+      ],
+      "catalogIncluded": true,
+      "fields": [
+        {
+          "id": 244,
+          "name": "String#<string-bytes>"
+        },
+        {
+          "id": 11,
+          "name": "*"
+        }
+      ],
+      "marks": []
+    },
+    "deeper_row": {
+      "event": "C5_ROW",
+      "run": 9,
+      "method": "org.owasp.benchmark.testcode.BenchmarkTest01000$Test#doSomething(javax.servlet.http.HttpServletRequest, java.lang.String) [{}]",
+      "scope": "ROOT",
+      "globalLimit": 8,
+      "premise": {
+        "kind": "INITIAL",
+        "members": [
+          {
+            "id": 1491,
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+            "base": "arg(1)",
+            "path": [
+              244,
+              11
+            ],
+            "tail": "STAR",
+            "E": [],
+            "mark": {
+              "kind": "FLOW",
+              "mx": []
+            }
+          }
+        ]
+      },
+      "raw": {
+        "kind": "FLOW",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+        "base": "ret",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "root": 0,
+        "protection": null
+      },
+      "entry": {
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+        "base": "arg(1)",
+        "path": [
+          244,
+          11
+        ],
+        "tail": "ANY",
+        "E": [],
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        }
+      },
+      "exit": {
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+        "base": "ret",
+        "path": [
+          244
+        ],
+        "tail": "STAR",
+        "E": [],
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        }
+      },
+      "nodes": [
+        {
+          "id": 0,
+          "flowLeaf": false,
+          "children": [
+            {
+              "field": 244,
+              "node": 1
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "flowLeaf": false,
+          "children": [
+            {
+              "field": 11,
+              "node": 2
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "flowLeaf": true,
+          "children": []
+        }
+      ],
+      "catalogIncluded": true,
+      "fields": [
+        {
+          "id": 244,
+          "name": "String#<string-bytes>"
+        },
+        {
+          "id": 11,
+          "name": "*"
+        }
+      ],
+      "marks": []
+    },
+    "deeper_budget": {
+      "event": "C5_BEFORE_LIMIT",
+      "run": 9,
+      "method": "org.owasp.benchmark.testcode.BenchmarkTest01000$Test#doSomething(javax.servlet.http.HttpServletRequest, java.lang.String) [{}]",
+      "scope": "ROOT",
+      "budget": 2,
+      "kept": {
+        "kind": "FLOW",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+        "base": "ret",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "root": 0,
+        "protection": null
+      },
+      "premise": {
+        "kind": "INITIAL",
+        "members": [
+          {
+            "id": 1491,
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+            "base": "arg(1)",
+            "path": [
+              244,
+              11
+            ],
+            "tail": "STAR",
+            "E": [],
+            "mark": {
+              "kind": "FLOW",
+              "mx": []
+            }
+          }
+        ]
+      },
+      "entry": {
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+        "base": "arg(1)",
+        "path": [
+          244,
+          11
+        ],
+        "tail": "ANY",
+        "E": [],
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        }
+      },
+      "exit": {
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+        "base": "ret",
+        "path": [
+          244
+        ],
+        "tail": "STAR",
+        "E": [],
+        "mark": {
+          "kind": "FLOW",
+          "mx": []
+        }
+      },
+      "nodes": [
+        {
+          "id": 0,
+          "flowLeaf": false,
+          "children": [
+            {
+              "field": 244,
+              "node": 1
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "flowLeaf": false,
+          "children": [
+            {
+              "field": 11,
+              "node": 2
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "flowLeaf": true,
+          "children": []
+        }
+      ],
+      "catalogIncluded": true,
+      "fields": [
+        {
+          "id": 244,
+          "name": "String#<string-bytes>"
+        },
+        {
+          "id": 11,
+          "name": "*"
+        }
+      ],
+      "marks": []
+    },
+    "normal_also_kept": {
+      "event": "C5_RESULTS",
+      "run": 9,
+      "method": "org.owasp.benchmark.testcode.BenchmarkTest01000$Test#doSomething(javax.servlet.http.HttpServletRequest, java.lang.String) [{}]",
+      "scope": "ROOT",
+      "premise": {
+        "kind": "INITIAL",
+        "members": [
+          {
+            "id": 1491,
+            "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Argument",
+            "base": "arg(1)",
+            "path": [
+              244,
+              11
+            ],
+            "tail": "STAR",
+            "E": [],
+            "mark": {
+              "kind": "FLOW",
+              "mx": []
+            }
+          }
+        ]
+      },
+      "result": {
+        "kind": "FLOW",
+        "baseType": "org.opentaint.dataflow.ap.ifds.AccessPathBase$Return",
+        "base": "ret",
+        "layer": "NORMAL",
+        "tail": "STAR",
+        "E": [],
+        "mx": [],
+        "root": 0,
+        "protection": null
+      },
+      "index": 1,
+      "nodes": [
+        {
+          "id": 0,
+          "flowLeaf": false,
+          "children": [
+            {
+              "field": 244,
+              "node": 1
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "flowLeaf": false,
+          "children": [
+            {
+              "field": 11,
+              "node": 2
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "flowLeaf": true,
+          "children": []
+        }
+      ],
+      "catalogIncluded": true,
+      "fields": [
+        {
+          "id": 244,
+          "name": "String#<string-bytes>"
+        },
+        {
+          "id": 11,
+          "name": "*"
+        }
+      ],
+      "marks": []
+    }
+  },
+  "observer_launch": {
+    "runtime": "14d7b63369d94f49d4c551be8405ed7719f267cc",
+    "head": "2e9ea2218de079b984c0ea093ae3cb548e29af27",
+    "purpose": "Read-only run8-10 selected method C5/raw/saved-view provenance. No performance comparison.",
+    "jvm_args": [
+      "-Xmx8g",
+      "-Dorg.opentaint.ir.impl.storage.defaultBatchSize=2000",
+      "-Djdk.util.jar.enableMultiRelease=false",
+      "-XX:FlightRecorderOptions=stackdepth=256",
+      "-XX:+HeapDumpOnOutOfMemoryError",
+      "-Dopentaint.bidi.run1MarkMode=FULL",
+      "-Dopentaint.bidi.fieldLimitSchedule=REPEAT_RUN1",
+      "-Dopentaint.bidi.disableRun1Statics=false",
+      "--add-exports=java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED",
+      "--add-exports=java.base/jdk.internal.org.objectweb.asm.commons=ALL-UNNAMED",
+      "-javaagent:/drive-testcomp/opentaint-go-rules/investigations-20261110/owasp-c5/observe.jar=/drive-testcomp/opentaint-go-rules/investigations-20261110/owasp-c5/trace.jsonl"
+    ],
+    "args": [
+      "--project",
+      "/drive-testcomp/opentaint-go-rules/owasp-ci-investigation/project/project.yaml",
+      "--output-dir",
+      "/drive-testcomp/opentaint-go-rules/investigations-20261110/owasp-c5/reports",
+      "--ifds-analysis-timeout",
+      "1000",
+      "--logs-file",
+      "/drive-testcomp/opentaint-go-rules/investigations-20261110/owasp-c5/analyzer.log",
+      "--verbosity",
+      "debug",
+      "--semgrep-rule-set",
+      "/drive-testcomp/opentaint-go-rules/opentaint-w3/rules/ruleset",
+      "--sarif-generate-fingerprint",
+      "--ifds-bidirectional"
+    ],
+    "source_sha256": "00ef663003639637c4e83f793e04cb0e4ddb657b11b9f62c0fa96c9b077bf762",
+    "jar_sha256": "8fa549efb18f4d3ea73cada1455fa1e552f2ff1284161ffd6847f24ce99684ee",
+    "started_utc": "2026-11-10T09:51:13.054346+00:00"
+  },
+  "observer_source": "package diag;\nimport static diag.Observe.*;\nimport java.io.*;import java.lang.instrument.*;import java.lang.reflect.*;import java.nio.file.*;import java.security.ProtectionDomain;import java.util.*;\nimport jdk.internal.org.objectweb.asm.*;import jdk.internal.org.objectweb.asm.commons.AdviceAdapter;\npublic final class C5Observe {\n static ThreadLocal<Object[]> active=new ThreadLocal<>();\n public static void premain(String path,Instrumentation inst)throws Exception{\n  Observe.output=new PrintWriter(Files.newBufferedWriter(Path.of(path)));\n  Runtime.getRuntime().addShutdownHook(new Thread(()->{synchronized(Observe.class){output.println(\"{\\\"event\\\":\\\"END\\\",\\\"rows\\\":\"+rows+\",\\\"errors\\\":\"+errors+\"}\");output.close();}}));\n  inst.addTransformer(new ClassFileTransformer(){public byte[] transform(ClassLoader cl,String cn,Class<?> r,ProtectionDomain pd,byte[] bytes){\n   boolean ds=cn.equals(\"org/opentaint/dataflow/bidi/store/DemandStore\"),limit=cn.equals(\"org/opentaint/dataflow/bidi/ap/LimitKt\"),bs=cn.equals(\"org/opentaint/dataflow/bidi/engine/BlockRunState\");\n   if(!ds&&!limit&&!bs)return null;\n   try{ClassReader cr=new ClassReader(bytes);ClassWriter cw=new ClassWriter(cr,ClassWriter.COMPUTE_MAXS);\n    cr.accept(new ClassVisitor(Opcodes.ASM8,cw){public MethodVisitor visitMethod(int acc,String name,String desc,String sig,String[]ex){MethodVisitor mv=super.visitMethod(acc,name,desc,sig,ex);\n     if(ds&&name.equals(\"offerDataPair\"))return new AdviceAdapter(Opcodes.ASM8,mv,acc,name,desc){\n      protected void onMethodEnter(){for(int i=0;i<7;i++)loadArg(i);visitMethodInsn(INVOKESTATIC,\"diag/C5Observe\",\"rowBegin\",\"(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V\",false);}\n      protected void onMethodExit(int op){visitMethodInsn(INVOKESTATIC,\"diag/C5Observe\",\"rowEnd\",\"()V\",false);}\n     };\n     if(limit&&name.equals(\"limitFacts\"))return new AdviceAdapter(Opcodes.ASM8,mv,acc,name,desc){protected void onMethodEnter(){loadArg(0);loadArg(1);loadArg(2);visitMethodInsn(INVOKESTATIC,\"diag/C5Observe\",\"limit\",\"(Ljava/lang/Object;Ljava/lang/Object;I)V\",false);}};\n     if(bs&&(acc&Opcodes.ACC_STATIC)==0&&name.startsWith(\"retainSummary\"))return new AdviceAdapter(Opcodes.ASM8,mv,acc,name,desc){protected void onMethodEnter(){loadThis();loadArg(0);loadArg(1);visitMethodInsn(INVOKESTATIC,\"diag/C5Observe\",\"raw\",\"(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V\",false);}};\n     if(bs&&name.equals(\"applyRecordView\"))return new AdviceAdapter(Opcodes.ASM8,mv,acc,name,desc){protected void onMethodEnter(){loadThis();loadArg(0);loadArg(1);visitMethodInsn(INVOKESTATIC,\"diag/C5Observe\",\"view\",\"(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V\",false);}};\n     return mv;\n    }},ClassReader.EXPAND_FRAMES);System.err.println(\"C5_TRANSFORM \"+cn);return cw.toByteArray();\n   }catch(Throwable t){error(\"transform\",t);return null;}\n  }});\n }\n static boolean selected(int run,Object key){return run>=8&&run<=10&&String.valueOf(key).contains(\"BenchmarkTest01000$Test#doSomething\");}\n static Object pattern(Object c)throws Exception{Class<?> p=Class.forName(\"org.opentaint.dataflow.bidi.ap.Pattern\");return p.getConstructors()[0].newInstance(get(c,\"fact\"),get(c,\"exclusion\"));}\n public static void rowBegin(Object key,Object ops,Object member,Object raw,Object pair,Object policy,Object result){try{\n  int run=((Number)get(policy,\"run\")).intValue();if(!selected(run,key))return;Object ap=get(ops,\"manager\");active.set(new Object[]{key,ap,member,raw,pair,policy,result});\n  Object b=builder(ap,\"C5_ROW\",run,String.valueOf(key),\"ROOT\");call(b,\"number\",\"globalLimit\",get(policy,\"fieldLimit\"));call(b,\"premise\",\"premise\",member);call(b,\"facts\",\"raw\",raw);call(b,\"pattern\",\"entry\",get(pair,\"entry\"));call(b,\"pattern\",\"exit\",get(pair,\"exit\"));emit(b);\n }catch(Throwable t){error(\"rowBegin\",t);}}\n public static void rowEnd(){Object[] a=active.get();if(a==null)return;try{int run=((Number)get(a[5],\"run\")).intValue();int i=0;for(Object fact:(Collection<?>)call(a[6],\"all\")){Object b=builder(a[1],\"C5_RESULTS\",run,String.valueOf(a[0]),\"ROOT\");call(b,\"premise\",\"premise\",a[2]);call(b,\"facts\",\"result\",fact);call(b,\"number\",\"index\",i++);emit(b);}}catch(Throwable t){error(\"rowEnd\",t);}finally{active.remove();synchronized(Observe.class){output.flush();}}}\n public static void limit(Object ap,Object kept,int budget){Object[]a=active.get();if(a==null)return;try{int run=((Number)get(a[5],\"run\")).intValue();Object b=builder(ap,\"C5_BEFORE_LIMIT\",run,String.valueOf(a[0]),\"ROOT\");call(b,\"number\",\"budget\",budget);call(b,\"facts\",\"kept\",kept);call(b,\"premise\",\"premise\",a[2]);call(b,\"pattern\",\"entry\",get(a[4],\"entry\"));call(b,\"pattern\",\"exit\",get(a[4],\"exit\"));emit(b);}catch(Throwable t){error(\"limit\",t);}}\n public static void raw(Object core,Object premise,Object raw){try{int run=((Number)get(get(core,\"config\"),\"index\")).intValue();Object key=get(core,\"key\");if(!selected(run,key))return;Object b=builder(get(core,\"ap\"),\"BEFORE_RETAIN\",run,String.valueOf(key),String.valueOf(get(core,\"scope\")));call(b,\"premise\",\"premise\",premise);call(b,\"facts\",\"raw\",raw);emit(b);}catch(Throwable t){error(\"raw\",t);}}\n public static void view(Object core,Object part,Object view){try{int run=((Number)get(get(core,\"config\"),\"index\")).intValue();Object key=get(core,\"key\");if(!selected(run,key))return;Object b=builder(get(core,\"ap\"),\"SAVED_VIEW\",run,String.valueOf(key),String.valueOf(get(core,\"scope\")));call(b,\"facts\",\"input\",get(part,\"added\"));Object ref=get(part,\"ref\");call(b,\"premise\",\"premise\",get(ref,\"premise\"));call(b,\"text\",\"call\",String.valueOf(get(ref,\"node\")));call(b,\"pattern\",\"viewPremise\",get(view,\"premise\"));call(b,\"pattern\",\"viewResult\",pattern(get(view,\"result\")));call(b,\"flag\",\"demand\",get(get(view,\"result\"),\"demand\"));emit(b);}catch(Throwable t){error(\"view\",t);}}\n}\n",
+  "helper_source": "package diag;\n\nimport java.io.*;\nimport java.lang.instrument.*;\nimport java.lang.reflect.*;\nimport java.nio.file.*;\nimport java.security.ProtectionDomain;\nimport java.util.*;\nimport jdk.internal.org.objectweb.asm.*;\nimport jdk.internal.org.objectweb.asm.commons.AdviceAdapter;\n\n/** Observational only: copies joined stores and completed forward witnesses. */\npublic final class Observe {\n  static PrintWriter output;\n  static long errors, rows;\n  public static void premain(String path, Instrumentation inst) throws Exception {\n    output=new PrintWriter(Files.newBufferedWriter(Path.of(path)));\n    Runtime.getRuntime().addShutdownHook(new Thread(()->{\n      synchronized(Observe.class){output.println(\"{\\\"event\\\":\\\"END\\\",\\\"rows\\\":\"+rows+\",\\\"errors\\\":\"+errors+\"}\");output.close();}\n    }));\n    inst.addTransformer(new ClassFileTransformer(){\n      public byte[] transform(ClassLoader loader,String name,Class<?> redef,ProtectionDomain domain,byte[] bytes){\n        boolean hand=name.equals(\"org/opentaint/dataflow/bidi/driver/HandOff$Companion\");\n        boolean wit=name.equals(\"org/opentaint/dataflow/bidi/engine/RunMethodLocalServices\");\n        if(!hand&&!wit)return null;\n        try { System.err.println(\"OBSERVE_TRANSFORM \"+name); ClassReader reader=new ClassReader(bytes);ClassWriter writer=new ClassWriter(reader,ClassWriter.COMPUTE_MAXS);\n        reader.accept(new ClassVisitor(Opcodes.ASM8,writer){\n          public MethodVisitor visitMethod(int access,String method,String desc,String sig,String[] exceptions){\n            MethodVisitor delegate=super.visitMethod(access,method,desc,sig,exceptions);\n            if(hand&&method.equals(\"of\"))return new AdviceAdapter(Opcodes.ASM8,delegate,access,method,desc){\n              protected void onMethodExit(int opcode){if(opcode==ARETURN){dup();loadArg(0);loadArg(1);loadArg(2);\n                visitMethodInsn(INVOKESTATIC,\"diag/Observe\",\"handoff\",\"(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V\",false);}}\n            };\n            if(wit&&method.equals(\"witness\"))return new AdviceAdapter(Opcodes.ASM8,delegate,access,method,desc){\n              public void visitMethodInsn(int op,String owner,String mn,String md,boolean itf){\n                super.visitMethodInsn(op,owner,mn,md,itf);\n                if(owner.endsWith(\"/ReportCatalog\")&&mn.startsWith(\"internReached\")){\n                  dup();loadArg(0);loadArg(1);loadArg(2);loadArg(3);\n                  super.visitMethodInsn(INVOKESTATIC,\"diag/Observe\",\"witness\",\"(ILjava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V\",false);\n                }\n              }\n            };\n            return delegate;\n          }\n        },ClassReader.EXPAND_FRAMES);\n        return writer.toByteArray(); } catch(Throwable t) { error(\"transform:\"+name,t);return null;}\n      }\n    });\n  }\n  static Object field(Object o,String name)throws Exception{\n    for(Class<?> c=o.getClass();c!=null;c=c.getSuperclass())try{Field f=c.getDeclaredField(name);f.setAccessible(true);return f.get(o);}catch(NoSuchFieldException e){}\n    throw new NoSuchFieldException(o.getClass()+\".\"+name);\n  }\n  static Method method(Object o,String name,int n)throws Exception{\n    for(Method m:o.getClass().getMethods())if((m.getName().equals(name)||m.getName().startsWith(name+\"$\")||m.getName().startsWith(name+\"-\"))&&m.getParameterCount()==n){m.setAccessible(true);return m;}\n    throw new NoSuchMethodException(o.getClass()+\".\"+name+\"/\"+n);\n  }\n  static Object call(Object o,String name,Object...args)throws Exception{return method(o,name,args.length).invoke(o,args);}\n  static Object get(Object o,String name)throws Exception{return call(o,\"get\"+Character.toUpperCase(name.charAt(0))+name.substring(1));}\n  static Iterable<?> sequence(Object seq)throws Exception{\n    Iterator<?> iter=(Iterator<?>)call(seq,\"iterator\");List<Object> out=new ArrayList<>();iter.forEachRemaining(out::add);return out;\n  }\n  static Object builder(Object ap,String event,int run,String owner,String scope)throws Exception{\n    Class<?> type=Class.forName(\"org.opentaint.dataflow.bidi.engine.LoopPipelineTrace$Fields\");\n    Constructor<?> c=type.getDeclaredConstructor(int.class,int.class);c.setAccessible(true);Object b=c.newInstance(1024*1024,65536);\n    call(b,\"catalog\",ap);call(b,\"text\",\"event\",event);call(b,\"number\",\"run\",run);call(b,\"text\",\"method\",owner);call(b,\"text\",\"scope\",scope);return b;\n  }\n  static synchronized void emit(Object b)throws Exception{output.println(call(b,\"finish\"));rows++;}\n  static synchronized void error(String phase,Throwable t){errors++;output.println(\"{\\\"event\\\":\\\"ERROR\\\",\\\"phase\\\":\\\"\"+phase+\"\\\",\\\"message\\\":\\\"\"+String.valueOf(t).replace(\"\\\\\",\"\\\\\\\\\").replace(\"\\\"\",\"\\\\\\\"\").replace(\"\\n\",\" \")+\"\\\"}\");output.flush();t.printStackTrace(System.err);}\n  public static void witness(int id,Object core,Object sink,Object node,Object edges){\n    try{\n      int run=((Number)get(get(core,\"config\"),\"index\")).intValue();if(run<5)return;\n      Object b=builder(get(core,\"ap\"),\"WITNESS\",run,String.valueOf(get(core,\"key\")),String.valueOf(get(core,\"scope\")));\n      call(b,\"number\",\"reportId\",id);call(b,\"text\",\"sinkRule\",String.valueOf(get(get(sink,\"rule\"),\"id\")));call(b,\"text\",\"statement\",String.valueOf(node));\n      int i=0;for(Object edge:(List<?>)edges){call(b,\"premise\",\"premise\"+i,get(edge,\"premise\"));call(b,\"facts\",\"facts\"+i,get(edge,\"facts\"));call(b,\"text\",\"layer\"+i,String.valueOf(get(edge,\"layer\")));i++;}\n      call(b,\"number\",\"inputs\",i);emit(b);\n    }catch(Throwable t){error(\"witness\",t);}\n  }\n  static void dataRows(Object ap,int run,Object owner,String scope,List<?> rows,List<?> ports)throws Exception{\n    int idx=0;for(Object row:rows){Object b=builder(ap,\"DEMAND_DATA\",run,String.valueOf(owner),scope);\n      call(b,\"pattern\",\"entry\",get(row,\"entry\"));Object exit=get(row,\"exit\");if(exit!=null)call(b,\"pattern\",\"exit\",exit);\n      if(ports!=null)call(b,\"text\",\"port\",String.valueOf(ports.get(idx)));emit(b);idx++;}\n  }\n  static void control(Object ap,int run,Object owner,String scope,Object row,Object port)throws Exception{\n    Object b=builder(ap,\"DEMAND_CONTROL\",run,String.valueOf(owner),scope);\n    if(port!=null)call(b,\"text\",\"port\",String.valueOf(port));\n    for(String key:new String[]{\"entry\",\"exit\"}){Object end=get(row,key);call(b,\"text\",key+\"Kind\",end.getClass().getSimpleName());\n      if(end.getClass().getSimpleName().equals(\"Data\"))call(b,\"pattern\",key,get(end,\"pattern\"));}\n    emit(b);\n  }\n  static void summaries(Object ap,int run,Object key,String scope,Object store)throws Exception{\n    for(Object pair:sequence(call(store,\"all\"))){Object b=builder(ap,\"CURRENT_SUMMARY\",run,String.valueOf(key),scope);\n      call(b,\"premise\",\"premise\",get(pair,\"first\"));call(b,\"facts\",\"facts\",get(pair,\"second\"));emit(b);}\n  }\n  static void targets(Object ap,int run,Object key,String scope,Collection<?> targets)throws Exception{\n    for(Object row:targets){Object b=builder(ap,\"TARGET\",run,String.valueOf(key),scope);call(b,\"premise\",\"premise\",get(row,\"premise\"));\n      call(b,\"text\",\"target\",String.valueOf(get(row,\"target\")));emit(b);}\n  }\n  public static void handoff(Object hand,Object config,Object result,Object shared){\n    try{\n      int run=((Number)get(config,\"index\")).intValue();if(run<5)return;\n      Object ap=get(shared,\"ap\"),ds=get(hand,\"demand\");\n      for(var e:((Map<?,?>)field(ds,\"byMethod\")).entrySet())dataRows(ap,run,e.getKey(),\"ROOT\",(List<?>)field(e.getValue(),\"rows\"),null);\n      for(var e:((Map<?,?>)field(ds,\"controls\")).entrySet())for(Object row:(List<?>)e.getValue())control(ap,run,e.getKey(),\"ROOT\",row,null);\n      for(var e:((Map<?,?>)field(ds,\"scoped\")).entrySet()){\n        Object key=get(e.getKey(),\"method\"),scope=get(e.getKey(),\"local\"),si=e.getValue();\n        dataRows(ap,run,key,String.valueOf(scope),(List<?>)field(field(si,\"data\"),\"rows\"),(List<?>)field(si,\"rowPorts\"));\n        for(Object pair:(List<?>)field(si,\"controls\"))control(ap,run,key,String.valueOf(scope),get(pair,\"second\"),get(pair,\"first\"));\n      }\n      for(Object zero:sequence(call(get(config,\"normalTargets\"),\"zeroRows\"))){Object b=builder(ap,\"CONFIRMED\",run,String.valueOf(get(zero,\"method\")),\"ROOT\");call(b,\"number\",\"reportId\",get(zero,\"id\"));emit(b);}\n      for(Object actor:(List<?>)get(result,\"analyzers\")){\n        Object key=get(actor,\"key\");targets(ap,run,key,\"ROOT\",(Collection<?>)get(actor,\"outgoingTargets\"));\n        for(Object block:sequence(call(actor,\"blockOutgoingTargets\")))targets(ap,run,key,String.valueOf(get(block,\"scope\"))+\" exit=\"+get(block,\"exit\"),(Collection<?>)get(block,\"rows\"));\n        summaries(ap,run,key,\"ROOT\",get(actor,\"summaries\"));\n        for(Object block:sequence(call(actor,\"blockSummaries\")))summaries(ap,run,key,String.valueOf(get(get(block,\"key\"),\"scope\"))+\" exit=\"+get(get(block,\"key\"),\"exit\"),get(block,\"summaries\"));\n      }\n      Object seeds=get(hand,\"seeds\");for(Object list:((Map<?,?>)field(seeds,\"byPlace\")).values())for(Object seed:(List<?>)list){\n        Object b=builder(ap,\"SEED\",run,String.valueOf(get(seed,\"method\")),\"\");call(b,\"text\",\"seedKind\",seed.getClass().getSimpleName());\n        call(b,\"text\",\"statement\",String.valueOf(get(seed,\"statement\")));call(b,\"text\",\"value\",String.valueOf(seed));\n        if(seed.getClass().getSimpleName().equals(\"Sink\"))call(b,\"pattern\",\"requirement\",get(seed,\"requirement\"));emit(b);\n      }\n      Object b=builder(ap,\"HANDOFF_END\",run,\"\",\"\");call(b,\"number\",\"explicitRows\",((Map<?,?>)get(hand,\"demandEdges\")).values().stream().mapToInt(v->((Number)v).intValue()).sum());emit(b);\n      synchronized(Observe.class){output.flush();}\n    }catch(Throwable t){error(\"handoff\",t);}\n  }\n}\n",
+  "artifact": {
+    "path": "docs/reports/data/bidirectional-owasp-c5-provenance-20261110.jsonl.gz",
+    "raw_bytes": 639238,
+    "gzip_bytes": 7815,
+    "raw_sha256": "afffcddf59aa0a59d5282f26dda8258d86246652f1b8c6f8c4aae694cc940e4b",
+    "gzip_sha256": "63a6d40bc7c401e98aae609463525d5dbc290b0cc300b7882a43ed4233f9cbe3"
+  },
+  "interpretation": "The effective cap1 for the shallow matching demand row creates the queried forward ANY/Demand result from NORMAL STAR raw facts; a separate deeper row also keeps the full NORMAL path. C5_RESULTS contains the cumulative result family, not only the latest single row delta.",
+  "sources": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandStore.kt": {
+      "sha256": "a664e74e3c32f2d07f9b18ef626cd46c8f44d857ea7798e95a80795a91737e68",
+      "text": "package org.opentaint.dataflow.bidi.store\n\nimport org.opentaint.dataflow.ap.ifds.AccessPathBase\nimport org.opentaint.dataflow.bidi.ap.*\nimport java.util.Collections\nimport org.opentaint.dataflow.graph.BlockId\nimport org.opentaint.dataflow.graph.PortId\n\n/** Immutable demand snapshot. Tails, marks, exclusions and exits remain candidate payloads. */\nclass DemandStore private constructor(\n    private val byMethod: Map<MethodKey, MethodDemandIndex>,\n    private val controls: Map<MethodKey, List<PairedDemand>>,\n    private val ap: ApManager,\n    val hasSharedStaticCarry: Boolean,\n    internal val completion: FrozenCompletion?,\n    private val scoped: Map<OwnedScope, ScopedDemandIndex>,\n    private val scopedCompletions: Map<OwnedScope, FrozenCompletion>,\n) {\n    private class MethodDemandIndex(val entries: FrozenDemandTrie<Pattern>, val rows: List<DemandPattern>,\n                                   val byEntry: PathTrie<Int>, val byExit: PathTrie<Int>, val entryCount: Int)\n    private class ScopedDemandIndex(\n        val data: MethodDemandIndex,\n        val rowPorts: List<PortId>,\n        val controls: List<Pair<PortId, PairedDemand>>,\n    )\n    private data class Query(val method: MethodKey, val scope: BlockScope? = null, val exit: PortId? = null)\n    private fun local(query: Query): MethodDemandIndex? = query.scope?.let {\n        scoped[OwnedScope(query.method, it)]?.data\n    } ?: if (query.scope == null) byMethod[query.method] else null\n\n    private fun completion(query: Query): FrozenCompletion? =\n        if (query.scope == null) completion else scopedCompletions[OwnedScope(query.method, query.scope)]?.selectExit(query.exit)\n\n    /** C2 borrows the union of this entry's exits; C5 selects one actual exit. */\n    fun scope(method: MethodKey, scope: BlockScope): ScopeDemandView = object : PreparedScopeDemandView, EntryPrecisionView {\n        override fun precisionCursors(actual: Pattern, policy: RestrictedInitialPolicy): List<AnyDemandCursor> =\n            local(Query(method, scope))?.entries?.precisionCursors(actual, ap.marks).orEmpty()\n        override fun initials(actual: Facts, policy: RestrictedInitialPolicy): Set<AdmittedInitial> =\n            initials(Query(method, scope), actual, policy)\n        override fun intersect(exit: PortId, original: PremiseKey, raw: Facts,\n                               policy: RestrictedInitialPolicy): List<Facts> =\n            intersect(Query(method, scope, exit), original, raw, policy)\n        override fun acceptsTarget(exit: PortId, original: PremiseKey, policy: RestrictedInitialPolicy): Boolean =\n            intersect(Query(method, scope, exit), original, Reach.DEMAND, policy).isNotEmpty()\n        override fun prepareDataPlan(exit: PortId, templates: List<Pattern>, policy: RestrictedInitialPolicy,\n                                     onEntryCheck: () -> Unit): PreparedLocalDataPlan? =\n            prepareLocalDataPlan(Query(method, scope, exit), templates, policy, onEntryCheck)\n    }\n\n    internal fun prepareDataPlan(method: MethodKey, templates: List<Pattern>,\n                                 policy: RestrictedInitialPolicy, onEntryCheck: () -> Unit = {}): PreparedLocalDataPlan? =\n        prepareLocalDataPlan(Query(method), templates, policy, onEntryCheck)\n\n    /** Exact local DATA capability. Static/control/unsupported cases keep native C5. */\n    private fun prepareLocalDataPlan(query: Query, templates: List<Pattern>,\n                                     policy: RestrictedInitialPolicy, onEntryCheck: () -> Unit): PreparedLocalDataPlan? {\n        ap.cancellation.checkpoint()\n        fun fallback(reason: PreparedPlanFallback): PreparedLocalDataPlan? {\n            statistics?.preparedFallback(reason)\n            return null\n        }\n        if (policy.run < 3) return fallback(PreparedPlanFallback.RUN)\n        if (hasStaticCompletion) return fallback(PreparedPlanFallback.STATIC_COMPLETION)\n        if (hasSharedStaticCarry) return fallback(PreparedPlanFallback.SHARED_CARRY)\n        if (templates.isEmpty()) return fallback(PreparedPlanFallback.EMPTY_TEMPLATES)\n        if (templates.size > 2048) return fallback(PreparedPlanFallback.OVERSIZE_TEMPLATES)\n        if (templates.any { it.fact.base == AccessPathBase.Zero }) return fallback(PreparedPlanFallback.ZERO_TEMPLATE)\n        val local = local(query)\n        val ops = ApOps(ap)\n        val programs = PreparedOutputPrograms.Builder(ap, query.method, templates, policy, statistics)\n        var occurrences = 0\n        for (member in templates) {\n            ap.cancellation.checkpoint()\n            if (local != null) for (id in local.byEntry.lookupPrefixes(member.fact.base, member.fact.path.toIntArray())) {\n                if (query.scope != null && query.exit != null &&\n                    scoped.getValue(OwnedScope(query.method, query.scope)).rowPorts[id] != query.exit) continue\n                if (occurrences + templates.size == 2048) return fallback(PreparedPlanFallback.OCCURRENCE_BUDGET)\n                val pair = local.rows[id]\n                onEntryCheck()\n                programs.offer(EntryRestrictionTicket.prepare(ops, member, pair, policy))\n                occurrences++\n            }\n        }\n        return programs.build()\n    }\n\n    private val statistics = if (java.lang.Boolean.getBoolean(\"org.opentaint.bidi.optimizationStatistics\"))\n        DemandQueryStatistics() else null\n    private val entryTrieCounts = statistics?.let { stats -> stats::trieQuery }\n    val hasStaticCompletion: Boolean get() = completion != null || scopedCompletions.isNotEmpty()\n    internal fun validateIncoming(run: Int) {\n        require(run >= 2)\n        check(run == 2 || !hasStaticCompletion && !hasSharedStaticCarry) {\n            \"Only run-2 can use the run-1 static completion\"\n        }\n        for (method in byMethod.values + scoped.values.map { it.data }) for (d in method.rows) {\n            ap.cancellation.checkpoint()\n            if (d.entry.fact.mark !is MarkSlot.Star) continue\n            check(d.entry.fact.tail == Tail.ANY || d.entry.fact.tail == Tail.STAR) {\n                \"A run-$run FLOW demand entry must be STAR or ANY: $d\"\n            }\n            check(d.exit == null || d.exit.fact.mark is MarkSlot.Star &&\n                d.exit.fact.tail in setOf(Tail.STAR, Tail.ANY)) { \"Invalid paired FLOW exit: $d\" }\n        }\n        for (rows in controls.values + scoped.values.map { it.controls.map { row -> row.second } }) for (row in rows) {\n            ap.cancellation.checkpoint()\n            val entry = (row.entry as? DemandEntry.Data)?.pattern ?: continue\n            if (entry.fact.mark is MarkSlot.Star)\n                check(entry.fact.tail == Tail.ANY || entry.fact.tail == Tail.STAR) {\n                    \"A run-$run FLOW demand entry must be STAR or ANY: $row\"\n                }\n        }\n    }\n    fun staticCompletionStatistics(): String? = (completion?.statistics() ?: \"localOnly=${!hasStaticCompletion}\") +\n        \" scopedCompletions=${scopedCompletions.size}\" +\n        \" entryRows=${byMethod.values.sumOf { it.entryCount.toLong() } + scoped.values.sumOf { it.data.entryCount.toLong() }}\" +\n        \" pairRows=${byMethod.values.sumOf { it.rows.size.toLong() } + controls.values.sumOf { it.size.toLong() } +\n            scoped.values.sumOf { it.data.rows.size.toLong() + it.controls.size.toLong() }}\" +\n        (statistics?.let { \" $it\" } ?: \"\")\n    internal fun diagnosticC5Samples(): List<String> = statistics?.rowSamples().orEmpty()\n\n    /** C2 uses an entry-only index and never materializes origin products. */\n    fun admissionPolicy(run: Int, fieldLimit: Int, direction: Direction): RestrictedInitialPolicy =\n        RestrictedInitialPolicy(run, fieldLimit, direction, ap.marks)\n\n    fun initials(method: MethodKey, boundedActual: Facts,\n                 policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ap.marks)): Set<AdmittedInitial> {\n        return initials(Query(method), boundedActual, policy)\n    }\n\n    private fun initials(query: Query, boundedActual: Facts, policy: RestrictedInitialPolicy): Set<AdmittedInitial> {\n        val method = query.method\n        ap.cancellation.checkpoint()\n        statistics?.add(0)\n        if (!RuntimeDataDomain.base(boundedActual.base)) return emptySet()\n        if (boundedActual is Reach) {\n            var admitted = false\n            visitControlPairs(query, policy) { pair ->\n                admitted = pair.entry == DemandEntry.Zero || pair.entry == DemandEntry.Target\n                !admitted\n            }\n            return if (admitted) setOf(existingZeroAdmission(ap.zero)) else emptySet()\n        }\n        val ops = ApOps(ap)\n        val leaves = ops.leaves(boundedActual).toList()\n        val result = InitialDemandResults(ap, policy, boundedActual.layer, statistics)\n        val local = local(query)\n        for (leaf in leaves) {\n            ap.cancellation.checkpoint()\n            local?.entries?.visitCountedNativeOrder(leaf, DemandQueryKind.INITIAL_C2, ap.marks, entryTrieCounts) { result.offer(it, leaf) }\n            staticCarry(leaf)?.let { result.offer(it.entry, leaf) }\n        }\n        val skipped = completion(query) ?: return result.initials // run-3 onward: local only\n        val query = StaticEntryLookup(ap, method, skipped, leaves, result, statistics)\n        query.directLocal()\n        // This query-local structural bound uses scalar emit only. No possible key is interned.\n        for (leaf in leaves) {\n            ap.cancellation.checkpoint()\n            local?.entries?.visitCountedNativeOrder(leaf, DemandQueryKind.INITIAL_C2, ap.marks, entryTrieCounts) {\n                result.requireFamily(it, false, leaf)\n            }\n            skipped.visitPossibleTargets(method, leaf) { target, flow ->\n                result.requireFamily(target, flow, leaf); true\n            }\n        }\n        fun covered(): Boolean = result.fullyCovered\n        if (covered()) { statistics?.add(3); return result.initials }\n        query.search(visible = false, ::covered)\n        if (covered()) { statistics?.add(3); return result.initials }\n        if (!skipped.mayNeedInheritedEntries(method, leaves)) return result.initials\n        query.search(visible = true, ::covered)\n        return result.initials\n    }\n\n    /** C5 selects complete paired rows and preserves the whole original ND premise at the caller. */\n    fun intersect(method: MethodKey, original: PremiseKey, raw: Facts,\n                  policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ap.marks)): List<Facts> {\n        return intersect(Query(method), original, raw, policy)\n    }\n\n    private fun intersect(query: Query, original: PremiseKey, raw: Facts,\n                          policy: RestrictedInitialPolicy): List<Facts> {\n        val method = query.method\n        ap.cancellation.checkpoint()\n        if (!RuntimeDataDomain.packet(original, raw)) return emptyList()\n        val ops = ApOps(ap)\n        val result = ExactDemandResults(ap)\n        // Reach has one possible result. DATA must exhaust rows with different exit budgets.\n        fun saturated(): Boolean = raw is Reach && result.hasResults\n        val local = local(query)\n        val outputLeaves = ops.leaves(raw).toList()\n        // A control pair is tested as one row. Entry and exit permissions cannot mix.\n        visitControlPairs(query, policy, includeDerived = original.isZero) { pair ->\n            ap.cancellation.checkpoint()\n            if (!entryAccepts(pair.entry, original, policy)) return@visitControlPairs true\n            when (val exit = pair.exit) {\n                DemandExit.Zero -> if (raw is Reach) result.add(raw)\n                is DemandExit.Data -> if (raw !is Reach) {\n                    // Data/Data rows use the AP index. A control entry admitted ZERO;\n                    // use the existing AP restriction, including protection transport.\n                    val dataPair = DemandPattern(ap.zero.toPattern(), exit.pattern)\n                    offerDataPair(method, ops, ap.zero, raw, dataPair, policy, result, route = 2)\n                }\n            }\n            !saturated()\n        }\n        fun offer(member: InitialAp, pair: DemandPattern, route: Int = 0) {\n            statistics?.add(7)\n            val exit = pair.exit ?: return\n            statistics?.add(9)\n            if (exit.fact.base == AccessPathBase.Zero) {\n                // The static walker can expose a typed ZERO through its legacy AP view.\n                if (raw is Reach) for (kept in ops.restrict(member, raw, pair, policy)) result.add(kept)\n            } else offerDataPair(method, ops, member, raw, pair, policy, result, route)\n        }\n        val outputIds = HashSet<Int>()\n        if (local != null) for (leaf in outputLeaves)\n            local.byExit.visitAround(leaf.fact.base, leaf.fact.path.toIntArray()) { outputIds += it }\n        original.forEachMember { member ->\n            ap.cancellation.checkpoint()\n            if (local != null) for (id in local.byEntry.lookupPrefixes(member.base,\n                    member.path?.toIntArray() ?: EMPTY_PATH)) {\n                if (id in outputIds && (query.scope == null || query.exit == null ||\n                        scoped[OwnedScope(method, query.scope)]!!.rowPorts[id] == query.exit))\n                    offer(member, local.rows[id])\n            }\n            staticCarry(member.toPattern())?.let { offer(member, it, route = 3) }\n        }\n        val skipped = completion(query) ?: return result.all() // later snapshots have no graph lookup\n        // Primitive seed pairs use the same complete source/target row. They do not form a product.\n        val primitive = skipped.local(method)\n        original.forEachMember { member ->\n            for (edge in primitive.pairs(member, outputLeaves))\n                offer(member, DemandPattern(edge.to, edge.from), route = 1)\n        }\n        if (saturated()) { statistics?.add(10); return result.all() }\n        val query = StaticPairLookup(ap, skipped, statistics) { entry, member -> policy.canStoreInitial(entry, member.toPattern()) }\n        val offerVirtual: (InitialAp, DemandPattern) -> Unit = { member, pair -> offer(member, pair, route = 1) }\n        query.walk(method, original, outputLeaves, visible = false, offerVirtual, ::saturated)\n        if (saturated()) { statistics?.add(10); return result.all() }\n        if (!skipped.mayNeedInheritedPairs(method)) return result.all()\n        query.walk(method, original, outputLeaves, visible = true, offerVirtual, ::saturated)\n        return result.all()\n    }\n\n    /** Exact C5 must precede the cut, and each complete row supplies its own exit depth. */\n    private fun offerDataPair(method: MethodKey, ops: ApOps, member: InitialAp, raw: Facts, pair: DemandPattern,\n                              policy: RestrictedInitialPolicy, result: ExactDemandResults, route: Int) {\n        ap.cancellation.checkpoint()\n        val exit = pair.exit ?: return\n        val depth = exit.fact.path.count { it.isCounted() }\n        val global = policy.fieldLimit\n        check(global >= 1)\n        // Clamp before adding: the default public policy uses Int.MAX_VALUE.\n        val budget = if (depth >= global) global else depth + 1\n        statistics?.dataRow(raw, exit, budget, route)\n        val sampledRow = statistics?.sampleRow(method, member, raw, pair, budget, route)\n        val selected = ops.restrict(member, raw, pair, policy)\n        if (selected.isEmpty()) {\n            statistics?.rejectedRow()\n            statistics?.sampleResult(sampledRow, null, null)\n        }\n        for (kept in selected) {\n            statistics?.selected(kept, budget)\n            ops.limit(kept, budget, object : ApOut {\n                override fun result(f: Facts) {\n                    statistics?.limited(kept, f)\n                    statistics?.sampleResult(sampledRow, kept, f)\n                    result.add(f)\n                }\n                override fun markRequest(mark: TaintMark) = error(\"A field cut must not emit a mark request\")\n            })\n        }\n    }\n\n    /** Immutable seed inspection for the finite explicit reference in tests. No closure is retained. */\n    internal fun explicitRows(method: MethodKey): List<DemandPattern> {\n        ap.cancellation.checkpoint()\n        val ordinary = byMethod[method]?.rows.orEmpty()\n        return ordinary + controls[method].orEmpty().mapNotNull { row ->\n            val entry = when (val e = row.entry) {\n                is DemandEntry.Data -> e.pattern\n                DemandEntry.Zero -> ap.zero.toPattern()\n                DemandEntry.Target -> return@mapNotNull null\n            }\n            val exit = when (val e = row.exit) {\n                is DemandExit.Data -> e.pattern\n                DemandExit.Zero -> ap.zero.toPattern()\n            }\n            DemandPattern(entry, exit)\n        }\n    }\n\n    /** Terminal C5 needs one complete pair with a ZERO exit, explicit or run-2 static-composed. */\n    fun acceptsTarget(method: MethodKey, original: PremiseKey,\n                      policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ap.marks)): Boolean {\n        // ZERO and Target match exactly the same exit slots. This read-only probe\n        // reuses all paired C5 lookup paths; it never stores or propagates a ZERO edge.\n        return intersect(method, original, Reach.DEMAND, policy).isNotEmpty()\n    }\n\n    /** A run-1 static write used the typed raw-write shortcut, not a\n     * completed normal exit or physical loop leave. Its reverse W row therefore has STATIC_SHORTCUT as its\n     * entry. An actually reached run-2 static initial can finish at a source\n     * through that same shortcut, while its live DATA scope stays physical.\n     * Only complete W/B paths with a genuine ZERO origin can admit Target;\n     * shared carry, unrelated normal demand and terminal-reader rows cannot. */\n    internal fun acceptsStaticShortcutTarget(method: MethodKey, block: BlockId, exit: PortId,\n                                             original: PremiseKey, policy: RestrictedInitialPolicy): Boolean {\n        if (policy.run != 2 || policy.direction != Direction.BACKWARD) return false\n        val member = original as? InitialAp ?: return false\n        if (member.base != STATIC || member.mark !is MarkSlot.Concrete) return false\n        val owner = OwnedScope(method, BlockScope(block, PortId.STATIC_SHORTCUT))\n        val skipped = scopedCompletions[owner]?.selectExit(exit) ?: return false\n        val ops = ApOps(ap)\n        val outputs = listOf(ap.zero.toPattern())\n        var accepted = false\n        fun offer(pair: DemandPattern) {\n            ap.cancellation.checkpoint()\n            if (pair.entry.fact.base != STATIC || pair.exit?.fact?.base != AccessPathBase.Zero) return\n            if (ops.restrict(member, Reach.DEMAND, pair, policy).isNotEmpty()) accepted = true\n        }\n        for (row in skipped.local(method).pairs(member, outputs)) {\n            ap.cancellation.checkpoint()\n            offer(DemandPattern(row.to, row.from))\n            if (accepted) return true\n        }\n        val query = StaticPairLookup(ap, skipped, statistics) { entry, initial ->\n            policy.canStoreInitial(entry, initial.toPattern())\n        }\n        query.walk(method, member, outputs, visible = false,\n            offer = { _, pair -> offer(pair) }, covered = { accepted })\n        if (accepted) return true\n        if (!skipped.mayNeedInheritedPairs(method)) return false\n        query.walk(method, member, outputs, visible = true,\n            offer = { _, pair -> offer(pair) }, covered = { accepted })\n        return accepted\n    }\n\n    /** Virtual terminal pairs share the run-1 static graph; no closure rows are retained. */\n    private fun visitControlPairs(query: Query, policy: RestrictedInitialPolicy, includeDerived: Boolean = true,\n                                  visit: (PairedDemand) -> Boolean): Boolean {\n        val method = query.method\n        if (query.scope == null) {\n            for (pair in controls[method].orEmpty()) {\n                ap.cancellation.checkpoint()\n                if (!visit(pair)) return false\n            }\n        } else for ((exit, pair) in scoped[OwnedScope(method, query.scope)]?.controls.orEmpty()) {\n            ap.cancellation.checkpoint()\n            if ((query.exit == null || query.exit == exit) && !visit(pair)) return false\n        }\n        val skipped = completion(query)?.takeIf { includeDerived } ?: return true\n        val query = StaticPairLookup(ap, skipped, statistics) { entry, member ->\n            policy.canStoreInitial(entry, member.toPattern())\n        }\n        fun walk(visible: Boolean): Boolean = query.walkTargetOrigins(method, visible) { origin ->\n            val exit = if (origin.fact.base == AccessPathBase.Zero) DemandExit.Zero else DemandExit.Data(origin)\n            visit(PairedDemand(DemandEntry.Target, exit))\n        }\n        if (!walk(false)) return false\n        return !skipped.mayNeedInheritedPairs(method) || walk(true)\n    }\n\n    private fun entryAccepts(entry: DemandEntry, original: PremiseKey, policy: RestrictedInitialPolicy): Boolean {\n        original.forEachMember { if (entryAccepts(entry, it, policy)) return true }\n        return false\n    }\n\n    private fun entryAccepts(entry: DemandEntry, member: InitialAp, policy: RestrictedInitialPolicy): Boolean =\n        when (entry) {\n            DemandEntry.Zero, DemandEntry.Target -> member.isZero\n            is DemandEntry.Data -> !member.isZero && policy.canStoreInitial(entry.pattern, member.toPattern())\n        }\n\n    /** Same actual slot and mark only. This family does not connect different fields. */\n    private fun staticCarry(actual: Pattern): DemandPattern? {\n        ap.cancellation.checkpoint()\n        if (!hasSharedStaticCarry || actual.fact.base != STATIC) return null\n        val pattern = guidancePattern(actual)\n        return DemandPattern(pattern, pattern)\n    }\n\n    class Builder(private val m: ApManager) {\n        private val seen = LinkedHashSet<Pair<MethodKey, DemandPattern>>()\n        private val controlRows = LinkedHashSet<Pair<MethodKey, PairedDemand>>()\n        private val scopedRows = LinkedHashSet<Pair<ScopedSummaryKey, DemandPattern>>()\n        private val scopedControls = LinkedHashSet<Pair<ScopedSummaryKey, PairedDemand>>()\n        private var staticCarry = false\n        private var completion: FrozenCompletion? = null\n        private val scopedCompletions = LinkedHashMap<OwnedScope, FrozenCompletion>()\n\n        /** Only the completed run-1 boundary installs these virtual guidance families. */\n        fun withCompletion(view: FrozenCompletion) { completion = view }\n        fun withCompletion(method: MethodKey, scope: BlockScope, view: FrozenCompletion) {\n            scopedCompletions[OwnedScope(method, scope)] = view\n        }\n        fun withSharedStaticCarry() { staticCarry = true }\n\n        /** Count only a new exact normalized pattern. Validate the typed hand-off boundary. */\n        fun add(method: MethodKey, d: DemandPattern): Boolean = add(method, null, d)\n\n        fun add(method: MethodKey, scope: BlockScope, exit: PortId, d: DemandPattern): Boolean =\n            add(method, ScopedSummaryKey(method, scope, exit), d)\n\n        private fun add(method: MethodKey, key: ScopedSummaryKey?, d: DemandPattern): Boolean {\n            m.cancellation.checkpoint()\n            if (!RuntimeDataDomain.base(d.entry.fact.base) ||\n                d.exit?.let { !RuntimeDataDomain.base(it.fact.base) } == true) return false\n            if (d.entry.fact.base == AccessPathBase.Zero || d.exit?.fact?.base == AccessPathBase.Zero) {\n                val exit = d.exit ?: return false // No unpaired implicit ZERO permission.\n                return add(method, key, PairedDemand(\n                    if (d.entry.fact.base == AccessPathBase.Zero) DemandEntry.Zero else DemandEntry.Data(d.entry),\n                    if (exit.fact.base == AccessPathBase.Zero) DemandExit.Zero else DemandExit.Data(exit),\n                ))\n            }\n            val entry = normalizeDemandFieldExclusion(d.entry)\n            val exit = d.exit?.let(::normalizeDemandFieldExclusion)\n            check(entry.fact.base !is AccessPathBase.CleanerTemporary && exit?.fact?.base !is AccessPathBase.CleanerTemporary) {\n                \"A field-action temporary cannot enter a demand hand-off\"\n            }\n            check(entry.fact.tail != Tail.ANY_TAINT && exit?.fact?.tail != Tail.ANY_TAINT) {\n                \"W8 (d): a demand pattern cannot have a must tail\"\n            }\n            check(normalizedMarks(entry) && (exit == null || normalizedMarks(exit))) {\n                \"Normalize mark exclusions at hand-off\"\n            }\n            check(entry.fact.mark !is MarkSlot.Star || entry.fact.tail == Tail.ANY || entry.fact.tail == Tail.STAR) {\n                \"A typed abstract demand entry has ANY or STAR tail\"\n            }\n            check(exit?.fact?.tail != Tail.EXACT || entry.fact.mark is MarkSlot.Concrete) {\n                \"A canonical exact exit demand has a concrete entry mark\"\n            }\n            check(validFieldExclusion(entry) && (exit == null || validFieldExclusion(exit))) {\n                \"Only STAR demand endpoints can exclude fields\"\n            }\n            val owned = ownDemand(m, DemandPattern(entry, exit))\n            return if (key == null) seen.add(method to owned) else scopedRows.add(key to owned)\n        }\n\n        /** Data pairs keep the current AP index; control rows use only this local list. */\n        fun add(method: MethodKey, row: PairedDemand): Boolean = add(method, null, row)\n\n        fun add(method: MethodKey, scope: BlockScope, exit: PortId, row: PairedDemand): Boolean =\n            add(method, ScopedSummaryKey(method, scope, exit), row)\n\n        private fun add(method: MethodKey, key: ScopedSummaryKey?, row: PairedDemand): Boolean {\n            m.cancellation.checkpoint()\n            if (row.entry is DemandEntry.Data && !RuntimeDataDomain.base(row.entry.pattern.fact.base) ||\n                row.exit is DemandExit.Data && !RuntimeDataDomain.base(row.exit.pattern.fact.base)) return false\n            if (row.entry is DemandEntry.Data && row.exit is DemandExit.Data)\n                return add(method, key, DemandPattern(row.entry.pattern, row.exit.pattern))\n            fun ownData(p: Pattern): Pattern {\n                val normalized = normalizeDemandFieldExclusion(p)\n                check(normalized.fact.base != AccessPathBase.Zero) { \"Use a typed ZERO control endpoint\" }\n                check(normalized.fact.base !is AccessPathBase.CleanerTemporary)\n                check(normalized.fact.tail != Tail.ANY_TAINT && normalizedMarks(normalized))\n                check(validFieldExclusion(normalized))\n                return ownPattern(m, normalized)\n            }\n            val entry = when (val e = row.entry) {\n                is DemandEntry.Data -> DemandEntry.Data(ownData(e.pattern).also {\n                    check(it.fact.mark !is MarkSlot.Star || it.fact.tail in setOf(Tail.ANY, Tail.STAR))\n                })\n                else -> e\n            }\n            val exit = when (val e = row.exit) {\n                is DemandExit.Data -> DemandExit.Data(ownData(e.pattern))\n                DemandExit.Zero -> DemandExit.Zero\n            }\n            val owned = PairedDemand(entry, exit)\n            return if (key == null) controlRows.add(method to owned) else scopedControls.add(key to owned)\n        }\n\n        /** The new index has no mutable alias in this builder or in earlier snapshots. */\n        fun build(): DemandStore {\n            m.cancellation.checkpoint()\n            val grouped = LinkedHashMap<MethodKey, MutableList<DemandPattern>>()\n            for ((method, demand) in seen) {\n                m.cancellation.checkpoint()\n                grouped.getOrPut(method) { ArrayList() } += demand\n            }\n            val controls = LinkedHashMap<MethodKey, MutableList<PairedDemand>>()\n            for ((method, row) in controlRows) {\n                controls.getOrPut(method) { ArrayList() } += row\n                grouped.getOrPut(method) { ArrayList() }\n            }\n            val byMethod = LinkedHashMap<MethodKey, MethodDemandIndex>()\n            for ((method, rows) in grouped) {\n                byMethod[method] = index(rows, controls[method].orEmpty())\n            }\n            val scopeData = LinkedHashMap<OwnedScope, MutableList<Pair<PortId, DemandPattern>>>()\n            val scopeControls = LinkedHashMap<OwnedScope, MutableList<Pair<PortId, PairedDemand>>>()\n            for ((key, row) in scopedRows) {\n                m.cancellation.checkpoint()\n                scopeData.getOrPut(OwnedScope(key.method, key.scope)) { ArrayList() } += key.exit to row\n            }\n            for ((key, row) in scopedControls) {\n                m.cancellation.checkpoint()\n                val owner = OwnedScope(key.method, key.scope)\n                scopeControls.getOrPut(owner) { ArrayList() } += key.exit to row\n                scopeData.getOrPut(owner) { ArrayList() }\n            }\n            val scopes = LinkedHashMap<OwnedScope, ScopedDemandIndex>()\n            for ((owner, rows) in scopeData) {\n                m.cancellation.checkpoint()\n                val control = scopeControls[owner].orEmpty()\n                scopes[owner] = ScopedDemandIndex(index(rows.map { it.second }, control.map { it.second }),\n                    Collections.unmodifiableList(rows.map { it.first }), Collections.unmodifiableList(control.toList()))\n            }\n            return DemandStore(Collections.unmodifiableMap(byMethod),\n                Collections.unmodifiableMap(controls.mapValues { Collections.unmodifiableList(it.value) }),\n                m, staticCarry, completion, Collections.unmodifiableMap(scopes),\n                Collections.unmodifiableMap(LinkedHashMap(scopedCompletions)))\n        }\n\n        private fun index(rows: List<DemandPattern>, controls: List<PairedDemand>): MethodDemandIndex {\n            val entries = FrozenDemandTrie.Builder<Pattern>(m.cancellation)\n            val byEntry = PathTrie<Int>(m.cancellation)\n            val byExit = PathTrie<Int>(m.cancellation)\n            var entryCount = 0\n            for ((id, demand) in rows.withIndex()) {\n                m.cancellation.checkpoint()\n                if (entries.add(demand.entry, demand.entry)) entryCount++\n                byEntry.add(demand.entry.fact.base, demand.entry.fact.path.toIntArray(), id)\n                demand.exit?.let { byExit.add(it.fact.base, it.fact.path.toIntArray(), id) }\n            }\n            for (row in controls) {\n                m.cancellation.checkpoint()\n                val entry = (row.entry as? DemandEntry.Data)?.pattern ?: continue\n                if (entries.add(entry, entry)) entryCount++\n            }\n            return MethodDemandIndex(entries.build(), Collections.unmodifiableList(rows.toList()), byEntry, byExit, entryCount)\n        }\n    }\n}\n\nprivate fun normalizedMarks(p: Pattern): Boolean =\n    (p.fact.mark as? MarkSlot.Star)?.excluded?.isEmpty != false\n\nprivate fun validFieldExclusion(p: Pattern): Boolean =\n    p.exclusion == ExclusionSet.Empty || p.fact.tail == Tail.STAR\n\nprivate fun ownDemand(m: ApManager, d: DemandPattern): DemandPattern =\n    DemandPattern(ownPattern(m, d.entry), d.exit?.let { ownPattern(m, it) })\n\nprivate fun ownPattern(m: ApManager, p: Pattern): Pattern {\n    m.cancellation.checkpoint()\n    val path = ArrayList<Int>(p.fact.path.size)\n    for (accessor in p.fact.path) {\n        m.cancellation.checkpoint()\n        path += accessor\n    }\n    return p.copy(fact = p.fact.copy(path = Collections.unmodifiableList(path)))\n}\n\n\n/** Read-only view bound to one method-owned block entry. C5 additionally names\n * the actual output port, so permissions from separate exits cannot mix. */\ninterface ScopeDemandView {\n    fun initials(actual: Facts, policy: RestrictedInitialPolicy): Set<AdmittedInitial>\n    fun intersect(exit: PortId, original: PremiseKey, raw: Facts,\n                  policy: RestrictedInitialPolicy): List<Facts>\n    fun acceptsTarget(exit: PortId, original: PremiseKey, policy: RestrictedInitialPolicy): Boolean\n}\n"
+    },
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Limit.kt": {
+      "sha256": "4a03eed47d6c2f1362219fbdb0e8d40895194dd2a7f090ed93c822054f6de45d",
+      "text": "package org.opentaint.dataflow.bidi.ap\n\nimport java.util.ArrayDeque\nimport java.util.IdentityHashMap\n\n/** Cut before the next counted accessor after the positive public budget is exhausted. */\ninternal fun limitFacts(m: ApManager, c: Facts, fieldLimit: Int, out: ApOut) {\n    require(fieldLimit >= 1) { \"The field limit must be positive\" }\n    m.cancellation.checkpoint()\n    when (c) {\n        is Reach -> out.result(c)\n        is FlowTree -> limitTrie(m, FlowAlgebra, c.root, fieldLimit,\n            { out.result(if (it === c.root) c else c.withRoot(it)) },\n            { out.result(m.flowTree(c.base, Layer.DEMAND, ExclusionSet.Empty, c.markExclusion, it)) })\n        is TaintTree -> limitTrie(m, m.taintAlg, c.root, fieldLimit,\n            { out.result(if (it === c.root) c else c.withRoot(it)) },\n            { out.result(m.taintTree(c.base, Layer.DEMAND, it)) })\n    }\n}\n\nprivate inline fun <P : TrieLeaf> limitTrie(\n    m: ApManager, alg: LeafAlgebra<P>, root: TrieNode<P>, budget: Int,\n    kept: (TrieNode<P>) -> Unit, cut: (TrieNode<P>) -> Unit,\n) {\n    if (root.boundedDepth <= budget) { kept(root); return }\n    val (within, overflow) = FieldLimitCut(alg, m).keep(root, budget)\n    m.cancellation.checkpoint()\n    within?.let(kept)\n    overflow?.let(cut)\n}\n\n/** A subtree can occur at different counted depths, so sharing is memoized by node identity and remaining budget. */\ninternal class FieldLimitCut<P : TrieLeaf>(private val alg: LeafAlgebra<P>, private val m: ApManager) {\n    private val memo = HashMap<Int, IdentityHashMap<TrieNode<P>, Pair<TrieNode<P>?, TrieNode<P>?>>>()\n\n    private class Frame<P : TrieLeaf>(val node: TrieNode<P>, val budget: Int, empty: P) {\n        var next = 0\n        var cutHere = empty\n        val keptAccessors = ArrayList<Int>()\n        val keptChildren = ArrayList<TrieNode<P>>()\n        val cutAccessors = ArrayList<Int>()\n        val cutChildren = ArrayList<TrieNode<P>>()\n    }\n\n    /** Both results are rooted at n. Zero is a valid internal remaining budget; class edges do not consume it. */\n    fun keep(n: TrieNode<P>, budget: Int): Pair<TrieNode<P>?, TrieNode<P>?> {\n        require(budget >= 0) { \"The remaining field budget must be nonnegative\" }\n        m.cancellation.checkpoint()\n        if (n.boundedDepth <= budget) return n to null\n        memo[budget]?.get(n)?.let { return it }\n        val stack = ArrayDeque<Frame<P>>()\n        stack.addLast(Frame(n, budget, alg.empty))\n        while (stack.isNotEmpty()) {\n            m.cancellation.checkpoint()\n            val frame = stack.peekLast()\n            val accessors = frame.node.accessorData\n            if (accessors != null && frame.next < accessors.size) {\n                val accessor = accessors[frame.next]\n                val child = frame.node.childData!![frame.next]\n                val counted = accessor.isCounted()\n                if (counted && frame.budget == 0) {\n                    frame.cutHere = alg.union(frame.cutHere, alg.asAny(alg.foldAll(child, m.cancellation)))\n                    frame.next++\n                    continue\n                }\n                val childBudget = frame.budget - if (counted) 1 else 0\n                val result = if (child.boundedDepth <= childBudget) child to null else memo[childBudget]?.get(child)\n                if (result == null) {\n                    stack.addLast(Frame(child, childBudget, alg.empty))\n                    continue\n                }\n                result.first?.let {\n                    frame.keptAccessors.add(accessor)\n                    frame.keptChildren.add(it)\n                }\n                result.second?.let {\n                    frame.cutAccessors.add(accessor)\n                    frame.cutChildren.add(it)\n                }\n                frame.next++\n                continue\n            }\n            val kept = alg.node(frame.node.leaf, frame.keptAccessors.toIntArray(), frame.keptChildren.toTypedArray())\n                .takeIf { !it.isEmpty }\n            val cut = alg.node(frame.cutHere, frame.cutAccessors.toIntArray(), frame.cutChildren.toTypedArray())\n                .takeIf { !it.isEmpty }\n            memo.getOrPut(frame.budget) { IdentityHashMap() }[frame.node] = kept to cut\n            stack.removeLast()\n        }\n        return memo.getValue(budget).getValue(n)\n    }\n}\n"
+    },
+    "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/EnumAliasTargets.kt": {
+      "sha256": "e7f656e41d126f236b9fd48ae2fb86604e0c5d371d4fbe3007adb3175b546dbb",
+      "text": "package org.opentaint.dataflow.jvm.bidi.interp\n\nimport org.opentaint.dataflow.ap.ifds.AccessPathBase\nimport org.opentaint.dataflow.ap.ifds.Accessor\nimport org.opentaint.dataflow.ap.ifds.ClassStaticAccessor\nimport org.opentaint.dataflow.ap.ifds.FieldAccessor\nimport org.opentaint.ir.api.jvm.JIRClasspath\nimport org.opentaint.ir.api.jvm.ext.isEnum\n\n/** New-core alias targets only. Explicit static operations keep their normal lowering. */\ninternal class EnumAliasTargets(private val cp: JIRClasspath) {\n    fun reject(base: AccessPathBase, path: List<Accessor>): Boolean {\n        if (base != AccessPathBase.ClassStatic || path.firstOrNull() !is ClassStaticAccessor) return false\n        val field = path.getOrNull(1) as? FieldAccessor ?: return false\n        val owner = cp.findClassOrNull(field.className) ?: return false\n        val resolved = owner.declaredFields.firstOrNull {\n            it.name == field.fieldName && it.type.typeName == field.fieldType\n        } ?: return false\n\n        // DIRTY HACK: Drop enum-constant static alias targets to stop the\n        // EntityType FLOW matrix. This is not an immutability proof.\n        return resolved.isStatic && resolved.isEnum\n    }\n}\n"
+    }
+  },
+  "head_note": "2e9ea2218 commits the prior investigation documents; production code remains the measured14d runtime."
+}
