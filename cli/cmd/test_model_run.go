@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"os"
 	"time"
 
-	"github.com/seqra/opentaint/internal/testmodel"
 	"github.com/spf13/cobra"
 )
 
@@ -29,19 +27,11 @@ var testModelRunCmd = &cobra.Command{
     --passthrough-models .opentaint/pass-through`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		ruleDir, err := os.MkdirTemp("", "opentaint-model-rule-*")
-		if err != nil {
-			out.Fatal("Failed to create a temporary directory for the harness rule", err)
-		}
-		if _, err := testmodel.WriteFixedRule(ruleDir); err != nil {
-			out.Fatal("Failed to write the harness rule", err)
-		}
-
 		runTestProject(args[0], testProjectOptions{
 			label:             "Model tests",
 			kind:              "model",
 			tempDir:           "opentaint-test-models-*",
-			rulesets:          []string{ruleDir},
+			harnessRule:       true,
 			outputDir:         testModelOutputDir,
 			timeout:           testModelTimeout,
 			maxMemory:         testModelMaxMemory,
