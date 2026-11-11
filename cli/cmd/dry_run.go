@@ -5,15 +5,11 @@ import (
 	"strings"
 )
 
-func failOnInvalidInputs(validate func() error) {
-	if err := validate(); err != nil {
-		out.FatalErr(err)
-	}
-}
-
-func runDryRun(skippedAction string) {
+// runDryRun ends a dry run: skippedAction is what the run did not do, and goal is what the same
+// command does without --dry-run, as in "To <goal>, run:".
+func runDryRun(skippedAction, goal string) {
 	out.Printf("Dry run complete. Inputs validated, %s skipped.", skippedAction)
-	suggest("To run for real, run:", rerunWithoutDryRun())
+	suggest("To "+goal+", run:", rerunWithoutDryRun())
 }
 
 func rerunWithoutDryRun() string {

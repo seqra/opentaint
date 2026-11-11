@@ -28,7 +28,7 @@ func TestCompileNextStep(t *testing.T) {
 	for name, tc := range map[string]struct{ dir, want string }{
 		"project":             {plain, "opentaint scan "},
 		"rule tests":          {ruleTest, "opentaint test rule run /out"},
-		"model tests":         {modelTest, "opentaint test model run /out --dataflow-models <model>"},
+		"model tests":         {modelTest, "opentaint test model run /out --dataflow-models <model-project>"},
 		"rule-test.yaml only": {writeRuleTest(t), "opentaint test rule run /out"},
 	} {
 		t.Run(name, func(t *testing.T) {

@@ -136,7 +136,7 @@ func summaryListingOptions(dim sarif.GroupDimension, codeFlowSel sarif.CodeFlowS
 	}
 }
 
-func printSarifSummary(report *sarif.Report, absSarifPath string, filters sarif.Filters, opts sarif.ListingOptions) {
+func printSarifSummary(report *sarif.Report, absSarifPath string, filters sarif.Filters, opts sarif.ListingOptions, extraOutputs ...any) {
 	filtered := report.Filter(filters)
 
 	hasOmittedFlow := false
@@ -145,7 +145,7 @@ func printSarifSummary(report *sarif.Report, absSarifPath string, filters sarif.
 		out.Blank()
 	}
 
-	filtered.PrintSummary(out, absSarifPath)
+	filtered.PrintSummary(out, absSarifPath, extraOutputs...)
 
 	if showFindings && hasOmittedFlow && !verboseFlow {
 		out.Suggest(

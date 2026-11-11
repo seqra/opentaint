@@ -161,7 +161,7 @@ func logSuggestion() (output.Suggestion, bool) {
 		return output.Suggestion{}, false
 	}
 	return output.Suggestion{
-		Description: "For full details, check the log file:",
+		Description: "To see the full details, open the log:",
 		Command:     globals.LogPath,
 	}, true
 }
@@ -174,7 +174,7 @@ func analyzerLogSuggestion(fail *analyzer.Error, logsFile string) (output.Sugges
 		return output.Suggestion{}, false
 	}
 	return output.Suggestion{
-		Description: "For the analyzer exception, check the analyzer log:",
+		Description: "To see the analyzer exception, open the analyzer log:",
 		Command:     logsFile,
 	}, true
 }

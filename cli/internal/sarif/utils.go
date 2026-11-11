@@ -202,8 +202,9 @@ func pluralize(count int, singular string) string {
 	return singular + "s"
 }
 
-// PrintSummary prints a human-readable summary of the SARIF report
-func (report *Report) PrintSummary(out *output.Printer, absSarifReportPath string) {
+// PrintSummary prints a human-readable summary of the SARIF report. The Output group lists the
+// report, then extraOutputs, then the log.
+func (report *Report) PrintSummary(out *output.Printer, absSarifReportPath string, extraOutputs ...any) {
 	summary := GenerateSummary(report)
 	ruleSummary := generateRuleSummary(report)
 
@@ -252,13 +253,13 @@ func (report *Report) PrintSummary(out *output.Printer, absSarifReportPath strin
 			rulesTriggered,
 		).
 		Group("Output",
-			outputItems(out, absSarifReportPath)...,
+			outputItems(out, absSarifReportPath, extraOutputs)...,
 		).
 		Render()
 }
 
-func outputItems(out *output.Printer, absSarifReportPath string) []any {
-	items := []any{out.FieldItem("Report", absSarifReportPath)}
+func outputItems(out *output.Printer, absSarifReportPath string, extraOutputs []any) []any {
+	items := append([]any{out.FieldItem("Report", absSarifReportPath)}, extraOutputs...)
 	if globals.LogPath != "" {
 		items = append(items, out.FieldItem("Log", globals.LogPath))
 	}

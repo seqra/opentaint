@@ -37,7 +37,7 @@ var modelInitCmd = &cobra.Command{
 		existing := models.IsProject(projectPath)
 		if existing {
 			out.Warnf("Replacing the build file of the model project at `%s`. "+
-				"Use --dependency for every library that the models need, not only the new ones.", projectPath)
+				"Use --dependency for every library that the models need, not only the new ones.", args[0])
 		}
 
 		if err := models.Scaffold(projectPath, initModelDeps, analyzerJarPath); err != nil {
@@ -45,9 +45,9 @@ var modelInitCmd = &cobra.Command{
 		}
 
 		if existing {
-			fmt.Printf("Model project updated at %s\n", projectPath)
+			out.Printf("Model project updated at `%s`", args[0])
 		} else {
-			fmt.Printf("Model project initialized at %s\n", projectPath)
+			out.Printf("Model project initialized at `%s`", args[0])
 		}
 		out.Suggestions(
 			output.Suggestion{Description: "To add the models, write them in:", Command: shellQuote(joinUserPath(args[0], "src", "main", "java"))},

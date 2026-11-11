@@ -200,7 +200,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		if err := validation.ValidateSourceProject(absUserProjectRoot); err != nil {
 			if validation.IsProjectModel(absUserProjectRoot) {
 				out.ErrorErr(err)
-				suggest("Use --project-model to scan a pre-compiled model:", currentScanBuilder(cfg, "").WithProjectModel(absUserProjectRoot).Build())
+				suggest("To scan the project model, run:", currentScanBuilder(cfg, "").WithProjectModel(absUserProjectRoot).Build())
 				os.Exit(1)
 			}
 			out.FatalErr(err)
@@ -291,11 +291,13 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 
 	maxMemory, err := validation.ValidateScanInputs(absUserProjectRoot, absProjectModelPath, absSarifReportPath, nonBuiltinRulesetPaths, cfg.Severity, globals.Config.Scan.MaxMemory, !plan.needsCompilation)
 	if err != nil {
+		out.Blank()
 		out.FatalErr(err)
 	}
 
 	if cfg.DryRun {
-		runDryRun("the build and scan")
+		out.Blank()
+		runDryRun("the build and scan", "scan the project")
 		return
 	}
 
@@ -490,22 +492,22 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	if report != nil {
 		// Scan does not expose summary's filter/group flags, so pass zero values:
 		// no filtering, default group dimension, first-flow code-flow selection.
-		printSarifSummary(report, absSarifReportPath, sarif.Filters{}, sarif.ListingOptions{MaxNestingLevel: -1})
+		var extraOutputs []any
+		reachabilityTracePath := filepath.Join(filepath.Dir(absSarifReportPath), "debug-ifds-fact-reachability.sarif")
+		if cfg.DebugFactReachabilitySarif && utils.PathExists(reachabilityTracePath) {
+			extraOutputs = append(extraOutputs, out.FieldItem("Reachability trace", reachabilityTracePath))
+		}
+		printSarifSummary(report, absSarifReportPath, sarif.Filters{}, sarif.ListingOptions{MaxNestingLevel: -1}, extraOutputs...)
 		switch {
 		case cfg.DebugFactReachabilitySarif:
 			if analyzerFail == nil {
 				out.Blank()
-				out.Successf("Reachability analysis completed.")
+				out.Successf("Reachability analysis completed")
 			}
-			reachabilityReportPath := filepath.Join(filepath.Dir(absSarifReportPath), "debug-ifds-fact-reachability.sarif")
-			suggestions = append(suggestions, output.Suggestion{
-				Description: "To view the reachability report, run:",
-				Command:     utils.NewSummaryCommand(reachabilityReportPath).WithShowFindings().Build(),
-			})
 		case sarif.GenerateSummary(report).TotalFindings > 0:
 			if analyzerFail == nil {
 				out.Blank()
-				out.Successf("Scan completed.")
+				out.Successf("Scan completed")
 			}
 			suggestions = append(suggestions, output.Suggestion{
 				Description: "To view the findings, run:",
@@ -596,12 +598,9 @@ func resolveScanPlan(cfg ScanConfig, absUserProjectRoot string) scanPlan {
 		// Readers don't stamp metadata (empty LockMeta); writers do. Use that
 		// to distinguish an in-progress compile from an in-progress analyze.
 		if meta, _ := utils.ReadLockMeta(cacheLockPath); meta.PID != 0 {
-			out.Errorf("Another command is compiling this project")
-		} else {
-			out.Errorf("Another scan is analyzing this project")
+			out.Fatalf("Another command is compiling this project")
 		}
-		suggest("To scan an existing model instead, run:", utils.NewScanCommand("").WithProjectModel("<project-model>").Build())
-		os.Exit(1)
+		out.Fatalf("Another scan is analyzing this project")
 	}
 	if lockErr != nil {
 		out.Fatal("Failed to lock the project model cache", lockErr)
