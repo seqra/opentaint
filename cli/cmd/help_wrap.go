@@ -15,6 +15,9 @@ const maxHelpWidth = 80
 // docsURL is the documentation that the end of every help links to.
 const docsURL = "https://github.com/seqra/opentaint/tree/main/docs"
 
+// usageDocsURL is the page of the documentation on the commands. Next steps link to its sections.
+const usageDocsURL = "https://github.com/seqra/opentaint/blob/main/docs/usage.md"
+
 // helpTemplate is the default cobra help template with the Long text wrapped by wrapHelp and a
 // link to the docs at the end.
 const helpTemplate = `{{with (or .Long .Short)}}{{. | wrapHelp | trimTrailingWhitespaces}}
