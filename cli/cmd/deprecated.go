@@ -64,5 +64,5 @@ func addDeprecatedFlagAlias(flags *pflag.FlagSet, newName, oldName string) {
 		Value:    flag.Value,
 		DefValue: flag.DefValue,
 	})
-	_ = flags.MarkDeprecated(oldName, "use `--"+newName+"` instead")
+	_ = flags.MarkDeprecated(oldName, "use --"+newName+" instead")
 }

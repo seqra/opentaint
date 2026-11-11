@@ -55,7 +55,7 @@ func ensureArtifactAvailable(name, version, artifactPath string, download func()
 	}
 
 	if !out.IsInteractive() {
-		out.Printf("Successfully downloaded %s to %s", name, artifactPath)
+		out.Printf("Downloaded %s to `%s`", name, artifactPath)
 	}
 
 	return nil

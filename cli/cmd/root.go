@@ -100,6 +100,10 @@ func Execute() {
 	}
 }
 
+// helpFlagUsage describes --help. Cobra adds its own --help, "help for <command>", only to a
+// command that has none, so the persistent --help of the root replaces it in every command.
+const helpFlagUsage = "Show help message"
+
 func init() {
 	configureExperimentalFlagVisibility()
 	configureHelpWrap()
@@ -112,6 +116,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&experimentalMode, experimentalFlagName, false, "Show experimental and hidden flags")
 	_ = rootCmd.PersistentFlags().MarkHidden(experimentalFlagName)
 
+	rootCmd.PersistentFlags().BoolP("help", "h", false, helpFlagUsage)
 	rootCmd.Flags().BoolVarP(&toolVersion, "version", "v", false, "Print the version information")
 
 	rootCmd.PersistentFlags().BoolVarP(&globals.Config.Output.Debug, "debug", "d", false, "Show debug output")
@@ -220,7 +225,7 @@ func addConfigFields(cmd *cobra.Command, sb *output.SectionBuilder) {
 				sb.Field("Config file", viper.ConfigFileUsed())
 			}
 			if globals.LogPath != "" {
-				sb.Field("Log file", globals.LogPath)
+				sb.Field("Log", globals.LogPath)
 			}
 		}
 	}

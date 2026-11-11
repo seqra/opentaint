@@ -178,7 +178,7 @@ func ensureDownloaded(url, dest string, printer *output.Printer) error {
 	output.LogDebugf("Downloading Temurin Java from %s", url)
 	err := downloadFile(url, dest, printer)
 	if err == nil {
-		output.LogDebugf("Successfully downloaded Temurin Java to %s", dest)
+		output.LogDebugf("Downloaded Temurin Java to %s", dest)
 	}
 	return err
 }

@@ -262,9 +262,13 @@ var projectCmd = &cobra.Command{
 		}
 		sb.Render()
 
+		if err := config.validate(); err != nil {
+			out.Blank()
+			out.FatalErr(err)
+		}
 		if DryRunProject {
-			failOnInvalidInputs(config.validate)
-			runDryRun("project-model generation")
+			out.Blank()
+			runDryRun("project-model generation", "create the project model")
 			return
 		}
 

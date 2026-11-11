@@ -63,9 +63,8 @@ var pullCmd = &cobra.Command{
 		out.Section("Pull Summary").
 			Child(summaryNodes...).
 			Render()
-
-		out.Successf("Pull completed.")
-		suggest("To scan your project, run:", "opentaint scan .")
+		out.Blank()
+		out.Successf("Pull completed")
 	},
 }
 

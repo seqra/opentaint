@@ -28,11 +28,11 @@ var updateCmd = &cobra.Command{
 
 		switch method {
 		case utils.InstallMethodHomebrew:
-			out.Print("opentaint was installed via Homebrew.")
+			out.Print("opentaint was installed via Homebrew")
 			suggest("To update, run:", "brew upgrade --cask opentaint")
 			return
 		case utils.InstallMethodNpm:
-			out.Print("opentaint was installed via npm.")
+			out.Print("opentaint was installed via npm")
 			suggest("To update, run:", "npm install -g @seqra/opentaint@latest")
 			return
 		}
@@ -67,7 +67,7 @@ var updateCmd = &cobra.Command{
 		cmp, err := version.CompareVersions(currentVersion, targetVersion)
 		if err != nil {
 			out.Warnf("Cannot compare version %s with %s", currentVersion, targetVersion)
-			out.Printf("Current: %s, Latest: %s", currentVersion, targetVersion)
+			out.Printf("Current version %s, latest version %s", currentVersion, targetVersion)
 			if !updateYes {
 				suggest("To proceed anyway, run:", withFlag(rerunWithoutDryRun(), "--yes"))
 				return
@@ -75,7 +75,7 @@ var updateCmd = &cobra.Command{
 		}
 
 		if cmp == 0 {
-			out.Printf("opentaint is already up to date (v%s).", currentVersion)
+			out.Printf("opentaint is already up to date (v%s)", currentVersion)
 			return
 		}
 
@@ -99,8 +99,7 @@ var updateCmd = &cobra.Command{
 
 		if !updateYes {
 			if !out.Confirm("Proceed with update?", false) {
-				out.Print("Update cancelled.")
-				suggest("To update without confirming, run:", "opentaint update --yes")
+				out.Print("Update cancelled")
 				return
 			}
 		}
@@ -125,7 +124,7 @@ var updateCmd = &cobra.Command{
 			out.Fatal("Failed to install the update", err)
 		}
 
-		out.Successf("Successfully updated to v%s", targetVersion)
+		out.Successf("Updated to v%s", targetVersion)
 		suggest("To clean up old artifacts, run:", "opentaint prune")
 	},
 }

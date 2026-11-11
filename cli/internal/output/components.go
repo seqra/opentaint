@@ -121,7 +121,12 @@ func (h *SpinnerHandle) StopError(finalMessage string) {
 // If the terminal is non-interactive, the function runs without visual feedback.
 func (p *Printer) RunWithSpinner(phase string, run func() error) error {
 	if !p.IsInteractiveUI() {
-		return run()
+		err := run()
+		if err != nil {
+			// No spinner line separates the error from the output above, so a blank line does.
+			p.Blank()
+		}
+		return err
 	}
 
 	p.InteractiveBlank()

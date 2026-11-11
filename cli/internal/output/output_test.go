@@ -257,14 +257,14 @@ func TestSuggestionsRendersMultipleItemsInOneSection(t *testing.T) {
 
 	p.Suggestions(
 		Suggestion{Description: "First hint", Command: "opentaint scan ."},
-		Suggestion{Description: "For full details, check the log file:", Command: "/tmp/run.log"},
+		Suggestion{Description: "To see the full details, open the log:", Command: "/tmp/run.log"},
 	)
 
 	got := buf.String()
 	if n := strings.Count(got, "Suggestions"); n != 1 {
 		t.Errorf("expected exactly one 'Suggestions' header, got %d in %q", n, got)
 	}
-	for _, want := range []string{"First hint", "opentaint scan .", "For full details, check the log file:", "/tmp/run.log"} {
+	for _, want := range []string{"First hint", "opentaint scan .", "To see the full details, open the log:", "/tmp/run.log"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("expected output to contain %q, got %q", want, got)
 		}

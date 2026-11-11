@@ -42,7 +42,7 @@ var testRuleInitCmd = &cobra.Command{
 			if err := testrule.Scaffold(dir); err != nil {
 				out.Fatal("Failed to create the test samples", err)
 			}
-			out.Printf("Rule test project (%s) initialized at %s", kind, dir)
+			out.Printf("Rule test project (%s) initialized at `%s`", kind, dir)
 		}
 		var suggestions []output.Suggestion
 		for _, kind := range kinds {
@@ -73,13 +73,13 @@ var testModelInitCmd = &cobra.Command{
 		if err := testmodel.Scaffold(args[0]); err != nil {
 			out.Fatal("Failed to create the test samples", err)
 		}
-		out.Printf("Model test project initialized at %s", args[0])
+		out.Printf("Model test project initialized at `%s`", args[0])
 		dir := args[0]
 		modelDir := filepath.Join(dir, "model")
 		out.Suggestions(
 			output.Suggestion{Description: "To add your test samples, edit:", Command: filepath.Join(dir, testproject.RuleTestFileName)},
 			output.Suggestion{Description: "To compile the test project, run:", Command: fmt.Sprintf("opentaint compile %s -o %s", shellQuote(dir), shellQuote(modelDir))},
-			output.Suggestion{Description: "To run the tests, run:", Command: fmt.Sprintf("opentaint test model run %s --dataflow-models <model>", shellQuote(modelDir))},
+			output.Suggestion{Description: "To run the tests, run:", Command: fmt.Sprintf("opentaint test model run %s --dataflow-models <model-project>", shellQuote(modelDir))},
 		)
 	},
 }

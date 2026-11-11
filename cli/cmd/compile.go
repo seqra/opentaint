@@ -80,10 +80,13 @@ var compileCmd = &cobra.Command{
 			FieldGroup("Autobuilder", componentItems(resolveJarComponent("autobuilder"), false)...).
 			Render()
 
+		if err := validation.ValidateCompileInputs(absProjectRoot, absOutputProjectModelPath); err != nil {
+			out.Blank()
+			out.FatalErr(err)
+		}
 		if DryRunCompile {
 			out.Blank()
-			failOnInvalidInputs(func() error { return validation.ValidateCompileInputs(absProjectRoot, absOutputProjectModelPath) })
-			runDryRun("compilation")
+			runDryRun("compilation", "compile the project")
 			return
 		}
 
@@ -202,7 +205,7 @@ func compileNextStep(absProjectRoot, projectRoot, absOutputProjectModelPath stri
 	}
 	projectModel := shellQuote(absOutputProjectModelPath)
 	if testmodel.IsTestProject(absProjectRoot) {
-		return "To run the model tests, run:", "opentaint test model run " + projectModel + " --dataflow-models <model>"
+		return "To run the model tests, run:", "opentaint test model run " + projectModel + " --dataflow-models <model-project>"
 	}
 	return "To run the rule tests, run:", "opentaint test rule run " + projectModel
 }
