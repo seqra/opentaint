@@ -57,7 +57,7 @@ func checkPassthroughPath(path string) error {
 	}
 	if !info.IsDir() {
 		if !isYAMLFile(path) {
-			return fmt.Errorf("`%s` is not a YAML file", path)
+			return fmt.Errorf("`%s` is not a pass-through model", path)
 		}
 		return nil
 	}
@@ -90,7 +90,7 @@ func checkPassthroughPath(path string) error {
 		return fmt.Errorf("failed to read `%s`: %w", path, err)
 	}
 	if otherFiles && !yamlFiles {
-		return fmt.Errorf("`%s` contains no YAML files", path)
+		return fmt.Errorf("`%s` contains no pass-through models", path)
 	}
 	return nil
 }
