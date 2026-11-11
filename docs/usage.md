@@ -116,7 +116,7 @@ These flags are to work with custom models:
 |------|-------------|
 | `--track-external-methods` | Write external-method coverage files next to the SARIF report |
 | `--passthrough-models` | Apply pass-through model YAML files or directories (repeatable) |
-| `--dataflow-models` | Apply dataflow model projects, build outputs, or class directories (repeatable) |
+| `--dataflow-models` | Dataflow models: a model project, compiled models, or a directory of them (repeatable) |
 
 Use external-method tracking when a scan may miss flows through library methods. The dropped-methods file shows where taint was killed because no model was available; the approximated-methods file shows methods already covered by built-in or custom models.
 
@@ -205,7 +205,7 @@ opentaint scan --project-model ./my-project-model \
 
 Pin the versions the target application uses. Those pins are the models' compile environment: they, and nothing about the project under analysis, decide what the models compile against, so a model compiles identically wherever it is applied.
 
-`--dataflow-models` accepts a model project, a build output, or a directory of compiled classes — and a directory holding any of those, so a tree with one project per batch can be passed as a single flag. A directory counts as compiled classes only when nothing below it still needs building; one that holds compiled classes of its own alongside a project is reported rather than guessed at. Paths may overlap, and the same models may be reached twice, but two of them may not offer the same class with different content — which copy an analysis would read is not defined. Projects are built on demand and rebuilt when their sources, their dependency pins, or the compiler change.
+`--dataflow-models` accepts a model project, the compiled models that `opentaint compile models` writes, or a directory holding any of those, so a tree with one project per batch can be passed as a single flag. Compiled classes in any other layout are rejected. Paths may overlap, and the same models may be reached twice, but two of them may not offer the same class with different content — which copy an analysis would read is not defined. Projects are built on demand and rebuilt when their sources, their dependency pins, or the compiler change.
 
 | Command | Description |
 |---------|-------------|
