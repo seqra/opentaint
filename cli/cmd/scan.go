@@ -513,7 +513,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 			})
 		case analyzerFail == nil:
 			out.Blank()
-			out.Successf("Scan completed. No %s findings were reported.", strings.Join(cfg.Severity, " or "))
+			out.Successf("Scan completed with no %s findings", strings.Join(cfg.Severity, " or "))
 			if isDefaultSeverity(cfg.Severity) {
 				suggestions = append(suggestions, output.Suggestion{
 					Description: "To also check note-level rules, run:",
