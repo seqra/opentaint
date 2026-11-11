@@ -17,9 +17,11 @@ import (
 type modelBuilder struct {
 	analyzerJarPath string
 	apiJar          []byte
+	// failed reports that a compile failed after its spinner showed it.
+	failed bool
 }
 
-func newModelBuilder(analyzerJarPath string) models.Builder {
+func newModelBuilder(analyzerJarPath string) *modelBuilder {
 	return &modelBuilder{analyzerJarPath: analyzerJarPath}
 }
 
@@ -77,6 +79,7 @@ func (b *modelBuilder) Compile(projectDir, projectModelDir string) error {
 		return compileProjectWithLogs(projectModelDir, projectDir, autobuilderJarPath, logsFile, true, javaRunner)
 	}
 	if err := out.RunWithSpinner("Compiling model project "+filepath.Base(projectDir), compile); err != nil {
+		b.failed = true
 		output.LogInfof("Model project %s failed to build: %v", projectDir, err)
 		// The compiler errors say all there is to say, so the log goes.
 		if diagnostics := autobuilder.CompilerDiagnostics(logsFile); diagnostics != "" {

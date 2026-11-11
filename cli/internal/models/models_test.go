@@ -558,3 +558,30 @@ func TestBuildFailsBeforeCompilingAProjectWithoutModels(t *testing.T) {
 		t.Errorf("compiled %v, want no compile step", builder.compiled)
 	}
 }
+
+// Check runs before the long steps, so it must not build a model project.
+func TestCheckBuildsNothing(t *testing.T) {
+	root := t.TempDir()
+	project := newProject(t, filepath.Join(root, "models"))
+
+	if err := Check(root); err != nil {
+		t.Fatalf("Check: %v", err)
+	}
+	if _, err := os.Stat(BuildDir(project)); !os.IsNotExist(err) {
+		t.Errorf("Check built the model project, build output stat: %v", err)
+	}
+}
+
+func TestCheckRejectsWhatResolveRejects(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "com", "example", "Model.class"), "bytecode")
+
+	var needed *ProjectNeededError
+	if err := Check(dir); !errors.As(err, &needed) || needed.Reason != PlainClasses {
+		t.Errorf("Check(plain classes) = %v, want a model project to be needed", err)
+	}
+	missing := filepath.Join(dir, "missing")
+	if err := Check(missing); err == nil || !strings.Contains(err.Error(), "`"+missing+"` does not exist") {
+		t.Errorf("Check(missing path) = %v, want it to say that the path does not exist", err)
+	}
+}

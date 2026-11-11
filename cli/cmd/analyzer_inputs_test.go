@@ -10,8 +10,6 @@ import (
 )
 
 func TestModelProjectSuggestions(t *testing.T) {
-	paths := []string{"models", ".opentaint/dataflow"}
-	absPaths := []string{"/work/models", "/work/.opentaint/dataflow"}
 	initStep := func(path string) output.Suggestion {
 		return output.Suggestion{
 			Description: "To create a model project, run:",
@@ -26,23 +24,23 @@ func TestModelProjectSuggestions(t *testing.T) {
 	}{
 		{
 			name: "no models",
-			err:  &models.ProjectNeededError{Path: "/work/.opentaint/dataflow", Reason: models.NoModels},
+			err:  &models.ProjectNeededError{Path: ".opentaint/dataflow", Reason: models.NoModels},
 			want: []output.Suggestion{initStep(".opentaint/dataflow")},
 		},
 		{
 			name: "plain classes",
-			err:  &models.ProjectNeededError{Path: "/work/models/classes", Reason: models.PlainClasses},
+			err:  &models.ProjectNeededError{Path: "models/classes", Reason: models.PlainClasses},
 			want: []output.Suggestion{initStep("<model-project>")},
 		},
 		{
 			name: "other error",
-			err:  errors.New("`/work/models` does not exist"),
+			err:  errors.New("`models` does not exist"),
 			want: nil,
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := modelProjectSuggestions(tc.err, paths, absPaths); !reflect.DeepEqual(got, tc.want) {
+			if got := modelProjectSuggestions(tc.err); !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("modelProjectSuggestions() = %v, want %v", got, tc.want)
 			}
 		})

@@ -73,6 +73,21 @@ func checkClasspathAgrees(classDirs []string) error {
 // Compiled classes in any other layout are rejected: a build output records the project
 // that the models come from, and plain classes do not.
 func Resolve(path string, builder Builder) ([]string, error) {
+	return resolve(path, builder)
+}
+
+// Check reports what Resolve would reject in a model path without building anything: a path
+// that does not exist or that holds no models in a form Resolve takes. A model project counts
+// as models here, and whether it compiles is for Resolve to find out. Check names the paths
+// below path as joined to it, so a relative path gives relative names.
+func Check(path string) error {
+	_, err := resolve(path, nil)
+	return err
+}
+
+// resolve does the work of Resolve. Without a builder it builds nothing, and a model project
+// stands for the classes that its build would give.
+func resolve(path string, builder Builder) ([]string, error) {
 	info, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		return nil, fmt.Errorf("`%s` does not exist", path)
@@ -96,6 +111,9 @@ func Resolve(path string, builder Builder) ([]string, error) {
 
 func resolveDir(dir string, builder Builder) ([]string, error) {
 	if IsProject(dir) {
+		if builder == nil {
+			return []string{ClassesDir(BuildDir(dir))}, nil
+		}
 		classes, err := ensureBuilt(dir, builder)
 		if err != nil {
 			return nil, err

@@ -90,6 +90,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		}
 		out.Fatal(fmt.Sprintf("Failed to access the project model `%s`", projectModelArg), err)
 	}
+	checkModelInputs(opts.dataflowModels, opts.passthroughModels)
 
 	maxMemory, err := utils.ParseMemoryValue(opts.maxMemory)
 	if err != nil {
@@ -160,7 +161,9 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	}
 	builder.SetJarPath(analyzerJarPath)
 
-	addDataflowModels(builder, opts.dataflowModels, analyzerJarPath)
+	for _, classDir := range compileDataflowModels(opts.dataflowModels, analyzerJarPath) {
+		builder.AddDataflowApproximations(classDir)
+	}
 	addPassthroughModels(builder, opts.passthroughModels)
 
 	javaRunner := newAnalyzerJavaRunner()

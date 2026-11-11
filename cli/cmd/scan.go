@@ -294,6 +294,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		out.Blank()
 		out.FatalErr(err)
 	}
+	checkModelInputs(cfg.DataflowModels, cfg.PassthroughModels)
 
 	if cfg.DryRun {
 		out.Blank()
@@ -313,6 +314,13 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 			fail("Failed to prepare the built-in ruleset", err)
 		}
 	}
+
+	analyzerJarPath, err := ensureAnalyzerAvailable()
+	if err != nil {
+		fail("Failed to get the analyzer", err)
+	}
+	// The models compile in less time than the project, so an error in them comes first.
+	dataflowClassDirs := compileDataflowModels(cfg.DataflowModels, analyzerJarPath)
 
 	if plan.needsCompilation {
 		autobuilderJarPath, err := ensureAutobuilderAvailable()
@@ -412,13 +420,10 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		nativeBuilder.SetDebugRunAnalysisOnSelectedEntryPoints(cfg.DebugRunAnalysisOnSelectedEntryPoints)
 	}
 
-	analyzerJarPath, err := ensureAnalyzerAvailable()
-	if err != nil {
-		fail("Failed to get the analyzer", err)
-	}
 	nativeBuilder.SetJarPath(analyzerJarPath)
-
-	addDataflowModels(nativeBuilder, cfg.DataflowModels, analyzerJarPath)
+	for _, classDir := range dataflowClassDirs {
+		nativeBuilder.AddDataflowApproximations(classDir)
+	}
 
 	analyzerJavaRunner := newAnalyzerJavaRunner()
 	if _, err := analyzerJavaRunner.EnsureJava(); err != nil {
