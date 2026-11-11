@@ -351,10 +351,36 @@ func TestResolveLooseSourcesNeedAProject(t *testing.T) {
 	}
 }
 
-func TestResolveEmptyDirectory(t *testing.T) {
-	_, err := Resolve(t.TempDir(), newFakeBuilder(t))
-	if err == nil {
-		t.Fatal("expected an empty directory to be rejected")
+func TestResolveEmptyDirectoryHasNoModels(t *testing.T) {
+	emptyTree := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(emptyTree, "my-batch", "src"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	hiddenOnly := t.TempDir()
+	writeFile(t, filepath.Join(hiddenOnly, ".gitkeep"), "")
+	writeFile(t, filepath.Join(hiddenOnly, ".opentaint", "build", "stamp.json"), "{}")
+
+	for name, dir := range map[string]string{"empty": t.TempDir(), "empty subdirectories": emptyTree, "hidden files": hiddenOnly} {
+		t.Run(name, func(t *testing.T) {
+			classDirs, err := Resolve(dir, newFakeBuilder(t))
+			if err != nil || len(classDirs) != 0 {
+				t.Fatalf("Resolve() = %v, %v, want no models and no error", classDirs, err)
+			}
+			if err := Check(dir); err != nil {
+				t.Fatalf("Check() = %v, want no error", err)
+			}
+		})
+	}
+}
+
+func TestResolveRejectsOtherFiles(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "notes", "README.md"), "models go here\n")
+
+	_, err := Resolve(dir, newFakeBuilder(t))
+	var needed *ProjectNeededError
+	if !errors.As(err, &needed) || needed.Reason != NoModels {
+		t.Fatalf("expected a directory with other files to be rejected, got: %v", err)
 	}
 }
 
@@ -433,8 +459,12 @@ func TestStagingIsInvisibleToTheResolver(t *testing.T) {
 	abandoned := filepath.Join(stagingRoot(output), filepath.Base(output)+"-1")
 	writeFile(t, filepath.Join(abandoned, classesDirName, "com", "example", "Other.class"), "bytecode")
 
-	if _, err := Resolve(root, newFakeBuilder(t)); err == nil {
-		t.Error("a leftover staging directory was resolved as compiled models")
+	classDirs, err := Resolve(root, newFakeBuilder(t))
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	if len(classDirs) != 0 {
+		t.Errorf("a leftover staging directory was resolved as compiled models: %v", classDirs)
 	}
 }
 

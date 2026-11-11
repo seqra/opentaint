@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/seqra/opentaint/internal/models"
 	"github.com/seqra/opentaint/internal/output"
@@ -35,15 +37,67 @@ func checkModelInputs(dataflow, passthrough []string) {
 		}
 	}
 	for _, path := range passthrough {
-		if _, err := os.Stat(path); err != nil {
-			cause := fmt.Errorf("failed to access `%s`: %w", path, err)
-			if os.IsNotExist(err) {
-				cause = fmt.Errorf("`%s` does not exist", path)
-			}
+		if err := checkPassthroughPath(path); err != nil {
 			out.Blank()
-			out.Fatal("Failed to load the pass-through models", cause)
+			out.Fatal("Failed to load the pass-through models", err)
 		}
 	}
+}
+
+// checkPassthroughPath rejects a pass-through path that the analyzer would read nothing from
+// although it holds something: the analyzer reads only the YAML files in the tree of the path.
+// A directory with no files holds no models and is accepted, as for the dataflow models.
+func checkPassthroughPath(path string) error {
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("`%s` does not exist", path)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to access `%s`: %w", path, err)
+	}
+	if !info.IsDir() {
+		if !isYAMLFile(path) {
+			return fmt.Errorf("`%s` is not a YAML file", path)
+		}
+		return nil
+	}
+
+	var yamlFiles, otherFiles bool
+	err = filepath.WalkDir(path, func(file string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if file == path {
+			return nil
+		}
+		if strings.HasPrefix(entry.Name(), ".") {
+			if entry.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		if isYAMLFile(file) {
+			yamlFiles = true
+			return filepath.SkipAll
+		}
+		otherFiles = true
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to read `%s`: %w", path, err)
+	}
+	if otherFiles && !yamlFiles {
+		return fmt.Errorf("`%s` contains no YAML files", path)
+	}
+	return nil
+}
+
+func isYAMLFile(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	return ext == ".yaml" || ext == ".yml"
 }
 
 // compileDataflowModels returns the class directories of the dataflow models. It compiles a

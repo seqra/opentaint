@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // ResolveAll returns the class directories for every model path, in the order the paths
@@ -71,7 +72,9 @@ func checkClasspathAgrees(classDirs []string) error {
 //  3. A directory tree that contains these items.
 //
 // Compiled classes in any other layout are rejected: a build output records the project
-// that the models come from, and plain classes do not.
+// that the models come from, and plain classes do not. A directory with no files holds no
+// models, and Resolve returns none for it, so that a directory kept for models can be passed
+// before it has any. A directory with files and no models is rejected.
 func Resolve(path string, builder Builder) ([]string, error) {
 	return resolve(path, builder)
 }
@@ -103,10 +106,38 @@ func resolve(path string, builder Builder) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(classDirs) == 0 {
+	if len(classDirs) == 0 && hasFiles(path) {
 		return nil, &ProjectNeededError{Path: path, Reason: NoModels}
 	}
 	return classDirs, nil
+}
+
+// hasFiles reports whether the tree of dir holds a file other than a hidden one, such as
+// .gitkeep, or one in a generated directory.
+func hasFiles(dir string) bool {
+	found := false
+	_ = filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			// What cannot be read is not known to be empty.
+			found = true
+			return filepath.SkipAll
+		}
+		if path == dir {
+			return nil
+		}
+		if strings.HasPrefix(entry.Name(), ".") || skippedDirs[entry.Name()] {
+			if entry.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !entry.IsDir() {
+			found = true
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	return found
 }
 
 func resolveDir(dir string, builder Builder) ([]string, error) {
