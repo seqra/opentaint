@@ -98,7 +98,7 @@ On the first run, the compiled project model is cached in `~/.opentaint/cache/`.
 
 | Flag | Description |
 |------|-------------|
-| `--output`, `-o` | Path to the SARIF report (default: `<model-dir>/sources/opentaint.sarif`) |
+| `--output`, `-o` | Path to the SARIF report (default: `.opentaint/results/report.sarif` in the project) |
 | `--recompile` | Force recompilation even if a cached project model exists |
 | `--project-model` | Path to a pre-compiled project model (skips compilation) |
 | `--timeout`, `-t` | Timeout for analysis (default: `15m`) |
@@ -288,7 +288,7 @@ To remove all cached models:
 opentaint prune
 ```
 
-When `--output` is not specified, the SARIF report is written next to the cached model at `<model-dir>/sources/opentaint.sarif`.
+When `--output` is not specified, the SARIF report is written to `.opentaint/results/report.sarif` in the project. With `--project-model`, it is written to `<model-dir>/sources/opentaint.sarif`.
 
 ## Global Options
 

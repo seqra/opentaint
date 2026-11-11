@@ -99,9 +99,15 @@ func GetProjectLogPath(projectPath string) (string, error) {
 	return filepath.Join(logsDir, ProjectPathSlugHash(absPath)), nil
 }
 
-// DefaultSarifReportPath returns the default SARIF report location for a given
-// project model path: <projectModelPath>/sources/opentaint.sarif
-func DefaultSarifReportPath(projectModelPath string) string {
+// DefaultSarifReportPath returns the default SARIF report location of a scan of the sources
+// in projectRoot: <projectRoot>/.opentaint/results/report.sarif
+func DefaultSarifReportPath(projectRoot string) string {
+	return filepath.Join(projectRoot, ".opentaint", "results", "report.sarif")
+}
+
+// ProjectModelSarifReportPath returns the default SARIF report location of a scan of a project
+// model: <projectModelPath>/sources/opentaint.sarif
+func ProjectModelSarifReportPath(projectModelPath string) string {
 	return filepath.Join(projectModelPath, "sources", "opentaint.sarif")
 }
 
