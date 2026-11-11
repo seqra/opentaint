@@ -77,7 +77,7 @@ var compileCmd = &cobra.Command{
 		}
 		sb.FieldNode("Project", absProjectRoot).
 			FieldNode("Project model", absOutputProjectModelPath).
-			FieldNode("Autobuilder", utils.ArtifactVersionWithPath(globals.ArtifactByKind("autobuilder"))).
+			FieldGroup("Autobuilder", componentItems(resolveJarComponent("autobuilder"), false)...).
 			Render()
 
 		if DryRunCompile {

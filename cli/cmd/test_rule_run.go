@@ -27,10 +27,10 @@ var testRuleRunCmd = &cobra.Command{
 	Use:   "run <test-project-model>",
 	Short: "Run rule tests on a compiled test project",
 	Long:  "Run rule tests on a compiled test project.\n\nArguments:\n  <test-project-model>  Test project compiled with `opentaint compile`",
-	Example: `  # Run the tests with the built-in rules
+	Example: `  # Run the tests with the built-in ruleset
   opentaint test rule run .opentaint/test-compiled/my-rule/sinks
 
-  # Run the tests with your own rules
+  # Run the tests with a custom ruleset
   opentaint test rule run .opentaint/test-compiled/my-rule/sinks \
     --ruleset .opentaint/rules
 
@@ -114,7 +114,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	if opts.includeBuiltinRules {
 		rulesPath, err := utils.EnsureRulesPath(out)
 		if err != nil {
-			fail("Failed to prepare the built-in rules", err)
+			fail("Failed to prepare the built-in ruleset", err)
 		}
 		builder.AddRuleSet(rulesPath)
 	}
@@ -198,7 +198,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 func init() {
 	testRuleCmd.AddCommand(testRuleRunCmd)
 
-	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleset, "ruleset", nil, "Rules file or directory to load in addition to the built-in rules (repeatable)")
+	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleset, "ruleset", nil, "Rules file or directory to load in addition to the built-in ruleset (repeatable)")
 	addTestRunFlags(testRuleRunCmd, &testRulesOutputDir, &testRulesTimeout, &testRulesMaxMemory, &testRulesDataflow, &testRulesPassthrough)
 	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleID, "rule-id", nil, "Run only the rule with this ID (repeatable)")
 }

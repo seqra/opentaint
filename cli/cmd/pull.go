@@ -17,13 +17,13 @@ import (
 
 var pullCmd = &cobra.Command{
 	Use:   "pull",
-	Short: "Download the analyzer, autobuilder, rules, and Java runtime",
-	Long:  "Download the analyzer, autobuilder, built-in rules, and Java runtime. Use it to prepare a machine ahead of time: other commands download a missing component on their own.",
+	Short: "Download the analyzer, autobuilder, ruleset, and Java runtime",
+	Long:  "Download the analyzer, autobuilder, built-in ruleset, and Java runtime. Use it to prepare a machine ahead of time: other commands download a missing component on their own.",
 	Run: func(cmd *cobra.Command, args []string) {
 		out.Section("OpenTaint Pull").
 			Field("Autobuilder", globals.Config.Autobuilder.Version).
 			Field("Analyzer", globals.Config.Analyzer.Version).
-			Field("Rules", globals.Config.Rules.Version).
+			Field("Built-in ruleset", globals.Config.Rules.Version).
 			Field("Java", globals.Config.Java.Version).
 			Render()
 
@@ -70,7 +70,7 @@ var pullCmd = &cobra.Command{
 }
 
 func downloadArtifact(spec globals.ArtifactDef, installNextToBinary, installCurrent bool) (*tree.Tree, error) {
-	node := out.GroupItem(fmt.Sprintf("%s %s", spec.Name, spec.Version))
+	node := out.GroupItem(fmt.Sprintf("%s %s", spec.Label(), spec.Version))
 
 	if spec.Override != "" {
 		node.Child(fmt.Sprintf("Config override active: scans use %s", spec.Override))

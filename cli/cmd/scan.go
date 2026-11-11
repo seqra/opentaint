@@ -135,7 +135,7 @@ func addRuleIDFlag(cmd *cobra.Command) {
 func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().DurationVarP(&globals.Config.Scan.Timeout, "timeout", "t", 900*time.Second, "Analysis timeout (e.g. 30m, 1h)")
 
-	cmd.Flags().StringArrayVar(&scanFlags.Ruleset, "ruleset", []string{"builtin"}, "Rules file or directory, or builtin for the built-in rules (repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.Ruleset, "ruleset", []string{"builtin"}, "Rules file or directory, or builtin for the built-in ruleset (repeatable)")
 
 	cmd.Flags().BoolVar(&scanFlags.SemgrepCompatibilitySarif, "semgrep-compatibility-sarif", true, "Use Semgrep-style dotted rule IDs in the SARIF report")
 	cmd.Flags().StringVarP(&scanFlags.SarifReportPath, "output", "o", "", "Path to the SARIF report (default: .opentaint/results/report.sarif in the project)")
@@ -229,7 +229,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		case "builtin":
 			rulesPath, err := utils.GetRulesPath(globals.Config.Rules.Version)
 			if err != nil {
-				out.Fatal("Failed to find the built-in rules", err)
+				out.Fatal("Failed to find the built-in ruleset", err)
 			}
 
 			absRuleSetPaths = append(absRuleSetPaths, RulesetType{Path: rulesPath, Builtin: true})
@@ -308,7 +308,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 	if hasBuiltin {
 		if _, err := utils.EnsureRulesPath(out); err != nil {
-			fail("Failed to prepare the built-in rules", err)
+			fail("Failed to prepare the built-in ruleset", err)
 		}
 	}
 
@@ -627,16 +627,21 @@ func printScanInfo(cmd *cobra.Command, plan scanPlan, absSemgrepRuleLoadTracePat
 		if plan.projectCachePath != "" {
 			sb.FieldNode("Project model", plan.absProjectModel)
 		}
-		sb.FieldNode("Autobuilder", utils.ArtifactVersionWithPath(globals.ArtifactByKind("autobuilder")))
+		sb.FieldGroup("Autobuilder", componentItems(resolveJarComponent("autobuilder"), false)...)
 	} else {
 		sb.FieldNode("Project model", plan.absProjectModel)
 	}
-	sb.FieldNode("Analyzer", utils.ArtifactVersionWithPath(globals.ArtifactByKind("analyzer")))
+	sb.FieldGroup("Analyzer", componentItems(resolveJarComponent("analyzer"), false)...)
 	for _, r := range absRuleSetPaths {
 		if r.Builtin {
-			sb.FieldNode("Bundled ruleset", utils.ArtifactVersionWithPath(globals.ArtifactByKind("rules")))
+			rules := healthComponent{
+				version: utils.ArtifactVersion(globals.ArtifactByKind("rules")),
+				path:    r.Path,
+				present: utils.PathExists(r.Path),
+			}
+			sb.FieldGroup("Built-in ruleset", componentItems(rules, false)...)
 		} else {
-			sb.FieldNode("User ruleset", r.Path)
+			sb.FieldNode("Custom ruleset", r.Path)
 		}
 	}
 	sb.Render()
