@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -162,6 +163,13 @@ func TestResolveRebuildsWhenDependencyPinChanges(t *testing.T) {
 	}
 }
 
+// writeBuiltOutput writes a model build output with one class of the given content.
+func writeBuiltOutput(t *testing.T, dir, classContent string) {
+	t.Helper()
+	writeFile(t, filepath.Join(dir, descriptorName), "sourceProject: /elsewhere\n")
+	writeFile(t, filepath.Join(dir, classesDirName, "com", "example", "Model.class"), classContent)
+}
+
 func TestResolveBuiltOutput(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, descriptorName), "sourceProject: \"/somewhere\"\n")
@@ -180,16 +188,18 @@ func TestResolveBuiltOutput(t *testing.T) {
 	}
 }
 
-func TestResolvePrecompiledClassDirectory(t *testing.T) {
+// Plain compiled classes do not record the project that they come from, so only the
+// output of a model build is accepted.
+func TestResolveRejectsPlainClassDirectory(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "com", "example", "Model.class"), "bytecode")
 
-	classDirs, err := Resolve(dir, newFakeBuilder(t))
-	if err != nil {
-		t.Fatalf("Resolve: %v", err)
+	_, err := Resolve(dir, newFakeBuilder(t))
+	if err == nil {
+		t.Fatal("expected a plain class directory to be rejected")
 	}
-	if len(classDirs) != 1 || classDirs[0] != dir {
-		t.Fatalf("Resolve() = %v, want [%s]", classDirs, dir)
+	if want := "`" + dir + "` is not"; !strings.Contains(err.Error(), want) {
+		t.Errorf("error should name the class directory, got: %v", err)
 	}
 }
 
@@ -223,30 +233,39 @@ func TestResolveTreeOfProjects(t *testing.T) {
 	}
 }
 
-// A tree may mix model projects with directories that are already compiled. Resolving
-// such a tree must build the project and keep the compiled classes, not collapse the
-// whole tree into one classpath root.
-func TestResolveTreeMixingProjectAndClasses(t *testing.T) {
+// A tree may hold model projects, but not plain classes beside them.
+func TestResolveTreeRejectsPlainClasses(t *testing.T) {
 	root := t.TempDir()
-	project := newProject(t, filepath.Join(root, "models"))
+	newProject(t, filepath.Join(root, "models"))
 	precompiled := filepath.Join(root, "precompiled")
 	writeFile(t, filepath.Join(precompiled, "com", "example", "Other.class"), "bytecode")
 
-	builder := newFakeBuilder(t)
-	classDirs, err := Resolve(root, builder)
-	if err != nil {
-		t.Fatalf("Resolve: %v", err)
+	_, err := Resolve(root, newFakeBuilder(t))
+	if err == nil {
+		t.Fatal("expected plain classes in a tree of projects to be rejected")
 	}
-	want := []string{ClassesDir(BuildDir(project)), precompiled}
-	if !reflect.DeepEqual(classDirs, want) {
-		t.Fatalf("Resolve() = %v, want %v", classDirs, want)
-	}
-	if !reflect.DeepEqual(builder.compiled, []string{project}) {
-		t.Fatalf("expected the project to be compiled, got %v", builder.compiled)
+	if want := "`" + precompiled + "` is not"; !strings.Contains(err.Error(), want) {
+		t.Errorf("error should name the class directory, got: %v", err)
 	}
 }
 
-// The same tree with a previous build output in place of the loose classes.
+// A class beside a model project belongs to neither.
+func TestResolveTreeRejectsClassBesideProject(t *testing.T) {
+	root := t.TempDir()
+	newProject(t, filepath.Join(root, "models"))
+	stray := filepath.Join(root, "Stray.class")
+	writeFile(t, stray, "bytecode")
+
+	_, err := Resolve(root, newFakeBuilder(t))
+	if err == nil {
+		t.Fatal("expected a class beside a project to be rejected")
+	}
+	if want := "`" + stray + "` is not"; !strings.Contains(err.Error(), want) {
+		t.Errorf("error should name the class file, got: %v", err)
+	}
+}
+
+// A tree may mix model projects with build outputs.
 func TestResolveTreeMixingProjectAndBuildOutput(t *testing.T) {
 	root := t.TempDir()
 	project := newProject(t, filepath.Join(root, "models"))
@@ -265,38 +284,6 @@ func TestResolveTreeMixingProjectAndBuildOutput(t *testing.T) {
 	}
 	if !reflect.DeepEqual(builder.compiled, []string{project}) {
 		t.Fatalf("expected the project to be compiled, got %v", builder.compiled)
-	}
-}
-
-// A directory that holds classes of its own and a project below it belongs to neither
-// shape: putting it on the classpath hides the project, recursing past it drops the
-// classes.
-func TestResolveRejectsAmbiguousDirectory(t *testing.T) {
-	root := t.TempDir()
-	newProject(t, filepath.Join(root, "models"))
-	writeFile(t, filepath.Join(root, "Stray.class"), "bytecode")
-
-	_, err := Resolve(root, newFakeBuilder(t))
-	if err == nil {
-		t.Fatal("expected a directory holding both classes and a project to be rejected")
-	}
-	if !strings.Contains(err.Error(), root) {
-		t.Errorf("error should name the ambiguous directory, got: %v", err)
-	}
-}
-
-// A plain class directory resolves to its root, not to the package directory that
-// happens to hold the class files.
-func TestResolvePrecompiledClassDirectoryKeepsItsRoot(t *testing.T) {
-	root := t.TempDir()
-	writeFile(t, filepath.Join(root, "com", "example", "Model.class"), "bytecode")
-
-	classDirs, err := Resolve(root, newFakeBuilder(t))
-	if err != nil {
-		t.Fatalf("Resolve: %v", err)
-	}
-	if !reflect.DeepEqual(classDirs, []string{root}) {
-		t.Fatalf("Resolve() = %v, want the classpath root %s", classDirs, root)
 	}
 }
 
@@ -321,14 +308,14 @@ func TestResolveAllAcceptsIdenticalCopiesOfAClass(t *testing.T) {
 	root := t.TempDir()
 	first := filepath.Join(root, "first")
 	second := filepath.Join(root, "second")
-	writeFile(t, filepath.Join(first, "com", "example", "Model.class"), "bytecode")
-	writeFile(t, filepath.Join(second, "com", "example", "Model.class"), "bytecode")
+	writeBuiltOutput(t, first, "bytecode")
+	writeBuiltOutput(t, second, "bytecode")
 
 	classDirs, err := ResolveAll([]string{first, second}, newFakeBuilder(t))
 	if err != nil {
 		t.Fatalf("ResolveAll: %v", err)
 	}
-	if !reflect.DeepEqual(classDirs, []string{first, second}) {
+	if !reflect.DeepEqual(classDirs, []string{ClassesDir(first), ClassesDir(second)}) {
 		t.Fatalf("ResolveAll() = %v, want both directories", classDirs)
 	}
 }
@@ -339,8 +326,8 @@ func TestResolveAllRejectsClashingClasses(t *testing.T) {
 	root := t.TempDir()
 	first := filepath.Join(root, "first")
 	second := filepath.Join(root, "second")
-	writeFile(t, filepath.Join(first, "com", "example", "Model.class"), "one bytecode")
-	writeFile(t, filepath.Join(second, "com", "example", "Model.class"), "another bytecode")
+	writeBuiltOutput(t, first, "one bytecode")
+	writeBuiltOutput(t, second, "another bytecode")
 
 	_, err := ResolveAll([]string{first, second}, newFakeBuilder(t))
 	if err == nil {
@@ -353,16 +340,14 @@ func TestResolveAllRejectsClashingClasses(t *testing.T) {
 	}
 }
 
-func TestResolveLooseSourcesReportsMigration(t *testing.T) {
+func TestResolveLooseSourcesNeedAProject(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "com", "example", "Model.java"), "package com.example;\n")
 
 	_, err := Resolve(dir, newFakeBuilder(t))
-	if err == nil {
-		t.Fatal("expected loose .java sources to be rejected")
-	}
-	if !strings.Contains(err.Error(), "opentaint model init") {
-		t.Errorf("error should point at the migration command, got: %v", err)
+	var needed *ProjectNeededError
+	if !errors.As(err, &needed) || needed.Reason != NoModels || needed.Path != dir {
+		t.Fatalf("expected loose .java sources in %s to need a model project, got: %v", dir, err)
 	}
 }
 
