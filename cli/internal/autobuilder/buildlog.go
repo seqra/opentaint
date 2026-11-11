@@ -58,3 +58,28 @@ func isCompilerDiagnostic(message string) bool {
 	// Match javac and kotlinc error formats.
 	return strings.Contains(message, ": error: ") || strings.HasPrefix(message, "e: ")
 }
+
+// BuildFailure returns what Gradle reports under "What went wrong" in an autobuilder log. It is
+// the cause of a build that failed before the compiler reported anything, such as a dependency
+// that can not be resolved.
+func BuildFailure(logPath string) string {
+	log, err := os.ReadFile(logPath)
+	if err != nil {
+		return ""
+	}
+
+	var failure []string
+	inside := false
+	for _, line := range strings.Split(string(log), "\n") {
+		message := strings.TrimRight(buildOutput(line), " \t")
+		if !inside {
+			inside = message == "* What went wrong:"
+			continue
+		}
+		if strings.TrimSpace(message) == "" || strings.HasPrefix(message, "* ") {
+			break
+		}
+		failure = append(failure, "  "+message)
+	}
+	return strings.Join(failure, "\n")
+}

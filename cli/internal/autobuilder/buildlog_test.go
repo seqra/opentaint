@@ -101,3 +101,40 @@ func TestCompilerDiagnosticsMissingLog(t *testing.T) {
 		t.Errorf("CompilerDiagnostics() = %q, want \"\" for an unreadable log", got)
 	}
 }
+
+func TestBuildFailure(t *testing.T) {
+	tests := []struct {
+		name string
+		log  string
+		want string
+	}{
+		{
+			name: "dependency that can not be resolved",
+			log: `15:15:15.944 |D| ProjectResolver - > Task :compileJava FAILED
+15:15:15.944 |D| ProjectResolver - FAILURE: Build failed with an exception.
+15:15:15.944 |D| ProjectResolver - * What went wrong:
+15:15:15.944 |D| ProjectResolver - Execution failed for task ':compileJava'.
+15:15:15.944 |D| ProjectResolver - > Could not resolve all files for configuration ':compileClasspath'.
+15:15:15.945 |D| ProjectResolver -    > Could not find com.example:does-not-exist:1.0.
+15:15:15.945 |D| ProjectResolver - * Try:
+15:15:15.945 |D| ProjectResolver - > Run with --info or --debug option to get more log output.
+`,
+			want: "  Execution failed for task ':compileJava'.\n" +
+				"  > Could not resolve all files for configuration ':compileClasspath'.\n" +
+				"     > Could not find com.example:does-not-exist:1.0.",
+		},
+		{
+			name: "no failure summary",
+			log:  "20:22:13.630 |I| ProjectResolver - BUILD SUCCESSFUL in 4s\n",
+			want: "",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := BuildFailure(writeLog(t, test.log)); got != test.want {
+				t.Errorf("BuildFailure() =\n%q\nwant\n%q", got, test.want)
+			}
+		})
+	}
+}
