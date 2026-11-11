@@ -180,13 +180,15 @@ Rule and model test runs write `test-result.json` and `test-results.sarif` to th
 Compiles Java and Kotlin projects and generates project models for analysis. Useful when you want to separate compilation from scanning or need to inspect the project model.
 
 ```bash
-opentaint compile --output ./my-project-model /path/to/project
-opentaint scan --project-model ./my-project-model
+opentaint compile .
+opentaint scan --project-model .opentaint/project
 ```
+
+The project model goes to `.opentaint/project` in the project unless `--output` says otherwise. The output path must not exist: to compile again, remove the previous project model or choose another `--output`.
 
 | Flag | Description |
 |------|-------------|
-| `--output`, `-o` | Path to the result project model (required) |
+| `--output`, `-o` | Path to the new project model, which must not exist (default: `.opentaint/project` in the project) |
 | `--dry-run` | Validate inputs and show what would run without compiling |
 | `--log-file` | Path to the log file (default: `<cache-dir>/logs/<timestamp>.log`) |
 

@@ -45,7 +45,7 @@ var compileCmd = &cobra.Command{
 	Short: "Compile a Java or Kotlin project into a project model",
 	Long:  "Compile a Java or Kotlin project into a project model. Use it to scan one build more than once or to compile a test project.\n\nArguments:\n  <source-path>  Project root",
 	Example: `  # Compile the project in the current directory
-  opentaint compile . -o .opentaint/project
+  opentaint compile .
 
   # Compile a rule test project
   opentaint compile .opentaint/test-projects/my-rule/sinks \
@@ -67,6 +67,9 @@ var compileCmd = &cobra.Command{
 			activateLoggingForProject(CompileLogFile, absProjectRoot)
 		}
 
+		if OutputProjectModelPath == "" {
+			OutputProjectModelPath = utils.DefaultProjectModelPath(projectRoot)
+		}
 		outputProjectModelPath := filepath.Clean(OutputProjectModelPath)
 		absOutputProjectModelPath := log.AbsPathOrExit(outputProjectModelPath, "output")
 
@@ -105,7 +108,7 @@ var compileCmd = &cobra.Command{
 		}); err == nil {
 			out.Blank()
 			printCompileSummary(absOutputProjectModelPath)
-			suggest(compileNextStep(absProjectRoot, projectRoot, absOutputProjectModelPath))
+			suggest(compileNextStep(absProjectRoot, projectRoot, outputProjectModelPath))
 		} else {
 			failWith(1, "Failed to compile the project", err, dockerCompileSuggestion())
 		}
@@ -115,8 +118,7 @@ var compileCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(compileCmd)
 
-	compileCmd.Flags().StringVarP(&OutputProjectModelPath, "output", "o", "", "Path to the new project model, which must not exist (required)")
-	_ = compileCmd.MarkFlagRequired("output")
+	compileCmd.Flags().StringVarP(&OutputProjectModelPath, "output", "o", "", "Path to the new project model, which must not exist (default: .opentaint/project in the project)")
 	compileCmd.Flags().BoolVar(&DryRunCompile, "dry-run", false, "Validate inputs and show what would run without compiling")
 	compileCmd.Flags().StringVar(&CompileLogFile, "log-file", "", logFileUsage)
 }
@@ -198,12 +200,12 @@ func compileProjectWithLogs(absOutputProjectModelPath, absProjectRoot, autobuild
 }
 
 // compileNextStep returns the hint printed after a successful compile. A compiled test project is
-// tested, not scanned.
-func compileNextStep(absProjectRoot, projectRoot, absOutputProjectModelPath string) (string, string) {
+// tested, not scanned. projectRoot and projectModelPath are as the user wrote them.
+func compileNextStep(absProjectRoot, projectRoot, projectModelPath string) (string, string) {
 	if !utils.PathExists(filepath.Join(absProjectRoot, testproject.RuleTestFileName)) {
-		return "To scan the compiled project model, run:", utils.BuildScanCommandFromCompile(projectRoot, absOutputProjectModelPath)
+		return "To scan the compiled project model, run:", utils.BuildScanCommandFromCompile(projectRoot, projectModelPath)
 	}
-	projectModel := shellQuote(absOutputProjectModelPath)
+	projectModel := shellQuote(projectModelPath)
 	if testmodel.IsTestProject(absProjectRoot) {
 		return "To run the model tests, run:", "opentaint test model run " + projectModel + " --dataflow-models <model-project>"
 	}

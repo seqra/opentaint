@@ -99,6 +99,12 @@ func GetProjectLogPath(projectPath string) (string, error) {
 	return filepath.Join(logsDir, ProjectPathSlugHash(absPath)), nil
 }
 
+// DefaultProjectModelPath returns the default output of `opentaint compile` for a project:
+// <projectRoot>/.opentaint/project
+func DefaultProjectModelPath(projectRoot string) string {
+	return filepath.Join(projectRoot, ".opentaint", "project")
+}
+
 // DefaultSarifReportPath returns the default SARIF report location of a scan of the sources
 // in projectRoot: <projectRoot>/.opentaint/results/report.sarif
 func DefaultSarifReportPath(projectRoot string) string {
