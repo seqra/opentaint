@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/seqra/opentaint/internal/models"
 	"github.com/seqra/opentaint/internal/output"
@@ -39,7 +40,9 @@ var compileModelsCmd = &cobra.Command{
 		}
 
 		if err := models.Build(projectPath, outputPath, newModelBuilder(analyzerJarPath)); err != nil {
-			out.Fatal("Failed to compile the model project", err)
+			out.Error("Failed to compile the model project", err)
+			out.Suggestions(modelBuildLogSuggestions(err)...)
+			os.Exit(1)
 		}
 
 		out.Section("Model Compile Summary").

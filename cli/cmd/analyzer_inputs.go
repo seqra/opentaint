@@ -39,7 +39,7 @@ func addDataflowModels(b *AnalyzerBuilder, paths []string, analyzerJarPath strin
 	classDirs, err := models.ResolveAll(absPaths, newModelBuilder(analyzerJarPath))
 	if err != nil {
 		out.Error("Failed to load the dataflow models", err)
-		out.Suggestions(modelProjectSuggestions(err, paths, absPaths)...)
+		out.Suggestions(append(modelProjectSuggestions(err, paths, absPaths), modelBuildLogSuggestions(err)...)...)
 		os.Exit(1)
 	}
 	for _, classDir := range classDirs {

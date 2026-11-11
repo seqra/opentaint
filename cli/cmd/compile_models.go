@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -76,14 +77,40 @@ func (b *modelBuilder) Compile(projectDir, projectModelDir string) error {
 		return compileProjectWithLogs(projectModelDir, projectDir, autobuilderJarPath, logsFile, true, javaRunner)
 	}
 	if err := out.RunWithSpinner("Compiling model project "+filepath.Base(projectDir), compile); err != nil {
-		// Show compiler errors when they are available.
-		// Keep the full log if no compiler error is available.
+		output.LogInfof("Model project %s failed to build: %v", projectDir, err)
+		// The compiler errors say all there is to say, so the log goes.
 		if diagnostics := autobuilder.CompilerDiagnostics(logsFile); diagnostics != "" {
-			return fmt.Errorf("model project %s failed to compile:\n%s", projectDir, diagnostics)
+			_ = os.RemoveAll(logsDir)
+			return fmt.Errorf("model project `%s` failed to compile:\n%s", projectDir, diagnostics)
 		}
-		return fmt.Errorf("failed to compile model project %s (build log: %s): %w", projectDir, logsFile, err)
+		return &modelBuildError{project: projectDir, log: logsFile, reason: autobuilder.BuildFailure(logsFile)}
 	}
 
 	_ = os.RemoveAll(logsDir)
 	return nil
+}
+
+// modelBuildError reports a model project that failed to build for a reason other than a
+// compiler error, such as a dependency that can not be resolved. Its build log holds the details.
+type modelBuildError struct {
+	project string
+	log     string
+	// reason is what the build tool reported, if it reported anything.
+	reason string
+}
+
+func (e *modelBuildError) Error() string {
+	if e.reason == "" {
+		return fmt.Sprintf("model project `%s` failed to build", e.project)
+	}
+	return fmt.Sprintf("model project `%s` failed to build:\n%s", e.project, e.reason)
+}
+
+// modelBuildLogSuggestions points at the build log of a model project that failed to build.
+func modelBuildLogSuggestions(err error) []output.Suggestion {
+	var buildErr *modelBuildError
+	if !errors.As(err, &buildErr) {
+		return nil
+	}
+	return []output.Suggestion{{Description: "To see the full details, open the build log:", Command: buildErr.log}}
 }
