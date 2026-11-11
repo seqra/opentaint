@@ -54,6 +54,11 @@ func (p *Printer) Warn(message string) {
 	fmt.Fprintln(p.w, p.theme.Warning.Render("Warning: "+message)) //nolint:errcheck
 }
 
+// WarnDetails prints `Warning: <message>` and, under it, the details, one on each line.
+func (p *Printer) WarnDetails(message string, details ...string) {
+	p.problem(p.theme.Warning.Render("Warning: "+message), details)
+}
+
 // Warnf prints `Warning: <message>` with a formatted message.
 func (p *Printer) Warnf(format string, a ...any) {
 	p.Warn(fmt.Sprintf(format, a...))
