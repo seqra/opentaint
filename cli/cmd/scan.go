@@ -464,19 +464,14 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		}
 	}
 
+	var ruleLoadIssues load_trace.RuleLoadIssues
 	if el != nil {
-		ruleLoadTraceSummary := load_trace.CollectRuleLoadTraceSummary(el, nonBuiltinRulesetPaths)
-
-		res := load_trace.CollectRulesetLoadErrorsSummary(ruleLoadTraceSummary)
-		ruleLoadErrorsResult := &res
-
-		var sarifSummary sarif.Summary
-		if report != nil {
-			sarifSummary = sarif.GenerateSummary(report)
+		rulesetPaths := make([]string, 0, len(absRuleSetPaths))
+		for _, r := range absRuleSetPaths {
+			rulesetPaths = append(rulesetPaths, r.Path)
 		}
-		load_trace.PrintRuleStatisticsTree(out, ruleLoadErrorsResult, absSemgrepRuleLoadTracePath, sarifSummary)
-
-		load_trace.PrintSyntaxErrorReport(out, ruleLoadTraceSummary)
+		ruleLoadIssues = load_trace.CollectRuleLoadIssues(el, rulesetPaths)
+		ruleLoadIssues.Print(out)
 	}
 
 	var suggestions []output.Suggestion
@@ -496,6 +491,9 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		reachabilityTracePath := filepath.Join(filepath.Dir(absSarifReportPath), "debug-ifds-fact-reachability.sarif")
 		if cfg.DebugFactReachabilitySarif && utils.PathExists(reachabilityTracePath) {
 			extraOutputs = append(extraOutputs, out.FieldItem("Reachability trace", reachabilityTracePath))
+		}
+		if el != nil && (!ruleLoadIssues.Empty() || globals.Config.Output.Debug) {
+			extraOutputs = append(extraOutputs, out.FieldItem("Rule load trace", absSemgrepRuleLoadTracePath))
 		}
 		printSarifSummary(report, absSarifReportPath, sarif.Filters{}, sarif.ListingOptions{MaxNestingLevel: -1}, extraOutputs...)
 		switch {

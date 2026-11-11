@@ -203,7 +203,9 @@ func indentTreeBlock(s string) string {
 		if lines[i] == "" {
 			continue
 		}
-		lines[i] = "  " + lines[i]
+		// The tree pads the lines of a multi-line item to one width, and the padding would
+		// wrap a narrow terminal.
+		lines[i] = "  " + strings.TrimRight(lines[i], " ")
 	}
 
 	return strings.Join(lines, "\n")
