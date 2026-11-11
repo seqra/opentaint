@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"slices"
 
 	"github.com/seqra/opentaint/internal/models"
 	"github.com/seqra/opentaint/internal/output"
@@ -24,11 +23,34 @@ func addPassthroughModelsFlag(cmd *cobra.Command, paths *[]string) {
 	addDeprecatedFlagAlias(cmd.Flags(), "passthrough-models", "passthrough-approximations")
 }
 
-// addDataflowModels resolves the paths to compiled model directories.
-// It rebuilds a model project when its inputs change.
-func addDataflowModels(b *AnalyzerBuilder, paths []string, analyzerJarPath string) {
+// checkModelInputs stops the command when a model path holds no models. It builds nothing, so
+// it runs with the other input checks, before the long steps.
+func checkModelInputs(dataflow, passthrough []string) {
+	for _, path := range dataflow {
+		if err := models.Check(path); err != nil {
+			out.Blank()
+			out.Error("Failed to load the dataflow models", err)
+			out.Suggestions(modelProjectSuggestions(err)...)
+			os.Exit(1)
+		}
+	}
+	for _, path := range passthrough {
+		if _, err := os.Stat(path); err != nil {
+			cause := fmt.Errorf("failed to access `%s`: %w", path, err)
+			if os.IsNotExist(err) {
+				cause = fmt.Errorf("`%s` does not exist", path)
+			}
+			out.Blank()
+			out.Fatal("Failed to load the pass-through models", cause)
+		}
+	}
+}
+
+// compileDataflowModels returns the class directories of the dataflow models. It compiles a
+// model project when its inputs change.
+func compileDataflowModels(paths []string, analyzerJarPath string) []string {
 	if len(paths) == 0 {
-		return
+		return nil
 	}
 
 	absPaths := make([]string, 0, len(paths))
@@ -36,20 +58,23 @@ func addDataflowModels(b *AnalyzerBuilder, paths []string, analyzerJarPath strin
 		absPaths = append(absPaths, log.AbsPathOrExit(modelPath, "dataflow-models"))
 	}
 
-	classDirs, err := models.ResolveAll(absPaths, newModelBuilder(analyzerJarPath))
+	builder := newModelBuilder(analyzerJarPath)
+	classDirs, err := models.ResolveAll(absPaths, builder)
 	if err != nil {
+		// A failed compile shows as a failed step, which separates the error from the output
+		// above. Other errors need the blank line.
+		if !builder.failed {
+			out.Blank()
+		}
 		out.Error("Failed to load the dataflow models", err)
-		out.Suggestions(append(modelProjectSuggestions(err, paths, absPaths), modelBuildLogSuggestions(err)...)...)
+		out.Suggestions(modelBuildLogSuggestions(err)...)
 		os.Exit(1)
 	}
-	for _, classDir := range classDirs {
-		b.AddDataflowApproximations(classDir)
-	}
+	return classDirs
 }
 
 // modelProjectSuggestions returns the next steps for a model path that needs a model project.
-// paths and absPaths are the model paths as the user wrote them and as absolute paths.
-func modelProjectSuggestions(err error, paths, absPaths []string) []output.Suggestion {
+func modelProjectSuggestions(err error) []output.Suggestion {
 	var needed *models.ProjectNeededError
 	if !errors.As(err, &needed) {
 		return nil
@@ -59,9 +84,7 @@ func modelProjectSuggestions(err error, paths, absPaths []string) []output.Sugge
 	// take in: their models have to be written anew.
 	projectArg := "<model-project>"
 	if needed.Reason != models.PlainClasses {
-		if i := slices.Index(absPaths, needed.Path); i >= 0 {
-			projectArg = shellQuote(paths[i])
-		}
+		projectArg = shellQuote(needed.Path)
 	}
 	return []output.Suggestion{{
 		Description: "To create a model project, run:",
