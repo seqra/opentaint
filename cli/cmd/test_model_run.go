@@ -39,7 +39,7 @@ var testModelRunCmd = &cobra.Command{
 
 		runTestProject(args[0], testProjectOptions{
 			label:             "Model tests",
-			passedLine:        "All model tests passed.",
+			kind:              "model",
 			tempDir:           "opentaint-test-models-*",
 			rulesets:          []string{ruleDir},
 			outputDir:         testModelOutputDir,

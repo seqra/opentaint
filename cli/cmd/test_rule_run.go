@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/seqra/opentaint/internal/analyzer"
 	"github.com/seqra/opentaint/internal/output"
 	"github.com/seqra/opentaint/internal/utils"
+	"github.com/seqra/opentaint/internal/utils/java"
 	"github.com/seqra/opentaint/internal/utils/log"
 	"github.com/spf13/cobra"
 )
@@ -41,7 +43,7 @@ var testRuleRunCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		runTestProject(args[0], testProjectOptions{
 			label:               "Rule tests",
-			passedLine:          "All rule tests passed.",
+			kind:                "rule",
 			tempDir:             "opentaint-test-rules-*",
 			rulesets:            testRulesRuleset,
 			outputDir:           testRulesOutputDir,
@@ -57,7 +59,7 @@ var testRuleRunCmd = &cobra.Command{
 
 type testProjectOptions struct {
 	label               string
-	passedLine          string
+	kind                string
 	tempDir             string
 	rulesets            []string
 	outputDir           string
@@ -146,53 +148,133 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		fail("Failed to find Java for the analyzer", err)
 	}
 
-	cmdErr, err := scanProject(builder, javaRunner)
-	if err != nil {
+	var cmdErr *java.JavaCommandError
+	// The spinner shows a failed analyzer run as failed, and the error is printed below.
+	if err := out.RunWithSpinner("Running "+opts.kind+" tests", func() error {
+		var runErr error
+		cmdErr, runErr = scanProject(builder, javaRunner)
+		if runErr == nil && cmdErr != nil {
+			return cmdErr
+		}
+		return runErr
+	}); err != nil && cmdErr == nil {
 		fail("Failed to run the analyzer", err)
 	}
 	analyzerFail := analyzer.Classify(cmdErr)
 
-	resultPath := filepath.Join(outputDir, "test-result.json")
-	out.Printf("Results directory: %s", outputDir)
-	out.Printf("Test results:     %s", resultPath)
-
 	if analyzerFail != nil {
 		out.Errorf("%s", analyzerFail.Message)
 		suggestions := appendLogSuggestion(nil)
-		if analyzerLog, ok := analyzerLogSuggestion(analyzerFail, builder.LogsFile()); ok {
+		if analyzerLog, ok := analyzerLogSuggestion(analyzerFail, keepAnalyzerLog(builder.LogsFile(), outputDir)); ok {
 			suggestions = append(suggestions, analyzerLog)
 		}
-		hint := output.Suggestion{
-			Description: "To stream the analyzer output, re-run with --debug:",
-			Command:     withFlag(rerunWithoutDryRun(), "--debug"),
-		}
 		if retry, ok := retrySuggestion(analyzerFail.ExitCode, opts.timeout, opts.maxMemory); ok {
-			hint = retry
+			suggestions = append(suggestions, retry)
 		}
-		out.Suggestions(append(suggestions, hint)...)
+		out.Suggestions(suggestions...)
 		os.Exit(analyzerFail.ExitCode)
 	}
 
+	resultPath := filepath.Join(outputDir, "test-result.json")
 	tr, err := analyzer.LoadTestResult(resultPath)
 	if err != nil {
 		fail("Failed to read the test results", err)
 	}
-	out.Printf("Passed: %d, failed: %d (false negatives: %d, false positives: %d, skipped: %d), disabled: %d",
-		len(tr.Success), tr.Failed(), len(tr.FalseNegative), len(tr.FalsePositive), len(tr.Skipped), len(tr.Disabled))
 
-	viewResultsCommand := utils.NewSummaryCommand(filepath.Join(outputDir, "test-results.sarif")).WithShowFindings().Build()
-
-	if tr.Failed() > 0 {
-		out.Printf("%s failed", opts.label)
-		out.Suggestions(append(appendLogSuggestion(nil), output.Suggestion{
-			Description: "To inspect the failing samples, run:",
-			Command:     viewResultsCommand,
-		})...)
-		os.Exit(2)
+	if tr.Failed() == 0 && len(tr.Success) == 0 {
+		out.Warnf("No %s tests ran", opts.kind)
+		return
+	}
+	if tr.Failed() == 0 {
+		out.Successf("%s", passedLine(opts.kind, len(tr.Success), len(tr.Disabled)))
+		return
 	}
 
-	out.Successf("%s", opts.passedLine)
-	suggest("To view the test results, run:", viewResultsCommand)
+	printFailedTests(opts, tr, resultPath)
+	suggestions := append(appendLogSuggestion(nil), output.Suggestion{
+		Description: "To inspect the failing samples, run:",
+		Command:     utils.NewSummaryCommand(filepath.Join(outputDir, "test-results.sarif")).WithShowFindings().Build(),
+	})
+	out.Suggestions(suggestions...)
+	os.Exit(2)
+}
+
+// printFailedTests prints the number of passed tests and the failed samples by category.
+func printFailedTests(opts testProjectOptions, tr *analyzer.TestResult, resultPath string) {
+	sb := out.Section(strings.ToUpper(opts.kind[:1])+opts.kind[1:]+" Test Results").
+		Field("Passed", len(tr.Success))
+	for _, category := range []struct {
+		name    string
+		samples []analyzer.TestSampleInfo
+	}{
+		{"False negatives", tr.FalseNegative},
+		{"False positives", tr.FalsePositive},
+	} {
+		if len(category.samples) == 0 {
+			continue
+		}
+		names := make([]any, len(category.samples))
+		for i, sample := range category.samples {
+			names[i] = sample.Name()
+		}
+		sb.Child(out.GroupItem(out.FieldItem(category.name, len(category.samples)), names...))
+	}
+	if len(tr.Skipped) > 0 {
+		sb.Child(out.GroupItem(out.FieldItem("Skipped", len(tr.Skipped)), skippedByRule(tr.Skipped)...))
+	}
+	if len(tr.Disabled) > 0 {
+		sb.Field("Disabled", len(tr.Disabled))
+	}
+	sb.Field("Results", resultPath).Render()
+
+	out.Blank()
+	out.Printf("%s failed: %d of %d", opts.label, tr.Failed(), tr.Failed()+len(tr.Success))
+}
+
+// skippedByRule groups the skipped samples under the ID of their rule, in the order in which the
+// rules first appear. A sample is skipped when the analyzer loaded no rule or several rules with
+// that ID.
+func skippedByRule(samples []analyzer.TestSampleInfo) []any {
+	var ruleIDs []string
+	byRule := map[string][]any{}
+	for _, sample := range samples {
+		id := sample.Rule.ID()
+		if _, ok := byRule[id]; !ok {
+			ruleIDs = append(ruleIDs, id)
+		}
+		byRule[id] = append(byRule[id], sample.Name())
+	}
+	groups := make([]any, len(ruleIDs))
+	for i, id := range ruleIDs {
+		groups[i] = out.GroupItem(id, byRule[id]...)
+	}
+	return groups
+}
+
+// passedLine says that all the tests of kind ("rule" or "model") passed, with their number.
+func passedLine(kind string, passed, disabled int) string {
+	line := fmt.Sprintf("All %d %s tests passed", passed, kind)
+	if passed == 1 {
+		line = fmt.Sprintf("1 %s test passed", kind)
+	}
+	if disabled > 0 {
+		line += fmt.Sprintf(", %d disabled", disabled)
+	}
+	return line
+}
+
+// keepAnalyzerLog copies the analyzer log of a failed run into dir, next to the results, and
+// returns the path of the copy. On an error it returns logsFile.
+func keepAnalyzerLog(logsFile, dir string) string {
+	if logsFile == "" {
+		return ""
+	}
+	kept := filepath.Join(dir, filepath.Base(logsFile))
+	if err := utils.CopyFile(logsFile, kept); err != nil {
+		output.LogDebugf("Failed to copy the analyzer log to %s: %v", kept, err)
+		return logsFile
+	}
+	return kept
 }
 
 func init() {
