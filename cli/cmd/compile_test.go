@@ -25,15 +25,24 @@ func TestCompileNextStep(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	ruleTestFile := writeRuleTest(t)
+
 	for name, tc := range map[string]struct{ dir, want string }{
 		"project":             {plain, "opentaint scan "},
-		"rule tests":          {ruleTest, "opentaint test rule run /out"},
+		"rule tests":          {ruleTest, "opentaint test rule run /out --ruleset " + filepath.Join(ruleTest, testrule.MarkersDir)},
 		"model tests":         {modelTest, "opentaint test model run /out --dataflow-models <model-project>"},
-		"rule-test.yaml only": {writeRuleTest(t), "opentaint test rule run /out"},
+		"rule-test.yaml only": {ruleTestFile, "opentaint test rule run /out"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if _, command := compileNextStep(tc.dir, tc.dir, "/out"); !strings.HasPrefix(command, tc.want) {
-				t.Errorf("command = %q, want the prefix %q", command, tc.want)
+			_, command := compileNextStep(tc.dir, tc.dir, "/out")
+			if name == "project" {
+				if !strings.HasPrefix(command, tc.want) {
+					t.Errorf("command = %q, want the prefix %q", command, tc.want)
+				}
+				return
+			}
+			if command != tc.want {
+				t.Errorf("command = %q, want %q", command, tc.want)
 			}
 		})
 	}
