@@ -11,6 +11,7 @@ import (
 	"github.com/seqra/opentaint/internal/globals"
 	"github.com/seqra/opentaint/internal/testmodel"
 	"github.com/seqra/opentaint/internal/testproject"
+	"github.com/seqra/opentaint/internal/testrule"
 	"github.com/seqra/opentaint/internal/utils"
 	"github.com/seqra/opentaint/internal/utils/java"
 	"github.com/seqra/opentaint/internal/utils/log"
@@ -209,5 +210,9 @@ func compileNextStep(absProjectRoot, projectRoot, projectModelPath string) (stri
 	if testmodel.IsTestProject(absProjectRoot) {
 		return "To run the model tests, run:", "opentaint test model run " + projectModel + " --dataflow-models <model-project>"
 	}
-	return "To run the rule tests, run:", "opentaint test rule run " + projectModel
+	command := "opentaint test rule run " + projectModel
+	if utils.PathExists(filepath.Join(absProjectRoot, testrule.MarkersDir)) {
+		command += " --ruleset " + shellQuote(joinUserPath(projectRoot, testrule.MarkersDir))
+	}
+	return "To run the rule tests, run:", command
 }
