@@ -9,6 +9,7 @@ import (
 
 	"github.com/seqra/opentaint/internal/analyzer"
 	"github.com/seqra/opentaint/internal/output"
+	"github.com/seqra/opentaint/internal/testmodel"
 	"github.com/seqra/opentaint/internal/utils"
 	"github.com/seqra/opentaint/internal/utils/java"
 	"github.com/seqra/opentaint/internal/utils/log"
@@ -69,7 +70,15 @@ type testProjectOptions struct {
 	dataflowModels      []string
 	passthroughModels   []string
 	includeBuiltinRules bool
+	// harnessRule loads the harness rule of the model tests. It is written to
+	// <test-project-model>/test-rules on every run: a ruleset is a directory, because the tests
+	// name the rule by its path in the ruleset, and a fresh copy keeps the tests on the rule of
+	// this CLI version.
+	harnessRule bool
 }
+
+// harnessRuleDir is the directory of the harness rule in a model test project model.
+const harnessRuleDir = "test-rules"
 
 func runTestProject(projectModelArg string, opts testProjectOptions) {
 	projectPath := log.AbsPathOrExit(projectModelArg, "project-model")
@@ -128,6 +137,17 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	for _, rs := range opts.rulesets {
 		absPath := log.AbsPathOrExit(rs, "ruleset")
 		builder.AddRuleSet(absPath)
+	}
+
+	if opts.harnessRule {
+		ruleDir := filepath.Join(projectPath, harnessRuleDir)
+		if err := os.MkdirAll(ruleDir, 0o755); err != nil {
+			out.Fatal("Failed to write the harness rule", err)
+		}
+		if _, err := testmodel.WriteFixedRule(ruleDir); err != nil {
+			out.Fatal("Failed to write the harness rule", err)
+		}
+		builder.AddRuleSet(ruleDir)
 	}
 
 	for _, ruleID := range opts.ruleIDs {
