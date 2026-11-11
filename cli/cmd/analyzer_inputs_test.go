@@ -84,8 +84,8 @@ func TestCheckPassthroughPath(t *testing.T) {
 		"hidden files only":      {hidden, ""},
 		"YAML among other files": {mixed, ""},
 		"YAML file":              {file, ""},
-		"no YAML files":          {other, "contains no YAML files"},
-		"file that is not YAML":  {notYAML, "is not a YAML file"},
+		"no YAML files":          {other, "contains no pass-through models"},
+		"file that is not YAML":  {notYAML, "is not a pass-through model"},
 		"missing":                {filepath.Join(root, "missing"), "does not exist"},
 	} {
 		t.Run(name, func(t *testing.T) {
