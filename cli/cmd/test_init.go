@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/seqra/opentaint/internal/output"
 	"github.com/seqra/opentaint/internal/testmodel"
@@ -34,25 +33,26 @@ var testRuleInitCmd = &cobra.Command{
 		} else if initRuleSourcesOnly {
 			kinds = []string{"sources"}
 		}
+		suggestions := []output.Suggestion{
+			{Description: "To learn more about the test projects, see:", Command: usageDocsURL + "#rule-tests"},
+		}
 		for _, kind := range kinds {
-			dir := filepath.Join(args[0], kind)
+			dir := joinUserPath(args[0], kind)
+			existing := testproject.Exists(dir)
+			warnReplacingBuildFile(existing, dir)
 			if err := testproject.Bootstrap(dir, "opentaint-rule-test-"+kind, initRuleProjectDeps); err != nil {
 				out.Fatal("Failed to create the test project", err)
 			}
 			if err := testrule.Scaffold(dir); err != nil {
 				out.Fatal("Failed to create the test samples", err)
 			}
-			out.Printf("Rule test project (%s) initialized at `%s`", kind, dir)
-		}
-		var suggestions []output.Suggestion
-		for _, kind := range kinds {
-			dir := filepath.Join(args[0], kind)
-			modelDir := filepath.Join(dir, "model")
-			suggestions = append(suggestions,
-				output.Suggestion{Description: fmt.Sprintf("To add %s test samples, edit:", kind), Command: filepath.Join(dir, testproject.RuleTestFileName)},
-				output.Suggestion{Description: fmt.Sprintf("To compile the %s test project, run:", kind), Command: fmt.Sprintf("opentaint compile %s -o %s", shellQuote(dir), shellQuote(modelDir))},
-				output.Suggestion{Description: fmt.Sprintf("To run the %s tests, run:", kind), Command: fmt.Sprintf("opentaint test rule run %s", shellQuote(modelDir))},
-			)
+			printInitResult(existing, "the "+kind+" test project", dir)
+
+			goal := "To run the tests after you add the samples, first run:"
+			if len(kinds) > 1 {
+				goal = fmt.Sprintf("To run the %s tests after you add the samples, first run:", kind)
+			}
+			suggestions = append(suggestions, output.Suggestion{Description: goal, Command: "opentaint compile " + shellQuote(dir)})
 		}
 		out.Suggestions(suggestions...)
 	},
@@ -67,21 +67,40 @@ var testModelInitCmd = &cobra.Command{
     --dependency com.fasterxml.jackson.core:jackson-databind:2.17.2`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := testproject.Bootstrap(args[0], "model-test-project", initModelProjectDeps); err != nil {
+		dir := args[0]
+		existing := testproject.Exists(dir)
+		warnReplacingBuildFile(existing, dir)
+		if err := testproject.Bootstrap(dir, "model-test-project", initModelProjectDeps); err != nil {
 			out.Fatal("Failed to create the test project", err)
 		}
-		if err := testmodel.Scaffold(args[0]); err != nil {
+		if err := testmodel.Scaffold(dir); err != nil {
 			out.Fatal("Failed to create the test samples", err)
 		}
-		out.Printf("Model test project initialized at `%s`", args[0])
-		dir := args[0]
-		modelDir := filepath.Join(dir, "model")
+		printInitResult(existing, "the model test project", dir)
 		out.Suggestions(
-			output.Suggestion{Description: "To add your test samples, edit:", Command: filepath.Join(dir, testproject.RuleTestFileName)},
-			output.Suggestion{Description: "To compile the test project, run:", Command: fmt.Sprintf("opentaint compile %s -o %s", shellQuote(dir), shellQuote(modelDir))},
-			output.Suggestion{Description: "To run the tests, run:", Command: fmt.Sprintf("opentaint test model run %s --dataflow-models <model-project>", shellQuote(modelDir))},
+			output.Suggestion{Description: "To learn more about the test projects, see:", Command: usageDocsURL + "#model-tests"},
+			output.Suggestion{Description: "To run the tests after you add the samples, first run:", Command: "opentaint compile " + shellQuote(dir)},
 		)
 	},
+}
+
+// warnReplacingBuildFile warns, when init runs on an existing project, that the build file is
+// replaced: the dependencies that it had and that --dependency does not repeat are gone. Init
+// keeps the files of the user, such as the models, the samples, and rule-test.yaml.
+func warnReplacingBuildFile(existing bool, dir string) {
+	if existing {
+		out.WarnDetails(fmt.Sprintf("Replacing the build file of `%s`", dir),
+			"the new build file has only the libraries from --dependency")
+	}
+}
+
+// printInitResult prints what init did with the project at dir.
+func printInitResult(existing bool, project, dir string) {
+	if existing {
+		out.Successf("Updated %s at `%s`", project, dir)
+		return
+	}
+	out.Successf("Created %s at `%s`", project, dir)
 }
 
 func init() {
