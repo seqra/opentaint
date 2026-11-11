@@ -25,6 +25,27 @@ type Printer struct {
 	isTTY   bool
 	quiet   bool
 	profile colorprofile.Profile
+	// started reports that the output has begun. A blank line separates parts of the output,
+	// so none is printed before the first part.
+	started bool
+}
+
+// startTracker forwards to its writer and records that the output has begun.
+type startTracker struct {
+	io.Writer
+	started *bool
+}
+
+func (t startTracker) Write(b []byte) (int, error) {
+	if len(b) > 0 {
+		*t.started = true
+	}
+	return t.Writer.Write(b)
+}
+
+// setWriter makes w the writer of the output.
+func (p *Printer) setWriter(w io.Writer) {
+	p.w = startTracker{Writer: w, started: &p.started}
 }
 
 var ansiEscapePattern = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]`)
@@ -35,14 +56,15 @@ func New() *Printer {
 	w := os.Stdout
 	tty := term.IsTerminal(int(w.Fd()))
 	cw := colorprofile.NewWriter(w, os.Environ())
-	return &Printer{
+	p := &Printer{
 		baseW:   w,
-		w:       cw,
 		debugW:  colorprofile.NewWriter(os.Stderr, os.Environ()),
 		theme:   DefaultTheme(cw.Profile),
 		isTTY:   tty,
 		profile: cw.Profile,
 	}
+	p.setWriter(cw)
+	return p
 }
 
 // NewWithWriter creates a Printer that writes to the given writer.
@@ -52,14 +74,15 @@ func NewWithWriter(w io.Writer) *Printer {
 		tty = term.IsTerminal(int(f.Fd()))
 	}
 	cw := colorprofile.NewWriter(w, os.Environ())
-	return &Printer{
+	p := &Printer{
 		baseW:   w,
-		w:       cw,
 		debugW:  colorprofile.NewWriter(os.Stderr, os.Environ()),
 		theme:   DefaultTheme(cw.Profile),
 		isTTY:   tty,
 		profile: cw.Profile,
 	}
+	p.setWriter(cw)
+	return p
 }
 
 // NewConfigured creates a Printer and applies color/quiet configuration.
@@ -80,18 +103,18 @@ func (p *Printer) Configure(colorMode string, quiet bool) {
 	switch mode {
 	case "never":
 		p.profile = colorprofile.NoTTY
-		p.w = &colorprofile.Writer{Forward: p.baseW, Profile: p.profile}
+		p.setWriter(&colorprofile.Writer{Forward: p.baseW, Profile: p.profile})
 		p.theme = PlainTheme()
 		return
 	case "always":
 		p.profile = colorprofile.TrueColor
-		p.w = &colorprofile.Writer{Forward: p.baseW, Profile: p.profile}
+		p.setWriter(&colorprofile.Writer{Forward: p.baseW, Profile: p.profile})
 		p.theme = DefaultTheme(p.profile)
 		return
 	default:
 		cw := colorprofile.NewWriter(p.baseW, os.Environ())
 		p.profile = cw.Profile
-		p.w = cw
+		p.setWriter(cw)
 	}
 
 	colored := p.resolveColor(colorMode)
@@ -161,6 +184,9 @@ func (p *Printer) Printf(format string, a ...any) {
 
 // Blank prints an empty line.
 func (p *Printer) Blank() {
+	if !p.started {
+		return
+	}
 	fmt.Fprintln(p.w) //nolint:errcheck
 }
 

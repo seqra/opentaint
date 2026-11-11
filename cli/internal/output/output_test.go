@@ -237,16 +237,30 @@ func TestSuggest(t *testing.T) {
 	}
 }
 
-func TestSuggestQuietHasLeadingBlankLine(t *testing.T) {
+func TestSuggestQuietSeparatesWithBlankLine(t *testing.T) {
 	var buf bytes.Buffer
 	p := NewWithWriter(&buf)
 	p.Configure("never", true)
 
+	p.Print("Scan completed")
 	p.Suggest("Try this approach", "opentaint scan --output result.sarif /project")
 
 	got := buf.String()
-	if !strings.HasPrefix(got, "\n") {
-		t.Errorf("expected leading blank line in quiet mode, got %q", got)
+	if !strings.HasPrefix(got, "Scan completed\n\n") {
+		t.Errorf("expected a blank line before the suggestions in quiet mode, got %q", got)
+	}
+}
+
+func TestBlankBeforeAnyOutputIsSkipped(t *testing.T) {
+	var buf bytes.Buffer
+	p := NewWithWriter(&buf)
+	p.Configure("never", false)
+
+	p.Blank()
+	p.Print("first")
+	p.Blank()
+	if got, want := buf.String(), "first\n\n"; got != want {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }
 
@@ -307,8 +321,9 @@ func TestInteractiveBlank(t *testing.T) {
 	}
 
 	p.isTTY = true
+	p.Print("first")
 	p.InteractiveBlank()
-	if buf.String() != "\n" {
+	if buf.String() != "first\n\n" {
 		t.Errorf("expected single blank line for interactive UI, got %q", buf.String())
 	}
 }
