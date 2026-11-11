@@ -207,7 +207,7 @@ opentaint scan --project-model ./my-project-model \
 
 Pin the versions the target application uses. Those pins are the models' compile environment: they, and nothing about the project under analysis, decide what the models compile against, so a model compiles identically wherever it is applied.
 
-`--dataflow-models` accepts a model project, the compiled models that `opentaint compile models` writes, or a directory holding any of those, so a tree with one project per batch can be passed as a single flag. Compiled classes in any other layout are rejected. Paths may overlap, and the same models may be reached twice, but two of them may not offer the same class with different content — which copy an analysis would read is not defined. Projects are built on demand and rebuilt when their sources, their dependency pins, or the compiler change.
+`--dataflow-models` accepts a model project, the compiled models that `opentaint compile models` writes, or a directory holding any of those, so a tree with one project per batch can be passed as a single flag. An empty directory adds no models, so `.opentaint/dataflow` can be passed before it holds any. Compiled classes in any other layout, and a directory with other files and no models, are rejected. The same holds for `--passthrough-models`: an empty directory adds nothing, and a directory with files but no YAML files is rejected. Paths may overlap, and the same models may be reached twice, but two of them may not offer the same class with different content — which copy an analysis would read is not defined. Projects are built on demand and rebuilt when their sources, their dependency pins, or the compiler change.
 
 | Command | Description |
 |---------|-------------|
