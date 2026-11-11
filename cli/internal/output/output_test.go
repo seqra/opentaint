@@ -2,6 +2,7 @@ package output
 
 import (
 	"bytes"
+	"errors"
 	"regexp"
 	"strings"
 	"testing"
@@ -358,5 +359,25 @@ func TestIsInteractiveUIEnabledByDefault(t *testing.T) {
 
 	if !p.IsInteractiveUI() {
 		t.Fatal("expected interactive UI to be enabled in default (non-debug) mode")
+	}
+}
+
+func TestStepWithoutTerminal(t *testing.T) {
+	var buf bytes.Buffer
+	p := NewWithWriter(&buf)
+	p.Configure("never", false)
+	p.Print("header")
+
+	step := p.NewStep("Compiling model projects")
+	step.Start()
+	step.Start()
+	step.Finish(nil)
+	if got, want := buf.String(), "header\n"; got != want {
+		t.Errorf("a finished step without a terminal printed %q, want %q", got, want)
+	}
+
+	p.NewStep("Compiling model projects").Finish(errors.New("failed"))
+	if got, want := buf.String(), "header\n\n"; got != want {
+		t.Errorf("a failed step printed %q, want a blank line before the error: %q", got, want)
 	}
 }

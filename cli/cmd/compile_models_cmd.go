@@ -39,12 +39,16 @@ var compileModelsCmd = &cobra.Command{
 			out.Fatal("Failed to get the analyzer", err)
 		}
 
-		if err := models.Build(projectPath, outputPath, newModelBuilder(analyzerJarPath)); err != nil {
+		builder := newModelBuilder(analyzerJarPath, "Compiling model project")
+		err = models.Build(projectPath, outputPath, builder)
+		builder.step.Finish(err)
+		if err != nil {
 			out.Error("Failed to compile the model project", err)
 			out.Suggestions(modelBuildLogSuggestions(err)...)
 			os.Exit(1)
 		}
 
+		out.Blank()
 		out.Section("Model Compile Summary").
 			Field("Model project", projectPath).
 			Field("Compiled models written to", outputPath).

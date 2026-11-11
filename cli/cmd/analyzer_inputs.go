@@ -58,14 +58,10 @@ func compileDataflowModels(paths []string, analyzerJarPath string) []string {
 		absPaths = append(absPaths, log.AbsPathOrExit(modelPath, "dataflow-models"))
 	}
 
-	builder := newModelBuilder(analyzerJarPath)
+	builder := newModelBuilder(analyzerJarPath, "Compiling model projects")
 	classDirs, err := models.ResolveAll(absPaths, builder)
+	builder.step.Finish(err)
 	if err != nil {
-		// A failed compile shows as a failed step, which separates the error from the output
-		// above. Other errors need the blank line.
-		if !builder.failed {
-			out.Blank()
-		}
 		out.Error("Failed to load the dataflow models", err)
 		out.Suggestions(modelBuildLogSuggestions(err)...)
 		os.Exit(1)

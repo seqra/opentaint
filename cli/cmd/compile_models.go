@@ -17,12 +17,14 @@ import (
 type modelBuilder struct {
 	analyzerJarPath string
 	apiJar          []byte
-	// failed reports that a compile failed after its spinner showed it.
-	failed bool
+	// step shows the compiles: one spinner for all the projects, and none when every project
+	// is already compiled.
+	step *output.Step
 }
 
-func newModelBuilder(analyzerJarPath string) *modelBuilder {
-	return &modelBuilder{analyzerJarPath: analyzerJarPath}
+// newModelBuilder returns a builder whose compiles show as phase. The caller finishes the step.
+func newModelBuilder(analyzerJarPath, phase string) *modelBuilder {
+	return &modelBuilder{analyzerJarPath: analyzerJarPath, step: out.NewStep(phase)}
 }
 
 // Fingerprint identifies the compiler a build was produced with.
@@ -73,13 +75,9 @@ func (b *modelBuilder) Compile(projectDir, projectModelDir string) error {
 	}
 	logsFile := filepath.Join(logsDir, "model-build.log")
 
-	// Show the spinner for direct and automatic builds.
 	output.LogInfof("Compiling model project %s", projectDir)
-	compile := func() error {
-		return compileProjectWithLogs(projectModelDir, projectDir, autobuilderJarPath, logsFile, true, javaRunner)
-	}
-	if err := out.RunWithSpinner("Compiling model project "+filepath.Base(projectDir), compile); err != nil {
-		b.failed = true
+	b.step.Start()
+	if err := compileProjectWithLogs(projectModelDir, projectDir, autobuilderJarPath, logsFile, true, javaRunner); err != nil {
 		output.LogInfof("Model project %s failed to build: %v", projectDir, err)
 		// The compiler errors say all there is to say, so the log goes.
 		if diagnostics := autobuilder.CompilerDiagnostics(logsFile); diagnostics != "" {
