@@ -67,6 +67,12 @@ func (sb *SectionBuilder) FieldNode(key string, value any) *SectionBuilder {
 	return sb
 }
 
+// FieldGroup adds a key with items under it.
+func (sb *SectionBuilder) FieldGroup(key string, items ...any) *SectionBuilder {
+	sb.items = append(sb.items, sb.printer.GroupItem(sb.printer.theme.FieldKey.Render(key), items...))
+	return sb
+}
+
 // Text adds a plain text node.
 func (sb *SectionBuilder) Text(text string) *SectionBuilder {
 	sb.items = append(sb.items, text)

@@ -40,7 +40,7 @@ func init() {
 	rootCmd.AddCommand(healthCmd)
 	healthCmd.Flags().BoolVar(&healthAutobuilder, "autobuilder", false, "Print only the autobuilder JAR path")
 	healthCmd.Flags().BoolVar(&healthAnalyzer, "analyzer", false, "Print only the analyzer JAR path")
-	healthCmd.Flags().BoolVar(&healthRules, "rules", false, "Print only the built-in rules path")
+	healthCmd.Flags().BoolVar(&healthRules, "rules", false, "Print only the built-in ruleset path")
 	healthCmd.Flags().BoolVar(&healthRuntime, "runtime", false, "Print only the Java runtime path")
 }
 
@@ -82,20 +82,12 @@ func runHealth() error {
 	}
 
 	sb := out.Section("OpenTaint Health")
-	th := out.Theme()
 	var missing []string
 	for _, c := range components {
-		node := out.GroupItem(th.FieldKey.Render(c.name))
-		if c.version != "" {
-			node.Child(th.FieldValue.Render(c.version))
-		}
-		path := c.path
 		if !c.present {
-			path += "  " + th.Error.Render("missing")
 			missing = append(missing, c.name)
 		}
-		node.Child(th.FieldValue.Render(path))
-		sb.Child(node)
+		sb.FieldGroup(c.name, componentItems(c, true)...)
 	}
 	sb.Render()
 	if len(missing) > 0 {
@@ -103,6 +95,26 @@ func runHealth() error {
 		return fmt.Errorf("missing components: %s", strings.Join(missing, ", "))
 	}
 	return nil
+}
+
+// componentItems are the items of a component in a block: its version and its path. A component
+// that is not on disk has no path, or, with markMissing, a path that is marked as missing.
+func componentItems(c healthComponent, markMissing bool) []any {
+	var items []any
+	if c.version != "" {
+		items = append(items, out.FieldItem("Version", c.version))
+	}
+	switch {
+	case c.present:
+		items = append(items, out.FieldItem("Path", c.path))
+	case markMissing:
+		missing := out.Theme().Error.Render("missing")
+		if c.path != "" {
+			missing = c.path + " (" + missing + ")"
+		}
+		items = append(items, out.FieldItem("Path", missing))
+	}
+	return items
 }
 
 func resolveHealthComponent(key string) healthComponent {
@@ -126,11 +138,11 @@ func resolveJarComponent(kind string) healthComponent {
 }
 
 func resolveRulesComponent() healthComponent {
-	c := healthComponent{name: "Rules", version: utils.ArtifactVersion(globals.ArtifactByKind("rules"))}
+	c := healthComponent{name: "Built-in ruleset", version: utils.ArtifactVersion(globals.ArtifactByKind("rules"))}
 	path, err := utils.EnsureRulesPath(out)
 	c.path = path
 	if err != nil {
-		fmt.Fprint(os.Stderr, output.FormatError(fmt.Errorf("failed to prepare the built-in rules: %w", err)))
+		fmt.Fprint(os.Stderr, output.FormatError(fmt.Errorf("failed to prepare the built-in ruleset: %w", err)))
 		return c
 	}
 	c.present = utils.PathExists(path)

@@ -36,7 +36,7 @@ func ValidateScanInputs(absUserProjectRoot, absProjectModelPath, absSarifReportP
 	}
 
 	for _, ruleSetPath := range nonBuiltinRulesetPaths {
-		if err := requirePathExists(ruleSetPath, "ruleset path"); err != nil {
+		if err := requirePathExists(ruleSetPath, "ruleset"); err != nil {
 			return "", err
 		}
 	}
