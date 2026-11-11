@@ -388,8 +388,8 @@ func BuildScanCommandWithDocker(base *OpentaintCommandBuilder, projectPath, sari
 // BuildScanCommandFromCompile builds a scan command string for use after compile,
 // suggesting the next step with the compiled project model.
 func BuildScanCommandFromCompile(projectPath, projectModelPath string) string {
-	// Suggest output path based on project path
-	outputPath := filepath.Join(projectPath, "opentaint.sarif")
+	// Write the report where a scan of the sources would write it
+	outputPath := DefaultSarifReportPath(projectPath)
 
 	return NewScanCommand("").
 		WithProjectModel(projectModelPath).

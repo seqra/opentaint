@@ -138,7 +138,7 @@ func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&scanFlags.Ruleset, "ruleset", []string{"builtin"}, "Rules file or directory, or builtin for the built-in rules (repeatable)")
 
 	cmd.Flags().BoolVar(&scanFlags.SemgrepCompatibilitySarif, "semgrep-compatibility-sarif", true, "Use Semgrep-style dotted rule IDs in the SARIF report")
-	cmd.Flags().StringVarP(&scanFlags.SarifReportPath, "output", "o", "", "Path to the SARIF report (default: <project-model>/sources/opentaint.sarif)")
+	cmd.Flags().StringVarP(&scanFlags.SarifReportPath, "output", "o", "", "Path to the SARIF report (default: .opentaint/results/report.sarif in the project)")
 
 	cmd.Flags().StringArrayVar(&scanFlags.Severity, "severity", []string{"warning", "error"}, "Run only the rules of this severity: note, warning, or error (repeatable)")
 	cmd.Flags().StringVar(&globals.Config.Scan.MaxMemory, "max-memory", "8G", "Maximum analyzer heap size (e.g. 8G, 1024m)")
@@ -243,8 +243,10 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	var absSarifReportPath string
 	if cfg.SarifReportPath != "" {
 		absSarifReportPath = log.AbsPathOrExit(cfg.SarifReportPath, "output")
+	} else if cfg.ProjectModelPath == "" {
+		absSarifReportPath = utils.DefaultSarifReportPath(absUserProjectRoot)
 	} else {
-		absSarifReportPath = utils.DefaultSarifReportPath(absProjectModelPath)
+		absSarifReportPath = utils.ProjectModelSarifReportPath(absProjectModelPath)
 	}
 
 	sarifReportName := filepath.Base(absSarifReportPath)
