@@ -140,6 +140,48 @@ func (p *Printer) RunWithSpinner(phase string, run func() error) error {
 	return nil
 }
 
+// Step is a spinner that starts only when there is work, so that a step with nothing to do
+// prints nothing. It shows one spinner however many times the work starts.
+type Step struct {
+	printer *Printer
+	phase   string
+	spinner *SpinnerHandle
+	started bool
+}
+
+// NewStep returns a step that shows phase once it starts.
+func (p *Printer) NewStep(phase string) *Step {
+	return &Step{printer: p, phase: phase}
+}
+
+// Start shows the spinner, unless it already shows.
+func (s *Step) Start() {
+	if s.started {
+		return
+	}
+	s.started = true
+	if s.printer.IsInteractiveUI() {
+		s.printer.InteractiveBlank()
+		s.spinner = s.printer.StartSpinner(s.phase)
+	}
+}
+
+// Finish ends the step as RunWithSpinner ends it. A step that did not start shows nothing, and
+// an error after it is set apart from the output above by a blank line.
+func (s *Step) Finish(err error) {
+	if s.spinner == nil {
+		if err != nil {
+			s.printer.Blank()
+		}
+		return
+	}
+	if err != nil {
+		s.spinner.StopError(s.phase)
+		return
+	}
+	s.spinner.Stop(s.phase)
+}
+
 // ── Progress bar ─────────────────────────────────────────────────────
 
 // CopyWithProgress copies src to dst while displaying a progress bar
