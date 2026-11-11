@@ -22,16 +22,25 @@ func CompilerDiagnostics(logPath string) string {
 	}
 
 	var diagnostics []string
+	// Gradle repeats the compiler output in its failure summary and in the stack trace, so
+	// each line is kept once.
+	seen := make(map[string]bool)
+	add := func(message string) {
+		if !seen[message] {
+			seen[message] = true
+			diagnostics = append(diagnostics, "  "+message)
+		}
+	}
 	for _, line := range strings.Split(string(log), "\n") {
-		message := buildOutput(line)
+		message := strings.TrimSpace(buildOutput(line))
 		switch {
 		case isCompilerDiagnostic(message):
-			diagnostics = append(diagnostics, "  "+message)
+			add(message)
 		case len(diagnostics) > 0 && compilerErrorCount.MatchString(message):
 			// javac closes with a count of what it just reported. On its own the line is
 			// only something that reads like one, so it is kept as a trailer and never as
 			// the diagnostic.
-			diagnostics = append(diagnostics, "  "+message)
+			add(message)
 		}
 	}
 	return strings.Join(diagnostics, "\n")
