@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/seqra/opentaint/internal/output"
 	"github.com/seqra/opentaint/internal/testmodel"
@@ -33,9 +34,6 @@ var testRuleInitCmd = &cobra.Command{
 		} else if initRuleSourcesOnly {
 			kinds = []string{"sources"}
 		}
-		suggestions := []output.Suggestion{
-			{Description: "To learn more about the test projects, see:", Command: usageDocsURL + "#rule-tests"},
-		}
 		for _, kind := range kinds {
 			dir := joinUserPath(args[0], kind)
 			existing := testproject.Exists(dir)
@@ -47,12 +45,21 @@ var testRuleInitCmd = &cobra.Command{
 				out.Fatal("Failed to create the test samples", err)
 			}
 			printInitResult(existing, "the "+kind+" test project", dir)
+		}
 
-			goal := "To run the tests after you add the samples, first run:"
-			if len(kinds) > 1 {
-				goal = fmt.Sprintf("To run the %s tests after you add the samples, first run:", kind)
+		compile := output.Suggestion{
+			Description: "To run the tests after you add the samples, first run:",
+			Command:     testCompileCommand(args[0], kinds[0]),
+		}
+		if len(kinds) > 1 {
+			compile = output.Suggestion{
+				Description: "To run the sinks or sources tests after you add the samples, first run:",
+				Command:     testCompileCommand(args[0], "<side>"),
 			}
-			suggestions = append(suggestions, output.Suggestion{Description: goal, Command: "opentaint compile " + shellQuote(dir)})
+		}
+		suggestions := []output.Suggestion{
+			{Description: "To learn more about the test projects, see:", Command: usageDocsURL + "#rule-tests"},
+			compile,
 		}
 		out.Suggestions(suggestions...)
 	},
@@ -79,9 +86,34 @@ var testModelInitCmd = &cobra.Command{
 		printInitResult(existing, "the model test project", dir)
 		out.Suggestions(
 			output.Suggestion{Description: "To learn more about the test projects, see:", Command: usageDocsURL + "#model-tests"},
-			output.Suggestion{Description: "To run the tests after you add the samples, first run:", Command: "opentaint compile " + shellQuote(dir)},
+			output.Suggestion{Description: "To run the tests after you add the samples, first run:", Command: testCompileCommand(dir, "")},
 		)
 	},
+}
+
+// testCompileCommand returns the command that compiles a test project that init created in
+// outputDir, or in its side directory when side is not empty. The side can be a placeholder.
+// A test project in <root>/test-projects/<name> compiles to <root>/test-compiled/<name>, where
+// the skills keep it. A test project elsewhere compiles to the default of compile.
+func testCompileCommand(outputDir, side string) string {
+	project := shellQuote(joinUserPath(outputDir))
+	var compiled string
+	clean := filepath.Clean(outputDir)
+	if filepath.Base(filepath.Dir(clean)) == "test-projects" {
+		compiled = shellQuote(joinUserPath(outputDir, "..", "..", "test-compiled", filepath.Base(clean)))
+	}
+	if side != "" {
+		// The side is joined after quoting, so that a placeholder stays as it is.
+		project += string(filepath.Separator) + side
+		if compiled != "" {
+			compiled += string(filepath.Separator) + side
+		}
+	}
+	command := "opentaint compile " + project
+	if compiled != "" {
+		command += " -o " + compiled
+	}
+	return command
 }
 
 // warnReplacingBuildFile warns, when init runs on an existing project, that the build file is
