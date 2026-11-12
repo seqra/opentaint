@@ -1,13 +1,14 @@
-# Work reduction: C2, loop probes, diagnostics and handoff compaction
+# Work reduction: caller storage, C2, loop probes, diagnostics and handoff compaction
 
 12 November 2026. **Specification; no production change.** The investigation
 campaign remains stopped. This is the combined specification for handoff
 compaction and the two selected proposals from the
 [run-11 next-iteration document](../docs/design/bidirectional-run11-next-iteration-20261109.md):
 **Prune impossible C2 candidates and reject losing loop probes early**, and
-**Remove the disabled unresolved diagnostic archive**. It does not reopen
-the campaign or authorize changes to AP transfer. FULL caller-input packing
-is explained in §15; it is not selected for implementation here.
+**Remove the disabled unresolved diagnostic archive**. It also specifies the
+selected FULL caller-input storage extension in §15: diagonal mark sets and
+exact mark-changing pairs. It does not reopen the campaign or authorize
+changes to AP transfer. Production implementation remains unchanged.
 
 The rules in §§4–6 have the stated existing operator proofs. The general
 MAY rule in §7 has a checked request-language proof, but its native
@@ -16,7 +17,7 @@ the additional proof in §10.** An ND certificate that uses that MAY rule has
 the same restriction. An ND certificate using only the exact query rules
 does not have this extra gate.
 
-The two added work-reduction features (§§12–14) preserve the current complete
+The work-reduction features (§§12–15) preserve the current complete
 per-run semantic results. They do not use the weaker eventual-findings
 contract of generalized MAY coarsening. Their local proofs and source
 correspondence are in §16. They can be developed independently of §7.
@@ -55,6 +56,7 @@ and confirmation status are not covered by the weaker eventual contract.
 | Local C2 candidate lookup | Visit strict-descendant terminals which STAR/EXACT actuals always reject. | Skip only those empty-emission visits; preserve the complete ordered emission stream. |
 | Loop prefix trial | Build a full observation even after an extra admission makes equality impossible. | Reject that budget on its first exact extra admission; preserve the chosen cut and fallback. |
 | Disabled unresolved-call diagnostic | Allocate a run-1 archive and retain full facts before a no-op JVM callback. | Expose disabled state and skip archive creation, updates and callbacks. Enabled observers keep their existing protocol. |
+| FULL caller-input storage | Retain qualified originals and their current TAINT images separately. | Share exact geometry; store diagonal full marks in a set and mark-changing memberships as exact pairs. Decode the same logical inputs for existing consumers. |
 | Completed-run observations | Report, source hits, NORMAL contributors and normal Targets are collected independently. | Preserve these collections and their commit rules. |
 
 The handoff compactor applies to **FULL late local handoffs**, where the next
@@ -71,7 +73,7 @@ source permissions; Target kinds and report identities; loop liveness and
 growth gates; the field-limit schedule. Do not close a proof gap by silently
 changing one of them.
 
-For §§12–14 there is **no selected analyzer semantic change**. Trie-work and
+For §§12–15 there is **no selected analyzer semantic change**. Trie-work and
 probe counters, allocation IDs and elapsed time can differ. On common
 completed frontiers, decoded initials, summaries, demand, Targets, findings
 and confirmation status must agree. A faster run can reach a later frontier
@@ -861,15 +863,273 @@ observers still use it. Do not remove enabled deduplication or replace it
 with a diagnostic-payload key in this iteration. Those are broader changes
 from the old proposal. No data-class/key equality or report identity changes.
 
-## 15. Clarification: FULL input packing versus FLOW subsumption
+## 15. Pack FULL caller inputs with exact mark relations
 
-Packing is an exact representation proposal, **not selected here**. Its
-decoder must retain every original full-mark membership and provenance:
+This is a storage change. It selects both diagonal and mark-changing
+relations. Preserve every logical input, complete original, layer, position,
+exclusion and protection membership. Do not replace full marks by groups,
+invent FLOW inputs, or eliminate a relation because it has been packed.
+
+### 15.1 Two representations at the same geometry
+
+Let P be the exact original geometry and Q the exact current geometry.
+At a common complete owner/header, store the mark relation:
+
+```text
+{ (P,T1) → (Q,T1), (P,T3) → (Q,T3),
+  (P,T1) → (Q,T2), (P,T3) → (Q,T4) }
+
+    ↔ (P → Q) [diagonal={T1,T3}, changing={(T1,T2),(T3,T4)}]
+```
+
+Use the existing immutable full-mark `MarkSet` for the diagonal. For
+changing pairs, use an exact target-to-source map:
+
+```text
+MarkRelation:
+    diagonal: MarkSet
+    changingByTarget: Map<FullMark, MarkSet>   # target → exact source marks
+
+contains(input, output):
+    if input == output: return input in diagonal
+    return input in changingByTarget[output]
+
+add(input, output):
+    if input == output: add input to diagonal
+    else: add input to changingByTarget[output]
+
+sourcesFor(output):
+    return changingByTarget[output]
+           union ({output} if output in diagonal else {})
+```
+
+Exclude diagonal pairs from `changingByTarget`; keep both parts when both
+kinds exist at Q. The IDs are existing full runtime mark identities, checked
+as FULL and nonzero. Do not conflate them with group IDs. A map bucket is
+an exact set of pairs, not an assertion that every input mark reaches every
+output mark. One input can have several outputs; several inputs can have
+one output. The two ends can belong to different groups when the native
+relation permits it; packing adds no same-group requirement.
+
+The user example is represented as:
+
+```text
+{(P,T1)→(Q,T2), (P,T3)→(Q,T4)}
+    ↔ (P→Q)[diagonal={}, changingByTarget={T2:{T1}, T4:{T3}}]
+
+Absent pairs remain absent: T1→T4 and T3→T2 are NOT added.
+```
+
+### 15.2 Scope and complete storage keys
+
+Apply the new representation to the retained TAINT inputs of
+`CalleeSubscriptions`, within its existing per-callee directory. That
+directory belongs to `SubscriptionManager`. Keep all current admission and
+selected-call policy checks before storage. Support FULL inputs in run-1
+and later runs without changing run-1 special semantics.
+
+Pack only an existing legal singleton original with a concrete nonzero FULL
+mark and a legal TAINT packet whose marks are FULL. Existing ND originals,
+ZERO/Reach, FLOW and GROUP inputs stay on the existing scalar path. Do not
+relax native validation or change the handling of constants/cleaner
+temporaries. Existing class-uniform protection validation remains in force.
+
+```text
+FamilyKey:
+    exact callee owner and caller/context key
+    call instruction, stage ordinal, caller layer, block scope/physical ports
+    original P: base, entire path, tail, E, owning AP manager
+    native current GroupKey: kind, layer, base, E, mx, tail, protection class
+
+Within a family:
+    current geometry trie Q
+        node.exact: MarkRelation
+        node.any:   MarkRelation       # tail meaning comes from GroupKey
+```
+
+Q is a literal field path plus its EXACT/any leaf slot. A packet with many
+paths has several cells in this trie. Retain the complete GroupKey even
+for an exact-only delta whose temporary native header is simpler.
+STAR, MAY and MUST remain distinct. Do not remove static CLASS/FIELD
+anchors, intersect exclusions or erase primitive-mark policy metadata.
+Legal named statics can be stored without a new static propagation rule.
+
+The mark-erased geometry is a **private descriptor**, not an `InitialAp`
+with a synthetic FLOW mark. Reconstruct the original `InitialAp` with its
+real full mark only at a scalar boundary. Do not change `CallerRef`,
+`Subscription`, `GroupKey`, record or report equality/hashing. Private keys
+erase only the two mark coordinates; full checked geometry equality is
+required after any hash match.
+
+Keep a thin logical handle and original insertion ordinal per old native
+input group `(FamilyKey, inputMark)`. Several such handles can share one
+family/geometry trie. This metadata preserves current input order and
+group identity; it must not retain a second full `CallerRef`/Facts archive.
+Keep derived handle-to-cell-ID postings for reconstruction, adding a cell
+once when that source first occurs there. These postings reference shared
+geometry; they contain no second fact tree or full qualified input.
+
+This change does not automatically replace `LocalInputDirectory`, summary
+stores, enabled diagnostic archives or method-edge stores. Do not modify
+the generic `AddedFactAccumulator` semantics for its other owners. The
+caller directory can use a specialized backend behind its current contract.
+
+### 15.3 Exact factoring and full snapshot reconstruction
+
+For each native TAINT packet, preserve each literal `(path, leaf slot,
+outputMark)` membership. Attach its original input mark at the same cell.
+For example:
+
+```text
+P/T1 → {Q.f.$/T2, Q.g.$/T4}
+
+cell Q.f, EXACT: changingByTarget[T2] = {T1}
+cell Q.g, EXACT: changingByTarget[T4] = {T1}
+```
+
+Do not combine the output marks into one mask shared by both positions.
+That would incorrectly add Q.f/T4 and Q.g/T2. Factor multi-mark packets
+without applying subsumption, field widening, protection upgrades or
+cleaning. Each family has the same native protection class throughout.
+Plain and protected families remain independent.
+
+```text
+readNativeGroup(family, inputMark):
+    for each cell Q in that logical handle's complete cell-ID postings:
+        outputMarks = {u | cell.contains(inputMark,u)}
+        restore that exact/any leaf with outputMarks
+    restore the original complete GroupKey and protection class
+    restore CallerRef with P/inputMark and its old owner/stage/scope
+    return the SAME complete native group as scalar storage
+```
+
+A mark-specific publication may use `sourcesFor(T)` to select candidate
+originals, but each selected original receives its **complete** native
+snapshot before the existing matcher. Do not pass one decoded leaf as a
+replacement for that snapshot. Retain all target marks at all positions
+for that input mark. This matters for joins, requests and source hooks.
+
+The required invariant is stronger than equal total counts:
+
+```math
+∀ logical native group k:
+  readNativeGroup(packed,k) = scalarCurrentSnapshot(k).
+```
+
+### 15.4 Admission, growth and pending replay
+
+Keep native scalar admission as the reference, including its exact fresh
+delta. Initially, read a transient old snapshot and call the existing
+`mergeAddDelta`. Retain only the packed current cells, not that temporary
+snapshot. Direct pair-set admission may replace this reference computation
+only with the same proved native membership/delta law.
+
+```text
+admitCallerInput(subscription):
+    apply existing domain, layer and selected-call policy checks
+    if unsupported original/kind/mode: use existing scalar storage
+
+    key = FamilyKey from the ORIGINAL offered packet, not its delta
+    input = original.fullMark
+    old = readNativeGroup(key,input)           # transient; absent on first offer
+    merged, fresh = existingNativeAddOrMerge(old, offered)
+    if fresh is empty: return NO_CHANGE
+
+    for (Q, slot, output) in literalMemberships(fresh):
+        key.geometry[Q,slot].add(input,output)
+    retain/extend the old logical handle and geometry postings
+    queue exactly the existing fresh replay packet, with its complete original
+    return Admission(fresh, current=readNativeGroup(key,input))
+```
+
+`mergeAddDelta` is literal union within one GroupKey. The stored union is
+old memberships plus fresh memberships. In particular, an exact-only fresh
+packet can clear E/change its temporary any-tail header; store its cells
+under the original admitted key, just as `AddedFactAccumulator` does now.
+Use the actual native fresh packet/header for its queued replay callback.
+
+A pair repeated at the same cell adds nothing. Changing pairs are deduped
+by `(input,output)`, not by either mark alone. A new output at the same
+input is growth. A new input at the same output is a different logical
+original and must receive its own replay.
+
+The queued `fresh` value is an immutable admission-time delta. `current`
+reads the current standing union when requested, as today. If more input
+arrives before a queued callback runs, do not replace its old fresh delta
+by that later union. Retaining ordinary transient/pending scalar deltas is
+allowed; retaining a second standing scalar archive is not the design.
+
+### 15.5 Lookup, delivery and release
+
+Share geometry postings by family/cell instead of duplicating geometry for
+every mark. Keep the existing prefix/extension candidate policy and native
+matching, including opposite-direction STAR handling. Exact target buckets
+can narrow a FULL-mark candidate query. FLOW, group or other unsupported
+query selectors use the conservative existing candidate route. Never treat
+a target-mark bucket as proof of spatial or layer applicability.
+
+Expand selected family/mark memberships to logical handles, deduplicate
+by those handles and restore the old logical input/member order. Build
+the same immutable native candidate snapshots before any callback can grow
+the directory. Do not deduplicate a request batch only by family: it could
+drop another original input mark. Keep the current request-batch logical
+handle deduplication.
+
+Decode before existing summary/record application, ND joins, rules,
+cleaners, alias hooks, primitive filters, request handling and static writer
+binding. These operations still see full native originals and Facts.
+There is no new mark-changing bulk transfer in this iteration. Existing
+certified neutral adapters may be reused only within their old guards;
+`NeutralRelationBatch.from/applyPacked` do not become valid for changing
+pairs, arbitrary calls, statics or excluded shapes just because storage can
+represent them.
+
+Example of a dependency that must survive decoding:
+
+```text
+stored:  P/T → Q/U, plain
+summary: Q/U → R/T
+result:  P/T → R/T, with the existing cycle-protection decision
+```
+
+Do not substitute U for the original T or apply a representative input
+mark to an entire pair bucket. The existing scalar composer decides H from
+the real original and summary. Packing neither generates nor clears H.
+
+The table remains caller-runner owned. Publishers only queue their current
+notifications. Joined caller binding moves/freezes the same owner directory;
+it reads the same logical snapshots without creating another standing
+archive. Release geometry, mark relations, thin handles, postings and
+scalar fallback together at the existing joined close/clear point. Do not
+retain a live mutable map view in a queued callback or method summary.
+
+### 15.6 Examples for diagonal, changing and mixed relations
+
+The diagonal decoder retains every original full mark and provenance:
 
 ```text
 { p.*/T1 → arg.*/T1, p.*/T2 → arg.*/T2 }
     ↔ template(p.*, arg.*), exact full-mark mask {T1,T2}
 ```
+
+For changing pairs and mixed cells:
+
+```text
+Input at P→Q:        T1→T2, T3→T4
+Storage:            diagonal={}, byTarget[T2]={T1}, byTarget[T4]={T3}
+Publication Q/T2:    select original T1; do not select T3
+
+Add T1→T1 at Q:      diagonal={T1}; changing pairs unchanged
+Add T1→T4 at Q:      byTarget[T4]={T1,T3}; T1 now has outputs T1,T2,T4
+Repeat T1→T4:        no fresh membership, no new replay for that pair
+```
+
+If T1 and T3 arrive in reverse order, their final logical membership sets
+are equal. For each concrete arrival trace, retain that trace's original
+logical insertion order for protocol delivery. Equal membership does not
+authorize reordering existing callbacks.
+
+### 15.7 Why FLOW subsumption still does not replace input storage
 
 Neither scalar input covers the other. A hypothetical FLOW input is not a
 substitute: it does not say that T1 or T2 actually arrived. A NORMAL FLOW
@@ -916,10 +1176,62 @@ which needs its own proof, not an application of summary subsumption.
 
 The old snapshot contains 3,437,574 subscription inputs. Its identity-mark
 screen covers 2,904,846 rows in 299,300 templates, with 532,728 scalar
-fallbacks. These are potential representation counts, not counts proven
-redundant by FLOW, not native packing eligibility counts, and not byte or
-speed savings. This spec selects neither packing nor a new input-deletion
-rule.
+fallbacks. These are potential representation counts for the old diagonal
+screen, not counts proven redundant by FLOW, not eligibility counts for
+the extended storage, and not byte or speed savings. This spec now selects
+exact diagonal/changing storage. It selects no new input-deletion rule.
+
+### 15.8 Proof contract, native binding and cost
+
+[CallerMarkRelations.lean](lean/proposals/in-handoff-compaction-20261112/CallerMarkRelations.lean)
+proves the constructive finite-relation core. The model partitions a
+relation into diagonal IDs and off-diagonal pairs. Its bucket theorem
+binds those pairs to the target-to-source map above. The model proves:
+
+```text
+decode(encode(R)) = R                         # membership, not allocation IDs
+decode(add(packed,pair)) = decode(packed) ∪ {pair}
+fresh(offered,packed) = offered - decode(packed)
+targets(input) and sources(output) select exactly the stored pairs
+factor/restore preserves every literal packet coordinate for its real source
+```
+
+It also proves canonical off-diagonal separation, duplicate idempotence,
+arrival-order membership equality and different-header separation. Its
+examples keep changing pairs correlated, including multiple outputs for
+one input and multiple inputs for one output. None uses an iteration cap.
+The native bridge must preserve the complete scalar snapshot and delta,
+not just one relation-cell answer; see the
+[packing source audit](lean/proposals/in-handoff-compaction-20261112/caller-packing-source-correspondence.md).
+
+The proof covers the relation algebra and packet-coordinate factoring,
+not a future whole Kotlin directory rewrite. Bind full header/geometry
+codes injectively and validate native fact reassembly, index completeness,
+queued-fresh/current behavior, ordering and lifetime before implementation
+lands. Arbitrary existing scalar consumers must receive the exact decoded
+objects under their current contracts. This is independent of §7's open
+MAY progress proof.
+
+For a common geometry with d diagonal memberships, c changing memberships
+and t distinct changing target marks, the mark data needs one set of d IDs
+plus t target keys and their c source memberships. The existing MarkSet is
+a sorted integer set, not a new group abstraction or a promised bitmap.
+Geometry/header storage is shared; changing relations still cost space
+proportional to their actual pairs. Thin logical handles, cell-ID postings
+and candidate indexes also remain. Existing AP nodes can already be shared, so logical
+compression ratios are not retained-byte estimates.
+
+Snapshots and unsupported scalar operations can still cost a decode per
+logical input. The reference native merge may allocate transient trees;
+measure that churn and CPU cost. The selected improvement is compact
+standing storage, not a claim that rules/calls execute once for all marks.
+The source's cell-ID postings avoid scanning unrelated family geometry.
+With target-first buckets, decoding a source can still scan the changing
+target keys at those cells. An exact derived source-to-target index can
+remove that scan; count its extra storage and prove it denotes the same
+pairs. It is never an independently authoritative relation.
+Do not add mark-changing packed execution without a separate operation
+proof and semantic-scope review.
 
 ## 16. Combined proof, source correspondence and experiments
 
@@ -937,6 +1249,7 @@ pin the inspected revision. They identify the native bridge for each law:
 | Chosen prefix | Every fast trial returns the same accept/reject decision; the first accepted budget and raw fallback are equal. | Keep prefix order, bypasses and the complete enclosing comparison. |
 | Disabled diagnostics | Old and new disabled traces have equal external output; new traces retain no diagnostic archive. Enabled steps are identical. | Capability must describe an inert disabled callback; diagnostic storage is not read by transfer. |
 | Semantic state | Product-state projection is independent of the diagnostic transition. | Keep transfer/rules/subscriptions/Targets independent of `observed`. |
+| FULL caller storage | The additional 26-claim CallerMarkRelations model proves exact diagonal/changing membership, target buckets, fresh difference, packet-coordinate factoring and source-cell postings. | Preserve complete native snapshots/deltas, logical handles/order and all scalar consumer boundaries. See §15.8. |
 
 These are local operator/control proofs with explicit source bridges, not
 a new full native trie or Kotlin analyzer formalization. Native tests must
@@ -960,12 +1273,29 @@ callback parity, generic observers, ignored methods and identical semantic
 outputs. Keep the observer a usable Kotlin/Java SAM with its default-enabled
 behavior. Preserve existing real finding assertions and known test failures.
 
+For caller storage, add differential controls for diagonal-only, changing-only
+and mixed cells; one source/multiple outputs and multiple sources/one output;
+different Q positions and exact/any slots; field exclusions; both layers and
+H classes; original geometry/owner/stage separation; primitive full marks;
+legal statics; and ND/ZERO/FLOW/GROUP fallback. Reconstruct the old complete
+native snapshot after every offer, including exact-only fresh deltas under
+the original GroupKey. Test late publications/requests, T→U→T protection,
+duplicates, stale queued fresh deltas versus current growth, snapshot-before-
+callback behavior, joined writer visits and release. Compare each callback's
+complete original and Facts, not merely the final pair count.
+
 After each independently landed mechanism, repeat the baseline FULL project
 configuration without changing limits, aliases, statics or rules. Record
 visited C2 nodes/profiles/terminals, emission equality, early witnesses,
 avoided full observations/saved applications, reused trial families and
 initial allocations. Confirm zero disabled diagnostic archives and exact
 enabled diagnostics. Do not claim a factor-of-two gain from sample shares.
+
+For packing, count logical input groups, geometry cells, diagonal members,
+changing pairs/target buckets, thin handles, scalar fallbacks and native
+snapshot decodes separately. Compare retained bytes and allocation churn,
+including shared AP roots and transient native merges. The old diagonal
+screen does not measure extended-packing eligibility or its memory saving.
 
 Validate the technical changes with the same handoff-compaction setting on
 both sides. Their equality claim does not mean that enabling handoff

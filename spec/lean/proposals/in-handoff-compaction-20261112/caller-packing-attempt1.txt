@@ -1,0 +1,43 @@
+spec/lean/proposals/in-handoff-compaction-20261112/CallerMarkRelations.lean:23:23: warning: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+spec/lean/proposals/in-handoff-compaction-20261112/CallerMarkRelations.lean:61:21: warning: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+spec/lean/proposals/in-handoff-compaction-20261112/CallerMarkRelations.lean:75:19: warning: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+spec/lean/proposals/in-handoff-compaction-20261112/CallerMarkRelations.lean:137:2: error: unsolved goals
+case pos
+packed : Packed
+pair : MarkPair
+same : pair.fst = pair.snd
+⊢ pair.snd ∈ if pair.snd ∈ packed.diagonal then packed.diagonal else pair.snd :: packed.diagonal
+spec/lean/proposals/in-handoff-compaction-20261112/CallerMarkRelations.lean:138:2: error: unsolved goals
+case neg
+packed : Packed
+pair : MarkPair
+same : ¬pair.fst = pair.snd
+⊢ pair ∈ if pair ∈ packed.changing then packed.changing else pair :: packed.changing
+'CallerMarkRelations.mem_insert' depends on axioms: [propext]
+'CallerMarkRelations.decoded_membership' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.put_exact_membership' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.empty_canonical' depends on axioms: [propext]
+'CallerMarkRelations.put_canonical' depends on axioms: [propext]
+'CallerMarkRelations.put_all_exact' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.exact_decode_encode' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.exact_fresh_delta' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.duplicate_put_idempotent' depends on axioms: [propext, sorryAx]
+'CallerMarkRelations.arrival_order_membership' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.targets_exact' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.sources_exact' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.arbitrary_scalar_replies' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.different_key_separate' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.diagonal_mask_example' depends on axioms: [propext]
+'CallerMarkRelations.changing_pairs_example' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.no_cartesian_product' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.same_source_two_targets' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.two_sources_same_target' depends on axioms: [propext]

@@ -1,0 +1,43 @@
+spec/lean/proposals/in-handoff-compaction-20261112/CallerMarkRelations.lean:271:11: error: unexpected token 'at'; expected '(', ':=', '|' or term
+spec/lean/proposals/in-handoff-compaction-20261112/CallerMarkRelations.lean:271:11: error: Missing cases:
+spec/lean/proposals/in-handoff-compaction-20261112/CallerMarkRelations.lean:268:2: error: unsolved goals
+case mp.isFalse
+source geometry : Nat
+cells : List Cell
+cell : Cell
+mem : cell ∈ cells
+h✝ : ¬cell.snd.fst = source
+found : none = some geometry
+⊢ ∃ target, (geometry, source, target) ∈ cells
+spec/lean/proposals/in-handoff-compaction-20261112/CallerMarkRelations.lean:265:54: error: unsolved goals
+case mpr
+source geometry : Nat
+cells : List Cell
+⊢ (∃ target, (geometry, source, target) ∈ cells) →
+    ∃ a, a ∈ cells ∧ (if a.snd.fst = source then some a.fst else none) = some geometry
+'CallerMarkRelations.mem_insert' depends on axioms: [propext]
+'CallerMarkRelations.insert_idempotent' depends on axioms: [propext]
+'CallerMarkRelations.decoded_membership' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.put_exact_membership' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.empty_canonical' depends on axioms: [propext]
+'CallerMarkRelations.put_canonical' depends on axioms: [propext]
+'CallerMarkRelations.put_all_exact' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.exact_decode_encode' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.exact_fresh_delta' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.duplicate_put_idempotent' depends on axioms: [propext]
+'CallerMarkRelations.arrival_order_membership' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.targets_exact' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.sources_exact' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.target_bucket_membership' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.arbitrary_scalar_replies' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.different_key_separate' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.factor_packet_roundtrip' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.other_source_packet_empty' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.restore_packet_union' depends on axioms: [propext]
+'CallerMarkRelations.source_cell_postings_exact' depends on axioms: [propext, sorryAx, Quot.sound]
+'CallerMarkRelations.source_postings_union' depends on axioms: [propext]
+'CallerMarkRelations.diagonal_mask_example' depends on axioms: [propext]
+'CallerMarkRelations.changing_pairs_example' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.no_cartesian_product' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.same_source_two_targets' depends on axioms: [propext, Quot.sound]
+'CallerMarkRelations.two_sources_same_target' depends on axioms: [propext]

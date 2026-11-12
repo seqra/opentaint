@@ -5,7 +5,7 @@ It changes no analyzer code and starts no project scan. The campaign remains
 stopped. The selected contract permits different intermediate runs but must
 preserve eventual refined findings without an iteration limit.
 That weaker contract applies to generalized MAY coarsening. The added C2,
-loop-probe and disabled-diagnostic changes preserve exact semantic results
+loop-probe, disabled-diagnostic and FULL caller-storage changes preserve exact semantic results
 on common completed runs.
 
 ## Checked model
@@ -118,3 +118,39 @@ previously pinned JAR, including actual `InitialAp.toPattern` round trips.
 See [the native receipt](work-reduction-native-receipt.json). Its first
 failed Java compile is preserved separately. These are empty-E operator
 controls, not a modified-trie test, loop-adapter parity suite or project run.
+
+## Exact diagonal and changing FULL caller relations
+
+`CallerMarkRelations.lean` adds 26 constructive claims for the newly selected
+storage extension. It models diagonal mark IDs plus exact changing pairs
+at each complete geometry/header key. Its target-bucket theorem binds the
+pair list to `changingByTarget[target] = source MarkSet`.
+
+The laws cover exact decode/encode, add/union, fresh differences, duplicate
+idempotence, arrival-order membership equality, source/target selection,
+literal packet factoring/reconstruction and separation of different keys.
+They also give exact source-to-cell postings and their growth law.
+Fixtures reject Cartesian products and retain one-to-many/many-to-one pairs.
+The successful axiom audit uses only `propext` and `Quot.sound`.
+
+```sh
+lean spec/lean/proposals/in-handoff-compaction-20261112/CallerMarkRelations.lean
+```
+
+See [the packing receipt](caller-packing-receipt.json) and
+[native source correspondence](caller-packing-source-correspondence.md).
+The first compile failed on an incomplete idempotence proof; its diagnostics
+remain in `caller-packing-attempt1.*`. The corrected final source passes.
+The later parser failure during the posting extension is preserved in
+`caller-packing-attempt3.*`; it is not a successful claim.
+The model does not implement native root reconstruction or the whole caller
+protocol. Existing scalar consumers must still receive the complete native
+snapshot, not an independent callback per cell.
+
+`CallerPackingMarkSetControl.java` is a proof-side target-bucket prototype
+using the actual immutable native MarkSet. All 512 relations on three opaque
+mark IDs and sparse/snapshot controls pass: **8,325 assertions**. The
+[native receipt](caller-packing-native-receipt.json) pins its JAR and source.
+It runs no production directory, analyzer or project. Implementation must
+still pass the spec's native snapshot/delta, replay, request, order, index,
+fallback and release tests. This feature does not use the MAY progress gate.

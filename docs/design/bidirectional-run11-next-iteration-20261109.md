@@ -1,9 +1,11 @@
 # Next iteration after the run-11 measurements
 
 9 November 2026. **Design overview. Do not implement from this document.**
-Update, 12 November: ranks 1 and 3 are selected for specification in the
+Update, 12 November: ranks 1, 2 and 3 are selected for specification in the
 [combined work-reduction and handoff spec](../../spec/in-handoff-edge-compaction.md#12-prune-impossible-local-c2-descendants).
-Other ranks remain unselected. No production implementation has been made.
+Rank 2 now covers both diagonal and changing FULL mark relations; its older
+neutral-only text below is historical. Other ranks remain unselected.
+No production implementation has been made.
 Measured runtime: `14d7b63369d94f49d4c551be8405ed7719f267cc`.
 This is a new proposal based on the completed run-11 campaign. The earlier
 main-migration proposal is historical. No runtime or experiment configuration
@@ -164,13 +166,20 @@ run-2 fallback. Keep the old invalid first-budget certificate disabled.
 
 ## 2. Pack neutral FULL caller inputs
 
+The selected extension is now specified as
+[exact FULL caller-input packing](../../spec/in-handoff-edge-compaction.md#15-pack-full-caller-inputs-with-exact-mark-relations):
+use a diagonal MarkSet and exact target-to-source mark buckets, with full
+native snapshot reconstruction before existing scalar consumers. The
+counts and neutral-execution limits below describe the older candidate,
+not the eligibility or measured saving of this extension.
+
 **Why FLOW subsumption does not replace this proposal:** a FLOW summary can
 cover diagonal T→T results, but it does not record which full marks actually
 arrived at a call. The stored T input must still match a future T→U summary
 or a mark request. Packing retains those exact memberships in a mask; it
 does not delete them or emit a synthetic FLOW input. Inputs already avoided
 by existing subsumption need no packing. See the
-[code and fact trace](../../spec/in-handoff-edge-compaction.md#15-clarification-full-input-packing-versus-flow-subsumption).
+[code and fact trace](../../spec/in-handoff-edge-compaction.md#157-why-flow-subsumption-still-does-not-replace-input-storage).
 
 The new complete identity query preserves each accumulator owner and exact callee
 key. It erases only the same identity full mark T from a singleton original and

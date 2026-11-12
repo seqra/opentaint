@@ -1,0 +1,42 @@
+{
+  "checkedUtc": "2026-11-12T15:15:56.603833+00:00",
+  "command": [
+    "lean",
+    "spec/lean/proposals/in-handoff-compaction-20261112/CallerMarkRelations.lean"
+  ],
+  "leanVersion": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+  "head": "5971701619350e51e277dd0e27c23c0e4aef9bd2",
+  "sourceSha256": "5ba7379eee7b3318cd36ddb8fa0fe7b6da982b70432ca3495c976eaace88aeb8",
+  "claims": 26,
+  "exitCode": 0,
+  "allowedAxioms": [
+    "propext",
+    "Quot.sound"
+  ],
+  "status": "PASS_EXACT_CALLER_MARK_RELATION_COMPONENT",
+  "nativeSourcePins": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/AddedFacts.kt": "f4be56d72b9f18301db6bdb6c369c9fac6d356fe667d77a15f9eab7b77cd106d",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/CalleeSubscriptions.kt": "6653fc032fa8dd7e02c70c3d759ee9a35168f272c72d74de0bb6f1eabaf574b5",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SubscriptionManager.kt": "6304f727ea5d6d35edda9707fab5cbfdee33ad2ee17bff078bfc4ff2793bdb61",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/ProtocolContracts.kt": "7513bd9b11764f01c9e88fd3399dc5bb5776eb4226b5e2073876427271652475",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/JoinedCallerInputs.kt": "379b643b6c61d35d8ff7990cd319f881e72dc162fae9b64794e914135d8a5e84",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/NeutralRelationBatch.kt": "e579f8e2153b3d41a8d640d563041a921e42cfec0ce57ba7e7a4673592b1e709",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Facts.kt": "9aa496dcd49a96333843a2fa70ffc0b2284bcad7aec92a7b990667b9c3af7cf1",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Conclusions.kt": "3317e0b21ceb8c8eedf095a340b461a8d75d8eac580807e7e54edef593f7b6d4",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/TrieOps.kt": "4ee1aa18c3eeaa13c3bcf4fdd70f9d9ec012528b8d37717ac8c74f1f0d64b3f6",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/FlowBackedProtection.kt": "e94b20268d0b9cc2797fbf7c26583af3e2d4d05bdf7a6a1b1df409baf2198891",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApManager.kt": "d8a575de8fc4f65d7d589f82784e1614a1728f6284b6865e055749a02b8b02b0",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Premise.kt": "e8a6b398a0c138d64a4bf013ccd8a4ca554f453d2cfa1f05dbe75964ff022c53",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/RuleMarkCatalog.kt": "70b0759521740c6ead451a7f3819f41c307052be4af5807cc38d255258a13483",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Trie.kt": "5e04111f13d7fb9db4ad179b79d09b5792af1f49d06beefb5e3a56801ba7bb31"
+  },
+  "productionChanged": false,
+  "engineRuns": 0,
+  "projectScans": 0,
+  "wholeNativeDirectoryRewriteProved": false,
+  "earlierAttempts": [
+    "caller-packing-attempt1",
+    "caller-packing-attempt2",
+    "caller-packing-attempt3"
+  ]
+}
