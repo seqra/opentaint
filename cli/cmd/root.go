@@ -57,6 +57,7 @@ var rootCmd = &cobra.Command{
 		// Configure the output printer.
 		out.Configure(globals.Config.Output.Color, globals.Config.Output.Quiet)
 		out.SetDebug(globals.Config.Output.Debug)
+		warnRenamedCommand(cmd)
 		warnRenamedFlags(cmd)
 
 		// Reconcile install-tier version marker if needed (lightweight: a few Stat calls).

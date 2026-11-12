@@ -26,14 +26,17 @@ func deprecatedCommand(cmd *cobra.Command, oldPath, newPath string) *cobra.Comma
 		Short:  cmd.Short,
 		Long:   cmd.Long,
 		Hidden: true,
-		// Cobra checks the arguments before the run hooks, so the warning comes before an
-		// error in the arguments too.
+		// Cobra checks the arguments before the run hooks, which warn. An error in the arguments
+		// comes with the warning too.
 		Args: func(c *cobra.Command, args []string) error {
-			warnRenamedCommand(c)
 			if cmd.Args == nil {
 				return nil
 			}
-			return cmd.Args(c, args)
+			err := cmd.Args(c, args)
+			if err != nil {
+				warnRenamedCommand(c)
+			}
+			return err
 		},
 		Run:         cmd.Run,
 		Annotations: annotations,
