@@ -4,7 +4,7 @@
 HEAD: `5971701619350e51e277dd0e27c23c0e4aef9bd2`. The
 [receipt](caller-packing-receipt.json) pins the cited runtime sources.
 The selected contract is exact native logical-input storage, not eventual
-coarsening. See [the combined specification, §15](../../../in-handoff-edge-compaction.md#15-pack-full-caller-inputs-with-exact-mark-relations).
+coarsening. See [the combined specification, §6](../../../in-handoff-edge-compaction.md#6-exact-full-caller-input-storage).
 
 ## 1. Owners and native group identity
 
