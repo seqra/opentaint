@@ -49,14 +49,44 @@ func TestRulesFilePath(t *testing.T) {
 	}
 	rulesets := []string{rulesDir, rulesFile}
 
-	if got, want := rulesFilePath("java/a.yaml", rulesets), filepath.Join(rulesDir, "java", "a.yaml"); got != want {
+	if got, want := rulesFilePath("java/a.yaml", nil, rulesets), filepath.Join(rulesDir, "java", "a.yaml"); got != want {
 		t.Errorf("file in a ruleset directory: got %s, want %s", got, want)
 	}
-	if got := rulesFilePath("", rulesets); got != rulesFile {
+	if got := rulesFilePath("", nil, rulesets); got != rulesFile {
 		t.Errorf("ruleset that is a file: got %s, want %s", got, rulesFile)
 	}
-	if got := rulesFilePath("java/missing.yaml", rulesets); got != "java/missing.yaml" {
+	if got := rulesFilePath("java/missing.yaml", nil, rulesets); got != "java/missing.yaml" {
 		t.Errorf("unknown file: got %s, want the name from the trace", got)
+	}
+}
+
+func TestRulesFilePathFindsTheRuleAmongSameNames(t *testing.T) {
+	root := t.TempDir()
+	write := func(path, ruleID string) string {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("rules:\n  - id: "+ruleID+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+	fileA := write(filepath.Join(root, "a.yaml"), "rule-a")
+	fileB := write(filepath.Join(root, "b.yaml"), "rule-b")
+	builtin := filepath.Join(root, "builtin")
+	write(filepath.Join(builtin, "go", "ssti.yaml"), "ssti")
+	custom := filepath.Join(root, "custom")
+	customSSTI := write(filepath.Join(custom, "go", "ssti.yaml"), "my-ssti")
+
+	if got := rulesFilePath("", []string{"rule-b"}, []string{fileA, fileB}); got != fileB {
+		t.Errorf("two single-file rulesets: got %s, want %s", got, fileB)
+	}
+	if got := rulesFilePath("go/ssti.yaml", []string{"my-ssti"}, []string{builtin, custom}); got != customSSTI {
+		t.Errorf("one name in two rulesets: got %s, want %s", got, customSSTI)
+	}
+	if got := rulesFilePath("", nil, []string{fileA, fileB}); got != fileA {
+		t.Errorf("no rule IDs: got %s, want the first candidate %s", got, fileA)
 	}
 }
 

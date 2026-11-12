@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/seqra/opentaint/internal/output"
+	"gopkg.in/yaml.v2"
 )
 
 // issueKind is what a rule load problem means for the rules.
@@ -66,7 +68,7 @@ func CollectRuleLoadIssues(trace *SemgrepLoadTrace, rulesetPaths []string) RuleL
 	var result RuleLoadIssues
 	for _, fileTrace := range trace.FileTraces {
 		file := fileIssues{
-			path:   rulesFilePath(fileTrace.Path, rulesetPaths),
+			path:   rulesFilePath(fileTrace.Path, ruleIDsIn(fileTrace), rulesetPaths),
 			issues: issuesIn(fileTrace.Entries),
 		}
 		for _, ruleTrace := range fileTrace.RuleTraces {
@@ -94,8 +96,10 @@ func CollectRuleLoadIssues(trace *SemgrepLoadTrace, rulesetPaths []string) RuleL
 }
 
 // rulesFilePath returns the path of a rules file that the trace names relative to its ruleset.
-// A ruleset that is a single file has an empty name in the trace.
-func rulesFilePath(name string, rulesetPaths []string) string {
+// A ruleset that is a single file has an empty name in the trace. When several rulesets hold a
+// file with that name, the file that declares one of ruleIDs is taken, and else the first.
+func rulesFilePath(name string, ruleIDs []string, rulesetPaths []string) string {
+	var candidates []string
 	for _, root := range rulesetPaths {
 		info, err := os.Stat(root)
 		if err != nil {
@@ -103,7 +107,7 @@ func rulesFilePath(name string, rulesetPaths []string) string {
 		}
 		if !info.IsDir() {
 			if name == "" {
-				return root
+				candidates = append(candidates, root)
 			}
 			continue
 		}
@@ -111,10 +115,56 @@ func rulesFilePath(name string, rulesetPaths []string) string {
 			continue
 		}
 		if candidate := filepath.Join(root, filepath.FromSlash(name)); fileExists(candidate) {
-			return candidate
+			candidates = append(candidates, candidate)
 		}
 	}
-	return name
+	if len(candidates) == 0 {
+		return name
+	}
+	if len(candidates) > 1 {
+		for _, candidate := range candidates {
+			if declaresAnyRule(candidate, ruleIDs) {
+				return candidate
+			}
+		}
+	}
+	return candidates[0]
+}
+
+// ruleIDsIn returns the IDs of the rules in a file trace, as the rules file writes them.
+func ruleIDsIn(fileTrace SemgrepFileLoadTrace) []string {
+	var ids []string
+	for _, ruleTrace := range fileTrace.RuleTraces {
+		if ruleTrace != nil && ruleTrace.RuleIdInFile != "" {
+			ids = append(ids, ruleTrace.RuleIdInFile)
+		}
+	}
+	return ids
+}
+
+// declaresAnyRule reports whether the rules file at path declares a rule with one of ids.
+func declaresAnyRule(path string, ids []string) bool {
+	if len(ids) == 0 {
+		return false
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	var rulesFile struct {
+		Rules []struct {
+			ID string `yaml:"id"`
+		} `yaml:"rules"`
+	}
+	if yaml.Unmarshal(content, &rulesFile) != nil {
+		return false
+	}
+	for _, rule := range rulesFile.Rules {
+		if slices.Contains(ids, rule.ID) {
+			return true
+		}
+	}
+	return false
 }
 
 func fileExists(path string) bool {
