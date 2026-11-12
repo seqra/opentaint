@@ -363,7 +363,6 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 			}
 			failWith(1, "Failed to compile the project", err, dockerScanSuggestion(cfg, absUserProjectRoot, absSarifReportPath))
 		}
-		out.Blank()
 
 		// Mark the cache as valid, then downgrade to a reader so other scans
 		// can run the analyzer against the freshly-compiled model in parallel.
@@ -376,8 +375,8 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 				output.LogInfof("Cache lock downgrade failed, continuing under exclusive: %v", err)
 			}
 		}
-
-		printCompileResult(absProjectModelPath)
+		// The compile is a step of the scan: its spinner shows that it ended, and the header
+		// shows the path of the project model.
 	}
 
 	if err := utils.EnsureParentDir(absSarifReportPath); err != nil {

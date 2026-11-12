@@ -149,7 +149,7 @@ func compile(absProjectRoot, absOutputProjectModelPath, autobuilderJarPath strin
 }
 
 // printCompileResult prints the line that ends a successful compile. projectModelPath is as the
-// user wrote it, or absolute for a model in the cache.
+// user wrote it.
 func printCompileResult(projectModelPath string) {
 	out.Successf("Created the project model at `%s`", projectModelPath)
 }
