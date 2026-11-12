@@ -360,7 +360,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		fail("Failed to get the analyzer", err)
 	}
 	// The models compile in less time than the project, so an error in them comes first.
-	dataflowClassDirs := compileDataflowModels(cfg.DataflowModels, analyzerJarPath)
+	dataflowModels := compileDataflowModels(cfg.DataflowModels, analyzerJarPath)
 
 	if plan.needsCompilation {
 		autobuilderJarPath, err := ensureAutobuilderAvailable()
@@ -460,9 +460,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 
 	nativeBuilder.SetJarPath(analyzerJarPath)
-	for _, classDir := range dataflowClassDirs {
-		nativeBuilder.AddDataflowApproximations(classDir)
-	}
+	addDataflowModels(nativeBuilder, dataflowModels)
 
 	// Go projects: get the go-ssa-server binary (a download, or the
 	// --go-server-binary override) and give its absolute path to the analyzer

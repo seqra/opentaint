@@ -14,12 +14,17 @@ var compileModelsOutput string
 
 var compileModelsCmd = &cobra.Command{
 	Use:   "models <model-project>",
-	Short: "Compile a dataflow model project",
-	Long:  "Compile a dataflow model project.\n\nArguments:\n  <model-project>  Model project from `opentaint model init`",
+	Short: "Compile a Java dataflow model project",
+	Long:  "Compile a Java dataflow model project.\n\nArguments:\n  <model-project>  Model project from `opentaint model init`",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath := log.AbsPathOrExit(args[0], "model-project")
 		checkModelProject(args[0], projectPath)
+		if models.IsGoProject(projectPath) {
+			out.Printf("Nothing to compile: the analyzer reads the Go models in `%s` from source", args[0])
+			suggestScanWithModels(args[0])
+			return
+		}
 
 		outputPath := compileModelsOutput
 		if outputPath == "" {
@@ -50,9 +55,14 @@ var compileModelsCmd = &cobra.Command{
 			Field("Model project", projectPath).
 			Field("Compiled models", outputPath).
 			Render()
-		suggest("To scan with these models, run:",
-			fmt.Sprintf("opentaint scan <source-path> --dataflow-models %s", shellQuote(args[0])))
+		suggestScanWithModels(args[0])
 	},
+}
+
+// suggestScanWithModels suggests the scan that uses the models at projectArg.
+func suggestScanWithModels(projectArg string) {
+	suggest("To scan with these models, run:",
+		fmt.Sprintf("opentaint scan <source-path> --dataflow-models %s", shellQuote(projectArg)))
 }
 
 func init() {
@@ -72,15 +82,13 @@ func checkModelProject(path, absPath string) {
 		out.Suggestions(modelProjectSuggestions(err)...)
 		os.Exit(1)
 	}
-	if models.IsProject(absPath) {
+	if models.IsProject(absPath) || models.IsGoProject(absPath) {
 		return
 	}
 	var suggestions []output.Suggestion
 	if models.IsEmpty(absPath) {
-		suggestions = append(suggestions, output.Suggestion{
-			Description: "To create a model project, run:",
-			Command:     fmt.Sprintf("opentaint model init %s --dependency <group:artifact:version>", shellQuote(path)),
-		})
+		// Only Java models compile: the analyzer reads the Go models from source.
+		suggestions = append(suggestions, javaModelInitStep(shellQuote(path)))
 	}
 	failWith(1, message, fmt.Errorf("`%s` is not a model project", path), suggestions...)
 }

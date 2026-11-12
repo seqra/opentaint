@@ -168,9 +168,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	}
 	builder.SetJarPath(analyzerJarPath)
 
-	for _, classDir := range compileDataflowModels(opts.dataflowModels, analyzerJarPath) {
-		builder.AddDataflowApproximations(classDir)
-	}
+	addDataflowModels(builder, compileDataflowModels(opts.dataflowModels, analyzerJarPath))
 	addPassthroughModels(builder, opts.passthroughModels)
 
 	javaRunner := newAnalyzerJavaRunner(goServerEnvForModel(projectPath))
