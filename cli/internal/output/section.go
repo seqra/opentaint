@@ -2,6 +2,7 @@ package output
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -205,10 +206,19 @@ func indentTreeBlock(s string) string {
 		}
 		// The tree pads the lines of a multi-line item to one width, and the padding would
 		// wrap a narrow terminal.
-		lines[i] = "  " + strings.TrimRight(lines[i], " ")
+		lines[i] = "  " + trimTrailingSpaces(lines[i])
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+// trailingSpaces matches the spaces at the end of a line, before the color codes that may close
+// it.
+var trailingSpaces = regexp.MustCompile(`[ ]+((?:\x1b\[[0-9;]*m)*)$`)
+
+// trimTrailingSpaces removes the spaces at the end of a line and keeps the color codes after them.
+func trimTrailingSpaces(line string) string {
+	return trailingSpaces.ReplaceAllString(line, "$1")
 }
 
 // ── Header rendering ─────────────────────────────────────────────────
