@@ -1,0 +1,28 @@
+{
+  "checkedUtc": "2026-11-12T11:12:12.494369+00:00",
+  "classPins": {
+    "org/opentaint/dataflow/bidi/ap/ReferenceKt.class": "4551b0399f3238b1432f88f91f68a24857f298e64fe851fd95a49f2cbe9e0c78",
+    "org/opentaint/dataflow/bidi/ap/RestrictedInitialPolicy.class": "b4e832c371daa4f4ac16061a83881c47983448b1dc3ad61abcc0b228b6bf355b"
+  },
+  "classpathMetadataSha256": "6b9632b04727dac0ad17e3272e9cde7fcc390d60efcb7c074d42553a3946ef55",
+  "engineRuns": 0,
+  "pinnedJar": {
+    "path": "core/opentaint-dataflow-core/opentaint-dataflow/build/libs/opentaint-dataflow.jar",
+    "sha256": "e8e0328810806242a7259e7d3f2a6c72eb796db1fa4dad66b299092c6e86a91c"
+  },
+  "productionChanged": false,
+  "projectScans": 0,
+  "sourceSha256": "a675ee05b0a5d213781aae95e8ca9f0689954fe7abf4373fe7a5950989033f77",
+  "status": "PASS_NATIVE_SCALAR_AND_C2_C5_REVIEW",
+  "steps": [
+    {
+      "exitCode": 0,
+      "step": "compile"
+    },
+    {
+      "exitCode": 0,
+      "step": "execute"
+    }
+  ],
+  "wholeEngineNecessityProved": false
+}

@@ -1,0 +1,6 @@
+B2_RAW_TRANSFER X=Conclusion(fact=PathFact(base=ret, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty, demand=true) Y=Conclusion(fact=PathFact(base=ret, path=[0], tail=EXACT, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty, demand=true)
+B2_C2_EQUAL [InitialEmission(pattern=Pattern(fact=PathFact(base=ret, path=[], tail=EXACT, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty), layer=DEMAND)]
+C1_C2_DIFFERENT point=[InitialEmission(pattern=Pattern(fact=PathFact(base=arg(0), path=[0], tail=EXACT, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty), layer=DEMAND)] ancestorMAY=[InitialEmission(pattern=Pattern(fact=PathFact(base=arg(0), path=[0], tail=STAR, mark=Concrete(mark=TaintMark(id=1))), exclusion=Empty), layer=DEMAND), InitialEmission(pattern=Pattern(fact=PathFact(base=arg(0), path=[0], tail=STAR, mark=Star(excluded={})), exclusion=Empty), layer=NORMAL), InitialEmission(pattern=Pattern(fact=PathFact(base=arg(0), path=[], tail=EXACT, mark=Star(excluded={})), exclusion=Empty), layer=NORMAL)]
+C1_C5_POINT_ADMITTED_BY_BOTH true
+B1_RAW_PREMISE exactActual: MUST=false STAR=true
+PASS_NATIVE_OPERATOR_REVIEW engineRuns=0 findingNecessityProved=false

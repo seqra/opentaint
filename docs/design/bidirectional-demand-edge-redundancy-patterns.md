@@ -1,524 +1,394 @@
-# Demand-edge redundancy patterns
+# Handoff compaction: summary subsumption and demand redundancy
 
-12 November 2026. The user stopped the investigation campaign.
-This document collects its accepted patterns. It adds no analyzer behavior.
-The production runtime remains `14d7b63369d94f49d4c551be8405ed7719f267cc`.
-Large evidence is stored outside Git. See the
-[external-data guide](../reports/EXTERNAL_DATA.md) before opening `data/...` links.
+12 November 2026. This review separates two contracts. **Native summary
+subsumption can compact saved relations. Demand-query subsumption can compact
+next-run guidance. One proof does not automatically establish the other.**
+No analyzer behavior changes. The reference runtime remains
+`14d7b63369d94f49d4c551be8405ed7719f267cc`, FULL mode.
+The investigation campaign remains stopped.
 
-## 1. Final results
+## 1. Reclassification of the earlier patterns
 
-| Project | Repeated origins | Individually redundant | Unresolved | Latest reached / completed / accepted forward |
-| --- | ---: | ---: | ---: | --- |
-| OWASP | 1,824 | 759 | 1,065 | run-11 / run-11 / run-11 |
-| Conductor | 25,786 | 7,833 | 17,953 | run-8 / run-7 / run-7 |
-| Stirling-PDF | 1,021 | 323 | 698 | run-11 / run-10 / run-9 |
-| Total | 28,631 | **8,915** | **19,716** | |
+| Earlier item | Result of the review | Saved NORMAL records | Next demand |
+| --- | --- | --- | --- |
+| A: identical projections | Exact demand-row duplication. Projection forgets information. | No deletion follows from equal projections alone. | Proved. |
+| B1: MAY/STAR output selectors | Demand-query equivalence. The displayed weaker-premise raw direction is a generalization candidate. | The symmetric query law is insufficient. | Proved, in either orientation. |
+| B2: concrete-point entry keys | Demand-query equivalence, not a general stronger-postcondition law. STAR preserves a suffix. | No raw replacement follows. The displayed DEMAND rows are not persisted. | Proved for late FULL concrete points. |
+| C1: point-to-MAY coverage | C5 containment plus a separate C2 witness. | X-by-Y raw subsumption is not proved. | Proved with both services covered. |
+| C2: complete-origin certificate | Coverage of every projected ND row. | Not a proof of arbitrary ND summary deletion. | Proved. |
+| C3: decision order | A procedure, not another algebraic rule. | Use native summary rules. | Use demand rules. |
+| Individual versus joint removal | A constraint on retained representatives. | No new raw subsumption rule. | Keep final witnesses; reject circular support. |
 
-The separate joint plan removes **6,955** origins. It keeps **1,960**
-individually redundant origins as providers. Do not remove all 8,915 together.
-No project necessity case passed the required sole-edge sink-loss test.
-Unresolved does not mean necessary. No runtime removal or speedup is claimed.
+The detailed [demand-query catalog](bidirectional-demand-query-compaction-patterns.md)
+keeps the old labels, handoff-state examples and accepted proof links.
+Sections 3–5 below identify the native rules and the proposed generalizations.
 
-Evidence: [accepted classification](../reports/data/redundant-demand-20261110/q-separated-individual-joint-v1/acceptance.json),
-[individual ledger](../reports/data/redundant-demand-20261110/ledger.jsonl.gz),
-[joint plan](../reports/data/redundant-demand-20261110/joint-retirement-plan.json).
+## 2. The handoff state and the two contracts
 
-## 2. Scope and notation
-
-Use the pinned FULL analyzer. Remove guidance only after a completed forward
-run, at run-5 or later. For a repeated edge at runs `i` and `i+2`, remove
-after `i+2`. Do not change run-i. The campaign cuts are OWASP run-11,
-Conductor run-7 and Stirling-PDF run-9.
-
-Let `j = i+2`. Every pattern decision is computed during the `j → j+1`
-handoff, before run-(j+1) starts. No pattern can read results from run-(j+1).
-
-Let:
+Let `j = i+2`. Compute all decisions after run-j completes, before run-(j+1).
+Inputs are current demand/summary edges and any retained earlier initial
+history. No input first learned in run-(j+1) is allowed. Source code, CFG,
+JVM types and report state are not pattern eligibility guards.
 
 ```text
-O_j        = all original outgoing guidance origins from completed run-j
-O          = O_j
-X          = one origin: complete raw edge membership, owner, context and ports
-projectDemand(X) = rows computed from X by the current handoff projection
-K          = retained origins
-q = (u,e,o)= one demand row: owner u, typed entry e, paired output o
-E          = field exclusion
-T, U       = full concrete marks
-FLOW       = abstract mark
+O_j       = complete current outgoing guidance origins
+N_j       = legal new and previously saved NORMAL records
+G(X)      = existing handoff projection of current origin X
+K         = final retained origins for a checked demand cut
 $, *, MAY, MUST = EXACT, STAR, [any], [any-taint]
 ```
 
-An origin can emit several rows, including all ND member projections.
-Keep method and generated inner-block identities. Keep physical ports.
-Compare complete decoded field and mark keys; names and hashes are not enough.
-
-`remove X` means omit its next-run guidance contribution. Keep its current
-raw summary and all saved NORMAL records. Keep ND premises, protection
-memberships, NormalTargets, seeds, source permissions and reports unchanged.
-
-Allowed pattern inputs are demands, summaries and submitted initial facts.
-Do not use source code, CFG properties, JVM types, rule forms or report state
-as eligibility guards. Treat owner/type strings as opaque identities.
-Missing input history is unknown, not empty.
-
-All accepted proofs allow arbitrarily many later iterations and new fields.
-The temporary run-11 limit is not a proof premise.
-
-### 2.1 Handoff projection is available now
-
-Earlier documents called this operation `emit(X)`. That name does not mean
-"observe what run-(j+1) emits." It means compute the demand rows **for**
-run-(j+1), from completed run-j summaries. Use `projectDemand` below.
-
-For a DATA summary, the existing handoff reverses its endpoints:
+For a current DATA summary, G is computed now:
 
 ```math
-X = {I_1, ..., I_n} → C
-projectDemand(X) = { (nextOwner(X), g(C), g(I_k)) | 1 ≤ k ≤ n }
+G({I_1,...,I_n} → C) = { (nextOwner, g(C), g(I_k)) | 1 ≤ k ≤ n }
 ```
 
-Here `g` is the existing `guidancePattern` normalization. For packed results,
-apply this formula to every conclusion leaf. Keep every ND premise member.
-For an inner block, reverse the physical boundary ports too.
+Apply this to every conclusion leaf and ND member. Reverse block ports.
+`g` maps MUST to MAY and clears its field exclusion. It clears FLOW mark
+exclusions and FLOW/STAR field exclusions. Other coordinates follow the
+existing typed handoff rules. DemandTarget gives a Target entry; NormalTarget
+is not refinement demand. G does not execute the next run.
+
+The two proof obligations are different:
 
 ```text
-projectDemand(X):                         # runs inside the run-j handoff
-    owner = reverseBoundaryOwner(X.owner)
-    if X.conclusion is DemandTarget:
-        return { typedRow(owner, Target, g(I)) for I in X.premise.members }
-    return { typedRow(owner, g(C), g(I))
-             for C in conclusionLeaves(X)
-             for I in X.premise.members }
+Native summary compaction:
+    retained relations must reproduce the removed relation's supported
+    current/direct/opposite applications, with the required correlation,
+    complete originals, layers, protection and interface.
 
-g(pattern):
-    if pattern.tail == MUST:
-        pattern = copy(pattern, tail=MAY, fieldExclusion=empty)
-    if pattern.mark is FLOW:
-        pattern = copy(pattern, markExclusion=empty)
-        if pattern.tail == STAR:
-            pattern = copy(pattern, fieldExclusion=empty)
-    return pattern
+Demand compaction:
+    retained projected rows must preserve complete C2 admission and paired
+    C5 restriction, including owner/port/precision support and the stop test.
 ```
 
-`typedRow` keeps DATA, ZERO and Target distinct. `g(ZERO)` is the same
-canonical ZERO. NormalTarget is not outgoing refinement demand. These are
-the existing method/block handoff rules, not additional analyzer execution.
+Do not infer either contract merely from an abstract set of output locations.
+In particular:
 
-```text
-At the end of run-j, before any work in run-(j+1):
-
-X: a.f.*/T → ret.MAY/T, DEMAND
-projectDemand(X): entry ret.MAY/T; output a.f.*/T
-
-Y: {a.f.*/T, b.$/U} → ret.MAY/T, DEMAND
-projectDemand(Y): entry ret.MAY/T; output a.f.*/T
-                 entry ret.MAY/T; output b.$/U
-
-Y already supplies X's projected row at this handoff.
-The next run need not submit a fact or produce a summary to establish this.
-```
-
-The implementation computes these rows in
-[`HandOff`](../../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/HandOff.kt)
-and [`BlockHandOff`](../../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/BlockHandOff.kt).
-
-### 2.2 Input availability
-
-| Pattern input | Available at the run-j handoff? |
+| Tail | Meaning relevant to this review |
 | --- | --- |
-| O_j and complete method/block edge identities | Yes: completed run-j stores. |
-| `projectDemand(X)` for X in O_j | Yes: the pure projection above. |
-| Candidate repetition at j-2 and j | Yes, if the earlier edge identities were retained. Missing history cannot prove repetition. |
-| Entry/output keys and point-to-MAY geometry | Yes: compare projected rows from O_j. |
-| Witness membership in final K | Yes: K is a selected subset of O_j, fixed at this handoff. |
-| Generic C2/C5 equivalence laws | Already proved. Their use requires no future calls to C2/C5. |
-| Actual submitted facts, C2 initials or summaries from run-(j+1) | No. They cannot decide removal. |
-| A provider first learned during run-(j+1) | No. It cannot witness a removal at handoff j. |
+| EXACT | The specified location. |
+| STAR | A suffix correlated with the input; it is not uniform taint. |
+| MAY | An unknown location represented by a DEMAND approximation. |
+| MUST | Uniform taint over the admitted region. |
 
-Patterns A–C need no submitted-fact history. Their C2/C5 laws hold for every
-legal future query. Future query values are proof variables, not runtime
-inputs to the pattern checker. Earlier submitted facts may support research;
-they do not replace a missing current retained provider.
+## 3. Part I: validated native summary-subsumption rules
 
-The handoff-state review checked all accepted certificates: 20,256 witness
-memberships for 8,915 individual cases and 16,168 for the 6,955-origin joint
-plan. Every witness is in its original removal-barrier snapshot. No later-run
-witness is used. Counts and classifications are unchanged.
-
-### 2.3 Example conventions
-
-Each example below is a state at completed forward run `j = i+2 ≥ 5`.
-T and U are full concrete marks. E is empty unless stated otherwise.
-All listed origins share one method/block owner and the same boundary ports.
-Their layer is DEMAND. Other analyzer state stays unchanged.
-
-The left column contains current summaries. The right column is computed
-from that same column during this handoff. It is not a future-run trace.
-O contains the listed origins; K is the proposed retained subset of O.
-
-## 3. Pattern A: identical projected guidance
+### S1. Literal payload inclusion under an identical complete premise
 
 ```math
-P_exact(X,K) := X ∈ O_j ∧ K ⊆ O_j \ {X} ∧ projectDemand(X) ≠ ∅ ∧
-               ∀q ∈ projectDemand(X), ∃Y ∈ K : q ∈ projectDemand(Y)
+X = (Γ, P, C_X),  Y = (Γ, P, C_Y)
+LiteralLeaves(C_X) ⊆ LiteralLeaves(C_Y)
+────────────────────────────────────────
+Y covers X
 ```
+
+Γ contains the complete owner/context, direction, block, ports and compatible
+native headers. Keep the same layer and the full premise P. Each covered leaf
+has the same path, tail, full mark, exclusions and protection membership.
+This is literal relation inclusion, not MAY/STAR or MUST/EXACT conversion.
+Both compared packets must be legal native values.
 
 **State after i+2:**
 
-| Current summary | `projectDemand`, written as `(entry; output)` |
-| --- | --- |
-| X: `a.f.*/T → ret.MAY/T` | `(ret.MAY/T; a.f.*/T)` |
-| Y: `a.f.*/T → ret.MUST/T` | `(ret.MAY/T; a.f.*/T)` |
-
 ```text
-O = {X,Y}; K = {Y}
-q = (ret.MAY/T; a.f.*/T)
-projectDemand(X) = {q} = projectDemand(Y)
-therefore P_exact(X,K) = true
+X, NORMAL: p.*/FLOW → ret.f.*/FLOW
+Y, NORMAL: p.*/FLOW → {ret.f.*/FLOW, ret.g.*/FLOW}
+
+Persist Y's payload once. X adds no literal relation leaf.
+In the opposite view, Y still has the identical ret.f → p leaf.
+For any outgoing rows, G(X) is also a subset of G(Y).
 ```
 
-**Reason:** handoff normalization turns Y's MUST conclusion into a MAY entry.
-The same demand pair remains through Y. Omit only X's guidance contribution;
-keep both raw summaries. No fact from run-(i+3) is needed.
+The same literal check applies to guidance when both origins contribute
+outgoing rows. Saved persistence uses only eligible NORMAL records; it does
+not start persisting DEMAND or ND rows. Equal complete ND premises can use
+literal payload inclusion in their current store without weakening AND.
 
-Use origins already present in O_j as witnesses. Different X rows can use different
-origins. A shared display shape or one covered ND arm is insufficient.
+Proof: [literal payload component](../../spec/lean/proposals/handoff-subsumption-review-20261112/RelationAndQuery.lean).
+The native bridge is the existing per-premise union and per-leaf direct/
+opposite application. All non-summary handoff state stays unchanged.
 
-The first checked version required witnesses outside the repeated set.
-The later basis proof permits any witness that survives the selected cut.
+### S2. Correlated NORMAL FLOW specialization
 
-Proof: [UnchangedProjectionCover](../../spec/unchanged-projection-cover.md).
-This pattern alone may save no next-run work: the demand builder already
-deduplicates identical rows.
-
-## 4. Pattern B: equivalent query coordinates
-
-The following are comparison keys. Do not rewrite actual facts or summaries.
-
-### B1. Equivalent output selectors
-
-For the same base, complete path and full mark M:
+This is an existing validated summary rule, not a new campaign result:
 
 ```math
-(x.p.MAY/M, E=∅) ≡out (x.p.*/M, E=∅)
+S, NORMAL: a.u.* / EiS → b.v.* / EoS
+L, NORMAL: a.u.r.* / EiL → b.v.r.* / EoL
 ```
 
-Keep the row's entry, owner and physical exit equal. The law is symmetric.
-It also applies when the unchanged typed entry is ZERO or Target.
-Other control coordinates remain literal.
+The same r must extend both endpoints. Require the same full interface and
+protection class. Set `ES = EiS ∪ EoS` and `EL = EiL ∪ EoL`.
+Require `mxS ⊆ mxL`, and:
+
+```text
+r is empty:     ES is a subset of EL
+r is nonempty:  ES admits r's first field
+```
+
+Keep legal static anchors intact. For packed conclusions, check each removed
+output against a real retained output with that same shift. The witness for
+a suffix `tau` in L is `r ++ tau` in S, in both directions.
 
 **State after i+2:**
 
-| Current summary | `projectDemand` `(entry; output)` |
-| --- | --- |
-| X: `a.f.MUST/T → ret.MAY/T` | qX = `(ret.MAY/T; a.f.MAY/T)` |
-| Y: `a.f.*/T → ret.MAY/T` | qY = `(ret.MAY/T; a.f.*/T)` |
-
 ```text
-O = {X,Y}; K = {Y}
-qX.entry = qY.entry = ret.MAY/T
-outputKey(qX.output) = outputKey(qY.output) = a.f.*/T
-queryKey(qX) = queryKey(qY)
+S, NORMAL: p.*/FLOW   → ret.*/FLOW
+L, NORMAL: p.f.*/FLOW → ret.f.*/FLOW
+
+Persist S; omit L.
+Actual p.f.g.$/T maps to ret.f.g.$/T through S as well as L.
+Both unary NORMAL rows contribute no next refinement demand.
 ```
 
-**Reason:** C2 uses the same entry. The empty-E MAY/STAR output law gives
-the same C5 result and field cut. Keep Y; omit X's guidance. The symmetric
-law also permits keeping X instead. The choice must remain consistent in
-the joint plan.
+Use the existing overlap matcher and directional inside policy. Do not
+extend this rule to a shift on only one endpoint or to arbitrary tails.
+The already selected FLOW-backed concrete cells retain their separate
+layer, mark and protection guards; this review does not widen them.
 
-**Target-entry variant:** replace both current conclusions with DemandTarget.
-The computed entries are then both Target; the outputs remain `a.f.MAY/T`
-and `a.f.*/T`. The same output-selector law applies at this handoff.
+Full contract: [relation subsumption, section 3](../../spec/edge-subsumption-initial-emission-demand-intersection.md#3-relation-subsumption).
 
-This law concerns a demand output selector. It does not equate MAY and STAR
-submitted facts, initials or C2 entries. Do not erase nonempty output E.
+## 4. Part II: validated demand-query compaction
 
-Proofs: [output selectors](../../spec/equivalent-demand-output-selectors.md),
-[symmetric use](../../spec/symmetric-equivalent-demand-output-selectors.md).
+These rules can run at every supported late handoff. Repetition was the
+campaign's candidate filter; their algebraic checks need no earlier repeat.
+They compact **projected demand rows**. They do not, by themselves, remove
+saved NORMAL providers.
 
-### B2. Equivalent concrete-point entries
-
-At restricted run-3 and later:
-
-```math
-(x.p.*/T, any legal E) ≡entry (x.p.$/T, E=∅)
-```
-
-T must be the same full concrete mark. Keep the base and path equal.
-Supported legal bases are This, Argument, Return, LocalVar, Exception and
-ClassStatic. Keep the native static grammar. Exclude literal and internal
-cleaner bases. FLOW and group marks do not use this law.
-
-Both entries give the same complete C2 family and C5 entry image:
-
-```text
-Primary initial: x.p.$/T, with the same actual-derived layer
-FLOW companion: none
-MAY precision cursor: none
-```
-
-**State after i+2:**
-
-| Current summary | `projectDemand` `(entry; output)` |
-| --- | --- |
-| X: `a.*/T → ret.*/T` | qX = `(ret.*/T; a.*/T)` |
-| Y: `a.*/T → ret.$/T` | qY = `(ret.$/T; a.*/T)` |
-
-```text
-O = {X,Y}; K = {Y}
-entryKey(qX.entry) = entryKey(qY.entry) = ret.$/T
-qX.output = qY.output = a.*/T
-queryKey(qX) = queryKey(qY)
-```
-
-**Reason:** these late full-concrete entries have equal complete C2 families
-and equal C5 entry images. Their paired outputs are identical. Keep Y;
-omit X's guidance. The checker compares keys; it does not wait to observe
-which submitted fact the next run will provide.
-
-Define executable comparison keys:
+### D1. Canonical query equivalence: earlier A, B1 and B2
 
 ```text
 entryKey(e):
-    if e is a supported legal FULL-concrete point:
-        require e.tail == STAR or (e.tail == EXACT and e.E == empty)
+    if e is a supported legal late FULL concrete point:
+        # STAR with legal E, or EXACT with empty E
         return copy(e, tail=EXACT, E=empty)
-    return e                              # includes its typed kind
+    return e
 
 outputKey(o):
     if o is DATA and o.tail == MAY and o.E == empty:
         return copy(o, tail=STAR)
     return o
 
-queryKey(q) = (complete owner and ports, entryKey(q.entry), outputKey(q.output))
+queryKey(q) = (full owner/ports, entryKey(q.entry), outputKey(q.output))
 ```
 
-Thus Pattern A extends to equal `queryKey` values.
-Proof: [concrete point queries](../../spec/concrete-point-demand-queries.md).
+Equal query keys can share one retained demand-row representative. Literal
+ZERO/Target kinds remain distinct. The point rule does not apply to FLOW or
+GROUP entries. Keep the original legal-base and exclusion guards.
 
-## 5. Pattern C: split admission and output coverage
-
-A row supplies two services:
+**Why B1 is not symmetric raw subsumption:** its displayed raw summaries are
 
 ```text
-C2(q, submitted)       = complete initial family and admission support
-C5(q, original, raw,k) = paired summary restriction and output support
+X: a.f.MUST/T → ret.MAY/T, DEMAND
+Y: a.f.*/T   → ret.MAY/T, DEMAND
 ```
 
-These expressions state the operator laws. The checker below does not call
-them with observed run-(j+1) facts. It compares current projected row keys.
+Y has the weaker raw premise. The reverse replacement is not valid for
+current application: exact input `a.f.$/T` satisfies Y but not X. Yet their
+projected output selectors are equivalent. A proof of that symmetric query
+law cannot be reused as a symmetric raw summary law. The weaker-premise
+raw direction remains a separate generalization opportunity.
 
-One retained row can preserve C2. Another can preserve C5.
-This is the main generalization of the duplicate-query patterns.
-
-Define:
+**Why B2 is not a general stronger-postcondition rule:**
 
 ```text
-C2Check(q,z):
-    same complete C2 owner and physical entry
-    entryKey(q.entry) == entryKey(z.entry)
-    # z's output and physical exit can differ
+X: a.*/T → ret.$/T, DEMAND
+Y: a.*/T → ret.*/T, DEMAND
+Actual: a.f.$/T, NORMAL
 
-C5Check(q,y):
-    same complete owner, physical exit and typed output kind
-    outputKey(q.output) == outputKey(y.output)
-    entryKey(q.entry) == entryKey(y.entry)
-        or PointMayImageContains(y.entry, q.entry)
+apply(X, Actual) = ret.$/T,   DEMAND
+apply(Y, Actual) = ret.f.$/T, DEMAND
 ```
 
-The checks preserve layers, FLOW companions, precision cursors, prepared
-output support and the complete original ND premise. C5 always uses one
-row's paired entry/output. Do not create a new pair from unrelated coordinates.
+Y does not reproduce X's root result. STAR carries f; it does not assert
+uniform taint. After handoff, the concrete STAR and EXACT entries have an
+equal late C2 key, which is a different statement. Also, concrete STAR
+initials are DEMAND and are not legal native NORMAL record premises.
+The [native controls](../../spec/lean/proposals/handoff-subsumption-review-20261112/native-receipt.json)
+verify both distinctions. These are operator counterexamples, not a new
+whole-project finding-loss claim.
 
-### C1. Point-to-MAY output coverage
+### D2. Split service coverage: earlier C1 and C2
 
-This adapter supplies C5 containment, not C2 equivalence:
+```text
+C2Check(q,z): same C2 owner and equal canonical entry keys
+C5Check(q,y): same paired output/port and
+             (equal entry keys or proved point-to-MAY image containment)
 
-```math
-q.entry = a.p.point/T
-y.entry = a.r.MAY/T, E=∅
-p = r  OR  p = r ++ CLASS* ++ c
-c.kind ∈ {FIELD, ELEMENT}
+Covered(q,K) =
+    exists z in K: C2Check(q,z)
+    and exists y in K: C5Check(q,y)
 ```
 
-The suffix ends at its first counted accessor. FIELD and ELEMENT count;
-CLASS does not. Keep all other entry coordinates equal. The supported bases
-are This, Argument, Return and LocalVar. This adapter excludes statics and
-Exception. The q entry must satisfy B2's legal full-concrete point rules.
+The point-to-MAY case permits the same path or its first counted extension,
+with the same full mark and the existing ordinary-base guards.
 
 **State after i+2:**
 
-| Current summary | `projectDemand` `(entry; output)` |
+| Current DEMAND summary | Computed demand `(entry; output)` |
 | --- | --- |
-| X: `b.*/U → a.f.$/T` | q = `(a.f.$/T; b.*/U)` |
-| Z: `c.*/U → a.f.$/T` | z = `(a.f.$/T; c.*/U)` |
-| Y: `b.*/U → a.MAY/T` | y = `(a.MAY/T; b.*/U)` |
+| X: `b.*/U → a.f.$/T` | qX = `(a.f.$/T; b.*/U)` |
+| Z: `c.*/U → a.f.$/T` | qZ = `(a.f.$/T; c.*/U)` |
+| Y: `b.*/U → a.MAY/T` | qY = `(a.MAY/T; b.*/U)` |
+
+Keep qZ and qY. qZ preserves qX's C2 family; qY preserves qX's paired C5.
+
+**Why Z appears:** this sufficient proof preserves exact admission replies.
+On the symbolic offer `a.f.*/T, DEMAND`:
 
 ```text
-O = {X,Z,Y}; K = {Z,Y}
-C2Check(q,z) = true           # same owner and exact entry; output can differ
-C5Check(q,y) = true           # same output; f is the first counted extension
+C2(qX): a.f.$/T, DEMAND
+C2(qY): a.f.*/T, DEMAND
+        a.f.*/FLOW, NORMAL
+        a.$/FLOW, NORMAL
 ```
 
-**Reason:** Z preserves q's complete admission service. Y's entry image
-contains q's exact point, and Y supplies the same output program. Both
-witnesses already exist in O. Neither depends on a new summary or initial
-from run-(i+3).
+Y does not supply the same exact initial. The native control confirms the
+difference and confirms that both C5 entries accept the stored exact point.
 
-Y alone is insufficient. On `a.f.*/T, DEMAND`, q emits `a.f.$/T`.
-Y can emit a STAR primary and FLOW companions instead. Z must preserve q's
-exact admission service. Same-path MAY coverage has the same requirement.
-This is a symbolic operator comparison, not a next-run input to the checker.
+This does **not** prove that Z is necessary for every possible sound rule.
+A Y-only rule could use a stronger proof about the different starts. That
+proof is not supplied by the campaign. A missing initial alone is not a
+proof of a lost sink.
 
-### C2. Complete-origin certificate
+Nor is Y's MAY output a stronger definite postcondition: `a.MAY/T` can refer
+to g rather than f. C5 image containment alone does not prove raw X-by-Y
+summary subsumption.
 
-```text
-checkCut(O, rows, R, certificates):
-    require O is the frozen completed run-j outgoing set
-    require rows == {X: projectDemand(X) for X in O}
-    require R is a subset of O
-    K = O - R
-    for X in R:
-        require rows[X] is complete and nonempty
-        for q in rows[X]:
-            (Z,z), (Y,y) = certificates[X,q]
-            require Z in K and z in rows[Z]
-            require Y in K and y in rows[Y]
-            require C2Check(q,z)
-            require C5Check(q,y)
-    return SAFE_GUIDANCE_CUT
-```
+For a complete outgoing origin, check every projected row. Keep all ND
+members and ports. This gives the accepted whole-origin certificate; it
+does not replace native ND execution by unary OR execution.
 
-All witnesses end at actual final retained origins. Recheck every affected
-certificate when the cut changes. Do not accept circular support.
+## 5. Generalization candidates: weaker premises and stronger postconditions
 
-**State after i+2, with a multi-row origin:**
-
-| Current summary | Complete `projectDemand` `(entry; output)` |
-| --- | --- |
-| X: `{b.*/U,c.*/U} → a.f.$/T` | q1 = `(a.f.$/T; b.*/U)`; q2 = `(a.f.$/T; c.*/U)` |
-| Y: `b.*/U → a.MAY/T` | y = `(a.MAY/T; b.*/U)` |
-| Z: `c.*/U → a.f.$/T` | z = `(a.f.$/T; c.*/U)` |
-
-```text
-O = {X,Y,Z}; R = {X}; K = {Y,Z}
-certificate[X,q1] = (C2: Z/z, C5: Y/y)
-certificate[X,q2] = (C2: Z/z, C5: Z/z)
-checkCut(O, rows, R, certificate) = true
-```
-
-**Reason:** every projected ND member has both services. q1 uses the
-point-to-MAY adapter; q2 uses an identical row. X's complete AND premise
-stays in current summary storage. If Z is also removed, this certificate
-fails: q2 and the shared C2 witness lose their retained provider.
-
-The existing witnesses preserve each removed service. Retained rows add no
-new service: they were already in O. Therefore the full demand oracle stays
-equal. With the other barrier state unchanged, later semantic observations
-stay equal for every finite continuation. Diagnostic callback counts may vary.
-
-Proofs: [retained service basis](../../spec/retained-demand-service-basis.md),
-[individual service cover](../../spec/individual-retained-query-service-cover.md).
-They generalize the [retained query basis](../../spec/retained-demand-query-basis.md)
-and its earlier whole-row patterns. No new proof is claimed by this summary.
-
-### C3. Decision order within the handoff
-
-```text
-atHandoff(j, completedRun, earlierEdgeIds):
-    require completedRun.index == j and completedRun.status == COMPLETE
-    require j is FORWARD and j >= 5
-    O = allOutgoingGuidance(completedRun)   # includes methods and inner blocks
-    rows = {X: projectDemand(X) for X in O}
-    candidates = repeatedOrigins(earlierEdgeIds[j-2], O)
-
-    # Separate individual classifications. No candidate is removed here.
-    for X in candidates:
-        individual[X] = findCertificates({X}, O - {X}, rows)
-
-    # Reference joint selection: every trial rechecks its complete cut.
-    R = empty
-    certificates = empty
-    for X in candidates with a checked individual certificate:
-        trial = R union {X}
-        trialCertificates = findCertificates(trial, O - trial, rows)
-        if trialCertificates exists and checkCut(O, rows, trial, trialCertificates):
-            R = trial
-            certificates = trialCertificates
-
-    require checkCut(O, rows, R, certificates)
-    nextDemand = buildDemand(union(rows[Y] for Y in O - R))
-    return nextDemand                    # only then start run-(j+1)
-```
-
-`findCertificates` searches finite current row indexes with `C2Check` and
-`C5Check`. If a required witness is missing, the trial fails. It does not
-start the next engine, test a future offer or wait for another provider.
-The reference order is not an implementation complexity claim.
-
-Keep the ordinary handoff's seeds, NORMAL persistence and other state.
-Build its demand counts and apply its stop check after the checked selection.
-Missing repetition history leaves the origin unselected. This clarification
-changes no transfer rule, proof predicate or accepted classification.
-
-## 6. Individual classification versus joint removal
+The requested logical template is valid for ordinary positive Horn rules:
 
 ```math
-IndividualRedundant(X) := checkCut(O, rows, {X}, certificateX)
-JointSafe(R)           := checkCut(O, rows, R, jointCertificates)
+Pre_X ⇒ Pre_Y,  Post_Y ⇒ Post_X
+───────────────────────────────
+(Pre_Y ⇒ Post_Y) entails (Pre_X ⇒ Post_X)
 ```
 
-An individual certificate can use any other original edge. It can use an
-edge that also has an individual REDUNDANT verdict.
+In particular:
 
-**State after i+2:** use Pattern A's two current summaries, named A and B:
+```text
+Y: P → C
+X: P AND Q → C
+
+Y logically subsumes X.
+```
+
+The [constructive component](../../spec/lean/proposals/handoff-subsumption-review-20261112/RelationAndQuery.lean)
+proves the premise-subset case. It does not identify correlated AP tails
+with ordinary independent propositions.
+
+To promote B1 or the ND example to a general native rule, prove its application
+and handoff bridges. Preserve complete caller originals, actual-derived
+layers, inherited/cycle protection, both saved read directions and the
+required demand admission. Do not infer these bridges from field-set
+inclusion or from one removed query reply.
+
+Thus the review yields useful generalization targets, but not an approved
+blanket "weaker premise plus larger field region" compactor. Only validated
+native cells belong in Part I. Missing bridge proofs stay explicit.
+
+## 6. Handoff procedure and the missing C3 example
+
+Freeze the original outgoing set before either compaction. Do not build
+next demand solely by projecting the compacted NORMAL store.
+
+```text
+handoff(j, completedRun, savedRecords):
+    require completedRun is COMPLETE
+    O = snapshotAllOutgoingGuidance(completedRun)
+    rows = {X: projectDemand(X) for X in O}       # computed now
+
+    normal = savedRecords union legalNormalRecords(completedRun)
+    normal = compactWithValidatedNativeRules(normal)  # Part I
+
+    K, certificates = selectRetainedDemandBasis(O, rows)
+    require every removed origin's complete rows pass D1/D2 against final K
+    demand = buildDemand(union(rows[Y] for Y in K))   # Part II
+
+    persist(normal)
+    preserve ordinary seeds, NormalTargets and other handoff state
+    publish demand and its counts
+    apply the ordinary stop/continue check
+```
+
+**State after i+2:**
+
+```text
+NORMAL:
+  N0: p.*/FLOW   → ret.*/FLOW
+  N1: p.f.*/FLOW → ret.f.*/FLOW
+DEMAND:
+  X: b.*/U → a.f.$/T
+  Z: c.*/U → a.f.$/T
+  Y: b.*/U → a.MAY/T
+
+Computed now:
+  qX = (a.f.$/T; b.*/U)
+  qZ = (a.f.$/T; c.*/U)
+  qY = (a.MAY/T; b.*/U)
+
+Native S2: keep N0, remove N1 from saved records.
+Demand D2: qX uses qZ for C2 and qY for C5.
+
+Persisted result: {N0}
+Next demand:     {qZ,qY}
+```
+
+All inputs and witnesses are present at this handoff. The two results use
+different proof contracts. No actual run-(i+3) offer or summary is inspected.
+This is a proposed compaction organization; production is unchanged.
+
+**Joint representative example, earlier section 6:**
 
 ```text
 A: a.f.*/T → ret.MAY/T
 B: a.f.*/T → ret.MUST/T
-q = (ret.MAY/T; a.f.*/T)
-O = {A,B}; projectDemand(A) = projectDemand(B) = {q}
+G(A) = G(B) = { (ret.MAY/T; a.f.*/T) }
 
-Individual cut {A}: K={B}; safe.
-Individual cut {B}: K={A}; safe.
-Joint cut {A,B}:    K={};  fails the retained-witness check.
-Joint cut {A}:     K={B}; safe, even though B is individually redundant.
+Removing only A is safe for demand; B remains.
+Removing only B is safe for demand; A remains.
+Removing both fails: no representative remains.
 ```
 
-**Reason:** the final retained set is chosen at this handoff. Future
-providers cannot repair a failed joint certificate at the removal point.
+This symmetric demand statement does not make the raw conclusions equal.
+If a validated native rule prefers the stronger MUST provider, retain it.
+Representative selection is a constraint on a compactor, not another
+subsumption theorem.
 
-A joint plan can keep an individually redundant representative. This does
-not make that representative necessary. The accepted plan is not claimed
-to be a minimum basis or a maximum removal set.
+## 7. Evidence, results and unchanged scope
 
-## 7. Rejection rules and evidence limits
+The campaign remains stopped with 8,915 individually redundant origins,
+19,716 unresolved origins and a separate checked 6,955-origin joint plan.
+Those counts concern demand contributions. They are not counts of removable
+saved records. No original project necessity case passed the sole-edge
+sink-loss gate.
 
-| Proposed shortcut | Why it is insufficient |
+| Project | Latest reached / completed / accepted forward |
 | --- | --- |
-| X repeats at i and i+2. | Repetition selects a target; it proves no future redundancy. |
-| A similar NORMAL summary exists. | It may preserve a concrete transfer while losing C2, C5 or later source permission. |
-| C2 is covered. | A different paired output can still admit a required future summary. |
-| C5 is covered. | A required exact initial or precision profile can still be lost. |
-| Most ND arms or ports are covered. | Every emitted row needs a retained witness. |
-| Witness survived an earlier removal. | It must survive the final joint cut. |
-| A matching provider appears in run-(j+1). | It was unavailable at handoff j and cannot be a witness. |
-| Sampled next-run C2/C5 results look equal. | The accepted checker needs current structural keys and a proved universal law. |
-| No later finding before run-11. | The proof must allow unbounded later iterations. |
-| No captured submitted facts. | Missing history cannot prove an empty input set. |
-| Generic test loses a sink. | It does not classify a project edge without its complete route/provider mapping. |
+| OWASP | run-11 / run-11 / run-11 |
+| Conductor | run-8 / run-7 / run-7 |
+| Stirling-PDF | run-11 / run-10 / run-9 |
 
-The original source/CFG-based P, source-safe replay, closed FLOW-frontier,
-hard-cutoff and final-report patterns are withdrawn under this contract.
-Their old evidence remains archived. They are not accepted removal rules.
+The review's 13 constructive component claims pass. Isolated native scalar
+application and C2/C5 controls pass. They ran no engine iteration or project
+scan and prove no new whole-engine deletion rule. Existing broader native
+rules retain their existing proofs and scope.
 
-The campaign ended with OPEN cases, including OWASP `4378d285...`.
-Their component proofs and synthetic cases remain research evidence.
-They do not extend the accepted patterns above.
+See the [proof receipt](../../spec/lean/proposals/handoff-subsumption-review-20261112/lean-receipt.json),
+[native receipt](../../spec/lean/proposals/handoff-subsumption-review-20261112/native-receipt.json),
+[demand-query catalog](bidirectional-demand-query-compaction-patterns.md) and
+[campaign report](../reports/bidirectional-redundant-demand-campaign-20261110.md).
+Large evidence remains outside Git; use the
+[external-data guide](../reports/EXTERNAL_DATA.md).
 
-Use the [campaign report](../reports/bidirectional-redundant-demand-campaign-20261110.md)
-for the full investigation history and the
-[predicate catalog](../reports/data/redundant-demand-20261110/predicate-catalog.json)
-for versioned proof links. A later production change needs a separate
-implementation proposal and validation.
+A new raw summary law can change analyzer semantics even when motivated by
+compaction. Prove its full contract before selecting an implementation.
+Keep source, sink, field transfer, marks, layers, protection and stop behavior
+unchanged unless a separate semantic change is explicitly selected.

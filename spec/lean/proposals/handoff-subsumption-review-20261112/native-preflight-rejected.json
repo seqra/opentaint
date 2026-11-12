@@ -1,0 +1,7 @@
+{
+  "status": "PRELAUNCH_REJECTED_BEFORE_COMPILATION",
+  "toolChunk": "dcc3a2",
+  "reason": "Classpath snapshot pins the dataflow JAR as a whole, not its individual class entries.",
+  "compilerStarted": false,
+  "engineRuns": 0
+}

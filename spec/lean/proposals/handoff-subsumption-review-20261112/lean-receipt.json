@@ -1,0 +1,13 @@
+{
+  "checkedUtc": "2026-11-12T11:09:32.179185+00:00",
+  "claims": 13,
+  "command": [
+    "/home/sobol/.elan/bin/lean",
+    "spec/lean/proposals/handoff-subsumption-review-20261112/RelationAndQuery.lean"
+  ],
+  "exitCode": 0,
+  "newGeneralNativeSubsumptionProved": false,
+  "productionChanged": false,
+  "sourceSha256": "cde02bc3d4237f3435cbe06690c691b69b8bff04d6e484ae2e5d1436dea64f62",
+  "status": "PASS_BOUNDED_SUBSUMPTION_REVIEW_COMPONENT"
+}

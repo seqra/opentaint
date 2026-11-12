@@ -1,0 +1,13 @@
+'HandoffSubsumptionReview.literal_payload_inclusion' depends on axioms: [propext, Quot.sound]
+'HandoffSubsumptionReview.redundant_payload_union' depends on axioms: [propext, Quot.sound]
+'HandoffSubsumptionReview.must_and_may_have_equal_projection' depends on axioms: [propext]
+'HandoffSubsumptionReview.projection_is_not_injective' depends on axioms: [propext]
+'HandoffSubsumptionReview.late_point_keys_equal' depends on axioms: [propext]
+'HandoffSubsumptionReview.correlated_output_keeps_suffix' does not depend on any axioms
+'HandoffSubsumptionReview.exact_output_has_no_suffix' does not depend on any axioms
+'HandoffSubsumptionReview.equal_demand_entry_keys_do_not_equal_raw_transfer' depends on axioms: [propext]
+'HandoffSubsumptionReview.point_family_has_exact' depends on axioms: [propext]
+'HandoffSubsumptionReview.ancestor_family_has_no_exact' depends on axioms: [propext]
+'HandoffSubsumptionReview.c2_families_are_not_literal_cover' depends on axioms: [propext]
+'HandoffSubsumptionReview.weaker_horn_premise' depends on axioms: [propext, Quot.sound]
+'HandoffSubsumptionReview.unary_horn_covers_conjunction' depends on axioms: [propext, Quot.sound]
