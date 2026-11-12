@@ -58,6 +58,31 @@ func writeModuleClasses(t *testing.T, projectModelDir string, modules map[string
 	writeFile(t, filepath.Join(projectModelDir, "project.yaml"), config)
 }
 
+// resolveJava returns the Java class directories that Resolve finds in path.
+func resolveJava(path string, builder Builder) ([]string, error) {
+	found, err := Resolve(path, builder)
+	if err != nil {
+		return nil, err
+	}
+	return found.JavaClassDirs, nil
+}
+
+// resolveAllJava returns the Java class directories that ResolveAll finds in paths.
+func resolveAllJava(paths []string, builder Builder) ([]string, error) {
+	found, err := ResolveAll(paths, builder)
+	if err != nil {
+		return nil, err
+	}
+	return found.JavaClassDirs, nil
+}
+
+// writeBuildOutput writes a Java model build output holding one class.
+func writeBuildOutput(t *testing.T, dir, bytecode string) {
+	t.Helper()
+	writeFile(t, filepath.Join(dir, descriptorName), "sourceProject: /elsewhere\n")
+	writeFile(t, filepath.Join(dir, classesDirName, "com", "example", "Model.class"), bytecode)
+}
+
 func writeFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -80,7 +105,7 @@ func TestResolveBuildsProject(t *testing.T) {
 	project := newProject(t, t.TempDir())
 	builder := newFakeBuilder(t)
 
-	classDirs, err := Resolve(project, builder)
+	classDirs, err := resolveJava(project, builder)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -176,7 +201,7 @@ func TestResolveBuiltOutput(t *testing.T) {
 	writeFile(t, filepath.Join(dir, classesDirName, "com", "example", "Model.class"), "bytecode")
 
 	builder := newFakeBuilder(t)
-	classDirs, err := Resolve(dir, builder)
+	classDirs, err := resolveJava(dir, builder)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -209,7 +234,7 @@ func TestResolveTreeOfProjects(t *testing.T) {
 	newProject(t, filepath.Join(root, "batch-b"))
 
 	builder := newFakeBuilder(t)
-	classDirs, err := Resolve(root, builder)
+	classDirs, err := resolveJava(root, builder)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -221,7 +246,7 @@ func TestResolveTreeOfProjects(t *testing.T) {
 	}
 
 	// The second call must ignore the nested build outputs.
-	again, err := Resolve(root, builder)
+	again, err := resolveJava(root, builder)
 	if err != nil {
 		t.Fatalf("second Resolve: %v", err)
 	}
@@ -274,7 +299,7 @@ func TestResolveTreeMixingProjectAndBuildOutput(t *testing.T) {
 	writeFile(t, filepath.Join(prebuilt, classesDirName, "com", "example", "Other.class"), "bytecode")
 
 	builder := newFakeBuilder(t)
-	classDirs, err := Resolve(root, builder)
+	classDirs, err := resolveJava(root, builder)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -293,7 +318,7 @@ func TestResolveAllPassesEachDirectoryOnce(t *testing.T) {
 	project := newProject(t, t.TempDir())
 	builder := newFakeBuilder(t)
 
-	classDirs, err := ResolveAll([]string{project, project}, builder)
+	classDirs, err := resolveAllJava([]string{project, project}, builder)
 	if err != nil {
 		t.Fatalf("ResolveAll: %v", err)
 	}
@@ -311,7 +336,7 @@ func TestResolveAllAcceptsIdenticalCopiesOfAClass(t *testing.T) {
 	writeBuiltOutput(t, first, "bytecode")
 	writeBuiltOutput(t, second, "bytecode")
 
-	classDirs, err := ResolveAll([]string{first, second}, newFakeBuilder(t))
+	classDirs, err := resolveAllJava([]string{first, second}, newFakeBuilder(t))
 	if err != nil {
 		t.Fatalf("ResolveAll: %v", err)
 	}
@@ -362,7 +387,7 @@ func TestResolveEmptyDirectoryHasNoModels(t *testing.T) {
 
 	for name, dir := range map[string]string{"empty": t.TempDir(), "empty subdirectories": emptyTree, "hidden files": hiddenOnly} {
 		t.Run(name, func(t *testing.T) {
-			classDirs, err := Resolve(dir, newFakeBuilder(t))
+			classDirs, err := resolveJava(dir, newFakeBuilder(t))
 			if err != nil || len(classDirs) != 0 {
 				t.Fatalf("Resolve() = %v, %v, want no models and no error", classDirs, err)
 			}
@@ -459,7 +484,7 @@ func TestStagingIsInvisibleToTheResolver(t *testing.T) {
 	abandoned := filepath.Join(stagingRoot(output), filepath.Base(output)+"-1")
 	writeFile(t, filepath.Join(abandoned, classesDirName, "com", "example", "Other.class"), "bytecode")
 
-	classDirs, err := Resolve(root, newFakeBuilder(t))
+	classDirs, err := resolveJava(root, newFakeBuilder(t))
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
