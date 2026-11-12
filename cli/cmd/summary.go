@@ -43,7 +43,13 @@ var summaryCmd = &cobra.Command{
 		if err != nil {
 			out.Fatal("Failed to load the SARIF report", err)
 		}
-		hasOmittedFlow := printSarifSummary(report, absSarifPath, summaryFilters(), summaryListingOptions(dim, codeFlowSel))
+		filters := summaryFilters()
+		matched := sarif.GenerateSummary(report.Filter(filters)).TotalFindings
+		if filters.Active() && matched == 0 {
+			out.Print("No findings match the filters")
+			return
+		}
+		hasOmittedFlow := printSarifSummary(report, absSarifPath, filters, summaryListingOptions(dim, codeFlowSel))
 
 		if showFindings && hasOmittedFlow && !verboseFlow {
 			out.Suggest(
@@ -51,7 +57,7 @@ var summaryCmd = &cobra.Command{
 				currentSummaryBuilder(args[0]).WithVerboseFlow().WithShowCodeSnippets().Build(),
 			)
 		}
-		if !showFindings && sarif.GenerateSummary(report.Filter(summaryFilters())).TotalFindings > 0 {
+		if !showFindings && matched > 0 {
 			out.Suggest(
 				"To list the findings, run:",
 				currentSummaryBuilder(args[0]).WithShowFindings().Build(),
