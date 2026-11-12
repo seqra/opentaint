@@ -1,0 +1,13 @@
+'ImplementationAlgorithms.mem_without' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.unaffected_certificate' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.rebind_valid' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.new_certificate_and_repair' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.other_sources_preserved' does not depend on any axioms
+'ImplementationAlgorithms.migrated_source_removed' depends on axioms: [propext]
+'ImplementationAlgorithms.partition_membership' depends on axioms: [propext]
+'ImplementationAlgorithms.migration_complete' does not depend on any axioms
+'ImplementationAlgorithms.migration_keeps_handle' does not depend on any axioms
+'ImplementationAlgorithms.migration_preserves_others' does not depend on any axioms
+'ImplementationAlgorithms.migration_one_authority' depends on axioms: [propext]
+'ImplementationAlgorithms.final_provider_fixture' depends on axioms: [propext]
+'ImplementationAlgorithms.migration_fixture' does not depend on any axioms

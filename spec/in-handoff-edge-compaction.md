@@ -4,6 +4,9 @@
 compaction, C2 pruning, early loop-probe rejection, disabled diagnostic
 removal and exact FULL caller-input storage.
 
+[Implementation proposal](../docs/design/bidirectional-work-reduction-implementation-20261112.md)
+gives the code boundaries, indices, tests and staged proof/activation gates.
+
 ## 1. Contract and notation
 
 | Change | Before → after | Required result |

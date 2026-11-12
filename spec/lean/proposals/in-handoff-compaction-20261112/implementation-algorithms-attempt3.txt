@@ -1,0 +1,51 @@
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:85:31: warning: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:85:54: warning: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:87:33: warning: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:87:56: warning: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:89:33: warning: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:89:56: warning: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:108:14: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  (?m.42 ∨ ?m.43) ∨ ?m.44
+in the target expression
+  c = x ∨ c ∈ sourceView source rest ∨ c ∈ eraseSource source rest ↔
+    c ∈ sourceView source rest ∨ c = x ∨ c ∈ eraseSource source rest
+
+case neg
+source : Nat
+c x : Cell
+rest : List Cell
+ih : c ∈ rest ↔ c ∈ sourceView source rest ∨ c ∈ eraseSource source rest
+hs : ¬x.source = source
+⊢ c = x ∨ c ∈ sourceView source rest ∨ c ∈ eraseSource source rest ↔
+    c ∈ sourceView source rest ∨ c = x ∨ c ∈ eraseSource source rest
+'ImplementationAlgorithms.mem_without' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.unaffected_certificate' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.rebind_valid' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.new_certificate_and_repair' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.other_sources_preserved' does not depend on any axioms
+'ImplementationAlgorithms.migrated_source_removed' depends on axioms: [propext]
+'ImplementationAlgorithms.partition_membership' depends on axioms: [propext, sorryAx]
+'ImplementationAlgorithms.migration_complete' does not depend on any axioms
+'ImplementationAlgorithms.migration_keeps_handle' does not depend on any axioms
+'ImplementationAlgorithms.migration_preserves_others' does not depend on any axioms
+'ImplementationAlgorithms.migration_one_authority' depends on axioms: [propext]
+'ImplementationAlgorithms.final_provider_fixture' depends on axioms: [propext]
+'ImplementationAlgorithms.migration_fixture' does not depend on any axioms

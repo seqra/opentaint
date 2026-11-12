@@ -166,3 +166,35 @@ mark IDs and sparse/snapshot controls pass: **8,325 assertions**. The
 It runs no production directory, analyzer or project. Implementation must
 still pass the spec's native snapshot/delta, replay, request, order, index,
 fallback and release tests. This feature does not use the MAY progress gate.
+
+## Implementation algorithms
+
+The [implementation proposal](../../../../docs/design/bidirectional-work-reduction-implementation-20261112.md)
+adds `ImplementationAlgorithms.lean`, with 13 constructive claims:
+
+```sh
+lean spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean
+```
+
+Its certificate model proves that removing one provider leaves unaffected
+certificates valid. Repairing the affected certificates and the new removal
+against the final retained set preserves the provider-membership invariant.
+Native service correctness still comes from the complete keys and the
+existing retained-service proof; a provider ID alone does not prove coverage.
+
+Its storage model proves ordered source projection, exact source partition,
+preservation of other sources during fallback, complete native-join input,
+stable handle and removal of the migrated source from packed authority.
+The native join remains an opaque supplied operation; its equality/delta law
+is an existing native obligation, not inferred from this migration model.
+
+The successful [receipt](implementation-algorithms-receipt.json) pins the
+source and Lean output. Its axiom audit uses only `propext`/`Quot.sound`, or
+no axioms. Three failed proof attempts remain in their own logs/receipts.
+Neither these models nor the proposal change runtime code or close R3's
+native MAY progress gate. No analyzer or project scan ran for this addition.
+
+The [proposal validation receipt](implementation-proposal-validation.json)
+records all four model checks (79 claims), local link checks and unchanged
+production scope. Its run labels refer to existing measurements, not new
+engine executions.

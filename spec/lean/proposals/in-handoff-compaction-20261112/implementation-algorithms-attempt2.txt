@@ -1,0 +1,65 @@
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:82:4: error: unsolved goals
+case pos
+source other : Nat
+different : other ≠ source
+c : Cell
+rest : List Cell
+ih : sourceView other (eraseSource source rest) = sourceView other rest
+hs : c.source = source
+ho : c.source ≠ other
+⊢ ¬source = other
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:86:4: error: unsolved goals
+case pos
+source other : Nat
+different : other ≠ source
+c : Cell
+rest : List Cell
+ih : sourceView other (eraseSource source rest) = sourceView other rest
+hs : ¬c.source = source
+ho : c.source = other
+⊢ sourceView other (if other = source then eraseSource source rest else c :: eraseSource source rest) =
+    c :: sourceView other rest
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:85:41: warning: This simp argument is unused:
+  ho
+
+Hint: Omit it from the simp argument list.
+  [apply] simp [sourceView, eraseSource, hs, ih]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:104:10: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  ?m.34 ∨ ?m.35 ∨ ?m.36
+in the target expression
+  c = x ∨ c ∈ rest ↔ (c = x ∨ c ∈ sourceView source rest) ∨ c ∈ eraseSource source rest
+
+case pos
+source : Nat
+c x : Cell
+rest : List Cell
+ih : c ∈ rest ↔ c ∈ sourceView source rest ∨ c ∈ eraseSource source rest
+hs : x.source = source
+⊢ c = x ∨ c ∈ rest ↔ (c = x ∨ c ∈ sourceView source rest) ∨ c ∈ eraseSource source rest
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:106:36: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  c ∈ sourceView source rest ∨ c ∈ eraseSource source rest
+in the target expression
+  c = x ∨ c ∈ rest ↔ (c = x ∨ c ∈ sourceView source rest) ∨ c ∈ eraseSource source rest
+
+case neg
+source : Nat
+c x : Cell
+rest : List Cell
+ih : c ∈ rest ↔ c ∈ sourceView source rest ∨ c ∈ eraseSource source rest
+hs : ¬x.source = source
+⊢ c = x ∨ c ∈ rest ↔ (c = x ∨ c ∈ sourceView source rest) ∨ c ∈ eraseSource source rest
+'ImplementationAlgorithms.mem_without' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.unaffected_certificate' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.rebind_valid' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.new_certificate_and_repair' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.other_sources_preserved' depends on axioms: [sorryAx]
+'ImplementationAlgorithms.migrated_source_removed' depends on axioms: [propext]
+'ImplementationAlgorithms.partition_membership' depends on axioms: [propext, sorryAx]
+'ImplementationAlgorithms.migration_complete' does not depend on any axioms
+'ImplementationAlgorithms.migration_keeps_handle' does not depend on any axioms
+'ImplementationAlgorithms.migration_preserves_others' depends on axioms: [sorryAx]
+'ImplementationAlgorithms.migration_one_authority' depends on axioms: [propext]
+'ImplementationAlgorithms.final_provider_fixture' depends on axioms: [propext]
+'ImplementationAlgorithms.migration_fixture' does not depend on any axioms

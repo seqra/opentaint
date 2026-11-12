@@ -1,0 +1,77 @@
+{
+  "checkedUtc": "2026-11-12T16:34:39.948428+00:00",
+  "head": "e078dd49545f21e2e377e7f8932aab2a871eda58",
+  "proposal": "docs/design/bidirectional-work-reduction-implementation-20261112.md",
+  "proposalSha256": "9badac8f4a50e03d48e6359dfcf3942732c5aeb76cb0b7411eac72b7268aac44",
+  "specSha256": "afbc9c400dae038c1e6cccaf4c80d04eadefffe5daec203746d7ea60d13b54e5",
+  "localLinkErrors": [],
+  "proofs": {
+    "HandoffCompaction": {
+      "sourceSha256": "6facc07a01072d1b01388ffaf321ce94f819181361aa5b9838303ff8283e432f",
+      "exitCode": 0,
+      "claims": 17,
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ],
+      "status": "PASS"
+    },
+    "WorkReduction": {
+      "sourceSha256": "50d5f01ae90cd61d9d4d569e69ae47be97a51e070f933da1e6153ac0a21a91b5",
+      "exitCode": 0,
+      "claims": 23,
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ],
+      "status": "PASS"
+    },
+    "CallerMarkRelations": {
+      "sourceSha256": "5ba7379eee7b3318cd36ddb8fa0fe7b6da982b70432ca3495c976eaace88aeb8",
+      "exitCode": 0,
+      "claims": 26,
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ],
+      "status": "PASS"
+    },
+    "ImplementationAlgorithms": {
+      "sourceSha256": "62cbb79272f3e53d0e1ed3210b4884cf5c7342bce2eb1bb8bb21ba91c860a2f0",
+      "exitCode": 0,
+      "claims": 13,
+      "axioms": [
+        "Quot.sound",
+        "propext"
+      ],
+      "status": "PASS"
+    }
+  },
+  "productionChanged": false,
+  "gradleRuns": 0,
+  "projectScans": 0,
+  "nativeMayEventualRefinementProved": false,
+  "latestMeasuredRunLabels": {
+    "owasp": {
+      "reached": "run-11",
+      "completed": "run-11",
+      "acceptedForward": "run-11"
+    },
+    "conductor": {
+      "reached": "run-8",
+      "completed": "run-7",
+      "acceptedForward": "run-7"
+    },
+    "stirling": {
+      "reached": "run-11",
+      "completed": "run-10",
+      "acceptedForward": "run-9"
+    },
+    "thingsboard": {
+      "reached": "run-1",
+      "completed": null,
+      "acceptedForward": null,
+      "end": "OOM"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "checkedUtc": "2026-11-12T16:24:55.403852+00:00",
+  "command": [
+    "lean",
+    "spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean"
+  ],
+  "sourceSha256": "e21b128d5fe68ce0c0d4afe891879942287757d504a357632ea4bbd22da40189",
+  "exitCode": 1,
+  "productionChanged": false,
+  "projectScans": 0
+}

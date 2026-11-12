@@ -1,0 +1,77 @@
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:80:4: error: unsolved goals
+case pos
+source other : Nat
+different : other ≠ source
+c : Cell
+rest : List Cell
+ih : sourceView other (eraseSource source rest) = sourceView other rest
+hs : c.source = source
+ho : c.source ≠ other
+⊢ List.filter (fun a => a.source == other && a.source != source) rest =
+    List.filter (fun c => c.source == other) (c :: rest)
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:84:4: error: unsolved goals
+case pos
+source other : Nat
+different : other ≠ source
+c : Cell
+rest : List Cell
+ih : sourceView other (eraseSource source rest) = sourceView other rest
+hs : ¬c.source = source
+ho : c.source = other
+⊢ List.filter (fun a => a.source == other && a.source != source) (c :: rest) =
+    c :: List.filter (fun c => c.source == other) rest
+
+case neg
+source other : Nat
+different : other ≠ source
+c : Cell
+rest : List Cell
+ih : sourceView other (eraseSource source rest) = sourceView other rest
+hs : ¬c.source = source
+ho : ¬c.source = other
+⊢ List.filter (fun a => a.source == other && a.source != source) rest = List.filter (fun c => c.source == other) rest
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:83:41: warning: This simp argument is unused:
+  ho
+
+Hint: Omit it from the simp argument list.
+  [apply] simp [sourceView, eraseSource, hs, ih]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:83:45: warning: This simp argument is unused:
+  ih
+
+Hint: Omit it from the simp argument list.
+  [apply] simp [sourceView, eraseSource, hs, ho]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:85:47: warning: This simp argument is unused:
+  ih
+
+Hint: Omit it from the simp argument list.
+  [apply] simp [sourceView, eraseSource, hs, ho]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:93:41: warning: This simp argument is unused:
+  ih
+
+Hint: Omit it from the simp argument list.
+  [apply] simp [sourceView, eraseSource, hs]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean:127:44: error: failed to synthesize
+  Decidable (Valid [1] [1, 1] ∧ ¬Valid [1] [2])
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+'ImplementationAlgorithms.mem_without' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.unaffected_certificate' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.rebind_valid' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.new_certificate_and_repair' depends on axioms: [propext, Quot.sound]
+'ImplementationAlgorithms.other_sources_preserved' depends on axioms: [sorryAx]
+'ImplementationAlgorithms.migrated_source_removed' depends on axioms: [propext, Classical.choice, Quot.sound]
+'ImplementationAlgorithms.partition_membership' depends on axioms: [propext, Classical.choice, Quot.sound]
+'ImplementationAlgorithms.migration_complete' does not depend on any axioms
+'ImplementationAlgorithms.migration_keeps_handle' does not depend on any axioms
+'ImplementationAlgorithms.migration_preserves_others' depends on axioms: [sorryAx]
+'ImplementationAlgorithms.migration_one_authority' depends on axioms: [propext, Classical.choice, Quot.sound]
+'ImplementationAlgorithms.final_provider_fixture' depends on axioms: [sorryAx]
+'ImplementationAlgorithms.migration_fixture' does not depend on any axioms

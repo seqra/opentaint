@@ -1,0 +1,25 @@
+{
+  "checkedUtc": "2026-11-12T16:25:43.649390+00:00",
+  "command": [
+    "lean",
+    "spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean"
+  ],
+  "leanVersion": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+  "head": "e078dd49545f21e2e377e7f8932aab2a871eda58",
+  "sourceSha256": "2f4bce37602b0fe617d6fcec555eb23a533d10fe17b095717a637554cf844e09",
+  "exitCode": 1,
+  "claims": 13,
+  "allowedAxioms": [
+    "propext",
+    "Quot.sound"
+  ],
+  "productionChanged": false,
+  "projectScans": 0,
+  "nativeMayEventualRefinementProved": false,
+  "earlierAttempts": [
+    "implementation-algorithms-attempt1",
+    "implementation-algorithms-attempt2"
+  ],
+  "auditFailed": true,
+  "status": "FAIL"
+}
