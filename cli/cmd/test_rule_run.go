@@ -171,6 +171,15 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		fail("Failed to find Java for the analyzer", err)
 	}
 
+	// Results left by an earlier run would pass for the results of this one.
+	resultPath := filepath.Join(outputDir, "test-result.json")
+	sarifPath := filepath.Join(outputDir, "test-results.sarif")
+	for _, path := range []string{resultPath, sarifPath} {
+		if err := utils.RemoveIfExists(path); err != nil {
+			fail("Failed to remove the old test results", err)
+		}
+	}
+
 	var cmdErr *java.JavaCommandError
 	// The spinner shows a failed analyzer run as failed, and the error is printed below.
 	if err := out.RunWithSpinner("Running "+opts.kind+" tests", func() error {
@@ -198,11 +207,11 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		os.Exit(analyzerFail.ExitCode)
 	}
 
-	resultPath := filepath.Join(outputDir, "test-result.json")
 	tr, err := analyzer.LoadTestResult(resultPath)
 	if err != nil {
 		fail("Failed to read the test results", err)
 	}
+	out.Blank()
 
 	if tr.Failed() == 0 && len(tr.Success) == 0 {
 		out.Warnf("No %s tests ran", opts.kind)
@@ -214,10 +223,15 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	}
 
 	printFailedTests(opts, tr, resultPath)
-	suggestions := append(appendLogSuggestion(nil), output.Suggestion{
-		Description: "To inspect the failing samples, run:",
-		Command:     utils.NewSummaryCommand(filepath.Join(outputDir, "test-results.sarif")).WithShowFindings().Build(),
-	})
+	suggestions := appendLogSuggestion(nil)
+	// The analyzer writes no SARIF report when no sample ran, for example when every sample is
+	// skipped.
+	if utils.PathExists(sarifPath) {
+		suggestions = append(suggestions, output.Suggestion{
+			Description: "To inspect the failing samples, run:",
+			Command:     utils.NewSummaryCommand(sarifPath).WithShowFindings().Build(),
+		})
+	}
 	out.Suggestions(suggestions...)
 	os.Exit(2)
 }

@@ -430,6 +430,12 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		fail("Failed to find Java for the analyzer", err)
 	}
 
+	// A report left by an earlier scan would pass for the result of this one when the analyzer
+	// fails before it writes a report.
+	if err := utils.RemoveIfExists(absSarifReportPath); err != nil {
+		fail("Failed to remove the old SARIF report", err)
+	}
+
 	var analyzerFail *analyzer.Error
 	var scanCmdErr *java.JavaCommandError
 	// The spinner shows a failed analyzer run as failed, and the error is printed below.
