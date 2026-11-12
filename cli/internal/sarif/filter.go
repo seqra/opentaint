@@ -21,10 +21,10 @@ type Filters struct {
 	FingerprintKey string   // partialFingerprints key to match ("" = DefaultFingerprintKey)
 }
 
-// active reports whether any filter dimension is set. FingerprintKey is
+// Active reports whether any filter dimension is set. FingerprintKey is
 // intentionally excluded: it only selects which key Fingerprints matches
 // against, so it has no effect without Fingerprints set.
-func (f Filters) active() bool {
+func (f Filters) Active() bool {
 	return len(f.Paths) > 0 || len(f.Severities) > 0 || len(f.RuleIDs) > 0 || len(f.Fingerprints) > 0
 }
 
@@ -33,7 +33,7 @@ func (f Filters) active() bool {
 // OriginalURIBaseIDS are preserved so "Rules executed" stays the full set. When
 // no dimension is set, the original report is returned unchanged.
 func (report *Report) Filter(f Filters) *Report {
-	if !f.active() {
+	if !f.Active() {
 		return report
 	}
 
