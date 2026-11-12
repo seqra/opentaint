@@ -56,11 +56,15 @@ var updateCmd = &cobra.Command{
 				targetTag = "v" + targetVersion
 			}
 		} else {
-			out.Print("Checking for updates...")
-			targetVersion, targetTag, err = utils.GetLatestRelease(globals.Config.Owner, globals.Config.Repo, globals.Config.Github.Token)
+			err = out.RunWithSpinner("Checking for updates", func() error {
+				var checkErr error
+				targetVersion, targetTag, checkErr = utils.GetLatestRelease(globals.Config.Owner, globals.Config.Repo, globals.Config.Github.Token)
+				return checkErr
+			})
 			if err != nil {
 				out.Fatal("Failed to check for updates", err)
 			}
+			out.Blank()
 		}
 
 		// Compare versions
@@ -111,7 +115,7 @@ var updateCmd = &cobra.Command{
 		}
 		defer func() { _ = os.RemoveAll(tmpDir) }()
 
-		out.Print("Downloading...")
+		// The download shows its own progress bar.
 		archivePath, err := utils.DownloadReleaseArchive(globals.Config.Owner, globals.Config.Repo, targetTag, globals.Config.Github.Token, tmpDir, globals.Config.SkipVerify, out)
 		if err != nil {
 			out.Fatal("Failed to download the release", err)
@@ -119,8 +123,9 @@ var updateCmd = &cobra.Command{
 
 		// Perform self-update
 		installDir := filepath.Dir(exePath)
-		out.Print("Installing...")
-		if err := utils.SelfUpdate(archivePath, installDir); err != nil {
+		if err := out.RunWithSpinner("Installing v"+targetVersion, func() error {
+			return utils.SelfUpdate(archivePath, installDir)
+		}); err != nil {
 			out.Fatal("Failed to install the update", err)
 		}
 
