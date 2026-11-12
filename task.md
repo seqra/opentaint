@@ -6,21 +6,10 @@ Our current goal: implement the modification and repeat major testing on real pr
 Always cleanup memory snapshot/profiles from the previous runs.
 
 # Modification:
-Implement the modification wrt the [bidirectional-main-migration-implementation-20261109.md](docs/design/bidirectional-main-migration-implementation-20261109.md)
+Implement the modification wrt the docs/design/bidirectional-work-reduction-implementation-20261112.md
 Commit after implementation.  
 Avoid changes in the analyzer core, that were not proposed and designed.
 If you have an optimization idea or a fix idea, write a proposal. Then we will include it into the next iteration.
-
-## Additional selected change (9 November 2026)
-
-Use [spec/bidirectional-run11-cutoff.md](spec/bidirectional-run11-cutoff.md).
-Stop all default bidirectional scans after the complete forward run-11 barrier.
-Keep confirmed findings. At this limit, also return provisional sink targets
-from the latest completed forward run only. Mark them as subject to later
-refinement. Do not restore targets discarded on earlier runs. Keep field
-limits, memory, timeouts and the legacy iteration-limit option unchanged.
-Preserve the old unbounded rule campaign as superseded and repeat validation
-from the new committed runtime.
 
 # Test
 Take the latest commit. Ignore reports for the previous commits as staled.
