@@ -13,6 +13,7 @@ import org.opentaint.dataflow.bidi.interp.Interpreter
 import org.opentaint.dataflow.bidi.interp.MethodForms
 import org.opentaint.dataflow.bidi.interp.RuleView
 import org.opentaint.dataflow.bidi.interp.UnresolvedCallObserver
+import org.opentaint.dataflow.bidi.interp.UnresolvedCallObserverState
 import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRFactTypeChecker
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodEntrypointResolver
@@ -32,7 +33,8 @@ class JIRInterpreter(
     val entries: JIRMethodEntries,
     val defaultGetModel: JIRMethodGetDefault?,
     val externalMethodTracker: ExternalMethodTracker?,
-) : Interpreter, UnresolvedCallObserver {
+) : Interpreter, UnresolvedCallObserver, UnresolvedCallObserverState {
+    override val enabled: Boolean get() = externalMethodTracker != null
     internal val errors = RuleErrors()
     internal val typeFilters = JIRTypeFilters(checker, manager)
     internal val enumAliasTargets = EnumAliasTargets(callResolver.cp)

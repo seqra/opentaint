@@ -69,7 +69,8 @@ class FrozenDemandTrieTest {
                 fun eligible(id: Int) = if (kind == DemandQueryKind.INITIAL_C2)
                     markSub(patterns[id].fact.mark, mark, f.manager.marks)
                 else marksMeet(patterns[id].fact.mark, mark, f.manager.marks)
-                val expected = reference.around(base, path.toIntArray()).filter(::eligible)
+                val expected = reference.around(base, path.toIntArray()).filter { eligible(it) &&
+                    (kind != DemandQueryKind.INITIAL_C2 || patterns[it].fact.path.size <= path.size) }
                 val selected = ArrayList<Int>()
                 trie.visitNativeOrder(actual, kind, f.manager.marks, selected::add)
                 assertEquals(expected, selected, "$kind $actual")
@@ -99,4 +100,109 @@ class FrozenDemandTrieTest {
         assertNull(atG.follow(c), "An exact-only child cannot extend an ANY precision cursor")
         assertFalse(trie.hasBase(AccessPathBase.Return))
     }
+    @Test fun `C2 skips impossible strict descendants while C5 retains them`() {
+        val f = StoreFixtures()
+        val root = f.pattern(tail = Tail.ANY)
+        val child = f.pattern(path = listOf(f.field("f")), tail = Tail.ANY)
+        val trie = FrozenDemandTrie.Builder<Int>().apply { add(root, 0); add(child, 1) }.build()
+        for (tail in Tail.entries) for (kind in DemandQueryKind.entries) {
+            val selected = arrayListOf<Int>()
+            var nodes = -1L
+            trie.visitCountedNativeOrder(root.copy(fact = root.fact.copy(tail = tail)), kind,
+                f.manager.marks, { n, _, _ -> nodes = n }, selected::add)
+            val descend = kind != DemandQueryKind.INITIAL_C2 || tail.isAny
+            assertEquals(if (descend) listOf(0, 1) else listOf(0), selected)
+            assertEquals(if (descend) 2L else 1L, nodes)
+        }
+    }
+
+    @Test fun `STOP unwinds ancestors and descendants and finalizes counts`() {
+        val f = StoreFixtures()
+        val root = f.pattern(tail = Tail.ANY)
+        val child = f.pattern(path = listOf(f.field("f")), tail = Tail.ANY)
+        val trie = FrozenDemandTrie.Builder<Int>().apply { add(root, 0); add(child, 1) }.build()
+        for (actual in listOf(root, child)) {
+            val selected = arrayListOf<Int>()
+            var counts = emptyList<Long>()
+            val status = trie.visitCountedUntil(actual, DemandQueryKind.INITIAL_C2, f.manager.marks,
+                { n, p, c -> counts = listOf(n, p, c) }) {
+                selected += it
+                DemandVisit.STOP
+            }
+            assertEquals(DemandScan.STOPPED, status)
+            assertEquals(listOf(0), selected)
+            assertEquals(listOf(1L, 1L, 1L), counts)
+        }
+    }
+
+    @Test fun `pure local scan matches complete materialized families and stops on companions`() {
+        val f = StoreFixtures()
+        val scope = BlockScope(org.opentaint.dataflow.graph.BlockId(1), org.opentaint.dataflow.graph.PortId(2))
+        val d = f.pattern(tail = Tail.ANY)
+        val store = DemandStore.Builder(f.manager).apply {
+            add(f.method, scope, org.opentaint.dataflow.graph.PortId(3), DemandPattern(d, d))
+        }.build()
+        val view = store.scope(f.method, scope)
+        val scan = view as LocalAdmissionView
+        val policy = RestrictedInitialPolicy(3, 8, Direction.FORWARD, f.manager.marks)
+        for (tail in Tail.entries) for (layer in Layer.entries) {
+            val actual = f.fact(path = listOf(f.field("f")), tail = tail, layer = layer)
+            val emitted = arrayListOf<InitialEmission>()
+            assertEquals(DemandScan.COMPLETED, scan.visitInitialEmissions(actual, policy) {
+                emitted += it; DemandVisit.CONTINUE
+            })
+            assertEquals(view.initials(actual, policy).map { InitialEmission(it.initial.toPattern(), it.layer) }, emitted)
+        }
+        val actual = f.fact(path = listOf(f.field("f"), f.field("g")))
+        var visited = 0
+        assertEquals(DemandScan.STOPPED, scan.visitInitialEmissions(actual, policy) {
+            visited++; if (visited == 2) DemandVisit.STOP else DemandVisit.CONTINUE
+        })
+        assertEquals(2, visited)
+        val later = RestrictedInitialPolicy(2, 8, Direction.BACKWARD, f.manager.marks)
+        assertFalse(scan.supportsScan(actual, later))
+        assertEquals(DemandScan.UNSUPPORTED, scan.visitInitialEmissions(actual, later) { error("unsupported scan") })
+        assertEquals(DemandScan.UNSUPPORTED, scan.visitInitialEmissions(Reach.NORMAL, policy) { error("control scan") })
+    }
+
+    @Test fun `visitor exception and cancellation unwind with final work counts`() {
+        val f = StoreFixtures()
+        val root = f.pattern(tail = Tail.ANY)
+        val trie = FrozenDemandTrie.Builder<Int>(f.cancellation).apply { add(root, 0); add(root, 1) }.build()
+        var counts = emptyList<Long>()
+        assertFailsWith<IllegalStateException> {
+            trie.visitCountedUntil(root, DemandQueryKind.INITIAL_C2, f.manager.marks,
+                { n, p, c -> counts = listOf(n, p, c) }) { error("visitor error") }
+        }
+        assertEquals(listOf(1L, 1L, 1L), counts)
+        assertFailsWith<org.opentaint.dataflow.util.Cancellation.Cancelled> {
+            trie.visitCountedUntil(root, DemandQueryKind.INITIAL_C2, f.manager.marks,
+                { n, p, c -> counts = listOf(n, p, c) }) {
+                f.cancellation.cancel()
+                DemandVisit.CONTINUE
+            }
+        }
+        assertEquals(listOf(1L, 1L, 1L), counts)
+    }
+
+    @Test fun `pure emission scan does not intern primary or companion initials`() {
+        val f = StoreFixtures()
+        val scope = BlockScope(org.opentaint.dataflow.graph.BlockId(1), org.opentaint.dataflow.graph.PortId(2))
+        val d = f.pattern(tail = Tail.ANY)
+        val view = DemandStore.Builder(f.manager).apply {
+            add(f.method, scope, org.opentaint.dataflow.graph.PortId(3), DemandPattern(d, d))
+        }.build().scope(f.method, scope) as LocalAdmissionView
+        val actual = f.fact(path = listOf(f.field("f"), f.field("g")))
+        val directory = ApManager::class.java.getDeclaredField("initials").apply { isAccessible = true }
+        fun count() = (directory.get(f.manager) as Map<*, *>).size
+        val before = count()
+        val emitted = arrayListOf<InitialEmission>()
+        assertEquals(DemandScan.COMPLETED, view.visitInitialEmissions(actual,
+            RestrictedInitialPolicy(3, 8, Direction.FORWARD, f.manager.marks)) {
+            emitted += it; DemandVisit.CONTINUE
+        })
+        assertEquals(3, emitted.size)
+        assertEquals(before, count(), "The descriptor probe must not create query-only initial keys")
+    }
+
 }

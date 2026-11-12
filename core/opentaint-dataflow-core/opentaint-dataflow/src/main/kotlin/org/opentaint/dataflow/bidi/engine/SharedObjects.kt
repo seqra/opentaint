@@ -10,6 +10,7 @@ import org.opentaint.dataflow.bidi.ap.ApOps
 import org.opentaint.dataflow.bidi.interp.FormCacheStatistics
 import org.opentaint.dataflow.bidi.interp.Interpreter
 import org.opentaint.dataflow.bidi.interp.UnresolvedCallObserver
+import org.opentaint.dataflow.bidi.interp.enabled
 import org.opentaint.dataflow.bidi.store.RecordStore
 import org.opentaint.dataflow.bidi.store.N1Statistics
 import org.opentaint.dataflow.ifds.UnitResolver
@@ -64,7 +65,8 @@ class SharedObjects(
         staticCallGraph = org.opentaint.dataflow.bidi.store.DetachedStaticCallGraph.EMPTY
     }
 
-    val unresolvedObserver: UnresolvedCallObserver? get() = interpreter as? UnresolvedCallObserver
+    val unresolvedObserver: UnresolvedCallObserver?
+        get() = (interpreter as? UnresolvedCallObserver)?.takeIf { it.enabled }
 
     override fun close() { releaseRun1CatalogCoverage(); dispatcher.close() }
 }

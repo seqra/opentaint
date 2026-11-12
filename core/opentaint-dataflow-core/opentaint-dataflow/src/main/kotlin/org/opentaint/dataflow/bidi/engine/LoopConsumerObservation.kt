@@ -45,6 +45,7 @@ internal class LoopConsumerViews(
     val keepEnclosingData: (PortId, Facts) -> Boolean = { _, _ -> true },
     val skipEmptyDataReplay: (PremiseKey, Facts, LoopObservedRecord) -> Boolean = { _, _, _ -> false },
     val precisionCursors: (Pattern) -> List<LoopPrecisionCursor>? = { null },
+    val probeAdmissions: ((Facts, Set<LoopAdmissionDescriptor>) -> LoopAdmissionProbe)? = null,
 )
 
 /** Complete three-family observer. All scratch is local to one query invocation. */
@@ -57,10 +58,14 @@ internal class LoopConsumerObservation(
 
     fun precisionCursors(actual: Pattern): List<LoopPrecisionCursor>? = views.precisionCursors(actual)
 
-    fun observe(original: PremiseKey, value: Facts): LoopObservation<LoopEnclosingResult> {
+    fun probe(value: Facts, expected: Set<LoopAdmissionDescriptor>): LoopAdmissionProbe =
+        views.probeAdmissions?.invoke(value, expected) ?: LoopAdmissionProbe.Unsupported
+
+    fun observe(original: PremiseKey, value: Facts,
+                completedBundle: LoopAdmissionBundle? = null): LoopObservation<LoopEnclosingResult> {
         val ap = ops.manager
         ap.cancellation.checkpoint()
-        val bundle = views.admissionBundle?.invoke(value)
+        val bundle = completedBundle ?: views.admissionBundle?.invoke(value)
         val adjacent = bundle?.adjacent() ?: views.adjacentInitials(value)
         val full = EnclosingResults(ops)
         fun sink(exit: PortId): LocalRelationOut = object : LocalRelationOut {

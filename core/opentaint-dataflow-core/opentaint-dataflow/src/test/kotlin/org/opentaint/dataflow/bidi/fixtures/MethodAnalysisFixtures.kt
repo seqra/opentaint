@@ -34,6 +34,7 @@ class MethodAnalysisFixtures(
     successors: List<List<Int>> = listOf(listOf(1), listOf(2), emptyList()),
     val normalExit: Int = 2,
     val exceptionalExit: Int? = null,
+    val unresolvedEnabled: Boolean = true,
     staticProfiles: ((MethodAnalysisFixtures) -> Run1StaticProfiles)? = null,
     abstractionStatistics: Run1AbstractionStatistics? =
         if (java.lang.Boolean.getBoolean("org.opentaint.bidi.optimizationStatistics")) Run1AbstractionStatistics() else null,
@@ -122,7 +123,8 @@ class MethodAnalysisFixtures(
             })
     }
 
-    val interpreter: Interpreter = object : Interpreter, UnresolvedCallObserver {
+    val interpreter: Interpreter = object : Interpreter, UnresolvedCallObserver, UnresolvedCallObserverState {
+        override val enabled: Boolean get() = unresolvedEnabled
         override fun reached(call: CommonCallExpr, position: AccessPathBase, plan: CallPlan) {
             unresolvedCalls += Triple(call, position, plan)
         }

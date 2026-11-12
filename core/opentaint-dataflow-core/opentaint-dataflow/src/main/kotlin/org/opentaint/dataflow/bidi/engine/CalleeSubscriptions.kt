@@ -1,14 +1,15 @@
 package org.opentaint.dataflow.bidi.engine
 
 import org.opentaint.dataflow.bidi.ap.*
-import org.opentaint.dataflow.bidi.store.AddedFactAccumulator
+import org.opentaint.dataflow.bidi.store.CallerInputValues
 import org.opentaint.dataflow.bidi.store.CallerRef
 import org.opentaint.dataflow.bidi.store.PathTrie
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 
 /** The caller runner owns exact added groups, indexed as the transpose of replay. */
-class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Statistics? = null) {
-    private val values = AddedFactAccumulator(ops.manager)
+class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Statistics? = null,
+                          markMode: MarkMode = MarkMode.FULL) {
+    private val values = CallerInputValues(ops.manager, markMode)
     private val callees = ArrayList<MethodKey>()
     private var index = PathTrie<Int>(ops.manager.cancellation)
     private val zeroParts = LinkedHashMap<CallerRef, Subscription>()
@@ -142,6 +143,7 @@ class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Stat
     /** Called only after the runner joins. */
     fun clear() {
         check(!visitingQuestion) { "A live question visit cannot release its input directory" }
+        statistics?.releaseCallerPacking(values.census())
         statistics?.releaseDirectory(values.size, zeroParts.size, postings)
         values.clear()
         callees.clear()

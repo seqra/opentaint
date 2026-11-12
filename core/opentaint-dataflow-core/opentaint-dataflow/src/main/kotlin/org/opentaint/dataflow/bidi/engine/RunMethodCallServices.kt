@@ -17,8 +17,8 @@ import java.util.ArrayDeque
 /** Call walks and suspended return batches belong to one method actor. */
 class RunMethodCallServices(core: BlockRunState) : MethodCallServices {
     private var owner: BlockRunState? = core
-    // Keep semantic unresolved observations once per qualified current input.
-    private var observed: AddedFactAccumulator? = if (core.config.run1) AddedFactAccumulator(core.ap) else null
+    // Allocate only for an enabled observer's first reached TAINT input.
+    private var observed: AddedFactAccumulator? = null
 
     private fun active(): BlockRunState = checkNotNull(owner) { "The call services were released" }.also {
         it.ap.cancellation.checkpoint()
@@ -312,10 +312,10 @@ class RunMethodCallServices(core: BlockRunState) : MethodCallServices {
         if (ctx.plan.stagesFrom[CallPoint.ADDED].orEmpty().none {
                 it is CallStage.Edges && it.kind == StageKind.UNRESOLVED
             }) return
-        val observed = checkNotNull(observed)
         for (fact in facts) {
             core.ap.cancellation.checkpoint()
             if (fact.facts !is TaintTree) continue
+            val observed = observed ?: AddedFactAccumulator(core.ap).also { this.observed = it }
             val ref = CallerRef(core.key, fact.premise, ctx.callerLayer, ctx.node, scope = core.scope)
             if (observed.add(ref, fact.facts.layer, fact.facts) == null) continue
             observer.reached(ctx.call, fact.facts.base, ctx.plan)

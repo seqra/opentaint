@@ -5,6 +5,9 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.util.Cancellation
 
+internal enum class DemandVisit { CONTINUE, STOP }
+internal enum class DemandScan { COMPLETED, STOPPED, UNSUPPORTED }
+
 internal enum class DemandQueryKind { INITIAL_C2, OUTPUT_C5 }
 
 /** A cursor only follows branches with a real compatible ANY witness. */
@@ -89,10 +92,16 @@ internal class FrozenDemandTrie<P : Any> private constructor(
 
     fun visitCountedNativeOrder(actual: Pattern, kind: DemandQueryKind, catalog: MarkTable?,
                                 counts: ((Long, Long, Long) -> Unit)?, visit: (P) -> Unit) {
+        visitCountedUntil(actual, kind, catalog, counts) { visit(it); DemandVisit.CONTINUE }
+    }
+
+    /** One walker serves materialized C2, non-creating probes and unchanged C5. */
+    fun visitCountedUntil(actual: Pattern, kind: DemandQueryKind, catalog: MarkTable?,
+                          counts: ((Long, Long, Long) -> Unit)?, visit: (P) -> DemandVisit): DemandScan {
         cancellation?.checkpoint()
-        var node = roots[actual.fact.base] ?: run { counts?.invoke(0, 0, 0); return }
+        var node = roots[actual.fact.base] ?: run { counts?.invoke(0, 0, 0); return DemandScan.COMPLETED }
         val work = if (counts == null) null else QueryWork()
-        fun values(at: Node<P>) {
+        fun values(at: Node<P>): DemandVisit {
             if (work != null) work.nodes++
             val selected = ArrayList<Terminal<P>>()
             for ((mark, terminals) in at.profiles) {
@@ -108,22 +117,29 @@ internal class FrozenDemandTrie<P : Any> private constructor(
             for (terminal in selected) {
                 cancellation?.checkpoint()
                 if (work != null) work.candidates++
-                visit(terminal.payload)
+                if (visit(terminal.payload) == DemandVisit.STOP) return DemandVisit.STOP
             }
+            return DemandVisit.CONTINUE
         }
         try {
             for (accessor in actual.fact.path) {
-                values(node)
-                node = node.child(accessor) ?: return
+                if (values(node) == DemandVisit.STOP) return DemandScan.STOPPED
+                node = node.child(accessor) ?: return DemandScan.COMPLETED
+            }
+            // A strict descendant cannot produce a C2 primary from STAR/EXACT.
+            // Companions also require that primary. MAY/MUST and C5 keep DFS.
+            if (kind == DemandQueryKind.INITIAL_C2 && !actual.fact.tail.isAny) {
+                return if (values(node) == DemandVisit.STOP) DemandScan.STOPPED else DemandScan.COMPLETED
             }
             val stack = ArrayDeque<Node<P>>()
             stack.addLast(node)
             while (stack.isNotEmpty()) {
                 cancellation?.checkpoint()
                 val at = stack.removeLast()
-                values(at)
+                if (values(at) == DemandVisit.STOP) return DemandScan.STOPPED
                 stack.addAll(at.nativeChildren)
             }
+            return DemandScan.COMPLETED
         } finally { if (work != null) counts?.invoke(work.nodes, work.profiles, work.candidates) }
     }
 

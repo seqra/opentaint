@@ -10,6 +10,8 @@ import org.opentaint.dataflow.bidi.engine.SharedObjects
 import org.opentaint.dataflow.bidi.fixtures.EngineShellFixtures
 import org.opentaint.dataflow.bidi.interp.Interpreter
 import org.opentaint.dataflow.bidi.interp.UnresolvedCallObserver
+import org.opentaint.dataflow.bidi.interp.UnresolvedCallObserverState
+import org.opentaint.dataflow.bidi.interp.enabled
 import org.opentaint.dataflow.bidi.store.DemandStore
 import org.opentaint.dataflow.bidi.store.Record
 import java.util.concurrent.ExecutorService
@@ -134,4 +136,18 @@ class RunConfigTest {
             assertEquals(listOf<AccessPathBase>(AccessPathBase.Argument(0)), seen)
         }
     }
+    @Test fun `disabled observer is absent but generic SAM remains enabled`(): Unit {
+        val generic = UnresolvedCallObserver { _, _, _ -> }
+        assertTrue(generic.enabled)
+        val interpreter = object : Interpreter by f.interpreter, UnresolvedCallObserver, UnresolvedCallObserverState {
+            override val enabled = false
+            override fun reached(call: org.opentaint.ir.api.common.cfg.CommonCallExpr, position: AccessPathBase,
+                                 plan: org.opentaint.dataflow.bidi.interp.CallPlan) = error("Disabled callback")
+        }
+        SharedObjects(f.manager, f.ops, interpreter, f.language, f.contexts, f.records,
+            f.unitResolver, f.refManager, f.cancellation, threads = 1).use { shared ->
+            assertNull(shared.unresolvedObserver)
+        }
+    }
+
 }

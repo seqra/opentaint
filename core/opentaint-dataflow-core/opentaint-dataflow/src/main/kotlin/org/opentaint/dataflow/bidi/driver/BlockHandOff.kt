@@ -28,7 +28,6 @@ fun projectBlockHandOff(
     counts: MutableMap<MethodKey, Int>,
     onBoundary: (ScopedSummaryKey, Pattern, Pattern) -> Unit = { _, _, _ -> },
 ) {
-    val ops = ApOps(ap)
     for ((producer, store) in summaries) {
         ap.cancellation.checkpoint()
         val next = producer.reversed()
@@ -37,16 +36,18 @@ fun projectBlockHandOff(
             // The same selected STAR/ANY guidance grammar applies at every scope.
             if (direction == Direction.BACKWARD)
                 check(premise is InitialAp) { "The backward run has no multi-premise summary (ap.md §9.2)" }
-            for (leaf in ops.leaves(facts)) {
-                ap.cancellation.checkpoint()
-                val entry = guidancePattern(leaf)
-                premise.forEachMember { member ->
-                    ap.cancellation.checkpoint()
-                    val exit = guidancePattern(member.toPattern())
-                    onBoundary(producer, exit, entry)
-                    if (demand.add(next.method, next.scope, next.exit, DemandPattern(entry, exit)))
-                        counts.merge(next.method, 1, Int::plus)
+            for (row in projectSummaryGuidance(ap,premise,facts)) {
+                val entry = when (val e = row.entry) {
+                    is DemandEntry.Data -> e.pattern
+                    DemandEntry.Zero -> ap.zero.toPattern()
+                    DemandEntry.Target -> error("A DATA summary cannot project a Target entry")
                 }
+                val exit = when (val e = row.exit) {
+                    is DemandExit.Data -> e.pattern
+                    DemandExit.Zero -> ap.zero.toPattern()
+                }
+                onBoundary(producer,exit,entry)
+                if (demand.add(next.method,next.scope,next.exit,row)) counts.merge(next.method,1,Int::plus)
             }
         }
     }
@@ -56,12 +57,8 @@ fun projectBlockHandOff(
         for (row in terminal.rows) {
             ap.cancellation.checkpoint()
             check(row.target == Target.DemandTarget) { "Only outgoing DEMAND Targets guide a later run" }
-            row.premise.forEachMember { member ->
-                ap.cancellation.checkpoint()
-                val exit = if (member.isZero) DemandExit.Zero
-                    else DemandExit.Data(guidancePattern(member.toPattern()))
-                if (demand.add(next.method, next.scope, next.exit, PairedDemand(DemandEntry.Target, exit)))
-                    counts.merge(next.method, 1, Int::plus)
+            for (projected in projectTargetGuidance(row)) {
+                if (demand.add(next.method,next.scope,next.exit,projected)) counts.merge(next.method,1,Int::plus)
             }
         }
     }

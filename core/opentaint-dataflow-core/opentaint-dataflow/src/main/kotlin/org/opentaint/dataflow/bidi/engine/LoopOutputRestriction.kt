@@ -92,6 +92,7 @@ internal class LoopRestrictionStatistics {
     var scalarQueries: Long = 0; internal set
     var observations: Long = 0; internal set
     var trials: Long = 0; internal set
+    var earlyRejectedTrials: Long = 0; internal set
     var drops: Long = 0; internal set
     var cuts: Long = 0; internal set
     var rawFallbacks: Long = 0; internal set
@@ -129,11 +130,12 @@ internal class LoopOutputRestriction(private val ops: ApOps) {
 
     fun <R> restrict(run1: Boolean, grows: Boolean, appliedValue: Facts,
                      session: LoopRestrictionSession<R>): List<Facts> =
-        restrictWithCertificate(run1, grows, appliedValue, session.observe, session::certifiedFirstBudget)
+        restrictWithCertificate(run1, grows, appliedValue, session.observe, session::certifiedFirstBudget, session::trial)
 
     private fun <R> restrictWithCertificate(run1: Boolean, grows: Boolean, appliedValue: Facts,
                                            observe: (Facts) -> LoopObservation<R>,
-                                           firstBudget: ((Facts, LoopObservation<R>) -> Int?)?): List<Facts> {
+                                           firstBudget: ((Facts, LoopObservation<R>) -> Int?)?,
+                                           trial: ((Facts, LoopObservation<R>) -> LoopObservation<R>?)? = null): List<Facts> {
         val ap = ops.manager
         ap.cancellation.checkpoint()
         statistics.offers++
@@ -143,13 +145,14 @@ internal class LoopOutputRestriction(private val ops: ApOps) {
         }
         val result = ExactDemandResults(ap)
         for (scalar in annotatedLoopScalars(ops, appliedValue)) {
-            restrictScalar(scalar, observe, firstBudget)?.let(result::add)
+            restrictScalar(scalar, observe, firstBudget, trial)?.let(result::add)
         }
         return result.all()
     }
 
     private fun <R> restrictScalar(raw: Facts, observe: (Facts) -> LoopObservation<R>,
-                                  firstBudget: ((Facts, LoopObservation<R>) -> Int?)?): Facts? {
+                                  firstBudget: ((Facts, LoopObservation<R>) -> Int?)?,
+                                  trial: ((Facts, LoopObservation<R>) -> LoopObservation<R>?)?): Facts? {
         ops.manager.cancellation.checkpoint()
         statistics.scalarQueries++
         statistics.observations++
@@ -182,8 +185,9 @@ internal class LoopOutputRestriction(private val ops: ApOps) {
                 override fun markRequest(mark: TaintMark) = error("A loop prefix cut cannot request a mark")
             })
             val cut = checkNotNull(candidate) { "A scalar field limit must have an output" }
-            statistics.observations++
-            if (observe(cut) == baseline) {
+            val observation = if (trial == null) observe(cut) else trial(cut, baseline)
+            if (observation == null) statistics.earlyRejectedTrials++ else statistics.observations++
+            if (observation == baseline) {
                 check(cut.layer == Layer.DEMAND) { "A proper loop prefix cut must be DEMAND" }
                 statistics.cuts++
                 return cut

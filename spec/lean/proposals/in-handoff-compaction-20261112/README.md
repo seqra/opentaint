@@ -198,3 +198,9 @@ The [proposal validation receipt](implementation-proposal-validation.json)
 records all four model checks (79 claims), local link checks and unchanged
 production scope. Its run labels refer to existing measurements, not new
 engine executions.
+
+## Runtime binding
+
+The [runtime binding](runtime-binding.md) maps the checked local laws to the
+implemented owners and native differential controls. It preserves the R3
+proof gate and states the storage fallback and release boundaries.

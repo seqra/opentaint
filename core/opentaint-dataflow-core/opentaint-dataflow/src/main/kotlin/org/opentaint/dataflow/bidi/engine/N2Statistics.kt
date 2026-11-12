@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.bidi.engine
 
 import java.util.concurrent.atomic.AtomicLong
+import org.opentaint.dataflow.bidi.store.CallerInputValues
 
 /** Optional aggregate census. Current counts cover subscription directories, not live graph bytes. */
 class N2Statistics {
@@ -23,6 +24,16 @@ class N2Statistics {
     private val staticGroupSuffixEntries = AtomicLong()
     private val staticGroupDirectSupplyLeaves = AtomicLong()
     private val staticGroupFallbackJoinLeaves = AtomicLong()
+    private val releasedCallerGroups = AtomicLong()
+    private val releasedCallerFamilies = AtomicLong()
+    private val releasedCallerSources = AtomicLong()
+    private val releasedCallerCells = AtomicLong()
+    private val releasedCallerDiagonal = AtomicLong()
+    private val releasedCallerChangingPairs = AtomicLong()
+    private val releasedCallerChangingTargets = AtomicLong()
+    private val releasedCallerScalar = AtomicLong()
+    private val releasedCallerMigrations = AtomicLong()
+    private val releasedCallerDecodes = AtomicLong()
 
     private val staticSupplyOffers = AtomicLong()
     private val staticSupplyOfferedMembers = AtomicLong()
@@ -92,6 +103,17 @@ class N2Statistics {
         val demandLookupEligible: Long = 0,
         val initialPackets: Long = 0,
         val offeredInitialKeys: Long = 0,
+        /** Terminal directory totals, not simultaneous live heap or deduplicated global geometry. */
+        val releasedCallerGroups: Long = 0,
+        val releasedCallerFamilies: Long = 0,
+        val releasedCallerSources: Long = 0,
+        val releasedCallerCells: Long = 0,
+        val releasedCallerDiagonal: Long = 0,
+        val releasedCallerChangingPairs: Long = 0,
+        val releasedCallerChangingTargets: Long = 0,
+        val releasedCallerScalar: Long = 0,
+        val releasedCallerMigrations: Long = 0,
+        val releasedCallerDecodes: Long = 0,
     )
 
     internal fun selectedCallOffered() { selectedCallOffers.incrementAndGet() }
@@ -129,6 +151,20 @@ class N2Statistics {
         cumulativeGroups.addAndGet(-groups.toLong())
         zeroOnlyEntries.addAndGet(-zeroEntries.toLong())
         indexPostings.addAndGet(-postings)
+    }
+
+    /** Once per released directory. No per-offer atomics or diagnostic key archive. */
+    internal fun releaseCallerPacking(census: CallerInputValues.Census) {
+        releasedCallerGroups.addAndGet(census.logicalGroups.toLong())
+        releasedCallerFamilies.addAndGet(census.families.toLong())
+        releasedCallerSources.addAndGet(census.sources.toLong())
+        releasedCallerCells.addAndGet(census.cells)
+        releasedCallerDiagonal.addAndGet(census.diagonal)
+        releasedCallerChangingPairs.addAndGet(census.changingPairs)
+        releasedCallerChangingTargets.addAndGet(census.changingTargets)
+        releasedCallerScalar.addAndGet(census.scalar.toLong())
+        releasedCallerMigrations.addAndGet(census.migrations)
+        releasedCallerDecodes.addAndGet(census.decodedSnapshots)
     }
 
     internal fun replayQueued() {
@@ -192,5 +228,9 @@ class N2Statistics {
         staticSupplyOfferedMembers.get(), staticSupplyFreshMembers.get(), staticSupplyRegionRows.get(),
         staticSupplyCommits.get(), selectedCallOffers.get(), persistedReplayInvocations.get(),
         persistedReplayCandidates.get(), persistedReplayMatches.get(), demandLookupInvocations.get(),
-        demandLookupEmpty.get(), demandLookupEligible.get(), initialPackets.get(), offeredInitialKeys.get())
+        demandLookupEmpty.get(), demandLookupEligible.get(), initialPackets.get(), offeredInitialKeys.get(),
+        releasedCallerGroups.get(), releasedCallerFamilies.get(), releasedCallerSources.get(),
+        releasedCallerCells.get(), releasedCallerDiagonal.get(), releasedCallerChangingPairs.get(),
+        releasedCallerChangingTargets.get(), releasedCallerScalar.get(), releasedCallerMigrations.get(),
+        releasedCallerDecodes.get())
 }

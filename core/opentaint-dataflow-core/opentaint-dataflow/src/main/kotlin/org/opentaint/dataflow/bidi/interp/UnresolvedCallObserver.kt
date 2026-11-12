@@ -7,3 +7,12 @@ import org.opentaint.ir.api.common.cfg.CommonCallExpr
 fun interface UnresolvedCallObserver {
     fun reached(call: CommonCallExpr, position: AccessPathBase, plan: CallPlan)
 }
+
+/** Optional immutable capability. Keep the observer itself a Java/Kotlin SAM. */
+interface UnresolvedCallObserverState {
+    val enabled: Boolean
+}
+
+/** Existing observers remain enabled unless they explicitly opt out. */
+val UnresolvedCallObserver.enabled: Boolean
+    get() = (this as? UnresolvedCallObserverState)?.enabled ?: true

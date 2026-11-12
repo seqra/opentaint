@@ -518,7 +518,13 @@ internal class MethodBlockRuntime(
                 val values = if (!child.isLoop || exit.ordinal < 0) listOf(bounded) else
                     restriction.restrict(config.run1, needsGate, bounded, LoopRestrictionSession(ops, config.admissionPolicy,
                         { candidate -> observe(parent, child, link, exit, original, candidate) },
-                        { actual -> observers[parent.scope to child.id]?.precisionCursors(actual) }))
+                        probe = { candidate, expected ->
+                            observers.getValue(parent.scope to child.id).probe(candidate, expected)
+                        },
+                        observeCompleted = { candidate, bundle ->
+                            observe(parent, child, link, exit, original, candidate, bundle)
+                        },
+                        precision = { actual -> observers[parent.scope to child.id]?.precisionCursors(actual) }))
                 for (kept in values) {
                     if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "local-kept") {
                         catalog(ap); text("parent", link.parent.toString()); text("child", link.child.toString())
@@ -762,7 +768,8 @@ internal class MethodBlockRuntime(
     }
 
     private fun observe(parent: Entry, loop: MethodBlock, link: LocalLink, exit: PortId,
-                        original: PremiseKey, value: Facts): LoopObservation<LoopEnclosingResult> {
+                        original: PremiseKey, value: Facts,
+                        completedBundle: LoopAdmissionBundle? = null): LoopObservation<LoopEnclosingResult> {
         val observer = observers.getOrPut(parent.scope to loop.id) {
         val adjacentId = checkNotNull(if (forward) layout[parent.scope.block].after else layout[parent.scope.block].before)
         val adjacent = layout[adjacentId]
@@ -785,6 +792,13 @@ internal class MethodBlockRuntime(
                 add(LoopLabelledAdmission(scope, LoopAdmissionFamily.ADJACENT, initial))
             for ((scope, demand) in repeatDemands) for (initial in initials(scope, demand, actual))
                 add(LoopLabelledAdmission(scope, LoopAdmissionFamily.REPEAT, initial))
+        }
+        val admissionConsumers = buildList {
+            for ((family, demands) in listOf(LoopAdmissionFamily.ADJACENT to adjacentDemands,
+                                             LoopAdmissionFamily.REPEAT to repeatDemands))
+                for ((scope, demand) in demands) add(LoopAdmissionConsumer(scope, family, demand) { actual ->
+                    keepLocalConclusion(scope.block, scope.entry, actual, count = false)
+                })
         }
         val enclosingDemand = parent.demand
         val views = LoopConsumerViews(parent.scope, parent.rootEntry,
@@ -809,6 +823,9 @@ internal class MethodBlockRuntime(
                     LoopLabelledAdmission(scope, LoopAdmissionFamily.REPEAT, it) } } }) },
             keepEnclosingData = { output, actual -> keepLocalConclusion(parent.scope.block, output, actual, count = false) },
             skipEmptyDataReplay = { pr, actual, saved -> skipEmptyDataReplay(parent, pr, actual, saved) },
+            probeAdmissions = { actual, expected ->
+                probeLoopAdmissions(ap, config.admissionPolicy, actual, expected, admissionConsumers, quantumQueries, queryCounts)
+            },
             precisionCursors = { actual ->
                 val packet = ap.factsOf(actual.fact, actual.exclusion, Layer.DEMAND)
                 buildList {
@@ -824,7 +841,7 @@ internal class MethodBlockRuntime(
             })
         LoopConsumerObservation(ops, mode, views)
         }
-        val observation = observer.observe(original, value)
+        val observation = observer.observe(original, value, completedBundle)
         if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "loop-observation") {
             catalog(ap); text("parent", parent.scope.toString()); number("loop", loop.id.ordinal)
             number("exit", exit.ordinal); premise("P", original); facts("F", value)
@@ -875,12 +892,13 @@ internal class MethodBlockRuntime(
             "prePublicationLocalOffers=$prePublicationLocalOffers prePublicationDeadLocals=$prePublicationDeadLocals " +
             "localMasks=${liveLocals?.retainedMasks ?: 0} localMaskWords=${liveLocals?.retainedWords ?: 0} " +
             "c2Queries=${queryCounts.c2Queries} c2Hits=${queryCounts.c2Hits} c2Native=${queryCounts.c2Native} c2Rows=${queryCounts.c2Rows} " +
+            "probeUnsupported=${queryCounts.probeUnsupported} probeComplete=${queryCounts.probeComplete} probeCacheHits=${queryCounts.probeCacheHits} " +
             "c5Plans=${queryCounts.plans} c5PlanChecks=${queryCounts.planChecks} c5PlanHits=${queryCounts.planHits} c5PlanFallbacks=${queryCounts.planFallbacks} " +
             "oversizedPlanRequests=${queryCounts.oversizedPlanRequests} c5PreparedQueries=${queryCounts.c5PreparedQueries} " +
             "c5NativeQueries=${queryCounts.c5NativeQueries} c5ReferenceFallbacks=${queryCounts.c5ReferenceFallbacks} " +
             "emptyDataReplays=${queryCounts.emptyReplays} " +
             "offers=${counts.offers} bypasses=${counts.bypasses} scalars=${counts.scalarQueries} " +
-            "observations=${counts.observations} trials=${counts.trials} drops=${counts.drops} " +
+            "observations=${counts.observations} trials=${counts.trials} earlyRejectedTrials=${counts.earlyRejectedTrials} drops=${counts.drops} " +
             "cuts=${counts.cuts} rawFallbacks=${counts.rawFallbacks} " +
             "certificates=${counts.certificates} certificateFallbacks=${counts.certificateFallbacks} budgetsSkipped=${counts.budgetsSkipped} " +
             (localMatchCounts?.diagnosticStatistics()?.plus(" ") ?: "") +

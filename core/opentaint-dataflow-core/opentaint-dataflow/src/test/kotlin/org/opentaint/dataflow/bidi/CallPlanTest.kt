@@ -531,4 +531,29 @@ class CallPlanTest {
             assertTrue(f.unresolvedCalls.isEmpty())
         }
     }
+    @Test fun `disabled unresolved diagnostics retain no archive and preserve transfer`(): Unit {
+        fun archive(calls: RunMethodCallServices): Any? = calls.javaClass.getDeclaredField("observed")
+            .also { it.isAccessible = true }.get(calls)
+        MethodAnalysisFixtures(unresolvedEnabled = false).use { f ->
+            f.call(1, straight())
+            val (core, calls) = service(f)
+            assertNull(archive(calls), "No diagnostic archive at construction")
+            val input = EdgeDelta(initial(f, f.pattern()), f.inst(1), f.fact())
+            repeat(2) { process(f, calls, input) }
+            assertNull(archive(calls), "Disabled callbacks must not retain inputs")
+            assertTrue(f.unresolvedCalls.isEmpty())
+            assertTrue(stored(f, core).isNotEmpty(), "Diagnostic disable must preserve transfer")
+        }
+        MethodAnalysisFixtures().use { f ->
+            f.call(1, straight())
+            val (_, calls) = service(f)
+            assertNull(archive(calls), "Enabled diagnostics are lazy too")
+            process(f, calls, EdgeDelta(initial(f, f.pattern()), f.inst(1), f.fact()))
+            assertNotNull(archive(calls))
+            assertEquals(1, f.unresolvedCalls.size)
+            calls.freeze()
+            assertNull(archive(calls), "Release the optional archive with its owner")
+        }
+    }
+
 }

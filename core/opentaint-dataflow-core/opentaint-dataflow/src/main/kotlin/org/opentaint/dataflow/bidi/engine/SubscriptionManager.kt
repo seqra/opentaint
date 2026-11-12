@@ -31,7 +31,7 @@ class SubscriptionManager(port: SubscriptionPort) {
         check(!port.config.run1 || sub.ref.premise is InitialAp) { "Run-1 subscriptions have one original premise" }
         val storage = port.summaryStorage(sub.callee)
         val entry = byCallee.getOrPut(sub.callee) {
-            CalleeSubscriptions(port.ops, port.statistics).also { storage.addSubscriber(this) }
+            CalleeSubscriptions(port.ops, port.statistics, port.config.mode.markMode).also { storage.addSubscriber(this) }
         }
         val admitted = entry.admit(sub) ?: return
         val statistics = port.statistics

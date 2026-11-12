@@ -32,23 +32,81 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
             check(result.status == RunStatus.COMPLETE) { "A hand-off needs a complete run" }
             shared.cancellation.checkpoint()
             val counts = LinkedHashMap<MethodKey, Int>()
-            val (demand, seeds) = if (config.direction == Direction.FORWARD)
+            val (demand, seeds) = if (!config.run1 && config.mode.markMode == MarkMode.FULL)
+                toCompacted(config, result, shared, counts)
+            else if (config.direction == Direction.FORWARD)
                 toBackward(result, shared, counts, config.run1) else toForward(result, shared, counts)
             return HandOff(demand, seeds, counts)
         }
 
+        /** Only local late FULL handoffs use exact-service selection. Run-1 keeps
+         * its shared-static completion and every old fallback callback unchanged. */
+        private fun toCompacted(config: RunConfig, result: RunResult<RunMethodAnalyzer>,
+                                shared: SharedObjects, counts: MutableMap<MethodKey, Int>): Pair<DemandStore, SeedIndex> {
+            val start = TimeSource.Monotonic.markNow()
+            val compactor = HandoffCompactor(shared.ap)
+            val origins = ArrayList<HandoffOrigin>()
+            for (actor in result.analyzers) {
+                shared.cancellation.checkpoint()
+                for ((premise, facts) in actor.summaries.demandEdges(config.direction)) {
+                    if (config.direction == Direction.BACKWARD)
+                        check(premise is InitialAp) { "The backward run has no multi-premise summary (ap.md §9.2)" }
+                    origins += compactor.summary(HandoffOwner(actor.key),premise,facts)
+                }
+                for (row in actor.outgoingTargets)
+                    origins += compactor.target(HandoffOwner(actor.key),row)
+                for ((producer, store) in actor.blockSummaries()) {
+                    val next = producer.reversed()
+                    val owner = HandoffOwner(next.method,next.scope,next.exit)
+                    for ((premise,facts) in store.demandEdges(config.direction)) {
+                        if (config.direction == Direction.BACKWARD)
+                            check(premise is InitialAp) { "The backward run has no multi-premise summary (ap.md §9.2)" }
+                        origins += compactor.summary(owner,premise,facts)
+                    }
+                }
+                for (terminal in actor.blockOutgoingTargets()) {
+                    val next = org.opentaint.dataflow.bidi.store.ScopedSummaryKey(
+                        terminal.method,terminal.scope,terminal.exit).reversed()
+                    val owner = HandoffOwner(next.method,next.scope,next.exit)
+                    for (row in terminal.rows) origins += compactor.target(owner,row)
+                }
+            }
+            val selection = compactor.select(origins)
+            val demand = DemandStore.Builder(shared.ap)
+            for (origin in selection.kept) for (row in origin.rows) {
+                shared.cancellation.checkpoint()
+                val owner = origin.owner
+                val added = if (owner.scope == null) demand.add(owner.method,row)
+                    else demand.add(owner.method,owner.scope,checkNotNull(owner.exit),row)
+                if (added) counts.merge(owner.method,1,Int::plus)
+            }
+            logger.info { "BIDI_HANDOFF_COMPACTION run=${config.index} origins=${origins.size} kept=${selection.kept.size} " +
+                "projected=${origins.sumOf { it.rows.size }} retainedProjected=${selection.kept.sumOf { it.rows.size }} " +
+                "certificates=${selection.certificates.size} rows=${counts.values.sum()} time=${start.elapsedNow()} residualMay=false" }
+            val seeds = if (config.direction == Direction.FORWARD) SeedIndex.of(result.analyzers.flatMap { it.sinkSeeds })
+                else sourceSeeds(result,shared)
+            return demand.build() to seeds
+        }
+
         private inline fun forEachDemandPiece(result: RunResult<RunMethodAnalyzer>, shared: SharedObjects,
                                              direction: Direction,
-                                             body: (MethodKey, PremiseKey, Pattern) -> Unit) {
+                                             body: (MethodKey, Pattern, Pattern) -> Unit) {
             for (actor in result.analyzers) {
                 shared.cancellation.checkpoint()
                 for ((premise, facts) in actor.summaries.demandEdges(direction)) {
-                    shared.cancellation.checkpoint()
-                    // Keep C5's STAR correlation. Projection uses the existing
-                    // guidance normalization for selector E/mx and MUST.
-                    for (leaf in shared.ops.leaves(facts)) {
-                        shared.cancellation.checkpoint()
-                        body(actor.key, premise, leaf)
+                    if (direction == Direction.BACKWARD)
+                        check(premise is InitialAp) { "The backward run has no multi-premise summary (ap.md §9.2)" }
+                    for (row in projectSummaryGuidance(shared.ap,premise,facts)) {
+                        val entry = when (val e = row.entry) {
+                            is DemandEntry.Data -> e.pattern
+                            DemandEntry.Zero -> shared.ap.zero.toPattern()
+                            DemandEntry.Target -> error("A DATA summary cannot project a Target entry")
+                        }
+                        val exit = when (val e = row.exit) {
+                            is DemandExit.Data -> e.pattern
+                            DemandExit.Zero -> shared.ap.zero.toPattern()
+                        }
+                        body(actor.key,entry,exit)
                     }
                 }
             }
@@ -91,15 +149,9 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
             }
             val seedCaptureTime = completionStart.elapsedNow()
             val projectionStart = TimeSource.Monotonic.markNow()
-            forEachDemandPiece(result, shared, Direction.FORWARD) { method, premise, piece ->
-                val entry = guidancePattern(piece)
-                premise.forEachMember { member ->
-                    shared.cancellation.checkpoint()
-                    val from = guidancePattern(member.toPattern())
-                    completion?.addBoundary(method, from, entry)
-                    val pattern = DemandPattern(entry, from)
-                    if (demand.add(method, pattern)) counts.merge(method, 1, Int::plus)
-                }
+            forEachDemandPiece(result, shared, Direction.FORWARD) { method, entry, from ->
+                completion?.addBoundary(method, from, entry)
+                if (demand.add(method,DemandPattern(entry,from))) counts.merge(method,1,Int::plus)
             }
             projectTargets(result, shared, demand, counts)
             projectBlocks(result, shared, Direction.FORWARD, run1, demand, counts, completion)
@@ -119,11 +171,8 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
                                    demand: DemandStore.Builder, counts: MutableMap<MethodKey, Int>) {
             for (actor in result.analyzers) for (row in actor.outgoingTargets) {
                 shared.cancellation.checkpoint()
-                for (member in row.premise.members) {
-                    val exit = if (member.isZero) DemandExit.Zero
-                        else DemandExit.Data(guidancePattern(member.toPattern()))
-                    if (demand.add(actor.key, PairedDemand(DemandEntry.Target, exit)))
-                        counts.merge(actor.key, 1, Int::plus)
+                for (projected in projectTargetGuidance(row)) {
+                    if (demand.add(actor.key,projected)) counts.merge(actor.key,1,Int::plus)
                 }
             }
         }
@@ -147,16 +196,15 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
         private fun toForward(result: RunResult<RunMethodAnalyzer>, shared: SharedObjects,
                               counts: MutableMap<MethodKey, Int>): Pair<DemandStore, SeedIndex> {
             val demand = DemandStore.Builder(shared.ap)
-            forEachDemandPiece(result, shared, Direction.BACKWARD) { method, premise, piece ->
-                val pattern = when (premise) {
-                    is InitialAp -> DemandPattern(guidancePattern(piece),
-                        guidancePattern(premise.toPattern()))
-                    is PremiseSet -> error("The backward run has no multi-premise summary (ap.md §9.2)")
-                }
-                if (demand.add(method, pattern)) counts.merge(method, 1, Int::plus)
+            forEachDemandPiece(result, shared, Direction.BACKWARD) { method, entry, from ->
+                if (demand.add(method,DemandPattern(entry,from))) counts.merge(method,1,Int::plus)
             }
             projectTargets(result, shared, demand, counts)
             projectBlocks(result, shared, Direction.BACKWARD, false, demand, counts)
+            return demand.build() to sourceSeeds(result, shared)
+        }
+
+        private fun sourceSeeds(result: RunResult<RunMethodAnalyzer>, shared: SharedObjects): SeedIndex {
             val seeds = ArrayList<Seed>()
             for (actor in result.analyzers) {
                 shared.cancellation.checkpoint()
@@ -165,7 +213,7 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
                     seeds += Seed.Source(method, statement, edge, action)
                 }
             }
-            return demand.build() to SeedIndex.of(seeds)
+            return SeedIndex.of(seeds)
         }
     }
 }

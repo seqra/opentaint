@@ -369,6 +369,8 @@ class JIRMethodCacheTest : BidiJIRTestUtils() {
         val inst = call(caller, "external")
         val expr = checkNotNull(inst.callExpr)
         val owner = interp(externalMethodTracker = tracker)
+        assertTrue(owner.enabled)
+        assertFalse(interp.enabled)
         val plan = owner.callPlan(key(caller), inst, expr)
         assertTrue(tracker.getExternalMethods().withoutRules.isEmpty())
         assertTrue(tracker.getExternalMethods().withRules.isEmpty())

@@ -32,7 +32,12 @@ class DemandStore private constructor(
         if (query.scope == null) completion else scopedCompletions[OwnedScope(query.method, query.scope)]?.selectExit(query.exit)
 
     /** C2 borrows the union of this entry's exits; C5 selects one actual exit. */
-    fun scope(method: MethodKey, scope: BlockScope): ScopeDemandView = object : PreparedScopeDemandView, EntryPrecisionView {
+    fun scope(method: MethodKey, scope: BlockScope): ScopeDemandView = object : PreparedScopeDemandView, EntryPrecisionView, LocalAdmissionView {
+        override fun supportsScan(actual: Facts, policy: RestrictedInitialPolicy): Boolean =
+            supportsLocalScan(actual, policy)
+        override fun visitInitialEmissions(actual: Facts, policy: RestrictedInitialPolicy,
+                                           visit: (InitialEmission) -> DemandVisit): DemandScan =
+            scanLocalInitials(Query(method, scope), actual, policy, visit)
         override fun precisionCursors(actual: Pattern, policy: RestrictedInitialPolicy): List<AnyDemandCursor> =
             local(Query(method, scope))?.entries?.precisionCursors(actual, ap.marks).orEmpty()
         override fun initials(actual: Facts, policy: RestrictedInitialPolicy): Set<AdmittedInitial> =
@@ -126,6 +131,27 @@ class DemandStore private constructor(
     fun initials(method: MethodKey, boundedActual: Facts,
                  policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ap.marks)): Set<AdmittedInitial> {
         return initials(Query(method), boundedActual, policy)
+    }
+
+    private fun supportsLocalScan(actual: Facts, policy: RestrictedInitialPolicy): Boolean =
+        policy.run >= 3 && !hasStaticCompletion && !hasSharedStaticCarry && actual !is Reach &&
+            RuntimeDataDomain.base(actual.base)
+
+    private fun scanLocalInitials(query: Query, actual: Facts, policy: RestrictedInitialPolicy,
+                                  visit: (InitialEmission) -> DemandVisit): DemandScan {
+        ap.cancellation.checkpoint()
+        if (!supportsLocalScan(actual, policy)) return DemandScan.UNSUPPORTED
+        statistics?.add(0)
+        val entries = local(query)?.entries ?: return DemandScan.COMPLETED
+        val result = InitialEmissionResults(policy, actual.layer, statistics)
+        for (leaf in ApOps(ap).leaves(actual)) {
+            ap.cancellation.checkpoint()
+            val status = entries.visitCountedUntil(leaf, DemandQueryKind.INITIAL_C2, ap.marks, entryTrieCounts) {
+                result.offer(it, leaf, visit)
+            }
+            if (status == DemandScan.STOPPED) return status
+        }
+        return DemandScan.COMPLETED
     }
 
     private fun initials(query: Query, boundedActual: Facts, policy: RestrictedInitialPolicy): Set<AdmittedInitial> {

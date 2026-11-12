@@ -163,34 +163,54 @@ internal class ExactDemandResults(private val ap: ApManager) {
     fun all(): List<Facts> = values.toList()
 }
 
+/** A pure local capability. Unsupported views reject before any scan or interning. */
+internal interface LocalAdmissionView {
+    fun supportsScan(actual: Facts, policy: RestrictedInitialPolicy): Boolean
+    fun visitInitialEmissions(actual: Facts, policy: RestrictedInitialPolicy,
+                              visit: (InitialEmission) -> DemandVisit): DemandScan
+}
+
+/** One ordered complete-family emitter serves native materialization and pure probes. */
+internal class InitialEmissionResults(private val policy: RestrictedInitialPolicy,
+                                      private val actualLayer: Layer,
+                                      private val statistics: DemandQueryStatistics? = null) {
+    val keys = LinkedHashSet<InitialEmission>()
+    private val offered = HashSet<Pair<Pattern, Pattern>>()
+    fun offer(entry: Pattern, actual: Pattern, visit: (InitialEmission) -> DemandVisit): DemandVisit {
+        if (!offered.add(entry to actual)) return DemandVisit.CONTINUE
+        val emissions = policy.emitAdmissions(entry, actual, actualLayer)
+        statistics?.admission(entry, actual, emissions.firstOrNull()?.pattern)
+        for (emitted in emissions) if (keys.add(emitted) && visit(emitted) == DemandVisit.STOP)
+            return DemandVisit.STOP
+        return DemandVisit.CONTINUE
+    }
+}
+
 /** Compare structural keys from the scalar emitter. This check never interns hypothetical APs. */
 internal class InitialDemandResults(private val ap: ApManager, private val policy: RestrictedInitialPolicy,
                                     private val actualLayer: Layer,
-                                    private val statistics: DemandQueryStatistics? = null) {
+                                    statistics: DemandQueryStatistics? = null) {
     val initials = LinkedHashSet<AdmittedInitial>()
-    private val keys = HashSet<InitialEmission>()
-    private val offered = HashSet<Pair<Pattern, Pattern>>()
+    private val emissions = InitialEmissionResults(policy, actualLayer, statistics)
     private val missing = HashSet<InitialEmission>()
     val fullyCovered: Boolean get() = missing.isEmpty()
 
     fun offer(entry: Pattern, actual: Pattern) {
         ap.cancellation.checkpoint()
-        if (!offered.add(entry to actual)) return
-        val emissions = policy.emitAdmissions(entry, actual, actualLayer)
-        statistics?.admission(entry, actual, emissions.firstOrNull()?.pattern)
-        for (emitted in emissions) {
-            if (keys.add(emitted)) initials += AdmittedInitial(ap.initial(emitted.pattern), emitted.layer)
+        emissions.offer(entry, actual) { emitted ->
+            initials += AdmittedInitial(ap.initial(emitted.pattern), emitted.layer)
             missing.remove(emitted)
+            DemandVisit.CONTINUE
         }
     }
     fun has(entry: Pattern, actual: Pattern): Boolean {
         ap.cancellation.checkpoint()
-        return policy.emitAdmissions(entry, actual, actualLayer).all { it in keys }
+        return policy.emitAdmissions(entry, actual, actualLayer).all { it in emissions.keys }
     }
     fun requireFamily(target: Pattern, flow: Boolean, actual: Pattern) {
         fun require(entry: Pattern) {
             for (potential in policy.emitAdmissions(entry, actual, actualLayer))
-                if (potential !in keys) missing += potential
+                if (potential !in emissions.keys) missing += potential
         }
         require(target)
         if (flow && actual.fact.mark is MarkSlot.Concrete && actual.fact.mark.mark != TaintMark.ZERO)
