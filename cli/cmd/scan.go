@@ -377,7 +377,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 			}
 		}
 
-		printCompileSummary(absProjectModelPath)
+		printCompileResult(absProjectModelPath)
 	}
 
 	if err := utils.EnsureParentDir(absSarifReportPath); err != nil {

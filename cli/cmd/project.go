@@ -181,15 +181,13 @@ func (c *JavaAutobuilderConfig) runAutobuilder() error {
 }
 
 func (c *JavaAutobuilderConfig) printProjectSummary(config *project.Config) error {
-	projectYamlPath := filepath.Join(c.outputDir, "project.yaml")
-
-	c.logProjectSummary(projectYamlPath, config)
+	c.logProjectSummary(config)
 	// The scan writes its report to its default place, <project model>/sources/opentaint.sarif.
 	suggest("To scan the generated model, run:", utils.NewScanCommand("").WithProjectModel(c.userOutputDir).Build())
 	return nil
 }
 
-func (c *JavaAutobuilderConfig) logProjectSummary(projectYamlPath string, config *project.Config) {
+func (c *JavaAutobuilderConfig) logProjectSummary(config *project.Config) {
 	modules := config.AllModules()
 	dependencies := config.AllDependencies()
 	totalPackages := 0
@@ -201,12 +199,11 @@ func (c *JavaAutobuilderConfig) logProjectSummary(projectYamlPath string, config
 
 	out.Blank()
 	out.Section("Project Summary").
-		Field("Generated project.yaml at", projectYamlPath).
-		Line().
-		Field("Total modules", len(modules)).
-		Field("Total classes", totalClasses).
-		Field("Total packages", totalPackages).
-		Field("Total dependencies", len(dependencies)).
+		Field("Project model", c.outputDir).
+		Field("Modules", len(modules)).
+		Field("Classes", totalClasses).
+		Field("Packages", totalPackages).
+		Field("Dependencies", len(dependencies)).
 		Render()
 }
 

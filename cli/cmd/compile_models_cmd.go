@@ -48,7 +48,7 @@ var compileModelsCmd = &cobra.Command{
 		out.Blank()
 		out.Section("Model Compile Summary").
 			Field("Model project", projectPath).
-			Field("Compiled models written to", outputPath).
+			Field("Compiled models", outputPath).
 			Render()
 		suggest("To scan with these models, run:",
 			fmt.Sprintf("opentaint scan <source-path> --dataflow-models %s", shellQuote(args[0])))
