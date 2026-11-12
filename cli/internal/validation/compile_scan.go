@@ -7,12 +7,14 @@ import (
 	"github.com/seqra/opentaint/internal/utils"
 )
 
-func ValidateCompileInputs(absProjectRoot, absOutputProjectModelPath string) error {
-	if err := requireDirExists(absProjectRoot, "project directory"); err != nil {
+// ValidateCompileInputs checks the inputs of a compile. The errors name the paths as they are
+// given, so pass them as the user wrote them where there is a choice.
+func ValidateCompileInputs(projectRoot, outputProjectModelPath string) error {
+	if err := requireDirExists(projectRoot, "project directory"); err != nil {
 		return err
 	}
 
-	if err := requirePathNotExists(absOutputProjectModelPath, "output directory"); err != nil {
+	if err := requirePathNotExists(outputProjectModelPath, "output directory"); err != nil {
 		return err
 	}
 
@@ -23,8 +25,10 @@ func ValidateCompileInputs(absProjectRoot, absOutputProjectModelPath string) err
 	return nil
 }
 
-func ValidateScanInputs(absUserProjectRoot, absProjectModelPath, absSarifReportPath string, nonBuiltinRulesetPaths, severities []string, maxMemoryValue string, requiresProjectModel bool) (string, error) {
-	if err := requireDirExists(absUserProjectRoot, "project path"); err != nil {
+// ValidateScanInputs checks the inputs of a scan. The errors name the paths as they are given, so
+// pass them as the user wrote them where there is a choice.
+func ValidateScanInputs(userProjectRoot, absProjectModelPath, absSarifReportPath string, rulesetPaths, severities []string, maxMemoryValue string, requiresProjectModel bool) (string, error) {
+	if err := requireDirExists(userProjectRoot, "project path"); err != nil {
 		return "", err
 	}
 
@@ -35,7 +39,7 @@ func ValidateScanInputs(absUserProjectRoot, absProjectModelPath, absSarifReportP
 		}
 	}
 
-	for _, ruleSetPath := range nonBuiltinRulesetPaths {
+	for _, ruleSetPath := range rulesetPaths {
 		if err := requirePathExists(ruleSetPath, "ruleset"); err != nil {
 			return "", err
 		}

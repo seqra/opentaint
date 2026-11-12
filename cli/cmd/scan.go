@@ -202,14 +202,20 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 
 	// When compiling from sources, validate the source folder looks like a Java/Kotlin project
 	if cfg.ProjectModelPath == "" {
-		if err := validation.ValidateSourceProject(absUserProjectRoot); err != nil {
+		// The checks name the paths as the user wrote them. They resolve them against the current
+		// directory, as the absolute paths are.
+		if err := validation.ValidateSourceProject(userProjectPath); err != nil {
 			if validation.IsProjectModel(absUserProjectRoot) {
 				out.ErrorErr(err)
-				suggest("To scan the project model, run:", currentScanBuilder(cfg, "").WithProjectModel(absUserProjectRoot).Build())
+				suggest("To scan the project model, run:", currentScanBuilder(cfg, "").WithProjectModel(cfg.UserProjectPath).Build())
 				os.Exit(1)
 			}
 			out.FatalErr(err)
 		}
+	}
+
+	if cfg.ProjectModelPath != "" && !validation.IsProjectModel(log.AbsPathOrExit(cfg.ProjectModelPath, "project model path")) {
+		out.Fatalf("No project model at `%s`", cfg.ProjectModelPath)
 	}
 
 	plan := resolveScanPlan(cfg, absUserProjectRoot)
@@ -287,14 +293,14 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	// Display scan information in tree format
 	printScanInfo(cmd, plan, absSemgrepRuleLoadTracePath, absUserProjectRoot, absRuleSetPaths)
 
-	var nonBuiltinRulesetPaths []string
-	for _, r := range absRuleSetPaths {
-		if !r.Builtin {
-			nonBuiltinRulesetPaths = append(nonBuiltinRulesetPaths, r.Path)
+	var userRulesetPaths []string
+	for _, ruleset := range cfg.Ruleset {
+		if ruleset != "builtin" {
+			userRulesetPaths = append(userRulesetPaths, ruleset)
 		}
 	}
 
-	maxMemory, err := validation.ValidateScanInputs(absUserProjectRoot, absProjectModelPath, absSarifReportPath, nonBuiltinRulesetPaths, cfg.Severity, globals.Config.Scan.MaxMemory, !plan.needsCompilation)
+	maxMemory, err := validation.ValidateScanInputs(userProjectPath, absProjectModelPath, absSarifReportPath, userRulesetPaths, cfg.Severity, globals.Config.Scan.MaxMemory, !plan.needsCompilation)
 	if err != nil {
 		out.Blank()
 		out.FatalErr(err)
