@@ -4,7 +4,9 @@ This package accompanies [the specification](../../../in-handoff-edge-compaction
 It changes no analyzer code and starts no project scan. The campaign remains
 stopped. The selected contract permits different intermediate runs but must
 preserve eventual refined findings without an iteration limit.
-That weaker contract applies to generalized MAY coarsening. The added C2,
+That weaker contract applies to residual MAY coarsening across storage lanes.
+Same-premise scalar MAY coverage and NORMAL record compaction already exist;
+the spec proposes no replacement for them. The added C2,
 loop-probe, disabled-diagnostic and FULL caller-storage changes preserve exact semantic results
 on common completed runs.
 
@@ -74,13 +76,23 @@ Existing native laws are reused from:
 
 ## Remaining proof gate
 
-The native eventual-refinement simulation for generalized MAY coarsening
-is not supplied by this package. Request-set inclusion is insufficient:
+The native eventual-refinement simulation for the new cross-lane MAY
+removals is not supplied by this package. Request-set inclusion is insufficient:
 the first-field C2 emission and C5 image can differ. A native proof must
 construct the required later precise derivation, preserve source and ND
 permissions and typed control guidance, and account for early stopping.
 Neither the temporary run-11 limit nor a passing finite fixture closes this
 gate. Exact-service cuts remain available without that additional theorem.
+
+`CurrentCompactionInventory.java` checks the current summary stores in both
+arrival orders: scalar same-premise MAY removes its exact child, but a
+packed diagonal MAY and scalar exact child can coexist. Same-head DEMAND
+STAR/EXACT also coexist. All 8 controls pass on the pinned runtime JAR;
+see [the inventory receipt](compaction-inventory-receipt.json). The IDs are
+opaque, with no declaration-ownership lookup, analyzer run or project scan.
+The old unrelated-C2-provider example is an exact-service certificate,
+not a condition of the proposed MAY rule. NORMAL specialization/persistence
+and projection remain existing machinery, as the spec's delta table states.
 
 ## Receipts
 

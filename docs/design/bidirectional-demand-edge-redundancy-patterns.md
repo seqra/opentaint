@@ -14,6 +14,14 @@ For generalized MAY coarsening, the selected contract preserves eventual
 refined findings without an iteration limit and permits intermediate runs
 to differ. Its native refinement/progress proof remains an activation gate.
 
+Current implementation audit: literal/NORMAL FLOW compaction, including
+persistence across runs, already exists. Same-premise scalar MAY coverage
+also exists; residual scalar/diagonal combinations can survive. This file
+is a pattern/proof catalog, not the new-work list. The authoritative
+[proposed rules and implementation differences](../../spec/in-handoff-edge-compaction.md#2-proposed-handoff-compaction)
+now separate those cases. The older split-service witness below is a
+sufficient proof certificate, not a requirement of MAY subsumption.
+
 **DEMAND clarification:** B1 and B2 are valid edge-subsumption rules at the
 joined handoff, under their stated guards. A DEMAND edge is a refinement
 obligation, not a NORMAL transfer guarantee. Raw-transfer inequality does

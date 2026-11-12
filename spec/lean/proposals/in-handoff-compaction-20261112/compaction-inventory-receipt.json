@@ -1,0 +1,32 @@
+{
+  "checkedUtc": "2026-11-12T16:02:20.008365+00:00",
+  "head": "fec0023b1d8bd5d3f6a014322b5c2050614a5d47",
+  "status": "PASS_CURRENT_STORE_INVENTORY",
+  "sourceSha256": "a7aa816178a2da68818c07fa394f2d9e1cd6c100d1f0ed557da293a63f0a1342",
+  "pinnedJarSha256": "e8e0328810806242a7259e7d3f2a6c72eb796db1fa4dad66b299092c6e86a91c",
+  "classpathMetadataSha256": "6b9632b04727dac0ad17e3272e9cde7fcc390d60efcb7c074d42553a3946ef55",
+  "steps": [
+    {
+      "step": "compile",
+      "exitCode": 0
+    },
+    {
+      "step": "execute",
+      "exitCode": 0
+    }
+  ],
+  "nativeSourcePins": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/FlowBackedSummaries.kt": "b1a0426c92b61140eb702213294bbe5bc08385b6fb7fe32dd971a5883c66f26a",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DiagonalRelations.kt": "badf2423fee16a882caa3f4fc8aade6e26958cb40c69a173336586a3f51c7984",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RecordStore.kt": "80dc31954a8c60d54fe730f07ef5f5349dad0f79f7b0ca835a56a81865534eee",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/AlignedFlowRelations.kt": "3638a5200c224ac2ecfedcb2713c3272499eb33e102345025fa235dfe7867446",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandStore.kt": "a664e74e3c32f2d07f9b18ef626cd46c8f44d857ea7798e95a80795a91737e68",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Groups.kt": "981807b532dc1561c61629a546b291c5292559e0176c4b5845d9c4854265658b",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/HandOff.kt": "2c3f93008b5d5e5adbd23af31dbadfa6ae6b18998b98b03ded117f20aac55080",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/BlockHandOff.kt": "5422c8aa326a4ab51872fb0291d9e150d267060bcd190cd628c6ab5880a04a44"
+  },
+  "productionChanged": false,
+  "engineRuns": 0,
+  "projectScans": 0,
+  "scope": "Existing summary store coverage; opaque mark IDs; no declaration ownership or whole-engine refinement proof"
+}

@@ -8,15 +8,15 @@ removal and exact FULL caller-input storage.
 
 | Change | Before → after | Required result |
 | --- | --- | --- |
-| Handoff compaction | Retain/project every eligible edge → retain a checked basis. | Preserve native NORMAL applications and complete demand services. |
+| Handoff compaction | Exact normalized demand-row deduplication → cross-origin subsumption at handoff. | Preserve required refinement; NORMAL persistence is unchanged. |
 | C2 pruning | Visit impossible descendants → skip their empty emissions. | Identical complete ordered initial families. |
 | Loop probes | Complete every trial → reject on a real extra admission. | Identical selected prefix/drop/fallback. |
 | Disabled diagnostics | Archive facts before a no-op callback → skip diagnostic work. | Identical semantic output; enabled observers unchanged. |
 | FULL caller storage | Separate qualified inputs → shared geometry with exact mark relations. | Identical logical snapshots, fresh deltas and delivery. |
 
-General MAY coarsening (§2.4) is **proof-gated**. It may change intermediate
-runs and confirmation timing, but must preserve eventual refined findings
-in both directions, with no iteration limit. The production run-11 cutoff
+Residual MAY coverage (R3, §2.1) has the proof obligation in §2.4. It may
+change intermediate runs and confirmation timing, but must preserve eventual
+refined findings in both directions, with no iteration limit. The production run-11 cutoff
 is unchanged and cannot justify that proof. The other changes preserve
 semantic results at common completed runs under the same compaction setting;
 work counters, allocation IDs and timing can differ.
@@ -30,7 +30,7 @@ Proof/storage metadata must not enter public equality or hashing.
 Γ = complete method/context, stored direction, block and physical ports
 H = literal protection membership: plain or non-subsumable
 P = complete original premise, unary or ND; C = conclusion packet
-N = old and new eligible NORMAL records; O = current outgoing guidance origins
+O = current outgoing guidance origins
 G(X) = complete native next-demand projection; K ⊆ O = final retained origins
 $ = EXACT; * = STAR; MAY = [any]; MUST = [any-taint]
 E = field exclusions; mx = FLOW mark exclusions; T,U = full concrete marks
@@ -41,221 +41,217 @@ C5 = paired entry admission/output restriction, including the relative field cut
 Compare complete decoded keys. Keep plain and protected memberships separate
 in both directions, including when identical geometry has both flags.
 
-## 2. Handoff compaction
+## 2. Proposed handoff compaction
 
-Run after workers join a COMPLETE run-j, before run-(j+1). If repetition was
-observed at i and i+2, the removal point is after j=i+2. Repetition is not an
-algebraic eligibility requirement. The new compactor supports FULL local
+The new rules remove redundant **outgoing guidance**, after current summary
+storage has normalized it. They do not add a NORMAL-record compactor.
+Compare equal Γ, H and full marks; retain legal static anchors. All
+witnesses must be actual retained edges.
+
+### 2.1 Compaction rules
+
+**R1. Weaker premise, identical conclusion**
+
+```text
+X: a.f.MUST/T → C, DEMAND
+Y: a.f.*/T   → C, DEMAND
+Y subsumes X for outgoing guidance.
+```
+
+Require identical conclusion and empty E on compared projected premise
+selectors. Existing projection gives the same entry and equivalent MAY/STAR
+paired-output selectors. This comparison crosses distinct premise keys,
+which current per-premise storage does not compare.
+
+**R2. Equivalent concrete-point conclusions**
+
+```text
+X: P → a.p.$/T, DEMAND
+Y: P → a.p.*/T, DEMAND
+Y subsumes X for outgoing guidance.
+```
+
+Require identical complete P. At late FULL admission, legal same-head
+concrete STAR/EXACT demand entries have identical C2/C5 images. EXACT E
+must be empty; STAR E can be any legal E. This does not equate their raw
+NORMAL transfer. Current summary storage can retain both outputs.
+
+**R3. Less restrictive DEMAND conclusion: remaining storage cases**
+
+```math
+X: P → Cx, DEMAND; Y: P → Cy, DEMAND
+Req(Cx) ⊆ Req(Cy)  ⇒  Y subsumes X as a refinement obligation
+
+Req(a.p.$/T) = Req(a.p.*/T) = {a.p.$/T}
+Req(a.p.MAY/T) = {a.p.s.$/T | s is a legal suffix}
+```
+
+Require identical complete P and empty E for this adapter. Each removed
+leaf needs a retained covering leaf. Ancestor STAR is not an ancestor
+wildcard: it cannot cover a deeper point. Both edges must already exist.
+
+Same-premise MAY coverage is already implemented within `TaintGroup`.
+The proposed difference is to cover residual edges which are split across
+storage lanes and therefore survive current normalization. For example:
+
+```text
+X: p.*/T → ret.f.$/T, DEMAND       # scalar exact lane
+Y: p.*/T → ret.MAY/T, DEMAND       # packed diagonal lane
+Proposed: retain Y; omit X's guidance.
+```
+
+No unrelated C2-supplying edge is a condition of R3. Its remaining native
+proof obligation is stated in §2.4, not an additional subsumption rule.
+
+**R4. ND guidance covered by retained arms**
+
+```text
+X: {I1,...,In} → C
+For every Ii and every conclusion leaf c:
+    retain arm witnesses covering the projected obligation (g(c);g(Ii)).
+Then omit X's outgoing guidance.
+```
+
+The same-conclusion case needs one retained unary arm per member:
+
+```text
+X: {p.$/T, q.$/U} → ret.$/V, DEMAND
+Y:  p.$/T        → ret.$/V, DEMAND
+Z:         q.$/U → ret.*/V, DEMAND
+Y and Z cover X through R2; Y alone does not.
+```
+
+For broader arm conclusions Ck, require
+`Req(C) ⊆ intersection_k Req(Ck)` and preserve each member's paired selector.
+Any new MAY-coverage application inherits R3's proof obligation. Exact
+service witnesses may be supplied by more than one retained origin.
+
+This changes guidance selection, not executable AND semantics. Keep
+complete caller originals, NORMAL contributors and reports. A NORMAL ND
+origin can lose its redundant guidance; it does not become a persisted
+unary record. The backward run remains unary; run-1 cannot retain ND.
+
+### 2.2 Difference from current implementation
+
+| Mechanism | Current implementation | Proposed difference |
+| --- | --- | --- |
+| Literal payload union, aligned NORMAL FLOW specialization and FLOW-backed T coverage | Implemented in `ConclusionGroup`/`FlowBackedSummaries`. `PersistentRecordStore` also uses that store across saved runs. | None. Reuse ordinary persistence; no new rule or pass for NORMAL records. |
+| Same-premise MAY conclusion coverage | `TaintGroup` canonicalizes its own scalar lane; packed diagonal admission also canonicalizes its own rows. | R3 covers residual scalar/diagonal combinations at handoff. It does not reimplement the already normalized cases. |
+| Equivalent demand services | C2/C5 already implement the matching behavior used by R1/R2. | Use it to remove redundant outgoing origins; the current demand builder deduplicates only identical normalized rows. |
+| Projection and control routing | `HandOff`/`projectBlockHandOff` already project all members/leaves and reverse block ports. | Select a retained basis before feeding that unchanged projection to the demand builder. |
+
+The current-store [inventory](lean/proposals/in-handoff-compaction-20261112/compaction-inventory-receipt.json)
+checks both arrival orders. In particular, for distinct full U and T,
+`b.*/U → a.MAY/T,D` already removes `b.*/U → a.f.$/T,D` in the scalar store.
+An extra `c.*/U → a.f.$/T,D` is unnecessary. Its earlier use supplied a
+stricter exact-C2 proof certificate; it is not a semantic requirement of
+conclusion coverage and is removed from the proposal.
+
+### 2.3 Handoff application and comparison
+
+Apply after a COMPLETE run joins, before the next run. Support FULL local
 handoffs whose next run is at least run-3, for methods and generated inner
 blocks in either direction. Bypass run-1→run-2 and GROUP-mode handoffs.
+Use only current demands/summaries/submitted initials, with no future-run,
+JVM-type, CFG/rule, finding-count or iteration-limit eligibility test.
 
-Use only demands, summaries and submitted initials available at this barrier.
-No future-run observations, JVM types, CFG/rule properties, finding counts
-or iteration limit may decide a removal.
-
-### 2.1 Saved NORMAL relations
-
-Compact actual eligible native records at equal Γ and H. Preserve existing
-persistence grammar: no DEMAND or ND records; keep legal nonempty initial E
-on NORMAL FLOW; retain the backward ZERO/MUST restrictions.
-
-**Literal inclusion:** with identical complete P, Y covers X when every
-literal conclusion leaf of X occurs in Y with identical path/tail/mark/E/mx/H.
-Per-leaf application then reproduces X in either read direction.
-
-**Correlated NORMAL FLOW specialization:**
-
-```text
-S: a.u.* / EiS   → b.v.* / EoS
-L: a.u.r.* / EiL → b.v.r.* / EoL
-ES = EiS ∪ EoS; EL = EiL ∪ EoL
-
-require same Γ, H and endpoint bases; same r at BOTH endpoints
-require mxS ⊆ mxL
-if r is empty: require ES ⊆ EL
-else:          require ES admits r's first counted field
-```
-
-S covers L: L's suffix τ has witness r++τ in S. Preserve named-static
-anchors. Check each output against a real retained output, without forming
-input/output products. Use the existing overlap matcher and opposite-only
-STAR-inside policy.
-
-```text
-p.* → ret.* covers p.f.* → ret.f.*              # NORMAL FLOW
-p.* → q.* does NOT cover p.f.* → q.*           # different suffix correlation
-p.* → q.* {f} does NOT cover p.f.* → q.f.*      # output excludes f
-```
-
-Reuse the existing FLOW-backed concrete cells under their current geometry,
-mark, layer and H guards. NORMAL FLOW can cover its plain T specialization
-when T is admitted; a protected-only provider cannot cover a plain row or
-vice versa. Transitive cover can use a factored view of the final provider;
-no intermediate fabricated record is published. This adds no broader native
-law than [AP subsumption §3](edge-subsumption-initial-emission-demand-intersection.md#3-relation-subsumption).
-
-### 2.2 Outgoing projection and exact service cover
-
-Freeze O **before** compacting N. O uses the existing outgoing predicate,
-including forward NORMAL ND and DemandTarget origins. A NORMAL singleton
-which contributes no outgoing row is not a guidance provider. Backward
-summaries remain unary; run-1 cannot retain an ND original.
+The projection is **existing machinery**, not a new transfer rule:
 
 ```text
 G(P → C) = {(next owner/ports, entry=g(c), output=g(p))
              | c is a conclusion leaf; p is EVERY premise member}
 ```
 
-Reverse block ports as today. `g` maps MUST to MAY and clears its E, clears
-FLOW mx and FLOW/STAR E, and preserves other legal coordinates. DemandTarget
-uses the existing Target entry and ZERO/DATA output. NormalTarget supplies
-no refinement demand. ZERO, Target and DATA remain distinct; preserve
-NormalTarget IDs and all report/source/contributor state.
+Keep existing `g`, physical port reversal, outgoing-origin predicate,
+ZERO/Target typing and normalization. NormalTarget supplies no refinement
+demand. Preserve its IDs, all source permissions, contributors and reports.
+Select origins from current summaries/Targets, not persisted NORMAL records.
 
-For a projected row q, compute comparison keys without changing the row:
-
-```text
-entryKey(q):
-    legal late FULL concrete STAR/T with legal E, or EXACT/T with empty E
-        → same base/path/full T, EXACT, empty E
-    otherwise → complete literal typed entry
-outputKey(q):
-    empty-E DATA MAY → same-head STAR, keeping all other coordinates
-    otherwise → complete literal typed output
-
-C2Cover(q,z): same entry owner/port and entryKey(q) == entryKey(z)
-C5Cover(q,y): same complete owner, physical exit and outputKey,
-             and (entryKey(q) == entryKey(y) or pointToMayImageContains(y,q))
-```
-
-The point-entry adapter supports This, Argument, Return, LocalVar, Exception
-and legal ClassStatic anchors; it excludes FLOW/GROUP entries, literal-backed
-and cleaner-temporary bases. It preserves actual-derived layer and the full
-C2 family/support profile, not just the primary fact.
-
-`pointToMayImageContains` is C5-only: q has a full-concrete point entry; y
-has empty-E MAY at the same ordinary base/full mark and either the same path
-or the prefix before its first counted extension. That extension is zero
-or more CLASS accessors followed by one FIELD/ELEMENT and nothing later.
-Supported bases are This, Argument, Return and LocalVar; retain native
-shape/budget guards. The output selector and exit must still be identical.
+For the new comparisons, use private keys without changing actual rows:
 
 ```text
-coveredOrigin(X,K):
-    require G(X) is complete and nonempty
-    for q in G(X):
-        require retained row z in G(K) with C2Cover(q,z)
-        require retained row y in G(K) with C5Cover(q,y)
+entryKey: legal late FULL concrete STAR/T or EXACT/T → same-head EXACT
+          (STAR has legal E; EXACT has empty E); otherwise literal entry
+outputKey: empty-E DATA MAY → same-head STAR; otherwise literal output
+
+C2Cover(q,z): same entry owner/port and equal entryKey
+C5Cover(q,y): same owner/physical exit/outputKey, and
+             (equal entryKey or existing point-to-MAY C5 image containment)
 ```
 
-z and y may differ, but must belong to actual final-retained origins. C2
-preserves all initials/companions/support; C5 preserves paired restriction
-and the complete original, even when one ND member admits it. See the
-[service proof](retained-demand-service-basis.md).
+The point adapter supports This/Argument/Return/LocalVar/Exception and
+legal ClassStatic anchors, not FLOW/GROUP, literals or cleaner temporaries.
+The C5-only point-to-MAY adapter supports ordinary This/Argument/Return/
+LocalVar at the same path or its first counted extension: zero or more
+CLASS accessors then one FIELD/ELEMENT and nothing later. Retain native
+shape/budget guards. These are comparison laws for existing services;
+C2 emission and paired C5 restriction are unchanged.
 
-### 2.3 Subsumption examples, including ND
-
-All rows below have compatible complete headers/H. These remove guidance,
-not saved NORMAL transfers:
-
-| Removed X | Retained witnesses | Reason |
-| --- | --- | --- |
-| `a.f.MUST/T → C,D` | `a.f.*/T → C,D` | Same entry; empty-E projected MAY/STAR outputs have equal C5 selectors. |
-| `P → a.p.$/T,D` | `P → a.p.*/T,D` | Same complete P; legal late concrete-point entries have equal C2/C5 images. |
-| `b.*/U → a.f.$/T,D` | `c.*/U → a.f.$/T,D` and `b.*/U → a.MAY/T,D` | First row supplies exact C2; second supplies paired C5. |
-
-For the first row require empty E on compared projected selectors. For the
-second, EXACT E is empty and STAR E follows the point-key guard. Neither
-rule equates raw NORMAL STAR/EXACT or MUST/STAR transfer.
+For exact-service certificates, cover every q in complete nonempty G(X)
+with retained C2 and C5 witnesses, which may differ. Preserve the complete
+initial family, layers/companions/precision support and complete C5 original.
+This certificate proves R1/R2 and exact R4 cases. It is not a requirement
+that R3 reproduce the same intermediate C2 family.
 
 ```text
-X: {p.$/T, q.$/U} → ret.$/V,D
-Y:  p.$/T        → ret.$/V,D
-Z:         q.$/U → ret.*/V,D
-
-G(X) has (ret.$/V; p.$/T) AND (ret.$/V; q.$/U).
-Y and Z cover both; Y alone does not.
-```
-
-Require witnesses for every ND member and every conclusion leaf. This does
-not replace executable AND by OR, split a complete caller original, or make
-ND records persistable. A NORMAL ND origin may lose only its redundant
-outgoing contribution. Different marks, H or ports are not interchangeable.
-
-### 2.4 General MAY coverage: activation blocked
-
-For equal Γ, H, full mark, legal static anchor and identical complete P,
-with empty E, the proposed DEMAND order is:
-
-```math
-Req(a.p.$/T) = Req(a.p.*/T) = {a.p.$/T}
-Req(a.p.MAY/T) = {a.p.s.$/T | s is a legal suffix}
-
-Y covers X as an obligation if Req(Cx) ⊆ Req(Cy).
-```
-
-Both origins must exist; each removed packet leaf needs a real covering
-leaf. For an ND arm family use `Req(C) ⊆ intersection_k Req(Ck)` plus its
-complete paired-selector checks. Any arm using general MAY coverage has
-the same proof gate. Ancestor STAR does not cover a deeper point.
-
-Request inclusion is proved; native progress is not:
-
-```text
-X: P → a.f.g.$/T,D       Y: P → a.MAY/T,D
-submitted: a.f.g.$/T,N
-C2(X): a.f.g.$/T,N
-C2(Y): a.f.*/T,D + FLOW companions
-C5(Y) does not accept the literal deep initial in this step.
-```
-
-Before activation, construct finite simulations in both directions for
-valid refined findings, under any retained surrounding edges. Account for
-first-field C2, paired C5 cuts, source/ND permissions, NORMAL replay,
-cleaners, H, ports/statics, and empty-demand stopping. No hard iteration
-limit or mere request-set inclusion closes this gap. Until proved, require
-the independent exact C2 witness in §2.2; change no AP semantics to force it.
-
-### 2.5 Barrier algorithm and complexity
-
-```text
-handoff(j, completeRun, saved):
+handoff(completeRun):
     require workers joined and status == COMPLETE
-    observations = prepare existing reports/seeds/Targets/contributors
-    O = freeze all selected method/block origins
-    rows = complete native G(O)
-    N = saved union eligible new NORMAL records
-    if unsupported compaction scope: return existing handoff
+    use existing report/seed preparation and NORMAL persistence
+    O = all current selected method/block/Target guidance origins
+    if unsupported scope: use existing handoff
+    rows = unchanged complete native G(O); K = O
 
-    Nfinal = compact N with §2.1, using actual final providers
-    K = O
     for X in stable order of complete decoded keys:
         trial = K minus {X}
-        rebind/check certificates for EVERY origin in O minus trial
-        if all exact-service checks pass against trial: K = trial
-    require all removed origins have witnesses in final K
+        rebind/check EVERY removed origin against final providers in trial
+        accept only rules whose native proof obligations are discharged
+        if all certificates pass: K = trial
 
-    prepare persistence(Nfinal)
-    demand = nativeBuilder(union(rows[Y] for Y in K))
-    counts = successful normalized demand insertions
-    preserve observations; commit with existing cancellation/report protocol
-    apply ordinary stop/continue to actual compacted demand
+    demand = existingBuilder(union(rows[Y] for Y in K))
+    count successful normalized insertions
+    preserve other handoff state; use existing commit and stop/continue
 ```
 
-Do not mutate live summaries, project only compacted NORMAL records, or
-use absent/self/circular witnesses. Rebind transitive cover to final leaves:
-A may cover C after B is removed. Equal-projection origins can each be
-individually redundant while a joint cut must keep one. Stable full-key
-ordering makes selection independent of arrival order; minimality is not
-required. Keep saved applications and guidance cover as separate contracts.
+Never mutate live summaries or use absent/self/circular witnesses. Rebind
+transitive cover to final providers: A may cover C after B is removed.
+Equivalent origins can each be redundant alone while a joint plan must
+keep one. Stable full-key order makes selection independent of arrival
+order; minimality is not required. Compare every ND member/output leaf
+without premise products. Exact lookups use hashes plus full-key checks;
+affected-certificate indexing can replace global plan rechecks.
 
-Index by complete Γ/H/mark and premise/selector keys. Exact lookup is hash
-lookup plus full-key comparison; checking an ND origin needs one C2/C5 pair
-per projected row, without origin products or premise subsets. Reference
-plan rechecks may be quadratic or worse; optimize affected-certificate
-lookup without changing final-witness checks.
+### 2.4 Proof obligations
+
+| Rule | Established | Remaining before activation |
+| --- | --- | --- |
+| R1/R2 | Existing C2/C5 service-key laws and retained-service proof. | Bind new handoff selection to complete native origins/final witnesses. |
+| R3 residual MAY coverage | Request-language inclusion and transitivity. Existing scalar MAY coverage is already active. | Prove eventual native refinement for the newly covered cross-lane cases. |
+| R4 | Complete-arm exact-service composition. | Broader MAY arm cases depend on R3's remaining proof. |
+
+R3 may change intermediate initials and confirmation timing. The remaining
+proof must preserve eventual valid refined findings in both directions,
+with no iteration limit, including source/ND permissions, NORMAL replay,
+cleaners, H, ports/statics and empty-demand stopping. For example:
+
+```text
+scalar X:   p.*/T → ret.f.g.$/T,D
+diagonal Y: p.*/T → ret.MAY/T,D
+submitted: ret.f.g.$/T,N
+C2(X): ret.f.g.$/T,N
+C2(Y): ret.f.*/T,D + FLOW companions
+```
+
+The first-field emitter makes request inclusion weaker than native progress.
+Do not claim this proof is complete, require an unrelated exact witness as
+part of R3, or change admission/field semantics to close it. Until discharged,
+leave those new residual MAY removals disabled; R1/R2 and exact R4 remain
+independent. This is a proof-status constraint on the rules above, not
+another proposed compaction mechanism.
 
 ## 3. Prune impossible local C2 descendants
+
+The emitter's rejection already exists. The new change is to avoid
+enumerating candidates which can only take that rejecting branch.
 
 `RestrictedInitialPolicy.emitAdmissions` emits nothing, including companions,
 when the demand strictly extends a STAR/EXACT actual. Its descendant branch
@@ -291,6 +287,9 @@ cannot stop DFS. Preserve cancellation propagation and count finalization;
 STOP is not cancellation. Use one native traversal, not an approximate walker.
 
 ## 4. Reject losing loop probes early
+
+The complete observer, prefix search and query caches already exist.
+Add only negative-witness streaming and reuse its completed C2 work.
 
 Preserve all existing bypasses, scalarization and prefix order. Compute the
 complete baseline before trying cuts. Observation equality includes exact
@@ -380,6 +379,10 @@ aggregation/counts, infer that a generic observer is disabled, or introduce
 runtime toggling. Preserve Kotlin/Java SAM use and public equality.
 
 ## 6. Exact FULL caller-input storage
+
+Diagonal masks already exist in other stores/neutral transport. The new
+work is their use in the caller-input directory together with exact
+changing-mark buckets; existing handles and scalar protocol are retained.
 
 ### 6.1 Representation and keys
 
@@ -532,7 +535,7 @@ input. Inputs already avoided by existing subsumption require no packing.
 
 | Model | Checked result | Native boundary |
 | --- | --- | --- |
-| HandoffCompaction, 17 claims | Exact-service composition, complete ND/retained witnesses, transitive request order. | Reuse native AP relation laws and C2/C5 service-key proofs; MAY eventual progress remains open. |
+| HandoffCompaction, 17 claims | Exact-service composition, complete ND/retained witnesses, transitive request order. | Bind R1/R2/R4 selection to existing services; R3 cross-lane progress remains open. |
 | WorkReduction, 23 claims | Empty-family pruning, descriptor round trip, negative witness, same selected budget, diagnostic noninterference. | Preserve real routing/liveness, exact set union and an inert disabled callback. |
 | CallerMarkRelations, 26 claims | Exact encode/decode/union/freshness, pair buckets, packet factoring, source-cell postings and separation. | Reconstruct whole native snapshots/deltas, indexes, order and lifetime before scalar consumers. |
 
@@ -556,7 +559,7 @@ controls:
 
 Keep real finding assertions and known failures. Exact-service/technical
 changes compare semantic results at common completed frontiers; enabling
-compaction may intentionally change raw demand counts. General MAY activation
+compaction may intentionally change raw demand counts. New residual MAY activation
 additionally requires uncapped natural-continuation/refined-finding proof
 and tests; a missing intermediate initial alone is not a sink-loss example.
 

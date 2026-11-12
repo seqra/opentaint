@@ -1,0 +1,9 @@
+EXISTING_SCALAR_MAY backed=false reversed=false rows=1
+EXISTING_SCALAR_MAY backed=true reversed=false rows=1
+RESIDUAL_CROSS_LANE_MAY reversed=false rows=2
+NEW_POINT_HANDOFF_EQUIVALENCE reversed=false rows=2
+EXISTING_SCALAR_MAY backed=false reversed=true rows=1
+EXISTING_SCALAR_MAY backed=true reversed=true rows=1
+RESIDUAL_CROSS_LANE_MAY reversed=true rows=2
+NEW_POINT_HANDOFF_EQUIVALENCE reversed=true rows=2
+PASS_CURRENT_COMPACTION_INVENTORY checks=8 engineRuns=0 projectScans=0 opaqueMarkIds=true
