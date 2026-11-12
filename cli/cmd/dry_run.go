@@ -3,6 +3,8 @@ package cmd
 import (
 	"os"
 	"strings"
+
+	"github.com/seqra/opentaint/internal/utils"
 )
 
 // runDryRun ends a dry run: skippedAction is what the run did not do, and goal is what the same
@@ -23,19 +25,7 @@ func rerunWithoutDryRun() string {
 	return strings.Join(args, " ")
 }
 
+// shellQuote quotes arg so that a command in a next step works when it is pasted.
 func shellQuote(arg string) string {
-	if arg != "" && !strings.ContainsFunc(arg, shellUnsafe) {
-		return arg
-	}
-	return "'" + strings.ReplaceAll(arg, "'", `'\''`) + "'"
-}
-
-func shellUnsafe(r rune) bool {
-	switch {
-	case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
-		return false
-	case strings.ContainsRune("_@%+=:,./-", r):
-		return false
-	}
-	return true
+	return utils.ShellQuote(arg)
 }

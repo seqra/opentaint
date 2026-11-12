@@ -234,9 +234,13 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	// The analyzer writes no SARIF report when no sample ran, for example when every sample is
 	// skipped.
 	if utils.PathExists(sarifPath) {
+		userSarifPath := sarifPath
+		if opts.outputDir != "" {
+			userSarifPath = joinUserPath(opts.outputDir, "test-results.sarif")
+		}
 		suggestions = append(suggestions, output.Suggestion{
 			Description: "To inspect the failing samples, run:",
-			Command:     utils.NewSummaryCommand(sarifPath).WithShowFindings().Build(),
+			Command:     utils.NewSummaryCommand(userSarifPath).WithShowFindings().Build(),
 		})
 	}
 	out.Suggestions(suggestions...)

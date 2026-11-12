@@ -278,7 +278,9 @@ func (cb *OpentaintCommandBuilder) CopyFlagsFrom(source *OpentaintCommandBuilder
 // Build constructs the final command string.
 func (cb *OpentaintCommandBuilder) Build() string {
 	parts := []string{cb.command}
-	parts = append(parts, cb.args...)
+	for _, arg := range cb.args {
+		parts = append(parts, ShellQuote(arg))
+	}
 
 	// Add regular flags in sorted order for consistency
 	var flagNames []string
@@ -287,7 +289,7 @@ func (cb *OpentaintCommandBuilder) Build() string {
 	}
 	sort.Strings(flagNames)
 	for _, flag := range flagNames {
-		parts = append(parts, fmt.Sprintf("--%s", flag), cb.flags[flag])
+		parts = append(parts, fmt.Sprintf("--%s", flag), ShellQuote(cb.flags[flag]))
 	}
 
 	// Add array flags in sorted order
@@ -298,7 +300,7 @@ func (cb *OpentaintCommandBuilder) Build() string {
 	sort.Strings(arrayFlagNames)
 	for _, flag := range arrayFlagNames {
 		for _, value := range cb.arrayFlags[flag] {
-			parts = append(parts, fmt.Sprintf("--%s", flag), value)
+			parts = append(parts, fmt.Sprintf("--%s", flag), ShellQuote(value))
 		}
 	}
 
@@ -334,8 +336,8 @@ func BuildCompileCommandWithDocker(base *OpentaintCommandBuilder, projectPath, o
 		WithOutput("/database/" + outputName).
 		Build()
 
-	return fmt.Sprintf("docker run --rm -v %s:/project -v %s:/database ghcr.io/seqra/opentaint:latest %s",
-		absProjectPath, outputDir, compileCmd)
+	return fmt.Sprintf("docker run --rm -v %s -v %s ghcr.io/seqra/opentaint:latest %s",
+		ShellQuote(absProjectPath+":/project"), ShellQuote(outputDir+":/database"), compileCmd)
 }
 
 // BuildScanCommandWithDocker builds a docker run command string for scanning a project
@@ -348,7 +350,7 @@ func BuildScanCommandWithDocker(base *OpentaintCommandBuilder, projectPath, sari
 	outputDir := filepath.Dir(absSarifReportPath)
 	sarifName := filepath.Base(absSarifReportPath)
 
-	volumes := fmt.Sprintf("-v %s:/project -v %s:/output", absProjectPath, outputDir)
+	volumes := fmt.Sprintf("-v %s -v %s", ShellQuote(absProjectPath+":/project"), ShellQuote(outputDir+":/output"))
 
 	// Map rulesets to container paths; "builtin" is kept as-is, custom paths get volume mounts.
 	// Skip rulesets entirely when only "builtin" is specified (it is the default).
@@ -367,7 +369,7 @@ func BuildScanCommandWithDocker(base *OpentaintCommandBuilder, projectPath, sari
 			} else {
 				absRuleset, _ := filepath.Abs(ruleset)
 				containerPath := fmt.Sprintf("/rules/ruleset%d", i)
-				volumes += fmt.Sprintf(" -v %s:%s", absRuleset, containerPath)
+				volumes += " -v " + ShellQuote(absRuleset+":"+containerPath)
 				containerRulesets = append(containerRulesets, containerPath)
 			}
 		}
