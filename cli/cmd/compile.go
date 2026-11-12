@@ -111,7 +111,7 @@ var compileCmd = &cobra.Command{
 			return compile(absProjectRoot, absOutputProjectModelPath, autobuilderJarPath, compileJavaRunner)
 		}); err == nil {
 			out.Blank()
-			printCompileSummary(absOutputProjectModelPath)
+			printCompileResult(outputProjectModelPath)
 			suggest(compileNextStep(absProjectRoot, projectRoot, outputProjectModelPath))
 		} else {
 			failWith(1, "Failed to compile the project", err, dockerCompileSuggestion())
@@ -148,10 +148,10 @@ func compile(absProjectRoot, absOutputProjectModelPath, autobuilderJarPath strin
 	return nil
 }
 
-func printCompileSummary(absOutputProjectModelPath string) {
-	out.Section("Compile Summary").
-		Field("Project model written to", absOutputProjectModelPath).
-		Render()
+// printCompileResult prints the line that ends a successful compile. projectModelPath is as the
+// user wrote it, or absolute for a model in the cache.
+func printCompileResult(projectModelPath string) {
+	out.Successf("Created the project model at `%s`", projectModelPath)
 }
 
 func compileProject(absOutputProjectModelPath, absProjectRoot, autobuilderJarPath string, javaRunner java.JavaRunner) error {

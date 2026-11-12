@@ -210,6 +210,7 @@ func (report *Report) PrintSummary(out *output.Printer, absSarifReportPath strin
 
 	th := out.Theme()
 
+	// The count of all findings is the value of the Findings key.
 	totalLine := formatLevelCounts(
 		th,
 		summary.FindingsByLevel["error"],
@@ -246,8 +247,7 @@ func (report *Report) PrintSummary(out *output.Printer, absSarifReportPath strin
 	}
 
 	out.Section("Scan Summary").
-		Group("Findings",
-			out.FieldItem("Total", totalLine),
+		Group(out.FieldItem("Findings", totalLine),
 			out.FieldItem("Files affected", findingFiles(report)),
 			out.FieldItem("Rules executed", summary.TotalRulesExecuted),
 			rulesTriggered,
