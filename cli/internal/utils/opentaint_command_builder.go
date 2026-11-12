@@ -101,7 +101,7 @@ func (cb *OpentaintCommandBuilder) WithScanType(scanType string) *OpentaintComma
 // WithTimeout sets the timeout flag if it differs from the default.
 func (cb *OpentaintCommandBuilder) WithTimeout(timeout time.Duration) *OpentaintCommandBuilder {
 	if timeout != defaultTimeout {
-		cb.flags["timeout"] = timeout.String()
+		cb.flags["timeout"] = ShortDuration(timeout)
 	}
 	return cb
 }
@@ -395,4 +395,16 @@ func BuildScanCommandFromCompile(projectPath, projectModelPath string) string {
 		WithProjectModel(projectModelPath).
 		WithOutput(outputPath).
 		Build()
+}
+
+// ShortDuration formats d the way a user writes it: 4m, not 4m0s.
+func ShortDuration(d time.Duration) string {
+	text := d.String()
+	if strings.HasSuffix(text, "m0s") {
+		text = strings.TrimSuffix(text, "0s")
+	}
+	if strings.HasSuffix(text, "h0m") {
+		text = strings.TrimSuffix(text, "0m")
+	}
+	return text
 }

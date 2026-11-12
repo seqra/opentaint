@@ -11,6 +11,7 @@ import (
 	"github.com/seqra/opentaint/internal/analyzer"
 	"github.com/seqra/opentaint/internal/globals"
 	"github.com/seqra/opentaint/internal/output"
+	"github.com/seqra/opentaint/internal/utils"
 )
 
 func suggest(description, command string) {
@@ -53,7 +54,7 @@ func retrySuggestion(exitCode int, timeout time.Duration, maxMemory string) (out
 		}
 		return output.Suggestion{
 			Description: "To retry with a longer timeout, run:",
-			Command:     rerunReplacingFlag(shortDuration(next), "--timeout", "-t"),
+			Command:     rerunReplacingFlag(utils.ShortDuration(next), "--timeout", "-t"),
 		}, true
 	}
 	return output.Suggestion{}, false
@@ -67,18 +68,6 @@ func joinUserPath(base string, elems ...string) string {
 		joined = "./" + joined
 	}
 	return joined
-}
-
-// shortDuration formats d the way a user writes it: 4m, not 4m0s.
-func shortDuration(d time.Duration) string {
-	text := d.String()
-	if strings.HasSuffix(text, "m0s") {
-		text = strings.TrimSuffix(text, "0s")
-	}
-	if strings.HasSuffix(text, "h0m") {
-		text = strings.TrimSuffix(text, "0m")
-	}
-	return text
 }
 
 func rerunReplacingFlag(value string, names ...string) string {

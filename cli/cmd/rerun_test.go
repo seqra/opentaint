@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/seqra/opentaint/internal/analyzer"
+	"github.com/seqra/opentaint/internal/utils"
 )
 
 func withOSArgs(t *testing.T, args []string) {
@@ -166,8 +167,8 @@ func TestShortDuration(t *testing.T) {
 		45 * time.Second:           "45s",
 		time.Hour + 30*time.Second: "1h0m30s",
 	} {
-		if got := shortDuration(d); got != want {
-			t.Errorf("shortDuration(%v) = %q, want %q", d, got, want)
+		if got := utils.ShortDuration(d); got != want {
+			t.Errorf("ShortDuration(%v) = %q, want %q", d, got, want)
 		}
 	}
 }
