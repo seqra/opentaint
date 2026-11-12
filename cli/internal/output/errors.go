@@ -51,7 +51,7 @@ func (p *Printer) FatalErr(err error) {
 
 // Warn prints `Warning: <message>`.
 func (p *Printer) Warn(message string) {
-	fmt.Fprintln(p.w, p.theme.Warning.Render("Warning: "+message)) //nolint:errcheck
+	fmt.Fprintln(p.errW, p.theme.Warning.Render("Warning: "+message)) //nolint:errcheck
 }
 
 // WarnDetails prints `Warning: <message>` and, under it, the details, one on each line.
@@ -64,9 +64,10 @@ func (p *Printer) Warnf(format string, a ...any) {
 	p.Warn(fmt.Sprintf(format, a...))
 }
 
+// problem prints an error or a warning to the error writer.
 func (p *Printer) problem(header string, causes []string) {
-	fmt.Fprintln(p.w, header)             //nolint:errcheck
-	fmt.Fprint(p.w, formatCauses(causes)) //nolint:errcheck
+	fmt.Fprintln(p.errW, header)             //nolint:errcheck
+	fmt.Fprint(p.errW, formatCauses(causes)) //nolint:errcheck
 }
 
 // FormatError returns err as ErrorErr prints it, without colors.
