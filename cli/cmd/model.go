@@ -33,8 +33,6 @@ var modelInitCmd = &cobra.Command{
 		}
 
 		existing := models.IsProject(projectPath)
-		warnReplacingBuildFile(existing, args[0])
-
 		if err := models.Scaffold(projectPath, initModelDeps, analyzerJarPath); err != nil {
 			out.Fatal("Failed to create the model project", err)
 		}
