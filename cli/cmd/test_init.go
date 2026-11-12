@@ -37,7 +37,6 @@ var testRuleInitCmd = &cobra.Command{
 		for _, kind := range kinds {
 			dir := joinUserPath(args[0], kind)
 			existing := testproject.Exists(dir)
-			warnReplacingBuildFile(existing, dir)
 			if err := testproject.Bootstrap(dir, "opentaint-rule-test-"+kind, initRuleProjectDeps); err != nil {
 				out.Fatal("Failed to create the test project", err)
 			}
@@ -76,7 +75,6 @@ var testModelInitCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		dir := args[0]
 		existing := testproject.Exists(dir)
-		warnReplacingBuildFile(existing, dir)
 		if err := testproject.Bootstrap(dir, "model-test-project", initModelProjectDeps); err != nil {
 			out.Fatal("Failed to create the test project", err)
 		}
@@ -116,19 +114,13 @@ func testCompileCommand(outputDir, side string) string {
 	return command
 }
 
-// warnReplacingBuildFile warns, when init runs on an existing project, that the build file is
-// replaced: the dependencies that it had and that --dependency does not repeat are gone. Init
-// keeps the files of the user, such as the models, the samples, and rule-test.yaml.
-func warnReplacingBuildFile(existing bool, dir string) {
-	if existing {
-		out.WarnDetails(fmt.Sprintf("Replacing the build file of `%s`", dir),
-			"the new build file has only the libraries from --dependency")
-	}
-}
-
-// printInitResult prints what init did with the project at dir.
+// printInitResult prints what init did with the project at dir. For an existing project, it warns
+// that init replaced the build file: the dependencies that it had and that --dependency does not
+// repeat are gone. Init keeps the files of the user, such as the models, the samples, and rule-test.yaml.
 func printInitResult(existing bool, project, dir string) {
 	if existing {
+		out.WarnDetails(fmt.Sprintf("Replaced the build file of `%s`", dir),
+			"the new build file has only the libraries from --dependency")
 		out.Successf("Updated %s at `%s`", project, dir)
 		return
 	}
