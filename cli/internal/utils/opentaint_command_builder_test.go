@@ -319,7 +319,7 @@ func TestSummaryFilterFlags(t *testing.T) {
 
 	for _, want := range []string{
 		"opentaint summary /r.sarif",
-		"--path src/main/**",
+		"--path 'src/main/**'",
 		"--severity error",
 		"--rule-id sql-injection",
 		"--partial-fingerprint abc123",
@@ -350,7 +350,7 @@ func TestSummaryRepeatableFlagMultiValue(t *testing.T) {
 	cmd := NewSummaryCommand("/r.sarif").
 		WithPath([]string{"src/**", "test/**"}).
 		Build()
-	if !contains(cmd, "--path src/**") || !contains(cmd, "--path test/**") {
+	if !contains(cmd, "--path 'src/**'") || !contains(cmd, "--path 'test/**'") {
 		t.Errorf("expected both --path values, got %q", cmd)
 	}
 }

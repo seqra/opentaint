@@ -43,12 +43,18 @@ var summaryCmd = &cobra.Command{
 		if err != nil {
 			out.Fatal("Failed to load the SARIF report", err)
 		}
-		printSarifSummary(report, absSarifPath, summaryFilters(), summaryListingOptions(dim, codeFlowSel))
+		hasOmittedFlow := printSarifSummary(report, absSarifPath, summaryFilters(), summaryListingOptions(dim, codeFlowSel))
 
+		if showFindings && hasOmittedFlow && !verboseFlow {
+			out.Suggest(
+				"To see the full code flow and code snippets, run:",
+				currentSummaryBuilder(args[0]).WithVerboseFlow().WithShowCodeSnippets().Build(),
+			)
+		}
 		if !showFindings && sarif.GenerateSummary(report.Filter(summaryFilters())).TotalFindings > 0 {
 			out.Suggest(
 				"To list the findings, run:",
-				currentSummaryBuilder(absSarifPath).WithShowFindings().Build(),
+				currentSummaryBuilder(args[0]).WithShowFindings().Build(),
 			)
 		}
 	},
@@ -136,7 +142,9 @@ func summaryListingOptions(dim sarif.GroupDimension, codeFlowSel sarif.CodeFlowS
 	}
 }
 
-func printSarifSummary(report *sarif.Report, absSarifPath string, filters sarif.Filters, opts sarif.ListingOptions, extraOutputs ...any) {
+// printSarifSummary prints the findings when --show-findings is set and the summary block. It
+// reports whether the listing omitted a part of some code flow.
+func printSarifSummary(report *sarif.Report, absSarifPath string, filters sarif.Filters, opts sarif.ListingOptions, extraOutputs ...any) bool {
 	filtered := report.Filter(filters)
 
 	hasOmittedFlow := false
@@ -146,11 +154,5 @@ func printSarifSummary(report *sarif.Report, absSarifPath string, filters sarif.
 	}
 
 	filtered.PrintSummary(out, absSarifPath, extraOutputs...)
-
-	if showFindings && hasOmittedFlow && !verboseFlow {
-		out.Suggest(
-			"To see the full code flow and code snippets, run:",
-			currentSummaryBuilder(absSarifPath).WithVerboseFlow().WithShowCodeSnippets().Build(),
-		)
-	}
+	return hasOmittedFlow
 }

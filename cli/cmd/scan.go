@@ -535,7 +535,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 			}
 			suggestions = append(suggestions, output.Suggestion{
 				Description: "To view the findings, run:",
-				Command:     utils.NewSummaryCommand(absSarifReportPath).WithShowFindings().Build(),
+				Command:     utils.NewSummaryCommand(userSarifReportPath(cfg)).WithShowFindings().Build(),
 			})
 		case analyzerFail == nil:
 			out.Blank()
@@ -552,6 +552,19 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 
 	if analyzerFail != nil {
 		os.Exit(analyzerFail.ExitCode)
+	}
+}
+
+// userSarifReportPath returns the path of the SARIF report as the user would write it: the
+// --output value, or the default path under the path of the project or of the project model.
+func userSarifReportPath(cfg ScanConfig) string {
+	switch {
+	case cfg.SarifReportPath != "":
+		return cfg.SarifReportPath
+	case cfg.ProjectModelPath != "":
+		return utils.ProjectModelSarifReportPath(cfg.ProjectModelPath)
+	default:
+		return utils.DefaultSarifReportPath(cfg.UserProjectPath)
 	}
 }
 
