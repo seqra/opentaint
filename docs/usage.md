@@ -5,7 +5,7 @@
 ## Scanning Projects
 
 ```bash
-# Basic scan (current directory, SARIF written to the cached model directory)
+# Basic scan (current directory, SARIF report written to .opentaint/results/report.sarif)
 opentaint scan
 
 # Scan a specific project
@@ -154,9 +154,9 @@ opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-mo
 
 | Command | Description |
 |---------|-------------|
-| `opentaint test rule init <output-dir>` | Create source and sink test projects with annotated sample support |
-| `opentaint test rule run <project-model>` | Run detection-rule tests on a compiled project model |
-| `opentaint test rule reachability <rule-id> [source-path]` | Trace why a rule can or cannot reach its facts |
+| `opentaint test rule init <test-project>` | Create source and sink test projects with annotated sample support |
+| `opentaint test rule run <test-project-model>` | Run detection-rule tests on a compiled project model |
+| `opentaint test rule reachability <rule-id> [<source-path>]` | Trace why a rule can or cannot reach its facts |
 
 #### Model tests
 
@@ -170,8 +170,8 @@ opentaint test model run .opentaint/test-compiled/my-model \
 
 | Command | Description |
 |---------|-------------|
-| `opentaint test model init <output-dir>` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
-| `opentaint test model run <project-model>` | Run dataflow model tests on a compiled project model |
+| `opentaint test model init <test-project>` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
+| `opentaint test model run <test-project-model>` | Run dataflow model tests on a compiled project model |
 
 Rule and model test runs write `test-result.json` and `test-results.sarif` to the selected output directory.
 
@@ -211,7 +211,7 @@ Pin the versions the target application uses. Those pins are the models' compile
 
 | Command | Description |
 |---------|-------------|
-| `opentaint model init <output-dir>` | Create a dataflow model project |
+| `opentaint model init <model-project>` | Create a dataflow model project |
 | `opentaint compile models <model-project>` | Compile a dataflow model project |
 
 | Flag | Description |

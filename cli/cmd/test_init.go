@@ -17,9 +17,9 @@ var initRuleSinksOnly bool
 var initRuleSourcesOnly bool
 
 var testRuleInitCmd = &cobra.Command{
-	Use:   "init <output-dir>",
+	Use:   "init <test-project>",
 	Short: "Create test projects for sink and source rules",
-	Long:  "Create test projects for sink and source rules.\n\nArguments:\n  <output-dir>  Parent directory of the `sinks` and `sources` projects",
+	Long:  "Create test projects for sink and source rules.\n\nArguments:\n  <test-project>  Directory of the new sinks and sources test projects",
 	Example: `  # Create only the sinks project, with a library that the samples call
   opentaint test rule init .opentaint/test-projects/my-rule --sinks-only \
     --dependency org.springframework:spring-jdbc:5.3.39`,
@@ -66,9 +66,9 @@ var testRuleInitCmd = &cobra.Command{
 }
 
 var testModelInitCmd = &cobra.Command{
-	Use:   "init <output-dir>",
+	Use:   "init <test-project>",
 	Short: "Create a dataflow model test project",
-	Long:  "Create a dataflow model test project.\n\nArguments:\n  <output-dir>  Directory of the new test project",
+	Long:  "Create a dataflow model test project.\n\nArguments:\n  <test-project>  Directory of the new test project for dataflow models",
 	Example: `  # Create a test project with samples that call Jackson
   opentaint test model init .opentaint/test-projects/my-model \
     --dependency com.fasterxml.jackson.core:jackson-databind:2.17.2`,
