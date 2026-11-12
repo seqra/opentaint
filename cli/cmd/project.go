@@ -17,11 +17,13 @@ import (
 )
 
 type JavaAutobuilderConfig struct {
-	outputDir    string
-	sourceRoot   string
-	dependencies []string
-	packages     []string
-	classpaths   []string
+	outputDir string
+	// userOutputDir is the output directory as the user wrote it, for the next steps.
+	userOutputDir string
+	sourceRoot    string
+	dependencies  []string
+	packages      []string
+	classpaths    []string
 }
 
 type JavaAutobuilderBuilder struct {
@@ -38,6 +40,7 @@ func (b *JavaAutobuilderBuilder) WithOutputDir(dir string) *JavaAutobuilderBuild
 	cleanDir := filepath.Clean(dir)
 	absDir := log.AbsPathOrExit(cleanDir, "output directory")
 	b.config.outputDir = absDir
+	b.config.userOutputDir = dir
 	return b
 }
 
@@ -181,7 +184,8 @@ func (c *JavaAutobuilderConfig) printProjectSummary(config *project.Config) erro
 	projectYamlPath := filepath.Join(c.outputDir, "project.yaml")
 
 	c.logProjectSummary(projectYamlPath, config)
-	suggest("To scan the generated model, run:", utils.BuildScanCommandFromCompile(c.outputDir, c.outputDir))
+	// The scan writes its report to its default place, <project model>/sources/opentaint.sarif.
+	suggest("To scan the generated model, run:", utils.NewScanCommand("").WithProjectModel(c.userOutputDir).Build())
 	return nil
 }
 
