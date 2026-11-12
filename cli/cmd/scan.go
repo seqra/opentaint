@@ -98,8 +98,13 @@ var scanCmd = &cobra.Command{
 func prepareScanConfig(cfg ScanConfig, args []string) ScanConfig {
 	if len(args) > 0 && cfg.ProjectModelPath != "" {
 		out.Errorf("Cannot use both <source-path> and --project-model")
-		suggest("Use either a source path or --project-model:",
-			utils.NewScanCommand("<source-path>").Build()+"\n  "+utils.NewScanCommand("").WithProjectModel("<project-model>").Build())
+		out.Suggestions(
+			output.Suggestion{Description: "To scan the sources, run:", Command: currentScanBuilder(cfg, args[0]).Build()},
+			output.Suggestion{
+				Description: "To scan the project model, run:",
+				Command:     currentScanBuilder(cfg, "").WithProjectModel(cfg.ProjectModelPath).Build(),
+			},
+		)
 		os.Exit(1)
 	}
 	if cfg.Recompile && cfg.ProjectModelPath != "" {

@@ -246,7 +246,7 @@ func TestBuildScanCommandWithDocker(t *testing.T) {
 			projectPath:     "/path/to/project",
 			sarifReportPath: "/path/to/output/results.sarif",
 			rulesetPaths:    []string{"builtin"},
-			expected:        "docker run --rm -v /path/to/project:/project -v /path/to/output:/output ghcr.io/seqra/opentaint:latest opentaint scan /project --output /output/results.sarif --timeout 20m0s --semgrep-compatibility-sarif=false",
+			expected:        "docker run --rm -v /path/to/project:/project -v /path/to/output:/output ghcr.io/seqra/opentaint:latest opentaint scan /project --output /output/results.sarif --timeout 20m --semgrep-compatibility-sarif=false",
 		},
 		{
 			name:            "custom ruleset with volume mount",
@@ -280,7 +280,7 @@ func TestCopyFlagsFrom(t *testing.T) {
 		WithOutput("/docker/output.sarif").
 		Build()
 
-	expected := "opentaint scan /docker/project --output /docker/output.sarif --timeout 20m0s --semgrep-compatibility-sarif=false"
+	expected := "opentaint scan /docker/project --output /docker/output.sarif --timeout 20m --semgrep-compatibility-sarif=false"
 	if result != expected {
 		t.Errorf("CopyFlagsFrom() = %q, want %q", result, expected)
 	}
