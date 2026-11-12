@@ -1,0 +1,12 @@
+'DemandRefinementCover.reflexive' does not depend on any axioms
+'DemandRefinementCover.transitive' does not depend on any axioms
+'DemandRefinementCover.star_exact_equal' does not depend on any axioms
+'DemandRefinementCover.star_covers_exact' does not depend on any axioms
+'DemandRefinementCover.exact_covers_star' does not depend on any axioms
+'DemandRefinementCover.may_covers_descendant_point' does not depend on any axioms
+'DemandRefinementCover.may_covers_descendant_may' depends on axioms: [propext]
+'DemandRefinementCover.root_star_does_not_cover_child_exact' depends on axioms: [propext]
+'DemandRefinementCover.first_field_is_exact' does not depend on any axioms
+'DemandRefinementCover.second_field_is_not_retained' does not depend on any axioms
+'DemandRefinementCover.requested_point_is_allowed_before_emission' does not depend on any axioms
+'DemandRefinementCover.emitted_start_is_not_the_requested_deep_point' depends on axioms: [propext]

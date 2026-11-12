@@ -1,0 +1,21 @@
+{
+  "checkedUtc": "2026-11-12T11:56:21.371106+00:00",
+  "engineRuns": 0,
+  "lostSinkProved": false,
+  "pinnedJarSha256": "e8e0328810806242a7259e7d3f2a6c72eb796db1fa4dad66b299092c6e86a91c",
+  "productionChanged": false,
+  "projectScans": 0,
+  "sourceSha256": "56222b4aa54075df7a637f4063c80d249482e64a82f921b4ad4cc4b663f80f40",
+  "status": "PASS_DEMAND_COVER_NATIVE_CELLS",
+  "steps": [
+    {
+      "exitCode": 0,
+      "step": "compile"
+    },
+    {
+      "exitCode": 0,
+      "step": "execute"
+    }
+  ],
+  "wholeEngineMayCoarseningProved": false
+}

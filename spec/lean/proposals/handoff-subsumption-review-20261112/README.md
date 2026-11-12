@@ -30,6 +30,25 @@ These distinctions refute an unrestricted lifting of query equivalence to raw
 transfer equivalence. They prove neither a project false negative nor that Z
 is necessary for every possible C1 proof.
 
+They do not refute B1/B2 DEMAND-edge subsumption at the joined handoff.
+That rule uses the already proved projection equivalence and does not replay
+the removed DEMAND row in a later run. The raw operator counterexample has
+a different scope.
+
+`DemandRefinementCover.lean` adds 12 constructive request-language claims.
+Same-head STAR and EXACT are equal concrete point obligations. Ancestor MAY
+admits descendant requests. Ancestor STAR does not admit a deeper point.
+The order is transitive. These are semantic request sets, not a claim that
+current C2 emits every allowed point immediately.
+
+`DemandCoverageReview.java` verifies the corresponding native C2 cells.
+It shows immediate exact recovery for a precise first-field offer, and the
+different first-field starts on deeper/coarse/uniform offers. The latter
+cells identify the simulation obligation for MAY coarsening. They establish
+no lost sink. See `demand-cover-lean-receipt.json` and
+`demand-cover-native-receipt.json`. A failed Lean parser attempt is preserved
+under `demand-cover-attempt1`; the corrected 12-claim check passed.
+
 Native verification uses the dataflow JAR pinned by the existing classpath
 snapshot. Its SHA-256 and the two relevant class hashes are in
 `native-receipt.json`. No observer agent or application state is needed.

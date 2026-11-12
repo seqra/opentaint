@@ -1,0 +1,14 @@
+{
+  "checkedUtc": "2026-11-12T11:54:49.711990+00:00",
+  "claims": 12,
+  "command": [
+    "/home/sobol/.elan/bin/lean",
+    "spec/lean/proposals/handoff-subsumption-review-20261112/DemandRefinementCover.lean"
+  ],
+  "exitCode": 0,
+  "previousAttempt": "demand-cover-attempt1",
+  "productionChanged": false,
+  "sourceSha256": "23889f61d58b24e5d1c7e1acac0fa0c0c77e72de47787014cdd20aec2253e9f8",
+  "status": "PASS_SEMANTIC_DEMAND_COVER_COMPONENT",
+  "wholeEngineMayCoarseningProved": false
+}

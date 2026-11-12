@@ -7,14 +7,19 @@ No analyzer behavior changes. The reference runtime remains
 `14d7b63369d94f49d4c551be8405ed7719f267cc`, FULL mode.
 The investigation campaign remains stopped.
 
+**DEMAND clarification:** B1 and B2 are valid edge-subsumption rules at the
+joined handoff, under their stated guards. A DEMAND edge is a refinement
+obligation, not a NORMAL transfer guarantee. Raw-transfer inequality does
+not refute removal of an equivalent DEMAND obligation after the run ends.
+
 ## 1. Reclassification of the earlier patterns
 
 | Earlier item | Result of the review | Saved NORMAL records | Next demand |
 | --- | --- | --- | --- |
 | A: identical projections | Exact demand-row duplication. Projection forgets information. | No deletion follows from equal projections alone. | Proved. |
-| B1: MAY/STAR output selectors | Demand-query equivalence. The displayed weaker-premise raw direction is a generalization candidate. | The symmetric query law is insufficient. | Proved, in either orientation. |
-| B2: concrete-point entry keys | Demand-query equivalence, not a general stronger-postcondition law. STAR preserves a suffix. | No raw replacement follows. The displayed DEMAND rows are not persisted. | Proved for late FULL concrete points. |
-| C1: point-to-MAY coverage | C5 containment plus a separate C2 witness. | X-by-Y raw subsumption is not proved. | Proved with both services covered. |
+| B1: MAY/STAR output selectors | Valid directional DEMAND-edge subsumption at handoff; its projection proof is even symmetric. | Outside the DEMAND guard. | Proved. |
+| B2: concrete-point entry keys | Valid same-head concrete DEMAND conclusion normalization: EXACT can be replaced by STAR. | Outside the DEMAND guard. | Proved for late FULL concrete points. |
+| C1: point-to-MAY coverage | A broader MAY obligation covers the exact point in the proposed DEMAND order. | Outside the DEMAND guard. | Existing certificate works with Z; the Y-only refinement simulation is open. |
 | C2: complete-origin certificate | Coverage of every projected ND row. | Not a proof of arbitrary ND summary deletion. | Proved. |
 | C3: decision order | A procedure, not another algebraic rule. | Use native summary rules. | Use demand rules. |
 | Individual versus joint removal | A constraint on retained representatives. | No new raw subsumption rule. | Keep final witnesses; reject circular support. |
@@ -178,37 +183,55 @@ Equal query keys can share one retained demand-row representative. Literal
 ZERO/Target kinds remain distinct. The point rule does not apply to FLOW or
 GROUP entries. Keep the original legal-base and exclusion guards.
 
-**Why B1 is not symmetric raw subsumption:** its displayed raw summaries are
+### DS-PRE. Weaker premise, same DEMAND conclusion (B1)
 
 ```text
-X: a.f.MUST/T → ret.MAY/T, DEMAND
-Y: a.f.*/T   → ret.MAY/T, DEMAND
+X: a.f.MUST/T → C, DEMAND
+Y: a.f.*/T   → C, DEMAND
 ```
 
-Y has the weaker raw premise. The reverse replacement is not valid for
-current application: exact input `a.f.$/T` satisfies Y but not X. Yet their
-projected output selectors are equivalent. A proof of that symmetric query
-law cannot be reused as a symmetric raw summary law. The weaker-premise
-raw direction remains a separate generalization opportunity.
-
-**Why B2 is not a general stronger-postcondition rule:**
+At the same head, every current fact satisfying X's premise also satisfies
+Y's less restrictive premise. Keep compatible full headers and empty E in
+the compared projected STAR output. Y subsumes X at this handoff:
 
 ```text
-X: a.*/T → ret.$/T, DEMAND
-Y: a.*/T → ret.*/T, DEMAND
-Actual: a.f.$/T, NORMAL
-
-apply(X, Actual) = ret.$/T,   DEMAND
-apply(Y, Actual) = ret.f.$/T, DEMAND
+G(X) = (g(C); a.f.MAY/T)
+G(Y) = (g(C); a.f.*/T)
+same entry; equivalent output selectors; keep Y
 ```
 
-Y does not reproduce X's root result. STAR carries f; it does not assert
-uniform taint. After handoff, the concrete STAR and EXACT entries have an
-equal late C2 key, which is a different statement. Also, concrete STAR
-initials are DEMAND and are not legal native NORMAL record premises.
-The [native controls](../../spec/lean/proposals/handoff-subsumption-review-20261112/native-receipt.json)
-verify both distinctions. These are operator counterexamples, not a new
-whole-project finding-loss claim.
+This direction is a genuine DEMAND-edge subsumption. The stronger existing
+query proof also permits either demand representative. It does not permit
+replacing a NORMAL weaker-premise transfer by a stronger-premise transfer.
+
+### DS-POINT. Same-head concrete EXACT/STAR DEMAND conclusions (B2)
+
+```text
+X: P → a.p.$/T, DEMAND
+Y: P → a.p.*/T, DEMAND
+```
+
+Require the same complete P, owner/ports, full T and protection membership.
+Use the existing legal-base/exclusion guards and a late FULL restricted run.
+Then:
+
+```math
+entryKey(g(a.p.$/T)) = entryKey(g(a.p.*/T))
+```
+
+Their projected paired output is the same `g(P)`. Both demand entries emit
+only the same concrete EXACT initial and have the same C5 entry image.
+Thus keep Y and omit X's DEMAND obligation. Every ND projection is checked
+when P has several members.
+
+"Only EXACT" describes the emitted initial. The submitted fact can itself
+be same-head STAR or MAY; the existing layer rules make provisional starts
+DEMAND. It need not already be an exact submitted fact.
+
+The earlier raw application trace `a.f.$/T → ret.f.$/T` versus `ret.$/T`
+remains correct. It is not a counterexample to this handoff-only rule: these
+DEMAND rows are not saved NORMAL transfers. No replay-equivalence change is
+required to use the existing demand-equivalence proof.
 
 ### D2. Split service coverage: earlier C1 and C2
 
@@ -253,13 +276,95 @@ A Y-only rule could use a stronger proof about the different starts. That
 proof is not supplied by the campaign. A missing initial alone is not a
 proof of a lost sink.
 
-Nor is Y's MAY output a stronger definite postcondition: `a.MAY/T` can refer
-to g rather than f. C5 image containment alone does not prove raw X-by-Y
-summary subsumption.
+Y's MAY output is not a stronger definite NORMAL postcondition. That is
+not the requirement for the proposed DEMAND rule: MAY is a less restrictive
+refinement obligation. Its soundness target is preservation of required
+precise refinements, not equality of immediate initial families. No native
+whole-engine counterexample to the Y-only proposal is established here.
 
 For a complete outgoing origin, check every projected row. Keep all ND
 members and ports. This gives the accepted whole-origin certificate; it
 does not replace native ND execution by unary OR execution.
+
+### DS-COVER. Proposed conclusion-coverage rule (C1 generalization)
+
+Your proposed criterion is the right DEMAND-specific design:
+
+```math
+X = (Γ,P,C_X,DEMAND),  Y = (Γ,P,C_Y,DEMAND)
+Req(C_X) ⊆ Req(C_Y)
+────────────────────────────────────────────
+Y covers X as a DEMAND obligation
+```
+
+Keep the identical complete premise P, full conclusion mark, owner/ports
+and protection class. Do not cover NORMAL by DEMAND, change marks or mix
+plain and protected memberships. Keep legal static anchors and control
+kinds. The new coverage order must be demand-aware:
+
+```math
+Req(a.p.$/T) = Req(a.p.*/T) = { a.p.$/T }
+Req(a.p.MAY/T) = { a.p.s.$/T | s is a legal field suffix }
+```
+
+These sets describe permitted precise requests, not the exact initial family
+which current C2 emits in one step. They give a transitive semantic order:
+
+```text
+same-head STAR covers EXACT                       # DS-POINT: proved
+ancestor MAY covers descendant EXACT/STAR/MAY    # DS-COVER: simulation open
+ancestor STAR does not cover a deeper exact point
+```
+
+**State after i+2:**
+
+```text
+X: b.*/U → a.f.$/T, DEMAND
+Y: b.*/U → a.MAY/T, DEMAND
+Req(a.f.$/T) is a subset of Req(a.MAY/T).
+Proposed result: retain Y without requiring Z.
+```
+
+The request-language inclusion is proved constructively. It is not yet the
+whole-engine refinement simulation. The precise open obligation is: every
+required fine flow preserved with X must still be recoverable with Y, through
+current admission, C5, source permissions and later unrestricted iterations.
+Intermediate starts and demand counts can differ. Do not require literal
+C2 equality, but do not assume eventual refinement without this proof.
+
+**Why ordinary geometric coverage is not enough:**
+
+```text
+Demand X: a.f.$/T     Submitted: a.f.$/T, NORMAL
+  initial: a.f.$/T, NORMAL
+Demand Y: a.*/T      Same submitted fact
+  initial: none in late runs
+```
+
+STAR is a point request here. It cannot be used as an ancestor wildcard.
+MAY is the appropriate less restrictive request.
+
+There is also a one-step refinement difference to account for:
+
+```text
+Demand X: a.f.g.$/T  Submitted: a.f.g.$/T, NORMAL
+  initial: a.f.g.$/T, NORMAL
+Demand Y: a.MAY/T    Same submitted fact
+  initials: a.f.*/T, DEMAND; FLOW companions
+```
+
+Current C5 for Y does not admit the literal stored initial `a.f.g.$/T`:
+it admits only the first new field at this step. This is a simulation/progress
+obligation, not a proved lost sink. Even the original one-field C1 cell can
+have different starts on coarse or uniform inputs. For a precise one-field
+EXACT input, Y does immediately reproduce X's exact initial.
+
+The [12-claim demand-order model](../../spec/lean/proposals/handoff-subsumption-review-20261112/DemandRefinementCover.lean)
+and [native cells](../../spec/lean/proposals/handoff-subsumption-review-20261112/demand-cover-native-receipt.json)
+separate the proved request inclusion from this remaining implementation
+obligation. Keep the existing Z-based certificate until a Y-only proof passes.
+The run-11 cutoff cannot replace that proof. This review does not silently
+change C2 or claim identical iteration/report timing for the broader rule.
 
 ## 5. Generalization candidates: weaker premises and stronger postconditions
 
@@ -284,7 +389,8 @@ The [constructive component](../../spec/lean/proposals/handoff-subsumption-revie
 proves the premise-subset case. It does not identify correlated AP tails
 with ordinary independent propositions.
 
-To promote B1 or the ND example to a general native rule, prove its application
+To promote these DEMAND rules to NORMAL replay, or promote the ND example
+to a general native rule, prove its application
 and handoff bridges. Preserve complete caller originals, actual-derived
 layers, inherited/cycle protection, both saved read directions and the
 required demand admission. Do not infer these bridges from field-set
@@ -376,8 +482,8 @@ sink-loss gate.
 | Conductor | run-8 / run-7 / run-7 |
 | Stirling-PDF | run-11 / run-10 / run-9 |
 
-The review's 13 constructive component claims pass. Isolated native scalar
-application and C2/C5 controls pass. They ran no engine iteration or project
+The review's 13 relation/query claims and 12 demand-order claims pass.
+Isolated native scalar application and C2/C5 controls pass. They ran no engine iteration or project
 scan and prove no new whole-engine deletion rule. Existing broader native
 rules retain their existing proofs and scope.
 

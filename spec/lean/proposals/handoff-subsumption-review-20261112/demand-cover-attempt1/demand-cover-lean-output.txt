@@ -1,0 +1,20 @@
+spec/lean/proposals/handoff-subsumption-review-20261112/DemandRefinementCover.lean:36:37: error: unexpected token 'prefix'; expected '_' or identifier
+spec/lean/proposals/handoff-subsumption-review-20261112/DemandRefinementCover.lean:36:43: error: unexpected identifier; expected ':'
+spec/lean/proposals/handoff-subsumption-review-20261112/DemandRefinementCover.lean:37:18: error: unexpected token ','; expected ':'
+spec/lean/proposals/handoff-subsumption-review-20261112/DemandRefinementCover.lean:37:32: error: unexpected token '++'; expected ':'
+spec/lean/proposals/handoff-subsumption-review-20261112/DemandRefinementCover.lean:41:35: error: unexpected token 'prefix'; expected '_' or identifier
+spec/lean/proposals/handoff-subsumption-review-20261112/DemandRefinementCover.lean:41:41: error: unexpected identifier; expected ':'
+spec/lean/proposals/handoff-subsumption-review-20261112/DemandRefinementCover.lean:42:18: error: unexpected token ','; expected ':'
+spec/lean/proposals/handoff-subsumption-review-20261112/DemandRefinementCover.lean:42:32: error: unexpected token '++'; expected ':'
+'DemandRefinementCover.reflexive' does not depend on any axioms
+'DemandRefinementCover.transitive' does not depend on any axioms
+'DemandRefinementCover.star_exact_equal' does not depend on any axioms
+'DemandRefinementCover.star_covers_exact' does not depend on any axioms
+'DemandRefinementCover.exact_covers_star' does not depend on any axioms
+spec/lean/proposals/handoff-subsumption-review-20261112/DemandRefinementCover.lean:77:14: error(lean.unknownIdentifier): Unknown constant `may_covers_descendant_point`
+spec/lean/proposals/handoff-subsumption-review-20261112/DemandRefinementCover.lean:78:14: error(lean.unknownIdentifier): Unknown constant `may_covers_descendant_may`
+'DemandRefinementCover.root_star_does_not_cover_child_exact' depends on axioms: [propext]
+'DemandRefinementCover.first_field_is_exact' does not depend on any axioms
+'DemandRefinementCover.second_field_is_not_retained' does not depend on any axioms
+'DemandRefinementCover.requested_point_is_allowed_before_emission' does not depend on any axioms
+'DemandRefinementCover.emitted_start_is_not_the_requested_deep_point' depends on axioms: [propext]

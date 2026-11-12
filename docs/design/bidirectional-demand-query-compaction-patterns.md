@@ -79,9 +79,11 @@ paired C5 results and relative field budgets. Either demand representative
 can remain. Replacing both current conclusions by DemandTarget gives the
 same example with Target entries.
 
-This symmetric query law is not symmetric raw premise subsumption.
-An exact input satisfies the STAR current premise but not the MUST one.
-See the [native summary review](bidirectional-demand-edge-redundancy-patterns.md#4-part-ii-validated-demand-query-compaction).
+Y's weaker premise gives a valid directional DEMAND-edge subsumption at
+handoff: keep Y and omit X's obligation. The existing query proof is even
+symmetric. The asymmetry of current raw premise matching does not refute
+this joined-handoff rule. Neither orientation authorizes changing NORMAL
+replay. See [DS-PRE](bidirectional-demand-edge-redundancy-patterns.md#ds-pre-weaker-premise-same-demand-conclusion-b1).
 
 Proofs: [output selectors](../../spec/equivalent-demand-output-selectors.md),
 [symmetric use](../../spec/symmetric-equivalent-demand-output-selectors.md).
@@ -108,9 +110,15 @@ layer and stored-entry image; neither gives a FLOW companion or MAY cursor.
 | Y: `a.*/T → ret.$/T` | `(ret.$/T; a.*/T)` |
 
 The entries share the concrete point key and their outputs are identical.
-Keep either demand representative. Do not replace the raw relations: STAR
-preserves the actual suffix, whereas EXACT resets it to the output root.
-The native review traces this difference.
+Because X and Y are DEMAND edges at the joined handoff, keep Y's STAR
+conclusion and omit X's exact obligation. This is a valid DEMAND-edge
+subsumption. Each resulting late concrete initial is EXACT at that same head.
+The actual submitted fact need not itself be EXACT.
+
+The earlier raw-transfer trace distinguishes STAR from EXACT during direct
+application. That trace does not refute this handoff-only deletion. It still
+prevents lifting this proof to arbitrary NORMAL replay. See
+[DS-POINT](bidirectional-demand-edge-redundancy-patterns.md#ds-point-same-head-concrete-exactstar-demand-conclusions-b2).
 
 Proof: [concrete point queries](../../spec/concrete-point-demand-queries.md).
 
@@ -184,9 +192,12 @@ accept that stored exact point. This does not prove Z necessary for every
 sound design, or prove a lost sink. A Y-only rule needs a new proof about
 the different initial families. That generalization remains open.
 
-Also, `a.MAY/T` is not a stronger definite postcondition than `a.f.$/T`:
-the unknown location may be g instead. C5 containment alone does not prove
-raw X-by-Y summary subsumption.
+For the proposed DEMAND-only rule, Y need not give a stronger definite
+postcondition. It gives a less restrictive permitted-refinement set. Thus
+`a.MAY/T` semantically covers the exact f obligation. The missing proof is
+that current admission/restriction and later iterations simulate the required
+fine flows without Z. It is not a proof that the abstract inclusion fails.
+See [DS-COVER](bidirectional-demand-edge-redundancy-patterns.md#ds-cover-proposed-conclusion-coverage-rule-c1-generalization).
 
 ## 4. Complete-origin coverage (earlier C2)
 
