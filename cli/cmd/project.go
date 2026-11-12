@@ -48,7 +48,7 @@ func (b *JavaAutobuilderBuilder) WithSourceRoot(root string) *JavaAutobuilderBui
 	cleanRoot := filepath.Clean(root)
 	absRoot := log.AbsPathOrExit(cleanRoot, "source root")
 	if _, err := os.Stat(absRoot); os.IsNotExist(err) {
-		out.Fatalf("Source root `%s` does not exist", absRoot)
+		out.Fatalf("Source root `%s` does not exist", root)
 	}
 	b.config.sourceRoot = absRoot
 	return b
@@ -62,7 +62,7 @@ func (b *JavaAutobuilderBuilder) WithDependencies(deps []string) *JavaAutobuilde
 			out.Fatal(fmt.Sprintf("Failed to resolve the dependency path `%s`", dep), err)
 		}
 		if _, err := os.Stat(absDep); os.IsNotExist(err) {
-			out.Fatalf("Dependency `%s` does not exist", absDep)
+			out.Fatalf("Dependency `%s` does not exist", dep)
 		}
 		absDeps[i] = absDep
 	}
@@ -83,7 +83,7 @@ func (b *JavaAutobuilderBuilder) WithClasspath(classpath []string) *JavaAutobuil
 			out.Fatal(fmt.Sprintf("Failed to resolve the classpath entry `%s`", cp), err)
 		}
 		if _, err := os.Stat(absCP); os.IsNotExist(err) {
-			out.Fatalf("Classpath entry `%s` does not exist", absCP)
+			out.Fatalf("Classpath entry `%s` does not exist", cp)
 		}
 		absClasspath[i] = absCP
 	}

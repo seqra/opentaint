@@ -91,10 +91,17 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		out.Fatal(fmt.Sprintf("Failed to access the project model `%s`", projectModelArg), err)
 	}
 	checkModelInputs(opts.dataflowModels, opts.passthroughModels)
+	for _, ruleset := range opts.rulesets {
+		if _, err := os.Stat(ruleset); os.IsNotExist(err) {
+			out.Fatalf("Ruleset `%s` does not exist", ruleset)
+		} else if err != nil {
+			out.Fatal(fmt.Sprintf("Failed to access the ruleset `%s`", ruleset), err)
+		}
+	}
 
 	maxMemory, err := utils.ParseMemoryValue(opts.maxMemory)
 	if err != nil {
-		out.FatalErr(err)
+		out.FatalErr(fmt.Errorf("invalid --max-memory value `%s`: %w", opts.maxMemory, err))
 	}
 
 	outputDir := opts.outputDir

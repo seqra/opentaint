@@ -59,7 +59,9 @@ var compileCmd = &cobra.Command{
 		projectRoot := filepath.Clean(ProjectPath)
 		absProjectRoot := log.AbsPathOrExit(projectRoot, "project path")
 
-		if err := validation.ValidateSourceProjectForCompile(absProjectRoot); err != nil {
+		// The checks name the paths as the user wrote them. They resolve them against the
+		// current directory, as the absolute paths are.
+		if err := validation.ValidateSourceProjectForCompile(projectRoot); err != nil {
 			out.FatalErr(err)
 		}
 
@@ -84,7 +86,7 @@ var compileCmd = &cobra.Command{
 			FieldGroup("Autobuilder", componentItems(resolveJarComponent("autobuilder"), false)...).
 			Render()
 
-		if err := validation.ValidateCompileInputs(absProjectRoot, absOutputProjectModelPath); err != nil {
+		if err := validation.ValidateCompileInputs(projectRoot, outputProjectModelPath); err != nil {
 			out.Blank()
 			out.FatalErr(err)
 		}
