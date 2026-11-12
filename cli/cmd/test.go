@@ -33,7 +33,7 @@ func init() {
 
 func addTestRunFlags(cmd *cobra.Command, outputDir *string, timeout *time.Duration, maxMemory *string, dataflow, passthrough *[]string) {
 	cmd.Flags().StringVarP(outputDir, "output", "o", "", "Directory for test-result.json and test-results.sarif (default: a temporary directory)")
-	cmd.Flags().DurationVar(timeout, "timeout", 600*time.Second, "Analysis timeout (e.g. 30m, 1h)")
+	cmd.Flags().DurationVarP(timeout, "timeout", "t", 600*time.Second, "Analysis timeout (e.g. 30m, 1h)")
 	cmd.Flags().StringVar(maxMemory, "max-memory", "8G", "Maximum analyzer heap size (e.g. 8G, 1024m)")
 	addDataflowModelsFlag(cmd, dataflow)
 	addPassthroughModelsFlag(cmd, passthrough)

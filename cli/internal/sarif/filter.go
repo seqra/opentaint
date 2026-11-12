@@ -173,5 +173,5 @@ func ValidateSeverity(level string) error {
 	if validSeverities[strings.ToLower(strings.TrimSpace(level))] {
 		return nil
 	}
-	return fmt.Errorf("invalid --severity value `%s`, use error, warning, note, or none", level)
+	return fmt.Errorf("invalid --severity value `%s`, use note, warning, error, or none", level)
 }
