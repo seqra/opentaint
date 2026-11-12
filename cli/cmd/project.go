@@ -166,15 +166,15 @@ func (c *JavaAutobuilderConfig) runAutobuilder() error {
 
 	cmdErr, err := javaRunner.ExecuteJavaCommand(autobuilderCommand, commandSucceeded)
 	if err != nil {
-		return fmt.Errorf("native autobuilder execution failed: %w", err)
+		return err
 	}
 	if cmdErr != nil {
-		return fmt.Errorf("native autobuilder execution failed: %w", cmdErr)
+		return noProjectModel(cmdErr)
 	}
 
 	config, err := validation.ValidateProjectModelOutput(c.outputDir)
 	if err != nil {
-		return fmt.Errorf("output validation failed after project generation: %w", err)
+		return invalidProjectModel(err)
 	}
 
 	return c.printProjectSummary(config)
