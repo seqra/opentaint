@@ -46,22 +46,28 @@ func canonicalProjectPath(projectPath string) (string, error) {
 	return absPath, nil
 }
 
-// GetProjectCachePath returns ~/.opentaint/cache/<slug-hash>/ for a project path,
-// creating the directory if needed. The project path is canonicalized (resolved
-// through symlinks and made absolute) before hashing.
-func GetProjectCachePath(projectPath string) (string, error) {
+// ProjectCachePath returns ~/.opentaint/cache/<slug-hash>/ for a project path without creating it.
+// The project path is canonicalized (resolved through symlinks and made absolute) before hashing.
+func ProjectCachePath(projectPath string) (string, error) {
 	absPath, err := canonicalProjectPath(projectPath)
 	if err != nil {
 		return "", err
 	}
 
-	modelsDir, err := GetModelCacheDir()
+	modelsDir, err := GetModelCacheDirPath()
 	if err != nil {
 		return "", err
 	}
+	return filepath.Join(modelsDir, ProjectPathSlugHash(absPath)), nil
+}
 
-	slugHash := ProjectPathSlugHash(absPath)
-	cachePath := filepath.Join(modelsDir, slugHash)
+// GetProjectCachePath returns ~/.opentaint/cache/<slug-hash>/ for a project path, creating it if
+// needed.
+func GetProjectCachePath(projectPath string) (string, error) {
+	cachePath, err := ProjectCachePath(projectPath)
+	if err != nil {
+		return "", err
+	}
 	if err := os.MkdirAll(cachePath, 0o755); err != nil {
 		return "", fmt.Errorf("failed to create project cache directory: %w", err)
 	}

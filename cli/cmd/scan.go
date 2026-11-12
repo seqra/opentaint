@@ -309,7 +309,11 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 
 	if cfg.DryRun {
 		out.Blank()
-		runDryRun("the build and scan", "scan the project")
+		skipped := "the scan"
+		if plan.needsCompilation {
+			skipped = "the build and scan"
+		}
+		runDryRun(skipped, "scan the project")
 		return
 	}
 
@@ -590,9 +594,17 @@ func resolveScanPlan(cfg ScanConfig, absUserProjectRoot string) scanPlan {
 	}
 
 	if cfg.DryRun {
-		dryRunPath := filepath.Join(os.TempDir(), dryRunScanProjectModelPath)
+		// A dry run reuses the cache as the scan does, but it neither creates nor locks it.
+		if !cfg.Recompile {
+			if cachePath, err := utils.ProjectCachePath(absUserProjectRoot); err == nil && utils.IsCachedModelComplete(cachePath) {
+				return scanPlan{
+					absProjectModel:  utils.CachedProjectModelPath(cachePath),
+					projectCachePath: cachePath,
+				}
+			}
+		}
 		return scanPlan{
-			absProjectModel:  dryRunPath,
+			absProjectModel:  filepath.Join(os.TempDir(), dryRunScanProjectModelPath),
 			needsCompilation: true,
 		}
 	}
