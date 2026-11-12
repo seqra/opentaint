@@ -28,12 +28,13 @@ steps go in the output.
   goal, then one command
 - Examples run from the project root and use the paths of the skills: `.opentaint/project`,
   `.opentaint/rules`, `.opentaint/dataflow`, `.opentaint/pass-through`,
-  `.opentaint/results/report.sarif`, `.opentaint/test-projects/<name>`
+  `.opentaint/results/report.sarif`, `.opentaint/test-projects/<name>`,
+  `.opentaint/test-compiled/<name>`
 - A made-up value looks made up: `com.example`. A value that names a real library or rule is real
 
 ## Flag descriptions
 
-- One short phrase, capitalized
+- One short phrase, capitalized. The help does not wrap the rows of the flags, so keep it short
 - A flag that names an input or an output is a noun phrase: `Path to the SARIF report`. A flag
   that changes what the command does is a verb phrase: `Skip the confirmation prompt`
 - A flag with a closed set of values lists them: `Color mode: auto, always, or never`
@@ -46,7 +47,14 @@ steps go in the output.
 
 - A run prints what it is going to do, the progress, the result, and the next steps, with one
   blank line between the parts
+- Progress is a spinner for each long step, named in the -ing form with no article or ellipsis:
+  `Compiling project model`. It ends with `✓` or `✗`. Without a terminal there is no spinner and
+  no progress line
+- A result of one value is one line in the past tense: ``Created the project model at `x` ``. A
+  result of two values or more is a block
 - When there is nothing to show, say so in one line
+- The notice of a new version is an exception to the next steps: one line after the output,
+  ``A new version is available: v1.2.3. To update, run `opentaint update` ``
 - Check the inputs before the long step starts, so that a wrong input does not look like a
   failed step
 - A path in a block is absolute. In a message and in a next step, a path and a value are as the
@@ -66,7 +74,8 @@ steps go in the output.
 ### Blocks
 
 - A block has a short title in Title Case. A total goes last
-- Each item is `Key: value`. Within a block, put every value either after its key or on its own
+- Each item is `Key: value`. A key is a short noun phrase: `Project model`, not
+  `Project model written to`. Within a block, put every value either after its key or on its own
   line under it
 - A group is a key with items under it. A count or a size of the whole group is the value of the
   key, and the items do not repeat what the key says
@@ -74,13 +83,16 @@ steps go in the output.
 
 ### Next steps
 
-- Up to 3 steps, each a goal and a command: `To <goal>, run:`. A step that points to a file has
-  its path in place of the command. A step with nothing to paste is one sentence
+- The steps go in a block titled `Suggestions`
+- Up to 3 steps, each a goal and a command: `To <goal>, run:`. A step that points to a file or a
+  page has its path or URL in place of the command: `To see the full details, open the log:`,
+  `To learn more about <topic>, see:`. A step with nothing to paste is one sentence
 - Give a step when the result feeds the next command, after a dry run, and after a failure that
   a log or another input can help with. Give none when there is nothing left to do, when the
   user declined the prompt, or when the step repeats what the output shows
 - A command in a step works when pasted. Use a placeholder only for a value that the CLI cannot
-  know, with the name that the help uses for it
+  know, with the name that the help uses for it. A placeholder can be a part of a path:
+  `.opentaint/test-compiled/<name>`
 
 ## Errors and warnings
 
@@ -96,7 +108,17 @@ steps go in the output.
 - An error in the code is lowercase and does not repeat the message of its caller
 - What to do goes in the next steps, not in the message. Only the valid values of a flag follow
   a wrong one: ``Invalid --color value `sometimes`, use auto, always, or never``
-- A warning says what the command did or found that the user may not expect
+- A warning says what the command did or found that the user may not expect. It has the form of
+  an error, with the causes under it, and tells what the command did in the past tense:
+
+  ```
+  Warning: Replaced the build file of `.opentaint/test-projects/my-rule/sinks`
+    the new build file has only the libraries from --dependency
+  ```
+
+- A renamed command or flag stays as a hidden alias. Using it warns:
+  ``Warning: `opentaint compile approximations` is now `opentaint compile models` ``,
+  `Warning: --dataflow-approximations is now --dataflow-models`
 
 ## Wording
 
