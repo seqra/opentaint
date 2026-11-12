@@ -22,7 +22,7 @@ var testRuleInitCmd = &cobra.Command{
 	Long:  "Create test projects for sink and source rules.\n\nArguments:\n  <output-dir>  Parent directory of the `sinks` and `sources` projects",
 	Example: `  # Create only the sinks project, with a library that the samples call
   opentaint test rule init .opentaint/test-projects/my-rule --sinks-only \
-    --dependency org.springframework:spring-jdbc:6.1.14`,
+    --dependency org.springframework:spring-jdbc:5.3.39`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if initRuleSinksOnly && initRuleSourcesOnly {
