@@ -38,3 +38,6 @@ core/**/bin/
 # Agent plugin manifests
 !.claude-plugin
 !.codex-plugin
+
+# Report evidence lives in the external report-data archive.
+/docs/reports/data/

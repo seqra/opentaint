@@ -33,9 +33,16 @@ run-9. A predicate does not need to justify removal at the earlier barrier.
 For each repeated edge at the later barrier, produce either:
 
 1. A checked predicate and witness that prove the edge is redundant at the
-   specified removal point.
+   specified removal point when only that edge is removed from the original
+   guidance.
 2. A faithful code example, native regression test and fact trace that show
-   why removing the edge after the later run can lose required analysis behavior.
+   that removing only the edge after the later run makes a valid sink
+   unreachable.
+
+For the second result, the deletion control must make the valid sink
+unreachable. Auxiliary losses alone do not establish necessity. Keep all
+other guidance and NORMAL providers, and check every retained route to that
+sink, not only the first witness in the trace.
 
 Repeat discovery alone does not establish redundancy or non-termination.
 Unsupported by a predicate does not mean necessary.
@@ -43,6 +50,58 @@ Unsupported by a predicate does not mean necessary.
 The campaign ends only when every repeated edge has this disposition at the
 later barrier. No sampled subset or unexplained residual category satisfies
 the goal.
+
+### Selected bookkeeping change: individual verdict and joint plan
+
+The user selected separate individual classifications and a jointly safe
+retirement plan. This is a change to campaign bookkeeping, not analyzer
+semantics or the required analysis behavior.
+
+| Question | Previous combined treatment | Selected treatment |
+| --- | --- | --- |
+| Is X redundant? | A verdict could depend on retaining X as a witness for one cumulative cut. | Test X alone against the complete original state, with only X removed. |
+| Which edges can be retired together? | The classification set also served as the removal set. | Select and prove a separate joint plan. |
+| What if a representative must stay in that plan? | It could remain unresolved despite an individual certificate. | Keep its individual verdict; record that the plan retains it. |
+
+For each project and later barrier, let O be the complete original outgoing
+guidance family after that run has joined and before any campaign removal.
+It includes every method and inner-block scope, kind and port. Freeze the
+original retained NORMAL records, confirmed NormalTarget routes and other
+barrier state with O. O is not the current joint plan's reduced guidance.
+
+For an individual target X, compare that original state with the same state
+using O minus {X}. Keep every other original edge and route, including edges
+with their own individual REDUNDANT verdicts. The certificate must identify
+this singleton cut and its original-state pins. It can use any other actual
+guidance edge in O minus {X} and any unchanged retained NORMAL or other
+provider state. It cannot assume X is present or use a provider's redundancy
+verdict as a substitute for its actual membership.
+
+Separate individual certificates can use each other's original edges. Each
+certificate has a different singleton cut and retains its own actual
+witnesses. Their union is not a joint deletion certificate.
+
+For a joint plan, select R from the individually REDUNDANT repeated targets.
+Let K = O minus R be the final retained guidance. Edges outside the repeated
+target universe stay fixed. Prove the complete removal R safe with respect
+to O. A joint guidance witness must be available in K, or have a checked
+replacement chain that ends there. Unchanged NORMAL and other retained
+provider state remains available separately. Check all joint dependencies
+against the same final K and unchanged provider state; do not accept mutual
+support among removed edges.
+
+A plan can keep an individually REDUNDANT representative. Do not label it
+NECESSARY or leave its individual verdict OPEN only because the plan needs
+it. Selecting or restoring that representative changes plan membership, not
+its individual verdict. A joint removal proof also does not by itself
+replace each target's singleton proof; bind that proof to O minus {X}.
+
+The new proof gates are separate: check every individual verdict against its
+original singleton cut, then check every selected joint cut and its complete
+retained witnesses. Counts and artifacts must identify which gate they
+describe. No maximum-size joint cut is required, and the plan need not retire
+every individually REDUNDANT target. The edge-only, unbounded proof contract,
+original sole-edge necessity test and no-implementation scope remain in force.
 
 ## 2. Reference behavior
 
@@ -53,8 +112,9 @@ A newer documentation-only HEAD is acceptable when its production tree is
 identical. Record both revisions and source/configuration hashes.
 
 Use the existing project preparation, models, extensions, aliases, static
-propagation, FULL mode and `1,1,2,...` schedule. The run-11 cutoff remains in
-effect. OWASP uses its CI project, 8g and 1000 seconds. Conductor and Stirling
+propagation, FULL mode and `1,1,2,...` schedule. The original captures use
+the temporary run-11 cutoff. It is a measurement setting only and must not
+justify redundancy. OWASP uses its CI project, 8g and 1000 seconds. Conductor and Stirling
 use their saved project configurations, 8g and 1080 seconds. Exact launch
 manifests in the reference report take precedence over a paraphrased command.
 
@@ -81,6 +141,39 @@ Production transfer, C2, C5, persistence, matching, report and stop behavior
 remain unchanged during corpus capture. Controlled deletion belongs in the
 small test cases described below. A production change requires a subsequent
 implementation proposal and selection.
+
+### Proof contract: unbounded iterations and edge-only patterns
+
+Assume no iteration limit when proving redundancy. Preserve the required
+behavior after every finite number of later iterations. Do not use the
+temporary run-11 cap, a final report at that cap, or the absence of later
+captured runs as a proof that guidance has no later consumer.
+
+An executable pattern can inspect only demand edges, summary edges and
+submitted initial facts, including their complete coordinates and history.
+Literal accessor owner/type strings already in these keys remain part of
+edge identity. Extra JVM type or hierarchy information is not allowed.
+Project source, CFG properties, rule forms, reports, source-hit state and
+other project information must not decide applicability. Analyzer operator
+semantics can be used to prove a uniform law over the allowed data.
+
+Use owner and type strings inside literal edge keys only as opaque identity
+values. Do not infer enum, immutability, assignability or library behavior
+from them. Do not move extra JVM information into edge metadata to make it
+an allowed input. Keep native base/accessor constructor tags distinct from
+project type analysis.
+
+Keep missing history explicit. An absent submitted-initial capture is not
+an empty initial set. A normalized FLOW summary with a STAR premise does
+not prove that C2 emitted STAR: an EXACT start can normalize to that same
+stored premise. A separate execution cannot supply the original run's
+missing submissions or initials.
+
+Audit earlier accepted predicates under both requirements. Reopen a target
+whose proof uses a forbidden assumption unless an independent eligible
+certificate is available. Keep withdrawn proofs as historical evidence;
+do not count them as active classifications. Generalize eligible patterns
+under this same contract, with a full-corpus and dependency check.
 
 ## 3. Define the repeated set precisely
 
@@ -200,21 +293,59 @@ P is a context-dependent predicate, not a table of edge shapes. Do not infer
 it from one matching NORMAL output or from the equal findings count.
 
 Let U contain one target for each repeated edge of each unit in B across the
-three pairs, at its later barrier. Initially:
+three pairs, at its later barrier. Evaluate individual proofs against each
+project's complete original O, not against a reduced joint basis. Initially:
 
 ```text
-resolved = { X in U | P has a checked certificate at X.laterBarrier }
+resolved = { X in U | P has a checked certificate for O minus {X}
+                       at X.laterBarrier }
 targets  = U - resolved
 ```
 
 Each repeated-edge ledger row retains both snapshot references and one
-disposition for removal after the later run. If P holds there, the target is
-resolved even when P did not hold after the earlier run.
+individual disposition for removal after the later run. Joint plan membership
+is a separate field or linked record. If P holds for that singleton cut, the
+target is resolved even when P did not hold after the earlier run. P's source
+and CFG guards remain ineligible under the proof contract in section 2;
+an individual verdict still needs an eligible edge-only certificate.
 
 ## 6. Phase C: process uncovered targets one at a time
 
 Maintain one ordered, durable work queue and one coordinator. Select one
 uncovered later-barrier target and record its ID. Then:
+
+Use this order for unresolved targets: FLOW demand edges first, unprotected
+concrete-mark edges second, Target edges third, and all remaining edges last.
+Keep the complete existing evidence for a deferred lower-priority target. A
+priority change does not prove that target redundant or necessary. Within one
+priority, the coordinator can select a tractable case and record the reason.
+The global filter after each accepted predicate still checks all priorities.
+
+A new predicate can inspect all summary edges and submitted initials across
+run-i, run-(i+1) and run-(i+2). It can use relations between methods, inner
+blocks, producers and consumers. An edge-local shape test is not required.
+
+Always examine sound generalizations of the known patterns. Prefer a common
+contract that covers earlier patterns and additional edges when its proof
+and executable guards support that scope. List the earlier predicates that
+it covers and show how their witnesses map to the wider contract. A union of
+existing predicates alone adds no coverage. Keep earlier individual
+certificates active until the replacement individual proof and full-corpus
+filter pass. Check all affected joint dependencies before changing the plan.
+A failed generalization leaves the earlier proved scope intact.
+
+For example, a predicate can check a complete historical input family and
+the summaries that it generated, then prove that retained replay or guidance
+covers every later use of the removed row. Do not infer this future coverage
+from repetition, equal counts or an unchanged input family alone.
+
+Keep submitted facts, emitted C2 initials, processed results and final summary
+memberships as distinct evidence. Record every scope and port. Use complete
+history for each claimed domain; a missing input stream is not an empty set,
+and an entry observation without its AP payload is not a submitted initial.
+If the predicate needs history that the original observer did not record,
+mark that evidence gap and obtain a coherent compatible capture. Do not
+insert fresh facts or summaries into the frozen original run pair.
 
 ```text
 while targets is not empty:
@@ -226,13 +357,15 @@ while targets is not empty:
         proveAndValidate(Q)
         addVersionedPredicate(Q)
         for Y in allRepeatedLaterBarrierTargets:
-            if Y is open and Q has a checked witness for Y:
+            if Y is open and Q has a checked witness for originalO minus {Y}:
                 classify(Y, REDUNDANT_Q, witness)
         rebuild targets from the ledger
     else:
         case = buildFaithfulNecessityExample(X)
-        proveAndReplayRequiredBehaviorLoss(case, removeOnly=X,
-                                          after=X.laterBarrier)
+        proveAndReplayValidSinkLoss(case, removeOnly=X,
+                                    after=X.laterBarrier,
+                                    baseline=originalO,
+                                    keepOtherDemandsAndNormalProviders=True)
         classify(X, NECESSARY_WITH_CASE, case)
         rebuild targets from the ledger
 ```
@@ -241,6 +374,20 @@ while targets is not empty:
 classification. The required necessity example must succeed. Until then X
 remains open. If several producers merged into X, analyze every relevant
 producer and their interactions.
+
+Maintain the joint retirement selection separately:
+
+```text
+R = chooseSubsetOfIndividuallyRedundantTargets()
+K = originalO minus R
+if completeJointProofAndDependencyCheck(originalO, R, K) passes:
+    saveVersionedJointPlan(R, K, completeCertificates)
+```
+
+An individual classification does not automatically add its edge to R.
+Changing R does not change the original baseline for any individual verdict
+or necessity case. Keep the previous checked plan until the new complete
+plan passes; do not publish an intermediate cut with missing witnesses.
 
 After accepting each Q, filter the entire remaining corpus before selecting
 the next target. Save a witness for each matched target. Shared geometry
@@ -269,12 +416,24 @@ inclusion. Check NORMAL replay before demand admission, C2/C5, both directions,
 source permissions, ZERO/Target routing, rule observations, report identity,
 call bindings, aliases, scope/ports and future refinement as applicable.
 Preserve complete ND premises, literal protection and all merged producers.
-Prove provider retention, arrival-order safety and absence of circular support.
-The accepted predicates must remain sound when all their selected edges are
-removed from guidance after their respective later barriers. A witness must
-not depend on another removed edge unless a
-proved replacement chain ends at independently retained state. Save those
-dependencies and check them again after each new predicate.
+Prove provider availability and arrival-order safety for the declared cut.
+
+For an individual verdict, bind the witness to original O minus {X}. Every
+provider must be an actual member of that retained state or have an eligible
+proved replacement there. Do not reject a valid singleton witness only
+because its provider is individually REDUNDANT or absent from a different
+joint plan. Do not infer an individual verdict solely from membership in a
+joint cut without checking the singleton theorem and witness.
+
+For a joint retirement plan, prove that all selected edges in R can be
+removed together after their respective later barriers. Validate every
+removed origin's complete required services against the same final K and
+unchanged provider state. Recheck prior joint witnesses and save new
+certificates if their providers leave K. A witness cannot
+depend on another removed edge unless a checked replacement chain ends at
+independently retained state. Save these joint dependencies and check them
+after each plan change. Individual certificates that retain different
+providers cannot replace this cumulative check.
 
 Do not justify deletion with equal counts, one project's unchanged findings,
 an unavailable future provider or a raw unadmitted summary. Do not silently
@@ -335,17 +494,41 @@ project configuration or impossible fixed limit.
 Run two controls from the same fixture and runtime:
 
 - Baseline: the edge repeats at run-i and run-(i+2), with i >= 3, and the
-  required modeled behavior is reached.
-- Deletion: keep execution unchanged through the later completed forward run.
-  Then remove only the selected edge from that run's outgoing guidance,
-  no earlier than after run-5.
-  Show the first missing required fact, summary, source permission, Target
-  route or valid source-to-sink finding, and trace the loss to the outcome.
+  analyzer reaches a valid sink after the later barrier. Record the sink
+  location, rule ID and run where it is reached. Retain all original O;
+  do not first apply a joint plan or other individual removals.
+- Deletion: start from that same original state at the later barrier. Remove
+  only the selected edge from O before it guides the next run. Keep
+  all other original demand edges, retained NORMAL providers and confirmed
+  NormalTarget routes. Run with the same schedule and stop policy. Show that
+  the same sink is unreachable after the deletion. Trace the first difference
+  through to the lost sink and verify that no retained route reaches it.
+
+A missing intermediate operation or one missing witness does not establish
+necessity if the same sink stays reachable. A retained confirmed NormalTarget
+also counts as a route to the sink. Record how both controls finish. A timeout
+or an incomplete trace cannot establish that the sink is unreachable.
+Both controls must run without an iteration cap; an external resource guard
+can record experiment failure only, not sink unreachability.
+
+The acceptance result must be: the same valid sink is reachable after
+run-(i+2) in the baseline, and unreachable after removal of only the selected
+edge at that barrier. A missing initial, summary or source permission alone
+does not pass this test.
+
+Do not substitute the current joint retained set K for original O in either
+control. A sink loss that needs other campaign removals is not individual
+necessity. Being kept as a joint witness is not evidence of necessity.
+
+Save the two control traces with the removed edge key, the later barrier,
+the sink location and rule ID, and each run's reachability result. Verify the
+one-edge difference at the handoff before comparing the sink outcomes.
 
 Loss of an extra MAY combination, a callback count or a spurious provisional
 path is not proof that an edge is necessary. A baseline test that already
 misses the finding is not a valid deletion control. State the concrete valid
-flow or other required semantic observation that is lost.
+flow to the lost sink. Other lost observations can support the trace, but
+cannot replace the required sink loss.
 
 Link the fixture to the actual project edge and its later barrier. A generic counterexample
 which only refutes an unsafe shape-based rule leaves the project edge open.
@@ -369,6 +552,9 @@ docs/reports/data/redundant-demand-<id>/
     predicate-catalog.json
     predicate-results.jsonl.gz
     ledger.jsonl.gz
+    individual-certificates.jsonl.gz
+    joint-retirement-plan.json
+    joint-certificates.jsonl.gz
     reconciliations.json
     cases/<case-id>/...
     receipts/...
@@ -380,9 +566,13 @@ or external-only scratch path may replace the complete sets and ledger.
 Compressed artifacts must have portable decoders and schemas.
 
 Each ledger entry must identify the project, run pair, full method key, unit
-kind and stable block key, scope/ports, exact edge key, both snapshot references, the later removal
-barrier and verdict, predicate/case ID and version, witness/proof/native-test references,
-and any pending issue. Keep an audit log of classification changes.
+kind and stable block key, scope/ports, exact edge key, both snapshot references,
+the later removal barrier and individual verdict, predicate/case ID and
+version, witness/proof/native-test references, and any pending issue. Pin the
+original O and singleton cut for an individual certificate. Record joint plan
+membership separately, including its version, R, final K, complete joint
+certificates and retained dependencies. Keep audit logs for classifications
+and plan changes without treating one as the other.
 
 The manifest must pin the runtime, project revisions, configurations,
 rules/models/extensions, observer and decoder sources, source hashes,
@@ -397,8 +587,14 @@ The report must contain:
 - Totals by project, method, unit kind, block, edge kind, layer, mark kind and
   scope. Show method-level and inner-block totals separately.
 - P coverage and failures at each pair's later barrier.
-- Every accepted Q, its proof domain and newly covered edge/unit/method counts.
+- Every accepted Q, its proof domain and counts of new individual
+  classifications by edge, unit and method.
 - Every necessary case and its mapped later-barrier targets.
+- Separate individual REDUNDANT/NECESSARY/OPEN totals and joint
+  selected/retained totals. Identify retained representatives that are
+  individually REDUNDANT without counting them as necessary or unresolved.
+- The checked joint plan, its complete certificates and final retained
+  witness set, with a separate change history.
 - Final reconciliation of the full repeated universe against the ledger.
 
 Do not interpret the percentage of retired edges as a measured CPU or memory
@@ -409,13 +605,17 @@ improvement. No post-implementation speedup has been measured in this campaign.
 Terminal dispositions are `REDUNDANT_P`, `REDUNDANT_<Q-name>` and
 `NECESSARY_WITH_CASE`. Unsupported, unknown, proof-pending, reproducer-pending
 and decision-pending are nonterminal.
+These are individual verdicts against original O. Joint plan membership is
+not a terminal disposition and does not change one.
 
-Completion requires zero open targets, every edge in every D accounted
-for at its later barrier for every method and generated inner block,
-all predicate proofs/native checks passing, every necessary
-case passing both controls with i >= 3 and removal after run-(i+2), and every
-count/link/hash reconciled. Neither a
-representative example nor the discovery of one broad Q ends the campaign.
+Completion requires zero individually open targets, every edge in every D
+accounted for at its later barrier for every method and generated inner
+block, and all individual predicate proofs/native checks passing. Every
+necessary case must prove that removing only X from original O makes the
+same valid sink unreachable, with i >= 3 and removal after run-(i+2).
+The selected joint plan must also pass its complete proof and retained
+dependency check. It need not contain every individually REDUNDANT edge.
+Reconcile individual and joint counts, links and hashes separately.
 
 Use subagents for independent capture preparation, decoding and proof or
 counterexample review of the current target. The coordinator still processes

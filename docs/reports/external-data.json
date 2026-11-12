@@ -1,0 +1,17 @@
+{
+  "archiveRoot": "/drive-testcomp/opentaint-go-rules/report-data-archive/opentaint-w3",
+  "archiveRootRelativeToRepository": "../report-data-archive/opentaint-w3",
+  "archivedUtc": "2026-11-12T10:17:38.406510+00:00",
+  "contentPreserved": true,
+  "directory": "docs/reports/data",
+  "fileCount": 6278,
+  "gitHistoryRewritten": false,
+  "inventory": "inventory.jsonl",
+  "inventorySha256": "bae14e913d9dc9c18e72a4a4fb621c4a6a007c49642fe2f61166e6dc0edaea6d",
+  "payloadPath": "docs/reports/data",
+  "previouslyIndexedFiles": 182,
+  "schema": "opentaint.external-report-data.v1",
+  "selectionPolicy": "Archive complete report-data directories whose aggregate size exceeds 10 MB.",
+  "thresholdBytes": 10000000,
+  "totalBytes": 4416380573
+}
