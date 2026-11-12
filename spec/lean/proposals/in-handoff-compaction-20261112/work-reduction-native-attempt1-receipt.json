@@ -1,0 +1,17 @@
+{
+  "checkedUtc": "2026-11-12T12:58:48.068069+00:00",
+  "status": "FAIL",
+  "steps": [
+    {
+      "step": "compile",
+      "exitCode": 1
+    }
+  ],
+  "sourceSha256": "e2e581fb2afee4b97a9bc5af4909977491ca1ebfa6328da77e9b82e188a3eeeb",
+  "pinnedJarSha256": "e8e0328810806242a7259e7d3f2a6c72eb796db1fa4dad66b299092c6e86a91c",
+  "classpathMetadataSha256": "6b9632b04727dac0ad17e3272e9cde7fcc390d60efcb7c074d42553a3946ef55",
+  "projectScans": 0,
+  "engineRuns": 0,
+  "productionChanged": false,
+  "scope": "Empty-E C2 ordered family controls and descriptor interning; no native trie or loop observer rewrite"
+}

@@ -1,0 +1,23 @@
+{
+  "checkedUtc": "2026-11-12T12:41:39.862195+00:00",
+  "command": [
+    "lean",
+    "spec/lean/proposals/in-handoff-compaction-20261112/HandoffCompaction.lean"
+  ],
+  "leanVersion": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+  "sourceSha256": "6facc07a01072d1b01388ffaf321ce94f819181361aa5b9838303ff8283e432f",
+  "exitCode": 0,
+  "claims": 17,
+  "auditAllowedAxioms": [
+    "propext",
+    "Quot.sound"
+  ],
+  "status": "PASS_SCOPED_HANDOFF_COMPONENTS",
+  "nativeMayEventualRefinementProved": false,
+  "productionChanged": false,
+  "projectScansStarted": false,
+  "previousAttempts": [
+    "lean-attempt1",
+    "lean-attempt2"
+  ]
+}

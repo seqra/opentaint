@@ -1,6 +1,9 @@
 # Next iteration after the run-11 measurements
 
-9 November 2026. **UNSELECTED. Do not implement from this document.**
+9 November 2026. **Design overview. Do not implement from this document.**
+Update, 12 November: ranks 1 and 3 are selected for specification in the
+[combined work-reduction and handoff spec](../../spec/in-handoff-edge-compaction.md#12-prune-impossible-local-c2-descendants).
+Other ranks remain unselected. No production implementation has been made.
 Measured runtime: `14d7b63369d94f49d4c551be8405ed7719f267cc`.
 This is a new proposal based on the completed run-11 campaign. The earlier
 main-migration proposal is historical. No runtime or experiment configuration
@@ -160,6 +163,14 @@ marks, layers, scopes, controls, late extra members, missing-only differences an
 run-2 fallback. Keep the old invalid first-budget certificate disabled.
 
 ## 2. Pack neutral FULL caller inputs
+
+**Why FLOW subsumption does not replace this proposal:** a FLOW summary can
+cover diagonal T→T results, but it does not record which full marks actually
+arrived at a call. The stored T input must still match a future T→U summary
+or a mark request. Packing retains those exact memberships in a mask; it
+does not delete them or emit a synthetic FLOW input. Inputs already avoided
+by existing subsumption need no packing. See the
+[code and fact trace](../../spec/in-handoff-edge-compaction.md#15-clarification-full-input-packing-versus-flow-subsumption).
 
 The new complete identity query preserves each accumulator owner and exact callee
 key. It erases only the same identity full mark T from a singleton original and

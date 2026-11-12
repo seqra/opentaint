@@ -1,0 +1,48 @@
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:82:48: error: unexpected token 'local'; expected ')'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:82:54: error: unexpected identifier; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:83:28: error: unexpected token '→'; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:84:34: error: unexpected token '='; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:85:59: error: unexpected identifier; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:91:23: error: unexpected token 'local'; expected ')'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:91:29: error: unexpected identifier; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:92:33: error: unexpected token 'with'; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:96:38: error: unexpected token 'local'; expected ')'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:96:44: error: unexpected identifier; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:97:28: error: unexpected token '→'; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:98:28: error: unexpected identifier; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:99:37: error: unexpected token 'with'; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:101:79: error: unexpected identifier; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:108:5: error: unexpected token 'local'; expected '_' or identifier
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:108:10: error: unexpected identifier; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:109:38: error: unexpected identifier; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:110:53: error: unexpected identifier; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:112:49: error: unexpected identifier; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:114:57: error: unexpected identifier; expected 'binder_predicate', 'builtin_cbv_simproc', 'builtin_dsimproc', 'builtin_simproc', 'cbv_simproc', 'dsimproc', 'elab', 'elab_rules', 'grind_pattern', 'infix', 'infixl', 'infixr', 'instance', 'macro', 'macro_rules', 'notation', 'postfix', 'prefix', 'simproc', 'syntax' or 'unif_hint'
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:118:34: error(lean.unknownIdentifier): Unknown identifier `fastTrial`
+
+Note: It is not possible to treat `fastTrial` as an implicitly bound variable here because the `autoImplicit` option is set to `false`.
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:120:36: error(lean.unknownIdentifier): Unknown identifier `fastTrial`
+
+Note: It is not possible to treat `fastTrial` as an implicitly bound variable here because the `autoImplicit` option is set to `false`.
+'WorkReduction.star_descendant_empty' does not depend on any axioms
+'WorkReduction.exact_descendant_empty' does not depend on any axioms
+'WorkReduction.may_descends' does not depend on any axioms
+'WorkReduction.must_descends' does not depend on any axioms
+'WorkReduction.ordered_empty_filter' depends on axioms: [propext]
+'WorkReduction.materialized_membership' depends on axioms: [propext, Quot.sound]
+'WorkReduction.first_extra_witness' depends on axioms: [propext, Quot.sound]
+'WorkReduction.same_observation_membership' depends on axioms: [propext, Quot.sound]
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:183:14: error(lean.unknownIdentifier): Unknown constant `extra_rejects_full_observation`
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:184:14: error(lean.unknownIdentifier): Unknown constant `trial_decision_equal`
+spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean:185:14: error(lean.unknownIdentifier): Unknown constant `selected_budget_equal`
+'WorkReduction.no_extra_does_not_accept' depends on axioms: [propext, sorryAx, Quot.sound]
+'WorkReduction.late_companion_rejects' depends on axioms: [propext, sorryAx, Quot.sound]
+'WorkReduction.same_geometry_other_scope_rejects' depends on axioms: [propext, Quot.sound]
+'WorkReduction.disabled_old_callbacks' depends on axioms: [propext, Quot.sound]
+'WorkReduction.disabled_new_no_archive' depends on axioms: [propext, Quot.sound]
+'WorkReduction.enabled_exact_step' depends on axioms: [propext, Quot.sound]
+'WorkReduction.old_disabled_run_callbacks' depends on axioms: [propext, Quot.sound]
+'WorkReduction.new_disabled_run_empty_work' depends on axioms: [propext, Quot.sound]
+'WorkReduction.enabled_exact_run' depends on axioms: [propext, Quot.sound]
+'WorkReduction.disabled_output_equal' depends on axioms: [propext, Quot.sound]
+'WorkReduction.semantic_state_unchanged' does not depend on any axioms

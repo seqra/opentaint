@@ -7,6 +7,13 @@ No analyzer behavior changes. The reference runtime remains
 `14d7b63369d94f49d4c551be8405ed7719f267cc`, FULL mode.
 The investigation campaign remains stopped.
 
+The proposed handoff workflow, ND rule, retained-provider checks and proof
+gates are now specified in
+[In-handoff edge compaction](../../spec/in-handoff-edge-compaction.md).
+For generalized MAY coarsening, the selected contract preserves eventual
+refined findings without an iteration limit and permits intermediate runs
+to differ. Its native refinement/progress proof remains an activation gate.
+
 **DEMAND clarification:** B1 and B2 are valid edge-subsumption rules at the
 joined handoff, under their stated guards. A DEMAND edge is a refinement
 obligation, not a NORMAL transfer guarantee. Raw-transfer inequality does
@@ -329,8 +336,10 @@ The request-language inclusion is proved constructively. It is not yet the
 whole-engine refinement simulation. The precise open obligation is: every
 required fine flow preserved with X must still be recoverable with Y, through
 current admission, C5, source permissions and later unrestricted iterations.
-Intermediate starts and demand counts can differ. Do not require literal
-C2 equality, but do not assume eventual refinement without this proof.
+Intermediate starts, demand counts and confirmation timing can differ under
+the selected eventual-findings contract. Do not require literal C2 equality,
+but do not assume eventual refinement without this proof. The temporary
+run-11 cutoff is not a correctness premise for this generalization.
 
 **Why ordinary geometric coverage is not enough:**
 

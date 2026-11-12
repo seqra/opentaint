@@ -1,0 +1,48 @@
+{
+  "checkedUtc": "2026-11-12T12:54:22.585973+00:00",
+  "command": [
+    "lean",
+    "spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean"
+  ],
+  "sourceSha256": "50d5f01ae90cd61d9d4d569e69ae47be97a51e070f933da1e6153ac0a21a91b5",
+  "exitCode": 0,
+  "claims": 23,
+  "allowedAxioms": [
+    "Quot.sound",
+    "propext"
+  ],
+  "status": "PASS_LOCAL_WORK_REDUCTION_COMPONENTS",
+  "head": "fabf6247f24ade8e5b91be86be8df7749279101f",
+  "earlierAuditedSourcePins": {
+    "ap/RestrictedInitialPolicy.kt": "8473d936c94d3e96c543e495309da53501098ad2a69fc29c82f3e3a32f392cbd",
+    "ap/Facts.kt": "9aa496dcd49a96333843a2fa70ffc0b2284bcad7aec92a7b990667b9c3af7cf1",
+    "store/FrozenDemandTrie.kt": "f260e08cbde6024c1aacca83e21d8c90c4d6116504eeecf22edb64e6bfd52b62",
+    "store/DemandStore.kt": "a664e74e3c32f2d07f9b18ef626cd46c8f44d857ea7798e95a80795a91737e68",
+    "store/DemandResultCoverage.kt": "0809b9680c2758022580806028bf2e269bb3057f8bba33800b1a8a432f918f6d",
+    "store/StaticEntryLookup.kt": "90bbb026bcfd6f7b9a295111e75aebe5ab069af28ef692883384d90b7c33f02d",
+    "engine/LoopOutputRestriction.kt": "c9381026696953188374d5fa4f170f252967ffcbfcf5903792a05623d82f7c28",
+    "engine/LoopConsumerObservation.kt": "6d98f705f055f6223ab97a061dd278a41fb0d5797375c4189b19b2691555518c",
+    "engine/LoopQueryScratch.kt": "f8c534f3d99f503e11a035ff5d839769932b81ad9bbdbcf88675a27a4fb521bf",
+    "engine/LoopRestrictionSession.kt": "8c08677a54a48a96967d1fe04cd358b66f74ec0b52e3c29768314df9b8fd2686",
+    "engine/MethodBlockRuntime.kt": "dea13b1054c8f5b6a82dcd9bf6e444446f3e7d57405a708f79f7d8f8841450db",
+    "engine/BlockBoundaryDemandView.kt": "114895ad7b24beb970bc5bb8794bd3300ecc58b0ad1a8f0dfd4513fb64a52ec4"
+  },
+  "changedSinceEarlierAudit": {
+    "engine/MethodBlockRuntime.kt": {
+      "old": "6485035a5ca56adfe5a744a42c3df2260f13fb2f3bff8a5d80e4ba94cb1b716a",
+      "current": "dea13b1054c8f5b6a82dcd9bf6e444446f3e7d57405a708f79f7d8f8841450db"
+    }
+  },
+  "additionalSourcePins": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodCallServices.kt": "2063bb43659a1d8b2789c778dfe6a1d3c32a9e4a25134430e2ebaa4a757fbde3",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SharedObjects.kt": "f19e8b9b4c9cb3a11129dc6c0b7c3fbe707a152002e2d3da752b3ef644a2651d",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/interp/UnresolvedCallObserver.kt": "8b2a653faabf042484e022bd7b1067d4188614b4e7e15fc7b4e9105cbbaa48c6",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/ApManager.kt": "d8a575de8fc4f65d7d589f82784e1614a1728f6284b6865e055749a02b8b02b0",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/Premise.kt": "e8a6b398a0c138d64a4bf013ccd8a4ca554f453d2cfa1f05dbe75964ff022c53",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/AdmittedInitial.kt": "8960e70e51cb77635a5545ff50828ac15bd053b1ac7d2bcf2914418d5b7340fd",
+    "core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/main/kotlin/org/opentaint/dataflow/jvm/bidi/interp/JIRInterpreter.kt": "17ac38edb66b59a5a7618b53347e2b5e6eb17b2431054db7a89b165e50b4e82d",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/ap/ifds/taint/ExternalMethodTracker.kt": "738eec0181098c3b7ed668314e4a6aeaab803334e97d114d0d3ea6beee6a258d"
+  },
+  "productionChanged": false,
+  "wholeNativeTrieAndObserverProved": false
+}

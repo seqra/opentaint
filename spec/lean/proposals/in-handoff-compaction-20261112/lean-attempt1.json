@@ -1,0 +1,9 @@
+{
+  "command": [
+    "lean",
+    "spec/lean/proposals/in-handoff-compaction-20261112/HandoffCompaction.lean"
+  ],
+  "checkedUtc": "2026-11-12T12:36:24.805710+00:00",
+  "sourceSha256": "4de0f58b35d2d2aedae9a51e43ba1b9aedb16b91e96f09e72098900035473e49",
+  "exitCode": 1
+}

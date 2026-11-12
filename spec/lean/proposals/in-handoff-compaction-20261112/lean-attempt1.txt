@@ -1,0 +1,65 @@
+spec/lean/proposals/in-handoff-compaction-20261112/HandoffCompaction.lean:81:55: error(lean.unknownIdentifier): Unknown constant `Bool.and_eq_true.mp`
+spec/lean/proposals/in-handoff-compaction-20261112/HandoffCompaction.lean:80:18: error: unsolved goals
+case point.data.data.exact.star
+a : List Nat
+⊢ ∀ (p : Point),
+    (match Need.data a Tail.star, p with
+      | Need.data path Tail.exact, Point.data p => p = path
+      | Need.data path Tail.star, Point.data p => p = path
+      | Need.data path Tail.may, Point.data p => ∃ suffix, p = path ++ suffix
+      | Need.control key, Point.control k => k = key
+      | x, x_1 => False) →
+      match Need.data a Tail.exact, p with
+      | Need.data path Tail.exact, Point.data p => p = path
+      | Need.data path Tail.star, Point.data p => p = path
+      | Need.data path Tail.may, Point.data p => ∃ suffix, p = path ++ suffix
+      | Need.control key, Point.control k => k = key
+      | x, x_1 => False
+
+case point.data.data.star.exact
+a : List Nat
+⊢ ∀ (p : Point),
+    (match Need.data a Tail.exact, p with
+      | Need.data path Tail.exact, Point.data p => p = path
+      | Need.data path Tail.star, Point.data p => p = path
+      | Need.data path Tail.may, Point.data p => ∃ suffix, p = path ++ suffix
+      | Need.control key, Point.control k => k = key
+      | x, x_1 => False) →
+      match Need.data a Tail.star, p with
+      | Need.data path Tail.exact, Point.data p => p = path
+      | Need.data path Tail.star, Point.data p => p = path
+      | Need.data path Tail.may, Point.data p => ∃ suffix, p = path ++ suffix
+      | Need.control key, Point.control k => k = key
+      | x, x_1 => False
+spec/lean/proposals/in-handoff-compaction-20261112/HandoffCompaction.lean:141:15: error(lean.unknownIdentifier): Unknown constant `Bool.and_eq_true.mp`
+spec/lean/proposals/in-handoff-compaction-20261112/HandoffCompaction.lean:139:46: error: unsolved goals
+kept : List Edge
+source : Edge
+ws : List ArmWitness
+h : checkEdge kept source ws = true
+t : Token
+ht : serves source t
+⊢ supplied kept t
+spec/lean/proposals/in-handoff-compaction-20261112/HandoffCompaction.lean:159:16: error(lean.unknownIdentifier): Unknown constant `Bool.and_eq_true.mp`
+spec/lean/proposals/in-handoff-compaction-20261112/HandoffCompaction.lean:158:50: error: unsolved goals
+original kept : List Edge
+cert : Edge → List ArmWitness
+h : checkPlan original kept cert = true
+⊢ ∀ (t : Token), supplied original t ↔ supplied kept t
+'HandoffCompaction.covers_refl' depends on axioms: [propext]
+'HandoffCompaction.covers_trans' depends on axioms: [propext]
+'HandoffCompaction.below_covers' depends on axioms: [propext]
+'HandoffCompaction.checked_need_sound' depends on axioms: [propext, sorryAx]
+'HandoffCompaction.checked_witness_sound' depends on axioms: [propext, sorryAx, Quot.sound]
+'HandoffCompaction.checked_edge_sound' depends on axioms: [propext, sorryAx, Quot.sound]
+'HandoffCompaction.checked_plan_preserves_requests' depends on axioms: [propext, sorryAx, Quot.sound]
+'HandoffCompaction.retained_service_cover' does not depend on any axioms
+'HandoffCompaction.eventual_from_per_step_equality' does not depend on any axioms
+'HandoffCompaction.nd_two_arms_check' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.nd_two_arms_cover' depends on axioms: [propext, sorryAx, Quot.sound]
+'HandoffCompaction.nd_missing_arm_rejected' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.mutual_deletion_rejected' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.wrong_header_rejected' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.other_arrival_order_check' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.may_semantic_plan_check' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.ancestor_star_does_not_cover_child' depends on axioms: [propext]

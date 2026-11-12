@@ -1,0 +1,17 @@
+'HandoffCompaction.covers_refl' depends on axioms: [propext]
+'HandoffCompaction.covers_trans' depends on axioms: [propext]
+'HandoffCompaction.below_covers' depends on axioms: [propext]
+'HandoffCompaction.checked_need_sound' depends on axioms: [propext]
+'HandoffCompaction.checked_witness_sound' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.checked_edge_sound' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.checked_plan_preserves_requests' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.retained_service_cover' does not depend on any axioms
+'HandoffCompaction.eventual_from_per_step_equality' does not depend on any axioms
+'HandoffCompaction.nd_two_arms_check' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.nd_two_arms_cover' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.nd_missing_arm_rejected' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.mutual_deletion_rejected' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.wrong_header_rejected' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.other_arrival_order_check' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.may_semantic_plan_check' depends on axioms: [propext, Quot.sound]
+'HandoffCompaction.ancestor_star_does_not_cover_child' depends on axioms: [propext]

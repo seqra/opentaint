@@ -1,0 +1,23 @@
+'WorkReduction.star_descendant_empty' does not depend on any axioms
+'WorkReduction.exact_descendant_empty' does not depend on any axioms
+'WorkReduction.may_descends' does not depend on any axioms
+'WorkReduction.must_descends' does not depend on any axioms
+'WorkReduction.ordered_empty_filter' depends on axioms: [propext]
+'WorkReduction.materialized_membership' depends on axioms: [propext, Quot.sound]
+'WorkReduction.first_extra_witness' depends on axioms: [propext, Quot.sound]
+'WorkReduction.same_observation_membership' depends on axioms: [propext, Quot.sound]
+'WorkReduction.extra_rejects_full_observation' depends on axioms: [propext, Quot.sound]
+'WorkReduction.trial_decision_equal' depends on axioms: [propext, Quot.sound]
+'WorkReduction.selected_budget_equal' depends on axioms: [propext, Quot.sound]
+'WorkReduction.no_extra_does_not_accept' depends on axioms: [propext, Quot.sound]
+'WorkReduction.late_companion_rejects' depends on axioms: [propext, Quot.sound]
+'WorkReduction.same_geometry_other_scope_rejects' depends on axioms: [propext, Quot.sound]
+'WorkReduction.disabled_old_callbacks' depends on axioms: [propext, Quot.sound]
+'WorkReduction.disabled_new_no_archive' depends on axioms: [propext, Quot.sound]
+'WorkReduction.enabled_exact_step' depends on axioms: [propext, Quot.sound]
+'WorkReduction.old_disabled_run_callbacks' depends on axioms: [propext, Quot.sound]
+'WorkReduction.new_disabled_run_empty_work' depends on axioms: [propext, Quot.sound]
+'WorkReduction.enabled_exact_run' depends on axioms: [propext, Quot.sound]
+'WorkReduction.disabled_output_equal' depends on axioms: [propext, Quot.sound]
+'WorkReduction.combined_projection' does not depend on any axioms
+'WorkReduction.semantic_state_unchanged' depends on axioms: [propext, Quot.sound]

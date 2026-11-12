@@ -1,0 +1,5 @@
+spec/lean/proposals/in-handoff-compaction-20261112/NativeWorkReduction.java:31: error: incompatible types: FrozenMarkDeclarations cannot be converted to MarkTable
+        ApManager manager = new ApManager(new Cancellation(),new RefManager(),FrozenMarkDeclarations.Companion.getEMPTY());
+                                                                                                                       ^
+Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+1 error
