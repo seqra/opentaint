@@ -1,0 +1,455 @@
+{
+  "schema": "work-reduction-final-20261112-v1",
+  "runtimeRevision": "472288cf34ddf75290e3fab4d6f5cbc0a366646c",
+  "coreTree": "845413a861a3bbc50492785efb88124aa419e924",
+  "baselineRevision": "54ad708fe1c4f551956d3d572866de1534415fa1",
+  "baselineRerun": false,
+  "rawEvidenceRoot": "/drive-testcomp/opentaint-go-rules/work-reduction-20261112",
+  "implementationValidation": {
+    "runtimeRevision": "472288cf34ddf75290e3fab4d6f5cbc0a366646c",
+    "coreTree": "845413a861a3bbc50492785efb88124aa419e924",
+    "worktreeClean": true,
+    "nativeSourceHashChecks": [
+      {
+        "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/CallerInputValues.kt",
+        "sameHash": true
+      },
+      {
+        "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/CallerMarkRelations.kt",
+        "sameHash": true
+      },
+      {
+        "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/CalleeSubscriptions.kt",
+        "sameHash": true
+      },
+      {
+        "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/SubscriptionManager.kt",
+        "sameHash": true
+      },
+      {
+        "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/N2Statistics.kt",
+        "sameHash": true
+      },
+      {
+        "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/CallerInputValuesTest.kt",
+        "sameHash": true
+      },
+      {
+        "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/PackedCallerDeliveryTest.kt",
+        "sameHash": true
+      },
+      {
+        "source": "spec/lean/proposals/in-handoff-compaction-20261112/CallerMarkRelations.lean",
+        "sameHash": true
+      },
+      {
+        "source": "spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean",
+        "sameHash": true
+      },
+      {
+        "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/HandoffCompactor.kt",
+        "sameHash": true
+      },
+      {
+        "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/HandoffServiceKeys.kt",
+        "sameHash": true
+      },
+      {
+        "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/HandOff.kt",
+        "sameHash": true
+      },
+      {
+        "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/BlockHandOff.kt",
+        "sameHash": true
+      },
+      {
+        "source": "core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/HandoffCompactorTest.kt",
+        "sameHash": true
+      }
+    ],
+    "commonJvm": {
+      "opentaint-dataflow": {
+        "tests": 2589,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "opentaint-jvm-dataflow": {
+        "tests": 467,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "root": {
+      "reference": "../main-migration-20261109/run11-native/root-bidi-failures-current.json",
+      "totals": {
+        "tests": 1083,
+        "failures": 20,
+        "errors": 0,
+        "skipped": 11
+      },
+      "sameFailureIdentities": true,
+      "checks": [
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.BidiSignedRuleResolverTest",
+          "name": "real serialized Object and array mark complements normalize to false for sources and sinks()",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest",
+          "name": "1 simultaneous mark(s)",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest",
+          "name": "2 simultaneous mark(s)",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest",
+          "name": "3 simultaneous mark(s)",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest",
+          "name": "4 simultaneous mark(s)",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest",
+          "name": "5 simultaneous mark(s)",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.CleanerDslAnalysisTest",
+          "name": "1 simultaneous mark(s)",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.CleanerDslAnalysisTest",
+          "name": "2 simultaneous mark(s)",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.CleanerDslAnalysisTest",
+          "name": "3 simultaneous mark(s)",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.CleanerDslAnalysisTest",
+          "name": "4 simultaneous mark(s)",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.CleanerDslAnalysisTest",
+          "name": "5 simultaneous mark(s)",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.IterationLimitAnalysisTest",
+          "name": "depth one flow is dropped with iteration limit zero()",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.IterationLimitAnalysisTest",
+          "name": "depth three flow is dropped with iteration limit two()",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.IterationLimitAnalysisTest",
+          "name": "mixed depth fact keeps its shallow branch over the iteration limit()",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.MainMigrationBoundaryCoverageTest",
+          "name": "entry-source descendants survive an exact root clean at one field()",
+          "sameMessage": false,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.dataflow.MainMigrationBoundaryCoverageTest",
+          "name": "entry-source descendants survive an exact root clean at two fields()",
+          "sameMessage": false,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.project.spring.SpringDispatcherAcceptanceTest",
+          "name": "actual optional JVM entry preserves component registry between controller calls and clears ordinary static state()",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.project.spring.SpringDispatcherAcceptanceTest",
+          "name": "real joined prescan and driver retain the exact controller sink keys without an outside finding()",
+          "sameMessage": false,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.project.spring.SpringPredefinedDispatcherAcceptanceTest",
+          "name": "actual optional JVM entry preserves component registry between controller calls and clears ordinary static state()",
+          "sameMessage": true,
+          "sameAssertedValues": true
+        },
+        {
+          "class": "org.opentaint.jvm.sast.project.spring.SpringPredefinedDispatcherAcceptanceTest",
+          "name": "real joined prescan and driver retain the exact controller sink keys without an outside finding()",
+          "sameMessage": false,
+          "sameAssertedValues": true
+        }
+      ],
+      "allAssertedValuesSame": true,
+      "finding_expectations_changed": false
+    },
+    "formal": {
+      "checkedUtc": "2026-11-12T17:01:41.221949+00:00",
+      "leanVersion": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+      "models": [
+        {
+          "source": "spec/lean/proposals/in-handoff-compaction-20261112/HandoffCompaction.lean",
+          "sha256": "6facc07a01072d1b01388ffaf321ce94f819181361aa5b9838303ff8283e432f",
+          "claims": 17,
+          "log": "handoff-lean.log",
+          "logSha256": "41fb8dad739b3a8f4403799b7f86c668af5f260b388d9df77429b38f71d1fb19",
+          "result": "PASS_LOCAL_MODEL"
+        },
+        {
+          "source": "spec/lean/proposals/in-handoff-compaction-20261112/WorkReduction.lean",
+          "sha256": "50d5f01ae90cd61d9d4d569e69ae47be97a51e070f933da1e6153ac0a21a91b5",
+          "claims": 23,
+          "log": "work-reduction-lean.log",
+          "logSha256": "466414f60d2f7c63792aacc3aa4cbc5d0ebef48649182727772fa490a73951ec",
+          "result": "PASS_LOCAL_MODEL"
+        },
+        {
+          "source": "spec/lean/proposals/in-handoff-compaction-20261112/CallerMarkRelations.lean",
+          "sha256": "5ba7379eee7b3318cd36ddb8fa0fe7b6da982b70432ca3495c976eaace88aeb8",
+          "claims": 26,
+          "log": "caller-lean.log",
+          "logSha256": "233a1b9d5b4855f15a026bc941ffff394b616f79c079d3068bea1986d983135e",
+          "result": "PASS_LOCAL_MODEL"
+        },
+        {
+          "source": "spec/lean/proposals/in-handoff-compaction-20261112/ImplementationAlgorithms.lean",
+          "sha256": "62cbb79272f3e53d0e1ed3210b4884cf5c7342bce2eb1bb8bb21ba91c860a2f0",
+          "claims": 13,
+          "log": "implementation-lean.log",
+          "logSha256": "160420cae9858a40764dd4dd56c00d3ffe33b828630fb20785a18d1100b5afb4",
+          "result": "PASS_LOCAL_MODEL"
+        }
+      ],
+      "claims": 79,
+      "nativeMayEventualRefinementProved": false,
+      "R3Enabled": false,
+      "scope": "Local constructive claims plus separately tested native bindings; not a formal proof of all Kotlin code."
+    }
+  },
+  "rules": {
+    "revision": "472288cf34ddf75290e3fab4d6f5cbc0a366646c",
+    "wallSeconds": 83.46729177236557,
+    "gradleExit": 0,
+    "resultCounts": {
+      "success": 786,
+      "falseNegative": 0,
+      "falsePositive": 0,
+      "skipped": 0,
+      "disabled": 22
+    },
+    "languages": {
+      "java": {
+        "declared": 609,
+        "collected": 607,
+        "counts": {
+          "success": 585,
+          "disabled": 22
+        }
+      },
+      "go": {
+        "declared": 201,
+        "collected": 201,
+        "counts": {
+          "success": 201
+        }
+      }
+    },
+    "uncollectedDeclarations": [
+      {
+        "language": "java",
+        "rule": "java/security/unsafe-deserialization.yaml#server-dangerous-object-deserialization",
+        "sample": "security.unsafedeserialization.UnsafeDeserializationSamples$DangerousRemoteService#invoke",
+        "mode": "default",
+        "kind": "positive"
+      },
+      {
+        "language": "java",
+        "rule": "java/security/unsafe-deserialization.yaml#server-dangerous-object-deserialization",
+        "sample": "security.unsafedeserialization.UnsafeDeserializationSamples$SafeRemoteService#invokeById",
+        "mode": "default",
+        "kind": "negative"
+      }
+    ],
+    "acceptance": {
+      "analyzerAndJsonGatePass": true,
+      "allCollectedNonDisabledJavaHaveActualBidiCompletion": true,
+      "allDeclarationsCollected": false,
+      "knownCollectionLimitationOnly": true
+    },
+    "priorComparison": {
+      "revision": "14d7b63369d94f49d4c551be8405ed7719f267cc",
+      "classificationChanges": [],
+      "allClassificationsIdentical": true,
+      "priorRuntimeSamples": 585,
+      "frontierChanges": []
+    }
+  },
+  "projects": {
+    "OWASP": {
+      "revision": "472288cf34ddf75290e3fab4d6f5cbc0a366646c",
+      "modelSha256": "e8fd467e410051c3b0b36d461d953780e5819345fd3b7fddc68a3f8769e09873",
+      "config": {
+        "model": "/drive-testcomp/opentaint-go-rules/owasp-ci-investigation/project/project.yaml",
+        "memory": "8g",
+        "timeout": 1000,
+        "outer_timeout": 1200
+      },
+      "status": "OK",
+      "latestReached": "run-11",
+      "latestCompleted": "run-11",
+      "acceptedForward": "run-11",
+      "wallSeconds": 224.91985450685024,
+      "peakRssBytes": 10375569408,
+      "manifestSha256": "4dc16ba1852fbdc0eda1570480c6f82680dd306f0898b1caa126105831629b6c",
+      "summarySha256": "302c387fc6fda6f04f4db533f3f50699d40ab7b3e6c06e7fbe02e403c0a21921"
+    },
+    "conductor": {
+      "revision": "472288cf34ddf75290e3fab4d6f5cbc0a366646c",
+      "modelSha256": "3457cf5a1b3c63e0710dfa50a9fbca1c4229f2726ea3276cc409e019515ee35d",
+      "config": {
+        "model": "/drive-testcomp/opentaint-go-rules/opentaint-test/opentaint-test-conductor/opentaint-project/project.yaml",
+        "memory": "8g",
+        "timeout": 1080,
+        "outer_timeout": 1200
+      },
+      "status": "TIMEOUT",
+      "latestReached": "run-8",
+      "latestCompleted": "run-7",
+      "acceptedForward": "run-7",
+      "wallSeconds": 1120.9043554216623,
+      "peakRssBytes": 10892849152,
+      "manifestSha256": "af0b8c8f8ae3a1eb58ebed0f5837b84fc828896959a78d9a4052a6621e868f08",
+      "summarySha256": "5c3d06548d14cc2c578984c094e08e283022e107b25f52a1c2b4edb0ca75742b"
+    },
+    "Stirling-PDF": {
+      "revision": "472288cf34ddf75290e3fab4d6f5cbc0a366646c",
+      "modelSha256": "b62263d3134af8b0c93426dedcd15a976808e4c8e838950c1a4959022d5d3ef4",
+      "config": {
+        "model": "/drive-testcomp/opentaint-go-rules/e2e-root/model-Stirling-PDF/project.yaml",
+        "memory": "8g",
+        "timeout": 1080,
+        "outer_timeout": 1200
+      },
+      "status": "TIMEOUT",
+      "latestReached": "run-11",
+      "latestCompleted": "run-10",
+      "acceptedForward": "run-9",
+      "wallSeconds": 1109.3039140552282,
+      "peakRssBytes": 10626363392,
+      "manifestSha256": "eb3322d6cd4b9c69f8ee2cffc0937d45b00db6af4c2d0da1134daee258ce21bf",
+      "summarySha256": "4936974c93b93ae5ab80e0c0e8a769ba888aeb5a925da3263781d52f025532cd"
+    },
+    "thingsboard": {
+      "revision": "472288cf34ddf75290e3fab4d6f5cbc0a366646c",
+      "modelSha256": "1246cb43621245e0ef971a51052b54a56abd60725860f44824f00f34d57b58f3",
+      "config": {
+        "model": "/drive-testcomp/opentaint-go-rules/opentaint-test/opentaint-test-thingsboard/opentaint-project/project.yaml",
+        "memory": "12g",
+        "timeout": 1080,
+        "outer_timeout": 1200
+      },
+      "status": "OOM",
+      "latestReached": "run-1",
+      "latestCompleted": null,
+      "acceptedForward": null,
+      "wallSeconds": 339.2160428315401,
+      "peakRssBytes": 14732201984,
+      "manifestSha256": "e1fe38e0f609a95b543e538f5759ef20654e2544c195f66ea703beef05c369d5",
+      "summarySha256": "82151ceaee8d2cb8af8bb33ace8c5bb840a7ce439ab983427672be0cb6fff87f"
+    }
+  },
+  "findings": {
+    "OWASP": {
+      "baseline": 2633,
+      "current": 2633,
+      "exactMissing": 0,
+      "exactExtra": 0
+    },
+    "conductor": {
+      "baseline": 7,
+      "current": 7,
+      "exactMissing": 0,
+      "exactExtra": 0,
+      "incompleteBoth": true
+    },
+    "Stirling-PDF": {
+      "baseline": 24,
+      "current": 32,
+      "exactMatches": 16,
+      "exactMissing": 8,
+      "exactExtra": 16,
+      "sameFullMethodRuleLocationCandidates": 8,
+      "additionalMethodRuleKeys": 8,
+      "exactLocationNoFnGateEstablished": false
+    },
+    "thingsboard": {
+      "baseline": 15,
+      "current": 0,
+      "exactMissing": 15,
+      "exactExtra": 0,
+      "acceptedForward": null,
+      "cause": "run-1 guard OOM before accepted first forward result"
+    }
+  },
+  "heap": {
+    "complete": true,
+    "runtime": "472288cf34ddf75290e3fab4d6f5cbc0a366646c",
+    "latestReached": "run-1",
+    "latestComplete": null,
+    "acceptedForward": null,
+    "rawHeapSha256": "126ee9667ba5c99c8fb25a60d8bcedf118a5bb08855f95b986be979fad360a6e",
+    "rawHeapBytes": 18527524474,
+    "allFinalQueriesComplete": true,
+    "nativeControlsPassed": true
+  },
+  "proposalLocalModel": {
+    "source": "spec/lean/proposals/loop-observation-work-20261112/ObservationPlan.lean",
+    "sha256": "6bca6d3de031f1bc4a9523ac7c6cad385f537d4b7cf251410f31b3593a517d38",
+    "claims": 7,
+    "leanVersion": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+    "exitCode": 0,
+    "axiomAudit": [
+      "'ObservationPlan.extra_sound' depends on axioms: [propext, Quot.sound]",
+      "'ObservationPlan.extra_rejects' depends on axioms: [propext, Quot.sound]",
+      "'ObservationPlan.not_viable_rejects' depends on axioms: [propext, Quot.sound]",
+      "'ObservationPlan.prune_preserves_first' depends on axioms: [propext, Quot.sound]",
+      "'ObservationPlan.all_bad_has_no_cut' depends on axioms: [propext, Quot.sound]",
+      "'ObservationPlan.nonempty_c2_all_bad_returns_raw' depends on axioms: [propext, Quot.sound]",
+      "'ObservationPlan.equal_key_query_equal' does not depend on any axioms"
+    ],
+    "nativeBatchBindingProved": false
+  },
+  "auditUtc": "2026-11-12T18:41:59.544827+00:00"
+}
