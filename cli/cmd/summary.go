@@ -39,7 +39,8 @@ var summaryCmd = &cobra.Command{
 		}
 
 		absSarifPath := log.AbsPathOrExit(args[0], "sarif path")
-		report, err := sarif.LoadReport(absSarifPath)
+		// The report is read by the path that the user wrote, so that an error names it so.
+		report, err := sarif.LoadReport(args[0])
 		if err != nil {
 			out.Fatal("Failed to load the SARIF report", err)
 		}
