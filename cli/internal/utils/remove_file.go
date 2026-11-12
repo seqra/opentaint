@@ -2,8 +2,6 @@ package utils
 
 import (
 	"os"
-
-	"github.com/seqra/opentaint/internal/output"
 )
 
 func RemoveIfExists(path string) error {
@@ -15,10 +13,4 @@ func RemoveIfExists(path string) error {
 		return err
 	}
 	return nil
-}
-
-func RemoveIfExistsOrExit(path string) {
-	if err := RemoveIfExists(path); err != nil {
-		output.Fatalf("Failed to remove '%s': %s", path, err)
-	}
 }
