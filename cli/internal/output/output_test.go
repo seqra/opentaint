@@ -381,3 +381,16 @@ func TestStepWithoutTerminal(t *testing.T) {
 		t.Errorf("a failed step printed %q, want a blank line before the error: %q", got, want)
 	}
 }
+
+func TestTrimTrailingSpacesKeepsColorCodes(t *testing.T) {
+	for in, want := range map[string]string{
+		"│  ":                        "│",
+		"\x1b[2m│  \x1b[m":           "\x1b[2m│\x1b[m",
+		"\x1b[2m├─ \x1b[mKey: value": "\x1b[2m├─ \x1b[mKey: value",
+		"value":                      "value",
+	} {
+		if got := trimTrailingSpaces(in); got != want {
+			t.Errorf("trimTrailingSpaces(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

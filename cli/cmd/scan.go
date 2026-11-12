@@ -506,6 +506,10 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		if el != nil && (!ruleLoadIssues.Empty() || globals.Config.Output.Debug) {
 			extraOutputs = append(extraOutputs, out.FieldItem("Rule load trace", absSemgrepRuleLoadTracePath))
 		}
+		if el != nil {
+			// The Rule Loading block is above.
+			out.Blank()
+		}
 		printSarifSummary(report, absSarifReportPath, sarif.Filters{}, sarif.ListingOptions{MaxNestingLevel: -1}, extraOutputs...)
 		switch {
 		case cfg.DebugFactReachabilitySarif:

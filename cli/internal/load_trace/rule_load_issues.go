@@ -239,7 +239,6 @@ func (r RuleLoadIssues) Print(out *output.Printer) {
 		sb.Field("Total", r.total())
 	}
 	sb.Render()
-	out.Blank()
 }
 
 func issueItems(out *output.Printer, issues []ruleLoadIssue) []any {
