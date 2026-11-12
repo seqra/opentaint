@@ -80,12 +80,12 @@ func init() {
 	summaryCmd.Flags().BoolVar(&showCodeSnippets, "show-code-snippets", false, "Show the code snippet of each finding")
 	summaryCmd.Flags().BoolVar(&verboseFlow, "verbose-flow", false, "Show every code-flow step, not only the source and sink")
 	summaryCmd.Flags().StringArrayVar(&summaryPaths, "path", nil, "Show only findings whose file path matches this glob (e.g. src/main/**) (repeatable)")
-	summaryCmd.Flags().StringArrayVar(&summarySeverities, "severity", nil, "Show only findings of this SARIF level: error, warning, note, or none (repeatable)")
+	summaryCmd.Flags().StringArrayVar(&summarySeverities, "severity", nil, "Show only findings of this SARIF level: note, warning, error, or none (repeatable)")
 	summaryCmd.Flags().StringArrayVar(&summaryRuleIDs, "rule-id", nil, "Show only findings of this rule: full ID, leaf name, or glob (repeatable)")
 	summaryCmd.Flags().StringArrayVar(&summaryFingerprints, "partial-fingerprint", nil, "Show only findings whose partial fingerprint starts with this prefix (repeatable)")
-	summaryCmd.Flags().StringVar(&summaryFingerprintKey, "partial-fingerprint-key", "", "SARIF partialFingerprints key that --partial-fingerprint matches (default: vulnerabilityWithTraceHash/v1)")
+	summaryCmd.Flags().StringVar(&summaryFingerprintKey, "partial-fingerprint-key", sarif.DefaultFingerprintKey, "SARIF partialFingerprints key that --partial-fingerprint matches")
 	summaryCmd.Flags().IntVar(&summaryMaxNestingLevel, "max-nesting-level", -1, "Hide code-flow steps deeper than this call-nesting level (-1 = off)")
-	summaryCmd.Flags().StringVar(&summaryGroupBy, "group-by", "", "Group findings by severity, rule-id, or file-path (default: file-path)")
+	summaryCmd.Flags().StringVar(&summaryGroupBy, "group-by", "file-path", "Group findings by severity, rule-id, or file-path")
 	summaryCmd.Flags().StringVar(&summaryCodeFlow, "code-flow", "", "Code flows to show for each finding: all or a 1-based index (default: the first)")
 }
 
@@ -107,7 +107,9 @@ func currentSummaryBuilder(sarifPath string) *utils.OpentaintCommandBuilder {
 	builder.WithSeverity(summarySeverities)
 	builder.WithRuleID(summaryRuleIDs)
 	builder.WithPartialFingerprint(summaryFingerprints)
-	builder.WithPartialFingerprintKey(summaryFingerprintKey)
+	if summaryFingerprintKey != sarif.DefaultFingerprintKey {
+		builder.WithPartialFingerprintKey(summaryFingerprintKey)
+	}
 	builder.WithMaxNestingLevel(summaryMaxNestingLevel)
 	builder.WithGroupBy(summaryGroupBy)
 	builder.WithCodeFlow(summaryCodeFlow)
