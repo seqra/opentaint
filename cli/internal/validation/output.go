@@ -21,12 +21,7 @@ func ValidateProjectModelOutput(outputDir string) (*project.Config, error) {
 		return nil, err
 	}
 
-	config, err := project.LoadConfig(outputDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse the project model `%s`: %w", projectModelFile, err)
-	}
-
-	return config, nil
+	return project.LoadConfig(outputDir)
 }
 
 func ValidateSarifOutput(absSarifPath string) (*sarif.Report, error) {

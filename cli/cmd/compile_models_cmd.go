@@ -25,6 +25,9 @@ var compileModelsCmd = &cobra.Command{
 		if outputPath == "" {
 			outputPath = models.BuildDir(projectPath)
 		} else {
+			if err := models.CheckOutputDir(outputPath); err != nil {
+				out.Fatal("Failed to compile the model project", err)
+			}
 			outputPath = log.AbsPathOrExit(outputPath, "output")
 		}
 

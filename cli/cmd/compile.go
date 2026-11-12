@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -141,7 +142,7 @@ func compile(absProjectRoot, absOutputProjectModelPath, autobuilderJarPath strin
 
 	if _, err := validation.ValidateProjectModelOutput(absOutputProjectModelPath); err != nil {
 		output.LogInfo(fmt.Errorf("output validation failed after compile: %w", err))
-		return fmt.Errorf("there was a problem during the compile step")
+		return invalidProjectModel(err)
 	}
 
 	return nil
@@ -160,6 +161,21 @@ func compileProject(absOutputProjectModelPath, absProjectRoot, autobuilderJarPat
 	}
 	return compileProjectWithLogs(absOutputProjectModelPath, absProjectRoot, autobuilderJarPath,
 		filepath.Join(tempLogsDir, "autobuild.log"), false, javaRunner)
+}
+
+// noProjectModel explains an autobuilder run that wrote no project model. The runner reports such
+// a run as failed whatever its exit code, so the exit code is a cause only when it is not 0.
+func noProjectModel(cmdErr *java.JavaCommandError) error {
+	const message = "the build produced no project model"
+	if cmdErr.ExitCode == 0 {
+		return errors.New(message)
+	}
+	return fmt.Errorf(message+": %w", cmdErr)
+}
+
+// invalidProjectModel explains an autobuilder run that wrote a project model that does not load.
+func invalidProjectModel(err error) error {
+	return fmt.Errorf("the build produced an invalid project model: %w", err)
 }
 
 // compileProjectWithLogs writes the autobuilder log to logsFile.
@@ -192,11 +208,11 @@ func compileProjectWithLogs(absOutputProjectModelPath, absProjectRoot, autobuild
 	cmdErr, err := javaRunner.ExecuteJavaCommand(autobuilderCommand, commandSucceeded)
 	if err != nil {
 		output.LogInfof("Native compilation has failed: %s", err)
-		return fmt.Errorf("native compilation has failed: %w", err)
+		return err
 	}
 	if cmdErr != nil {
 		output.LogInfof("Native compilation has failed: %s", cmdErr)
-		return fmt.Errorf("native compilation has failed: %w", cmdErr)
+		return noProjectModel(cmdErr)
 	}
 
 	return nil
