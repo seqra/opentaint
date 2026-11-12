@@ -57,6 +57,7 @@ var rootCmd = &cobra.Command{
 		// Configure the output printer.
 		out.Configure(globals.Config.Output.Color, globals.Config.Output.Quiet)
 		out.SetDebug(globals.Config.Output.Debug)
+		warnRenamedFlags(cmd)
 
 		// Reconcile install-tier version marker if needed (lightweight: a few Stat calls).
 		utils.ReconcileInstallMarker()
@@ -237,6 +238,7 @@ func configureExperimentalFlagVisibility() {
 
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		applyExperimentalFlagVisibility(cmd.Root(), experimentalMode)
+		warnRenamedCommand(cmd)
 		defaultHelpFunc(cmd, args)
 	})
 	rootCmd.SetUsageFunc(func(cmd *cobra.Command) error {
@@ -273,7 +275,9 @@ func setFlagSetHidden(flags *pflag.FlagSet, hidden bool) {
 	}
 
 	flags.VisitAll(func(flag *pflag.Flag) {
-		flag.Hidden = hidden
+		if !isRenamedFlag(flag) {
+			flag.Hidden = hidden
+		}
 	})
 }
 
