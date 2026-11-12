@@ -540,12 +540,14 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 }
 
+// noteSeverityScanCommand returns the scan that also runs the note-level rules. It keeps the
+// default severities, so that its report holds every finding of this scan too.
 func noteSeverityScanCommand(cfg ScanConfig) string {
 	sourcePath := cfg.UserProjectPath
 	if cfg.ProjectModelPath != "" {
 		sourcePath = ""
 	}
-	b := currentScanBuilder(cfg, sourcePath).WithSeverity([]string{"note"})
+	b := currentScanBuilder(cfg, sourcePath).WithSeverity([]string{"note", "warning", "error"})
 	if cfg.ProjectModelPath != "" {
 		b.WithProjectModel(cfg.ProjectModelPath)
 	}
