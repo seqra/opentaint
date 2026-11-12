@@ -5,7 +5,8 @@ subsumption can compact saved relations. Demand-query subsumption can compact
 next-run guidance. One proof does not automatically establish the other.**
 No analyzer behavior changes. The reference runtime remains
 `14d7b63369d94f49d4c551be8405ed7719f267cc`, FULL mode.
-The investigation campaign remains stopped.
+The [campaign specification](bidirectional-redundant-demand-elimination-campaign-20261110.md)
+defines the next investigation's post-handoff targets and removal point.
 
 The proposed handoff workflow, ND rule, retained-provider checks and proof
 gates are now specified in
@@ -487,11 +488,12 @@ subsumption theorem.
 
 ## 7. Evidence, results and unchanged scope
 
-The campaign remains stopped with 8,915 individually redundant origins,
+The historical campaign checkpoint has 8,915 individually redundant origins,
 19,716 unresolved origins and a separate checked 6,955-origin joint plan.
 Those counts concern demand contributions. They are not counts of removable
-saved records. No original project necessity case passed the sole-edge
-sink-loss gate.
+post-handoff rows or saved records. Reconcile their certificates with the
+updated row-level target inventory before reuse. No original project
+necessity case passed the sole-edge sink-loss gate.
 
 | Project | Latest reached / completed / accepted forward |
 | --- | --- |

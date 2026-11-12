@@ -3,10 +3,12 @@
 10 November 2026. This document specifies an investigation and proof campaign.
 It does not select or install a production optimization.
 Use ASD-STE100 Simplified Technical English for reports and proposals.
+Updated 12 November 2026 to compare retained post-handoff demand.
 
 ## 1. Goal and fixed scope
 
-Classify every repeated outgoing demand edge in these completed forward runs:
+Classify every repeated **post-handoff demand row** in these completed
+forward runs:
 
 | Project | Earlier run | Later run | Field limits under `1,1,2,...` |
 | --- | --- | --- | --- |
@@ -20,12 +22,18 @@ blocks (BL and AL), loop bodies (L), and nested blocks at every level. Each
 unit has its own summaries and demand. An edge is in scope even if it stays
 inside a method and never appears in the method-level summary store.
 
-**The removal point is after run-(i+2), not after run-i.** Keep run-i and
-the intervening analysis unchanged. Use run-i only to establish repetition
-and explain its cause. After the later run completes and its NORMAL records
-are persisted, test whether its repeated demand edge can be omitted from
-the outgoing guidance for the next run. Do not remove current-run effects,
-persisted NORMAL records or reports.
+**Compare demand after both handoffs. Evaluate removal during the later
+handoff.** First let each run's ordinary handoff finish demand construction,
+projection, normalization, deduplication and existing compaction. Compare the
+retained demand rows which will guide the next run. A repeated pre-handoff
+summary origin is not a target unless its resulting demand row repeats too.
+
+The new elimination step belongs at the end of the run-(i+2) handoff, before
+demand publication and the stop/continue decision. Its baseline is the
+complete demand set that the ordinary handoff would publish without this
+new step. Keep run-i and the intervening analysis unchanged. Do not remove
+current-run effects, persisted NORMAL records or reports. Use no state first
+available in run-(i+3), including its actual C2 emissions or summary results.
 
 Thus, the removal barriers are OWASP run-11, Conductor run-7 and Stirling-PDF
 run-9. A predicate does not need to justify removal at the earlier barrier.
@@ -51,6 +59,58 @@ The campaign ends only when every repeated edge has this disposition at the
 later barrier. No sampled subset or unexplained residual category satisfies
 the goal.
 
+### Main pattern goal: remove repetition
+
+Distinguish these two proof kinds:
+
+| Kind | Reason X can be removed | Investigation value |
+| --- | --- | --- |
+| Coverage/subsumption | Another retained repeated row Y covers the required services of X. | Removes duplicate work, but can leave Y repeating. |
+| Closed evolution | Repeating X cannot produce new required summaries or services beyond those already covered by retained state. | Can remove the repeated obligation itself. This is the main target. |
+
+A coverage proof remains useful and valid within its proved scope. Do not
+claim that it ends repetition if another repeated provider must remain.
+After such compaction, investigate the retained representative or family.
+Keep individual verdicts separate from this investigation priority.
+
+Prefer demand-evolution tracking across the complete pair of runs:
+
+```text
+X in H_i
+  -- run-(i+1): admitted inputs, summary family S, C5, handoff --> {Y1,...,Yn}
+  -- run-(i+2): admitted inputs, summary family P, C5, handoff --> {...,X,...}
+```
+
+The simple case is X -> Y -> X. S and P are actual summary edges used by
+the native restriction and propagation steps. The arrows include C2,
+persisted replay, paired C5, normalization and handoff projection. They are
+not a new edge-composition rule. Track all branches and all producers of
+merged rows, including dependencies across methods and inner blocks.
+Represent this evidence in the [demand evolution graph](#demand-evolution-graph).
+
+The trace explains how X returns. It does not yet prove redundancy. A later
+field limit or another submitted input can enable a new summary even when
+the same row repeats. Equality of demand sets, summary sets or submitted
+inputs in this captured interval is not a future-closure proof.
+
+"New" means a required result not already covered by retained state, not
+merely a new raw edge key. Even an existing summary can need X for delivery
+to a new caller or block context. Prove that such delivery remains covered.
+
+For a closed-evolution predicate, prove that every later traversal of the
+identified evolution is covered without the removed guidance. Cover all
+legal later field limits and inputs allowed by the predicate's invariant,
+not only the captured S and P. A new input from outside the traced family
+must either be covered by that invariant or have an independent retained
+route. Include C2/C5 services, layers, protection, source permissions and
+ZERO/Target routing, not only summary geometry. State this closure as a
+constructive invariant with executable guards from the allowed handoff
+state. A cycle cannot serve as its own retained provider after removal.
+
+This is investigation guidance, not an accepted deletion rule. Do not add
+a new tail, control mechanism or analyzer semantic change to make a closure
+proof pass. A counterexample keeps that candidate scope open or narrows it.
+
 ### Selected bookkeeping change: individual verdict and joint plan
 
 The user selected separate individual classifications and a jointly safe
@@ -63,11 +123,17 @@ semantics or the required analysis behavior.
 | Which edges can be retired together? | The classification set also served as the removal set. | Select and prove a separate joint plan. |
 | What if a representative must stay in that plan? | It could remain unresolved despite an individual certificate. | Keep its individual verdict; record that the plan retains it. |
 
-For each project and later barrier, let O be the complete original outgoing
-guidance family after that run has joined and before any campaign removal.
-It includes every method and inner-block scope, kind and port. Freeze the
-original retained NORMAL records, confirmed NormalTarget routes and other
-barrier state with O. O is not the current joint plan's reduced guidance.
+For each project and later barrier, let O be the complete post-handoff demand
+set before any new campaign removal. It includes every method and inner-block
+scope, kind and port. Its members are retained native demand rows, not their
+pre-handoff summary origins. Freeze the original retained NORMAL records,
+confirmed NormalTarget routes and other barrier state with O. O is not the
+current joint plan's reduced guidance.
+
+Removing X means removing that row from the next-run demand storage, even
+when several origins supplied it. Keep every other row and all original
+summaries. Removing one origin while another still emits X is not a test of
+removing X. Check provider availability against this row-level cut.
 
 For an individual target X, compare that original state with the same state
 using O minus {X}. Keep every other original edge and route, including edges
@@ -169,6 +235,12 @@ not prove that C2 emitted STAR: an EXACT start can normalize to that same
 stored premise. A separate execution cannot supply the original run's
 missing submissions or initials.
 
+Every predicate and witness must be computable during the later handoff.
+It can inspect the complete allowed history through run-(i+2). It can also
+compute native projections and symbolic operator images from that state.
+It cannot use actual offers, initials, summaries or observations from
+run-(i+3). A proof can quantify over future inputs without reading them.
+
 Audit earlier accepted predicates under both requirements. Reopen a target
 whose proof uses a forbidden assumption unless an independent eligible
 certificate is available. Keep withdrawn proofs as historical evidence;
@@ -177,56 +249,73 @@ under this same contract, with a full-corpus and dependency check.
 
 ## 3. Define the repeated set precisely
 
-For project p, completed forward run r and summarizable unit b, let S(p,r,b)
-be the final outgoing demand set owned by b. A unit key contains the full
-owning method key and a stable method-boundary or inner-block identity. Then:
+For project p, completed forward run r and summarizable unit b, let H(p,r,b)
+be the retained demand set after the ordinary run-r handoff. These rows are
+the inputs to b's next-run demand storage. Use the baseline before the new
+elimination step. A unit key contains the full owning method key and a stable
+method-boundary or inner-block identity. Then:
 
 ```text
-D(p,b) = S(p,earlier,b) intersection S(p,later,b)
+D(p,b) = H(p,i,b) intersection H(p,i+2,b)
 B(p)   = { b | D(p,b) is not empty }
 M(p)   = { owningMethod(b) | b in B(p) }
+
+ordinaryHandoff(run):
+    persistNormalRecords(run)
+    return buildDemandWithExistingProjectionAndCompaction(run)
+
+// Reference capture: do not apply new campaign removals.
+H_i = ordinaryHandoff(run_i)
+H_j = ordinaryHandoff(run_j)             // j = i+2
+repeated = intersectPerUnit(H_i, H_j)
+
+// Proposed elimination point inside the run-j handoff:
+O = freeze(H_j)                         // complete set across all units
+R = selectWithCheckedJointProof(repeated, O, allowedHistoryThrough(j))
+publishDemand(O minus R)
+applyOrdinaryStopOrContinueDecision()
 ```
 
-The complete sets S can differ. D is their exact common subset. Dump the
+The complete sets H can differ. D is their exact common subset. Dump the
 earlier-only and later-only edges too, so additions and removals remain visible.
 M is a method index for the report; B is the full analysis inventory. Do not
 combine demands from different blocks before computing repetition.
 
-Include every final edge selected to guide the next run:
+Include every retained native demand row, including DATA, ZERO and Target
+guidance, for methods and all inner blocks. Read the demand stores after
+handoff; a summary store or pre-handoff outgoing callback is not a substitute.
+NormalTarget is not outgoing refinement demand. Keep its records as provider
+or observation evidence where required. Unsupported demand kinds remain
+targets; do not omit them because P handles only FLOW DATA.
 
-- AP summaries on DEMAND, with their complete original premise.
-- Other AP summaries selected by the existing handoff rule, such as a NORMAL
-  ND summary. Record its real layer and its selection reason.
-- Outgoing DemandTarget summaries.
-- Inner-block summaries and Targets selected for that block's next-run
-  demand, including rows absent from the method-level handoff. Their scope
-  and physical ports stay in the edge identity.
+Save pre-handoff outgoing origins separately, including DEMAND summaries,
+NORMAL ND summaries selected by handoff, and outgoing DemandTarget summaries.
+Keep complete ND premises and every output leaf in this provenance. Map all
+origins to their final retained rows, including rows shared by several
+origins or covered by existing compaction. Do not restore removed origins
+or count them as extra rows.
 
-NormalTarget is not outgoing refinement demand. Retain its records as provider
-or observation evidence where required. Classify unsupported demand kinds;
-do not omit them because P handles only FLOW DATA.
-
-Use final stores after work has joined, deduplication and subsumption have
-completed. Do not compare callback streams, raw C5 candidates or only newly
-published deltas. Also dump the actual projected next-run demand rows and map
-them to their outgoing origins. Scalar edges, packed packets, ND projections
-and normalized handoff rows have different counts; reconcile them explicitly.
+Work must have joined and all ordinary handoff operations must be complete.
+Do not compare callback streams, raw C5 candidates, pre-compaction projections
+or only newly published deltas. Origin, scalar membership, packed packet,
+projected-row and retained-row counts use different units. Reconcile them.
 
 ### Stable edge identity
 
-Expand packed output trees and mark sets into exact scalar memberships. Keep
-the full paired relation. Preserve:
+Decode retained demand into exact scalar row memberships. Keep the native
+paired entry/output selectors together. Preserve every coordinate in the
+actual demand key:
 
 - Declaring method, full descriptor, language, context and forward entry.
 - Unit kind, method/block scope and real entry/exit ports. Record the complete
   decomposition tree and a stable block key based on its position in that
   tree and its instruction/port identities, not an allocation ID.
-- Edge kind and actual layer.
-- The complete ZERO/singleton/ND premise. Sort an ND set without splitting AND
-  into independent premises for comparison.
+- Demand kind and any layer or protection coordinate which belongs to the
+  native row identity.
+- Both paired selectors, including ZERO and Target forms. An ND summary can
+  project to several demand rows; compare the resulting rows individually.
 - Base kind, concrete field path, tail kind, field exclusions, mark slot,
   full mark identity and mark exclusions on both endpoints.
-- Separate plain/protected memberships, as the current storage specifies.
 - Target kind and all semantic payloads that actually belong to its identity.
 
 Remove allocation IDs only. Keep raw IDs and complete catalogs beside the
@@ -235,9 +324,10 @@ owner and type; equal short field names do not establish equality. The array
 element accessor `[]` must not be confused with a STAR tail. Generated marks
 and specialization identities must remain distinct.
 
-Keep the handoff selection reason as metadata. A changed reason does not make
-an otherwise equal edge different. Do not add diagnostic provenance to edge
-equality. For example, DemandTarget
+Keep original layers, plain/protected memberships, complete ND premises,
+selection reasons and producer identities in the origin mapping. Origin-only
+coordinates do not make otherwise identical native demand rows different.
+Do not add diagnostic provenance to demand equality. For example, DemandTarget
 is anonymous in the core. Its sink locations/rule identities belong in a
 separate complete provenance table, not in an invented Target ID.
 
@@ -250,15 +340,24 @@ an ambiguous block match is unresolved evidence, not repetition.
 
 For each project:
 
-1. Freeze both completed forward snapshots from one execution.
-2. Export the complete method/block hierarchy and every unit's final outgoing
-   edges and next-run demand projections. Include units with empty demand.
+1. Freeze both completed post-handoff snapshots from one execution, with
+   explicit handoff completion markers.
+2. Export the complete method/block hierarchy and every unit's retained
+   demand rows. Save outgoing origins and their row mappings separately.
+   Include units with empty demand.
 3. Compute B, M, D, earlier-only and later-only sets per unit.
 4. Export every unit in B with its complete D and all relevant contexts.
 5. Reconcile counts with each unit's authoritative stores and report counters.
 
-A method-only capture is incomplete for this campaign. Check block summary
-and demand stores directly; a method summary is not a substitute for them.
+A method-only capture is incomplete for this campaign. Check each block's
+post-handoff demand store directly; a method summary is not a substitute.
+
+Historical origin-based ledgers and counts are evidence, not the new target
+inventory. Recompute repetition from retained rows and recheck each reused
+certificate against O minus {X}. A proof that one origin can be omitted does
+not by itself prove that its entire shared demand row can be omitted. Mark
+captures without complete post-handoff rows or reconstruction evidence as
+incomplete. Do not silently carry their verdict totals into the new ledger.
 
 Capture the preceding and intervening backward demands, C2 offers and
 initials, C5 inputs/outputs and retained NORMAL records when required to
@@ -269,7 +368,67 @@ Every stream needs a record count, completion marker, error count and hash.
 Detect truncation and dropped records. Preserve canonicalization and decoding
 scripts. A tool's successful exit alone is not proof that a capture is complete.
 
+### Demand evolution graph
+
+Build a graph from the complete allowed evidence for run-i through
+run-(i+2). Use all demand rows needed to explain the repeated targets, not
+only the repeated rows. Keep the full method/block scope and physical ports.
+
+```text
+node = (run, unit, exact retained post-handoff demand row)
+
+transition = {
+    parentDemandNodes,
+    submittedInputs,                  // exact facts and layers
+    summaryEdges,                     // complete premises and conclusions
+    nativeAdmissionAndRestrictionWitnesses,
+    normalizationAndProjectionWitnesses,
+    childDemandNodes,
+    producedSummaries
+}
+
+parent demands --[transition and its input/summary dependencies]--> children
+```
+
+Run records must retain direction and field limit. Each transition must have
+a native derivation or a checked reconstruction from complete captures. A
+matching path or mark alone does not establish a dependency. Save all
+producers of a merged child. Keep summary and input dependencies as explicit
+references; record whether a summary remains available after the proposed
+cut. An independently replayed NORMAL provider is distinct from a new
+summary that needs the removed guidance.
+
+Use a transition node with its complete required parent set when several
+demands or ND contributors are needed together. Simple arrows are a display
+of this dependency, not permission to replace AND with OR. Record independent
+alternative derivations separately. A production with no parent demand has
+an explicit root derivation; do not invent a demand parent for it. Missing
+provenance makes that graph region incomplete, not unreachable.
+
+The graph with run indices is a history, not a directed cycle. For candidate
+discovery, also show a folded graph that identifies equal demand rows at the
+same direction, unit and ports across runs. Keep the original runs and field
+limits behind every folded node and arc. Folding displays X -> Y -> X; it
+does not prove that later executions have the same inputs or results.
+
+Inspect each repeated target's full evolution, including branches leaving
+the folded cycle, joins and externally supplied inputs or summaries. For
+example, X -> Y -> X plus Y -> Z is not a closed redundant cycle if Z adds
+an uncovered required summary or Target route. Conversely, a family whose
+every later effect has an independent retained cover is a candidate for a
+closed-evolution proof. A graph cycle or a strongly connected component alone
+does not supply that proof.
+
+Use the graph to propose predicates and small counterexamples. Apply the
+proof gates in section 7 before accepting removal. A component-level cut
+also needs the separate joint proof; do not infer it from singleton verdicts.
+No production dependency tracker is selected by this document.
+
 ## 5. Phase B: test P at the later barrier
+
+Use the [known pattern catalog](bidirectional-demand-edge-redundancy-patterns.md)
+as prior evidence. Recheck each applicable rule under this campaign's
+post-handoff row contract and pinned runtime.
 
 Use [P: NORMAL replay coverage](../../spec/normal-backed-flow-demand-retirement.md)
 and its [proof package](../../spec/lean/proposals/normal-backed-demand-20261110/README.md).
@@ -279,14 +438,15 @@ blocks. Record unsupported block cases as targets; do not omit them or use
 an enclosing method's certificate in place of a block proof.
 
 Evaluate P only at each pair's later completed barrier. Use the NORMAL
-records retained there, after persistence. A provider first available in the
-later run is valid evidence for removal after that run. Keep the earlier
-state for the repetition trace; no deletion or P verdict is required there.
+records retained there, after persistence. Bind its certificate to removal
+of the retained demand row, not only one supplying origin. A provider first
+available in the later handoff is valid. Keep the earlier state for the
+repetition trace; no deletion or P verdict is required there.
 
 For a positive result, save the complete copy/origin relation and every native
 replay witness, including scope, direction, direct/opposite role, shared
 suffix, exclusions and availability. For a negative or unknown result, save
-the first failed guard and the remaining uncovered origins. An unsupported
+the first failed guard and the remaining uncovered demand rows. An unsupported
 loop, static, concrete, ND or Target case remains an elimination target.
 
 P is a context-dependent predicate, not a table of edge shapes. Do not infer
@@ -309,6 +469,12 @@ target is resolved even when P did not hold after the earlier run. P's source
 and CFG guards remain ineligible under the proof contract in section 2;
 an individual verdict still needs an eligible edge-only certificate.
 
+Label each certificate as coverage/subsumption or closed evolution, or keep
+both when both are proved. A coverage verdict does not close the evolution
+investigation if its repeated representative remains. Record that residual
+family as a primary investigation target without changing the valid
+individual verdict or counting it as an individually OPEN row.
+
 ## 6. Phase C: process uncovered targets one at a time
 
 Maintain one ordered, durable work queue and one coordinator. Select one
@@ -320,6 +486,10 @@ Keep the complete existing evidence for a deferred lower-priority target. A
 priority change does not prove that target redundant or necessary. Within one
 priority, the coordinator can select a tractable case and record the reason.
 The global filter after each accepted predicate still checks all priorities.
+Within each priority, prefer closed-evolution candidates. Trace X through
+the backward and next forward handoffs in the evolution graph before
+searching only for another repeated provider. Keep residual families from
+coverage-only verdicts in the evolution queue as well.
 
 A new predicate can inspect all summary edges and submitted initials across
 run-i, run-(i+1) and run-(i+2). It can use relations between methods, inner
@@ -370,6 +540,28 @@ while targets is not empty:
         rebuild targets from the ledger
 ```
 
+The singleton loop above classifies rows. Also maintain an evolution queue
+for repeated families under the same coordinator. A family can remain there
+after coverage classifies its rows. These are separate ledger views, not
+independent target selection. For each selected family:
+
+```text
+evolution = traceCompleteEvolution(family, i, i+2)
+candidate = seekClosedEvolutionInvariant(evolution, retainedStateAt(i+2))
+if candidate has a checked proof and handoff-computable witnesses:
+    applyPredicateToAllTargets(candidate)
+    recheckJointPlanAndResidualRepeatedFamilies()
+else:
+    saveCounterexampleOrOpenProofIssue(evolution, candidate)
+```
+
+Apply a new closed-evolution predicate to the full corpus, including rows
+already classified by coverage. Save additional certificates without counting
+the same row twice. The evolution queue does not authorize deletion or change
+individual verdicts without their own certificates. Preserve the proof
+contract when a candidate uses several rows. A missing closure proof does
+not establish necessity.
+
 "Could not find a redundancy rule" does not authorize the else branch's final
 classification. The required necessity example must succeed. Until then X
 remains open. If several producers merged into X, analyze every relevant
@@ -409,7 +601,8 @@ accepted, provide:
 3. A constructive Lean model, executable witnesses and soundness proof.
 4. A source correspondence argument and native tests of the real operators.
 5. Positive examples and counterexamples to weaker versions of the predicate.
-6. A proof/validation receipt and per-target certificates at the later barrier.
+6. A proof/validation receipt and per-row certificates at the later handoff,
+   with all predicate inputs available there.
 
 The proof must cover the required later behavior, not only concrete relation
 inclusion. Check NORMAL replay before demand admission, C2/C5, both directions,
@@ -417,6 +610,13 @@ source permissions, ZERO/Target routing, rule observations, report identity,
 call bindings, aliases, scope/ports and future refinement as applicable.
 Preserve complete ND premises, literal protection and all merged producers.
 Prove provider availability and arrival-order safety for the declared cut.
+
+For a closed-evolution predicate, also provide the complete evolution graph
+region and its closure invariant. Prove that later refinement, new permitted
+inputs, external providers and all outgoing branches cannot add an uncovered
+required effect through the removed guidance. Include counterexamples to
+the weaker test "the graph contains X -> Y -> X". The graph is evidence for
+the proof; the observed finite graph alone is not the proof.
 
 For an individual verdict, bind the witness to original O minus {X}. Every
 provider must be an actual member of that retained state or have an eligible
@@ -427,7 +627,7 @@ joint cut without checking the singleton theorem and witness.
 
 For a joint retirement plan, prove that all selected edges in R can be
 removed together after their respective later barriers. Validate every
-removed origin's complete required services against the same final K and
+removed row's complete required services against the same final K and
 unchanged provider state. Recheck prior joint witnesses and save new
 certificates if their providers leave K. A witness cannot
 depend on another removed edge unless a checked replacement chain ends at
@@ -453,8 +653,9 @@ needed by the case. Use real instructions and legal fact shapes. Derive the
 summaries through the current analyzer; do not inject an impossible initial or
 fabricate a summary to force the result.
 
-The example must reproduce the same demand edge at run-i and run-(i+2), with
-the intervening backward run. **Require i >= 3.** The earliest valid pair is
+The example must reproduce the same retained demand row after the run-i
+handoff and after the run-(i+2) handoff, with the intervening backward run.
+**Require i >= 3.** The earliest valid pair is
 run-3/run-5, and the earliest removal point is after run-5. A run-1/run-3
 example is not sufficient evidence that a later-run edge is necessary.
 Run-1 has special handling that can invalidate predicates for later runs.
@@ -483,6 +684,7 @@ Result method(Input x) {
 }
 // Produced NORMAL summaries: ...
 // Produced DEMAND summaries and Targets: ...
+// Retained demand rows after this run's handoff: ...
 ```
 
 Use the code's variables. Show fields after a base. Keep produced summaries
@@ -493,12 +695,12 @@ project configuration or impossible fixed limit.
 
 Run two controls from the same fixture and runtime:
 
-- Baseline: the edge repeats at run-i and run-(i+2), with i >= 3, and the
+- Baseline: the row repeats after both handoffs, with i >= 3, and the
   analyzer reaches a valid sink after the later barrier. Record the sink
   location, rule ID and run where it is reached. Retain all original O;
   do not first apply a joint plan or other individual removals.
 - Deletion: start from that same original state at the later barrier. Remove
-  only the selected edge from O before it guides the next run. Keep
+  only the selected demand row from O before it guides the next run. Keep
   all other original demand edges, retained NORMAL providers and confirmed
   NormalTarget routes. Run with the same schedule and stop policy. Show that
   the same sink is unreachable after the deletion. Trace the first difference
@@ -537,13 +739,22 @@ preserves all relevant preconditions and available replacement routes.
 
 ## 9. Artifacts and audit ledger
 
-Use one campaign ID and save all final evidence in the repository, for example:
+Use one campaign ID. Keep the report, schemas, portable tools and small proof
+artifacts in the repository. Store large data outside Git under the
+[external-data policy](../reports/EXTERNAL_DATA.md), including a directory
+whose total size exceeds 10 MB. Use this logical evidence layout:
 
 ```text
 docs/reports/bidirectional-redundant-demand-campaign-<id>.md
 docs/reports/data/redundant-demand-<id>/
     manifest.json
-    snapshots/<project>/run-<r>.jsonl.gz
+    snapshots/<project>/run-<r>-post-handoff.jsonl.gz
+    origins/<project>/run-<r>.jsonl.gz
+    origin-to-row/<project>/run-<r>.jsonl.gz
+    evolution/<project>/nodes.jsonl.gz
+    evolution/<project>/transitions.jsonl.gz
+    evolution/<project>/completeness.json
+    evolution/<project>/families.jsonl.gz
     repeated/<project>.jsonl.gz
     units.json
     methods.json
@@ -562,11 +773,13 @@ spec/lean/proposals/redundant-demand-<id>/...
 ```
 
 Dump all results. The report can summarize them, but no top-N limit, sample
-or external-only scratch path may replace the complete sets and ledger.
-Compressed artifacts must have portable decoders and schemas.
+or temporary scratch path may replace the complete sets and ledger. Give a
+durable external location, hashes and restoration instructions for archived
+data. Compressed artifacts must have portable decoders and schemas.
 
 Each ledger entry must identify the project, run pair, full method key, unit
-kind and stable block key, scope/ports, exact edge key, both snapshot references,
+kind and stable block key, scope/ports, exact retained demand-row key, both
+post-handoff snapshot references and origin mappings,
 the later removal barrier and individual verdict, predicate/case ID and
 version, witness/proof/native-test references, and any pending issue. Pin the
 original O and singleton cut for an individual certificate. Record joint plan
@@ -574,21 +787,38 @@ membership separately, including its version, R, final K, complete joint
 certificates and retained dependencies. Keep audit logs for classifications
 and plan changes without treating one as the other.
 
+Record each certificate's proof kind and evolution-family references. Keep
+the evolution queue and its status separate from individual verdicts and
+joint plan membership. Link folded nodes and transitions to their exact
+unfolded records, all producers, dependencies and native witnesses. A
+completeness record must identify missing lineage or inputs explicitly.
+
 The manifest must pin the runtime, project revisions, configurations,
 rules/models/extensions, observer and decoder sources, source hashes,
-commands, completion/error counts, artifact hashes and actual latest reached,
-completed and accepted iterations. Save finding-location comparisons and
+commands, run and handoff completion/error counts, artifact hashes and actual
+latest reached, completed and accepted iterations. Identify snapshots as
+post-handoff and record the active compaction settings. If testing a new
+elimination step, save both the ordinary handoff baseline and the final
+filtered rows. Save finding-location comparisons and
 explain capture differences instead of merging inconsistent executions.
 
 The report must contain:
 
 - The complete B, M and D inventories, with links to all edge records and the
   method/block hierarchy.
+- The post-handoff repeated-row counts, kept separate from historical origin
+  counts, with complete origin-to-row and compaction reconciliations.
 - Totals by project, method, unit kind, block, edge kind, layer, mark kind and
   scope. Show method-level and inner-block totals separately.
 - P coverage and failures at each pair's later barrier.
 - Every accepted Q, its proof domain and counts of new individual
   classifications by edge, unit and method.
+- Coverage/subsumption results separately from closed-evolution results.
+  Show which repeated providers remain after compaction and which repeated
+  obligations or families the checked joint plan can eliminate completely.
+  Do not use fewer rows alone as evidence that repetition has ended.
+- The evolution graph, candidate invariants, uncovered branches and closure
+  proof status. Keep overlap between pattern kinds explicit in the totals.
 - Every necessary case and its mapped later-barrier targets.
 - Separate individual REDUNDANT/NECESSARY/OPEN totals and joint
   selected/retained totals. Identify retained representatives that are
@@ -616,6 +846,9 @@ same valid sink unreachable, with i >= 3 and removal after run-(i+2).
 The selected joint plan must also pass its complete proof and retained
 dependency check. It need not contain every individually REDUNDANT edge.
 Reconcile individual and joint counts, links and hashes separately.
+Also report residual repetition. Completion of the individual classification
+ledger does not establish that every cycle is redundant or that repetition
+has ended. Any such claim needs its own closed-evolution and joint-cut proof.
 
 Use subagents for independent capture preparation, decoding and proof or
 counterexample review of the current target. The coordinator still processes

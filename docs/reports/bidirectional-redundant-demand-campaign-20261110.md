@@ -3,11 +3,16 @@
 The evidence under `data/` is stored outside Git. See
 [External report data](EXTERNAL_DATA.md) for its location and restoration.
 
-Finalized 12 November 2026 at the user's request. **The campaign is stopped.**
+Historical results checkpoint finalized on 12 November 2026. The
+[campaign specification](../design/bidirectional-redundant-demand-elimination-campaign-20261110.md)
+now defines the next investigation: compare retained demand after both
+handoffs and test removal during the later handoff.
 The [dedicated patterns document](../design/bidirectional-demand-edge-redundancy-patterns.md)
 collects the accepted rules with math, pseudocode, examples and proof links.
-The fixed three run pairs contain **28,631 repeated method and generated
-inner-block edges**. Exhaustive classification remains incomplete.
+The historical inventory contains **28,631 repeated method and generated
+inner-block summary origins**. Recompute the target inventory from retained
+post-handoff rows; these historical counts and certificates do not establish
+row-level removal. Exhaustive classification remains incomplete.
 **8,915 targets are individually redundant and 19,716 remain OPEN.** A
 separate offline joint plan selects **6,955** origins. It keeps **1,960**
 individually redundant origins as providers. Do not remove all 8,915 together.
@@ -17,11 +22,12 @@ The last selected target was OWASP `4378d285...`; the Conductor
 `0c5f46ce...` case is deferred and remains OPEN. See sections 0.19, 0.21, 0.22 and 0.23.
 
 The [queue status](data/redundant-demand-20261110/queue-status.json) and
-[ledger](data/redundant-demand-20261110/ledger.jsonl.gz) are authoritative.
-Earlier counts in the investigation history below are not current verdicts.
+[ledger](data/redundant-demand-20261110/ledger.jsonl.gz) record the historical
+origin-based classifications. Reuse them only after the row-level checks in
+the campaign specification. Earlier counts below describe earlier checkpoints.
 The separate [finalization record](data/redundant-demand-20261110/campaign-finalization.json)
-records the user stop. Archived queue and next-action fields describe the
-last research checkpoint; they are not instructions to restart the campaign.
+is an immutable record of that checkpoint. It does not set the next campaign's
+status or override its updated specification.
 
 ## 0. Current proof contract and classifications
 

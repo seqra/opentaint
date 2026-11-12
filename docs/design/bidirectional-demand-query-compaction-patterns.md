@@ -4,7 +4,9 @@
 [handoff compaction review](bidirectional-demand-edge-redundancy-patterns.md).
 The historical A/B/C labels remain in parentheses. These rules remove
 redundant guidance. They do not authorize removal of saved NORMAL records.
-Production is unchanged; the campaign remains stopped.
+This catalog describes the historical pattern proofs. Use the updated
+[campaign specification](bidirectional-redundant-demand-elimination-campaign-20261110.md)
+to bind them to retained post-handoff rows before reuse.
 
 ## 1. State available at handoff
 
