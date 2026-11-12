@@ -112,6 +112,12 @@ func resolve(path string, builder Builder) ([]string, error) {
 	return classDirs, nil
 }
 
+// IsEmpty reports whether dir holds no file other than a hidden one or one in a generated
+// directory, as a directory kept for models does before it has any.
+func IsEmpty(dir string) bool {
+	return !hasFiles(dir)
+}
+
 // hasFiles reports whether the tree of dir holds a file other than a hidden one, such as
 // .gitkeep, or one in a generated directory.
 func hasFiles(dir string) bool {

@@ -19,13 +19,7 @@ var compileModelsCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath := log.AbsPathOrExit(args[0], "model-project")
-
-		if !models.IsProject(projectPath) {
-			failWith(1, fmt.Sprintf("`%s` is not a model project", args[0]), nil, output.Suggestion{
-				Description: "To create a model project, run:",
-				Command:     fmt.Sprintf("opentaint model init %s --dependency <group:artifact:version>", shellQuote(args[0])),
-			})
-		}
+		checkModelProject(args[0], projectPath)
 
 		outputPath := compileModelsOutput
 		if outputPath == "" {
@@ -64,4 +58,26 @@ func init() {
 	compileModelsCmd.Flags().StringVarP(&compileModelsOutput, "output", "o", "",
 		"Path to the compiled models (default: <model-project>/.opentaint/build)")
 	compileCmd.AddCommand(deprecatedCommand(compileModelsCmd, "opentaint compile approximations", "opentaint compile models"))
+}
+
+// checkModelProject stops the command when path is not a model project. It explains a wrong path
+// as --dataflow-models does, and suggests init only for a directory that holds nothing yet.
+func checkModelProject(path, absPath string) {
+	const message = "Failed to compile the model project"
+	if err := models.Check(path); err != nil {
+		out.Error(message, err)
+		out.Suggestions(modelProjectSuggestions(err)...)
+		os.Exit(1)
+	}
+	if models.IsProject(absPath) {
+		return
+	}
+	var suggestions []output.Suggestion
+	if models.IsEmpty(absPath) {
+		suggestions = append(suggestions, output.Suggestion{
+			Description: "To create a model project, run:",
+			Command:     fmt.Sprintf("opentaint model init %s --dependency <group:artifact:version>", shellQuote(path)),
+		})
+	}
+	failWith(1, message, fmt.Errorf("`%s` is not a model project", path), suggestions...)
 }
