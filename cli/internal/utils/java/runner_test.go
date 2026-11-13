@@ -433,18 +433,13 @@ func TestJavaRunner_WithExtraEnv_MergeLaterWins(t *testing.T) {
 	}
 }
 
-// --- executeWithJava: extra env reaches the child process ---
+// --- executeWithJava: the extra env reaches the child process ---
 //
-// These tests re-execute the test binary itself as the "java" process via
-// executeWithJava and have the child (TestHelperProcess) dump its environment
-// to a file, so we can assert what actually ended up in cmd.Env on each
-// resolution strategy. No real JVM is required.
+// The tests run the test binary as "java": TestHelperProcess writes its environment to a file.
 
-// runHelperEnv runs executeWithJava with the test binary as the child process
-// and returns the environment that child observed. The GO_WANT_HELPER_PROCESS
-// gate is injected through the runner's own extra-env mechanism, so if extra
-// env failed to reach the child the helper would never activate and the env
-// file would be missing (surfaced as a clear failure here).
+// runHelperEnv returns the environment of the child process. The helper is switched on by
+// GO_WANT_HELPER_PROCESS, which goes through the extra env too: if that env is lost, no file is
+// written and the test fails.
 func runHelperEnv(t *testing.T, j *javaRunner, strategy ResolutionStrategy) map[string]string {
 	t.Helper()
 
@@ -479,9 +474,7 @@ func runHelperEnv(t *testing.T, j *javaRunner, strategy ResolutionStrategy) map[
 }
 
 func TestJavaRunner_ExtraEnv_SystemStrategy_AppendsAndPreservesInherited(t *testing.T) {
-	// Set an inherited variable in the parent environment. On the System path
-	// cmd.Env starts nil and must be seeded from os.Environ() so inherited
-	// variables survive alongside the appended extra entry.
+	// With the System strategy, cmd.Env starts nil: the inherited variables must stay.
 	t.Setenv("OPENTAINT_INHERITED_SYS", "inherited-value")
 
 	j := (&javaRunner{}).WithExtraEnv(map[string]string{
@@ -499,8 +492,7 @@ func TestJavaRunner_ExtraEnv_SystemStrategy_AppendsAndPreservesInherited(t *test
 }
 
 func TestJavaRunner_ExtraEnv_SpecificStrategy_AppendsAfterCleanEnv(t *testing.T) {
-	// Specific strategy uses the clean environment (Java vars stripped) and then
-	// appends the extra entries.
+	// The Specific strategy strips the Java variables and then adds the extra ones.
 	t.Setenv("OPENTAINT_INHERITED_SPECIFIC", "kept-value")
 	t.Setenv("JAVA_HOME", "/fake/java/home")
 
@@ -521,11 +513,8 @@ func TestJavaRunner_ExtraEnv_SpecificStrategy_AppendsAfterCleanEnv(t *testing.T)
 	}
 }
 
-// TestHelperProcess is not a real test. It is re-executed as the child "java"
-// process by the env-injection tests above. When the GO_WANT_HELPER_PROCESS
-// gate (passed through the runner's extra env) is present it writes the child's
-// full environment to the file named after "--" and exits; otherwise it is a
-// no-op for normal test runs.
+// TestHelperProcess is the child "java" of the tests above, not a test. With
+// GO_WANT_HELPER_PROCESS=1 it writes its environment to the file after "--" and exits.
 func TestHelperProcess(t *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return

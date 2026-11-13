@@ -9,10 +9,8 @@ import (
 	"github.com/seqra/opentaint/internal/globals"
 )
 
-// The --go-server-binary override short-circuits EnsureGoServerAvailable: when
-// globals.Config.GoServer.Binary is set it validates the path exists, returns
-// its absolute form, and performs no download. These tests exercise only that
-// override branch, so no network access is involved.
+// These tests cover only the --go-server-binary branch of EnsureGoServerAvailable, which
+// downloads nothing.
 
 func TestEnsureGoServerAvailable_BinaryOverrideReturnsAbsPath(t *testing.T) {
 	orig := globals.Config.GoServer.Binary

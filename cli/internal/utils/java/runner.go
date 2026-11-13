@@ -40,11 +40,8 @@ type JavaRunner interface {
 	WithImageType(imageType AdoptiumImageType) JavaRunner
 	WithSkipVerify(skipVerify bool) JavaRunner
 	WithDebugOutput(writer DebugLineWriter) JavaRunner
-	// WithExtraEnv adds KEY=VALUE environment entries that are appended to the
-	// child process environment for every ExecuteJavaCommand call. Entries are
-	// applied regardless of the Java resolution strategy (including System) and
-	// override any inherited values with the same key. A nil or empty map is a
-	// no-op. Repeated calls merge their entries (later calls win per key).
+	// WithExtraEnv adds environment variables to every Java command, with any resolution
+	// strategy. They override the inherited ones, and a later call wins for the same key.
 	WithExtraEnv(env map[string]string) JavaRunner
 	GetJavaResolutions() []JavaResolution
 	// EnsureJava resolves and downloads Java if needed, returning the path.
@@ -212,11 +209,8 @@ func (j *javaRunner) executeWithJava(javaPath string, strategy ResolutionStrateg
 		output.LogDebug("Using clean environment for managed Java version strategy")
 	}
 
-	// Append any per-call extra environment variables. These apply regardless of
-	// the resolution strategy. On the System strategy cmd.Env is otherwise left
-	// nil (the child inherits the parent env), so seed it from os.Environ() first
-	// to avoid dropping inherited variables. Appended entries win over earlier
-	// ones with the same key (os/exec uses the last occurrence).
+	// The System strategy leaves cmd.Env nil to inherit the environment, so start from
+	// os.Environ(). os/exec takes the last value of a key, so the extra values win.
 	if len(j.extraEnv) > 0 {
 		if cmd.Env == nil {
 			cmd.Env = os.Environ()

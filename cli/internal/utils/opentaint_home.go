@@ -211,9 +211,8 @@ func GetRulesPath(version string) (string, error) {
 	return resolveArtifactPath(globals.ArtifactByKind("rules").WithVersion(version))
 }
 
-// GetGoServerPath resolves the on-disk path of the go-ssa-server binary for the
-// given version using the standard artifact tier resolution (bundled, install, cache).
-// The returned path may not yet exist on disk if the binary has not been downloaded.
+// GetGoServerPath returns the go-ssa-server path of version in the artifact tiers. The binary
+// may not be downloaded yet.
 func GetGoServerPath(version string) (string, error) {
 	return resolveArtifactPath(globals.ArtifactByKind("goserver").WithVersion(version))
 }

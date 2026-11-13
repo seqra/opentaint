@@ -46,10 +46,8 @@ const RulesAssetName = "opentaint-rules.tar.gz"
 // GoServerAssetNamePrefix is the per-platform go-ssa-server asset filename prefix.
 const GoServerAssetNamePrefix = "go-ssa-server_"
 
-// GoServerAssetName returns the platform-specific name of the go-ssa-server
-// release asset. The name follows the contract of the release pipeline:
-// "go-ssa-server_<GOOS>_<GOARCH>", with ".exe" added on windows. It uses the
-// raw runtime.GOOS and runtime.GOARCH values (no Adoptium-style mapping).
+// GoServerAssetName returns the go-ssa-server release asset of this platform:
+// go-ssa-server_<GOOS>_<GOARCH> in Go's names (amd64, not x64), with .exe on windows.
 func GoServerAssetName() string {
 	name := fmt.Sprintf("%s%s_%s", GoServerAssetNamePrefix, runtime.GOOS, runtime.GOARCH)
 	if runtime.GOOS == "windows" {

@@ -338,8 +338,7 @@ func TestIsGoProject_NonExistentPath(t *testing.T) {
 }
 
 func TestIsGoProject_NestedGoMod(t *testing.T) {
-	// go.mod one level down — within maxMarkerSearchDepth, so it is detected,
-	// mirroring TestDetectLanguages_NestedMarker for the Java/Kotlin case.
+	// One level down is within maxMarkerSearchDepth.
 	dir := t.TempDir()
 	createFile(t, filepath.Join(dir, "service", "go.mod"))
 

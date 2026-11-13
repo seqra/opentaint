@@ -1,6 +1,6 @@
-// Package taint is the generic taint marker of a Go rule test project. Source returns a string
-// and Sink accepts any value. The bundled generic-source / generic-sink lib rules match them, so
-// a package's source/sink lib rules can be exercised against a fixed counterpart.
+// Package taint is the generic source and sink of a Go rule test project. The generic lib rules
+// in test-rules match them, so a source rule is tested with a fixed sink, and a sink rule with a
+// fixed source.
 package taint
 
 // Source returns the tainted test input.

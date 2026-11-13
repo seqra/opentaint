@@ -41,9 +41,8 @@ func (a ArtifactDef) Label() string {
 	return a.Name
 }
 
-// TagPrefix returns the release-tag prefix of this artifact, for example
-// "analyzer/". The go-ssa-server tag uses "go-server/", which differs from
-// the artifact kind.
+// TagPrefix is the release tag prefix of the artifact, such as "analyzer/". The go-ssa-server
+// tags start with "go-server/", not with its kind.
 func (a ArtifactDef) TagPrefix() string {
 	if a.Kind() == "goserver" {
 		return "go-server/"
@@ -65,10 +64,7 @@ func (a ArtifactDef) WithVersion(v string) ArtifactDef {
 // Artifacts returns the list of artifact definitions, reading current globals and Config.
 // This is a function (not a var) so it picks up mutable bind version vars and Config at call time.
 func Artifacts() []ArtifactDef {
-	// go-ssa-server is a single native binary (Unpack:false). The bundled and
-	// install tiers store it under its platform asset name. The per-machine
-	// cache file keeps the windows .exe suffix. Thus the resolved path stays
-	// executable on windows.
+	// The cached go-ssa-server keeps .exe on windows, so that it stays executable there.
 	goServerCacheSuffix := ""
 	if runtime.GOOS == "windows" {
 		goServerCacheSuffix = ".exe"
