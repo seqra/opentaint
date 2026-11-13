@@ -21,6 +21,7 @@ steps go in the output.
   clear when the command is needed. No flags, steps, definitions, internals, exit codes, or
   filler. A group has no Long
 - Arguments: one line for each positional argument, with the default when it is optional
+- The commands, the flags, and the global flags start their descriptions in one column
 - Write a paragraph as one line: the help wraps it at the terminal width, at most 80 columns.
   Break a long example by hand with `\`
 - Examples: a command for a main task shows the plain run and one or two common variants. Other

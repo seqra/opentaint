@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
 func TestWrapHelpWrapsParagraphsAndKeepsIndentedLines(t *testing.T) {
@@ -64,5 +66,34 @@ func TestHelpEndsWithTheDocsLink(t *testing.T) {
 	}
 	if want := "\n\nLearn more at " + docsURL + "\n"; !strings.HasSuffix(buf.String(), want) {
 		t.Errorf("help ends with %q, want %q", buf.String()[max(0, buf.Len()-120):], want)
+	}
+}
+
+// The commands, the flags, and the global flags start their descriptions in one column.
+func TestUsageAlignsTheDescriptions(t *testing.T) {
+	root := &cobra.Command{Use: "tool"}
+	root.PersistentFlags().StringP("color", "c", "auto", "Color mode")
+	group := &cobra.Command{Use: "group", Short: "Group"}
+	group.AddCommand(&cobra.Command{Use: "a-long-subcommand", Short: "Sub", Run: func(*cobra.Command, []string) {}})
+	group.Flags().StringArray("dependency", nil, "Library")
+	root.AddCommand(group)
+	root.SetUsageTemplate(usageTemplate)
+
+	usage := group.UsageString()
+	column := helpColumn(group)
+	descriptions := map[string]string{"a-long-subcommand": "Sub", "--dependency": "Library", "--color": "Color mode"}
+	for name, description := range descriptions {
+		var row string
+		for _, line := range strings.Split(usage, "\n") {
+			if strings.Contains(line, name) {
+				row = line
+			}
+		}
+		if got := strings.Index(row, description); got != column {
+			t.Errorf("%s: description at %d, want %d:\n%s", name, got, column, usage)
+		}
+	}
+	if !strings.Contains(usage, "tool group <command>") || !strings.Contains(usage, "Run `tool group <command> --help`") {
+		t.Errorf("usage of a group:\n%s", usage)
 	}
 }

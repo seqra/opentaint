@@ -89,8 +89,8 @@ func TestDeprecatedGroupHelpIsTheHelpOfTheNewGroup(t *testing.T) {
 		old  []string
 		want string
 	}{
-		{[]string{"approximation"}, "opentaint model [command]"},
-		{[]string{"test", "approximation"}, "opentaint test model [command]"},
+		{[]string{"approximation"}, "opentaint model <command>"},
+		{[]string{"test", "approximation"}, "opentaint test model <command>"},
 		// A subcommand of a deprecated group keeps its own help.
 		{[]string{"approximation", "init"}, "opentaint approximation init <model-project>"},
 		{[]string{"test", "approximation", "run"}, "opentaint test approximation run <test-project-model>"},
