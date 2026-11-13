@@ -220,7 +220,7 @@ var (
 var projectCmd = &cobra.Command{
 	Use:   "project",
 	Short: "Create a project model from precompiled JARs or classes",
-	Long:  "Create a project model from precompiled JARs or classes. Use it when `opentaint compile` cannot build the project.",
+	Long:  "Create a project model from precompiled JARs or classes.",
 	Example: `  # Create a project model from an application JAR and a library JAR
   opentaint project --source-root ./src --classpath ./app.jar \
     --package com.example --dependency ./lib/guava.jar -o .opentaint/project`,

@@ -15,7 +15,7 @@ var compileModelsOutput string
 var compileModelsCmd = &cobra.Command{
 	Use:   "models <model-project>",
 	Short: "Compile a dataflow model project",
-	Long:  "Compile a dataflow model project. `opentaint scan` and the test runs compile it on demand, so use this command to see the compiler errors or to compile ahead of time.\n\nArguments:\n  <model-project>  Model project from `opentaint model init`",
+	Long:  "Compile a dataflow model project.\n\nArguments:\n  <model-project>  Model project from `opentaint model init`",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		projectPath := log.AbsPathOrExit(args[0], "model-project")

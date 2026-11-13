@@ -17,9 +17,9 @@ steps go in the output.
 - A placeholder is in lowercase kebab-case and names the thing, not its type: `<source-path>`, not
   `<path>`. Write it the same way, brackets included
 - Short: a verb phrase in the imperative, capitalized, at most ~60 characters
-- Long: one sentence, usually the Short as a sentence. A second sentence only when it is not
-  clear when the command is needed. No flags, steps, definitions, internals, exit codes, or
-  filler. A group has no Long
+- Long: one sentence that says what the command does, usually the Short as a sentence, and no
+  second one. When to use the command and what other commands do in its place go in the docs.
+  No flags, steps, definitions, internals, exit codes, or filler. A group has no Long
 - Arguments: one line for each positional argument, with the default when it is optional
 - The commands, the flags, and the global flags start their descriptions in one column
 - Write a paragraph as one line: the help wraps it at the terminal width, at most 80 columns.
