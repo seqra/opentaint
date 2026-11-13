@@ -210,6 +210,13 @@ implementation proposal and selection.
 
 ### Proof contract: unbounded iterations and edge-only patterns
 
+**User decision, 13 November 2026: keep this edge-only scope.** Complete
+instruction-level AP transfer models are not an additional input or
+completeness premise for a removal predicate. The scope question is
+resolved. Uniform proofs of the native operators and faithful native
+counterexamples remain allowed under the existing gates. Do not use
+project source or a model-completeness assertion to certify retirement.
+
 Assume no iteration limit when proving redundancy. Preserve the required
 behavior after every finite number of later iterations. Do not use the
 temporary run-11 cap, a final report at that cap, or the absence of later

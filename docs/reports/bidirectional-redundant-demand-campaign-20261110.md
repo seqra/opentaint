@@ -7,6 +7,10 @@ Historical results checkpoint finalized on 12 November 2026. The
 [campaign specification](../design/bidirectional-redundant-demand-elimination-campaign-20261110.md)
 now defines the next investigation: compare retained demand after both
 handoffs and test removal during the later handoff.
+The active [post-handoff row campaign](bidirectional-demand-row-campaign-20261112.md)
+has a separate 25,389-row inventory and versioned ledger. Its current
+counts are 4,635 REDUNDANT and 20,754 OPEN, with a separate 3,490-row joint
+plan. The origin-based counts in this historical report remain unchanged.
 The [dedicated patterns document](../design/bidirectional-demand-edge-redundancy-patterns.md)
 collects the accepted rules with math, pseudocode, examples and proof links.
 The historical inventory contains **28,631 repeated method and generated

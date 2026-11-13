@@ -8,6 +8,20 @@ No analyzer behavior changes. The reference runtime remains
 The [campaign specification](bidirectional-redundant-demand-elimination-campaign-20261110.md)
 defines the next investigation's post-handoff targets and removal point.
 
+The active [row-level campaign](../reports/bidirectional-demand-row-campaign-20261112.md)
+has rechecked the split-service law for whole native row deletion. Its
+[constructive row-cut proof](../../spec/lean/proposals/redundant-demand-row-20261112/README.md)
+requires actual distinct retained C2/C5 rows; another origin emitting the
+same removed row is not a provider. The checked result is 4,635 individual
+row certificates and a separate 3,490-row joint plan. Historical origin
+counts below are not row counts. No closed-evolution rule is yet accepted.
+
+The current investigation records intrinsic STAR-to-MAY creation and an
+uncapped deep-relay counterexample in the
+[row report](../reports/bidirectional-demand-row-campaign-20261112.md).
+Equal demand at run-3 and run-5 can still be needed for a valid finding at
+run-9. Finite repetition is not a new elimination predicate.
+
 The proposed handoff workflow, ND rule, retained-provider checks and proof
 gates are now specified in
 [In-handoff edge compaction](../../spec/in-handoff-edge-compaction.md).

@@ -1,0 +1,109 @@
+{
+  "actualAxiomAudits": 72,
+  "allowedAxioms": [
+    "propext",
+    "Quot.sound"
+  ],
+  "arbitraryLaterRunsFieldsLimitsAndSharedPrograms": true,
+  "artifacts": {
+    "AncestorMayPointQuery.lean": "b29e58ea82bd91437cf0f90cc90baa20bd2a81a99ccf75fc6f2afb7d5a195787",
+    "ObservedRowGuards.lean": "efc1b5290781464b6dc8b5f3b6f1d9b50a5c58298e3dcfbf6c3273d1aa5b053c",
+    "README.md": "087e41ea379816fa99f71a8282bdaf7320d42e141267db0e946da6c1b79a4279",
+    "RetainedServiceBasis.lean": "e573c90914f38555679402343b355315e77d42db7f6f6dce95ba04c7e448d54a",
+    "RowCut.lean": "f78508a071df10f99554fe086650439168b9340398dcd264508bab2248ff049a",
+    "RowCutControls.lean": "0245f5bf7c7b8eceeb849e00c1bc99ee213059788562cd52c2f16274819aee2c",
+    "bind_observed.py": "6a57cedc09451e4df7b23f0b79ca1988fbbdff17e1782a1986b3f143e016f949",
+    "check.py": "81be778365734a8e9ebaed7238d19575040bfa2a4f0481a4ffede1619809ca19"
+  },
+  "closedEvolutionPredicateEstablished": false,
+  "copiedKernelOrigin": "docs/reports/data/redundant-demand-20261110/cases/retained-service-basis-kernel-v1/lean/",
+  "corpusClassificationsEstablished": false,
+  "historicalNativeCorrespondence": {
+    "checkedArtifacts": 27,
+    "checkedInputPins": 8,
+    "checkedSourcePins": 6,
+    "errors": 0,
+    "failures": 0,
+    "freshCorpusClassifications": false,
+    "literalRoots": 4620,
+    "literalRows": 6372,
+    "path": "docs/reports/data/redundant-demand-20261110/cases/retained-service-basis-native-v1/receipt.json",
+    "productionTreeEqualAtExecution": true,
+    "sha256": "c8093cda966e140ec70d47aa94121be7de92f1136c06fb879b63297f21694e53",
+    "skipped": 0,
+    "tests": 11,
+    "testsRerun": false
+  },
+  "models": [
+    {
+      "audits": 17,
+      "exitCode": 0,
+      "outputSha256": "925ac87660f0c0235bda9580edf06035325cc1a06dee51ff9fad3fb76c0d526e",
+      "path": "AncestorMayPointQuery.lean",
+      "sha256": "b29e58ea82bd91437cf0f90cc90baa20bd2a81a99ccf75fc6f2afb7d5a195787"
+    },
+    {
+      "audits": 28,
+      "exitCode": 0,
+      "outputSha256": "75ab5742af15ed68f131bd578ecee865d7fbb1505ec7cb161c8ab8dce2bf3d1b",
+      "path": "RetainedServiceBasis.lean",
+      "sha256": "e573c90914f38555679402343b355315e77d42db7f6f6dce95ba04c7e448d54a"
+    },
+    {
+      "audits": 9,
+      "exitCode": 0,
+      "outputSha256": "df6018655ae90bfdfa30484f76e9658362de4280080c6f97eb7865060fd6b233",
+      "path": "RowCut.lean",
+      "sha256": "f78508a071df10f99554fe086650439168b9340398dcd264508bab2248ff049a"
+    },
+    {
+      "audits": 11,
+      "exitCode": 0,
+      "outputSha256": "6e8d1d2ae66e07402f20acc0bc94650e9377cd46738878272e3e1213d02be17a",
+      "path": "RowCutControls.lean",
+      "sha256": "0245f5bf7c7b8eceeb849e00c1bc99ee213059788562cd52c2f16274819aee2c"
+    },
+    {
+      "audits": 7,
+      "exitCode": 0,
+      "outputSha256": "5135c8b9636e64718cf376c8aa69a04655afaf195d5c64250f8cec1564279e68",
+      "path": "ObservedRowGuards.lean",
+      "sha256": "efc1b5290781464b6dc8b5f3b6f1d9b50a5c58298e3dcfbf6c3273d1aa5b053c"
+    }
+  ],
+  "nativeTestsRerun": false,
+  "noRemovedRowAsProvider": true,
+  "operatorPins": [
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/ap/RestrictedInitialPolicy.kt",
+      "sha256": "8473d936c94d3e96c543e495309da53501098ad2a69fc29c82f3e3a32f392cbd"
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandStore.kt",
+      "sha256": "a664e74e3c32f2d07f9b18ef626cd46c8f44d857ea7798e95a80795a91737e68"
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/FrozenDemandTrie.kt",
+      "sha256": "f260e08cbde6024c1aacca83e21d8c90c4d6116504eeecf22edb64e6bfd52b62"
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/PreparedOutputPrograms.kt",
+      "sha256": "682b774936ee5cc56857a4d2be79e4ccb59778fb05cc475203f347f403c2a747"
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LoopConsumerObservation.kt",
+      "sha256": "6d98f705f055f6223ab97a061dd278a41fb0d5797375c4189b19b2691555518c"
+    },
+    {
+      "path": "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/LoopOutputRestriction.kt",
+      "sha256": "c9381026696953188374d5fa4f170f252967ffcbfcf5903792a05623d82f7c28"
+    }
+  ],
+  "productionModified": false,
+  "productionRevision": "14d7b63369d94f49d4c551be8405ed7719f267cc",
+  "rowsNotOrigins": true,
+  "schema": "RetainedDemandRowCutProof-v1",
+  "singletonAndJointCuts": true,
+  "status": "GENERIC_PROOF_AND_CONTROLS_PASS",
+  "unboundedIterations": true
+}
