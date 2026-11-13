@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -328,10 +329,11 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		}
 	}
 
-	// Look for Go after the dry run and before the long compile, so that a Go scan without `go`
-	// fails early. For a project model, Go is looked for in the source root that project.yaml
-	// records, so that root must still exist.
-	needGoServer := goServerRequired(sourceRoot)
+	// Check for `go` before the long compile. The project model decides later whether the scan
+	// needs it, as the autobuilder can find a go.mod deeper than this search.
+	if plan.needsCompilation && slices.Contains(validation.DetectLanguages(absUserProjectRoot), "Go") {
+		requireGoToolchain()
+	}
 
 	if hasBuiltin {
 		if _, err := utils.EnsureRulesPath(out); err != nil {
@@ -446,14 +448,11 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	nativeBuilder.SetJarPath(analyzerJarPath)
 	addDataflowModels(nativeBuilder, dataflowModels)
 
-	// The Go server is resolved after the compile. A scan without Go keeps goServerEnv nil and
-	// passes no extra environment to the analyzer.
-	var goServerEnv map[string]string
-	if needGoServer {
-		goServerEnv = resolveGoServerEnv()
+	config, err := project.LoadConfig(absProjectModelPath)
+	if err != nil {
+		fail("Failed to read the project model", err)
 	}
-
-	analyzerJavaRunner := newAnalyzerJavaRunner(goServerEnv)
+	analyzerJavaRunner := newAnalyzerJavaRunner(goServerEnv(config))
 	if _, err := analyzerJavaRunner.EnsureJava(); err != nil {
 		fail("Failed to find Java for the analyzer", err)
 	}
@@ -795,46 +794,28 @@ func ensureExecutable(path string) error {
 	return nil
 }
 
-// goServerRequired reports whether the analyzer needs go-ssa-server for the project at
-// sourceRoot, that is, whether the project has Go code. It also checks for `go` on PATH, which
-// go-ssa-server runs even with --go-server-binary: without `go`, a Go-only project stops the
-// command, and a project in other languages too gets a warning and false.
-func goServerRequired(sourceRoot string) bool {
-	langs := validation.DetectLanguages(sourceRoot)
-	if !slices.Contains(langs, "Go") {
-		return false
+// requireGoToolchain stops the command when `go` is not on PATH. go-ssa-server runs it to load
+// the Go packages, also with --go-server-binary.
+func requireGoToolchain() {
+	if _, err := exec.LookPath("go"); err == nil {
+		return
 	}
-	if _, lookErr := exec.LookPath("go"); lookErr != nil {
-		if len(langs) == 1 {
-			out.Fatal("A Go project needs the Go toolchain, but `go` was not found on your PATH.\n"+
-				"Install Go (https://go.dev/dl/), make sure `go` is on your PATH, and run the command again.", nil)
-		}
-		out.Warnf("A Go module (go.mod) was found, but `go` is not on your PATH. " +
-			"The scan continues with the other detected languages and does not analyze the Go code. " +
-			"To analyze Go, install Go (https://go.dev/dl/).")
-		return false
-	}
-	return true
+	failWith(1, "Failed to find the Go toolchain", errors.New("the project has Go code, and `go` is not on PATH"),
+		output.Suggestion{Description: "To install Go, see:", Command: "https://go.dev/dl/"})
 }
 
-// resolveGoServerEnv gets go-ssa-server and returns the analyzer environment that points
-// GOIR_SERVER_BINARY at it. Call it when goServerRequired returns true.
-func resolveGoServerEnv() map[string]string {
+// goServerEnv returns the analyzer environment for the Go projects of a project model:
+// GOIR_SERVER_BINARY with the path of go-ssa-server. A model without Go projects needs none.
+func goServerEnv(config *project.Config) map[string]string {
+	if len(config.GoProjects) == 0 {
+		return nil
+	}
+	requireGoToolchain()
 	goServerPath, err := EnsureGoServerAvailable()
 	if err != nil {
-		out.Fatalf("Failed to resolve go-ssa-server: %s", err)
+		fail("Failed to get the Go server", err)
 	}
 	return map[string]string{"GOIR_SERVER_BINARY": goServerPath}
-}
-
-// goServerRequiredForModel does goServerRequired for a compiled project model. It reads the
-// source root that the model recorded.
-func goServerRequiredForModel(projectModelPath string) bool {
-	sourceRoot, err := project.GetSourceRoot(projectModelPath)
-	if err != nil {
-		out.Fatalf("Failed to parse sourceRoot from project.yaml: %v", err)
-	}
-	return goServerRequired(sourceRoot)
 }
 
 func scanProject(analyzerBuilder *AnalyzerBuilder, javaRunner java.JavaRunner) (*java.JavaCommandError, error) {

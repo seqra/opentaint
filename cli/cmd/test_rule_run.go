@@ -110,8 +110,8 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		out.Fatal(fmt.Sprintf("Failed to read the project model `%s`", projectModelArg), err)
 	}
 
-	needGoServer := goServerRequiredForModel(projectPath)
-	if needGoServer {
+	if len(config.GoProjects) > 0 {
+		requireGoToolchain()
 		buildGoSamples(projectPath, config)
 	}
 
@@ -182,11 +182,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	addDataflowModels(builder, compileDataflowModels(opts.dataflowModels, analyzerJarPath))
 	addPassthroughModels(builder, opts.passthroughModels)
 
-	var goServerEnv map[string]string
-	if needGoServer {
-		goServerEnv = resolveGoServerEnv()
-	}
-	javaRunner := newAnalyzerJavaRunner(goServerEnv)
+	javaRunner := newAnalyzerJavaRunner(goServerEnv(config))
 	if _, err := javaRunner.EnsureJava(); err != nil {
 		fail("Failed to find Java for the analyzer", err)
 	}

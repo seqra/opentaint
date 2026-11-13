@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/seqra/opentaint/internal/globals"
+	"github.com/seqra/opentaint/internal/utils/project"
 )
 
 // These tests cover only the --go-server-binary branch of EnsureGoServerAvailable, which
@@ -88,5 +90,35 @@ func TestEnsureGoServerAvailable_BinaryOverrideDirectoryReturnsError(t *testing.
 	}
 	if !strings.Contains(err.Error(), "directory") {
 		t.Errorf("error should mention the path is a directory, got: %v", err)
+	}
+}
+
+// The project model decides whether the analyzer needs go-ssa-server, whatever is on disk.
+func TestGoServerEnvWithoutGoProjects(t *testing.T) {
+	orig := globals.Config.GoServer.Binary
+	t.Cleanup(func() { globals.Config.GoServer.Binary = orig })
+	globals.Config.GoServer.Binary = filepath.Join(t.TempDir(), "does-not-exist")
+
+	config := &project.Config{JavaProjects: []project.JavaProject{{SourceRoot: "java_0/sources"}}}
+	if env := goServerEnv(config); env != nil {
+		t.Errorf("goServerEnv() = %v, want none for a model without Go projects", env)
+	}
+}
+
+func TestGoServerEnvPointsAtTheGoServer(t *testing.T) {
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("no Go toolchain")
+	}
+	orig := globals.Config.GoServer.Binary
+	t.Cleanup(func() { globals.Config.GoServer.Binary = orig })
+	bin := filepath.Join(t.TempDir(), "go-ssa-server")
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	globals.Config.GoServer.Binary = bin
+
+	config := &project.Config{GoProjects: []project.GoProject{{ProjectDir: "go_0"}}}
+	if got := goServerEnv(config)["GOIR_SERVER_BINARY"]; got != bin {
+		t.Errorf("GOIR_SERVER_BINARY = %q, want %q", got, bin)
 	}
 }
