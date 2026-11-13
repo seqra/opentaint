@@ -13,8 +13,8 @@ python3 spec/lean/proposals/exact-may-evidence-policy-20261113/check.py \
   --out /tmp/exact-may-evidence-proof-check
 ```
 
-The checker compiles six modules with Lean 4.35.0, including two reused
-models. It audits 56 declarations and rejects classical choice, `sorryAx`
+The checker compiles seven modules with Lean 4.35.0, including two reused
+models. It audits 66 declarations and rejects classical choice, `sorryAx`
 and custom axioms. Some declarations use standard `propext` and `Quot.sound`.
 Every existential witness is a constructed seed, path or raw emission.
 
@@ -37,6 +37,7 @@ Every existential witness is a constructed seed, path or raw emission.
 | EXACT-first local queue | `Priority.may_dispatch_has_exact_quiescence` requires no ready/in-flight local exact work; dispatch removes exactly one queued job. |
 | Late work and owner scope | `late_exact_preempts`, `dropping_reservation_too_early_is_observable` and `another_owner_need_not_wait` distinguish local priority from a global barrier. |
 | Subsumption gap | `ViewCover` models both ordinary return branches, constructs the projected precise-input counterexample and the user's longer MAY binding. A matching NORMAL shape is not a complete method model. |
+| Latest STAR-start alternative | `StarAdmissionComparison` isolates its descendant C2 change. Its genuine MAY-loss row is retained by the selected conclusion-tail guard, so it is not a counterexample to that guard. The empty-binding gate retains broad STAR offers, leaving STAR-driven repetition unresolved. See the [comparison](../../../../docs/design/bidirectional-star-may-admission-comparison-20261113.md); it does not prove the complete alternative policy. |
 
 ## Assumptions and limits
 
@@ -83,6 +84,8 @@ Both are source-Gradle offline tests. Their frozen evidence is outside Git:
 `dual-exact-may-starts-20261113/native-v2/` and
 `exact-may-evidence-policy-20261113/projected-cover-v2/` under the
 [external data root](../../../../docs/reports/EXTERNAL_DATA.md).
+The extended native STAR-start check passes in
+`exact-may-evidence-policy-20261113/star-start-cover-v1/`.
 
 No complete new-policy driver or project run was executed. Historical
 wrapper controls finish at run-7 and run-5; project positions are recorded

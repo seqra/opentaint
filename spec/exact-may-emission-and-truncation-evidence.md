@@ -2,6 +2,13 @@
 
 13 November 2026. Specification draft. No production implementation changes.
 Baseline: `374fa3c6f5f73b24ccca00fc829da8c83a322d3f`.
+The user has since proposed STAR starts with MAY admission. The
+[STAR/MAY comparison](../docs/design/bidirectional-star-may-admission-comparison-20261113.md)
+records that alternative. Keeping different conclusion tails resolves the
+prior candidate's stated subsumption objection; the effect on FL+1 repetition
+remains unproved.
+The EXACT/MAY rules below and their proofs describe the prior candidate;
+they do not implement or settle that alternative.
 Follow [proof-guide.md](proof-guide.md). The
 [proof dossier](lean/proposals/exact-may-evidence-policy-20261113/README.md)
 states the checked scope and outstanding adapter obligations.

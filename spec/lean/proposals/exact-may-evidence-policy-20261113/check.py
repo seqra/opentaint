@@ -25,7 +25,7 @@ def main():
     sources = {
         "Evidence": package.parent / "truncation-evidence-20261113/Evidence.lean",
         "DualStarts": package.parent / "dual-exact-may-starts-20261113/DualStarts.lean",
-        **{name: package / (name + ".lean") for name in ["Emission", "Capture", "Priority", "ViewCover"]},
+        **{name: package / (name + ".lean") for name in ["Emission", "Capture", "Priority", "ViewCover", "StarAdmissionComparison"]},
     }
     audited = []
     receipt = {"leanVersion": subprocess.check_output(["lean", "--version"], text=True).strip(),
