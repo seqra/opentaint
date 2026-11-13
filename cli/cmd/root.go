@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -94,10 +95,17 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	requireKnownSubcommands(rootCmd)
 	cmd, err := rootCmd.ExecuteC()
 	if err != nil {
 		fmt.Fprint(os.Stderr, output.FormatError(err))
-		fmt.Fprintf(os.Stderr, "Run `%s --help` for usage.\n", usageCommandPath(cmd))
+		var unknown *unknownCommandError
+		if errors.As(err, &unknown) {
+			if commands := unknown.suggestions(); len(commands) > 0 {
+				fmt.Fprintf(os.Stderr, "Did you mean %s?\n", joinOr(commands))
+			}
+		}
+		fmt.Fprintf(os.Stderr, "Run `%s --help` for usage\n", usageCommandPath(cmd))
 		os.Exit(1)
 	}
 }
