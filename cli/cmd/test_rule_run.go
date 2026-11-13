@@ -10,9 +10,11 @@ import (
 	"github.com/seqra/opentaint/internal/analyzer"
 	"github.com/seqra/opentaint/internal/output"
 	"github.com/seqra/opentaint/internal/testmodel"
+	"github.com/seqra/opentaint/internal/testproject"
 	"github.com/seqra/opentaint/internal/utils"
 	"github.com/seqra/opentaint/internal/utils/java"
 	"github.com/seqra/opentaint/internal/utils/log"
+	"github.com/seqra/opentaint/internal/utils/project"
 	"github.com/spf13/cobra"
 )
 
@@ -103,6 +105,15 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	if err != nil {
 		out.FatalErr(fmt.Errorf("invalid --max-memory value `%s`: %w", opts.maxMemory, err))
 	}
+	config, err := project.LoadConfig(projectPath)
+	if err != nil {
+		out.Fatal(fmt.Sprintf("Failed to read the project model `%s`", projectModelArg), err)
+	}
+
+	needGoServer := goServerRequiredForModel(projectPath)
+	if needGoServer {
+		buildGoSamples(projectPath, config)
+	}
 
 	outputDir := opts.outputDir
 	if outputDir == "" {
@@ -152,7 +163,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		if err := os.MkdirAll(ruleDir, 0o755); err != nil {
 			out.Fatal("Failed to write the harness rule", err)
 		}
-		if _, err := testmodel.WriteFixedRule(ruleDir); err != nil {
+		if _, err := testmodel.WriteFixedRule(ruleDir, samplesLanguage(config)); err != nil {
 			out.Fatal("Failed to write the harness rule", err)
 		}
 		builder.AddRuleSet(ruleDir)
@@ -171,7 +182,11 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	addDataflowModels(builder, compileDataflowModels(opts.dataflowModels, analyzerJarPath))
 	addPassthroughModels(builder, opts.passthroughModels)
 
-	javaRunner := newAnalyzerJavaRunner(goServerEnvForModel(projectPath))
+	var goServerEnv map[string]string
+	if needGoServer {
+		goServerEnv = resolveGoServerEnv()
+	}
+	javaRunner := newAnalyzerJavaRunner(goServerEnv)
 	if _, err := javaRunner.EnsureJava(); err != nil {
 		fail("Failed to find Java for the analyzer", err)
 	}
@@ -243,6 +258,38 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	}
 	out.Suggestions(suggestions...)
 	os.Exit(2)
+}
+
+// buildGoSamples runs `go mod tidy` and `go build` in each Go project of a test project model.
+// The analyzer reads the Go samples from source, so a sample that does not compile would fail
+// only in the analyzer log. Tidy adds to go.mod the modules that the samples import.
+func buildGoSamples(projectModelPath string, config *project.Config) {
+	err := out.RunWithSpinner("Building Go samples", func() error {
+		for _, goProject := range config.GoProjects {
+			dir := goProject.ProjectDir
+			if !filepath.IsAbs(dir) {
+				dir = filepath.Join(projectModelPath, dir)
+			}
+			if err := testproject.TidyGo(dir); err != nil {
+				return err
+			}
+			if err := testproject.BuildGo(dir); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		out.Fatal("Failed to build the samples", err)
+	}
+}
+
+// samplesLanguage is the language of the samples in a test project model, java or go.
+func samplesLanguage(config *project.Config) string {
+	if len(config.GoProjects) > 0 && len(config.JavaProjects) == 0 {
+		return "go"
+	}
+	return "java"
 }
 
 // printFailedTests prints the number of passed tests and the failed samples by category.

@@ -1,6 +1,7 @@
 package testproject
 
 import (
+	"errors"
 	"fmt"
 	"go/version"
 	"os"
@@ -21,22 +22,24 @@ func BootstrapGo(outputDir, modulePath string, dependencies []string) error {
 		return err
 	}
 	return utils.WriteFiles(map[string][]byte{
-		filepath.Join(outputDir, "go.mod"): content,
+		filepath.Join(outputDir, goModuleFileName): content,
 	})
 }
 
-// TidyGo runs 'go mod tidy' in dir, so its go.mod lists the modules its packages import.
+// TidyGo runs `go mod tidy` in dir, so that its go.mod lists the modules that its packages import.
 func TidyGo(dir string) error {
 	return runGo(dir, "go mod tidy", "mod", "tidy")
 }
 
-// BuildGo runs 'go build ./...' in dir, so compile errors in the samples surface before the
-// analyzer runs. The build output is discarded.
+// BuildGo runs `go build ./...` in dir, so that a sample that does not compile fails before the
+// analyzer runs. The build output is discarded, and no version control information is stamped:
+// dir may lie in a repository that the go command cannot read.
 func BuildGo(dir string) error {
-	return runGo(dir, "go build ./...", "build", "-o", os.DevNull, "./...")
+	return runGo(dir, "go build ./...", "build", "-o", os.DevNull, "-buildvcs=false", "./...")
 }
 
-// runGo runs the go command with args in dir. A failure reports name, dir and the go output.
+// runGo runs the go command with args in dir. An error has the command line, shown as name, and
+// the output of the go command.
 func runGo(dir, name string, args ...string) error {
 	command := exec.Command("go", args...)
 	command.Dir = dir
@@ -45,9 +48,9 @@ func runGo(dir, name string, args ...string) error {
 		return nil
 	}
 	if details := strings.TrimSpace(string(output)); details != "" {
-		return fmt.Errorf("'%s' failed in %s:\n%s", name, dir, details)
+		err = errors.New(details)
 	}
-	return fmt.Errorf("'%s' failed in %s: %w", name, dir, err)
+	return fmt.Errorf("`%s` failed: %w", name, err)
 }
 
 // GoVersion is the language version for a generated go.mod: the version of the local Go toolchain,

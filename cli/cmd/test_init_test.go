@@ -1,6 +1,11 @@
 package cmd
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+
+	"github.com/spf13/cobra"
+)
 
 func TestTestCompileCommand(t *testing.T) {
 	tests := []struct {
@@ -23,4 +28,55 @@ func TestTestCompileCommand(t *testing.T) {
 			t.Errorf("testCompileCommand(%q, %q) = %q, want %q", tc.outputDir, tc.side, got, tc.want)
 		}
 	}
+}
+
+func TestTestInitCommandsRequireLanguage(t *testing.T) {
+	for _, cmd := range []*cobra.Command{testRuleInitCmd, testModelInitCmd} {
+		flag := cmd.Flags().Lookup("language")
+		if flag == nil {
+			t.Fatalf("%s has no --language flag", cmd.CommandPath())
+		}
+		if flag.DefValue != "" {
+			t.Errorf("%s --language default = %q, want none", cmd.CommandPath(), flag.DefValue)
+		}
+		if flag.Annotations[cobra.BashCompOneRequiredFlag] == nil {
+			t.Errorf("%s --language is not required", cmd.CommandPath())
+		}
+	}
+}
+
+// Init updates a test project in the same language and refuses to mix the languages.
+func TestExistingTestProject(t *testing.T) {
+	goDir := t.TempDir()
+	writeTestFile(t, filepath.Join(goDir, "go.mod"), "module test\n")
+	javaDir := t.TempDir()
+	writeTestFile(t, filepath.Join(javaDir, "build.gradle.kts"), "")
+
+	for _, tc := range []struct {
+		name, dir, language string
+		want                bool
+		wantErr             string
+	}{
+		{"new", t.TempDir(), "go", false, ""},
+		{"same language", goDir, "go", true, ""},
+		{"go project for java", goDir, "java", false, "`" + goDir + "` is a Go test project"},
+		{"java project for go", javaDir, "go", false, "`" + javaDir + "` is a Java test project"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := existingTestProject(tc.dir, tc.language)
+			if got != tc.want {
+				t.Errorf("existing = %v, want %v", got, tc.want)
+			}
+			if gotErr := errorText(err); gotErr != tc.wantErr {
+				t.Errorf("error = %q, want %q", gotErr, tc.wantErr)
+			}
+		})
+	}
+}
+
+func errorText(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }
