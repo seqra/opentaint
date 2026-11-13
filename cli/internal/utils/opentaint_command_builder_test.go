@@ -246,7 +246,7 @@ func TestBuildScanCommandWithDocker(t *testing.T) {
 			projectPath:     "/path/to/project",
 			sarifReportPath: "/path/to/output/results.sarif",
 			rulesetPaths:    []string{"builtin"},
-			expected:        "docker run --rm -v /path/to/project:/project -v /path/to/output:/output ghcr.io/seqra/opentaint:latest opentaint scan /project --output /output/results.sarif --timeout 20m0s --semgrep-compatibility-sarif=false",
+			expected:        "docker run --rm -v /path/to/project:/project -v /path/to/output:/output ghcr.io/seqra/opentaint:latest opentaint scan /project --output /output/results.sarif --timeout 20m --semgrep-compatibility-sarif=false",
 		},
 		{
 			name:            "custom ruleset with volume mount",
@@ -268,6 +268,31 @@ func TestBuildScanCommandWithDocker(t *testing.T) {
 	}
 }
 
+func TestBuildScanCommandWithDockerMountsModelInputs(t *testing.T) {
+	base := NewScanCommand("").
+		WithDataflowModels([]string{"/host/dataflow"}).
+		WithPassthroughModels([]string{"/host/passthrough.yaml"})
+
+	cmd := BuildScanCommandWithDocker(
+		base,
+		"/host/project",
+		"/host/output/results.sarif",
+		[]string{"builtin"},
+	)
+	expected := "docker run --rm " +
+		"-v /host/project:/project -v /host/output:/output " +
+		"-v /host/dataflow:/dataflow-models/input0 " +
+		"-v /host/passthrough.yaml:/passthrough-models/input0 " +
+		"ghcr.io/seqra/opentaint:latest opentaint scan /project " +
+		"--output /output/results.sarif " +
+		"--dataflow-models /dataflow-models/input0 " +
+		"--passthrough-models /passthrough-models/input0"
+
+	if cmd != expected {
+		t.Fatalf("Docker model inputs = %q, want %q", cmd, expected)
+	}
+}
+
 func TestCopyFlagsFrom(t *testing.T) {
 	base := NewScanCommand("/original").
 		WithTimeout(1200 * time.Second).
@@ -280,7 +305,7 @@ func TestCopyFlagsFrom(t *testing.T) {
 		WithOutput("/docker/output.sarif").
 		Build()
 
-	expected := "opentaint scan /docker/project --output /docker/output.sarif --timeout 20m0s --semgrep-compatibility-sarif=false"
+	expected := "opentaint scan /docker/project --output /docker/output.sarif --timeout 20m --semgrep-compatibility-sarif=false"
 	if result != expected {
 		t.Errorf("CopyFlagsFrom() = %q, want %q", result, expected)
 	}
@@ -319,7 +344,7 @@ func TestSummaryFilterFlags(t *testing.T) {
 
 	for _, want := range []string{
 		"opentaint summary /r.sarif",
-		"--path src/main/**",
+		"--path 'src/main/**'",
 		"--severity error",
 		"--rule-id sql-injection",
 		"--partial-fingerprint abc123",
@@ -350,7 +375,7 @@ func TestSummaryRepeatableFlagMultiValue(t *testing.T) {
 	cmd := NewSummaryCommand("/r.sarif").
 		WithPath([]string{"src/**", "test/**"}).
 		Build()
-	if !contains(cmd, "--path src/**") || !contains(cmd, "--path test/**") {
+	if !contains(cmd, "--path 'src/**'") || !contains(cmd, "--path 'test/**'") {
 		t.Errorf("expected both --path values, got %q", cmd)
 	}
 }

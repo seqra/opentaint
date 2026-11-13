@@ -17,20 +17,13 @@ import (
 
 var pullCmd = &cobra.Command{
 	Use:   "pull",
-	Short: "Download autobuilder, analyzer binaries, rules and Java runtime",
-	Long: `Download all necessary binaries and assets:
-- OpenTaint autobuilder JAR
-- OpenTaint analyzer JAR
-- OpenTaint rules archive
-- Java runtime (Temurin JRE)
-
-This prepares the environment with all required dependencies for offline analysis.
-When bundled artifacts are present (from a release archive), they will be used directly.`,
+	Short: "Download the analyzer, autobuilder, ruleset, and Java runtime",
+	Long:  "Download the analyzer, autobuilder, built-in ruleset, and Java runtime.",
 	Run: func(cmd *cobra.Command, args []string) {
 		out.Section("OpenTaint Pull").
 			Field("Autobuilder", globals.Config.Autobuilder.Version).
 			Field("Analyzer", globals.Config.Analyzer.Version).
-			Field("Rules", globals.Config.Rules.Version).
+			Field("Built-in ruleset", globals.Config.Rules.Version).
 			Field("Java", globals.Config.Java.Version).
 			Render()
 
@@ -40,7 +33,7 @@ When bundled artifacts are present (from a release archive), they will be used d
 		installCurrent := utils.IsInstallCurrent()
 		if !installCurrent {
 			if err := utils.CleanInstallDir(); err != nil {
-				out.Fatalf("Failed to clean install directory: %s", err)
+				fail("Failed to clean the install directory", err)
 			}
 		}
 
@@ -50,31 +43,33 @@ When bundled artifacts are present (from a release archive), they will be used d
 		for _, spec := range artifacts {
 			node, err := downloadArtifact(spec, installNextToBinary, installCurrent)
 			if err != nil {
-				out.Fatalf("Failed to download %s: %s", spec.Kind(), err)
+				fail("Failed to download the "+spec.Kind(), err)
 			}
 			summaryNodes = append(summaryNodes, node)
 		}
 
 		javaNode, err := downloadJava(installNextToBinary, installCurrent)
 		if err != nil {
-			out.Fatalf("Failed to download Java: %s", err)
+			fail("Failed to download Java", err)
 		}
 		summaryNodes = append(summaryNodes, javaNode)
 
 		// Write version marker after all downloads succeed
 		if err := utils.WriteInstallVersionMarker(); err != nil {
-			out.Fatalf("Failed to write install version marker: %s", err)
+			fail("Failed to record the installed version", err)
 		}
 
 		out.Blank()
 		out.Section("Pull Summary").
 			Child(summaryNodes...).
 			Render()
+		out.Blank()
+		out.Successf("Pull completed")
 	},
 }
 
 func downloadArtifact(spec globals.ArtifactDef, installNextToBinary, installCurrent bool) (*tree.Tree, error) {
-	node := out.GroupItem(fmt.Sprintf("%s %s", spec.Name, spec.Version))
+	node := out.GroupItem(fmt.Sprintf("%s %s", spec.Label(), spec.Version))
 
 	if spec.Override != "" {
 		node.Child(fmt.Sprintf("Config override active: scans use %s", spec.Override))

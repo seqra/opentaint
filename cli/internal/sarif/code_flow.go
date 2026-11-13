@@ -29,7 +29,7 @@ func ParseCodeFlowSelection(s string) (CodeFlowSelection, error) {
 	}
 	n, err := strconv.Atoi(t)
 	if err != nil || n <= 0 {
-		return CodeFlowSelection{}, fmt.Errorf("invalid --code-flow %q: expected \"all\" or a positive integer", s)
+		return CodeFlowSelection{}, fmt.Errorf("invalid --code-flow value `%s`, use all or a positive number", s)
 	}
 	return CodeFlowSelection{Index: n}, nil
 }

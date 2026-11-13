@@ -5,7 +5,7 @@
 ## Scanning Projects
 
 ```bash
-# Basic scan (current directory, SARIF written to the cached model directory)
+# Basic scan (current directory, SARIF report written to .opentaint/results/report.sarif)
 opentaint scan
 
 # Scan a specific project
@@ -98,7 +98,7 @@ On the first run, the compiled project model is cached in `~/.opentaint/cache/`.
 
 | Flag | Description |
 |------|-------------|
-| `--output`, `-o` | Path to the SARIF report (default: `<model-dir>/sources/opentaint.sarif`) |
+| `--output`, `-o` | Path to the SARIF report (default: `.opentaint/results/report.sarif` in the project) |
 | `--recompile` | Force recompilation even if a cached project model exists |
 | `--project-model` | Path to a pre-compiled project model (skips compilation) |
 | `--timeout`, `-t` | Timeout for analysis (default: `15m`) |
@@ -116,7 +116,7 @@ These flags are to work with custom models:
 |------|-------------|
 | `--track-external-methods` | Write external-method coverage files next to the SARIF report |
 | `--passthrough-models` | Apply pass-through model YAML files or directories (repeatable) |
-| `--dataflow-models` | Apply dataflow model projects, build outputs, or class directories (repeatable) |
+| `--dataflow-models` | Dataflow models: a model project, compiled models, or a directory of them (repeatable) |
 
 Use external-method tracking when a scan may miss flows through library methods. The dropped-methods file shows where taint was killed because no model was available; the approximated-methods file shows methods already covered by built-in or custom models.
 
@@ -154,9 +154,9 @@ opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-mo
 
 | Command | Description |
 |---------|-------------|
-| `opentaint test rule init <output-dir>` | Create source and sink test projects with annotated sample support |
-| `opentaint test rule run <project-model>` | Run detection-rule tests on a compiled project model |
-| `opentaint test rule reachability <rule-id> [source-path]` | Trace why a rule can or cannot reach its facts |
+| `opentaint test rule init <test-project>` | Create source and sink test projects with annotated sample support |
+| `opentaint test rule run <test-project-model>` | Run detection-rule tests on a compiled project model |
+| `opentaint test rule reachability <rule-id> [<source-path>]` | Trace why a rule can or cannot reach its facts |
 
 #### Model tests
 
@@ -170,8 +170,8 @@ opentaint test model run .opentaint/test-compiled/my-model \
 
 | Command | Description |
 |---------|-------------|
-| `opentaint test model init <output-dir>` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
-| `opentaint test model run <project-model>` | Run dataflow model tests on a compiled project model |
+| `opentaint test model init <test-project>` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
+| `opentaint test model run <test-project-model>` | Run dataflow model tests on a compiled project model |
 
 Rule and model test runs write `test-result.json` and `test-results.sarif` to the selected output directory.
 
@@ -180,13 +180,15 @@ Rule and model test runs write `test-result.json` and `test-results.sarif` to th
 Compiles Java and Kotlin projects and generates project models for analysis. Useful when you want to separate compilation from scanning or need to inspect the project model.
 
 ```bash
-opentaint compile --output ./my-project-model /path/to/project
-opentaint scan --project-model ./my-project-model
+opentaint compile .
+opentaint scan --project-model .opentaint/project
 ```
+
+The project model goes to `.opentaint/project` in the project unless `--output` says otherwise. The output path must not exist: to compile again, remove the previous project model or choose another `--output`.
 
 | Flag | Description |
 |------|-------------|
-| `--output`, `-o` | Path to the result project model (required) |
+| `--output`, `-o` | Path to the new project model, which must not exist (default: `.opentaint/project` in the project) |
 | `--dry-run` | Validate inputs and show what would run without compiling |
 | `--log-file` | Path to the log file (default: `<cache-dir>/logs/<timestamp>.log`) |
 
@@ -205,11 +207,11 @@ opentaint scan --project-model ./my-project-model \
 
 Pin the versions the target application uses. Those pins are the models' compile environment: they, and nothing about the project under analysis, decide what the models compile against, so a model compiles identically wherever it is applied.
 
-`--dataflow-models` accepts a model project, a build output, or a directory of compiled classes — and a directory holding any of those, so a tree with one project per batch can be passed as a single flag. A directory counts as compiled classes only when nothing below it still needs building; one that holds compiled classes of its own alongside a project is reported rather than guessed at. Paths may overlap, and the same models may be reached twice, but two of them may not offer the same class with different content — which copy an analysis would read is not defined. Projects are built on demand and rebuilt when their sources, their dependency pins, or the compiler change.
+`--dataflow-models` accepts a model project, the compiled models that `opentaint compile models` writes, or a directory holding any of those, so a tree with one project per batch can be passed as a single flag. An empty directory adds no models, so `.opentaint/dataflow` can be passed before it holds any. Compiled classes in any other layout, and a directory with other files and no models, are rejected. The same holds for `--passthrough-models`: an empty directory adds nothing, and a directory with files but no YAML files is rejected. Paths may overlap, and the same models may be reached twice, but two of them may not offer the same class with different content — which copy an analysis would read is not defined. Projects are built on demand and rebuilt when their sources, their dependency pins, or the compiler change.
 
 | Command | Description |
 |---------|-------------|
-| `opentaint model init <output-dir>` | Create a dataflow model project |
+| `opentaint model init <model-project>` | Create a dataflow model project |
 | `opentaint compile models <model-project>` | Compile a dataflow model project |
 
 | Flag | Description |
@@ -288,7 +290,7 @@ To remove all cached models:
 opentaint prune
 ```
 
-When `--output` is not specified, the SARIF report is written next to the cached model at `<model-dir>/sources/opentaint.sarif`.
+When `--output` is not specified, the SARIF report is written to `.opentaint/results/report.sarif` in the project. With `--project-model`, it is written to `<model-dir>/sources/opentaint.sarif`.
 
 ## Global Options
 

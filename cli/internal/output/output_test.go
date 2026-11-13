@@ -2,6 +2,7 @@ package output
 
 import (
 	"bytes"
+	"errors"
 	"regexp"
 	"strings"
 	"testing"
@@ -56,7 +57,7 @@ func TestPrinterErrorNotSuppressedByQuiet(t *testing.T) {
 	p := NewWithWriter(&buf)
 	p.Configure("never", true)
 
-	p.Error("fatal problem")
+	p.Error("fatal problem", nil)
 
 	got := buf.String()
 	if !strings.Contains(got, "fatal problem") {
@@ -237,16 +238,30 @@ func TestSuggest(t *testing.T) {
 	}
 }
 
-func TestSuggestQuietHasLeadingBlankLine(t *testing.T) {
+func TestSuggestQuietSeparatesWithBlankLine(t *testing.T) {
 	var buf bytes.Buffer
 	p := NewWithWriter(&buf)
 	p.Configure("never", true)
 
+	p.Print("Scan completed")
 	p.Suggest("Try this approach", "opentaint scan --output result.sarif /project")
 
 	got := buf.String()
-	if !strings.HasPrefix(got, "\n") {
-		t.Errorf("expected leading blank line in quiet mode, got %q", got)
+	if !strings.HasPrefix(got, "Scan completed\n\n") {
+		t.Errorf("expected a blank line before the suggestions in quiet mode, got %q", got)
+	}
+}
+
+func TestBlankBeforeAnyOutputIsSkipped(t *testing.T) {
+	var buf bytes.Buffer
+	p := NewWithWriter(&buf)
+	p.Configure("never", false)
+
+	p.Blank()
+	p.Print("first")
+	p.Blank()
+	if got, want := buf.String(), "first\n\n"; got != want {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }
 
@@ -257,14 +272,14 @@ func TestSuggestionsRendersMultipleItemsInOneSection(t *testing.T) {
 
 	p.Suggestions(
 		Suggestion{Description: "First hint", Command: "opentaint scan ."},
-		Suggestion{Description: "For full details, check the log file:", Command: "/tmp/run.log"},
+		Suggestion{Description: "To see the full details, open the log:", Command: "/tmp/run.log"},
 	)
 
 	got := buf.String()
 	if n := strings.Count(got, "Suggestions"); n != 1 {
 		t.Errorf("expected exactly one 'Suggestions' header, got %d in %q", n, got)
 	}
-	for _, want := range []string{"First hint", "opentaint scan .", "For full details, check the log file:", "/tmp/run.log"} {
+	for _, want := range []string{"First hint", "opentaint scan .", "To see the full details, open the log:", "/tmp/run.log"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("expected output to contain %q, got %q", want, got)
 		}
@@ -307,8 +322,9 @@ func TestInteractiveBlank(t *testing.T) {
 	}
 
 	p.isTTY = true
+	p.Print("first")
 	p.InteractiveBlank()
-	if buf.String() != "\n" {
+	if buf.String() != "first\n\n" {
 		t.Errorf("expected single blank line for interactive UI, got %q", buf.String())
 	}
 }
@@ -343,5 +359,38 @@ func TestIsInteractiveUIEnabledByDefault(t *testing.T) {
 
 	if !p.IsInteractiveUI() {
 		t.Fatal("expected interactive UI to be enabled in default (non-debug) mode")
+	}
+}
+
+func TestStepWithoutTerminal(t *testing.T) {
+	var buf bytes.Buffer
+	p := NewWithWriter(&buf)
+	p.Configure("never", false)
+	p.Print("header")
+
+	step := p.NewStep("Compiling model projects")
+	step.Start()
+	step.Start()
+	step.Finish(nil)
+	if got, want := buf.String(), "header\n"; got != want {
+		t.Errorf("a finished step without a terminal printed %q, want %q", got, want)
+	}
+
+	p.NewStep("Compiling model projects").Finish(errors.New("failed"))
+	if got, want := buf.String(), "header\n\n"; got != want {
+		t.Errorf("a failed step printed %q, want a blank line before the error: %q", got, want)
+	}
+}
+
+func TestTrimTrailingSpacesKeepsColorCodes(t *testing.T) {
+	for in, want := range map[string]string{
+		"│  ":                        "│",
+		"\x1b[2m│  \x1b[m":           "\x1b[2m│\x1b[m",
+		"\x1b[2m├─ \x1b[mKey: value": "\x1b[2m├─ \x1b[mKey: value",
+		"value":                      "value",
+	} {
+		if got := trimTrailingSpaces(in); got != want {
+			t.Errorf("trimTrailingSpaces(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

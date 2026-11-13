@@ -16,15 +16,46 @@ import (
 // through a Printer instance. It holds the active theme, the output writer,
 // and knows whether it's writing to a TTY.
 type Printer struct {
-	baseW   io.Writer
-	w       io.Writer
-	debugW  io.Writer
-	logW    io.Writer
-	debug   bool
-	theme   *Theme
-	isTTY   bool
-	quiet   bool
-	profile colorprofile.Profile
+	baseW io.Writer
+	// baseErrW receives the errors and the warnings, so that they stay apart from the output
+	// that a user redirects or pipes.
+	baseErrW io.Writer
+	w        io.Writer
+	errW     io.Writer
+	debugW   io.Writer
+	logW     io.Writer
+	debug    bool
+	theme    *Theme
+	isTTY    bool
+	quiet    bool
+	profile  colorprofile.Profile
+	// started reports that the output has begun on any of the writers. A blank line separates
+	// parts of the output, so none is printed before the first part.
+	started bool
+}
+
+// startTracker forwards to its writer and records that the output has begun.
+type startTracker struct {
+	io.Writer
+	started *bool
+}
+
+func (t startTracker) Write(b []byte) (int, error) {
+	if len(b) > 0 {
+		*t.started = true
+	}
+	return t.Writer.Write(b)
+}
+
+// setWriters makes w the writer of the output and errW the writer of the errors and warnings.
+func (p *Printer) setWriters(w, errW io.Writer) {
+	p.w = p.tracked(w)
+	p.errW = p.tracked(errW)
+}
+
+// tracked returns w that records that the output has begun.
+func (p *Printer) tracked(w io.Writer) io.Writer {
+	return startTracker{Writer: w, started: &p.started}
 }
 
 var ansiEscapePattern = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]`)
@@ -35,31 +66,35 @@ func New() *Printer {
 	w := os.Stdout
 	tty := term.IsTerminal(int(w.Fd()))
 	cw := colorprofile.NewWriter(w, os.Environ())
-	return &Printer{
-		baseW:   w,
-		w:       cw,
-		debugW:  colorprofile.NewWriter(os.Stderr, os.Environ()),
-		theme:   DefaultTheme(cw.Profile),
-		isTTY:   tty,
-		profile: cw.Profile,
+	p := &Printer{
+		baseW:    w,
+		baseErrW: os.Stderr,
+		theme:    DefaultTheme(cw.Profile),
+		isTTY:    tty,
+		profile:  cw.Profile,
 	}
+	p.debugW = p.tracked(colorprofile.NewWriter(os.Stderr, os.Environ()))
+	p.setWriters(cw, colorprofile.NewWriter(os.Stderr, os.Environ()))
+	return p
 }
 
-// NewWithWriter creates a Printer that writes to the given writer.
+// NewWithWriter creates a Printer that writes all of its output, the errors too, to w.
 func NewWithWriter(w io.Writer) *Printer {
 	tty := false
 	if f, ok := w.(*os.File); ok {
 		tty = term.IsTerminal(int(f.Fd()))
 	}
 	cw := colorprofile.NewWriter(w, os.Environ())
-	return &Printer{
-		baseW:   w,
-		w:       cw,
-		debugW:  colorprofile.NewWriter(os.Stderr, os.Environ()),
-		theme:   DefaultTheme(cw.Profile),
-		isTTY:   tty,
-		profile: cw.Profile,
+	p := &Printer{
+		baseW:    w,
+		baseErrW: w,
+		theme:    DefaultTheme(cw.Profile),
+		isTTY:    tty,
+		profile:  cw.Profile,
 	}
+	p.debugW = p.tracked(colorprofile.NewWriter(os.Stderr, os.Environ()))
+	p.setWriters(cw, cw)
+	return p
 }
 
 // NewConfigured creates a Printer and applies color/quiet configuration.
@@ -80,18 +115,20 @@ func (p *Printer) Configure(colorMode string, quiet bool) {
 	switch mode {
 	case "never":
 		p.profile = colorprofile.NoTTY
-		p.w = &colorprofile.Writer{Forward: p.baseW, Profile: p.profile}
+		p.setWriters(&colorprofile.Writer{Forward: p.baseW, Profile: p.profile},
+			&colorprofile.Writer{Forward: p.baseErrW, Profile: p.profile})
 		p.theme = PlainTheme()
 		return
 	case "always":
 		p.profile = colorprofile.TrueColor
-		p.w = &colorprofile.Writer{Forward: p.baseW, Profile: p.profile}
+		p.setWriters(&colorprofile.Writer{Forward: p.baseW, Profile: p.profile},
+			&colorprofile.Writer{Forward: p.baseErrW, Profile: p.profile})
 		p.theme = DefaultTheme(p.profile)
 		return
 	default:
 		cw := colorprofile.NewWriter(p.baseW, os.Environ())
 		p.profile = cw.Profile
-		p.w = cw
+		p.setWriters(cw, colorprofile.NewWriter(p.baseErrW, os.Environ()))
 	}
 
 	colored := p.resolveColor(colorMode)
@@ -161,6 +198,9 @@ func (p *Printer) Printf(format string, a ...any) {
 
 // Blank prints an empty line.
 func (p *Printer) Blank() {
+	if !p.started {
+		return
+	}
 	fmt.Fprintln(p.w) //nolint:errcheck
 }
 
@@ -172,52 +212,10 @@ func (p *Printer) InteractiveBlank() {
 	}
 }
 
-// Error prints an error-styled message.
-func (p *Printer) Error(a ...any) {
-	text := fmt.Sprint(a...)
-	fmt.Fprintln(p.w, p.theme.Error.Render(text)) //nolint:errcheck
-}
-
-// ErrorErr prints an error value as a human-friendly, capitalized message.
-func (p *Printer) ErrorErr(err error) {
-	p.Error(Humanize(err))
-}
-
-// FatalErr prints an error value as a human-friendly, capitalized message
-// and terminates the process with exit code 1.
-func (p *Printer) FatalErr(err error) {
-	p.ErrorErr(err)
-	os.Exit(1)
-}
-
-// Warn prints a warning-styled message.
-func (p *Printer) Warn(a ...any) {
-	text := fmt.Sprint(a...)
-	fmt.Fprintln(p.w, p.theme.Warning.Render(text)) //nolint:errcheck
-}
-
-// Warnf prints a formatted warning message.
-func (p *Printer) Warnf(format string, a ...any) {
-	text := fmt.Sprintf(format, a...)
-	fmt.Fprintln(p.w, p.theme.Warning.Render(text)) //nolint:errcheck
-}
-
 // Successf prints a formatted success message.
 func (p *Printer) Successf(format string, a ...any) {
 	text := fmt.Sprintf(format, a...)
 	fmt.Fprintln(p.w, p.theme.Success.Render(text)) //nolint:errcheck
-}
-
-// Fatal prints an error-styled message and terminates the process with exit code 1.
-func (p *Printer) Fatal(a ...any) {
-	p.Error(a...)
-	os.Exit(1)
-}
-
-// Fatalf prints a formatted error-styled message and terminates the process with exit code 1.
-func (p *Printer) Fatalf(format string, a ...any) {
-	p.Error(fmt.Sprintf(format, a...))
-	os.Exit(1)
 }
 
 // resolveColor determines whether colors should be enabled.

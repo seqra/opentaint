@@ -7,6 +7,9 @@ import (
 	"github.com/seqra/opentaint/internal/utils/log"
 )
 
+// logFileUsage describes the --log-file flag of the commands that write a project log by default.
+const logFileUsage = "Path to the log file (default: a timestamped file in ~/.opentaint/logs)"
+
 // activateLogging opens the log file and configures the output printer's log writer.
 // If logFilePath is set, it uses that directly. Otherwise, it writes a timestamped
 // log file into logDir. If both are empty, no log file is opened.
@@ -17,12 +20,12 @@ func activateLogging(logFilePath string, logDir string) {
 	if logFilePath != "" {
 		logPath = log.AbsPathOrExit(logFilePath, "log file")
 		if _, err = log.OpenLogFileAt(logPath); err != nil {
-			out.Fatalf("Failed to open log file: %s", err)
+			out.Fatal("Failed to open the log file", err)
 		}
 	} else if logDir != "" {
 		logPath, err = log.OpenProjectLog(logDir)
 		if err != nil {
-			out.Fatalf("Failed to open project log file: %s", err)
+			out.Fatal("Failed to open the project log file", err)
 		}
 	}
 

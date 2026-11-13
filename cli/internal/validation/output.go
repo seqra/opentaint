@@ -21,12 +21,7 @@ func ValidateProjectModelOutput(outputDir string) (*project.Config, error) {
 		return nil, err
 	}
 
-	config, err := project.LoadConfig(outputDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse generated project model at %s: %w", projectModelFile, err)
-	}
-
-	return config, nil
+	return project.LoadConfig(outputDir)
 }
 
 func ValidateSarifOutput(absSarifPath string) (*sarif.Report, error) {
@@ -35,15 +30,15 @@ func ValidateSarifOutput(absSarifPath string) (*sarif.Report, error) {
 		return nil, err
 	}
 	if info.Size() == 0 {
-		return nil, fmt.Errorf("sarif output file is empty: %s", absSarifPath)
+		return nil, fmt.Errorf("SARIF report `%s` is empty", absSarifPath)
 	}
 
 	report, err := sarif.LoadReport(absSarifPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse sarif output file %s: %w", absSarifPath, err)
+		return nil, fmt.Errorf("failed to parse SARIF report `%s`: %w", absSarifPath, err)
 	}
 	if len(report.Runs) == 0 {
-		return nil, fmt.Errorf("sarif output file has no runs: %s", absSarifPath)
+		return nil, fmt.Errorf("SARIF report `%s` has no runs", absSarifPath)
 	}
 
 	return report, nil
@@ -56,12 +51,12 @@ func ValidateRuleLoadTraceOutput(absSemgrepRuleLoadTracePath string) (*load_trac
 
 	data, err := os.ReadFile(absSemgrepRuleLoadTracePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read rule load trace file %s: %w", absSemgrepRuleLoadTracePath, err)
+		return nil, fmt.Errorf("failed to read rule load trace `%s`: %w", absSemgrepRuleLoadTracePath, err)
 	}
 
 	var trace load_trace.SemgrepLoadTrace
 	if err := json.Unmarshal(data, &trace); err != nil {
-		return nil, fmt.Errorf("failed to parse rule load trace file %s: %w", absSemgrepRuleLoadTracePath, err)
+		return nil, fmt.Errorf("failed to parse rule load trace `%s`: %w", absSemgrepRuleLoadTracePath, err)
 	}
 
 	return &trace, nil

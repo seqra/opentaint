@@ -12,10 +12,6 @@ func ArtifactDisplayVersion(def globals.ArtifactDef) string {
 	return displayVersion(def.Version, def.Override, tier, path, bundledRelease)
 }
 
-func ArtifactVersionWithPath(def globals.ArtifactDef) string {
-	return strings.TrimPrefix(ArtifactDisplayVersion(def), def.Kind()+"/")
-}
-
 func ArtifactVersion(def globals.ArtifactDef) string {
 	tier, _, bundledRelease := artifactResolution(def)
 	if isCustomArtifact(def.Version, def.Override, tier, bundledRelease) {

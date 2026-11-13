@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // ResolveAll returns the class directories for every model path, in the order the paths
@@ -56,11 +57,7 @@ func checkClasspathAgrees(classDirs []string) error {
 				return err
 			}
 			if !same {
-				return fmt.Errorf(
-					"%s is offered with different content by %s and by %s; which one an analysis "+
-						"reads is not defined.\nDrop one of the copies, or pass only one of these "+
-						"model paths",
-					class, previous, dir)
+				return fmt.Errorf("`%s` differs in `%s` and `%s`", class, previous, dir)
 			}
 		}
 	}
@@ -71,30 +68,89 @@ func checkClasspathAgrees(classDirs []string) error {
 // The path can have one of these forms:
 //
 //  1. A model project.
-//  2. A model build output.
-//  3. A compiled class directory.
-//  4. A directory tree that contains these items.
+//  2. A model build output, as `opentaint compile models` writes it.
+//  3. A directory tree that contains these items.
+//
+// Compiled classes in any other layout are rejected: a build output records the project
+// that the models come from, and plain classes do not. A directory with no files holds no
+// models, and Resolve returns none for it, so that a directory kept for models can be passed
+// before it has any. A directory with files and no models is rejected.
 func Resolve(path string, builder Builder) ([]string, error) {
+	return resolve(path, builder)
+}
+
+// Check reports what Resolve would reject in a model path without building anything: a path
+// that does not exist or that holds no models in a form Resolve takes. A model project counts
+// as models here, and whether it compiles is for Resolve to find out. Check names the paths
+// below path as joined to it, so a relative path gives relative names.
+func Check(path string) error {
+	_, err := resolve(path, nil)
+	return err
+}
+
+// resolve does the work of Resolve. Without a builder it builds nothing, and a model project
+// stands for the classes that its build would give.
+func resolve(path string, builder Builder) ([]string, error) {
 	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return nil, fmt.Errorf("`%s` does not exist", path)
+	}
 	if err != nil {
-		return nil, fmt.Errorf("model path does not exist: %w", err)
+		return nil, fmt.Errorf("failed to access `%s`: %w", path, err)
 	}
 	if !info.IsDir() {
-		return nil, fmt.Errorf("model path %s is not a directory", path)
+		return nil, fmt.Errorf("`%s` is not a directory", path)
 	}
 
 	classDirs, err := resolveDir(path, builder)
 	if err != nil {
 		return nil, err
 	}
-	if len(classDirs) == 0 {
-		return nil, emptyPathError(path)
+	if len(classDirs) == 0 && hasFiles(path) {
+		return nil, &ProjectNeededError{Path: path, Reason: NoModels}
 	}
 	return classDirs, nil
 }
 
+// IsEmpty reports whether dir holds no file other than a hidden one or one in a generated
+// directory, as a directory kept for models does before it has any.
+func IsEmpty(dir string) bool {
+	return !hasFiles(dir)
+}
+
+// hasFiles reports whether the tree of dir holds a file other than a hidden one, such as
+// .gitkeep, or one in a generated directory.
+func hasFiles(dir string) bool {
+	found := false
+	_ = filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			// What cannot be read is not known to be empty.
+			found = true
+			return filepath.SkipAll
+		}
+		if path == dir {
+			return nil
+		}
+		if strings.HasPrefix(entry.Name(), ".") || skippedDirs[entry.Name()] {
+			if entry.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !entry.IsDir() {
+			found = true
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	return found
+}
+
 func resolveDir(dir string, builder Builder) ([]string, error) {
 	if IsProject(dir) {
+		if builder == nil {
+			return []string{ClassesDir(BuildDir(dir))}, nil
+		}
 		classes, err := ensureBuilt(dir, builder)
 		if err != nil {
 			return nil, err
@@ -106,24 +162,22 @@ func resolveDir(dir string, builder Builder) ([]string, error) {
 		return []string{ClassesDir(dir)}, nil
 	}
 
-	// A directory is a class directory only when nothing below it still needs building.
-	// Without that condition a tree holding both a project and compiled classes reads as
-	// one class directory, and the project's models never reach the analysis.
-	facts := scanSubtree(dir)
-	if facts.classFiles && !facts.unitSource {
-		return []string{dir}, nil
+	// Classes with no model project or build output below them are plain compiled classes,
+	// which do not record the project that they come from.
+	if facts := scanSubtree(dir); facts.classFiles && !facts.unitSource {
+		return nil, &ProjectNeededError{Path: dir, Reason: PlainClasses}
 	}
 
 	// os.ReadDir returns entries sorted by name, so the answer does not depend on the
 	// order the filesystem happens to hand them back.
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read model directory %s: %w", dir, err)
+		return nil, fmt.Errorf("failed to read model directory `%s`: %w", dir, err)
 	}
 
-	// Descending past classes this directory holds itself would leave them unused.
+	// Classes beside model projects belong to neither.
 	if classFile, found := directClassFile(entries); found {
-		return nil, ambiguousDirError(dir, classFile)
+		return nil, &ProjectNeededError{Path: filepath.Join(dir, classFile), Reason: PlainClasses}
 	}
 
 	var classDirs []string
@@ -140,27 +194,27 @@ func resolveDir(dir string, builder Builder) ([]string, error) {
 	return classDirs, nil
 }
 
-// ambiguousDirError reports a directory that is neither a class directory nor a
-// directory of model paths.
-func ambiguousDirError(dir, classFile string) error {
-	return fmt.Errorf(
-		"%s holds compiled classes of its own (e.g. %s) and a model project or build "+
-			"output below it, so it is neither a class directory nor a directory of them.\n"+
-			"Move the classes into a directory of their own, or pass each model path to "+
-			"--dataflow-models separately",
-		dir, classFile)
+// ProjectNeededReason says why a model path needs a model project.
+type ProjectNeededReason int
+
+const (
+	// NoModels: the path holds no model project or compiled models.
+	NoModels ProjectNeededReason = iota
+	// PlainClasses: the path holds compiled classes that are not a model build output.
+	PlainClasses
+)
+
+// ProjectNeededError reports a model path that holds no model project where one is needed.
+type ProjectNeededError struct {
+	// Path is the model path, or for PlainClasses the directory or class file below it
+	// that holds the classes.
+	Path   string
+	Reason ProjectNeededReason
 }
 
-// emptyPathError reports why a path does not contain usable models.
-func emptyPathError(path string) error {
-	if source, found := firstJavaSource(path); found {
-		return fmt.Errorf(
-			"%s holds model sources (e.g. %s) but no model project: nothing declares "+
-				"the dependencies to compile the models against.\n"+
-				"Create a project per model directory with 'opentaint model init <dir> "+
-				"--dependency <group:artifact:version>' and move its sources under <dir>/src/main/java",
-			path, source,
-		)
+func (e *ProjectNeededError) Error() string {
+	if e.Reason == PlainClasses {
+		return fmt.Sprintf("`%s` is not a model project or compiled models", e.Path)
 	}
-	return fmt.Errorf("%s contains no model project, build output or compiled classes", path)
+	return fmt.Sprintf("`%s` contains no model project or compiled models", e.Path)
 }

@@ -21,10 +21,10 @@ type Filters struct {
 	FingerprintKey string   // partialFingerprints key to match ("" = DefaultFingerprintKey)
 }
 
-// active reports whether any filter dimension is set. FingerprintKey is
+// Active reports whether any filter dimension is set. FingerprintKey is
 // intentionally excluded: it only selects which key Fingerprints matches
 // against, so it has no effect without Fingerprints set.
-func (f Filters) active() bool {
+func (f Filters) Active() bool {
 	return len(f.Paths) > 0 || len(f.Severities) > 0 || len(f.RuleIDs) > 0 || len(f.Fingerprints) > 0
 }
 
@@ -33,7 +33,7 @@ func (f Filters) active() bool {
 // OriginalURIBaseIDS are preserved so "Rules executed" stays the full set. When
 // no dimension is set, the original report is returned unchanged.
 func (report *Report) Filter(f Filters) *Report {
-	if !f.active() {
+	if !f.Active() {
 		return report
 	}
 
@@ -173,5 +173,5 @@ func ValidateSeverity(level string) error {
 	if validSeverities[strings.ToLower(strings.TrimSpace(level))] {
 		return nil
 	}
-	return fmt.Errorf("invalid --severity %q: valid values are error, warning, note, none", level)
+	return fmt.Errorf("invalid --severity value `%s`, use note, warning, error, or none", level)
 }

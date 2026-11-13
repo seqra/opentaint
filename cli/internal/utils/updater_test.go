@@ -209,12 +209,18 @@ func TestSelfUpdate(t *testing.T) {
 	}
 }
 
-func TestUpdateHintNpm(t *testing.T) {
-	got := npmUpdateHint("9.9.9")
-	if !strings.Contains(got, "npm install -g @seqra/opentaint@latest") {
-		t.Errorf("npmUpdateHint() = %q, want it to mention the npm upgrade command", got)
+func TestUpdateHint(t *testing.T) {
+	tests := []struct {
+		method InstallMethod
+		want   string
+	}{
+		{InstallMethodNpm, "A new version is available: v9.9.9. To update, run `npm install -g @seqra/opentaint@latest`"},
+		{InstallMethodHomebrew, "A new version is available: v9.9.9. To update, run `brew upgrade --cask opentaint`"},
+		{InstallMethodUnknown, "A new version is available: v9.9.9. To update, run `opentaint update`"},
 	}
-	if !strings.Contains(got, "9.9.9") {
-		t.Errorf("npmUpdateHint() = %q, want it to mention the version", got)
+	for _, tt := range tests {
+		if got := updateHint("9.9.9", tt.method); got != tt.want {
+			t.Errorf("updateHint(%v) = %q, want %q", tt.method, got, tt.want)
+		}
 	}
 }

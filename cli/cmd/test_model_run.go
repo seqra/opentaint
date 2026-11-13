@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"os"
 	"time"
 
-	"github.com/seqra/opentaint/internal/testmodel"
 	"github.com/spf13/cobra"
 )
 
@@ -17,28 +15,23 @@ var (
 )
 
 var testModelRunCmd = &cobra.Command{
-	Use:   "run <project-model>",
-	Short: "Run dataflow model tests on a compiled project model",
-	Long: `Run the samples specified in rule-test.yaml with the supplied dataflow models applied.
+	Use:   "run <test-project-model>",
+	Short: "Run dataflow model tests on a compiled test project",
+	Long:  "Run dataflow model tests on a compiled test project.\n\nArguments:\n  <test-project-model>  Test project compiled with `opentaint compile`",
+	Example: `  # Test a model project
+  opentaint test model run .opentaint/test-compiled/my-model \
+    --dataflow-models .opentaint/dataflow
 
-A built-in source-to-sink harness rule is applied automatically; positive samples reference the
-model-rule.yaml rule with id "model-rule".
-
-` + testExitCodesHelp("All model tests passed"),
+  # Test pass-through models
+  opentaint test model run .opentaint/test-compiled/my-model \
+    --passthrough-models .opentaint/pass-through`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		ruleDir, err := os.MkdirTemp("", "opentaint-model-rule-*")
-		if err != nil {
-			out.Fatalf("Failed to create temp dir for harness rule: %s", err)
-		}
-		if _, err := testmodel.WriteFixedRule(ruleDir); err != nil {
-			out.Fatalf("Failed to materialize harness rule: %s", err)
-		}
-
 		runTestProject(args[0], testProjectOptions{
 			label:             "Model tests",
+			kind:              "model",
 			tempDir:           "opentaint-test-models-*",
-			rulesets:          []string{ruleDir},
+			harnessRule:       true,
 			outputDir:         testModelOutputDir,
 			timeout:           testModelTimeout,
 			maxMemory:         testModelMaxMemory,
@@ -51,5 +44,5 @@ model-rule.yaml rule with id "model-rule".
 func init() {
 	testModelCmd.AddCommand(testModelRunCmd)
 	addTestRunFlags(testModelRunCmd, &testModelOutputDir, &testModelTimeout, &testModelMaxMemory, &testModelDataflow, &testModelPassthrough)
-	testApproximationCmd.AddCommand(deprecatedCommand(testModelRunCmd, "run", "opentaint test model run"))
+	testApproximationCmd.AddCommand(deprecatedCommand(testModelRunCmd, "opentaint test approximation run", "opentaint test model run"))
 }

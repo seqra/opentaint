@@ -139,10 +139,16 @@ func processRunning(pid int) bool {
 }
 
 func build(projectDir, outputDir string, inputs stamp, builder Builder) error {
-	if err := checkOutputDir(outputDir); err != nil {
+	if err := CheckOutputDir(outputDir); err != nil {
 		return err
 	}
 	sweepStaging(outputDir)
+
+	// Fail before the compile step, which would succeed on a project without models.
+	sourcesDir := filepath.Join(projectDir, "src", "main", "java")
+	if _, found := firstJavaSource(sourcesDir); !found {
+		return fmt.Errorf("no models in `%s`", sourcesDir)
+	}
 
 	buildTempDir, err := os.MkdirTemp("", "opentaint-model-build-*")
 	if err != nil {
@@ -172,7 +178,7 @@ func build(projectDir, outputDir string, inputs stamp, builder Builder) error {
 		return err
 	}
 	if !containsClassFiles(ClassesDir(staging)) {
-		return fmt.Errorf("model project %s compiled to no classes; it has no models under src/main/java", projectDir)
+		return fmt.Errorf("model project `%s` compiled to no classes", projectDir)
 	}
 
 	if err := writeDescriptor(staging, descriptor{
@@ -194,17 +200,18 @@ func build(projectDir, outputDir string, inputs stamp, builder Builder) error {
 	return nil
 }
 
-// checkOutputDir prevents replacement of an unrelated directory.
-func checkOutputDir(outputDir string) error {
+// CheckOutputDir prevents replacement of an unrelated directory: outputDir must be missing, empty,
+// or hold compiled models. The errors name outputDir as it is given.
+func CheckOutputDir(outputDir string) error {
 	info, err := os.Stat(outputDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
-		return fmt.Errorf("failed to access output directory %s: %w", outputDir, err)
+		return fmt.Errorf("failed to access `%s`: %w", outputDir, err)
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("output path %s is not a directory", outputDir)
+		return fmt.Errorf("`%s` is not a directory", outputDir)
 	}
 	if isBuiltOutput(outputDir) {
 		return nil
@@ -215,9 +222,7 @@ func checkOutputDir(outputDir string) error {
 		return err
 	}
 	if !empty {
-		return fmt.Errorf(
-			"output directory %s already exists and is not a model build output; "+
-				"remove it or choose another --output path", outputDir)
+		return fmt.Errorf("`%s` already exists and is not compiled models", outputDir)
 	}
 	return nil
 }
@@ -309,10 +314,8 @@ func copyTree(srcDir, destDir string) error {
 			return os.MkdirAll(target, 0o755)
 		}
 		if _, err := os.Stat(target); err == nil {
-			return fmt.Errorf(
-				"two model modules produce %s; a model class maps to exactly one target class",
-				filepath.ToSlash(rel),
-			)
+			return fmt.Errorf("two model modules produce `%s`: %w",
+				filepath.ToSlash(rel), errors.New("a model class maps to exactly one target class"))
 		}
 		return utils.CopyFile(path, target)
 	})

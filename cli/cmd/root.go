@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -34,8 +35,8 @@ var updateHintCh = make(chan string, 1)
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:           "opentaint",
-	Short:         "OpenTaint Analyzer",
-	Long:          `OpenTaint is a CLI tool that analyzes Java and Kotlin projects to find vulnerabilities`,
+	Short:         "Find vulnerabilities in Java and Kotlin projects",
+	Long:          "OpenTaint is a taint analysis engine for Java and Kotlin projects.\n\nQuick start:\n  # Scan the project in the current directory\n  opentaint scan . -o .opentaint/results/report.sarif\n\n  # List the findings\n  opentaint summary .opentaint/results/report.sarif --show-findings",
 	SilenceErrors: true,
 	SilenceUsage:  true,
 
@@ -48,9 +49,17 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("failed to set up logging: %w", err)
 		}
 
+		switch strings.ToLower(strings.TrimSpace(globals.Config.Output.Color)) {
+		case "", "auto", "always", "never":
+		default:
+			return fmt.Errorf("invalid --color value `%s`, use auto, always, or never", globals.Config.Output.Color)
+		}
+
 		// Configure the output printer.
 		out.Configure(globals.Config.Output.Color, globals.Config.Output.Quiet)
 		out.SetDebug(globals.Config.Output.Debug)
+		warnRenamedCommand(cmd)
+		warnRenamedFlags(cmd)
 
 		// Reconcile install-tier version marker if needed (lightweight: a few Stat calls).
 		utils.ReconcileInstallMarker()
@@ -86,16 +95,38 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	err := rootCmd.Execute()
+	requireKnownSubcommands(rootCmd)
+	cmd, err := rootCmd.ExecuteC()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %s\n", output.Humanize(err))
-		fmt.Fprintln(os.Stderr, "Run 'opentaint --help' for usage.")
+		fmt.Fprint(os.Stderr, output.FormatError(err))
+		var unknown *unknownCommandError
+		if errors.As(err, &unknown) {
+			if commands := unknown.suggestions(); len(commands) > 0 {
+				fmt.Fprintf(os.Stderr, "Did you mean %s?\n", joinOr(commands))
+			}
+		}
+		fmt.Fprintf(os.Stderr, "Run `%s --help` for usage\n", usageCommandPath(cmd))
 		os.Exit(1)
 	}
 }
 
+// usageCommandPath is the command whose help explains a usage error of cmd: the new command for
+// an alias of a renamed command. The commands report the errors of a run themselves, so the
+// errors that reach Execute are errors of usage.
+func usageCommandPath(cmd *cobra.Command) string {
+	if newPath := cmd.Annotations[renamedTo]; newPath != "" {
+		return newPath
+	}
+	return cmd.CommandPath()
+}
+
+// helpFlagUsage describes --help. Cobra adds its own --help, "help for <command>", only to a
+// command that has none, so the persistent --help of the root replaces it in every command.
+const helpFlagUsage = "Show help message"
+
 func init() {
 	configureExperimentalFlagVisibility()
+	configureHelpWrap()
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
@@ -105,52 +136,53 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&experimentalMode, experimentalFlagName, false, "Show experimental and hidden flags")
 	_ = rootCmd.PersistentFlags().MarkHidden(experimentalFlagName)
 
+	rootCmd.PersistentFlags().BoolP("help", "h", false, helpFlagUsage)
 	rootCmd.Flags().BoolVarP(&toolVersion, "version", "v", false, "Print the version information")
 
-	rootCmd.PersistentFlags().BoolVarP(&globals.Config.Output.Debug, "debug", "d", false, "Enable debug output (stream JAR subprocess output, show debug-only fields)")
+	rootCmd.PersistentFlags().BoolVarP(&globals.Config.Output.Debug, "debug", "d", false, "Show debug output")
 	_ = viper.BindPFlag("output.debug", rootCmd.PersistentFlags().Lookup("debug"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Output.Color, "color", "auto", "Color mode (auto, always, never)")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Output.Color, "color", "auto", "Color mode: auto, always, or never")
 	_ = viper.BindPFlag("output.color", rootCmd.PersistentFlags().Lookup("color"))
 
-	rootCmd.PersistentFlags().BoolVarP(&globals.Config.Output.Quiet, "quiet", "q", false, "Suppress interactive UI elements (spinners, progress bars) and JAR streaming")
+	rootCmd.PersistentFlags().BoolVarP(&globals.Config.Output.Quiet, "quiet", "q", false, "Hide spinners and progress bars, and do not stream the analyzer output")
 	_ = viper.BindPFlag("output.quiet", rootCmd.PersistentFlags().Lookup("quiet"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Analyzer.Version, "analyzer-version", globals.AnalyzerBindVersion, "Version of opentaint analyzer")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Analyzer.Version, "analyzer-version", globals.AnalyzerBindVersion, "Analyzer version to use")
 	_ = rootCmd.PersistentFlags().MarkHidden("analyzer-version")
 	_ = viper.BindPFlag("analyzer.version", rootCmd.PersistentFlags().Lookup("analyzer-version"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Autobuilder.Version, "autobuilder-version", globals.AutobuilderBindVersion, "Version of opentaint autobuilder")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Autobuilder.Version, "autobuilder-version", globals.AutobuilderBindVersion, "Autobuilder version to use")
 	_ = rootCmd.PersistentFlags().MarkHidden("autobuilder-version")
 	_ = viper.BindPFlag("autobuilder.version", rootCmd.PersistentFlags().Lookup("autobuilder-version"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Rules.Version, "rules-version", globals.RulesBindVersion, "Version of opentaint rules")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Rules.Version, "rules-version", globals.RulesBindVersion, "Built-in ruleset version to use")
 	_ = rootCmd.PersistentFlags().MarkHidden("rules-version")
 	_ = viper.BindPFlag("rules.version", rootCmd.PersistentFlags().Lookup("rules-version"))
 
-	rootCmd.PersistentFlags().IntVar(&globals.Config.Java.Version, "java-version", globals.DefaultJavaVersion, "Java version to use for running analyzer")
+	rootCmd.PersistentFlags().IntVar(&globals.Config.Java.Version, "java-version", globals.DefaultJavaVersion, "Java version to compile projects with when no system Java is found")
 	_ = viper.BindPFlag("java.version", rootCmd.PersistentFlags().Lookup("java-version"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Github.Token, "github-token", "", "Token for docker image pull from ghcr.io")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Github.Token, "github-token", "", "GitHub token for downloading releases")
 	_ = rootCmd.PersistentFlags().MarkHidden("github-token")
 	_ = viper.BindPFlag("github.token", rootCmd.PersistentFlags().Lookup("github-token"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Owner, "owner", globals.RepoOwner, "Organization owner for GitHub repositories")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Owner, "owner", globals.RepoOwner, "Owner of the GitHub repository to download releases from")
 	_ = rootCmd.PersistentFlags().MarkHidden("owner")
 	_ = viper.BindPFlag("owner", rootCmd.PersistentFlags().Lookup("owner"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Repo, "repo", globals.RepoName, "GitHub repository name")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Repo, "repo", globals.RepoName, "GitHub repository to download releases from")
 	_ = rootCmd.PersistentFlags().MarkHidden("repo")
 	_ = viper.BindPFlag("repo", rootCmd.PersistentFlags().Lookup("repo"))
 
 	rootCmd.PersistentFlags().BoolVar(&globals.Config.SkipVerify, "skip-verify", false, "Skip SHA256 checksum verification of downloaded artifacts")
 	_ = viper.BindPFlag("skip-verify", rootCmd.PersistentFlags().Lookup("skip-verify"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Analyzer.JarPath, "analyzer-jar", "", "Path to analyzer JAR (dev override, skips download)")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Analyzer.JarPath, "analyzer-jar", "", "Path to a local analyzer JAR to use instead of downloading one")
 	_ = rootCmd.PersistentFlags().MarkHidden("analyzer-jar")
 	_ = viper.BindPFlag("analyzer.jar_path", rootCmd.PersistentFlags().Lookup("analyzer-jar"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.Autobuilder.JarPath, "autobuilder-jar", "", "Path to autobuilder JAR (dev override, skips download)")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.Autobuilder.JarPath, "autobuilder-jar", "", "Path to a local autobuilder JAR to use instead of downloading one")
 	_ = rootCmd.PersistentFlags().MarkHidden("autobuilder-jar")
 	_ = viper.BindPFlag("autobuilder.jar_path", rootCmd.PersistentFlags().Lookup("autobuilder-jar"))
 }
@@ -213,7 +245,7 @@ func addConfigFields(cmd *cobra.Command, sb *output.SectionBuilder) {
 				sb.Field("Config file", viper.ConfigFileUsed())
 			}
 			if globals.LogPath != "" {
-				sb.Field("Log file", globals.LogPath)
+				sb.Field("Log", globals.LogPath)
 			}
 		}
 	}
@@ -225,6 +257,7 @@ func configureExperimentalFlagVisibility() {
 
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		applyExperimentalFlagVisibility(cmd.Root(), experimentalMode)
+		warnRenamedCommand(cmd)
 		defaultHelpFunc(cmd, args)
 	})
 	rootCmd.SetUsageFunc(func(cmd *cobra.Command) error {
@@ -261,7 +294,9 @@ func setFlagSetHidden(flags *pflag.FlagSet, hidden bool) {
 	}
 
 	flags.VisitAll(func(flag *pflag.Flag) {
-		flag.Hidden = hidden
+		if !isRenamedFlag(flag) {
+			flag.Hidden = hidden
+		}
 	})
 }
 

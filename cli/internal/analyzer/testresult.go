@@ -7,8 +7,32 @@ import (
 )
 
 type TestSampleInfo struct {
-	ClassName  string `json:"className"`
-	MethodName string `json:"methodName"`
+	ClassName  string       `json:"className"`
+	MethodName string       `json:"methodName"`
+	Rule       TestRuleInfo `json:"rule"`
+}
+
+// TestRuleInfo is the rule that a test sample checks.
+type TestRuleInfo struct {
+	RulePath string `json:"rulePath"`
+	RuleID   string `json:"ruleId"`
+}
+
+// ID returns the rule ID in the form that --rule-id takes: <rule-path>:<rule-id>, or the rule path
+// alone when the test names no rule in the file.
+func (r TestRuleInfo) ID() string {
+	if r.RuleID == "" {
+		return r.RulePath
+	}
+	return r.RulePath + ":" + r.RuleID
+}
+
+// Name returns the sample as class#method, or as the class alone when the sample names no method.
+func (s TestSampleInfo) Name() string {
+	if s.MethodName == "" {
+		return s.ClassName
+	}
+	return s.ClassName + "#" + s.MethodName
 }
 
 type TestResult struct {
