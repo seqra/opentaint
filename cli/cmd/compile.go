@@ -45,7 +45,7 @@ func dockerCompileSuggestion() output.Suggestion {
 var compileCmd = &cobra.Command{
 	Use:   "compile <source-path>",
 	Short: "Compile a Java or Kotlin project into a project model",
-	Long:  "Compile a Java or Kotlin project into a project model. Use it to scan one build more than once or to compile a test project.\n\nArguments:\n  <source-path>  Project root",
+	Long:  "Compile a Java or Kotlin project into a project model.\n\nArguments:\n  <source-path>  Project root",
 	Example: `  # Compile the project in the current directory
   opentaint compile .
 

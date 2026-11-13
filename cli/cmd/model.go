@@ -19,7 +19,7 @@ var modelCmd = &cobra.Command{
 var modelInitCmd = &cobra.Command{
 	Use:   "init <model-project>",
 	Short: "Create a dataflow model project",
-	Long:  "Create a dataflow model project. Use it when the analyzer loses taint in a library method that it cannot see into.\n\nArguments:\n  <model-project>  Directory of the new model project",
+	Long:  "Create a dataflow model project.\n\nArguments:\n  <model-project>  Directory of the new model project",
 	Example: `  # Create a model project for the Jackson version that the app uses
   opentaint model init .opentaint/dataflow \
     --dependency com.fasterxml.jackson.core:jackson-databind:2.17.2`,
