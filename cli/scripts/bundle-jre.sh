@@ -35,7 +35,8 @@ download_jre() {
 }
 
 inject_jre_tar_gz() {
-    local archive="$1"
+    local archive
+    archive="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
     local jre_archive="$2"
     local tmp_dir
 
@@ -64,7 +65,9 @@ inject_jre_tar_gz() {
     rm -rf "$jre_tmp"
 
     echo "  Recompressing archive..."
-    tar -czf "$archive" -C "$tmp_dir" .
+    # Pack the entries, not ".": tar gives a "./" entry the mode of the temporary
+    # directory (0700) and sets that mode on the directory the user unpacks into.
+    (cd "$tmp_dir" && shopt -s dotglob && tar -czf "$archive" -- *)
 }
 
 inject_jre_zip() {
