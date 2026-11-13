@@ -7,31 +7,52 @@ import (
 	"strings"
 )
 
-// ResolveAll returns the class directories for every model path, in the order the paths
-// were given. A directory reached more than once contributes once, and the directories
-// must agree about every class they share: which copy an analysis reads is not defined, so
-// two different copies of one class would leave the result of the scan unpinned.
-func ResolveAll(paths []string, builder Builder) ([]string, error) {
-	var classDirs []string
-	resolved := make(map[string]bool)
+// Models are the dataflow models in the model paths, grouped by the way the analyzer loads them.
+type Models struct {
+	// JavaClassDirs are the class directories of the Java models.
+	JavaClassDirs []string
+	// GoModelDirs are the Go model modules.
+	GoModelDirs []string
+}
+
+// add adds the models of other that m does not hold yet.
+func (m *Models) add(other Models, seen map[string]bool) {
+	for _, dir := range other.JavaClassDirs {
+		if dir = filepath.Clean(dir); !seen[dir] {
+			seen[dir] = true
+			m.JavaClassDirs = append(m.JavaClassDirs, dir)
+		}
+	}
+	for _, dir := range other.GoModelDirs {
+		if dir = filepath.Clean(dir); !seen[dir] {
+			seen[dir] = true
+			m.GoModelDirs = append(m.GoModelDirs, dir)
+		}
+	}
+}
+
+func (m *Models) empty() bool {
+	return len(m.JavaClassDirs) == 0 && len(m.GoModelDirs) == 0
+}
+
+// ResolveAll returns the models in every model path, in the order the paths were given. A
+// directory reached more than once contributes once, and the Java class directories must agree
+// about every class they share: which copy an analysis reads is not defined, so two different
+// copies of one class would leave the result of the scan unpinned.
+func ResolveAll(paths []string, builder Builder) (*Models, error) {
+	var all Models
+	seen := make(map[string]bool)
 	for _, path := range paths {
-		dirs, err := Resolve(path, builder)
+		found, err := Resolve(path, builder)
 		if err != nil {
 			return nil, err
 		}
-		for _, dir := range dirs {
-			dir = filepath.Clean(dir)
-			if resolved[dir] {
-				continue
-			}
-			resolved[dir] = true
-			classDirs = append(classDirs, dir)
-		}
+		all.add(*found, seen)
 	}
-	if err := checkClasspathAgrees(classDirs); err != nil {
+	if err := checkClasspathAgrees(all.JavaClassDirs); err != nil {
 		return nil, err
 	}
-	return classDirs, nil
+	return &all, nil
 }
 
 // checkClasspathAgrees rejects class directories that offer one class with different
@@ -64,18 +85,18 @@ func checkClasspathAgrees(classDirs []string) error {
 	return nil
 }
 
-// Resolve returns the class directories for one model path.
-// The path can have one of these forms:
+// Resolve returns the models in one model path. The path can have one of these forms:
 //
-//  1. A model project.
-//  2. A model build output, as `opentaint compile models` writes it.
-//  3. A directory tree that contains these items.
+//  1. A Java model project.
+//  2. A Java model build output, as `opentaint compile models` writes it.
+//  3. A Go model module: a Go module with the module path opentaint.
+//  4. A directory tree that contains these items.
 //
 // Compiled classes in any other layout are rejected: a build output records the project
 // that the models come from, and plain classes do not. A directory with no files holds no
 // models, and Resolve returns none for it, so that a directory kept for models can be passed
 // before it has any. A directory with files and no models is rejected.
-func Resolve(path string, builder Builder) ([]string, error) {
+func Resolve(path string, builder Builder) (*Models, error) {
 	return resolve(path, builder)
 }
 
@@ -90,7 +111,7 @@ func Check(path string) error {
 
 // resolve does the work of Resolve. Without a builder it builds nothing, and a model project
 // stands for the classes that its build would give.
-func resolve(path string, builder Builder) ([]string, error) {
+func resolve(path string, builder Builder) (*Models, error) {
 	info, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		return nil, fmt.Errorf("`%s` does not exist", path)
@@ -102,14 +123,14 @@ func resolve(path string, builder Builder) ([]string, error) {
 		return nil, fmt.Errorf("`%s` is not a directory", path)
 	}
 
-	classDirs, err := resolveDir(path, builder)
-	if err != nil {
+	var found Models
+	if err := resolveDir(path, builder, &found); err != nil {
 		return nil, err
 	}
-	if len(classDirs) == 0 && hasFiles(path) {
+	if found.empty() && hasFiles(path) {
 		return nil, &ProjectNeededError{Path: path, Reason: NoModels}
 	}
-	return classDirs, nil
+	return &found, nil
 }
 
 // IsEmpty reports whether dir holds no file other than a hidden one or one in a generated
@@ -146,52 +167,60 @@ func hasFiles(dir string) bool {
 	return found
 }
 
-func resolveDir(dir string, builder Builder) ([]string, error) {
+func resolveDir(dir string, builder Builder, found *Models) error {
 	if IsProject(dir) {
 		if builder == nil {
-			return []string{ClassesDir(BuildDir(dir))}, nil
+			found.JavaClassDirs = append(found.JavaClassDirs, ClassesDir(BuildDir(dir)))
+			return nil
 		}
 		classes, err := ensureBuilt(dir, builder)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		return []string{classes}, nil
+		found.JavaClassDirs = append(found.JavaClassDirs, classes)
+		return nil
 	}
 
 	if isBuiltOutput(dir) {
-		return []string{ClassesDir(dir)}, nil
+		found.JavaClassDirs = append(found.JavaClassDirs, ClassesDir(dir))
+		return nil
+	}
+
+	if IsGoProject(dir) {
+		if err := checkGoModelModule(dir); err != nil {
+			return err
+		}
+		found.GoModelDirs = append(found.GoModelDirs, dir)
+		return nil
 	}
 
 	// Classes with no model project or build output below them are plain compiled classes,
 	// which do not record the project that they come from.
 	if facts := scanSubtree(dir); facts.classFiles && !facts.unitSource {
-		return nil, &ProjectNeededError{Path: dir, Reason: PlainClasses}
+		return &ProjectNeededError{Path: dir, Reason: PlainClasses}
 	}
 
 	// os.ReadDir returns entries sorted by name, so the answer does not depend on the
 	// order the filesystem happens to hand them back.
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read model directory `%s`: %w", dir, err)
+		return fmt.Errorf("failed to read model directory `%s`: %w", dir, err)
 	}
 
 	// Classes beside model projects belong to neither.
 	if classFile, found := directClassFile(entries); found {
-		return nil, &ProjectNeededError{Path: filepath.Join(dir, classFile), Reason: PlainClasses}
+		return &ProjectNeededError{Path: filepath.Join(dir, classFile), Reason: PlainClasses}
 	}
 
-	var classDirs []string
 	for _, entry := range entries {
 		if !entry.IsDir() || skippedDirs[entry.Name()] {
 			continue
 		}
-		nested, err := resolveDir(filepath.Join(dir, entry.Name()), builder)
-		if err != nil {
-			return nil, err
+		if err := resolveDir(filepath.Join(dir, entry.Name()), builder, found); err != nil {
+			return err
 		}
-		classDirs = append(classDirs, nested...)
 	}
-	return classDirs, nil
+	return nil
 }
 
 // ProjectNeededReason says why a model path needs a model project.

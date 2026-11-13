@@ -44,8 +44,8 @@ func dockerCompileSuggestion() output.Suggestion {
 // compileCmd represents the compile command
 var compileCmd = &cobra.Command{
 	Use:   "compile <source-path>",
-	Short: "Compile a Java or Kotlin project into a project model",
-	Long:  "Compile a Java or Kotlin project into a project model.\n\nArguments:\n  <source-path>  Project root",
+	Short: "Compile a Java, Kotlin, or Go project into a project model",
+	Long:  "Compile a Java, Kotlin, or Go project into a project model.\n\nArguments:\n  <source-path>  Project root",
 	Example: `  # Compile the project in the current directory
   opentaint compile .
 
@@ -84,7 +84,7 @@ var compileCmd = &cobra.Command{
 		}
 		sb.FieldNode("Project", absProjectRoot).
 			FieldNode("Project model", absOutputProjectModelPath).
-			FieldGroup("Autobuilder", componentItems(resolveJarComponent("autobuilder"), false)...).
+			FieldGroup("Autobuilder", componentItems(resolveArtifactComponent("autobuilder"), false)...).
 			Render()
 
 		if err := validation.ValidateCompileInputs(projectRoot, outputProjectModelPath); err != nil {

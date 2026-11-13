@@ -35,8 +35,8 @@ var updateHintCh = make(chan string, 1)
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:           "opentaint",
-	Short:         "Find vulnerabilities in Java and Kotlin projects",
-	Long:          "OpenTaint is a taint analysis engine for Java and Kotlin projects.\n\nQuick start:\n  # Scan the project in the current directory\n  opentaint scan . -o .opentaint/results/report.sarif\n\n  # List the findings\n  opentaint summary .opentaint/results/report.sarif --show-findings",
+	Short:         "Find vulnerabilities in Java, Kotlin, and Go projects",
+	Long:          "OpenTaint is a taint analysis engine for Java, Kotlin, and Go projects.\n\nQuick start:\n  # Scan the project in the current directory\n  opentaint scan . -o .opentaint/results/report.sarif\n\n  # List the findings\n  opentaint summary .opentaint/results/report.sarif --show-findings",
 	SilenceErrors: true,
 	SilenceUsage:  true,
 
@@ -159,6 +159,14 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&globals.Config.Rules.Version, "rules-version", globals.RulesBindVersion, "Built-in ruleset version to use")
 	_ = rootCmd.PersistentFlags().MarkHidden("rules-version")
 	_ = viper.BindPFlag("rules.version", rootCmd.PersistentFlags().Lookup("rules-version"))
+
+	rootCmd.PersistentFlags().StringVar(&globals.Config.GoServer.Version, "go-server-version", globals.GoServerBindVersion, "The go-ssa-server version to download")
+	_ = rootCmd.PersistentFlags().MarkHidden("go-server-version")
+	_ = viper.BindPFlag("go-server.version", rootCmd.PersistentFlags().Lookup("go-server-version"))
+
+	rootCmd.PersistentFlags().StringVar(&globals.Config.GoServer.Binary, "go-server-binary", "", "Path to a go-ssa-server binary (developer override, no download)")
+	_ = rootCmd.PersistentFlags().MarkHidden("go-server-binary")
+	_ = viper.BindPFlag("go-server.binary", rootCmd.PersistentFlags().Lookup("go-server-binary"))
 
 	rootCmd.PersistentFlags().IntVar(&globals.Config.Java.Version, "java-version", globals.DefaultJavaVersion, "Java version to compile projects with when no system Java is found")
 	_ = viper.BindPFlag("java.version", rootCmd.PersistentFlags().Lookup("java-version"))

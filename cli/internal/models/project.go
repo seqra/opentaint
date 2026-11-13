@@ -24,6 +24,7 @@ const (
 
 	stampFileName   = "stamp.json"
 	gradleBuildFile = "build.gradle.kts"
+	goModuleFile    = "go.mod"
 )
 
 // opentaintDirName contains the local build output.
@@ -41,6 +42,11 @@ var skippedDirs = map[string]bool{
 // IsProject reports whether dir is a model project root.
 func IsProject(dir string) bool {
 	return isFile(filepath.Join(dir, gradleBuildFile))
+}
+
+// IsGoProject reports whether dir is a Go module root.
+func IsGoProject(dir string) bool {
+	return isFile(filepath.Join(dir, goModuleFile))
 }
 
 // isBuiltOutput reports whether dir contains a model build.
@@ -112,7 +118,7 @@ func scanSubtree(dir string) subtreeFacts {
 		switch {
 		case isClassFileName(entry.Name()):
 			facts.classFiles = true
-		case entry.Name() == gradleBuildFile:
+		case entry.Name() == gradleBuildFile, entry.Name() == goModuleFile:
 			facts.unitSource = true
 		case entry.Name() == descriptorName && isDir(filepath.Join(filepath.Dir(path), classesDirName)):
 			facts.unitSource = true
