@@ -1,4 +1,8 @@
-# Non-empty MAY: proposal and checked fragment
+# Non-empty MAY: earlier proposal and checked fragment
+
+Superseded by the [complete specification](non-empty-may.md). The material
+below records the earlier partial design and its unresolved choices, which
+the complete specification now resolves.
 
 13 November 2026. Partial design; not an implementation contract.
 Production source is unchanged. Follow [proof-guide.md](proof-guide.md).
