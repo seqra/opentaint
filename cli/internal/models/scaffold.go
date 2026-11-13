@@ -35,14 +35,6 @@ func ScaffoldGo(projectDir string, dependencies []string) error {
 	return testproject.BootstrapGo(projectDir, goModelModulePath, dependencies)
 }
 
-func currentGoVersion() string {
-	return testproject.GoVersion()
-}
-
-func goModule(dependencies []string, goVersion string) ([]byte, error) {
-	return testproject.GoModule(goModelModulePath, dependencies, goVersion)
-}
-
 // ExtractApiJar reads the model API jar from the analyzer jar.
 func ExtractApiJar(analyzerJarPath string) ([]byte, error) {
 	reader, err := zip.OpenReader(analyzerJarPath)

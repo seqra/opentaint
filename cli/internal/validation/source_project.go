@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 )
 
@@ -191,9 +190,4 @@ func ValidateSourceProjectForCompile(absProjectRoot string) error {
 // within maxMarkerSearchDepth of absProjectRoot. A directory that cannot be read has none.
 func DetectLanguages(absProjectRoot string) []string {
 	return detectLanguages(absProjectRoot)
-}
-
-// IsGoProject reports whether DetectLanguages finds Go under absProjectRoot.
-func IsGoProject(absProjectRoot string) bool {
-	return slices.Contains(detectLanguages(absProjectRoot), "Go")
 }

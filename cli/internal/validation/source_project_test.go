@@ -301,52 +301,6 @@ func TestValidateSourceProjectForCompile_IgnoresProjectYaml(t *testing.T) {
 	}
 }
 
-// --- IsGoProject ---
-
-func TestIsGoProject_GoMod(t *testing.T) {
-	dir := t.TempDir()
-	createFile(t, filepath.Join(dir, "go.mod"))
-
-	if !IsGoProject(dir) {
-		t.Errorf("IsGoProject() = false, want true for dir containing go.mod")
-	}
-}
-
-func TestIsGoProject_JavaKotlinMarkersOnly(t *testing.T) {
-	dir := t.TempDir()
-	createFile(t, filepath.Join(dir, "pom.xml"))
-
-	if IsGoProject(dir) {
-		t.Errorf("IsGoProject() = true, want false for dir with only Java/Kotlin markers (pom.xml)")
-	}
-}
-
-func TestIsGoProject_EmptyDir(t *testing.T) {
-	dir := t.TempDir()
-
-	if IsGoProject(dir) {
-		t.Errorf("IsGoProject() = true, want false for empty dir")
-	}
-}
-
-func TestIsGoProject_NonExistentPath(t *testing.T) {
-	missing := filepath.Join(t.TempDir(), "does-not-exist")
-
-	if IsGoProject(missing) {
-		t.Errorf("IsGoProject() = true, want false for non-existent path")
-	}
-}
-
-func TestIsGoProject_NestedGoMod(t *testing.T) {
-	// One level down is within maxMarkerSearchDepth.
-	dir := t.TempDir()
-	createFile(t, filepath.Join(dir, "service", "go.mod"))
-
-	if !IsGoProject(dir) {
-		t.Errorf("IsGoProject() = false, want true for nested go.mod one level down")
-	}
-}
-
 // --- DetectLanguages (exported) ---
 
 func TestDetectLanguages_PolyglotGoAndJava(t *testing.T) {

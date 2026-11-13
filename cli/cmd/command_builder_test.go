@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
-
-	"github.com/spf13/cobra"
 )
 
 func TestHasNestedKey(t *testing.T) {
@@ -87,14 +85,6 @@ func TestAnalyzerBuilderReportsItsLogsFile(t *testing.T) {
 
 	if filepath.Base(b.LogsFile()) != "analyzer.log" || !containsFlagPair(cmd, "--logs-file", b.LogsFile()) {
 		t.Fatalf("LogsFile() = %q, command was %v", b.LogsFile(), cmd)
-	}
-}
-
-func TestGoModelsFlagIsGone(t *testing.T) {
-	for _, command := range []*cobra.Command{scanCmd, testRuleRunCmd, testModelRunCmd} {
-		if command.Flags().Lookup("go-models") != nil {
-			t.Errorf("%s still exposes --go-models", command.CommandPath())
-		}
 	}
 }
 

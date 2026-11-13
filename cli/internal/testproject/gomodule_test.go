@@ -42,6 +42,20 @@ func TestBootstrapGoRejectsMavenCoordinate(t *testing.T) {
 	}
 }
 
+func TestGoModuleRejectsUnpinnedDependency(t *testing.T) {
+	_, err := GoModule("test", []string{"github.com/acme/library"}, "1.25.0")
+	if err == nil || !strings.Contains(err.Error(), "module@version") {
+		t.Fatalf("GoModule error = %v, want module@version guidance", err)
+	}
+}
+
+func TestGoModuleRejectsInvalidMajorVersion(t *testing.T) {
+	_, err := GoModule("test", []string{"example.com/library/v2@v1.0.0"}, "1.25.0")
+	if err == nil || !strings.Contains(err.Error(), "should be v2") {
+		t.Fatalf("GoModule error = %v, want major-version error", err)
+	}
+}
+
 func TestTidyGo(t *testing.T) {
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skip("no Go toolchain")
