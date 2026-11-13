@@ -23,7 +23,8 @@ echo "go-ssa-server version: $GO_SERVER_TAG"
 PLATFORMS=(linux_amd64 linux_arm64 darwin_amd64 darwin_arm64 windows_amd64 windows_arm64)
 
 inject_tar_gz() {
-    local archive="$1"
+    local archive
+    archive="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
     local binary="$2"
     local tmp_dir
 
@@ -39,7 +40,9 @@ inject_tar_gz() {
     chmod 0755 "$tmp_dir/lib/$(basename "$binary")"
 
     echo "  Recompressing archive..."
-    tar -czf "$archive" -C "$tmp_dir" .
+    # Pack the entries, not ".": tar gives a "./" entry the mode of the temporary
+    # directory (0700) and sets that mode on the directory the user unpacks into.
+    (cd "$tmp_dir" && shopt -s dotglob && tar -czf "$archive" -- *)
 }
 
 inject_zip() {
