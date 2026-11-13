@@ -747,7 +747,7 @@ func setupSemgrepRuleLoadTrace(traceDir string) string {
 
 // EnsureGoServerAvailable returns the absolute path of the go-ssa-server
 // binary. If the binary is absent, the function downloads the asset for this
-// platform and, on unix, makes the file executable.
+// platform. On unix, it sets the executable bits when none is set.
 //
 // The release tag is the configured go-server version ("go-server/<ver>",
 // default globals.GoServerBindVersion). The asset is the platform-specific
@@ -800,11 +800,8 @@ func EnsureGoServerAvailable() (string, error) {
 		return "", err
 	}
 
-	// The go-ssa-server is a single native binary and must be executable to run.
-	if runtime.GOOS != "windows" {
-		if err := os.Chmod(goServerPath, 0o755); err != nil {
-			return "", fmt.Errorf("failed to mark go-ssa-server executable at %s: %w", goServerPath, err)
-		}
+	if err := ensureExecutable(goServerPath); err != nil {
+		return "", err
 	}
 
 	absPath, err := filepath.Abs(goServerPath)
@@ -813,6 +810,25 @@ func EnsureGoServerAvailable() (string, error) {
 	}
 
 	return absPath, nil
+}
+
+// ensureExecutable sets the executable bits of the go-ssa-server binary only when none is
+// set. A release that root installed has an executable binary that the user cannot chmod.
+func ensureExecutable(path string) error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("failed to check go-ssa-server at %s: %w", path, err)
+	}
+	if info.Mode()&0o111 != 0 {
+		return nil
+	}
+	if err := os.Chmod(path, info.Mode().Perm()|0o755); err != nil {
+		return fmt.Errorf("failed to mark go-ssa-server executable at %s: %w", path, err)
+	}
+	return nil
 }
 
 // goServerRequired reports whether the analyzer needs the go-ssa-server for

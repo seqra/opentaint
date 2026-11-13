@@ -110,10 +110,9 @@ func downloadArtifact(spec globals.ArtifactDef, installNextToBinary, installCurr
 		if err := download(t.Path); err != nil {
 			return node, err
 		}
-		// go-ssa-server is a single native binary and must be executable on unix.
-		if spec.Kind() == "goserver" && runtime.GOOS != "windows" {
-			if err := os.Chmod(t.Path, 0o755); err != nil {
-				return node, fmt.Errorf("failed to mark %s executable: %w", spec.Kind(), err)
+		if spec.Kind() == "goserver" {
+			if err := ensureExecutable(t.Path); err != nil {
+				return node, err
 			}
 		}
 		node.Child(fmt.Sprintf("Downloaded to %s", t.Path))
