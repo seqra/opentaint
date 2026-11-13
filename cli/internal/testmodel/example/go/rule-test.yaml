@@ -1,0 +1,7 @@
+# Samples are entry-point functions given as test.<function>, for example test.Positive
+# A positive sample passes taint from taint.Source() to taint.Sink() through the modeled function
+# A negative sample does not
+tests:
+  - rule-id: model-rule.yaml#model-rule
+    positive: []
+    negative: []

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/seqra/opentaint/internal/models"
 	"github.com/seqra/opentaint/internal/output"
@@ -33,10 +32,7 @@ var modelInitCmd = &cobra.Command{
     --dependency github.com/gin-gonic/gin@v1.10.0`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		language := strings.ToLower(strings.TrimSpace(initModelLanguage))
-		if language != "java" && language != "go" {
-			out.Fatalf("Invalid --language value `%s`, use java or go", initModelLanguage)
-		}
+		language := parseLanguage(initModelLanguage)
 		projectPath := log.AbsPathOrExit(args[0], "model-project")
 
 		var existing bool
@@ -90,7 +86,7 @@ func init() {
 	modelCmd.AddCommand(modelInitCmd)
 
 	modelInitCmd.Flags().StringArrayVar(&initModelDeps, "dependency", nil,
-		"Library that the models refer to: group:artifact:version for Java, module@version for Go (repeatable)")
+		"Library that the models refer to: group:artifact:version or module@version (repeatable)")
 	modelInitCmd.Flags().StringVar(&initModelLanguage, "language", "", "Language of the models: java or go (required)")
 	_ = modelInitCmd.MarkFlagRequired("language")
 

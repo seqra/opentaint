@@ -64,8 +64,8 @@ func TestTidyGo(t *testing.T) {
 	broken := t.TempDir()
 	writeGoFile(t, filepath.Join(broken, "go.mod"), "modul test\n")
 	err = TidyGo(broken)
-	if err == nil || !strings.Contains(err.Error(), "unknown directive") || !strings.Contains(err.Error(), broken) {
-		t.Errorf("error = %v, want the go command output and the directory", err)
+	if err == nil || !strings.Contains(err.Error(), "`go mod tidy` failed") || !strings.Contains(err.Error(), "unknown directive") {
+		t.Errorf("error = %v, want the command and its output", err)
 	}
 }
 
@@ -86,9 +86,9 @@ func TestBuildGo(t *testing.T) {
 
 	writeGoFile(t, filepath.Join(dir, "broken.go"), "package main\n\nfunc broken() { undefinedCall() }\n")
 	err := BuildGo(dir)
-	if err == nil || !strings.Contains(err.Error(), "'go build ./...' failed in "+dir) ||
+	if err == nil || !strings.Contains(err.Error(), "`go build ./...` failed") ||
 		!strings.Contains(err.Error(), "undefined: undefinedCall") {
-		t.Errorf("error = %v, want the compile error and the directory", err)
+		t.Errorf("error = %v, want the command and the compile error", err)
 	}
 }
 
@@ -96,5 +96,21 @@ func writeGoFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestLanguage(t *testing.T) {
+	java := t.TempDir()
+	if err := Bootstrap(java, "p", nil); err != nil {
+		t.Fatal(err)
+	}
+	goDir := t.TempDir()
+	if err := BootstrapGo(goDir, "test", nil); err != nil {
+		t.Fatal(err)
+	}
+	for dir, want := range map[string]string{java: "java", goDir: "go", t.TempDir(): ""} {
+		if got := Language(dir); got != want {
+			t.Errorf("Language(%s) = %q, want %q", dir, got, want)
+		}
 	}
 }

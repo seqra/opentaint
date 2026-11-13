@@ -857,20 +857,14 @@ func resolveGoServerEnv() map[string]string {
 	return map[string]string{"GOIR_SERVER_BINARY": goServerPath}
 }
 
-// goServerEnvForModel does goServerRequired and then resolveGoServerEnv for
-// a compiled project model. It reads the source root that the model recorded.
-// It returns the go-ssa-server env when the model needs it, and nil when not.
-// The result goes directly to newAnalyzerJavaRunner, where WithExtraEnv(nil)
-// does nothing.
-func goServerEnvForModel(projectModelPath string) map[string]string {
+// goServerRequiredForModel does goServerRequired for a compiled project model. It reads the
+// source root that the model recorded.
+func goServerRequiredForModel(projectModelPath string) bool {
 	sourceRoot, err := project.GetSourceRoot(projectModelPath)
 	if err != nil {
 		out.Fatalf("Failed to parse sourceRoot from project.yaml: %v", err)
 	}
-	if !goServerRequired(sourceRoot) {
-		return nil
-	}
-	return resolveGoServerEnv()
+	return goServerRequired(sourceRoot)
 }
 
 func scanProject(analyzerBuilder *AnalyzerBuilder, javaRunner java.JavaRunner) (*java.JavaCommandError, error) {
