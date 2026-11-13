@@ -31,8 +31,8 @@ var healthCmd = &cobra.Command{
 	Short: "Show the installed components and their paths",
 	Long:  "Show the installed components and their paths.",
 	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return runHealth()
+	Run: func(cmd *cobra.Command, args []string) {
+		runHealth()
 	},
 }
 
@@ -44,7 +44,7 @@ func init() {
 	healthCmd.Flags().BoolVar(&healthRuntime, "runtime", false, "Print only the Java runtime path")
 }
 
-func runHealth() error {
+func runHealth() {
 	var requested []string
 	if healthAutobuilder {
 		requested = append(requested, "autobuilder")
@@ -74,11 +74,11 @@ func runHealth() error {
 		}
 		if !c.present {
 			if c.path == "" {
-				return fmt.Errorf("%s could not be resolved", c.name)
+				out.Fatalf("%s could not be resolved", c.name)
 			}
-			return fmt.Errorf("%s missing at %s", c.name, c.path)
+			out.Fatalf("%s missing at %s", c.name, c.path)
 		}
-		return nil
+		return
 	}
 
 	sb := out.Section("OpenTaint Health")
@@ -91,10 +91,11 @@ func runHealth() error {
 	}
 	sb.Render()
 	if len(missing) > 0 {
+		out.Blank()
+		out.Errorf("Missing components: %s", strings.Join(missing, ", "))
 		out.Suggest("To download the missing components, run:", "opentaint pull")
-		return fmt.Errorf("missing components: %s", strings.Join(missing, ", "))
+		os.Exit(1)
 	}
-	return nil
 }
 
 // componentItems are the items of a component in a block: its version and its path. A component

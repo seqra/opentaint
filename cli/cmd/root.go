@@ -94,12 +94,22 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	err := rootCmd.Execute()
+	cmd, err := rootCmd.ExecuteC()
 	if err != nil {
 		fmt.Fprint(os.Stderr, output.FormatError(err))
-		fmt.Fprintln(os.Stderr, "Run `opentaint --help` for usage.")
+		fmt.Fprintf(os.Stderr, "Run `%s --help` for usage.\n", usageCommandPath(cmd))
 		os.Exit(1)
 	}
+}
+
+// usageCommandPath is the command whose help explains a usage error of cmd: the new command for
+// an alias of a renamed command. The commands report the errors of a run themselves, so the
+// errors that reach Execute are errors of usage.
+func usageCommandPath(cmd *cobra.Command) string {
+	if newPath := cmd.Annotations[renamedTo]; newPath != "" {
+		return newPath
+	}
+	return cmd.CommandPath()
 }
 
 // helpFlagUsage describes --help. Cobra adds its own --help, "help for <command>", only to a
