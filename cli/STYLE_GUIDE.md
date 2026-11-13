@@ -116,6 +116,9 @@ steps go in the output.
     the new build file has only the libraries from --dependency
   ```
 
+- A usage error, such as an unknown flag or command, ends with ``Run `<command> --help` for
+  usage``, the help of the command that the user ran. A mistyped command comes with
+  ``Did you mean `<command>`?`` before it
 - A renamed command or flag stays as a hidden alias. Using it warns:
   ``Warning: `opentaint compile approximations` is now `opentaint compile models` ``,
   `Warning: --dataflow-approximations is now --dataflow-models`

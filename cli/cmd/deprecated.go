@@ -54,6 +54,19 @@ func deprecatedGroup(group *cobra.Command, oldPath, newPath string) *cobra.Comma
 		Short:       group.Short,
 		Hidden:      true,
 		Annotations: map[string]string{renamedTo: newPath},
+		// Cobra checks the arguments before the run hooks, which warn. An unknown subcommand
+		// comes with the warning too.
+		Args: func(c *cobra.Command, args []string) error {
+			err := knownSubcommand(c, args)
+			if err != nil {
+				warnRenamedCommand(c)
+			}
+			return err
+		},
+		// The run hooks have warned already.
+		Run: func(c *cobra.Command, args []string) {
+			_ = group.Help()
+		},
 	}
 	alias.SetHelpFunc(func(c *cobra.Command, args []string) {
 		if c != alias {
