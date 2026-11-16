@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"os"
@@ -40,6 +41,7 @@ type ScanConfig struct {
 	Recompile                 bool
 	LogFile                   string
 	RuleID                    []string
+	RuleIDName                string // the name of RuleID in messages, --rule-id when empty
 	ExcludeRuleID             []string
 	ErrorOnFindings           bool
 	ErrorOnSeverity           []string
@@ -50,7 +52,6 @@ type ScanConfig struct {
 
 	DebugFactReachabilitySarif            bool
 	DebugRunAnalysisOnSelectedEntryPoints string
-	ExpandRuleRefs                        bool
 }
 
 var scanFlags ScanConfig
@@ -143,7 +144,7 @@ func addEntryPointsFlag(cmd *cobra.Command) {
 }
 
 func addRuleIDFlag(cmd *cobra.Command) {
-	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Run only the rule with this ID (repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Run only the rule with this ID: full ID, leaf name, or glob (repeatable)")
 	cmd.Flags().StringArrayVar(&scanFlags.ExcludeRuleID, "exclude-rule-id", nil, "Skip the rule with this ID: full ID, leaf name, or glob (repeatable)")
 }
 
@@ -194,50 +195,66 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 }
 
 // resolveRuleIDs turns the rule selection into exact rule IDs for the analyzer. --rule-id replaces
-// rules.only, and --exclude-rule-id replaces rules.exclude. The zero value runs every rule.
+// rules.only and rules.exclude, and --exclude-rule-id replaces rules.exclude. The zero value runs
+// every rule.
 func resolveRuleIDs(cfg ScanConfig, absRuleSetPaths []RulesetType) rules.Resolved {
+	selection := ruleSelection(cfg)
+	if !selection.Active() {
+		return rules.Resolved{}
+	}
 	var rulesetRoots []string
 	for _, r := range absRuleSetPaths {
 		rulesetRoots = append(rulesetRoots, r.Path)
 	}
 
-	if len(cfg.RuleID) > 0 {
-		ids, err := rules.ApplyExclusions(cfg.RuleID, cfg.ExcludeRuleID)
-		if err != nil {
-			out.Blank()
-			out.Fatal("No rules to run", err)
-		}
-		warnUnmatchedRulePatterns(rules.Selection{Exclude: cfg.ExcludeRuleID}, cfg.RuleID, "no --rule-id value matches it")
-		if cfg.ExpandRuleRefs {
-			ids = rules.ExpandRuleIDs(ids, rulesetRoots)
-		}
-		return rules.Resolved{Include: ids}
+	all := rules.ListRuleIDs(rulesetRoots)
+	for _, pattern := range selection.Unmatched(all) {
+		out.Blank()
+		out.WarnDetails(fmt.Sprintf("Ignored the rule ID `%s`", pattern), "no rule in the ruleset matches it")
 	}
-
-	selection := configuredRuleSelection(cfg)
 	selected, err := rules.Select(selection, rulesetRoots)
+	if errors.Is(err, rules.ErrNoRules) {
+		err = noRulesCause(cfg, selection, all)
+	}
 	if err != nil {
 		out.Blank()
 		out.Fatal("No rules to run", err)
 	}
-	if selection.Active() {
-		warnUnmatchedRulePatterns(selection, rules.ListRuleIDs(rulesetRoots), "no rule in the ruleset matches it")
-	}
 	return selected
 }
 
-// warnUnmatchedRulePatterns warns about the rule IDs that match none of all, usually typos. cause
-// says what they were matched against.
-func warnUnmatchedRulePatterns(selection rules.Selection, all []string, cause string) {
-	for _, pattern := range selection.Unmatched(all) {
-		out.Blank()
-		out.WarnDetails(fmt.Sprintf("Ignored the rule ID `%s`", pattern), cause)
+// noRulesCause says why the rule selection leaves no rule, in the names of the flags or the config
+// keys that the user set.
+func noRulesCause(cfg ScanConfig, selection rules.Selection, all []string) error {
+	only, exclude := "rules.only", "rules.exclude"
+	if len(cfg.RuleID) > 0 {
+		only = cmp.Or(cfg.RuleIDName, "--rule-id")
+	}
+	if len(cfg.ExcludeRuleID) > 0 {
+		exclude = "--exclude-rule-id"
+	}
+	switch {
+	case len(selection.Only) == 0:
+		return fmt.Errorf("%s excludes every rule", exclude)
+	case len(rules.Selection{Only: selection.Only}.Unmatched(all)) == len(selection.Only):
+		return fmt.Errorf("no rule matches %s", only)
+	default:
+		return fmt.Errorf("%s excludes every rule that %s selects", exclude, only)
 	}
 }
 
 // ruleSelectionActive reports whether the flags or the config select rules.
 func ruleSelectionActive(cfg ScanConfig) bool {
-	return len(cfg.RuleID) > 0 || len(cfg.ExcludeRuleID) > 0 || configuredRuleSelection(cfg).Active()
+	return ruleSelection(cfg).Active()
+}
+
+// ruleSelection returns the rules that --rule-id and --exclude-rule-id select, or rules.only and
+// rules.exclude from the config in place of the flags that are not set.
+func ruleSelection(cfg ScanConfig) rules.Selection {
+	if len(cfg.RuleID) > 0 {
+		return rules.Selection{Only: cfg.RuleID, Exclude: cfg.ExcludeRuleID}
+	}
+	return configuredRuleSelection(cfg)
 }
 
 // configuredRuleSelection returns rules.only and rules.exclude from the config, with

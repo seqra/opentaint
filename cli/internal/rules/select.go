@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -73,6 +74,9 @@ type Resolved struct {
 	Exclude []string
 }
 
+// ErrNoRules is the error of Select when the selection leaves no rule.
+var ErrNoRules = errors.New("the selection leaves no rule")
+
 // Select resolves selection against the rules under roots. Without rules.only it returns only the
 // excluded IDs. With rules.only it returns the included IDs plus the library rules they join, so
 // that excluding a library rule does not break the rules that use it.
@@ -98,7 +102,7 @@ func Select(selection Selection, roots []string) (Resolved, error) {
 		kept = append(kept, id)
 	}
 	if len(kept) == 0 {
-		return Resolved{}, fmt.Errorf("rules.only and rules.exclude leave no rule")
+		return Resolved{}, ErrNoRules
 	}
 
 	if len(selection.Only) == 0 {
@@ -126,23 +130,6 @@ func dottedRuleID(id string) string {
 	}
 	parts := strings.Split(path, "/")
 	return strings.Join(append(parts[:len(parts)-1], name), ".")
-}
-
-// ApplyExclusions removes the IDs that match patterns. It fails when none is left.
-func ApplyExclusions(ids, patterns []string) ([]string, error) {
-	if len(patterns) == 0 {
-		return ids, nil
-	}
-	var kept []string
-	for _, id := range ids {
-		if !matchesAny(id, patterns) {
-			kept = append(kept, id)
-		}
-	}
-	if len(ids) > 0 && len(kept) == 0 {
-		return nil, fmt.Errorf("--exclude-rule-id excludes every --rule-id")
-	}
-	return kept, nil
 }
 
 // Unmatched returns the patterns, rules.only first, that match no ID in all.

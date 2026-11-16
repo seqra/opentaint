@@ -24,9 +24,6 @@ func TestReachabilityScanConfigAppliesPresets(t *testing.T) {
 	if !cfg.DebugFactReachabilitySarif {
 		t.Error("DebugFactReachabilitySarif = false, want true")
 	}
-	if !cfg.ExpandRuleRefs {
-		t.Error("ExpandRuleRefs = false, want true")
-	}
 	if cfg.DebugRunAnalysisOnSelectedEntryPoints != "com.example.A#m" {
 		t.Errorf("entry points = %q, want com.example.A#m", cfg.DebugRunAnalysisOnSelectedEntryPoints)
 	}

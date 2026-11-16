@@ -30,8 +30,8 @@ var testRuleReachabilityCmd = &cobra.Command{
 
 func reachabilityScanConfig(base ScanConfig, ruleID, entryPoint string) ScanConfig {
 	base.RuleID = []string{ruleID}
+	base.RuleIDName = "<rule-id>"
 	base.DebugFactReachabilitySarif = true
-	base.ExpandRuleRefs = true
 	if entryPoint != "" {
 		base.DebugRunAnalysisOnSelectedEntryPoints = entryPoint
 	}
