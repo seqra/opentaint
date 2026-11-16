@@ -193,7 +193,7 @@ func printInitResult(existing bool, project, dir string) {
 }
 
 const (
-	testDependencyUsage = "Library: group:artifact:version or module@version (repeatable)"
+	testDependencyUsage = "Library that the samples call, as group:artifact:version or module@version (repeatable)"
 	testLanguageUsage   = "Language of the samples: java or go (required)"
 )
 

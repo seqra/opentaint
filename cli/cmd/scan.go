@@ -269,17 +269,10 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	localVersion := utils.ArtifactDisplayVersion(globals.ArtifactByKind("analyzer"))
 	localSemanticVersion := version.GetVersion()
 
-	var sourceRoot string
-	if !plan.needsCompilation {
-		if parsedSourceRoot, err := project.GetSourceRoot(absProjectModelPath); err != nil {
-			out.Fatal("Failed to read the source root of the project model", err)
-		} else {
-			sourceRoot = parsedSourceRoot
-		}
-	} else {
-		sourceRoot = absUserProjectRoot
+	sourceRoot, err := sarifSourceRoot(cfg.ProjectModelPath != "", absUserProjectRoot, absProjectModelPath)
+	if err != nil {
+		out.Fatal("Failed to read the source root of the project model", err)
 	}
-
 	uriBase := fmt.Sprintf("%s%s", sourceRoot, string(filepath.Separator))
 
 	ruleLoadTraceDir, err := utils.GetProjectLogPath(absUserProjectRoot)
@@ -317,6 +310,12 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		}
 	}
 
+	// Check for `go` before the long steps and in a dry run. The project model decides again before
+	// the analyzer, as the autobuilder can find a go.mod deeper than scanHasGo does.
+	if hasGo {
+		requireGoToolchain()
+	}
+
 	if cfg.DryRun {
 		out.Blank()
 		skipped := "the scan"
@@ -333,12 +332,6 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 			hasBuiltin = true
 			break
 		}
-	}
-
-	// Check for `go` before the long compile. The project model decides later whether the scan
-	// needs it, as the autobuilder can find a go.mod deeper than this search.
-	if plan.needsCompilation && hasGo {
-		requireGoToolchain()
 	}
 
 	if hasBuiltin {
@@ -681,6 +674,16 @@ func resolveScanPlan(cfg ScanConfig, absUserProjectRoot string) scanPlan {
 		needsCompilation: true,
 		cacheLock:        cacheLock,
 	}
+}
+
+// sarifSourceRoot is the directory that the paths in the SARIF report are relative to. A scan of
+// sources uses the project of the user, also with a project model from the cache, so that a
+// rescan reports the paths that the first scan did. A scan of a project model uses its source root.
+func sarifSourceRoot(scansModel bool, absUserProjectRoot, absProjectModelPath string) (string, error) {
+	if !scansModel {
+		return absUserProjectRoot, nil
+	}
+	return project.GetSourceRoot(absProjectModelPath)
 }
 
 // scanHasGo reports whether the project has Go code: by the Go projects of the project model, or,

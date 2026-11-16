@@ -147,3 +147,22 @@ func TestGoServerEnvPointsAtTheGoServer(t *testing.T) {
 		t.Errorf("GOIR_SERVER_BINARY = %q, want %q", got, bin)
 	}
 }
+
+// A rescan of sources reports the paths that the first scan did, though the model comes from the
+// cache; a scan of a project model uses the source root of the model.
+func TestSarifSourceRoot(t *testing.T) {
+	userRoot := t.TempDir()
+	model := t.TempDir()
+	if err := os.WriteFile(filepath.Join(model, "project.yaml"), []byte("goProjects:\n- projectDir: go_0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := sarifSourceRoot(false, userRoot, model)
+	if err != nil || got != userRoot {
+		t.Errorf("source scan: sarifSourceRoot() = %q, %v, want %q", got, err, userRoot)
+	}
+	got, err = sarifSourceRoot(true, userRoot, model)
+	if err != nil || got != filepath.Join(model, "go_0") {
+		t.Errorf("model scan: sarifSourceRoot() = %q, %v, want %q", got, err, filepath.Join(model, "go_0"))
+	}
+}

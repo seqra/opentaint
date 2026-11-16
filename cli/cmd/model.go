@@ -89,7 +89,7 @@ func init() {
 	modelCmd.AddCommand(modelInitCmd)
 
 	modelInitCmd.Flags().StringArrayVar(&initModelDeps, "dependency", nil,
-		"Library: group:artifact:version or module@version (repeatable)")
+		"Library that the models refer to, as group:artifact:version or module@version (repeatable)")
 	modelInitCmd.Flags().StringVar(&initModelLanguage, "language", "", "Language of the models: java or go (required)")
 	_ = modelInitCmd.MarkFlagRequired("language")
 
