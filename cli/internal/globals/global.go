@@ -84,10 +84,8 @@ type Autobuilder struct {
 
 type Rules struct {
 	Version string `mapstructure:"version"`
-	// Only and Exclude control which rules the analyzer runs. They are rule
-	// selection, not suppression: an excluded rule never loads, so it produces
-	// nothing in the report. Entries match a full "path.yaml:id", a bare rule
-	// name, or a glob over either.
+	// Only and Exclude select the rules that the analyzer runs: full ID, leaf name, or glob over the
+	// full ID.
 	Only    []string `mapstructure:"only"`
 	Exclude []string `mapstructure:"exclude"`
 }

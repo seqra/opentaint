@@ -90,9 +90,6 @@ var scanCmd = &cobra.Command{
   # Scan a large project with more memory and time
   opentaint scan . --max-memory 16G --timeout 20m
 
-  # Exit with code 2 when the scan finds an error
-  opentaint scan . --error-on-findings --error-on-severity error
-
   # Add your own rules and dataflow models to the built-in ones
   opentaint scan . --ruleset builtin --ruleset .opentaint/rules \
     --dataflow-models .opentaint/dataflow`,
@@ -133,6 +130,7 @@ func init() {
 	rootCmd.AddCommand(scanCmd)
 	addScanFlags(scanCmd)
 	addRuleIDFlag(scanCmd)
+	addGateFlags(scanCmd)
 	addEntryPointsFlag(scanCmd)
 }
 
@@ -146,11 +144,10 @@ func addEntryPointsFlag(cmd *cobra.Command) {
 
 func addRuleIDFlag(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Run only the rule with this ID (repeatable)")
-	cmd.Flags().StringArrayVar(&scanFlags.ExcludeRuleID, "exclude-rule-id", nil, "Never run rules matching this ID: full id, bare name, or glob over the full id (repeatable, overrides rules.exclude from the config)")
+	cmd.Flags().StringArrayVar(&scanFlags.ExcludeRuleID, "exclude-rule-id", nil, "Skip the rule with this ID: full ID, leaf name, or glob (repeatable)")
 }
 
 func addScanFlags(cmd *cobra.Command) {
-	addGateFlags(cmd, &scanFlags.ErrorOnFindings, &scanFlags.ErrorOnSeverity)
 	cmd.Flags().DurationVarP(&globals.Config.Scan.Timeout, "timeout", "t", 900*time.Second, "Analysis timeout (e.g. 30m, 1h)")
 
 	cmd.Flags().StringArrayVar(&scanFlags.Ruleset, "ruleset", []string{"builtin"}, "Rules file or directory, or builtin for the built-in ruleset (repeatable)")
@@ -196,15 +193,8 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 	return b
 }
 
-// resolveRuleIDs determines which rules the analyzer should run, as exact
-// inclusion and exclusion ids (patterns never reach the analyzer).
-//
-// --rule-id wins over the config lists, as flags do everywhere else. Honoring
-// a flag and rules.only together would silently intersect two selections the
-// user never asked to combine. --exclude-rule-id overrides rules.exclude the
-// same way, and composes with --rule-id since both were asked for explicitly.
-// Returns the zero value when nothing restricts the rules, which runs the
-// whole ruleset.
+// resolveRuleIDs turns the rule selection into exact rule IDs for the analyzer. --rule-id replaces
+// rules.only, and --exclude-rule-id replaces rules.exclude. The zero value runs every rule.
 func resolveRuleIDs(cfg ScanConfig, absRuleSetPaths []RulesetType) rules.Resolved {
 	var rulesetRoots []string
 	for _, r := range absRuleSetPaths {
@@ -212,13 +202,12 @@ func resolveRuleIDs(cfg ScanConfig, absRuleSetPaths []RulesetType) rules.Resolve
 	}
 
 	if len(cfg.RuleID) > 0 {
-		// The explicit list is small, so exclusions are subtracted right here
-		// and the analyzer sees only the survivors.
 		ids, err := rules.ApplyExclusions(cfg.RuleID, cfg.ExcludeRuleID)
 		if err != nil {
-			out.Fatalf("%s", err)
+			out.Blank()
+			out.Fatal("No rules to run", err)
 		}
-		warnUnmatchedRulePatterns(rules.Selection{Exclude: cfg.ExcludeRuleID}, cfg.RuleID)
+		warnUnmatchedRulePatterns(rules.Selection{Exclude: cfg.ExcludeRuleID}, cfg.RuleID, "no --rule-id value matches it")
 		if cfg.ExpandRuleRefs {
 			ids = rules.ExpandRuleIDs(ids, rulesetRoots)
 		}
@@ -228,33 +217,31 @@ func resolveRuleIDs(cfg ScanConfig, absRuleSetPaths []RulesetType) rules.Resolve
 	selection := configuredRuleSelection(cfg)
 	selected, err := rules.Select(selection, rulesetRoots)
 	if err != nil {
-		out.Fatalf("%s", err)
+		out.Blank()
+		out.Fatal("No rules to run", err)
 	}
 	if selection.Active() {
-		warnUnmatchedRulePatterns(selection, rules.ListRuleIDs(rulesetRoots))
+		warnUnmatchedRulePatterns(selection, rules.ListRuleIDs(rulesetRoots), "no rule in the ruleset matches it")
 	}
 	return selected
 }
 
-// warnUnmatchedRulePatterns surfaces selection patterns that matched no rule.
-// A pattern matching nothing is usually a typo, and staying silent would make
-// an exclusion look effective when it never was.
-func warnUnmatchedRulePatterns(selection rules.Selection, all []string) {
+// warnUnmatchedRulePatterns warns about the rule IDs that match none of all, usually typos. cause
+// says what they were matched against.
+func warnUnmatchedRulePatterns(selection rules.Selection, all []string, cause string) {
 	for _, pattern := range selection.Unmatched(all) {
-		out.Warnf("Rule pattern %q matches no rule in the active ruleset", pattern)
+		out.Blank()
+		out.WarnDetails(fmt.Sprintf("Ignored the rule ID `%s`", pattern), cause)
 	}
 }
 
-// configuredRuleSelection merges the rules.only / rules.exclude lists from the
-// configuration file with the --exclude-rule-id flag, which overrides the
-// configured exclude list when set.
-// ruleSelectionActive reports whether any rule allow/deny input is in play —
-// the flags or the config lists. Only then does rule resolution read the
-// ruleset from disk.
+// ruleSelectionActive reports whether the flags or the config select rules.
 func ruleSelectionActive(cfg ScanConfig) bool {
 	return len(cfg.RuleID) > 0 || len(cfg.ExcludeRuleID) > 0 || configuredRuleSelection(cfg).Active()
 }
 
+// configuredRuleSelection returns rules.only and rules.exclude from the config, with
+// --exclude-rule-id in place of rules.exclude when set.
 func configuredRuleSelection(cfg ScanConfig) rules.Selection {
 	selection := rules.Selection{
 		Only:    globals.Config.Rules.Only,
@@ -281,8 +268,9 @@ func dockerScanSuggestion(cfg ScanConfig, projectRoot, sarifReportPath string) o
 func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	gateSeverities, err := triage.ParseGateSeverities(cfg.ErrorOnSeverity)
 	if err != nil {
-		out.Fatalf("%s", err)
+		out.FatalErr(err)
 	}
+	gate := triage.Gate{Enabled: cfg.ErrorOnFindings || len(gateSeverities) > 0, Severities: gateSeverities}
 	userProjectPath := filepath.Clean(cfg.UserProjectPath)
 	absUserProjectRoot := log.AbsPathOrExit(userProjectPath, "project path")
 
@@ -412,7 +400,8 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 
 	if hasBuiltin && ruleSelectionActive(cfg) {
 		if _, err := utils.EnsureRulesPath(out); err != nil {
-			out.Fatal("Failed to prepare the built-in rules", err)
+			out.Blank()
+			out.Fatal("Failed to prepare the built-in ruleset", err)
 		}
 	}
 	resolvedRules := resolveRuleIDs(cfg, absRuleSetPaths)
@@ -599,6 +588,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 
 	var suggestions []output.Suggestion
+	gateFailed := false
 	if analyzerFail != nil {
 		suggestions = appendLogSuggestion(suggestions)
 		if analyzerLog, ok := analyzerLogSuggestion(analyzerFail, nativeBuilder.LogsFile()); ok {
@@ -633,7 +623,12 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		case sarif.GenerateSummary(report).TotalFindings > 0:
 			if analyzerFail == nil {
 				out.Blank()
-				out.Successf("Scan completed")
+				if count, tripped := gate.Evaluate(report); tripped {
+					gateFailed = true
+					out.Errorf("%s", gateMessage(count, gateSeverities))
+				} else {
+					out.Successf("Scan completed")
+				}
 			}
 			suggestions = append(suggestions, output.Suggestion{
 				Description: "To view the findings, run:",
@@ -655,8 +650,8 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	if analyzerFail != nil {
 		os.Exit(analyzerFail.ExitCode)
 	}
-	if report != nil {
-		exitOnGate(triage.Gate{Enabled: cfg.ErrorOnFindings, Severities: gateSeverities}, report)
+	if gateFailed {
+		os.Exit(ExitFindings)
 	}
 }
 
@@ -962,23 +957,23 @@ func scanProject(analyzerBuilder *AnalyzerBuilder, javaRunner java.JavaRunner) (
 	return javaRunner.ExecuteJavaCommand(analyzerCommand, commandSucceeded)
 }
 
+// ExitFindings is the exit code of a scan that --error-on-findings or --error-on-severity fails.
 const ExitFindings = 2
 
-func addGateFlags(cmd *cobra.Command, errorOnFindings *bool, severities *[]string) {
-	cmd.Flags().BoolVar(errorOnFindings, "error-on-findings", false, "Exit with code 2 when findings remain")
-	cmd.Flags().StringArrayVar(severities, "error-on-severity", nil, "Restrict --error-on-findings to these levels: note, warning, error, none (repeatable or comma-separated, defaults to all)")
+func addGateFlags(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&scanFlags.ErrorOnFindings, "error-on-findings", false, "Fail when the scan has findings")
+	cmd.Flags().StringArrayVar(&scanFlags.ErrorOnSeverity, "error-on-severity", nil, "Fail on findings of this severity: note, warning, error, or none (repeatable)")
 }
 
-func exitOnGate(gate triage.Gate, report *sarif.Report) {
-	count, tripped := gate.Evaluate(report)
-	if !tripped {
-		return
+// gateMessage says how many findings failed the scan: "Found 2 findings of severity error".
+func gateMessage(count int, severities []string) string {
+	noun := "findings"
+	if count == 1 {
+		noun = "finding"
 	}
-	out.Blank()
-	scope := "finding"
-	if count != 1 {
-		scope = "findings"
+	message := fmt.Sprintf("Found %d %s", count, noun)
+	if len(severities) > 0 {
+		message += " of severity " + strings.Join(severities, " or ")
 	}
-	out.Errorf("%d %s reported (--error-on-findings)", count, scope)
-	os.Exit(ExitFindings)
+	return message
 }

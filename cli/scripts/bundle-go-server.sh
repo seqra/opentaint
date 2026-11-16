@@ -4,8 +4,7 @@ set -euo pipefail
 # Bundle the platform-specific go-ssa-server binary into the release archives.
 # The script runs after GoReleaser. It puts the binary into the lib/ directory
 # of the "opentaint" and "opentaint-full" archives, next to the analyzer, the
-# autobuilder, and the rules. This is the analogue of bundle-jre.sh, which
-# injects the platform-specific JREs.
+# autobuilder, and the rules.
 #
 # Usage: ./scripts/bundle-go-server.sh <dist-dir> [github-repo]
 #
@@ -15,7 +14,8 @@ DIST_DIR="${1:?Usage: $0 <dist-dir> [github-repo]}"
 REPO="${2:-seqra/opentaint}"
 VERSIONS_FILE="internal/globals/versions.yaml"
 
-GO_SERVER_TAG=$(grep '^go-server:' "$VERSIONS_FILE" | awk '{print $2}' | tr -d '"')
+GO_SERVER_TAG=$(grep '^go-server:' "$VERSIONS_FILE" | awk '{print $2}' | tr -d '"') ||
+    { echo "No go-server version in $VERSIONS_FILE" >&2; exit 1; }
 echo "go-ssa-server version: $GO_SERVER_TAG"
 
 # The release assets are named "go-ssa-server_<goos>_<goarch>", with ".exe" on

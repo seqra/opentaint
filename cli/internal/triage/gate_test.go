@@ -1,6 +1,7 @@
 package triage
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/seqra/opentaint/internal/sarif"
@@ -62,38 +63,16 @@ func TestParseGateSeverities(t *testing.T) {
 	}
 }
 
-func TestParseGateSeveritiesSplitsCommaSeparated(t *testing.T) {
-	got, err := ParseGateSeverities([]string{"error,warning"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+func TestParseGateSeveritiesKeepsTheValueAsWritten(t *testing.T) {
+	got, err := ParseGateSeverities([]string{" Error ", "warning"})
+	if err != nil || len(got) != 2 || got[0] != "error" || got[1] != "warning" {
+		t.Errorf("ParseGateSeverities() = %v, %v, want [error warning]", got, err)
 	}
-	if len(got) != 2 || got[0] != "error" || got[1] != "warning" {
-		t.Errorf("got %v, want [error warning]", got)
+	_, err = ParseGateSeverities([]string{"Bogus"})
+	if err == nil || !strings.Contains(err.Error(), "`Bogus`") {
+		t.Errorf("error = %v, want the value as the user wrote it", err)
 	}
-}
-
-func TestParseGateSeveritiesMixesCommaAndRepeatedFlags(t *testing.T) {
-	got, err := ParseGateSeverities([]string{"error, warning", "note"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(got) != 3 {
-		t.Errorf("got %v, want error warning note", got)
-	}
-}
-
-func TestParseGateSeveritiesRejectsBadTokenInsideAList(t *testing.T) {
-	if _, err := ParseGateSeverities([]string{"error,bogus"}); err == nil {
-		t.Error("expected an error for a bad token in a comma list")
-	}
-}
-
-func TestParseGateSeveritiesIgnoresEmptyTokens(t *testing.T) {
-	got, err := ParseGateSeverities([]string{"error,,warning,"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(got) != 2 {
-		t.Errorf("got %v, want [error warning]", got)
+	if _, err := ParseGateSeverities([]string{"error,warning"}); err == nil {
+		t.Error("ParseGateSeverities accepted a comma-separated list")
 	}
 }

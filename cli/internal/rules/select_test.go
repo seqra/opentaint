@@ -271,3 +271,17 @@ func TestSelectExcludeOnFileRulesetResolvesToAnalyzerIDs(t *testing.T) {
 		t.Errorf("exclusion resolved to %v, want [:rule-one]", resolved.Exclude)
 	}
 }
+
+// The rule ID that the summary shows, dotted as in the SARIF report, selects the rule too.
+func TestMatchesDottedRuleID(t *testing.T) {
+	id := "go/security/cmdi.yaml:command-injection"
+	if got := dottedRuleID(id); got != "go.security.command-injection" {
+		t.Errorf("dottedRuleID() = %q, want go.security.command-injection", got)
+	}
+	if !matchesAny(id, []string{"go.security.command-injection"}) {
+		t.Error("the dotted ID does not match the rule")
+	}
+	if got := dottedRuleID(":single"); got != "single" {
+		t.Errorf("dottedRuleID(:single) = %q, want single", got)
+	}
+}

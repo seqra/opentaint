@@ -90,7 +90,7 @@ func matchPath(r *Result, patterns []string) bool {
 	return false
 }
 
-// matchSeverity reports whether the result's level equals any supplied level
+// MatchesSeverity reports whether the result's level equals any supplied level
 // (case-insensitive). A nil/empty level is treated as "note".
 func MatchesSeverity(r *Result, levels []string) bool {
 	actual := strings.ToLower(string(findingLevel(r)))
@@ -115,12 +115,12 @@ func ruleLeaf(id string) string {
 	return id
 }
 
-// matchRuleID reports whether the result's rule-id matches any supplied value as
-// a full-id exact match, a leaf exact match, or a doublestar glob over the full id.
 func matchRuleID(r *Result, values []string) bool {
 	return r.RuleID != nil && MatchesRuleID(*r.RuleID, values)
 }
 
+// MatchesRuleID reports whether the rule ID full matches any supplied value as a full-id exact
+// match, a leaf exact match, or a doublestar glob over the full id.
 func MatchesRuleID(full string, values []string) bool {
 	leaf := ruleLeaf(full)
 	for _, v := range values {

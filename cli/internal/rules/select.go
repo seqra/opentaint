@@ -12,9 +12,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Selection is the allow/deny list of rule ids from the configuration file.
-// These control which rules the analyzer runs at all — they are not
-// suppressions, and an excluded rule produces nothing to suppress.
+// Selection is the rules that the analyzer runs: rules.only and rules.exclude, or --exclude-rule-id.
 type Selection struct {
 	Only    []string // if non-empty, only rules matching these run
 	Exclude []string // rules matching these never run
@@ -25,10 +23,8 @@ func (s Selection) Active() bool {
 	return len(s.Only) > 0 || len(s.Exclude) > 0
 }
 
-// ListRuleIDs returns every rule id defined under the given ruleset roots, in
-// the "<path relative to the root>.yaml:<id>" form the analyzer matches on.
-// Files that cannot be read or parsed are skipped: a malformed rule file is the
-// rule loader's problem to report, not a reason to fail rule selection.
+// ListRuleIDs returns the IDs of the rules under roots as <path>.yaml:<id>. It skips the files that
+// it cannot parse: the analyzer reports them.
 func ListRuleIDs(roots []string) []string {
 	var ids []string
 	for _, root := range roots {
@@ -50,9 +46,7 @@ func ListRuleIDs(roots []string) []string {
 			}
 			prefix := filepath.ToSlash(relPath)
 			if prefix == "." {
-				// A root that is a single rule file has no relative path. The
-				// analyzer names such a ruleset by Path.relativeTo(root), which
-				// is empty for the root itself, so the id it matches is ":<id>".
+				// The analyzer names a rule in a single-file ruleset ":<id>".
 				prefix = ""
 			}
 			for _, r := range rf.Rules {
@@ -72,24 +66,16 @@ func isRuleFile(path string) bool {
 	return ext == ".yaml" || ext == ".yml"
 }
 
-// Resolved is a rule selection lowered to the exact ids the analyzer accepts:
-// Include feeds --semgrep-rule-id (empty = run everything), Exclude feeds
-// --semgrep-rule-id-exclude. Patterns never reach the analyzer.
+// Resolved holds the exact IDs for --semgrep-rule-id (Include, empty for all rules) and
+// --semgrep-rule-id-exclude (Exclude).
 type Resolved struct {
 	Include []string
 	Exclude []string
 }
 
-// Select resolves a Selection against the ruleset roots.
-//
-// An exclusion-only selection resolves to just the excluded ids — excluding
-// one rule passes one exclusion arg, not the 150-rule complement. When an
-// allow-list is present the inclusion list is unavoidable (the analyzer
-// matches exact ids), so exclusions are subtracted from it CLI-side and rules
-// referenced by the survivors are pulled back in: a rule whose joined library
-// rule was excluded could never match anything, which is a silently broken
-// scan rather than a narrower one. On the exclusion side the analyzer itself
-// resolves join refs past exclusions, so no such repair is needed.
+// Select resolves selection against the rules under roots. Without rules.only it returns only the
+// excluded IDs. With rules.only it returns the included IDs plus the library rules they join, so
+// that excluding a library rule does not break the rules that use it.
 func Select(selection Selection, roots []string) (Resolved, error) {
 	if !selection.Active() {
 		return Resolved{}, nil
@@ -97,7 +83,7 @@ func Select(selection Selection, roots []string) (Resolved, error) {
 
 	all := ListRuleIDs(roots)
 	if len(all) == 0 {
-		return Resolved{}, fmt.Errorf("rules.only/rules.exclude are configured but no rules were found in the ruleset")
+		return Resolved{}, fmt.Errorf("the ruleset has no rules")
 	}
 
 	var kept, excluded []string
@@ -112,7 +98,7 @@ func Select(selection Selection, roots []string) (Resolved, error) {
 		kept = append(kept, id)
 	}
 	if len(kept) == 0 {
-		return Resolved{}, fmt.Errorf("rules.only/rules.exclude select no rules at all: nothing would be scanned")
+		return Resolved{}, fmt.Errorf("rules.only and rules.exclude leave no rule")
 	}
 
 	if len(selection.Only) == 0 {
@@ -125,18 +111,24 @@ func Select(selection Selection, roots []string) (Resolved, error) {
 	return Resolved{Include: expanded}, nil
 }
 
-// matchesAny delegates to the one rule-id grammar (sarif.MatchesRuleID), so a
-// pattern behaves identically in rules.only/rules.exclude, --exclude-rule-id,
-// and summary's --rule-id filter: exact full "path.yaml:id", exact bare name,
-// or a doublestar glob over the full id.
+// matchesAny matches id as summary --rule-id does: the full ID, the leaf name, or a glob over the
+// full ID. The full ID is <path>.yaml:<id> or, as the SARIF report writes it, the dotted ID.
 func matchesAny(id string, patterns []string) bool {
-	return sarif.MatchesRuleID(id, patterns)
+	return sarif.MatchesRuleID(id, patterns) || sarif.MatchesRuleID(dottedRuleID(id), patterns)
 }
 
-// ApplyExclusions filters an explicit rule-id list (--rule-id) by exclusion
-// patterns (--exclude-rule-id), so the two flags compose instead of one
-// silently winning. Emptying the list is an error: every id in it was asked
-// for by name, so excluding them all leaves a scan that checks nothing.
+// dottedRuleID is the rule ID that the analyzer writes in a Semgrep-style SARIF report:
+// go/security/cmdi.yaml:command-injection is go.security.command-injection.
+func dottedRuleID(id string) string {
+	path, name, ok := strings.Cut(id, ":")
+	if !ok {
+		return id
+	}
+	parts := strings.Split(path, "/")
+	return strings.Join(append(parts[:len(parts)-1], name), ".")
+}
+
+// ApplyExclusions removes the IDs that match patterns. It fails when none is left.
 func ApplyExclusions(ids, patterns []string) ([]string, error) {
 	if len(patterns) == 0 {
 		return ids, nil
@@ -148,15 +140,12 @@ func ApplyExclusions(ids, patterns []string) ([]string, error) {
 		}
 	}
 	if len(ids) > 0 && len(kept) == 0 {
-		return nil, fmt.Errorf("--exclude-rule-id excludes every rule selected by --rule-id: nothing would be scanned")
+		return nil, fmt.Errorf("--exclude-rule-id excludes every --rule-id")
 	}
 	return kept, nil
 }
 
-// Unmatched returns the selection patterns that match none of the given rule
-// ids, in Only-then-Exclude order. A pattern matching nothing is usually a
-// typo'd rule name, and silently ignoring it would make an exclusion look
-// effective when it never was — the caller should surface these.
+// Unmatched returns the patterns, rules.only first, that match no ID in all.
 func (s Selection) Unmatched(all []string) []string {
 	var unmatched []string
 	for _, pattern := range append(append([]string{}, s.Only...), s.Exclude...) {
