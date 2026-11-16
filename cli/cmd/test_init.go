@@ -27,18 +27,21 @@ var testRuleInitCmd = &cobra.Command{
 	Short: "Create test projects for sink and source rules",
 	Long:  "Create test projects for sink and source rules.\n\nArguments:\n  <test-project>  Directory of the new sinks and sources test projects",
 	Example: `  # Create only the sinks project, with a library that the samples call
-  opentaint test rule init .opentaint/test-projects/my-rule --language java --sinks-only \
-    --dependency org.springframework:spring-jdbc:5.3.39
+  opentaint test rule init .opentaint/test-projects/my-rule --language java \
+    --sinks-only --dependency org.springframework:spring-jdbc:5.3.39
 
   # Create only the sinks project for Go samples that call Gin
-  opentaint test rule init .opentaint/test-projects/my-rule --language go --sinks-only \
-    --dependency github.com/gin-gonic/gin@v1.10.0`,
+  opentaint test rule init .opentaint/test-projects/my-rule --language go \
+    --sinks-only --dependency github.com/gin-gonic/gin@v1.10.0`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if initRuleSinksOnly && initRuleSourcesOnly {
 			out.Fatalf("Cannot use --sinks-only with --sources-only")
 		}
 		language := parseLanguage(initRuleLanguage)
+		if language == "go" {
+			checkGoDependencies(initRuleProjectDeps)
+		}
 		kinds := []string{"sinks", "sources"}
 		if initRuleSinksOnly {
 			kinds = []string{"sinks"}
@@ -100,6 +103,9 @@ var testModelInitCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		language := parseLanguage(initModelTestLanguage)
+		if language == "go" {
+			checkGoDependencies(initModelProjectDeps)
+		}
 		dir := args[0]
 		existing := checkTestProjectLanguage(dir, language)
 		var err error
@@ -187,7 +193,7 @@ func printInitResult(existing bool, project, dir string) {
 }
 
 const (
-	testDependencyUsage = "Library that the samples call: group:artifact:version or module@version (repeatable)"
+	testDependencyUsage = "Library: group:artifact:version or module@version (repeatable)"
 	testLanguageUsage   = "Language of the samples: java or go (required)"
 )
 

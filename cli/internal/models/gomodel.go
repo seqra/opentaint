@@ -37,7 +37,7 @@ func checkGoModelModule(dir string) error {
 	}
 	if !isGoModelModulePath(modulePath) {
 		return fmt.Errorf("`%s` is not a model project: %w", dir, fmt.Errorf(
-			"its go.mod declares the module `%s`, and a Go model project declares `%s`",
+			"its go.mod declares the module `%s`, not `%s`",
 			modulePath, goModelModulePath))
 	}
 	return nil

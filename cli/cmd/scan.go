@@ -295,7 +295,8 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 
 	// Display scan information in tree format
-	printScanInfo(cmd, plan, absSemgrepRuleLoadTracePath, absUserProjectRoot, absRuleSetPaths)
+	hasGo := scanHasGo(plan, absUserProjectRoot)
+	printScanInfo(cmd, plan, absSemgrepRuleLoadTracePath, absUserProjectRoot, absRuleSetPaths, hasGo)
 
 	var userRulesetPaths []string
 	for _, ruleset := range cfg.Ruleset {
@@ -310,6 +311,11 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		out.FatalErr(err)
 	}
 	checkModelInputs(cfg.DataflowModels, cfg.PassthroughModels)
+	if globals.Config.GoServer.Binary != "" {
+		if _, err := checkGoServerBinary(globals.Config.GoServer.Binary); err != nil {
+			failGoServer(err)
+		}
+	}
 
 	if cfg.DryRun {
 		out.Blank()
@@ -331,7 +337,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 
 	// Check for `go` before the long compile. The project model decides later whether the scan
 	// needs it, as the autobuilder can find a go.mod deeper than this search.
-	if plan.needsCompilation && slices.Contains(validation.DetectLanguages(absUserProjectRoot), "Go") {
+	if plan.needsCompilation && hasGo {
 		requireGoToolchain()
 	}
 
@@ -677,7 +683,17 @@ func resolveScanPlan(cfg ScanConfig, absUserProjectRoot string) scanPlan {
 	}
 }
 
-func printScanInfo(cmd *cobra.Command, plan scanPlan, absSemgrepRuleLoadTracePath string, absUserProjectRoot string, absRuleSetPaths []RulesetType) {
+// scanHasGo reports whether the project has Go code: by the Go projects of the project model, or,
+// before the compile, by a go.mod in the project.
+func scanHasGo(plan scanPlan, absUserProjectRoot string) bool {
+	if plan.needsCompilation {
+		return slices.Contains(validation.DetectLanguages(absUserProjectRoot), "Go")
+	}
+	config, err := project.LoadConfig(plan.absProjectModel)
+	return err == nil && len(config.GoProjects) > 0
+}
+
+func printScanInfo(cmd *cobra.Command, plan scanPlan, absSemgrepRuleLoadTracePath string, absUserProjectRoot string, absRuleSetPaths []RulesetType, hasGo bool) {
 	sb := out.Section(plan.title())
 	addConfigFields(cmd, sb)
 	if globals.Config.Output.Debug {
@@ -694,6 +710,9 @@ func printScanInfo(cmd *cobra.Command, plan scanPlan, absSemgrepRuleLoadTracePat
 		sb.FieldNode("Project model", plan.absProjectModel)
 	}
 	sb.FieldGroup("Analyzer", componentItems(resolveArtifactComponent("analyzer"), false)...)
+	if hasGo {
+		sb.FieldGroup("Go server", componentItems(resolveArtifactComponent("goserver"), false)...)
+	}
 	for _, r := range absRuleSetPaths {
 		if r.Builtin {
 			rules := healthComponent{
@@ -723,26 +742,11 @@ func setupSemgrepRuleLoadTrace(traceDir string) string {
 	return absSemgrepRuleLoadTracePath
 }
 
-// EnsureGoServerAvailable returns the absolute path of the go-ssa-server binary. It downloads the
-// binary for this platform when it is absent and makes it executable. A --go-server-binary path
-// is only checked, as an --analyzer-jar one is: nothing is downloaded or changed.
+// EnsureGoServerAvailable returns the absolute path of the Go server and downloads it when absent.
+// A --go-server-binary path is checked, never changed.
 func EnsureGoServerAvailable() (string, error) {
 	if globals.Config.GoServer.Binary != "" {
-		info, err := os.Stat(globals.Config.GoServer.Binary)
-		if err != nil {
-			return "", fmt.Errorf("go-ssa-server binary not found at %s: %w", globals.Config.GoServer.Binary, err)
-		}
-		if info.IsDir() {
-			return "", fmt.Errorf("go-ssa-server path %s is a directory, expected an executable file", globals.Config.GoServer.Binary)
-		}
-		if runtime.GOOS != "windows" && info.Mode()&0o111 == 0 {
-			return "", fmt.Errorf("go-ssa-server binary %s is not executable (run: chmod +x %s)", globals.Config.GoServer.Binary, globals.Config.GoServer.Binary)
-		}
-		absPath, err := filepath.Abs(globals.Config.GoServer.Binary)
-		if err != nil {
-			return "", fmt.Errorf("failed to resolve absolute path to the go-ssa-server: %w", err)
-		}
-		return absPath, nil
+		return checkGoServerBinary(globals.Config.GoServer.Binary)
 	}
 
 	version := globals.Config.GoServer.Version
@@ -750,15 +754,13 @@ func EnsureGoServerAvailable() (string, error) {
 		version = globals.GoServerBindVersion
 	}
 
-	assetName := globals.GoServerAssetName()
-
 	goServerPath, err := utils.GetGoServerPath(version)
 	if err != nil {
-		return "", fmt.Errorf("failed to construct path to the go-ssa-server: %w", err)
+		return "", fmt.Errorf("failed to construct path to the Go server: %w", err)
 	}
 
-	if err := ensureArtifactAvailable("go-ssa-server", version, goServerPath, func() error {
-		return utils.DownloadGithubReleaseAsset(globals.Config.Owner, globals.Config.Repo, version, assetName, goServerPath, globals.Config.Github.Token, globals.Config.SkipVerify, out)
+	if err := ensureArtifactAvailable("Go server", version, goServerPath, func() error {
+		return utils.DownloadGithubReleaseAsset(globals.Config.Owner, globals.Config.Repo, version, globals.GoServerAssetName(), goServerPath, globals.Config.Github.Token, globals.Config.SkipVerify, out)
 	}); err != nil {
 		return "", err
 	}
@@ -766,46 +768,81 @@ func EnsureGoServerAvailable() (string, error) {
 	if err := ensureExecutable(goServerPath); err != nil {
 		return "", err
 	}
-
-	absPath, err := filepath.Abs(goServerPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve absolute path to the go-ssa-server: %w", err)
-	}
-
-	return absPath, nil
+	return filepath.Abs(goServerPath)
 }
 
-// ensureExecutable sets the executable bits of the go-ssa-server binary only when none is
-// set. A release that root installed has an executable binary that the user cannot chmod.
+// notExecutableError is the error of a file that has no executable bit.
+type notExecutableError struct{ path string }
+
+func (e notExecutableError) Error() string {
+	return fmt.Sprintf("`%s` is not executable", e.path)
+}
+
+// checkGoServerBinary returns the absolute path of a --go-server-binary file. It fails when the
+// file does not exist, is a directory, or is not executable.
+func checkGoServerBinary(path string) (string, error) {
+	info, err := os.Stat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("`%s` does not exist", path)
+	}
+	if err != nil {
+		return "", err
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("`%s` is a directory", path)
+	}
+	if runtime.GOOS != "windows" && info.Mode()&0o111 == 0 {
+		return "", notExecutableError{path}
+	}
+	return filepath.Abs(path)
+}
+
+// ensureExecutable sets the executable bits of the Go server only when none is set: a binary
+// that root installed is executable, and the user cannot chmod it.
 func ensureExecutable(path string) error {
 	if runtime.GOOS == "windows" {
 		return nil
 	}
 	info, err := os.Stat(path)
 	if err != nil {
-		return fmt.Errorf("failed to check go-ssa-server at %s: %w", path, err)
+		return err
 	}
 	if info.Mode()&0o111 != 0 {
 		return nil
 	}
 	if err := os.Chmod(path, info.Mode().Perm()|0o755); err != nil {
-		return fmt.Errorf("failed to mark go-ssa-server executable at %s: %w", path, err)
+		return fmt.Errorf("failed to make the Go server executable: %w", err)
 	}
 	return nil
 }
 
-// requireGoToolchain stops the command when `go` is not on PATH. go-ssa-server runs it to load
-// the Go packages, also with --go-server-binary.
+// failGoServer prints the error of getting the Go server and exits with code 1. A file that is
+// not executable gets the chmod step; the log adds nothing to it.
+func failGoServer(err error) {
+	out.Blank()
+	var notExecutable notExecutableError
+	if errors.As(err, &notExecutable) {
+		out.Error("Failed to get the Go server", err)
+		out.Suggest("To make it executable, run:", "chmod +x "+shellQuote(notExecutable.path))
+		os.Exit(1)
+	}
+	fail("Failed to get the Go server", err)
+}
+
+// requireGoToolchain stops the command when `go` is not on PATH: the Go server runs it to load
+// the packages.
 func requireGoToolchain() {
 	if _, err := exec.LookPath("go"); err == nil {
 		return
 	}
-	failWith(1, "Failed to find the Go toolchain", errors.New("the project has Go code, and `go` is not on PATH"),
-		output.Suggestion{Description: "To install Go, see:", Command: "https://go.dev/dl/"})
+	out.Blank()
+	out.Error("Failed to find the Go toolchain", errors.New("the project has Go code, and `go` is not on PATH"))
+	out.Suggest("To install Go, see:", "https://go.dev/dl/")
+	os.Exit(1)
 }
 
 // goServerEnv returns the analyzer environment for the Go projects of a project model:
-// GOIR_SERVER_BINARY with the path of go-ssa-server. A model without Go projects needs none.
+// GOIR_SERVER_BINARY with the path of the Go server. A model without Go projects needs none.
 func goServerEnv(config *project.Config) map[string]string {
 	if len(config.GoProjects) == 0 {
 		return nil
@@ -813,7 +850,7 @@ func goServerEnv(config *project.Config) map[string]string {
 	requireGoToolchain()
 	goServerPath, err := EnsureGoServerAvailable()
 	if err != nil {
-		fail("Failed to get the Go server", err)
+		failGoServer(err)
 	}
 	return map[string]string{"GOIR_SERVER_BINARY": goServerPath}
 }

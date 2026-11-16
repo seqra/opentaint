@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -79,7 +80,13 @@ func checkModelProject(path, absPath string) {
 	const message = "Failed to compile the model project"
 	if err := models.Check(path); err != nil {
 		out.Error(message, err)
-		out.Suggestions(modelProjectSuggestions(err)...)
+		// Only Java models compile, so the model project to create is a Java one.
+		var needed *models.ProjectNeededError
+		if errors.As(err, &needed) && needed.Reason != models.PlainClasses {
+			out.Suggestions(javaModelInitStep(shellQuote(needed.Path)))
+		} else {
+			out.Suggestions(modelProjectSuggestions(err)...)
+		}
 		os.Exit(1)
 	}
 	if models.IsProject(absPath) || models.IsGoProject(absPath) {

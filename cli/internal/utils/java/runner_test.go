@@ -395,8 +395,6 @@ func TestEnvironmentVariableList(t *testing.T) {
 	_ = os.Unsetenv("NON_JAVA")
 }
 
-// --- WithExtraEnv: builder semantics ---
-
 func TestJavaRunner_WithExtraEnv_NilAndEmptyAreNoOps(t *testing.T) {
 	j := &javaRunner{}
 
@@ -433,13 +431,9 @@ func TestJavaRunner_WithExtraEnv_MergeLaterWins(t *testing.T) {
 	}
 }
 
-// --- executeWithJava: the extra env reaches the child process ---
-//
-// The tests run the test binary as "java": TestHelperProcess writes its environment to a file.
-
-// runHelperEnv returns the environment of the child process. The helper is switched on by
-// GO_WANT_HELPER_PROCESS, which goes through the extra env too: if that env is lost, no file is
-// written and the test fails.
+// runHelperEnv runs the test binary as "java" and returns the environment of that child process,
+// which TestHelperProcess writes to a file. The helper is switched on by GO_WANT_HELPER_PROCESS,
+// which goes through the extra env too: if that env is lost, no file is written and the test fails.
 func runHelperEnv(t *testing.T, j *javaRunner, strategy ResolutionStrategy) map[string]string {
 	t.Helper()
 

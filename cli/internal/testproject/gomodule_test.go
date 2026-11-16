@@ -1,6 +1,7 @@
 package testproject
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -53,6 +54,20 @@ func TestGoModuleRejectsInvalidMajorVersion(t *testing.T) {
 	_, err := GoModule("test", []string{"example.com/library/v2@v1.0.0"}, "1.25.0")
 	if err == nil || !strings.Contains(err.Error(), "should be v2") {
 		t.Fatalf("GoModule error = %v, want major-version error", err)
+	}
+}
+
+func TestCheckGoDependency(t *testing.T) {
+	for _, dependency := range []string{"github.com/acme/library", "com.foo:bar:1.0", "@v1.0.0", "a@b@c"} {
+		if err := CheckGoDependency(dependency); !errors.Is(err, ErrNotModuleVersion) {
+			t.Errorf("CheckGoDependency(%q) = %v, want ErrNotModuleVersion", dependency, err)
+		}
+	}
+	if err := CheckGoDependency("example.com/library/v2@v1.0.0"); err == nil || errors.Is(err, ErrNotModuleVersion) {
+		t.Errorf("CheckGoDependency(bad major version) = %v, want the module error", err)
+	}
+	if err := CheckGoDependency("github.com/acme/library@v1.2.3"); err != nil {
+		t.Errorf("CheckGoDependency(valid) = %v", err)
 	}
 }
 

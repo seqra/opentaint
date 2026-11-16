@@ -103,7 +103,7 @@ type ConfigType struct {
 	Analyzer    Analyzer    `mapstructure:"analyzer"`
 	Autobuilder Autobuilder `mapstructure:"autobuilder"`
 	Rules       Rules       `mapstructure:"rules"`
-	GoServer    GoServer    `mapstructure:"go-server"`
+	GoServer    GoServer    `mapstructure:"go_server"`
 	Java        Java        `mapstructure:"java"`
 	Owner       string      `mapstructure:"owner"`
 	Repo        string      `mapstructure:"repo"`

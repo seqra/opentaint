@@ -41,6 +41,14 @@ func (a ArtifactDef) Label() string {
 	return a.Name
 }
 
+// Noun is the name of the artifact inside a sentence: "analyzer", "rules", "Go server".
+func (a ArtifactDef) Noun() string {
+	if a.Kind() == "goserver" {
+		return a.Label()
+	}
+	return a.Kind()
+}
+
 // TagPrefix is the release tag prefix of the artifact, such as "analyzer/". The go-ssa-server
 // tags start with "go-server/", not with its kind.
 func (a ArtifactDef) TagPrefix() string {

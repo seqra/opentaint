@@ -26,7 +26,7 @@ func TestResolveRejectsExplicitForeignGoModule(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module opentaintx\n")
 	_, err := Resolve(dir, newFakeBuilder(t))
-	if err == nil || !strings.Contains(err.Error(), "`opentaintx`, and a Go model project declares `opentaint`") {
+	if err == nil || !strings.Contains(err.Error(), "`opentaintx`, not `opentaint`") {
 		t.Fatalf("error = %v, want the module path requirement", err)
 	}
 }

@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -72,8 +74,8 @@ func TestEnsureGoServerAvailable_BinaryOverrideMissingReturnsError(t *testing.T)
 	if err == nil {
 		t.Fatalf("expected error for non-existent override binary, got path %q", got)
 	}
-	if !strings.Contains(err.Error(), "not found") {
-		t.Errorf("error should mention binary not found, got: %v", err)
+	if !strings.Contains(err.Error(), "does not exist") {
+		t.Errorf("error should say that the binary does not exist, got: %v", err)
 	}
 }
 
@@ -90,6 +92,29 @@ func TestEnsureGoServerAvailable_BinaryOverrideDirectoryReturnsError(t *testing.
 	}
 	if !strings.Contains(err.Error(), "directory") {
 		t.Errorf("error should mention the path is a directory, got: %v", err)
+	}
+}
+
+func TestEnsureGoServerAvailable_BinaryOverrideNotExecutable(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("windows has no executable bit")
+	}
+	orig := globals.Config.GoServer.Binary
+	t.Cleanup(func() { globals.Config.GoServer.Binary = orig })
+
+	binary := filepath.Join(t.TempDir(), "go-ssa-server")
+	if err := os.WriteFile(binary, []byte("#!/bin/sh\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	globals.Config.GoServer.Binary = binary
+
+	_, err := EnsureGoServerAvailable()
+	var notExecutable notExecutableError
+	if !errors.As(err, &notExecutable) || notExecutable.path != binary {
+		t.Fatalf("error = %v, want notExecutableError for %s", err, binary)
+	}
+	if info, statErr := os.Stat(binary); statErr != nil || info.Mode()&0o111 != 0 {
+		t.Errorf("the override was changed: %v, %v", info.Mode(), statErr)
 	}
 }
 

@@ -44,7 +44,7 @@ var pullCmd = &cobra.Command{
 		for _, spec := range artifacts {
 			node, err := downloadArtifact(spec, installNextToBinary, installCurrent)
 			if err != nil {
-				fail("Failed to download the "+spec.Kind(), err)
+				fail("Failed to download the "+spec.Noun(), err)
 			}
 			summaryNodes = append(summaryNodes, node)
 		}
@@ -119,7 +119,7 @@ func downloadArtifact(spec globals.ArtifactDef, installNextToBinary, installCurr
 		return node, nil
 	}
 
-	return node, fmt.Errorf("no writable location found for %s", spec.Kind())
+	return node, fmt.Errorf("no writable location found for the %s", spec.Noun())
 }
 
 func downloadJava(installNextToBinary, installCurrent bool) (*tree.Tree, error) {

@@ -4,12 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 )
 
+// TestSampleInfo is a test sample in test-result.json. A Java sample has a class, a method and a
+// rule; a Go sample has a function and a rule ID.
 type TestSampleInfo struct {
 	ClassName  string       `json:"className"`
 	MethodName string       `json:"methodName"`
 	Rule       TestRuleInfo `json:"rule"`
+	Function   string       `json:"function"`
+	GoRuleID   string       `json:"ruleId"`
 }
 
 // TestRuleInfo is the rule that a test sample checks.
@@ -27,8 +32,21 @@ func (r TestRuleInfo) ID() string {
 	return r.RulePath + ":" + r.RuleID
 }
 
-// Name returns the sample as class#method, or as the class alone when the sample names no method.
+// RuleID returns the ID of the rule of the sample in the form that --rule-id takes. A Go rule ID
+// is <rule-path>#<rule-id>, and the analyzer reads it with ":" in place of "#".
+func (s TestSampleInfo) RuleID() string {
+	if s.GoRuleID != "" {
+		return strings.ReplaceAll(s.GoRuleID, "#", ":")
+	}
+	return s.Rule.ID()
+}
+
+// Name returns a Go sample as its function, and a Java sample as class#method, or as the class
+// alone when the sample names no method.
 func (s TestSampleInfo) Name() string {
+	if s.Function != "" {
+		return s.Function
+	}
 	if s.MethodName == "" {
 		return s.ClassName
 	}

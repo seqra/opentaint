@@ -31,15 +31,13 @@ func TidyGo(dir string) error {
 	return runGo(dir, "go mod tidy", "mod", "tidy")
 }
 
-// BuildGo runs `go build ./...` in dir, so that a sample that does not compile fails before the
-// analyzer runs. The build output is discarded, and no version control information is stamped:
-// dir may lie in a repository that the go command cannot read.
+// BuildGo runs `go build ./...` in dir and discards the output. -buildvcs=false: dir may lie in a
+// repository that go cannot read.
 func BuildGo(dir string) error {
 	return runGo(dir, "go build ./...", "build", "-o", os.DevNull, "-buildvcs=false", "./...")
 }
 
-// runGo runs the go command with args in dir. An error has the command line, shown as name, and
-// the output of the go command.
+// runGo runs go with args in dir. Its error names the command as name and holds the go output.
 func runGo(dir, name string, args ...string) error {
 	command := exec.Command("go", args...)
 	command.Dir = dir
@@ -53,9 +51,8 @@ func runGo(dir, name string, args ...string) error {
 	return fmt.Errorf("`%s` failed: %w", name, err)
 }
 
-// GoVersion is the language version for a generated go.mod: the version of the local Go toolchain,
-// so the module builds with the toolchain that will build the samples. Without a local toolchain it
-// falls back to the version the CLI was built with.
+// GoVersion is the go version of a generated go.mod: that of the local toolchain, else the one that
+// built the CLI.
 func GoVersion() string {
 	goVersion := ""
 	if output, err := exec.Command("go", "env", "GOVERSION").Output(); err == nil {
@@ -70,6 +67,19 @@ func GoVersion() string {
 	return strings.TrimPrefix(goVersion, "go")
 }
 
+// ErrNotModuleVersion is the error of a Go dependency that is not module@version.
+var ErrNotModuleVersion = errors.New("not module@version")
+
+// CheckGoDependency checks that dependency is module@version with a valid module path and
+// version.
+func CheckGoDependency(dependency string) error {
+	path, dependencyVersion, ok := strings.Cut(dependency, "@")
+	if !ok || path == "" || dependencyVersion == "" || strings.Contains(dependencyVersion, "@") {
+		return ErrNotModuleVersion
+	}
+	return module.Check(path, dependencyVersion)
+}
+
 // GoModule formats a go.mod for modulePath that requires each module@version dependency.
 func GoModule(modulePath string, dependencies []string, goVersion string) ([]byte, error) {
 	file := new(modfile.File)
@@ -81,15 +91,12 @@ func GoModule(modulePath string, dependencies []string, goVersion string) ([]byt
 	}
 
 	for _, dependency := range dependencies {
-		path, dependencyVersion, ok := strings.Cut(dependency, "@")
-		if !ok || path == "" || dependencyVersion == "" || strings.Contains(dependencyVersion, "@") {
-			return nil, fmt.Errorf("invalid Go dependency %q: use module@version", dependency)
+		if err := CheckGoDependency(dependency); err != nil {
+			return nil, fmt.Errorf("invalid Go dependency `%s`: %w", dependency, err)
 		}
-		if err := module.Check(path, dependencyVersion); err != nil {
-			return nil, fmt.Errorf("invalid Go dependency %q: %w", dependency, err)
-		}
+		path, dependencyVersion, _ := strings.Cut(dependency, "@")
 		if err := file.AddRequire(path, dependencyVersion); err != nil {
-			return nil, fmt.Errorf("add Go dependency %q: %w", dependency, err)
+			return nil, fmt.Errorf("add Go dependency `%s`: %w", dependency, err)
 		}
 	}
 

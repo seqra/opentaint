@@ -160,13 +160,13 @@ func init() {
 	_ = rootCmd.PersistentFlags().MarkHidden("rules-version")
 	_ = viper.BindPFlag("rules.version", rootCmd.PersistentFlags().Lookup("rules-version"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.GoServer.Version, "go-server-version", globals.GoServerBindVersion, "The go-ssa-server version to download")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.GoServer.Version, "go-server-version", globals.GoServerBindVersion, "Go server version to use")
 	_ = rootCmd.PersistentFlags().MarkHidden("go-server-version")
-	_ = viper.BindPFlag("go-server.version", rootCmd.PersistentFlags().Lookup("go-server-version"))
+	_ = viper.BindPFlag("go_server.version", rootCmd.PersistentFlags().Lookup("go-server-version"))
 
-	rootCmd.PersistentFlags().StringVar(&globals.Config.GoServer.Binary, "go-server-binary", "", "Path to a go-ssa-server binary (developer override, no download)")
+	rootCmd.PersistentFlags().StringVar(&globals.Config.GoServer.Binary, "go-server-binary", "", "Path to a local Go server binary to use instead of downloading one")
 	_ = rootCmd.PersistentFlags().MarkHidden("go-server-binary")
-	_ = viper.BindPFlag("go-server.binary", rootCmd.PersistentFlags().Lookup("go-server-binary"))
+	_ = viper.BindPFlag("go_server.binary", rootCmd.PersistentFlags().Lookup("go-server-binary"))
 
 	rootCmd.PersistentFlags().IntVar(&globals.Config.Java.Version, "java-version", globals.DefaultJavaVersion, "Java version to compile projects with when no system Java is found")
 	_ = viper.BindPFlag("java.version", rootCmd.PersistentFlags().Lookup("java-version"))

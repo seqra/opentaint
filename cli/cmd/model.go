@@ -33,6 +33,9 @@ var modelInitCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		language := parseLanguage(initModelLanguage)
+		if language == "go" {
+			checkGoDependencies(initModelDeps)
+		}
 		projectPath := log.AbsPathOrExit(args[0], "model-project")
 
 		var existing bool
@@ -86,7 +89,7 @@ func init() {
 	modelCmd.AddCommand(modelInitCmd)
 
 	modelInitCmd.Flags().StringArrayVar(&initModelDeps, "dependency", nil,
-		"Library that the models refer to: group:artifact:version or module@version (repeatable)")
+		"Library: group:artifact:version or module@version (repeatable)")
 	modelInitCmd.Flags().StringVar(&initModelLanguage, "language", "", "Language of the models: java or go (required)")
 	_ = modelInitCmd.MarkFlagRequired("language")
 

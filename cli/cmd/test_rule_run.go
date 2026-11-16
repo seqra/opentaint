@@ -256,9 +256,8 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	os.Exit(2)
 }
 
-// buildGoSamples runs `go mod tidy` and `go build` in each Go project of a test project model.
-// The analyzer reads the Go samples from source, so a sample that does not compile would fail
-// only in the analyzer log. Tidy adds to go.mod the modules that the samples import.
+// buildGoSamples tidies and builds the Go projects of a test project model, so that a sample that
+// does not compile fails here and not in the analyzer log.
 func buildGoSamples(projectModelPath string, config *project.Config) {
 	err := out.RunWithSpinner("Building Go samples", func() error {
 		for _, goProject := range config.GoProjects {
@@ -327,7 +326,7 @@ func skippedByRule(samples []analyzer.TestSampleInfo) []any {
 	var ruleIDs []string
 	byRule := map[string][]any{}
 	for _, sample := range samples {
-		id := sample.Rule.ID()
+		id := sample.RuleID()
 		if _, ok := byRule[id]; !ok {
 			ruleIDs = append(ruleIDs, id)
 		}
