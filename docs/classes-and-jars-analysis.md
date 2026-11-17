@@ -30,6 +30,7 @@ javaProjects:
       - /path/to/dependency2.jar
 goProjects:  # optional
   - projectDir: /path/to/go/module
+    goToolchain: /path/to/go/root
 ```
 
 Empty lists and unset optional fields are omitted from the generated file (so a Java-only model has no `goProjects`, and vice versa).
@@ -53,7 +54,12 @@ List of Java projects. Each entry describes one Java project (a multi-module bui
 - **dependencies** (optional): Array of paths to JAR files the project depends on (typically third-party libraries).
 
 ### goProjects (optional)
-List of Go projects. Each entry has a single field, **projectDir**, pointing at the Go module directory.
+List of Go projects. Each entry describes one Go module.
+
+#### Go project fields
+
+- **projectDir** (required): The Go module directory (absolute or relative).
+- **goToolchain** (required for analysis): Absolute path to the root of the Go installation (`GOROOT`), the directory that contains `bin/go`. `opentaint compile` records the Go installation found on `PATH`. The toolchain is not copied into the model, so compile and scan a Go project in the same environment (the same machine or the same container image) with `go` on `PATH`. A Go project without this field, or with a path that does not exist, is skipped during analysis.
 
 ### Legacy format
 
