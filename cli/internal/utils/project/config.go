@@ -23,6 +23,39 @@ type JavaProject struct {
 
 type GoProject struct {
 	ProjectDir string `yaml:"projectDir"`
+	// GoToolchain is GOROOT of the Go installation that the autobuilder found. The analyzer runs
+	// `go` from it, and skips a Go project that has none.
+	GoToolchain string `yaml:"goToolchain,omitempty"`
+}
+
+// GoToolchainProblem tells why the analyzer skips the Go project: the project model records no Go
+// toolchain for it, or the recorded one has no `go`. It is empty for a project that is analyzed.
+func (p GoProject) GoToolchainProblem(projectModelPath string) string {
+	if p.GoToolchain == "" {
+		return "the project model has no Go toolchain"
+	}
+	goRoot := p.GoToolchain
+	if !filepath.IsAbs(goRoot) {
+		goRoot = filepath.Join(projectModelPath, goRoot)
+	}
+	for _, name := range []string{"go", "go.exe"} {
+		if info, err := os.Stat(filepath.Join(goRoot, "bin", name)); err == nil && info.Mode().IsRegular() {
+			return ""
+		}
+	}
+	return fmt.Sprintf("the Go toolchain `%s` of the project model does not exist", p.GoToolchain)
+}
+
+// SkippedGoProjects returns why the analyzer skips Go projects of the model, one cause for each
+// skipped project.
+func (c *Config) SkippedGoProjects(projectModelPath string) []string {
+	var problems []string
+	for _, goProject := range c.GoProjects {
+		if problem := goProject.GoToolchainProblem(projectModelPath); problem != "" {
+			problems = append(problems, problem)
+		}
+	}
+	return problems
 }
 
 type Module struct {

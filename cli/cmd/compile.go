@@ -16,6 +16,7 @@ import (
 	"github.com/seqra/opentaint/internal/utils"
 	"github.com/seqra/opentaint/internal/utils/java"
 	"github.com/seqra/opentaint/internal/utils/log"
+	"github.com/seqra/opentaint/internal/utils/project"
 
 	"github.com/seqra/opentaint/internal/output"
 )
@@ -110,6 +111,9 @@ var compileCmd = &cobra.Command{
 		if err := out.RunWithSpinner("Compiling project model", func() error {
 			return compile(absProjectRoot, absOutputProjectModelPath, autobuilderJarPath, compileJavaRunner)
 		}); err == nil {
+			if config, err := project.LoadConfig(absOutputProjectModelPath); err == nil {
+				warnNoGoToolchain(config, absOutputProjectModelPath)
+			}
 			out.Blank()
 			printCompileResult(outputProjectModelPath)
 			suggest(compileNextStep(absProjectRoot, projectRoot, outputProjectModelPath))

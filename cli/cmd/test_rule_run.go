@@ -112,6 +112,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 
 	if len(config.GoProjects) > 0 {
 		requireGoToolchain()
+		checkGoToolchains(config, projectPath, compileModelCommand(projectModelArg))
 		buildGoSamples(projectPath, config)
 	}
 
@@ -182,7 +183,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	addDataflowModels(builder, compileDataflowModels(opts.dataflowModels, analyzerJarPath))
 	addPassthroughModels(builder, opts.passthroughModels)
 
-	javaRunner := newAnalyzerJavaRunner(goServerEnv(config))
+	javaRunner := newAnalyzerJavaRunner(goServerEnv(config, projectPath))
 	if _, err := javaRunner.EnsureJava(); err != nil {
 		fail("Failed to find Java for the analyzer", err)
 	}
