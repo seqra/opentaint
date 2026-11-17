@@ -79,7 +79,7 @@ class GoTestProjectAnalyzer(
             Yaml().decodeFromStream<RuleTests>(it)
         }
 
-        val ctx = AnalysisCtx(project, GoIRClient(project.goToolchain), modelPaths, useDefaultModels)
+        val ctx = AnalysisCtx(project, GoIRClient(), modelPaths, useDefaultModels)
 
         val results = ctx.analyzeTestSamples(ruleTests.tests)
             ?: return ProjectAnalysisStatus.EXCEPTION

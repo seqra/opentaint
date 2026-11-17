@@ -15,7 +15,6 @@ import java.nio.file.Path
 import java.util.logging.Logger
 import kotlin.io.path.Path
 import kotlin.io.path.inputStream
-import kotlin.io.path.isRegularFile
 import kotlin.io.path.outputStream
 import kotlin.io.path.relativeTo
 
@@ -94,19 +93,7 @@ data class GoProject(
 
     fun relativeTo(path: Path): GoProject = GoProject(projectDir.relativeTo(path), goToolchain)
 
-    fun resolve(base: Path): GoProject = GoProject(
-        base.resolve(projectDir),
-        goToolchain?.let { base.resolve(it) },
-    )
-
-    fun goExecutable(): Path? = goToolchain?.let { goExecutable(it) }
-
-    companion object {
-        fun goExecutable(goRoot: Path): Path? =
-            listOf("go", "go.exe")
-                .map { goRoot.resolve("bin").resolve(it) }
-                .firstOrNull { it.isRegularFile() }
-    }
+    fun resolve(base: Path): GoProject = GoProject(base.resolve(projectDir), goToolchain)
 }
 
 @Serializable

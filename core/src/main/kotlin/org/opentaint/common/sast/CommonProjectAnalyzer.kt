@@ -15,6 +15,7 @@ import org.opentaint.project.GoProject
 import org.opentaint.project.JavaProject
 import org.opentaint.project.Project
 import java.nio.file.Path
+import kotlin.io.path.isDirectory
 
 class CommonProjectAnalyzer(
     val project: Project,
@@ -112,13 +113,11 @@ class CommonProjectAnalyzer(
         GoTestProjectAnalyzer(project, results, options.goOptions())
 
     // A Go project is analyzed with the Go toolchain that the project model records.
-    private fun CommonProject.skipReason(): String? = when (this) {
-        is JavaProject -> null
-        is GoProject -> when {
-            goToolchain == null -> "the project model has no Go toolchain"
-            goExecutable() == null -> "the Go toolchain $goToolchain of the project model has no bin/go"
-            else -> null
-        }
+    private fun CommonProject.skipReason(): String? {
+        if (this !is GoProject) return null
+        val toolchain = goToolchain ?: return "the project model has no Go toolchain"
+        if (!toolchain.isDirectory()) return "the Go toolchain $toolchain of the project model does not exist"
+        return null
     }
 
     private fun CommonProject.projectName(): String = when (this) {
