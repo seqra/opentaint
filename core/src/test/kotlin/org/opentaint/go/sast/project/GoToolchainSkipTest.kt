@@ -11,10 +11,6 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/**
- * A Go project without a usable Go toolchain in the project model is skipped. Its directory does
- * not exist here, so an attempt to analyze it would end with [ProjectAnalysisStatus.EXCEPTION].
- */
 class GoToolchainSkipTest {
     private val tmp: Path = Files.createTempDirectory("go-toolchain-skip-test")
 

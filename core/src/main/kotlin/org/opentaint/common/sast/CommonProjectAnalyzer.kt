@@ -112,7 +112,6 @@ class CommonProjectAnalyzer(
     private fun goProjectTestAnalyzer(project: GoProject, results: ProjectAnalysisTestResults) =
         GoTestProjectAnalyzer(project, results, options.goOptions())
 
-    // A Go project is analyzed with the Go toolchain that the project model records.
     private fun CommonProject.skipReason(): String? {
         if (this !is GoProject) return null
         val toolchain = goToolchain ?: return "the project model has no Go toolchain"

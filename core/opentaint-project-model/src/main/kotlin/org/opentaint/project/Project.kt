@@ -85,8 +85,6 @@ data class ProjectModuleClasses(
 @Serializable
 data class GoProject(
     val projectDir: @Serializable(with = PathAsStringSerializer::class) Path,
-    // GOROOT of the Go installation on the machine that built the project model. It is not copied
-    // into the model, so it stays absolute.
     val goToolchain: @Serializable(with = PathAsStringSerializer::class) Path? = null,
 ): CommonProject {
     override fun sourceRoot(): Path = projectDir

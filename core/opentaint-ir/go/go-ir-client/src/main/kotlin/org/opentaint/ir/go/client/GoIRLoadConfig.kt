@@ -11,6 +11,5 @@ data class GoIRLoadConfig(
     val instantiateGenerics: Boolean = true,
     val sanityCheck: Boolean = true,
     val modelDirs: List<Path> = emptyList(),
-    // GOROOT for the `go` commands of the build; `go` uses its own when null.
     val goRoot: Path? = null,
 )

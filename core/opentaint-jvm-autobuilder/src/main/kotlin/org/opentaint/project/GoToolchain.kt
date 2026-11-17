@@ -10,16 +10,11 @@ import kotlin.io.path.Path
 object GoToolchain {
     private val logger = object : KLogging() {}.logger
 
-    /**
-     * GOROOT of the Go installation on PATH, or `null` when there is none.
-     *
-     * `GOTOOLCHAIN=local` keeps the answer on the installed Go: without it `go` can report a
-     * toolchain that it downloaded into the module cache, and that path does not outlive the cache.
-     */
     fun resolve(workDir: Path): Path? = try {
         val goRoot = ProcessExecutor()
             .command("go", "env", "GOROOT")
             .directory(workDir.toFile())
+            // Without it `go` can report a toolchain that it downloaded into the module cache.
             .environment("GOTOOLCHAIN", "local")
             .readOutput(true)
             .redirectError(Slf4jStream.of(logger.underlyingLogger).asDebug())
