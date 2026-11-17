@@ -3,7 +3,9 @@ package org.opentaint.ir.go.client
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import java.io.BufferedReader
+import java.io.File
 import java.io.InputStreamReader
+import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
 /**
@@ -14,6 +16,8 @@ class GoSsaServerProcess(
         System.getProperty("goir.server.binary")
             ?: System.getenv("GOIR_SERVER_BINARY")
             ?: error("GOIR_SERVER_BINARY not set"),
+    // GOROOT of the Go installation that the server runs `go` from; `go` on PATH when null.
+    private val goRoot: Path? = null,
 ) : AutoCloseable {
     private var process: Process? = null
     private var channel: ManagedChannel? = null
@@ -31,6 +35,8 @@ class GoSsaServerProcess(
         val pb = ProcessBuilder(serverBinaryPath, "-port=0")
             .redirectInput(ProcessBuilder.Redirect.PIPE)
             .redirectErrorStream(false)
+
+        goRoot?.let { useGoToolchain(pb.environment(), it) }
 
         val proc = pb.start()
         process = proc
@@ -59,6 +65,14 @@ class GoSsaServerProcess(
 
         channel = ch
         return ch
+    }
+
+    // The server starts `go` by name, so the toolchain is selected through PATH.
+    private fun useGoToolchain(env: MutableMap<String, String>, goRoot: Path) {
+        val pathKey = env.keys.firstOrNull { it.equals("PATH", ignoreCase = true) } ?: "PATH"
+        env[pathKey] = listOfNotNull(goRoot.resolve("bin").toString(), env[pathKey])
+            .joinToString(File.pathSeparator)
+        env["GOROOT"] = goRoot.toString()
     }
 
     /** Tail of the server's stderr captured so far, or `null` if unavailable. */

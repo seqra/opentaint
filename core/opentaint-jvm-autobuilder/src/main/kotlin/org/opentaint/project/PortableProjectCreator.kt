@@ -104,7 +104,7 @@ class PortableProjectCreator(
 
         copy(rootProject.projectDir, portableProjectPath)
 
-        val portableProject = GoProject(portableProjectPath)
+        val portableProject = GoProject(portableProjectPath, rootProject.goToolchain)
         val relativeProject = portableProject.relativeTo(portableProjectRootPath)
         return relativeProject
     }

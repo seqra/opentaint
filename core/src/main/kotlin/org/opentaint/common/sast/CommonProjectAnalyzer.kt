@@ -74,6 +74,13 @@ class CommonProjectAnalyzer(
         var status = ProjectAnalysisStatus.OK
         for (project in allProjects) {
             val projectName = project.projectName()
+
+            val skipReason = project.skipReason()
+            if (skipReason != null) {
+                logger.warn { "Skip analysis for project: $projectName: $skipReason" }
+                continue
+            }
+
             val projectStatus = try {
                 logger.info { "Start analysis for project: $projectName" }
                 createAndRunAnalyzer(project, results).also {
@@ -103,6 +110,16 @@ class CommonProjectAnalyzer(
 
     private fun goProjectTestAnalyzer(project: GoProject, results: ProjectAnalysisTestResults) =
         GoTestProjectAnalyzer(project, results, options.goOptions())
+
+    // A Go project is analyzed with the Go toolchain that the project model records.
+    private fun CommonProject.skipReason(): String? = when (this) {
+        is JavaProject -> null
+        is GoProject -> when {
+            goToolchain == null -> "the project model has no Go toolchain"
+            goExecutable() == null -> "the Go toolchain $goToolchain of the project model has no bin/go"
+            else -> null
+        }
+    }
 
     private fun CommonProject.projectName(): String = when (this) {
         is JavaProject -> sourceRoot.toString()

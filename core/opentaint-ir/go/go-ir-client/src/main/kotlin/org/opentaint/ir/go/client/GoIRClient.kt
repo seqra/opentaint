@@ -18,14 +18,14 @@ data class BuildResult(
     val timings: BuildTimings,
 )
 
-class GoIRClient : AutoCloseable {
+class GoIRClient(goRoot: Path? = null) : AutoCloseable {
     companion object {
         init {
             GoIRGrpcLogging.quietNoisyGrpcLogs()
         }
     }
 
-    private val serverProcess = GoSsaServerProcess()
+    private val serverProcess = GoSsaServerProcess(goRoot = goRoot)
     private val channel = serverProcess.start()
     private val stub = GoSSAServiceGrpc.newBlockingStub(channel)
 

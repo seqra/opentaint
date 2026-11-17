@@ -34,7 +34,7 @@ class GoProjectAnalyzer(
     private val useDefaultModels = goOptions.useDefaultModels
 
     override fun initializeProjectAnalysisContext(): AnalysisCtx {
-        val client = GoIRClient()
+        val client = GoIRClient(project.goToolchain)
         return AnalysisCtx(project, client, modelPaths, useDefaultModels)
     }
 

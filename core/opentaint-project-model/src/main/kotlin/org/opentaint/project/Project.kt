@@ -15,6 +15,7 @@ import java.nio.file.Path
 import java.util.logging.Logger
 import kotlin.io.path.Path
 import kotlin.io.path.inputStream
+import kotlin.io.path.isRegularFile
 import kotlin.io.path.outputStream
 import kotlin.io.path.relativeTo
 
@@ -85,12 +86,27 @@ data class ProjectModuleClasses(
 @Serializable
 data class GoProject(
     val projectDir: @Serializable(with = PathAsStringSerializer::class) Path,
+    // GOROOT of the Go installation on the machine that built the project model. It is not copied
+    // into the model, so it stays absolute.
+    val goToolchain: @Serializable(with = PathAsStringSerializer::class) Path? = null,
 ): CommonProject {
     override fun sourceRoot(): Path = projectDir
 
-    fun relativeTo(path: Path): GoProject = GoProject(projectDir.relativeTo(path))
+    fun relativeTo(path: Path): GoProject = GoProject(projectDir.relativeTo(path), goToolchain)
 
-    fun resolve(base: Path): GoProject = GoProject(base.resolve(projectDir))
+    fun resolve(base: Path): GoProject = GoProject(
+        base.resolve(projectDir),
+        goToolchain?.let { base.resolve(it) },
+    )
+
+    fun goExecutable(): Path? = goToolchain?.let { goExecutable(it) }
+
+    companion object {
+        fun goExecutable(goRoot: Path): Path? =
+            listOf("go", "go.exe")
+                .map { goRoot.resolve("bin").resolve(it) }
+                .firstOrNull { it.isRegularFile() }
+    }
 }
 
 @Serializable
