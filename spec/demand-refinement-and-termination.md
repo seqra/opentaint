@@ -12,6 +12,15 @@ statement forms, AP stores and handoff indexes. Sections 4 and 7 state
 the implemented scope of suppression. In particular, the mathematical
 live-reply and terminal-retirement proofs stay in the model.
 
+**COMPLEX** marks additional cross-row preparation, graph extraction
+or closure work. A local tail case, a scan of first CFG destinations
+or reuse of a native lookup keeps its ordinary classification. For
+each COMPLEX candidate, compare its recorded fixture with the
+candidate withheld. A bounded run supplies diagnostic evidence.
+An uncapped claim needs a repeated frontier and inductive proof in the
+stated model. A simpler rule that discharges the same fixture is
+sufficient reason to withhold the heavier computation.
+
 ## 1. Domain and processing order
 
 `p.f.K/m,L` means base `p`, field chain `f`, tail `K`, mark `m` and layer
@@ -117,6 +126,11 @@ semantics, restricted admission and publication, completed-output filtering,
 and cleaner transfer. They can change demand,
 report timing and delivery counts. Selected EXACT cleaning of concrete
 MUST has the explicit precision tradeoff in §5.
+
+### COMPLEX
+
+The scheduler and block layout reuse the native engine. They add no
+separate termination search in this section.
 
 ### Examples diff
 
@@ -253,6 +267,45 @@ before union. A covered uncut leaf does not justify skipping another
 row that would emit a cut D variant. An early exit needs coverage of
 every remaining row's **capped** membership, including layer and H.
 
+### 2.4 C2 at an offer
+
+```text
+prepareC2(offer, owner, entryPort):
+    bounded = nativeGlobalCut(offer)
+    commands = empty exact set
+    for row in indexedEntryCandidates(owner, entryPort, bounded):
+        if native scope, geometry and mark gates fail: continue
+        family = primaryCommandsFromSection2_1(row.Dc, bounded)
+        add only the authorized companions and point probe
+        apply R07 then R08 to their eligible commands
+        add the prepared children from §3.1
+        keep each command's own qualified row and bound offer
+        enforce the entry and global limits from §2.3
+        commands.addAll(family)
+    return commands
+```
+
+Use this for DATA once per real restricted offer after saved replay.
+Use §6.1 for ZERO. The caller
+hands the result to the owner for current application and subscriptions.
+The C5 raw-image predicate uses the same cases as a structural query.
+For `P` candidate rows, `G` guard hits for child preparation and `B`
+command memberships examined or produced, work is a candidate/guard
+scan plus `O((P+G+B)·(K+Emax))` scalar field and exclusion work.
+`Emax` bounds the mask comparisons per scalar operation. This
+excludes the existing index traversal and run-2 static query. The
+family uses at most `4+3·|fields|` commands per scalar row before
+deduplication. Scratch space follows the prepared plan, with no
+unbounded actual-offer history.
+
+### COMPLEX
+
+R04–R08 and R32 use the scalar table, prefix tests and a bounded
+rewrite. The additional cross-row child lookup is audited with
+R09/R10 in §3.4. The R08 example with
+`p.f.g.h.MUST/T{k},N` needs the right head for correctness, but its
+replacement is one local operation on the actual.
+
 ### Examples diff
 
 #### Raw field transfer
@@ -342,6 +395,18 @@ parent's Dp and cap even if a deeper
 row helped select f. The deeper row can also supply an independent
 plan with its own cap.
 
+```text
+prepareChildren(row, originalActual):
+    collect distinct allowed first fields from compatible rows and saved guards
+    for f in those fields:
+        select the empty and nonempty residuals at row.Dc.head + f
+        emit the eligible EXACT and STAR child and its authorized companion
+        bind the child to the original actual and the parent's complete row
+```
+
+Apply the field limit once against that parent row. This loop does not
+recursively prepare grandchildren. Its work is included in §2.4.
+
 Apply the prepared children and the ordinary coarse transfer through
 native application. A child query has its own original. It cannot
 supply a different original's publication just because both fact
@@ -352,6 +417,21 @@ reached the same destination. R34 likewise uses ordinary delivery for
 its possible result. There is no delegation check on the worklist.
 
 ### 3.2 Match and apply scalar summaries
+
+```text
+onRestrictedCallOrBlockOffer(originalActual):
+    apply saved NORMAL summaries to the original actual
+    plan = prepareC2(originalActual)
+    if plan is empty: return
+    submit the plan's admitted initials to the owner
+    apply admitted current rows in this binding
+    subscribe for later matching current rows in the same binding
+```
+
+This is the normal offer path. Saved replay and current application
+cost one indexed candidate scan each plus native matching, cuts and
+effects for the selected rows. This reuses the one C2 plan and adds no
+second actual traversal. An ND application still uses its native join.
 
 Use the original actual for saved and ordinary current application.
 Evaluate the caller's current C2 plan once. An empty plan ends current
@@ -442,8 +522,8 @@ C5(rawP, rawC):
         if either endpoint or the result is control:
             apply the typed C5 cases in §6.1 for this pair
             continue
-        for each candidate leaf c0 and eligible raw premise member i:
-            if no legal actual with i in the prepared raw C2 family of Dc: skip
+        if no eligible raw premise member is in RawImage(row): continue
+        for each candidate leaf c0:
             (p,c) = normalizeFLOWPair(whole rawP,c0)
             b = selectExit(c,Dp)
             if b exists:
@@ -514,6 +594,39 @@ representability case. Selection never upgrades support or creates a
 concrete mark. Cut after this step and normalize again. The cut keeps the
 prefix through the effective budget's last counted field, changes the
 tail to NE/D, clears E, and preserves mark, mx and H.
+
+**Work.** Run C5 once per fresh summary at its publishing boundary.
+For `P` indexed pairs, at most `M` eligible original members and
+`L` candidate output leaves, there are at most `P·M` raw admission
+tests and `P·L` scalar output tests after a matching member is found.
+The reference loop can share the same row's member test across its
+leaves and the same output test across its matched arms. Bound work
+per test by its geometry and exclusion scans and the lookups needed
+for the row's prepared C2 cases. Never enumerate hypothetical offers
+on the publishing path. The cut processes at most the selected
+leaf's field chain. Store the deduplicated admitted results and emit
+no unrestricted candidate record.
+
+### 3.4 COMPLEX — prepared children
+
+R09/R10 read deeper rows and saved guards before creating additional
+bounded C2 queries. The R11/R12 proof model can then delegate a
+coarse transfer to those children. The active path keeps the coarse
+transfer, as in §3.1. No further query closure or delegation is
+performed on the worklist.
+
+| Candidate and fixture | Rule-disabled check | Necessity for current proposal |
+| --- | --- | --- |
+| Prepared children with delegation. `wrapper(x){ return choose(x); }`, where `choose` reads `x.f.f` on one branch and writes two fields on the other. Saved `x.f.f.*→ret.*,N` on `x.f.*/F` keeps `x.f.*/F→ret.M/F,D` even when current C2 is empty. | The historical branch without saved delegation has four stationary MAY pairs from run-9/run-10 and an uncapped recurrence. The child-routing reference stops at run-9. R17 sees live caller/return consumers and cannot remove them. | This isolates the missing **saved-replay delegation** in that reference. Prepared C2 children alone do not remove the saved result. No independent stop caused by the currently enabled preparation has been established with the other guards retained. |
+| Generic pre-C5 or live-reply coverage. The enclosing-method example can pass `ret.f.f.MUST/F,N` through a `ret.*` guide and publish `ret.f.NE/F,D`. | The historical BB reference needs an additional whole-summary proof. A longer initial and the inner BB's NORMAL record do not change the enclosing cap. | There is no production proof check for this candidate. R18 uses ordinary C5. A historical stop with precoverage is not evidence for enabling general cross-context analysis. |
+
+The remaining C5 selection is one raw membership test and one
+bounded output selection per qualified pair. Restrict the raw-image
+implementation to the C2 cases in §§2–3.1. A general search over
+hypothetical inputs would be an additional COMPLEX algorithm without
+a termination witness here. Keep that search out of publication.
+[Nested replay fixture](../docs/reports/bidirectional-nested-saved-replay-nontermination-20261115.md) ·
+[BB fixture](../docs/reports/bidirectional-non-empty-may-basic-block-retrace-20261113.md)
 
 ### Examples diff
 
@@ -609,15 +722,32 @@ It can read x or run a rule before the overwrite.
 
 ```text
 completeOutput(S, P, d):
-    if forward FULL after run-1 and isEligibleScalarLocalDemand(d):
-        destinations = ordinaryFirstDestinationsAfter(S, d.base)
-        if destinations are known and every destination is a plain
-           statement whose form discards the entire d.base as above:
-            for n in edges.edgesAt(S, P):
-                if n is NORMAL and a scalar leaf of n wholly covers d:
-                    return                       // skip this offer
+    if forward FULL after run-1 and scalar concrete local D(d)
+       and hasOnlyDiscardingDestinations(S, d.base)
+       and edges.edgesAt(S, P).hasNormalCover(d):
+        return                       // skip insertion and all enqueues
     admitOutputsAndDispatchAsUsual(S, P, d)
+
+hasOnlyDiscardingDestinations(S, x):
+    for J in borrowCachedFirstDestinations(S, x):
+        if J is a boundary, endpoint, call or synthetic route: return false
+        form = borrowCachedForwardFullStatement(J)
+        if form is missing: return false
+        if x not in form.touched or form.edgesOf(x) is nonempty: return false
+        if form has conjunctions, sources or static operations: return false
+    return every ordinary successor had a complete cached destination list
 ```
+
+Read existing cache entries without building or pinning new forms for
+this check. A missing or reclaimed row uses ordinary output admission
+and delivery. An empty cached row is a completed result. A provider
+already delivered from S normally has warmed the same routing rows.
+Where a form provider has no cache-only read, leave that destination
+ineligible until the provider exposes a read of its existing cached
+value. A cache-only read holds the existing value during the predicate.
+It needs no new cache or retention policy. Stream each successor's
+cached destinations. Repeated destinations can be checked twice without
+allocating a union. Stop at the first failing destination.
 
 An empty, completed destination list passes the destination test. Use
 the existing store lookup for the same block entry scope, original P
@@ -636,6 +766,18 @@ one live or unavailable destination keeps the whole D offer. The
 filter requires only the current output, cached destinations, statement
 forms and the existing edge store. It introduces no origin key, proof
 record, speculative rule execution, waiting or scan across future runs.
+
+**Work.** Let `s` be the immediate successor count, `d` the number
+of destination references read, and `b` the number of provider leaves
+inspected in the one `(S,P)` cell. The added work is
+`O(s + d + b·(K + Emax))`, plus decoding the borrowed cell's existing
+packets. `Emax` is the largest exclusion-set scan during comparison.
+Read only providers at the same base/mark/H and use the existing prefix
+lookup where available. A failed destination check never reads the
+edge store. Extra retained space is zero. The check causes no new CFG
+walk, form build, call application, C2 start or C5 lookup. A hot check
+can still cost more than one ordinary overwrite delivery. Measure
+offers checked, drops and processing time before claiming a speedup.
 
 **Preservation.** Native delivery skips only irrelevant statements. At
 all first destinations accepted here, this input only touches a base
@@ -683,6 +825,17 @@ compaction as in the existing method and scoped handoff. Keep both
 rows for other shape comparisons, including MAY versus NE. Do not
 introduce cross-layer summary folding or pre-C5 suppression.
 
+### COMPLEX
+
+R17 and its use after call application require only the immediate
+native continuation in §4.1. R19's former complete owned-query and
+caller-use closure would be COMPLEX. The live `x.h.M/U,D` fixture
+illustrates the extra computation but does not require it for
+termination: the guarded run-9 reference stops using R38 while
+forwarding every applicable reply. The other bound-reply controls
+also stop with the same root rule and no live-reply omission.
+Keep the stronger R19 test out of the analyzer. [Bound-reply ablation](../docs/reports/bidirectional-termination-fix-validation-20261117.md)
+
 ### Examples diff
 
 | Rule and input | Current | Proposed |
@@ -722,6 +875,59 @@ is `x = null` and the caller already stores a NORMAL MUST cover for
 the D fact at the producing statement, the coarse local can be skipped under §4.1. No callee state
 needs to be retained for that decision.
 
+#### R17 across calls and blocks
+
+All examples start in forward run-3 or later. Let
+`N = ZERO→x.h.MUST/U,N` and `D = ZERO→x.h.M/U,D`. Use the same
+caller scope, original and H. N is already stored at S unless noted.
+An overwrite example assumes the destination and statement form are
+already cached.
+
+```java
+void caller(Box p, Box replacement, boolean branch) {
+    Box x = wrapper(p);      // S. Applied caller results include {N, D}.
+    if (branch) x = null;
+    else x = replacement;   // Both arms discard the old x in their forms.
+    observe(x);              // Cannot take the old x from S.
+}
+Box wrapper(Box p) {
+    return dispatch(p);      // Multiple resolved callees can supply N and D.
+}
+```
+
+| Native result and first destinations | Current output from S | Output with R17 |
+| --- | --- | --- |
+| The two cached overwrites above. `wrapper` returns `{p.f.g.$/T→ret.h.MUST/U,N; p.f.*/T→ret.h.M/U,D}` in compatible bindings. | Caller forwards `{N; D}`. Both overwrites give `∅` from old x. | Caller forwards `{N}`. The same two callee summaries remain. |
+| Replace the else arm with `x = wrapper2(x)`. One resolved target reads h first and emits `{ZERO→DT,D}`. | `{N; D}` reach the call. | Keep `{N; D}`. The first relevant instruction is a call, even though the result rebinds x. |
+| The original caller now saves `Box a = x` before the overwrite, and `anotherWrapper(a)` can read h. | The copy emits `{ZERO→a.h.MUST/U,N; ZERO→a.h.M/U,D}`. | Same two facts. The first form has an edge from x to a. No callee lookup is required to reject removal. |
+| A completed call also emits `Q→p.f.$/V,D` to a caller alias and an admitted `ZERO→DT,D`. Old x has only the two overwrites. | `{N; D; Q→p.f.$/V,D; ZERO→DT,D}`. | `{N; Q→p.f.$/V,D; ZERO→DT,D}`. The local gate applies only to x after these effects. |
+| After a call inside a loop, x reaches a repeat/leave port, with `ZERO→x.h.M/U,D` in a candidate block summary. | `{N; D}` enter ordinary block exit handling. | `{N; D}`. R17 cannot look through a block port to an outer overwrite. |
+| A cached empty destination row for x. Alternatively one row is missing, or N is from a different original or was delivered after D. | Store `{N; D}` when both facts arrive. | Empty row and ready cover: store `{N}`. Missing row, wrong original or late N: retain D. |
+
+#### R17 and the termination cases
+
+Every R17 deletion removes deliveries whose first transfers have empty
+results and effects. Applying the check to any catalogue program
+preserves the baseline semantic frontier, including its active DT,
+source permissions, next C2 admissions and published summaries. The
+test can save local propagation. It cannot close a cycle that requires
+an observable D delivery to disappear.
+
+| Checked case and decisive fact | R17 decision | Termination evidence |
+| --- | --- | --- |
+| Alternating generators. After the first two `make` calls, `x.M/U,D` and `y.M/T,D` feed another call. After the third, `z.M/U,D` feeds the observer. | Keep all three. The first two destinations are calls and the third is an observation, or its boundary. | The historical run-5 model used live uniform folding. With it withheld, the checked retained-reply model still has root `ZERO→DT,D` through run-11. The run-7 natural stop with R38 requires a separate root retirement. |
+| Two marking sites with one report. `r.M/T,D` from B and `r.MUST/T,N` from A reach the same observer. | Keep D, so `ZERO→DT,D` can still authorize B. | The guarded native fixture reaches B's precise track at run-5. The value-only gate lost it at run-3. |
+| Protected and uniform bound replies, disjoint or unadmitted returns, exact-input control, and saved MUST replay controls. Bound coarse return facts feed reads, calls or observers. | Keep the live D replies regardless of their coverage. | The recorded guarded stops at run-7 through run-11 rely on the fixture's complete root Target proof. The run at which the NORMAL track already exists is not a stopping proof. |
+| Exclusion-carry and deeper-head controls. The useful NORMAL reply must still reach its observer. | Preserve the observer delivery. R17 does not decide E or the initial head. | The checked exclusion references stop at run-5 with uniform value folding withheld. |
+| Root MAY renewal, BB and enclosing-method renewal, global-cut growth (including protected), both cleaner cases, uniform root cleaner and EXACT-origin write. The relevant C2/C5 or field-transfer paths reach an operation or boundary. | Keep the live path. Any deleted local offer has no following output. | The catalogue tests distinct admission, cap or transfer repairs for these cases. R17 neither replaces those repairs nor changes their frontiers. |
+| Nested saved replay with and without exclusions. The regenerated D result has a live input or publication use. | Keep it at the call/block. | The recorded run-9 certificates use child routing, outside the local overwrite check. |
+| Recursive wrappers and regular/nested writer–reader examples. The coarse D route reaches a return, call or observer. | Keep the route and its admitted root DT. | Wrapper stops at run-7/run-9 and field-route stops at run-5 require terminal retirement. The field-route native diagnostics with DT retained reach run-9/POLICY. |
+
+The compared runs are reference or native fixture results with their
+stated policies. They do not give a new natural stop for the whole
+current pipeline. [Catalogue verification](../docs/reports/bidirectional-termination-fix-validation-20261117.md) ·
+[Two-source audit](demand-refinement-no-loss-audit.md)
+
 ## 5. Cleaners
 
 | Rule and affected part | Required behavior | Proof |
@@ -740,6 +946,41 @@ field-position ALL use this spatial rule. Below-only RemoveAll remains
 invalid. For R31 leave existing mark requests and cleaner ownership in
 place. Partition packed paths by the stated prefix test and add the
 selected marks to mx only on the remaining leaves. At most two packets.
+
+```text
+cleanConcreteMust(c, cleaner):
+    if the regions are disjoint: return {c}
+    if cleaner is selected EXACT and its point is in c:
+        return {c with native cleaner-survivor H}
+    if not the R36 restricted NORMAL case: return nativeClean(c, cleaner)
+    if the entire region is cleaned: return empty
+    residuals = []
+    for next field f on the cleaner's path relative to c:
+        if f is excluded at this head: return ordinaryCut(residuals + [c])
+        residuals.add(c with E union {f})
+        c = child MUST at f with empty E
+    if cleaner is BELOW: residuals.add(the surviving exact point)
+    return ordinaryCut(residuals)
+
+cleanFlowPacket(packet, cleaner):
+    partition its leaves by the R31 suffix-cone disjointness test
+    emit disjoint leaves with their original headers
+    emit remaining leaves with the native selected-mark mask update
+```
+
+Run at ordinary cleaner transfer, before the next delivery or
+publication. R36 emits at most one residual per traversed cleaner
+field plus the possible exact point. The work is linear in those
+steps, the mask inspections and the sizes of the emitted paths.
+R31 does one prefix comparison per leaf and uses at most two packets.
+Neither rule creates a C2 start or expands arbitrary field suffixes.
+
+### COMPLEX
+
+R26/R35 classify an exact point locally. R36 traverses only the
+cleaner's declared field chain, and R31 visits only the packet
+already being cleaned. This section adds no search across statements,
+methods or iterations.
 
 ### Examples diff
 
@@ -778,6 +1019,32 @@ For C5, evaluate the following two tests on **one** qualified pair.
 | Raw entry | Dc is ZERO or DT | The matched original is ZERO. A DATA member cannot match. |
 | Output | Dp is DATA | Only DATA can pass. Apply scalar selection and the row's cap in §3.3, including for a legal ZERO original. |
 | Output | Dp is ZERO | Only a ZERO result or a DT candidate passes. The DT probe accepts on the same exit slots as ZERO and emits only a DT. |
+
+```text
+emitTarget(boundOriginal P, target, physicalPort):
+    if target is NT:
+        if forward and all required witnesses and links are NORMAL:
+            publish via the existing NT deduplication
+        return
+    if unrestricted run-1 or acceptsTarget(P, physicalPort):
+        publish DT with the admitted original and port
+
+acceptsTarget(P, port):
+    for row in ordinary qualified paired rows at this port:
+        if row.Dp == ZERO and row.Dc accepts a complete P member:
+            return true
+    return false
+```
+
+The paired probe implements the table above and includes the existing
+run-2 virtual and borrowed-normal routes where eligible. The ND member
+test above applies only to restriction. The ND call join still requires
+all arms before it can emit a Target. Use this at the existing Target
+publication point, after ordinary rule handling or native call/block
+composition. Work for the typed part is linear in indexed candidate
+pairs and their inspected original members, with early exit at a
+complete match. DATA entry checks and static lookup keep their own
+costs. No AP path product is created by the typed ZERO/DT check.
 
 For example, with guides `{p.$/T→DT,D; ZERO→q.$/T,D}`,
 `ZERO→DT,D` matches the entry of the first row and the exit of the
@@ -831,7 +1098,7 @@ handoff(sealedRun):
                               or original is ND
                               or (backward and original is singleton ZERO)
     selected += admitted DT at method and block boundaries
-    build the next seed index from native sink seeds or source hits
+    seeds = forward ? native sink seeds : native source hits
     for each selected origin with its physical owner and ports:
         for each scalar result and each original member:
             Dc = guideEndpoint(result)      // DT handled as typed entry
@@ -841,6 +1108,14 @@ handoff(sealedRun):
     apply existing qualified C2/C5 compaction to eligible DATA rows
     insert admitted DT and the retained DATA rows in DemandStore.Builder
     freeze the demand index and use the native forward stop test
+
+guideEndpoint(x):
+    if x is ZERO or DT: return the same typed endpoint
+    if x.tail == MUST: x = x with M tail and empty E       // native view
+    if x.mark == FLOW:
+        clear mx
+        if x.tail == STAR: clear E
+    return x
 ```
 
 The selector applies to admitted method and block results, including
@@ -876,6 +1151,15 @@ second search for virtual consumers at the stop test. A changed static
 view must pass the native comparison for C2, C5, Target and preflight
 before activation. A policy cutoff stays separate.
 
+**Work.** At the sealed barrier, a selected origin with `k` scalar
+outputs and `m` original members offers `k·m` pairs. A DT has one
+typed output. Projection and index construction charge the decoded
+paths of those pairs and the native seed count. The existing
+`HandoffCompactor` also sorts eligible origins by owner group and
+looks up matching rows for each projection. Its comparison keys
+and provider rechecks stay native. The final positive-count test is
+constant time. It launches no lookup or transitive walk.
+
 ### 6.3 Run-1 static views
 
 Build the run-2 static view from the frozen run-1 direct, captured write
@@ -910,6 +1194,42 @@ and a `S/T→DT` reader can expose `ZERO→DT` through their common S.
 Short-circuit only after the probe has all
 its required results, including different C5 budgets. Shared carry
 offers just the projected identity for the same actual static slot.
+
+```text
+queryRun2Static(owner, ports, operation, input):
+    try the native explicit and eligible shared-carry rows
+    for view in [local, inherited if the native preflight allows it]:
+        pending = indexed endpoints matching this operation in view
+        seen = empty set
+        while pending is not empty:
+            row = pending.pop()
+            if row already in seen: continue
+            seen.add(row)
+            offer the complete row to C2, paired C5 or Target
+            if the operation has all its required results: return
+            if row.input has a static anchor:
+                for predecessor in indexedIncoming(view, row.input):
+                    if anchors, geometry and mark composition match:
+                        pending.push(compose(predecessor, row))
+```
+
+For C2, the indexed traversal can use the native entry-only
+optimization. For paired C5 it keeps both endpoints and its port until
+the row is consumed. For a Target the output is typed DT and there is
+no AP label on that endpoint. The latter two queries follow matching
+predecessors as shown. This is the reference lookup order. Use the
+existing native static view, including its entry-only specialization,
+and compare any new implementation against its operation-specific
+results. A boolean Target probe can stop at one accepted pair. DATA
+C5 must account for all selected output leaves and their budgets.
+
+**Work.** A native run-2 lookup examines the indexed seed postings
+and then the reachable qualified states and their incoming candidate
+postings. Its extra memory is the worklist and visited keys of this
+probe. A posting check costs the mark and geometry comparison only
+after the native filters allow it. Each query may examine a large
+closure in the worst case. No such expansion runs in later iterations,
+and the barrier does not materialize a static relation closure.
 
 For a reached backward run-2 concrete static original at a block, the
 static-write shortcut may serve a DT candidate through a completed
@@ -964,7 +1284,24 @@ proveClosedGoal(g):
         if s in possible and s not in witnessed and no validated NoRoute(s,g):
             return Open
     return Closed
+
+onAdmittedTargetInModel(key, originBits):
+    incoming = OR(originBits)    // a local origin contributes goal not in frozenClosed
+    if key has no bit: publish and store incoming
+    else if incoming and currentBit(key) == false: publish upgrade to true
 ```
+
+For the proof model, run `proveClosedGoal` at a completed forward seal
+for a goal with an available complete catalogue and both validated
+graphs. A Closed result enters the next forward snapshot. With
+adjacency lists, two reverse searches cost `O(V+E+|S|)` time and
+`O(V+|S|)` scratch space after the views are built. Construction and
+validation of the two views are separate costs and are not constant
+time. The modeled bit uses OR on every admitted alternative. It can
+publish once and upgrade once per key. A missing graph or catalogue is
+Unknown. A possible route without a retained witness is Open.
+Production runs neither search nor
+the bit propagation.
 
 This condition alone is insufficient for removing a row. The same
 `PairedDemand(Target, Zero)` authorizes a ZERO initial in `DemandStore`
@@ -984,42 +1321,274 @@ retiring the row.
 
 ### 6.5 R39/R40 NoRoute proof models
 
-For the R39/R40 proof models require complete pure FLOW route extraction. Build clauses
-from the finite resolved writer/reader control-flow graphs, using
-ordinary field reads/writes and transfer-preserving relays. Collect
-branches by union. Label each write with the actual prefix it
-prepends and each read with the known field it consumes. Compose the
-labels around calls and loops only when each path factors into the
-permitted base or single-child clause. Validate that every path,
-resolved target, source alias, binding and actual observer port has a
-corresponding derivation in the extracted languages. A normal return
-alone supplies no edge for an internal observation.
-For source field word `a` and exact observation word `q`, solve
-`writerWord·a = readerWord·q`. Regular clauses are base words or
-`prefix·B`. A nested clause can use `prefix·B·suffix` on one side only.
-Reverse writer loop instruction order for prefix writes; preserve reader
-order. In a two-sided writer, fields prepended after the call come first.
-Append a/q at regular base clauses. For the nested side append the outer
-suffix **after the whole word**. For example, a nested `g·B·f` with B
-empty and source h gives `g.f.h`; appending h to B incorrectly gives
-`g.h.f`.
+**When.** Run this checker in a reference fixture or a read-only query
+at a completed forward seal. It checks one exact marking-action to
+observer relation. The native handoff currently keeps the DT. Even a
+valid NoRoute could discharge only this relation under §6.4.
 
-For regular sides traverse the synchronized same-field product from
-the aligned start states. Accept disjointness only if its visited set
-contains the starts, is closed under every synchronized transition
-and contains no accepting pair. Return Unknown on a cross-owner empty-word transition
-unless its epsilon elimination is proved. For one nested side, use the
-regular automaton's word transition `step`. Seed `(A,p,q)` where base(A)
-can move p to q.
-For `A→u·B·v`, an existing `(B,m,n)` adds `(A,p,q)` when
-`m∈step(p,u)` and `q∈step(n,v)`. Check closure and absence of an accepting
-start-owner cell after consuming the outer suffix. The product has at most
-`Qw·Qr` pairs. The nested check has at most `M·Q²` cells for M owners and
-Q regular states. Index clauses by child and solve the finite closure.
-A possible word, incomplete code extraction, unsupported
-effects or two nested languages leaves guidance in place. NoRoute creates
-no NORMAL report or source permission. The native handoff in this
-revision does not run this extraction and keeps the DT row.
+**Inputs.** One FULL mark T, the native marking action and exact source
+position with word `a`, the exact observer occurrence and position
+with word `q`, and the writer/reader interfaces. Each interface fixes
+the actual root object, resolved entry and exit bindings and ports.
+The writer and reader must meet at the same bound base. A field or
+array label is the actual accessor ID. Do not use field names without
+their resolved identity. The writer prepends its derived word to a.
+The reader consumes its derived word before checking q. Thus a route
+requires `writeWord · a = readWord · q`.
+
+#### Extract the two languages
+
+Use a finite value-flow graph for this fragment. Its vertices are
+`(physical scope, instruction or port, base)` in the writer or reader.
+Use the resolved CFG, the ordinary statement forms and resolved call
+binding/return maps. The following table specifies labels on the value
+being tracked. Include identity edges on every CFG branch that can
+preserve it. A fresh result starts with no incoming value edge.
+
+| Native transfer on the tracked value | Writer | Reader |
+| --- | --- | --- |
+| Identity or local copy | ε | ε |
+| Ordinary `b.f = v`, with verified fresh, non-aliased result b | Edge `v→b` with label f | Unknown |
+| Ordinary `b = v.f` | Unknown | Edge `v→b` with label f |
+| Resolved call with an exact input/return mapping in the fragment | Invocation edge for the matching interface | Same |
+| Branch or type guard on control only | Include every possible successor | Same |
+
+Select the cone between the chosen input and output ports. Use the
+version of the writer graph with these value edges read backwards
+from output to input. Prepending f last puts f first in the final
+word. Use the reader graph from input to output. For example, if a
+writer prepends g before B and f after B, the rule is `f·B·g`. A
+reader with the same instruction order uses `g·B·f`.
+
+```text
+extract(graph, interface, role):
+    if exact endpoints, actual binding or other incoming routes are unproved:
+        return Unknown
+    scan all control-reachable CFG points at the resolved interfaces
+    add the supported edges from their statement forms
+    if any relevant operation can carry T outside these edges:
+        return Unknown                     // includes unknown alias or call
+    keep the value-flow cone between the selected ports
+    orient value edges in word order for role
+    for each matched interface:
+        create a nonterminal for its start and each local vertex
+        at the chosen output vertex add A → ε
+        for each ordinary edge A --word--> B add A → word · B
+        for each invocation edge A --callee--> C:
+            v = uniqueRemainingWord(C, selected output)
+            if v is NoPath: continue
+            if v is unknown: return Unknown
+            for each resolved alternative B with the matched ports:
+                add A → ε · start(B) · v
+    return the reachable clauses from the selected start
+
+uniqueRemainingWord(C, exit):
+    cone = vertices reachable from C that can reach exit
+    if C not in cone: return NoPath
+    if cone contains a call or cycle: return Unknown
+    word(exit) = ε
+    for node in reverseTopologicalOrder(cone), excluding exit:
+        candidates = {edge.label · word(edge.to) | edge in this cone}
+        if candidates do not all agree: return Unknown
+        word(node) = the common word
+    return word(C)
+```
+
+`uniqueRemainingWord` considers every continuation from C that can
+reach the selected output. For the checked fragment, this subgraph
+contains no call and is acyclic. Scan in reverse topological order:
+the exit maps to ε and each other vertex maps to `edgeWord · word(next)`
+when all reaching successors give the same word. No route gives no
+clause. A cycle, second call or different suffix words gives Unknown.
+This is a sufficient test for the recorded nested fixtures. Loops in
+the regular part use ordinary labelled graph cycles outside this
+suffix test. A branch before a call or in a regular loop adds edges,
+not one clause per complete path. Mutual recursion names the resolved
+callee interface, without unfolding it.
+
+Check all resolved callees and relevant CFG edges, including exceptional
+routes to this observer. Exclude a transfer only when its configured
+base/alias information rules it out for the tracked carrier. A cleaner,
+mark-changing rule, relevant overwrite, missing binding, hidden heap
+route or unsupported effect in the cone yields Unknown. Carry no
+facts through this extractor. An unobserved summary, the current
+field limit or current seed permissions cannot justify omitting an
+edge. A different internal observer or caller binding is a separate
+query. A NORMAL return alone gives no edge to an internal observer.
+
+**Extraction invariant.** Each real segment in the binding takes one
+of the checked edges or invocation alternatives. Induct on the local
+path and the nested return tree. Ordinary labels compose in word
+order and each invocation substitutes the child's word before the
+checked suffix. Thus the extracted language includes every real
+word. Extra CFG branches can give Possible, while an omitted route
+would invalidate NoRoute. The verifier rejects incomplete extraction.
+For a supplied fixture grammar, validate this invariant against its
+fully analyzed code separately from testing product emptiness.
+
+#### R39 [REC] [LOOP] with two regular sides
+
+A regular grammar has only `A→w` and `A→u·B`. Compile the first to a
+word-labelled path to an accepting state and the second to a path to
+B. Split each nonempty label into one transition per accessor. Attach
+`a` on the writer and `q` on the reader after a base path to a final.
+For ε arcs, compute ordinary ε closure: a state is final if its
+closure reaches a final and a labelled transition may follow any
+state of that closure. Its endpoint uses the same rule for the next
+label. If the implementation cannot verify this expansion, return
+Unknown. Finite ε closure preserves each labelled path by factoring
+it at its labelled transitions.
+
+```text
+compileRegular(grammar, outer):
+    add a word-labelled path A --w · outer--> final for each A → w
+    add a word-labelled path A --u--> B for each A → u · B
+    split each nonempty path into single-labelled arcs
+    for state p:
+        closure = reachableByEpsilon(p)
+        mark p final if closure meets an original final
+        copy labelled arcs from closure to p, leaving their destinations intact
+    return the new labelled arcs with the updated finals and no ε arcs
+
+regularNoRoute(writer, reader):
+    if either validated grammar is unavailable or nonregular: return Unknown
+    W, R = compileRegularWithOuterSuffixes(writer, a, reader, q)
+    seen, pending = {(W.start, R.start)}, queue of that pair
+    while pending is not empty:
+        (p, r) = pending.pop()
+        if p in W.finals and r in R.finals: return Possible
+        for label in the common outgoing labels of p and r:
+            for (pNext, rNext) in W.next(p,label) × R.next(r,label):
+                if new to seen: pending.push((pNext, rNext))
+    return NoRoute
+```
+
+The exhausted set includes the start and all equal-label successors.
+Every shared word induces a path to a pair of accepting states by
+induction on the word. The empty product test is independent of K
+and the iteration budget. With ε removed, product space is at most
+`Qw·Qr` pairs. Time is linear in those reached pairs, label probes and
+matching successor pairs actually examined. The product is visited
+lazily. For Q compiler states and E arcs before ε elimination,
+the direct compiler takes at most `O(Q·(Q+E))` time and
+`O(Q·E)` expanded labelled-arc space. It uses the original ε
+graph and labelled arcs for each state, so copied arcs do not
+feed the expansion scan.
+
+#### R40 [REC] with one nested side
+
+One side may also have `A→u·B·v`. Compile only the other, regular
+side into automaton A with its outer suffix. Write `end(p,w)` for the
+set of states reached from p by w. For each distinct fixed clause word
+or outer suffix, compute `end` by an ordinary word transition DP.
+Let `outer` be a or q on the nested side. Apply `outer` after the
+whole derived word.
+
+```text
+nestedNoRoute(nested, regular, outer):
+    if either model is incomplete or both are nested: return Unknown
+    A = compileRegularWithItsOuterSuffix(regular)
+    acceptingEnd = {q | end(q, outer) intersects A.finals}
+    cells, pending = empty set, empty queue
+    for each base rule B → w and each state p in A:
+        for q in end(p,w): insertNew((B,p,q), cells, pending)
+    while pending is not empty:
+        (B,m,n) = pending.pop()
+        if B == nested.start and m == A.start and n in acceptingEnd:
+            return Possible
+        for each rule C → u · B · v indexed by child B:
+            for p with m in end(p,u):
+                for q in end(n,v): insertNew((C,p,q), cells, pending)
+    return NoRoute
+```
+
+A cell means a derived word can take the regular automaton from its
+start state to its end state in that cell. Every inserted cell has
+such a witness by construction. Conversely any word derivation
+splits the automaton path at the prefix and suffix of its last rule.
+By induction, the child cell enters the queue and adds the parent
+cell. A source at h and a writer deriving `g.f` yield `g.f.h`.
+Appending h inside the base of `g·B·f` would yield `g.h.f` and could
+falsely prove disjointness. The last test therefore consumes the
+outer suffix after the accepting candidate cell.
+
+**Work.** Let M be the finite number of nested nonterminals including
+local CFG vertices, Q the compiled regular state count, and C the
+clause count. The worklist stores at most `M·Q²` cells. After computing
+word relations, seeding takes at most `O(C·Q²)` and advancing takes
+`O(C·Q⁴)` in the dense case. Use indexes by child and by start/end state.
+The fixed word tables occupy at most `O(W·Q²)` for W distinct words.
+For total word length L and E labelled arcs, computing them by a scan
+per start and letter takes `O(L·Q·(Q+E))`. Extraction costs one scan
+of the finite CFG, resolved bindings and tracked bases. Each invocation
+can add a linear scan of its suffix cone plus the costs of building
+and comparing its fixed words. There is no read/write word
+enumeration. Unknown or an
+interrupted search leaves the candidate open. Production incurs zero
+work from these proof-only searches.
+
+**Principal results.** R39 accepts disjointness for `{g,h}*f` versus
+`{g,h}*g`. Changing the reader base to f gives Possible, with shared
+word f. R40 returns NoRoute for `g*f` versus `R = g | g·R | h·R·h`.
+Adding a writer base word `h.g.h` yields Possible through the nested
+arm. Possible means a shared word in the model, which can contain
+extra control branches. A proof result creates no DATA row, NORMAL
+report or permission.
+[Regular proof](lean/proposals/branching-field-cycle-20261117/RegularCertificate.lean) ·
+[Nested proof](lean/proposals/two-sided-field-cycle-20261117/PairedContext.lean)
+
+### 6.6 COMPLEX — terminal retirement and field languages
+
+Typed projection, compaction and static lookup in §§6.1–6.3 reuse
+native work. The added proof algorithms in §§6.4–6.5 have the
+following independent termination evidence.
+
+```java
+Node wrap(Node p, int depth) {
+    if (depth == 0) return p;
+    Node y = new Node();
+    y.f = wrap(p, depth - 1);
+    return y;
+}
+// Mark x.f.g.$/T. Let r = wrap(x, depth). Observe CM(r.M, T).
+```
+
+| Candidate | Witness with the candidate withheld | What the other rules cover |
+| --- | --- | --- |
+| **R37/R38, source-specific terminal retirement.** In the wrapper above, `ZERO→NT(id),N` is available by run-3 while the next recursive cut again supplies `ZERO→DT,D`. | Without retirement, the bounded closure and the reverse MAY offer renew the live root DT in every later pair of the reference. The native diagnostic reaches run-15/POLICY. The single-source closure reference stops at run-7 after complete service is frozen. | The observer reads the D result, so R17 must keep it. NoRoute cannot discharge a real shared route. Two marking sites can share id while only A is served. The separate two-source wrapper stops at run-9 only after both are served. R38 is a correctness requirement on this retirement, not a second independent stopping rule. |
+| **R39, regular intersection.** A fresh wrapper writer prepends g or h recursively and ends in f. A prefix reader consumes g or h recursively and ends in g. The coarse `z.M/T,D` yields `ZERO→DT,D`. | The signed regular reference has the repeated DT and backwards permission in every later pair. The disabled native control reaches run-9/POLICY. Its certificate adapter stops at run-5. | R17 keeps the live observation and R38 has no NORMAL witness. But the field-membership test below already proves this route impossible. R40's cell algorithm can also handle empty right chunks. The product is a cheaper regular implementation of the general language decision, with no independent necessity shown in this fixture. |
+| **R40, nested state-pair closure.** Use `g*f` for the writer. Reader base `return p.g`, recursive arms `read(p.g)` and `read(p.h).h`. The coarse `z.M/T,D` yields the same DT. | With no NoRoute certificate, the clean return cone repeatedly carries the DT and the backward permission. The disabled native control reaches run-9/POLICY. The nested certificate adapter stops at run-5. | The R39 compiler rejects the nonempty right chunk in `h·R·h`. R17 and the NORMAL-only R38 proof cannot close the route. The field-membership test still proves this fixture disjoint. The native same-terminal and parity controls already stop naturally, so they do not supply an independent termination witness for the general closure. |
+
+**Smaller-certificate control.** For the checked linear grammars, a
+finite derivation reaches a base rule. Compute a field required by
+every base on one side and absent from the other side. Include the
+fixed outer positions. Test both directions.
+
+```text
+absentRequiredField(L, R, outerL, outerR):
+    if either extraction is incomplete or L has no base clause: return Unknown
+    must = fields(outerL) ∪ intersection(fields(w) for each L base word w)
+    may = fields(outerR) ∪ union(fields of all R base, left and right chunks)
+    if must minus may is nonempty: return NoRoute
+    return Unknown
+```
+
+Compute the intersection and union with sets of accessor IDs. Work
+is linear in the total clause fields and the outer words with
+ordinary set operations. Every L word contains every element of
+`must` by induction on its final base and outer position. Every R
+word uses only `may`. Both negative fixtures have f in the difference.
+This check can replace the language solver in the proof model and
+supplies the same NoRoute premise. It does not replace validation
+of the extraction or the other root control uses.
+
+The wrapper isolates the need for source-specific terminal retirement
+in its reference. The field-route fixtures isolate the need for an
+absence proof. They do not justify adding the general product or
+nested closure to production. None of these claims assumes a
+run-11 cutoff or a combined production experiment. [Wrapper recurrence](../docs/reports/bidirectional-recursive-target-termination-20261117.md) ·
+[Regular controls](../docs/reports/bidirectional-branching-field-termination-20261117.md) ·
+[Nested controls](../docs/reports/bidirectional-two-sided-field-search-20261117.md)
 
 ### Examples diff
 
@@ -1119,6 +1688,13 @@ semantic inputs reach every rule, publication and source-permission
 query. Iteration timing and processing counters may change. In
 particular, this proof does not imply termination of the earlier
 examples that needed a live coarse reply or anonymous DT to be removed.
+
+### COMPLEX
+
+The proof inputs are checked outside the worklist. The active
+analyzer has no general proof search or validation over future runs.
+Sections 3.4 and 6.6 give the additional candidates and their
+rule-disabled controls.
 
 ### Examples diff
 

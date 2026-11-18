@@ -57,3 +57,15 @@ list. The module compiles independently on Lean 4.35.0.
 The broader service and terminal checks in `ServiceAndHandoff` remain
 proof models. The implementation in §7 uses existing analyzer operations
 and keeps live DEMAND replies and anonymous Targets.
+
+[OperationalChecks.lean](OperationalChecks.lean) checks the first
+destination cases for multi-call R17 examples and replays the retained
+alternating-generator reference through run-11. It also checks R39/R40
+disjoint and shared-word controls, correct placement of outer positions,
+and the simpler required-field proof for both negative fixtures. The
+retained replay checks a nonempty frontier at the listed runs. The
+uncapped recurrences are in the linked catalogue proofs.
+
+Compile with the checked outputs for `NativeOutputFilter`,
+`GuardedTermination` and `PairedContext` and their proof directories on
+`LEAN_PATH`. Store all compiled outputs outside the repository.
