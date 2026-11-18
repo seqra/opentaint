@@ -4,7 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 
 object AliasDirective {
     data class Path(val base: AccessPathBase, val accessors: List<GoAliasAccessor>, val negated: Boolean)
-    data class Expectation(val paths: List<Path>, val sourceLine: Int)
+    data class Expectation(val paths: List<Path>, val sourceLine: Int, val engineOnly: Boolean = false)
     data class Parsed(val depth: Int, val expectations: List<Expectation>)
 
     fun parsePath(raw: String): Path {
@@ -39,9 +39,10 @@ object AliasDirective {
             if (t.startsWith("// depth:")) {
                 depth = t.removePrefix("// depth:").trim().toInt()
             }
-            if (t.startsWith("// alias:")) {
-                val paths = t.removePrefix("// alias:").split(",").map { it.trim() }.filter { it.isNotEmpty() }.map { parsePath(it) }
-                expectations.add(Expectation(paths, i))
+            val prefix = listOf("// alias:", "// engine alias:").firstOrNull { t.startsWith(it) }
+            if (prefix != null) {
+                val paths = t.removePrefix(prefix).split(",").map { it.trim() }.filter { it.isNotEmpty() }.map { parsePath(it) }
+                expectations.add(Expectation(paths, i, engineOnly = prefix == "// engine alias:"))
             }
         }
         return Parsed(depth, expectations)

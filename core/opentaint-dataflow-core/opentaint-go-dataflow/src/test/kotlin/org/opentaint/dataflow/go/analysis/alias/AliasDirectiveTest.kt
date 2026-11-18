@@ -40,5 +40,21 @@ class AliasDirectiveTest {
         assertEquals(1, parsed.depth)
         assertEquals(1, parsed.expectations.size)
         assertEquals(2, parsed.expectations[0].paths.size)
+        assertEquals(false, parsed.expectations[0].engineOnly)
+    }
+
+    @Test
+    fun `extracts engine only directives`() {
+        val src = """
+            package util
+            func F() {
+                // engine alias: arg0.inner.a, !arg1
+                aliasSink(x)
+            }
+        """.trimIndent()
+        val expectation = AliasDirective.parseSource(src).expectations.single()
+        assertEquals(true, expectation.engineOnly)
+        assertEquals(2, expectation.paths.size)
+        assertEquals(true, expectation.paths[1].negated)
     }
 }

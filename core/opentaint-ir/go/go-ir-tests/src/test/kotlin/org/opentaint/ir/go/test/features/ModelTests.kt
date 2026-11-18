@@ -534,7 +534,7 @@ class ModelTests {
         val program = builder.buildFromDir(project, modelConfig(model))
         val functions = program.findPackage("example.com/genericreceiver")!!.functions
         val get = functions.single {
-            it.fullName.contains("Box[string]") && it.name.startsWith("Get[")
+            it.fullName.contains("Box[string]") && it.name == "Get"
         }
         val returned = (get.body!!.blocks.single().terminator as GoIRReturn).results.single()
 

@@ -78,6 +78,25 @@ class LoadModeTests {
     }
 
     @Test
+    fun `project for a newer Go than the installed one keeps its bodies`() {
+        val root = Files.createTempDirectory("goir-newer-go")
+        root.resolve("go.mod").toFile().writeText("module example.com/app\ngo 1.27.0\n")
+        root.resolve("main.go").toFile().writeText(
+            "package main\nimport (\n\t\"fmt\"\n\t\"net/http\"\n)\nfunc Handle(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, r.URL.Path) }\nfunc main() { http.HandleFunc(\"/\", Handle) }\n",
+        )
+        GoIRClient().use { client ->
+            val prog = client.buildFromDir(root, GoIRLoadConfig(mode = GoIRLoadMode.PROJECT)).program
+
+            val app = prog.findPackage("example.com/app")
+            assertThat(app).isNotNull()
+            val handle = app!!.functions.first { it.name == "Handle" }
+            assertThat(handle.bodyAvailable).isTrue()
+            assertThat(handle.body).isNotNull()
+            assertThat(prog.findPackage("net/http")!!.isStdlib).isTrue()
+        }
+    }
+
+    @Test
     fun `goRoot is GOROOT of the build`() {
         val root = writeWorkspace()
         val goRoot = root.resolve("no-goroot")

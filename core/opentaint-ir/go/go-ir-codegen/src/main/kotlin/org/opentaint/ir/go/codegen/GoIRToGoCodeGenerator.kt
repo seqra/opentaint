@@ -974,7 +974,13 @@ class GoIRToGoCodeGenerator {
         is GoIRConstantValue.ComplexConst -> "complex(${cv.real}, ${cv.imag})"
         is GoIRConstantValue.StringConst -> "\"${escapeGoString(cv.value)}\""
         is GoIRConstantValue.BoolConst -> cv.value.toString()
-        is GoIRConstantValue.NilConst -> "nil"
+        is GoIRConstantValue.NilConst -> if (isAggregate(value.type)) "${TypeFormatter.format(value.type)}{}" else "nil"
+    }
+
+    private fun isAggregate(type: GoIRType): Boolean = when (type) {
+        is GoIRArrayType, is GoIRStructType -> true
+        is GoIRNamedTypeRef -> isAggregate(type.namedType.underlying)
+        else -> false
     }
 
     private fun escapeGoString(s: String): String {

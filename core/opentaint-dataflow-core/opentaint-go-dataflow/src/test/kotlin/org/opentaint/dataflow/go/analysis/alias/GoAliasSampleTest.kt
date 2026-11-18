@@ -46,7 +46,10 @@ class GoAliasSampleTest {
             val expectations = parsed.expectations.filter { sourceContainsFunctionAt(source.value, fn.name, it.sourceLine) }
             if (expectations.isEmpty()) continue
             tests.add(DynamicTest.dynamicTest("${source.key}:${fn.name}") {
-                runFunction(fn, parsed.depth, expectations)
+                runFunction(fn, parsed.depth, expectations, engine = false)
+            })
+            tests.add(DynamicTest.dynamicTest("${source.key}:${fn.name} (engine)") {
+                runFunction(fn, parsed.depth, expectations, engine = true)
             })
         }
         return tests
@@ -61,7 +64,12 @@ class GoAliasSampleTest {
         return false
     }
 
-    private fun runFunction(fn: GoIRFunction, depth: Int, expectations: List<AliasDirective.Expectation>) {
+    private fun runFunction(
+        fn: GoIRFunction,
+        depth: Int,
+        expectations: List<AliasDirective.Expectation>,
+        engine: Boolean,
+    ) {
         val aa = GoLocalAliasAnalysis(fn, GoLocalAliasAnalysis.Params(interProcCallDepth = depth))
         val sinks = fn.body!!.instructions.filterIsInstance<GoIRCall>().filter {
             (it.call.target as? GoIRCallTarget.Function)?.function?.name == "aliasSink"
@@ -73,8 +81,16 @@ class GoAliasSampleTest {
                 is GoIRParameterValue -> AccessPathBase.Argument(arg.paramIndex)
                 else -> fail("${fn.name}: sink #$i first arg is not a register or parameter")
             }
-            val aliases = aa.computeAliasWithRef(queryBase, sink)
-            for (p in exp.paths) {
+            val aliases = if (engine) {
+                val local = queryBase as? AccessPathBase.LocalVar ?: return@forEachIndexed
+                val found = aa.findAlias(local, sink) ?: fail("${fn.name}: no alias info at marker sink #$i")
+                found.filterIsInstance<AliasApInfoNoRef>().map { AliasApInfo(it.base, it.accessors) }
+            } else {
+                if (exp.engineOnly) return@forEachIndexed
+                aa.computeAliasWithRef(queryBase, sink)
+            }
+            val paths = if (engine) exp.paths.filter { GoAliasAccessor.Ref !in it.accessors } else exp.paths
+            for (p in paths) {
                 val present = aliases.any { matches(it, p) }
                 if (p.negated) {
                     assertTrue(!present, "${fn.name}: expected ABSENT ${render(p)} but found it in $aliases")

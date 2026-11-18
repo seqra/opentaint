@@ -54,7 +54,12 @@ import org.opentaint.ir.go.inst.GoIRReturn
 import org.opentaint.ir.go.inst.GoIRSend
 import org.opentaint.ir.go.inst.GoIRStore
 import org.opentaint.ir.go.inst.GoIRStoreInst
+import org.opentaint.ir.go.type.GoIRArrayType
 import org.opentaint.ir.go.type.GoIRCallMode
+import org.opentaint.ir.go.type.GoIRNamedTypeRef
+import org.opentaint.ir.go.type.GoIRPointerType
+import org.opentaint.ir.go.type.GoIRStructType
+import org.opentaint.ir.go.type.GoIRType
 import org.opentaint.ir.go.type.GoIRUnaryOp
 import org.opentaint.ir.go.value.GoIRParameterValue
 import org.opentaint.ir.go.value.GoIRRegister
@@ -180,7 +185,9 @@ class GoDSUAliasAnalysis(
             is GoIRNextExpr -> heapLoad(refValueOf(expr.iter, ctx), state, instIdx, ctx, GoArrayAlias)
 
             is GoIRUnOpExpr -> when (expr.op) {
-                GoIRUnaryOp.DEREF -> heapLoad(refValueOf(expr.x, ctx), state, instIdx, ctx, GoRefAlias)
+                GoIRUnaryOp.DEREF ->
+                    if (expr.x.type.pointsToAggregate()) copyOf(expr.x, state, instIdx, ctx)
+                    else heapLoad(refValueOf(expr.x, ctx), state, instIdx, ctx, GoRefAlias)
                 GoIRUnaryOp.ARROW -> heapLoad(refValueOf(expr.x, ctx), state, instIdx, ctx, GoArrayAlias)
                 else -> unknown(instIdx, ctx)
             }
@@ -232,6 +239,10 @@ class GoDSUAliasAnalysis(
 
     private fun evalStore(inst: GoIRStore, state: State, ctx: ContextInfo): State {
         val addr = refValueOf(inst.addr, ctx) ?: return state
+        if (inst.value.type.isAggregate()) {
+            val value = refValueOf(inst.value, ctx) ?: return state
+            return state.mergeWith(addr.aliasInfo().index(), value.aliasInfo().index())
+        }
         val valueSet = refValueOf(inst.value, ctx)?.let { aliasSetFromInfo(it.aliasInfo()) }
             ?: unknown(inst.location.index, ctx)
         val refLoc = HeapAlias(state.heapObj(addr.aliasInfo()), GoRefAlias).index()
@@ -463,6 +474,14 @@ class GoDSUAliasAnalysis(
     private fun aliasSetFromInfo(info: AAInfo): AliasSet = AliasSet(info.index())
 
     private fun unknown(instIdx: Int, ctx: ContextInfo): AliasSet = aliasSetFromInfo(GoUnknown(instIdx, ctx))
+
+    private fun GoIRType.pointsToAggregate(): Boolean = this is GoIRPointerType && elem.isAggregate()
+
+    private fun GoIRType.isAggregate(): Boolean = when (this) {
+        is GoIRStructType, is GoIRArrayType -> true
+        is GoIRNamedTypeRef -> namedType.underlying.isAggregate()
+        else -> false
+    }
 
     private fun structFieldAccessor(structVal: GoIRValue, fieldName: String): GoAliasAccessor.Field =
         GoAliasAccessor.Field(structVal.type.typeName.removePrefix("*"), fieldName)
