@@ -119,26 +119,27 @@ MUST has the explicit precision tradeoff in §5.
 
 | Rule and input | Current | Proposed |
 | --- | --- | --- |
-| R29. Equal geometry with H=0 and H=1 | Keep both memberships. A pass carries the input flag. | Same. An NE result also keeps both flags distinct and a pass creates neither flag. |
-| R30. Later `{p.$/T,q.$/U}→ret.$/V`, only p supplied | No reply. | Same. A guide for p alone does not satisfy the q arm. With both arms in one binding, application joins both support layers. |
-| Static completion. `ZERO→C.f/T` and `C.f/T→DT` at run-1 handoff | The run-2 virtual lookup supplies `ZERO→DT` in the eligible owner. | Same lookup and typed output. Any NE DATA entry uses its nonempty region in that same virtual row. |
-| Backward exceptional ZERO at a block with a normal `ZERO→DT` guide | Borrow the normal control entry for the reached ZERO, at the real normal invocation. | Same. A DATA NE input still uses its own physical port. |
+| R29. Pass `p.*/F→ret.*/F,N` on memberships `{p.f.M/T,D,H=0; p.f.M/T,D,H=1}`. The proposal has the corresponding NE actuals. | `{ret.f.M/T,D,H=0; ret.f.M/T,D,H=1}` | `{ret.f.NE/T,D,H=0; ret.f.NE/T,D,H=1}`. Each input keeps its flag. |
+| R30. Later-run summary `{p.$/T,q.$/U}→ret.$/V,N` with only `p.$/T,N` supplied to its binding. | Replies `∅`. | Replies `∅`, even if p has its own projected guide. |
+| R30. Same summary with both `p.$/T,N` and `q.$/U,D` in one binding. | `{ret.$/V,D}` | `{ret.$/V,D}` |
+| Static completion. Run-1 rows `{ZERO→S.C.f/T,D; S.C.f/T→DT,D}` in a qualified scope. | Run-2 virtual guide `{ZERO→DT,D}`. | Run-2 virtual guide `{ZERO→DT,D}` with the same owner and port. |
+| Control port. Backward actual `ZERO,N` reached at a block's exceptional entry, with a normal `ZERO→DT,D` guide. | Borrow normal entry service and publish `{ZERO→DT,D}` at the normal invocation. | Publish `{ZERO→DT,D}` at the same normal invocation. An actual `p.f.NE/T,D` gets `∅` from that control-only guide. |
 
 ## 2. Field transfer and C2
 
-| Rule and affected part | Required behavior and principal example | Proof |
+| Rule and affected part | Required behavior | Proof |
 | --- | --- | --- |
 | R01–R03 · DATA grammar, cut, transfer, handoff | A real cut emits NE. A cut of `x.f.g.h.$/T` at limit 1 gives `x.f.NE/T,D`, with empty E and the same mark, mx and H. Apply at every existing real field cut, including run-1. Uncut M stays M. For `y=x.f`, `x.NE` gives `y.M,D`, `x.f.NE` gives `y.NE,D`, and `x.$` gives no y. For `x.f=y`, keep `x.f.M` from `y.M` and `x.f.NE` from `y.NE` while f fits. If f is cut, both give `x.NE,D`. An intrinsic MAY supply can include the root. | The removed suffix has a first field, and its old point lies in the retained head's NE region. An unknown read can consume the entire suffix. An uncut write can put the former root at the newly named field. |
 | R04–R06 · C2, call binding, raw C5 | For same-head `p.M/T ← p.M/T`, start `p.$/T,D` and `p.*/T,D`, plus the conditional FLOW companion. NE keeps the nonempty case. A frozen `p.f.M` row can use a compatible ancestor `p.*` as a **possible** offer, within its prepared budget. Keep the real caller binding. | Empty and nonempty suffixes exhaust M. Each primary authorizes only its stated companions. Possible field binding joins as D. A FLOW hypothesis alone supplies no concrete-mark witness. |
 | R07 · C2, raw C5 | `p.M/T ← p.f.MUST/T {g},N` starts `p.f.*/T,D` and its FLOW companion. Carry `{g}` on both STAR starts at the unchanged actual head. Apply only in restricted FULL for a concrete demand and a STAR or MUST actual. | At the same head the copied mask denotes the same forbidden subtrees. E cannot move to another head. The map adds no seed and changes no start layer. |
-| R08 · C2, raw C5, field limits | For `p.M/T ← p.f.g.MUST/T {g},N`, replace the two eligible shorter STAR starts by `p.f.g.*/T,D` and `p.f.g.*/F,N`, both with `{g}`. Keep the conditional `p.$/F` probe. | The actual head and holes stay together. Every overrun of Dc+1 comes from the certified map below. The global and paired output caps still hold. |
+| R08 · C2, raw C5, field limits | Preserve the already bounded, deeper actual head and its nonempty E on the eligible concrete STAR start and its FLOW companion. Keep the conditional EXACT/FLOW prefix probe for M demand. | The actual head and holes stay together. Every overrun of Dc+1 comes from the certified map below. The global and paired output caps still hold. |
 | R13 · raw transfer | For `x.f.g=new Node()`, reject the strict-descendant keep at `x.f.*` per leaf when the actual is `x.$/F`. The keep at `x.* {f}` still yields the exact root with `{f}`. | No strict descendant lies in the exact point. The same-head keep records the real overwrite exclusion before normalization. |
 | R32 · run-2 C2 and raw C5 | Start the requested STAR identity in backward run-2 for a same-head precise STAR demand and STAR actual. `set(p){ p.f=new Node(); return p; }` through wrappers can then produce the NORMAL relation with `{f}` and preserve `p.g/T` at run-3. Retain the existing admitted deeper-actual run-2 STAR case. | Same base/head requires no extra field. C5 uses the same raw family. The wrapper proof relays NORMAL service through any finite number of wrappers. |
 
 ### 2.1 Legal starts and marks
 
-C2 runs on a scalar actual and one qualified pair `Dp→Dc`. It first
-checks owner, direction, physical entry, base, mark, legal static shape
+C2 uses a scalar actual and the entry selector Dc of a qualified pair
+`Dp→Dc`. The pair retains Dp for C5. C2 first checks owner, direction, physical entry, base, mark, legal static shape
 and the global bound on both heads. A T selector accepts only actual T.
 FLOW with mask X accepts T if T is outside X, and FLOW with mask Y if
 `X ⊆ Y`. Handoff normally clears the FLOW selector mask. The initial
@@ -188,6 +189,13 @@ other primary has empty E except the stated MUST case and R07/R08.
   eligible shorter empty-E STAR head and E together as specified below.
   Check that other required callers and guides keep their service before
   applying either replacement.
+
+Apply R07 to the ordinary C2 family first. It copies E only when the
+STAR command already has the actual's full head. R08 then checks the
+shorter STAR commands that still have empty E. For a single command and
+actual, the two tests are disjoint. A command moved by R08 already has
+the actual's E. It does not receive a second R07 update or leave a second
+shorter STAR command behind. MUST alone does not qualify for R08.
 
 ### 2.2 Possible field bindings
 
@@ -245,27 +253,57 @@ every remaining row's **capped** membership, including layer and H.
 
 ### Examples diff
 
-Each listed initial is an identity. F means FLOW, and the unqualified
-examples fit the global budget.
+#### Raw field transfer
 
-| Rule and input | Current emitted result or initial set | Proposed emitted result or initial set |
+`{f}` after a fact is its field exclusion at that fact's head. Results
+below are before C5 and summary normalization. R13 is shown in a
+restricted forward run with K≥2.
+
+| Input fact and operation | Current output facts | Proposed output facts |
 | --- | --- | --- |
-| R01. Cut `x.f.g.$/T,N` at K=1 | `x.f.M/T,D` | `x.f.NE/T,D` |
-| R02. `y=x.f` on the result of a cut at x, then on a known `x.f` prefix | `x.M/T,D→y.M/T,D`; `x.f.M/T,D→y.M/T,D` | `x.NE/T,D→y.M/T,D`; `x.f.NE/T,D→y.NE/T,D` |
-| R03. `x.f=y` with `y.M/T,D` and room for f | `x.f.M/T,D` | Same while f fits. A subsequent cut at x gives `x.NE/T,D` instead of `x.M/T,D`. |
-| R04. `Dc=p.M/T`, actual `p.M/T,D` | `{p.*/T,D; p.*/F,N}` | `{p.$/T,D; p.*/T,D; p.*/F,N}` |
-| R05. Previous cut produced `Dc=p.M/T` currently, `p.NE/T` in the proposal. Actual `p.$/T,N` | `{p.$/T,N}` | `∅`. With actual `p.f.$/T,N` both admit the field point, and only the current M family adds the prefix FLOW probe. |
-| R06. `Dc=p.f.M/T`, actual `p.*/T,D`, after run-2 | `∅` | `{p.f.$/T,D; p.f.*/T,D; p.f.*/F,N}`, with possible binding. Add `E={f}` to the actual and both sets are empty. |
-| R07. `Dc=p.M/T`, actual `p.f.MUST/T {g},N` | `{p.f.*/T,D; p.f.*/F,N; p.$/F,N}` | Same set, with `{g}` on both `p.f.*` starts. |
-| R08. `Dc=p.M/T`, actual `p.f.g.MUST/T {g},N`, K=2 | `{p.f.*/T,D; p.f.*/F,N; p.$/F,N}` | `{p.f.g.*/T{g},D; p.f.g.*/F{g},N; p.$/F,N}`. The first two have FL=2, one above Dc+1. At K=1 a raw depth-2 actual is invalid. |
-| R13. `x.f.g=new Node()`, raw actual `x.$/F` and strict child keep `x.f.* {g}` | The strict keep can produce an uncertain survivor. | The strict keep has no result. The same-head keep still gives `x.$/F{f}`. |
-| R32. Backward run-2, `Dc=p.*/F`, actual `p.*/F,N` | `{p.$/F,N}` | `{p.*/F,N}`, including at the cap. In later restricted runs this same STAR offer emits nothing. |
-| C5 cap. `Dp=ret.*/T`, raw `C=ret.f.g.$/T,N`, K=3, legal raw entry | `ret.f.M/T,D` after the row cut | `ret.f.NE/T,D`. Neither side can publish the depth-2 result under this pair. |
-| Independent output budget. `Dp=ret.f.g.*/T`, current `P=p.$/T`, `C=ret.f.g.h.$/T,N`, K=3, legal raw entry | The paired cap is 3. The exact result fits. | Same. The three-field result is legal even though FL(P)=0. |
+| R01. Cut `x.f.g.$/T,N` at K=1 | `{x.f.M/T,D}` | `{x.f.NE/T,D}` |
+| R02. `y=x.f`. Offer `x.M/T,D` in the current core and `x.NE/T,D` in the proposal. | `{y.M/T,D}` | `{y.M/T,D}`. Reading f can exhaust the nonempty suffix. |
+| R02. `y=x.f`. Offer `x.f.M/T,D` or `x.f.NE/T,D`. | `{y.M/T,D}` | `{y.NE/T,D}`. Reading f consumes a known field only. |
+| R03. `x.f=y` with `y.M/T,D` and room for f. | `{x.f.M/T,D}` | `{x.f.M/T,D}` |
+| R03. `x.g.f=y` with `y.M/T,D` and K=1. The write first forms `x.g.f.M/T,D`. | `{x.g.M/T,D}` | `{x.g.NE/T,D}` |
+| R13. `x.f.g=new Node()` with `x.$/F,N`. Apply the parallel root keep `x.*/F→x.*/F{f}`. | `{x.$/F{f},N}` | `{x.$/F{f},N}` |
+| R13. Same write and actual `x.$/F,N`. Apply the strict child keep `x.f.*/F→x.f.*/F{g}`. | `{x.f.M/F,D}` | `∅` |
+| R13. Next instruction `y=x.f`. Use the union of both keep results above. | From `{x.$/F{f},N; x.f.M/F,D}` emit `{y.M/F,D}`. | From `{x.$/F{f},N}` emit `∅` for y. |
+
+#### C2 initial emission
+
+Each member `i,L` in a result set denotes the raw identity edge
+`i→i,L`. Use one frozen row and no
+other eligible deeper row or saved guard in these examples. The R07 and
+R08 rows use restricted forward **run-5**, K=4. The letters f, g, h and k
+are distinct fields. The comparison operates on Dc and the actual.
+Dp is carried with the row for the later C5 step.
+
+| Rule | Entry demand Dc | Actual | Current initial set | Proposed initial set |
+| --- | --- | --- | --- | --- |
+| R04 | `p.M/T` | `p.M/T,D` | `{p.*/T,D; p.*/F,N}` | `{p.$/T,D; p.*/T,D; p.*/F,N}` |
+| R05 | `p.M/T` from a current cut, `p.NE/T` from the proposed cut | `p.$/T,N` | `{p.$/T,N}` | `∅` |
+| R05 | `p.M/T` from a current cut, `p.NE/T` from the proposed cut | `p.f.$/T,N` | `{p.f.$/T,N; p.$/F,N}` | `{p.f.$/T,N}` |
+| R06 | `p.f.M/T` | `p.*/T,D` | `∅` | `{p.f.$/T,D; p.f.*/T,D; p.f.*/F,N}`. The caller binding is possible. |
+| R06 | `p.f.M/T` | `p.*/T{f},D` | `∅` | `∅` |
+| R07 | `p.M/T` | `p.f.MUST/T{k},N` | `{p.f.*/T,D; p.f.*/F,N; p.$/F,N}` | `{p.f.*/T{k},D; p.f.*/F{k},N; p.$/F,N}`. R07 adds E at the same head. R08 does not move the head. |
+| R08 | `p.M/T` | `p.f.g.h.MUST/T{k},N` | `{p.f.*/T,D; p.f.*/F,N; p.$/F,N}` | `{p.f.g.h.*/T{k},D; p.f.g.h.*/F{k},N; p.$/F,N}`. R07 leaves the initial `p.f.*` commands alone. R08 replaces both with depth-3 commands with `E={k}` at the full actual head. |
+| R08, empty E control | `p.M/T` | `p.f.g.h.MUST/T,N` | `{p.f.*/T,D; p.f.*/F,N; p.$/F,N}` | `{p.f.*/T,D; p.f.*/F,N; p.$/F,N}` |
+| R08, D actual control | `p.M/T` | `p.f.g.h.MUST/T{k},D` | `{p.f.*/T,D; p.f.*/F,N; p.$/F,N}` | `{p.f.*/T,D; p.f.*/F,N; p.$/F,N}` |
+| R08, same-head MUST control | `p.M/T` | `p.MUST/T{k},N` | `{p.MUST/T{k},N}` | `{p.MUST/T{k},N}`. This family has no STAR command to replace. |
+| R08, FLOW selector control | `p.M/F` | `p.f.g.h.MUST/T{k},N` | `{p.f.*/F,N; p.$/F,N}` | `{p.f.*/F,N; p.$/F,N}`. The selector is FLOW, so neither R07 nor R08 copies E. |
+| R08, NE selector | `p.M/T` from a current cut, `p.NE/T` from the proposed cut | `p.f.g.h.MUST/T{k},N` | `{p.f.*/T,D; p.f.*/F,N; p.$/F,N}` | `{p.f.g.h.*/T{k},D; p.f.g.h.*/F{k},N}`. NE omits `p.$/F,N`. |
+| R32, backward run-2 | `p.*/F` | `p.*/F,N` | `{p.$/F,N}` | `{p.*/F,N}` |
+
+For the positive R08 row, the ordinary `FL(Dc)+1` is 1. The two
+replacements have FL=3 and fit K=4. The EXACT/FLOW probe has FL=0.
+No MUST identity or extra shorter STAR identity is in this family.
+Reducing K below 3 would require a global cut **before** C2. The raw
+three-field MUST actual would no longer be the submitted fact.
 
 ## 3. Prepared children, replay and paired C5
 
-| Rule and affected part | Required behavior and principal example | Proof |
+| Rule and affected part | Required behavior | Proof |
 | --- | --- | --- |
 | R09/R10/R23 · demand preparation, publication, handoff | For `P→p.M,D` and `P→p.f.NE,D`, executable union can hide f. Capture the bounded post-C5 child before executable union. Use f from a deeper row with the same paired Dp or an eligible saved NORMAL guard; `p.f.g.*` contributes f only. Prepare `p.f.$` and `p.f.*` when compatible. | M contains NE for execution. At the same head the NE query family is contained in MAY's under identical qualifiers and budget. A deeper head can admit an extra concrete field that the parent cannot. A child NE alone also misses its exact boundary point. |
 | R11/R12 · primitive transfer, saved replay inside queries | In `y=x.f`, route the `x.*→y.M,D` contribution for f through an already ready complete child only with the service proof in §6. Apply the same rule to supported saved NORMAL reads inside the query, even if current callee demand is empty. | A matching unknown suffix begins with f. Its residual belongs to the child point or child suffix. The child's qualified proof must supply all real effects and every consumer's paired output service. |
@@ -474,26 +512,53 @@ tail to NE/D, clears E, and preserves mark, mx and H.
 
 ### Examples diff
 
-| Rule and input | Current | Proposed |
+#### Preparation and application
+
+| Rule and input | Current output | Proposed output |
 | --- | --- | --- |
-| R09. Same Dp, `Dc=p.M` and a deeper guide after cut at `p.f` | Executable MAY coverage can hide the deeper guide. | Keep `p.f.NE` in the bounded refinement view until its own service is covered. |
-| R10. `Dc=p.M/F`, actual `p.*/F`, eligible saved guard `p.f.g.*` | `{p.*/F,N}` | `{p.*/F,N; p.f.$/F,N; p.f.*/F,N}`. Both child bindings are possible at the caller. The child has FL=1. |
-| R11. `y=x.f`, actual `x.*/F`, ready exact and suffix child | The coarse read emits `y.M/F,D`. | Use the proved child contribution. Omit that coarse reply only once the complete consumer check passes. A different field g still uses ordinary transfer. |
-| R12. Inside an owned query, an opposite saved `p.f.*→ret.*` reads `p.*` | Emit its possible `ret.M,D` even with empty current callee demand. | Keep saved-first replay. Delegate only this contribution if the f child supplies its whole service. |
-| R14. Saved `p.*→ret.*`, actual `p.f.$/T,N`, current C2 empty | `ret.f.$/T,N` | Same. No current subscription or extra admission. |
-| R15. Saved `p.MUST/T→ret.MUST/U`, actual `p.f.MUST/T,N` | Provisional `ret.MUST/U,D` from the overlap lane. | Omit only with continuation service. Otherwise retain that D reply. A definite `p.MUST/T` still gets the NORMAL reply. |
-| R18. NORMAL candidate `p.f.g.*→ret.f.g.*` under a short Dp | C5 can cut it and publish a D variant. | Skip that candidate when retained `p.*→ret.*` gives its complete uncut service. |
-| R20. Raw `p.$/F→ret.$/F`, same head with a nonempty entry | The analogous native MAY entry checks the normalized `p.*` key. | An NE entry rejects this raw point. An admitted `p.*` witness alone cannot license it. |
-| R21. Entry `p.M/T`, paired exit `ret.$/T`, admitted FLOW STAR companion, raw conclusion a cut `ret.M/F,D` currently or `ret.NE/F,D` in the proposal | Native normalized admission can accept the FLOW companion. The exit selects a provisional point, with the output mark still FLOW. | Keep the legal companion as the entry witness. The exact exit rejects NE at the same head. No other row can lend its exit or synthesize T. |
-| R22. Admitted raw `p.$/F→ret.$/F,N` | Publish `p.*/F→ret.*/F,N` with legal E. | Same public relation after raw checking and the suffix-lifting proof. A result `ret.NE` survives either normalization. |
-| R34. Direct saved `p.f.*→ret.*`, actual `p.*/F,N`, f allowed | No reply via direct STAR inside. | `ret.M/F,D`. If the actual excludes f the result is empty on both sides. |
-| NE result. `p.*→ret.NE,D`, actual `p.f.$/T,N` | The native cut form gives `ret.M/T,D`, regardless of f. | `ret.NE/T,D`, with no f appended. Resolve a normal read of `ret.g` to M/D because g can consume the unknown suffix. |
-| NE actual. Saved `p.*→ret.*`, actual `p.f.NE/T,D` | The native M actual gives `ret.f.M/T,D`. | `ret.f.NE/T,D`. An EXACT premise at the same head as an NE offer has no match. |
-| NE C5. Current result `ret.NE/T,D`, paired Dp `ret.$/T` | With native M at the same head, select `ret.$/T,D`. | Empty. With Dp `ret.f.$/T`, select `ret.f.$/T,D` assuming the global and pair budgets admit it. |
+| R09. Qualified candidates `ret.*/F→p.M/F,D` and `ret.*/F→p.f.M/F,D`. In the proposal the latter comes from a real cut and ends in `p.f.NE/F,D`. | The broad result can leave only `{ret.*/F→p.M/F}` in the frozen guidance. | Keep `{ret.*/F→p.M/F; ret.*/F→p.f.NE/F}` as guides if the deeper service is distinct. The executable packet may still contain just `ret.*/F→p.M/F,D`. |
+| R10. `Dc=p.M/F`, actual `p.*/F,N`, eligible saved guard `p.f.g.*/F→ret.*/F,N`. | Initials `{p.*/F,N}`. | Initials `{p.*/F,N; p.f.$/F,N; p.f.*/F,N}`. The child bindings are possible. |
+| R11. Read `y=x.f` under raw original `x.*/F`. The point and suffix children already supply the complete service. | Coarse contribution `{x.*/F→y.M/F,D}`. | Coarse contribution `∅`. Retain the child results `{x.f.$/F→y.$/F,N; x.f.*/F→y.*/F,N}` at raw transfer. |
+| R12. In the `p.*/F` query, apply opposite saved view `p.f.*/F→ret.*/F,N` to `p.*/F,N`. Current callee C2 is empty. | Saved coarse contribution `{p.*/F→ret.M/F,D}`. | Saved coarse contribution `∅` if the complete f-child service is already retained. The ready child supplies `{p.f.$/F→ret.$/F,N; p.f.*/F→ret.*/F,N}` as raw results. |
+| R14. Saved `p.*/F→ret.*/F,N`, actual `p.f.$/T,N`, current C2 set `∅`. | Caller reply `{ret.f.$/T,N}`. | Caller reply `{ret.f.$/T,N}`; current subscriptions `∅`. |
+| R15. Saved `p.MUST/T→ret.MUST/U,N`, actual `p.f.MUST/T,N`. | Possible saved reply `{ret.MUST/U,D}`. | Saved reply `∅` if the continuation proof covers it; `{ret.MUST/U,D}` otherwise. |
+| R15, definite control. Same saved edge, actual `p.MUST/T,N`. | `{ret.MUST/U,N}` | `{ret.MUST/U,N}` |
+| R34. Direct saved `p.f.*/F→ret.*/F,N`, actual `p.*/F,N`, f allowed. | `∅` | `{ret.M/F,D}` |
+| R34, excluded descent. Same saved edge, actual `p.*/F{f},N`. | `∅` | `∅` |
+| Independent result. `p.*/F→ret.M/F,D` currently, `p.*/F→ret.NE/F,D` in the proposal. Actual `p.f.$/T,N`. | `{ret.M/T,D}` | `{ret.NE/T,D}`. No appended f. |
+| Correlated result. Saved `p.*/F→ret.*/F,N`, actual `p.f.M/T,D` currently or `p.f.NE/T,D` in the proposal. | `{ret.f.M/T,D}` | `{ret.f.NE/T,D}` |
+
+#### C5 publication and delivery
+
+Demand is the complete previous edge `Dp→Dc`. Raw summary is the
+current edge `P→C`. Each output cell lists the **published current
+summary set** for that candidate and row. Those edges are available to
+matching caller subscriptions. `∅` means the candidate publishes
+nothing and sends no current reply. Retained saved edges use the
+separate replay path. The examples use no other demand row unless
+shown.
+
+| Rule | Previous demand edge `Dp→Dc` | Raw current summary `P→C` | Current published set | Proposed published set |
+| --- | --- | --- | --- | --- |
+| R18. Saved provider `p.*/F→ret.*/F,N` covers the complete candidate. K≥2. | `ret.*/F→p.f.M/F,D` | `p.f.g.*/F→ret.f.g.*/F,N` | `{p.f.g.*/F→ret.f.M/F,D}` | `∅` for the fresh candidate. The caller can still apply saved `p.*/F→ret.*/F,N`. |
+| R20. Same public STAR key, different raw starts. | Current `ret.*/F→p.M/F,D`; proposed `ret.*/F→p.NE/F,D` | `p.$/F→ret.$/F,N` | `{p.*/F→ret.*/F,N}` | `∅`. The raw point fails before normalization. |
+| R20, STAR control. | Current `ret.*/F→p.M/F,D`; proposed `ret.*/F→p.NE/F,D` | `p.*/F→ret.*/F,N` | `{p.*/F→ret.*/F,N}` | `{p.*/F→ret.*/F,N}` |
+| R21. Authorized FLOW companion under concrete T demand. | `ret.$/T→p.M/T,D` | Current `p.*/F→ret.M/F,D`; proposed `p.*/F→ret.NE/F,D` | `{p.*/F→ret.*/F,D}`. Select `ret.$/F,D`, then normalize the output. | `∅`. Entry still accepts `p.*/F`. The exact exit cannot select the root from `ret.NE/F,D`. |
+| R21, strict descendant exit. | `ret.f.$/T→p.M/T,D` | Current `p.$/T→ret.M/T,D`; proposed `p.$/T→ret.NE/T,D` | `{p.$/T→ret.f.$/T,D}` | `{p.$/T→ret.f.$/T,D}`. The selected f itself consumes the nonempty suffix. |
+| R22. FLOW normalization, real exclusion. | `ret.*/F→p.M/F,D` | `p.$/F→ret.$/F{f},N` | `{p.*/F→ret.*/F{f},N}` | `{p.*/F→ret.*/F{f},N}` after raw admission. |
+| Output cap, K=4. | `ret.*/T→p.M/T,D` | `p.$/T→ret.f.g.$/T,N` | `{p.$/T→ret.f.M/T,D}` | `{p.$/T→ret.f.NE/T,D}`. The two-field NORMAL candidate is never published. |
+| R08 with output cap, run-5 and K=4. | `ret.*/T→p.M/T,D` | Current `p.f.*/T→ret.f.g.h.$/T,D`; proposed `p.f.g.h.*/T{k}→ret.f.g.h.$/T,D` | `{p.f.*/T→ret.f.M/T,D}` | `{p.f.g.h.*/T{k}→ret.f.NE/T,D}`. The three-field premise fits R08. The conclusion still has a one-field budget. |
+| Output budget from Dp, K=4. | `ret.f.g.*/T→p.M/T,D` | `p.$/T→ret.f.g.h.$/T,N` | `{p.$/T→ret.f.g.h.$/T,N}` | `{p.$/T→ret.f.g.h.$/T,N}`. `FL(Dp)+1=3`, regardless of `FL(P)=0`. |
+
+In the first output-cap example, a caller that offers `p.$/T,N` gets
+`{ret.f.M/T,D}` from the current published edge and `{ret.f.NE/T,D}`
+from the proposed published edge. The raw `p.$/T→ret.f.g.$/T,N`
+is absent from both publications, so this application delivers no
+`ret.f.g.$/T,N`.
 
 ## 4. Reply and summary coverage
 
-| Rule and affected part | Required behavior and principal example | Proof |
+| Rule and affected part | Required behavior | Proof |
 | --- | --- | --- |
 | R16 · applied ready reply packets | A definite `ret.MUST/T {f}` can be delivered twice with N and D. Fold D into identical N before continuation, as for definite EXACT. Compare the whole key, including H and resolved alias/identity continuation. | N proves the same points at the same location, with the same continuation. Resolve real effects first or keep separate continuations. A raw NORMAL record or a D actual is not a provider. |
 | R17 · post-statement actual DATA, ready delivery | A ready `x.h.MUST/U,N` can cover `x.h.M/U,D` from an alternating T/U generator. In forward FULL omit the D actual only after the continuation check below. | Every candidate point has the same-mark, same-H witness already bound in the continuation. Positive derivation induction keeps every whole AND premise. Raw C2 image equality is not required or claimed. |
@@ -567,17 +632,17 @@ alone gives no joint deletion permission.
 
 | Rule and input | Current | Proposed |
 | --- | --- | --- |
-| R16. Ready replies `ret.MUST/T{f},N` and `ret.MUST/T{f},D` in one binding | The two support memberships can both resume. | Keep N only if the complete continuation is covered. Different H or a unique D seed use keeps both. |
-| R17. Post-statement `x.h.MUST/U,N` and `x.h.M/U,D` | Both can reach the next use of x. | Keep N and omit the covered D when all required uses are served. If D is the sole route to a second marking point, keep D even with the same report ID. |
-| R19. Owned exact query publishes NORMAL `ret.h.$/U`. Coarse query also yields `ret.h.M/U,D`. A disjoint `ret.k.$/V` is unadmitted. | The applicable coarse reply reaches the caller. | Omit that delivery only after the bound h proof and continuation check. Keep the k work in the owned closure and keep the bounded handoff rules. |
-| R23. Same P, two outputs `a.M/T,D` and `a.f.NE/T,D` | Native MAY coverage can retain only the broad result and its handoff. | It can retain only the broad executable output, but retains the qualified child guide unless the broad basis supplies its complete C2/C5 service. Same-head `a.NE` can be removed if the M row covers that service. |
-| R24. Same forward MUST P and H=1. NORMAL `P→a.MUST/T` plus cut `P→a.f.NE/T,D` | The existing protected cut result can remain even with the NORMAL uniform relation. | Omit the D relation only with whole same-lane coverage and proof of its future guide service. |
-| R25. `A:p.*→q.*`, `B:p.f.*→q.f.*`, `C:p.f.g.*→q.f.g.*` have the same qualified NORMAL FLOW suffix law | Existing aligned coverage may drop specializations. | The final basis must also prove the service of any omitted guidance. If B is removed, use A for C in either arrival order. |
-| R27. At one owner a point command and an uncertain STAR command are both ready | Ordinary FLOW priority and batching can defer the point's publication. | Drain ready point and high-lane provider work before dispatching the next low-lane command. Use FLOW-first inside each lane. Already delivered effects remain. |
+| R16. One binding has ready replies `{ret.MUST/T{f},N; ret.MUST/T{f},D}`. All required uses of D are served. | Deliver `{ret.MUST/T{f},N; ret.MUST/T{f},D}`. | Deliver `{ret.MUST/T{f},N}`. |
+| R17. Post-statement packet `{x.h.MUST/U,N; x.h.M/U,D}` under one original. All required uses are served. | Forward `{x.h.MUST/U,N; x.h.M/U,D}`. | Forward `{x.h.MUST/U,N}`. If D is the sole route to a second marking site, forward `{x.h.MUST/U,N; x.h.M/U,D}`. |
+| R19. Owned exact query's bound reply `ret.h.$/U,N`. Coarse current reply `ret.h.M/U,D`. Raw `ret.k.$/V,N` does not pass C5. | Caller packet `{ret.h.$/U,N; ret.h.M/U,D}`. | Caller packet `{ret.h.$/U,N}` if the outer continuation and owned closure witnesses pass. Keep `ret.k.$/V,N` in the closure. The coarse summary stays eligible for its other uses. |
+| R23. Same original `p.$/T`, outputs `ret.M/T,D` and `ret.f.M/T,D` in the current core. The latter becomes `ret.f.NE/T,D` in the proposal. | Broad executable edge and guide can be `{p.$/T→ret.M/T,D}` only. | Executable set `{p.$/T→ret.M/T,D}`; guidance set `{p.$/T→ret.M/T,D; p.$/T→ret.f.NE/T,D}` if the deeper guide has distinct service. |
+| R24. `A=p.MUST/T→ret.MUST/T,N,H=1`; `B=p.MUST/T→ret.f.M/T,D,H=1` currently, with `ret.f.NE/T,D,H=1` in the proposal. Whole coverage and handoff service pass. | Both `{A; B}` can remain executable. | Keep `{A}`. Omit B's guide under the same service proof. |
+| R25. `A=p.*/F→q.*/F,N`, `B=p.f.*/F→q.f.*/F,N`, `C=p.f.g.*/F→q.f.g.*/F,N`. | Aligned native subsumption yields executable basis `{A}`. | Executable basis `{A}` and final service witness `A covers C` in either arrival order. |
+| R27. Ready starts `p.*/F,N` and `p.$/T,N` at one owner. Their summaries are `A=p.*/F→ret.M/F,D` and `B=p.$/T→ret.$/T,N`. | A FLOW-first queue can publish `A then B`. | Publish ready `B then A`. With the same retained service, the resulting set is still `{A; B}`. |
 
 ## 5. Cleaners, controls and handoff
 
-| Rule and affected part | Required behavior and principal example | Proof |
+| Rule and affected part | Required behavior | Proof |
 | --- | --- | --- |
 | R26/R35 · concrete cleaner transfer [selected coarsening] | For selected EXACT cleaning of T at `x` or `x.f.g`, a matching same-base `x.MUST/T` keeps its region, original support, E and cleaner-survivor H. Nonuniform exact T still dies at the selected point. | Split along the cleaner path and use the selected same-head policy at the final child. Union with its siblings reconstructs the original region. This explicitly retains a possible observation at the selected point. D stays D. |
 | R36 · concrete cleaner transfer after run-1 | For NORMAL `x.MUST/T` cleaned ALL at `x.f.g`, emit `x.MUST/T {f}` and `x.f.MUST/T {g}`, normally. Selected BELOW also retains `x.f.g.$/T`. Apply the usual caps. | Partition into one residual sibling region per field plus the optional point. The union is exactly the input minus the selected subtree. There are at most depth+1 pieces. |
@@ -681,18 +746,33 @@ no NORMAL report or source permission.
 
 ### Examples diff
 
-| Rule and input | Current | Proposed |
+#### Cleaner transfer
+
+| Rule and input | Current output facts | Proposed output facts |
 | --- | --- | --- |
-| R26. Selected EXACT cleanup of T at x with incoming `x.MUST/T,N` | A partial survivor can be D and renew a Target. | Keep `x.MUST/T,N` with its survivor H. An exact observer at x can now report on this retained uniform result. |
-| R35. Selected EXACT cleanup at `x.f.g` in `x.MUST/T,N` | The descendant point can demote a broad survivor. | Keep the original NORMAL uniform region. A nonuniform EXACT fact at the cleaned point still dies. |
-| R36. Restricted ALL at `x.f.g` with `x.MUST/T,N` | A partially cleaned region can remain only as a broad D result. | Emit `x.MUST/T{f},N` and `x.f.MUST/T{g},N` if both fit. BELOW also keeps `x.f.g.$/T,N` if it fits. |
-| R31. `clearExactT(p); return p.g` | The FLOW cleaner can attach mx={T} to the getter's flow. | Keep T eligible on the disjoint `p.g` cone. Keep the mask where the cone contains the cleaned point. |
-| R28. Backward `ZERO→x.f.$/T,N` in an after-loop block | Retain the native ZERO-origin guidance. A remaining DT keeps the analysis active even with no DATA demand. | Same. Also preserve a cut NE entry and its real paired scope. |
-| R33. FLOW summary with mx={T} used to derive a guide | The guide has empty mx. Saved replay still excludes T. | Same, including both endpoints of the paired projection. |
-| R37. A recursive relay continues to publish root `ZERO→DT` with only closed terminal origins | The anonymous row can keep renewing. | At a sealed forward handoff with a frozen complete proof, omit that row. Other scoped DATA and terminal rows keep their own handling. |
-| R38. Two marking sites A and B share one observer ID. Only A has a NORMAL track. | The root `ZERO→DT` remains. | It still remains until B and every other root use are served. Later retirement uses both tracks, not the one report ID. |
-| R39. Writer words `{g,h}*f`, reader words `{g,h}*g` | Cuts can hide the final mismatch and repeat the root Target. | A closed empty product discharges the route. If it is the last root use, the frozen proof lets the frontier drain. |
-| R40. Writer `g*f`, reader `g or g·R or h·R·h` | The opposite sides of the recursive call can keep creating possible matches. | A closed nested state-pair relation proves disjointness. With a real `h.g.h` writer route the certificate fails and keeps guidance. |
+| R26. Selected EXACT cleanup of T at x with `x.MUST/T,N`. | `{x.MUST/T,D,H=1}` | `{x.MUST/T,N,H=1}` |
+| R35. Selected EXACT cleanup of T at `x.f.g` with `x.MUST/T,N`. | `{x.MUST/T,D,H=1}` | `{x.MUST/T,N,H=1}` |
+| R35, exact input control. Same cleanup with `x.f.g.$/T,N`. | `∅` | `∅` |
+| R36. Selected ALL below and at `x.f.g`, with `x.MUST/T,N` and room for both fields. | `{x.MUST/T,D,H=1}` | `{x.MUST/T{f},N,H=1; x.f.MUST/T{g},N,H=1}` |
+| R36. Selected BELOW `x.f.g`, same actual and budget. | `{x.MUST/T,D,H=1}` | `{x.MUST/T{f},N,H=1; x.f.MUST/T{g},N,H=1; x.f.g.$/T,N,H=1}` |
+| R31. Selected EXACT cleanup of T at p with the disjoint leaf `p.g.*/F,N`. | `{p.g.*/F(mx={T}),N}` | `{p.g.*/F,N}` |
+| R31, intersecting control. Same cleanup with `p.*/F,N`. | `{p.*/F(mx={T}),N}` | `{p.*/F(mx={T}),N}` |
+
+#### Handoff and stopping
+
+Each set below lists outgoing guidance in the previous edge's orientation.
+For instance, `ZERO→DT` will select actual ZERO in the next run at the
+matching typed entry.
+
+| Rule and input | Current handoff | Proposed handoff |
+| --- | --- | --- |
+| R28. Backward after-loop block publishes `ZERO→x.f.$/T,N`. | `{ZERO→x.f.$/T,N}` in the block's reversed scope. | `{ZERO→x.f.$/T,N}` in the same reversed scope. |
+| R28. EMPTY DATA set, with a live forward root `ZERO→DT,D`. | `{ZERO→DT,D}`. Continue. | `{ZERO→DT,D}`. Continue. |
+| R33. Admitted `p.*/F→ret.*/F(mx={T}),D`. | Guide `{p.*/F→ret.*/F}` with empty mx. | Guide `{p.*/F→ret.*/F}` with empty mx. A saved NORMAL record with the same mask still rejects T in replay. |
+| R37. Root result `{ZERO→NT(id),N; ZERO→DT,D}`. All root uses have frozen complete service. | `{ZERO→DT,D}`; retain the NORMAL observation. | Guidance `∅`; retain `{ZERO→NT(id),N}`. |
+| R38. A and B can reach the same observer. Only A contributes `ZERO→NT(id),N`; B uses `ZERO→DT,D`. | `{ZERO→DT,D}` | `{ZERO→DT,D}`. A's NT does not close B's track. |
+| R39. A qualified root has `ZERO→DT,D` from writer words `{g,h}*f` and reader words `{g,h}*g`. Empty product and complete control proof are frozen. | `{ZERO→DT,D}` | `∅` |
+| R40. A qualified root has `ZERO→DT,D` from writer words `g*f` and reader `g or g·R or h·R·h`. The nested disjointness and control proofs are frozen. | `{ZERO→DT,D}` | `∅`. With a real writer word `h.g.h`, guidance stays `{ZERO→DT,D}` until its track is discharged. |
 
 ## 6. Proof and activation
 
@@ -737,11 +817,11 @@ original reply or guide. Unknown terminal scope keeps its ZERO→DT row.
 
 ### Examples diff
 
-| Case | Current | Proposed |
+| Proof input | Current route or basis | Proposed route or basis |
 | --- | --- | --- |
-| Planned deletion relies on a source permission only obtained in a later run | Native processing retains the original path. | The replacement fails its run-order check. Keep the original path under the fallback rule. |
-| A proposed child route meets a DATA value but loses the only scoped ZERO guide | The native paired scope can still start that consumer. | The DATA witness is insufficient. Activation needs the matching ZERO route or a complete retained alternative. |
-| Both A and B are individually removable using each other | Ordinary processing retains a basis. | The joint proof cannot use a deleted provider. Keep a basis that supplies each needed continuation. |
+| A run-3 reply `x.f.M/T,D` is needed to emit `ZERO→DT,D`. A replacement claims a permission first available in run-5. | Keep `x.f.M/T,D` and the resulting `ZERO→DT,D`. | Keep `x.f.M/T,D` and `ZERO→DT,D`. The replacement fails its run-order check. |
+| At the normal port, a reached backward ZERO needs `ZERO→DT,D`. The proposed child supplies only `p.f.$/T→ret.$/T,N`. | Keep `{ZERO→DT,D}` for the reached ZERO. | Keep `{ZERO→DT,D}`. The DATA edge does not serve it. |
+| A and B are two qualified guides, `A=ret.*/T→p.NE/T,D` and `B=ret.*/T→p.M/T,D`. This example's complete consumers can use either retained guide. | A native comparison has the corresponding MAY guide `{ret.*/T→p.M/T,D}`. | Keep a service basis such as `{B}`. The empty set `∅` cannot serve the shared consumer. |
 
 [Constructive rule proofs](lean/proposals/demand-refinement-spec-20261117/README.md) ·
 [Joint service proof](lean/proposals/demand-no-loss-audit-20261117/README.md) ·

@@ -2,6 +2,7 @@ import Binding
 import Run2Relay
 import HeadSafety
 import OverwriteReplay
+import PointWriteReplay
 
 namespace ScalarApplication
 
@@ -120,5 +121,78 @@ theorem an_r08_premise_does_not_relax_the_paired_output_cap :
     let row : Row := ⟨d,⟨1,[],.star,some 7,[],[]⟩⟩
     Run2Relay.restrictOne 3 2 false [a] raw out row =
       some (raw,⟨⟨1,[1],.ne,some 7,[],[]⟩,true,true⟩) := by decide
+
+def mayDemand : Ap := ⟨0,[],.may,some 7,[],[]⟩
+def mustActual (path e : Path) (demand : Bool := false) : Offered :=
+  ⟨⟨0,path,.must,some 7,e,[]⟩,demand⟩
+def starred (path e : Path) (mark : Option Nat) : Seed :=
+  ⟨⟨0,path,.star,mark,e,[]⟩,mark.isSome⟩
+def shortFamily : List Seed :=
+  [starred [1] [] (some 7),starred [1] [] none,probe mayDemand]
+
+theorem r07_keeps_the_head_and_prefix_probe_in_the_full_family :
+    let actual := mustActual [1] [4]
+    Run2Relay.emit 5 4 false mayDemand actual =
+      [starred [1] [4] (some 7),starred [1] [4] none,probe mayDemand] := by decide
+
+theorem r07_leaves_the_three_field_offer_short_and_r08_moves_both_stars :
+    let actual := mustActual [1,2,3] [4]
+    CarryPolicy.emit 5 4 false mayDemand actual = shortFamily ∧
+    Run2Relay.emit 5 4 false mayDemand actual =
+      [starred [1,2,3] [4] (some 7),starred [1,2,3] [4] none,probe mayDemand] := by decide
+
+theorem r08_three_field_controls_keep_the_short_family :
+    Run2Relay.emit 5 4 false mayDemand (mustActual [1,2,3] []) = shortFamily ∧
+    Run2Relay.emit 5 4 false mayDemand (mustActual [1,2,3] [4] true) = shortFamily ∧
+    Run2Relay.emit 5 4 false {mayDemand with mark := none} (mustActual [1,2,3] [4]) =
+      [starred [1] [] none,probe mayDemand] ∧
+    Run2Relay.emit 5 2 false mayDemand (mustActual [1,2,3] [4]) = [] := by decide
+
+theorem the_ne_selector_keeps_only_the_two_deeper_star_commands :
+    Run2Relay.emit 5 4 false {mayDemand with tail := .ne} (mustActual [1,2,3] [4]) =
+      [starred [1,2,3] [4] (some 7),starred [1,2,3] [4] none] := by decide
+
+theorem the_three_field_r08_publication_has_one_output_field :
+    let actual := mustActual [1,2,3] [4]
+    let raw := (starred [1,2,3] [4] (some 7)).ap
+    let output : Value := ⟨⟨1,[1,2,3],.exact,some 7,[],[]⟩,true,false⟩
+    let row : Row := ⟨mayDemand,⟨1,[],.star,some 7,[],[]⟩⟩
+    Run2Relay.restrictOne 5 4 false [actual] raw output row =
+      some (raw,⟨⟨1,[1],.ne,some 7,[],[]⟩,true,false⟩) := by decide
+
+theorem r13_keeps_the_excluded_point_and_removes_the_child_result :
+    let actual : Value := ⟨⟨0,[],.exact,none,[],[]⟩,false,false⟩
+    let expected : Value := ⟨⟨0,[],.exact,none,[1],[]⟩,false,false⟩
+    let child : Value := ⟨⟨0,[1],.may,none,[],[]⟩,true,false⟩
+    NestedWriteReplay.keep 5 [] 1 actual = some expected ∧
+    PointWriteReplay.keep 5 [] 1 actual = some expected ∧
+    NestedWriteReplay.keep 5 [1] 2 actual = some child ∧
+    PointWriteReplay.keep 5 [1] 2 actual = none ∧
+    OverwriteReplay.move [1] [] expected.ap = none := by decide
+
+theorem the_c5_point_and_star_examples_publish_different_sets_under_ne :
+    let entry : Ap := ⟨0,[],.may,none,[],[]⟩
+    let exit : Ap := ⟨1,[],.star,none,[],[]⟩
+    let row : Row := ⟨entry,exit⟩
+    let neRow : Row := ⟨{entry with tail := .ne},exit⟩
+    let actual : Offered := ⟨entry,true⟩
+    let point : Ap := {entry with tail := .exact}
+    let star : Ap := {entry with tail := .star}
+    let rawPoint : Value := ⟨{exit with tail := .exact, e := [1]},false,false⟩
+    let output : Value := ⟨{exit with e := [1]},false,false⟩
+    Run2Relay.restrictOne 5 4 false [actual] point rawPoint row = some (star,output) ∧
+    Run2Relay.restrictOne 5 4 false [actual] point rawPoint neRow = none ∧
+    Run2Relay.restrictOne 5 4 false [actual] star output neRow = some (star,output) := by decide
+
+theorem the_c5_companion_uses_the_same_rows_conclusion_and_mark :
+    let exit : Ap := ⟨1,[],.exact,some 7,[],[]⟩
+    let row : Row := ⟨mayDemand,exit⟩
+    let actual : Offered := ⟨mayDemand,true⟩
+    let companion : Ap := starP []
+    let old : Value := ⟨⟨1,[],.may,none,[],[]⟩,true,false⟩
+    let cut : Value := {old with ap := {old.ap with tail := .ne}}
+    let published : Value := {old with ap := {old.ap with tail := .star}}
+    Run2Relay.restrictOne 5 4 false [actual] companion old row = some (companion,published) ∧
+    Run2Relay.restrictOne 5 4 false [actual] companion cut row = none := by decide
 
 end ScalarApplication

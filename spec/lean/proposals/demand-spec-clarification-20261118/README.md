@@ -13,6 +13,10 @@
 - Any entry-depth overrun in the checked base family requires the R08
   certificate. The run-2 relay keeps the ordinary cap. An R08 entry
   cannot relax its paired C5 output cap.
+- The example checks cover the full R07/R08 identity families, including
+  the three-field MUST offer, its controls and the NE variant. They check
+  the nested-write keep results for R13 and the published sets for
+  representative raw C5 point, STAR and FLOW-companion inputs.
 
 The scalar NE checks start after the ordinary base, mark, role and
 port checks. The [bounded child proofs](../bounded-refinement-frontier-20261114/README.md)
