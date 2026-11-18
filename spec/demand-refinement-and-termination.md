@@ -778,630 +778,250 @@ methods or iterations.
 
 | Rule and affected part | Required behavior | Proof |
 | --- | --- | --- |
-| R28/R33 · typed controls, handoff and stopping | Retain paired DATA/Target projection. Clear FLOW mx from both demand endpoints. Keep real masks in NORMAL replay. DT still counts when DATA is empty. | Projection is idempotent. Typed controls keep their paired witnesses. Stopping requires an empty effective frontier. |
+| R28/R33 · typed controls, handoff and stopping | Reuse paired projection, demand mask clearing and the forward stop test. Carry NE through DATA projection. | Projection is idempotent. Typed controls keep their paired witnesses. Stopping requires an empty effective frontier. |
 | R37/R38 [REC] [LOOP] · terminal proof | Keep the root DT. The proof model explains when all marking-site routes and uses could be discharged. | A saved `ZERO→NT(id-1),N` neither serves id-2 nor proves that all seeds using the root guide are redundant. |
 | R39 [REC] [LOOP] · NoRoute proof | The regular-language model can prove absence of a marking-to-observer path. The native handoff retains its DT row. | A common word would induce a reachable accepting product pair. |
 | R40 [REC] · NoRoute proof | The nested/regular model can prove disjointness. The native handoff retains its DT row. | A common word would supply a checked owner/state-pair derivation. |
 
 ### 6.1 Typed matching, publication and seeds
 
-Each eligible pair is `(Dc, Dp)` for the next execution, written
-`Dp→Dc` in the previous direction. The entry port and exit port come
-from the same row. C2 matches a reached ZERO against Dc=ZERO or DT
-and starts the native ZERO identity. This grants entry only. An
-offer with DATA uses DATA selectors under §2.
+**Current implementation.** Reuse the existing ZERO, Target and seed
+handlers.
 
-For C5, evaluate the following two tests on **one** qualified pair.
+- **C2 and C5 controls.** A reached ZERO starts the ZERO identity when
+  `Dc` is ZERO or DT. C5 tests both endpoints on one qualified row. A
+  ZERO or DT entry requires a ZERO original. A ZERO exit accepts ZERO
+  and also admits DT publication without creating a ZERO result.
+  [DemandStore](../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandStore.kt#L157)
+- **Target publication.** A forward NORMAL witness yields NT with its
+  report ID. A DEMAND witness yields DT. NT composes only on NORMAL
+  links, deduplicates against saved NT and confirms a report at a
+  configured root with ZERO premise. Backward ignores NT. DT uses paired
+  C5 after run-1. A reversed source completion from DATA to ZERO emits
+  DT with the caller original. `ZERO→ZERO` stays ordinary control flow.
+  Keep concrete or ZERO Target origins and full ND application joins.
+  [BlockRunState](../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockRunState.kt#L132)
+- **Seeds and ports.** Reuse statement-scoped sink seeds and source-hit
+  permissions keyed by method, statement, forward micro-edge and action.
+  The seed index supplies permissions at reached statements.
+  A reached backward exceptional ZERO can also use the normal control
+  view. If that view admits ZERO, hand off `ZERO→DT` at the normal
+  invocation. Use §6.3 for the run-2 static routes.
+  [SeedIndex](../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/Seeds.kt#L59) ·
+  [BlockBoundaryDemandView](../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/BlockBoundaryDemandView.kt#L35)
 
-| Test | Selector | Accepted result |
-| --- | --- | --- |
-| Raw entry | Dc is DATA | A DATA premise member belongs to the row's raw C2 image. For ND this tests a contributing arm and keeps the full original. |
-| Raw entry | Dc is ZERO or DT | The matched original is ZERO. A DATA member cannot match. |
-| Output | Dp is DATA | Only DATA can pass. Apply scalar selection and the row's cap in §3.3, including for a legal ZERO original. |
-| Output | Dp is ZERO | Only a ZERO result or a DT candidate passes. The DT probe accepts on the same exit slots as ZERO and emits only a DT. |
-
-```text
-emitTarget(boundOriginal P, target, physicalPort):
-    if target is NT:
-        if forward and all required witnesses and links are NORMAL:
-            publish via the existing NT deduplication
-        return
-    if unrestricted run-1 or acceptsTarget(P, physicalPort):
-        publish DT with the admitted original and port
-
-acceptsTarget(P, port):
-    for row in ordinary qualified paired rows at this port:
-        if row.Dp == ZERO and row.Dc accepts a complete P member:
-            return true
-    return false
-```
-
-The paired probe implements the table above and includes the existing
-run-2 virtual and borrowed-normal routes where eligible. The ND member
-test above applies only to restriction. The ND call join still requires
-all arms before it can emit a Target. Use this at the existing Target
-publication point, after ordinary rule handling or native call/block
-composition. Work for the typed part is linear in indexed candidate
-pairs and their inspected original members, with early exit at a
-complete match. DATA entry checks and static lookup keep their own
-costs. No AP path product is created by the typed ZERO/DT check.
-
-For example, with guides `{p.$/T→DT,D; ZERO→q.$/T,D}`,
-`ZERO→DT,D` matches the entry of the first row and the exit of the
-second. It publishes `∅`. A complete `{ZERO→DT,D}` guide admits it.
-NT uses the separate forward NORMAL report protocol. It is neither
-an entry selector nor an exit selector.
-
-At a forward observation, a complete NORMAL witness emits `P→NT(id),N`.
-ID is the native key for location and rule. A DEMAND witness emits
-`P→DT,D`. Preserve the run-1 origin selection and later-run full AND
-joins. Dispatch a DT to its callers only if run-1 is unrestricted at
-this boundary or paired C5 admits it. At a call or block link use the
-native premise match in the actual binding, including all ND members
-when applicable. The composed NT requires NORMAL inputs and links and
-has the original ID. Ignore NT in backward. Keep native deduplication
-against already persisted NT and collect confirmed reports from
-configured root `ZERO→NT(id),N` edges. Section 6.4 models an optional DT bit. Native publication does not use it.
-
-In backward saved replay, a reversed forward source is a matching
-non-ZERO premise whose application produces ZERO. Preserve the caller
-original, emit DT through its paired restriction and finish that
-application. A `ZERO→ZERO` completion stays ordinary control flow.
-Only the native source-hit paths record source permissions. The
-conversion grants no independent source permission.
-
-The seed index stays separate from the pair index. Forward demand
-observations contribute the existing literal FULL requirements or
-predicate occurrence handles at their native method and statement.
-Backward source hits contribute the exact method, statement, forward
-micro-edge and action identity. The next forward source hook compares
-that complete key. At both ends, a seed becomes active only if the
-native entry and CFG/rule binding reach it. A retained seed definition
-does not replace a missing entry guide.
-
-For an already reached backward exceptional block ZERO, C2 unions the
-physical ZERO admission with admission from the normal invocation's
-ZERO/DT view. Record whether that second test admitted ZERO. A ZERO
-original's DT probe can use either whole paired control row. If the
-borrowed admission was recorded, project the admitted ZERO→DT at the
-normal invocation address. Resolve that address through the existing
-normal block exit map. Keep exact DATA ports, the physical ZERO→ZERO
-paths and the independent run-2 static-shortcut rule below. The
-borrowed view creates no new block offer.
+**Proposed change.** In scopes that enable revised C2/C5, use §2 and
+§3.3 for the DATA endpoint of a mixed DATA/control row. For a DATA
+entry, including a DT probe, replace the current `canStoreInitial`
+check with the raw C2-image test. One contributing member can satisfy
+the restriction, and the full ND original stays on the result. For a
+DATA exit, use the revised selection and NE truncation at the existing
+row cap in §3.3.
 
 ### 6.2 Barrier projection and stop
 
-```text
-handoff(sealedRun):
-    persist eligible admitted NORMAL DATA and existing NORMAL Targets
-    selected = admitted DATA where layer is D
-                              or original is ND
-                              or (backward and original is singleton ZERO)
-    selected += admitted DT at method and block boundaries
-    seeds = forward ? native sink seeds : native source hits
-    for each selected origin with its physical owner and ports:
-        for each scalar result and each original member:
-            Dc = guideEndpoint(result)      // DT handled as typed entry
-            Dp = guideEndpoint(member)
-            emit row(Dc, Dp) at the reversed ports
-    attach the run-1 static view only for run-2, as in §6.3
-    apply existing qualified C2/C5 compaction to eligible DATA rows
-    insert admitted DT and the retained DATA rows in DemandStore.Builder
-    freeze the demand index and use the native forward stop test
+**Current implementation.** At a completed barrier, persist eligible
+NORMAL summaries with their masks and use the existing report and seed
+stores. Build the next demand index from admitted DEMAND summaries, ND
+summaries, backward singleton-ZERO summaries and outgoing DT. DATA
+projection forms one `(Dc,Dp)` pair per result leaf and original member.
+Reverse block ports. Keep the original ND premise for application.
+[IterationDriver](../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/IterationDriver.kt#L213) ·
+[HandOff](../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/HandOff.kt#L31)
 
-guideEndpoint(x):
-    if x is ZERO or DT: return the same typed endpoint
-    if x.tail == MUST: x = x with M tail and empty E       // native view
-    if x.mark == FLOW:
-        clear mx
-        if x.tail == STAR: clear E
-    return x
-```
+R33 already clears FLOW mx on both projected endpoints and E on FLOW
+STAR. MUST projects to M with empty E. ZERO and DT stay typed. These
+projections are idempotent. FULL handoffs after run-1 use exact C2/C5
+service compaction. The forward stop test is `HandOff.demandEdges.isEmpty()`
+after insertion and compaction. A retained DT counts. Report rows and
+seed definitions stay in their own stores.
+[Projection](../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticGuidance.kt#L50) ·
+[Compaction](../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/HandoffCompactor.kt#L21) ·
+[Mask proof](lean/proposals/handoff-mask-audit-20261117/MaskHandoff.lean)
 
-The selector applies to admitted method and block results, including
-the existing backward singleton-ZERO NORMAL case. Backward executable
-ND is invalid. An ND projection adds one row per arm and scalar
-result. The saved/current summary still requires the whole ND
-original. Keep the source origin in the proof frame until compaction
-checks finish. Identical projected pairs can then share one index entry
-at the same owner and ports. Reverse block ports by exchanging the
-producer entry and exit. A block's logical normal Target port must
-resolve to the existing forward or reverse normal invocation, including
-the borrowed route above.
-
-`guideEndpoint` copies concrete heads, tails and masks except for
-the existing forward MUST projection to M with empty E. It drops mx
-on FLOW endpoints and clears E on FLOW STAR selectors. Keep NE and
-its nonempty meaning. ZERO and DT stay typed. NORMAL replay retains
-its original E/mx and real support. Confirmed NT and the seed index
-do not become guide rows. Never apply DATA subsumption to DT.
-
-For R09/R23, keep the distinct admitted summaries in their existing
-summary store. Project these rows at handoff. This keeps the deeper
-NE head available to C2 without a separate list of removed outputs.
-Equal entry selectors can select different paired outputs or budgets.
-The compactor compares complete projected pairs under R25 in §4.
-
-At a completed forward barrier use `HandOff.demandEdges.isEmpty()`
-after insertion and compaction, as in `IterationDriver.barrier`.
-A retained typed DT counts. NT, saved replay, raw candidates rejected
-by C5 and seed definitions do not count. Run-1 preserves the existing
-frozen static views, their attached rows and preflight. Do not run a
-second search for virtual consumers at the stop test. A changed static
-view must pass the native comparison for C2, C5, Target, preflight and
-empty-frontier results before activation. Run these checks outside
-the worklist. A policy cutoff stays separate.
-
-**Work.** At the sealed barrier, a selected origin with `k` scalar
-outputs and `m` original members offers `k·m` pairs. A DT has one
-typed output. Projection and index construction charge the decoded
-paths of those pairs and the native seed count. The existing
-`HandoffCompactor` also sorts eligible origins by owner group and
-looks up matching rows for each projection. Its comparison keys
-and provider rechecks stay native. The final positive-count test is
-constant time. It launches no lookup or transitive walk.
+**Proposed change.** Project each distinct admitted NE result as an NE
+entry at its own head, paired with its own original and ports
+(R09/R23). A MAY row leaves that NE row eligible. Revalidate existing
+DATA compaction keys against the new C2/C5 rules under R25 in §4.
+Remove an origin only when every projection has its required service in the
+final retained basis. Keep typed Target compaction and the stop test.
+Projection still offers at most `k·m` pairs for k result leaves and m
+original members. The stop test still reads the completed index count.
 
 ### 6.3 Run-1 static views
 
-Build the run-2 static view from the frozen run-1 direct, captured write
-and lost-write rows, attached boundary rows and terminal readers. Index
-by complete scope and port as well as the static anchor. A write or
-read attachment, including a terminal reader, belongs to the
-selected method or exact block port pair. Only static-to-static
-bridges can be inherited. The local lookup accepts a bridge owned by
-this method. An inherited lookup accepts it if an owning method is
-reachable from the querying method along zero or more resolved
-caller-to-callee edges. The native outside-graph case accepts only
-exact ownership. Apply this projection to C2, C5, Target and the
-stop proof. Static shortcuts use their own physical attachment.
+**Current implementation.** Reuse the frozen run-1 direct, write,
+lost-write, boundary and terminal rows for run-2. Keep method and block
+attachments scoped to their ports. The native lookup uses explicit
+rows and same-slot carry, then local composition and eligible inherited
+static-to-static bridges. It joins shared anchors with compatible
+geometry and mark labels. A static anchor is a class/field pair or an
+EXACT class marker. FLOW acts as identity. In FULL mode,
+two concrete middle labels must agree. Keep the C2 entry-only lookup,
+complete C5 pairs with their own budgets and the existing Target
+probe. Later runs use local demand. The barrier attaches the index
+without expanding the transitive closure.
+[FrozenStaticCompletion](../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticGuidance.kt#L212) ·
+[StaticPairLookup](../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/StaticPairLookup.kt#L5)
 
-The reference view includes the direct rows and compositions of
-visible rows at a shared static anchor. The anchor is the pair
-(class, field), or the exact class marker for that class considered on
-its own. From `A→S` and `S'→B`, extend only if S and S' have the same
-anchor, their represented locations can overlap and the marks
-compose. For native non-NE tails, overlap compares the two heads.
-The shorter tail must admit the remaining known path and its E
-must admit the first descent. For NE also require a possible nonempty
-suffix in its region, so same-head EXACT and NE cannot overlap.
-FLOW composes as identity. Two concrete labels must agree on the
-middle full mark.
-Carry the composed endpoint labels on A and B. A ZERO origin remains
-typed and a DT endpoint has no output mark. The search keeps the
-complete endpoint pair and scope and stops extending at a nonstatic
-input. Revisit a search key only for new qualified endpoint/mark
-service. Expose each reached pair on demand. A `ZERO→S/T` writer
-and a `S/T→DT` reader can expose `ZERO→DT` through their common S.
-Short-circuit only after the probe has all
-its required results, including different C5 budgets. Shared carry
-offers just the projected identity for the same actual static slot.
+The backward run-2 block Target shortcut uses the `STATIC_SHORTCUT`
+entry scope, the matching output port and a writer path back to real
+ZERO. Keep this route separate from ordinary DATA entry.
+[Shortcut](../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/DemandStore.kt#L328)
 
-```text
-queryRun2Static(owner, ports, operation, input):
-    try the native explicit and eligible shared-carry rows
-    for view in [local, inherited if the native preflight allows it]:
-        pending = indexed endpoints matching this operation in view
-        seen = empty set
-        while pending is not empty:
-            row = pending.pop()
-            if row already in seen: continue
-            seen.add(row)
-            offer the complete row to C2, paired C5 or Target
-            if the operation has all its required results: return
-            if row.input has a static anchor:
-                for predecessor in indexedIncoming(view, row.input):
-                    if anchors, geometry and mark composition match:
-                        pending.push(compose(predecessor, row))
-```
-
-For C2, the indexed traversal can use the native entry-only
-optimization. For paired C5 it keeps both endpoints and its port until
-the row is consumed. For a Target the output is typed DT and there is
-no AP label on that endpoint. The latter two queries follow matching
-predecessors as shown. This is the reference lookup order. Use the
-existing native static view, including its entry-only specialization,
-and compare any new implementation against its operation-specific
-results. A boolean Target probe can stop at one accepted pair. DATA
-C5 must account for all selected output leaves and their budgets.
-
-**Work.** A native run-2 lookup examines the indexed seed postings
-and then the reachable qualified states and their incoming candidate
-postings. Its extra memory is the worklist and visited keys of this
-probe. A posting check costs the mark and geometry comparison only
-after the native filters allow it. Each query may examine a large
-closure in the worst case. No such expansion runs in later iterations,
-and the barrier does not materialize a static relation closure.
-
-For a reached backward run-2 concrete static original at a block, the
-static-write shortcut may serve a DT candidate through a completed
-writer origin at `STATIC_SHORTCUT` with the matching output port.
-The writer or preceding static bridge chain must end at real ZERO
-when followed backwards. A carry identity, other-port writer or
-terminal reader alone cannot serve this probe. It grants no DATA
-entry alias. After run-2 use local demand only. Validate equivalence
-to the native qualified static view before enabling NE in it.
+**Proposed change.** Keep NE at its named static field anchor. For a
+join involving NE, require an overlapping location with a nonempty
+suffix relative to every NE endpoint, respecting both endpoints'
+geometry and E. Thus same-head EXACT and NE cannot join. Use §§2–3
+for the qualified C2/C5 tests. Check the adapter against native C2,
+C5, Target, preflight and frontier results on existing shapes and
+validate NE joins before enabling it. Keep this check outside the
+worklist. Runtime lookup still visits only indexed postings and states
+reached by the native query.
 
 ### 6.4 R37/R38 terminal service proof
 
-The implementation hands off every admitted DT with the ordinary
-`projectTargetGuidance`. `NormalTargetStore` records report IDs and
-conditional target rows. The seed index records permissions. Neither
-provides a source-to-observer witness for each branch of an anonymous
-DT. The theorem below is the condition for a stronger retirement rule.
-It adds no runtime terminal bit, source catalogue or graph scan to this
-implementation.
+**Current and proposed handoff.** Keep native DT guidance and its
+typed compaction. The following proof model describes the stronger
+condition for removing a root `ZERO→DT`. It adds no runtime analysis.
 
-A goal is `(observer ID, full-mark/position predicate, revision)`.
-Revision includes the applicable graph and rule versions. Freeze the
-set of proved closed goals at forward start. Each local admitted DT
-derivation contributes true for an unknown goal or a goal outside the
-snapshot, and false otherwise. Each admitted relay copies its input
-bit. If a relay has several required terminal inputs, OR their bits
-under its complete binding. Alternative derivations of the same
-qualified Target key also combine by OR. Retain a false-to-true
-upgrade even when the Target edge was already delivered. Process
-upgrades through the same valid Target links until stable before
-handoff. A key publishes at most its first notification and one upgrade.
-
-Compute closure of a goal before adding it to a later snapshot.
-Use the complete catalogue S of possible marking sites, actions and
-bindings for this predicate. In a temporary upper view U, every
-possible source-to-goal transfer must map to a path, including sources
-beyond current cuts or without current permission. In a temporary
-NORMAL witness view N, every path used by the check must lift to a
-retained actual root NORMAL path from that same source and mark to
-the goal. Use ordinary matching, ports, binding and caps. Build both
-views by supported adapters. With fields forgotten U can be
-conservative. Bounded summaries alone cannot establish U. A local
-conditional NT, a different source's report and NORMAL GEN before a
-later cut do not establish N.
+For one goal g, fix the observer, FULL mark/position predicate and
+graph/rule revision. S is its complete catalogue of marking actions
+and bindings, including sites beyond the current cut or without
+permission. U covers every possible native source-to-goal path.
+N contains only paths backed by retained root NORMAL witnesses from
+the same binding and mark to g.
 
 ```text
-proveClosedGoal(g):
-    if catalogue or transfer correspondence is unproved: return Unknown
-    possible = reverseReachable(U, g)
-    witnessed = reverseReachable(N, g)
-    for s in S:
-        if s in possible and s not in witnessed and no validated NoRoute(s,g):
-            return Open
-    return Closed
+closeGoal(g):
+    if S, U or N is unvalidated: return Unknown
+    possible = S ∩ reverseReachable(U, g)
+    served   = S ∩ reverseReachable(N, g)
+    if every s in possible is in served or has validated NoRoute(s,g): return Closed
+    return Open
 
-onAdmittedTargetInModel(key, originBits):
-    incoming = OR(originBits)    // a local origin contributes goal not in frozenClosed
-    if key has no bit: publish and store incoming
-    else if incoming and currentBit(key) == false: publish upgrade to true
+at a completed forward seal: freeze Closed goals for the next forward run
+for each admitted DT key: OR the bits of all derivations and relay the result
+    local bit = true for an unknown goal or a goal outside the frozen set
+    relay bit = OR of input bits under the complete binding
+    process false-to-true upgrades to closure
+root DT can retire iff bit == false and every other use has retained service
 ```
 
-For the proof model, run `proveClosedGoal` at a completed forward seal
-for a goal with an available complete catalogue and both validated
-graphs. A Closed result enters the next forward snapshot. With
-adjacency lists, two reverse searches cost `O(V+E+|S|)` time and
-`O(V+|S|)` scratch space after the views are built. Construction and
-validation of the two views are separate costs and are not constant
-time. The modeled bit uses OR on every admitted alternative. It can
-publish once and upgrade once per key. A missing graph or catalogue is
-Unknown. A possible route without a retained witness is Open.
-Production runs neither search nor
-the bit propagation.
-
-This condition alone is insufficient for removing a row. The same
-`PairedDemand(Target, Zero)` authorizes a ZERO initial in `DemandStore`
-and lets a ZERO-original DT pass `acceptsTarget`. Those operations can
-activate a seed in another rule or block. A root DT must stay as long as
-the implementation cannot prove that every such use will survive or has
-no required effect. Native stores have no reverse consumer index for
-that key. Knowing that both report IDs are confirmed gives no decision
-about such a seed. The implementation preserves the explicit control
-row, seed index and exact scope/ports.
-
-Induction over finite terminal derivations puts every goal of a
-stable false key in the frozen set. The catalogue and path checks
-give service for every possible source of each such goal. A
-separate proof for all other control uses would be required before
-retiring the row.
+Other uses include scoped C2 ZERO admission, paired C5 and seed
+activation. Each must have retained service or no required effect.
+Induction over finite terminal derivations shows
+that every open or unknown origin sets the root bit. The complete
+source check serves every origin of a false bit. The separate control
+condition preserves all other uses. Given validated views and NoRoute
+results, closure costs `O(V+E+|S|)` per goal. Each DT key publishes once
+and upgrades at most once.
+[Source-specific proof](lean/proposals/mark-origin-soundness-20261117/OriginService.lean) ·
+[Terminal relay proof](lean/proposals/recursive-target-service-20261117/TargetSupport.lean)
 
 ### 6.5 R39/R40 NoRoute proof models
 
-**When.** Run this checker in a reference fixture or a read-only query
-at a completed forward seal. It checks one exact marking-action to
-observer relation. The native handoff currently keeps the DT. Even a
-valid NoRoute could discharge only this relation under §6.4.
-
-**Inputs.** One FULL mark T, the native marking action and exact source
-position with word `a`, the exact observer occurrence and position
-with word `q`, and the writer/reader interfaces. Each interface fixes
-the actual root object, resolved entry and exit bindings and ports.
-The writer and reader must meet at the same bound base. A field or
-array label is the actual accessor ID. Do not use field names without
-their resolved identity. The writer prepends its derived word to a.
-The reader consumes its derived word before checking q. Thus a route
-requires `writeWord · a = readWord · q`.
-
-#### Extract the two languages
-
-Use a finite value-flow graph for this fragment. Its vertices are
-`(physical scope, instruction or port, base)` in the writer or reader.
-Use the resolved CFG, the ordinary statement forms and resolved call
-binding/return maps. The following table specifies labels on the value
-being tracked. Include identity edges on every CFG branch that can
-preserve it. A fresh result starts with no incoming value edge.
-
-| Native transfer on the tracked value | Writer | Reader |
-| --- | --- | --- |
-| Identity or local copy | ε | ε |
-| Ordinary `b.f = v`, with verified fresh, non-aliased result b | Edge `v→b` with label f | Unknown |
-| Ordinary `b = v.f` | Unknown | Edge `v→b` with label f |
-| Resolved call with an exact input/return mapping in the fragment | Invocation edge for the matching interface | Same |
-| Branch or type guard on control only | Include every possible successor | Same |
-
-Select the cone between the chosen input and output ports. Use the
-version of the writer graph with these value edges read backwards
-from output to input. Prepending f last puts f first in the final
-word. Use the reader graph from input to output. For example, if a
-writer prepends g before B and f after B, the rule is `f·B·g`. A
-reader with the same instruction order uses `g·B·f`.
+**Current and proposed handoff.** The runtime retains the native DT
+guidance. In §6.4's proof model, NoRoute discharges one source/observer
+relation. Use a read-only model at a forward seal or a reference
+fixture. Fix the mark, both occurrences and resolved interfaces at the
+same bound carrier. For marking position a and observer position q,
+a route requires `writerWord · a = readerWord · q`.
 
 ```text
-extract(graph, interface, role):
-    if exact endpoints, actual binding or other incoming routes are unproved:
-        return Unknown
-    scan all control-reachable CFG points at the resolved interfaces
-    add the supported edges from their statement forms
-    if any relevant operation can carry T outside these edges:
-        return Unknown                     // includes unknown alias or call
-    keep the value-flow cone between the selected ports
-    orient value edges in word order for role
-    for each matched interface:
-        create a nonterminal for its start and each local vertex
-        at the chosen output vertex add A → ε
-        for each ordinary edge A --word--> B add A → word · B
-        for each invocation edge A --callee--> C:
-            v = uniqueRemainingWord(C, selected output)
-            if v is NoPath: continue
-            if v is unknown: return Unknown
-            for each resolved alternative B with the matched ports:
-                add A → ε · start(B) · v
-    return the reachable clauses from the selected start
+extract(role, boundInterfaces):
+    build the value-flow cone between the exact resolved ports
+    label identity/copy ε, verified fresh writer stores f, and reader loads f
+    include all preserving CFG branches and resolved call alternatives
+    if a relevant route, binding, alias or effect is unproved: return Unknown
+    use reverse value-flow order for writers and direct order for readers
+    emit A→ε at outputs and A→label·B for local edges
+    at each invocation A→callee→C, compute the unique C-to-output word v
+    omit a call with no path to the output
+    if a reaching suffix has a call, a cycle or differing words: return Unknown
+    emit A→start(callee)·v for each resolved callee interface
 
-uniqueRemainingWord(C, exit):
-    cone = vertices reachable from C that can reach exit
-    if C not in cone: return NoPath
-    if cone contains a call or cycle: return Unknown
-    word(exit) = ε
-    for node in reverseTopologicalOrder(cone), excluding exit:
-        candidates = {edge.label · word(edge.to) | edge in this cone}
-        if candidates do not all agree: return Unknown
-        word(node) = the common word
-    return word(C)
+regularNoRoute(writer, reader):                       // R39
+    if either grammar is incomplete or nonregular: return Unknown
+    compile both grammars A→w or A→u·B to automata, with outer suffixes a and q
+    split labels into accessors and include ε closure before each step and at finals
+    visit matching-label state pairs from the starts
+    return Possible at a joint final, otherwise NoRoute when the queue empties
+
+nestedNoRoute(nested, regular, outer):                 // R40
+    if either grammar is incomplete or both are nested: return Unknown
+    compile the regular side with its own outer suffix
+    seed (A,p,r) for A→w when r ∈ end(p,w)
+    for each reached (B,m,n) and rule A→u·B·v:
+        add (A,p,r) when m ∈ end(p,u) and r ∈ end(n,v)
+    return Possible if (startNested,startRegular,r) can consume outer to a final
+    return NoRoute when the cell queue empties
 ```
 
-`uniqueRemainingWord` considers every continuation from C that can
-reach the selected output. For the checked fragment, this subgraph
-contains no call and is acyclic. Scan in reverse topological order:
-the exit maps to ε and each other vertex maps to `edgeWord · word(next)`
-when all reaching successors give the same word. No route gives no
-clause. A cycle, second call or different suffix words gives Unknown.
-This is a sufficient test for the recorded nested fixtures. Loops in
-the regular part use ordinary labelled graph cycles outside this
-suffix test. A branch before a call or in a regular loop adds edges,
-not one clause per complete path. Mutual recursion names the resolved
-callee interface, without unfolding it.
+Use resolved accessor IDs. In the acyclic suffix cone, set `word(exit)=ε`.
+In reverse topological order, set `word(p)` to the common
+`edgeLabel · word(next)` over successors that reach the exit.
+Validate extraction by induction on native paths and matched returns.
+A relevant cleaner, hidden heap route or unsupported effect gives
+Unknown. Only a validated NoRoute discharges the relation.
 
-Check all resolved callees and relevant CFG edges, including exceptional
-routes to this observer. Exclude a transfer only when its configured
-base/alias information rules it out for the tracked carrier. A cleaner,
-mark-changing rule, relevant overwrite, missing binding, hidden heap
-route or unsupported effect in the cone yields Unknown. Carry no
-facts through this extractor. An unobserved summary, the current
-field limit or current seed permissions cannot justify omitting an
-edge. A different internal observer or caller binding is a separate
-query. A NORMAL return alone gives no edge to an internal observer.
-
-**Extraction invariant.** Each real segment in the binding takes one
-of the checked edges or invocation alternatives. Induct on the local
-path and the nested return tree. Ordinary labels compose in word
-order and each invocation substitutes the child's word before the
-checked suffix. Thus the extracted language includes every real
-word. Extra CFG branches can give Possible, while an omitted route
-would invalidate NoRoute. The verifier rejects incomplete extraction.
-For a supplied fixture grammar, validate this invariant against its
-fully analyzed code separately from testing product emptiness.
-
-#### R39 [REC] [LOOP] with two regular sides
-
-A regular grammar has only `A→w` and `A→u·B`. Compile the first to a
-word-labelled path to an accepting state and the second to a path to
-B. Split each nonempty label into one transition per accessor. Attach
-`a` on the writer and `q` on the reader after a base path to a final.
-For ε arcs, compute ordinary ε closure: a state is final if its
-closure reaches a final and a labelled transition may follow any
-state of that closure. Its endpoint uses the same rule for the next
-label. If the implementation cannot verify this expansion, return
-Unknown. Finite ε closure preserves each labelled path by factoring
-it at its labelled transitions.
-
-```text
-compileRegular(grammar, outer):
-    add a word-labelled path A --w · outer--> final for each A → w
-    add a word-labelled path A --u--> B for each A → u · B
-    split each nonempty path into single-labelled arcs
-    for state p:
-        closure = reachableByEpsilon(p)
-        mark p final if closure meets an original final
-        copy labelled arcs from closure to p, leaving their destinations intact
-    return the new labelled arcs with the updated finals and no ε arcs
-
-regularNoRoute(writer, reader):
-    if either validated grammar is unavailable or nonregular: return Unknown
-    W, R = compileRegularWithOuterSuffixes(writer, a, reader, q)
-    seen, pending = {(W.start, R.start)}, queue of that pair
-    while pending is not empty:
-        (p, r) = pending.pop()
-        if p in W.finals and r in R.finals: return Possible
-        for label in the common outgoing labels of p and r:
-            for (pNext, rNext) in W.next(p,label) × R.next(r,label):
-                if new to seen: pending.push((pNext, rNext))
-    return NoRoute
-```
-
-The exhausted set includes the start and all equal-label successors.
-Every shared word induces a path to a pair of accepting states by
-induction on the word. The empty product test is independent of K
-and the iteration budget. With ε removed, product space is at most
-`Qw·Qr` pairs. Time is linear in those reached pairs, label probes and
-matching successor pairs actually examined. The product is visited
-lazily. For Q compiler states and E arcs before ε elimination,
-the direct compiler takes at most `O(Q·(Q+E))` time and
-`O(Q·E)` expanded labelled-arc space. It uses the original ε
-graph and labelled arcs for each state, so copied arcs do not
-feed the expansion scan.
-
-#### R40 [REC] with one nested side
-
-One side may also have `A→u·B·v`. Compile only the other, regular
-side into automaton A with its outer suffix. Write `end(p,w)` for the
-set of states reached from p by w. For each distinct fixed clause word
-or outer suffix, compute `end` by an ordinary word transition DP.
-Let `outer` be a or q on the nested side. Apply `outer` after the
-whole derived word.
-
-```text
-nestedNoRoute(nested, regular, outer):
-    if either model is incomplete or both are nested: return Unknown
-    A = compileRegularWithItsOuterSuffix(regular)
-    acceptingEnd = {q | end(q, outer) intersects A.finals}
-    cells, pending = empty set, empty queue
-    for each base rule B → w and each state p in A:
-        for q in end(p,w): insertNew((B,p,q), cells, pending)
-    while pending is not empty:
-        (B,m,n) = pending.pop()
-        if B == nested.start and m == A.start and n in acceptingEnd:
-            return Possible
-        for each rule C → u · B · v indexed by child B:
-            for p with m in end(p,u):
-                for q in end(n,v): insertNew((C,p,q), cells, pending)
-    return NoRoute
-```
-
-A cell means a derived word can take the regular automaton from its
-start state to its end state in that cell. Every inserted cell has
-such a witness by construction. Conversely any word derivation
-splits the automaton path at the prefix and suffix of its last rule.
-By induction, the child cell enters the queue and adds the parent
-cell. A source at h and a writer deriving `g.f` yield `g.f.h`.
-Appending h inside the base of `g·B·f` would yield `g.h.f` and could
-falsely prove disjointness. The last test therefore consumes the
-outer suffix after the accepting candidate cell.
-
-**Work.** Let M be the finite number of nested nonterminals including
-local CFG vertices, Q the compiled regular state count, and C the
-clause count. The worklist stores at most `M·Q²` cells. After computing
-word relations, seeding takes at most `O(C·Q²)` and advancing takes
-`O(C·Q⁴)` in the dense case. Use indexes by child and by start/end state.
-The fixed word tables occupy at most `O(W·Q²)` for W distinct words.
-For total word length L and E labelled arcs, computing them by a scan
-per start and letter takes `O(L·Q·(Q+E))`. Extraction costs one scan
-of the finite CFG, resolved bindings and tracked bases. Each invocation
-can add a linear scan of its suffix cone plus the costs of building
-and comparing its fixed words. There is no read/write word
-enumeration. Unknown or an
-interrupted search leaves the candidate open. Production incurs zero
-work from these proof-only searches.
-
-**Principal results.** R39 accepts disjointness for `{g,h}*f` versus
-`{g,h}*g`. Changing the reader base to f gives Possible, with shared
-word f. R40 returns NoRoute for `g*f` versus `R = g | g·R | h·R·h`.
-Adding a writer base word `h.g.h` yields Possible through the nested
-arm. Possible means a shared word in the model, which can contain
-extra control branches. A proof result creates no DATA row, NORMAL
-report or permission.
+**Proof and work.** A shared word induces a reached product pair or
+a nested cell by induction on its derivation. Append the outer word
+after the entire derivation, e.g. `g.f · h = g.f.h`. R39 explores at most
+`Qw·Qr` pairs after ε compilation. R40 uses at most `M·Q²` cells
+and `O(C·Q⁴)` dense cell processing after fixed-word tables, for M
+nonterminals, Q regular states and C clauses. These proof searches
+add zero runtime work.
 [Regular proof](lean/proposals/branching-field-cycle-20261117/RegularCertificate.lean) ·
 [Nested proof](lean/proposals/two-sided-field-cycle-20261117/PairedContext.lean)
 
 ### 6.6 COMPLEX — terminal retirement and field languages
 
-Typed projection, compaction and static lookup in §§6.1–6.3 reuse
-native work. The added proof algorithms in §§6.4–6.5 have the
-following independent termination evidence.
+The recorded controls isolate the need for the following proof
+conditions in their reference scopes. Runtime handoff follows §6.2.
 
-```java
-Node wrap(Node p, int depth) {
-    if (depth == 0) return p;
-    Node y = new Node();
-    y.f = wrap(p, depth - 1);
-    return y;
-}
-// Mark x.f.g.$/T. Let r = wrap(x, depth). Observe CM(r.M, T).
-```
-
-| Candidate | Witness with the candidate withheld | What the other rules cover |
+| Candidate | Fact trace and disabled control | What suffices in the fixture |
 | --- | --- | --- |
-| **R37/R38, source-specific terminal retirement.** In the wrapper above, `ZERO→NT(id),N` is available by run-3 while the next recursive cut again supplies `ZERO→DT,D`. | Without retirement, the bounded closure and the reverse MAY offer renew the live root DT in every later pair of the reference. The native diagnostic reaches run-15/POLICY. The single-source closure reference stops at run-7 after complete service is frozen. | The observer consumes the D reply. NoRoute cannot discharge a real shared route. Two marking sites can share id while only A is served. The separate two-source wrapper stops at run-9 only after both are served. R38 is a correctness requirement on this retirement, not a second independent stopping rule. |
-| **R39, regular intersection.** A fresh wrapper writer prepends g or h recursively and ends in f. A prefix reader consumes g or h recursively and ends in g. The coarse `z.M/T,D` yields `ZERO→DT,D`. | The signed regular reference has the repeated DT and backwards permission in every later pair. The disabled native control reaches run-9/POLICY. Its certificate adapter stops at run-5. | R38 has no NORMAL witness. The field-membership test below proves this route impossible. R40's cell algorithm can also handle empty right chunks. The product is a cheaper regular implementation of the general language decision, with no independent necessity shown in this fixture. |
-| **R40, nested state-pair closure.** Use `g*f` for the writer. Reader base `return p.g`, recursive arms `read(p.g)` and `read(p.h).h`. The coarse `z.M/T,D` yields the same DT. | With no NoRoute certificate, the clean return cone repeatedly carries the DT and the backward permission. The disabled native control reaches run-9/POLICY. The nested certificate adapter stops at run-5. | The R39 compiler rejects the nonempty right chunk in `h·R·h`. The NORMAL-only R38 proof cannot close the route. The field-membership test still proves this fixture disjoint. The native same-terminal and parity controls already stop naturally, so they do not supply an independent termination witness for the general closure. |
-
-In the alternating-generator reference, `x.M/U,D` and `y.M/T,D`
-feed the next call. `z.M/U,D` reaches the observer and renews
-`ZERO→DT,D` through run-11 with ordinary reply delivery. The reference
-with source-specific retirement stops at run-7. This is a separate
-Target-retirement result, with its own checked source witnesses.
-[Catalogue verification](../docs/reports/bidirectional-termination-fix-validation-20261117.md)
-
-**Smaller-certificate control.** For the checked linear grammars, a
-finite derivation reaches a base rule. Compute a field required by
-every base on one side and absent from the other side. Include the
-fixed outer positions. Test both directions.
+| R37/R38 [REC] [LOOP]. Mark `x.f.g.$/T`, then `r=wrap(x,n)`. `wrap(p,0)=p` and `wrap(p,n+1)` returns a fresh object with `f=wrap(p,n)`. | By run-3, `r.f.g.$/T,N` gives `ZERO→NT(id),N`. The cut route renews `ZERO→DT,D` in every later reference pair. Native diagnostic run-15/POLICY. | Source-specific service stops the single-source reference at run-7 and the two-source reference at run-9. R38 guards retirement. NoRoute cannot close the real route. |
+| R39 [REC] [LOOP]. Writer `{g,h}*f`, reader `{g,h}*g`. | `z.M/T,D→DT` and the reverse permission recur. Native diagnostic run-9/POLICY. Certificate adapter run-5. | Required-field check below suffices. Reader ending in f instead has the shared word f. |
+| R40 [REC]. Writer `g*f`, reader `R=g or g·R or h·R·h`. | `z.M/T,D→DT` and reverse permission recur. Native diagnostic run-9/POLICY. Certificate adapter run-5. | Required-field check still suffices. R39 cannot compile the nested right h. Writer base `h.g.h` yields a shared word. |
 
 ```text
-absentRequiredField(L, R, outerL, outerR):
-    if either extraction is incomplete or L has no base clause: return Unknown
-    must = fields(outerL) ∪ intersection(fields(w) for each L base word w)
-    may = fields(outerR) ∪ union(fields of all R base, left and right chunks)
-    if must minus may is nonempty: return NoRoute
-    return Unknown
+must = fields(outerL) ∪ intersection(fields(w) for each L base word w)
+may  = fields(outerR) ∪ union(fields of all R base, left and right chunks)
+NoRoute if either orientation has a nonempty must − may
 ```
 
-Compute the intersection and union with sets of accessor IDs. Work
-is linear in the total clause fields and the outer words with
-ordinary set operations. Every L word contains every element of
-`must` by induction on its final base and outer position. Every R
-word uses only `may`. Both negative fixtures have f in the difference.
-This check can replace the language solver in the proof model and
-supplies the same NoRoute premise. It does not replace validation
-of the extraction or the other root control uses.
-
-The wrapper isolates the need for source-specific terminal retirement
-in its reference. The field-route fixtures isolate the need for an
-absence proof. They do not justify adding the general product or
-nested closure to production. None of these claims assumes a
-run-11 cutoff or a combined production experiment. [Wrapper recurrence](../docs/reports/bidirectional-recursive-target-termination-20261117.md) ·
+Require both complete extractions and a base clause on the must side.
+Every finite derivation ends at a base and then includes its outer
+word. This proves the set test, which costs one scan of the clause
+fields. Both negative language fixtures require f on the writer and
+exclude it on the reader. They establish no independent need for the
+general product or chart in runtime. The alternating-generator
+reference keeps its root DT through run-11 with ordinary replies and
+stops at run-7 with the source-specific proof.
+[Wrapper recurrence](../docs/reports/bidirectional-recursive-target-termination-20261117.md) ·
 [Regular controls](../docs/reports/bidirectional-branching-field-termination-20261117.md) ·
-[Nested controls](../docs/reports/bidirectional-two-sided-field-search-20261117.md)
+[Nested controls](../docs/reports/bidirectional-two-sided-field-search-20261117.md) ·
+[Catalogue verification](../docs/reports/bidirectional-termination-fix-validation-20261117.md)
 
 ### Examples diff
 
-Each set below lists outgoing guidance in the previous edge's orientation.
-For instance, `ZERO→DT` will select actual ZERO in the next run at the
-matching typed entry.
+Guide rows are shown in the previous edge's orientation.
 
-| Rule and input | Current handoff | Proposed handoff |
+| Rule and input | Current | Proposed |
 | --- | --- | --- |
-| R28. Backward after-loop block publishes `ZERO→x.f.$/T,N`. | `{ZERO→x.f.$/T,N}` in the block's reversed scope. | `{ZERO→x.f.$/T,N}` in the same reversed scope. |
-| R28, paired C5. Guides `{p.$/T→DT,D; ZERO→q.$/T,D}`, raw `ZERO→DT,D`. | Publish `∅`. | Publish `∅`. Adding `ZERO→DT,D` to the guides allows publication `{ZERO→DT,D}`. |
-| R28. EMPTY DATA set, with a live forward root `ZERO→DT,D`. | `{ZERO→DT,D}`. Continue. | `{ZERO→DT,D}`. Continue. |
-| R33. Admitted `p.*/F{f}(mx={U})→ret.*/F{g}(mx={T}),D`. | Guide `{p.*/F→ret.*/F}`. | Guide `{p.*/F→ret.*/F}`. For a NORMAL replay record with those masks, retain `{p.*/F{f}(mx={U})→ret.*/F{g}(mx={T}),N}`. |
-| R37. Run-3 root has saved `{ZERO→NT(id-1),N}` and admitted `{ZERO→DT,D}` from open goal id-2. | Guide `{ZERO→DT,D}`. | Guide `{ZERO→DT,D}`. |
-| R37, two saved reports. Retained `{ZERO→NT(id-1),N; ZERO→NT(id-2),N}` and admitted `{ZERO→DT,D}`. | Guide `{ZERO→DT,D}`. | Guide `{ZERO→DT,D}`. The reports do not identify which seed consumers still use the row. |
-| R37, separate control use. Same two reports, but this row also provides the only reached ZERO for `permission(B, x.f.$/T)` outside both goals. | Guide `{ZERO→DT,D}`. | Guide `{ZERO→DT,D}`. Neither NT authorizes the missing permission. |
-| R38. A and B can reach the same observer. Only A contributes `ZERO→NT(id),N`; B uses `ZERO→DT,D`. | `{ZERO→DT,D}` | `{ZERO→DT,D}`. A's NT does not close B's track. |
-| R39. Root has `{ZERO→DT,D}` with writer words `{g,h}*f` and reader words `{g,h}*g`. | Guide `{ZERO→DT,D}`. | Guide `{ZERO→DT,D}`. The proof model gives an empty intersection; the native handoff does not consume it. |
-| R40. Root has `{ZERO→DT,D}` with writer words `g*f` and reader `g or g·R or h·R·h`. | Guide `{ZERO→DT,D}`. | Guide `{ZERO→DT,D}`. The proof model gives an empty intersection, but gives `{h.g.h}` as a possible witness if the writer supplies that word. |
+| R28. Backward after-loop block emits `ZERO→x.f.$/T,N`. | Guide `{ZERO→x.f.$/T,N}` at reversed ports. | Guide `{ZERO→x.f.$/T,N}` at reversed ports. |
+| R28, paired C5. Guides `{p.$/T→DT,D; ZERO→q.$/T,D}`, raw `ZERO→DT,D`. | Published `∅`. | Published `∅`. Adding guide `ZERO→DT,D` admits the candidate. |
+| R28. No DATA guides, live root `ZERO→DT,D`. | Guide `{ZERO→DT,D}`. Continue. | Guide `{ZERO→DT,D}`. Continue. |
+| R33. Admitted `p.*/F{f}(mx={U})→ret.*/F{g}(mx={T}),D`. | Guide `{p.*/F→ret.*/F}`. | Guide `{p.*/F→ret.*/F}`. NORMAL replay keeps `E` and `mx`. |
+| R09/R23. A field cut gives `p.$/T→ret.f.M/T,D` today and `p.$/T→ret.f.NE/T,D` under the proposal. | Guide `{p.$/T→ret.f.M/T}`. | Guide `{p.$/T→ret.f.NE/T}`. A broader MAY guide does not replace this NE row. |
+| Run-2 static join. Matching ports and `ZERO→S.C.f.M/T,D` writer with `S.C.f.$/T→DT,D` reader. In the proposal the same field cut gives `S.C.f.NE/T,D`. | This pair can produce virtual `{ZERO→DT,D}`. | This pair yields `∅`. The NE writer excludes the reader's exact head. |
+| R38. A and B can reach one observer. A supplies `ZERO→NT(id),N`. B uses `ZERO→DT,D`. | Guide `{ZERO→DT,D}`. | Guide `{ZERO→DT,D}`. A's witness cannot serve B's source permission. |
 
 #### R37 trace with two observer IDs
 
-Only root is analyzed in this slice. The two marking actions and two
-observers are local rules at the shown positions. The deep action marks
-only the four-field path.
+Both marking actions and observations are local to root.
 
 ```java
 void root() {
@@ -1413,9 +1033,8 @@ void root() {
 }
 ```
 
-Each forward DATA fact below has ZERO as its original. Ignore ordinary
-ZERO→ZERO completion in the Target columns. DT has no report ID on the
-edge. The id-2 annotation identifies its proof goal, not a stored label.
+Forward DATA facts have ZERO origin. The trace omits ordinary
+`ZERO→ZERO`. The observer ID identifies the goal in the proof model.
 
 | Run and guide input | Decisive facts and control | Current handoff | Proposed handoff |
 | --- | --- | --- | --- |
@@ -1425,12 +1044,10 @@ edge. The id-2 annotation identifies its proof goal, not a stored label.
 | run-4, backward K=3. Guide `{ZERO→DT,D}`, actual ZERO. | Reverse id-2 yields `r.M/T,D`, then `x.f.f.f.M/T,D`. This includes the last f at B. | `{ZERO→DT,D; permission(B)}`. | `{ZERO→DT,D; permission(B)}`. |
 | run-5, forward K=4. Guide `{ZERO→DT,D}`, actual ZERO with `permission(B)`. | B produces `x.f.f.f.f.$/T,N`. The reads produce `r.f.$/T,N`. Observer 2 emits `ZERO→NT(id-2),N`. | Guide `∅`. Reports `{ZERO→NT(id-1),N; ZERO→NT(id-2),N}`. | Guide `∅`. Reports `{ZERO→NT(id-1),N; ZERO→NT(id-2),N}`. |
 
-Deleting the run-3 DT just because the root already has NT(id-1)
-would leave `∅` at that handoff. The root has no DATA summary or
-alternative activation for id-2. It would stop before run-4 supplies
-B's permission. In the R37 proof model, an id-1 DT derivation can set the bit to
-false first. The id-2 derivation then upgrades the same anonymous
-row to true. Native handoff keeps the row without consulting a bit.
+At run-3, removing DT leaves `∅` and stops before run-4 grants
+`permission(B)`. In the proof model, an id-1 derivation can contribute
+false first. The open id-2 derivation upgrades the same key to true.
+Native handoff retains `ZERO→DT,D`.
 
 ---
 
