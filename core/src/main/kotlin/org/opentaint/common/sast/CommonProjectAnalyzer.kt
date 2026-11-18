@@ -15,6 +15,7 @@ import org.opentaint.project.GoProject
 import org.opentaint.project.JavaProject
 import org.opentaint.project.Project
 import java.nio.file.Path
+import kotlin.io.path.isDirectory
 
 class CommonProjectAnalyzer(
     val project: Project,
@@ -74,6 +75,13 @@ class CommonProjectAnalyzer(
         var status = ProjectAnalysisStatus.OK
         for (project in allProjects) {
             val projectName = project.projectName()
+
+            val skipReason = project.skipReason()
+            if (skipReason != null) {
+                logger.warn { "Skip analysis for project: $projectName: $skipReason" }
+                continue
+            }
+
             val projectStatus = try {
                 logger.info { "Start analysis for project: $projectName" }
                 createAndRunAnalyzer(project, results).also {
@@ -103,6 +111,13 @@ class CommonProjectAnalyzer(
 
     private fun goProjectTestAnalyzer(project: GoProject, results: ProjectAnalysisTestResults) =
         GoTestProjectAnalyzer(project, results, options.goOptions())
+
+    private fun CommonProject.skipReason(): String? {
+        if (this !is GoProject) return null
+        val toolchain = goToolchain ?: return "the project model has no Go toolchain"
+        if (!toolchain.isDirectory()) return "the Go toolchain $toolchain of the project model does not exist"
+        return null
+    }
 
     private fun CommonProject.projectName(): String = when (this) {
         is JavaProject -> sourceRoot.toString()

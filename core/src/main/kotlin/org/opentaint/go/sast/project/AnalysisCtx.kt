@@ -22,6 +22,7 @@ class AnalysisCtx(
             GoIRLoadConfig(
                 mode = GoIRLoadMode.PROJECT,
                 modelDirs = defaultModelPaths() + modelPaths,
+                goRoot = prj.goToolchain,
             ),
         ).program
     }

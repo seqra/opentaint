@@ -76,4 +76,14 @@ class LoadModeTests {
             assertThat(prog.findPackage("strings")!!.functions.any { it.bodyAvailable }).isFalse()
         }
     }
+
+    @Test
+    fun `goRoot is GOROOT of the build`() {
+        val root = writeWorkspace()
+        val goRoot = root.resolve("no-goroot")
+        GoIRClient().use { client ->
+            assertThatThrownBy { client.buildFromDir(root, GoIRLoadConfig(goRoot = goRoot)) }
+                .hasMessageContaining(goRoot.toString())
+        }
+    }
 }

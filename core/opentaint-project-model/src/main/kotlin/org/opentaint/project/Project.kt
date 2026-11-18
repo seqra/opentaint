@@ -85,12 +85,13 @@ data class ProjectModuleClasses(
 @Serializable
 data class GoProject(
     val projectDir: @Serializable(with = PathAsStringSerializer::class) Path,
+    val goToolchain: @Serializable(with = PathAsStringSerializer::class) Path? = null,
 ): CommonProject {
     override fun sourceRoot(): Path = projectDir
 
-    fun relativeTo(path: Path): GoProject = GoProject(projectDir.relativeTo(path))
+    fun relativeTo(path: Path): GoProject = GoProject(projectDir.relativeTo(path), goToolchain)
 
-    fun resolve(base: Path): GoProject = GoProject(base.resolve(projectDir))
+    fun resolve(base: Path): GoProject = GoProject(base.resolve(projectDir), goToolchain)
 }
 
 @Serializable
