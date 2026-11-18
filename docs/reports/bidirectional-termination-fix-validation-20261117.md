@@ -1,8 +1,12 @@
 # Verification of the demand-termination examples
 
+**Scope.** This report verifies the combined reference, including the
+[deferred Target-retirement rules](../../spec/demand-target-retirement.md).
+Stops that use those rules apply to that reference scope.
+
 All **24 in-scope entries** in the [termination catalogue](bidirectional-demand-termination-counterexamples-20261115.md#status-map) have a natural stop in their checked reference scopes. The MAY-producing pass rule is excluded. Eleven examples were rechecked with their optional reply omissions withheld. In those cases, the existing R38 root Target rule is enough once all required marking-to-observer tracks have a NORMAL witness.
 
-This verifies the specification on the recorded reference examples. The production driver at `966a40c36` does not implement the complete protocol. The native suite passed **2,689 tests in 436 classes**, including diagnostic fixtures and isolated adapters. Lean checked **16 additional constructive claims**, for **7,554** cumulative claims.
+The production driver at `966a40c36` does not implement the complete reference protocol. The native suite passed **2,689 tests in 436 classes**, including diagnostic fixtures and isolated adapters. Lean checked **16 additional constructive claims**, for **7,554** cumulative claims.
 
 ## Results
 

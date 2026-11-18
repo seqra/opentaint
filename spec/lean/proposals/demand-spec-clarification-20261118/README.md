@@ -36,8 +36,9 @@ ELAN_TOOLCHAIN=leanprover/lean4:v4.35.0 LEAN_PATH="$dependency_dir" \
 [ServiceAndHandoff.lean](ServiceAndHandoff.lean) checks the clarified
 service boundary separately from the scalar rules. The checks cover
 retained-basis recipes and missing source permission, R19's raw
-closure and committed bound service, the typed C5 pair gate, and the
-two-ID R37 trace through run-5. The example proof reuses the four-field
+closure and committed bound service, and the typed C5 pair gate.
+For the [deferred Target-retirement rules](../../../demand-target-retirement.md),
+the module also checks the two-ID R37 trace through run-5. The proof reuses the four-field
 marking action and three ordinary field reads. It assumes the sole root
 ZERO guide activates the reverse observer and its source permission.
 Complete native extraction of uses and transfers remains a prerequisite

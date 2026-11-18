@@ -25,8 +25,10 @@ source-control guards and the native handoff exceptions.
 | R31 | [Disjoint cleaner transfer](../disjoint-cleaner-flow-20261117/DisjointCleaner.lean) and [getter trace](../disjoint-cleaner-flow-20261117/CleanerRepairTrace.lean). The prefix guard protects the complete normalized suffix region. |
 | R32/R33 | [Run-2 relay](../run2-star-relay-20261117/README.md) and [handoff masks](../handoff-mask-audit-20261117/MaskHandoff.lean). Old cells remain, and the new raw family and F72 keep their own-row service. |
 | R34 | [Possible DIRECT replay](../saved-direct-possible-replay-20261117/README.md). Preserves successful old reads and D-only new support. Cold repair resumes the missed route. |
-| R37/R38 | [Terminal lineage](../recursive-target-service-20261117/TargetSupport.lean) with [source-specific witnesses](../mark-origin-soundness-20261117/OriginService.lean). The lineage theorem alone does not authorize report-ID-only retirement. |
-| R39/R40 | [Regular emptiness and branch recurrence](../branching-field-cycle-20261117/README.md) and [nested state pairs and cold search](../two-sided-field-cycle-20261117/README.md). Closure excludes every complete shared word. Extraction and whole native service have separate obligations. |
+
+The [candidate Target-retirement spec](../../../demand-target-retirement.md)
+holds the deferred R37–R40 rules and links to their proofs. This proof
+package also checks those reference models.
 
 [CondensedDemandRefinement.lean](CondensedDemandRefinement.lean) proves
 seven composition checks. It checks transitive service for complete

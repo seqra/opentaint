@@ -1,9 +1,13 @@
 # Consolidated demand-termination counterexamples
 
 Updated 17 November 2026. Synthetic data-flow reachability investigation, 13–17 November.
-[Entire current approach](../design/bidirectional-demand-termination-approach-20261115.md).
-[Current guarded verification and natural stops](bidirectional-termination-fix-validation-20261117.md).
+[Consolidated design history](../design/bidirectional-demand-termination-approach-20261115.md).
+[Reference verification and natural stops](bidirectional-termination-fix-validation-20261117.md).
 Follow [proof-guide.md](../../spec/proof-guide.md). Production is unchanged.
+
+The [active spec](../../spec/demand-refinement-and-termination.md) defines
+the selected rules. Results that use R37–R40 belong to the
+[candidate Target-retirement spec](../../spec/demand-target-retirement.md).
 
 **Current search result.** A reader that reads before and after recursion
 admits a recurrent clean return cone while R39 cannot certify the entire
