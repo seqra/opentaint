@@ -7,14 +7,12 @@ with limits 2, 3, …. A policy cutoff is separate from natural termination.
 In the examples, **current** means the native FULL rules at `8da26aa13`.
 **Proposed** means the analyzer operations defined below.
 For a proposed-only tail, the current column gives the corresponding
-native case and names the substitution. The analyzer uses existing
-statement forms, AP stores and handoff indexes. Sections 4 and 7 state
-the implemented scope of suppression. In particular, the mathematical
-live-reply and terminal-retirement proofs stay in the model.
+native case and names the substitution. Sections 4 and 7 specify
+reply delivery, compaction and the scope of the remaining proof models.
 
 **COMPLEX** marks additional cross-row preparation, graph extraction
-or closure work. A local tail case, a scan of first CFG destinations
-or reuse of a native lookup keeps its ordinary classification. For
+or closure work. Local tail cases and existing native lookups keep
+their ordinary classification. For
 each COMPLEX candidate, compare its recorded fixture with the
 candidate withheld. A bounded run supplies diagnostic evidence.
 An uncapped claim needs a repeated frontier and inductive proof in the
@@ -122,9 +120,8 @@ paired selector and cap as other block results.
 Use restricted C2 and C5 from run-2 onward. Run-1 uses unrestricted
 admission and its ordinary publication. Apply rules that explicitly cover
 run-1 to those transfers. The selected changes cover tail and cut
-semantics, restricted admission and publication, completed-output filtering,
-and cleaner transfer. They can change demand,
-report timing and delivery counts. Selected EXACT cleaning of concrete
+semantics, restricted admission and publication, and cleaner transfer.
+They can change demand, report timing and delivery counts. Selected EXACT cleaning of concrete
 MUST has the explicit precision tradeoff in §5.
 
 ### COMPLEX
@@ -507,7 +504,7 @@ apply.
 Use definite MUST matching for saved calls, blocks and loops. If that
 match fails and ordinary provisional replay can apply, deliver its D
 result through the native continuation. Preserve C2, ND and the port
-and alias behavior. The eventual local result can use §4.1.
+and alias behavior.
 
 ### 3.3 Raw entry witness and paired output
 
@@ -617,7 +614,7 @@ performed on the worklist.
 
 | Candidate and fixture | Rule-disabled check | Necessity for current proposal |
 | --- | --- | --- |
-| Prepared children with delegation. `wrapper(x){ return choose(x); }`, where `choose` reads `x.f.f` on one branch and writes two fields on the other. Saved `x.f.f.*→ret.*,N` on `x.f.*/F` keeps `x.f.*/F→ret.M/F,D` even when current C2 is empty. | The historical branch without saved delegation has four stationary MAY pairs from run-9/run-10 and an uncapped recurrence. The child-routing reference stops at run-9. R17 sees live caller/return consumers and cannot remove them. | This isolates the missing **saved-replay delegation** in that reference. Prepared C2 children alone do not remove the saved result. No independent stop caused by the currently enabled preparation has been established with the other guards retained. |
+| Prepared children with delegation. `wrapper(x){ return choose(x); }`, where `choose` reads `x.f.f` on one branch and writes two fields on the other. Saved `x.f.f.*→ret.*,N` on `x.f.*/F` keeps `x.f.*/F→ret.M/F,D` even when current C2 is empty. | The historical branch without saved delegation has four stationary MAY pairs from run-9/run-10 and an uncapped recurrence. The child-routing reference stops at run-9. | This isolates the missing **saved-replay delegation** in that reference. Prepared C2 children alone do not remove the saved result. No independent stop caused by the currently enabled preparation has been established with the other guards retained. |
 | Generic pre-C5 or live-reply coverage. The enclosing-method example can pass `ret.f.f.MUST/F,N` through a `ret.*` guide and publish `ret.f.NE/F,D`. | The historical BB reference needs an additional whole-summary proof. A longer initial and the inner BB's NORMAL record do not change the enclosing cap. | There is no production proof check for this candidate. R18 uses ordinary C5. A historical stop with precoverage is not evidence for enabling general cross-context analysis. |
 
 The remaining C5 selection is one raw membership test and one
@@ -676,257 +673,49 @@ is absent from both publications, so this application delivers no
 
 ## 4. Reply and summary coverage
 
-| Rule and affected part | Required behavior | Proof |
-| --- | --- | --- |
-| R16 · completed statement output | Use §4.1 for an identical definite N/D pair. | An eligible D delivery has no effects at any first destination. |
-| R17 · completed statement output | Omit a covered concrete local D offer before insertion when every native next destination discards the old local. | Native delivery cannot pass the first relevant instruction without executing it. The accepted statements have no action for the fact. |
-| R19 · current reply | Apply the current reply and its call stages normally. At completed statement output use §4.1 for the eligible local result. | C5, other subscribers and call effects see the same inputs. Only a local result with no consuming instruction is skipped. |
-| R24 · post-C5 summary and handoff | Retain the distinct DEMAND membership even when the NORMAL MUST conclusion contains its points. | NORMAL support cannot replace the paired demand row. The paired comparison in §6 preserves the outgoing uses. |
-| R25/R27 · publication, ready queues and compaction | Reuse native aligned NORMAL subsumption and qualified handoff compaction. Process ready exact and control work before uncertain work per owner. Use FLOW first within a lane. | Native membership is checked on the final retained rows. Scheduling changes callbacks and processing order. |
+### 4.1 Reply delivery
 
-### 4.1 R17 at completed statement output
+For R16 and R19, apply saved and current summaries with the native
+premise match, layer join, ND binding, alias handling and post-call
+stages. Submit the result to ordinary post-statement admission.
+Equal field geometry with a ready NORMAL result does not remove a
+distinct DEMAND membership. Its continuation can still produce a
+Target or guide a different marking site.
 
-Apply R17 in forward FULL after run-1, in `BlockRunState.completeOutput`
-before `admitOutputs` writes to `ScopedEdgeStore`. Calls use this same
-point after their last stage, ordinary alias handling and the field cut.
-Statement and identity results use the same check. Limit this path to
-single scalar concrete local facts on D with tail EXACT, MUST, M or NE.
-Use ordinary admission for a packed offer unless it already comes
-through this scalar path. Skip the filter at method exits, exceptional
-exits and other output paths that do not call `completeOutput`.
+### 4.2 Summary coverage and retained basis
 
-Take the exact ordinary first destinations for `(S, d.base)`. For a
-flat method use `context.forEachSuccessor` and `forEachDeliveryTarget`.
-For a physical block use the same `BlockCfgDeliveryCache.after` result
-as `Binding.successors`. A block boundary, repeat edge, method endpoint
-or synthetic route fails the deletion test. Keep the native path for
-root routing without that exact destination view. The cache already
-skips statements proved irrelevant to this base. Never continue past a
-first relevant statement for this test.
+For R23 and R24, keep distinct admitted MAY and NE rows and separate
+NORMAL and DEMAND memberships. Reuse same-layer MUST folding and
+aligned NORMAL FLOW subsumption. For example, `x.*→y.*` can cover
+`x.f.*→y.f.*` with the same admitted suffix. Keep `x.f.*→y.g.*` as a
+separate candidate. Keep literal NE deduplication.
 
-At a first destination J, an input with base x has no effect only in
-this supported case:
+At handoff, `DemandStore.Builder` can share identical complete projected
+pairs. For other shapes, reuse `HandoffCompactor` only where its C2/C5
+key equivalences still hold, including all ND projections. Check
+providers against the final retained rows (R25).
 
-- J is an ordinary non-call instruction, outside entry/exit handling.
-- Its `DirectedForms.withStatement` value touches x, and
-  `StatementSummary.edgesOf(x)` is empty. The ordinary `FormApplier`
-  therefore takes the touched-base branch and emits no plain result.
-- The form has no conjunctions, source predicates or static operations.
-  This excludes the other callbacks that could use x. No after-call or
-  boundary rule runs at J.
-
-For example, the form of `x = null` touches x and has no edge from x.
-A field overwrite such as `x.f = y` normally has a keep edge from x and
-fails the test. A call fails even if its declared return overwrites x.
-It can read x or run a rule before the overwrite.
-
-```text
-completeOutput(S, P, d):
-    if forward FULL after run-1 and scalar concrete local D(d)
-       and hasOnlyDiscardingDestinations(S, d.base)
-       and edges.edgesAt(S, P).hasNormalCover(d):
-        return                       // skip insertion and all enqueues
-    admitOutputsAndDispatchAsUsual(S, P, d)
-
-hasOnlyDiscardingDestinations(S, x):
-    for J in borrowCachedFirstDestinations(S, x):
-        if J is a boundary, endpoint, call or synthetic route: return false
-        form = borrowCachedForwardFullStatement(J)
-        if form is missing: return false
-        if x not in form.touched or form.edgesOf(x) is nonempty: return false
-        if form has conjunctions, sources or static operations: return false
-    return every ordinary successor had a complete cached destination list
-```
-
-Read existing cache entries without building or pinning new forms for
-this check. A missing or reclaimed row uses ordinary output admission
-and delivery. An empty cached row is a completed result. A provider
-already delivered from S normally has warmed the same routing rows.
-Where a form provider has no cache-only read, leave that destination
-ineligible until the provider exposes a read of its existing cached
-value. A cache-only read holds the existing value during the predicate.
-It needs no new cache or retention policy. Stream each successor's
-cached destinations. Repeated destinations can be checked twice without
-allocating a union. Stop at the first failing destination.
-
-An empty, completed destination list passes the destination test. Use
-the existing store lookup for the same block entry scope, original P
-and producing statement S. Compare a NORMAL leaf with the same local
-base, full mark and literal H. For R17 the provider is MUST. At the same
-head it covers EXACT, MUST when its E is a subset of the candidate's E,
-and M or NE when the provider has empty E. For descendant heads the
-first extra field must be outside its E. Other heads fail. R16 can use
-this same output filter with a NORMAL EXACT or MUST of identical
-geometry, E and mark. Use the existing same-layer folding independently.
-
-The deletion skips insertion of this offer and every enqueue from S.
-The provider has already taken its native path. A later NORMAL arrival
-does not remove any stored D, pending work or emitted effects. At least
-one live or unavailable destination keeps the whole D offer. The
-filter requires only the current output, cached destinations, statement
-forms and the existing edge store. It introduces no origin key, proof
-record, speculative rule execution, waiting or scan across future runs.
-
-**Work.** Let `s` be the immediate successor count, `d` the number
-of destination references read, and `b` the number of provider leaves
-inspected in the one `(S,P)` cell. The added work is
-`O(s + d + b·(K + Emax))`, plus decoding the borrowed cell's existing
-packets. `Emax` is the largest exclusion-set scan during comparison.
-Read only providers at the same base/mark/H and use the existing prefix
-lookup where available. A failed destination check never reads the
-edge store. Extra retained space is zero. The check causes no new CFG
-walk, form build, call application, C2 start or C5 lookup. A hot check
-can still cost more than one ordinary overwrite delivery. Measure
-offers checked, drops and processing time before claiming a speedup.
-
-**Preservation.** Native delivery skips only irrelevant statements. At
-all first destinations accepted here, this input only touches a base
-with no transfer, join or rule callback. It emits no later fact, call,
-Target or summary. Induction over the worklist therefore leaves all
-subsequent semantic outputs identical. C5 and the next permission
-index have the same inputs. In particular, a ready NORMAL cover does
-not authorize dropping D on the way to an observer. Both D and N reach
-that observer and native Target handling decides what to publish.
-
-### 4.2 R19 and the call output path
-
-Apply saved NORMAL and current summaries through the existing
-`RunMethodCallServices` application and resume paths. In particular,
-finish the premise match, ND join if any, bound H, ordinary alias and
-identity handling, and all post-call stages. The caller then reaches
-`completeOutput` and tests its local result under §4.1, regardless of
-which summary produced it. R19 adds no filter inside call application.
-Keep all owner summaries, existing C2 admissions, subscriptions,
-permissions and admitted Targets.
-
-There is no separate owned-query closure scan in this implementation.
-The local `r.k.$/V,N` below can trigger a V-dependent rule in the
-callee. Its return transfer yields raw `ret.k.$/V,N`, which C5 rejects.
-A closed h/U query with
-committed `x.h.$/U,N` does not by itself show which future caller action
-or source permission depends on `x.h.M/U,D`. In that live case send
-both. The stronger R19 model that inspects every raw exit is an
-analysis proof model, not an input to call delivery. It shows how an
-h/U test may ignore a disjoint k/V exit only after completing the
-callee transfers. It does not supply the missing caller test.
-
-### 4.3 Summary coverage and retained basis
-
-Store both a distinct MAY or NE DEMAND summary and its covering
-NORMAL MUST summary. Existing same-layer MUST folding and aligned NORMAL
-FLOW specialization stay in force. For example, `x.*→y.*` can cover
-`x.f.*→y.f.*` with the same admitted suffix, while the misaligned
-`x.f.*→y.g.*` remains eligible. Keep literal NE deduplication. At
-handoff `DemandStore.Builder` can share identical complete projected
-pairs. The existing `HandoffCompactor` can use its implemented key
-matches only for cases whose C2/C5 semantics still agree, including
-all ND projections. Compare every retained provider at the end of
-compaction as in the existing method and scoped handoff. Keep both
-rows for other shape comparisons, including MAY versus NE. Do not
-introduce cross-layer summary folding or pre-C5 suppression.
+Schedule ready exact and control work before uncertain work per owner.
+Use FLOW first within a lane (R27).
 
 ### COMPLEX
 
-R17 and its use after call application require only the immediate
-native continuation in §4.1. R19's former complete owned-query and
-caller-use closure would be COMPLEX. The live `x.h.M/U,D` fixture
-illustrates the extra computation but does not require it for
-termination: the guarded run-9 reference stops using R38 while
-forwarding every applicable reply. The other bound-reply controls
-also stop with the same root rule and no live-reply omission.
-Keep the stronger R19 test out of the analyzer. [Bound-reply ablation](../docs/reports/bidirectional-termination-fix-validation-20261117.md)
+The former owned-query closure for R19 remains a proof model. The
+bound-reply reference reaches run-9 with ordinary delivery once R38
+retires the root Target. The other bound-reply controls also stop with
+ordinary delivery and the separate root certificate.
+[Bound-reply ablation](../docs/reports/bidirectional-termination-fix-validation-20261117.md)
 
 ### Examples diff
 
 | Rule and input | Current | Proposed |
 | --- | --- | --- |
-| R16. Completed call S gives `{x.MUST/T{f},N; x.MUST/T{f},D}`. NORMAL already stored. Every first destination executes `x = null`. | Store and send `{x.MUST/T{f},N; x.MUST/T{f},D}`. | Store and send `{x.MUST/T{f},N}`. Both versions produce `∅` for these inputs at the overwrite. |
-| R17. Output of S under ZERO is `{x.h.MUST/U,N; x.h.M/U,D}`. The NORMAL leaf is already stored. The sole first destination is `x = null`. | Store `{x.h.MUST/U,N; x.h.M/U,D}` at S and queue both. The overwrite emits `∅` for them. | Store `{x.h.MUST/U,N}` at S. Skip the insertion and enqueue of `x.h.M/U,D`. The overwrite emits `∅` for the remaining input. |
-| R17, live destination. Same output at S, but one branch reads `x.h.f` for `observeU`; the other overwrites x. | Deliver `{x.h.MUST/U,N; x.h.M/U,D}`. The observation can produce `{ZERO→NT(o),N; ZERO→DT,D}`. | Deliver both `{x.h.MUST/U,N; x.h.M/U,D}`. A live first destination keeps D. Its DT can authorize the backward route to a different marking site. |
-| R19. Actual `p.f.g.$/T,N` owns q below. The bound caller outputs are `{x.h.$/U,N; x.h.M/U,D}` and use `x.h`. | Deliver `{x.h.$/U,N; x.h.M/U,D}`. | Deliver `{x.h.$/U,N; x.h.M/U,D}`. The owned h exit proves one point. The caller can read the D reply. |
-| R19, overwritten caller output. Current return gives `x.h.M/U,D` and an earlier completed result at S is `x.h.MUST/U,N`. The next instruction is `x = null`. | Complete the call and deliver `{x.h.MUST/U,N; x.h.M/U,D}`. | Complete the call and deliver `{x.h.MUST/U,N}` under §4.1. The callee summary and the subscription remain. |
+| R16. Completed call gives `{x.MUST/T{f},N; x.MUST/T{f},D}`. | Submit `{x.MUST/T{f},N; x.MUST/T{f},D}` to admission. | Submit the same two memberships `{x.MUST/T{f},N; x.MUST/T{f},D}`. |
+| R19. The owned query `p.f.g.$/T,N` returns `{ret.k.$/V,N; ret.h.$/U,N}`. C5 selects h/U. A coarse current reply also binds at x. | Deliver `{x.h.$/U,N; x.h.M/U,D}`. | Deliver `{x.h.$/U,N; x.h.M/U,D}`. The raw k/V return publishes `∅` under its C5 row. |
 | R23. Same original `p.$/T`, outputs `ret.M/T,D` and `ret.f.M/T,D` currently. The latter becomes `ret.f.NE/T,D`. | The broad row can leave `{p.$/T→ret.M/T,D}`. | Keep both `{p.$/T→ret.M/T,D; p.$/T→ret.f.NE/T,D}`. |
 | R24. `A=p.MUST/T→ret.MUST/T,N,H=1` and `B=p.MUST/T→ret.f.M/T,D,H=1` currently. B ends in `ret.f.NE/T,D,H=1` in the proposal. | Keep `{A; B}` where both are admitted. | Keep `{A; B}`. The D guide remains `{p.MUST/T→ret.f.NE/T}`. |
 | R25. `A=p.*/F→q.*/F,N`, `B=p.f.*/F→q.f.*/F,N`, `C=p.f.g.*/F→q.f.g.*/F,N`. | Aligned native subsumption yields executable basis `{A}`. | Executable basis `{A}` and final service witness `A covers C` in either arrival order. |
-| R27. Ready starts `p.*/F,N` and `p.$/T,N` at one owner. Their summaries are `A=p.*/F→ret.M/F,D` and `B=p.$/T→ret.$/T,N`. | A FLOW-first queue can publish `A then B`. | Publish ready `B then A`. With the same retained service, the resulting set is still `{A; B}`. |
-
-R19 example for an already owned point query at run-5. The point
-query q uses `ret.h.$/U→p.f.M/T,D`. A separate coarse query can use
-`ret.h.*/U→p.M/T,D` and publish `p.f.*/T→ret.h.M/U,D`.
-
-```java
-// Actual and raw initial for q: p.f.g.$/T,N.
-Box make(Box p) {
-    Box r = new Box();
-    labelV(p, r);   // CM(p.f.g, T) gives r.k.$/V,N.
-    labelU(r);      // CM(r.k, V)   gives r.h.$/U,N.
-    return r;      // Raw exits {ret.k.$/V,N; ret.h.$/U,N}.
-}
-// C5 publishes {p.f.g.$/T → ret.h.$/U,N}. It rejects the k exit.
-// Caller: x = make(p). A qualified coarse query separately supplies x.h.M/U,D.
-// Ready NORMAL binding is {x.h.$/U,N}.
-```
-
-`r.k.$/V,N` enters the compiled `labelU` predicate during ordinary
-analysis and can produce `r.h.$/U,N`. The return later emits raw
-`ret.k.$/V,N`, which C5 rejects. In the caller the next uses of x decide
-§4.1. A field read keeps the coarse h/U fact. If every first destination
-is `x = null` and the caller already stores a NORMAL MUST cover for
-the D fact at the producing statement, the coarse local can be skipped under §4.1. No callee state
-needs to be retained for that decision.
-
-#### R17 across calls and blocks
-
-All examples start in forward run-3 or later. Let
-`N = ZERO→x.h.MUST/U,N` and `D = ZERO→x.h.M/U,D`. Use the same
-caller scope, original and H. N is already stored at S unless noted.
-An overwrite example assumes the destination and statement form are
-already cached.
-
-```java
-void caller(Box p, Box replacement, boolean branch) {
-    Box x = wrapper(p);      // S. Applied caller results include {N, D}.
-    if (branch) x = null;
-    else x = replacement;   // Both arms discard the old x in their forms.
-    observe(x);              // Cannot take the old x from S.
-}
-Box wrapper(Box p) {
-    return dispatch(p);      // Multiple resolved callees can supply N and D.
-}
-```
-
-| Native result and first destinations | Current output from S | Output with R17 |
-| --- | --- | --- |
-| The two cached overwrites above. `wrapper` returns `{p.f.g.$/T→ret.h.MUST/U,N; p.f.*/T→ret.h.M/U,D}` in compatible bindings. | Caller forwards `{N; D}`. Both overwrites give `∅` from old x. | Caller forwards `{N}`. The same two callee summaries remain. |
-| Replace the else arm with `x = wrapper2(x)`. One resolved target reads h first and emits `{ZERO→DT,D}`. | `{N; D}` reach the call. | Keep `{N; D}`. The first relevant instruction is a call, even though the result rebinds x. |
-| The original caller now saves `Box a = x` before the overwrite, and `anotherWrapper(a)` can read h. | The copy emits `{ZERO→a.h.MUST/U,N; ZERO→a.h.M/U,D}`. | Same two facts. The first form has an edge from x to a. No callee lookup is required to reject removal. |
-| A completed call also emits `Q→p.f.$/V,D` to a caller alias and an admitted `ZERO→DT,D`. Old x has only the two overwrites. | `{N; D; Q→p.f.$/V,D; ZERO→DT,D}`. | `{N; Q→p.f.$/V,D; ZERO→DT,D}`. The local gate applies only to x after these effects. |
-| After a call inside a loop, x reaches a repeat/leave port, with `ZERO→x.h.M/U,D` in a candidate block summary. | `{N; D}` enter ordinary block exit handling. | `{N; D}`. R17 cannot look through a block port to an outer overwrite. |
-| A cached empty destination row for x. Alternatively one row is missing, or N is from a different original or was delivered after D. | Store `{N; D}` when both facts arrive. | Empty row and ready cover: store `{N}`. Missing row, wrong original or late N: retain D. |
-
-#### R17 and the termination cases
-
-Every R17 deletion removes deliveries whose first transfers have empty
-results and effects. Applying the check to any catalogue program
-preserves the baseline semantic frontier, including its active DT,
-source permissions, next C2 admissions and published summaries. The
-test can save local propagation. It cannot close a cycle that requires
-an observable D delivery to disappear.
-
-| Checked case and decisive fact | R17 decision | Termination evidence |
-| --- | --- | --- |
-| Alternating generators. After the first two `make` calls, `x.M/U,D` and `y.M/T,D` feed another call. After the third, `z.M/U,D` feeds the observer. | Keep all three. The first two destinations are calls and the third is an observation, or its boundary. | The historical run-5 model used live uniform folding. With it withheld, the checked retained-reply model still has root `ZERO→DT,D` through run-11. The run-7 natural stop with R38 requires a separate root retirement. |
-| Two marking sites with one report. `r.M/T,D` from B and `r.MUST/T,N` from A reach the same observer. | Keep D, so `ZERO→DT,D` can still authorize B. | The guarded native fixture reaches B's precise track at run-5. The value-only gate lost it at run-3. |
-| Protected and uniform bound replies, disjoint or unadmitted returns, exact-input control, and saved MUST replay controls. Bound coarse return facts feed reads, calls or observers. | Keep the live D replies regardless of their coverage. | The recorded guarded stops at run-7 through run-11 rely on the fixture's complete root Target proof. The run at which the NORMAL track already exists is not a stopping proof. |
-| Exclusion-carry and deeper-head controls. The useful NORMAL reply must still reach its observer. | Preserve the observer delivery. R17 does not decide E or the initial head. | The checked exclusion references stop at run-5 with uniform value folding withheld. |
-| Root MAY renewal, BB and enclosing-method renewal, global-cut growth (including protected), both cleaner cases, uniform root cleaner and EXACT-origin write. The relevant C2/C5 or field-transfer paths reach an operation or boundary. | Keep the live path. Any deleted local offer has no following output. | The catalogue tests distinct admission, cap or transfer repairs for these cases. R17 neither replaces those repairs nor changes their frontiers. |
-| Nested saved replay with and without exclusions. The regenerated D result has a live input or publication use. | Keep it at the call/block. | The recorded run-9 certificates use child routing, outside the local overwrite check. |
-| Recursive wrappers and regular/nested writer–reader examples. The coarse D route reaches a return, call or observer. | Keep the route and its admitted root DT. | Wrapper stops at run-7/run-9 and field-route stops at run-5 require terminal retirement. The field-route native diagnostics with DT retained reach run-9/POLICY. |
-
-The compared runs are reference or native fixture results with their
-stated policies. They do not give a new natural stop for the whole
-current pipeline. [Catalogue verification](../docs/reports/bidirectional-termination-fix-validation-20261117.md) ·
-[Two-source audit](demand-refinement-no-loss-audit.md)
+| R27. Ready starts `p.*/F,N` and `p.$/T,N` at one owner. Their summaries are `A=p.*/F→ret.M/F,D` and `B=p.$/T→ret.$/T,N`. | A FLOW-first queue can publish `A then B`. | Publish ready `B then A`. The resulting set is still `{A; B}`. |
 
 ## 5. Cleaners
 
@@ -1140,7 +929,7 @@ For R09/R23, keep the distinct admitted summaries in their existing
 summary store. Project these rows at handoff. This keeps the deeper
 NE head available to C2 without a separate list of removed outputs.
 Equal entry selectors can select different paired outputs or budgets.
-The compactor compares complete projected pairs under §4.3.
+The compactor compares complete projected pairs under §4.2.
 
 At a completed forward barrier use `HandOff.demandEdges.isEmpty()`
 after insertion and compaction, as in `IterationDriver.barrier`.
@@ -1555,9 +1344,16 @@ Node wrap(Node p, int depth) {
 
 | Candidate | Witness with the candidate withheld | What the other rules cover |
 | --- | --- | --- |
-| **R37/R38, source-specific terminal retirement.** In the wrapper above, `ZERO→NT(id),N` is available by run-3 while the next recursive cut again supplies `ZERO→DT,D`. | Without retirement, the bounded closure and the reverse MAY offer renew the live root DT in every later pair of the reference. The native diagnostic reaches run-15/POLICY. The single-source closure reference stops at run-7 after complete service is frozen. | The observer reads the D result, so R17 must keep it. NoRoute cannot discharge a real shared route. Two marking sites can share id while only A is served. The separate two-source wrapper stops at run-9 only after both are served. R38 is a correctness requirement on this retirement, not a second independent stopping rule. |
-| **R39, regular intersection.** A fresh wrapper writer prepends g or h recursively and ends in f. A prefix reader consumes g or h recursively and ends in g. The coarse `z.M/T,D` yields `ZERO→DT,D`. | The signed regular reference has the repeated DT and backwards permission in every later pair. The disabled native control reaches run-9/POLICY. Its certificate adapter stops at run-5. | R17 keeps the live observation and R38 has no NORMAL witness. But the field-membership test below already proves this route impossible. R40's cell algorithm can also handle empty right chunks. The product is a cheaper regular implementation of the general language decision, with no independent necessity shown in this fixture. |
-| **R40, nested state-pair closure.** Use `g*f` for the writer. Reader base `return p.g`, recursive arms `read(p.g)` and `read(p.h).h`. The coarse `z.M/T,D` yields the same DT. | With no NoRoute certificate, the clean return cone repeatedly carries the DT and the backward permission. The disabled native control reaches run-9/POLICY. The nested certificate adapter stops at run-5. | The R39 compiler rejects the nonempty right chunk in `h·R·h`. R17 and the NORMAL-only R38 proof cannot close the route. The field-membership test still proves this fixture disjoint. The native same-terminal and parity controls already stop naturally, so they do not supply an independent termination witness for the general closure. |
+| **R37/R38, source-specific terminal retirement.** In the wrapper above, `ZERO→NT(id),N` is available by run-3 while the next recursive cut again supplies `ZERO→DT,D`. | Without retirement, the bounded closure and the reverse MAY offer renew the live root DT in every later pair of the reference. The native diagnostic reaches run-15/POLICY. The single-source closure reference stops at run-7 after complete service is frozen. | The observer consumes the D reply. NoRoute cannot discharge a real shared route. Two marking sites can share id while only A is served. The separate two-source wrapper stops at run-9 only after both are served. R38 is a correctness requirement on this retirement, not a second independent stopping rule. |
+| **R39, regular intersection.** A fresh wrapper writer prepends g or h recursively and ends in f. A prefix reader consumes g or h recursively and ends in g. The coarse `z.M/T,D` yields `ZERO→DT,D`. | The signed regular reference has the repeated DT and backwards permission in every later pair. The disabled native control reaches run-9/POLICY. Its certificate adapter stops at run-5. | R38 has no NORMAL witness. The field-membership test below proves this route impossible. R40's cell algorithm can also handle empty right chunks. The product is a cheaper regular implementation of the general language decision, with no independent necessity shown in this fixture. |
+| **R40, nested state-pair closure.** Use `g*f` for the writer. Reader base `return p.g`, recursive arms `read(p.g)` and `read(p.h).h`. The coarse `z.M/T,D` yields the same DT. | With no NoRoute certificate, the clean return cone repeatedly carries the DT and the backward permission. The disabled native control reaches run-9/POLICY. The nested certificate adapter stops at run-5. | The R39 compiler rejects the nonempty right chunk in `h·R·h`. The NORMAL-only R38 proof cannot close the route. The field-membership test still proves this fixture disjoint. The native same-terminal and parity controls already stop naturally, so they do not supply an independent termination witness for the general closure. |
+
+In the alternating-generator reference, `x.M/U,D` and `y.M/T,D`
+feed the next call. `z.M/U,D` reaches the observer and renews
+`ZERO→DT,D` through run-11 with ordinary reply delivery. The reference
+with source-specific retirement stops at run-7. This is a separate
+Target-retirement result, with its own checked source witnesses.
+[Catalogue verification](../docs/reports/bidirectional-termination-fix-validation-20261117.md)
 
 **Smaller-certificate control.** For the checked linear grammars, a
 finite derivation reaches a base rule. Compute a field required by
@@ -1657,8 +1453,8 @@ implementation does not construct a graph of uses or run a proof recipe.
 | --- | --- |
 | R07/R08 query map and R20–R22 raw C5 | Use the C2 and C5 operators and qualified rows in §§2–3. Enable together for the scopes covered by the comparative proof. Outside those scopes use the native C2/C5 pair from the start of analysis. The reference raw image specifies `RestrictedInitialPolicy.canStoreInitial`; it is not a lookup into actual call-offer history. |
 | R11/R12 child and saved contribution | Keep the ordinary coarse contribution when the available child result differs in original, applied result, layer, E, mx, H or destination. Only ordinary exact-result deduplication can remove equal already applied results. It happens after the distinct native effects have run. A child hypothesis or an uncombined child result cannot replace the contribution. |
-| R15 provisional saved MUST reply | Use the ordinary possible replay when the definite matcher does not apply and the native possible lane succeeds. The resulting D local may use the completed-output rule in §4.1. No special drop at the record match. |
-| R16/R17/R19 actual DATA | Filter at completed statement output as in §4.1. Preserve calls, live local paths and boundary outputs, including ones with a ready NORMAL cover. |
+| R15 provisional saved MUST reply | Use the ordinary possible replay when the definite matcher does not apply and the native possible lane succeeds. |
+| R16/R19 actual DATA | Use ordinary reply delivery and post-statement admission in §4.1. |
 | R18/R23/R24 executable summaries | Run exit effects and C5. Use native exact membership and existing same-layer subsumption. Keep a distinct D membership if its provider is only NORMAL, even with the same geometry. There is no new pre-C5 skip based on a saved record. |
 | R09/R23/R25 outgoing guidance | Compare the complete normalized next-run rows, including the matched owner and physical ports. Keep distinct origins unless the existing C2/C5 compactor relation is proved for the updated tail/mark cells. Equality of the entire projected row suffices at insertion. Preserve all of an ND origin's projections. |
 | R37–R40 root DT | Keep the admitted DT and its native seeds. The abstract closure proofs in §§6.4–6.5 do not authorize a drop using the current stores. |
@@ -1680,15 +1476,6 @@ proof inputs. Inspecting an already observed prefix of forward or backward
 runs cannot construct those inputs for a live fact. The analyzer uses the
 native gates above.
 
-For the completed-output filter, the native statement dispatch or
-block router yields the complete first destination list. The form test
-shows that every skipped delivery has an empty effect. Induct over
-subsequent worklist processing and then the run handoffs. The same
-semantic inputs reach every rule, publication and source-permission
-query. Iteration timing and processing counters may change. In
-particular, this proof does not imply termination of the earlier
-examples that needed a live coarse reply or anonymous DT to be removed.
-
 ### COMPLEX
 
 The proof inputs are checked outside the worklist. The active
@@ -1700,7 +1487,7 @@ rule-disabled controls.
 
 | Proof input | Current route or basis | Proposed route or basis |
 | --- | --- | --- |
-| A run-3 reply `x.f.M/T,D` is needed to emit `ZERO→DT,D`. A replacement claims a permission first available in run-5. | Keep `x.f.M/T,D` and the resulting `ZERO→DT,D`. | Keep `x.f.M/T,D` and `ZERO→DT,D`. The call destination fails §4.1. |
+| A run-3 reply `x.f.M/T,D` is needed to emit `ZERO→DT,D`. A replacement claims a permission first available in run-5. | Keep `x.f.M/T,D` and the resulting `ZERO→DT,D`. | Keep `x.f.M/T,D` and `ZERO→DT,D` through ordinary delivery. |
 | At the normal port, a reached backward ZERO needs `ZERO→DT,D`. The proposed child supplies only `p.f.$/T→ret.$/T,N`. | Keep `{ZERO→DT,D}` for the reached ZERO. | Keep `{ZERO→DT,D}`. The DATA edge does not serve it. |
 | A and B are qualified guides, `A=ret.*/T→p.NE/T,D` and `B=ret.*/T→p.M/T,D`. | The corresponding same-head MAY rows deduplicate to `{ret.*/T→p.M/T,D}`. | Keep `{A; B}`. Different NE and MAY keys do not use exact-row compaction. |
 

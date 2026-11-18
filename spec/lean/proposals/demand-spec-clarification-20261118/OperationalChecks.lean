@@ -1,21 +1,7 @@
-import NativeOutputFilter
 import GuardedTermination
 import PairedContext
 
 namespace OperationalChecks
-open NativeOutputFilter
-
-def copyLocal : Destination := .statement true true false false false
-
-theorem nested_calls_require_only_the_callers_first_destinations :
-    skipOutput true [overwrite, overwrite] = true ∧
-    skipOutput true [overwrite, .call] = false ∧
-    skipOutput true [copyLocal] = false ∧
-    skipOutput true [.boundary] = false := by decide
-
-theorem the_three_alternating_outputs_have_live_destinations :
-    ([Destination.call, Destination.call, Destination.boundary].map
-      (fun dest => skipOutput true [dest])) = [false, false, false] := by decide
 
 -- Observe the retained-reply controls at their real completed forward
 -- runs. This checks the presence of a frontier, not an uncapped recurrence.

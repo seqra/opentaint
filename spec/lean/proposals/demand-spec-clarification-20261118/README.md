@@ -35,7 +35,7 @@ ELAN_TOOLCHAIN=leanprover/lean4:v4.35.0 LEAN_PATH="$dependency_dir" \
 
 [ServiceAndHandoff.lean](ServiceAndHandoff.lean) checks the clarified
 service boundary separately from the scalar rules. The checks cover
-R17's retained-basis recipe and missing source permission, R19's raw
+retained-basis recipes and missing source permission, R19's raw
 closure and committed bound service, the typed C5 pair gate, and the
 two-ID R37 trace through run-5. The example proof reuses the four-field
 marking action and three ordinary field reads. It assumes the sole root
@@ -47,25 +47,18 @@ Compile with the checked outputs from
 `demand-no-loss-audit-20261117`, `demand-refinement-spec-20261117` and
 `two-sided-field-cycle-20261117` on `LEAN_PATH`.
 
-[NativeOutputFilter.lean](NativeOutputFilter.lean) checks the analyzer
-rule in §4.1. The worklist's first relevant destinations are the
-input list. A touched base with no outgoing edge, conjunction, source
-or static operation has no effect in the modeled ordinary statement.
-The check rejects calls, boundaries and any live destination in the
-list. The module compiles independently on Lean 4.35.0.
-
 The broader service and terminal checks in `ServiceAndHandoff` remain
 proof models. The implementation in §7 uses existing analyzer operations
 and keeps live DEMAND replies and anonymous Targets.
 
-[OperationalChecks.lean](OperationalChecks.lean) checks the first
-destination cases for multi-call R17 examples and replays the retained
-alternating-generator reference through run-11. It also checks R39/R40
+[OperationalChecks.lean](OperationalChecks.lean) replays the
+alternating-generator reference with ordinary reply delivery through
+run-11. It also checks R39/R40
 disjoint and shared-word controls, correct placement of outer positions,
 and the simpler required-field proof for both negative fixtures. The
 retained replay checks a nonempty frontier at the listed runs. The
 uncapped recurrences are in the linked catalogue proofs.
 
-Compile with the checked outputs for `NativeOutputFilter`,
-`GuardedTermination` and `PairedContext` and their proof directories on
+Compile with the checked outputs for `GuardedTermination` and
+`PairedContext` and their proof directories on
 `LEAN_PATH`. Store all compiled outputs outside the repository.

@@ -25,10 +25,10 @@ def observeU : Need := ⟨.track,3,1,1⟩
 def otherSource : Need := ⟨.sourcePermission,5,1,2⟩
 def observe : Action := ⟨[readyU],observeU⟩
 
-theorem r17_the_bound_normal_serve_can_reproduce_the_observation :
+theorem the_bound_normal_value_can_reproduce_the_observation :
     continuation true [observe] [observe] [readyU] [observeU] = true := by decide
 
-theorem r17_a_distinct_source_permission_is_not_supplied_by_the_same_points :
+theorem a_distinct_source_permission_is_not_supplied_by_the_same_points :
     continuation true [observe] [observe] [readyU] [observeU,otherSource] = false := by decide
 
 inductive State where
