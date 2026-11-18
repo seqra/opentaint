@@ -25,7 +25,7 @@ internal fun markCheckFacts(m: ApManager, c: Facts, p: Pattern, mode: ApMode,
             if (mode.run1) MarkCheck.Request(request) else MarkCheck.None
         }
         is TaintTree -> {
-            val hit = taintOverlap(m, c.root, p, c.exclusion) ?: return MarkCheck.None
+            val hit = taintOverlap(m, c, p) ?: return MarkCheck.None
             val withT = m.taintAlg.mapLeaves(hit, m.cancellation) { leaf ->
                 m.taintLeaves(gate.taintMarks(leaf.exact) ?: MarkSet.EMPTY,
                     gate.taintMarks(leaf.any) ?: MarkSet.EMPTY)
@@ -80,21 +80,31 @@ private fun flowRequests(m: ApManager, c: FlowTree, p: Pattern, unchanged: IntAr
     val u = c.root.walk(path) { d, n ->
         m.cancellation.checkpoint()
         if (!n.leaf.isEmpty && c.exclusion.admits(path[d]) &&
+            (c.tail != Tail.NON_EMPTY_MAY || permitsNonEmptyLiteral(path, d, p.fact.tail)) &&
             !sameFlowLeaf(m, unchanged, path, d)) hit = true
     }
     if (hit || u == null) return hit
     return if (p.fact.tail.isAny) changedFlowSubtree(m, u, path, unchanged)
-        else !u.leaf.isEmpty && !sameFlowLeaf(m, unchanged, path, path.size)
+        else (c.tail != Tail.NON_EMPTY_MAY || p.fact.tail != Tail.EXACT) && !u.leaf.isEmpty && !sameFlowLeaf(m, unchanged, path, path.size)
 }
 
-private fun taintOverlap(m: ApManager, c: TaintNode, p: Pattern, e: ExclusionSet): TaintNode? {
+private fun permitsNonEmptyLiteral(path: IntArray, first: Int, literalTail: Tail): Boolean =
+    literalTail != Tail.EXACT || (first until path.size).any { path[it].isCounted() }
+
+private fun taintOverlap(m: ApManager, c: TaintTree, p: Pattern): TaintNode? {
     val path = p.fact.path.toIntArray()
     val spine = ArrayList<TaintLeaves>()
-    val u = c.walk(path) { d, n ->
+    val u = c.root.walk(path) { d, n ->
         m.cancellation.checkpoint()
-        spine += if (e.admits(path[d])) m.taintLeaves(MarkSet.EMPTY, n.leaf.any) else TaintLeaves.EMPTY
+        val overlaps = c.exclusion.admits(path[d]) &&
+            (c.anyTail != Tail.NON_EMPTY_MAY || permitsNonEmptyLiteral(path, d, p.fact.tail))
+        spine += if (overlaps) m.taintLeaves(MarkSet.EMPTY, n.leaf.any) else TaintLeaves.EMPTY
     }
-    val tip = u?.let { if (p.fact.tail.isAny) it else m.taintAlg.leafNode(it.leaf) }
+    val tip = u?.let {
+        if (p.fact.tail.isAny) it
+        else if (c.anyTail == Tail.NON_EMPTY_MAY && p.fact.tail == Tail.EXACT) m.taintAlg.leafNode(m.taintLeaves(it.leaf.exact, MarkSet.EMPTY))
+        else m.taintAlg.leafNode(it.leaf)
+    }
     return m.taintAlg.chain(m, path, spine, tip)
 }
 

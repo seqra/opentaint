@@ -4,13 +4,17 @@ import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.store.ExactDemandResults
 import org.opentaint.dataflow.bidi.store.ScopeDemandView
 import org.opentaint.dataflow.bidi.store.BlockScope
+import org.opentaint.dataflow.bidi.store.BoundAdmission
+import org.opentaint.dataflow.bidi.store.AdmittedSummary
+import org.opentaint.dataflow.bidi.store.DemandQualification
 import org.opentaint.dataflow.graph.PortId
 
 /** The router supplies a witness for the boundary which was actually reached. */
 internal enum class BlockEntryRole { NORMAL_INTERFACE, EXCEPTIONAL_INTERFACE, MID_BLOCK }
 
 internal data class BlockBoundaryAdmission(val initials: Set<AdmittedInitial>,
-                                         val borrowedExceptionalNormalZero: Boolean)
+                                         val borrowedExceptionalNormalZero: Boolean,
+                                         val possibleAdmissions: Set<BoundAdmission> = emptySet())
 
 /**
  * DATA keeps its exact physical interface. Typed ZERO control also sees the
@@ -24,6 +28,8 @@ internal class BlockBoundaryDemandView(
     direction: Direction,
     role: BlockEntryRole,
     normalOutputs: Collection<PortId>,
+    private val staticShortcutQualifications: (PortId, PremiseKey, RestrictedInitialPolicy) -> Set<DemandQualification> =
+        { _, _, _ -> emptySet() },
     private val staticShortcutTarget: (PortId, PremiseKey, RestrictedInitialPolicy) -> Boolean = { _, _, _ -> false },
 ) : org.opentaint.dataflow.bidi.store.PreparedScopeDemandView, org.opentaint.dataflow.bidi.store.EntryPrecisionView {
     private val outputs = normalOutputs.toSet()
@@ -32,7 +38,13 @@ internal class BlockBoundaryDemandView(
     private val borrowNormal = role == BlockEntryRole.NORMAL_INTERFACE ||
         exceptionalHack
 
-    fun admission(actual: Facts, policy: RestrictedInitialPolicy): BlockBoundaryAdmission {
+    fun admission(actual: Facts, policy: RestrictedInitialPolicy,
+                  savedGuards: (Pattern) -> Sequence<Pattern> = { emptySequence() }): BlockBoundaryAdmission {
+        if (policy.revised && actual !is Reach) {
+            val bound = boundInitials(actual, policy, savedGuards)
+            return BlockBoundaryAdmission(bound.mapTo(LinkedHashSet()) { it.admitted }, false,
+                bound.filterTo(LinkedHashSet()) { it.possible && it.qualification != null })
+        }
         val result = LinkedHashSet(physical.initials(actual, policy))
         // HACK: backward ZERO at the actual exceptional interface applies the
         // normal exit's control demands too. Ordinary DATA never reads them.
@@ -47,6 +59,10 @@ internal class BlockBoundaryDemandView(
 
     override fun initials(actual: Facts, policy: RestrictedInitialPolicy): Set<AdmittedInitial> =
         admission(actual, policy).initials
+
+    override fun boundInitials(actual: Facts, policy: RestrictedInitialPolicy,
+                               savedGuards: (Pattern) -> Sequence<Pattern>): Set<BoundAdmission> =
+        physical.boundInitials(actual, policy, savedGuards)
 
     override fun precisionCursors(actual: Pattern, policy: RestrictedInitialPolicy): List<org.opentaint.dataflow.bidi.store.AnyDemandCursor>? =
         (physical as? org.opentaint.dataflow.bidi.store.EntryPrecisionView)?.precisionCursors(actual, policy)
@@ -64,6 +80,13 @@ internal class BlockBoundaryDemandView(
         return result.all()
     }
 
+    override fun intersectAdmitted(exit: PortId, original: PremiseKey, raw: Facts,
+                                   policy: RestrictedInitialPolicy): List<AdmittedSummary> {
+        val current = physical.intersectAdmitted(exit, original, raw, policy)
+        if (!borrowNormal || !original.isZero) return current
+        return (current + normal.intersectAdmitted(exit, original, raw, policy)).distinct()
+    }
+
     override fun acceptsTarget(exit: PortId, original: PremiseKey,
                                policy: RestrictedInitialPolicy): Boolean {
         // A Target is attached to the normal interface. A matching complete
@@ -78,6 +101,19 @@ internal class BlockBoundaryDemandView(
                 staticShortcutTarget(output, original, policy)) return true
         }
         return false
+    }
+
+    override fun targetQualifications(exit: PortId, original: PremiseKey,
+                                      policy: RestrictedInitialPolicy): Set<DemandQualification> {
+        if (original.isZero) return emptySet()
+        return buildSet {
+            for (output in outputs + exit) {
+                ap.cancellation.checkpoint()
+                addAll(physical.targetQualifications(output, original, policy))
+                if (backward && policy.run == 2 && original is InitialAp && original.base == STATIC)
+                    addAll(staticShortcutQualifications(output, original, policy))
+            }
+        }
     }
 }
 

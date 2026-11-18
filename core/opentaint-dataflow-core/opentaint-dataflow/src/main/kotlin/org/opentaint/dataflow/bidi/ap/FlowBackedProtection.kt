@@ -114,7 +114,22 @@ internal class ProtectionOutputs(private val m: ApManager) : ApOut {
     }
 }
 
-internal fun ApManager.transportProtection(c: Facts, out: ApOut, operation: (Facts, ApOut) -> Unit) {
+internal fun ApManager.transportProtection(
+    c: Facts, out: ApOut, keepMemberships: Boolean = false, operation: (Facts, ApOut) -> Unit,
+) {
+    if (keepMemberships && c is TaintTree && c.nonSubsumable != null) {
+        // Different input coordinates can reach the same output coordinate.
+        // Process each flag membership independently before that happens.
+        val protectedOut = object : ApOut {
+            override fun result(f: Facts) = out.result(selectedProtection(f, null))
+            override fun markRequest(mark: TaintMark) = out.markRequest(mark)
+        }
+        for (part in c.membershipPackets(this)) {
+            val tree = part as TaintTree
+            operation(tree.withoutProtection(), if (tree.protectionClass()) protectedOut else out)
+        }
+        return
+    }
     val protected = (c as? TaintTree)?.protectedPart()
     if (protected == null) { operation(c, out); return }
     val masks = ProtectionOutputs(this)

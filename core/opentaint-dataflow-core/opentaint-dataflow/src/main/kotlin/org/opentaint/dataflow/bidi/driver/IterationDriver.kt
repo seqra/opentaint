@@ -32,6 +32,7 @@ class IterationDriver internal constructor(
     private val budget: Duration,
     private val invokeRun: (RunConfig, SharedObjects, Duration) -> RunResult<RunMethodAnalyzer>,
     private val guardBarrier: (SharedObjects, () -> Next) -> Next,
+    private val demandRefinement: Boolean = policy.diagnosticDemandRefinement,
 ) {
     constructor(policy: IterationPolicy, shared: SharedObjects, budget: Duration) :
         this(policy, shared, budget, ::runEngine, ::withBarrierGuard)
@@ -52,11 +53,12 @@ class IterationDriver internal constructor(
         }
         try {
             logger.info { "BIDI_FIELD_LIMIT_SCHEDULE schedule=$fieldLimitSchedule" }
+            logger.info { "BIDI_DEMAND_REFINEMENT diagnostic=${demandRefinement && run1MarkMode == MarkMode.FULL}" }
             val firstLimit = policy.fieldLimit(1)
             require(firstLimit == 1) { "F78: selected run 1 needs field limit exactly 1" }
             var config = RunConfig(1, firstLimit, demand = null, records = shared.records.view(),
                 seeds = SeedIndex.EMPTY, roots = roots, run1MarkMode = run1MarkMode,
-                fieldLimitSchedule = fieldLimitSchedule)
+                fieldLimitSchedule = fieldLimitSchedule, demandRefinement = demandRefinement)
             while (true) {
                 index = config.index
                 val selectedTimeout = policy.timeout(config, budget - start.elapsedNow())
@@ -239,7 +241,8 @@ class IterationDriver internal constructor(
         val limit = policy.fieldLimit(index)
         require(limit >= config.fieldLimit) { "ap.md W3: the field limit must not decrease" }
         return RunConfig(index, limit, handOff.demand, shared.records.view(), handOff.seeds, config.roots,
-            run1MarkMode = run1MarkMode, fieldLimitSchedule = fieldLimitSchedule, normalTargets = normalTargets)
+            run1MarkMode = run1MarkMode, fieldLimitSchedule = fieldLimitSchedule, normalTargets = normalTargets,
+            demandRefinement = config.mode.demandRefinement)
     }
 
     companion object : KLogging() {

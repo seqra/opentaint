@@ -26,7 +26,7 @@ internal data class HandoffC5Key(
 
 /** These adapters bind the late-FULL service laws in retained-demand-service-basis.md.
  * Full checked Pattern equality follows the hash lookup, including E/mx and full marks. */
-internal class HandoffServiceKeys(private val ap: ApManager) {
+internal class HandoffServiceKeys(private val ap: ApManager, private val exactPairsOnly: Boolean = false) {
     private fun point(p: Pattern): Boolean {
         val mark = p.fact.mark as? MarkSlot.Concrete ?: return false
         if (!ap.marks.isFull(mark.mark) || p.fact.tail !in setOf(Tail.STAR, Tail.EXACT)) return false
@@ -43,12 +43,14 @@ internal class HandoffServiceKeys(private val ap: ApManager) {
     }
 
     fun entry(entry: DemandEntry): DemandEntry {
+        if (exactPairsOnly) return entry
         val p = (entry as? DemandEntry.Data)?.pattern ?: return entry
         return if (point(p)) DemandEntry.Data(p.copy(fact = p.fact.copy(tail = Tail.EXACT),
             exclusion = ExclusionSet.Empty)) else entry
     }
 
     fun output(exit: DemandExit): DemandExit {
+        if (exactPairsOnly) return exit
         val p = (exit as? DemandExit.Data)?.pattern ?: return exit
         return if (p.fact.tail == Tail.ANY && p.exclusion == ExclusionSet.Empty)
             DemandExit.Data(p.copy(fact = p.fact.copy(tail = Tail.STAR))) else exit
@@ -63,6 +65,7 @@ internal class HandoffServiceKeys(private val ap: ApManager) {
      * one final counted accessor (preceded by CLASS accessors) is admitted. */
     fun c5Alternatives(key: HandoffC5Key): Sequence<HandoffC5Key> = sequence {
         yield(key)
+        if (exactPairsOnly) return@sequence
         val p = (key.entry as? DemandEntry.Data)?.pattern ?: return@sequence
         if (!point(p)) return@sequence
         when (p.fact.base) {

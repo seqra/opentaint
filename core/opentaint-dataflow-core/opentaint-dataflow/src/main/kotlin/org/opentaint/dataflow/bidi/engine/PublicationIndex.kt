@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.store.PathTrie
 import org.opentaint.dataflow.bidi.store.FlowBackedSummaries
+import org.opentaint.dataflow.bidi.store.DemandQualification
 import org.opentaint.dataflow.bidi.store.finalMembershipPart
 import java.util.Collections
 
@@ -13,12 +14,15 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
     private val interners = ap.newInterners()
     private val merged = LinkedHashMap<PremiseKey, ConclusionGroup>()
     private val backed = if (flowBacked) FlowBackedSummaries(ap,onPremiseRemoved=::unindexPremise) else null
+    private var qualified: MutableMap<PremiseKey, MutableMap<DemandQualification, ConclusionGroup>>? = null
     private val targets = LinkedHashMap<PremiseKey, LinkedHashSet<Target>>()
+    private var qualifiedTargets: MutableMap<PremiseKey, MutableSet<TargetSummary>>? = null
     private val indexed = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<PremiseKey, Boolean>())
     private val byMember = PathTrie<Member>(ap.cancellation)
     fun addAll(pubs: List<Publication>): List<Publication> {
         ap.cancellation.checkpoint()
         val out = ArrayList<Publication>()
+        var qualifiedDeltas: MutableList<Publication>? = null
         for (pub in pubs) {
             ap.cancellation.checkpoint()
             if (!RuntimeDataDomain.packet(pub.premise, pub.conclusion)) continue
@@ -31,6 +35,20 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
             }
             check(pub.premise !is PremiseSet || pub.conclusion is TaintTree) {
                 "A multi-premise publication must be TAINT"
+            }
+            val qualification = pub.qualification
+            if (qualification != null) {
+                val directory = qualified ?: HashMap<PremiseKey, MutableMap<DemandQualification, ConclusionGroup>>()
+                    .also { qualified = it }
+                val group = directory.getOrPut(pub.premise, ::LinkedHashMap).getOrPut(qualification) {
+                    ConclusionGroup(ap, interners)
+                }
+                for (packet in group.addAll(pub.conclusion)) {
+                    indexPremise(pub.premise)
+                    val deltas = qualifiedDeltas ?: ArrayList<Publication>().also { qualifiedDeltas = it }
+                    deltas += pub.copy(conclusion = packet)
+                }
+                continue
             }
             val fresh = if (backed != null) backed.addAll(pub.premise, pub.conclusion)
                 else merged.getOrPut(pub.premise) { ConclusionGroup(ap, interners) }.addAll(pub.conclusion)
@@ -45,11 +63,13 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
                 else finalMembershipPart(ap,pub.conclusion,merged[pub.premise]?.all() ?: emptySequence())
             retained?.let { Publication(pub.premise,it) }
         }
-        return Collections.unmodifiableList(current)
+        return Collections.unmodifiableList(if (qualifiedDeltas == null) current else current + qualifiedDeltas)
     }
 
     private fun unindexPremise(premise: PremiseKey) {
-        if (targets[premise]?.isNotEmpty() == true || !indexed.remove(premise)) return
+        if (targets[premise]?.isNotEmpty() == true || qualified?.containsKey(premise) == true ||
+            qualifiedTargets?.containsKey(premise) == true ||
+            !indexed.remove(premise)) return
         for (member in 0 until premise.size) {
             val initial = premise.member(member)
             byMember.remove(initial.base,initial.pathData,Member(premise,member))
@@ -70,7 +90,15 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
         for (row in rows) {
             ap.cancellation.checkpoint()
             if (!RuntimeDataDomain.premise(row.premise)) continue
-            if (!targets.getOrPut(row.premise, ::LinkedHashSet).add(row.target)) continue
+            val added = if (row.qualification == null)
+                targets.getOrPut(row.premise, ::LinkedHashSet).add(row.target)
+            else {
+                check(row.target == Target.DemandTarget)
+                val directory = qualifiedTargets ?: HashMap<PremiseKey, MutableSet<TargetSummary>>()
+                    .also { qualifiedTargets = it }
+                directory.getOrPut(row.premise, ::LinkedHashSet).add(row)
+            }
+            if (!added) continue
             indexPremise(row.premise)
             fresh += row
         }
@@ -133,6 +161,7 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
         for (member in candidateMembers(original, actual, mode, zeroOnly)) {
             ap.cancellation.checkpoint()
             for (target in targets[member.premise].orEmpty()) out += TargetSummary(member.premise, target) to member.index
+            for (row in qualifiedTargets?.get(member.premise).orEmpty()) out += row to member.index
         }
         return Collections.unmodifiableList(out)
     }
@@ -162,6 +191,10 @@ class PublicationIndex(private val ap: ApManager, private val ops: ApOps, flowBa
 
     private fun publications(premise: PremiseKey): List<Publication> {
         val values = backed?.borrow(premise) ?: merged[premise]?.all() ?: emptySequence()
-        return values.map { Publication(premise, it) }.toList()
+        val ordinary = values.map { Publication(premise, it) }
+        val bound = qualified?.get(premise)?.asSequence()?.flatMap { (qualification, group) ->
+            group.all().map { Publication(premise, it, qualification) }
+        }
+        return (if (bound == null) ordinary else ordinary + bound).toList()
     }
 }

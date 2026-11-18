@@ -31,7 +31,7 @@ internal class MethodBlockRuntime(
         }
     }
     private val application = LocalRelationApplication(ops, mode)
-    private val restriction = LoopOutputRestriction(ops)
+    private val restriction = LoopOutputRestriction(ops, mode.demandRefinement)
     private val liveLocals = port.shared.contexts.blockLiveLocals(key)
     private val queryCounts = LoopQueryCounts()
     private val localMatchCounts = if (port.shared.n2Statistics != null) LocalSummaryMatchStatistics() else null
@@ -77,9 +77,13 @@ internal class MethodBlockRuntime(
             val store = checkNotNull(config.demand)
             BlockBoundaryDemandView(ap, store.scope(key, scope),
                 store.scope(key, BlockScope(scope.block, controlEntry)), config.direction,
-                entryRole(scope), normalOutputs(scope)) { output, original, policy ->
-                store.acceptsStaticShortcutTarget(key, scope.block, output, original, policy)
-            }
+                entryRole(scope), normalOutputs(scope),
+                staticShortcutTarget = { output, original, policy ->
+                    store.acceptsStaticShortcutTarget(key, scope.block, output, original, policy)
+                },
+                staticShortcutQualifications = { output, original, policy ->
+                    store.staticShortcutTargetQualifications(key, scope.block, output, original, policy)
+                })
         }
         private val cacheValue = lazy {
             if (layout[scope.block].instructions.isEmpty()) null else
@@ -355,7 +359,9 @@ internal class MethodBlockRuntime(
             premise("P", original); facts("offered", value)
         }
         replaySaved(childEntry, link, value)
-        val admission = if (config.run1) null else childEntry.demand!!.admission(value, config.admissionPolicy)
+        val admission = if (config.run1) null else childEntry.demand!!.admission(value, config.admissionPolicy) { leaf ->
+            savedInitialGuards(config, key, scope, leaf)
+        }
         val initials = admission?.initials
         if (initials != null && initials.isEmpty()) return
         if (admission?.borrowedExceptionalNormalZero == true) childEntry.borrowedExceptionalNormalZero = true
@@ -372,7 +378,7 @@ internal class MethodBlockRuntime(
             }
         } else if (admittedTarget && state.initials.all().any { it.isZero } && original.isZero && value is Reach)
             queue { startEntryTarget(childEntry, state, target, ap.zero, state.forceRun1Layer(ap.zero, ops.startFact(ap.zero, mode))) }
-        childEntry.links.offer(link, value)
+        childEntry.links.offer(link, value, admission?.possibleAdmissions.orEmpty())
         if (childEntry.links.hasPending) port.enqueue(root)
         if (config.run1) {
             checkNotNull(state.abstraction).emit(original, value)
@@ -513,7 +519,7 @@ internal class MethodBlockRuntime(
             is TaintTree -> value.root.boundedDepth
         }
         if (depth > config.fieldLimit) boundaryLimitCuts++
-        ops.limit(value, config.fieldLimit, object : ApOut {
+        ops.limit(value, config.fieldLimit, mode.demandRefinement, object : ApOut {
             override fun result(bounded: Facts) {
                 val values = if (!child.isLoop || exit.ordinal < 0) listOf(bounded) else
                     restriction.restrict(config.run1, needsGate, bounded, LoopRestrictionSession(ops, config.admissionPolicy,
@@ -751,6 +757,13 @@ internal class MethodBlockRuntime(
             else checkNotNull(parent.demand).intersect(exit, original, value, config.admissionPolicy)
     }
 
+    private fun intersectRaw(parent: Entry, exit: PortId, original: PremiseKey, value: Facts): List<AdmittedSummary> {
+        queryCounts.c5NativeQueries++
+        return if (parent.rootEntry)
+            checkNotNull(config.demand).intersectAdmitted(key, original, value, config.admissionPolicy)
+        else checkNotNull(parent.demand).intersectAdmitted(exit, original, value, config.admissionPolicy)
+    }
+
     private fun skipEmptyDataReplay(parent: Entry, original: PremiseKey, actual: Facts,
                                     saved: LoopObservedRecord): Boolean {
         val record = saved.record
@@ -787,11 +800,23 @@ internal class MethodBlockRuntime(
             ap.cancellation.checkpoint(); queryCounts.c2Queries++; queryCounts.c2Native++
             return demand.initials(actual, config.admissionPolicy).also { queryCounts.c2Rows += it.size }
         }
+        fun labels(scope: BlockScope, family: LoopAdmissionFamily, demand: ScopeDemandView,
+                   actual: Facts): Collection<LoopLabelledAdmission> {
+            if (!mode.demandRefinement || actual is Reach)
+                return initials(scope, demand, actual).map { LoopLabelledAdmission(scope, family, it) }
+            if (!keepLocalConclusion(scope.block, scope.entry, actual, count = false)) return emptyList()
+            ap.cancellation.checkpoint()
+            queryCounts.c2Queries++
+            queryCounts.c2Native++
+            val bound = demand.boundInitials(actual, config.admissionPolicy) { leaf -> savedInitialGuards(config, key, scope, leaf) }
+            queryCounts.c2Rows += bound.size
+            return bound.map { LoopLabelledAdmission(scope, family, it.admitted, it.takeIf(BoundAdmission::possible)) }
+        }
         fun labelled(actual: Facts): Set<LoopLabelledAdmission> = buildSet {
-            for ((scope, demand) in adjacentDemands) for (initial in initials(scope, demand, actual))
-                add(LoopLabelledAdmission(scope, LoopAdmissionFamily.ADJACENT, initial))
-            for ((scope, demand) in repeatDemands) for (initial in initials(scope, demand, actual))
-                add(LoopLabelledAdmission(scope, LoopAdmissionFamily.REPEAT, initial))
+            for ((scope, demand) in adjacentDemands)
+                addAll(labels(scope, LoopAdmissionFamily.ADJACENT, demand, actual))
+            for ((scope, demand) in repeatDemands)
+                addAll(labels(scope, LoopAdmissionFamily.REPEAT, demand, actual))
         }
         val admissionConsumers = buildList {
             for ((family, demands) in listOf(LoopAdmissionFamily.ADJACENT to adjacentDemands,
@@ -817,16 +842,17 @@ internal class MethodBlockRuntime(
             port.shared.interpreter::isSummaryBase, ::labelled,
             { pr, actual -> if (parent.rootEntry) root.adjustObservedMethodExit(pr, actual) else actual },
             admissionBundle = { actual -> LoopAdmissionBundle(
-                { adjacentDemands.flatMap { (scope, demand) -> initials(scope, demand, actual).map {
-                    LoopLabelledAdmission(scope, LoopAdmissionFamily.ADJACENT, it) } } },
-                { repeatDemands.flatMap { (scope, demand) -> initials(scope, demand, actual).map {
-                    LoopLabelledAdmission(scope, LoopAdmissionFamily.REPEAT, it) } } }) },
+                { adjacentDemands.flatMap { (scope, demand) -> labels(scope, LoopAdmissionFamily.ADJACENT, demand, actual) } },
+                { repeatDemands.flatMap { (scope, demand) -> labels(scope, LoopAdmissionFamily.REPEAT, demand, actual) } }) },
             keepEnclosingData = { output, actual -> keepLocalConclusion(parent.scope.block, output, actual, count = false) },
             skipEmptyDataReplay = { pr, actual, saved -> skipEmptyDataReplay(parent, pr, actual, saved) },
             probeAdmissions = { actual, expected ->
-                probeLoopAdmissions(ap, config.admissionPolicy, actual, expected, admissionConsumers, quantumQueries, queryCounts)
+                if (mode.demandRefinement) LoopAdmissionProbe.Unsupported
+                else probeLoopAdmissions(ap, config.admissionPolicy, actual, expected, admissionConsumers, quantumQueries, queryCounts)
             },
+            intersectRawEnclosing = { portId, pr, actual -> intersectRaw(parent, portId, pr, actual) },
             precisionCursors = { actual ->
+                if (mode.demandRefinement) null else run {
                 val packet = ap.factsOf(actual.fact, actual.exclusion, Layer.DEMAND)
                 buildList {
                     for ((family, demands) in listOf(LoopAdmissionFamily.ADJACENT to adjacentDemands,
@@ -837,6 +863,7 @@ internal class MethodBlockRuntime(
                                 ?: continue
                             for (cursor in cursors) add(LoopPrecisionCursor(scope, family, cursor))
                         }
+                }
                 }
             })
         LoopConsumerObservation(ops, mode, views)

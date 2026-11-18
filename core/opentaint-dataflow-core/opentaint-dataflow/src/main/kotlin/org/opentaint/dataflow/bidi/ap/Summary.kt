@@ -8,17 +8,19 @@ enum class SummaryReadRole { CURRENT, SAVED_DIRECT, SAVED_OPPOSITE }
 private class SummaryTails<P : TrieLeaf>(
     val exclusion: ExclusionSet,
     val anyExclusion: ExclusionSet = ExclusionSet.Empty,
+    val nonempty: Boolean = false,
     val select: (P, star: Boolean, any: Boolean, exact: Boolean) -> P,
 )
 
 private fun flowTails(a: FlowTree) = SummaryTails<FlowLeaf>(
     if (a.tail == Tail.STAR) a.exclusion else ExclusionSet.Empty,
     if (a.tail == Tail.ANY_TAINT) a.exclusion else ExclusionSet.Empty,
+    nonempty = a.tail == Tail.NON_EMPTY_MAY,
 ) { p, star, any, exact ->
     val selected = when (a.tail) {
         Tail.STAR -> star
         Tail.EXACT -> exact
-        Tail.ANY, Tail.ANY_TAINT -> any
+        Tail.ANY, Tail.NON_EMPTY_MAY, Tail.ANY_TAINT -> any
     }
     if (selected) p else FlowLeaf.NONE
 }
@@ -26,7 +28,7 @@ private fun flowTails(a: FlowTree) = SummaryTails<FlowLeaf>(
 private fun taintTails(m: ApManager, a: TaintTree) =
     if (a.anyTail == Tail.STAR) SummaryTails<TaintLeaves>(a.exclusion) { p, star, _, exact ->
         m.taintLeaves(if (exact) p.exact else MarkSet.EMPTY, if (star) p.any else MarkSet.EMPTY)
-    } else SummaryTails<TaintLeaves>(ExclusionSet.Empty, a.exclusion) { p, _, any, exact ->
+    } else SummaryTails<TaintLeaves>(ExclusionSet.Empty, a.exclusion, nonempty = a.anyTail == Tail.NON_EMPTY_MAY) { p, _, any, exact ->
         m.taintLeaves(if (exact) p.exact else MarkSet.EMPTY, if (any) p.any else MarkSet.EMPTY)
     }
 
@@ -59,6 +61,47 @@ internal fun satisfyingPart(m: ApManager, a: Facts, j: Pattern, mode: ApMode, re
             ?.let { markSubPart(m, it, j, mode) }
             ?.let { m.taintTree(a.base, if (mode.markMode == MarkMode.GROUP) Layer.DEMAND else a.layer, it, a.exclusion, a.anyTail) }
     }
+}
+
+/** R34. Only the strict-ancestor STAR members that fail a direct FLOW record match. */
+internal fun possibleSavedDirectPart(
+    ops: ApOps, actual: Facts, premise: InitialAp, conclusion: Facts, mode: ApMode,
+): Facts? {
+    if (!mode.demandRefinement || !mode.restricted || actual.base != premise.base ||
+        !premise.isFlow || premise.tail != Tail.STAR ||
+        conclusion !is FlowTree || conclusion.tail != Tail.STAR || conclusion.layer != Layer.NORMAL ||
+        premise.pathData.isEmpty()) return null
+    val ap = ops.manager
+    val path = premise.pathData
+    return when (actual) {
+        is Reach -> null
+        is FlowTree -> {
+            if (actual.tail != Tail.STAR) return null
+            val root = savedAncestorPart(ap, actual.root, FlowAlgebra, path, actual.exclusion) { it } ?: return null
+            ap.flowTree(actual.base, Layer.DEMAND, ExclusionSet.Empty, actual.markExclusion, root, Tail.ANY)
+        }
+        is TaintTree -> {
+            if (actual.anyTail != Tail.STAR || !actual.root.hasAny) return null
+            val root = savedAncestorPart(ap, actual.root, ap.taintAlg, path, actual.exclusion) {
+                ap.taintLeaves(MarkSet.EMPTY, it.any)
+            } ?: return null
+            val selected = markSubPart(ap, root, premise.toPattern(), mode) ?: return null
+            ap.taintTree(actual.base, Layer.DEMAND, selected, ExclusionSet.Empty, Tail.ANY,
+                actual.nonSubsumable?.let { intersectTaintMask(it, selected, ap.cancellation) })
+        }
+    }
+}
+
+private fun <P : TrieLeaf> savedAncestorPart(
+    ap: ApManager, root: TrieNode<P>, alg: LeafAlgebra<P>, path: IntArray, exclusion: ExclusionSet,
+    keep: (P) -> P,
+): TrieNode<P>? {
+    val spine = ArrayList<P>(path.size)
+    root.walk(path) { depth, node ->
+        ap.cancellation.checkpoint()
+        spine += if (exclusion.admits(path[depth])) keep(node.leaf) else alg.empty
+    }
+    return alg.chain(ap, path, spine)
 }
 
 /** A uniform query requires an actual uniform scope that covers the entire query. */
@@ -105,6 +148,7 @@ private fun <P : TrieLeaf> applicablePart(
         Tail.EXACT -> t.select(u.leaf, false, false, true)
         Tail.ANY_TAINT -> t.select(u.leaf, false, anyAt, false)
         Tail.ANY -> t.select(u.leaf, false, true, false)
+        Tail.NON_EMPTY_MAY -> error("A summary cannot have a nonempty MAY premise")
     }
     val kids = when (j.fact.tail) {
         Tail.STAR -> alg.retainChildren(u, m.cancellation) { ej.admits(it) }
@@ -113,6 +157,7 @@ private fun <P : TrieLeaf> applicablePart(
             ?.let { k -> alg.mapLeaves(k, m.cancellation) { t.select(it, false, true, false) } }
         Tail.ANY -> alg.retainChildren(u, m.cancellation) { true }
             ?.let { k -> alg.mapLeaves(k, m.cancellation) { t.select(it, false, true, false) } }
+        Tail.NON_EMPTY_MAY -> error("A summary cannot have a nonempty MAY premise")
     }
     return alg.withLeaf(kids, at)?.let { alg.prepend(m, m.path(path), it) }
 }
@@ -133,8 +178,10 @@ private fun <P : TrieLeaf> insidePart(
             Tail.EXACT -> true
             Tail.STAR -> true
             Tail.ANY, Tail.ANY_TAINT -> t.exclusion == ExclusionSet.Empty
+            Tail.NON_EMPTY_MAY -> error("A summary cannot have a nonempty MAY premise")
         },
-        j.fact.tail == Tail.EXACT || j.fact.tail == Tail.STAR || t.anyExclusion.isSubsetOf(j.exclusion),
+        (j.fact.tail != Tail.EXACT || !t.nonempty) &&
+            (j.fact.tail == Tail.EXACT || j.fact.tail == Tail.STAR || t.anyExclusion.isSubsetOf(j.exclusion)),
         j.fact.tail == Tail.EXACT)
     return alg.chain(m, path, spine)
 }

@@ -101,7 +101,7 @@ class NeutralRelationBatch private constructor(
                 val filtered = summary.resultFilters[f.base]?.let { ops.filter(f, it) } ?: if (
                     summary.resultFilters.containsKey(f.base)) null else f
                 if (filtered == null) return
-                ops.limit(filtered, mode.fieldLimit, object : ApOut {
+                ops.limit(filtered, mode.fieldLimit, mode.demandRefinement, object : ApOut {
                     override fun markRequest(mark: TaintMark): Unit = error("Field limits cannot request a mark")
                     override fun result(bounded: Facts) {
                         if (!RuntimeDataDomain.base(bounded.base)) return

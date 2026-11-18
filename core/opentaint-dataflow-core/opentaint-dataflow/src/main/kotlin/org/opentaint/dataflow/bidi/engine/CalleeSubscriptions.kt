@@ -2,6 +2,7 @@ package org.opentaint.dataflow.bidi.engine
 
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.store.CallerInputValues
+import org.opentaint.dataflow.bidi.store.BoundAdmission
 import org.opentaint.dataflow.bidi.store.CallerRef
 import org.opentaint.dataflow.bidi.store.PathTrie
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
@@ -13,15 +14,17 @@ class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Stat
     private val callees = ArrayList<MethodKey>()
     private var index = PathTrie<Int>(ops.manager.cancellation)
     private val zeroParts = LinkedHashMap<CallerRef, Subscription>()
+    private data class BoundKey(val ref: CallerRef, val group: GroupKey)
+    private val bound = HashMap<BoundKey, Set<BoundAdmission>>()
     private var postings = 0L
     private var visitingQuestion = false
 
     /** A queued replay keeps the established fresh delta, not an old cumulative root. */
-    internal inner class Admission(val fresh: Subscription, private val handle: Int, val growth: Boolean = false) {
+    internal inner class Admission(val fresh: Subscription, private val handle: Int, val growth: Boolean = false,
+                                   val qualifiersOnly: Boolean = false) {
         val current: Subscription get() {
             if (handle < 0) return fresh
-            val value = values.snapshot(handle)
-            return Subscription(callees[handle], value.ref, value.group.layer, value.facts)
+            return snapshot(handle)
         }
     }
 
@@ -40,7 +43,16 @@ class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Stat
             statistics?.accepted(zeroOnly = true)
             return Admission(sub, -1)
         }
-        val update = values.add(sub.ref, sub.linkLayer, sub.added) ?: return null
+        val freshBindings = if (sub.possibleAdmissions.isEmpty()) emptySet() else {
+            val key = BoundKey(sub.ref, sub.added.groupKey)
+            val old = bound[key].orEmpty()
+            val fresh = sub.possibleAdmissions - old
+            if (fresh.isNotEmpty()) bound[key] = old + fresh
+            fresh
+        }
+        val update = values.add(sub.ref, sub.linkLayer, sub.added)
+            ?: return if (freshBindings.isEmpty()) null
+            else Admission(sub.copy(possibleAdmissions = freshBindings), -1, qualifiersOnly = true)
         if (update.newGroup) callees += sub.callee
         statistics?.accepted(newGroup = update.newGroup)
         ops.manager.forEachLeafPosition(update.delta) { base, path ->
@@ -50,7 +62,14 @@ class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Stat
             }
         }
         // This immutable delta is retained only by the pending replay callback.
-        return Admission(sub.copy(added = update.delta), update.handle, growth = !update.newGroup)
+        return Admission(sub.copy(added = update.delta, possibleAdmissions = freshBindings), update.handle,
+            growth = !update.newGroup)
+    }
+
+    private fun snapshot(handle: Int): Subscription {
+        val value = values.snapshot(handle)
+        val admissions = if (bound.isEmpty()) emptySet() else bound[BoundKey(value.ref, value.group)].orEmpty()
+        return Subscription(callees[handle], value.ref, value.group.layer, value.facts, possibleAdmissions = admissions)
     }
 
     /** Request overlap differs from run-1 summary applicability: ancestors are candidates too.
@@ -93,14 +112,13 @@ class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Stat
             if (initial.mark is MarkSlot.Star || initial.tail == Tail.STAR) ids += index.lookupExtensions(initial.base, initial.pathData)
         }
         // Capture every candidate value before callbacks can grow this directory.
-        val snapshot = ArrayList<Subscription>(ids.size + if (premise.isZero) zeroParts.size else 0)
+        val candidates = ArrayList<Subscription>(ids.size + if (premise.isZero) zeroParts.size else 0)
         for (id in ids) {
             ops.manager.cancellation.checkpoint()
-            val value = values.snapshot(id)
-            snapshot += Subscription(callees[id], value.ref, value.group.layer, value.facts)
+            candidates += snapshot(id)
         }
-        if (premise.isZero) snapshot.addAll(zeroParts.values)
-        for (sub in snapshot) {
+        if (premise.isZero) candidates.addAll(zeroParts.values)
+        for (sub in candidates) {
             ops.manager.cancellation.checkpoint()
             yield(sub)
         }
@@ -148,6 +166,7 @@ class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Stat
         values.clear()
         callees.clear()
         zeroParts.clear()
+        bound.clear()
         index = PathTrie(ops.manager.cancellation)
         postings = 0L
     }

@@ -101,7 +101,7 @@ internal class OwnedJoinedStaticWriterBinding(
                         // This is the existing static-result lane. Keep raw mx until AP
                         // application ends; no configured call suffix or aliases execute.
                         ops.run1Cover(f.withLayer(Layer.DEMAND)) { covered ->
-                            ops.limit(covered, mode.fieldLimit, object : ApOut {
+                            ops.limit(covered, mode.fieldLimit, mode.demandRefinement, object : ApOut {
                                 override fun result(f: Facts) {
                                     ops.run1Cover(f.withLayer(Layer.DEMAND)) { bounded ->
                                         for (piece in ops.leaves(bounded)) {

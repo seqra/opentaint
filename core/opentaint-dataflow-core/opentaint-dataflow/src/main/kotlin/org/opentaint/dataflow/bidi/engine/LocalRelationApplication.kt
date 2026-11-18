@@ -67,8 +67,11 @@ internal class LocalRelationApplication(private val ops: ApOps, private val mode
     fun matchRecord(actual: Facts, original: PremiseKey, record: Record): List<NativeRecordLane>? {
         val initial = record.premise
         if (!valid(actual, original, initial, record.conclusion)) return null
-        val offered = ops.satisfying(actual, initial, mode, record = true) ?: return null
-        return nativeRecordLanes(ops, mode, offered, initial)
+        val offered = ops.satisfying(actual, initial, mode, record = true)
+        val possible = possibleSavedDirectPart(ops, actual, initial, record.conclusion, mode)
+        if (offered == null && possible == null) return null
+        val native = if (offered == null) emptyList() else nativeRecordLanes(ops, mode, offered, initial)
+        return if (possible == null) native else native + NativeRecordLane(possible, false)
     }
 
     fun applyMatchedRecord(lanes: List<NativeRecordLane>, original: PremiseKey, record: Record,

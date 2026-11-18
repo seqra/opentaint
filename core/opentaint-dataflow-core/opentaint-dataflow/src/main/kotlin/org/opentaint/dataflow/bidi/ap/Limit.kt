@@ -4,17 +4,18 @@ import java.util.ArrayDeque
 import java.util.IdentityHashMap
 
 /** Cut before the next counted accessor after the positive public budget is exhausted. */
-internal fun limitFacts(m: ApManager, c: Facts, fieldLimit: Int, out: ApOut) {
+internal fun limitFacts(m: ApManager, c: Facts, fieldLimit: Int, out: ApOut, nonEmptyMay: Boolean = false) {
     require(fieldLimit >= 1) { "The field limit must be positive" }
     m.cancellation.checkpoint()
+    val cutTail = if (nonEmptyMay) Tail.NON_EMPTY_MAY else Tail.ANY
     when (c) {
         is Reach -> out.result(c)
         is FlowTree -> limitTrie(m, FlowAlgebra, c.root, fieldLimit,
             { out.result(if (it === c.root) c else c.withRoot(it)) },
-            { out.result(m.flowTree(c.base, Layer.DEMAND, ExclusionSet.Empty, c.markExclusion, it)) })
+            { out.result(m.flowTree(c.base, Layer.DEMAND, ExclusionSet.Empty, c.markExclusion, it, cutTail)) })
         is TaintTree -> limitTrie(m, m.taintAlg, c.root, fieldLimit,
             { out.result(if (it === c.root) c else c.withRoot(it)) },
-            { out.result(m.taintTree(c.base, Layer.DEMAND, it)) })
+            { out.result(m.taintTree(c.base, Layer.DEMAND, it, anyTail = cutTail)) })
     }
 }
 

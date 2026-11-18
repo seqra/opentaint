@@ -22,7 +22,8 @@ internal data class LoopObservedTarget(val row: TargetSummary, val member: Int, 
 /** Scope, complete original and exit are part of the observation, not only AP geometry. */
 internal sealed interface LoopEnclosingResult {
     data class Data(val scope: BlockScope, val exit: PortId, val original: PremiseKey,
-                    val member: LoopObservedMember) : LoopEnclosingResult
+                    val member: LoopObservedMember,
+                    val qualification: org.opentaint.dataflow.bidi.store.DemandQualification? = null) : LoopEnclosingResult
     data class Terminal(val scope: BlockScope, val exit: PortId, val original: PremiseKey,
                         val target: Target) : LoopEnclosingResult
 }
@@ -46,6 +47,7 @@ internal class LoopConsumerViews(
     val skipEmptyDataReplay: (PremiseKey, Facts, LoopObservedRecord) -> Boolean = { _, _, _ -> false },
     val precisionCursors: (Pattern) -> List<LoopPrecisionCursor>? = { null },
     val probeAdmissions: ((Facts, Set<LoopAdmissionDescriptor>) -> LoopAdmissionProbe)? = null,
+    val intersectRawEnclosing: ((PortId, PremiseKey, Facts) -> List<org.opentaint.dataflow.bidi.store.AdmittedSummary>)? = null,
 )
 
 /** Complete three-family observer. All scratch is local to one query invocation. */
@@ -74,6 +76,11 @@ internal class LoopConsumerObservation(
                 val adjusted = views.adjustEnclosingData(original, value) ?: return
                 if (!views.keepEnclosingData(exit, adjusted)) return
                 if (views.enclosingIsRoot && !views.isPublicSummaryBase(adjusted.base)) return
+                if (mode.demandRefinement) {
+                    for (kept in checkNotNull(views.intersectRawEnclosing)(exit, original, adjusted))
+                        full.addData(views.enclosingScope, exit, kept.premise, kept.facts, kept.qualification)
+                    return
+                }
                 val normalized = normalizeFlowSummary(ap, original, adjusted)
                 for (kept in views.intersectEnclosing(exit, normalized.premise, normalized.facts))
                     full.addData(views.enclosingScope, exit, normalized.premise, kept)
@@ -124,12 +131,14 @@ internal class LoopConsumerObservation(
 
 /** Union protection before freezing the complete result signature. */
 private class EnclosingResults(private val ops: ApOps) {
-    private data class Header(val scope: BlockScope, val exit: PortId, val original: PremiseKey)
+    private data class Header(val scope: BlockScope, val exit: PortId, val original: PremiseKey,
+                              val qualification: org.opentaint.dataflow.bidi.store.DemandQualification?)
     private val data = LinkedHashMap<Header, LoopObservedFacts>()
     private val targets = LinkedHashSet<LoopEnclosingResult.Terminal>()
 
-    fun addData(scope: BlockScope, exit: PortId, original: PremiseKey, value: Facts) {
-        data.getOrPut(Header(scope, exit, original)) { LoopObservedFacts(ops) }.add(value)
+    fun addData(scope: BlockScope, exit: PortId, original: PremiseKey, value: Facts,
+                qualification: org.opentaint.dataflow.bidi.store.DemandQualification? = null) {
+        data.getOrPut(Header(scope, exit, original, qualification)) { LoopObservedFacts(ops) }.add(value)
     }
 
     fun addTarget(scope: BlockScope, exit: PortId, original: PremiseKey, target: Target) {
@@ -139,7 +148,7 @@ private class EnclosingResults(private val ops: ApOps) {
     fun freeze(): Set<LoopEnclosingResult> = buildSet {
         for ((header, values) in data) for (member in values.freeze()) {
             ops.manager.cancellation.checkpoint()
-            add(LoopEnclosingResult.Data(header.scope, header.exit, header.original, member))
+            add(LoopEnclosingResult.Data(header.scope, header.exit, header.original, member, header.qualification))
         }
         addAll(targets)
     }

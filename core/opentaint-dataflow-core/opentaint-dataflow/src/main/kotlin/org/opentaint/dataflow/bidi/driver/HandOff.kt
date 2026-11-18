@@ -44,7 +44,7 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
         private fun toCompacted(config: RunConfig, result: RunResult<RunMethodAnalyzer>,
                                 shared: SharedObjects, counts: MutableMap<MethodKey, Int>): Pair<DemandStore, SeedIndex> {
             val start = TimeSource.Monotonic.markNow()
-            val compactor = HandoffCompactor(shared.ap)
+            val compactor = HandoffCompactor(shared.ap, exactPairsOnly = config.mode.demandRefinement)
             val origins = ArrayList<HandoffOrigin>()
             for (actor in result.analyzers) {
                 shared.cancellation.checkpoint()

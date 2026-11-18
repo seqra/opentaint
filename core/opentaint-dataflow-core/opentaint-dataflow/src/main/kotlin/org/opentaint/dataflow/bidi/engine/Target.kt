@@ -12,7 +12,10 @@ sealed interface Target {
     data object DemandTarget : Target
 }
 
-data class TargetSummary(val premise: PremiseKey, val target: Target)
+data class TargetSummary(
+    val premise: PremiseKey, val target: Target,
+    val qualification: org.opentaint.dataflow.bidi.store.DemandQualification? = null,
+)
 data class OwnedNormalTarget(val method: MethodKey, val premise: PremiseKey, val id: ReportId,
                              val scope: BlockScope? = null)
 typealias TargetBatch = List<TargetSummary>

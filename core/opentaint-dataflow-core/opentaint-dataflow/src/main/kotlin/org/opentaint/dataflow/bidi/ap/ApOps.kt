@@ -42,7 +42,7 @@ class ApOps(val manager: ApManager) {
     internal fun applyCompiledEdge(c: Facts, ce: CompiledEdge, edgeDemand: Boolean,
                                    staticAt: Int, mode: ApMode, out: ApOut,
                                    unchangedStaticInitial: InitialAp? = null) {
-        manager.transportProtection(c, out) { part, sink ->
+        manager.transportProtection(c, out, mode.demandRefinement) { part, sink ->
             applyCompiledEdgeRaw(part, ce, edgeDemand, staticAt, mode, sink, unchangedStaticInitial)
         }
     }
@@ -129,7 +129,7 @@ class ApOps(val manager: ApManager) {
             override fun result(f: Facts) = out.result(manager.selectedProtection(f, cl.mark?.let { manager.markSetOf(manager.marks.runtimeAtom(it, mode.markMode)) }))
             override fun markRequest(mark: TaintMark) = out.markRequest(mark)
         }
-        manager.transportProtection(c, sink) { part, target ->
+        manager.transportProtection(c, sink, mode.demandRefinement) { part, target ->
             cleanFacts(manager, part, premise, cl, mode, target.run1Policy(manager, mode))
         }
     }
@@ -154,9 +154,11 @@ class ApOps(val manager: ApManager) {
     }
 
     fun filter(c: Facts, f: TypeFilter): Facts? = filterFacts(manager, c, f)?.let { retainProtection(c, it, manager.cancellation) }
-    fun limit(c: Facts, fieldLimit: Int, out: ApOut) = manager.transportProtection(c, out) { part, sink ->
-        limitFacts(manager, part, fieldLimit, sink)
-    }
+    fun limit(c: Facts, fieldLimit: Int, out: ApOut) = limit(c, fieldLimit, false, out)
+    fun limit(c: Facts, fieldLimit: Int, nonEmptyMay: Boolean, out: ApOut) =
+        manager.transportProtection(c, out, nonEmptyMay) { part, sink ->
+            limitFacts(manager, part, fieldLimit, sink, nonEmptyMay)
+        }
     /** Pass the original initial only when the run-1 static catalog covers this check. */
     fun checkMark(c: Facts, p: Pattern, mode: ApMode,
                   unchangedStaticInitial: InitialAp? = null): MarkCheck =

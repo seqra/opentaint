@@ -4,19 +4,21 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 
 enum class Direction { FORWARD, BACKWARD }
 enum class Layer { NORMAL, DEMAND }
-enum class Tail { STAR, ANY, ANY_TAINT, EXACT }
+enum class Tail { STAR, ANY, ANY_TAINT, EXACT, NON_EMPTY_MAY }
 
+val Tail.isMay: Boolean get() = this == Tail.ANY || this == Tail.NON_EMPTY_MAY
 val Tail.isAny: Boolean get() = this == Tail.ANY || this == Tail.ANY_TAINT
 infix fun Layer.or(demand: Boolean): Layer = if (demand) Layer.DEMAND else this
 
 /** Run 1 is forward. Every run has a positive field limit. */
 class ApMode(val run1: Boolean, val direction: Direction, val fieldLimit: Int,
-             val markMode: MarkMode = MarkMode.FULL) {
+             val markMode: MarkMode = MarkMode.FULL, val demandRefinement: Boolean = false) {
     val restricted: Boolean get() = !run1
 
     init {
         require(fieldLimit >= 1) { "The field limit must be positive" }
         require(!run1 || direction == Direction.FORWARD) { "Run 1 must be forward" }
+        require(!demandRefinement || markMode == MarkMode.FULL) { "Demand refinement requires FULL marks" }
     }
 }
 

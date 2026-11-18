@@ -161,7 +161,7 @@ class RedesignedInitialEmissionTest {
         val paths=listOf(emptyList(),listOf(a),listOf(b),listOf(a,a),listOf(a,b),listOf(b,a),listOf(b,b))
         for(run in listOf(2,3)) {
             val q=policy(run,2)
-            val actuals=paths.flatMap { path -> Tail.entries.flatMap { tail ->
+            val actuals=paths.flatMap { path -> Tail.entries.filter { it != Tail.NON_EMPTY_MAY }.flatMap { tail ->
                 listOf(MarkSlot.STAR,t,u).map { pat(path,tail,it) }
             } }
             val demands=actuals.filter { it.fact.tail!=Tail.ANY_TAINT }

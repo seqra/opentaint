@@ -7,9 +7,10 @@ import java.util.ArrayDeque
 internal fun cleanPosAt(cl: Cleaner, tail: Tail, d: Int, admitsRest: Boolean): Pos =
     if (d < cl.pathArray.size) when (tail) {
         Tail.EXACT -> Pos.DISJOINT
-        Tail.STAR, Tail.ANY, Tail.ANY_TAINT -> if (admitsRest) Pos.PART else Pos.DISJOINT
+        Tail.STAR, Tail.ANY, Tail.NON_EMPTY_MAY, Tail.ANY_TAINT -> if (admitsRest) Pos.PART else Pos.DISJOINT
     } else when (tail) {
         Tail.EXACT -> if (cl.reach == CleanReach.BELOW) Pos.DISJOINT else Pos.INSIDE
+        Tail.NON_EMPTY_MAY -> if (cl.reach == CleanReach.EXACT) Pos.DISJOINT else Pos.INSIDE
         else -> if (cl.reach == CleanReach.AT_AND_BELOW) Pos.INSIDE else Pos.PART
     }
 
@@ -81,10 +82,8 @@ internal fun cleanSelectedFullMask(m: ApManager, c: Facts, cl: Cleaner, selected
     when (c) {
         is Reach -> out.result(c)
         is FlowTree -> {
-            // Selected nonstatic FLOW cleaning intentionally has no spatial test.
-            val mx = m.intern(c.markExclusion + selected)
             request(selected) // incoming mx does not remove requested memberships
-            out.result(m.flowTree(c.base, c.layer, c.exclusion, mx, c.root, c.tail))
+            FlowClean(m, c, cl, mode, out).maskSelected(m.intern(c.markExclusion + selected))
         }
         is TaintTree -> TaintClean(m, c, cl, mode, out, selected).run()
     }
@@ -98,10 +97,14 @@ private class FlowClean(private val m: ApManager, private val c: FlowTree, priva
     fun run() {
         val selected = cl.mark?.let { m.marks.runtimeAtom(it, mode.markMode) }
         if (selected != null) {
-            if (mode.run1 && c.base == STATIC) { selectedStatic(selected); return }
-            results.flow(c.layer, c.exclusion, m.intern(c.markExclusion + selected), c.root, c.tail)
-            if (mode.run1) out.markRequest(selected)
-            results.flush(out)
+            val mx = m.intern(c.markExclusion + selected)
+            if (mode.run1 && c.base == STATIC) {
+                if (maskSpatial(mx, suffixCone = false)) out.markRequest(selected)
+                results.flush(out)
+            } else {
+                if (mode.run1) out.markRequest(selected)
+                maskSelected(mx)
+            }
             return
         }
         FlowAlgebra.cleanSpine(c.root, cl.pathArray, cl.reach, 0, m.cancellation,
@@ -120,10 +123,16 @@ private class FlowClean(private val m: ApManager, private val c: FlowTree, priva
         results.flush(out.run1Policy(m, mode))
     }
 
-    /** A disjoint static field is not a mark-interest producer. Split selected
-     * leaves before changing mx so an unrelated sibling keeps its own header. */
-    private fun selectedStatic(selected: TaintMark) {
-        val mx = m.intern(c.markExclusion + selected)
+    fun maskSelected(mx: MarkExclusions) {
+        if (mx == c.markExclusion) { out.result(c); return }
+        if (mode.demandRefinement && c.base != STATIC) maskSpatial(mx, suffixCone = true)
+        else results.flow(c.layer, c.exclusion, mx, c.root, c.tail)
+        results.flush(out)
+    }
+
+    /** Split along the cleaner spine. Siblings outside the cleaned cone
+     * need no visit and keep their original header. */
+    private fun maskSpatial(mx: MarkExclusions, suffixCone: Boolean): Boolean {
         var matched = false
         fun add(node: FlowNode) {
             matched = true
@@ -131,8 +140,9 @@ private class FlowClean(private val m: ApManager, private val c: FlowTree, priva
         }
         val kept = FlowAlgebra.cleanSpine(c.root, cl.pathArray, cl.reach, 0, m.cancellation,
             { depth, leaf ->
-                if (leaf.isEmpty || cleanPosAt(cl, c.tail, depth,
-                        depth < cl.pathArray.size && c.exclusion.admits(cl.pathArray[depth])) == Pos.DISJOINT) leaf
+                val intersects = suffixCone || cleanPosAt(cl, c.tail, depth,
+                    depth < cl.pathArray.size && c.exclusion.admits(cl.pathArray[depth])) != Pos.DISJOINT
+                if (leaf.isEmpty || !intersects) leaf
                 else {
                     add(FlowAlgebra.prepend(m, m.path(cl.pathArray.copyOf(depth)), FlowAlgebra.LEAF_NODE))
                     FlowLeaf.NONE
@@ -143,8 +153,7 @@ private class FlowClean(private val m: ApManager, private val c: FlowTree, priva
                 null
             })
         kept?.let { results.flow(c.layer, c.exclusion, c.markExclusion, it, c.tail) }
-        if (matched) out.markRequest(selected)
-        results.flush(out)
+        return matched
     }
 
 
@@ -185,6 +194,10 @@ private class TaintClean(private val m: ApManager, private val c: TaintTree, pri
             Pos.PART -> {
                 val at = m.path(path.copyOf(d))
                 when {
+                    mode.demandRefinement && tail == Tail.ANY_TAINT && cl.reach == CleanReach.EXACT &&
+                        (selected != null || cl.mark != null) -> put(c.layer, at, tail, removed, c.exclusion)
+                    mode.demandRefinement && mode.restricted && c.layer == Layer.NORMAL &&
+                        tail == Tail.ANY_TAINT && cl.reach != CleanReach.EXACT -> putMustResidual(d, removed)
                     tail == Tail.ANY_TAINT && d == path.size - 1 && cl.reach != CleanReach.EXACT -> {
                         if (mode.run1) put(Layer.DEMAND, at, Tail.ANY_TAINT, removed)
                         else put(c.layer, at, Tail.ANY_TAINT, removed, c.exclusion.union(ExclusionSet.of(path[d])))
@@ -202,6 +215,17 @@ private class TaintClean(private val m: ApManager, private val c: TaintTree, pri
             }
         }
         return marks - removed
+    }
+
+    private fun putMustResidual(start: Int, marks: MarkSet) {
+        val path = cl.pathArray
+        for (depth in start until path.size) {
+            m.cancellation.checkpoint()
+            val old = if (depth == start) c.exclusion else ExclusionSet.Empty
+            put(Layer.NORMAL, m.path(path.copyOf(depth)), Tail.ANY_TAINT, marks,
+                old.union(ExclusionSet.of(path[depth])))
+        }
+        if (cl.reach == CleanReach.BELOW) put(Layer.NORMAL, cl.path, Tail.EXACT, marks)
     }
 
     private fun put(layer: Layer, at: PathNode?, tail: Tail, marks: MarkSet,

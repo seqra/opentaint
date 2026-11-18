@@ -165,7 +165,7 @@ class EdgeTreeEquivalenceTest {
                 flow(listOf(path), mx = marks(u.id), exclusion = ex(k)),
                 flow(listOf(path), demand = true, mx = marks(u.id)),
             )
-            for (fromTail in Tail.entries) for (toTail in Tail.entries) {
+            for (fromTail in Tail.entries - Tail.NON_EMPTY_MAY) for (toTail in Tail.entries) {
                 if (fromTail == Tail.EXACT && toTail == Tail.STAR) continue
                 val e = edge(fromTail, toTail,
                     exclusion = if (fromTail == Tail.STAR || toTail == Tail.STAR) ex(h) else ExclusionSet.Empty,
@@ -268,7 +268,7 @@ class EdgeTreeEquivalenceTest {
         for (q in listOf(p(), p(c))) {
             val input = flow(listOf(q), mx = marks(t.id), base = static)
             val initial = manager.initial(static, manager.path(q), Tail.STAR, ExclusionSet.Empty, star)
-            for (fromTail in Tail.entries) for (toTail in Tail.entries) {
+            for (fromTail in Tail.entries - Tail.NON_EMPTY_MAY) for (toTail in Tail.entries) {
                 if (fromTail == Tail.EXACT && toTail == Tail.STAR) continue
                 val e = edge(fromTail, toTail, fromPath = readPath, fromBase = static)
                 val out = check(input, e, premise = initial)

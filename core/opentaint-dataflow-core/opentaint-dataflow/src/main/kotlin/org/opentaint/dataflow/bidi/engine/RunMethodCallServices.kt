@@ -350,11 +350,11 @@ class RunMethodCallServices(core: BlockRunState) : MethodCallServices {
                 if (!row.premise.isZero) applyTarget(part, row, member, saved = true)
             }
             // Demand admission uses the complete original offer, never a live merge delta.
-            val initials = emitRestrictedInitials(core.config, core.ops, callee, part.added, statistics)
+            val (initials, possibleAdmissions) = prepareRestrictedOffer(core.config, core.ops, callee, part.added, statistics)
             if (initials.isEmpty()) continue
 
             // Register before a same-unit callee can publish. Current replay remains fresh-only.
-            core.runnerPort.subscribe(part)
+            core.runnerPort.subscribe(if (possibleAdmissions.isEmpty()) part else part.copy(possibleAdmissions = possibleAdmissions))
             core.ap.cancellation.checkpoint()
             // A duplicate live offer can still carry a complete initial packet.
             statistics?.initialPacketOffered(initials.size)
@@ -497,10 +497,14 @@ class RunMethodCallServices(core: BlockRunState) : MethodCallServices {
         if (!RuntimeDataDomain.packet(part.ref.premise, part.added) || !RuntimeDataDomain.premise(row.premise)) return
         val initial = row.premise.member(member)
         if (part.zeroOnly && !initial.isZero) return
-        val selected = core.ops.satisfying(part.added, initial, core.mode,
-            record = saved && initial.tail != Tail.ANY_TAINT) ?: return
-        val layer = if (part.ref.callerLayer == Layer.DEMAND || selected.layer == Layer.DEMAND ||
-            part.linkLayer == Layer.DEMAND) Layer.DEMAND else Layer.NORMAL
+        val layer = if (row.qualification != null) {
+            if (saved || !row.hasPossibleInput(initial, part.possibleAdmissions)) return
+            Layer.DEMAND
+        } else {
+            val selected = core.ops.satisfying(part.added, initial, core.mode,
+                record = saved && initial.tail != Tail.ANY_TAINT) ?: return
+            part.ref.callerLayer or (selected.layer == Layer.DEMAND || part.linkLayer == Layer.DEMAND)
+        }
         if (row.target is Target.NormalTarget && layer != Layer.NORMAL) return
         val binding = TargetBinding(part.ref, layer)
         if (row.premise is InitialAp) emitTargetBinding(listOf(binding), row.target)
@@ -663,7 +667,8 @@ class RunMethodCallServices(core: BlockRunState) : MethodCallServices {
         check(core.forward && !core.config.run1) { "Conjunctive summaries require a later forward run" }
         check(!part.zeroOnly && part.added !is Reach && !premise.member(member).isZero)
         val conclusion = checkNotNull(pub.conclusion as? TaintTree) { "A multi-premise publication is TAINT" }
-        val matched = matches(part, pub, member, core.ops, core.mode) ?: return
+        val matched = if (pub.qualification != null) part.added
+            else matches(part, pub, member, core.ops, core.mode) ?: return
         check(matched is TaintTree) { "An E6 member input is TAINT" }
         check(part.linkLayer == matched.layer) { "The matched fact and link have the same layer" }
         val store = checkNotNull(core.localServices.conjunctions) { "Forward calls need their local conjunction store" }

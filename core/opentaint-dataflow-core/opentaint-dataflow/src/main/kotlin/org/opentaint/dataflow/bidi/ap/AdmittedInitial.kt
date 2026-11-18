@@ -10,7 +10,7 @@ data class InitialEmission(val pattern: Pattern, val layer: Layer)
 
 private fun intrinsicInitialLayer(tail: Tail, mark: MarkSlot, zero: Boolean): Layer = when {
     zero -> Layer.NORMAL
-    tail == Tail.ANY -> Layer.DEMAND
+    tail.isMay -> Layer.DEMAND
     tail == Tail.STAR && mark is MarkSlot.Concrete -> Layer.DEMAND
     else -> Layer.NORMAL
 }

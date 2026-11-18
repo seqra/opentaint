@@ -71,7 +71,7 @@ class ApManager(val cancellation: Cancellation, refManager: RefManager = RefMana
         is FlowTree -> {
             val layer = if (mode.markMode == MarkMode.GROUP && f.base == STATIC) Layer.DEMAND else f.layer
             val mx = intern(f.markExclusion.projected(marks, mode.markMode))
-            val exclusion = if (f.tail == Tail.ANY) ExclusionSet.Empty else intern(f.exclusion)
+            val exclusion = if (f.tail.isMay) ExclusionSet.Empty else intern(f.exclusion)
             if (layer == f.layer && mx === f.markExclusion && exclusion === f.exclusion) f
             else flowTree(f.base, layer, exclusion, mx, f.root, f.tail)
         }
@@ -82,7 +82,7 @@ class ApManager(val cancellation: Cancellation, refManager: RefManager = RefMana
             }
             val layer = if (mode.markMode == MarkMode.GROUP) Layer.DEMAND else f.layer
             val tail = if (root.hasAny) f.anyTail else Tail.ANY_TAINT
-            val exclusion = if (tail == Tail.ANY || !root.hasAny) ExclusionSet.Empty else intern(f.exclusion)
+            val exclusion = if (tail.isMay || !root.hasAny) ExclusionSet.Empty else intern(f.exclusion)
             if (root === f.root && protected === f.nonSubsumable && layer == f.layer && tail == f.anyTail && exclusion === f.exclusion) f
             else taintTree(f.base, layer, root, exclusion, tail, protected)
         }
@@ -145,7 +145,7 @@ class ApManager(val cancellation: Cancellation, refManager: RefManager = RefMana
 
     fun flowTree(base: AccessPathBase, layer: Layer, exclusion: ExclusionSet, mx: MarkExclusions, root: FlowNode,
                  tail: Tail = if (layer == Layer.NORMAL) Tail.STAR else Tail.ANY): FlowTree =
-        FlowTree(base, layer, if (tail == Tail.ANY) ExclusionSet.Empty else intern(exclusion), intern(mx), root, tail)
+        FlowTree(base, layer, if (tail.isMay) ExclusionSet.Empty else intern(exclusion), intern(mx), root, tail)
 
     fun flowTree(base: AccessPathBase, layer: Layer, exclusion: ExclusionSet, mx: MarkSet, root: FlowNode,
                  tail: Tail = if (layer == Layer.NORMAL) Tail.STAR else Tail.ANY): FlowTree =
@@ -154,7 +154,7 @@ class ApManager(val cancellation: Cancellation, refManager: RefManager = RefMana
     fun taintTree(base: AccessPathBase, layer: Layer, root: TaintNode, exclusion: ExclusionSet = ExclusionSet.Empty,
                   anyTail: Tail = if (layer == Layer.NORMAL) Tail.ANY_TAINT else Tail.ANY,
                   nonSubsumable: TaintNode? = null): TaintTree =
-        TaintTree(base, layer, root, if (anyTail == Tail.ANY || !root.hasAny) ExclusionSet.Empty else intern(exclusion),
+        TaintTree(base, layer, root, if (anyTail.isMay || !root.hasAny) ExclusionSet.Empty else intern(exclusion),
             if (root.hasAny) anyTail else Tail.ANY_TAINT, nonSubsumable?.let { intersectTaintMask(it, root, cancellation) })
 
     fun taintLeaves(exact: MarkSet, any: MarkSet): TaintLeaves = taintAlg.leaves(exact, any)

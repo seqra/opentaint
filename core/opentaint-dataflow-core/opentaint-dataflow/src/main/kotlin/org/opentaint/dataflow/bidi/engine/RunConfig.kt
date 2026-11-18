@@ -23,6 +23,7 @@ class RunConfig(
     val run1MarkMode: MarkMode = readRun1MarkMode(),
     val fieldLimitSchedule: FieldLimitSchedule = FieldLimitSchedule.REPEAT_RUN1,
     val normalTargets: NormalTargetView = NormalTargetView.EMPTY,
+    demandRefinement: Boolean = false,
 ) {
     init {
         require(index >= 1) { "The run index must be positive" }
@@ -43,8 +44,10 @@ class RunConfig(
     val run1: Boolean get() = index == 1
     val restricted: Boolean get() = index > 1
     val mode: ApMode = ApMode(run1, direction, fieldLimit,
-        markMode = if (run1) run1MarkMode else MarkMode.FULL)
-    val admissionPolicy: RestrictedInitialPolicy = demand?.admissionPolicy(index, fieldLimit, direction) ?: RestrictedInitialPolicy()
+        markMode = if (run1) run1MarkMode else MarkMode.FULL,
+        demandRefinement = demandRefinement && run1MarkMode == MarkMode.FULL)
+    val admissionPolicy: RestrictedInitialPolicy = demand?.admissionPolicy(index, fieldLimit, direction,
+        revised = mode.demandRefinement) ?: RestrictedInitialPolicy()
     val seededSources: Boolean get() = restricted && direction == Direction.FORWARD
 }
 

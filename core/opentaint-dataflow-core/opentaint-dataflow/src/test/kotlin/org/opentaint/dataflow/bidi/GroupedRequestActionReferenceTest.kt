@@ -86,6 +86,7 @@ class GroupedRequestActionReferenceTest {
                         Tail.ANY_TAINT, Tail.EXACT -> concrete
                         Tail.STAR -> abstract
                         Tail.ANY -> concrete + abstract
+                        Tail.NON_EMPTY_MAY -> error("The legacy request matrix has no nonempty MAY tail")
                     }
                     for (mark in marks) for (exclusion in if (tail in listOf(Tail.STAR, Tail.ANY_TAINT))
                         listOf(ExclusionSet.Empty, ExclusionSet.of(cls), ExclusionSet.of(a)) else listOf(ExclusionSet.Empty)) {

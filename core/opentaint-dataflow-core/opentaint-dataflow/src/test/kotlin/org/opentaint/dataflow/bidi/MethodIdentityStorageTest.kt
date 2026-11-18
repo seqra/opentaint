@@ -17,7 +17,7 @@ class MethodIdentityStorageTest {
 
     @Test
     fun `identity admission matches scalar group state and every delta for all layers and protection orders`(): Unit = with(v) {
-        for (tail in Tail.entries) for (flow in listOf(false, true)) {
+        for (tail in Tail.entries - Tail.NON_EMPTY_MAY) for (flow in listOf(false, true)) {
             val key = premise(p(f, g), tail, if (flow) MarkSlot.STAR else mt)
             val initials = Layer.entries.filter { !(flow && tail == Tail.ANY && it == Layer.NORMAL) }.map {
                 initialImage(m, key, it, false)
