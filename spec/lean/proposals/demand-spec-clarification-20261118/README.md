@@ -46,3 +46,14 @@ for activating a certificate.
 Compile with the checked outputs from
 `demand-no-loss-audit-20261117`, `demand-refinement-spec-20261117` and
 `two-sided-field-cycle-20261117` on `LEAN_PATH`.
+
+[NativeOutputFilter.lean](NativeOutputFilter.lean) checks the analyzer
+rule in §4.1. The worklist's first relevant destinations are the
+input list. A touched base with no outgoing edge, conjunction, source
+or static operation has no effect in the modeled ordinary statement.
+The check rejects calls, boundaries and any live destination in the
+list. The module compiles independently on Lean 4.35.0.
+
+The broader service and terminal checks in `ServiceAndHandoff` remain
+proof models. The implementation in §7 uses existing analyzer operations
+and keeps live DEMAND replies and anonymous Targets.
