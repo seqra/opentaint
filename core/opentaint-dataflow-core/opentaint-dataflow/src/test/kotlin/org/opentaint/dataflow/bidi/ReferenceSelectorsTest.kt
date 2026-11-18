@@ -77,11 +77,8 @@ class ReferenceSelectorsTest {
         for (j in patterns) for (a in patterns) {
             val expectedCover = marked.getValue(j).containsAll(marked.getValue(a))
             val expectedOverlap = spatial.getValue(j).any { it in spatial.getValue(a) }
-            assertEquals(expectedCover, covers(j, a), "covers: j=$j a=$a")
-            assertEquals(expectedOverlap, overlap(j, a), "overlap: j=$j a=$a")
-            if (j.fact.tail == Tail.NON_EMPTY_MAY) continue // A selector cannot be an executable premise.
             val expectedApplicable = expectedCover &&
-                (j.fact.tail !in setOf(Tail.ANY, Tail.ANY_TAINT) || a.fact.tail in setOf(Tail.ANY, Tail.ANY_TAINT, Tail.NON_EMPTY_MAY))
+                (j.fact.tail !in setOf(Tail.ANY, Tail.ANY_TAINT) || a.fact.tail in setOf(Tail.ANY, Tail.ANY_TAINT))
             val expectedInside = spatial.getValue(a).containsAll(spatial.getValue(j)) &&
                 marks.getValue(j.fact.mark).containsAll(marks.getValue(a.fact.mark))
             val label = "j=$j a=$a"
@@ -100,7 +97,7 @@ class ReferenceSelectorsTest {
         val marks = patterns.map { it.fact.mark }.distinct().associateWith(universe::markedValues)
         for (j in patterns) for (a in patterns) {
             val expectedApplicable = marked.getValue(j).containsAll(marked.getValue(a)) &&
-                (j.fact.tail !in setOf(Tail.ANY, Tail.ANY_TAINT) || a.fact.tail in setOf(Tail.ANY, Tail.ANY_TAINT, Tail.NON_EMPTY_MAY))
+                (j.fact.tail !in setOf(Tail.ANY, Tail.ANY_TAINT) || a.fact.tail in setOf(Tail.ANY, Tail.ANY_TAINT))
             val expectedInside = spatial.getValue(a).containsAll(spatial.getValue(j)) &&
                 marks.getValue(j.fact.mark).containsAll(marks.getValue(a.fact.mark))
             val canonicalFlow = j.fact.tail == Tail.STAR && j.exclusion == ExclusionSet.Empty && j.fact.mark == MarkSlot.STAR
@@ -232,7 +229,7 @@ class ReferenceSelectorsTest {
             val expectedCover = deepUniverse.marked(j).containsAll(deepUniverse.marked(a))
             val expectedOverlap = jSpatial.any { it in aSpatial }
             val expectedApplicable = expectedCover &&
-                (j.fact.tail !in setOf(Tail.ANY, Tail.ANY_TAINT) || a.fact.tail in setOf(Tail.ANY, Tail.ANY_TAINT, Tail.NON_EMPTY_MAY))
+                (j.fact.tail !in setOf(Tail.ANY, Tail.ANY_TAINT) || a.fact.tail in setOf(Tail.ANY, Tail.ANY_TAINT))
             val expectedInside = aSpatial.containsAll(jSpatial) &&
                 deepUniverse.markedValues(j.fact.mark).containsAll(deepUniverse.markedValues(a.fact.mark))
             val canonicalFlow = j.fact.tail == Tail.STAR && j.exclusion == ExclusionSet.Empty && j.fact.mark == MarkSlot.STAR

@@ -31,7 +31,6 @@ class InitialAp internal constructor(
     init {
         check(base !is AccessPathBase.CleanerTemporary) { "A field-action temporary cannot be a premise" }
         check(mark !is MarkSlot.Star || mark.excluded.isEmpty) { "A premise cannot exclude marks" }
-        check(tail != Tail.NON_EMPTY_MAY) { "A nonempty MAY selector cannot be an executable premise" }
         check(tail == Tail.STAR || tail == Tail.ANY_TAINT || exclusion == ExclusionSet.Empty) {
             "Only a STAR or must premise can exclude fields"
         }

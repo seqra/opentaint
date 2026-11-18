@@ -213,7 +213,7 @@ internal object HistoricalF71 {
             s.startsWith(q) -> when (c.fact.tail) {
                 Tail.ANY -> c.copy(fact = c.fact.copy(path = s, tail = if (out.fact.tail == Tail.EXACT) Tail.EXACT else Tail.ANY))
                 Tail.STAR -> if (c.exclusion.admits(s.drop(q.size))) c else null
-                Tail.EXACT, Tail.NON_EMPTY_MAY -> null
+                Tail.EXACT -> null
                 Tail.ANY_TAINT -> if (c.exclusion.admits(s.drop(q.size))) c.copy(
                     fact = c.fact.copy(path = s, tail = if (out.fact.tail == Tail.EXACT) Tail.EXACT else Tail.ANY_TAINT),
                     exclusion = if (out.fact.tail == Tail.STAR) out.exclusion else ExclusionSet.Empty) else null

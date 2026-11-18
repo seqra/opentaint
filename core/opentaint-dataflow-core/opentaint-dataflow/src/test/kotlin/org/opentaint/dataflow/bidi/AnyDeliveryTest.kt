@@ -134,7 +134,6 @@ class AnyDeliveryTest {
                     Tail.ANY -> deepPaths
                     Tail.ANY_TAINT -> deepPaths.filter { j.exclusion.admits(it[1]) }
                     Tail.STAR -> error("This native matrix has concrete premises")
-                    Tail.NON_EMPTY_MAY -> error("A nonempty MAY tail cannot be a saved premise")
                 }
                 assertEquals(expectedPaths.map { Conclusion(PathFact(argument, it, Tail.ANY_TAINT, t), deepE, false) }.toSet(),
                     methodLeaves(f.ops, listOf(call.part.added)), j.toPattern().toString())

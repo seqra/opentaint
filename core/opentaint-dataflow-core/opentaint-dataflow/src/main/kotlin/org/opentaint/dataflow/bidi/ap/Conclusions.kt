@@ -30,8 +30,8 @@ class FlowTree internal constructor(
     init {
         check(base != AccessPathBase.Zero) { "Only REACH represents zero" }
         check(!root.isEmpty) { "A conclusion tree must be nonempty" }
-        check(!tail.isMay || layer == Layer.DEMAND) { "A MAY FLOW leaf is DEMAND" }
-        check(!tail.isMay || exclusion == ExclusionSet.Empty) { "A MAY leaf has empty E" }
+        check(tail != Tail.ANY || layer == Layer.DEMAND) { "An ANY FLOW leaf is DEMAND" }
+        check(tail != Tail.ANY || exclusion == ExclusionSet.Empty) { "An ANY leaf has Empty E" }
     }
     internal fun withRoot(root: FlowNode) = FlowTree(base, layer, exclusion, markExclusion, root, tail)
     override fun equals(other: Any?): Boolean = this === other || (other is FlowTree && layer == other.layer &&
@@ -52,9 +52,8 @@ class TaintTree internal constructor(
     init {
         check(base != AccessPathBase.Zero) { "Only REACH represents zero" }
         check(!root.isEmpty) { "A conclusion tree must be nonempty" }
-        check(anyTail == Tail.STAR || anyTail.isMay || anyTail == Tail.ANY_TAINT)
-        check(anyTail != Tail.NON_EMPTY_MAY || layer == Layer.DEMAND) { "A nonempty MAY leaf is DEMAND" }
-        check(exclusion == ExclusionSet.Empty || (!anyTail.isMay && root.hasAny)) {
+        check(anyTail == Tail.STAR || anyTail == Tail.ANY || anyTail == Tail.ANY_TAINT)
+        check(exclusion == ExclusionSet.Empty || (anyTail != Tail.ANY && root.hasAny)) {
             "Only STAR and must leaves have an exclusion"
         }
     }

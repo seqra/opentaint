@@ -9,7 +9,6 @@ import kotlin.time.Duration
 
 interface IterationPolicy {
     val fieldLimitSchedule: FieldLimitSchedule get() = FieldLimitSchedule.REPEAT_RUN1
-    val diagnosticDemandRefinement: Boolean get() = false
     fun fieldLimit(runIndex: Int): Int
 
     /** Called only after a complete forward run and the empty-demand stop check. */
@@ -69,21 +68,11 @@ object RunIndexLimits : IterationPolicy {
 /** The project entry point reads the setting once when it selects the policy. */
 fun configuredIncreasingLimits(
     value: String? = System.getProperty("opentaint.bidi.fieldLimitSchedule"),
-    diagnosticDemandRefinement: Boolean = java.lang.Boolean.getBoolean("opentaint.bidi.diagnosticDemandRefinement"),
-): IterationPolicy {
-    val schedule = when (value) {
-        null, "REPEAT_RUN1" -> IncreasingLimits
-        "RUN_INDEX" -> RunIndexLimits
-        else -> error("Invalid opentaint.bidi.fieldLimitSchedule=$value; use REPEAT_RUN1 or RUN_INDEX")
-    }
-    val selected = if (!diagnosticDemandRefinement) schedule else {
-        require(schedule === IncreasingLimits) { "The demand refinement comparison uses limits 1,1,2,..." }
-        object : IterationPolicy by schedule {
-            override val diagnosticDemandRefinement get() = true
-        }
-    }
-    return HardRunLimitPolicy(selected)
-}
+): IterationPolicy = HardRunLimitPolicy(when (value) {
+    null, "REPEAT_RUN1" -> IncreasingLimits
+    "RUN_INDEX" -> RunIndexLimits
+    else -> error("Invalid opentaint.bidi.fieldLimitSchedule=$value; use REPEAT_RUN1 or RUN_INDEX")
+})
 
 class FixedLimits(limits: List<Int>) : IterationPolicy {
     private val limits: List<Int> = Collections.unmodifiableList(ArrayList(limits))

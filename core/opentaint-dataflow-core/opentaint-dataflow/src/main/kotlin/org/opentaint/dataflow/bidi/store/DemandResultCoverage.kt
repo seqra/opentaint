@@ -7,22 +7,18 @@ import java.util.concurrent.atomic.AtomicLongArray
 
 internal enum class PreparedPlanFallback {
     RUN, STATIC_COMPLETION, SHARED_CARRY, EMPTY_TEMPLATES, OVERSIZE_TEMPLATES, ZERO_TEMPLATE, OCCURRENCE_BUDGET,
-    RAW_ENTRY,
 }
 
 /** Counters only. A query never retains its path trace in the frozen snapshot. */
 internal class DemandQueryStatistics : DemandScalarWork {
     private val values = AtomicLongArray(18)
-    private val tailCount = Tail.entries.size
-    private val admissionResults = tailCount + 1
-    private val admissions = AtomicLongArray(tailCount * tailCount * admissionResults)
+    private val admissions = AtomicLongArray(16 * 5)
     private val restriction = AtomicLongArray(11)
     private val depths = AtomicLongArray(5 * 17)
     private val sampleOrdinal = AtomicLong()
     private val rowSamples = ArrayDeque<String>()
     private val prepared = AtomicLongArray(12)
     private val tries = AtomicLongArray(3)
-    private val r08Overruns = AtomicLong()
     private val preparedFallbacks = AtomicLongArray(PreparedPlanFallback.entries.size)
     fun add(kind: Int, amount: Long = 1) { values.addAndGet(kind, amount) }
     fun preparedPlan(checked: Int, accepted: Int, programs: Int) {
@@ -50,10 +46,9 @@ internal class DemandQueryStatistics : DemandScalarWork {
         tries.addAndGet(2, candidates)
     }
     fun admission(entry: Pattern, actual: Pattern, emitted: Pattern?) {
-        val cell = (entry.fact.tail.ordinal * tailCount + actual.fact.tail.ordinal) * admissionResults
-        admissions.incrementAndGet(cell + (emitted?.fact?.tail?.ordinal ?: tailCount))
+        val cell = (entry.fact.tail.ordinal * 4 + actual.fact.tail.ordinal) * 5
+        admissions.incrementAndGet(cell + if (emitted == null) 4 else emitted.fact.tail.ordinal)
     }
-    fun r08Overrun() { r08Overruns.incrementAndGet() }
     /** DATA row/packet attempts, not unique facts or logical paths. Bin 16 includes all larger depths. */
     fun dataRow(raw: Facts, exit: Pattern, budget: Int, route: Int) {
         restriction.incrementAndGet(0)
@@ -139,13 +134,12 @@ internal class DemandQueryStatistics : DemandScalarWork {
                 append(" $name=${prepared[i]}")
             for ((i, name) in listOf("trieNodes", "trieProfiles", "trieCandidates").withIndex())
                 append(" $name=${tries[i]}")
-            append(" c2R08Overruns=${r08Overruns.get()}")
             for ((i, name) in listOf("Run", "StaticCompletion", "SharedCarry", "EmptyTemplates",
-                "OversizeTemplates", "ZeroTemplate", "OccurrenceBudget", "RawEntry").withIndex())
+                "OversizeTemplates", "ZeroTemplate", "OccurrenceBudget").withIndex())
                 append(" c5PlanFallback$name=${preparedFallbacks[i]}")
-            for (d in Tail.entries) for (a in Tail.entries) for (result in 0..tailCount) {
-                val count = admissions[(d.ordinal * tailCount + a.ordinal) * admissionResults + result]
-                if (count != 0L) append(" c2_${d}_${a}_${if (result == tailCount) "REJECT" else Tail.entries[result]}=$count")
+            for (d in Tail.entries) for (a in Tail.entries) for (result in 0..4) {
+                val count = admissions[(d.ordinal * 4 + a.ordinal) * 5 + result]
+                if (count != 0L) append(" c2_${d}_${a}_${if (result == 4) "REJECT" else Tail.entries[result]}=$count")
             }
             for ((i, name) in listOf("c5RowAttempts", "c5ExactRejectRows", "c5SelectedPackets", "c5LimitCalls",
                 "c5LimitResults", "c5CutInputs", "c5NormalToDemandPackets", "c5LocalRows", "c5VirtualRows",
@@ -197,22 +191,12 @@ internal class InitialDemandResults(private val ap: ApManager, private val polic
                                     private val actualLayer: Layer,
                                     statistics: DemandQueryStatistics? = null) {
     val initials = LinkedHashSet<AdmittedInitial>()
-    private val virtualCommands =
-        if (policy.revised) LinkedHashMap<Pair<Pattern, Pattern>, List<RawInitialCommand>>() else null
-    private val requiredVirtual = if (policy.revised) HashSet<Pair<Pattern, Pattern>>() else null
     private val emissions = InitialEmissionResults(policy, actualLayer, statistics)
     private val missing = HashSet<InitialEmission>()
-    val fullyCovered: Boolean get() = missing.isEmpty() && requiredVirtual?.isEmpty() != false
+    val fullyCovered: Boolean get() = missing.isEmpty()
 
     fun offer(entry: Pattern, actual: Pattern) {
         ap.cancellation.checkpoint()
-        val bound = virtualCommands
-        if (bound != null) {
-            val key = entry to actual
-            bound.getOrPut(key) { policy.rawCommands(entry, actual, actualLayer) }
-            checkNotNull(requiredVirtual).remove(key)
-            return
-        }
         emissions.offer(entry, actual) { emitted ->
             initials += AdmittedInitial(ap.initial(emitted.pattern), emitted.layer)
             missing.remove(emitted)
@@ -221,26 +205,10 @@ internal class InitialDemandResults(private val ap: ApManager, private val polic
     }
     fun has(entry: Pattern, actual: Pattern): Boolean {
         ap.cancellation.checkpoint()
-        val bound = virtualCommands
-        if (bound != null) return entry to actual in bound || policy.rawCommands(entry, actual, actualLayer).isEmpty()
         return policy.emitAdmissions(entry, actual, actualLayer).all { it in emissions.keys }
-    }
-
-    fun visitVirtualCommands(visit: (Pattern, Pattern, List<RawInitialCommand>) -> Unit) {
-        for ((key, commands) in checkNotNull(virtualCommands)) {
-            ap.cancellation.checkpoint()
-            visit(key.first, key.second, commands)
-        }
     }
     fun requireFamily(target: Pattern, flow: Boolean, actual: Pattern) {
         fun require(entry: Pattern) {
-            val bound = virtualCommands
-            if (bound != null) {
-                val key = entry to actual
-                if (key !in bound && policy.rawCommands(entry, actual, actualLayer).isNotEmpty())
-                    checkNotNull(requiredVirtual).add(key)
-                return
-            }
             for (potential in policy.emitAdmissions(entry, actual, actualLayer))
                 if (potential !in emissions.keys) missing += potential
         }

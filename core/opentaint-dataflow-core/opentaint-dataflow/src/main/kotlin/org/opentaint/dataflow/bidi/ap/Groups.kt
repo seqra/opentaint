@@ -155,13 +155,12 @@ class FlowGroup(private val m: ApManager, private val interner: TrieInterner<Flo
             m.cancellation.checkpoint()
             val marks = stored.markExclusion.isSubsetOf(t.markExclusion)
             val atOk = marks && when (stored.tail) {
-                Tail.ANY -> t.tail != Tail.NON_EMPTY_MAY
-                Tail.NON_EMPTY_MAY -> t.tail == Tail.NON_EMPTY_MAY
+                Tail.ANY -> true
                 Tail.STAR -> t.tail == Tail.STAR && stored.exclusion.isSubsetOf(t.exclusion)
                 Tail.EXACT -> t.tail == Tail.EXACT && stored.exclusion.isSubsetOf(t.exclusion)
                 Tail.ANY_TAINT -> t.tail == Tail.ANY_TAINT && stored.exclusion.isSubsetOf(t.exclusion)
             }
-            val belowOk = marks && (stored.tail == Tail.ANY && t.tail != Tail.NON_EMPTY_MAY ||
+            val belowOk = marks && (stored.tail == Tail.ANY ||
                 stored.tail == Tail.ANY_TAINT && t.tail == Tail.ANY_TAINT)
             root = FlowAlgebra.subtract(root, stored.root, FlowLeaf.NONE,
                 at = { if (atOk) it else FlowLeaf.NONE },
@@ -179,7 +178,7 @@ private fun admittedTree(
     exclusion: ExclusionSet = header.exclusion,
 ): TaintTree = TaintTree(
     header.base, header.layer, root,
-    if (!root.hasAny || header.anyTail.isMay) ExclusionSet.Empty else m.intern(exclusion),
+    if (!root.hasAny || header.anyTail == Tail.ANY) ExclusionSet.Empty else m.intern(exclusion),
     if (root.hasAny) header.anyTail else Tail.ANY_TAINT,
     includedMask,
 )
@@ -346,13 +345,13 @@ class TaintGroup(private val m: ApManager, private val interner: TrieInterner<Ta
             m.cancellation.checkpoint()
             val may = stored.anyTail == Tail.ANY
             val star = stored.anyTail == Tail.STAR
-            val coversAny = (may && t.anyTail != Tail.NON_EMPTY_MAY) || stored.anyTail == t.anyTail
+            val coversAny = may || stored.anyTail == t.anyTail
             val atAny = coversAny && (may || stored.exclusion.isSubsetOf(t.exclusion))
             remaining = alg.subtract(remaining, stored.root, TaintLeaves.EMPTY,
                 at = { alg.leaves(if (may) it.exact + it.any else it.exact,
                     if (atAny) it.any else MarkSet.EMPTY) },
                 below = { alg.leaves(if (may) it.any else MarkSet.EMPTY,
-                    if (coversAny && !star && stored.anyTail != Tail.NON_EMPTY_MAY) it.any else MarkSet.EMPTY) },
+                    if (coversAny && !star) it.any else MarkSet.EMPTY) },
                 admits = stored.exclusion::admits, cancellation = m.cancellation) ?: return null
         }
         return if (remaining === t.root) t else packet(t, remaining)

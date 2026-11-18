@@ -46,9 +46,8 @@ internal class SelectedDemandReference(
                 Tail.ANY -> selected(p, if (rejectMayForExact) Tail.STAR else Tail.ANY)
                 Tail.ANY_TAINT -> selected(p, Tail.ANY_TAINT, actual.exclusion)
                 Tail.STAR -> if (rejectMayForExact) selected(p,Tail.STAR) else null
-                Tail.NON_EMPTY_MAY -> null
             }
-            Tail.ANY_TAINT, Tail.NON_EMPTY_MAY -> null
+            Tail.ANY_TAINT -> null
         }
         if (q.startsWith(p) && d.tailAdmits(q.drop(p.size))) {
             if (d.fact.tail == Tail.STAR) return if (run == 2) selected(p, Tail.STAR, d.exclusion) else null
@@ -67,7 +66,7 @@ internal class SelectedDemandReference(
                 Tail.ANY_TAINT -> selected(p, Tail.ANY_TAINT, d.exclusion)
                 else -> null
             }
-            Tail.ANY_TAINT, Tail.NON_EMPTY_MAY -> null
+            Tail.ANY_TAINT -> null
         }
         return null
     }
@@ -130,7 +129,7 @@ internal class SelectedDemandReference(
             }
             q.startsWith(p) -> result.takeIf { exit.tailAdmits(q.drop(p.size)) }
             p.startsWith(q) -> when (result.fact.tail) {
-                Tail.EXACT, Tail.NON_EMPTY_MAY -> null
+                Tail.EXACT -> null
                 Tail.STAR -> result.takeIf { result.exclusion.admits(p.drop(q.size)) }
                 Tail.ANY, Tail.ANY_TAINT -> if (!result.exclusion.admits(p.drop(q.size))) null
                     else if (exit.fact.tail == Tail.EXACT) result.copy(fact = result.fact.copy(path = p, tail = Tail.EXACT),

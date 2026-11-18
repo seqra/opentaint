@@ -17,11 +17,9 @@ internal class CompiledEdge(
     val toExclusion: ExclusionSet = ExclusionSet.Empty,
 ) {
     internal val fromPathData = fromPath.copyOf()
-    internal val lastCountedFrom = fromPathData.indexOfLast { it.isCounted() }
     val fromPath: IntArray get() = fromPathData.copyOf()
 
     init {
-        check(fromTail != Tail.NON_EMPTY_MAY) { "A nonempty MAY selector cannot be an executable premise" }
         check(fromMark !is MarkSlot.Star || fromMark.excluded.isEmpty) { "S7: a premise cannot exclude marks" }
         check(toMark !is MarkSlot.Concrete || fromMark is MarkSlot.Concrete) { "S7: a concrete target needs a concrete premise" }
         check(fromTail != Tail.EXACT || toTail != Tail.STAR || fromMark is MarkSlot.Star) {
@@ -53,7 +51,7 @@ internal class EdgeApplication(private val m: ApManager, private val ce: Compile
     private val aboveTail = if (ce.toTail == Tail.EXACT) Tail.EXACT else Tail.ANY
     private val mustAboveTail = when (ce.toTail) {
         Tail.EXACT -> Tail.EXACT
-        Tail.ANY, Tail.NON_EMPTY_MAY -> ce.toTail
+        Tail.ANY -> Tail.ANY
         Tail.STAR, Tail.ANY_TAINT -> Tail.ANY_TAINT
     }
     private val aboveExclusion = if (ce.toTail == Tail.ANY_TAINT) ce.toExclusion else ce.exclusion
@@ -76,8 +74,7 @@ internal class EdgeApplication(private val m: ApManager, private val ce: Compile
         val mx = gate.flowMarks(c.markExclusion)
         val exact = c.tail == Tail.EXACT
         val must = c.tail == Tail.ANY_TAINT
-        val maskedSuffix = !c.tail.isMay
-        val matchedHeadAllowsPoint = !excludesExactPoint(c.tail, ce.fromPathData.size)
+        val normal = c.tail != Tail.ANY
         val writeKeep = ce.fromBase == ce.toBase && ce.fromTail == Tail.STAR &&
             ce.toTail == Tail.STAR && ce.fromPathData.contentEquals(ce.toPath?.toIntArray() ?: EMPTY_PATH) &&
             ce.exclusion != ExclusionSet.Empty
@@ -85,19 +82,15 @@ internal class EdgeApplication(private val m: ApManager, private val ce: Compile
         val unchanged = if (mode.run1 && mode.markMode == MarkMode.FULL) unchangedStaticFlowPath(c, unchangedStaticInitial) else null
         val u = c.root.walk(ce.fromPathData) { d, n ->
             m.cancellation.checkpoint()
-            if (n.leaf.isEmpty || excludesExactPoint(c.tail, d) ||
-                (maskedSuffix && !c.exclusion.admits(ce.fromPathData[d]))) return@walk
-            if (maskedSuffix && d == staticAt) {
+            if (n.leaf.isEmpty || (normal && !c.exclusion.admits(ce.fromPathData[d]))) return@walk
+            if (normal && d == staticAt) {
                 // Prescan catalog emission replaces the old position request. This parent gives no fact.
-            } else if (!exact || (writeKeep && !mode.demandRefinement)) flowHit(mx, c, { !sameFlowLeaf(m, unchanged, ce.fromPathData, d) }) {
+            } else if (!exact || writeKeep) flowHit(mx, c, { !sameFlowLeaf(m, unchanged, ce.fromPathData, d) }) {
                 if (must) {
-                    val tail = if (layer == Layer.DEMAND && ce.toTail != Tail.NON_EMPTY_MAY) Tail.ANY else mustAboveTail
-                    results.flow(if (tail.isMay) Layer.DEMAND else layer,
-                        if (tail.isMay || tail == Tail.EXACT) ExclusionSet.Empty else aboveExclusion, it, flagAtTarget(), tail)
-                } else {
-                    val tail = uncertainTarget(c.tail, d)
-                    results.flow(Layer.DEMAND, ExclusionSet.Empty, it, flagAtTarget(), tail)
-                }
+                    val tail = if (layer == Layer.DEMAND) Tail.ANY else mustAboveTail
+                    results.flow(if (tail == Tail.ANY) Layer.DEMAND else layer,
+                        if (tail == Tail.ANY || tail == Tail.EXACT) ExclusionSet.Empty else aboveExclusion, it, flagAtTarget(), tail)
+                } else results.flow(Layer.DEMAND, ExclusionSet.Empty, it, flagAtTarget())
             }
         } ?: return
         val kids = FlowAlgebra.retainChildren(u, m.cancellation, admitsRest)
@@ -108,27 +101,27 @@ internal class EdgeApplication(private val m: ApManager, private val ce: Compile
                         results.flow(Layer.DEMAND, ExclusionSet.Empty, it, FlowAlgebra.prepend(m, ce.toPath, kids), Tail.ANY)
                     else results.flow(layer, c.exclusion, it, FlowAlgebra.prepend(m, ce.toPath, kids), c.tail)
                 }
-                if (matchedHeadAllowsPoint && !u.leaf.isEmpty) flowHit(mx, c, {
+                if (!u.leaf.isEmpty) flowHit(mx, c, {
                     !sameFlowLeaf(m, unchanged, ce.fromPathData, ce.fromPathData.size)
                 }) {
-                    if (mode.run1 && ce.exclusion != ExclusionSet.Empty && !c.tail.isMay)
+                    if (mode.run1 && ce.exclusion != ExclusionSet.Empty && c.tail != Tail.ANY)
                         results.flow(Layer.DEMAND, ExclusionSet.Empty, it, flagAtTarget(), c.tail)
                     else if (layer == Layer.DEMAND && (exact || must))
                         results.flow(Layer.DEMAND, ExclusionSet.Empty, it, flagAtTarget(), Tail.ANY)
                     else results.flow(layer, c.exclusion.union(ce.exclusion), it, flagAtTarget(), c.tail)
                 }
             }
-            else -> if (kids != null || (matchedHeadAllowsPoint && !u.leaf.isEmpty)) flowHit(mx, c, {
-                (matchedHeadAllowsPoint && !u.leaf.isEmpty && !sameFlowLeaf(m, unchanged, ce.fromPathData, ce.fromPathData.size)) ||
+            else -> if (kids != null || !u.leaf.isEmpty) flowHit(mx, c, {
+                (!u.leaf.isEmpty && !sameFlowLeaf(m, unchanged, ce.fromPathData, ce.fromPathData.size)) ||
                     (kids != null && changedFlowSubtree(m, kids, ce.fromPathData, unchanged))
             }) {
-                val tail = if (layer == Layer.DEMAND && !ce.toTail.isMay) Tail.ANY else ce.toTail
+                val tail = if (layer == Layer.DEMAND && ce.toTail != Tail.ANY) Tail.ANY else ce.toTail
                 val exclusion = when (tail) {
                     Tail.ANY_TAINT -> ce.toExclusion
                     Tail.EXACT -> ExclusionSet.Empty
                     else -> ExclusionSet.Empty
                 }
-                results.flow(if (tail.isMay) Layer.DEMAND else layer, exclusion, it, flagAtTarget(), tail)
+                results.flow(if (tail == Tail.ANY) Layer.DEMAND else layer, exclusion, it, flagAtTarget(), tail)
             }
         }
     }
@@ -145,10 +138,10 @@ internal class EdgeApplication(private val m: ApManager, private val ce: Compile
         val e = c.exclusion
         val u = c.root.walk(ce.fromPathData) { d, n ->
             m.cancellation.checkpoint()
-            if (!e.admits(ce.fromPathData[d]) || excludesExactPoint(c.anyTail, d)) return@walk
+            if (!e.admits(ce.fromPathData[d])) return@walk
             gate.taintMarks(n.leaf.any)?.let {
                 if (must) put(layer, mustAboveTail, it, aboveExclusion)
-                else put(Layer.DEMAND, uncertainTarget(c.anyTail, d, aboveTail), it)
+                else put(Layer.DEMAND, aboveTail, it)
             }
         } ?: return
         when (ce.toTail) {
@@ -157,29 +150,27 @@ internal class EdgeApplication(private val m: ApManager, private val ce: Compile
                     gateTree(kids)?.let { results.taint(layer, m.taintAlg.prepend(m, ce.toPath, it), e, c.anyTail) }
                 }
                 gate.taintMarks(u.leaf.exact)?.let { put(layer, Tail.EXACT, it) }
-                val matched = if (excludesExactPoint(c.anyTail, ce.fromPathData.size)) MarkSet.EMPTY else u.leaf.any
-                gate.taintMarks(matched)?.let {
+                gate.taintMarks(u.leaf.any)?.let {
                     when (c.anyTail) {
                         Tail.STAR, Tail.ANY_TAINT -> put(layer, c.anyTail, it, e.union(ce.exclusion))
-                        Tail.ANY, Tail.NON_EMPTY_MAY -> put(Layer.DEMAND, c.anyTail, it)
+                        Tail.ANY -> put(Layer.DEMAND, Tail.ANY, it)
                         else -> error("Nonexact TAINT header")
                     }
                 }
             }
             else -> {
                 val all = m.taintAlg.foldLeaves(u, m.cancellation, admitsRest)
-                val marks = if (c.anyTail == Tail.NON_EMPTY_MAY && ce.fromTail == Tail.EXACT) all.exact else all.exact + all.any
-                gate.taintMarks(marks)?.let { put(layer, ce.toTail, it, ce.toExclusion) }
+                gate.taintMarks(all.exact + all.any)?.let { put(layer, ce.toTail, it, ce.toExclusion) }
             }
         }
     }
 
     private fun put(layer: Layer, tail: Tail, marks: MarkSet, exclusion: ExclusionSet = ExclusionSet.Empty) {
-        val resultLayer = if (tail.isMay) Layer.DEMAND else layer
+        val resultLayer = if (tail == Tail.ANY) Layer.DEMAND else layer
         if (ce.toBase == AccessPathBase.Zero) { results.reach(resultLayer); return }
         val leaf = when (tail) {
             Tail.EXACT -> m.taintLeaves(marks, MarkSet.EMPTY)
-            Tail.STAR, Tail.ANY, Tail.NON_EMPTY_MAY, Tail.ANY_TAINT -> m.taintLeaves(MarkSet.EMPTY, marks)
+            Tail.STAR, Tail.ANY, Tail.ANY_TAINT -> m.taintLeaves(MarkSet.EMPTY, marks)
         }
         val hasExclusion = tail == Tail.STAR || tail == Tail.ANY_TAINT
         val cover = mode.run1 && hasExclusion && exclusion != ExclusionSet.Empty
@@ -187,17 +178,6 @@ internal class EdgeApplication(private val m: ApManager, private val ce: Compile
             m.taintAlg.prepend(m, ce.toPath, m.taintAlg.leafNode(leaf)),
             if (cover || !hasExclusion) ExclusionSet.Empty else exclusion,
             if (tail == Tail.EXACT) Tail.ANY_TAINT else tail)
-    }
-
-    private fun excludesExactPoint(actualTail: Tail, matchedDepth: Int): Boolean =
-        actualTail == Tail.NON_EMPTY_MAY && ce.fromTail == Tail.EXACT && matchedDepth > ce.lastCountedFrom
-
-    private fun uncertainTarget(actualTail: Tail, matchedDepth: Int, fallback: Tail = Tail.ANY): Tail {
-        if (ce.toTail == Tail.NON_EMPTY_MAY) return Tail.NON_EMPTY_MAY
-        // Consuming only an uncounted anchor leaves the nonempty suffix.
-        if (actualTail == Tail.NON_EMPTY_MAY && matchedDepth > ce.lastCountedFrom && ce.toTail == Tail.STAR)
-            return Tail.NON_EMPTY_MAY
-        return fallback
     }
 
     private fun gateTree(n: TaintNode): TaintNode? =

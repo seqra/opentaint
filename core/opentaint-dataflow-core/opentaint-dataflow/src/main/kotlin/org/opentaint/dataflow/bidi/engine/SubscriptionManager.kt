@@ -59,14 +59,12 @@ class SubscriptionManager(port: SubscriptionPort) {
         val part = admitted.fresh
         for ((pub, member) in storage.candidates(part, port.config.mode)) {
             port.ops.manager.cancellation.checkpoint()
-            if (!admitted.qualifiersOnly || pub.qualification != null) applyMatch(part, pub, member)
+            applyMatch(part, pub, member)
         }
         for ((row, member) in storage.targetCandidates(part, port.config.mode)) {
             port.ops.manager.cancellation.checkpoint()
-            if (!admitted.qualifiersOnly || row.qualification != null)
-                port.applier(part.caller).applyTarget(part, row, member)
+            port.applier(part.caller).applyTarget(part, row, member)
         }
-        if (admitted.qualifiersOnly) return
         if (isStaticControl(part)) for ((row, member) in storage.staticTargetCandidates()) {
             port.ops.manager.cancellation.checkpoint()
             port.applier(part.caller).applyStaticTarget(part, row, member)
@@ -230,12 +228,9 @@ class SubscriptionManager(port: SubscriptionPort) {
 
     private fun applyMatch(part: Subscription, pub: Publication, member: Int) {
         val port = active()
-        if (pub.qualification == null) {
-            val added = matches(part, pub, member, port.ops, port.config.mode) ?: return
-            port.applier(part.caller).applySummary(part.copy(added = added), pub, member)
-        } else for (added in possibleSummaryInputs(port.ops.manager, part.added, pub, member, part.possibleAdmissions)) {
-            port.applier(part.caller).applySummary(part.copy(added = added, linkLayer = Layer.DEMAND), pub, member)
-        }
+        val added = matches(part, pub, member, port.ops, port.config.mode) ?: return
+        port.ops.manager.cancellation.checkpoint()
+        port.applier(part.caller).applySummary(part.copy(added = added), pub, member)
         port.ops.manager.cancellation.checkpoint()
     }
 

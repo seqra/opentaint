@@ -6,10 +6,7 @@ import org.opentaint.dataflow.bidi.ap.*
 /** C5 retains the correlated source and target for every labelled path. */
 internal class StaticPairLookup(private val ap: ApManager, private val completion: FrozenCompletion,
                                 private val stats: DemandQueryStatistics?,
-                                private val allowFlowCompanion: Boolean,
                                 private val canStoreInitial: (Pattern, InitialAp) -> Boolean) {
-    constructor(ap: ApManager, completion: FrozenCompletion, stats: DemandQueryStatistics?,
-                canStoreInitial: (Pattern, InitialAp) -> Boolean) : this(ap, completion, stats, false, canStoreInitial)
     /** The terminal has no AP output. Each visited input is one complete path's origin. */
     fun walkTargetOrigins(method: MethodKey, visible: Boolean, offer: (Pattern) -> Boolean): Boolean {
         if (visible) stats?.add(11)
@@ -49,8 +46,7 @@ internal class StaticPairLookup(private val ap: ApManager, private val completio
         if (visible) stats?.add(11)
         val view = if (visible) completion.visible(method) else completion.local(method)
         original.forEachMember { member ->
-            val targetLabels = if (allowFlowCompanion && member.isFlow) StaticLabelSelection.All
-                else outputCovering(member.toPattern(), ap.marks)
+            val targetLabels = outputCovering(member.toPattern(), ap.marks)
             val fullOriginal = (targetLabels as? StaticLabelSelection.OutputCovers)?.actual is StaticMarkSelector.Full
             val targetQuery = StaticRowQuery(targetLabels) { right -> mappedRightMayEmit(member, right, fullOriginal) }
             val keepTarget = StaticCandidateFilter { _, to, marks -> mayKeep(member, to, marks) }

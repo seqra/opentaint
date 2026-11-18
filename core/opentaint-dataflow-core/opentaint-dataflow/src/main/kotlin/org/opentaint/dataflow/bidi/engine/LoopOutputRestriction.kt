@@ -3,7 +3,6 @@ package org.opentaint.dataflow.bidi.engine
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.store.ExactDemandResults
 import org.opentaint.dataflow.bidi.store.BlockScope
-import org.opentaint.dataflow.bidi.store.BoundAdmission
 import java.util.Collections
 
 /** A frozen query result. R contains the complete scoped/port-labelled enclosing result key.
@@ -34,7 +33,7 @@ internal class LoopObservation<R>(
 
 internal enum class LoopAdmissionFamily { ADJACENT, REPEAT }
 internal data class LoopLabelledAdmission(val scope: BlockScope, val family: LoopAdmissionFamily,
-                                         val admitted: AdmittedInitial, val binding: BoundAdmission? = null)
+                                         val admitted: AdmittedInitial)
 
 private fun <T> frozenSet(values: Collection<T>): Set<T> =
     Collections.unmodifiableSet(LinkedHashSet(values))
@@ -109,7 +108,7 @@ internal class LoopRestrictionStatistics {
  * captures the complete enclosing original, actual output port and immutable scope views in
  * [observe]. Restriction neither rewrites that context nor publishes a result.
  */
-internal class LoopOutputRestriction(private val ops: ApOps, private val nonEmptyMay: Boolean = false) {
+internal class LoopOutputRestriction(private val ops: ApOps) {
     val statistics = LoopRestrictionStatistics()
 
     fun <R> restrict(
@@ -177,7 +176,7 @@ internal class LoopOutputRestriction(private val ops: ApOps, private val nonEmpt
             ops.manager.cancellation.checkpoint()
             statistics.trials++
             var candidate: Facts? = null
-            ops.limit(raw, budget, nonEmptyMay, object : ApOut {
+            ops.limit(raw, budget, object : ApOut {
                 override fun result(f: Facts) {
                     check(candidate == null) { "A scalar proper-prefix limit must have one output" }
                     candidate = f

@@ -11,14 +11,11 @@ import org.opentaint.dataflow.bidi.ap.Reach
 import org.opentaint.dataflow.bidi.ap.STATIC
 import org.opentaint.dataflow.bidi.ap.forEachLeafPosition
 import org.opentaint.dataflow.bidi.store.PathTrie
-import org.opentaint.dataflow.bidi.store.BoundAdmission
 import java.util.BitSet
 
 /** The same table used by live local delivery; it has no callback or runtime owner. */
 internal data class LocalInputKey(val link: LocalLink, val group: GroupKey)
-internal data class LocalInputValue(
-    val link: LocalLink, var value: Facts, var possibleAdmissions: Set<BoundAdmission> = emptySet(),
-)
+internal data class LocalInputValue(val link: LocalLink, var value: Facts)
 internal data class LocalInputCandidate(val input: LocalInputValue, val member: Int)
 internal class LocalInputDirectory(private val ops: ApOps? = null) {
     private val rows = LinkedHashMap<LocalInputKey, LocalInputValue>()
@@ -62,7 +59,7 @@ internal class LocalInputDirectory(private val ops: ApOps? = null) {
         val result = ArrayList<LocalInputCandidate>()
         for (handle in selected.keys.sorted()) {
             val current = ordered[handle]
-            val snapshot = current.copy()
+            val snapshot = LocalInputValue(current.link, current.value)
             val members = selected.getValue(handle)
             var member = members.nextSetBit(0)
             while (member >= 0) {

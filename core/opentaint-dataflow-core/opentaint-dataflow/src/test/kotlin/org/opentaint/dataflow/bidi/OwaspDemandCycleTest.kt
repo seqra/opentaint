@@ -82,21 +82,6 @@ class OwaspDemandCycleTest {
         } }.toSet()
 
     @Test
-    fun `revised native driver retains the named storage observation`() {
-        DriverFixtures().use { f ->
-            val case = build(f, withStorageRoutes = true)
-            val policy = configuredIncreasingLimits("REPEAT_RUN1", diagnosticDemandRefinement = true)
-            val driver = f.driver(policy, budget = 15.seconds, run1MarkMode = MarkMode.FULL)
-            val report = driver.analyze(listOf(case.root))
-
-            assertTrue(f.configs.size >= 3)
-            assertTrue(f.configs.all { it.mode.demandRefinement })
-            assertTrue(f.results.all { it.status == RunStatus.COMPLETE })
-            assertEquals("OWASP model sink", report.entries.single().descriptor.key.ruleId)
-        }
-    }
-
-    @Test
     fun `named storage routes refine once and retain the sink without a policy cap`(): Unit {
         DriverFixtures().use { f ->
             val case = build(f, withStorageRoutes = true)

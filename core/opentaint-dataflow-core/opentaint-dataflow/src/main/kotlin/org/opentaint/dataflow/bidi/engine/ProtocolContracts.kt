@@ -7,8 +7,6 @@ import org.opentaint.dataflow.bidi.ap.PremiseKey
 import org.opentaint.dataflow.bidi.ap.Reach
 import org.opentaint.dataflow.bidi.ap.RecordLeafView
 import org.opentaint.dataflow.bidi.store.CallerRef
-import org.opentaint.dataflow.bidi.store.BoundAdmission
-import org.opentaint.dataflow.bidi.store.DemandQualification
 import org.opentaint.dataflow.bidi.store.Record
 import org.opentaint.ir.api.common.cfg.CommonInst
 
@@ -24,11 +22,7 @@ data class EdgeDelta(val premise: PremiseKey, val node: CommonInst, val facts: F
 enum class Cut { STATEMENT, CALL, ENTRY_RULES, EXIT_RULES, SEED }
 
 /** Published summary content keeps its canonical keys and the unchanged fact object. */
-data class Publication(
-    val premise: PremiseKey,
-    val conclusion: Facts,
-    val qualification: DemandQualification? = null,
-) {
+data class Publication(val premise: PremiseKey, val conclusion: Facts) {
     val layer: Layer get() = conclusion.layer
 }
 
@@ -39,7 +33,6 @@ data class Subscription(
     val linkLayer: Layer,
     val added: Facts,
     val zeroOnly: Boolean = false,
-    val possibleAdmissions: Set<BoundAdmission> = emptySet(),
 ) {
     val caller: MethodKey get() = ref.caller
 

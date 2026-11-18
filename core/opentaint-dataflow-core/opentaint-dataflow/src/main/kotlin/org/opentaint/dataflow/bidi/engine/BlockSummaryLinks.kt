@@ -80,7 +80,7 @@ internal class BlockSummaryLinks(
     val hasPending: Boolean get() = deliveries.isNotEmpty()
     val inputGroups: Int get() = inputs.size
 
-    fun offer(link: LocalLink, actual: Facts, possibleAdmissions: Set<BoundAdmission> = emptySet()) {
+    fun offer(link: LocalLink, actual: Facts) {
         checkLive()
         matchStatistics?.let { it.offers++ }
         require(link.child == scope)
@@ -89,28 +89,16 @@ internal class BlockSummaryLinks(
         require(actual.layer == link.layer)
         val key = InputKey(link, actual.groupKey)
         val old = inputs[key]
-        val boundDelta = if (old == null || possibleAdmissions.isEmpty()) possibleAdmissions
-            else possibleAdmissions - old.possibleAdmissions
         val fresh = if (old == null) {
             matchStatistics?.let { it.freshInputGroups++ }
-            inputs[key] = Input(link, actual, possibleAdmissions)
+            inputs[key] = Input(link, actual)
             actual
         } else {
             val (merged, delta) = ap.mergeAddDelta(old.value, actual)
-            if (delta != null) old.value = merged
-            if (boundDelta.isNotEmpty()) old.possibleAdmissions += boundDelta
+            if (delta == null) return
+            old.value = merged
             delta
         }
-        if (boundDelta.isNotEmpty()) {
-            val offered = Input(link, actual, boundDelta)
-            for ((exit, index) in publications)
-                for ((row, member) in index.candidates(link.original, actual, mode))
-                    if (row.qualification != null) queueData(offered, exit, row, member, HashMap())
-            for ((row, member) in targets.targetCandidates(link.original, actual, mode))
-                if (row.hasPossibleInput(row.premise.member(member), boundDelta))
-                    deliveries += Delivery.Terminal(offered, row, member, saved = false)
-        }
-        if (fresh == null) return
         matchStatistics?.let { it.freshInputDeltas++ }
         inputs.recordDelta(key, fresh)
         // Deliver the fresh packet only. The standing row retains the current union.
@@ -118,12 +106,12 @@ internal class BlockSummaryLinks(
         val matches = HashMap<InitialAp, MatchedInput?>()
         for ((exit, index) in publications) {
             for ((row, member) in index.candidates(link.original, fresh, mode))
-                if (row.qualification == null) queueData(offered, exit, row, member, matches)
+                queueData(offered, exit, row, member, matches)
             if (isStaticControl(offered)) for ((row, member) in index.staticCandidates())
                 queueData(offered, exit, row, member, matches)
         }
         for ((row, member) in targets.targetCandidates(link.original, fresh, mode))
-            if (row.qualification == null) deliveries += Delivery.Terminal(offered, row, member, saved = false)
+            deliveries += Delivery.Terminal(offered, row, member, saved = false)
         if (isStaticControl(offered)) for ((row, member) in targets.staticTargetCandidates())
             deliveries += Delivery.Terminal(offered, row, member, saved = false)
     }
@@ -153,14 +141,10 @@ internal class BlockSummaryLinks(
         }
         for (row in fresh) for ((input, member) in inputs.candidates(row.premise, mode)) {
             ap.cancellation.checkpoint()
-            if (row.qualification != null) {
-                if (row.hasPossibleInput(row.premise.member(member), input.possibleAdmissions))
-                    deliveries += Delivery.Terminal(input, row, member, saved = false)
-            } else if (isStaticControl(input) && row.premise.member(member).base == STATIC ||
+            if (isStaticControl(input) && row.premise.member(member).base == STATIC ||
                 application.targetArmLayer(input.value, row.premise.member(member), row.target,
-                    saved = false, offeredLayer = input.link.layer) != null) {
+                    saved = false, offeredLayer = input.link.layer) != null)
                 deliveries += Delivery.Terminal(input, row, member, saved = false)
-            }
         }
     }
 
@@ -170,11 +154,6 @@ internal class BlockSummaryLinks(
     private fun queueData(offered: Input, exit: PortId, row: Publication, member: Int,
                           cache: MutableMap<InitialAp, MatchedInput?>) {
         matchStatistics?.let { it.candidatePairs++ }
-        if (row.qualification != null) {
-            for (matched in possibleSummaryInputs(ap, offered.value, row, member, offered.possibleAdmissions))
-                deliveries += Delivery.Data(offered, exit, row, member, matched)
-            return
-        }
         val initial = row.premise.member(member)
         if (!cache.containsKey(initial)) {
             val input = if (isStaticControl(offered) && initial.base == STATIC)
@@ -256,10 +235,7 @@ internal class BlockSummaryLinks(
         val (offered, row, member, saved) = delivery
         val input = if (isStaticControl(offered) && row.premise.member(member).base == STATIC)
             suppliedStaticInput(offered, row.premise.member(member)) else offered
-        val layer = if (row.qualification != null) {
-            if (saved || !row.hasPossibleInput(row.premise.member(member), input.possibleAdmissions)) return
-            Layer.DEMAND
-        } else application.targetArmLayer(input.value, row.premise.member(member), row.target,
+        val layer = application.targetArmLayer(input.value, row.premise.member(member), row.target,
             saved, input.link.layer) ?: return
         val binding = TerminalInput(input.link, layer)
         val combinations = when (val premise = row.premise) {

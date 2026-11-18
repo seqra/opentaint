@@ -12,12 +12,12 @@ internal fun validateRun2StaticFullInput(ap: ApManager, actual: Pattern, fieldLi
     val fact = actual.fact
     val location = if (field) fact.path.drop(1).all { it.isCounted() } &&
         fact.path.count { it.isCounted() } <= fieldLimit &&
-        (fact.tail == Tail.EXACT || fact.tail.isMay || fact.tail == Tail.STAR)
+        (fact.tail == Tail.EXACT || fact.tail == Tail.ANY || fact.tail == Tail.STAR)
     else fact.path.size == 1 && fact.tail == Tail.EXACT
     val exclusion = actual.exclusion == ExclusionSet.Empty || field && fact.tail == Tail.STAR
     check(location && exclusion) {
         "Unsupported run-2 concrete static input: $actual. " +
-            "Expected a named field within limit $fieldLimit with EXACT/MAY/NE and empty field exclusions, " +
+            "Expected a named field within limit $fieldLimit with EXACT/ANY and empty field exclusions, " +
             "a named field with correlated STAR and its legal field exclusion, " +
             "or an EXACT class marker with empty field exclusions. Backward MUST is forbidden."
     }

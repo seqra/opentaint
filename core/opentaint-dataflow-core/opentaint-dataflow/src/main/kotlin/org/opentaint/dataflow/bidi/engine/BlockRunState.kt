@@ -117,8 +117,7 @@ open class BlockRunState internal constructor(
     private var formApplier: FormApplier<PremiseKey, Facts>? = FormApplier(EngineAlgebra(this))
     internal val applier get() = checkNotNull(formApplier) { "The form applier was released" }
     private var worklist = DeltaWorklist(flowFirst = mode.run1 && mode.markMode == MarkMode.FULL,
-        batchManager = ap.takeIf { mode.run1 && mode.markMode == MarkMode.FULL },
-        priorityManager = ap.takeIf { mode.demandRefinement })
+        batchManager = ap.takeIf { mode.run1 && mode.markMode == MarkMode.FULL })
     private var pending = ArrayList<Publication>()
     private var targetPublicationSink: TargetPublicationSink? = targetPublisher
     private var pendingTargets = ArrayList<TargetSummary>()
@@ -142,14 +141,7 @@ open class BlockRunState internal constructor(
             (binding?.demand?.acceptsTarget(binding.terminalExit, premise, config.admissionPolicy)
                 ?: checkNotNull(config.demand).acceptsTarget(key, premise, config.admissionPolicy))) {
             pendingTargets += row
-            if (target == Target.DemandTarget) {
-                outgoingTargetRows += row
-                if (mode.demandRefinement && config.restricted && !premise.isZero) {
-                    val qualifications = binding?.demand?.targetQualifications(binding.terminalExit, premise, config.admissionPolicy)
-                        ?: checkNotNull(config.demand).targetQualifications(key, premise, config.admissionPolicy)
-                    for (qualification in qualifications) pendingTargets += row.copy(qualification = qualification)
-                }
-            }
+            if (target == Target.DemandTarget) outgoingTargetRows += row
             requestWork()
         }
     }
@@ -256,7 +248,7 @@ open class BlockRunState internal constructor(
 
     internal fun addInitial(admitted: AdmittedInitial) {
         val initial = admitted.initial
-        check(!initial.tail.isMay) { "An owned initial cannot have an ANY tail" }
+        check(initial.tail != Tail.ANY) { "An owned initial cannot have an ANY tail" }
         if (!RuntimeDataDomain.initial(initial)) return
         ap.cancellation.checkpoint()
         initialize()
@@ -438,7 +430,7 @@ open class BlockRunState internal constructor(
             if (f is TaintTree) {
                 // Static effects leave the ordinary call suffix early. Apply
                 // the same field limit that suffix would apply to its result.
-                ops.limit(forceRun1Layer(premise, f), limit, mode.demandRefinement, collect(premise, f) { _, bounded -> emit(bounded) })
+                ops.limit(forceRun1Layer(premise, f), limit, collect(premise, f) { _, bounded -> emit(bounded) })
             }
         }
         override fun markRequest(mark: TaintMark) = Unit // summary application is not rule execution
@@ -493,8 +485,8 @@ open class BlockRunState internal constructor(
             sink(pr, bounded)
         }
         val out = collect(premise, facts, checkedSink)
-        if (config.run1) ops.run1Cover(facts) { ops.limit(it, limit, mode.demandRefinement, out) }
-        else ops.limit(facts, limit, mode.demandRefinement, out)
+        if (config.run1) ops.run1Cover(facts) { ops.limit(it, limit, out) }
+        else ops.limit(facts, limit, out)
     }
 
     /** Current result headers stay unchanged. Only query/seed admission requires
@@ -902,7 +894,7 @@ open class BlockRunState internal constructor(
         if (config.run1) ops.run1Cover(runtime) { covered ->
             // Static producer routing bypasses the ordinary successor cut.
             // Preserve the same bounded AP value at that boundary.
-            ops.limit(covered, limit, mode.demandRefinement, collect(premise, covered, sink))
+            ops.limit(covered, limit, collect(premise, covered, sink))
         }
         else {
             // Native/summary producers can reach this boundary without a new
@@ -921,17 +913,6 @@ open class BlockRunState internal constructor(
         val preparedExit = binding?.prepareExit(exit, rawFacts.base)
         if (preparedExit === PreparedExit.DeadData ||
             preparedExit == null && binding?.keepLocalConclusion(exit, rawFacts) == false) return
-        if (mode.demandRefinement && config.restricted) {
-            checkKinds(rawPremise, rawFacts)
-            if (isRootScope && !context.shared.interpreter.isSummaryBase(rawFacts.base)) return
-            bodyWork?.candidate(rawPremise, rawFacts, internalBlock = !isRootScope)
-            val admitted = binding?.demand?.intersectAdmitted(exit, rawPremise, rawFacts, config.admissionPolicy)
-                ?: checkNotNull(config.demand).intersectAdmitted(key, rawPremise, rawFacts, config.admissionPolicy)
-            for ((premise, facts, qualification) in admitted)
-                retainAdmittedSummary(exit, premise, facts, qualification)
-            if (pending.isNotEmpty() || localPublications.isNotEmpty()) requestWork()
-            return
-        }
         val normalized = normalizeFlowSummary(ap, rawPremise, rawFacts)
         val premise = normalized.premise
         val facts = normalized.facts
@@ -963,45 +944,26 @@ open class BlockRunState internal constructor(
                 ?: rootRouting?.intersectSummary(exit, premise, facts)
                 ?: binding?.demand?.intersect(exit, premise, facts, config.admissionPolicy)
                 ?: checkNotNull(config.demand).intersect(key, premise, facts, config.admissionPolicy)
-        for (piece in admitted) retainAdmittedSummary(exit, premise, piece)
+        for (piece in admitted) {
+            ap.cancellation.checkpoint()
+            checkKinds(premise, piece)
+            if (trace) LoopPipelineTrace.record(config.index, key, "c5-admitted") {
+                catalog(ap)
+                text("scope", scope.toString())
+                number("exit", exit.ordinal)
+                this.premise("P", premise)
+                this.facts("F", piece)
+            }
+            val store = if (isRootScope) summaries else portSummaries.at(exit)
+            for (delta in store.addAdmittedAll(premise, piece)) {
+                localEdgeDeltas++
+                if (delta.layer == Layer.DEMAND) localDemandLayerEdges++
+                if (isRootScope) pending += Publication(premise, delta)
+                else localPublications.getOrPut(exit, ::ArrayList).add(Publication(premise, delta))
+            }
+        }
         if (pending.isNotEmpty() || localPublications.isNotEmpty()) requestWork()
     }
-
-    private fun retainAdmittedSummary(
-        exit: PortId, premise: PremiseKey, piece: Facts, qualification: DemandQualification? = null,
-    ) {
-        ap.cancellation.checkpoint()
-        checkKinds(premise, piece)
-        if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "c5-admitted") {
-            catalog(ap)
-            text("scope", scope.toString())
-            number("exit", exit.ordinal)
-            this.premise("P", premise)
-            this.facts("F", piece)
-        }
-        val store = if (isRootScope) summaries else portSummaries.at(exit)
-        for (delta in store.addAdmittedAll(premise, piece)) {
-            localEdgeDeltas++
-            if (delta.layer == Layer.DEMAND) localDemandLayerEdges++
-            enqueuePublication(exit, Publication(premise, delta))
-        }
-        if (qualification != null) enqueuePublication(exit, Publication(premise, piece, qualification))
-    }
-
-    private fun enqueuePublication(exit: PortId, row: Publication) {
-        fun enqueue(part: Publication) {
-            if (isRootScope) pending += part else localPublications.getOrPut(exit, ::ArrayList).add(part)
-        }
-        if (!mode.demandRefinement) enqueue(row)
-        else row.conclusion.forEachPriorityPacket(ap) {
-            enqueue(if (it === row.conclusion) row else row.copy(conclusion = it))
-        }
-    }
-
-    private fun orderPublications(rows: List<Publication>): List<Publication> =
-        if (!mode.demandRefinement || rows.size < 2) rows else rows.sortedWith(
-            compareByDescending<Publication> { it.conclusion.isReadyPriority }
-                .thenByDescending { it.conclusion is FlowTree })
 
     internal fun erasesRun1StaticSummary(premise: PremiseKey, facts: Facts): Boolean =
         config.run1 && facts.base == STATIC && !premise.isZero &&
@@ -1022,13 +984,12 @@ open class BlockRunState internal constructor(
         if (localPublications.isNotEmpty()) {
             val detachedLocal = localPublications.toList()
             localPublications.clear()
-            for ((exit, rows) in detachedLocal) checkNotNull(binding).publish(this, exit,
-                Collections.unmodifiableList(orderPublications(rows)))
+            for ((exit, rows) in detachedLocal) checkNotNull(binding).publish(this, exit, Collections.unmodifiableList(rows))
         }
         if (pending.isEmpty()) return
         val detached = pending
         pending = ArrayList()
-        val batch: List<Publication> = Collections.unmodifiableList(orderPublications(detached))
+        val batch: List<Publication> = Collections.unmodifiableList(detached)
         try {
             checkNotNull(publicationSink).publish(key, batch)
         } catch (error: Throwable) {
@@ -1151,8 +1112,7 @@ open class BlockRunState internal constructor(
             rootRouting = null
             worklist.clear()
             worklist = DeltaWorklist(flowFirst = mode.run1 && mode.markMode == MarkMode.FULL,
-                batchManager = ap.takeIf { mode.run1 && mode.markMode == MarkMode.FULL },
-            priorityManager = ap.takeIf { mode.demandRefinement })
+                batchManager = ap.takeIf { mode.run1 && mode.markMode == MarkMode.FULL })
             pending = ArrayList()
             localPublications = LinkedHashMap()
             bodyWork = null

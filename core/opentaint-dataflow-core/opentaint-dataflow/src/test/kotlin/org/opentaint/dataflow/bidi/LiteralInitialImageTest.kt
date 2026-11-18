@@ -34,7 +34,7 @@ class LiteralInitialImageTest {
         val bases = listOf(AccessPathBase.Argument(0), AccessPathBase.This, AccessPathBase.Return,
             AccessPathBase.ClassStatic)
         for (base in bases) for (path in listOf(emptyList(), listOf(f), listOf(clazz), listOf(clazz, f, g))) {
-            for (tail in Tail.entries - Tail.NON_EMPTY_MAY) for (flow in listOf(false, true)) {
+            for (tail in Tail.entries) for (flow in listOf(false, true)) {
                 val exclusions = if (tail == Tail.STAR || tail == Tail.ANY_TAINT)
                     listOf(ExclusionSet.Empty, ExclusionSet.of(g)) else listOf(ExclusionSet.Empty)
                 for (e in exclusions) for (layer in Layer.entries) {

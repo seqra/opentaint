@@ -17,8 +17,7 @@ class DemandStore private constructor(
     private val scopedCompletions: Map<OwnedScope, FrozenCompletion>,
 ) {
     private class MethodDemandIndex(val entries: FrozenDemandTrie<Pattern>, val rows: List<DemandPattern>,
-                                   val byEntry: PathTrie<Int>, val byExit: PathTrie<Int>,
-                                   val byControlEntry: PathTrie<Int>, val entryCount: Int)
+                                   val byEntry: PathTrie<Int>, val byExit: PathTrie<Int>, val entryCount: Int)
     private class ScopedDemandIndex(
         val data: MethodDemandIndex,
         val rowPorts: List<PortId>,
@@ -42,24 +41,12 @@ class DemandStore private constructor(
         override fun precisionCursors(actual: Pattern, policy: RestrictedInitialPolicy): List<AnyDemandCursor> =
             local(Query(method, scope))?.entries?.precisionCursors(actual, ap.marks).orEmpty()
         override fun initials(actual: Facts, policy: RestrictedInitialPolicy): Set<AdmittedInitial> =
-            if (policy.revised) boundInitials(Query(method, scope), actual, policy) { emptySequence() }
-                .mapTo(LinkedHashSet()) { it.admitted }
-            else initials(Query(method, scope), actual, policy)
-        override fun boundInitials(actual: Facts, policy: RestrictedInitialPolicy,
-                                   savedGuards: (Pattern) -> Sequence<Pattern>): Set<BoundAdmission> =
-            boundInitials(Query(method, scope), actual, policy, savedGuards)
+            initials(Query(method, scope), actual, policy)
         override fun intersect(exit: PortId, original: PremiseKey, raw: Facts,
                                policy: RestrictedInitialPolicy): List<Facts> =
-            if (policy.revised) intersectAdmitted(exit, original, raw, policy).map { it.facts }.distinct()
-            else intersect(Query(method, scope, exit), original, raw, policy)
-        override fun intersectAdmitted(exit: PortId, original: PremiseKey, raw: Facts,
-                                      policy: RestrictedInitialPolicy): List<AdmittedSummary> =
-            intersectAdmitted(Query(method, scope, exit), original, raw, policy)
+            intersect(Query(method, scope, exit), original, raw, policy)
         override fun acceptsTarget(exit: PortId, original: PremiseKey, policy: RestrictedInitialPolicy): Boolean =
-            intersect(exit, original, Reach.DEMAND, policy).isNotEmpty()
-        override fun targetQualifications(exit: PortId, original: PremiseKey,
-                                          policy: RestrictedInitialPolicy): Set<DemandQualification> =
-            targetQualifications(Query(method, scope, exit), original, policy)
+            intersect(Query(method, scope, exit), original, Reach.DEMAND, policy).isNotEmpty()
         override fun prepareDataPlan(exit: PortId, templates: List<Pattern>, policy: RestrictedInitialPolicy,
                                      onEntryCheck: () -> Unit): PreparedLocalDataPlan? =
             prepareLocalDataPlan(Query(method, scope, exit), templates, policy, onEntryCheck)
@@ -77,8 +64,6 @@ class DemandStore private constructor(
             statistics?.preparedFallback(reason)
             return null
         }
-        // Legacy plans use normalized templates and cannot witness a raw revised start.
-        if (policy.revised) return fallback(PreparedPlanFallback.RAW_ENTRY)
         if (policy.run < 3) return fallback(PreparedPlanFallback.RUN)
         if (hasStaticCompletion) return fallback(PreparedPlanFallback.STATIC_COMPLETION)
         if (hasSharedStaticCarry) return fallback(PreparedPlanFallback.SHARED_CARRY)
@@ -116,8 +101,8 @@ class DemandStore private constructor(
         for (method in byMethod.values + scoped.values.map { it.data }) for (d in method.rows) {
             ap.cancellation.checkpoint()
             if (d.entry.fact.mark !is MarkSlot.Star) continue
-            check(d.entry.fact.tail.isMay || d.entry.fact.tail == Tail.STAR) {
-                "A run-$run FLOW demand entry must be STAR, MAY or NE: $d"
+            check(d.entry.fact.tail == Tail.ANY || d.entry.fact.tail == Tail.STAR) {
+                "A run-$run FLOW demand entry must be STAR or ANY: $d"
             }
             check(d.exit == null || d.exit.fact.mark is MarkSlot.Star &&
                 d.exit.fact.tail in setOf(Tail.STAR, Tail.ANY)) { "Invalid paired FLOW exit: $d" }
@@ -126,8 +111,8 @@ class DemandStore private constructor(
             ap.cancellation.checkpoint()
             val entry = (row.entry as? DemandEntry.Data)?.pattern ?: continue
             if (entry.fact.mark is MarkSlot.Star)
-                check(entry.fact.tail.isMay || entry.fact.tail == Tail.STAR) {
-                    "A run-$run FLOW demand entry must be STAR, MAY or NE: $row"
+                check(entry.fact.tail == Tail.ANY || entry.fact.tail == Tail.STAR) {
+                    "A run-$run FLOW demand entry must be STAR or ANY: $row"
                 }
         }
     }
@@ -140,120 +125,17 @@ class DemandStore private constructor(
     internal fun diagnosticC5Samples(): List<String> = statistics?.rowSamples().orEmpty()
 
     /** C2 uses an entry-only index and never materializes origin products. */
-    fun admissionPolicy(run: Int, fieldLimit: Int, direction: Direction, revised: Boolean = false): RestrictedInitialPolicy =
-        RestrictedInitialPolicy(run, fieldLimit, direction, ap.marks, revised)
+    fun admissionPolicy(run: Int, fieldLimit: Int, direction: Direction): RestrictedInitialPolicy =
+        RestrictedInitialPolicy(run, fieldLimit, direction, ap.marks)
 
     fun initials(method: MethodKey, boundedActual: Facts,
                  policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ap.marks)): Set<AdmittedInitial> {
-        return if (policy.revised) boundInitials(method, boundedActual, policy).mapTo(LinkedHashSet()) { it.admitted }
-        else initials(Query(method), boundedActual, policy)
+        return initials(Query(method), boundedActual, policy)
     }
 
     private fun supportsLocalScan(actual: Facts, policy: RestrictedInitialPolicy): Boolean =
-        !policy.revised && policy.run >= 3 && !hasStaticCompletion && !hasSharedStaticCarry && actual !is Reach &&
+        policy.run >= 3 && !hasStaticCompletion && !hasSharedStaticCarry && actual !is Reach &&
             RuntimeDataDomain.base(actual.base)
-
-    fun boundInitials(method: MethodKey, actual: Facts, policy: RestrictedInitialPolicy,
-                      savedGuards: (Pattern) -> Sequence<Pattern> = { emptySequence() }): Set<BoundAdmission> =
-        boundInitials(Query(method), actual, policy, savedGuards)
-
-    private fun boundInitials(query: Query, actual: Facts, policy: RestrictedInitialPolicy,
-                              savedGuards: (Pattern) -> Sequence<Pattern>): Set<BoundAdmission> {
-        ap.cancellation.checkpoint()
-        val leaves = ApOps(ap).leaves(actual).toList()
-        if (!policy.revised || actual is Reach) {
-            val native = initials(query, actual, policy)
-            return native.flatMapTo(LinkedHashSet()) { admission ->
-                leaves.map { BoundAdmission(admission, null, it, false) }
-            }
-        }
-        if (!RuntimeDataDomain.base(actual.base)) return emptySet()
-        statistics?.add(0)
-        val result = LinkedHashSet<BoundAdmission>()
-        val index = local(query)
-        val owned = query.scope?.let { scoped[OwnedScope(query.method, it)] }
-        fun offer(entry: Pattern, row: PairedDemand?, exit: PortId?, leaf: Pattern, virtual: Boolean = false,
-                  primary: List<RawInitialCommand> = policy.rawCommands(entry, leaf, actual.layer)) {
-            statistics?.admission(entry, leaf, primary.firstOrNull()?.emission?.pattern)
-            if (primary.isEmpty()) return
-            val entryDepth = entry.fact.path.count { it.isCounted() }
-            fun keep(command: RawInitialCommand) {
-                val emitted = command.emission
-                if (statistics != null && emitted.pattern.fact.path.count { it.isCounted() } > entryDepth + 1)
-                    statistics.r08Overrun()
-                val initial = ap.initial(emitted.pattern)
-                val qualification = when {
-                    !command.possible -> null
-                    virtual -> DemandQualification(null, initial, exit, DemandEntry.Data(entry))
-                    row != null -> DemandQualification(row, initial, exit)
-                    else -> null
-                }
-                result += BoundAdmission(AdmittedInitial(initial, emitted.layer), qualification, leaf, command.possible)
-            }
-            primary.forEach(::keep)
-            if (!entry.fact.tail.isMay || entryDepth >= policy.fieldLimit ||
-                primary.none { it.emission.pattern.fact.path == entry.fact.path && it.emission.pattern.fact.tail == Tail.STAR }) return
-            val children = LinkedHashSet<List<Int>>()
-            fun consider(deeper: Pattern) {
-                val p = entry.fact.path
-                val q = deeper.fact.path
-                if (entry.fact.base != deeper.fact.base || q.size <= p.size || !q.startsWith(p) ||
-                    !markSub(deeper.fact.mark, leaf.fact.mark, ap.marks)) return
-                val next = (p.size until q.size).firstOrNull { q[it].isCounted() } ?: return
-                children.add(q.take(next + 1))
-            }
-            if (row != null && index != null) {
-                for (id in index.byEntry.lookupExtensions(entry.fact.base, entry.fact.path.toIntArray())) {
-                    val deeper = index.rows[id]
-                    if (owned?.rowPorts?.get(id) == exit && paired(deeper)?.exit == row.exit) consider(deeper.entry)
-                }
-            }
-            for (guard in savedGuards(leaf)) {
-                ap.cancellation.checkpoint()
-                consider(guard)
-            }
-            for (child in children) policy.preparedChild(entry, leaf, actual.layer, child).forEach(::keep)
-        }
-        for (leaf in leaves) {
-            ap.cancellation.checkpoint()
-            val path = leaf.fact.path.toIntArray()
-            fun visit(trie: PathTrie<Int>, callback: (Int) -> Unit) {
-                if (leaf.fact.tail == Tail.EXACT) trie.lookupPrefixes(actual.base, path).forEach(callback)
-                else trie.visitAround(actual.base, path, callback)
-            }
-            if (index != null) {
-                visit(index.byEntry) { id ->
-                    val demand = index.rows[id]
-                    offer(demand.entry, paired(demand), owned?.rowPorts?.get(id), leaf)
-                }
-                visit(index.byControlEntry) { id ->
-                    val (exit, control) = owned?.controls?.get(id) ?: (null to controls.getValue(query.method)[id])
-                    val entry = control.entry as DemandEntry.Data
-                    offer(entry.pattern, control, exit, leaf)
-                }
-            }
-            staticCarry(leaf)?.let { offer(it.entry, paired(it), null, leaf) }
-        }
-        // Preserve the virtual run-2 entry-only lookup. It witnesses an entry
-        // projection, while only its later paired C5 row can authorize a reply.
-        val skipped = completion(query)
-        if (skipped != null) {
-            val virtual = InitialDemandResults(ap, policy, actual.layer, statistics)
-            val lookup = StaticEntryLookup(ap, query.method, skipped, leaves, virtual, statistics)
-            lookup.directLocal()
-            for (leaf in leaves) skipped.visitPossibleTargets(query.method, leaf) { target, flow ->
-                virtual.requireFamily(target, flow, leaf)
-                true
-            }
-            if (!virtual.fullyCovered) lookup.search(visible = false) { virtual.fullyCovered }
-            if (!virtual.fullyCovered && skipped.mayNeedInheritedEntries(query.method, leaves))
-                lookup.search(visible = true) { virtual.fullyCovered }
-            virtual.visitVirtualCommands { entry, leaf, primary ->
-                offer(entry, null, null, leaf, virtual = true, primary = primary)
-            }
-        }
-        return result
-    }
 
     private fun scanLocalInitials(query: Query, actual: Facts, policy: RestrictedInitialPolicy,
                                   visit: (InitialEmission) -> DemandVisit): DemandScan {
@@ -319,122 +201,7 @@ class DemandStore private constructor(
     /** C5 selects complete paired rows and preserves the whole original ND premise at the caller. */
     fun intersect(method: MethodKey, original: PremiseKey, raw: Facts,
                   policy: RestrictedInitialPolicy = RestrictedInitialPolicy(direction = Direction.FORWARD, catalog = ap.marks)): List<Facts> {
-        return if (policy.revised) intersectAdmitted(method, original, raw, policy).map { it.facts }.distinct()
-        else intersect(Query(method), original, raw, policy)
-    }
-
-    fun intersectAdmitted(method: MethodKey, original: PremiseKey, raw: Facts,
-                          policy: RestrictedInitialPolicy): List<AdmittedSummary> =
-        intersectAdmitted(Query(method), original, raw, policy)
-
-    private fun intersectAdmitted(query: Query, original: PremiseKey, raw: Facts,
-                                  policy: RestrictedInitialPolicy): List<AdmittedSummary> {
-        if (!policy.revised)
-            return intersect(query, original, raw, policy).map { AdmittedSummary(original, it) }
-        ap.cancellation.checkpoint()
-        if (!RuntimeDataDomain.packet(original, raw)) return emptyList()
-        val ops = ApOps(ap)
-        val result = LinkedHashSet<AdmittedSummary>()
-        val leaves = ops.leaves(raw).toList()
-        val index = local(query)
-        val outputIds = HashSet<Int>()
-        if (index != null) for (leaf in leaves) index.byExit.visitAround(leaf.fact.base, leaf.fact.path.toIntArray()) {
-            outputIds += it
-        }
-        val owned = query.scope?.let { scoped[OwnedScope(query.method, it)] }
-        val membersById = LinkedHashMap<Int, MutableList<InitialAp>>()
-        if (index != null) original.forEachMember { member ->
-            for (id in index.byEntry.lookupPrefixes(member.base, member.pathData)) {
-                if (id !in outputIds || query.exit != null && owned?.rowPorts?.get(id) != query.exit) continue
-                membersById.getOrPut(id, ::ArrayList).add(member)
-            }
-        }
-        val normalized = lazy { normalizeFlowSummary(ap, original, raw) }
-        val normalizedLeaves = lazy { normalized.value.facts.membershipPackets(ap) }
-        val pairsSeen = HashSet<Triple<PairedDemand, PortId?, Boolean>>()
-        fun offer(row: PairedDemand, candidates: List<InitialAp>, exit: PortId? = query.exit, virtual: Boolean = false) {
-            ap.cancellation.checkpoint()
-            val identity = Triple(row, exit, virtual)
-            if (identity in pairsSeen) return
-            val matching = candidates.filter { entryAccepts(row.entry, it, policy) }
-            if (matching.isEmpty()) return
-            pairsSeen.add(identity)
-            if (raw is Reach) {
-                if (row.exit == DemandExit.Zero) result.add(AdmittedSummary(original, raw))
-                return
-            }
-            val dp = (row.exit as? DemandExit.Data)?.pattern ?: return
-            val selector = (row.entry as? DemandEntry.Data)?.pattern
-            val qualifiers = if (selector == null) emptyList() else matching.mapNotNull { member ->
-                if (!policy.needsPossibleQualification(selector, member)) null
-                else DemandQualification(row, member, exit, if (virtual) row.entry else null)
-            }
-            val selected = normalized.value
-            val depth = dp.fact.path.count { it.isCounted() }
-            val budget = if (depth >= policy.fieldLimit) policy.fieldLimit else depth + 1
-            statistics?.dataRow(raw, dp, budget, 0)
-            for (packet in normalizedLeaves.value) {
-                val protected = (packet as? TaintTree)?.protectionClass() == true
-                val picks = LinkedHashMap<GroupKey, Facts>()
-                for (leaf in ops.leaves(packet)) {
-                    ap.cancellation.checkpoint()
-                    val c = selectRevisedConclusion(leaf, dp, ap.marks) ?: continue
-                    val fact = ap.factsOf(c.fact, c.exclusion, packet.layer)
-                    val value = if (protected) ap.selectedProtection(fact, null) else fact
-                    val old = picks[value.groupKey]
-                    picks[value.groupKey] = if (old == null) value else ap.mergeAddDelta(old, value).first
-                }
-                for (piece in picks.values) ops.limit(piece, budget, nonEmptyMay = true, object : ApOut {
-                    override fun result(f: Facts) {
-                        val summary = normalizeFlowSummary(ap, selected.premise, f)
-                        if (qualifiers.isEmpty()) result.add(AdmittedSummary(summary.premise, summary.facts))
-                        else for (qualification in qualifiers)
-                            result.add(AdmittedSummary(summary.premise, summary.facts, qualification))
-                    }
-                    override fun markRequest(mark: TaintMark) = error("A field cut must not emit a mark request")
-                })
-            }
-        }
-        visitControlPairs(query, policy, includeDerived = original.isZero) { row ->
-            offer(row, original.members)
-            raw !is Reach || result.isEmpty()
-        }
-        if (raw is Reach && result.isNotEmpty()) return result.toList()
-        for ((id, members) in membersById) {
-            val row = checkNotNull(index).rows[id]
-            paired(row)?.let { offer(it, members, owned?.rowPorts?.get(id)) }
-        }
-        original.forEachMember { member ->
-            staticCarry(member.toPattern())?.let { carry ->
-                // Admission binds through the offered selector. Use each actual head
-                // indirectly on ordinary application, with the native same-slot key.
-                paired(carry)?.let { offer(it, original.members, null) }
-            }
-        }
-        val skipped = completion(query) ?: return result.toList()
-        val primitive = skipped.local(query.method)
-        original.forEachMember { member ->
-            for (edge in primitive.pairs(member, leaves))
-                paired(DemandPattern(edge.to, edge.from))?.let { offer(it, original.members, virtual = true) }
-        }
-        fun saturated(): Boolean = raw is Reach && result.isNotEmpty()
-        val walker = StaticPairLookup(ap, skipped, statistics, allowFlowCompanion = true) { entry, member ->
-            policy.canStoreInitial(entry, member.toPattern())
-        }
-        fun offerVirtual(member: InitialAp, pair: DemandPattern) {
-            paired(pair)?.let { offer(it, if (original.size == 1) listOf(member) else original.members, virtual = true) }
-        }
-        if (!saturated()) walker.walk(query.method, original, leaves, visible = false, ::offerVirtual, ::saturated)
-        if (!saturated() && skipped.mayNeedInheritedPairs(query.method))
-            walker.walk(query.method, original, leaves, visible = true, ::offerVirtual, ::saturated)
-        return result.toList()
-    }
-
-    private fun paired(d: DemandPattern): PairedDemand? {
-        val exit = d.exit ?: return null
-        val entry = if (d.entry.fact.base == AccessPathBase.Zero) DemandEntry.Zero else DemandEntry.Data(d.entry)
-        val end = if (exit.fact.base == AccessPathBase.Zero) DemandExit.Zero else DemandExit.Data(exit)
-        return PairedDemand(entry, end)
+        return intersect(Query(method), original, raw, policy)
     }
 
     private fun intersect(query: Query, original: PremiseKey, raw: Facts,
@@ -556,62 +323,6 @@ class DemandStore private constructor(
         // ZERO and Target match exactly the same exit slots. This read-only probe
         // reuses all paired C5 lookup paths; it never stores or propagates a ZERO edge.
         return intersect(method, original, Reach.DEMAND, policy).isNotEmpty()
-    }
-
-    fun targetQualifications(method: MethodKey, original: PremiseKey,
-                             policy: RestrictedInitialPolicy): Set<DemandQualification> =
-        targetQualifications(Query(method), original, policy)
-
-    /** The typed DATA→ZERO row gates DT publication; publish the qualifier
-     * without constructing a DATA/Reach result or an executable ZERO edge. */
-    private fun targetQualifications(query: Query, original: PremiseKey, policy: RestrictedInitialPolicy,
-                                     includeExplicit: Boolean = true): Set<DemandQualification> {
-        if (!policy.revised || original.isZero || !RuntimeDataDomain.premise(original)) return emptySet()
-        val candidates = original.members.filter {
-            it.path != null && it.exclusion == ExclusionSet.Empty && (it.tail == Tail.EXACT || it.tail == Tail.STAR)
-        }
-        if (candidates.isEmpty()) return emptySet()
-        val result = LinkedHashSet<DemandQualification>()
-        val seen = HashSet<Pair<PairedDemand, Boolean>>()
-        fun offer(row: PairedDemand, virtual: Boolean) {
-            val entry = row.entry as? DemandEntry.Data ?: return
-            if (row.exit != DemandExit.Zero || !seen.add(row to virtual)) return
-            for (member in candidates) {
-                ap.cancellation.checkpoint()
-                if (policy.needsPossibleQualification(entry.pattern, member) &&
-                    entryAccepts(entry, member, policy)) {
-                    result += DemandQualification(row, member, query.exit, if (virtual) entry else null)
-                }
-            }
-        }
-        if (includeExplicit)
-            visitControlPairs(query, policy, includeDerived = false) { row -> offer(row, virtual = false); true }
-        val skipped = completion(query) ?: return result
-        val output = listOf(ap.zero.toPattern())
-        val localView = skipped.local(query.method)
-        for (member in candidates) {
-            for (edge in localView.pairs(member, output))
-                paired(DemandPattern(edge.to, edge.from))?.let { offer(it, virtual = true) }
-        }
-        val walker = StaticPairLookup(ap, skipped, statistics) { entry, member ->
-            policy.canStoreInitial(entry, member.toPattern())
-        }
-        fun virtualPair(@Suppress("UNUSED_PARAMETER") member: InitialAp, pair: DemandPattern) {
-            paired(pair)?.let { offer(it, virtual = true) }
-        }
-        walker.walk(query.method, original, output, visible = false, ::virtualPair, covered = { false })
-        if (skipped.mayNeedInheritedPairs(query.method))
-            walker.walk(query.method, original, output, visible = true, ::virtualPair, covered = { false })
-        return result
-    }
-
-    internal fun staticShortcutTargetQualifications(method: MethodKey, block: BlockId, exit: PortId,
-                                                    original: PremiseKey,
-                                                    policy: RestrictedInitialPolicy): Set<DemandQualification> {
-        if (policy.run != 2 || policy.direction != Direction.BACKWARD ||
-            original !is InitialAp || original.base != STATIC || original.mark !is MarkSlot.Concrete) return emptySet()
-        return targetQualifications(Query(method, BlockScope(block, PortId.STATIC_SHORTCUT), exit),
-            original, policy, includeExplicit = false)
     }
 
     /** A run-1 static write used the typed raw-write shortcut, not a
@@ -740,9 +451,8 @@ class DemandStore private constructor(
             check(normalizedMarks(entry) && (exit == null || normalizedMarks(exit))) {
                 "Normalize mark exclusions at hand-off"
             }
-            check(exit?.fact?.tail != Tail.NON_EMPTY_MAY) { "A demand exit comes from an executable premise" }
-            check(entry.fact.mark !is MarkSlot.Star || entry.fact.tail.isMay || entry.fact.tail == Tail.STAR) {
-                "A typed abstract demand entry has STAR, MAY or NE tail"
+            check(entry.fact.mark !is MarkSlot.Star || entry.fact.tail == Tail.ANY || entry.fact.tail == Tail.STAR) {
+                "A typed abstract demand entry has ANY or STAR tail"
             }
             check(exit?.fact?.tail != Tail.EXACT || entry.fact.mark is MarkSlot.Concrete) {
                 "A canonical exact exit demand has a concrete entry mark"
@@ -776,14 +486,12 @@ class DemandStore private constructor(
             }
             val entry = when (val e = row.entry) {
                 is DemandEntry.Data -> DemandEntry.Data(ownData(e.pattern).also {
-                    check(it.fact.mark !is MarkSlot.Star || it.fact.tail.isMay || it.fact.tail == Tail.STAR)
+                    check(it.fact.mark !is MarkSlot.Star || it.fact.tail in setOf(Tail.ANY, Tail.STAR))
                 })
                 else -> e
             }
             val exit = when (val e = row.exit) {
-                is DemandExit.Data -> DemandExit.Data(ownData(e.pattern).also {
-                    check(it.fact.tail != Tail.NON_EMPTY_MAY) { "A demand exit comes from an executable premise" }
-                })
+                is DemandExit.Data -> DemandExit.Data(ownData(e.pattern))
                 DemandExit.Zero -> DemandExit.Zero
             }
             val owned = PairedDemand(entry, exit)
@@ -836,7 +544,6 @@ class DemandStore private constructor(
             val entries = FrozenDemandTrie.Builder<Pattern>(m.cancellation)
             val byEntry = PathTrie<Int>(m.cancellation)
             val byExit = PathTrie<Int>(m.cancellation)
-            val byControlEntry = PathTrie<Int>(m.cancellation)
             var entryCount = 0
             for ((id, demand) in rows.withIndex()) {
                 m.cancellation.checkpoint()
@@ -844,14 +551,12 @@ class DemandStore private constructor(
                 byEntry.add(demand.entry.fact.base, demand.entry.fact.path.toIntArray(), id)
                 demand.exit?.let { byExit.add(it.fact.base, it.fact.path.toIntArray(), id) }
             }
-            for ((id, row) in controls.withIndex()) {
+            for (row in controls) {
                 m.cancellation.checkpoint()
                 val entry = (row.entry as? DemandEntry.Data)?.pattern ?: continue
                 if (entries.add(entry, entry)) entryCount++
-                byControlEntry.add(entry.fact.base, entry.fact.path.toIntArray(), id)
             }
-            return MethodDemandIndex(entries.build(), Collections.unmodifiableList(rows.toList()),
-                byEntry, byExit, byControlEntry, entryCount)
+            return MethodDemandIndex(entries.build(), Collections.unmodifiableList(rows.toList()), byEntry, byExit, entryCount)
         }
     }
 }
@@ -880,15 +585,7 @@ private fun ownPattern(m: ApManager, p: Pattern): Pattern {
  * the actual output port, so permissions from separate exits cannot mix. */
 interface ScopeDemandView {
     fun initials(actual: Facts, policy: RestrictedInitialPolicy): Set<AdmittedInitial>
-    fun boundInitials(actual: Facts, policy: RestrictedInitialPolicy,
-                      savedGuards: (Pattern) -> Sequence<Pattern> = { emptySequence() }): Set<BoundAdmission> =
-        emptySet()
     fun intersect(exit: PortId, original: PremiseKey, raw: Facts,
                   policy: RestrictedInitialPolicy): List<Facts>
-    fun intersectAdmitted(exit: PortId, original: PremiseKey, raw: Facts,
-                         policy: RestrictedInitialPolicy): List<AdmittedSummary> =
-        intersect(exit, original, raw, policy).map { AdmittedSummary(original, it) }
     fun acceptsTarget(exit: PortId, original: PremiseKey, policy: RestrictedInitialPolicy): Boolean
-    fun targetQualifications(exit: PortId, original: PremiseKey,
-                             policy: RestrictedInitialPolicy): Set<DemandQualification> = emptySet()
 }

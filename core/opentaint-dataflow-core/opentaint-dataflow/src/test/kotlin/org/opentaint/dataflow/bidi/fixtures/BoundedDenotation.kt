@@ -46,7 +46,6 @@ class BoundedDenotation(
     fun admitsContinuation(tail: Tail, exclusion: ExclusionSet, continuation: List<Int>): Boolean = when (tail) {
         Tail.EXACT -> continuation.isEmpty()
         Tail.ANY -> true
-        Tail.NON_EMPTY_MAY -> continuation.isNotEmpty()
         Tail.STAR, Tail.ANY_TAINT -> continuation.isEmpty() || continuation.first() !in excludedFields(exclusion)
     }
 
@@ -88,7 +87,6 @@ class BoundedDenotation(
             Tail.EXACT -> tau.isEmpty()
             Tail.STAR -> tau == sigma && admitsContinuation(Tail.STAR, conclusion.exclusion, tau)
             Tail.ANY -> true
-            Tail.NON_EMPTY_MAY -> tau.isNotEmpty()
             Tail.ANY_TAINT -> admitsContinuation(Tail.ANY_TAINT, conclusion.exclusion, tau)
         }
     }

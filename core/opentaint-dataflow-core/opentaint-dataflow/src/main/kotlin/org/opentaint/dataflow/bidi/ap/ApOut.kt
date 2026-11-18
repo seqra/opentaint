@@ -26,7 +26,7 @@ internal class Results(private val m: ApManager, private val base: AccessPathBas
     fun flow(layer: Layer, exclusion: ExclusionSet, mx: MarkExclusions, node: FlowNode,
              tail: Tail = if (layer == Layer.NORMAL) Tail.STAR else Tail.ANY) {
         if (node.isEmpty) return
-        val key = FlowKey(layer, if (tail.isMay) ExclusionSet.Empty else m.intern(exclusion), m.intern(mx), tail)
+        val key = FlowKey(layer, if (tail == Tail.ANY) ExclusionSet.Empty else m.intern(exclusion), m.intern(mx), tail)
         flow[key] = flow[key]?.let { FlowAlgebra.mergeAdd(it, node, m.cancellation) } ?: node
     }
 
@@ -37,7 +37,7 @@ internal class Results(private val m: ApManager, private val base: AccessPathBas
     fun taint(layer: Layer, node: TaintNode, exclusion: ExclusionSet = ExclusionSet.Empty,
               anyTail: Tail = if (layer == Layer.NORMAL) Tail.ANY_TAINT else Tail.ANY) {
         if (node.isEmpty) return
-        val key = TaintKey(layer, if (anyTail.isMay || !node.hasAny) ExclusionSet.Empty else m.intern(exclusion),
+        val key = TaintKey(layer, if (anyTail == Tail.ANY || !node.hasAny) ExclusionSet.Empty else m.intern(exclusion),
             if (node.hasAny) anyTail else Tail.ANY_TAINT)
         taint[key] = taint[key]?.let { m.taintAlg.mergeAdd(it, node, m.cancellation) } ?: node
     }

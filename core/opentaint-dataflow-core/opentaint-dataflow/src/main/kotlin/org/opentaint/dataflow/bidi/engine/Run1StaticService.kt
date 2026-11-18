@@ -416,12 +416,8 @@ class Run1StaticService(private val ap: ApManager, private val markMode: MarkMod
         for (atom in atoms.ids) {
             val executable = ap.marks.runtimeAtom(TaintMark(atom), markMode)
             check(executable.id == atom) { "Static reply contains an atom from a different run mode" }
-            val tail = when (region.fact.tail) {
-                Tail.EXACT, Tail.NON_EMPTY_MAY -> region.fact.tail
-                else -> Tail.ANY
-            }
-            val one = ap.factsOf(region.fact.copy(mark = MarkSlot.Concrete(executable), tail = tail),
-                ExclusionSet.Empty, Layer.DEMAND) as TaintTree
+            val one = ap.factsOf(region.fact.copy(mark = MarkSlot.Concrete(executable),
+                tail = if (region.fact.tail == Tail.EXACT) Tail.EXACT else Tail.ANY), ExclusionSet.Empty, Layer.DEMAND) as TaintTree
             result = if (result == null) one else ap.taintTree(one.base, Layer.DEMAND,
                 ap.taintAlg.mergeAdd(result.root, one.root, ap.cancellation), one.exclusion, one.anyTail)
         }
@@ -456,10 +452,6 @@ class Run1StaticService(private val ap: ApManager, private val markMode: MarkMod
             if (q.size < p.size) {
                 if (b.fact.tail == Tail.EXACT || !b.exclusion.admits(p[q.size])) return null
                 return region(a)
-            }
-            if (a.fact.tail == Tail.NON_EMPTY_MAY || b.fact.tail == Tail.NON_EMPTY_MAY) {
-                if (a.fact.tail == Tail.EXACT || b.fact.tail == Tail.EXACT) return null
-                return Pattern(a.fact.copy(tail = Tail.NON_EMPTY_MAY, mark = MarkSlot.STAR), ExclusionSet.Empty)
             }
             val tail = when {
                 a.fact.tail == Tail.EXACT || b.fact.tail == Tail.EXACT -> Tail.EXACT

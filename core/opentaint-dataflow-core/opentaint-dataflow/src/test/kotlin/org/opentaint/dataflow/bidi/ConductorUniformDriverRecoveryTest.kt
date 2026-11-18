@@ -4,8 +4,6 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.driver.FixedLimits
-import org.opentaint.dataflow.bidi.driver.IterationPolicy
-import org.opentaint.dataflow.bidi.driver.configuredIncreasingLimits
 import org.opentaint.dataflow.bidi.engine.*
 import org.opentaint.dataflow.bidi.fixtures.DriverFixtures
 import org.opentaint.dataflow.bidi.interp.*
@@ -16,13 +14,7 @@ import kotlin.time.Duration.Companion.seconds
 
 /** E29 runs the real root/callee pipeline. No demand or saved relation is injected. */
 class ConductorUniformDriverRecoveryTest {
-    @Test fun `uniform source and mapper branch recover the exact sink by run5`() =
-        checkRecovery(FixedLimits(listOf(1, 1, 2, 3, 4)), 5)
-
-    @Test fun `revised policy confirms the uniform source and mapper observation`() =
-        checkRecovery(configuredIncreasingLimits("REPEAT_RUN1", diagnosticDemandRefinement = true), 11)
-
-    private fun checkRecovery(policy: IterationPolicy, lastRun: Int) = DriverFixtures().use { fixture ->
+    @Test fun `uniform source and mapper branch recover the exact sink by run5`() = DriverFixtures().use { fixture ->
         val program=fixture.program
         val root=program.method("E29 root",listOf(listOf(1),listOf(2),emptyList()),2).key()
         val mapper=program.method("E29 mapper",listOf(
@@ -61,12 +53,11 @@ class ConductorUniformDriverRecoveryTest {
         program.statement(mapper,3,MicroEdgeBuilder().apply { read(part,p,listOf(f,g)) }.build())
         program.statement(mapper,4,MicroEdgeBuilder().apply { write(out,listOf(e,h),false,listOf(part),emptyList()) }.build())
         program.statement(mapper,5,MicroEdgeBuilder().apply { move(ret,out) }.build())
-        val report=fixture.driver(policy,budget=20.seconds,
+        val report=fixture.driver(FixedLimits(listOf(1,1,2,3,4)),budget=20.seconds,
             run1MarkMode=MarkMode.FULL).analyze(listOf(root))
         assertTrue(fixture.results.all { it.status==RunStatus.COMPLETE })
-        assertTrue(report.entries.any { !it.provisional && it.descriptor.rule==sink.rule &&
-            it.descriptor.key.statement==program.inst(root,2) },
-            "E29 NORMAL marking track must be recovered by run-$lastRun; runs=${fixture.configs.map { it.index }}")
-        assertTrue(report.end.run <= lastRun)
+        assertTrue(report.entries.any { it.descriptor.rule==sink.rule && it.descriptor.key.statement==program.inst(root,2) },
+            "E29 NORMAL source-to-sink route must be recovered by run-5; runs=${fixture.configs.map { it.index }}")
+        assertTrue(report.end.run<=5)
     }
 }

@@ -18,7 +18,7 @@ class InitialFactStoreTest {
         for (path in listOf(emptyList(), listOf(f))) {
             for (tail in listOf(Tail.STAR, Tail.ANY)) initials += m.initial(fixture.pattern(path = path, tail = tail, mark = MarkSlot.STAR))
             initials += m.initial(fixture.pattern(path = path, tail = Tail.STAR, mark = MarkSlot.STAR, exclusion = ExclusionSet.of(g)))
-            for (mark in listOf(t, u)) for (tail in Tail.entries - Tail.NON_EMPTY_MAY) {
+            for (mark in listOf(t, u)) for (tail in Tail.entries) {
                 initials += m.initial(fixture.pattern(path = path, tail = tail, mark = MarkSlot.Concrete(mark)))
                 if (tail == Tail.STAR || tail == Tail.ANY_TAINT)
                     initials += m.initial(fixture.pattern(path = path, tail = tail, mark = MarkSlot.Concrete(mark), exclusion = ExclusionSet.of(g)))

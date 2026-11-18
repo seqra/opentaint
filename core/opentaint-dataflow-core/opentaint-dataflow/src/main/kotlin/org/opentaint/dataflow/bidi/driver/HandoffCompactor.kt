@@ -20,8 +20,8 @@ internal class HandoffSelection(
 
 /** Exact C2/C5 service compaction. R3 request-language/MAY-only removals are not
  * enabled: their native eventual-refinement proof is still open. */
-internal class HandoffCompactor(private val ap: ApManager, exactPairsOnly: Boolean = false) {
-    private val keys = HandoffServiceKeys(ap, exactPairsOnly)
+internal class HandoffCompactor(private val ap: ApManager) {
+    private val keys = HandoffServiceKeys(ap)
 
     fun summary(owner: HandoffOwner, premise: PremiseKey, facts: Facts): HandoffOrigin {
         val rows = projectSummaryGuidance(ap, premise, facts)

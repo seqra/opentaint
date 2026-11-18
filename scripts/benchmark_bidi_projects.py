@@ -105,8 +105,6 @@ def analyzer_jvm_args(args, directory, side, memory):
             values.append('-Dorg.opentaint.bidi.formStatistics=true')
         if args.optimization_statistics:
             values.append('-Dorg.opentaint.bidi.optimizationStatistics=true')
-        if getattr(args, 'demand_refinement', False):
-            values.append('-Dopentaint.bidi.diagnosticDemandRefinement=true')
     return values
 
 
@@ -426,8 +424,6 @@ def main():
                         help='Select run-1 mark precision in the analyzer JVM; later runs remain FULL')
     parser.add_argument('--field-limit-schedule', choices=['REPEAT_RUN1', 'RUN_INDEX'], default='REPEAT_RUN1',
                         help='Use limits 1,1,2,... (default) or the experiment 1,2,3,...')
-    parser.add_argument('--demand-refinement', action='store_true',
-                        help='Compare the proposed FULL demand policy using the run-11 diagnostic driver')
     parser.add_argument('--heap-memory', type=heap_memory,
                         help='Override only analyzer JVM heaps for the selected projects, e.g. 16g')
     args = parser.parse_args()

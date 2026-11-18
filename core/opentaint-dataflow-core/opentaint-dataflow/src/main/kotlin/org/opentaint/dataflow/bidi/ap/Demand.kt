@@ -10,7 +10,6 @@ internal fun initialFacts(m: ApManager, i: InitialAp): Facts {
             val layer = when (i.tail) {
                 Tail.STAR -> Layer.NORMAL
                 Tail.ANY -> Layer.DEMAND
-                Tail.NON_EMPTY_MAY -> error("A nonempty MAY selector cannot start an initial")
                 Tail.EXACT, Tail.ANY_TAINT -> Layer.NORMAL
             }
             m.flowTree(i.base, layer, i.exclusion, MarkSet.EMPTY,

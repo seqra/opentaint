@@ -9,7 +9,7 @@ data class Pattern(val fact: PathFact, val exclusion: ExclusionSet)
 
 data class Conclusion(val fact: PathFact, val exclusion: ExclusionSet, val demand: Boolean) {
     init {
-        check(!fact.tail.isMay || demand) { "W6: a may conclusion must be DEMAND" }
+        check(fact.tail != Tail.ANY || demand) { "W6: a may conclusion must be DEMAND" }
         check(exclusion == ExclusionSet.Empty || fact.tail == Tail.STAR || fact.tail == Tail.ANY_TAINT ||
             (fact.tail == Tail.EXACT && fact.mark is MarkSlot.Star)) {
             "Only a STAR or must conclusion can exclude fields"
@@ -29,7 +29,6 @@ data class DemandPattern(val entry: Pattern, val exit: Pattern?)
 fun tailAdmits(tail: Tail, exclusion: ExclusionSet, r: List<AccessorIdx>): Boolean = when (tail) {
     Tail.STAR, Tail.ANY_TAINT -> exclusion.admits(r)   // r = [] or the first accessor of r is not excluded
     Tail.ANY -> true
-    Tail.NON_EMPTY_MAY -> r.any { it.isCounted() }
     Tail.EXACT -> r.isEmpty()
 }
 fun Pattern.tailAdmits(r: List<AccessorIdx>) = tailAdmits(fact.tail, exclusion, r)
@@ -44,11 +43,10 @@ fun markSub(i: MarkSlot, c: MarkSlot, catalog: MarkTable? = null): Boolean = whe
 
 private fun tailSub(i: Pattern, c: Pattern): Boolean = when (i.fact.tail) {
     Tail.ANY -> true
-    Tail.NON_EMPTY_MAY -> c.fact.tail == Tail.NON_EMPTY_MAY
     Tail.EXACT -> c.fact.tail == Tail.EXACT
     Tail.STAR, Tail.ANY_TAINT -> when (c.fact.tail) {       // the exclusion of i must exclude only what c excludes
         Tail.EXACT -> true
-        Tail.ANY, Tail.NON_EMPTY_MAY -> i.exclusion == ExclusionSet.Empty
+        Tail.ANY -> i.exclusion == ExclusionSet.Empty
         Tail.STAR, Tail.ANY_TAINT -> i.exclusion.isSubsetOf(c.exclusion)
     }
 }
@@ -66,8 +64,6 @@ fun overlap(a: Pattern, b: Pattern): Boolean {
     val p = a.fact.path
     val q = b.fact.path
     return when {
-        p == q -> (a.fact.tail != Tail.NON_EMPTY_MAY || b.fact.tail != Tail.EXACT) &&
-            (b.fact.tail != Tail.NON_EMPTY_MAY || a.fact.tail != Tail.EXACT)
         q.startsWith(p) -> a.tailAdmits(q.drop(p.size))
         p.startsWith(q) -> b.tailAdmits(p.drop(q.size))
         else -> false
@@ -75,7 +71,7 @@ fun overlap(a: Pattern, b: Pattern): Boolean {
 }
 
 fun applicable(j: Pattern, a: Pattern, catalog: MarkTable? = null): Boolean =
-    covers(j, a, catalog) && (!j.fact.tail.isAny || a.fact.tail.isAny || a.fact.tail == Tail.NON_EMPTY_MAY)
+    covers(j, a, catalog) && (!j.fact.tail.isAny || a.fact.tail.isAny)
 
 fun inside(j: Pattern, a: Pattern, catalog: MarkTable? = null): Boolean =
     covers(a.copy(fact = a.fact.copy(mark = MarkSlot.Star(MarkSet.EMPTY))), j, catalog) && markSub(j.fact.mark, a.fact.mark, catalog)
@@ -138,8 +134,6 @@ fun recordLeafIdentity(v: RecordLeafView): Boolean = !v.result.demand && v.premi
 
 fun meet(a: Pattern, d: Pattern): Pair<Tail, ExclusionSet> {
     return when {
-        a.fact.tail == Tail.NON_EMPTY_MAY || d.fact.tail == Tail.NON_EMPTY_MAY ->
-            Tail.NON_EMPTY_MAY to ExclusionSet.Empty
         a.fact.tail == Tail.ANY_TAINT && d.fact.tail == Tail.STAR ->
             Tail.ANY_TAINT to a.exclusion.union(d.exclusion)
         a.fact.tail.isAny && d.fact.tail.isAny -> a.fact.tail to a.exclusion
@@ -162,7 +156,7 @@ fun emit(d: Pattern, a: Pattern, catalog: MarkTable? = null): Pattern? =
 
 fun flowForm(d: Pattern): Pattern {
     val star = MarkSlot.Star(MarkSet.EMPTY)
-    return if (d.fact.tail.isMay) Pattern(d.fact.copy(tail = Tail.STAR, mark = star), ExclusionSet.Empty)
+    return if (d.fact.tail == Tail.ANY) Pattern(d.fact.copy(tail = Tail.STAR, mark = star), ExclusionSet.Empty)
     else Pattern(d.fact.copy(mark = star), d.exclusion)                // `STAR/E` keeps E
 }
 
@@ -177,7 +171,6 @@ fun commonPart(d: Pattern, a: Pattern, catalog: MarkTable? = null): Pattern? {
         q.size > p.size && q.startsWith(p) ->                                   // below: the fact itself
             if (d.tailAdmits(q.drop(p.size))) a else null
         q == p -> {                                                              // at: the meet of the tails
-            if (!overlap(d, a)) return null
             val (tail, excl) = meet(a, d)
             Pattern(a.fact.copy(tail = tail), excl)
         }
@@ -185,8 +178,7 @@ fun commonPart(d: Pattern, a: Pattern, catalog: MarkTable? = null): Pattern? {
             if (a.tailAdmits(p.drop(q.size))) {
                 // E excludes first accessors at q. After the admitted descent to p it has no effect there.
                 // Keep the demand's own E at p, including the MUST/STAR and correlated STAR cells.
-                val residual = if (a.fact.tail == Tail.NON_EMPTY_MAY) a.copy(fact = a.fact.copy(tail = Tail.ANY)) else a
-                val (tail, excl) = meet(residual.copy(exclusion = ExclusionSet.Empty), d)
+                val (tail, excl) = meet(a.copy(exclusion = ExclusionSet.Empty), d)
                 Pattern(d.fact.copy(tail = tail, mark = a.fact.mark), excl)
             } else null
         else -> null
@@ -248,16 +240,14 @@ fun restrictConclusionOnly(sc: Conclusion, exit: Pattern?, catalog: MarkTable? =
     val p = dp.fact.path
     val q = sc.fact.path
     return when {
-        q == p -> if (sc.fact.tail == Tail.NON_EMPTY_MAY && dp.fact.tail == Tail.EXACT) null
-            else meetConclusion(sc, dp)                                         // at D-p: the meet
+        q == p -> meetConclusion(sc, dp)                                         // at D-p: the meet
         q.startsWith(p) -> if (dp.tailAdmits(q.drop(p.size))) sc else null     // below D-p: keeps E
         p.startsWith(q) -> when (sc.fact.tail) {                                // above D-p
-            Tail.ANY, Tail.ANY_TAINT, Tail.NON_EMPTY_MAY ->
+            Tail.ANY, Tail.ANY_TAINT ->
                 if (!sc.exclusion.admits(p.drop(q.size))) null                   // E of `[any-taint]/E` (W8)
                 else if (dp.fact.tail == Tail.EXACT)                             // the chain of D-p, the layer stays
                     sc.copy(fact = sc.fact.copy(path = p, tail = Tail.EXACT), exclusion = ExclusionSet.Empty)
-                else sc.copy(fact = sc.fact.copy(path = p,
-                    tail = if (sc.fact.tail == Tail.NON_EMPTY_MAY) Tail.ANY else sc.fact.tail),
+                else sc.copy(fact = sc.fact.copy(path = p),
                     exclusion = if (sc.fact.tail == Tail.ANY_TAINT && dp.fact.tail == Tail.STAR) dp.exclusion
                                 else ExclusionSet.Empty)                         // [any-taint]/E2 under STAR/E2 (W8)
             Tail.STAR -> if (sc.exclusion.admits(p.drop(q.size))) sc else null   // a FLOW conclusion (F72)
@@ -275,7 +265,6 @@ data class PathEdge(val from: PathFact, val to: PathFact, val exclusion: Exclusi
 
 private fun PathEdge.premiseAdmits(r: List<AccessorIdx>): Boolean = when (from.tail) {
     Tail.EXACT -> r.isEmpty()
-    Tail.NON_EMPTY_MAY -> r.any { it.isCounted() }
     Tail.ANY_TAINT -> fromExclusion.admits(r)   // a must-premise: Ej
     else -> exclusion.admits(r)        // `*`: E; `[any]`: E is Empty unless the target is `*` (row 1)
 }
@@ -285,17 +274,16 @@ private class Shape(val path: List<AccessorIdx>, val tail: Tail, val exclusion: 
 private fun below(c: Conclusion, edge: PathEdge, r: List<AccessorIdx>): Shape? {
     if (!edge.premiseAdmits(r)) return null
     val to = edge.to
-    if (c.fact.tail == Tail.NON_EMPTY_MAY && edge.from.tail == Tail.EXACT) return null
     if (to.tail == Tail.STAR && r.isNotEmpty() && !edge.exclusion.admits(r)) return null
     return when (to.tail) {
         Tail.STAR -> when {
             r.isNotEmpty() -> Shape(to.path + r, c.fact.tail, c.exclusion, demand = false)   // keeps Ec (W8)
             c.fact.tail == Tail.EXACT -> Shape(to.path, Tail.EXACT,
                 if (c.fact.mark is MarkSlot.Star) c.exclusion.union(edge.exclusion) else ExclusionSet.Empty, false)
-            c.fact.tail.isMay -> Shape(to.path, c.fact.tail, ExclusionSet.Empty, demand = true)   // W6
+            c.fact.tail == Tail.ANY -> Shape(to.path, Tail.ANY, ExclusionSet.Empty, demand = true)   // W6
             else -> Shape(to.path, c.fact.tail, c.exclusion.union(edge.exclusion), false)  // `STAR/Ec`, or the exclusion
         }                                                                                 // edge on `[any-taint]/Ec` (W8)
-        Tail.ANY, Tail.NON_EMPTY_MAY -> Shape(to.path, to.tail, ExclusionSet.Empty, demand = true)               // W6: a may
+        Tail.ANY -> Shape(to.path, Tail.ANY, ExclusionSet.Empty, demand = true)               // W6: a may
         Tail.ANY_TAINT, Tail.EXACT -> Shape(to.path, to.tail,                                  // a must, or `$`
             if (to.tail == Tail.ANY_TAINT) edge.toExclusion else ExclusionSet.Empty,           // Et (W8)
             demand = false)        // W2 and the concrete premise gate reject STAR input; geometry still precedes that gate
@@ -306,35 +294,26 @@ private fun PathEdge.isExcludedIdentityKeep(): Boolean =
     from.base == to.base && from.path == to.path && from.tail == Tail.STAR &&
         to.tail == Tail.STAR && exclusion != ExclusionSet.Empty
 
-private fun above(c: Conclusion, edge: PathEdge, r: List<AccessorIdx>, demandRefinement: Boolean): Shape? {
+private fun above(c: Conclusion, edge: PathEdge, r: List<AccessorIdx>): Shape? {
     val admitted = when (c.fact.tail) {
-        Tail.STAR, Tail.ANY_TAINT -> c.exclusion.admits(r)
-        Tail.ANY, Tail.NON_EMPTY_MAY -> true
-        Tail.EXACT -> false
+        Tail.STAR, Tail.ANY_TAINT -> c.exclusion.admits(r); Tail.ANY -> true; Tail.EXACT -> false
     }
     if (!admitted) {
         // An excluded identity keep is the existing field-write effect, not a read.
-        if (!demandRefinement && c.fact.tail == Tail.EXACT && c.fact.mark is MarkSlot.Star &&
-            edge.isExcludedIdentityKeep() && c.exclusion.admits(r))
+        if (c.fact.tail == Tail.EXACT && c.fact.mark is MarkSlot.Star && edge.isExcludedIdentityKeep() && c.exclusion.admits(r))
             return Shape(edge.to.path, Tail.ANY, ExclusionSet.Empty, demand = true)
         return null
     }
     val to = edge.to
-    val unresolvedNonEmpty = c.fact.tail == Tail.NON_EMPTY_MAY && r.none { it.isCounted() }
-    if (unresolvedNonEmpty && edge.from.tail == Tail.EXACT) return null
     if (c.fact.tail != Tail.ANY_TAINT) {           // a `*` fact loses its correlation; an `[any]` fact is demand (W6)
-        val tail = when {
-            to.tail == Tail.EXACT -> Tail.EXACT
-            to.tail == Tail.NON_EMPTY_MAY || (unresolvedNonEmpty && to.tail == Tail.STAR) -> Tail.NON_EMPTY_MAY
-            else -> Tail.ANY
-        }
+        val tail = if (to.tail == Tail.EXACT) Tail.EXACT else Tail.ANY
         return Shape(to.path, tail, ExclusionSet.Empty, demand = true)
     }
     return when (to.tail) {                        // every admitted location of c carries its mark: nothing is lost
         Tail.EXACT -> Shape(to.path, Tail.EXACT,
             if (c.fact.mark is MarkSlot.Star && r.isEmpty()) c.exclusion else ExclusionSet.Empty, demand = false)
         Tail.ANY_TAINT -> Shape(to.path, Tail.ANY_TAINT, edge.toExclusion, demand = false)    // Et
-        Tail.ANY, Tail.NON_EMPTY_MAY -> Shape(to.path, to.tail, ExclusionSet.Empty, demand = true)               // W6: a may
+        Tail.ANY -> Shape(to.path, Tail.ANY, ExclusionSet.Empty, demand = true)               // W6: a may
         Tail.STAR -> Shape(to.path, Tail.ANY_TAINT, edge.exclusion, demand = false)          // the edge exclusion (W8)
     }
 }
@@ -349,8 +328,7 @@ sealed interface EdgeOutcome {
 fun rootOrClass(q: List<AccessorIdx>): Boolean = q.isEmpty() || (q.size == 1 && q[0].isClass())
 
 fun concat(c: Conclusion, edge: PathEdge, edgeDemand: Boolean = false,
-           staticIdentity: Boolean = false, restricted: Boolean = false, run1: Boolean = false,
-           demandRefinement: Boolean = false): EdgeOutcome {
+           staticIdentity: Boolean = false, restricted: Boolean = false, run1: Boolean = false): EdgeOutcome {
     val from = edge.from
     check(from.mark !is MarkSlot.Star || from.mark.excluded.isEmpty)          // S7
     check(edge.to.mark !is MarkSlot.Concrete || from.mark is MarkSlot.Concrete)          // S7
@@ -362,7 +340,7 @@ fun concat(c: Conclusion, edge: PathEdge, edgeDemand: Boolean = false,
     val isAbove = p.size > q.size && p.startsWith(q)
     val shape = when {
         q.startsWith(p) -> below(c, edge, q.drop(p.size))
-        isAbove -> above(c, edge, p.drop(q.size), demandRefinement)
+        isAbove -> above(c, edge, p.drop(q.size))
         else -> null
     } ?: return EdgeOutcome.None
     if (staticIdentity && from.base == STATIC && isAbove && rootOrClass(q)) {   // the static exception (§4.10)
@@ -397,7 +375,7 @@ fun compose(to: MarkSlot, c: MarkSlot): MarkSlot? = when (to) {
 fun normalize(f: PathFact, exclusion: ExclusionSet, demand: Boolean): Conclusion = when {
     demand && f.mark is MarkSlot.Star && (f.tail == Tail.EXACT || f.tail == Tail.ANY_TAINT) ->
         Conclusion(f.copy(tail = Tail.ANY), ExclusionSet.Empty, demand = true)
-    f.tail.isMay -> Conclusion(f, ExclusionSet.Empty, demand = true)                                  // W6
+    f.tail == Tail.ANY -> Conclusion(f, ExclusionSet.Empty, demand = true)                                  // W6
     f.tail == Tail.ANY_TAINT -> {
         Conclusion(f, exclusion, demand)
     }
@@ -409,20 +387,18 @@ fun normalize(f: PathFact, exclusion: ExclusionSet, demand: Boolean): Conclusion
 fun startFact(i: Pattern): Conclusion = when (i.fact.tail) {
     Tail.STAR -> Conclusion(i.fact, i.exclusion, demand = i.fact.mark is MarkSlot.Concrete)
     Tail.ANY -> Conclusion(i.fact, ExclusionSet.Empty, demand = true)
-    Tail.NON_EMPTY_MAY -> error("A nonempty MAY selector cannot start an initial")
     Tail.ANY_TAINT -> Conclusion(i.fact, i.exclusion, demand = false)                // a must-premise: itself, normal
     Tail.EXACT -> Conclusion(i.fact, ExclusionSet.Empty, demand = false)
 }
 
 /** ap.md §4.4 (Lean cutPath, limitF; with the exclusion AnyTaintEx.limitFX). An `[any-taint]/E` fact over the limit
  *  becomes `[any]` in the demand layer and loses E (W8, A2). */
-fun limit(c: Conclusion, fieldLimit: Int, nonEmptyMay: Boolean = false): Conclusion {
+fun limit(c: Conclusion, fieldLimit: Int): Conclusion {
     require(fieldLimit >= 1) { "The field limit must be positive" }
     var n = 0
     for ((k, a) in c.fact.path.withIndex())
         if (a.isCounted() && ++n > fieldLimit)
-            return Conclusion(c.fact.copy(path = c.fact.path.take(k), tail = if (nonEmptyMay) Tail.NON_EMPTY_MAY else Tail.ANY),
-                ExclusionSet.Empty, demand = true)
+            return Conclusion(c.fact.copy(path = c.fact.path.take(k), tail = Tail.ANY), ExclusionSet.Empty, demand = true)
     return c
 }
 
@@ -439,12 +415,11 @@ fun cleanPos(cl: Cleaner, c: PathFact, exclusion: ExclusionSet): Pos {
         q == p -> when {
             cl.reach == CleanReach.AT_AND_BELOW -> Pos.INSIDE
             c.tail == Tail.EXACT -> if (cl.reach == CleanReach.EXACT) Pos.INSIDE else Pos.DISJOINT
-            c.tail == Tail.NON_EMPTY_MAY -> if (cl.reach == CleanReach.EXACT) Pos.DISJOINT else Pos.INSIDE
             else -> Pos.PART
         }
         p.startsWith(q) -> when (c.tail) {
             Tail.EXACT -> Pos.DISJOINT
-            Tail.STAR, Tail.ANY, Tail.NON_EMPTY_MAY, Tail.ANY_TAINT ->                                  // `[any]`: the Empty exclusion admits
+            Tail.STAR, Tail.ANY, Tail.ANY_TAINT ->                                  // `[any]`: the Empty exclusion admits
                 if (exclusion.admits(p.drop(q.size))) Pos.PART else Pos.DISJOINT
         }
         else -> Pos.DISJOINT
@@ -494,7 +469,7 @@ internal fun wholeFlowClean(cl: Cleaner, c: Conclusion): List<Conclusion> {
     val q = c.fact.path
     if (q.startsWith(path)) return emptyList()
     if (!path.startsWith(q) || !c.exclusion.admits(path.drop(q.size))) return listOf(c)
-    if (c.fact.tail.isMay) return listOf(c)
+    if (c.fact.tail == Tail.ANY) return listOf(c)
     val result = ArrayList<Conclusion>()
     result += c.copy(exclusion = c.exclusion.union(ExclusionSet.of(path[q.size])))
     if (q.size + 1 < path.size) {
@@ -573,7 +548,6 @@ fun policy(a: Pattern): Pattern =
  *  native forward must shapes separately (§7.8). A forward must micro target still reverses to ordinary ANY.
  *  MicroEdge.may reads the forward target for pass-rule demand handling. */
 fun revEdge(e: PathEdge): PathEdge? {
-    if (e.from.tail == Tail.NON_EMPTY_MAY || e.to.tail == Tail.NON_EMPTY_MAY) return null
     if (e.from.tail == Tail.ANY_TAINT) return null                          // generic reversal only
     if (e.to.tail == Tail.ANY_TAINT && (e.toExclusion != ExclusionSet.Empty || e.exclusion != ExclusionSet.Empty))
         return null                                                         // generic reversal only
@@ -589,20 +563,16 @@ fun revEdge(e: PathEdge): PathEdge? {
 fun revTails(i: Tail, f: Tail): Pair<Tail, Tail> = when (i) {             // the table of §9.1
     Tail.STAR -> when (f) {
         Tail.STAR -> Tail.STAR to Tail.STAR; Tail.EXACT -> Tail.EXACT to Tail.ANY; Tail.ANY -> Tail.ANY to Tail.ANY
-        Tail.NON_EMPTY_MAY -> error("Nonempty MAY is not a reversible endpoint")
         Tail.ANY_TAINT -> error("S15: a taint edge has an EXACT or ANY premise; a `*` premise has no `[any-taint]` conclusion")
     }
     Tail.ANY -> when (f) {
         Tail.STAR -> Tail.STAR to Tail.STAR; Tail.EXACT -> Tail.EXACT to Tail.ANY; Tail.ANY -> Tail.ANY to Tail.ANY
-        Tail.NON_EMPTY_MAY -> error("Nonempty MAY is not a reversible endpoint")
         Tail.ANY_TAINT -> Tail.ANY to Tail.ANY                               // a conditional source with an `[any]` literal (A1)
     }
     Tail.EXACT -> when (f) {
         Tail.STAR -> Tail.EXACT to Tail.EXACT; Tail.EXACT -> Tail.EXACT to Tail.EXACT; Tail.ANY -> Tail.ANY to Tail.EXACT
-        Tail.NON_EMPTY_MAY -> error("Nonempty MAY is not a reversible endpoint")
         Tail.ANY_TAINT -> Tail.ANY to Tail.EXACT                              // a source result: the premise `[any]` (A1)
     }
-    Tail.NON_EMPTY_MAY -> error("Nonempty MAY is not a reversible premise")
     Tail.ANY_TAINT -> error("generic revTails has no must-premise row")   // reverseRecordLeaf handles native must views
 }
 
@@ -614,8 +584,7 @@ fun revTails(i: Tail, f: Tail): Pair<Tail, Tail> = when (i) {             // the
 fun subsumes(s: Conclusion, n: Conclusion): Boolean {
     if (s.fact.base != n.fact.base || s.demand != n.demand || !markSubsumes(s.fact.mark, n.fact.mark)) return false
     return when (s.fact.tail) {
-        Tail.ANY -> n.fact.tail != Tail.NON_EMPTY_MAY && n.fact.path.startsWith(s.fact.path)
-        Tail.NON_EMPTY_MAY -> n.fact.tail == Tail.NON_EMPTY_MAY && s.fact.path == n.fact.path
+        Tail.ANY -> n.fact.path.startsWith(s.fact.path)
         Tail.ANY_TAINT -> n.fact.tail == Tail.ANY_TAINT && n.fact.path.startsWith(s.fact.path) &&
             if (n.fact.path.size == s.fact.path.size) s.exclusion.isSubsetOf(n.exclusion)
             else s.exclusion.admits(n.fact.path[s.fact.path.size])

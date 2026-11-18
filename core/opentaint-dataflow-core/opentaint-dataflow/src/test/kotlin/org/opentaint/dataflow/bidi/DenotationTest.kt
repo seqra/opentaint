@@ -12,7 +12,6 @@ import org.opentaint.dataflow.bidi.ap.MarkSlot
 import org.opentaint.dataflow.bidi.ap.PathFact
 import org.opentaint.dataflow.bidi.ap.Pattern
 import org.opentaint.dataflow.bidi.ap.Tail
-import org.opentaint.dataflow.bidi.ap.isMay
 import org.opentaint.dataflow.bidi.ap.markSub
 import org.opentaint.dataflow.bidi.ap.tailAdmits
 import org.opentaint.dataflow.bidi.fixtures.BoundedDenotation
@@ -44,10 +43,10 @@ class DenotationTest {
         exclusion: ExclusionSet = ExclusionSet.Empty,
     ) = Pattern(PathFact(base, path, tail, mark), exclusion)
 
-    private fun conclusion(p: Pattern, demand: Boolean = p.fact.tail.isMay) = Conclusion(p.fact, p.exclusion, demand)
+    private fun conclusion(p: Pattern, demand: Boolean = p.fact.tail == Tail.ANY) = Conclusion(p.fact, p.exclusion, demand)
 
     @Test
-    fun `admitted continuations follow every tail row and only the first excluded accessor`() {
+    fun `admitted continuations follow all four tail rows and only the first excluded accessor`() {
         for (tail in Tail.entries) for (exclusion in listOf(ExclusionSet.Empty, ExclusionSet.of(f))) {
             for (suffix in universe.paths) {
                 assertEquals(universe.admitsContinuation(tail, exclusion, suffix), tailAdmits(tail, exclusion, suffix),

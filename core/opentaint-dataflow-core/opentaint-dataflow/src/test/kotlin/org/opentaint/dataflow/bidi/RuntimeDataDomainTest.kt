@@ -21,7 +21,7 @@ class RuntimeDataDomainTest {
         m.initial(base, null, tail, ExclusionSet.Empty, mark)
 
     @Test fun `runtime domain rejects both endpoints for every tail and layer without changing generic AP factories`() {
-        for (tail in Tail.entries - Tail.NON_EMPTY_MAY) for (layer in Layer.entries) for (slot in listOf(mark, MarkSlot.STAR)) {
+        for (tail in Tail.entries) for (layer in Layer.entries) for (slot in listOf(mark, MarkSlot.STAR)) {
             val origin = initial(tail = tail, mark = slot)
             val constantOrigin = initial(literal, tail, slot)
             val value = fixture.fact(tail = tail, mark = slot, layer = layer)

@@ -25,14 +25,9 @@ internal fun replayPersistedSummaries(
             cancellation.checkpoint()
             statistics?.persistedReplayCandidate()
             if (record.direction != direction || !seen.add(record)) continue
-            ops.satisfying(part.added, record.premise, mode, record = true)?.let { matched ->
-                statistics?.persistedReplayMatched()
-                applier.applyRecord(part.copy(added = matched), record)
-            }
-            possibleSavedDirectPart(ops, part.added, record.premise, record.conclusion, mode)?.let { matched ->
-                statistics?.persistedReplayMatched()
-                applier.applyRecord(part.copy(added = matched), record)
-            }
+            val added = ops.satisfying(part.added, record.premise, mode, record = true) ?: continue
+            statistics?.persistedReplayMatched()
+            applier.applyRecord(part.copy(added = added), record)
         }
         for (record in records.byExit(part.callee, leaf)) {
             cancellation.checkpoint()

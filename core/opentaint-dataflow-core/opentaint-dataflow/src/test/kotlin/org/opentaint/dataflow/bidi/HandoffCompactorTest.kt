@@ -124,7 +124,7 @@ class HandoffCompactorTest {
                 val star=may.copy(fact=may.fact.copy(tail=Tail.STAR))
                 assertEquals(HandoffServiceKeys(f.manager).output(DemandExit.Data(may)),DemandExit.Data(star))
                 for (path in listOf(emptyList(),listOf(field),listOf(field,field))) for (tail in Tail.entries) {
-                    val raw=Conclusion(PathFact(p,path,tail,mark),ExclusionSet.Empty,tail.isMay)
+                    val raw=Conclusion(PathFact(p,path,tail,mark),ExclusionSet.Empty,tail==Tail.ANY)
                     assertEquals(restrictConclusionOnly(raw,may),restrictConclusionOnly(raw,star))
                 }
             }
@@ -175,7 +175,7 @@ class HandoffCompactorTest {
                             val actual=f.fact(ret,path,tail,mark,e,if (tail==Tail.ANY) Layer.DEMAND else layer)
                             assertEquals(before.initials(owner.method,actual,policy),after.initials(owner.method,actual,policy),
                                 "C2 run=$run path=$path tail=$tail mark=$mark layer=$layer")
-                            if (tail.isMay || tail==Tail.ANY_TAINT && policy.direction==Direction.BACKWARD ||
+                            if (tail==Tail.ANY || tail==Tail.ANY_TAINT && policy.direction==Direction.BACKWARD ||
                                 mark is MarkSlot.Star && tail==Tail.EXACT && e!=ExclusionSet.Empty) continue
                             val initial=f.initial(ret,path,tail,mark,e)
                             for (outBase in listOf(p,q)) for (outTail in Tail.entries) {
