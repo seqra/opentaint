@@ -7,8 +7,7 @@ with limits 2, 3, …. A policy cutoff is separate from natural termination.
 In the examples, **current** means the native FULL rules at `8da26aa13`.
 **Proposed** means the analyzer operations defined below.
 For a proposed-only tail, the current column gives the corresponding
-native case and names the substitution. Sections 4 and 7 specify
-reply delivery, compaction and the scope of the remaining proof models.
+native case and names the substitution.
 
 **COMPLEX** marks additional cross-row preparation, graph extraction
 or closure work. Local tail cases and existing native lookups keep
@@ -201,7 +200,7 @@ other primary has empty E except the stated MUST case and R07/R08.
   command at the exact same base and head, including its FLOW companion.
   Existing nonempty command E takes precedence. R08 can replace an
   eligible shorter empty-E STAR head and E together as specified below.
-  Apply the C2/C5 policy selection in §7 as one unit.
+  Use these maps with the raw C5 check in §3.3.
 
 Apply R07 to the ordinary C2 family first. It copies E only when the
 STAR command already has the actual's full head. R08 then checks the
@@ -410,8 +409,8 @@ supply a different original's publication just because both fact
 regions contain a field. For a supported primitive read or saved
 inside read, use the ordinary exact result deduplication only after
 both contributions have been applied in the same binding and have
-reached the same destination. R34 likewise uses ordinary delivery for
-its possible result. There is no delegation check on the worklist.
+reached the same destination. Equality includes original, layer, E, mx
+and H. R34 likewise uses ordinary delivery for its possible result.
 
 ### 3.2 Match and apply scalar summaries
 
@@ -552,13 +551,14 @@ ND/control rules. The two normalizations occur after the raw entry check.
 All fresh restricted-run DATA summaries, including NORMAL, use the
 paired output cap. Include the qualified virtual pairs in run-2.
 
-Activate raw checking and the C2 plan together. For a native admitted
-summary or start that the new plan rejects, prove that a legal retained
-route serves every needed use of it. A normalized STAR key alone cannot
-justify a raw EXACT command under NE. A proof uses one complete paired
-row for each new admission/publication, including its companions and
-output cap. If the bridge is missing, use native admission and publication
-for the affected scope under §7.
+Select the C2 plan and raw C5 check together before analysis starts.
+Enable the pair in scopes where the comparative proof supplies a
+retained route for every required use of a native start or summary it
+rejects. Use the native pair in other scopes. Validate each proposed
+admission and publication against one complete demand row with its
+companions and cap. A normalized STAR key alone cannot witness a raw
+EXACT command under NE. Use the reference raw image to validate the
+updated `RestrictedInitialPolicy.canStoreInitial`.
 
 `selectExit` first checks equal bases and intersecting marks. Equal
 concrete marks meet. A concrete mark meets FLOW only if FLOW admits it.
@@ -673,30 +673,21 @@ is absent from both publications, so this application delivers no
 
 ## 4. Reply and summary coverage
 
-### 4.1 Reply delivery
+### Rule definitions
 
-For R16 and R19, apply saved and current summaries with the native
-premise match, layer join, ND binding, alias handling and post-call
-stages. Submit the result to ordinary post-statement admission.
-Equal field geometry with a ready NORMAL result does not remove a
-distinct DEMAND membership. Its continuation can still produce a
-Target or guide a different marking site.
+| Rule and stage | Required behavior |
+| --- | --- |
+| **R16 · ready reply delivery** | Deliver each applicable NORMAL and DEMAND reply through native matching, layer joins, complete AND bindings, aliases and post-call stages. Submit the results to ordinary post-statement admission. Equal geometry keeps separate NORMAL and DEMAND memberships. |
+| **R19 · current reply delivery** | Apply every current summary that matches the caller's native binding. A ready NORMAL result for the same region leaves the applicable DEMAND reply eligible. In restricted runs, current replies come from C5-admitted results. A raw exit rejected by C5 performs no caller delivery. |
+| **R23 · admitted summaries and handoff** | Keep distinct MAY and NE summary rows after C5, including when the MAY region contains the NE region. Deduplicate identical NE memberships. Project each retained row with its own premise, field head and ports. |
+| **R24 · admitted layers** | Keep an admitted DEMAND row when a NORMAL MUST conclusion covers its region. Retain the NORMAL row for replay and the qualified DEMAND row for the next handoff. Continue using native same-layer MUST folding. |
+| **R25 · executable subsumption and guide compaction** | Reuse native aligned NORMAL FLOW subsumption, with the same suffix on both endpoints and the native mask and protection checks. At handoff, identical complete pairs can share one entry. For other compaction, verify the existing C2 key relation in the same entry scope and the C5 key relation at the same paired ports under the updated tails. Check every projection of an ND origin. Before sealing, verify every removed row's providers against the final retained basis. |
+| **R27 · per-owner work priority** | Visit ready EXACT, NORMAL and control work before remaining uncertain work. Use FLOW first within each lane. Apply this order to an owner's ready work and publications. |
 
-### 4.2 Summary coverage and retained basis
-
-For R23 and R24, keep distinct admitted MAY and NE rows and separate
-NORMAL and DEMAND memberships. Reuse same-layer MUST folding and
-aligned NORMAL FLOW subsumption. For example, `x.*→y.*` can cover
-`x.f.*→y.f.*` with the same admitted suffix. Keep `x.f.*→y.g.*` as a
-separate candidate. Keep literal NE deduplication.
-
-At handoff, `DemandStore.Builder` can share identical complete projected
-pairs. For other shapes, reuse `HandoffCompactor` only where its C2/C5
-key equivalences still hold, including all ND projections. Check
-providers against the final retained rows (R25).
-
-Schedule ready exact and control work before uncertain work per owner.
-Use FLOW first within a lane (R27).
+A DEMAND reply can still produce a Target or open a source permission
+even when a NORMAL reply covers its points. C2 uses the preserved NE
+head and C5 uses its own paired output selector. Transitive compaction
+keeps a final valid provider regardless of arrival order.
 
 ### COMPLEX
 
@@ -929,7 +920,7 @@ For R09/R23, keep the distinct admitted summaries in their existing
 summary store. Project these rows at handoff. This keeps the deeper
 NE head available to C2 without a separate list of removed outputs.
 Equal entry selectors can select different paired outputs or budgets.
-The compactor compares complete projected pairs under §4.2.
+The compactor compares complete projected pairs under R25 in §4.
 
 At a completed forward barrier use `HandOff.demandEdges.isEmpty()`
 after insertion and compaction, as in `IterationDriver.barrier`.
@@ -937,8 +928,9 @@ A retained typed DT counts. NT, saved replay, raw candidates rejected
 by C5 and seed definitions do not count. Run-1 preserves the existing
 frozen static views, their attached rows and preflight. Do not run a
 second search for virtual consumers at the stop test. A changed static
-view must pass the native comparison for C2, C5, Target and preflight
-before activation. A policy cutoff stays separate.
+view must pass the native comparison for C2, C5, Target, preflight and
+empty-frontier results before activation. Run these checks outside
+the worklist. A policy cutoff stays separate.
 
 **Work.** At the sealed barrier, a selected origin with `k` scalar
 outputs and `m` original members offers `k·m` pairs. A DT has one
@@ -1440,56 +1432,7 @@ B's permission. In the R37 proof model, an id-1 DT derivation can set the bit to
 false first. The id-2 derivation then upgrades the same anonymous
 row to true. Native handoff keeps the row without consulting a bit.
 
-## 7. Proof and activation
-
-### 7.1 Checks performed by the analyzer
-
-Use the existing AP operation and compare its actual output at the
-stage where the implementation would skip work. The table states the
-permitted checks. A missed check keeps the ordinary result. The
-implementation does not construct a graph of uses or run a proof recipe.
-
-| Operation | Native decision |
-| --- | --- |
-| R07/R08 query map and R20–R22 raw C5 | Use the C2 and C5 operators and qualified rows in §§2–3. Enable together for the scopes covered by the comparative proof. Outside those scopes use the native C2/C5 pair from the start of analysis. The reference raw image specifies `RestrictedInitialPolicy.canStoreInitial`; it is not a lookup into actual call-offer history. |
-| R11/R12 child and saved contribution | Keep the ordinary coarse contribution when the available child result differs in original, applied result, layer, E, mx, H or destination. Only ordinary exact-result deduplication can remove equal already applied results. It happens after the distinct native effects have run. A child hypothesis or an uncombined child result cannot replace the contribution. |
-| R15 provisional saved MUST reply | Use the ordinary possible replay when the definite matcher does not apply and the native possible lane succeeds. |
-| R16/R19 actual DATA | Use ordinary reply delivery and post-statement admission in §4.1. |
-| R18/R23/R24 executable summaries | Run exit effects and C5. Use native exact membership and existing same-layer subsumption. Keep a distinct D membership if its provider is only NORMAL, even with the same geometry. There is no new pre-C5 skip based on a saved record. |
-| R09/R23/R25 outgoing guidance | Compare the complete normalized next-run rows, including the matched owner and physical ports. Keep distinct origins unless the existing C2/C5 compactor relation is proved for the updated tail/mark cells. Equality of the entire projected row suffices at insertion. Preserve all of an ND origin's projections. |
-| R37–R40 root DT | Keep the admitted DT and its native seeds. The abstract closure proofs in §§6.4–6.5 do not authorize a drop using the current stores. |
-
-The root and block handoff use the typed lookup and projection in §6.
-Use the existing forward stop test on the built demand index. The
-run-1 static view retains its own native preflight. Enable a changed
-static view only after verifying that its qualified C2, C5, Target and
-empty-frontier results agree with the specified reference for that view.
-This check is part of verification, outside the analysis worklist.
-
-### 7.2 Proof boundary
-
-Point containment proves spatial support. It does not prove preservation
-of the next source permission, paired publication or Target. The Lean
-models can compare complete sets of effects or show that a proof would
-suffice if all uses were available. Their use lists and derivations are
-proof inputs. Inspecting an already observed prefix of forward or backward
-runs cannot construct those inputs for a live fact. The analyzer uses the
-native gates above.
-
-### COMPLEX
-
-The proof inputs are checked outside the worklist. The active
-analyzer has no general proof search or validation over future runs.
-Sections 3.4 and 6.6 give the additional candidates and their
-rule-disabled controls.
-
-### Examples diff
-
-| Proof input | Current route or basis | Proposed route or basis |
-| --- | --- | --- |
-| A run-3 reply `x.f.M/T,D` is needed to emit `ZERO→DT,D`. A replacement claims a permission first available in run-5. | Keep `x.f.M/T,D` and the resulting `ZERO→DT,D`. | Keep `x.f.M/T,D` and `ZERO→DT,D` through ordinary delivery. |
-| At the normal port, a reached backward ZERO needs `ZERO→DT,D`. The proposed child supplies only `p.f.$/T→ret.$/T,N`. | Keep `{ZERO→DT,D}` for the reached ZERO. | Keep `{ZERO→DT,D}`. The DATA edge does not serve it. |
-| A and B are qualified guides, `A=ret.*/T→p.NE/T,D` and `B=ret.*/T→p.M/T,D`. | The corresponding same-head MAY rows deduplicate to `{ret.*/T→p.M/T,D}`. | Keep `{A; B}`. Different NE and MAY keys do not use exact-row compaction. |
+---
 
 [Constructive rule proofs](lean/proposals/demand-refinement-spec-20261117/README.md) ·
 [Joint service proof](lean/proposals/demand-no-loss-audit-20261117/README.md) ·

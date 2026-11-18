@@ -20,8 +20,8 @@
 
 The scalar NE checks start after the ordinary base, mark, role and
 port checks. The [bounded child proofs](../bounded-refinement-frontier-20261114/README.md)
-cover one-field preparation. The native adapter still has the
-correspondence obligations in §7 of the specification.
+cover one-field preparation. The native adapter follows the joint C2/C5
+activation check in §3.3 of the specification.
 
 Use the source-hash-checked `two-sided-field-cycle-20261117/checked-proofs`
 receipt as the dependency directory. Compile with Lean 4.35.0. Keep
@@ -48,8 +48,8 @@ Compile with the checked outputs from
 `two-sided-field-cycle-20261117` on `LEAN_PATH`.
 
 The broader service and terminal checks in `ServiceAndHandoff` remain
-proof models. The implementation in §7 uses existing analyzer operations
-and keeps live DEMAND replies and anonymous Targets.
+proof models. The analyzer uses ordinary reply delivery in §4 and the
+typed handoff in §6.
 
 [OperationalChecks.lean](OperationalChecks.lean) replays the
 alternating-generator reference with ordinary reply delivery through
