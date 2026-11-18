@@ -1,8 +1,45 @@
 # Non-empty MAY proof dossier
 
+The later [R39 regular field-path goal service](../branching-field-cycle-20261117/README.md) adds only a proved
+NoRoute terminal-handoff certificate. It does not change the NE domain,
+initial emission, C5, normalization or any field cap in this package.
+
+
+The [mark-origin service package](../mark-origin-soundness-20261117/README.md)
+checks the later R38 [REC] [LOOP] Target certificate, its source-specific
+loss control and 7,686 fresh configurations. No tail, C2/C5 or field-cap
+rule in this historical proof package changes.
+
+
+The later [run-2 STAR relay](../run2-star-relay-20261117/README.md)
+supersedes only same-head STAR-to-STAR rejection for precise STAR demand
+in run-2, including its complete raw C5 image. The original model below
+is a historical dependency. Other cells and all caps remain unchanged.
+
+
 The [complete specification](../../../non-empty-may.md) is the behavioral
 contract. No production analyzer implementation is changed by this package.
 It follows [the proof guide](../../../proof-guide.md).
+
+Later C2 progress rules are in the
+[consolidated proposal](../../../../docs/design/bidirectional-demand-termination-approach-20261115.md).
+The [carried-real-E package](../concrete-query-exclusions-20261116/README.md)
+supersedes this package's Empty-E STAR admission only for eligible
+restricted FULL concrete-demand families and their FLOW companions, with
+the corresponding new raw C5 image. These original Lean sources stay
+unchanged as source-hash-checked historical dependencies.
+
+The [NORMAL MUST head-retention extension](../excluded-head-admission-20261116/README.md)
+adds one exhaustive forward FULL concrete MAY/NE entry-cap exception with
+real E. Global/output caps stay mandatory. This original package does not
+prove that extension; its separate package checks the new raw image,
+exception certificate and old/new cold examples.
+
+The selected same-head MUST/EXACT-root cleaner revision is checked in the
+separate [cleaner policy package](../uniform-root-cleaner-cycle-20261114/README.md).
+Its 9 checks distinguish run-1 completion from the historical cycle and
+record the NORMAL exact-root false-positive consequence. The four tail/
+C2/C5 modules below do not model that cleaner transfer.
 
 ## Reproduce
 
@@ -128,4 +165,8 @@ Run the wrapper, successive-loop, no-leave and two historical Conductor
 finding regressions without an iteration limit, then project validation.
 This package proves neither global convergence nor full-program no-FN.
 It contains no universal-workload bound or measured new-policy speedup.
+The separate [acyclic counterexample](../non-empty-may-acyclic-cycle-20261113/README.md)
+constructs a recurring demand under these C2/C5 rules and derives its
+submitted packets through two real call contexts, rather than assuming
+the same packets will be offered in every run.
 No new project run is claimed; latest historical positions are in the spec.

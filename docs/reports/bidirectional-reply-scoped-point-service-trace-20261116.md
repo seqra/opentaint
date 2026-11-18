@@ -1,0 +1,317 @@
+# Reply-scoped NORMAL completion: complete fact trace
+
+16 November 2026. Synthetic data-flow reachability. Production unchanged.
+[Selected repair, proofs and scope](../design/bidirectional-reply-scoped-point-service-20261116.md).
+
+`$`=EXACT, `*`=STAR, M=MAY, NE=nonempty MAY, MUST=uniform; N/D=layer.
+All H are plain; E/mx are empty. Grouped pairs abbreviate separate scalar rows.
+The shared make owner aggregates all three ordinary call offers. Each call is followed
+by a real field read of h. These reads are instructions, not configured pass rules.
+Helper submitted facts include the reverse h read in backward runs. Root lines show
+the packets after each forward read, or before each reverse read, in code variable names.
+All eligible C2 children, current C5 results and saved NORMAL service remain enabled.
+The fixed reference controller explicitly models root ZERO/Target permissions.
+For forward runs inputs are above each body and outputs below. Backward placement reverses this.
+The full cold prefix reaches natural stop at run-5. Every run from run-6 is proved quiet.
+
+### Run-1, forward, field limit 1
+
+```java
+// Demand [entry | paired output]:
+//   unrestricted run-1
+// Submitted facts:
+//   D: p.f.NE/T, p.M/T
+//   D: p.M/U
+// Emitted initials:
+//   D: p.*/T
+//   D: p.*/U
+// Whole complete keys: none
+// Mark-scoped complete keys: none
+// Current-owner full NORMAL closure keys: none
+Box make(Box p) {
+    Box r = new Box();
+    // CM(p.f.g.g.M,T) => assign U to r.h.MUST.
+    // CM(p.M,T)       => assign U to r.h.h.MUST.
+    // CM(p.M,T)       => assign U to r.k.MUST.
+    // CM(p.f.g.g.M,U) => assign T to r.h.MUST.
+    // CM(p.M,U)       => assign T to r.h.h.MUST.
+    // CM(p.M,U)       => assign T to r.k.MUST.
+    return r;
+}
+// Admitted current NORMAL summaries: none
+// Published qualified DEMAND summaries:
+//   p.*/T -> D: ret.h.M/U, ret.h.NE/U, ret.k.MUST/U
+//   p.*/U -> D: ret.h.M/T, ret.h.NE/T, ret.k.MUST/T
+```
+
+```java
+// Demand control: unrestricted run-1
+// Submitted ZERO / emitted ZERO: active
+// Entry DATA: a.f.NE/T,D
+void root(Box a) { // Entry marking: T only at a.f.g.$.
+    Box x = make(a).h; // x.M/U,D
+    Box y = make(x).h; // y.M/T,D
+    Box z = make(y).h; // z.M/U,D
+    // Observe CM(z.M,U).
+}
+// Published: ZERO -> DemandTarget,D.
+// NORMAL observation: none.
+```
+
+### Run-2, backward, field limit 1
+
+```java
+// Admitted current NORMAL summaries: none
+// Published qualified DEMAND summaries:
+//   ret.h.$/U -> D: p.f.NE/T
+//   ret.h.*/U -> D: p.f.NE/T, p.M/T
+//   ret.h.$/T -> D: p.f.NE/U
+//   ret.h.*/T -> D: p.f.NE/U, p.M/U
+Box make(Box p) {
+    Box r = new Box();
+    // CM(p.f.g.g.M,T) => assign U to r.h.MUST.
+    // CM(p.M,T)       => assign U to r.h.h.MUST.
+    // CM(p.M,T)       => assign U to r.k.MUST.
+    // CM(p.f.g.g.M,U) => assign T to r.h.MUST.
+    // CM(p.M,U)       => assign T to r.h.h.MUST.
+    // CM(p.M,U)       => assign T to r.k.MUST.
+    return r;
+}
+// Demand [entry | paired output]:
+//   [ret.h.M/U | p.*/T]
+//   [ret.h.NE/U | p.*/T]
+//   [ret.k.M/U | p.*/T]
+//   [ret.h.M/T | p.*/U]
+//   [ret.h.NE/T | p.*/U]
+//   [ret.k.M/T | p.*/U]
+// Submitted facts:
+//   D: ret.h.M/U
+//   D: ret.h.M/T
+// Emitted initials:
+//   D: ret.h.$/U, ret.h.*/U
+//   N: ret.h.*/FLOW
+//   D: ret.h.$/T, ret.h.*/T
+// Whole complete keys: none
+// Mark-scoped complete keys: none
+// Current-owner full NORMAL closure keys: none
+```
+
+```java
+// Published control summary: ZERO -> DemandTarget,D; entry-marking permission renewed.
+// NormalTarget is ignored backward; the prior NORMAL report remains retained.
+void root(Box a) {
+    Box x = make(a).h; // backward requirements at a: a.M/T,D
+    Box y = make(x).h; // backward requirements at x: x.M/U,D
+    Box z = make(y).h; // backward requirements at y: y.M/T,D
+    // Backward observation input at z: z.M/U,D
+}
+// Demand control: [Target | ZERO]
+// Submitted ZERO / emitted ZERO: active
+// Backward observation input at z: z.M/U,D
+```
+
+### Run-3, forward, field limit 2
+
+```java
+// Demand [entry | paired output]:
+//   [p.f.NE/T | ret.h.$/U, ret.h.*/U]
+//   [p.M/T | ret.h.*/U]
+//   [p.f.NE/U | ret.h.$/T, ret.h.*/T]
+//   [p.M/U | ret.h.*/T]
+// Submitted facts:
+//   N: p.f.g.$/T
+//   N: p.h.MUST/U
+//   D: p.h.MUST/T
+// Emitted initials:
+//   N: p.f.g.$/T
+//   D: p.f.*/T, p.h.*/T
+//   N: p.f.*/FLOW, p.$/FLOW, p.f.$/FLOW, p.h.*/FLOW
+//   D: p.h.*/U
+// Whole complete keys: none
+// Mark-scoped complete keys: none
+// Current-owner full NORMAL closure keys:
+//   p.f.g.$/T
+Box make(Box p) {
+    Box r = new Box();
+    // CM(p.f.g.g.M,T) => assign U to r.h.MUST.
+    // CM(p.M,T)       => assign U to r.h.h.MUST.
+    // CM(p.M,T)       => assign U to r.k.MUST.
+    // CM(p.f.g.g.M,U) => assign T to r.h.MUST.
+    // CM(p.M,U)       => assign T to r.h.h.MUST.
+    // CM(p.M,U)       => assign T to r.k.MUST.
+    return r;
+}
+// Admitted current NORMAL summaries:
+//   p.f.g.$/T -> N: ret.h.h.MUST/U
+// Published qualified DEMAND summaries:
+//   p.f.*/T -> D: ret.h.M/U, ret.h.h.MUST/U
+//   p.h.*/U -> D: ret.h.h.MUST/T
+//   p.h.*/T -> D: ret.h.h.MUST/U
+// Raw ret.k.MUST/T or U is outside every paired h output.
+// Whole/mark completion still fails; the h reply can use its own complete NORMAL service.
+```
+
+```java
+// Demand control: [Target | ZERO]
+// Submitted ZERO / emitted ZERO: active
+// Entry DATA: a.f.g.$/T,N
+void root(Box a) { // Entry marking: T only at a.f.g.$.
+    Box x = make(a).h; // x.h.MUST/U,N
+    Box y = make(x).h; // y.h.MUST/T,D
+    Box z = make(y).h; // z.h.MUST/U,D
+    // Observe CM(z.M,U).
+}
+// Published: ZERO -> DemandTarget,D.
+// NORMAL observation: none.
+```
+
+### Run-4, backward, field limit 3
+
+```java
+// Admitted current NORMAL summaries: none
+// Published qualified DEMAND summaries:
+//   ret.h.$/U -> D: p.f.g.NE/T
+//   ret.h.*/U -> D: p.f.g.NE/T, p.f.M/T
+//   ret.h.h.$/U -> D: p.f.g.NE/T, p.f.M/T, p.h.M/T
+//   ret.h.h.*/U -> D: p.f.g.NE/T, p.f.M/T, p.h.M/T
+//   ret.h.h.$/T -> D: p.h.M/U
+//   ret.h.h.*/T -> D: p.h.M/U
+Box make(Box p) {
+    Box r = new Box();
+    // CM(p.f.g.g.M,T) => assign U to r.h.MUST.
+    // CM(p.M,T)       => assign U to r.h.h.MUST.
+    // CM(p.M,T)       => assign U to r.k.MUST.
+    // CM(p.f.g.g.M,U) => assign T to r.h.MUST.
+    // CM(p.M,U)       => assign T to r.h.h.MUST.
+    // CM(p.M,U)       => assign T to r.k.MUST.
+    return r;
+}
+// Demand [entry | paired output]:
+//   [ret.h.M/U | p.f.*/T]
+//   [ret.h.h.M/U | p.f.*/T, p.h.*/T]
+//   [ret.h.h.M/T | p.h.*/U]
+// Submitted facts:
+//   D: ret.h.M/U, ret.h.h.M/U
+//   D: ret.h.f.g.$/T, ret.h.f.M/T, ret.h.h.M/T
+// Emitted initials:
+//   D: ret.h.$/U, ret.h.*/U, ret.h.h.$/U, ret.h.h.*/U
+//   N: ret.h.*/FLOW, ret.h.h.*/FLOW, ret.h.$/FLOW
+//   D: ret.h.h.$/T, ret.h.h.*/T
+// Whole complete keys: none
+// Mark-scoped complete keys: none
+// Current-owner full NORMAL closure keys: none
+```
+
+```java
+// Published control summary: ZERO -> DemandTarget,D; entry-marking permission renewed.
+// NormalTarget is ignored backward; the prior NORMAL report remains retained.
+void root(Box a) {
+    Box x = make(a).h; // backward requirements at a: a.f.M/T,D; a.h.M/T,D
+    Box y = make(x).h; // backward requirements at x: x.h.M/U,D
+    Box z = make(y).h; // backward requirements at y: y.f.M/T,D; y.h.M/T,D
+    // Backward observation input at z: z.M/U,D
+}
+// Demand control: [Target | ZERO]
+// Submitted ZERO / emitted ZERO: active
+// Backward observation input at z: z.M/U,D
+```
+
+### Run-5, forward, field limit 4
+
+```java
+// Demand [entry | paired output]:
+//   [p.f.g.NE/T | ret.h.$/U, ret.h.*/U, ret.h.h.$/U, ret.h.h.*/U]
+//   [p.f.M/T | ret.h.*/U, ret.h.h.$/U, ret.h.h.*/U]
+//   [p.h.M/T | ret.h.h.$/U, ret.h.h.*/U]
+//   [p.h.M/U | ret.h.h.$/T, ret.h.h.*/T]
+// Submitted facts:
+//   N: p.f.g.$/T, p.h.$/T, p.h.MUST/T
+//   N: p.h.MUST/U, p.h.$/U
+// Emitted initials:
+//   N: p.f.g.$/T, p.h.$/T, p.h.MUST/T
+//   N: p.f.$/FLOW
+//   N: p.h.MUST/U, p.h.$/U
+// Whole complete keys: none
+// Mark-scoped complete keys: none
+// Current-owner full NORMAL closure keys:
+//   p.f.g.$/T
+//   p.h.$/U
+//   p.h.$/T
+Box make(Box p) {
+    Box r = new Box();
+    // CM(p.f.g.g.M,T) => assign U to r.h.MUST.
+    // CM(p.M,T)       => assign U to r.h.h.MUST.
+    // CM(p.M,T)       => assign U to r.k.MUST.
+    // CM(p.f.g.g.M,U) => assign T to r.h.MUST.
+    // CM(p.M,U)       => assign T to r.h.h.MUST.
+    // CM(p.M,U)       => assign T to r.k.MUST.
+    return r;
+}
+// Admitted current NORMAL summaries:
+//   p.f.g.$/T -> N: ret.h.h.MUST/U, ret.h.h.$/U
+//   p.h.MUST/U -> N: ret.h.h.$/T, ret.h.h.MUST/T
+//   p.h.$/U -> N: ret.h.h.$/T, ret.h.h.MUST/T
+//   p.h.$/T -> N: ret.h.h.$/U, ret.h.h.MUST/U
+//   p.h.MUST/T -> N: ret.h.h.$/U, ret.h.h.MUST/U
+// Published qualified DEMAND summaries: none
+// Raw ret.k.MUST/T or U is outside every paired h output.
+// Whole/mark completion still fails; the h reply can use its own complete NORMAL service.
+```
+
+```java
+// Demand control: [Target | ZERO]
+// Submitted ZERO / emitted ZERO: active
+// Entry DATA: a.f.g.$/T,N
+void root(Box a) { // Entry marking: T only at a.f.g.$.
+    Box x = make(a).h; // x.h.MUST/U,N; x.h.$/U,N
+    Box y = make(x).h; // y.h.$/T,N; y.h.MUST/T,N
+    Box z = make(y).h; // z.h.$/U,N; z.h.MUST/U,N
+    // Observe CM(z.M,U).
+}
+// Published: no new DemandTarget.
+// NORMAL observation: retained NormalTarget(id).
+```
+
+### Run-6, backward, field limit 5
+
+```java
+// Admitted current NORMAL summaries: none
+// Published qualified DEMAND summaries: none
+Box make(Box p) {
+    Box r = new Box();
+    // CM(p.f.g.g.M,T) => assign U to r.h.MUST.
+    // CM(p.M,T)       => assign U to r.h.h.MUST.
+    // CM(p.M,T)       => assign U to r.k.MUST.
+    // CM(p.f.g.g.M,U) => assign T to r.h.MUST.
+    // CM(p.M,U)       => assign T to r.h.h.MUST.
+    // CM(p.M,U)       => assign T to r.k.MUST.
+    return r;
+}
+// Demand [entry | paired output]: none
+// Submitted facts: none
+// Emitted initials: none
+// Whole complete keys: none
+// Mark-scoped complete keys: none
+// Current-owner full NORMAL closure keys: none
+```
+
+```java
+// Published control summary: none.
+// NormalTarget is ignored backward; the prior NORMAL report remains retained.
+void root(Box a) {
+    Box x = make(a).h; // backward requirements at a: none
+    Box y = make(x).h; // backward requirements at x: none
+    Box z = make(y).h; // backward requirements at y: none
+    // Backward observation input at z: none
+}
+// Demand control: inactive
+// Submitted ZERO / emitted ZERO: none
+// Backward observation input at z: none
+```
+
+## Uncapped quiet suffix
+
+For every n >= 0, history(n+6) equals the complete quiet run-6 state.
+The NORMAL observation remains retained. No DATA or Target guidance revives.
+This is a constructive induction result for the uncapped schedule, not a run-11 policy stop.
+Within-run fixed points are checked at each cold iteration.

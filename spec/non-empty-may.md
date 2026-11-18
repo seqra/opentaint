@@ -1,5 +1,19 @@
 # Non-empty MAY: emission, restriction and subsumption
 
+The [condensed specification](demand-refinement-and-termination.md) integrates
+this design with the later selected rules.
+
+The later [R39 regular field-path goal service](../docs/design/bidirectional-regular-field-goal-service-20261117.md) adds only a proved
+NoRoute terminal-handoff certificate. It does not change the NE domain,
+initial emission, C5, normalization or any field cap in this package.
+
+
+The later [R38 source-specific Target service](../docs/design/bidirectional-demand-termination-approach-20261115.md#source-specific-root-target-service-r37-rec-r38-rec-loop)
+strengthens only the root Target retirement certificate. It does not alter
+this document's tails, C2/C5, normalization or field cuts. Report identity
+alone is not proof of every marking-point/full-mark/observer relation.
+
+
 13 November 2026. Design specification. Production code is unchanged.
 Source baseline: `374fa3c6f`; reviewed repository HEAD: `2bed8939b`.
 Follow [proof-guide.md](proof-guide.md). The
@@ -8,6 +22,57 @@ the constructive results, model scope and implementation acceptance checks.
 
 This document replaces the earlier EXACT/MAY-start and STAR/MAY-admission
 candidates for these mechanisms. It does not restart the demand campaign.
+
+The [consolidated progress proposal](../docs/design/bidirectional-demand-termination-approach-20261115.md)
+adds the later selected fixes. Its latest restricted-FULL concrete C2 change
+retains actual real E on same-head STAR starts and their existing FLOW
+companions; C5 uses that updated raw family. It supersedes Empty-E admission
+in that narrow case. [Rule, old/new examples and uncapped run-5 result](../docs/reports/bidirectional-concrete-query-exclusions-20261116.md).
+The original tail/proof sources below remain historical dependencies, not
+a proof that NE alone ensures termination.
+
+The later [NORMAL MUST head-retention rule](../docs/reports/bidirectional-excluded-head-admission-20261116.md)
+adds one enumerated FL(Dc)+1 entry exception: restricted forward FULL
+concrete MAY/NE, an already admitted NORMAL MUST actual with nonempty real
+E, and an existing shorter Empty-E STAR start. Only that start and its
+FLOW companion can retain the actual head/E. The global cap and all paired
+FL(Dp)+1 output caps stay mandatory. STAR/DEMAND actuals and backward runs
+are ineligible. The consolidated proposal lists the exhaustive guard and
+the required frequency/workload measurements before activation.
+
+The later [run-2 STAR relay](../docs/design/bidirectional-run2-star-relay-20261117.md)
+adds one bootstrap cell: same-head STAR actual plus precise STAR demand in
+run-2 starts a STAR identity, with the existing concrete DEMAND/FLOW companion
+rules. Use the same complete raw C2 family in C5. This supersedes that one
+rejection below; exact demands, later runs, exclusions and all caps are unchanged.
+
+The [handoff-mask audit](../docs/reports/bidirectional-post-run2-soundness-audit-20261117.md)
+makes the retained AP F72 boundary explicit: clear mx on FLOW demand Dc
+and Dp, after selecting an admitted edge for handoff. Runtime actuals,
+summary conclusions and saved NORMAL records retain mx. A field cut keeps
+mx on its result; that does not override the later guidance-only projection.
+This is a model/spec clarification, not a new semantic change.
+
+The later [possible DIRECT replay repair](../docs/design/bidirectional-saved-direct-possible-replay-20261117.md)
+adds a DEMAND-only read for a blocked strict-ancestor STAR offer against a
+saved same-direction unary NORMAL FLOW STAR relation. It preserves all
+old successful reads and the C2/C5/cut rules below. The prefix-return
+reference retains its NORMAL observation at **run-5**. Production is unchanged.
+
+The later [cleaner repairs R35/R36](../docs/reports/bidirectional-cleaner-termination-campaign-20261117.md)
+replace the same-head-only selected EXACT/MUST guard with projection closure
+and add a precise NORMAL MUST subtree residual after run-1. R35 deliberately
+extends the accepted point-cleaner coarsening; R36 preserves exact subtree
+deletion. All field caps and the tail/C2/C5 contract below stay unchanged.
+Their repaired references finish at natural **run-1/run-3**; no new field-cap
+exception or production change is included.
+
+The later [R37 [REC] terminal service](../docs/reports/bidirectional-recursive-target-termination-20261117.md)
+removes only certified forward root ZERO/DT handoff guidance whose complete
+origins are already confirmed root report IDs. One terminal-only bit keeps
+mixed or unknown origins pending. Target keys stay anonymous; current-run
+propagation, all DATA rows and the tail/C2/C5 rules below stay unchanged.
+The recursive wrapper reference finishes naturally at **run-7**.
 
 ## 1. Selected semantic changes
 
@@ -22,6 +87,7 @@ candidates for these mechanisms. It does not restart the demand campaign.
 | Real field cut | MAY/DEMAND | NE/DEMAND, in every run |
 | Uncut write of a MAY value | Keep the written field and MAY suffix | Keep this behavior |
 | MAY coverage | No NE output | A retained MAY output also covers NE in the same region |
+| Selected EXACT-root T cleaner on same-head MUST/T | Preserve MUST but move it to DEMAND | Keep MUST and its input layer; the cleaner cannot clean this fact |
 
 These change query selection, summary admission and the next demand frontier.
 The raw C5 check is a semantic change: another raw initial with the same
@@ -453,6 +519,24 @@ be represented precisely, retain NE/D rather than invent an empty binding.
 Keep existing cleaner protection producers. Full kills, mark exclusions,
 mark-changing actions and complete source/ND conditions remain unchanged.
 NE never becomes MUST and never bypasses a mark gate or source permission.
+Historical selected revision, 14 November: an EXACT-reach selected T cleaner at
+`x.p` cannot clean the same-head concrete `x.p.MUST/T`. Keep its path,
+mark, real E and layer, with the existing selected-survivor protection.
+NORMAL stays NORMAL; DEMAND stays DEMAND. All other cleaner rows are
+unchanged, including exact-point kills, MAY/STAR partial survivors,
+different-position cleaners and whole-position cleaning.
+
+This is an explicit semantic change. It closes the uniform-source/root-
+cleaner repetition at run-1. It also retains T at the cleaned root in a
+NORMAL MUST, so an exact-root sink can now give a NORMAL false positive
+under the original concrete cleaning behavior. This revision does not
+prove precision of that report; see the
+[policy proof and example](lean/proposals/uniform-root-cleaner-cycle-20261114/README.md).
+The later R35/R36 rules in the
+[consolidated cleaner section](../docs/design/bidirectional-demand-termination-approach-20261115.md#9-selected-cleaner-policy-and-controls)
+supersede the same-head-only guard and the claim that every other concrete
+cleaner row is unchanged. They do not change the NE policies here.
+
 The existing selected partial STAR cleaner survivor remains MAY/D with
 its existing protection; this proposal adds no further STAR-cleaner-to-NE
 optimization. Do not relabel an old MAY survivor without the selected
@@ -618,6 +702,11 @@ can admit another STAR non-empty query without naming a new field. The
 proved progress distinction excludes an empty query from a non-empty-only
 offer; it is not a theorem that each admission increases concrete FL.
 Unknown reads and protocol over-approximations can produce MAY again.
+The [acyclic two-call counterexample](../docs/reports/bidirectional-non-empty-may-acyclic-nontermination-20261113.md)
+derives a repeating FLOW demand without loops, recursion or a real cut on
+the repeating route. It includes per-run annotations and an uncapped
+inductive witness proof. NE therefore does not ensure convergence even on
+an acyclic program.
 The proof dossier contains 79 audited constructive declarations across
 four modules; it separates these results from native adapter obligations.
 

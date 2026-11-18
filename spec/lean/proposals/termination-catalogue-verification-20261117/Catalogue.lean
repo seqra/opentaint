@@ -1,0 +1,66 @@
+import TerminalReplay
+import UniformStickyColdOldMethod
+import UniformStickyColdOldBB
+import UniformStickyColdOrdinaryTwo
+import UniformStickyColdNested
+import UniformStickyColdOverwrite
+import UniformStickyColdNestedNegative
+import UniformStickyColdNestedExact
+import RootCleanerPolicy
+import ExactMUSTClosure
+import NestedCleanerProtocol
+import MarkedClosure
+import OriginRepair
+import RootTerminalRepair
+import LateCompleteCold
+import LateScopedCold
+import CarryNewCold
+import HeadDeepCold
+import HeadShallowCold
+import DirectPossibleProofs
+import CleanerRepairTrace
+import RelayTrace
+
+-- Keep the scoped constructive proofs in the catalogue audit. The
+-- generated executions check the additional conservative dispatch policy.
+#check UniformStickyColdOldMethod.natural_stop_and_expected_observation
+#check UniformStickyColdOldBB.natural_stop_and_expected_observation
+#check UniformStickyColdOrdinaryTwo.natural_stop_and_expected_observation
+#check UniformStickyColdNested.natural_stop_and_expected_observation
+#check UniformStickyColdOverwrite.natural_stop_and_expected_observation
+#check UniformStickyColdNestedNegative.natural_stop_and_expected_observation
+#check UniformStickyColdNestedExact.natural_stop_and_expected_observation
+#check DefiniteMustPrior.all_eighteen_final_frontiers_are_empty
+#check DefiniteMustPrior.all_eighteen_expected_report_sets_are_preserved
+#check SameLaneMarkedClosure.the_entire_new_frontier_is_empty_at_the_within_run_fixed_point
+#check SameLaneMarkedClosure.every_later_closure_round_has_no_handoff
+#check UniformRootCleanerPolicy.no_refinement_or_backward_run_is_required
+#check ExactMUSTClosure.the_new_case_has_a_NORMAL_target_and_empty_handoff_at_run1
+#check NestedCleanerProtocol.both_repaired_modes_have_NORMAL_targets_and_empty_handoff_at_run3
+#check NestedCleanerProtocol.neither_repaired_case_can_restart_after_natural_completion
+#check LateCompleteCold.natural_stop
+#check LateScopedCold.natural_stop
+#check CarryNewCold.the_new_case_naturally_stops_run5
+#check HeadDeepCold.natural_stop_run5
+#check HeadShallowCold.natural_stop_run5
+#check OriginRepair.the_repair_reaches_the_same_deep_relation_as_the_baseline_at_run5
+#check OriginRepair.the_later_recursive_relation_is_served_before_natural_run9_completion
+#check RootTerminalRepair.every_later_forward_stays_quiet_without_any_iteration_limit
+#check GuardedTermination.the_disjoint_regular_and_nested_models_keep_the_run5_stop
+#check DirectPossibleProofs.run5_retains_the_real_NORMAL_observation_and_empties_demand
+#check DirectPossibleProofs.full_165_keeps_its_NORMAL_observation_at_run5
+#check DirectPossibleProofs.existing_884_control_has_the_same_complete_run5_state
+#check CleanerRepairTrace.the_repaired_case_finishes_naturally_in_run3
+#check RelayTrace.natural_run3_completion_retains_the_real_observation
+
+-- The exclusion-aware C2 families remain selected when the optional
+-- continuation fold is withheld. Each still reaches the original stop.
+#eval do
+  let carry := CarryExcluded.history false 5
+  let shallow := HeadShallow.history false 5
+  let deep := HeadDeep.history false 5
+  if !(CarryExcluded.stopped 5 carry && carry.report &&
+      HeadShallow.stopped 5 shallow && shallow.report &&
+      HeadDeep.stopped 5 deep && deep.report) then
+    throw (IO.userError "an exclusion fixture lost natural run-5 completion")
+  IO.println "same-head, shallow and deep exclusions: natural run-5"
