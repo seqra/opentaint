@@ -4,6 +4,10 @@ This specification defines bounded refinement and demand retirement in
 FULL mark mode of the bidirectional access-path analyzer. Run forward at
 limit 1 in run-1, backward at limit 1 in run-2, then alternate direction
 with limits 2, 3, …. A policy cutoff is separate from natural termination.
+In the examples, **current** means the native FULL rules at `8da26aa13`.
+**Proposed** means the qualified rules below with their proof guards satisfied.
+For a proposed-only tail or certificate, the current column gives the
+corresponding native case and names the substitution.
 
 ## 1. Domain and processing order
 
@@ -19,18 +23,34 @@ Static class anchors count as zero fields and remain indivisible.
 For a field alphabet Σ, a head denotes the suffix sets `$={ε}`,
 `M=Σ*` and `NE=Σ+`. A NORMAL STAR relation carries **the same** admitted
 suffix from its premise to its conclusion. MAY and NE conclusions can
-choose an independent suffix. MUST asserts support at every represented
-point, subject to E. The STAR binding used by C2 queries the nonempty
-case. This choice does not change ordinary STAR application.
+choose an independent suffix. NE excludes the empty suffix and carries
+DEMAND support. M and NE have empty E. MUST asserts support at every
+represented point, subject to E. C2 classifies a same-head STAR offer
+under M/NE as supplying the nonempty branch only. In ordinary application,
+STAR still admits the empty suffix. A strict descent through STAR/MUST
+checks the first accessor against E at its head. EXACT admits only empty.
+M admits any suffix and NE admits any suffix with at least one field or
+array accessor. Compose support as D if any participant is D or the
+binding is only possible.
 
-A query owns EXACT or STAR initials, with the existing forward MUST
-exception. A result or offer can also have M or NE. A frozen entry
-selector can have STAR, M, NE or concrete EXACT. A paired exit selector
-can have STAR or EXACT, with the existing uniform and virtual MAY cases.
-An executable DATA premise, including an ND member, and an ordinary
-paired exit selector cannot have NE or M. The virtual MAY exit comes
-from the native projection. Backward MUST initials are invalid. ZERO, DemandTarget (DT)
-and NormalTarget (NT) are typed controls outside DATA.
+| Role | Allowed tails |
+| --- | --- |
+| Raw initial or executable DATA premise member | EXACT, STAR, and the forward MUST lane |
+| DATA conclusion or incoming actual | EXACT, STAR, M, NE, and MUST where the native direction permits it |
+| Frozen demand entry Dc | STAR, M, NE, or concrete EXACT |
+| Paired demand exit Dp | EXACT, STAR, forward-origin MUST, or M in a native virtual view |
+| Saved NORMAL record | Only eligible native NORMAL shapes, with no NE endpoint |
+
+NE and M never serve as owned initials, executable premise members or
+record read premises. An ordinary reversed demand pair can have NE at
+its entry Dc only. Backward MUST initials and actuals are invalid.
+ZERO, DemandTarget (DT) and NormalTarget (NT) are typed controls outside
+DATA. A concrete static AP has a named JVM class/field anchor, or an
+EXACT class marker. Validate restricted run-2 concrete static actuals
+at the usual handoff after the global cut. A named field can now supply
+NE/D with empty E, as well as the existing EXACT, M and correlated STAR
+shapes. An EXACT class marker still has empty E. No cut or rebase of
+a concrete static AP can invent a broad root or class mark.
 
 An owner is a method or generated block. The comparison frame contains
 owner and revision, direction, complete original premise, physical ports,
@@ -43,6 +63,11 @@ singleton-origin approximation and produces ZERO only from an all-ZERO
 witness. For example, equivalent plain/protected `p.f.$/T` remain separate,
 and one arm of `CM(p,T) AND CM(q,U)` cannot produce the later-run result.
 These constraints apply at storage, application and handoff (R29/R30).
+Tail, layer and H distinguish logical fact and summary memberships,
+including packed leaves. Starting support distinguishes query processing
+memberships but does not change the interned AP key. Row ownership,
+possible-binding annotations and proof receipts are control data outside
+fact equality and hashing.
 
 ```text
 on offer: apply saved NORMAL to the original actual
@@ -66,7 +91,8 @@ For run-2, run-1 static completion and shared carry supply virtual
 pairs to C2 and C5. Include static Target lookups, lost-write guides,
 scoped static shortcuts, preflight and the frontier test in the same view.
 Keep each pair's physical owner route, anchor, selected mark label and
-output budget. Keep the native positive `NO_DEMAND_EDGE` behavior. For
+output budget. A completed forward run has reason `NO_DEMAND_EDGE`
+when its full outgoing guidance is empty. For
 example, `ZERO→C.f/T` and `C.f/T→DT` can supply a virtual `ZERO→DT`
 guide. Check equivalence with the native static view before activating
 an NE-aware adapter. Use transitive lookup for these pairs without
@@ -76,7 +102,10 @@ An already reached backward exceptional ZERO also tests the normal
 control view. Return a borrowed `ZERO→DT` to the genuine normal
 invocation address. This view supplies no standalone seeds and changes
 no DATA ports. Loop consumer probes use the same C2/C5. The own-ZERO
-loop exception applies only to the additional growth gate.
+loop exception applies only to the additional growth gate. That gate
+checks a growing DATA relation at a loop boundary against the repeat or
+leave consumer and the enclosing continuation. Its result uses the same
+paired selector and cap as other block results.
 
 Use restricted C2 and C5 from run-2 onward. Run-1 uses unrestricted
 admission and its ordinary publication. Apply rules that explicitly cover
@@ -86,63 +115,153 @@ cleaner transfer, and sealed demand retirement. They can change demand,
 report timing and delivery counts. Selected EXACT cleaning of concrete
 MUST has the explicit precision tradeoff in §5.
 
+### Examples diff
+
+| Rule and input | Current | Proposed |
+| --- | --- | --- |
+| R29. Equal geometry with H=0 and H=1 | Keep both memberships. A pass carries the input flag. | Same. An NE result also keeps both flags distinct and a pass creates neither flag. |
+| R30. Later `{p.$/T,q.$/U}→ret.$/V`, only p supplied | No reply. | Same. A guide for p alone does not satisfy the q arm. With both arms in one binding, application joins both support layers. |
+| Static completion. `ZERO→C.f/T` and `C.f/T→DT` at run-1 handoff | The run-2 virtual lookup supplies `ZERO→DT` in the eligible owner. | Same lookup and typed output. Any NE DATA entry uses its nonempty region in that same virtual row. |
+| Backward exceptional ZERO at a block with a normal `ZERO→DT` guide | Borrow the normal control entry for the reached ZERO, at the real normal invocation. | Same. A DATA NE input still uses its own physical port. |
+
 ## 2. Field transfer and C2
 
 | Rule and affected part | Required behavior and principal example | Proof |
 | --- | --- | --- |
 | R01–R03 · DATA grammar, cut, transfer, handoff | A real cut emits NE. A cut of `x.f.g.h.$/T` at limit 1 gives `x.f.NE/T,D`, with empty E and the same mark, mx and H. Apply at every existing real field cut, including run-1. Uncut M stays M. For `y=x.f`, `x.NE` gives `y.M,D`, `x.f.NE` gives `y.NE,D`, and `x.$` gives no y. For `x.f=y`, keep `x.f.M` from `y.M` and `x.f.NE` from `y.NE` while f fits. If f is cut, both give `x.NE,D`. An intrinsic MAY supply can include the root. | The removed suffix has a first field, and its old point lies in the retained head's NE region. An unknown read can consume the entire suffix. An uncut write can put the former root at the newly named field. |
-| R04–R06 · C2, call binding, raw C5 | For same-head `p.M/T ← p.M/T`, start `p.$/T,D` and `p.*/T,D`, plus the conditional FLOW companion. NE keeps the nonempty case. A frozen `p.f.M` row can use a compatible ancestor `p.*` as a **possible** offer, within its prepared budget. Keep the real caller binding. | Empty and nonempty suffixes exhaust M. Each primary authorizes only its stated companions. Guessed binding support joins as D, so neither a FLOW hypothesis nor possible admission confirms NT. |
+| R04–R06 · C2, call binding, raw C5 | For same-head `p.M/T ← p.M/T`, start `p.$/T,D` and `p.*/T,D`, plus the conditional FLOW companion. NE keeps the nonempty case. A frozen `p.f.M` row can use a compatible ancestor `p.*` as a **possible** offer, within its prepared budget. Keep the real caller binding. | Empty and nonempty suffixes exhaust M. Each primary authorizes only its stated companions. Possible field binding joins as D. A FLOW hypothesis alone supplies no concrete-mark witness. |
 | R07 · C2, raw C5 | `p.M/T ← p.f.MUST/T {g},N` starts `p.f.*/T,D` and its FLOW companion. Carry `{g}` on both STAR starts at the unchanged actual head. Apply only in restricted FULL for a concrete demand and a STAR or MUST actual. | At the same head the copied mask denotes the same forbidden subtrees. E cannot move to another head. The map adds no seed and changes no start layer. |
 | R08 · C2, raw C5, field limits | For `p.M/T ← p.f.g.MUST/T {g},N`, replace the two eligible shorter STAR starts by `p.f.g.*/T,D` and `p.f.g.*/F,N`, both with `{g}`. Keep the conditional `p.$/F` probe. | The actual head and holes stay together. Every overrun of Dc+1 comes from the certified map below. The global and paired output caps still hold. |
 | R13 · raw transfer | For `x.f.g=new Node()`, reject the strict-descendant keep at `x.f.*` per leaf when the actual is `x.$/F`. The keep at `x.* {f}` still yields the exact root with `{f}`. | No strict descendant lies in the exact point. The same-head keep records the real overwrite exclusion before normalization. |
 | R32 · run-2 C2 and raw C5 | Start the requested STAR identity in backward run-2 for a same-head precise STAR demand and STAR actual. `set(p){ p.f=new Node(); return p; }` through wrappers can then produce the NORMAL relation with `{f}` and preserve `p.g/T` at run-3. Retain the existing admitted deeper-actual run-2 STAR case. | Same base/head requires no extra field. C5 uses the same raw family. The wrapper proof relays NORMAL service through any finite number of wrappers. |
 
-C2 first checks legal geometry, direction, base, mark and global limit.
-A concrete demand T matches T. A FLOW demand uses empty mx at handoff.
-Actual and saved-record masks retain their own meaning. Normalize selector E
-only in the existing abstract FLOW/STAR case. For the **same head**, emit
-the following raw identities. MUST entries in the last column require a
-legal forward uniform actual.
+### 2.1 Legal starts and marks
 
-| Dc | Actual $ | Actual * | Actual M | Actual NE | Actual MUST |
+C2 runs on a scalar actual and one qualified pair `Dp→Dc`. It first
+checks owner, direction, physical entry, base, mark, legal static shape
+and the global bound on both heads. A T selector accepts only actual T.
+FLOW with mask X accepts T if T is outside X, and FLOW with mask Y if
+`X ⊆ Y`. Handoff normally clears the FLOW selector mask. The initial
+uses the demand mark with empty mx. Normalize selector E to empty only
+for an abstract FLOW/STAR selector. An exact concrete selector has
+empty E. Each descent checks E at the ancestor's head. An initial is a
+raw identity. In the table, the cell names the tail of that identity
+before its companions.
+
+| Dc at p | Actual p.$ | Actual p.* | Actual p.M | Actual p.NE | Actual p.MUST |
 | --- | --- | --- | --- | --- | --- |
-| Concrete $ | $ | ∅ | $ | ∅ | $ |
-| Precise STAR | $ | STAR in run-2 only | $ | ∅ | $ |
+| Concrete $ | $ | ∅ | $ on D | ∅ | $ |
+| Precise STAR | $ | * in backward run-2, ∅ otherwise | $ on D | ∅ | $ |
 | M | $ | * | $ and * | * | MUST |
 | NE | ∅ | * | * | * | MUST |
 
-If the actual extends Dc, reject under precise $ and under precise STAR
-after run-2. Under M/NE, stop at the first new counted field `r`. A
-longer head starts `r.*`. An actual at r starts `r.$` for EXACT,
-both for M, and `r.*` for STAR/NE/MUST. For an ancestor actual, check
-its own E at the first field of descent. EXACT cannot descend. M/NE
-can descend and use residual M at Dc. MUST uses its native uniform
-descent. An ancestor STAR is possible only for an eligible M/NE selector
-or its prepared child in the frozen plan, within that row's budget.
-Incomparable heads reject.
+MUST actuals use the forward lane. A same-head MUST initial keeps actual
+E. A precise STAR identity in backward run-2 keeps selector E. Every
+other primary has empty E except the stated MUST case and R07/R08.
 
-Every successful concrete STAR start gets the same-shape N FLOW
-companion. A successful deeper actual under MAY also gets a conditional
-EXACT/FLOW probe at Dc. Build NE from the complete MAY family and remove
-all EXACT starts at NE's original head, including that prefix probe.
-FLOW starts have empty mx and structural N support. Concrete STAR starts
-D. Concrete EXACT/MUST starts N only with definite actual N support.
-Keep the real layer and H on resume, including possible admission.
-Deduplicate by raw initial and starting support. A failed primary emits
-no companion.
+- **Actual strictly below Dc.** EXACT demand rejects. STAR demand emits
+  the requested STAR identity in backward run-2 if the selector admits
+  the extension. STAR rejects deeper actuals in later runs. For M/NE,
+  let r be the prefix of the actual through the first new counted field
+  after Dc. If the actual is deeper than r, emit `r.*`. At r, actual EXACT
+  emits `r.$`, actual M emits both `r.$` and `r.*`, and STAR/NE/MUST emit
+  `r.*`. An EXACT at r already satisfies a nonempty requirement at Dc.
+- **Dc strictly below the actual.** EXACT actual rejects. M/NE actual
+  can supply a *possible* residual M at Dc after the descent. It can be
+  empty if the chosen path ends there. Use the same-head table. A forward
+  MUST actual descends uniformly with empty E at the new head, after
+  checking E at the old head. STAR uses the limited possible-binding
+  rule below. Incomparable heads reject.
+- **Companions and starting support.** Each successful concrete STAR
+  adds the same-geometry FLOW STAR companion with N support. A successful
+  deeper actual under M also adds `Dc.head.$/F,N` with empty E/mx as a
+  structural probe. For NE, take the complete M family and remove every
+  EXACT command at Dc's own head, including that probe. A failed primary
+  adds no companion. FLOW starts have N support. Concrete STAR starts
+  D. Concrete EXACT/MUST starts N only when the actual provides definite
+  N support for it. Concrete support projected from M, NE or a possible
+  STAR descent is D. Always carry actual layer and H on resumption.
+- **Real exclusions.** For restricted FULL concrete demand, R07 copies
+  nonempty actual E from STAR or MUST onto each eligible empty-E STAR
+  command at the exact same base and head, including its FLOW companion.
+  Existing nonempty command E takes precedence. R08 can replace an
+  eligible shorter empty-E STAR head and E together as specified below.
+  Check that other required callers and guides keep their service before
+  applying either replacement.
 
-An ordinary entry obeys `FL(I) ≤ min(global, FL(Dc)+1)`. The sole
-exception is an eligible Empty-E STAR command in a **restricted forward
-FULL** concrete M/NE family whose actual is the same T, NORMAL MUST with
-nonempty actual E, and whose actual head strictly extends that command at
-the same base and fits global. Replace the head and E together, including
-its FLOW companion. Apply all ordinary member and output caps.
+### 2.2 Possible field bindings
 
-Preserve the required service of each command that these rules replace.
-R07/R08 can affect other bindings as well as the triggering actual. For
-example, replacing hole-free `p.f.*/F` with `p.f.*/F {g}` can remove a
-guide for another offer. Check that consumer against the retained binding
-and its paired C5 row before replacing the family.
+A possible field binding comes from selecting a named field path inside
+an unresolved suffix. It does not assert that the actual has that
+specific path. For the R06 STAR exception, use a strict descendant head
+already named by a frozen M/NE row or by an allowed one-field child
+in §3. Use the entire known path from the actual head to that selected
+head. The actual's E must admit the first accessor. Check the same
+base, mark, scope and port gates as for a direct offer. Apply the table
+as if the selected head had a possible M residual. For an NE selector
+the residual must supply its nonempty branch. The child's exact point,
+when selected by an NE **parent**, is already nonempty relative to
+that parent. An unrelated precise STAR or EXACT demand grants no such
+permission.
+
+Retain the original actual. Attach the possible flag to its binding
+with the chosen row and raw query. Match only a current summary of
+that admitted query in the same caller context, owner and port. When
+FLOW normalization changes an EXACT endpoint's public key, use the
+normalization witness for that raw query. The flag grants no saved-record
+match and no other current query. Run ordinary matches first and use
+this possible lane for the extra binding. Join the possible flag,
+original actual's layer and summary layer when applying the result.
+A correlated STAR result with unknown residual becomes M/D. An explicit
+result follows §3.2 with D support. A possible binding cannot compose NT.
+No artificial actual fact, field exclusion or new AP key records this
+choice.
+
+### 2.3 Field limits
+
+`FL` is the number of concrete fields and array accessors. Count a JVM
+static class anchor as zero and keep its named field together with it.
+For example, `FL(x)=0`, `FL(x.f.g)=2` and `FL(S.C.f)=1`. Typed control
+endpoints have no AP cap. A mixed control/DATA relation still caps the
+DATA side. The loop growth test alone can use depth zero for ZERO.
+Let K be the positive global limit of the current run.
+
+| Boundary | Limit | Scope and exceptions |
+| --- | --- | --- |
+| Instruction results, caller replay results, and incoming actuals at admission | K at the bounded interface | Intermediate concatenation may be longer until the normal global cut. Real cuts produce NE/D in every run. |
+| Ordinary C2 starts, including FLOW companions, prepared children and run-2 STAR relay | `min(K,FL(Dc)+1)` | Use the originating row's depth. A prepared child supplies no second +1. For ND the matched member is checked against its own row. |
+| R08 C2 starts | K | **Only C2 exception to `FL(Dc)+1`**. In restricted forward FULL, a concrete M/NE row and same-mark NORMAL MUST actual with nonempty real E may extend an already eligible empty-E primary STAR command to its own strictly deeper head. Move actual head and E together. Map the matching FLOW companion identically. The old family must already exist. No extra starts and no extension for a prepared child, an EXACT probe, a backward run, a DEMAND actual or an empty-E actual. |
+| Fresh C5 DATA output, including NORMAL, static virtual pairs and block/loop exits | `min(K,FL(Dp)+1)` for its own pair | **No relative output exception**. R08 changes only the initial head. For an ND result, keep all original members and apply the matched row's output cap to each selected leaf. A typed ZERO exit cannot carry DATA. |
+| Run-1 summaries | K and native run-1 shape/static rules | There is no previous pair and thus no relative limit. |
+| Saved NORMAL replay, predefined summaries and R18 precoverage | K on delivered DATA | Replay/model input is outside fresh C2/C5 publication. R18 skips a redundant candidate only if the existing whole image fits K and all services are retained. Any newly inferred caller summary still passes its own C5. |
+| Loop own-ZERO exception | Ordinary K and C5 cap if DATA is emitted | Bypass the extra loop growth gate only. |
+
+The output limit uses the previous pair's **Dp**, even when it is longer
+or shorter than the current raw premise P. There is no general
+`FL(C) ≤ FL(P)+1` rule. In a multi-row packet, cut each selected leaf
+before union. A covered uncut leaf does not justify skipping another
+row that would emit a cut D variant. An early exit needs coverage of
+every remaining row's **capped** membership, including layer and H.
+
+### Examples diff
+
+Each listed initial is an identity. F means FLOW, and the unqualified
+examples fit the global budget.
+
+| Rule and input | Current emitted result or initial set | Proposed emitted result or initial set |
+| --- | --- | --- |
+| R01. Cut `x.f.g.$/T,N` at K=1 | `x.f.M/T,D` | `x.f.NE/T,D` |
+| R02. `y=x.f` on the result of a cut at x, then on a known `x.f` prefix | `x.M/T,D→y.M/T,D`; `x.f.M/T,D→y.M/T,D` | `x.NE/T,D→y.M/T,D`; `x.f.NE/T,D→y.NE/T,D` |
+| R03. `x.f=y` with `y.M/T,D` and room for f | `x.f.M/T,D` | Same while f fits. A subsequent cut at x gives `x.NE/T,D` instead of `x.M/T,D`. |
+| R04. `Dc=p.M/T`, actual `p.M/T,D` | `{p.*/T,D; p.*/F,N}` | `{p.$/T,D; p.*/T,D; p.*/F,N}` |
+| R05. Previous cut produced `Dc=p.M/T` currently, `p.NE/T` in the proposal. Actual `p.$/T,N` | `{p.$/T,N}` | `∅`. With actual `p.f.$/T,N` both admit the field point, and only the current M family adds the prefix FLOW probe. |
+| R06. `Dc=p.f.M/T`, actual `p.*/T,D`, after run-2 | `∅` | `{p.f.$/T,D; p.f.*/T,D; p.f.*/F,N}`, with possible binding. Add `E={f}` to the actual and both sets are empty. |
+| R07. `Dc=p.M/T`, actual `p.f.MUST/T {g},N` | `{p.f.*/T,D; p.f.*/F,N; p.$/F,N}` | Same set, with `{g}` on both `p.f.*` starts. |
+| R08. `Dc=p.M/T`, actual `p.f.g.MUST/T {g},N`, K=2 | `{p.f.*/T,D; p.f.*/F,N; p.$/F,N}` | `{p.f.g.*/T{g},D; p.f.g.*/F{g},N; p.$/F,N}`. The first two have FL=2, one above Dc+1. At K=1 a raw depth-2 actual is invalid. |
+| R13. `x.f.g=new Node()`, raw actual `x.$/F` and strict child keep `x.f.* {g}` | The strict keep can produce an uncertain survivor. | The strict keep has no result. The same-head keep still gives `x.$/F{f}`. |
+| R32. Backward run-2, `Dc=p.*/F`, actual `p.*/F,N` | `{p.$/F,N}` | `{p.*/F,N}`, including at the cap. In later restricted runs this same STAR offer emits nothing. |
+| C5 cap. `Dp=ret.*/T`, raw `C=ret.f.g.$/T,N`, K=3, legal raw entry | `ret.f.M/T,D` after the row cut | `ret.f.NE/T,D`. Neither side can publish the depth-2 result under this pair. |
+| Independent output budget. `Dp=ret.f.g.*/T`, current `P=p.$/T`, `C=ret.f.g.h.$/T,N`, K=3, legal raw entry | The paired cap is 3. The exact result fits. | Same. The three-field result is legal even though FL(P)=0. |
 
 ## 3. Prepared children, replay and paired C5
 
@@ -156,11 +275,38 @@ and its paired C5 row before replacing the family.
 | R18 · summary emission before relative C5 | A learned NORMAL `p.*→ret.*` already returns the whole `p.f.g.*→ret.f.g.*` specialization. Skip the redundant publication only with retained NORMAL unary FLOW STAR service whose exact native image equals the whole candidate and fits global. | Native whole-image equality gives the same suffix, masks, tail, ports and layer. Run rule/exit effects first. Genuine global cuts and a candidate that depends on a different binding remain. |
 | R20–R22 · summary restriction and normalization | Under `Dc=p.NE/F`, C5 rejects raw `p.$/F` even though it shares public `p.*/F` with an allowed raw STAR. Select with the row's own Dp, cut to its own limit, then publish admitted pairs. | Raw membership constructs an actual legal C2 command for that row. The scalar selection preserves each point in the paired intersection. Conditional FLOW EXACT-to-STAR needs a suffix-lifting witness, including real write E. |
 
-Choose first fields without recursive expansion in the same preparation.
-For one legal base family, preparation adds at most two probes per observed
-field. Preserve each child's owning row, flags, ports and budget. Freeze
-readiness for a shared raw query only when all its possible issuing
-consumers, including later arrivals, have complete child service. Route supported primitive reads with the complete child proof. For a saved
+### 3.1 Prepare one level of children
+
+For an M/NE family with a STAR command at the row's own head p, collect
+first fields from compatible deeper frozen rows with the same complete
+Dp, or from retained NORMAL record guards in the active read view. A
+guard `p.f.g.*` contributes f. A field must be legal for the row's mark,
+scope, ports and actual, and admitted by real E. Use only bounded frozen
+demand/record inputs. A prepared command cannot contribute a field to
+this preparation.
+
+For each retained f, select the residual at `p.f` from the **original**
+actual. An exact actual at `p.f` offers the point. A known longer head
+offers the suffix. An unknown compatible suffix that can start with f
+can offer both a possible point and a possible nonempty residual. An
+actual whose known prefix is disjoint offers neither. The point uses
+EXACT, the nonempty branch uses STAR. A same-head STAR at the child
+supplies only the suffix branch. A definite admitted MUST query remains
+available for its own region. Carry the usual companion and support rules
+from §2. For a concrete child family, STAR's FLOW companion is the
+existing same-geometry hypothesis. The count of *primary* child starts
+is at most two per observed field. No new parent prefix probe is added
+by child preparation. Including companions, a scalar row and actual
+produce at most `4 + 3·|fields|` commands before deduplication. Keep the
+parent's Dp and cap even if a deeper
+row helped select f. The deeper row can also supply an independent
+plan with its own cap.
+
+A child is ready for delegation only after its exact-point and suffix
+service for that contribution are both proved or discharged. Freeze
+routing for a shared raw query only when all its issuing consumers,
+including later arrivals, have that proof. Otherwise process the
+coarse contribution. Route supported primitive reads with the complete child proof. For a saved
 inside read, require an Empty-E/mx STAR/FLOW query, a still NORMAL correlated
 STAR/FLOW operand with empty mx, and a unary unprotected NORMAL FLOW
 STAR-to-STAR record with empty mx. Operand and saved endpoint E stay at
@@ -170,11 +316,86 @@ replay uses the original actual. R34 may omit only its new contribution
 when an already prepared child fully covers it. The R34 lane does not
 create a new query and must participate in any later closure check.
 
+### 3.2 Match and apply scalar summaries
+
+Use the original actual for saved and ordinary current application.
+Evaluate the caller's current C2 plan once. An empty plan ends current
+application and subscription for that offer. Saved replay has already
+run. In a nonempty plan, ordinary current matches still use the usual
+premise matcher. An additional possible match must use the bound query
+from §2.2. R34 extends only a failed direct saved read of a unary NORMAL
+FLOW STAR-to-STAR record on a strict ancestor STAR actual. It checks
+actual E at the descent, the ordinary mark/effect guards and the global
+cut. It can return the record's output head as M/D with empty E.
+Ordinary saved STAR-inside matches use opposite-direction records.
+
+**NE actual.** For each scalar actual `a.u.NE`, select compatible leaves
+at the summary premise head `a.v`. Use the normal base, mark, owner,
+port and record-role filter, with the following NE geometry. Here
+`s ≠ ε` is a known path component.
+
+| Head relation | Premise EXACT | Premise STAR | Premise MUST |
+| --- | --- | --- | --- |
+| `u=v` | Reject, no empty suffix | Nonempty residual NE at v | No definite match |
+| `u=v·s` | Reject | Admit if premise E allows s. Residual is the known s followed by NE. | No definite match |
+| `v=u·s` | A possible point at v where the ordinary inside lane permits this premise | A possible residual M at v where the ordinary inside lane permits this premise | No definite match |
+| Incomparable | Reject | Reject | Reject |
+
+The inside lane in this table is the one available for an incoming M
+leaf, with the same base, direction, mark, role and selected-record
+checks. It does not require the R06 STAR exception. The strict descendant
+s consumes at least one field, so the residual of NE there can be empty.
+MUST still needs its definite basis for a definite match. A native
+provisional MUST lane, when retained under R15, must pass its own
+overlap and support checks and stays D. It gets no uniform support from NE.
+
+**NE result.** After a successful actual binding, apply the leaf by the
+following rules. They apply to a call or generated block, including a
+repeat or leave edge.
+
+1. An explicit NE conclusion is an independent result at the written
+   output head. Use the ordinary endpoint mark substitution and mapped
+   result base. Its tail remains NE and its layer D. Do not append the
+   actual's unmatched suffix. A complete ND application or ZERO premise
+   applies the same output constructor after its own match. A same-head
+   NE result still uses the ordinary DEMAND alias and effect lane.
+2. A correlated STAR-to-STAR relation with an NE actual copies the
+   residual to its output. At equal heads it preserves NE. If a known s
+   follows the premise, append s before the NE tail. Check the shared E
+   of the STAR endpoints at the first field of s. With an unresolved
+   suffix at equal heads, keep its NE region with empty E, which
+   conservatively covers any admitted nonempty suffix. If matching
+   consumed a strict prefix *from* an unknown suffix, the remaining
+   output is M/D, with empty E. Do not restore NE there from the layer.
+3. For other result tails use the ordinary constructor on the selected
+   support, including ordinary MAY demotion when correlation is lost.
+   An explicit point, where supported by the native constructor, is
+   D under a possible or NE actual. No case turns an NE actual into
+   definite MUST or a NORMAL observation. Apply the ordinary result
+   cuts, alias/effect processing and H transport. An NE output carries
+   its literal H membership, independent of the field-depth decision.
+
+NE summaries are current-run DATA summaries. Store and deliver NE on D,
+with empty E. At handoff turn the NE conclusion into Dc, keeping its
+head and pairing with Dp. Do not reverse it into an executable premise or
+persist it as a NORMAL record. For a packed result apply these rules
+leaf by leaf, then union equal logical memberships; an EXACT leaf at
+the same head retains its own support and membership.
+
+At a rule test, NE cannot satisfy an exact condition at its own head.
+A strict descendant can match with D support. A selected cleaner can
+kill the whole NE region or remove a covered piece. If a partial
+survivor cannot be represented, keep its NE/D cover. The survivor
+cannot regain an empty suffix. Existing mark masks and cleaner H still
+apply.
+
 Use the definite MUST matcher for saved calls, blocks, loops and service
 probes. Under R15, omit a nondefinite saved reply only if every required
 use of that reply is served, including later guidance from a DEMAND
 result and a caller with empty current C2. Otherwise retain the native
 reply. Preserve full ND binding and native port and alias behavior.
+
+### 3.3 Raw entry witness and paired output
 
 For R18 the retained saved provider's input prefixes P and admits the
 whole P region. Its image keeps P's tail and exact native guards. Check the
@@ -184,19 +405,28 @@ affected subscriber.
 
 ```text
 C5(rawP, rawC):
-    for each compatible scalar pair (Dp -> Dc) at this owner and port:
-        if rawP is outside the complete prepared raw C2 image of Dc: skip
-        (p,c) = normalizeFLOWPair(rawP,rawC)
-        b = selectExit(c,Dp)
-        if b exists:
-            emit normalizeFLOWPair(p, cut(b, min(global,FL(Dp)+1)))
+    for each qualified pair (Dp -> Dc), including virtual pairs:
+        for each candidate leaf c0 and eligible raw premise member i:
+            if typed control: apply the typed pair rule in §5 and continue
+            if no legal actual with i in the prepared raw C2 family of Dc: skip
+            (p,c) = normalizeFLOWPair(whole rawP,c0)
+            b = selectExit(c,Dp)
+            if b exists:
+                emit normalizeFLOWPair(p, cut(b, min(K,FL(Dp)+1)))
 ```
 
 Split packed chains before pairing. Preserve the owning row on each leaf.
-The raw image uses legal hypothetical offers and the exact C2 rules
-above, including companions and head retention. It does not depend on an
-input history. ND uses its existing member entry test and keeps the complete
-premise. Normalize EXACT endpoints to STAR only for a complete singleton
+The raw image uses legal hypothetical offers and the complete C2 rules
+above, including possible binding, prepared children, companions and
+head retention. A C5 witness can be a hypothetical legal actual; it does
+not grant a caller application without a real binding. A structural
+implementation must construct the same witness, including a real legal
+accessor if it needs one, rather than scan historical offers. A concrete
+T selector can authorize a raw FLOW start via its own companion/probe.
+The later mark restriction is on the output and must not reject that
+entry witness just because it is FLOW. ND uses one contributing member
+for entry permission but keeps the complete original on the output.
+Normalize EXACT endpoints to STAR only for a complete singleton
 FLOW-to-FLOW pair, preserving each path, E, mx, layer and H. Keep the native
 ND/control rules. The two normalizations occur after the raw entry check.
 All fresh restricted-run DATA summaries, including NORMAL, use the
@@ -210,20 +440,56 @@ row for each new admission/publication, including its companions and
 output cap. If the bridge is missing, use native admission and publication
 for the affected scope under §6.
 
-`selectExit` first checks equal bases and intersecting marks. It retains
-the candidate mark, mx, layer and H. At the same head keep EXACT or correlated
-STAR whole. M becomes EXACT for exact Dp and stays M otherwise. NE rejects
-exact Dp and stays NE otherwise. MUST becomes EXACT for exact Dp, joins E
-for STAR Dp and stays MUST otherwise. Concrete EXACT has empty E. The
-same-head abstract EXACT selected from MUST retains its required E.
+`selectExit` first checks equal bases and intersecting marks. Equal
+concrete marks meet. A concrete mark meets FLOW only if FLOW admits it.
+Two FLOW slots meet. Preserve candidate mark, mx, layer and H. On the
+selector only, normalize abstract FLOW/STAR E to empty.
 
-If the candidate is below Dp, keep it only when Dp's tail and E permit
-descent. If Dp lies below the candidate, require the candidate to permit
-descent. EXACT rejects; STAR stays whole; M/NE rebase at Dp as M or as
-EXACT for exact Dp; MUST rebases uniformly or as EXACT for exact Dp.
-Use Dp's E at a uniform rebased STAR selector and Empty E otherwise.
-Incomparable heads reject. A selector never produces a new concrete mark
-or upgrades support. Ordinary Dp cannot be NE.
+| Candidate tail at Dp's head | Dp EXACT | Dp STAR | Dp M or MUST |
+| --- | --- | --- | --- |
+| EXACT | Keep | Keep | Keep |
+| STAR | Keep whole relation | Keep whole relation | Keep whole relation |
+| M | EXACT | M | M |
+| NE | Reject | NE | NE |
+| MUST | EXACT | MUST with E union | MUST |
+
+If the candidate is below Dp, keep it only when Dp admits that suffix.
+If Dp is below the candidate and the candidate admits descent, use
+this table. Incomparable heads reject.
+
+| Ancestor candidate | Dp EXACT | Other Dp |
+| --- | --- | --- |
+| EXACT | Reject | Reject |
+| STAR | Keep whole relation | Keep whole relation |
+| M or NE | EXACT at Dp | M at Dp with empty E |
+| MUST | EXACT at Dp | MUST at Dp, using selector E for STAR and empty E otherwise |
+
+Any selected concrete EXACT has empty E. An abstract EXACT selected
+from MUST at the same head keeps its required E. An abstract EXACT
+after descent has empty E. Keep correlated STAR whole for the native
+representability case. Selection never upgrades support or creates a
+concrete mark. Cut after this step and normalize again. The cut keeps the
+prefix through the effective budget's last counted field, changes the
+tail to NE/D, clears E, and preserves mark, mx and H.
+
+### Examples diff
+
+| Rule and input | Current | Proposed |
+| --- | --- | --- |
+| R09. Same Dp, `Dc=p.M` and a deeper guide after cut at `p.f` | Executable MAY coverage can hide the deeper guide. | Keep `p.f.NE` in the bounded refinement view until its own service is covered. |
+| R10. `Dc=p.M/F`, actual `p.*/F`, eligible saved guard `p.f.g.*` | `{p.*/F,N}` | `{p.*/F,N; p.f.$/F,N; p.f.*/F,N}`. Both child bindings are possible at the caller. The child has FL=1. |
+| R11. `y=x.f`, actual `x.*/F`, ready exact and suffix child | The coarse read emits `y.M/F,D`. | Use the proved child contribution. Omit that coarse reply only once the complete consumer check passes. A different field g still uses ordinary transfer. |
+| R12. Inside an owned query, an opposite saved `p.f.*→ret.*` reads `p.*` | Emit its possible `ret.M,D` even with empty current callee demand. | Keep saved-first replay. Delegate only this contribution if the f child supplies its whole service. |
+| R14. Saved `p.*→ret.*`, actual `p.f.$/T,N`, current C2 empty | `ret.f.$/T,N` | Same. No current subscription or extra admission. |
+| R15. Saved `p.MUST/T→ret.MUST/U`, actual `p.f.MUST/T,N` | Provisional `ret.MUST/U,D` from the overlap lane. | Omit only with continuation service. Otherwise retain that D reply. A definite `p.MUST/T` still gets the NORMAL reply. |
+| R18. NORMAL candidate `p.f.g.*→ret.f.g.*` under a short Dp | C5 can cut it and publish a D variant. | Skip that candidate when retained `p.*→ret.*` gives its complete uncut service. |
+| R20. Raw `p.$/F→ret.$/F`, same head with a nonempty entry | The analogous native MAY entry checks the normalized `p.*` key. | An NE entry rejects this raw point. An admitted `p.*` witness alone cannot license it. |
+| R21. Entry `p.M/T`, paired exit `ret.$/T`, admitted FLOW STAR companion, raw conclusion a cut `ret.M/F,D` currently or `ret.NE/F,D` in the proposal | Native normalized admission can accept the FLOW companion. The exit selects a provisional point, with the output mark still FLOW. | Keep the legal companion as the entry witness. The exact exit rejects NE at the same head. No other row can lend its exit or synthesize T. |
+| R22. Admitted raw `p.$/F→ret.$/F,N` | Publish `p.*/F→ret.*/F,N` with legal E. | Same public relation after raw checking and the suffix-lifting proof. A result `ret.NE` survives either normalization. |
+| R34. Direct saved `p.f.*→ret.*`, actual `p.*/F,N`, f allowed | No reply via direct STAR inside. | `ret.M/F,D`. If the actual excludes f the result is empty on both sides. |
+| NE result. `p.*→ret.NE,D`, actual `p.f.$/T,N` | The native cut form gives `ret.M/T,D`, regardless of f. | `ret.NE/T,D`, with no f appended. Resolve a normal read of `ret.g` to M/D because g can consume the unknown suffix. |
+| NE actual. Saved `p.*→ret.*`, actual `p.f.NE/T,D` | The native M actual gives `ret.f.M/T,D`. | `ret.f.NE/T,D`. An EXACT premise at the same head as an NE offer has no match. |
+| NE C5. Current result `ret.NE/T,D`, paired Dp `ret.$/T` | With native M at the same head, select `ret.$/T,D`. | Empty. With Dp `ret.f.$/T`, select `ret.f.$/T,D` assuming the global and pair budgets admit it. |
 
 ## 4. Reply and summary coverage
 
@@ -282,8 +548,13 @@ Do not store this image. R17 and R24 serve different consumers.
 
 Reuse aligned NORMAL FLOW specialization with identical suffix extension
 at both endpoints and real mask/overlap checks. Reuse diagonal FLOW-backed
-same-tail marked coverage for eligible plain edges. No STAR coverage of
-independent M/NE follows from this. Same-layer MUST union fills an excluded
+same-tail marked coverage for eligible plain edges, including equal-tail NE
+where the ordinary mask, layer and geometry checks pass. A MAY output at
+p can cover an NE output at or below p with the same complete original,
+scope, base, mark, mx, layer and H. Its captured NE guide remains until
+the retained basis supplies its own raw C2 and paired C5 service. NE has
+literal deduplication. No STAR coverage of independent M/NE or blanket
+NE-prefix coverage follows from this. Same-layer MUST union fills an excluded
 field only with its complete immediate child with empty E. For instance,
 `x.*→y.*` can cover `x.f.*→y.f.*` with the same admitted suffix, but cannot
 cover `x.f.*→y.g.*`. At handoff keep existing weaker-premise/same-result
@@ -291,6 +562,18 @@ and concrete STAR/EXACT service compaction only if the full updated C2/C5
 service agrees, including all ND projections; the latter equivalence is
 outside run-2. Recheck against the final basis. Individual redundancy
 alone gives no joint deletion permission.
+
+### Examples diff
+
+| Rule and input | Current | Proposed |
+| --- | --- | --- |
+| R16. Ready replies `ret.MUST/T{f},N` and `ret.MUST/T{f},D` in one binding | The two support memberships can both resume. | Keep N only if the complete continuation is covered. Different H or a unique D seed use keeps both. |
+| R17. Post-statement `x.h.MUST/U,N` and `x.h.M/U,D` | Both can reach the next use of x. | Keep N and omit the covered D when all required uses are served. If D is the sole route to a second marking point, keep D even with the same report ID. |
+| R19. Owned exact query publishes NORMAL `ret.h.$/U`. Coarse query also yields `ret.h.M/U,D`. A disjoint `ret.k.$/V` is unadmitted. | The applicable coarse reply reaches the caller. | Omit that delivery only after the bound h proof and continuation check. Keep the k work in the owned closure and keep the bounded handoff rules. |
+| R23. Same P, two outputs `a.M/T,D` and `a.f.NE/T,D` | Native MAY coverage can retain only the broad result and its handoff. | It can retain only the broad executable output, but retains the qualified child guide unless the broad basis supplies its complete C2/C5 service. Same-head `a.NE` can be removed if the M row covers that service. |
+| R24. Same forward MUST P and H=1. NORMAL `P→a.MUST/T` plus cut `P→a.f.NE/T,D` | The existing protected cut result can remain even with the NORMAL uniform relation. | Omit the D relation only with whole same-lane coverage and proof of its future guide service. |
+| R25. `A:p.*→q.*`, `B:p.f.*→q.f.*`, `C:p.f.g.*→q.f.g.*` have the same qualified NORMAL FLOW suffix law | Existing aligned coverage may drop specializations. | The final basis must also prove the service of any omitted guidance. If B is removed, use A for C in either arrival order. |
+| R27. At one owner a point command and an uncertain STAR command are both ready | Ordinary FLOW priority and batching can defer the point's publication. | Drain ready point and high-lane provider work before dispatching the next low-lane command. Use FLOW-first inside each lane. Already delivered effects remain. |
 
 ## 5. Cleaners, controls and handoff
 
@@ -315,6 +598,8 @@ invalid. For R31 leave existing mark requests and cleaner ownership in
 place. Partition packed paths by the stated prefix test and add the
 selected marks to mx only on the remaining leaves. At most two packets.
 
+### 5.1 Typed matching and next-run rows
+
 For R28/R33, select admitted DATA whose layer is D, whose original is
 ND, or whose original is singleton ZERO in backward. Apply the native
 selection to methods and scoped blocks. Backward executable ND is
@@ -322,11 +607,27 @@ invalid. For example, backward `ZERO→x.f.$/T,N` in a loop's after block
 provides the next forward C2 guide at that block. Project each selected
 pair with its physical ports and original pairing. NE remains NE in Dc. Use only existing forward MUST
 guidance projection and reverse views. Persist admitted NORMAL records,
-including real E/mx. Target entries admit ZERO, and a paired ZERO exit
-permits ZERO or Target. Use existing backward ZERO-to-Target relations and
-source permission rules. NT composes only with NORMAL and is ignored
-backward. Keep NT IDs, existing duplicate rules and observations. These
-rules do not change the conditions under which a run emits a Target.
+including real E/mx. For the frozen guide, clear mx from FLOW endpoints
+only. The saved record continues to use its own mask.
+
+| Pair component | Match and result |
+| --- | --- |
+| Dc is DATA | Use C2 and the raw C5 image, or the contributing-member test for ND. |
+| Dc is ZERO or DT | Only an actual ZERO at the permitted entry starts/serves this control binding. |
+| Dp is DATA | Use scalar selection and its own cap, including from a control entry with a legal ZERO original. |
+| Dp is ZERO | Accept only a ZERO result or a DT publication under that same paired entry. |
+
+A DT publication uses the ordinary paired control restriction. A backward
+saved source relation that returns ZERO uses the native ZERO-to-DT
+conversion and source permission route. NT composes only with NORMAL.
+It remains forward-only, keeps its report ID and existing deduplication,
+and uses its separate NORMAL report protocol rather than DATA C5. Do not
+satisfy a DATA selector with ZERO or a Target. At a sealed forward barrier
+stop only when the full outgoing frontier is empty, including applicable
+virtual DATA and DT guidance. On a reached exceptional backward ZERO
+the borrowed normal rule in §1 applies only to the control match.
+
+### 5.2 Terminal service
 
 For R37/R38, freeze the set of proved closed goals at forward start.
 A goal includes observer identity, its full-mark/position predicate, and
@@ -378,6 +679,21 @@ A possible word, incomplete code extraction, unsupported
 effects or two nested languages leaves guidance in place. NoRoute creates
 no NORMAL report or source permission.
 
+### Examples diff
+
+| Rule and input | Current | Proposed |
+| --- | --- | --- |
+| R26. Selected EXACT cleanup of T at x with incoming `x.MUST/T,N` | A partial survivor can be D and renew a Target. | Keep `x.MUST/T,N` with its survivor H. An exact observer at x can now report on this retained uniform result. |
+| R35. Selected EXACT cleanup at `x.f.g` in `x.MUST/T,N` | The descendant point can demote a broad survivor. | Keep the original NORMAL uniform region. A nonuniform EXACT fact at the cleaned point still dies. |
+| R36. Restricted ALL at `x.f.g` with `x.MUST/T,N` | A partially cleaned region can remain only as a broad D result. | Emit `x.MUST/T{f},N` and `x.f.MUST/T{g},N` if both fit. BELOW also keeps `x.f.g.$/T,N` if it fits. |
+| R31. `clearExactT(p); return p.g` | The FLOW cleaner can attach mx={T} to the getter's flow. | Keep T eligible on the disjoint `p.g` cone. Keep the mask where the cone contains the cleaned point. |
+| R28. Backward `ZERO→x.f.$/T,N` in an after-loop block | Retain the native ZERO-origin guidance. A remaining DT keeps the analysis active even with no DATA demand. | Same. Also preserve a cut NE entry and its real paired scope. |
+| R33. FLOW summary with mx={T} used to derive a guide | The guide has empty mx. Saved replay still excludes T. | Same, including both endpoints of the paired projection. |
+| R37. A recursive relay continues to publish root `ZERO→DT` with only closed terminal origins | The anonymous row can keep renewing. | At a sealed forward handoff with a frozen complete proof, omit that row. Other scoped DATA and terminal rows keep their own handling. |
+| R38. Two marking sites A and B share one observer ID. Only A has a NORMAL track. | The root `ZERO→DT` remains. | It still remains until B and every other root use are served. Later retirement uses both tracks, not the one report ID. |
+| R39. Writer words `{g,h}*f`, reader words `{g,h}*g` | Cuts can hide the final mismatch and repeat the root Target. | A closed empty product discharges the route. If it is the last root use, the frozen proof lets the frontier drain. |
+| R40. Writer `g*f`, reader `g or g·R or h·R·h` | The opposite sides of the recursive call can keep creating possible matches. | A closed nested state-pair relation proves disjointness. With a real `h.g.h` writer route the certificate fails and keeps guidance. |
+
 ## 6. Proof and activation
 
 A service obligation identifies its run and stage, owner and revision,
@@ -419,7 +735,16 @@ start. Use local native fallback only with a checked adapter for incoming
 boundaries and earlier history. A failed optional suppression retains its
 original reply or guide. Unknown terminal scope keeps its ZERO→DT row.
 
+### Examples diff
+
+| Case | Current | Proposed |
+| --- | --- | --- |
+| Planned deletion relies on a source permission only obtained in a later run | Native processing retains the original path. | The replacement fails its run-order check. Keep the original path under the fallback rule. |
+| A proposed child route meets a DATA value but loses the only scoped ZERO guide | The native paired scope can still start that consumer. | The DATA witness is insufficient. Activation needs the matching ZERO route or a complete retained alternative. |
+| Both A and B are individually removable using each other | Ordinary processing retains a basis. | The joint proof cannot use a deleted provider. Keep a basis that supplies each needed continuation. |
+
 [Constructive rule proofs](lean/proposals/demand-refinement-spec-20261117/README.md) ·
 [Joint service proof](lean/proposals/demand-no-loss-audit-20261117/README.md) ·
+[NE application and limit checks](lean/proposals/demand-spec-clarification-20261118/README.md) ·
 [Termination examples](../docs/reports/bidirectional-demand-termination-counterexamples-20261115.md) ·
 [Validation](../docs/reports/bidirectional-termination-fix-validation-20261117.md)
