@@ -306,7 +306,7 @@ three-field MUST actual would no longer be the submitted fact.
 | Rule and affected part | Required behavior | Proof |
 | --- | --- | --- |
 | R09/R10/R23 · demand preparation, publication, handoff | For `P→p.M,D` and `P→p.f.NE,D`, executable union can hide f. Capture the bounded post-C5 child before executable union. Use f from a deeper row with the same paired Dp or an eligible saved NORMAL guard; `p.f.g.*` contributes f only. Prepare `p.f.$` and `p.f.*` when compatible. | M contains NE for execution. At the same head the NE query family is contained in MAY's under identical qualifiers and budget. A deeper head can admit an extra concrete field that the parent cannot. A child NE alone also misses its exact boundary point. |
-| R11/R12 · primitive transfer, saved replay inside queries | In `y=x.f`, route the `x.*→y.M,D` contribution for f through an already ready complete child only with the service proof in §6. Apply the same rule to supported saved NORMAL reads inside the query, even if current callee demand is empty. | A matching unknown suffix begins with f. Its residual belongs to the child point or child suffix. The child's qualified proof must supply all real effects and every consumer's paired output service. |
+| R11/R12 · primitive transfer, saved replay inside queries | In `y=x.f`, route the `x.*→y.M,D` contribution for f through an already ready complete child only with the service proof in §7. Apply the same rule to supported saved NORMAL reads inside the query, even if current callee demand is empty. | A matching unknown suffix begins with f. Its residual belongs to the child point or child suffix. The child's qualified proof must supply all real effects and every consumer's paired output service. |
 | R14 · call/block coordination | Reuse saved-first replay. If `id` has saved `p.*→ret.*` and no current demand, `p.f.$/T` still gives `ret.f.$/T`. Reuse the caller's C2 plan at the owner. | Original actual and resolved effects preserve the saved route. An empty plan only disables current-query service. |
 | R15 · saved matching, actual delivery | A saved `p.MUST/T→ret.MUST/U` can supply a provisional reply from `p.f.MUST/T`. Suppress that reply only after the continuation check below. Apply definite MUST matching and prepare current C2 as usual. | The child does not prove support at p. At equal heads definite matching needs `actual.E ⊆ required.E`. An actual ancestor must admit the first descent. Definite replies preserve NORMAL support. The continuation check preserves required service from provisional replies. |
 | R34 · saved matching, ordinary caller caps | For a same-direction saved NORMAL FLOW `p.f.*→ret.*` and a shorter `p.*` offer in a restricted run, use a possible read if the ordinary scalar match fails and yield `ret.M,D` at the saved result head, Empty E, with native mark/H/binding and guards. | A compatible suffix beginning in f can satisfy the guard, but a shorter STAR supplies no definite choice. Existing hits are unchanged. The possible reply can guide a later NORMAL return. |
@@ -340,8 +340,12 @@ parent's Dp and cap even if a deeper
 row helped select f. The deeper row can also supply an independent
 plan with its own cap.
 
-A child is ready for delegation only after its exact-point and suffix
-service for that contribution are both proved or discharged. Freeze
+A child is ready for delegation only when each of the two residual
+classes at f, empty and nonempty, has a checked replacement recipe
+under §7, or is impossible under the original transfer and guards.
+Check the whole affected continuation for each class. Use a completed,
+retained child result or a validated transfer recipe. Merely having
+admitted the child query supplies neither. Freeze
 routing for a shared raw query only when all its issuing consumers,
 including later arrivals, have that proof. Otherwise process the
 coarse contribution. Route supported primitive reads with the complete child proof. For a saved
@@ -436,16 +440,21 @@ reply. Preserve full ND binding and native port and alias behavior.
 ### 3.3 Raw entry witness and paired output
 
 For R18 the retained saved provider's input prefixes P and admits the
-whole P region. Its image keeps P's tail and exact native guards. Check the
-skipped row's uses in publication, current delivery and handoff. Using a
-current-only provider requires complete committed service to every
-affected subscriber.
+whole P region. Apply the native provider to the symbolic suffix of P,
+keeping its guards and coordinate qualifiers. Require equality of the
+whole uncut result with the raw candidate after legal normalization,
+including the output mask, mark, support and ports. If this image needs
+a global cut, use ordinary C5. Check the skipped row's publication,
+current delivery and handoff uses under §7. Using a current-only
+provider also requires committed application in every affected binding.
 
 ```text
 C5(rawP, rawC):
     for each qualified pair (Dp -> Dc), including virtual pairs:
+        if either endpoint or the result is control:
+            apply the typed C5 cases in §6.1 for this pair
+            continue
         for each candidate leaf c0 and eligible raw premise member i:
-            if typed control: apply the typed pair rule in §5 and continue
             if no legal actual with i in the prepared raw C2 family of Dc: skip
             (p,c) = normalizeFLOWPair(whole rawP,c0)
             b = selectExit(c,Dp)
@@ -454,12 +463,20 @@ C5(rawP, rawC):
 ```
 
 Split packed chains before pairing. Preserve the owning row on each leaf.
-The raw image uses legal hypothetical offers and the complete C2 rules
-above, including possible binding, prepared children, companions and
-head retention. A C5 witness can be a hypothetical legal actual; it does
-not grant a caller application without a real binding. A structural
-implementation must construct the same witness, including a real legal
-accessor if it needs one, rather than scan historical offers. A concrete
+For the reference entry test, let A be the legal bounded scalar actuals
+of this row's resolved base, port, direction and FULL mark mode.
+`RawImage(row) = ⋃{ rawAPs(prepareC2(row,a)) | a ∈ A }`.
+Preparation uses the same frozen row and saved-guard view as §3.1.
+Compare the raw command's AP before normalization. A positive result
+supplies the actual and the command which C2 emits for it. A negative
+result must exclude all the C2
+cases in §§2–3.1. The reference domain has finite legal accessors,
+marks, masks and depth K. An implementation solves the finite cases
+symbolically from the relative heads, tails, mark/E gates, fixed guard
+fields and support lanes. Validate both directions against the reference
+test. A missing accessor must be witnessed by a real legal accessor.
+Do not enumerate path products or scan historical offers at runtime.
+The hypothetical witness grants no caller application. A concrete
 T selector can authorize a raw FLOW start via its own companion/probe.
 The later mark restriction is on the output and must not reject that
 entry witness just because it is FLOW. ND uses one contributing member
@@ -476,7 +493,7 @@ route serves every needed use of it. A normalized STAR key alone cannot
 justify a raw EXACT command under NE. A proof uses one complete paired
 row for each new admission/publication, including its companions and
 output cap. If the bridge is missing, use native admission and publication
-for the affected scope under §6.
+for the affected scope under §7.
 
 `selectExit` first checks equal bases and intersecting marks. Equal
 concrete marks meet. A concrete mark meets FLOW only if FLOW admits it.
@@ -566,6 +583,8 @@ is absent from both publications, so this application delivers no
 | R24 · post-C5 summary, execution and handoff | Same `P=MUST`: `P→a.u.MUST/T,N,H=1` covers `P→a.u.f.NE/T,D,H=1` with the guards below. Check next-run guidance before removing the NE row. | Every NE point is within the uniform region of the same original. Equality of qualifiers and H preserves its application witness. A cut provider cannot serve it. |
 | R25/R27 · publication, ready queues, compaction | If `A` covers `B` and `B` covers `C`, retain a final service witness for C even when C arrived first. Process ready exact work and its summaries before uncertain work per owner, with control-enabling work, legal MUST and ready NORMAL providers in the high lane. Use FLOW first within a lane. When a ready exact reply and its uncertain counterpart share a consumer, publish the exact service first. | Witness substitution is transitive. Requiring a final retained basis prevents joint deletion cycles. Fair sound stores closed under the same positive rules have the same least result; callback counts may differ. |
 
+### 4.1 Actual coverage and the continuation check
+
 For actual coverage in R16, use FULL concrete EXACT with empty E or MUST
 with equal E, empty mx, and equal continuation, original, flags and geometry.
 Run ordinary same-layer MUST folding first. For R17 the provider must be
@@ -578,31 +597,116 @@ processed statement. A late provider can remove a pending membership
 once its complete continuation is covered. Independent effects and
 emitted Targets stay accumulated.
 
-For R16, R17 and R19, and for R24 at publication or handoff, check
-continuation service as well as point coverage. Include dependent C2/C5,
-rule effects, typed Targets, source permissions and later guides. For
-example, ready NORMAL coverage from source A can share the ZERO original,
-mark and observer with B's only DEMAND route. Keep B's member until
-every needed use has committed service or a verified retained route.
-Check before the first affected delivery or publication. Use the
-qualified service views in §6 without adding origin labels to DATA.
+For R17, let `d` be the proposed D deletion and `n` the ready NORMAL
+cover in that same continuation. The check passes exactly when all
+three conditions hold.
+
+1. The cover above holds after resolving the actual destination, call
+   stage and any alias, identity or demotion effect. Compare in the same
+   execution frame, including the entire original and bound H.
+2. The supported adapter identifies every affected use at the boundary
+   of the replaced continuation under §7.1. A use can be a DATA
+   delivery, C2 start, C5 publication, rule effect, Target, seed, source
+   permission or later guide. Distinct marking-site relations need
+   distinct witnesses even if they share an AP or report ID.
+3. `checkService(retained, uses, recipe)` in §7.1 passes. Start with
+   the already committed N cover and other unchanged inputs. The D
+   candidate and anything available only through it are absent from
+   that basis. For pending work, the recipe can use retained, enabled
+   actions in the same valid binding. It cannot assume a future reply.
+
+For example, when `x.h.M/U,D` only feeds an exact observation of
+`x.h.f.$/U`, a committed `x.h.MUST/U,N` can supply that same
+source-to-observer track in the supported positive continuation.
+If the D member can also lead to permission for a distinct marking
+action B, the recipe must supply B's permission or a complete retained
+service for its track under §7.1. Point containment supplies no such
+permission by itself. Apply the same check to R16. For R24, use the
+affected publication or handoff consumers.
+
+### 4.2 R19 owned closure and caller delivery
 
 R19 requires forward FULL after run-2 and an **already owned** NORMAL
-concrete EXACT (Empty E/mx) or MUST (actual E, Empty mx) query. Establish
-closure over its complete uncut strong transfer graph, including internal
-other marks, all H values, children and unpublished boundary states.
-Unknown effects, pending dependencies, internal cuts or unresolved D
-prevent closure. A child's mark/region certificate cannot prove its full
-transfer. For each applicable unary non-ZERO current concrete D return,
-check every possible overlapping return in its native bound H class
-against whole, already applied N service. Partial overlap requires whole
-coverage. Unknown FLOW that can contain the mark is relevant. Use only
-supported transfer adapters. Omit just that delivery. Owner records and
-handoff demand stay. The proved positive-unary leaf adapter supports fresh
-returned objects, marking rules, allocation/return and caller field reads.
-Reuse the guarded whole-query, per-mark and plain-region fast paths on
-their existing scopes; sparse positive mark flags reference existing
-return classes. Keep no per-region cache, and do not wait for future replies.
+concrete EXACT (empty E/mx) or MUST (actual E, empty mx) query
+`q` for the actual. Let `S` be the borrowed state set of q, including
+its entry seeds and raw exit facts before C5. A state has its full
+value, location, stage, original and physical ports. Let `next(s)`
+be all outcomes of the resolved strong transfer from s, including
+rule actions, boundary effects and the results of complete child
+transfers. Use the actual query's mode and the native transfer cases.
+All of the following must hold.
+
+- Every entry seed of q belongs to S. Every successor of every state
+  in S belongs to S or is a recorded terminal outcome in S. A supported
+  transfer with no output has an empty successor set.
+- The adapter validates every transfer of this scope. There are no
+  pending states or deliveries, unexplained results, unresolved D or
+  internal field cuts. A child can supply its whole completed relation
+  or an equivalent checked transfer. A certificate for one child
+  output mark or region supplies only that terminal service. Cyclic
+  calls need a closed, validated joint state set if the adapter
+  supports them. A certificate cannot use itself as a child result.
+- Closure inspects all marks and protection flags. C5 acceptance,
+  field-region overlap and mark relevance are tested only after
+  constructing the raw exit view. They never filter the state set.
+
+For each applicable unary non-ZERO current concrete D return `d`,
+perform this check before its first affected delivery.
+
+```text
+mayOmitCurrentReturn(context, q, d):
+    if q is ineligible or ownedClosure(q) is unproved: return false
+    committed = already applied NORMAL results in context
+    relevant = []
+    for raw in q's owned raw returns for the matched output port:
+        b = bindNativeGeometry(raw, context)
+        if binding is unsupported: return false
+        if b.boundH == d.boundH and mayOverlap(b, d):
+            relevant.add(b)
+    for b in relevant:
+        if no n in committed wholly covers b: return false
+    return checkContinuationService(context, omit = d, basis = committed)
+```
+
+`context` is the real application, including its actual, call stage,
+caller original, owner revision, physical ports and resolved continuation.
+The geometry adapter `bindNativeGeometry` uses the native return base and
+path rebase, input-H transport, output H and mark-cycle restoration in
+that context. It computes a proof value even when the raw exit did not
+pass C5. It grants no application or delivery. A complete native binding
+that cannot produce a return at this port contributes none. Unresolved
+bindings fail the check. `mayOverlap` tests common base, intersecting
+suffix locations and compatible marks, using the tail sets in §1 and E
+at its own head. A FLOW slot is relevant if it can include the concrete
+mark. An undecided overlap must be checked. Compare H after binding.
+`wholly covers` requires an equal bound value or the whole NORMAL MUST
+cover in §4.1, including the full mark and H. An overlapping fragment or
+a stored record that has not been applied supplies no witness. Verify
+all of b, even if only part overlaps d. The final continuation check
+uses §4.1 conditions 2–3 for the omitted delivery and its real caller
+effects. It is required even when `relevant` is empty.
+
+Borrow the full owned state view during the check. A raw exit that fails
+C5 is accounted for in that view, then the temporary view is released.
+Keep no extra return or intra-proc archive. Reuse the guarded whole-query,
+per-mark and plain-region fast paths only when they certify the same
+requirements on their existing scopes. Sparse positive mark flags
+reference existing return classes. An applied receipt is still required.
+The supported positive-unary leaf adapter handles ordinary
+allocation/return, marking actions on fresh objects and caller field
+reads. If the adapter cannot inspect closed states or effects, deliver d
+normally. Add no query, region cache or wait for a future reply. Omit
+only that delivery. Its summary, other subscribers, handoff rows and
+earlier Targets remain available.
+
+Reachability induction from the entry seeds puts every strong return
+in S. The bound scan constructs a committed NORMAL witness for every
+selected return. The recipe check proves the separate caller and
+future-service obligations, including the case with no selected returns.
+It excludes the inference that complete local data coverage alone
+preserves downstream control or source permission.
+
+### 4.3 Summary coverage and retained basis
 
 R24 requires forward singleton MUST original, nonstatic common output
 base, empty E on original and both outputs, diagonal FLOW or same-T
@@ -625,32 +729,60 @@ field only with its complete immediate child with empty E. For instance,
 cover `x.f.*→y.g.*`. At handoff keep existing weaker-premise/same-result
 and concrete STAR/EXACT service compaction only if the full updated C2/C5
 service agrees, including all ND projections; the latter equivalence is
-outside run-2. Recheck against the final basis. Individual redundancy
-alone gives no joint deletion permission.
+outside run-2. To select a retained basis, start with all qualified
+origins. For each candidate use the current survivors excluding that
+candidate as the replacement basis. At seal verify the recipes for
+every deletion using the final survivors, substituting earlier
+provider witnesses when needed. Restore any origin whose service
+cannot be verified. Individual redundancy alone gives no joint
+deletion permission.
 
 ### Examples diff
 
 | Rule and input | Current | Proposed |
 | --- | --- | --- |
 | R16. One binding has ready replies `{ret.MUST/T{f},N; ret.MUST/T{f},D}`. All required uses of D are served. | Deliver `{ret.MUST/T{f},N; ret.MUST/T{f},D}`. | Deliver `{ret.MUST/T{f},N}`. |
-| R17. Post-statement packet `{x.h.MUST/U,N; x.h.M/U,D}` under one original. All required uses are served. | Forward `{x.h.MUST/U,N; x.h.M/U,D}`. | Forward `{x.h.MUST/U,N}`. If D is the sole route to a second marking site, forward `{x.h.MUST/U,N; x.h.M/U,D}`. |
-| R19. Owned exact query's bound reply `ret.h.$/U,N`. Coarse current reply `ret.h.M/U,D`. Raw `ret.k.$/V,N` does not pass C5. | Caller packet `{ret.h.$/U,N; ret.h.M/U,D}`. | Caller packet `{ret.h.$/U,N}` if the outer continuation and owned closure witnesses pass. Keep `ret.k.$/V,N` in the closure. The coarse summary stays eligible for its other uses. |
+| R17. Ready post-statement packet `{x.h.MUST/U,N; x.h.M/U,D}` under ZERO. The complete affected-use list contains the exact U observation at `x.h.f`. | Forward `{x.h.MUST/U,N; x.h.M/U,D}`. The D fact can give `{ZERO→DT,D}`, alongside the N witness `{ZERO→NT(o),N}`. | Forward `{x.h.MUST/U,N}`. Its same-source exact witness gives `{ZERO→NT(o),N}`; the complete recipe discharges the D route's uses. |
+| R17, separate permission control. Same packet, with affected uses also including `run-5 permission(B, x.h.f.$/U)`. The retained N action provides only `ZERO→NT(o),N` from A. | Forward `{x.h.MUST/U,N; x.h.M/U,D}`. | Forward `{x.h.MUST/U,N; x.h.M/U,D}`. The permission for B is absent from the recipe result. |
+| R19. Actual `p.f.g.$/T,N` owns q below. The ordinary caller binding has `{x.h.$/U,N; x.h.M/U,D}`, and the ready h reply supplies every affected use of this D delivery. | Deliver `{x.h.$/U,N; x.h.M/U,D}`. | Deliver `{x.h.$/U,N}`. The raw k return is in q's state view but supplies no caller fact. |
+| R19, overlapping return control. The same closed q has raw `ret.k.$/V,N`. For an eligible delivery `x.k.M/V,D`, the committed binding still contains only `x.h.$/U,N`. | Deliver `{x.h.$/U,N; x.k.M/V,D}`. | Deliver `{x.h.$/U,N; x.k.M/V,D}`. The relevant bound exit `x.k.$/V,N` has no whole committed provider. |
 | R23. Same original `p.$/T`, outputs `ret.M/T,D` and `ret.f.M/T,D` in the current core. The latter becomes `ret.f.NE/T,D` in the proposal. | Broad executable edge and guide can be `{p.$/T→ret.M/T,D}` only. | Executable set `{p.$/T→ret.M/T,D}`; guidance set `{p.$/T→ret.M/T,D; p.$/T→ret.f.NE/T,D}` if the deeper guide has distinct service. |
 | R24. `A=p.MUST/T→ret.MUST/T,N,H=1`; `B=p.MUST/T→ret.f.M/T,D,H=1` currently, with `ret.f.NE/T,D,H=1` in the proposal. Whole coverage and handoff service pass. | Both `{A; B}` can remain executable. | Keep `{A}`. Omit B's guide under the same service proof. |
 | R25. `A=p.*/F→q.*/F,N`, `B=p.f.*/F→q.f.*/F,N`, `C=p.f.g.*/F→q.f.g.*/F,N`. | Aligned native subsumption yields executable basis `{A}`. | Executable basis `{A}` and final service witness `A covers C` in either arrival order. |
 | R27. Ready starts `p.*/F,N` and `p.$/T,N` at one owner. Their summaries are `A=p.*/F→ret.M/F,D` and `B=p.$/T→ret.$/T,N`. | A FLOW-first queue can publish `A then B`. | Publish ready `B then A`. With the same retained service, the resulting set is still `{A; B}`. |
 
-## 5. Cleaners, controls and handoff
+R19 example for an already owned point query at run-5. The point
+query q uses `ret.h.$/U→p.f.M/T,D`. A separate coarse query can use
+`ret.h.*/U→p.M/T,D` and publish `p.f.*/T→ret.h.M/U,D`.
+
+```java
+// Actual and raw initial for q: p.f.g.$/T,N.
+Box make(Box p) {
+    Box r = new Box();
+    labelV(p, r);   // CM(p.f.g, T) gives r.k.$/V,N.
+    labelU(r);      // CM(r.k, V)   gives r.h.$/U,N.
+    return r;      // Raw exits {ret.k.$/V,N; ret.h.$/U,N}.
+}
+// C5 publishes {p.f.g.$/T → ret.h.$/U,N}. It rejects the k exit.
+// Caller: x = make(p). A qualified coarse query separately supplies x.h.M/U,D.
+// Ready NORMAL binding is {x.h.$/U,N}.
+```
+
+The closure checker visits the state `r.k.$/V,N` and checks its
+successors `r.h.$/U,N` and the raw `ret.k.$/V,N` exit. Filtering V
+out of the owned view would remove a transfer that derives h/U.
+The terminal h/U scan has obligation `{x.h.$/U,N}`. The disjoint k/V
+return is evidence that a k/V scan
+would have obligation `{x.k.$/V,N}`. Neither scan can publish
+`p.f.g.$/T→ret.k.$/V,N` after C5 rejected it.
+
+## 5. Cleaners
 
 | Rule and affected part | Required behavior | Proof |
 | --- | --- | --- |
 | R26/R35 · concrete cleaner transfer [selected coarsening] | For selected EXACT cleaning of T at `x` or `x.f.g`, a matching same-base `x.MUST/T` keeps its region, original support, E and cleaner-survivor H. Nonuniform exact T still dies at the selected point. | Split along the cleaner path and use the selected same-head policy at the final child. Union with its siblings reconstructs the original region. This explicitly retains a possible observation at the selected point. D stays D. |
 | R36 · concrete cleaner transfer after run-1 | For NORMAL `x.MUST/T` cleaned ALL at `x.f.g`, emit `x.MUST/T {f}` and `x.f.MUST/T {g}`, normally. Selected BELOW also retains `x.f.g.$/T`. Apply the usual caps. | Partition into one residual sibling region per field plus the optional point. The union is exactly the input minus the selected subtree. There are at most depth+1 pieces. |
 | R31 · FULL nonstatic FLOW cleaner, all runs and directions | For `clearExactT(p); return p.g;`, keep the original headers of every path whose whole suffix cone is disjoint from the cleaner. Mask the remaining leaves as before. Cleaner at `p.f` still masks an abstract point probe at p because its normalized suffix can include f. | For EXACT, the cleaner head lies in the cone iff the input head prefixes it. For BELOW/ALL use prefix incomparability. This guard covers normalized suffixes too. The getter relays `p.g.h/T` with its original mark support. |
-| R28/R33 · typed controls, handoff and stopping | Reuse the existing paired DATA/Target projection. FLOW masks are cleared on both demand endpoints only. For `p→ret/F, mx={T}`, demand can guide FLOW admission, while saved replay still excludes T. DT still counts when DATA is empty. | Mask projection is idempotent and preserves all other coordinates. Controls carry their own witness and accumulate independently of DATA compaction. Stopping requires the full frontier to be empty. |
-| R37/R38 [REC] [LOOP] · terminal receipt, handoff | Omit a root ZERO→DT only with frozen service for every source/full-mark/observer relation and a proof of all other uses of that control key. One ID can report from a shallow source at run-3 while its deeper source first reaches the same observer at run-5. Keep guidance for the deeper source. | Induct over terminal derivations through relays. OR of unresolved leaves is false only if each leaf's complete source catalogue is served. A valid origin cannot use another origin's witness. |
-| R39 [REC] [LOOP] · origin certificate at seal | Certify an empty product for validated regular word languages, including eligible loops. Recursive writer words `{g,h}*f` and reader words `{g,h}*g` have an empty product. | A common word induces a simultaneous automaton path to an accepting pair. A closed reached set with none rules out that word at every depth. |
-| R40 [REC] · origin certificate at seal | Admit one nested clause side against a regular other side. Writer `g*f` and reader `R=g or g·R or h·R·h` are disjoint. With writer word `h.g.h` the nested arm supplies a real observation, so keep guidance. | Induct on a nested word derivation. Split its regular run at prefix/child/suffix. A closed owner/state-pair relation contains its endpoints. A real matching outer suffix would reach an accepting state. |
 
 R36 applies to the partially intersecting NORMAL concrete MUST region in
 FULL after run-1. At each selected field retain the current head with that
@@ -663,63 +795,279 @@ invalid. For R31 leave existing mark requests and cleaner ownership in
 place. Partition packed paths by the stated prefix test and add the
 selected marks to mx only on the remaining leaves. At most two packets.
 
-### 5.1 Typed matching and next-run rows
+### Examples diff
 
-For R28/R33, select admitted DATA whose layer is D, whose original is
-ND, or whose original is singleton ZERO in backward. Apply the native
-selection to methods and scoped blocks. Backward executable ND is
-invalid. For example, backward `ZERO→x.f.$/T,N` in a loop's after block
-provides the next forward C2 guide at that block. Project each selected
-pair with its physical ports and original pairing. NE remains NE in Dc. Use only existing forward MUST
-guidance projection and reverse views. Persist admitted NORMAL records,
-including real E/mx. For the frozen guide, clear mx from FLOW endpoints
-only. The saved record continues to use its own mask.
+| Rule and input | Current output facts | Proposed output facts |
+| --- | --- | --- |
+| R26. Selected EXACT cleanup of T at x with `x.MUST/T,N`. | `{x.MUST/T,D,H=1}` | `{x.MUST/T,N,H=1}` |
+| R35. Selected EXACT cleanup of T at `x.f.g` with `x.MUST/T,N`. | `{x.MUST/T,D,H=1}` | `{x.MUST/T,N,H=1}` |
+| R35, exact input control. Same cleanup with `x.f.g.$/T,N`. | `∅` | `∅` |
+| R36. Selected ALL below and at `x.f.g`, with `x.MUST/T,N` and room for both fields. | `{x.MUST/T,D,H=1}` | `{x.MUST/T{f},N,H=1; x.f.MUST/T{g},N,H=1}` |
+| R36. Selected BELOW `x.f.g`, same actual and budget. | `{x.MUST/T,D,H=1}` | `{x.MUST/T{f},N,H=1; x.f.MUST/T{g},N,H=1; x.f.g.$/T,N,H=1}` |
+| R31. Selected EXACT cleanup of T at p with the disjoint leaf `p.g.*/F,N`. | `{p.g.*/F(mx={T}),N}` | `{p.g.*/F,N}` |
+| R31, intersecting control. Same cleanup with `p.*/F,N`. | `{p.*/F(mx={T}),N}` | `{p.*/F(mx={T}),N}` |
 
-| Pair component | Match and result |
-| --- | --- |
-| Dc is DATA | Use C2 and the raw C5 image, or the contributing-member test for ND. |
-| Dc is ZERO or DT | Only an actual ZERO at the permitted entry starts/serves this control binding. |
-| Dp is DATA | Use scalar selection and its own cap, including from a control entry with a legal ZERO original. |
-| Dp is ZERO | Accept only a ZERO result or a DT publication under that same paired entry. |
+## 6. Controls and handoff
 
-A DT publication uses the ordinary paired control restriction. A backward
-saved source relation that returns ZERO uses the native ZERO-to-DT
-conversion and source permission route. NT composes only with NORMAL.
-It remains forward-only, keeps its report ID and existing deduplication,
-and uses its separate NORMAL report protocol rather than DATA C5. Do not
-satisfy a DATA selector with ZERO or a Target. At a sealed forward barrier
-stop only when the full outgoing frontier is empty, including applicable
-virtual DATA and DT guidance. On a reached exceptional backward ZERO
-the borrowed normal rule in §1 applies only to the control match.
+| Rule and affected part | Required behavior | Proof |
+| --- | --- | --- |
+| R28/R33 · typed controls, handoff and stopping | Retain paired DATA/Target projection. Clear FLOW mx from both demand endpoints. Keep real masks in NORMAL replay. DT still counts when DATA is empty. | Projection is idempotent. Typed controls keep their paired witnesses. Stopping requires an empty effective frontier. |
+| R37/R38 [REC] [LOOP] · terminal receipt, handoff | Omit a root ZERO→DT only with frozen service for every source/full-mark/observer relation and checked service for the root key's other uses. `ZERO→NT(id-1),N` cannot serve a DT origin that may reach `NT(id-2)`. Two sources for the same ID also need separate witnesses. | Induct over terminal derivations through relays. A false bit implies every leaf goal is closed. The complete source catalogue and separate control recipe cover distinct obligations. |
+| R39 [REC] [LOOP] · origin certificate at seal | Certify an empty product for validated regular word languages, including eligible loops. Recursive writer words `{g,h}*f` and reader words `{g,h}*g` have an empty product. | A common word induces a simultaneous automaton path to an accepting pair. A closed reached set with none rules out that word at every depth. |
+| R40 [REC] · origin certificate at seal | Admit one nested clause side against a regular other side. Writer `g*f` and reader `R=g or g·R or h·R·h` are disjoint. With writer word `h.g.h` the nested arm supplies a real observation, so keep guidance. | Induct on a nested word derivation. Split its regular run at prefix/child/suffix. A closed owner/state-pair relation contains its endpoints. A real matching outer suffix would reach an accepting state. |
 
-### 5.2 Terminal service
+### 6.1 Typed matching, publication and seeds
 
-For R37/R38, freeze the set of proved closed goals at forward start.
-A goal includes observer identity, its full-mark/position predicate, and
-the graph and rule version. Each predicate sharing an ID needs its own
-proof. A local Target origin contributes `goal ∉ frozenClosed`, or true
-for an unknown origin. Relays pass this bit and alternatives OR it.
-Publish a late false-to-true upgrade even when the terminal key is already
-stored. Join all upgrades. At completed FULL forward handoff, omit only
-the configured method-root ZERO→DT when accounting is complete and the
-bit is false. Also prove that every required use of that root key for
-admission, seed activation and future guidance is already served or has
-another retained route. Terminal origin accounting alone cannot certify
-an unrelated or latent consumer. Each key needs at most its first
-notification and one upgrade. Use a closed-goal proof at the next forward
-start. One unserved origin keeps the whole anonymous row.
+Each eligible pair is `(Dc, Dp)` for the next execution, written
+`Dp→Dc` in the previous direction. The entry port and exit port come
+from the same row. C2 matches a reached ZERO against Dc=ZERO or DT
+and starts the native ZERO identity. This grants entry only. An
+offer with DATA uses DATA selectors under §2.
 
-A complete catalogue includes every possible marking point and its bindings.
-For each point require a retained actual root NORMAL path to the same
-observer or a validated NoRoute result. Complete upper graphs may prove
-absence with fields forgotten. Bounded summaries alone cannot prove absence.
-Conditional NORMAL rows, an early NORMAL GEN before a cut and another
-source's report do not establish service. Retain only the frozen result and
-terminal bit, with temporary views of existing states and records.
+For C5, evaluate the following two tests on **one** qualified pair.
 
-For R39/R40 require complete pure FLOW route extraction, including every
-branch, resolved target, all source aliases, bindings and actual observer
-ports. A normal return does not represent an internal observation by itself.
+| Test | Selector | Accepted result |
+| --- | --- | --- |
+| Raw entry | Dc is DATA | A DATA premise member belongs to the row's raw C2 image. For ND this tests a contributing arm and keeps the full original. |
+| Raw entry | Dc is ZERO or DT | The matched original is ZERO. A DATA member cannot match. |
+| Output | Dp is DATA | Only DATA can pass. Apply scalar selection and the row's cap in §3.3, including for a legal ZERO original. |
+| Output | Dp is ZERO | Only a ZERO result or a DT candidate passes. The DT probe accepts on the same exit slots as ZERO and emits only a DT. |
+
+For example, with guides `{p.$/T→DT,D; ZERO→q.$/T,D}`,
+`ZERO→DT,D` matches the entry of the first row and the exit of the
+second. It publishes `∅`. A complete `{ZERO→DT,D}` guide admits it.
+NT uses the separate forward NORMAL report protocol. It is neither
+an entry selector nor an exit selector.
+
+At a forward observation, a complete NORMAL witness emits `P→NT(id),N`.
+ID is the native key for location and rule. A DEMAND witness emits
+`P→DT,D`. Preserve the run-1 origin selection and later-run full AND
+joins. Dispatch a DT to its callers only if run-1 is unrestricted at
+this boundary or paired C5 admits it. At a call or block link use the
+native premise match in the actual binding, including all ND members
+when applicable. The composed NT requires NORMAL inputs and links and
+has the original ID. Ignore NT in backward. Keep native deduplication
+against already persisted NT and collect confirmed reports from
+configured root `ZERO→NT(id),N` edges. A DT bit change in §6.4 is a
+metadata notification for an admitted DT, not a new match.
+
+In backward saved replay, a reversed forward source is a matching
+non-ZERO premise whose application produces ZERO. Preserve the caller
+original, emit DT through its paired restriction and finish that
+application. A `ZERO→ZERO` completion stays ordinary control flow.
+Only the native source-hit paths record source permissions. The
+conversion grants no independent source permission.
+
+The seed index stays separate from the pair index. Forward demand
+observations contribute the existing literal FULL requirements or
+predicate occurrence handles at their native method and statement.
+Backward source hits contribute the exact method, statement, forward
+micro-edge and action identity. The next forward source hook compares
+that complete key. At both ends, a seed becomes active only if the
+native entry and CFG/rule binding reach it. A retained seed definition
+does not replace a missing entry guide.
+
+For an already reached backward exceptional block ZERO, C2 unions the
+physical ZERO admission with admission from the normal invocation's
+ZERO/DT view. Record whether that second test admitted ZERO. A ZERO
+original's DT probe can use either whole paired control row. If the
+borrowed admission was recorded, project the admitted ZERO→DT at the
+normal invocation address. Resolve that address through the existing
+normal block exit map. Keep exact DATA ports, the physical ZERO→ZERO
+paths and the independent run-2 static-shortcut rule below. The
+borrowed view creates no new block offer.
+
+### 6.2 Barrier projection and stop
+
+```text
+handoff(sealedRun):
+    persist eligible admitted NORMAL DATA and existing NORMAL Targets
+    selected = admitted DATA where layer is D
+                              or original is ND
+                              or (backward and original is singleton ZERO)
+    selected += admitted DT at method and block boundaries
+    build the next seed index from native sink seeds or source hits
+    for each selected origin with its physical owner and ports:
+        for each scalar result and each original member:
+            Dc = guideEndpoint(result)      // DT handled as typed entry
+            Dp = guideEndpoint(member)
+            emit row(Dc, Dp) at the reversed ports
+    attach the run-1 static view only for run-2, as in §6.3
+    propose DATA compaction and root DT omissions under §7.1 and §6.4
+    verify all deletions against the same final survivors
+    retain any origin with unproved service
+    freeze retained rows and check the full effective frontier
+```
+
+The selector applies to admitted method and block results, including
+the existing backward singleton-ZERO NORMAL case. Backward executable
+ND is invalid. An ND projection adds one row per arm and scalar
+result. The saved/current summary still requires the whole ND
+original. Keep the source origin in the proof frame until compaction
+checks finish. Identical projected pairs can then share one index entry
+at the same owner and ports. Reverse block ports by exchanging the
+producer entry and exit. A block's logical normal Target port must
+resolve to the existing forward or reverse normal invocation, including
+the borrowed route above.
+
+`guideEndpoint` copies concrete heads, tails and masks except for
+the existing forward MUST projection to M with empty E. It drops mx
+on FLOW endpoints and clears E on FLOW STAR selectors. Keep NE and
+its nonempty meaning. ZERO and DT stay typed. NORMAL replay retains
+its original E/mx and real support. Confirmed NT and the seed index
+do not become guide rows. Never apply DATA subsumption to DT.
+
+For each projected origin, distinguish its executable service from its
+guide service. When executable coverage removes a DATA candidate,
+retain a qualified projection if its row still supplies a distinct
+C2 command or capped paired C5 output. R09/R23 capture that projection
+after C5 and before executable folding. Handoff may remove it only
+with the final-basis check in §7.1. Compare each full paired C5 output
+and each ND projection. Equal entry selectors can select different
+paired outputs or budgets.
+
+Test the frontier only at a completed forward barrier after draining
+work and Target upgrades. It is nonempty if either test passes.
+
+1. The frozen explicit index contains a retained DATA or DT pair.
+2. At the run-1 barrier, the static search in §6.3 exposes a virtual
+   pair with a required C2 or C5 use in its qualified scope. A use is
+   required if it can serve a retained refinement or seed/Target
+   consumer under the §7.1 interface check. Test a complete paired
+   path and its consumer together. An isolated bridge or carry identity
+   with no such consumer supplies no outstanding refinement.
+
+Use `NO_DEMAND_EDGE` when both are false. NT, saved replay, seed
+definitions alone and raw rejected candidates are outside the
+frontier. The native row count counts explicit insertions. An
+adapter can use that counter alone only with a proof that virtual
+service cannot keep an otherwise empty frontier live. Otherwise it
+must establish the virtual test from the frozen views without
+materializing the closure. If either test is unproved under the
+changed policy, use the fallback contract in §7. A policy cutoff
+remains a separate decision.
+
+### 6.3 Run-1 static views
+
+Build the run-2 static view from the frozen run-1 direct, captured write
+and lost-write rows, attached boundary rows and terminal readers. Index
+by complete scope and port as well as the static anchor. A write or
+read attachment, including a terminal reader, belongs to the
+selected method or exact block port pair. Only static-to-static
+bridges can be inherited. The local lookup accepts a bridge owned by
+this method. An inherited lookup accepts it if an owning method is
+reachable from the querying method along zero or more resolved
+caller-to-callee edges. The native outside-graph case accepts only
+exact ownership. Apply this projection to C2, C5, Target and the
+stop proof. Static shortcuts use their own physical attachment.
+
+The reference view includes the direct rows and compositions of
+visible rows at a shared static anchor. The anchor is the pair
+(class, field), or the exact class marker for that class considered on
+its own. From `A→S` and `S'→B`, extend only if S and S' have the same
+anchor, their represented locations can overlap and the marks
+compose. For native non-NE tails, overlap compares the two heads.
+The shorter tail must admit the remaining known path and its E
+must admit the first descent. For NE also require a possible nonempty
+suffix in its region, so same-head EXACT and NE cannot overlap.
+FLOW composes as identity. Two concrete labels must agree on the
+middle full mark.
+Carry the composed endpoint labels on A and B. A ZERO origin remains
+typed and a DT endpoint has no output mark. The search keeps the
+complete endpoint pair and scope and stops extending at a nonstatic
+input. Revisit a search key only for new qualified endpoint/mark
+service. Expose each reached pair on demand. A `ZERO→S/T` writer
+and a `S/T→DT` reader can expose `ZERO→DT` through their common S.
+Short-circuit only after the probe has all
+its required results, including different C5 budgets. Shared carry
+offers just the projected identity for the same actual static slot.
+
+For a reached backward run-2 concrete static original at a block, the
+static-write shortcut may serve a DT candidate through a completed
+writer origin at `STATIC_SHORTCUT` with the matching output port.
+The writer or preceding static bridge chain must end at real ZERO
+when followed backwards. A carry identity, other-port writer or
+terminal reader alone cannot serve this probe. It grants no DATA
+entry alias. After run-2 use local demand only. Validate equivalence
+to the native qualified static view before enabling NE in it.
+
+### 6.4 Terminal service and root retirement
+
+A goal is `(observer ID, full-mark/position predicate, revision)`.
+Revision includes the applicable graph and rule versions. Freeze the
+set of proved closed goals at forward start. Each local admitted DT
+derivation contributes true for an unknown goal or a goal outside the
+snapshot, and false otherwise. Each admitted relay copies its input
+bit. If a relay has several required terminal inputs, OR their bits
+under its complete binding. Alternative derivations of the same
+qualified Target key also combine by OR. Retain a false-to-true
+upgrade even when the Target edge was already delivered. Process
+upgrades through the same valid Target links until stable before
+handoff. A key publishes at most its first notification and one upgrade.
+
+Compute closure of a goal before adding it to a later snapshot.
+Use the complete catalogue S of possible marking sites, actions and
+bindings for this predicate. In a temporary upper view U, every
+possible source-to-goal transfer must map to a path, including sources
+beyond current cuts or without current permission. In a temporary
+NORMAL witness view N, every path used by the check must lift to a
+retained actual root NORMAL path from that same source and mark to
+the goal. Use ordinary matching, ports, binding and caps. Build both
+views by supported adapters. With fields forgotten U can be
+conservative. Bounded summaries alone cannot establish U. A local
+conditional NT, a different source's report and NORMAL GEN before a
+later cut do not establish N.
+
+```text
+proveClosedGoal(g):
+    if catalogue or transfer correspondence is unproved: return Unknown
+    possible = reverseReachable(U, g)
+    witnessed = reverseReachable(N, g)
+    for s in S:
+        if s in possible and s not in witnessed and no validated NoRoute(s,g):
+            return Open
+    return Closed
+
+omitRootDT(row):
+    return completed FULL forward handoff at a configured method root
+       and row is admitted ZERO→DT
+       and every local emitter and permitted relay was accounted for
+       and all bit notifications have drained and row.needs is false
+       and checkService(retainedBasisWithout(row), otherUses(row), recipe)
+```
+
+`otherUses(row)` is the complete §7.1 interface of control uses outside
+the closed goal proof. Start at the next ZERO admissions this row can
+authorize, then follow dependent seed activations, source permissions,
+terminal relays and further DATA or control guides. A closed terminal
+goal discharges only the use it proves. If all consumers of a permission
+or admission are discharged, the intermediate permission or admission
+has no remaining obligation. Other uses require independent service
+or proof that the associated action is impossible. An intact seed
+index or a similar row at another port supplies neither. If an adapter
+cannot construct the complete interface, keep the root row. Keep
+scoped, nonroot, non-ZERO and backward DTs.
+Retain only the proved Closed result and the terminal bit, with
+temporary views of the existing state.
+
+Induction over finite terminal derivations puts every goal of a
+stable false key in the frozen set. The catalogue and path checks
+give service for every possible source of each such goal. The
+separate recipe covers all other control consumers. Combining the
+two proofs prevents a root DT removal from losing an observation.
+
+### 6.5 R39/R40 NoRoute certificates
+
+For R39/R40 require complete pure FLOW route extraction. Build clauses
+from the finite resolved writer/reader control-flow graphs, using
+ordinary field reads/writes and transfer-preserving relays. Collect
+branches by union. Label each write with the actual prefix it
+prepends and each read with the known field it consumes. Compose the
+labels around calls and loops only when each path factors into the
+permitted base or single-child clause. Validate that every path,
+resolved target, source alias, binding and actual observer port has a
+corresponding derivation in the extracted languages. A normal return
+alone supplies no edge for an internal observation.
 For source field word `a` and exact observation word `q`, solve
 `writerWord·a = readerWord·q`. Regular clauses are base words or
 `prefix·B`. A nested clause can use `prefix·B·suffix` on one side only.
@@ -730,8 +1078,10 @@ suffix **after the whole word**. For example, a nested `g·B·f` with B
 empty and source h gives `g.f.h`; appending h to B incorrectly gives
 `g.h.f`.
 
-For regular sides validate every clause and traverse the synchronized
-same-field product. Return Unknown on a cross-owner empty-word transition
+For regular sides traverse the synchronized same-field product from
+the aligned start states. Accept disjointness only if its visited set
+contains the starts, is closed under every synchronized transition
+and contains no accepting pair. Return Unknown on a cross-owner empty-word transition
 unless its epsilon elimination is proved. For one nested side, use the
 regular automaton's word transition `step`. Seed `(A,p,q)` where base(A)
 can move p to q.
@@ -746,20 +1096,6 @@ no NORMAL report or source permission.
 
 ### Examples diff
 
-#### Cleaner transfer
-
-| Rule and input | Current output facts | Proposed output facts |
-| --- | --- | --- |
-| R26. Selected EXACT cleanup of T at x with `x.MUST/T,N`. | `{x.MUST/T,D,H=1}` | `{x.MUST/T,N,H=1}` |
-| R35. Selected EXACT cleanup of T at `x.f.g` with `x.MUST/T,N`. | `{x.MUST/T,D,H=1}` | `{x.MUST/T,N,H=1}` |
-| R35, exact input control. Same cleanup with `x.f.g.$/T,N`. | `∅` | `∅` |
-| R36. Selected ALL below and at `x.f.g`, with `x.MUST/T,N` and room for both fields. | `{x.MUST/T,D,H=1}` | `{x.MUST/T{f},N,H=1; x.f.MUST/T{g},N,H=1}` |
-| R36. Selected BELOW `x.f.g`, same actual and budget. | `{x.MUST/T,D,H=1}` | `{x.MUST/T{f},N,H=1; x.f.MUST/T{g},N,H=1; x.f.g.$/T,N,H=1}` |
-| R31. Selected EXACT cleanup of T at p with the disjoint leaf `p.g.*/F,N`. | `{p.g.*/F(mx={T}),N}` | `{p.g.*/F,N}` |
-| R31, intersecting control. Same cleanup with `p.*/F,N`. | `{p.*/F(mx={T}),N}` | `{p.*/F(mx={T}),N}` |
-
-#### Handoff and stopping
-
 Each set below lists outgoing guidance in the previous edge's orientation.
 For instance, `ZERO→DT` will select actual ZERO in the next run at the
 matching typed entry.
@@ -767,28 +1103,107 @@ matching typed entry.
 | Rule and input | Current handoff | Proposed handoff |
 | --- | --- | --- |
 | R28. Backward after-loop block publishes `ZERO→x.f.$/T,N`. | `{ZERO→x.f.$/T,N}` in the block's reversed scope. | `{ZERO→x.f.$/T,N}` in the same reversed scope. |
+| R28, paired C5. Guides `{p.$/T→DT,D; ZERO→q.$/T,D}`, raw `ZERO→DT,D`. | Publish `∅`. | Publish `∅`. Adding `ZERO→DT,D` to the guides allows publication `{ZERO→DT,D}`. |
 | R28. EMPTY DATA set, with a live forward root `ZERO→DT,D`. | `{ZERO→DT,D}`. Continue. | `{ZERO→DT,D}`. Continue. |
-| R33. Admitted `p.*/F→ret.*/F(mx={T}),D`. | Guide `{p.*/F→ret.*/F}` with empty mx. | Guide `{p.*/F→ret.*/F}` with empty mx. A saved NORMAL record with the same mask still rejects T in replay. |
-| R37. Root result `{ZERO→NT(id),N; ZERO→DT,D}`. All root uses have frozen complete service. | `{ZERO→DT,D}`; retain the NORMAL observation. | Guidance `∅`; retain `{ZERO→NT(id),N}`. |
+| R33. Admitted `p.*/F{f}(mx={U})→ret.*/F{g}(mx={T}),D`. | Guide `{p.*/F→ret.*/F}`. | Guide `{p.*/F→ret.*/F}`. For a NORMAL replay record with those masks, retain `{p.*/F{f}(mx={U})→ret.*/F{g}(mx={T}),N}`. |
+| R37. Run-3 root has saved `{ZERO→NT(id-1),N}` and admitted `{ZERO→DT,D}` from open goal id-2. | Guide `{ZERO→DT,D}`. | Guide `{ZERO→DT,D}`. A false bit for id-1 cannot clear id-2's true bit. |
+| R37, closed control. Retained `{ZERO→NT(id-1),N; ZERO→NT(id-2),N}`. A coarse route still produces `{ZERO→DT,D}`. Both goal proofs are frozen and all other uses of the row are discharged. | Guide `{ZERO→DT,D}`. | Guide `∅`. Both NORMAL reports remain. |
+| R37, separate control use. Same closed goals, but this row also provides the only reached ZERO for `permission(B, x.f.$/T)` outside both goals. | Guide `{ZERO→DT,D}`. | Guide `{ZERO→DT,D}`. Neither NT authorizes the missing permission. |
 | R38. A and B can reach the same observer. Only A contributes `ZERO→NT(id),N`; B uses `ZERO→DT,D`. | `{ZERO→DT,D}` | `{ZERO→DT,D}`. A's NT does not close B's track. |
 | R39. A qualified root has `ZERO→DT,D` from writer words `{g,h}*f` and reader words `{g,h}*g`. Empty product and complete control proof are frozen. | `{ZERO→DT,D}` | `∅` |
 | R40. A qualified root has `ZERO→DT,D` from writer words `g*f` and reader `g or g·R or h·R·h`. The nested disjointness and control proofs are frozen. | `{ZERO→DT,D}` | `∅`. With a real writer word `h.g.h`, guidance stays `{ZERO→DT,D}` until its track is discharged. |
 
-## 6. Proof and activation
+#### R37 trace with two observer IDs
+
+Only root is analyzed in this slice. The two marking actions and two
+observers are local rules at the shown positions. The deep action marks
+only the four-field path.
+
+```java
+void root() {
+    Node a = new Node();    // A assigns T at a.g.$.
+    observe1(a.g);          // Exact T observation, id-1.
+    Node x = new Node();    // B assigns T at x.f.f.f.f.$.
+    Node r = x.f.f.f;
+    observe2(r);            // CM(r.MAY, T), id-2.
+}
+```
+
+Each forward DATA fact below has ZERO as its original. Ignore ordinary
+ZERO→ZERO completion in the Target columns. DT has no report ID on the
+edge. The id-2 annotation identifies its proof goal, not a stored label.
+
+| Run and guide input | Decisive facts and control | Current handoff | Proposed handoff |
+| --- | --- | --- | --- |
+| run-1, forward K=1. Unrestricted root ZERO. | `a.g.$/T,N→NT(id-1)`. B cuts to `x.f.M/T,D` currently and `x.f.NE/T,D` under the proposal. The reads yield `r.M/T,D→DT` at id-2. | Guide `{ZERO→DT,D}`. Report `{ZERO→NT(id-1),N}`. | Guide `{ZERO→DT,D}`. Report `{ZERO→NT(id-1),N}`. |
+| run-2, backward K=1. Guide `{ZERO→DT,D}`, actual ZERO. | Root starts `ZERO→ZERO,N`. Observer id-2 emits reverse `r.M/T,D`. The reverse reads yield `x.f.M/T,D` currently and `x.f.NE/T,D` in the proposal, both matching B's declared position. | `{ZERO→DT,D; permission(B)}`. | `{ZERO→DT,D; permission(B)}`. |
+| run-3, forward K=2. Guide `{ZERO→DT,D}`, actual ZERO with `permission(B)`. | Retained report `{ZERO→NT(id-1),N}`. B cuts to `x.f.f.M/T,D` currently or `x.f.f.NE/T,D` in the proposal. The reads yield `r.M/T,D→DT`. | Guide `{ZERO→DT,D}`. | `frozenClosed={id-1}` for these predicates. Id-2 sets the root bit to true. Guide `{ZERO→DT,D}`. |
+| run-4, backward K=3. Guide `{ZERO→DT,D}`, actual ZERO. | Reverse id-2 yields `r.M/T,D`, then `x.f.f.f.M/T,D`. This includes the last f at B. | `{ZERO→DT,D; permission(B)}`. | `{ZERO→DT,D; permission(B)}`. |
+| run-5, forward K=4. Guide `{ZERO→DT,D}`, actual ZERO with `permission(B)`. | B produces `x.f.f.f.f.$/T,N`. The reads produce `r.f.$/T,N`. Observer 2 emits `ZERO→NT(id-2),N`. | Guide `∅`. Reports `{ZERO→NT(id-1),N; ZERO→NT(id-2),N}`. | Guide `∅`. Reports `{ZERO→NT(id-1),N; ZERO→NT(id-2),N}`. |
+
+Deleting the run-3 DT just because the root already has NT(id-1)
+would leave `∅` at that handoff. The root has no DATA summary or
+alternative activation for id-2. It would stop before run-4 supplies
+B's permission. If an id-1 DT derivation also reaches the root first,
+it can publish the bit as false. The id-2 derivation upgrades the
+same anonymous row to true.
+
+## 7. Proof and activation
+
+### 7.1 Service interface and certificate
 
 A service obligation identifies its run and stage, owner and revision,
 physical ports, original, mark, exclusions, protection and exact effect.
-Include required queries, publications, Targets, source permissions,
-aliases, rule effects and source-specific observations. These coordinates
-identify proof witnesses in native events.
+Source-specific observations also identify the marking action and
+observer. These are proof coordinates of existing native events.
 
-For each changed branch, validate all affected seeds and native actions
-in its complete scope. Check a finite replacement derivation for each
-needed service. Each step must use an available permitted native transfer
-with all of its inputs in the same valid binding. Respect run and stage
-order. End every recipe in the final retained basis after all simultaneous
-deletions. At a stop, require materialized witnesses and discharge every
-remaining native continuation that could supply a required track.
+A complete affected interface is defined relative to the replaced value,
+query, publication or guide. In a supported native model, start with
+the actions that take the replaced event as an input, test it in a
+guard, or use it as a permission. Follow their results through the
+replaced region to all consumers outside it. Include each use of a
+result that is also read inside the region. It may be discharged there
+by traversing its complete consumers. At the interface record each
+required result, native binding and availability point. Retain the
+conditions on a symbolic use as part of its recipe. The effect kinds
+are DATA, ready query or publication, resolved alias or rule effect,
+Target, seed or source permission, saved replay, next-run guide and
+source-to-observer track.
+
+Use the completed native action relation in a finite adapter, or
+check finite case schemas for the supported native data and control
+operations. A schema for a next-run query or guide must hold for all
+legal bounded offers and budgets in its scope, or prove that its
+consumers are fully served without it. This does not run later
+iterations or infer an empty interface from the observed prefix. If
+any successor, guard or call/seed consumer cannot be accounted for,
+the interface is unknown. A proven empty interface is a valid result.
+
+```text
+checkService(basis, uses, orderedRecipe):
+    if uses or the native transfer adapter is incomplete: return false
+    available = already committed events from the final retained basis
+    for step in orderedRecipe:
+        if step is not a validated retained native action: return false
+        if any required input is unavailable in its binding: return false
+        if any input is first available after this action: return false
+        add step's verified result to available
+    return every key in uses has its required result in available
+```
+
+A proof of a stronger result must include the native action or
+constructive point witness that serves the consumer in this binding.
+If a route is impossible, validate absence using the semantics of
+that action or a complete upper view such as §6.4. Only then remove
+its use from the interface. Ready services can be used immediately.
+A symbolic future service is a proof from the retained handoff inputs
+at the required run and stage. A reply or permission first seen in a
+later run cannot justify an earlier use. At any one run and stage,
+the ordered recipe must produce an input before relying on it. For
+joint compaction no recipe may depend on another deleted event unless
+it derives the event's required service from the same retained basis.
+At natural stop every required observable track has a materialized
+result or a validated absence proof.
 
 The preservation proof substitutes the checked recipes into each finite
 native derivation by induction. An AND derivation requires witnesses for
@@ -797,6 +1212,8 @@ the materialized tracks. For termination of an example, show within-run
 closure and an empty full frontier, or prove an inductively quiet suffix.
 A bounded execution cannot prove natural termination without that
 certificate.
+
+### 7.2 Native correspondence and fallback
 
 Before activation, establish native correspondence for the complete scope.
 The proof must cover the following parts.
@@ -825,6 +1242,6 @@ original reply or guide. Unknown terminal scope keeps its ZERO→DT row.
 
 [Constructive rule proofs](lean/proposals/demand-refinement-spec-20261117/README.md) ·
 [Joint service proof](lean/proposals/demand-no-loss-audit-20261117/README.md) ·
-[NE application and limit checks](lean/proposals/demand-spec-clarification-20261118/README.md) ·
+[Scalar, continuation and handoff checks](lean/proposals/demand-spec-clarification-20261118/README.md) ·
 [Termination examples](../docs/reports/bidirectional-demand-termination-counterexamples-20261115.md) ·
 [Validation](../docs/reports/bidirectional-termination-fix-validation-20261117.md)
