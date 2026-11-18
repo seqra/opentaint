@@ -1,9 +1,10 @@
 # Candidate specification for demand Target retirement
 
-**Possible next iteration.** R37–R40 are under consideration. The
-[active refinement spec](demand-refinement-and-termination.md) uses the
-native Target handoff. The rules and run outcomes below describe the
-checked reference models. Use the access-path notation, layers, C2/C5
+**Deferred cyclic cases and reference models.** The
+[active refinement spec](demand-refinement-and-termination.md#72-r37r38--retire-a-fully-served-acyclic-root-target)
+selects acyclic R37/R38 with a frozen handoff certificate. The
+loop and recursion variants, including R39/R40, are deferred.
+The rules and run outcomes below describe the checked reference models. Use the access-path notation, layers, C2/C5
 pairs and scoped handoff from the active spec.
 
 Retiring a root DemandTarget (DT) changes which backward ZERO starts

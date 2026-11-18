@@ -593,15 +593,79 @@ A current call application resumes the NE result. A separate
 saved reverse MUST view resumes MAY. The cut is already present
 in the current summary before either delivery.
 
-The two root MAY rows enter C5 on DEMAND, as queries 101–102
-show. The paired cut trace applies to the four NE rows. Keep
-the two producer mechanisms separate when testing retirement.
+The two root MAY rows enter C5 on DEMAND in run-11 queries
+101–102. Run-10 query 71 already offers the raw DEMAND relation
+`ret.* → p.MAY`. Its output selection retains
+`ret.* → p.b.MAY, DEMAND`. The paired cut trace explains the
+four NE rows. The root MAY rows have a second source of renewal
+that also needs coverage.
 
-The observed renewal is the known demand-relative cut pattern.
-R01 and R18/R20–R23 produce the expected result for these inputs.
-The selected helper DATA rows do not use the deferred Target
-service. The capture establishes the H9–H11 recurrence, with
-an uncapped recurrence and retirement proof still open.
+### Why the termination rules keep the helper active
+
+- **R05 and R09–R12 find the refined starts.** The run-11
+  offer `p.b.*` starts the prepared child `p.b.[].*`.
+  For the shallow pair, the field comes from a saved NORMAL
+  guard. The deeper NE pair has a different exit selector
+  and cannot supply a child to the shallow pair by the
+  same-exit rule. The prepared child still keeps the shallow
+  exit selector and its cap.
+  [Prepared-child rules](../../spec/demand-refinement-and-termination.md#31-prepare-one-level-of-children)
+- **R18 and R20–R23 retain the cut beside the precise result.**
+  R18 runs C5 even when a saved NORMAL relation covers the raw
+  transfer. The shallow backward pair has cap 2 and the shallow
+  forward pair has cap 1. Increasing the global limit beyond
+  those caps leaves the cuts unchanged. The deeper pairs admit
+  the NORMAL relations separately. A constructive Lean check
+  derives the same two projected NE keys for all global caps
+  that fit the raw inputs, assuming the observed raw offers and
+  shallow rows remain available.
+  [Paired C5 contract](../../spec/demand-refinement-and-termination.md#33-raw-entry-witness-and-paired-output)
+- **R25 cannot merge the shallow and deep pairs.** The
+  revised handoff deduplicates exact pairs. The observed pairs
+  also have different C2/C5 service. For example, shallow
+  C5 accepts the raw point in query 29. The deeper NE selector
+  rejects that same-head point before FLOW normalization.
+  Query 84 shows the same distinction in the forward direction.
+  NORMAL subsumption applies to executable NORMAL relations.
+  It leaves the separate DEMAND refinement service available.
+  [Service keys](../../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/HandoffServiceKeys.kt)
+- **The driver sees nonempty DATA demand.** R37–R40 address
+  Target service. The helper's repeated pairs are FLOW DATA
+  and its method has no loop. The current `NO_DEMAND_EDGE`
+  check therefore still sees these pairs.
+  [Stop test](../../core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/driver/IterationDriver.kt#L224)
+
+The capture shows the active rules producing their specified
+results. The missing behavior is retirement of a FLOW demand
+whose complete transfer can already use saved NORMAL replay.
+The [earlier retirement proposal](../../spec/normal-backed-flow-demand-retirement.md)
+defines that proof for this helper. It was a design experiment.
+The active spec explicitly keeps ordinary C5 in the historical
+precoverage case. Unconditionally skipping a cut when one
+NORMAL result covers it can remove another service of the
+same demand pair.
+
+The saved replay check reused the 12 paired copy origins from
+the earlier compiled-form audit. It checked each origin
+assigned to each of the 34 retained helper row instances in
+H7–H11 against the 21 revised, saved NORMAL STAR relations
+at each barrier. All 124 clipped origin instances had an
+aligned witness in both directions. The check uses the whole
+MAY region as a conservative cover of NE. Each witness uses
+the provider's real direct or opposite replay role. This
+confirms the retained-basis part of the older proof against
+the revised capture. It uses the prior form closure and leaves
+current form completeness and retirement through caller C2
+and C5 to check before activation.
+
+The focused native test command passed all 22 tests in
+`RevisedDemandPolicyTest`, `HandoffCompactorTest` and
+`OwaspDemandCycleTest`. The C5 test expects both a NORMAL
+result and a shallow NE result. The revised OWASP-shaped
+test requires its observation and completed runs. It has no
+natural-stop assertion for the actual helper. Evidence for
+this review is in `cutoff/OWASP-helper-H10-H11/coverage-review/`
+in the campaign archive.
 [Prior helper trace](bidirectional-owasp-helper-cycle-20261110.md)
 
 The replay accounted for all 776 H11 pairs. Twenty are new

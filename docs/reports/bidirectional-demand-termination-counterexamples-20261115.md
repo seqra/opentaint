@@ -137,6 +137,11 @@ Production stays unchanged. The historical native diagnostic remains
 **run-31/POLICY**, with its documented NORMAL-observation alignment difference.
 Native component checks do not establish integration of the whole proposal.
 
+The [pre-refinement run-101 baseline](bidirectional-termination-baseline-run101-20261118.md)
+records the extended native outcomes, including the actual OWASP helper.
+The earlier finite captures in this catalogue document the named
+versions and reference models.
+
 ## Notation and reading rules
 
 ```text

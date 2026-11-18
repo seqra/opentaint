@@ -5,6 +5,8 @@ import org.opentaint.dataflow.bidi.ap.MarkMode
 import org.opentaint.dataflow.bidi.driver.*
 import org.opentaint.dataflow.bidi.engine.*
 import org.opentaint.dataflow.bidi.fixtures.DriverFixtures
+import org.opentaint.dataflow.bidi.fixtures.TERMINATION_BASELINE_LAST_RUN
+import org.opentaint.dataflow.bidi.fixtures.TerminationBaselinePolicy
 import org.opentaint.dataflow.bidi.fixtures.settledNormalSink
 import org.opentaint.dataflow.bidi.store.DemandStore
 import kotlin.test.*
@@ -17,6 +19,20 @@ class HardRunLimitPolicyTest {
             if (index == 1) null else DemandStore.Builder(f.manager).build(),
             f.records, SeedIndex.EMPTY, emptyList(), run1MarkMode = MarkMode.FULL,
             fieldLimitSchedule = schedule)
+
+    @Test
+    fun `an intrinsic MAY rule remains provisional at the extended cutoff`() {
+        DriverFixtures().use { f ->
+            val case = f.persistentDemand()
+            val driver = f.driver(TerminationBaselinePolicy, budget = 30.seconds)
+            val report = driver.analyze(listOf(case.root))
+            assertEquals(RunStatus.COMPLETE, report.end.status)
+            assertEquals(EndReason.RUN_LIMIT, report.end.reason)
+            assertEquals(TERMINATION_BASELINE_LAST_RUN, report.end.run)
+            assertTrue(driver.frontiers.all { it.targetDemand > 0 })
+            assertTrue(report.entries.single().provisional)
+        }
+    }
 
     @Test
     fun `default production policies cap eleven without changing either field schedule`() {
