@@ -6,7 +6,8 @@ Improve the [demand refinement and termination spec](spec/demand-refinement-and-
 through repeated termination and soundness counterexample discovery and repair. Follow
 [spec/proof-guide.md](spec/proof-guide.md). Keep the
 [counterexample catalogue](docs/reports/bidirectional-demand-termination-counterexamples-20261115.md)
-current. These documents define the selected rules and the known examples.
+current. The spec defines the selected rules. The catalogue records the
+known examples and the scope of their proofs.
 
 We analyze synthetic data-flow reachability. Use marking and observation
 rules. Do not describe the examples as real vulnerabilities.
