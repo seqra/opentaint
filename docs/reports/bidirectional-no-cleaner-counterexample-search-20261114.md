@@ -40,7 +40,7 @@ reference experiment, not a native NE implementation.
 
 ## Bounded search evidence
 
-[Exploratory scripts](../../scripts/demand_experiments/no-cleaner-counterexample/)
+[Exploratory scripts](data/bidirectional-experiment-sources-20261118/scripts/demand_experiments/no-cleaner-counterexample)
 compose ordinary single-field reads and writes, apply per-operation global
 cuts and paired relative C5, retain NORMAL records, run the one-level query
 plan, compact executable MAY results separately from the retained demand

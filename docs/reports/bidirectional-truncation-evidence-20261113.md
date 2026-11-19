@@ -293,7 +293,7 @@ or a change to field transfers. No such change was made here.
 
 ## 6. Reproduction and evidence
 
-The [native fixture](../../scripts/demand_experiments/truncation-evidence/TruncationEvidenceTest.kt)
+The [native fixture](data/bidirectional-experiment-sources-20261118/scripts/demand_experiments/truncation-evidence/TruncationEvidenceTest.kt)
 uses a test-only admission filter. It leaves subscriptions and persisted
 NORMAL replay in place. The filter unions support from all matching local
 demand rows; it does not let one row veto an initial supported by another.

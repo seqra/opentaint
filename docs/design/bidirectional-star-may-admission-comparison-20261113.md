@@ -134,7 +134,7 @@ run-11 limit supplies no evidence of convergence.
 
 ## 4. Checked evidence
 
-The [native regression](../../scripts/demand_experiments/dual-starts/ProjectedMayCoverTest.kt)
+The [native regression](../../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/ProjectedMayCoverTest.kt)
 passes against the current AP implementation. Its STAR-start assertions
 check both candidate relations and both original-offer applications above.
 

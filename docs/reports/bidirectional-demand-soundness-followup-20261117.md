@@ -57,8 +57,8 @@ results; the search counts below describe the earlier, unchanged sweep.
 
 Two executable scripts extend the earlier conditional-marking helper family:
 
-- [Search.lean](../../scripts/demand_experiments/soundness-followup-20261117/Search.lean): 504 configurations.
-- [NegativeSearch.lean](../../scripts/demand_experiments/soundness-followup-20261117/NegativeSearch.lean): 280 configurations.
+- [Search.lean](data/bidirectional-experiment-sources-20261118/scripts/demand_experiments/soundness-followup-20261117/Search.lean): 504 configurations.
+- [NegativeSearch.lean](data/bidirectional-experiment-sources-20261118/scripts/demand_experiments/soundness-followup-20261117/NegativeSearch.lean): 280 configurations.
 
 The helpers have two positive marking actions, one with a field-dependent
 condition and one with a whole-input condition. The caller reads h from

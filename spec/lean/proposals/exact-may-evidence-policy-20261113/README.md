@@ -72,10 +72,10 @@ correctly; the old full-queue publication barrier must not hide them.
 
 ## Native evidence
 
-- [Six dual-start AP tests](../../../../scripts/demand_experiments/dual-starts/DualStartsTest.kt)
+- [Six dual-start AP tests](../../../../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/DualStartsTest.kt)
   pass for normalization, getter/copy operators, same-head MAY application,
   the descendant-result difference and concrete layer retention.
-- [Projected-view counterexample](../../../../scripts/demand_experiments/dual-starts/ProjectedMayCoverTest.kt)
+- [Projected-view counterexample](../../../../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/ProjectedMayCoverTest.kt)
   passes: the ordinary second branch returns a real root T which the
   retained copy-shaped NORMAL provider alone does not return on the precise
   offer. It is a local AP test, not a complete driver finding-loss proof.

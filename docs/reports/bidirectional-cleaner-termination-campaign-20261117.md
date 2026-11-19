@@ -325,8 +325,8 @@ marker or native decision shortcut is allowed.
 [Checker and scope](../../spec/lean/proposals/uniform-cleaner-spine-20261117/README.md).
 Native sources:
 [recurrence/controls](../../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/DescendantCleanerTerminationTest.kt),
-[R35](../../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/ExactUniformCleanerClosureTest.kt),
-[R36](../../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/UniformCleanerSpineTest.kt).
+[R35](data/bidirectional-experiment-sources-20261118/core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/ExactUniformCleanerClosureTest.kt),
+[R36](data/bidirectional-experiment-sources-20261118/core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/UniformCleanerSpineTest.kt).
 
 Compiled models, per-claim axiom logs, the search output, Gradle log and
 111-test XML files are outside Git under `uniform-cleaner-spine-20261117/`

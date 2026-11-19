@@ -90,7 +90,7 @@ or disproved by this scalar test.
 ## Native and formal checks
 
 The portable runner is
-[`probe_normal_envelope.py`](../../../../scripts/demand_campaign/probe_normal_envelope.py).
+[`probe_normal_envelope.py`](../../../../docs/reports/data/bidirectional-experiment-sources-20261118/scripts/demand_campaign/probe_normal_envelope.py).
 It checks all 29 captured NORMAL memberships, with their direct/opposite
 roles and the native MUST inversion. The exact ZERO identity is disjoint
 from the Return offer. Ten legal input cells cover FLOW/full T, STAR/EXACT/

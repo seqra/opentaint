@@ -207,7 +207,10 @@ full-engine correspondence proof.
 
 ## Validation and scope
 
-[Native JUnit source](../../scripts/demand_campaign/native-fixtures/SamePrefixHiddenRenameTest.kt)
+The [current Gradle regression](../../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/RepeatedDemandHiddenRenameTest.kt)
+checks the repeated handoff row and the native findings.
+
+[Native JUnit source](data/bidirectional-experiment-sources-20261118/scripts/demand_campaign/native-fixtures/SamePrefixHiddenRenameTest.kt)
 uses the production handlers, stores and `IncreasingLimits` driver.
 Its test-only wrapper delegates all native events and records publications
 at the existing publication sink. All observers are read only. Set snapshots

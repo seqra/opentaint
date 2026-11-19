@@ -476,7 +476,7 @@ scope or analyzer change is assumed.
 
 ## Reproduce and retain the evidence
 
-Portable tools are in [scripts/demand_campaign](../../scripts/demand_campaign/rows.py).
+Portable tools are in [scripts/demand_campaign](data/bidirectional-experiment-sources-20261118/scripts/demand_campaign/rows.py).
 The complete data is outside Git under the archive root from
 [external-data.json](external-data.json):
 

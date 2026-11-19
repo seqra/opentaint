@@ -170,7 +170,7 @@ support preservation, non-inclusion of raw concrete relations, forward-read
 non-provider case, backward getter provider and descendant-input difference.
 Its axiom audit has no classical choice, `sorryAx` or custom axioms.
 
-The [native fixture](../../scripts/demand_experiments/dual-starts/DualStartsTest.kt)
+The [native fixture](../../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/DualStartsTest.kt)
 has six passing AP tests. It constructs candidate raw starts through the
 existing AP factory and checks real transfer, normalization and application
 operators. It does not enable MAY initials in the method engine, install

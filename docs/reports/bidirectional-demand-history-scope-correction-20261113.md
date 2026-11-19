@@ -126,7 +126,7 @@ capture remains in v1. This remains a generic counterexample, not an
 actual OWASP row necessity certificate.
 
 The small fixture and observer sources are retained in
-[scripts/demand_campaign/native-fixtures/raw-c5](../../scripts/demand_campaign/native-fixtures/raw-c5/README.md).
+[scripts/demand_campaign/native-fixtures/raw-c5](data/bidirectional-experiment-sources-20261118/scripts/demand_campaign/native-fixtures/raw-c5/README.md).
 Run the repository checker with the external case path:
 
 ```sh

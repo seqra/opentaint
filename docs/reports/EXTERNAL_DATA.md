@@ -29,3 +29,22 @@ cp -a ../report-data-archive/opentaint-w3/docs/reports/data docs/reports/data
 The restored directory remains ignored by Git. Transfer the external archive
 separately when another checkout needs the evidence. The archive move does
 not rewrite existing Git history.
+
+## Termination experiment sources
+
+The sibling archive's `docs/reports/data/bidirectional-experiment-sources-20261118/`
+preserves the exploratory sources and their original paths. Its
+`inventory.json` records file sizes and SHA-256 hashes. The Gradle
+test source set contains the maintained native regressions.
+
+To restore the archived source links locally:
+
+```sh
+mkdir -p docs/reports/data
+cp -a ../report-data-archive/opentaint-w3/docs/reports/data/bidirectional-experiment-sources-20261118 docs/reports/data/
+```
+
+For a historical command that uses `scripts/demand_campaign/` or
+`scripts/demand_experiments/`, recover the relevant source group at
+its original path in a scratch checkout of the report's recorded
+revision. Reuse the report's recorded inputs and build settings.

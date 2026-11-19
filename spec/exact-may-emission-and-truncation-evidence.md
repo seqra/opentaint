@@ -398,7 +398,7 @@ W on the admitted view gives `ret.[any]/T,D`. The second branch can really
 return `ret.h.$/T` from the valid exact binding `x.f.g.h.$/T`. Thus adding
 the exact probe at f does not itself prove the missing branch covered.
 
-The [native projected-view test](../scripts/demand_experiments/dual-starts/ProjectedMayCoverTest.kt)
+The [native projected-view test](../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/ProjectedMayCoverTest.kt)
 checks these results and the real exact transfer of the second branch.
 It is an AP-level counterexample to the proposed shape/application proof,
 not an uncapped complete-driver finding-loss measurement.

@@ -75,7 +75,7 @@ its output outside the repository. Numeric encoding: base 0=p, 1=ret;
 fields 1=f, 2=g, 3=h; marks 1=T, 2=U. The export is not the proof oracle.
 Natural termination is proved independently for arbitrary later run numbers.
 
-The [native adapter](../../../../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/ConcreteQueryExclusionsTest.kt)
+The [native adapter](../../../../docs/reports/data/bidirectional-experiment-sources-20261118/core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/ConcreteQueryExclusionsTest.kt)
 has nine passing tests. Together with the four previous component/control
 classes, **31 tests pass**. See the report for the Gradle command. Latest
 unchanged native diagnostic: **run-31**; no production NE integration is

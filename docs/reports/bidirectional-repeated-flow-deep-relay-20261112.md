@@ -171,7 +171,10 @@ separate observed sink-loss control.
 
 ## Reproduction and evidence
 
-The [native JUnit fixture](../../scripts/demand_campaign/native-fixtures/DeepRelayDemandTest.kt)
+The [current Gradle regression](../../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/RepeatedDemandRelayTest.kt)
+checks the repeated handoff row and the native findings.
+
+The [native JUnit fixture](data/bidirectional-experiment-sources-20261118/scripts/demand_campaign/native-fixtures/DeepRelayDemandTest.kt)
 uses `IncreasingLimits` directly: limits `1,1,2,3,…`. It never calls
 `configuredIncreasingLimits` and does not use `HardRunLimitPolicy`.
 Both controls assert `COMPLETE/NO_DEMAND_EDGE` and runs 9/7, respectively.

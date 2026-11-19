@@ -333,7 +333,7 @@ The external capture case's `reconciliation-v1` directory contains all
 99 owner/run demand comparisons, complete DATA NORMAL comparisons, actual
 offer/family pairs, the finding comparison, and the full 24-row table with
 original target IDs. The portable decoder is
-[decode_causal_capture.py](../../scripts/demand_campaign/decode_causal_capture.py).
+[decode_causal_capture.py](data/bidirectional-experiment-sources-20261118/scripts/demand_campaign/decode_causal_capture.py).
 Its six focused tests pass. It refuses live execution input and preserves
 the distinction between actual offers, service queries and native boundary
 observations. Its output still declares `completeGraph=false`.

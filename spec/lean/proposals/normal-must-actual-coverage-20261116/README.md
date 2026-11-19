@@ -45,7 +45,7 @@ iterations. It does not use an exporter horizon as a premise.
 
 The frozen states and their proof terms are in this directory. Diagnostic
 exporters and the freezer are under
-[scripts/demand_experiments/normal-must-actual-coverage](../../../../scripts/demand_experiments/normal-must-actual-coverage).
+[scripts/demand_experiments/normal-must-actual-coverage](../../../../docs/reports/data/bidirectional-experiment-sources-20261118/scripts/demand_experiments/normal-must-actual-coverage).
 They are not trusted proof inputs. Bulk logs and compiled output stay outside
 the repository. Ten new native adapter tests plus ten controls pass.
 

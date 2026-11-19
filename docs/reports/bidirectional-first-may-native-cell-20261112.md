@@ -42,7 +42,7 @@ summary matcher, demand store, method actor, loop gate or alias analysis.
 
 ## Check and reproduction
 
-The [Java fixture](../../scripts/demand_campaign/FirstMayNativeCell.java)
+The [Java fixture](data/bidirectional-experiment-sources-20261118/scripts/demand_campaign/FirstMayNativeCell.java)
 compares `ApOps.applyEdge` and the compiled AP entry point. It checks all four
 cells in both directions at field limits 1, 3 and 11: **24 cells pass**.
 It calls no field-cut function. The unchanged result at limit 11 establishes
@@ -50,7 +50,7 @@ that a small field budget is not needed for this MAY creator.
 
 Use the frozen source-built 92-entry classpath, with source revision
 `14d7b63369d94f49d4c551be8405ed7719f267cc`. The
-[runner](../../scripts/demand_campaign/run_first_may_cell.py) verifies all
+[runner](data/bidirectional-experiment-sources-20261118/scripts/demand_campaign/run_first_may_cell.py) verifies all
 438 classpath files and runs one small Java process with a 256 MB heap:
 
 ```sh

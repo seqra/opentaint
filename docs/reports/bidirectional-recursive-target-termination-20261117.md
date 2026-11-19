@@ -472,7 +472,7 @@ are unchanged.
 
 [Proof package and reproduction](../../spec/lean/proposals/recursive-target-service-20261117/README.md).
 [Wrapper fixture and handoff adapter](../../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/RecursiveWrapperTerminationTest.kt).
-[Origin-bit cyclic/mixed/epoch controls](../../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/RecursiveTargetSupportTest.kt).
+[Origin-bit cyclic/mixed/epoch controls](data/bidirectional-experiment-sources-20261118/core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/RecursiveTargetSupportTest.kt).
 Compiled proofs, axiom logs, search output and native XML/logs are outside
 Git under `recursive-target-service-20261117/` at the
 [external data root](EXTERNAL_DATA.md). No new project performance run is claimed.

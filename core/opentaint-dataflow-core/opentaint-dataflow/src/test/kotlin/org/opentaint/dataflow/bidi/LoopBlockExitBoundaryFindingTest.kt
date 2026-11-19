@@ -2,19 +2,19 @@ package org.opentaint.dataflow.bidi
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
-import org.opentaint.dataflow.bidi.driver.FixedLimits
+import org.opentaint.dataflow.bidi.driver.*
 import org.opentaint.dataflow.bidi.engine.*
 import org.opentaint.dataflow.bidi.engine.Target
 import org.opentaint.dataflow.bidi.fixtures.DriverFixtures
 import org.opentaint.dataflow.bidi.interp.*
-import org.opentaint.dataflow.bidi.store.BlockScope
+import org.opentaint.dataflow.bidi.store.*
 import org.opentaint.dataflow.graph.PortId
 import kotlin.test.*
 import kotlin.time.Duration.Companion.seconds
 
 /** The forward counterpart of the missing entry-inclusive prefix relation. */
 class LoopBlockExitBoundaryFindingTest {
-    private fun run(withLoop: Boolean) {
+    private fun run(withLoop: Boolean, demandOnly: Boolean = false) {
         DriverFixtures().use { f ->
             val p = f.program
             // Entry source: p and all descendants have T.
@@ -43,9 +43,35 @@ class LoopBlockExitBoundaryFindingTest {
             p.exit(method, 5, ExitRules(RuleStatement(StatementSummary.EMPTY, StatementSummary.EMPTY,
                 listOf(sink)), globalStateDrop = true, entryMarks = setOf(atom)))
 
+            var omitted = 0
             val driver = f.driver(FixedLimits(listOf(1, 1, 2, 3, 4)), 15.seconds,
-                run1MarkMode = MarkMode.FULL)
+                run1MarkMode = MarkMode.FULL, invokeRun = { config, owner, timeout ->
+                    if (!demandOnly || config.index != 3) f.run(config, owner, timeout)
+                    else {
+                        val layout = f.shared.contexts.blockLayout(method)
+                        val after = checkNotNull(layout[layout.root].after)
+                        val point = p.pattern(x, listOf(field), Tail.EXACT, mark)
+                        val demand = rebuildHandoff(f, Direction.BACKWARD) { origin ->
+                            val drop = origin.owner.method == method && origin.owner.scope?.block == after &&
+                                origin.rows == listOf(PairedDemand(DemandEntry.Data(point), DemandExit.Zero))
+                            if (drop) omitted++
+                            drop
+                        }
+                        f.run(RunConfig(config.index, config.fieldLimit, demand, config.records,
+                            config.seeds, config.roots, run1MarkMode = config.run1MarkMode,
+                            fieldLimitSchedule = config.fieldLimitSchedule, normalTargets = config.normalTargets),
+                            owner, timeout)
+                    }
+                })
             val report = driver.analyze(listOf(method))
+            if (demandOnly) {
+                assertEquals(1, omitted, "The adapter must remove one real native handoff origin")
+                assertEquals(RunStatus.COMPLETE, report.end.status)
+                assertEquals(3, report.end.run)
+                assertEquals(EndReason.NO_DEMAND_EDGE, report.end.reason)
+                assertTrue(report.entries.isEmpty())
+                return
+            }
             if (report.entries.isEmpty()) println(buildString {
                 appendLine("EXIT_BOUNDARY_TRACE loop=$withLoop end=${report.end}")
                 for (config in f.configs) appendLine("config=${config.index} sourcePermission=${config.seeds.allowsSource(method, p.inst(method, 0), source)}")
@@ -122,5 +148,7 @@ class LoopBlockExitBoundaryFindingTest {
     }
 
     @Test fun `growing forward loop output reaches the real normal exit sink after saved after-region replay`() = run(true)
+    @Test fun `dropping NORMAL backward ZERO guidance loses the loop exit observation`() =
+        run(withLoop = true, demandOnly = true)
     @Test fun `same field write and real normal exit sink report when only feedback is removed`() = run(false)
 }

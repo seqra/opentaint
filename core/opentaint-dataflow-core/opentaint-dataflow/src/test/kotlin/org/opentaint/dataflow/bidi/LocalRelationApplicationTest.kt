@@ -81,6 +81,68 @@ class LocalRelationApplicationTest {
         assertFalse(provisional.data.any { it.second.layer == Layer.NORMAL })
     }
 
+    @Test fun `current and saved protected full-mark MUST providers have definite normal service`() {
+        val f = StoreFixtures()
+        val p = AccessPathBase.Argument(0)
+        val ret = AccessPathBase.Return
+        val field = f.field("f")
+        val t = MarkSlot.Concrete(f.mark("T"))
+        val initial = f.manager.initial(f.pattern(p, listOf(field), Tail.ANY_TAINT, t))
+        val raw = f.fact(ret, tail = Tail.ANY_TAINT, mark = t) as TaintTree
+        val protected = TaintTree(raw.base, raw.layer, raw.root, raw.exclusion, raw.anyTail, raw.root)
+        val actual = f.fact(p, tail = Tail.ANY_TAINT, mark = t)
+        val app = LocalRelationApplication(f.ops, ApMode(false, Direction.FORWARD, 2))
+        val current = Output()
+        val saved = Output()
+        assertTrue(app.applyCurrent(actual, f.manager.zero, initial, protected, current))
+        assertTrue(app.applyRecord(actual, f.manager.zero,
+            Record(f.method, Direction.FORWARD, initial, protected), saved))
+        assertEquals(current.data, saved.data)
+        val (original, result) = current.data.single()
+        assertSame(f.manager.zero, original)
+        assertEquals(Layer.NORMAL, result.layer)
+        assertEquals(f.pattern(ret, tail = Tail.ANY_TAINT, mark = t), f.ops.leaves(result).single())
+        assertNotNull((result as TaintTree).nonSubsumable)
+    }
+
+    @Test fun `uniform FLOW provider keeps its mark exclusion in native service`() {
+        val f = StoreFixtures()
+        val p = AccessPathBase.Argument(0)
+        val ret = AccessPathBase.Return
+        val field = f.field("f")
+        val t = f.mark("T")
+        val u = f.mark("U")
+        val initial = f.manager.initial(f.pattern(p, listOf(field), Tail.ANY_TAINT, MarkSlot.STAR))
+        val result = f.fact(ret, tail = Tail.ANY_TAINT, mark = MarkSlot.Star(MarkSet.of(t)))
+        val app = LocalRelationApplication(f.ops, ApMode(false, Direction.FORWARD, 2))
+        val blocked = Output()
+        app.applyCurrent(f.fact(p, tail = Tail.ANY_TAINT, mark = MarkSlot.Concrete(t)),
+            f.manager.zero, initial, result, blocked)
+        assertTrue(blocked.data.isEmpty())
+        val allowed = Output()
+        assertTrue(app.applyCurrent(f.fact(p, tail = Tail.ANY_TAINT, mark = MarkSlot.Concrete(u)),
+            f.manager.zero, initial, result, allowed))
+        assertEquals(f.pattern(ret, tail = Tail.ANY_TAINT, mark = MarkSlot.Concrete(u)),
+            f.ops.leaves(allowed.data.single().second).single())
+        assertEquals(Layer.NORMAL, allowed.data.single().second.layer)
+    }
+
+    @Test fun `normal protected provider cannot upgrade demand support`() {
+        val f = StoreFixtures()
+        val p = AccessPathBase.Argument(0)
+        val ret = AccessPathBase.Return
+        val t = MarkSlot.Concrete(f.mark("T"))
+        val initial = f.manager.initial(f.pattern(p, tail = Tail.ANY_TAINT, mark = t))
+        val raw = f.fact(ret, tail = Tail.ANY_TAINT, mark = t) as TaintTree
+        val protected = TaintTree(raw.base, raw.layer, raw.root, raw.exclusion, raw.anyTail, raw.root)
+        val out = Output()
+        val app = LocalRelationApplication(f.ops, ApMode(false, Direction.FORWARD, 2))
+        assertTrue(app.applyCurrent(f.fact(p, tail = Tail.ANY_TAINT, mark = t, layer = Layer.DEMAND),
+            initial, initial, protected, out))
+        assertTrue(out.data.isNotEmpty())
+        assertTrue(out.data.all { it.second.layer == Layer.DEMAND && (it.second as TaintTree).nonSubsumable != null })
+    }
+
     @Test fun `one saved native match and MUST split is reused across every output scalar`() {
         val initial = ap.initial(fixture.pattern(x, tail = Tail.ANY_TAINT, mark = t))
         val packed = ap.mergeAddDelta(fixture.fact(ret,listOf(f),mark=u),fixture.fact(ret,listOf(g),mark=u)).first

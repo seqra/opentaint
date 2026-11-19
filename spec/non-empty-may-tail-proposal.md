@@ -243,7 +243,7 @@ It models scalar field strings. Marks, exclusions, classes, arrays, MUST,
 ND, aliases, Targets, raw summary image and physical ports are not proved
 by this component.
 
-[CurrentMayWriteTraceTest.kt](../scripts/demand_experiments/non-empty-may/CurrentMayWriteTraceTest.kt)
+[CurrentMayWriteTraceTest.kt](../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/CurrentMayWriteTraceTest.kt)
 passes against the unmodified current C2, AP operations and C5. It verifies
 the complete relevant trace above, including the FLOW companion and exact
 binding. It does not implement the new tail or prove a new full-driver

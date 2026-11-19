@@ -144,7 +144,7 @@ It is not permission to split a later-run executable ND summary into arms.
 
 ## Native evidence and required acceptance
 
-[CurrentMayWriteTraceTest.kt](../../../../scripts/demand_experiments/non-empty-may/CurrentMayWriteTraceTest.kt)
+[CurrentMayWriteTraceTest.kt](../../../../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/CurrentMayWriteTraceTest.kt)
 passes against current C2/AP/C5 and checks the baseline write trace, FLOW
 companion and exact root binding. Frozen receipt:
 `non-empty-may-20261113/current-write-v1/` under the

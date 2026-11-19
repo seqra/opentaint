@@ -52,5 +52,5 @@ Unchanged argument/ZERO identities are outside the marked-return fragment.
 Their existing service cannot provide a missing fresh cross-mark root mark.
 
 Diagnostic exporters and the readable trace renderer are in
-[scripts/demand_experiments/excluded-guard-cycle-20261116](../../../../scripts/demand_experiments/excluded-guard-cycle-20261116).
+[scripts/demand_experiments/excluded-guard-cycle-20261116](../../../../docs/reports/data/bidirectional-experiment-sources-20261118/scripts/demand_experiments/excluded-guard-cycle-20261116).
 Bulk data and compiled output remain in the external report-data archive.

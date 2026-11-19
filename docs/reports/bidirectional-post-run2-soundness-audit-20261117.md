@@ -242,7 +242,7 @@ one additional full round produces exactly the same work state. The sample
 is deterministic, not an exhaustive enumeration of all parameter products.
 These results do not establish universal termination or G1–G4.
 
-[Search and exact adapter definition](../../scripts/demand_experiments/post-run2-soundness-20261117/README.md).
+[Search and exact adapter definition](data/bidirectional-experiment-sources-20261118/scripts/demand_experiments/post-run2-soundness-20261117/README.md).
 The full result rows and source hashes are external. The combined targeted
 native suite has **70 passing tests**, zero failures and zero skipped tests.
 
