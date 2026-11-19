@@ -19,11 +19,24 @@ sufficient reason to withhold the heavier computation.
 
 ## Scope and adoption
 
-The first implementation removes work from the native pipeline and
-tests certificate-based handoff retirement on that pipeline. The transfer,
-qualification, and live-reply variants below retain their candidate
-semantics. Bring them into the production path only after their separate
-work and project comparisons pass (§8).
+Start with work removal in the native pipeline. The cost-repair profile
+uses the following implementations. The other transfer, qualification
+and live-reply variants below remain candidates. Each variant requires
+its own work, reachability and project checks (§8).
+
+| Rule | Profile |
+| --- | --- |
+| R13 | Reject the invalid strict-descendant keep at an EXACT FULL nonstatic head. Collect the first result directly and use the read-only loop C5 shortcuts in §8.1. |
+| R26, R35 | Reuse the structural observer guard at the selected cleaner site. Check the uncleaned witness for each leaf (§5). |
+| R36 | Pack the residual partition in one trie where exclusions permit. Use the native fast path for the simple cases (§5). |
+| R41 | Bypass unused compaction indexes and build the joined saved-record index once. Use the applicable closed proof at the completed forward seal (§7.1). |
+| Field limit | Deliver an already fitting packet directly when its protection permits it (§8.1). |
+
+Select at most one R41 proof mode for a scan. The measured profile
+uses the closed observer check for one configured root and the
+closed run-pair check for two to four configured roots. It uses
+their ordinary fallback on a failed check. Keep local retirement
+available as a separate profile.
 
 | Change | Current | Proposed | Affected stages |
 | --- | --- | --- | --- |
@@ -31,19 +44,30 @@ work and project comparisons pass (§8).
 | Retire an acyclic root obligation | An anonymous DT can recur after all its source-to-observer relations have NORMAL witnesses. | R37/R38 retire the root row only after every use has a frozen receipt or an acyclic NoRoute proof. | Forward handoff, next-run control |
 | Retire served uniform cut guides | A definite uniform reply and a covered cut can trigger independent continuation work. | R42 at handoff requires complete same-lane application and continuation service. Live reply folding is a separate candidate. | Handoff first, reply admission separately |
 | Refine genuine unresolved suffixes | Real cuts and reads with unknown suffix use the same MAY category. | Candidate NE and local rules in §§1–5 for validated nonstatic, noncyclic scopes. The first implementation keeps native transfer, C2 and publication semantics. | Transfer, C2, C5, delivery |
+| Stop at a certified forward seal | A nonempty frontier can continue after every report has a retained NORMAL receipt, or after two native transfers have shown that the whole state will repeat. | The two run-level R41 candidates in §7.1 use a complete receipt or repeated-state proof. Select either stopping policy separately from local demand retirement. | Completed forward seal, driver stopping |
 
 The driver, run schedule, typing of ZERO/Targets, ND application join,
 physical ports, report identities and saved-first policy use the native
 contract. Recursion and loop-specific retirement, including R39/R40, are
 postponed. A cyclic endpoint or unresolved boundary gives Unknown to a
-certificate. Method-local eligibility does not imply that a caller loop's
-Target can retire. Run-1 static shortcuts and lazy static completion keep
-their native behavior. Keep the production run-11 policy and use run-101
-in the termination suite.
+local certificate. Method-local eligibility gives no proof for a caller
+loop's Target. A run-level certificate can use a completed native run
+that contains a loop because it proves the whole transition. Run-1
+static shortcuts and lazy static completion use their native behavior.
+Keep the production run-11 policy and use run-101 in the termination suite.
 
 A selected rule cannot be enabled using only a reference model stop.
 Section 8 specifies how to validate the native correspondence and reject
 a rollout with higher work or changed required reachability.
+
+The isolated rule experiments identified five useful rules. R13 removes
+an invalid field-transfer result. R26 and R35 change the layer for a
+selected cleaner survivor in a closed observation scope. R36 preserves
+the NORMAL layer of the exact residual region after a deep cleaner. R41
+discharges a FLOW demand using independently retained service. The
+cost controls below apply to these variants individually. See the
+[rule experiments](../docs/reports/bidirectional-demand-refinement-rule-prototypes-20261118.md)
+and the [cost-fix checks](../docs/reports/bidirectional-useful-rule-cost-fixes-20261119.md).
 
 ## 1. Domain and processing order
 
@@ -176,6 +200,29 @@ R27 is a separate scheduling candidate under §8.3.
 | R08 · C2, raw C5, field limits | Preserve the already bounded, deeper actual head and its nonempty E on the eligible concrete STAR start and its FLOW companion. Keep the conditional EXACT/FLOW prefix probe for M demand. | The actual head and holes stay together. Every overrun of Dc+1 comes from the certified map below. The global and paired output caps still hold. |
 | R13 · raw transfer | For `x.f.g=new Node()`, reject the strict-descendant keep at `x.f.*` per leaf when the actual is `x.$/F`. The keep at `x.* {f}` still yields the exact root with `{f}`. | No strict descendant lies in the exact point. The same-head keep records the real overwrite exclusion before normalization. |
 | R32 · run-2 C2 and raw C5 | Start the requested STAR identity in backward run-2 for a same-head precise STAR demand and STAR actual in an enabled nonstatic scope. Use §6.3 for statics. `set(p){ p.f=new Node(); return p; }` through wrappers can then produce the NORMAL relation with `{f}` and preserve `p.g/T` at run-3. Retain the existing admitted deeper-actual run-2 STAR case. | Same base/head requires no extra field. C5 uses the same raw family. The wrapper proof relays NORMAL service through any finite number of wrappers. |
+
+**R13 cost control.** Select the ancestor rule once per application.
+For a non-EXACT packet use the ordinary ancestor result. For an EXACT
+packet in nonstatic FULL, the strict-ancestor result is empty. The
+legacy EXACT cases need the existing write-keep check only for a
+nonempty input head. Check the nonempty exclusion and the endpoint
+bases and tails before comparing paths. Compare the immutable path
+cells with the existing input array. Reuse the result at each ancestor.
+The same-head branch performs the exclusion update. Use the same
+FULL nonstatic check in the scalar reference transfer. GROUP and
+static facts use the existing write-keep exception.
+
+**Output allocation.** Record the two REACH
+layers in bit flags.
+Keep the first canonical key and root for each of FLOW and TAINT
+directly in the operation result. Merge another result for that
+key in place. Allocate the ordered map on the first different
+key. At flush, emit the direct slot, then the remaining keys in
+insertion order. Keep the native REACH, FLOW and TAINT order.
+The merge uses the same algebra and operands as the native map.
+Mark requests retain their native callbacks. The collector also serves
+other transfers. Measure it separately from the R13 guard and enable
+it only after the same project checks pass.
 
 ### 2.1 Legal starts and marks
 
@@ -743,7 +790,13 @@ Target-retirement certificate.
 | R31 · FULL nonstatic FLOW cleaner, all runs and directions | For `clearExactT(p); return p.g;`, keep the original headers of every path whose whole suffix cone is disjoint from the cleaner. Mask the remaining leaves as before. Cleaner at `p.f` still masks an abstract point probe at p because its normalized suffix can include f. | For EXACT, the cleaner head lies in the cone iff the input head prefixes it. For BELOW/ALL use prefix incomparability. This guard covers normalized suffixes too. The getter relays `p.g.h/T` with its original mark support. |
 
 R36 applies to the partially intersecting NORMAL concrete MUST region in
-FULL after run-1. At each selected field retain the current head with that
+nonstatic FULL after run-1. Use the native cleaner when the selected
+point is at the current head or one field below it. The native one-field
+branch already emits exactly the selected residual and, for BELOW, the
+surviving exact point. Enter the partition only if two or more fields
+remain and the full cleaner chain fits the current run's field limit.
+Check this before constructing a fallback path. At each selected field
+retain the current head with that
 field excluded, then recurse into the field with empty E. Stop if that field
 was already excluded. Kill a wholly cleaned subtree as before. At the last
 head keep an exact point only for selected BELOW; ALL removes it. Use
@@ -780,6 +833,19 @@ Run at ordinary cleaner transfer, before the next delivery or
 publication. R36 emits at most one residual per traversed cleaner
 field plus the possible exact point. The work is linear in those
 steps, the mask inspections and the sizes of the emitted paths.
+When adjacent residuals have the same field exclusion, build one
+MUST packet for those residuals. Set its leaf flag at each residual
+head on the cleaner spine. Build each shared prefix once. For
+`x.f.f.f` with an empty input mask this gives one packet with
+heads `x`, `x.f` and `x.f.f`, all with `{f}`. A different
+input mask at the first head keeps that residual in its own packet.
+The packed spine has the same leaves, layer, H and marks as the
+individual results. All residual heads lie on the cleaner path and
+fit the global field limit. A residual can exceed the paired summary
+exit budget. Ordinary C5 applies the relative cut at that boundary.
+The scalar reference emits the individual residuals under the same
+bounded FULL guard. Tests compare their annotated leaves with the
+packed result, including the last surviving exact point for BELOW.
 R31 does one prefix comparison per leaf and uses at most two packets.
 Neither rule creates a C2 start or expands arbitrary field suffixes.
 
@@ -795,12 +861,36 @@ A terminal local `CM(x.M,T)` can use a known uncleaned point in the same
 region. `CM(x.f.g.$,T)` after removing exactly `x.f.g` has no such
 point. The former can keep the broad NORMAL region for that closed
 use. The latter keeps the native transfer. Account for the same origin
-on every consumer of a scoped summary. In the cleaner variant, verify the
-guard before processing offers and reuse it at the cleaner. Include
-guard construction, lookup and retention in that variant's §8.3
-comparison. The first implementation uses native cleaner transfer.
+on every consumer of a scoped summary.
+
+**R26/R35 cost control.** Test forward FULL and closed-root eligibility
+once for the owner. The selected prototype requires the only scan root,
+the method boundary and a ZERO premise. R26 handles an EXACT cleaner
+on a local root. R35 also handles a descendant EXACT cleaner on a
+single carrier copied through an otherwise empty resolved callee.
+The call must have only the normal exit as its successor. The exit must
+have one local MAY observer for the same mark and no other effect.
+Refer to the immutable call plan to verify the carrier and the absence
+of other consumers or rule effects. Retain at most the last verified
+site result, including a rejection, in the owning run. Key it by the
+instruction, immutable plan, stage and cleaner. This cache requires no
+allocation until an eligible concrete NORMAL MUST packet reaches the
+site. Check the uncleaned witness against each selected leaf's path,
+mark, exclusion and field limit on each use. The structural result does
+not authorize a new packet on its own. Release it with the owner.
+
+The separation is valid since all paths and rule bindings in the
+verified suffix are fixed for that key. Packet evidence is evaluated
+under its current mark and mask. A cache hit has the same guard result
+as a complete new check. A miss performs at most the old structural
+check. A disallowed owner performs neither a form lookup nor a witness
+walk. Consume a successful check in the existing partial-cleaner
+fallback. Ordinary disjoint, kill, one-field and below-at-head paths
+finish before this check in the cleaner kernel. Include guard
+construction, lookup and retention in the §8.3 comparison.
 R36 remains a declared field-path partition. R31 visits only the
 packet already being cleaned.
+[Constructive checks for R13 and the cleaner paths](lean/proposals/termination-rollback-20261118/UsefulRuleCosts.lean)
 
 ### Examples diff
 
@@ -882,9 +972,11 @@ entry at its own head, paired with its own original and ports
 (R09/R23). A MAY row leaves that NE row eligible. Revalidate existing
 DATA compaction keys against the new C2/C5 rules under R25 in §4.
 Remove an origin only when every projection has its required service in the
-final retained basis. Keep typed Target compaction and the stop test.
+final retained basis. Use native typed Target compaction and the
+empty-frontier stop. A selected run-level proof adds the independent
+stop case in §7.1.
 Projection still offers at most `k·m` pairs for k result leaves and m
-original members. The stop test still reads the completed index count.
+original members. The empty-frontier test reads the completed index count.
 
 ### 6.3 Run-1 static views
 
@@ -967,7 +1059,9 @@ finishHandoff(joinedRun):
         else:
             install its native pairs
     commit native reports and seed catalogue
-    stop on forward iff the installed demand is empty
+    if forward and the installed demand is empty: finish
+    if forward and a selected run-level proof closes the seal (§7.1): finish
+    apply the native continuation policy
 ```
 
 ### 7.1 R41 — Retire an independently replayable FLOW obligation
@@ -1027,6 +1121,30 @@ as in §7.2 if exact service is used in place of a provisional consumer.
 A cover of one raw C5 result supplies no evidence about the other
 paired rows. R18 applies during current-run publication.
 
+**Closed-root continuation.** Check the one-root case before building
+copy geometry. The affected owner must be a proper callee of the root.
+Walk the reachable compiled forms with the same work bound as the
+certificate. Reject a cycle, an unknown stage, a second observation, a
+second producer or a guard with a data effect. The closed form has one
+unconditional marking action at root entry and one same-mark observer
+at the root exit. The root is the only external entry. Require a
+retained ZERO-to-NormalTarget with that observer's exact identity.
+This receipt supplies the observable track from the only producer.
+The remaining pure copies cannot create another observable effect.
+The local replay check still applies to every paired row.
+
+For a wider caller scope, check the complete affected continuation
+from the result binding in the compiled form. A root reply can
+replace a lost MAY reply for a same-mark root use. It cannot authorize
+deleting an unresolved descendant read or a coarse-only C2 route.
+Check forwarded carriers, later boundaries and reverse permissions as
+part of that proof. Keep the origin if any such use is unresolved.
+For example, an append can write the incoming point to both `ret`
+and `ret.content`. The next call can read `this.content`. A proof
+for the return root must cover that named-field use through the
+explicit write. It must also cover any different aliases, rule
+activation or call admission caused by the broader reply.
+
 **Proof.** A shared middle location gives one of the two prefix
 composition cases, with a constructive suffix witness. Induction over
 the finite graph covers each concrete origin behind X. An aligned
@@ -1056,6 +1174,168 @@ It reached natural run-11 with both confirmed identities. The caller
 and block control pairs drained under the ordinary policy. A different
 live DT still needs its own proof under §7.2.
 [Baseline trace and audit](../docs/reports/bidirectional-termination-baseline-run101-20261118.md)
+
+#### Candidate for a complete set of retained reports
+
+For a bounded closed-root scope, the proof in R41 already establishes
+that the root's exit observer is the only observer in the reachable
+compiled forms. An alternative is to use that fact at a completed
+forward seal and stop as soon as the root's NORMAL receipt exists.
+This changes the driver stopping condition. The analyzer publishes
+the current summaries and accepts the current reports as usual.
+
+```text
+if the frozen call closure is complete:
+    sites = possible native observer identities in the closure
+    require every site has a retained root NORMAL receipt
+    commit the native report and stop at this seal
+otherwise keep the native continuation
+```
+
+Use the exact physical identity of method, instruction and rule.
+Include the configured entry, call and exit observer sites, every
+compiled call alternative and any observer identity from a retained
+Target that can reach a configured root. An open call-graph boundary
+or uncertain observer identity gives Unknown. Use the compiled FULL
+forward forms already cached by the native run. A missing context,
+graph or form gives Unknown and does not start lowering. Stream
+each observer test while walking the closure. Read exit positions
+from the borrowed forward graph. Use the cached rule slots at those
+positions. Reject at the first missing receipt or at a call to a
+context still being visited. Use depth-first order, with one visit
+state per context. A completed visit has finished all children.
+Thus every edge in an accepted scope goes to an earlier completion
+and the call graph has no cycle. This retains the native recursion
+controls outside the measured proof scope. Charge the
+retained Target and receipt enumeration before entering the closure.
+
+Every future observation must have an identity in this complete set.
+Its committed report is retained across later runs. Since all possible
+latest reached identities also have a NORMAL receipt, the cutoff
+would add no provisional report. This proof neither waits for a
+specific field limit nor requires that future DATA states repeat.
+The report consumes the retained descriptor of the first NORMAL
+receipt. The proof covers that descriptor and confirmed status. An
+observer can also be reached through a second marking action that
+would give the same report identity. If separate tracks are required,
+establish complete track coverage or use the ordered run-pair or
+local retirement proof. Reserve the closure walk and its scratch
+before attempting the check.
+[Observer receipt proof](lean/proposals/termination-rollback-20261118/ObserverCensus.lean)
+
+#### Candidate for a closed pair of native runs
+
+The local R41 check needs a proof for each continuation that can
+distinguish a saved precise reply from a removed MAY reply. A second
+candidate proves that the entire remaining frontier can do no new
+observable work. This is a new stopping condition. It changes the
+driver at the completed forward seal. C2, C5, the native report
+commit and ordinary publication use their existing operations.
+
+Let `S` be the complete state sealed two runs ago, and `B` the
+successor after the backward run. Include ordered demand with its
+ports, source and observer seeds, the saved record and Target views,
+condition contributors and the report state. Roots, compiled forms
+and runtime configuration must remain stable. Compare actual
+semantic values. A demand count, hash alone or matching method keys
+cannot close the pair.
+
+```text
+after completing a restricted forward run:
+    require prior two transitions both completed
+    require exact sealed state == S
+    require complete witness of native transitions S -> B -> S
+    require each witnessed limit read gives the same result at every higher limit
+    require all reached report identities already have a root NORMAL receipt
+    commit the native report and stop at this seal
+on any failed or incomplete check:
+    use the native continuation
+```
+
+The native witness must include root admission and routing. Start
+with one effective runner and one admitted root in each of the two
+runs. A rejected start can be discarded only when its admission is
+also independent of the higher limit. Require that the other runners
+cannot deliver work to the effective runner. Count actual accepted
+starts at the native admission. Actor creation at a configured root
+can also happen through a call, so the number of root actors is a
+diagnostic only. During an eligible pair witness, record the first
+accepted non-start post to each runner under the existing admission
+lock. This includes direct delivery posts as well as posts through
+the router. Later posts to that runner need no new audit entry.
+Intra-unit work owned by an actor belongs to that actor's unit.
+Check this set with the joined actor units. A different unit with an
+accepted data post makes the certificate ineligible. The ordinary
+router and dequeue loop need no trace or audit lookup.
+With one semantic producer, the event queue orders
+active work by its immutable rank, step and sequence keys. A rejected
+start is removable only when it has no semantic effect and erasing it
+preserves the active event order. Account for any other source of
+work or ordering that can affect the run. If this correspondence
+cannot be established, keep the native path.
+[Accepted-post proof](lean/proposals/termination-rollback-20261118/JoinedRouting.lean)
+
+Observe global cuts where the runtime already tests a raw packet
+depth. Observe depth rejection in C2 and the global clamp in C5
+at their existing comparisons. The cost-fixed build has two more
+global limit reads. The deep selected cleaner uses
+`cleanerDepth <= limit` to select the MUST residual. The point
+cleaner witness uses `headLength + 1 <= limit` to select NORMAL.
+A failed test in either operation invalidates the witness. A relative
+C5 cap remains in effect. Require a complete audit of the configured
+native path and reject on any dependent or unknown global read.
+Keep the failure bit set through the completed seal. Saturate optional
+diagnostic counts so count overflow cannot clear that bit.
+Gate the audit before allocating a comparison snapshot and charge
+its bounded retained data and verification to §8.2. An audit is
+never required for the ordinary native path. Put audit state in the
+owning scan and pass it through the existing execution context.
+Concurrent scans have independent audit state. It takes no part in
+fact, key or mode equality.
+
+Use only post-run-2 transitions for this certificate. The run-2
+static input checks and its special STAR admission depend on the
+iteration number. The later phase may compare a forward seal to an
+earlier forward seal only after the backward and forward witness
+runs both used the regular restricted rules. In the first profile,
+check the configured root count before enabling any runtime proof
+work. Bound the joined actor count before preparing any proof view.
+The prototype uses at most four roots and 64 joined actors for
+these two checks. The pair verifier accepts at most eight joined
+actors, 512 saved record references, 64 explicit demand rows, 64 predicate
+seeds and 64 identities in each report view. It rejects other seed
+kinds and nonempty demand masks in this first profile. Use the
+reserved field-word count for the exact key comparisons. These are
+work bounds on the proof. All out-of-scope cases continue with
+native analysis.
+
+Keep one previous forward snapshot and the intervening backward
+witness. Hold only bounded demand and seed keys and the report
+identities in that snapshot. Use the following checks for retained
+state instead of copying it into the witness.
+
+| Native state | Equality check |
+| --- | --- |
+| Saved records | Compare the current ordered record references to the last sealed order during index construction. Increase the generation on any change, invalid or incomplete comparison. The old order refers only to records already retained before this rebuild. The previous forward witness holds the generation alone. |
+| Rule contributors | Increase a generation when the existing publish operation changes the persistent contributor root. Keep that generation in the forward snapshot. |
+| Retained NORMAL Targets and reports | Compare counts from the sealed ordered rows. The native seal inserts all previous rows first and adds only new keys. An unchanged count proves the ordered prefix is the whole view. |
+| Latest reached | Compare bounded identity sets and check all the identities have retained root receipts. |
+
+Reject comparisons that exceed the reserved key or primitive word
+count. A generation must never wrap. A missing or replaced key can
+invalidate the snapshot immediately. Additional work includes the
+generation construction, bounded state capture and final comparison,
+both successful and failed. All witness state belongs to one scan.
+Release it when that scan stops, fails or leaves the bound.
+[Ordered seal proofs](lean/proposals/termination-rollback-20261118/RecordIndexSeal.lean)
+
+For a deterministic witness, induction over the run actions gives
+the same successor at each higher limit. Induction over future
+backward/forward pairs then repeats exactly `S -> B -> S`.
+Every future report already has its retained root receipt. The
+current native frontier test would continue. The candidate stops
+using this proof with no hard iteration cutoff.
+[Closed run-pair proof](lean/proposals/termination-rollback-20261118/ClosedRunPair.lean)
 
 ### 7.2 R37/R38 — Retire a fully served acyclic root Target
 
@@ -1198,14 +1478,18 @@ membership and delivery order separately.
 
 ## 8. Work bounds and release gates
 
+The [isolated prototype measurements](../docs/reports/bidirectional-demand-refinement-rule-prototypes-20261118.md)
+record native termination tests and project comparisons for these candidates.
+
 ### 8.1 Replace current work before enabling new work
 
-The first implementation uses native fact generation, admission,
-publication and scheduling. Implement equivalent work removal first.
-Evaluate R41, acyclic R37/R38 and handoff R42 on that native pipeline
-as independent changes. Their proof checks operate on the completed
-handoff. The tighter transfer and admission rules in §§1–6 and live
-R42 reply folding each require separate evidence of no regression.
+Test equivalent work removal with native fact generation, admission,
+publication and scheduling first. Evaluate R41, acyclic R37/R38 and
+handoff R42 as independent changes. Their proof checks operate on the
+completed handoff. The selected transfer changes R13, R26, R35 and R36
+require their own checks before joining that build. The other transfer
+and admission rules in §§1–6 and live R42 reply folding also need
+separate evidence of no regression.
 Compile or select the native path before entering the run for variants
 that use it. They incur no alternate plan, qualification table or
 candidate lookup per offer or publication.
@@ -1218,6 +1502,85 @@ Use these substitutions at existing integration points.
 | C5 | Within an indexed candidate stream, evaluate an equal complete entry test once and an equal paired exit test and cap once. | Reuse the existing plan or index. Include raw EXACT/STAR, companion and guard lanes, direction, scope, port, original member, selectors and cap in test identity. Reuse a contiguous group the producer can identify in the existing traversal or group at the existing plan build step in place of its scalar entries. Preserve every pair association. Singleton or already-unique streams use the native plan. No parallel scalar index, full-view preparation pass or extra C5 application on publication. |
 | Current application | Share the payload and apply once where multiple authorized postings yield exactly the same application. | Group as part of existing posting construction or admission. Compare recipient, ports, original, premise arm, actual operand, effect, layer, E, mx and H. Preserve the full ND join and every distinct authorization. A later posting must still deliver if it authorizes a new operand. Preserve observable effects and order where observable. Use the ordinary path for native one-posting or first-seen keys. No cross-offer result history or second payload store. |
 | Run-2 static and loop boundaries | Preserve existing fast paths in the first implementation. | Reuse static early completion and label indexes, exact carry admission, loop scratch and native plans. Do not build another worklist, enumerate virtual static pairs or traverse the static closure to find certificate candidates. Keep run-1 production and the H1 format native. |
+
+**Loop observation candidates for the R13 workload.** Reuse the
+existing `skipEmptyDataReplay` guards for same-direction DATA with a
+non-ZERO original and record premise, matching fact kinds and no
+MUST premise. At the method boundary, skip the read-only replay if
+the record output base is private or absent from the prepared C5
+output programs. Application preserves the original premise and the
+output base. The exit metadata for that original permits only
+unchanged data or subtraction. Neither preparation nor the replay
+can produce an observable output on a rejected base. Actual
+deliveries and Target observation use their native calls.
+
+Within the same read-only C5 query, a one-program nonstatic FLOW
+plan may reuse the result of a field cut. Require a selector head
+strictly before the cap and every raw leaf strictly after the
+same counted prefix at the cap. The measured profile uses caps
+from 1 to 16. Verify that the next fields at
+the cut are counted. The deeper-output selector reads only its
+head and first remaining field, which are both in that prefix.
+The cap erases the other fields and E, and promotes to MAY on
+DEMAND. Use the complete original, prefix and mx as the key within
+the prepared plan. Keep one result in that plan's owner quantum.
+Compare the trie against the cached prefix before allocating a key
+for a new result. Use the ordinary paired C5 procedure for other
+inputs. Count the work removed by each shortcut and check the
+combined R13 path on the configured projects before adoption.
+The shortcuts add no field-budget exception.
+[Constructive observation checks](lean/proposals/termination-rollback-20261118/UsefulRuleCosts.lean)
+
+**Independent trie-traversal candidate.** Compare the complete node header before creating
+comparison scratch. When both headers match and there is one child,
+continue with that child pair. A terminal or identical subtree can
+finish directly. Start the existing memoized traversal at the first
+branch. For a childless postorder walk, call the native operation
+once with an empty memo. In graft, a childless node either supplies
+the replacement root or produces no result. It needs no child arrays.
+Both paths keep the same node, leaf and accessor tests. They preserve
+the value of the trie and the order of visits on a branch. Keep this
+candidate outside the selected profile. In the OWASP trial it reduced
+run-9 engine time and increased measured end-to-end cost.
+[Traversal proof](lean/proposals/termination-rollback-20261118/TrieScratch.lean)
+
+**Bounded-cut fast path.** At the existing global or relative
+field-limit operation, use the stored counted depth of the fact trie.
+If the whole packet fits, deliver it once when it is REACH, FLOW or
+TAINT with no protection or whole protection. Whole protection uses
+the packet root as the mask. Check the positive limit and cancellation
+as usual. The native operation would cut neither the ordinary facts
+nor the protected facts. For whole protection it would split and
+reattach the same protected coordinates. The result has the same base,
+layer, head, exclusion, marks and protection. No audit failure or
+mark request occurs. Use the ordinary operation for an over-limit
+packet or a TAINT packet with a separate mask.
+[Bounded-cut proof](lean/proposals/termination-rollback-20261118/BoundedFactLimit.lean)
+
+**Independent whole-protection replay candidate.** In FULL, verify
+that an ordinary micro-edge's TAINT input or a summary's TAINT
+conclusion is canonical and uses its own root as the mask. For these
+operations the private protection pass uses the same geometry, marks,
+exclusions and layers as the ordinary pass. The raw micro-edge ignores
+protection in its transfer. Summary selection and grafting use the same
+ordinary coordinates when caller protection is stripped. In either
+case the private pass would supply protection for every ordinary
+TAINT output coordinate. Execute the ordinary pass once and attach
+each result's own root as its mask. Keep ordinary requests in their
+callback order. The private pass publishes no requests. Use the
+ordinary path for partial or noncanonical masks and other transfers.
+Keep this candidate outside the selected profile. The ThingsBoard
+trial did not establish time parity.
+[Whole-protection proof](lean/proposals/termination-rollback-20261118/WholeProtection.lean)
+
+| Operation input | Current work | Candidate work |
+| --- | --- | --- |
+| Saved `x.*/F→tmp.*/F,N`, actual `x.f.$/T,N`; `tmp` is private at the method exit | Apply the relation to obtain `tmp.f.$/T,N`. Discard it at the public-base test. | Return no enclosing DATA observation for this saved relation without applying it. |
+| One paired output selector `ret.f.M/T`, cap 2; successive FLOW outputs `ret.f.g.h.*/F` and `ret.f.g.k.*/F` with the same mx and original | Select and cut each output to `ret.f.g.M/F,D`. | Compute the same result for the first cut. Reuse it on the second query within the prepared plan. |
+| Two independently built tries for `x.f.$/T` with the same leaf | Allocate a pair stack and identity maps for structural comparison. | Compare the headers and the sole child. Return the same equality result without allocating traversal scratch. |
+| Graft a replacement `ret.g.$/T` at a childless FLOW node | Walk the root using an identity memo and build empty child arrays. | Test the root once and return the same `ret.g.$/T` subtree. |
+| Fully protected `{x.$/T, x.f.MUST/U},N` at limit 1 | Run the bounded check on both the ordinary and protected tries and reattach the mask. Emit the original memberships. | The stored depth fits. Emit the same packet once without rebuilding the protection mask. |
+| Actual `p.$/T,N`; summary `p.$/T → {ret.f.$/U, ret.g.MUST/V},N`, with whole conclusion protection | Apply twice and recover the mask `{ret.f.$/U, ret.g.MUST/V}` for the ordinary results. | Apply once. Both emitted memberships have whole-result protection. |
 
 For C5, equal entry tests admit the same raw original members. Equal exit
 tests select the same leaves at the same cap. Taking their union once gives
@@ -1280,10 +1643,115 @@ When several pairs of the same owner need the same prefix relation or
 use slice, verify that prerequisite once per frozen basis in the
 reserved scratch. Charge its construction once and charge each pair's
 own port, cap and continuation checks. Release the slice at the end
-of the handoff. In the selected OWASP case, the run-7 ablation bypassed
-the general proof. The native R41 variant must produce its certificate
-within the verified savings at an eligible seal to pass the
-run-11-or-earlier acceptance check.
+of the handoff. For R41, the geometry key includes the owner and the
+exact set of basis input bases from the paired rows. Cache a complete
+geometry result or a completed structural rejection within the seal.
+The prototype retains only the last geometry. It allocates no proof
+cache for a handoff which cannot use the selected certificate.
+Cancellation and a work limit supply no cache value. A geometry hit
+still requires current replay and continuation checks for that origin.
+
+For each clipped copy, borrow the existing saved-record indexes.
+The direct witness premise must prefix the broad entry head. Visit
+only that prefix chain. The input shift determines a unique output
+leaf. Compare the shift with the output suffix and read that one
+leaf from the FLOW trie. The opposite witness premise comes from a
+saved output position. Visit only positions that prefix the clipped
+input head, then use the existing reversal on the selected position.
+Stop each lookup at its first valid witness. The existing indexes
+supply the same candidate set that can satisfy the old alignment check.
+Transfer a copy set to an empty, sole successor in the acyclic proof
+graph. At a fork, give each successor its own set. At a join, merge into
+the successor's set. Retain the exit set until it is returned. A moved
+set can be reused because the source has already finished its last
+read. The copies and paired clips are the same as with a fresh set at
+each successor.
+
+An additional native saving is available in exact-service compaction.
+Keep a singleton group without building either index. For other
+groups, build the C2 provider index first. If no key has two distinct origins,
+each proposed removal fails its first C2 requirement. Return the
+original sorted group without building the C5 index or trying deletions.
+If a key has two origins, run the existing check. Two leaves of one
+origin never establish that test. The shortcut preserves both the
+selected origins and their order. Materialize the native string order
+key only when the comparator needs to break an exit-port and protection
+tie. Compute the key from the original premise and output packet.
+Projected guidance can erase annotations that distinguish order keys.
+A singleton has no comparison and needs no string key. The deferred
+comparison returns exactly the previous result on every tie.
+The deferred keys borrow the packets from the completed run during
+this handoff. Release the origins and any materialized keys when
+the rows are installed. Count the C5 index work saved on unique
+groups. Charge detection of shared C2 keys, the second row walk on
+shared groups and any added live scratch before crediting savings.
+[Constructive compaction and cache checks](lean/proposals/termination-rollback-20261118/UsefulRuleCosts.lean)
+
+**Publish saved-record indexes once per seal.** After the workers join,
+merge the public NORMAL rows and then the scoped NORMAL rows. Rebuild
+the public and scoped entry and exit indexes together. The driver
+currently rebuilds all four indexes after each merge. No query reads
+the intermediate indexes. Keep the native individual persist operations
+for callers that publish only one partition.
+
+The joined rebuild can also serve scans outside the certificate scope.
+In that mode merge the two partitions and build the native indexes
+once, with no record-order snapshot or proof accounting. Measure this
+path separately because it changes handoff allocation even when the
+terminating proof is ineligible.
+
+The merge keys separate public and scoped rows. The two merges read and
+write the same authoritative relations in the same order. Index
+construction reads those relations without modifying them. The final
+rebuild sees the same ordered input and output positions, ports, record
+directions and retained keys. Reuse the prior sealed record for each
+surviving key. A newly introduced key had no visible record before the
+seal. If either merge fails, the driver abandons the seal and starts no
+new run. The report commit still requires a complete seal.
+
+The omitted rebuild would have visited every current public record and
+every previously committed scoped record. It would have inserted each
+entry and each indexed output position in that intermediate population.
+Use those actual counts as a starting point for the same-seal allowance.
+Charge the cost of recording and using the counts. Count field and key
+work separately if the verifier needs that allowance. A newly indexed
+scoped record in the current seal earns no credit for the omitted pass.
+[Sealed index proof](lean/proposals/termination-rollback-20261118/RecordIndexSeal.lean)
+
+**Candidate for one-time proof work.** Some small scopes have too few
+saved positions in one seal to pay for a complete observer closure.
+A scan can instead keep only the unused work counts from earlier
+completed seals of that same scan. Credit each actual removal once
+and reserve the complete verifier bound before starting it. Failed
+verification consumes the reservation. A reserved walk can return
+Unknown when it exhausts its bound. No credit comes from a future
+run or from earlier scans. The memory and scratch bounds still
+apply at the current seal. Retain no earlier edge solely to keep
+work credit.
+
+At every completed prefix of the scan, the sum of reservations is
+at most the sum of actual credited work, by induction on credit
+and reservation operations. This is an aggregate work bound.
+A handoff can spend work saved by an earlier one. Evaluate timing
+and memory per iteration with the actual reservations enabled
+before selecting this accounting policy.
+[Reservation invariant](lean/proposals/termination-rollback-20261118/RecordIndexSeal.lean)
+
+In the selected OWASP case, the run-7 ablation bypassed
+the general proof. A local R41 retirement certificate, or a complete
+run-level witness from §7.1, must fit the verified savings at an
+eligible seal to pass the run-11-or-earlier acceptance check. A
+run-level witness changes the stopping policy and needs its own
+proof and project comparison. Keep the local retirement check
+when work for other observations must continue.
+
+Alignment of concrete suffixes alone is insufficient for native
+continuations. In run-5 a consumer with `p.*/F` demand admits
+`p.M/T,D` as `p.$/F`. It rejects `p.f.$/T,N` under that same demand.
+Both offers cover the concrete point `p.f`. Therefore a saved result
+that gives the latter offer needs a separate admission or replay proof
+at this consumer. The geometry result authorizes neither removal of
+source permission nor pruning of this coarse-only admission route.
 
 If B is baseline work in one counted class, S is the audited net work
 already saved, and A is the sum of reservations, the handoff performs
@@ -1335,24 +1803,32 @@ benchmark fixtures exercise those same selection rules.
   completed checkpoints and peak live heap at the same resource budget.
   Record reached, completed and accepted runs with stop reasons as well
   as starts, caller memberships, deliveries, C5 work and proof work.
-  Earlier natural convergence preserves progress when it keeps the
-  required observations and discharges all live guidance.
+  An earlier stop preserves progress when it keeps the required
+  observations and proves that the remaining guidance cannot change them.
 - **Pass rule.** A project passes only with preserved observations and
   progress, and equal or better end-to-end time and peak memory within
   the resolution of the matched measurements. A reproducible increase
   on one project fails the variant regardless of savings elsewhere.
   Inconclusive results require more matched evidence or a revised
-  design. A comparable fixed-heap timeout or OOM is not completion
-  evidence. For a baseline failure require equivalent or better progress
-  and resources through a matched checkpoint at the original budget
-  and run a matched higher-heap comparison to check completed behavior.
-  A missing measurement cannot certify a pass.
+  design. For a native memory guard or timeout, compare progress and
+  resources at the original configured budget. Record the latest common
+  checkpoint and the accepted locations. If no run completes, compare
+  CPU and wall time at common in-run progress samples as well as at
+  the guard. Event counts can hide different body work, so use them
+  with the operation counters and allocation samples. A missing
+  measurement leaves the comparison open.
 - **Release.** Require all four individual passes and at least one
   demonstrated strict improvement in the combined build. Require the
   four no-regression checks both for each change independently and for
   the combined build. Assess projects separately at the same workload
   and iteration limits. Preserve the native path for any
   variant that has yet to pass.
+
+Compare peak process RSS and the Java heap measured at the same
+iteration boundaries. A post-pause heap measurement characterizes
+retained Java data. The process high-water mark also includes short
+native-memory spikes and report generation. Use the same resource
+sampling in both arms when a spike changes the acceptance decision.
 
 The structural checks bound the operations they count and preserve the
 specified service. Passing the per-project comparison establishes the
