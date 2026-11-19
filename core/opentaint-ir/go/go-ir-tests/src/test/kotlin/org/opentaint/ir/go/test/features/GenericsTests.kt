@@ -3,11 +3,15 @@ package org.opentaint.ir.go.test.features
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.opentaint.ir.go.api.GoIRProgram
+import org.opentaint.ir.go.client.GoIRLoadConfig
+import org.opentaint.ir.go.ext.findFunctionByFullName
 import org.opentaint.ir.go.ext.findFunctionByName
 import org.opentaint.ir.go.ext.findNamedTypeByName
 import org.opentaint.ir.go.test.GoIRSanityChecker
 import org.opentaint.ir.go.test.GoIRTestBuilder
 import org.opentaint.ir.go.test.GoIRTestExtension
+import java.nio.file.Files
 
 /**
  * Tests for Go generics (type parameters, constraints, instantiation).
@@ -93,7 +97,6 @@ class GenericsTests {
 
     @Test
     fun `generic method on type`(builder: GoIRTestBuilder) {
-        // Note: Go doesn't allow generic methods directly, but methods on generic types work
         val prog = builder.buildFromSource("""
             package p
             type Stack[T any] struct { items []T }
@@ -111,4 +114,58 @@ class GenericsTests {
 
         GoIRSanityChecker.check(prog).assertNoErrors()
     }
+
+    @Test
+    fun `methods of a generic type have bodies and belong to the type`(builder: GoIRTestBuilder) {
+        val prog = builder.buildFromSource("""
+            package p
+            type Box[T any] struct { v T }
+            func (b Box[T]) Get() T { return b.v }
+            func (b *Box[T]) Set(v T) { b.v = v }
+            func (b Box[T]) Unused() T { return b.v }
+            func use() int {
+                b := &Box[int]{}
+                b.Set(1)
+                return b.Get()
+            }
+        """.trimIndent())
+
+        val box = prog.findNamedTypeByName("Box")!!
+        assertThat(box.methods.map { it.name }).contains("Get", "Unused")
+        assertThat(box.pointerMethods.map { it.name }).contains("Set")
+        for (name in listOf("(test/p.Box[T]).Get", "(*test/p.Box[T]).Set", "(test/p.Box[T]).Unused")) {
+            assertThat(prog.findFunctionByFullName(name)?.bodyAvailable).describedAs(name).isTrue()
+        }
+        assertThat(declaredWithoutBody(prog)).isEmpty()
+
+        GoIRSanityChecker.check(prog).assertNoErrors()
+    }
+
+    @Test
+    fun `methods with their own type parameters have bodies`(builder: GoIRTestBuilder) {
+        val root = Files.createTempDirectory("goir-generic-methods")
+        root.resolve("go.mod").toFile().writeText("module test/p\ngo 1.27.0\n")
+        root.resolve("p.go").toFile().writeText("""
+            package p
+            type Conv struct{}
+            func (Conv) Pass[T any](v T) T { return v }
+            func (Conv) Unused[T any](v T) T { return v }
+            func use() string { return Conv{}.Pass("x") }
+        """.trimIndent())
+
+        val prog = builder.buildFromDir(root, GoIRLoadConfig())
+
+        for (name in listOf("(test/p.Conv).Pass", "(test/p.Conv).Unused")) {
+            assertThat(prog.findFunctionByFullName(name)?.bodyAvailable).describedAs(name).isTrue()
+        }
+        assertThat(declaredWithoutBody(prog)).isEmpty()
+
+        GoIRSanityChecker.check(prog).assertNoErrors()
+    }
+
+    /** The project functions that declare a body the program doesn't carry. */
+    private fun declaredWithoutBody(prog: GoIRProgram): List<String> =
+        prog.allFunctions()
+            .filter { it.pkg?.isProject == true && it.hasBody && !it.bodyAvailable }
+            .map { it.fullName }
 }
