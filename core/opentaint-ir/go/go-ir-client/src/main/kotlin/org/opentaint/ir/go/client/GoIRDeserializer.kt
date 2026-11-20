@@ -616,7 +616,7 @@ class GoIRDeserializer {
     ): GoIrFunctionReference {
         val pkg = getPackage(packageInfo.functionPkgId.get(pf.id))
         val signature = getFunctionalType(pf.signatureTypeId)
-        return GoIrFunctionReference(pkg.importPath, pf.name, signature).also { it.program = program }
+        return GoIrFunctionReference(pkg.importPath, pf.fullName, signature).also { it.program = program }
     }
 
     private fun getFunction(id: Int): GoIRFunctionImpl =

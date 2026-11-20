@@ -12,7 +12,7 @@ interface GoIRLookup {
 class GoIRProgramLookup(private val program: GoIRProgram) : GoIRLookup {
     override fun function(reference: GoIrFunctionReference): GoIRFunction? =
         program.findPackage(reference.pkg)?.functions?.firstOrNull {
-            it.name == reference.name && it.signature == reference.signature
+            it.fullName == reference.fullName && it.signature == reference.signature
         }
     override fun namedType(reference: NamedTypeRef): GoIRNamedType? =
         program.findPackage(reference.refTypePkg)?.findNamedType(reference.refTypeName)
