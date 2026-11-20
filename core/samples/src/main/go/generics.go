@@ -57,6 +57,27 @@ func genericBoxSet001T() {
 	util.Sink(result)
 }
 
+// ── Generic container through an interface ──────────────────────────
+
+type genGetter interface{ Get() string }
+
+func genericBoxIface001T() {
+	data := util.Source()
+	var g genGetter = GenBox[string]{value: data}
+	util.Sink(g.Get())
+}
+
+func genericBoxIface002F() {
+	_ = util.Source()
+	var g genGetter = GenBox[string]{value: "safe"}
+	util.Sink(g.Get())
+}
+
+// genericBoxEntry001T is not called anywhere: the analysis reaches it only as an entry point.
+func (b GenBox[T]) genericBoxEntry001T() {
+	util.Sink(util.Source())
+}
+
 // ── Generic pair ─────────────────────────────────────────────────────
 
 type GenPair[A any, B any] struct {
