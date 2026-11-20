@@ -30,6 +30,11 @@ func Scaffold(projectDir string, dependencies []string, analyzerJarPath string) 
 	return os.MkdirAll(filepath.Join(projectDir, "src", "main", "java"), 0o755)
 }
 
+// ScaffoldGo creates a Go module for dataflow models.
+func ScaffoldGo(projectDir string, dependencies []string) error {
+	return testproject.BootstrapGo(projectDir, goModelModulePath, dependencies)
+}
+
 // ExtractApiJar reads the model API jar from the analyzer jar.
 func ExtractApiJar(analyzerJarPath string) ([]byte, error) {
 	reader, err := zip.OpenReader(analyzerJarPath)

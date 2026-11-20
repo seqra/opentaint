@@ -1,6 +1,9 @@
 package globals
 
-import "strings"
+import (
+	"runtime"
+	"strings"
+)
 
 // ArtifactDef declaratively describes a downloadable artifact.
 type ArtifactDef struct {
@@ -29,10 +32,30 @@ func (a ArtifactDef) Kind() string {
 // Label is the name of the artifact in the output. Name is not used there because Kind and the
 // cache paths derive from it.
 func (a ArtifactDef) Label() string {
-	if a.Kind() == "rules" {
+	switch a.Kind() {
+	case "rules":
 		return "Built-in ruleset"
+	case "goserver":
+		return "Go server"
 	}
 	return a.Name
+}
+
+// Noun is the name of the artifact inside a sentence: "analyzer", "rules", "Go server".
+func (a ArtifactDef) Noun() string {
+	if a.Kind() == "goserver" {
+		return a.Label()
+	}
+	return a.Kind()
+}
+
+// TagPrefix is the release tag prefix of the artifact, such as "analyzer/". The go-ssa-server
+// tags start with "go-server/", not with its kind.
+func (a ArtifactDef) TagPrefix() string {
+	if a.Kind() == "goserver" {
+		return "go-server/"
+	}
+	return a.Kind() + "/"
 }
 
 // IsBindVersion reports whether the configured version matches the compile-time bind version.
@@ -49,6 +72,11 @@ func (a ArtifactDef) WithVersion(v string) ArtifactDef {
 // Artifacts returns the list of artifact definitions, reading current globals and Config.
 // This is a function (not a var) so it picks up mutable bind version vars and Config at call time.
 func Artifacts() []ArtifactDef {
+	// The cached go-ssa-server keeps .exe on windows, so that it stays executable there.
+	goServerCacheSuffix := ""
+	if runtime.GOOS == "windows" {
+		goServerCacheSuffix = ".exe"
+	}
 	return []ArtifactDef{
 		{
 			Name:        "Autobuilder",
@@ -82,6 +110,18 @@ func Artifacts() []ArtifactDef {
 			BindVersion: RulesBindVersion,
 			Version:     Config.Rules.Version,
 			Unpack:      true,
+		},
+		{
+			Name:        "GoServer",
+			RepoName:    Config.Repo,
+			AssetName:   GoServerAssetName(),
+			LibSubpath:  GoServerAssetName(),
+			CachePrefix: GoServerAssetNamePrefix,
+			CacheSuffix: goServerCacheSuffix,
+			BindVersion: GoServerBindVersion,
+			Version:     Config.GoServer.Version,
+			Override:    Config.GoServer.Binary,
+			Unpack:      false,
 		},
 	}
 }

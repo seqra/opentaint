@@ -14,6 +14,7 @@ import (
 const (
 	StaleKindAnalyzer    = "analyzer"
 	StaleKindAutobuilder = "autobuilder"
+	StaleKindGoServer    = "goserver"
 	StaleKindRules       = "rules"
 	StaleKindJDK         = "jdk"
 	StaleKindJRE         = "jre"

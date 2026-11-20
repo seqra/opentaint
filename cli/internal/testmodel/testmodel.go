@@ -21,9 +21,23 @@ var taintJava []byte
 //go:embed example/rule-test.yaml
 var ruleTestTemplate []byte
 
-func WriteFixedRule(dir string) (string, error) {
+//go:embed example/go/model-rule.yaml
+var fixedGoRule []byte
+
+//go:embed example/go/taint/taint.go
+var taintGo []byte
+
+//go:embed example/go/rule-test.yaml
+var goRuleTestTemplate []byte
+
+// WriteFixedRule writes the fixed rule for the samples in language, java or go, to dir.
+func WriteFixedRule(dir, language string) (string, error) {
+	rule := fixedRule
+	if language == "go" {
+		rule = fixedGoRule
+	}
 	path := filepath.Join(dir, fixedRuleFileName)
-	if err := os.WriteFile(path, fixedRule, 0o644); err != nil {
+	if err := os.WriteFile(path, rule, 0o644); err != nil {
 		return "", fmt.Errorf("write fixed model rule: %w", err)
 	}
 	return path, nil
@@ -43,4 +57,16 @@ func Scaffold(projectDir string) error {
 		return err
 	}
 	return testproject.WriteRuleTestFile(projectDir, ruleTestTemplate)
+}
+
+// ScaffoldGo writes the harness of a Go model test project: the taint package, the fixed rule,
+// and rule-test.yaml.
+func ScaffoldGo(projectDir string) error {
+	if err := utils.WriteFiles(map[string][]byte{
+		filepath.Join(projectDir, fixedRuleFileName):   fixedGoRule,
+		filepath.Join(projectDir, "taint", "taint.go"): taintGo,
+	}); err != nil {
+		return err
+	}
+	return testproject.WriteRuleTestFile(projectDir, goRuleTestTemplate)
 }

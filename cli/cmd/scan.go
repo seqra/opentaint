@@ -1,9 +1,13 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -74,8 +78,8 @@ func (p scanPlan) title() string {
 // scanCmd represents the scan command
 var scanCmd = &cobra.Command{
 	Use:   "scan [<source-path>]",
-	Short: "Scan a Java or Kotlin project for vulnerabilities",
-	Long:  "Build a Java or Kotlin project and scan it for vulnerabilities.\n\nArguments:\n  [<source-path>]  Project root (default: the current directory)",
+	Short: "Scan a Java, Kotlin, or Go project for vulnerabilities",
+	Long:  "Build a Java, Kotlin, or Go project and scan it for vulnerabilities.\n\nArguments:\n  [<source-path>]  Project root (default: the current directory)",
 	Example: `  # Scan the project in the current directory
   opentaint scan . -o .opentaint/results/report.sarif
 
@@ -265,17 +269,10 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	localVersion := utils.ArtifactDisplayVersion(globals.ArtifactByKind("analyzer"))
 	localSemanticVersion := version.GetVersion()
 
-	var sourceRoot string
-	if !plan.needsCompilation {
-		if parsedSourceRoot, err := project.GetSourceRoot(absProjectModelPath); err != nil {
-			out.Fatal("Failed to read the source root of the project model", err)
-		} else {
-			sourceRoot = parsedSourceRoot
-		}
-	} else {
-		sourceRoot = absUserProjectRoot
+	sourceRoot, err := sarifSourceRoot(cfg.ProjectModelPath != "", absUserProjectRoot, absProjectModelPath)
+	if err != nil {
+		out.Fatal("Failed to read the source root of the project model", err)
 	}
-
 	uriBase := fmt.Sprintf("%s%s", sourceRoot, string(filepath.Separator))
 
 	ruleLoadTraceDir, err := utils.GetProjectLogPath(absUserProjectRoot)
@@ -291,7 +288,8 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 
 	// Display scan information in tree format
-	printScanInfo(cmd, plan, absSemgrepRuleLoadTracePath, absUserProjectRoot, absRuleSetPaths)
+	hasGo := scanHasGo(plan, absUserProjectRoot)
+	printScanInfo(cmd, plan, absSemgrepRuleLoadTracePath, absUserProjectRoot, absRuleSetPaths, hasGo)
 
 	var userRulesetPaths []string
 	for _, ruleset := range cfg.Ruleset {
@@ -306,6 +304,17 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		out.FatalErr(err)
 	}
 	checkModelInputs(cfg.DataflowModels, cfg.PassthroughModels)
+	if globals.Config.GoServer.Binary != "" {
+		if _, err := checkGoServerBinary(globals.Config.GoServer.Binary); err != nil {
+			failGoServer(err)
+		}
+	}
+
+	// Check for `go` before the long steps and in a dry run. The project model decides again before
+	// the analyzer, as the autobuilder can find a go.mod deeper than scanHasGo does.
+	if hasGo {
+		requireGoToolchain()
+	}
 
 	if cfg.DryRun {
 		out.Blank()
@@ -324,6 +333,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 			break
 		}
 	}
+
 	if hasBuiltin {
 		if _, err := utils.EnsureRulesPath(out); err != nil {
 			fail("Failed to prepare the built-in ruleset", err)
@@ -335,7 +345,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		fail("Failed to get the analyzer", err)
 	}
 	// The models compile in less time than the project, so an error in them comes first.
-	dataflowClassDirs := compileDataflowModels(cfg.DataflowModels, analyzerJarPath)
+	dataflowModels := compileDataflowModels(cfg.DataflowModels, analyzerJarPath)
 
 	if plan.needsCompilation {
 		autobuilderJarPath, err := ensureAutobuilderAvailable()
@@ -435,11 +445,13 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 
 	nativeBuilder.SetJarPath(analyzerJarPath)
-	for _, classDir := range dataflowClassDirs {
-		nativeBuilder.AddDataflowApproximations(classDir)
-	}
+	addDataflowModels(nativeBuilder, dataflowModels)
 
-	analyzerJavaRunner := newAnalyzerJavaRunner()
+	config, err := project.LoadConfig(absProjectModelPath)
+	if err != nil {
+		fail("Failed to read the project model", err)
+	}
+	analyzerJavaRunner := newAnalyzerJavaRunner(goServerEnv(config))
 	if _, err := analyzerJavaRunner.EnsureJava(); err != nil {
 		fail("Failed to find Java for the analyzer", err)
 	}
@@ -664,7 +676,27 @@ func resolveScanPlan(cfg ScanConfig, absUserProjectRoot string) scanPlan {
 	}
 }
 
-func printScanInfo(cmd *cobra.Command, plan scanPlan, absSemgrepRuleLoadTracePath string, absUserProjectRoot string, absRuleSetPaths []RulesetType) {
+// sarifSourceRoot is the directory that the paths in the SARIF report are relative to. A scan of
+// sources uses the project of the user, also with a project model from the cache, so that a
+// rescan reports the paths that the first scan did. A scan of a project model uses its source root.
+func sarifSourceRoot(scansModel bool, absUserProjectRoot, absProjectModelPath string) (string, error) {
+	if !scansModel {
+		return absUserProjectRoot, nil
+	}
+	return project.GetSourceRoot(absProjectModelPath)
+}
+
+// scanHasGo reports whether the project has Go code: by the Go projects of the project model, or,
+// before the compile, by a go.mod in the project.
+func scanHasGo(plan scanPlan, absUserProjectRoot string) bool {
+	if plan.needsCompilation {
+		return slices.Contains(validation.DetectLanguages(absUserProjectRoot), "Go")
+	}
+	config, err := project.LoadConfig(plan.absProjectModel)
+	return err == nil && len(config.GoProjects) > 0
+}
+
+func printScanInfo(cmd *cobra.Command, plan scanPlan, absSemgrepRuleLoadTracePath string, absUserProjectRoot string, absRuleSetPaths []RulesetType, hasGo bool) {
 	sb := out.Section(plan.title())
 	addConfigFields(cmd, sb)
 	if globals.Config.Output.Debug {
@@ -676,11 +708,14 @@ func printScanInfo(cmd *cobra.Command, plan scanPlan, absSemgrepRuleLoadTracePat
 		if plan.projectCachePath != "" {
 			sb.FieldNode("Project model", plan.absProjectModel)
 		}
-		sb.FieldGroup("Autobuilder", componentItems(resolveJarComponent("autobuilder"), false)...)
+		sb.FieldGroup("Autobuilder", componentItems(resolveArtifactComponent("autobuilder"), false)...)
 	} else {
 		sb.FieldNode("Project model", plan.absProjectModel)
 	}
-	sb.FieldGroup("Analyzer", componentItems(resolveJarComponent("analyzer"), false)...)
+	sb.FieldGroup("Analyzer", componentItems(resolveArtifactComponent("analyzer"), false)...)
+	if hasGo {
+		sb.FieldGroup("Go server", componentItems(resolveArtifactComponent("goserver"), false)...)
+	}
 	for _, r := range absRuleSetPaths {
 		if r.Builtin {
 			rules := healthComponent{
@@ -708,6 +743,119 @@ func setupSemgrepRuleLoadTrace(traceDir string) string {
 
 	// Rule load trace path is now displayed in the tree format
 	return absSemgrepRuleLoadTracePath
+}
+
+// EnsureGoServerAvailable returns the absolute path of the Go server and downloads it when absent.
+// A --go-server-binary path is checked, never changed.
+func EnsureGoServerAvailable() (string, error) {
+	if globals.Config.GoServer.Binary != "" {
+		return checkGoServerBinary(globals.Config.GoServer.Binary)
+	}
+
+	version := globals.Config.GoServer.Version
+	if version == "" {
+		version = globals.GoServerBindVersion
+	}
+
+	goServerPath, err := utils.GetGoServerPath(version)
+	if err != nil {
+		return "", fmt.Errorf("failed to construct path to the Go server: %w", err)
+	}
+
+	if err := ensureArtifactAvailable("Go server", version, goServerPath, func() error {
+		return utils.DownloadGithubReleaseAsset(globals.Config.Owner, globals.Config.Repo, version, globals.GoServerAssetName(), goServerPath, globals.Config.Github.Token, globals.Config.SkipVerify, out)
+	}); err != nil {
+		return "", err
+	}
+
+	if err := ensureExecutable(goServerPath); err != nil {
+		return "", err
+	}
+	return filepath.Abs(goServerPath)
+}
+
+// notExecutableError is the error of a file that has no executable bit.
+type notExecutableError struct{ path string }
+
+func (e notExecutableError) Error() string {
+	return fmt.Sprintf("`%s` is not executable", e.path)
+}
+
+// checkGoServerBinary returns the absolute path of a --go-server-binary file. It fails when the
+// file does not exist, is a directory, or is not executable.
+func checkGoServerBinary(path string) (string, error) {
+	info, err := os.Stat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("`%s` does not exist", path)
+	}
+	if err != nil {
+		return "", err
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("`%s` is a directory", path)
+	}
+	if runtime.GOOS != "windows" && info.Mode()&0o111 == 0 {
+		return "", notExecutableError{path}
+	}
+	return filepath.Abs(path)
+}
+
+// ensureExecutable sets the executable bits of the Go server only when none is set: a binary
+// that root installed is executable, and the user cannot chmod it.
+func ensureExecutable(path string) error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if info.Mode()&0o111 != 0 {
+		return nil
+	}
+	if err := os.Chmod(path, info.Mode().Perm()|0o755); err != nil {
+		return fmt.Errorf("failed to make the Go server executable: %w", err)
+	}
+	return nil
+}
+
+// failGoServer prints the error of getting the Go server and exits with code 1. A file that is
+// not executable gets the chmod step; the log adds nothing to it.
+func failGoServer(err error) {
+	out.Blank()
+	var notExecutable notExecutableError
+	if errors.As(err, &notExecutable) {
+		out.Error("Failed to get the Go server", err)
+		out.Suggest("To make it executable, run:", "chmod +x "+shellQuote(notExecutable.path))
+		os.Exit(1)
+	}
+	fail("Failed to get the Go server", err)
+}
+
+// requireGoToolchain stops the command when `go` is not on PATH: the Go server runs it to load
+// the packages.
+func requireGoToolchain() {
+	if _, err := exec.LookPath("go"); err == nil {
+		return
+	}
+	out.Blank()
+	out.Error("Failed to find the Go toolchain", errors.New("the project has Go code, and `go` is not on PATH"))
+	out.Suggest("To install Go, see:", "https://go.dev/dl/")
+	os.Exit(1)
+}
+
+// goServerEnv returns the analyzer environment for the Go projects of a project model:
+// GOIR_SERVER_BINARY with the path of the Go server. A model without Go projects needs none.
+func goServerEnv(config *project.Config) map[string]string {
+	if len(config.GoProjects) == 0 {
+		return nil
+	}
+	requireGoToolchain()
+	goServerPath, err := EnsureGoServerAvailable()
+	if err != nil {
+		failGoServer(err)
+	}
+	return map[string]string{"GOIR_SERVER_BINARY": goServerPath}
 }
 
 func scanProject(analyzerBuilder *AnalyzerBuilder, javaRunner java.JavaRunner) (*java.JavaCommandError, error) {

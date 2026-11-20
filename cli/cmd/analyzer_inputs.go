@@ -100,11 +100,11 @@ func isYAMLFile(path string) bool {
 	return ext == ".yaml" || ext == ".yml"
 }
 
-// compileDataflowModels returns the class directories of the dataflow models. It compiles a
-// model project when its inputs change.
-func compileDataflowModels(paths []string, analyzerJarPath string) []string {
+// compileDataflowModels returns the dataflow models in paths: the class directories of the Java
+// models and the Go model projects. It compiles a Java model project when its inputs change.
+func compileDataflowModels(paths []string, analyzerJarPath string) *models.Models {
 	if len(paths) == 0 {
-		return nil
+		return &models.Models{}
 	}
 
 	absPaths := make([]string, 0, len(paths))
@@ -113,14 +113,24 @@ func compileDataflowModels(paths []string, analyzerJarPath string) []string {
 	}
 
 	builder := newModelBuilder(analyzerJarPath, "Compiling model projects")
-	classDirs, err := models.ResolveAll(absPaths, builder)
+	found, err := models.ResolveAll(absPaths, builder)
 	builder.step.Finish(err)
 	if err != nil {
 		out.Error("Failed to load the dataflow models", err)
 		out.Suggestions(modelBuildLogSuggestions(err)...)
 		os.Exit(1)
 	}
-	return classDirs
+	return found
+}
+
+// addDataflowModels passes the dataflow models to the analyzer.
+func addDataflowModels(b *AnalyzerBuilder, found *models.Models) {
+	for _, classDir := range found.JavaClassDirs {
+		b.AddDataflowApproximations(classDir)
+	}
+	for _, goModelDir := range found.GoModelDirs {
+		b.AddGoModel(goModelDir)
+	}
 }
 
 // modelProjectSuggestions returns the next steps for a model path that needs a model project.
@@ -131,15 +141,22 @@ func modelProjectSuggestions(err error) []output.Suggestion {
 	}
 
 	// The project goes in the model path itself, except for classes, which a project can not
-	// take in: their models have to be written anew.
-	projectArg := "<model-project>"
-	if needed.Reason != models.PlainClasses {
-		projectArg = shellQuote(needed.Path)
+	// take in: their models have to be written anew, in Java.
+	if needed.Reason == models.PlainClasses {
+		return []output.Suggestion{javaModelInitStep("<model-project>")}
 	}
 	return []output.Suggestion{{
 		Description: "To create a model project, run:",
-		Command:     fmt.Sprintf("opentaint model init %s --dependency <group:artifact:version>", projectArg),
+		Command:     fmt.Sprintf("opentaint model init %s --language <language> --dependency <library>", shellQuote(needed.Path)),
 	}}
+}
+
+// javaModelInitStep returns the step that creates a Java model project at projectArg.
+func javaModelInitStep(projectArg string) output.Suggestion {
+	return output.Suggestion{
+		Description: "To create a model project, run:",
+		Command:     fmt.Sprintf("opentaint model init %s --language java --dependency <group:artifact:version>", projectArg),
+	}
 }
 
 func addPassthroughModels(b *AnalyzerBuilder, paths []string) {

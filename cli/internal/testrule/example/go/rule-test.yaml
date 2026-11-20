@@ -1,0 +1,9 @@
+# Add one entry for each rule under test. The rule-id is the path of the rule file relative to
+# its ruleset root and the ID of the rule. Samples are entry-point functions given as test.<function>
+#
+#   - rule-id: go/security/my-rule.yaml#my-rule
+#     positive:
+#       - test.Positive
+#     negative:
+#       - test.Negative
+tests: []

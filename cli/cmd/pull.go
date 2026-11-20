@@ -17,13 +17,14 @@ import (
 
 var pullCmd = &cobra.Command{
 	Use:   "pull",
-	Short: "Download the analyzer, autobuilder, ruleset, and Java runtime",
-	Long:  "Download the analyzer, autobuilder, built-in ruleset, and Java runtime.",
+	Short: "Download the analysis components and the Java runtime",
+	Long:  "Download the analyzer, autobuilder, built-in ruleset, Go server, and Java runtime.",
 	Run: func(cmd *cobra.Command, args []string) {
 		out.Section("OpenTaint Pull").
 			Field("Autobuilder", globals.Config.Autobuilder.Version).
 			Field("Analyzer", globals.Config.Analyzer.Version).
 			Field("Built-in ruleset", globals.Config.Rules.Version).
+			Field("Go server", globals.Config.GoServer.Version).
 			Field("Java", globals.Config.Java.Version).
 			Render()
 
@@ -43,7 +44,7 @@ var pullCmd = &cobra.Command{
 		for _, spec := range artifacts {
 			node, err := downloadArtifact(spec, installNextToBinary, installCurrent)
 			if err != nil {
-				fail("Failed to download the "+spec.Kind(), err)
+				fail("Failed to download the "+spec.Noun(), err)
 			}
 			summaryNodes = append(summaryNodes, node)
 		}
@@ -109,11 +110,16 @@ func downloadArtifact(spec globals.ArtifactDef, installNextToBinary, installCurr
 		if err := download(t.Path); err != nil {
 			return node, err
 		}
+		if spec.Kind() == "goserver" {
+			if err := ensureExecutable(t.Path); err != nil {
+				return node, err
+			}
+		}
 		node.Child(fmt.Sprintf("Downloaded to %s", t.Path))
 		return node, nil
 	}
 
-	return node, fmt.Errorf("no writable location found for %s", spec.Kind())
+	return node, fmt.Errorf("no writable location found for the %s", spec.Noun())
 }
 
 func downloadJava(installNextToBinary, installCurrent bool) (*tree.Tree, error) {

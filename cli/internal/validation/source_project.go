@@ -58,6 +58,10 @@ var supportedLanguages = []LanguageMarkers{
 			"gradlew.bat",
 		},
 	},
+	{
+		Name:    "Go",
+		Markers: []string{"go.mod"},
+	},
 }
 
 // markerToLanguage builds a lookup from marker name to language name.
@@ -180,4 +184,10 @@ func ValidateSourceProject(absProjectRoot string) error {
 // always operates on source directories.
 func ValidateSourceProjectForCompile(absProjectRoot string) error {
 	return validateSourceDir(absProjectRoot, false)
+}
+
+// DetectLanguages returns the languages, such as "Go" and "Java/Kotlin", whose build markers are
+// within maxMarkerSearchDepth of absProjectRoot. A directory that cannot be read has none.
+func DetectLanguages(absProjectRoot string) []string {
+	return detectLanguages(absProjectRoot)
 }

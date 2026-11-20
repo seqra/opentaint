@@ -10,9 +10,11 @@ import (
 	"github.com/seqra/opentaint/internal/analyzer"
 	"github.com/seqra/opentaint/internal/output"
 	"github.com/seqra/opentaint/internal/testmodel"
+	"github.com/seqra/opentaint/internal/testproject"
 	"github.com/seqra/opentaint/internal/utils"
 	"github.com/seqra/opentaint/internal/utils/java"
 	"github.com/seqra/opentaint/internal/utils/log"
+	"github.com/seqra/opentaint/internal/utils/project"
 	"github.com/spf13/cobra"
 )
 
@@ -103,6 +105,15 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	if err != nil {
 		out.FatalErr(fmt.Errorf("invalid --max-memory value `%s`: %w", opts.maxMemory, err))
 	}
+	config, err := project.LoadConfig(projectPath)
+	if err != nil {
+		out.Fatal(fmt.Sprintf("Failed to read the project model `%s`", projectModelArg), err)
+	}
+
+	if len(config.GoProjects) > 0 {
+		requireGoToolchain()
+		buildGoSamples(projectPath, config)
+	}
 
 	outputDir := opts.outputDir
 	if outputDir == "" {
@@ -152,7 +163,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 		if err := os.MkdirAll(ruleDir, 0o755); err != nil {
 			out.Fatal("Failed to write the harness rule", err)
 		}
-		if _, err := testmodel.WriteFixedRule(ruleDir); err != nil {
+		if _, err := testmodel.WriteFixedRule(ruleDir, samplesLanguage(config)); err != nil {
 			out.Fatal("Failed to write the harness rule", err)
 		}
 		builder.AddRuleSet(ruleDir)
@@ -168,12 +179,10 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	}
 	builder.SetJarPath(analyzerJarPath)
 
-	for _, classDir := range compileDataflowModels(opts.dataflowModels, analyzerJarPath) {
-		builder.AddDataflowApproximations(classDir)
-	}
+	addDataflowModels(builder, compileDataflowModels(opts.dataflowModels, analyzerJarPath))
 	addPassthroughModels(builder, opts.passthroughModels)
 
-	javaRunner := newAnalyzerJavaRunner()
+	javaRunner := newAnalyzerJavaRunner(goServerEnv(config))
 	if _, err := javaRunner.EnsureJava(); err != nil {
 		fail("Failed to find Java for the analyzer", err)
 	}
@@ -247,6 +256,37 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	os.Exit(2)
 }
 
+// buildGoSamples tidies and builds the Go projects of a test project model, so that a sample that
+// does not compile fails here and not in the analyzer log.
+func buildGoSamples(projectModelPath string, config *project.Config) {
+	err := out.RunWithSpinner("Building Go samples", func() error {
+		for _, goProject := range config.GoProjects {
+			dir := goProject.ProjectDir
+			if !filepath.IsAbs(dir) {
+				dir = filepath.Join(projectModelPath, dir)
+			}
+			if err := testproject.TidyGo(dir); err != nil {
+				return err
+			}
+			if err := testproject.BuildGo(dir); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		out.Fatal("Failed to build the samples", err)
+	}
+}
+
+// samplesLanguage is the language of the samples in a test project model, java or go.
+func samplesLanguage(config *project.Config) string {
+	if len(config.GoProjects) > 0 && len(config.JavaProjects) == 0 {
+		return "go"
+	}
+	return "java"
+}
+
 // printFailedTests prints the number of passed tests and the failed samples by category.
 func printFailedTests(opts testProjectOptions, tr *analyzer.TestResult, resultPath string) {
 	sb := out.Section(strings.ToUpper(opts.kind[:1])+opts.kind[1:]+" Test Results").
@@ -286,7 +326,7 @@ func skippedByRule(samples []analyzer.TestSampleInfo) []any {
 	var ruleIDs []string
 	byRule := map[string][]any{}
 	for _, sample := range samples {
-		id := sample.Rule.ID()
+		id := sample.RuleID()
 		if _, ok := byRule[id]; !ok {
 			ruleIDs = append(ruleIDs, id)
 		}
