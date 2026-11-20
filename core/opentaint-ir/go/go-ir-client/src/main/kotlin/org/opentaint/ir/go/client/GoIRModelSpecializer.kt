@@ -39,7 +39,7 @@ internal class GoIRModelSpecializer(
         val anonymousRefs = IdentityHashMap<GoIRFunction, MutableList<GoIrFunctionReference>>()
 
         fun reference(function: GoIRFunction): GoIrFunctionReference =
-            GoIrFunctionReference(pkg.importPath, function.name, function.signature)
+            GoIrFunctionReference(pkg.importPath, function.fullName, function.signature)
                 .also { it.program = program }
 
         val rootRefs = mutableListOf<GoIrFunctionReference>()

@@ -4,11 +4,9 @@ import org.opentaint.ir.go.type.GoIRFuncType
 
 data class GoIrFunctionReference(
     val pkg: String,
-    val name: String,
+    val fullName: String,
     val signature: GoIRFuncType
 ) {
-    val fullName: String get() = "$pkg.$name"
-
     lateinit var program: GoIRProgram
 
     val function: GoIRFunction by lazy {
@@ -18,4 +16,4 @@ data class GoIrFunctionReference(
 }
 
 fun GoIRFunction.reference(): GoIrFunctionReference =
-    GoIrFunctionReference(pkg?.importPath.orEmpty(), name, signature)
+    GoIrFunctionReference(pkg?.importPath.orEmpty(), fullName, signature)
