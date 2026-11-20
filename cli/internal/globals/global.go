@@ -84,6 +84,10 @@ type Autobuilder struct {
 
 type Rules struct {
 	Version string `mapstructure:"version"`
+	// Only and Exclude select the rules that the analyzer runs: full ID, leaf name, or glob over the
+	// full ID.
+	Only    []string `mapstructure:"only"`
+	Exclude []string `mapstructure:"exclude"`
 }
 
 type GoServer struct {

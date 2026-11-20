@@ -433,3 +433,28 @@ func ShortDuration(d time.Duration) string {
 	}
 	return text
 }
+
+func (cb *OpentaintCommandBuilder) WithErrorOnFindings(enabled bool) *OpentaintCommandBuilder {
+	if enabled {
+		cb.boolFlags["error-on-findings"] = true
+	}
+	return cb
+}
+
+func (cb *OpentaintCommandBuilder) WithErrorOnSeverity(severities []string) *OpentaintCommandBuilder {
+	for _, s := range severities {
+		if s != "" {
+			cb.arrayFlags["error-on-severity"] = append(cb.arrayFlags["error-on-severity"], s)
+		}
+	}
+	return cb
+}
+
+func (cb *OpentaintCommandBuilder) WithExcludeRuleID(ruleIDs []string) *OpentaintCommandBuilder {
+	for _, id := range ruleIDs {
+		if id != "" {
+			cb.arrayFlags["exclude-rule-id"] = append(cb.arrayFlags["exclude-rule-id"], id)
+		}
+	}
+	return cb
+}

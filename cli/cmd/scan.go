@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"github.com/seqra/opentaint/internal/load_trace"
 	"github.com/seqra/opentaint/internal/rules"
 	"github.com/seqra/opentaint/internal/sarif"
+	"github.com/seqra/opentaint/internal/triage"
 	"github.com/seqra/opentaint/internal/validation"
 	"github.com/seqra/opentaint/internal/version"
 
@@ -39,6 +41,10 @@ type ScanConfig struct {
 	Recompile                 bool
 	LogFile                   string
 	RuleID                    []string
+	RuleIDName                string // the name of RuleID in messages, --rule-id when empty
+	ExcludeRuleID             []string
+	ErrorOnFindings           bool
+	ErrorOnSeverity           []string
 	PassthroughModels         []string
 	DataflowModels            []string
 	TrackExternalMethods      bool
@@ -46,7 +52,6 @@ type ScanConfig struct {
 
 	DebugFactReachabilitySarif            bool
 	DebugRunAnalysisOnSelectedEntryPoints string
-	ExpandRuleRefs                        bool
 }
 
 var scanFlags ScanConfig
@@ -126,6 +131,7 @@ func init() {
 	rootCmd.AddCommand(scanCmd)
 	addScanFlags(scanCmd)
 	addRuleIDFlag(scanCmd)
+	addGateFlags(scanCmd)
 	addEntryPointsFlag(scanCmd)
 }
 
@@ -138,7 +144,8 @@ func addEntryPointsFlag(cmd *cobra.Command) {
 }
 
 func addRuleIDFlag(cmd *cobra.Command) {
-	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Run only the rule with this ID (repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Run only the rule with this ID: full ID, leaf name, or glob (repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.ExcludeRuleID, "exclude-rule-id", nil, "Skip the rule with this ID: full ID, leaf name, or glob (repeatable)")
 }
 
 func addScanFlags(cmd *cobra.Command) {
@@ -174,6 +181,9 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 		WithRuleset(cfg.Ruleset).
 		WithSemgrepCompatibility(cfg.SemgrepCompatibilitySarif).
 		WithRuleID(cfg.RuleID).
+		WithExcludeRuleID(cfg.ExcludeRuleID).
+		WithErrorOnFindings(cfg.ErrorOnFindings).
+		WithErrorOnSeverity(cfg.ErrorOnSeverity).
 		WithPassthroughModels(cfg.PassthroughModels).
 		WithDataflowModels(cfg.DataflowModels).
 		WithTrackExternalMethods(cfg.TrackExternalMethods).
@@ -182,6 +192,82 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 		b.WithSeverity(cfg.Severity)
 	}
 	return b
+}
+
+// resolveRuleIDs turns the rule selection into exact rule IDs for the analyzer. --rule-id replaces
+// rules.only and rules.exclude, and --exclude-rule-id replaces rules.exclude. The zero value runs
+// every rule.
+func resolveRuleIDs(cfg ScanConfig, absRuleSetPaths []RulesetType) rules.Resolved {
+	selection := ruleSelection(cfg)
+	if !selection.Active() {
+		return rules.Resolved{}
+	}
+	var rulesetRoots []string
+	for _, r := range absRuleSetPaths {
+		rulesetRoots = append(rulesetRoots, r.Path)
+	}
+
+	all := rules.ListRuleIDs(rulesetRoots)
+	for _, pattern := range selection.Unmatched(all) {
+		out.Blank()
+		out.WarnDetails(fmt.Sprintf("Ignored the rule ID `%s`", pattern), "no rule in the ruleset matches it")
+	}
+	selected, err := rules.Select(selection, rulesetRoots)
+	if errors.Is(err, rules.ErrNoRules) {
+		err = noRulesCause(cfg, selection, all)
+	}
+	if err != nil {
+		out.Blank()
+		out.Fatal("No rules to run", err)
+	}
+	return selected
+}
+
+// noRulesCause says why the rule selection leaves no rule, in the names of the flags or the config
+// keys that the user set.
+func noRulesCause(cfg ScanConfig, selection rules.Selection, all []string) error {
+	only, exclude := "rules.only", "rules.exclude"
+	if len(cfg.RuleID) > 0 {
+		only = cmp.Or(cfg.RuleIDName, "--rule-id")
+	}
+	if len(cfg.ExcludeRuleID) > 0 {
+		exclude = "--exclude-rule-id"
+	}
+	switch {
+	case len(selection.Only) == 0:
+		return fmt.Errorf("%s excludes every rule", exclude)
+	case len(rules.Selection{Only: selection.Only}.Unmatched(all)) == len(selection.Only):
+		return fmt.Errorf("no rule matches %s", only)
+	default:
+		return fmt.Errorf("%s excludes every rule that %s selects", exclude, only)
+	}
+}
+
+// ruleSelectionActive reports whether the flags or the config select rules.
+func ruleSelectionActive(cfg ScanConfig) bool {
+	return ruleSelection(cfg).Active()
+}
+
+// ruleSelection returns the rules that --rule-id and --exclude-rule-id select, or rules.only and
+// rules.exclude from the config in place of the flags that are not set.
+func ruleSelection(cfg ScanConfig) rules.Selection {
+	if len(cfg.RuleID) > 0 {
+		return rules.Selection{Only: cfg.RuleID, Exclude: cfg.ExcludeRuleID}
+	}
+	return configuredRuleSelection(cfg)
+}
+
+// configuredRuleSelection returns rules.only and rules.exclude from the config, with
+// --exclude-rule-id in place of rules.exclude when set.
+func configuredRuleSelection(cfg ScanConfig) rules.Selection {
+	selection := rules.Selection{
+		Only:    globals.Config.Rules.Only,
+		Exclude: globals.Config.Rules.Exclude,
+	}
+	if len(cfg.ExcludeRuleID) > 0 {
+		selection.Exclude = cfg.ExcludeRuleID
+	}
+	return selection
 }
 
 func isDefaultSeverity(sev []string) bool {
@@ -197,6 +283,11 @@ func dockerScanSuggestion(cfg ScanConfig, projectRoot, sarifReportPath string) o
 }
 
 func runScan(cmd *cobra.Command, cfg ScanConfig) {
+	gateSeverities, err := triage.ParseGateSeverities(cfg.ErrorOnSeverity)
+	if err != nil {
+		out.FatalErr(err)
+	}
+	gate := triage.Gate{Enabled: cfg.ErrorOnFindings || len(gateSeverities) > 0, Severities: gateSeverities}
 	userProjectPath := filepath.Clean(cfg.UserProjectPath)
 	absUserProjectRoot := log.AbsPathOrExit(userProjectPath, "project path")
 
@@ -316,6 +407,21 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		requireGoToolchain()
 	}
 
+	hasBuiltin := false
+	for _, ruleSetPath := range absRuleSetPaths {
+		if ruleSetPath.Builtin {
+			hasBuiltin = true
+			break
+		}
+	}
+
+	if hasBuiltin && ruleSelectionActive(cfg) {
+		if _, err := utils.EnsureRulesPath(out); err != nil {
+			out.Blank()
+			out.Fatal("Failed to prepare the built-in ruleset", err)
+		}
+	}
+	resolvedRules := resolveRuleIDs(cfg, absRuleSetPaths)
 	if cfg.DryRun {
 		out.Blank()
 		skipped := "the scan"
@@ -324,14 +430,6 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		}
 		runDryRun(skipped, "scan the project")
 		return
-	}
-
-	hasBuiltin := false
-	for _, ruleSetPath := range absRuleSetPaths {
-		if ruleSetPath.Builtin {
-			hasBuiltin = true
-			break
-		}
 	}
 
 	if hasBuiltin {
@@ -419,16 +517,11 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	if maxMemory != "" {
 		nativeBuilder.SetMaxMemory(maxMemory)
 	}
-	ruleIDs := cfg.RuleID
-	if cfg.ExpandRuleRefs && len(ruleIDs) > 0 {
-		var roots []string
-		for _, r := range absRuleSetPaths {
-			roots = append(roots, r.Path)
-		}
-		ruleIDs = rules.ExpandRuleIDs(ruleIDs, roots)
-	}
-	for _, ruleID := range ruleIDs {
+	for _, ruleID := range resolvedRules.Include {
 		nativeBuilder.AddRuleID(ruleID)
+	}
+	for _, ruleID := range resolvedRules.Exclude {
+		nativeBuilder.AddRuleIDExclude(ruleID)
 	}
 	addPassthroughModels(nativeBuilder, cfg.PassthroughModels)
 	if cfg.TrackExternalMethods {
@@ -512,6 +605,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 
 	var suggestions []output.Suggestion
+	gateFailed := false
 	if analyzerFail != nil {
 		suggestions = appendLogSuggestion(suggestions)
 		if analyzerLog, ok := analyzerLogSuggestion(analyzerFail, nativeBuilder.LogsFile()); ok {
@@ -546,7 +640,12 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		case sarif.GenerateSummary(report).TotalFindings > 0:
 			if analyzerFail == nil {
 				out.Blank()
-				out.Successf("Scan completed")
+				if count, tripped := gate.Evaluate(report); tripped {
+					gateFailed = true
+					out.Errorf("%s", gateMessage(count, gateSeverities))
+				} else {
+					out.Successf("Scan completed")
+				}
 			}
 			suggestions = append(suggestions, output.Suggestion{
 				Description: "To view the findings, run:",
@@ -567,6 +666,9 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 
 	if analyzerFail != nil {
 		os.Exit(analyzerFail.ExitCode)
+	}
+	if gateFailed {
+		os.Exit(ExitFindings)
 	}
 }
 
@@ -870,4 +972,25 @@ func scanProject(analyzerBuilder *AnalyzerBuilder, javaRunner java.JavaRunner) (
 	}
 
 	return javaRunner.ExecuteJavaCommand(analyzerCommand, commandSucceeded)
+}
+
+// ExitFindings is the exit code of a scan that --error-on-findings or --error-on-severity fails.
+const ExitFindings = 2
+
+func addGateFlags(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&scanFlags.ErrorOnFindings, "error-on-findings", false, "Fail when the scan has findings")
+	cmd.Flags().StringArrayVar(&scanFlags.ErrorOnSeverity, "error-on-severity", nil, "Fail on findings of this severity: note, warning, error, or none (repeatable)")
+}
+
+// gateMessage says how many findings failed the scan: "Found 2 findings of severity error".
+func gateMessage(count int, severities []string) string {
+	noun := "findings"
+	if count == 1 {
+		noun = "finding"
+	}
+	message := fmt.Sprintf("Found %d %s", count, noun)
+	if len(severities) > 0 {
+		message += " of severity " + strings.Join(severities, " or ")
+	}
+	return message
 }
