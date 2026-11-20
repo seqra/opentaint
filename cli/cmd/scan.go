@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -401,10 +400,13 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		}
 	}
 
-	// Check for `go` before the long steps and in a dry run. The project model decides again before
-	// the analyzer, as the autobuilder can find a go.mod deeper than scanHasGo does.
-	if hasGo {
-		requireGoToolchain()
+	// Check the Go toolchain before the long steps and in a dry run. A project model that this run
+	// compiles is checked again before the analyzer, as the autobuilder decides what it records.
+	goReported := false
+	if plan.needsCompilation {
+		goReported = checkGoBeforeCompile(absUserProjectRoot)
+	} else if config, err := project.LoadConfig(plan.absProjectModel); err == nil {
+		checkGoToolchains(config, plan.absProjectModel, rebuildModelCommand(cfg, plan))
 	}
 
 	hasBuiltin := false
@@ -544,7 +546,10 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	if err != nil {
 		fail("Failed to read the project model", err)
 	}
-	analyzerJavaRunner := newAnalyzerJavaRunner(goServerEnv(config))
+	if plan.needsCompilation && !goReported {
+		checkGoToolchains(config, absProjectModelPath, "")
+	}
+	analyzerJavaRunner := newAnalyzerJavaRunner(goServerEnv(config, absProjectModelPath))
 	if _, err := analyzerJavaRunner.EnsureJava(); err != nil {
 		fail("Failed to find Java for the analyzer", err)
 	}
@@ -788,6 +793,21 @@ func sarifSourceRoot(scansModel bool, absUserProjectRoot, absProjectModelPath st
 	return project.GetSourceRoot(absProjectModelPath)
 }
 
+// rebuildModelCommand is the command that rebuilds the project model of a scan that did not
+// compile it: the scan with --recompile for a model from the cache, and the compile for a model
+// that the user gave.
+func rebuildModelCommand(cfg ScanConfig, plan scanPlan) string {
+	if plan.projectCachePath != "" {
+		return withFlag(rerunWithoutDryRun(), "--recompile")
+	}
+	return compileModelCommand(cfg.ProjectModelPath)
+}
+
+// compileModelCommand is the command that compiles sources to the project model at modelPath.
+func compileModelCommand(modelPath string) string {
+	return "opentaint compile <source-path> --output " + shellQuote(modelPath)
+}
+
 // scanHasGo reports whether the project has Go code: by the Go projects of the project model, or,
 // before the compile, by a go.mod in the project.
 func scanHasGo(plan scanPlan, absUserProjectRoot string) bool {
@@ -932,32 +952,6 @@ func failGoServer(err error) {
 		os.Exit(1)
 	}
 	fail("Failed to get the Go server", err)
-}
-
-// requireGoToolchain stops the command when `go` is not on PATH: the Go server runs it to load
-// the packages.
-func requireGoToolchain() {
-	if _, err := exec.LookPath("go"); err == nil {
-		return
-	}
-	out.Blank()
-	out.Error("Failed to find the Go toolchain", errors.New("the project has Go code, and `go` is not on PATH"))
-	out.Suggest("To install Go, see:", "https://go.dev/dl/")
-	os.Exit(1)
-}
-
-// goServerEnv returns the analyzer environment for the Go projects of a project model:
-// GOIR_SERVER_BINARY with the path of the Go server. A model without Go projects needs none.
-func goServerEnv(config *project.Config) map[string]string {
-	if len(config.GoProjects) == 0 {
-		return nil
-	}
-	requireGoToolchain()
-	goServerPath, err := EnsureGoServerAvailable()
-	if err != nil {
-		failGoServer(err)
-	}
-	return map[string]string{"GOIR_SERVER_BINARY": goServerPath}
 }
 
 func scanProject(analyzerBuilder *AnalyzerBuilder, javaRunner java.JavaRunner) (*java.JavaCommandError, error) {

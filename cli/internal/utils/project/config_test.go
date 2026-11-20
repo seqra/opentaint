@@ -94,3 +94,37 @@ func TestGetSourceRootRelativeResolved(t *testing.T) {
 		t.Errorf("GetSourceRoot = %q, want %q", got, want)
 	}
 }
+
+func TestGoToolchainProblem(t *testing.T) {
+	dir := writeProjectYaml(t, `goProjects:
+  - projectDir: go_0
+  - projectDir: go_1
+    goToolchain: /does/not/exist
+  - projectDir: go_2
+    goToolchain: goroot
+`)
+	if err := os.MkdirAll(filepath.Join(dir, "goroot", "bin"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "goroot", "bin", "go"), nil, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	config, err := LoadConfig(dir)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	want := []string{
+		"the project model has no Go toolchain",
+		"the Go toolchain `/does/not/exist` of the project model does not exist",
+		"",
+	}
+	for i, goProject := range config.GoProjects {
+		if got := goProject.GoToolchainProblem(dir); got != want[i] {
+			t.Errorf("%s: problem = %q, want %q", goProject.ProjectDir, got, want[i])
+		}
+	}
+	if got := config.SkippedGoProjects(dir); len(got) != 2 {
+		t.Errorf("SkippedGoProjects = %q, want the first two projects", got)
+	}
+}
