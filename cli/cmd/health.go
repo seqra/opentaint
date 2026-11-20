@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/seqra/opentaint/internal/globals"
+	"github.com/seqra/opentaint/internal/output"
 	"github.com/seqra/opentaint/internal/utils"
 	"github.com/spf13/cobra"
 )
@@ -27,18 +28,11 @@ type healthComponent struct {
 
 var healthCmd = &cobra.Command{
 	Use:   "health",
-	Short: "Show resolved dependency paths",
-	Long: `Show the on-disk paths OpenTaint uses for the autobuilder, analyzer,
-built-in rules, and Java runtime.
-
-Use --autobuilder, --analyzer, --rules, or --runtime to select components. When
-exactly one component is selected, only its path is printed. The command does
-not download artifacts except built-in rules, which are fetched on demand.
-
-The exit code is non-zero when any selected component is missing.`,
-	Args: cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return runHealth()
+	Short: "Show the installed components and their paths",
+	Long:  "Show the installed components and their paths.",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		runHealth()
 	},
 }
 
@@ -46,11 +40,11 @@ func init() {
 	rootCmd.AddCommand(healthCmd)
 	healthCmd.Flags().BoolVar(&healthAutobuilder, "autobuilder", false, "Print only the autobuilder JAR path")
 	healthCmd.Flags().BoolVar(&healthAnalyzer, "analyzer", false, "Print only the analyzer JAR path")
-	healthCmd.Flags().BoolVar(&healthRules, "rules", false, "Print only the built-in rules path, downloading rules if needed")
+	healthCmd.Flags().BoolVar(&healthRules, "rules", false, "Print only the built-in ruleset path")
 	healthCmd.Flags().BoolVar(&healthRuntime, "runtime", false, "Print only the Java runtime path")
 }
 
-func runHealth() error {
+func runHealth() {
 	var requested []string
 	if healthAutobuilder {
 		requested = append(requested, "autobuilder")
@@ -80,34 +74,48 @@ func runHealth() error {
 		}
 		if !c.present {
 			if c.path == "" {
-				return fmt.Errorf("%s could not be resolved", c.name)
+				out.Fatalf("%s could not be resolved", c.name)
 			}
-			return fmt.Errorf("%s missing at %s", c.name, c.path)
+			out.Fatalf("%s missing at %s", c.name, c.path)
 		}
-		return nil
+		return
 	}
 
 	sb := out.Section("OpenTaint Health")
-	th := out.Theme()
 	var missing []string
 	for _, c := range components {
-		node := out.GroupItem(th.FieldKey.Render(c.name))
-		if c.version != "" {
-			node.Child(th.FieldValue.Render(c.version))
-		}
-		path := c.path
 		if !c.present {
-			path += "  " + th.Error.Render("missing")
 			missing = append(missing, c.name)
 		}
-		node.Child(th.FieldValue.Render(path))
-		sb.Child(node)
+		sb.FieldGroup(c.name, componentItems(c, true)...)
 	}
 	sb.Render()
 	if len(missing) > 0 {
-		return fmt.Errorf("missing components: %s", strings.Join(missing, ", "))
+		out.Blank()
+		out.Errorf("Missing components: %s", strings.Join(missing, ", "))
+		out.Suggest("To download the missing components, run:", "opentaint pull")
+		os.Exit(1)
 	}
-	return nil
+}
+
+// componentItems are the items of a component in a block: its version and its path. A component
+// that is not on disk has no path, or, with markMissing, a path that is marked as missing.
+func componentItems(c healthComponent, markMissing bool) []any {
+	var items []any
+	if c.version != "" {
+		items = append(items, out.FieldItem("Version", c.version))
+	}
+	switch {
+	case c.present:
+		items = append(items, out.FieldItem("Path", c.path))
+	case markMissing:
+		missing := out.Theme().Error.Render("missing")
+		if c.path != "" {
+			missing = c.path + " (" + missing + ")"
+		}
+		items = append(items, out.FieldItem("Path", missing))
+	}
+	return items
 }
 
 func resolveHealthComponent(key string) healthComponent {
@@ -131,11 +139,11 @@ func resolveJarComponent(kind string) healthComponent {
 }
 
 func resolveRulesComponent() healthComponent {
-	c := healthComponent{name: "Rules", version: utils.ArtifactVersion(globals.ArtifactByKind("rules"))}
+	c := healthComponent{name: "Built-in ruleset", version: utils.ArtifactVersion(globals.ArtifactByKind("rules"))}
 	path, err := utils.EnsureRulesPath(out)
 	c.path = path
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to prepare built-in rules: %s\n", err)
+		fmt.Fprint(os.Stderr, output.FormatError(fmt.Errorf("failed to prepare the built-in ruleset: %w", err)))
 		return c
 	}
 	c.present = utils.PathExists(path)

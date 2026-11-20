@@ -121,7 +121,12 @@ func (h *SpinnerHandle) StopError(finalMessage string) {
 // If the terminal is non-interactive, the function runs without visual feedback.
 func (p *Printer) RunWithSpinner(phase string, run func() error) error {
 	if !p.IsInteractiveUI() {
-		return run()
+		err := run()
+		if err != nil {
+			// No spinner line separates the error from the output above, so a blank line does.
+			p.Blank()
+		}
+		return err
 	}
 
 	p.InteractiveBlank()
@@ -133,6 +138,48 @@ func (p *Printer) RunWithSpinner(phase string, run func() error) error {
 	}
 	spinner.Stop(phase)
 	return nil
+}
+
+// Step is a spinner that starts only when there is work, so that a step with nothing to do
+// prints nothing. It shows one spinner however many times the work starts.
+type Step struct {
+	printer *Printer
+	phase   string
+	spinner *SpinnerHandle
+	started bool
+}
+
+// NewStep returns a step that shows phase once it starts.
+func (p *Printer) NewStep(phase string) *Step {
+	return &Step{printer: p, phase: phase}
+}
+
+// Start shows the spinner, unless it already shows.
+func (s *Step) Start() {
+	if s.started {
+		return
+	}
+	s.started = true
+	if s.printer.IsInteractiveUI() {
+		s.printer.InteractiveBlank()
+		s.spinner = s.printer.StartSpinner(s.phase)
+	}
+}
+
+// Finish ends the step as RunWithSpinner ends it. A step that did not start shows nothing, and
+// an error after it is set apart from the output above by a blank line.
+func (s *Step) Finish(err error) {
+	if s.spinner == nil {
+		if err != nil {
+			s.printer.Blank()
+		}
+		return
+	}
+	if err != nil {
+		s.spinner.StopError(s.phase)
+		return
+	}
+	s.spinner.Stop(s.phase)
 }
 
 // ── Progress bar ─────────────────────────────────────────────────────

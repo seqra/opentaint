@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"reflect"
 	"strings"
 	"testing"
@@ -24,8 +25,8 @@ func TestDeprecatedCommandsPointAtTheirNewNames(t *testing.T) {
 			if err != nil || len(rest) != 0 || command.Name() != tc.old[len(tc.old)-1] {
 				t.Fatalf("Find(%v) = %s %v %v", tc.old, command.CommandPath(), rest, err)
 			}
-			if !strings.Contains(command.Deprecated, tc.newPath) {
-				t.Errorf("Deprecated = %q, want it to name %q", command.Deprecated, tc.newPath)
+			if got := command.Annotations[renamedTo]; got != tc.newPath {
+				t.Errorf("renamed to %q, want %q", got, tc.newPath)
 			}
 			if command.IsAvailableCommand() {
 				t.Error("a deprecated command is listed in help")
@@ -63,8 +64,8 @@ func TestDeprecatedFlagAliasesFeedTheNewFlag(t *testing.T) {
 	}
 	for _, old := range []string{"dataflow-approximations", "passthrough-approximations"} {
 		flag := command.Flags().Lookup(old)
-		if !flag.Hidden || !strings.Contains(flag.Deprecated, "-models") {
-			t.Errorf("--%s: hidden=%v deprecated=%q, want a hidden alias naming the new flag", old, flag.Hidden, flag.Deprecated)
+		if !flag.Hidden || !strings.HasSuffix(flag.Annotations[renamedTo][0], "-models") {
+			t.Errorf("--%s: hidden=%v annotations=%v, want a hidden alias naming the new flag", old, flag.Hidden, flag.Annotations)
 		}
 	}
 }
@@ -76,5 +77,34 @@ func TestModelFlagsOnAnalyzerCommands(t *testing.T) {
 				t.Errorf("%s has no --%s", command.CommandPath(), name)
 			}
 		}
+	}
+}
+
+func TestDeprecatedGroupHelpIsTheHelpOfTheNewGroup(t *testing.T) {
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
+	t.Cleanup(func() { rootCmd.SetOut(nil) })
+
+	for _, tc := range []struct {
+		old  []string
+		want string
+	}{
+		{[]string{"approximation"}, "opentaint model <command>"},
+		{[]string{"test", "approximation"}, "opentaint test model <command>"},
+		// A subcommand of a deprecated group keeps its own help.
+		{[]string{"approximation", "init"}, "opentaint approximation init <model-project>"},
+		{[]string{"test", "approximation", "run"}, "opentaint test approximation run <test-project-model>"},
+	} {
+		t.Run(strings.Join(tc.old, " "), func(t *testing.T) {
+			command, _, err := rootCmd.Find(tc.old)
+			if err != nil {
+				t.Fatal(err)
+			}
+			buf.Reset()
+			command.HelpFunc()(command, nil)
+			if !strings.Contains(buf.String(), tc.want) {
+				t.Errorf("help does not contain %q:\n%s", tc.want, buf.String())
+			}
+		})
 	}
 }

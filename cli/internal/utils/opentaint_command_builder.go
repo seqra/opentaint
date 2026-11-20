@@ -101,7 +101,7 @@ func (cb *OpentaintCommandBuilder) WithScanType(scanType string) *OpentaintComma
 // WithTimeout sets the timeout flag if it differs from the default.
 func (cb *OpentaintCommandBuilder) WithTimeout(timeout time.Duration) *OpentaintCommandBuilder {
 	if timeout != defaultTimeout {
-		cb.flags["timeout"] = timeout.String()
+		cb.flags["timeout"] = ShortDuration(timeout)
 	}
 	return cb
 }
@@ -278,7 +278,9 @@ func (cb *OpentaintCommandBuilder) CopyFlagsFrom(source *OpentaintCommandBuilder
 // Build constructs the final command string.
 func (cb *OpentaintCommandBuilder) Build() string {
 	parts := []string{cb.command}
-	parts = append(parts, cb.args...)
+	for _, arg := range cb.args {
+		parts = append(parts, ShellQuote(arg))
+	}
 
 	// Add regular flags in sorted order for consistency
 	var flagNames []string
@@ -287,7 +289,7 @@ func (cb *OpentaintCommandBuilder) Build() string {
 	}
 	sort.Strings(flagNames)
 	for _, flag := range flagNames {
-		parts = append(parts, fmt.Sprintf("--%s", flag), cb.flags[flag])
+		parts = append(parts, fmt.Sprintf("--%s", flag), ShellQuote(cb.flags[flag]))
 	}
 
 	// Add array flags in sorted order
@@ -298,7 +300,7 @@ func (cb *OpentaintCommandBuilder) Build() string {
 	sort.Strings(arrayFlagNames)
 	for _, flag := range arrayFlagNames {
 		for _, value := range cb.arrayFlags[flag] {
-			parts = append(parts, fmt.Sprintf("--%s", flag), value)
+			parts = append(parts, fmt.Sprintf("--%s", flag), ShellQuote(value))
 		}
 	}
 
@@ -334,21 +336,21 @@ func BuildCompileCommandWithDocker(base *OpentaintCommandBuilder, projectPath, o
 		WithOutput("/database/" + outputName).
 		Build()
 
-	return fmt.Sprintf("docker run --rm -v %s:/project -v %s:/database ghcr.io/seqra/opentaint:latest %s",
-		absProjectPath, outputDir, compileCmd)
+	return fmt.Sprintf("docker run --rm -v %s -v %s ghcr.io/seqra/opentaint:latest %s",
+		ShellQuote(absProjectPath+":/project"), ShellQuote(outputDir+":/database"), compileCmd)
 }
 
 // BuildScanCommandWithDocker builds a docker run command string for scanning a project
 // using the opentaint Docker image. The base builder carries all user-specified scan flags
 // (timeout, semgrep-compatibility, etc.) so that new flags added to the builder factory
-// are automatically included. Path-based flags (output, ruleset) are remapped to container paths.
+// are automatically included. Path-based flags are remapped to container paths.
 func BuildScanCommandWithDocker(base *OpentaintCommandBuilder, projectPath, sarifReportPath string, rulesetPaths []string) string {
 	absProjectPath, _ := filepath.Abs(projectPath)
 	absSarifReportPath, _ := filepath.Abs(sarifReportPath)
 	outputDir := filepath.Dir(absSarifReportPath)
 	sarifName := filepath.Base(absSarifReportPath)
 
-	volumes := fmt.Sprintf("-v %s:/project -v %s:/output", absProjectPath, outputDir)
+	volumes := fmt.Sprintf("-v %s -v %s", ShellQuote(absProjectPath+":/project"), ShellQuote(outputDir+":/output"))
 
 	// Map rulesets to container paths; "builtin" is kept as-is, custom paths get volume mounts.
 	// Skip rulesets entirely when only "builtin" is specified (it is the default).
@@ -367,7 +369,7 @@ func BuildScanCommandWithDocker(base *OpentaintCommandBuilder, projectPath, sari
 			} else {
 				absRuleset, _ := filepath.Abs(ruleset)
 				containerPath := fmt.Sprintf("/rules/ruleset%d", i)
-				volumes += fmt.Sprintf(" -v %s:%s", absRuleset, containerPath)
+				volumes += " -v " + ShellQuote(absRuleset+":"+containerPath)
 				containerRulesets = append(containerRulesets, containerPath)
 			}
 		}
@@ -379,20 +381,55 @@ func BuildScanCommandWithDocker(base *OpentaintCommandBuilder, projectPath, sari
 	scanCmd := NewScanCommand("/project").
 		CopyFlagsFrom(base).
 		WithOutput("/output/" + sarifName).
-		WithRuleset(containerRulesets).
-		Build()
+		WithRuleset(containerRulesets)
+	mapDockerInputPaths(scanCmd, base, "dataflow-models", "/dataflow-models", &volumes)
+	mapDockerInputPaths(scanCmd, base, "passthrough-models", "/passthrough-models", &volumes)
 
-	return fmt.Sprintf("docker run --rm %s ghcr.io/seqra/opentaint:latest %s", volumes, scanCmd)
+	return fmt.Sprintf("docker run --rm %s ghcr.io/seqra/opentaint:latest %s", volumes, scanCmd.Build())
+}
+
+func mapDockerInputPaths(
+	command *OpentaintCommandBuilder,
+	source *OpentaintCommandBuilder,
+	flag string,
+	containerRoot string,
+	volumes *string,
+) {
+	paths := source.arrayFlags[flag]
+	if len(paths) == 0 {
+		return
+	}
+
+	mapped := make([]string, 0, len(paths))
+	for index, path := range paths {
+		absPath, _ := filepath.Abs(path)
+		containerPath := fmt.Sprintf("%s/input%d", containerRoot, index)
+		*volumes += " -v " + ShellQuote(absPath+":"+containerPath)
+		mapped = append(mapped, containerPath)
+	}
+	command.arrayFlags[flag] = mapped
 }
 
 // BuildScanCommandFromCompile builds a scan command string for use after compile,
 // suggesting the next step with the compiled project model.
 func BuildScanCommandFromCompile(projectPath, projectModelPath string) string {
-	// Suggest output path based on project path
-	outputPath := filepath.Join(projectPath, "opentaint.sarif")
+	// Write the report where a scan of the sources would write it
+	outputPath := DefaultSarifReportPath(projectPath)
 
 	return NewScanCommand("").
 		WithProjectModel(projectModelPath).
 		WithOutput(outputPath).
 		Build()
+}
+
+// ShortDuration formats d the way a user writes it: 4m, not 4m0s.
+func ShortDuration(d time.Duration) string {
+	text := d.String()
+	if strings.HasSuffix(text, "m0s") {
+		text = strings.TrimSuffix(text, "0s")
+	}
+	if strings.HasSuffix(text, "h0m") {
+		text = strings.TrimSuffix(text, "0m")
+	}
+	return text
 }

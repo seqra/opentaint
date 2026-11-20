@@ -30,18 +30,19 @@ type Error struct {
 	Message  string
 }
 
-// ExitMessage returns a human-readable description for a known analyzer exit
-// code, or empty string if the code is not recognized.
+// ExitMessage returns the error message for a known analyzer exit code, or an empty string
+// if the code is not known. Classify adds the code to it. The suggestions after the error say
+// what to do.
 func ExitMessage(code int) string {
 	switch code {
 	case ExitConfigError:
-		return "project configuration error"
+		return "Analysis failed because of a project configuration error"
 	case ExitTimeout:
-		return "analysis timed out — try increasing --timeout or --max-memory"
+		return "Analysis timed out"
 	case ExitOOM:
-		return "out of memory — try increasing --max-memory (e.g. --max-memory 16G)"
+		return "Analysis ran out of memory"
 	case ExitException:
-		return "unhandled analyzer exception"
+		return "The analyzer failed with an unhandled exception"
 	default:
 		return ""
 	}
@@ -57,13 +58,10 @@ func Classify(cmdErr *java.JavaCommandError) *Error {
 
 	code := cmdErr.ExitCode
 	if msg := ExitMessage(code); msg != "" {
-		return &Error{
-			ExitCode: code,
-			Message:  fmt.Sprintf("Analysis failed (exit code %d): %s", code, msg),
-		}
+		return &Error{ExitCode: code, Message: fmt.Sprintf("%s (exit code %d)", msg, code)}
 	}
 	return &Error{
 		ExitCode: code,
-		Message:  fmt.Sprintf("Analysis failed with exit code %d", code),
+		Message:  fmt.Sprintf("The analyzer exited with code %d", code),
 	}
 }
