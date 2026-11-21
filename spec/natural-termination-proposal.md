@@ -1013,6 +1013,56 @@ Trace result (branch `proto/conductor-volume-20261120`, native, cutoff
   hold 68-93 % of all rows. Backward run-6 makes 570,138 and 395,746 K
   cuts in them.
 
+Correction and widening (branch `proto/cyclic-widening-20261121`, on S):
+
+- The relative C5 cap is not the driver; the loop does not add the
+  levels either. In each loop pass the analyzer puts a pathless DEMAND
+  fact `var(3).[any]` on the iterator. Seven calls in the loop write it.
+  The `ALIASES` call stage copies a callee's coarse reply, and the `put`
+  write, onto every local that the alias analysis links to the argument.
+  At the back edge C5 copies that pathless fact into every exit row of
+  the previous backward run: in run-5, 400 of 401 publications of one
+  premise come from it, and 46,594 of 58,157 over all `replace` loop
+  scopes. Backward, C2 starts one counted accessor below each entry. So
+  the demand gains one level per pair of runs.
+- The 10-way branching comes from the models: `it.next()` dispatches to
+  `Iterator#Element`, `StrTokenizer#inputContent`,
+  `HeaderIterator#headers` and `HeaderElementIterator#headerElements`;
+  `e.getValue()` to `entryData`, `Value` and two `Pair#right` fields,
+  each also with an identity copy. Inferred root cause: models that
+  return the receiver itself (`this → result`) pollute the alias set, so
+  the iterator seems to alias `result`, which never happens in Java. This
+  alias-set precision is a separate item.
+- Widening A (`-Dorg.opentaint.bidi.cyclicWidening=fwd`): in a loop block
+  at its back-edge exit, or at the method level of a recursive method,
+  C5 restricts a MAY fact only to the first counted accessor below the
+  MAY node: `var(3).[any]` with exit `var(3).a.b.c` gives
+  `var(3).a.[any]`. It refines less than the demand requests. It has no
+  numeric parameter and reads neither K nor the report state. What it can
+  lose: a finding that needs a deep exact start below a MAY node in a
+  cyclic scope where that node does not move with K. None was observed.
+
+| Conductor | S | S + A (2 launches) |
+| --- | --- | --- |
+| `replace` loop rows | 33,006 at H7, growing | 5,215-5,408 from H9; 194-195 entries |
+| Run-6 / run-7 | 349 s / 162 s | 186-191 s / 26-29 s |
+| Run-8 | does not finish | 397-401 s |
+| Binding K reads | still at run-7 | 0 in every run from 16 to 21 |
+| End | timeout in run-8 | no `FIXED_POINT` by run-21 (budget 5,400 s) |
+| Findings | 7 / 0 | identical SARIF and code flows |
+
+- Still open on Conductor: from run-17 only the handoff and record
+  conditions of `FIXED_POINT` fail. Backward rows of `replaceList` grow
+  (+3,300 at H18, +2,929 at H20) and record keys rotate. Backward runs
+  cost 600-772 s each, so Conductor cannot end inside the 1,080 s
+  production budget even if it converged. Next: trace `replaceList` in
+  runs 18-20, measure the backward mode of A, profile one late backward
+  run, and the alias-set precision.
+- Gate of A: module suites identical (A never fires); rule suite
+  identical; OWASP identical (A never fires; handoff digests equal);
+  Stirling-PDF identical (A fires 51-189 times per forward run and
+  changes only H3-H5).
+
 Conclusion: Conductor's divergence is cyclic growth by combinations of
 container accessors, driven by the demand chain itself. `replace` is in
 a loop and a recursion, so it is outside requirement AC. No exact
@@ -1248,6 +1298,7 @@ All branches are local, not pushed. Data directories are under
 | Deep-field-chain fixtures | `proto/deep-chain-fixture-20261120`, `docs/reports/deep-chain-fixture-20261120.md` | in the branch |
 | Stirling-PDF trace | this proposal, §5 | `scripts/` |
 | Cycle-attached fold W, Stirling-PDF row trace, owner census | `proto/cycle-fold-20261120`, `docs/reports/cycle-fold-20261120.md` | `cycle-fold/` |
+| Conductor cyclic widening A, `replace` growth trace | `proto/cyclic-widening-20261121`, `docs/reports/cyclic-widening-20261121.md` | `cyclic-widening/` |
 | Loop-block DemandTarget cover LG, D4 trace, loop fixtures L1-L6 | `proto/loop-dt-20261121`, `docs/reports/loop-dt-20261121.md` | `loop-dt/` |
 | Configuration S: MUST ignores an EXACT cleaner; exact-start volume | `proto/must-cleaner-20261121`, `docs/reports/must-cleaner-20261121.md` | `must-cleaner/` |
 | AC closure fixes | `proto/ac-closure-20261121`, `docs/reports/ac-closure-20261121.md` | `ac-closure/` |
