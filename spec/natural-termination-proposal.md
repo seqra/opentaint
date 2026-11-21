@@ -197,6 +197,52 @@ Conductor run-4, run-6 and run-7 took about 1-2 min longer each. In a
 synthetic wide object graph it makes one premise per leaf at once (peak
 256 premises per run against 16) but 35-38 % fewer facts in total.
 
+**Loop-block DemandTarget renewal** (branch `proto/loop-dt-20261121`, on
+S):
+
+- The OWASP cyclic residual under S (93 rows) is three `doPost` loop
+  roots (`02326`, `01418`, `01874`), their post-loop blocks and two
+  `doGet` relays. On `02326` every late witness is at
+  `write(bar.toCharArray())` in post-loop block 6, at two conjunctive
+  sinks that are already confirmed. The DEMAND arm is a STAR start
+  `var(7).<field>.*` below the NORMAL `var(7).MUST`; a `var(7).MAY` row
+  admits it, and the sink's any-field seed makes that row in the
+  backward run. The cycle is: witness → DemandTarget and seed → MAY row
+  → STAR start → the same witness. The taint enters the block from
+  outside, so the block never gets a complete target of its own.
+- Why XE lost finding B in deep-chain D4: B has its own DemandTarget
+  and seed, and its seed does reach the source. The cause is
+  `LoopOutputRestriction.restrictScalar`: it drops a growing loop output
+  that no consumer admits. In run-5 only the coarse row that A's
+  any-field seed made kept the one-pass output `c.f$`. Without A's seed
+  `c.f$` is dropped and `c.f.f$` is never made. This is the same native
+  defect that loses loop-grown chains of depth 3 or more with all flags
+  off: a loop is not monotone in K. Keeping the unobserved outputs
+  restores B, but the analysis then runs to `RUN_LIMIT`.
+- Rule LG (`-Dorg.opentaint.bidi.loopDtCover=true`): a DEMAND witness in
+  a loop block, whose method root has a saved complete ZERO →
+  NormalTarget for the same sink, emits no DemandTarget and no seed only
+  when (a) every sink of the method that captured a seed so far is
+  covered the same way, and (b) the method relayed no callee
+  DemandTarget in this or the previous forward run. It reads only seeds,
+  targets and complete summaries.
+
+| Gate of LG alone on S | Result |
+| --- | --- |
+| New loop fixtures L1-L6 and D4 | no finding lost (XE lost B in L1, L2, L4, D4) |
+| Module suites (366 analyses, 78 deep-chain variants) | 0 report changes; `LoopMarkOriginServiceTest` no longer refines the deep route of an already-confirmed sink (same report) |
+| Rule suite | 585 of 585 identical; LG never acts |
+| OWASP, 3 interleaved pairs | identical SARIF and code flows; **`NO_DEMAND_EDGE` at run-7** in 3 of 3 (S: `FIXED_POINT` 11); cyclic and helper rows go to 0 |
+| OWASP driver, census off, 2 pairs | S 105.1 / 103.8 s, LG 101.3 / 100.2 s (native 132-134 s) |
+| Stirling-PDF, Conductor (1 launch each) | identical reports and ends; LG never acts (its guard fails on all 15 Stirling-PDF candidates) |
+
+So OWASP's forward demand becomes empty: the stop of the original task,
+with the same report and about 25 % less driver time than native. LG
+has no proof. Its guard avoids the loop-output interference, which is
+live on Stirling-PDF (200,107 drops) and Conductor (672,433). The real
+fix is to make the loop output restriction monotone in K; then LG's
+guard may become unnecessary.
+
 Open questions for the next step:
 
 1. Scope of AC for an acyclic callee of a cyclic caller: decided. The
@@ -1202,6 +1248,7 @@ All branches are local, not pushed. Data directories are under
 | Deep-field-chain fixtures | `proto/deep-chain-fixture-20261120`, `docs/reports/deep-chain-fixture-20261120.md` | in the branch |
 | Stirling-PDF trace | this proposal, §5 | `scripts/` |
 | Cycle-attached fold W, Stirling-PDF row trace, owner census | `proto/cycle-fold-20261120`, `docs/reports/cycle-fold-20261120.md` | `cycle-fold/` |
+| Loop-block DemandTarget cover LG, D4 trace, loop fixtures L1-L6 | `proto/loop-dt-20261121`, `docs/reports/loop-dt-20261121.md` | `loop-dt/` |
 | Configuration S: MUST ignores an EXACT cleaner; exact-start volume | `proto/must-cleaner-20261121`, `docs/reports/must-cleaner-20261121.md` | `must-cleaner/` |
 | AC closure fixes | `proto/ac-closure-20261121`, `docs/reports/ac-closure-20261121.md` | `ac-closure/` |
 | Integration NT and its gate | `proto/termination-integration-20261120`, `docs/reports/termination-integration-20261120.md` | `integration/` |
