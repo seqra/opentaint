@@ -291,6 +291,51 @@ guard may become unnecessary.
   (2) The Conductor cost increase fails "no performance loss" (n = 1);
   its cause is not traced.
 
+**Stirling-PDF makers** (branch `proto/stirling-ac-20261121`, on S):
+
+| Rows of the 43 | Owner | Maker |
+| --- | --- | --- |
+| 14 | `WebResponseUtils#bytesToWebResponse` | DEMAND arms of the XSS predicate sink with ND premises, fed by DEMAND offers from two cyclic callers |
+| 10 | `multiPartFileToWebResponse`, 4 `FilterController` methods, entry points | relays of those DemandTargets |
+| 3 | `AuthController#login` and its entry point | a self-renewing DemandTarget at the STAR static premise `REG.User#username.*`, started from a backward MAY row |
+| 8 | `decodeMimeHeader` block 1 (in AC scope: no loop before it) | relative C5 cap at the block exit |
+| 1 | `CustomHtmlSanitizer#sanitize` | a start that is DEMAND only because its caller offers DEMAND |
+| 7 | inside-read owners | (the inside-read rule) |
+
+- Ablation: dropping the 21 rows of `bytesToWebResponse` once at H7
+  takes the residual 43 → 5 and the end `FIXED_POINT` 33 → 15, driver
+  577 s → 81 s, same report and code flows. That one DemandTarget loop
+  anchors 38 of the 43 rows and about half of Stirling-PDF's cyclic
+  demand.
+- No exact cover exists at the witness for ND premises. Covering a
+  DEMAND arm with premise P by a complete NormalTarget whose premise is a
+  subset of P loses `B@g:1` in attack fixture M3: the DEMAND arm's
+  DemandTarget and seed are the only refinement channel for callers that
+  bind the premise on DEMAND. X is exact only because ZERO needs no
+  binding. Adding a channel at the caller (relay plus call-site seed)
+  was exact but cost 3 min against 3.4 s in one forward run; withdrawn.
+- Rule RX: the witness tags its DemandTarget with its report identity,
+  and a tagged DemandTarget is not relayed into a caller that already
+  has a complete ZERO → NormalTarget for that identity. Exact by the
+  same argument as X (ZERO at the caller).
+
+| Gate of RX on S | Result |
+| --- | --- |
+| Stirling-PDF, 2 launches | residual 43 → 19; end `FIXED_POINT` 33 → **15**; driver 577-581 s → **71-72 s**; forward rows 944 → 478; same report and code flows |
+| OWASP, 2 launches | forward rows 99 → 11 (cyclic 93 → 9); residual 6 → 2; same report and time |
+| Conductor | timeout in run-8 as before; same report; residual at H7 15 → 11 |
+| Rule suite | identical |
+| Module suite | 325 analyses identical (23 generated analyses not compared); 49 assertions fail because they compare the untagged DemandTarget object or count DemandTarget rows |
+
+- `C5B` (the no-cap rule for acyclic blocks): `decodeMimeHeader` block
+  rows 8 → 2, same report, +1.7 % driver time on Stirling-PDF (n = 2).
+- Left on Stirling-PDF with RX: `bytesToWebResponse` 14 rows (its
+  remaining DEMAND input is probably from a block of
+  `PipelineController#handleData`, not traced), `login` 3 rows,
+  `saveUser` 2 inside-read rows. The `bytesToWebResponse` STAR arms and
+  the `login` STAR start both come from a backward MAY row that turns
+  into a forward STAR start. That is the next maker to study.
+
 Open questions for the next step:
 
 1. Scope of AC for an acyclic callee of a cyclic caller: decided. The
@@ -1346,6 +1391,7 @@ All branches are local, not pushed. Data directories are under
 | Deep-field-chain fixtures | `proto/deep-chain-fixture-20261120`, `docs/reports/deep-chain-fixture-20261120.md` | in the branch |
 | Stirling-PDF trace | this proposal, §5 | `scripts/` |
 | Cycle-attached fold W, Stirling-PDF row trace, owner census | `proto/cycle-fold-20261120`, `docs/reports/cycle-fold-20261120.md` | `cycle-fold/` |
+| Stirling-PDF makers, rule RX, `C5B` | `proto/stirling-ac-20261121`, `docs/reports/stirling-ac-20261121.md` | `stirling-ac/` |
 | Inside-read rule, no-cap isolation | `proto/inside-read-20261121`, `docs/reports/inside-read-20261121.md` | `inside-read/` |
 | Conductor cyclic widening A, `replace` growth trace | `proto/cyclic-widening-20261121`, `docs/reports/cyclic-widening-20261121.md` | `cyclic-widening/` |
 | Loop-block DemandTarget cover LG, D4 trace, loop fixtures L1-L6 | `proto/loop-dt-20261121`, `docs/reports/loop-dt-20261121.md` | `loop-dt/` |
