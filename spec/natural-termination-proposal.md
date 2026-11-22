@@ -243,6 +243,54 @@ live on Stirling-PDF (200,107 drops) and Conductor (672,433). The real
 fix is to make the loop output restriction monotone in K; then LG's
 guard may become unnecessary.
 
+**Inside reads and the no-cap rule** (branch `proto/inside-read-20261121`):
+
+- S without `acC5Exact` (S'): reports and ends equal, but the AC residual
+  rises (OWASP 6 → 18, Stirling-PDF 43 → 44, Conductor 15 → 21), because
+  the relative-cap rows come back. `acC5Exact` adds no facts: acyclic
+  NORMAL facts fall by 1.0 % (OWASP), 0.1 % (Stirling-PDF), 1.1 %
+  (Conductor). It stays.
+- Trace (full OWASP): the only forward inside read in the helpers is the
+  `new String(byte[])` model edge `arg(0).[].* → <this>.*` on the coarse
+  premise `arg(1).String#bytes.*/FLOW`. The finer premise
+  `…String#bytes.[].*` already exists and is NORMAL. The caller offers
+  exact actuals `arg(1).String#bytes.$/T`, so the coarse premise starts
+  in every run, and its DEMAND reply `ret.MAY` reaches those exact
+  actuals, although an exact `$` holds no array element. That reply
+  reaches the XSS sink and renews the callers' DemandTargets.
+- Rule `insideReadNormal`: in forward restricted runs, in acyclic
+  root-scope methods, at a NORMAL FLOW inside read of `P = b.p.*`, do not
+  emit the DEMAND reply; start the finer premise `F = b.p.q.*` in the same
+  run, and let C5 check F's publications against the entry of P's row.
+  F is the rule's own read path and equals the backward image that the
+  native row requests, so the rule stays inside the requested
+  refinement. Natively C2 starts the same F later: on OWASP the same 24
+  premises, 4 runs earlier. Saved replay finds F's record by prefix
+  without a row. No proof.
+
+| Gate | S | S + inside-read rule |
+| --- | --- | --- |
+| OWASP end (4 launches) | `FIXED_POINT` 11 | **`NO_DEMAND_EDGE` 7** in 4 of 4 |
+| OWASP report | 2,633 / 0 | identical SARIF and code flows |
+| OWASP driver / wall | 104-105 s / 181 s | **100-101 s / 177 s** (native 132-134 s driver) |
+| OWASP forward rows / AC residual | 99 / 6 | **0 / 0 from H5** |
+| Rule suite | — | the rule never fires; identical |
+| Stirling-PDF (2 + 2) | `FIXED_POINT` 33, 32 / 2 | `FIXED_POINT` 33, **32 / 0**; AC residual 35, forward rows 484 (S: ~940) |
+| Conductor (1 launch) | timeout in run-8 | same; run-6 **+10 %** (6:20 against 5:46-5:54); facts +5.4 % NORMAL, +12.9 % DEMAND, nearly all in cyclic methods |
+| Module suite (348 analyses) | — | one report change: a fault-injection variant of `RepeatedDemandHiddenRenameTest` that removes the helper's coarse row now confirms the true finding; 0 lost |
+
+- On OWASP this rule alone drains everything, also the cyclic callers,
+  because their late demand was the DemandTarget renewal that the
+  helpers' DEMAND replies fed. So it does the work of LG at the maker,
+  without a guard. If it passes its gate, LG is not needed.
+- Two open points. (1) The two Stirling-PDF stored-XSS candidates
+  (`UserController.java:753`, `:768`, §5.5) disappear:
+  `UserService#saveUser(Optional, String)` no longer hands off its DEMAND
+  replies `__repo__.MAY` and `ret.MAY`. The legacy engine reports
+  neither. This is probably a precision gain; it needs a decision.
+  (2) The Conductor cost increase fails "no performance loss" (n = 1);
+  its cause is not traced.
+
 Open questions for the next step:
 
 1. Scope of AC for an acyclic callee of a cyclic caller: decided. The
@@ -1298,6 +1346,7 @@ All branches are local, not pushed. Data directories are under
 | Deep-field-chain fixtures | `proto/deep-chain-fixture-20261120`, `docs/reports/deep-chain-fixture-20261120.md` | in the branch |
 | Stirling-PDF trace | this proposal, §5 | `scripts/` |
 | Cycle-attached fold W, Stirling-PDF row trace, owner census | `proto/cycle-fold-20261120`, `docs/reports/cycle-fold-20261120.md` | `cycle-fold/` |
+| Inside-read rule, no-cap isolation | `proto/inside-read-20261121`, `docs/reports/inside-read-20261121.md` | `inside-read/` |
 | Conductor cyclic widening A, `replace` growth trace | `proto/cyclic-widening-20261121`, `docs/reports/cyclic-widening-20261121.md` | `cyclic-widening/` |
 | Loop-block DemandTarget cover LG, D4 trace, loop fixtures L1-L6 | `proto/loop-dt-20261121`, `docs/reports/loop-dt-20261121.md` | `loop-dt/` |
 | Configuration S: MUST ignores an EXACT cleaner; exact-start volume | `proto/must-cleaner-20261121`, `docs/reports/must-cleaner-20261121.md` | `must-cleaner/` |
