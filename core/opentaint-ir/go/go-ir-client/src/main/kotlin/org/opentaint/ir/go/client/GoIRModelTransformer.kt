@@ -157,7 +157,11 @@ internal class GoIRModelTransformer(
         val context = object : GoIRBodyContext() {
             override fun type(type: GoIRType) = this@ModelScope.type(type)
             override fun function(reference: GoIrFunctionReference) = reference
-                .copy(pkg = path(reference.pkg), signature = type(reference.signature) as GoIRFuncType)
+                .copy(
+                    pkg = path(reference.pkg),
+                    fullName = symbol(reference.fullName),
+                    signature = type(reference.signature) as GoIRFuncType,
+                )
                 .also { it.program = program }
             override fun global(reference: GoIRGlobalReference) =
                 reference.copy(pkg = path(reference.pkg)).also { it.program = program }
