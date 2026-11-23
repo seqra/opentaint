@@ -41,6 +41,13 @@ class GenericsTest : AnalysisTest() {
     @Test fun genericBox002F() = assertNotReachable("test.genericBox002F")
     @Test fun genericBoxSet001T() = assertReachable("test.genericBoxSet001T")
 
+    // Generic box through an interface
+    @Test fun genericBoxIface001T() = assertReachable("test.genericBoxIface001T")
+    @Test fun genericBoxIface002F() = assertNotReachable("test.genericBoxIface002F")
+
+    // A method of a generic type as an entry point
+    @Test fun genericBoxEntry001T() = assertReachable("(test.GenBox[T]).genericBoxEntry001T")
+
     // Generic pair
     @Test fun genericPair001T() = assertReachable("test.genericPair001T")
     @Test fun genericPair002F() = assertNotReachable("test.genericPair002F")

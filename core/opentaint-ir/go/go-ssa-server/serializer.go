@@ -146,14 +146,75 @@ func (s *serializer) collectAll() {
 			}
 		}
 	}
-	for fn := range ssautil.AllFunctions(s.prog) {
+	all := allFunctionsWithGenericMethods(s.prog, s.pkgs)
+	for fn := range all {
 		s.collectFunctionSignature(fn)
 	}
-	for fn := range ssautil.AllFunctions(s.prog) {
+	for fn := range all {
 		if s.shouldEmitBody(fn) {
 			s.collectFunctionBody(fn)
 		}
 	}
+}
+
+// allFunctionsWithGenericMethods returns ssautil.AllFunctions plus the generic
+// methods of the packages and the functions their bodies reference (closures,
+// callees). AllFunctions skips the methods of generic types and the methods
+// with their own type parameters, so without them such a method is reached
+// only as the origin of an instance, and has no body.
+func allFunctionsWithGenericMethods(prog *ssa.Program, pkgs []*ssa.Package) map[*ssa.Function]bool {
+	all := ssautil.AllFunctions(prog)
+	var visit func(fn *ssa.Function)
+	visit = func(fn *ssa.Function) {
+		if fn == nil || all[fn] {
+			return
+		}
+		all[fn] = true
+		var buf [10]*ssa.Value
+		for _, b := range fn.Blocks {
+			for _, instr := range b.Instrs {
+				for _, op := range instr.Operands(buf[:0]) {
+					if callee, ok := (*op).(*ssa.Function); ok {
+						visit(callee)
+					}
+				}
+			}
+		}
+	}
+	for _, pkg := range pkgs {
+		for _, fn := range genericMethods(prog, pkg) {
+			visit(fn)
+		}
+	}
+	return all
+}
+
+// genericMethods returns the methods of the generic types of pkg and the
+// methods with their own type parameters, as the generic functions built from
+// the syntax.
+func genericMethods(prog *ssa.Program, pkg *ssa.Package) []*ssa.Function {
+	var methods []*ssa.Function
+	for _, mem := range sortedMembers(pkg) {
+		t, ok := mem.(*ssa.Type)
+		if !ok {
+			continue
+		}
+		named, ok := t.Type().(*types.Named)
+		if !ok {
+			continue
+		}
+		genericType := named.TypeParams().Len() > 0
+		for i := 0; i < named.NumMethods(); i++ {
+			method := named.Method(i)
+			if !genericType && method.Signature().TypeParams().Len() == 0 {
+				continue
+			}
+			if fn := prog.FuncValue(method); fn != nil {
+				methods = append(methods, fn)
+			}
+		}
+	}
+	return methods
 }
 
 func (s *serializer) shouldEmitBody(fn *ssa.Function) bool {
@@ -1041,6 +1102,23 @@ func (s *serializer) serializeNamedType(named *types.TypeName) *pb.ProtoNamedTyp
 				ConstraintTypeId: s.typeID(typeParam.Constraint()),
 				TypeId:           s.typeID(typeParam),
 			})
+		}
+	}
+	// MethodValue returns nil for a method of a generic type, so the method
+	// sets below list nothing for it: list its declared methods, so that a
+	// call through an interface resolves to them.
+	if namedType.TypeParams().Len() > 0 {
+		for i := 0; i < namedType.NumMethods(); i++ {
+			method := namedType.Method(i)
+			fn := s.prog.FuncValue(method)
+			if fn == nil {
+				continue
+			}
+			if _, ptr := method.Signature().Recv().Type().(*types.Pointer); ptr {
+				nt.PointerMethodIds = append(nt.PointerMethodIds, s.ids.functionID(fn))
+			} else {
+				nt.MethodIds = append(nt.MethodIds, s.ids.functionID(fn))
+			}
 		}
 	}
 	mset := s.prog.MethodSets.MethodSet(namedType)
