@@ -283,13 +283,22 @@ guard may become unnecessary.
   because their late demand was the DemandTarget renewal that the
   helpers' DEMAND replies fed. So it does the work of LG at the maker,
   without a guard. If it passes its gate, LG is not needed.
-- Two open points. (1) The two Stirling-PDF stored-XSS candidates
-  (`UserController.java:753`, `:768`, §5.5) disappear:
-  `UserService#saveUser(Optional, String)` no longer hands off its DEMAND
-  replies `__repo__.MAY` and `ret.MAY`. The legacy engine reports
-  neither. This is probably a precision gain; it needs a decision.
-  (2) The Conductor cost increase fails "no performance loss" (n = 1);
+- **The rule fails its gate in this form** (decision of 23 November).
+  The two Stirling-PDF stored-XSS candidates (`UserController.java:753`,
+  `:768`, §5.5) disappear: `UserService#saveUser(Optional, String)` no
+  longer hands off its DEMAND replies `__repo__.MAY` and `ret.MAY`.
+  There is no trusted ground truth that calls this a precision gain, so
+  it is a report change. Gate rule from now on: confirmed AND
+  provisional results must stay identical; a change that looks like a
+  precision gain is still a failure.
+- The Conductor cost increase also fails "no performance loss" (n = 1);
   its cause is not traced.
+- The same maker does two things. On OWASP the DEMAND reply to an exact
+  actual only renews DemandTargets at confirmed sinks. On Stirling-PDF
+  it also makes two sinks reached (and so provisional) that nothing
+  confirms. A rule that removes the reply removes both. A form that
+  passes must keep what the reply makes reached and remove only the
+  demand that the reply renews.
 
 **Stirling-PDF makers** (branch `proto/stirling-ac-20261121`, on S):
 
