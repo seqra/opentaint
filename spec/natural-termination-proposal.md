@@ -299,6 +299,16 @@ guard may become unnecessary.
   confirms. A rule that removes the reply removes both. A form that
   passes must keep what the reply makes reached and remove only the
   demand that the reply renews.
+- Selected direction (option A, 23 November): decouple "reached" from
+  "demand". Keep the MAY reply, so that what it makes reached stays
+  reached. Mark it unrefinable: its refinement F is complete in the same
+  run, so no later run can change it. An unrefinable fact makes no
+  demand row, no DemandTarget and no seed. At a natural end, publish the
+  reached-but-unconfirmed sinks as provisional. If native runs that end
+  with `NO_DEMAND_EDGE` already have such sinks, publish only the sinks
+  that are reached through unrefinable facts, so that native outputs do
+  not change. This adds a third layer state, which is a semantic change.
+  (Running: `proto/unrefinable-may-20261123`.)
 
 **Stirling-PDF makers** (branch `proto/stirling-ac-20261121`, on S):
 
