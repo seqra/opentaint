@@ -308,7 +308,39 @@ guard may become unnecessary.
   with `NO_DEMAND_EDGE` already have such sinks, publish only the sinks
   that are reached through unrefinable facts, so that native outputs do
   not change. This adds a third layer state, which is a semantic change.
-  (Running: `proto/unrefinable-may-20261123`.)
+- **Option A fails its gate** (branch `proto/unrefinable-may-20261123`).
+  With S + inside-read + A, Stirling-PDF gives 32 / 0 against native
+  32 / 2 in 4 of 4 launches, also with RX. The trace:
+  - The inside read is in `saveUser(Optional, String)` at `user.get()`.
+    Its DEMAND reply `ret.MAY` / `REPO.MAY` goes up through
+    `addApiKeyToUser`, `refreshApiKeyForUser` and `getApiKeyForUser` to
+    `user.getApiKey()` at both `UserController` sinks. It is the only
+    value that covers `User#apiKey`: the NORMAL relation excludes that
+    field, because `setApiKey` overwrites it with a generated key.
+  - In run-3 each sink is reached once, under the DEMAND STAR premise
+    `REPO.*/XSS`, independent of the reply.
+  - From run-5 the reply's demand rows make the coarse backward row
+    `REPO.MAY/XSS => ZERO`, and the 14-16 controller starts of each later
+    run follow that row. Without the rows the backward row is precise
+    (`REPO.User#apiKey.MAY/XSS => ZERO`), the controllers do not start,
+    and the sinks are not reached again. Handing the unrefinable pieces
+    off as rows again (DemandTargets and seeds still suppressed) brings
+    back 32 / 2.
+  - So these two provisional results exist only because coarse demand
+    makes later runs explore the controllers. Native publishes the
+    reached set of the last run at its cutoff, and that set depends on
+    the demand. Any rule that makes this demand precise removes them.
+- Other gates of A: rule suite, jvm suite, OWASP and Conductor
+  identical to native; OWASP ends with `NO_DEMAND_EDGE` at run-7; A adds
+  no Conductor cost (run-6 5:53, inside the native range). 46 module tests
+  fail with every flag off because the layer enum has a third value.
+- Native analyses that end with `NO_DEMAND_EDGE` while `L∖C` is not
+  empty: 3 of 233 in the module suite, 0 in the jvm suite, rule suite
+  and projects. So a plain "publish `L∖C` at every natural end" rule
+  would change native reports.
+- Consequence: for this maker, requirement AC (zero rows for `saveUser`)
+  and "provisional results identical to native" cannot both hold. A
+  decision is needed.
 
 **Stirling-PDF makers** (branch `proto/stirling-ac-20261121`, on S):
 
@@ -1410,6 +1442,7 @@ All branches are local, not pushed. Data directories are under
 | Deep-field-chain fixtures | `proto/deep-chain-fixture-20261120`, `docs/reports/deep-chain-fixture-20261120.md` | in the branch |
 | Stirling-PDF trace | this proposal, §5 | `scripts/` |
 | Cycle-attached fold W, Stirling-PDF row trace, owner census | `proto/cycle-fold-20261120`, `docs/reports/cycle-fold-20261120.md` | `cycle-fold/` |
+| Option A (unrefinable MAY), `saveUser` trace | `proto/unrefinable-may-20261123`, `docs/reports/unrefinable-may-20261123.md` | `unrefinable/` |
 | Stirling-PDF makers, rule RX, `C5B` | `proto/stirling-ac-20261121`, `docs/reports/stirling-ac-20261121.md` | `stirling-ac/` |
 | Inside-read rule, no-cap isolation | `proto/inside-read-20261121`, `docs/reports/inside-read-20261121.md` | `inside-read/` |
 | Conductor cyclic widening A, `replace` growth trace | `proto/cyclic-widening-20261121`, `docs/reports/cyclic-widening-20261121.md` | `cyclic-widening/` |
