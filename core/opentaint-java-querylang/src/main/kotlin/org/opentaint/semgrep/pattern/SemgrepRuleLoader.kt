@@ -125,15 +125,24 @@ class SemgrepRuleLoader(
         severity: List<Severity> = emptyList(),
         ruleIdFilter: List<String> = emptyList(),
         ruleIdExclude: List<String> = emptyList(),
+        semgrepStyleRuleIdFilter: List<String> = emptyList(),
+        semgrepStyleRuleIdExclude: List<String> = emptyList(),
     ): RuleLoadResult {
+        registeredRules.values.toList()
+            .forEach { parseRule(it, forceLibraryMode = false) }
+
+        val ruleIdsBySemgrepStyleId = registeredRules.keys.groupBy(SemgrepRuleUtils::getSemgrepStyleRuleId)
+        fun List<String>.toRuleIds() = flatMap { ruleIdsBySemgrepStyleId[it].orEmpty() }
+
+        val allowedRuleIds = (ruleIdFilter + semgrepStyleRuleIdFilter.toRuleIds()).toSet()
+            .takeIf { ruleIdFilter.isNotEmpty() || semgrepStyleRuleIdFilter.isNotEmpty() }
+        val excludedRuleIds = (ruleIdExclude + semgrepStyleRuleIdExclude.toRuleIds()).toSet()
+
         fun Rule<*>.skip(): Boolean =
             info.isDisabled || info.isLibraryRule
                 || !ruleSeverityAllow(this, severity)
-                || !ruleIdAllow(this, ruleIdFilter)
-                || ruleIdExcluded(this, ruleIdExclude)
-
-        registeredRules.values.toList()
-            .forEach { parseRule(it, forceLibraryMode = false) }
+                || !ruleIdAllow(this, allowedRuleIds)
+                || ruleIdExcluded(this, excludedRuleIds)
 
         resolveRuleOverrides()
 
@@ -152,7 +161,6 @@ class SemgrepRuleLoader(
             .forEach { it.addLoaded(loadNormalRule(it)) }
 
         val tagIndex = buildTagIndex()
-        val excludedRuleIds = ruleIdExclude.toSet()
         parsedRules.values
             .filterIsInstance<JoinRule<*>>()
             .filterNot { it.skip() }
@@ -610,10 +618,10 @@ class SemgrepRuleLoader(
     private fun ruleSeverityAllow(rule: Rule<*>, severity: List<Severity>): Boolean =
         severity.isEmpty() || severity.contains(rule.info.metadata.severity)
 
-    private fun ruleIdAllow(rule: Rule<*>, ruleIdFilter: List<String>): Boolean =
-        ruleIdFilter.isEmpty() || rule.info.ruleId in ruleIdFilter
+    private fun ruleIdAllow(rule: Rule<*>, ruleIdFilter: Set<String>?): Boolean =
+        ruleIdFilter == null || rule.info.ruleId in ruleIdFilter
 
-    private fun ruleIdExcluded(rule: Rule<*>, ruleIdExclude: List<String>): Boolean =
+    private fun ruleIdExcluded(rule: Rule<*>, ruleIdExclude: Set<String>): Boolean =
         rule.info.ruleId in ruleIdExclude
 
     private fun Rule<*>.modeModifier(): String? {

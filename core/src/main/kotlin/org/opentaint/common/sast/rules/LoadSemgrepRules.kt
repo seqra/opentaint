@@ -4,7 +4,6 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import mu.KLogging
 import org.opentaint.common.sast.CommonAnalysisOptions
-import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.conversion.LanguageStrategy
@@ -21,7 +20,7 @@ fun CommonAnalysisOptions.loadSemgrepRules(
     strategies: List<LanguageStrategy<*, *>>,
 ): SemgrepRuleLoader.RuleLoadResult {
     val trace = SemgrepLoadTrace()
-    val rules = parseSemgrepRules(strategies, semgrepRuleSet, semgrepSeverity, semgrepRuleId, semgrepRuleIdExclude, trace)
+    val rules = parseSemgrepRules(strategies, trace)
     semgrepRuleLoadTrace?.let { writeTrace(it, trace) }
     return rules
 }
@@ -35,23 +34,21 @@ private fun writeTrace(traceFile: Path, trace: SemgrepLoadTrace) {
     }.onFailure { logger.error(it) { "Failed to write semgrep load trace to $traceFile: ${it.message}" } }
 }
 
-private fun parseSemgrepRules(
+private fun CommonAnalysisOptions.parseSemgrepRules(
     strategies: List<LanguageStrategy<*, *>>,
-    rulesPath: List<Path>,
-    severity: List<Severity>,
-    ruleId: List<String>,
-    ruleIdExclude: List<String>,
     semgrepTrace: SemgrepLoadTrace,
 ): SemgrepRuleLoader.RuleLoadResult {
     val loader = SemgrepRuleLoader(strategies)
     val ruleExt = arrayOf("yaml", "yml")
-    for (rulesRoot in rulesPath) {
+    for (rulesRoot in semgrepRuleSet) {
         rulesRoot.walk().filter { it.extension in ruleExt }.forEach { rulePath ->
             val rel = rulePath.relativeTo(rulesRoot)
             loader.registerRuleSet(rulePath.readText(), rel, rulesRoot, semgrepTrace)
         }
     }
-    val loaded = loader.loadRules(severity, ruleId, ruleIdExclude)
+    val loaded = loader.loadRules(
+        semgrepSeverity, semgrepRuleId, semgrepRuleIdExclude, semgrepStyleRuleId, semgrepStyleRuleIdExclude
+    )
     logger.info { "Total loaded ${loaded.rulesWithMeta.sumOf { it.first.size }} rules" }
     return loaded
 }
