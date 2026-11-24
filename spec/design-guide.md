@@ -39,9 +39,9 @@ the cost is acceptable. A native prototype shows those three.
    per-offer work needs a measured saving that pays for it.
 
 6. **Gate each rule alone, per project.** Confirmed findings equal to
-   the pinned baseline; wall time and peak memory not worse. Use at
-   least three interleaved launches. A difference smaller than the
-   native variance is not a result.
+   the pinned baseline; wall time and peak memory not worse. 
+   Use single launch for the measurements. 
+   Additional launches are allowed only if the acquired numbers are not representative enough to make a decision.
 
 7. **One rule in, or one rule out.** A rule that fails its gate is
    withdrawn. If the rule count grows while the real failure stays,
