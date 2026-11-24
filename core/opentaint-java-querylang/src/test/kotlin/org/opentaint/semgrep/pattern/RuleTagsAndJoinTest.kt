@@ -1,6 +1,7 @@
 package org.opentaint.semgrep.pattern
 
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
+import org.opentaint.dataflow.configuration.jvm.serialized.SinkRule
 import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
 import org.opentaint.semgrep.pattern.conversion.LanguageStrategy
 import kotlin.io.path.Path
@@ -498,6 +499,53 @@ class RuleTagsAndJoinTest {
         )
         assertTrue(trace.errorMessages().isEmpty(), trace.errorMessages().toString())
         assertTrue("multi-sink" in loadedRuleIds(result), "join rule should load; loaded=${loadedRuleIds(result)}")
+    }
+
+    @Test
+    fun `sinks of a tag-expanded sink ref report the join rule id`() {
+        val (result, trace) = load(
+            servletSource,
+            "lib/sinks.yaml" to """
+                rules:
+                  - id: sink-x
+                    options: { lib: true }
+                    tags: [demo-sink]
+                    severity: NOTE
+                    message: m
+                    languages: [java]
+                    patterns: [ { pattern: sinkX(${'$'}X) } ]
+                  - id: sink-y
+                    options: { lib: true }
+                    tags: [demo-sink]
+                    severity: NOTE
+                    message: m
+                    languages: [java]
+                    patterns: [ { pattern: sinkY(${'$'}X) } ]
+            """.trimIndent(),
+            "j.yaml" to """
+                rules:
+                  - id: j-tag
+                    severity: ERROR
+                    message: m
+                    languages: [java]
+                    mode: join
+                    join:
+                      refs:
+                        - tag: untrusted-data-source
+                          as: src
+                        - tag: demo-sink
+                          as: sink
+                      on:
+                        - 'src.${'$'}X -> sink.${'$'}X'
+            """.trimIndent()
+        )
+        assertTrue(trace.errorMessages().isEmpty(), trace.errorMessages().toString())
+        val rule = result.rulesWithMeta.single().first
+        val root = assertIs<TaintRuleFromSemgrep.Structure.Join<*>>(rule.root)
+        assertEquals(2, root.branches.size)
+
+        val sinkIds = rule.taintRules.flatMap { it.rules }.filterIsInstance<SinkRule>().map { it.id }
+        assertEquals(setOf("j.yaml:j-tag"), sinkIds.toSet())
     }
 
     @Test

@@ -285,7 +285,7 @@ fun JavaTaintRuleGenerationCtx.emitJavaTaintRules(ctx: RuleConversionCtx): List<
                         SerializedRule.MethodEntrySink(
                             function, signature = null, overrides = false, cond,
                             trackFactsReachAnalysisEnd = afterSinkActions,
-                            ctx.ruleId, meta = ctx.meta
+                            ctx.sinkRuleId, meta = ctx.meta
                         )
                     )
 
@@ -293,12 +293,12 @@ fun JavaTaintRuleGenerationCtx.emitJavaTaintRules(ctx: RuleConversionCtx): List<
                         SerializedRule.Sink(
                             function, signature = null, overrides = true, cond,
                             trackFactsReachAnalysisEnd = afterSinkActions,
-                            ctx.ruleId, meta = ctx.meta
+                            ctx.sinkRuleId, meta = ctx.meta
                         )
                     )
 
                     TaintRuleEdge.Kind.MethodExit -> {
-                        generateEndSink(cond, afterSinkActions, ctx.ruleId, ctx.meta)
+                        generateEndSink(cond, afterSinkActions, ctx.sinkRuleId, ctx.meta)
                     }
                 }
             }.map { ruleEdge to it }

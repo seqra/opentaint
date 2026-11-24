@@ -1,0 +1,34 @@
+rules:
+  - id: go-tag-join
+    languages: [go]
+    severity: ERROR
+    message: "Tainted data flows to a tagged sink"
+    mode: join
+    join:
+      refs:
+        - rule: '#tag-join-src'
+          as: src
+        - tag: tag-join-sink
+          as: sink
+      on:
+        - 'src.$X -> sink.$X'
+  - id: tag-join-src
+    options: {lib: true}
+    languages: [go]
+    severity: NOTE
+    message: "source"
+    pattern: "$X = util.Source(...)"
+  - id: tag-join-sink-x
+    options: {lib: true}
+    tags: [tag-join-sink]
+    languages: [go]
+    severity: NOTE
+    message: "sink x"
+    pattern: "util.SinkX($X)"
+  - id: tag-join-sink-y
+    options: {lib: true}
+    tags: [tag-join-sink]
+    languages: [go]
+    severity: NOTE
+    message: "sink y"
+    pattern: "util.SinkY($X)"

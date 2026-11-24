@@ -79,11 +79,9 @@ fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertTaintAutomataJoinToTain
             return null
         }
 
-        // Each sink converts under its own rule id so the marks generated for one sink cannot
-        // collide with another's; a single-sink join keeps the original id.
-        val sinkCtx =
-            if (operationsBySink.size == 1) this
-            else RuleConversionCtx("$ruleId#$sinkItemId", modeModifier, meta, trace, typeOps)
+        // Each sink converts in its own namespace so the marks generated for one sink cannot
+        // collide with another's; a single-sink join keeps the original one.
+        val sinkCtx = if (operationsBySink.size == 1) this else joinItemCtx(sinkItemId)
 
         val converted = sinkCtx.convertCompositionJoinOperations(strategy, rule, rightItemRef, sinkOps.map { it.lhs })
             ?: return null
@@ -112,7 +110,7 @@ private fun <Item, Cond, Assign, Clean> RuleConversionCtx.convertCompositionJoin
         val leftItem = rule.items.getValue(leftItemRef.itemId)
         val leftAutomata = leftItem.rule
 
-        val leftCtx = RuleConversionCtx("$ruleId#${leftItemRef.itemId}", modeModifier, meta, trace, typeOps)
+        val leftCtx = joinItemCtx(leftItemRef.itemId)
         val (leftStructure, leftFinalMarks) = leftCtx.convertCompositionLeftRule(
             leftItemRef.itemId, strategy, leftAutomata, leftItemRef.metaVar
         ) ?: return null

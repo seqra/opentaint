@@ -8,6 +8,7 @@ import org.opentaint.semgrep.go.pattern.conversion.GoLanguageStrategy
 import org.opentaint.semgrep.go.pattern.conversion.loadGoTaintConfiguration
 import kotlin.io.path.Path
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class GoRuleEmitTest {
@@ -68,6 +69,14 @@ class GoRuleEmitTest {
             cfg.sinkForFunction("ex.Command".signature(1)).isEmpty(),
             "the local import alias must not leak into the resolved sink name",
         )
+    }
+
+    @Test fun tagJoinSinksReportJoinRuleId() {
+        val cfg = emitConfig("go-rules/tag-join.yaml")
+        for (sink in listOf("util.SinkX", "util.SinkY")) {
+            val ids = cfg.sinkForFunction(sink.signature(1)).mapTo(hashSetOf()) { it.id }
+            assertEquals(setOf("go-rules/tag-join.yaml:go-tag-join"), ids, sink)
+        }
     }
 
     private val anyType = GoIRUnsafePointerType
