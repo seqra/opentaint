@@ -1,7 +1,9 @@
 # Acyclic convergence for the bidirectional analyzer
 
 Status: PROPOSAL, revision 2, 23 November 2026; decisions of 24 November
-recorded (§1). It follows the
+recorded (§1); clarifications of 24 November in §5.2 (report identity),
+§5.3 (the tag, decision at the handoff) and §5.4 (the scope is a proxy).
+It follows the
 [design guide](design-guide.md). Revision 1 was condensed from
 [natural-termination-proposal.md](natural-termination-proposal.md) §5.
 
@@ -342,6 +344,27 @@ X:       if (ZERO → NormalTarget(id)) ∈ NT(o):  emit nothing and capture not
 X decides once per witness, at its first DEMAND arm. NORMAL arms do not
 change. Backward runs do not change.
 
+**Report identity (24 November).** X needs no tag. The witness knows
+its own identity `id = (method, sink node, rule)`
+(`engine/RunMethodLocalServices.kt:373`), and X tests
+`ZERO → NormalTarget(id)` for this `id` only (`:387`). Another sink
+`id2 ≠ id` in the same owner has its own witness. X tests
+`NormalTarget(id2)` there, and that witness keeps its DemandTarget and
+its seeds while `id2` has no complete ZERO target. A seed names its rule
+and its sink statement (`Seed.Sink(rule, method, at, pattern)`,
+`driver/HandOff.kt:247-252`), so X removes only the seeds of `id`.
+
+The identity is lost only after the emission. Natively
+`P → DemandTarget` has no identity. So the witnesses of `id` and `id2`
+with the same premise make one target row, and one handoff row
+`(Target, member of P)` for each member (`driver/HandoffCompactor.kt:127-131`).
+When X suppresses the witness of `id`, the witness of `id2` still makes
+this row, and `id2` needs it. The next runs refine `P` for `id2`. This
+work can reach the sink of `id` again, and X suppresses that witness
+again. So the demand for `id` does not stay alive by itself; it is a
+passenger of the demand for `id2`. The lost identity matters only at a
+relay (§5.3).
+
 **Exactness argument.** `P ⊨ ZERO`. The DemandTarget and the seeds ask
 the next runs for a NORMAL proof of `id` at `o` under a refinement of
 `P`. Every result of that work is a row `P' → NormalTarget(id)` at `o` or
@@ -387,13 +410,77 @@ RX:      in a forward run, if (ZERO → NormalTarget(id)) ∈ NT(o'):  do not re
 ```
 
 RX acts only at the relay through a call binding
-(`engine/RunMethodCallServices.kt:527-529`). A block lift and a loop
-consumer pass the target on unchanged, with its tag
-(`engine/MethodBlockRuntime.kt:548-549`,
-`engine/LoopConsumerObservation.kt:85, :118`), and RX does not act there.
-So a tagged DemandTarget lifted from a block into a root that has
-`ZERO → NormalTarget(id)` is still emitted at the root. Backward source
-discharges are untagged and relayed as before.
+(`engine/RunMethodCallServices.kt:527-529`). A block lift passes the
+target on unchanged, with its tag (`engine/MethodBlockRuntime.kt:548-549`),
+and RX does not act there. (The DemandTarget branch of the loop consumer,
+`engine/LoopConsumerObservation.kt:85`, is reached only in backward runs,
+from `engine/LocalRelationApplication.kt:157`; correction of 24
+November.) So a tagged DemandTarget lifted from a block into a root that
+has `ZERO → NormalTarget(id)` is still emitted at the root. Backward
+source discharges are untagged and relayed as before.
+
+**The tag (24 November).** Only RX needs the tag: the relay site sees
+only the callee's target row `P → DemandTarget`, and that row has no
+identity (§5.2). In a forward run every DemandTarget comes from a sink
+witness (`engine/RunMethodLocalServices.kt:400`). The other DemandTarget
+sites are backward source discharges. The tag lives in one forward run:
+
+1. the witness makes `DT(id)`;
+2. a call relay copies the target value
+   (`engine/RunMethodCallServices.kt:499-530`); a block lift passes it
+   on;
+3. the handoff erases it. A target row projects to
+   `(Target, member of P)` with no identity
+   (`driver/HandoffCompactor.kt:127-131`), so `DT(id)` and `DT(id2)` with
+   the same premise give the same handoff rows.
+
+The next run, the backward runs and the stores never see a tag. The cost
+of the tag as a target value: `DT(id)` and `DT(id2)` with one premise are
+two target rows and two relays where native has one, and 58 module tests
+compare the untagged object.
+
+**Decision at the handoff (open, not measured).** X and RX decide during
+the run, against `NT(o)` = the saved targets and the targets that `o`
+emitted *earlier* in this run (`engine/DtSubsumption.kt:47-56`). So the
+decision depends on the order of the work. The same decision can be made
+once, at the barrier, against the complete `NT_i(o)` of run `i`. In a
+restricted forward run (run-3 onward) a DemandTarget makes only relays
+and handoff rows. It makes no DATA fact. So there a removal at the barrier
+gives the same handoff as a removal during the run (INFERENCE from the
+code: the forward consumers of a target are the call relay, the block
+lift and the handoff). Run-1 is different: a DemandTarget whose premise
+has a STATIC member goes through the static lane
+(`engine/RunMethodCallServices.kt:533-543`) and can ask FLOW writers for
+marks (`engine/Run1StaticService.kt:244`, `engine/Run1PointResume.kt:298-309`),
+which makes DATA facts. So in run-1 the decision must stay in the run. The id of each row
+must still reach the barrier, so the tag stays: the decision moves, the
+tag does not go away. Seeds need the same: today the root and the block
+scopes of a method share one seed set, and a seed records no owner
+(`engine/MethodBlockRuntime.kt:235`), so a barrier rule that removes the
+seeds of one owner needs the owner of each seed.
+
+| Form | At the barrier of forward run `i`, drop | Difference from X + RX |
+| --- | --- | --- |
+| H-owner | each outgoing `DT(id)` row of owner `o`, and the seeds of each witness of `id` at `o`, when `ZERO → NormalTarget(id) ∈ NT_i(o)` | independent of order; includes X. But a `DT(id)` that RX stops at the caller `o'` still reaches the callers of `o'` during the run, and their rows stay unless their own owner is covered. The callers of `o'` do not always have the ZERO target: it does not relay into a DEMAND binding (`engine/RunMethodCallServices.kt:509`), and saved ZERO targets are not replayed at calls (`:353`) |
+| H-lineage | as H-owner, and each row that a `DT(id)` reaches only through covered owners (needs the relay edges of the run) | equal to X + RX, plus block lifts; independent of order |
+| H-global | each `DT(id)` row and each seed of `id` when `id` is confirmed | removes all demand for a confirmed `id`, also where the owner premise is not ZERO |
+
+For H-global: at each forward barrier the report builder checks that
+every retained method-scope `ZERO → NormalTarget(id)` has its id among the
+confirmed results (`driver/Report.kt:58-60`;
+`engine/NormalTargetStore.kt:19` keeps only method-scope rows). So "some
+method has `ZERO → NormalTarget(id)`" is the same as "`id` is
+confirmed". Block-scope ZERO rows are not in this check, so H-global is
+defined by the confirmed set itself. H-global does not stop the analysis
+and does not infer anything about another id. It removes work whose only
+effect is on an id that is already confirmed. Its exactness argument is
+the argument of X: by monotonicity in K, every other sink that a later
+run can confirm keeps its own witness, DemandTarget and seed. Risks: the
+SARIF code flows of a confirmed id, if the trace resolution uses NORMAL
+targets that later runs add; and its closeness to the rejected
+report-based stops. H-global is the only form that also removes a
+DemandTarget whose owner premise is not ZERO, for example the block-3
+DemandTarget of the OWASP `doSomething` families (§5.4).
 
 **Exactness argument.** The argument of X, at `o'`.
 
@@ -482,6 +569,85 @@ H5.
 **Why the scope.** Without condition 4 the Conductor H7 rows become 2.2
 times native: nearly all drops there are in cyclic callees. With it,
 Conductor keeps 29,795 covered replies of cyclic callees and drops 2.
+
+**The scope is a proxy (trace of 24 November).** Branch
+`proto/must-cover-shape-20261124`, report
+`docs/reports/must-cover-shape-20261124.md`: Conductor launches up to H7
+with a width census of each forward handoff and a log of each drop, one
+launch per arm. VERIFIED:
+
+- The unscoped rule drops 366 / 11,914 / 17,667 replies in runs 3 / 5 / 7.
+  29,942 of 29,947 are replies of cyclic callees. 3,384 of them are the
+  equal-path covers that cover item 3 rejects (the prototype defect
+  above), all in `WorkflowExecutorOps`.
+- H7 has 181,935 rows against 84,720 native, but the number of handoff
+  origins is the same (11,924 against 11,830). The summaries are wider,
+  not more: 197,486 projected rows against 92,068. Run 7 takes 385 s
+  against 91 s.
+- 105,123 of the 105,418 new projected rows (99.7 %) are in three
+  owners: block 2, the loop body, of `ParametersUtils#replace` (two
+  contexts) and of `ParametersUtils#replaceList`. The two methods call
+  each other inside their loops.
+- The rows change before the growth: H5 has 118 more rows (650 fewer
+  projected rows) and H6 (backward) 11,891 fewer rows. Only run 7
+  publishes the wider summaries.
+- In `replace` block 2 the run-7 DEMAND leaves, summed over the
+  summaries, grow from 68,773 to 166,148. Two kinds of leaves grow. (a)
+  FLOW MAY leaves at depth 3 (`var(3).F1.F2.F3`, 10 × 10 × 42 fields):
+  native has the same 4,105 distinct leaves, but the 36 summaries that
+  carry them hold 2,687 each on average, against 631 in 41 native
+  summaries (25,867 → 96,720). At the same time the FLOW MAY leaves at
+  depth 2 go from 22,784 to 15,599. A MAY leaf subsumes every fact at or
+  below its path in its layer (`ap/Reference.kt:586`), so the lost
+  depth-2 leaves are the coarse leaves that held the depth-3 fan-out.
+  (b) concrete EXACT leaves at depth 2 (`var(3).F1.F2.$`, 5 × 18 fields
+  of pass-through models and one application field): 202 → 33,125, in
+  735 summaries against 179. This is the model family of §7 item 3.
+- The run-7 drops inside `replace` block 2 (1,208) are DEMAND replies of
+  the recursive calls (`newValue = replaceList(…)`, `newValue =
+  replace(…)`): 742 with MAY tails (`ret.MAY/T,D`, `arg(0).MAY/T,D`,
+  `ret.Iterable#Element.MAY/T,D`), 414 with EXACT tails and 52 with MUST
+  tails, covered by `ret.MUST/T,N`, `arg(0).MUST/T,N` and similar.
+
+Two restrictions, measured on the same Conductor setup:
+
+| Arm | Drops runs 3 / 5 / 7 | H6 rows | H7 rows | H7 projected | Run 7 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| native | none | 149,621 | 84,720 | 92,068 | 91 s |
+| unscoped | 366 / 11,914 / 17,667 | 137,730 | 181,935 | 197,486 | 385 s |
+| unscoped, cover item 3 fixed | 372 / 9,938 / 16,297 | 137,658 | 182,023 | 197,780 | 270 s |
+| unscoped, cover item 3 fixed, MAY-tail replies only | 170 / 7,102 / 11,606 | 137,530 | 183,832 | 201,289 | 266 s |
+
+Both restricted arms grow in the same three owners. On OWASP (AO-C5,
+one launch each) the cover fix and the MAY-only restriction change
+nothing: the same 56 drops, residual 6, 2,633 / 0 and code flows
+identical to native. Every AO-C5 drop on OWASP is a MAY-tail reply. AO-C5
+without MUST-cover: reports and code flows identical, driver 112.2 s,
+residual 24 instead of 6. The 18 extra rows are the DEMAND rows of
+three `doSomething` helpers (`BenchmarkTest00996`, `01000`, `01009`; 6
+each).
+
+Conclusions:
+
+1. Acyclicity does not separate the cases. Cycles do not make the
+   growth; a loop body with a container fan-out multiplies it. The scope
+   tests the callee, but the growth is in a caller block (a loop body).
+   An acyclic callee that such a loop body calls is inside the scope.
+2. The cover defect does not cause the growth, and the obvious shape
+   restriction (MAY-tail replies only, the only shape that OWASP needs)
+   does not prevent it.
+3. The rule is exact for the NORMAL facts of the run where it acts (with
+   cover item 3), but it is not a subsumption of the demand. It removes
+   demand rows. With fewer rows, C5 (which selects and cuts for each row
+   and publishes the union) can publish fewer coarse cuts, and the finer
+   leaves that a coarse cut held become visible. The lost depth-2 FLOW
+   leaves fit this reading; which H6 rows are missing is not traced
+   (INFERENCE). The widening is bounded (one more field level), but it
+   costs 3-4 times the run-7 time on Conductor.
+
+So a restriction by the shape of the reply does not give a rule without
+negative consequences: the consequence is in the demand that the
+dropped fact would make, not in the fact. Open (§7 item 4).
 
 **Gate alone.** Module identical, 2 end earlier; jvm 6 of 6; rule suite
 identical; OWASP identical, 151.7 s, residual 705. Alone the effect is
@@ -785,9 +951,19 @@ Open acyclic owners with AO-C5:
      through a self alias, the row becomes stable, and the owner leaves
      the AC scope. Not prototyped.
 4. **The MUST-cover scope reads a call-cone property** (§5.4). This is
-   the weak point that withdrew `acC5Exact`. The scope is needed because
-   the unscoped rule doubles Conductor's H7 rows; the local cause of that
-   growth is not traced.
+   the weak point that withdrew `acC5Exact`. The trace of 24 November
+   (`proto/must-cover-shape-20261124`) shows that the scope is a proxy.
+   The unscoped growth is a widening of DEMAND summaries in the loop body
+   of `ParametersUtils#replace` / `replaceList` one run after the demand
+   rows change. Neither the cover fix nor a MAY-only restriction prevents
+   it. On OWASP the rule is needed only for three `doSomething` helpers
+   (AO-C5 without it: residual 24 instead of 6, reports identical).
+   Candidate, not measured: remove the maker of these three families at
+   the target level instead with H-global (§5.3); for `BenchmarkTest01000`
+   the renewal is the block-3 DemandTarget of `doPost` (§5.4 example), for
+   the other two it is not traced. Withdraw MUST-cover
+   if the three families close without it. To trace the widening itself:
+   a backward census of H6 in `replace` block 2.
 5. **Not traced:** the Conductor Target rows and `StartWorkflow#getRequest`
    block 1 (§6); rule case 349 (8 Target rows in a block of
    `UnsafeFileUploadServlet#doPost` that no loop precedes).
