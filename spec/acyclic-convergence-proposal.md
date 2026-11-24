@@ -2,7 +2,8 @@
 
 Status: PROPOSAL, revision 2, 23 November 2026; decisions of 24 November
 recorded (§1); clarifications of 24 November in §5.2 (report identity),
-§5.3 (the tag, decision at the handoff) and §5.4 (the scope is a proxy).
+§5.3 (the tag, decision at the handoff) and §5.4 (the scope is a proxy);
+new rule §5.7 owner cover (prototype and gate of 24 November, not decided).
 It follows the
 [design guide](design-guide.md). Revision 1 was condensed from
 [natural-termination-proposal.md](natural-termination-proposal.md) §5.
@@ -33,6 +34,7 @@ Five rules. Each one removes one maker of acyclic demand at its source.
 | §5.4 MUST-cover | DEMAND reply at a call to an acyclic callee | a DEMAND reply that a NORMAL MUST reply covers | identical | 705 |
 | §5.5 EXACT cleaner ignored on MUST | cleaner on a MUST leaf | cleaner survivor | identical, except 4 module fixtures (signed off 24 November) | 24 |
 | §5.6 relative C5 cap | — | none: a passenger | — | — |
+| §5.7 owner cover (proposed 24 November) | outgoing DemandTarget row at the forward barrier | DemandTarget renewal at an owner with a NormalTarget whose premise the DemandTarget premise implies | identical (with §5.1); 4 fixtures do not serve a second route to a confirmed sink, 3 of them also with X (§5.7) | 0 (with §5.1 only; analysis ends at run 5) |
 
 Combined (configuration AO-C5 = §5.1-§5.5), against native:
 
@@ -828,6 +830,154 @@ is cut at K in every run up to run-7:
 Neither (A) nor (D) acts on it: it is a cut of a DEMAND selection. The
 cause is an alias self cycle with a bound of 9 fields (§7 item 3).
 
+### 5.7 Owner cover (proposed 24 November)
+
+Flag `-Dorg.opentaint.bidi.dtOwnerCover=true`. Branch
+`proto/dt-owner-cover-20261124`, report
+`docs/reports/dt-owner-cover-20261124.md`. Proposal of 24 November: drop
+`DemandTarget(id)` at the owners that have a NormalTarget for `id`, so that
+a caller that does not get the NormalTarget keeps its DemandTarget.
+
+**Definition.** At the barrier of a restricted forward run `i` (run-3
+onward, `driver/HandOff.kt` `toCompacted`):
+
+- `NT_i(o)` = the NormalTargets of owner `o` (a method, or a block scope
+  of a method): saved, and made in run `i`.
+- `R_i` = the outgoing `P → DemandTarget(id)` rows. The witness tags each
+  DemandTarget with its id (the RX tag, §5.3).
+- `E_i` = the relay edges of run `i` between pairs `(owner, id)`: callee →
+  caller at a call relay (`engine/RunMethodCallServices.kt` `applyTarget`),
+  child block → parent scope at a block lift
+  (`engine/MethodBlockRuntime.kt` `onTerminal`).
+
+```text
+P ⊨ Q            ⟺  Q = ZERO, or members(Q) ⊆ members(P)
+covered(o,P,id)  ⟺  ∃ Q: (Q → NormalTarget(id)) ∈ NT_i(o) ∧ P ⊨ Q
+kept(o,id)       ⟺  some row (o,P,id) ∈ R_i is not covered,
+                     or ∃ (o,id) → (o',id) ∈ E_i with kept(o',id)        (least fixed point)
+drop (o,P,id)    ⟺  covered(o,P,id) ∧ no (o,id) → (o',id) ∈ E_i with kept(o',id)
+drop seeds of id ⟺  a DemandTarget(id) row was dropped and none stays (predicate-sink seeds stay)
+```
+
+In-run relays keep their premises and layers, so a caller that does not
+get the NormalTarget (another premise, or a DEMAND binding) still gets the
+DemandTarget during the run and keeps its own row. But the tag splits
+DemandTarget rows, relays and ND joins per report id where native merges
+them (target rows and join keys contain the target); two module tests that
+assert the merge fail, as under RX. The implication `P ⊨ Q` uses only the
+forms that need no pattern reasoning. The lineage is per `(owner, id)`,
+not per row, and a call relay records its edge per member binding, before
+the ND join and before `acceptsTarget`; so the lineage has extra edges and
+keeps more rows than an exact per-row lineage. The edge store is keyed by
+the run index only (another analysis in the same JVM can leave edges; this
+also only keeps rows).
+
+**Why the lineage (fixture M3, `DecidedStopAttackTest`).** Callee `g` has
+`ND[a0 & a1] → NormalTarget(B)` from two split call sites. A deep call
+binds `a0` on DEMAND. Its DEMAND arm at `g` has the same premise. Without
+the lineage the rule keeps the root's `DemandTarget(B)` (B is not
+confirmed) and the seeds of B, but it drops `g`'s own row, and B is lost
+(confirmed `{A}` instead of `{A, B}`): the backward run needs `g`'s row to
+compute `a1` at the deep call. With the lineage `g`'s row stays (it relayed
+into the root's kept row) and M3 keeps B. This is the counterexample of the
+earlier ND cover (§5.3 "Why not a wider cover"); the barrier form alone
+does not remove it.
+
+**Exactness argument.** Take a dropped row `(o, P, id)`. (1) At `o`, the
+refinement that the row asks for can only make `P' → NormalTarget(id)`
+with `P' ⊨ P ⊨ Q`, which `Q → NormalTarget(id)` already implies. (2) Above
+`o`, every relay of `DemandTarget(id)` from `o` in this run went into an
+owner whose rows are all dropped, up to owners with no relay. A caller that
+binds the premise on DEMAND does not get the NormalTarget (it does not relay
+into a DEMAND binding, `engine/RunMethodCallServices.kt:510`), so it keeps
+its row, and the lineage keeps the path below it. Assumption, not shown:
+that caller's row is accepted (`acceptsTarget`) and its ND join completes
+in the run; otherwise its edge exists but it is not kept, and the callee
+row is dropped. (3) Every other id keeps its own witness, DemandTarget and
+seed, if the analysis is monotone in K (assumed; M4 is the only test): the
+rule needs §5.1, as X does (without G6 it removes finding B of M4).
+
+The argument covers targets and reports only. Refinement also makes
+NORMAL facts and records that are not targets, for example a second route
+to a sink that is already confirmed. Four module fixtures were written as
+counterexamples to "a report id proves that every route is served". In all
+of them the report does not change, and the second route is not served:
+
+| Fixture | Native end | G6 + X (and AO-C5) | G6 + owner cover |
+| --- | --- | --- | --- |
+| `DistinctMarkOriginServiceTest` (acyclic, deep chain `x.f.f.f.f`) | 3-5 | 1 | 3 |
+| `UniformCoverageOriginAuditTest` (acyclic) | 3-5 | 1 | 3 |
+| `RecursiveWrapperTerminationTest` (recursion) | 9, 101 | 7 | 5 |
+| `LoopMarkOriginServiceTest` (loop, two marking origins) | 13, 17 | 13, 17 (served) | 5 (not served) |
+
+So X, an accepted rule, already acts like the rejected report-only
+retirement on the first three; owner cover adds the loop fixture, where the
+renewing rows are a block row and its lift into the root (X and RX do not
+act there). For `LoopMarkOriginServiceTest` the missing route is VERIFIED
+with a print of the test's `deepBefore` check (native and G6 + X: served;
+G6 + owner cover: not served; the test asserts the end run first). On the
+three projects the SARIF code flows stay identical. Not covered either:
+callers that are not analysed in run `i` are not in `E_i`.
+
+**Example (OWASP).** At the run-3 barrier the rule drops all 1,150 outgoing
+DemandTarget rows (502 with a ZERO premise); 268 report ids lose all their
+rows. Run 5 has no forward demand row, and the analysis ends by itself at
+run 5 (`NO_DEMAND_EDGE`) with 2,633 / 0 and identical code flows. Native
+ends at `RUN_LIMIT` 11, AO-C5 too (residual 6).
+
+**Gate (single launch per item, 24 November).** Arms: G6 + owner cover
+(the rule with its prerequisite), and AO-C5 with owner cover in place of
+MUST-cover (G6, X, RX, cleaner rule, owner cover).
+
+| | Native | AO-C5 | G6 + owner cover | AO-C5 with owner cover, no MUST-cover |
+| --- | --- | --- | --- | --- |
+| Module suite (342 analyses on this branch) | 30 / 81 open | 18 / 47 (291 analyses) | 308 identical, 29 end earlier, 3 other end changes (below); report changes: M4 ×2 (decided G6); 19 / 54 open | 301 identical (+16 with suppressions), 33 end earlier, 2 other end changes; report changes: the 4 signed-off cleaner fixtures, M4 ×2; 16 / 45 open |
+| Jvm suite | 6 | 6 identical; 2 cleaner assertions fail | 6 identical | 6 identical; the same 2 cleaner assertions fail |
+| Rule suite (585) | 2 / 9 open | 1 / 8 | 0 outcome changes, 582 identical, 3 end earlier; 0 / 0 open | 0 outcome changes, 562 identical, 23 end earlier; 0 / 0 open |
+| OWASP | `RUN_LIMIT` 11, 150-153 s, residual 711-735 | `RUN_LIMIT` 11, 112.8 s, residual 6 | **`NO_DEMAND_EDGE` 5**, identical, 120.6 s, residual 0 | **`NO_DEMAND_EDGE` 5**, identical, 108.1 s, residual 0 |
+| Stirling-PDF | run-11 stall (2,704 s), 32 / 2 | `RUN_LIMIT` 11, 55.7 s, residual 5 | `RUN_LIMIT` 11, 32 / 2 identical, 56.6 s, residual 5 | `RUN_LIMIT` 11, identical, 54.2 s, residual 5 |
+| Conductor | timeout run-8, 7 / 0, H7 at 666 s (84,944 rows), residual 21 | identical, H7 at 600 s (80,815), residual 16 | identical, H7 at 593 s (78,716), residual 15 | identical, H7 at 586 s (79,176), residual 15 |
+
+Every project launch has identical confirmed and provisional results and
+identical code flows. The module-suite report changes are the decided
+exceptions only. Other end changes: two module analyses end `ABNORMAL` at
+run 5 (the "report-only retirement" hook of `LoopMarkOriginServiceTest`
+looks up the root analyzer in run 5, and with the rule the root is not
+analysed there: a test-hook artifact, not an engine failure), and one
+analysis that ends `ABNORMAL` natively at run 22 ends `ABNORMAL` at run 21.
+Stirling-PDF times are under host load in every arm (mean load 5.9-7.3,
+the AO-C5 reference 7.3); during the G6 + owner cover launch an unlocked
+unit-test run of this work also overlapped.
+
+**Cost.** Per forward barrier: an index of the saved and current
+NormalTargets, two passes over the outgoing DemandTarget rows, each with a
+cover test (largest: Conductor 5,042 rows), and a reverse closure over the
+relay edges (largest: Stirling-PDF 2,709). Per member binding of a tagged
+relay: two hash operations. No seed was dropped in any launch, also where
+every row of an id was dropped (OWASP 268 ids, Stirling-PDF 12): the seed
+branch never acted. Why (for example predicate-sink seeds, which the rule
+keeps) is not measured.
+
+**Consequence (not decided).** Without X, RX, MUST-cover and the cleaner
+rule, G6 + owner cover matches or improves the residual of AO-C5 on the
+three projects and the rule suite: OWASP and the rule suite end by
+themselves, and the cleaner fixtures do not change. It does not improve the
+module-suite residual (19 / 54 against 18 / 47: without the cleaner rule
+the cleaner fixtures stay open) or the OWASP time (120.6 s against 112.8 s,
+one launch each). The row that X suppresses is a case of owner cover (a
+ZERO cover at the witness owner), but X also acts in run-1 and during the
+run, where it stops the relay and the seed: the OWASP forward residual is
+7,086 without X against 4,780 with it at run-1, and 95 against 56 at
+run-3. RX is not fully included: RX also stops the
+relay above the covered caller, while owner cover lets it continue and
+keeps the rows of owners above that have no covering NormalTarget; on the
+three projects this made no difference to the residual. With owner cover
+the OWASP `doSomething` families close without MUST-cover and its acyclic
+scope (which DemandTarget rows did it there is not traced per owner). Open
+decision: accept the loop-route
+behaviour above, and replace X, RX, MUST-cover and the cleaner rule by
+owner cover.
+
 ## 6. Combined result
 
 AO-C5 = §5.1-§5.5 on the native runtime. Branch
@@ -958,12 +1108,9 @@ Open acyclic owners with AO-C5:
    rows change. Neither the cover fix nor a MAY-only restriction prevents
    it. On OWASP the rule is needed only for three `doSomething` helpers
    (AO-C5 without it: residual 24 instead of 6, reports identical).
-   Candidate, not measured: remove the maker of these three families at
-   the target level instead with H-global (§5.3); for `BenchmarkTest01000`
-   the renewal is the block-3 DemandTarget of `doPost` (§5.4 example), for
-   the other two it is not traced. Withdraw MUST-cover
-   if the three families close without it. To trace the widening itself:
-   a backward census of H6 in `replace` block 2.
+   Measured instead of H-global: owner cover (§5.7) closes them without
+   MUST-cover (OWASP residual 0, natural end at run 5). To trace the
+   widening itself: a backward census of H6 in `replace` block 2.
 5. **Not traced:** the Conductor Target rows and `StartWorkflow#getRequest`
    block 1 (§6); rule case 349 (8 Target rows in a block of
    `UnsafeFileUploadServlet#doPost` that no loop precedes).

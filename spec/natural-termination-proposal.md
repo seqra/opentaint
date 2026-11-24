@@ -394,6 +394,7 @@ All branches are local. Data is under
 | Relative C5 cut rows are passengers; alternatives (A)-(D) | `proto/c5-passenger-20261123` | `docs/reports/c5-passenger-20261123.md` |
 | Alias self cycles in acyclic code; R2, R4 prototypes | `proto/acyclic-growth-20261124` | `docs/reports/acyclic-growth-20261124.md` |
 | MUST-cover without the acyclic scope: Conductor width census, cover item 3, MAY-only, AO-C5 without MUST-cover | `proto/must-cover-shape-20261124` | `docs/reports/must-cover-shape-20261124.md` |
+| Owner cover: covered DemandTarget rows dropped at the forward barrier, with lineage; gate of G6 + owner cover and AO-C5 with owner cover | `proto/dt-owner-cover-20261124` | `docs/reports/dt-owner-cover-20261124.md` |
 
 ## 12. Checklist and blind spots
 
