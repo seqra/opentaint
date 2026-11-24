@@ -33,6 +33,14 @@ class SemgrepStyleRuleIdCollision(semgrepStyleRuleId: String, otherRuleIds: List
     override val message: String = "Semgrep-style rule ID '$semgrepStyleRuleId' is shared with ${otherRuleIds.joinToString { "'$it'" }}; this ID selects and reports all of these rules together"
 }
 
+class UnknownRuleIdFilter(ruleId: String) : RuleIssueNonBlockingMessage() {
+    override val message: String = "Rule ID '$ruleId' given to a rule filter matches no rule"
+}
+
+class NoRuleSelected : RuleIssueBlockingMessage() {
+    override val message: String = "The rule filters leave no rule to run; the analysis is skipped"
+}
+
 class RuleOverridesNothing(targetRuleId: String) : RuleIssueBlockingMessage() {
     override val message: String = "Rule overrides nothing: target rule '$targetRuleId' was not found or not parsed"
 }

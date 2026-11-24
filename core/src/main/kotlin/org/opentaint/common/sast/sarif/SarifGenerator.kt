@@ -39,19 +39,7 @@ abstract class SarifGenerator<IL>(
         metadatas: List<RuleMetadata>
     ): LazyToolRunReport {
         val sarifResults = traces.mapNotNull { generateSarifResult(it.vulnerability, it.trace) }
-
-        val uriBase = options.uriBase ?: sourceRoot?.absolutePathString()
-        val sourceUri = uriBase?.let {
-            mapOf(SarifGenerationOptions.LOCATION_URI to ArtifactLocation(uri = it))
-        }
-
-        val run = LazyToolRunReport(
-            tool = generateSarifAnalyzerToolDescription(metadatas, options),
-            originalURIBaseIDS = sourceUri,
-            results = sarifResults.toList().asSequence(),
-        )
-
-        return run
+        return options.toolRunReport(sourceRoot, metadatas, sarifResults.toList().asSequence())
     }
 
     open fun postProcessSarif(
@@ -197,4 +185,20 @@ abstract class SarifGenerator<IL>(
     companion object {
         val logger = object : KLogging() {}.logger
     }
+}
+
+fun SarifGenerationOptions.toolRunReport(
+    sourceRoot: Path?,
+    metadatas: List<RuleMetadata>,
+    results: Sequence<Result>,
+): LazyToolRunReport {
+    val sourceUri = (uriBase ?: sourceRoot?.absolutePathString())?.let {
+        mapOf(SarifGenerationOptions.LOCATION_URI to ArtifactLocation(uri = it))
+    }
+
+    return LazyToolRunReport(
+        tool = generateSarifAnalyzerToolDescription(metadatas, this),
+        originalURIBaseIDS = sourceUri,
+        results = results,
+    )
 }

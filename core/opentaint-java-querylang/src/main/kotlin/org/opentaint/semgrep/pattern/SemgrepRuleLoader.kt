@@ -113,6 +113,7 @@ class SemgrepRuleLoader(
     data class RuleLoadResult(
         val rulesByLanguage: Map<String, List<Pair<TaintRuleFromSemgrep<*>, RuleMetadata>>>,
         val disabledRules: Set<String>,
+        val noRuleSelected: Boolean,
     ) {
         val rulesWithMeta: List<Pair<TaintRuleFromSemgrep<*>, RuleMetadata>>
             get() = rulesByLanguage.values.flatten()
@@ -128,6 +129,7 @@ class SemgrepRuleLoader(
         semgrepStyleRuleIdFilter: List<String> = emptyList(),
         semgrepStyleRuleIdExclude: List<String> = emptyList(),
         useSemgrepStyleRuleId: Boolean = false,
+        trace: SemgrepLoadTrace = SemgrepLoadTrace(),
     ): RuleLoadResult {
         registeredRules.values.toList()
             .forEach { parseRule(it, forceLibraryMode = false) }
@@ -171,7 +173,19 @@ class SemgrepRuleLoader(
             .filterNot { it.skip() }
             .forEach { it.addLoaded(loadJoinRule(it, tagIndex, excludedRuleIds)) }
 
-        return RuleLoadResult(loaded, disabledRules)
+        (ruleIdFilter + ruleIdExclude).filterNot { it in registeredRules }
+            .forEach { trace.error(Step.LOAD_RULESET, UnknownRuleIdFilter(it)) }
+        (semgrepStyleRuleIdFilter + semgrepStyleRuleIdExclude).filterNot { it in ruleIdsBySemgrepStyleId }
+            .forEach { trace.error(Step.LOAD_RULESET, UnknownRuleIdFilter(it)) }
+
+        val ruleIdFiltersGiven = listOf(ruleIdFilter, ruleIdExclude, semgrepStyleRuleIdFilter, semgrepStyleRuleIdExclude)
+            .any { it.isNotEmpty() }
+        val noRuleSelected = ruleIdFiltersGiven && loaded.isEmpty()
+        if (noRuleSelected) {
+            trace.error(Step.LOAD_RULESET, NoRuleSelected())
+        }
+
+        return RuleLoadResult(loaded, disabledRules, noRuleSelected)
     }
 
     private fun reportSemgrepStyleRuleIdCollisions(ruleIdsBySemgrepStyleId: Map<String, List<String>>) {

@@ -1,6 +1,7 @@
 package org.opentaint.common.sast
 
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
+import org.opentaint.common.sast.sarif.toolRunReport
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -28,6 +29,12 @@ abstract class ProjectAnalyzer<
     abstract fun initializeProjectAnalysisContext(): Ctx
 
     open fun analyze(): ProjectAnalysisStatus {
+        if (loadedRules.noRuleSelected) {
+            results.analysisSarifReport += project to
+                options.sarifGenerationOptions.toolRunReport(project.sourceRoot(), emptyList(), emptySequence())
+            return ProjectAnalysisStatus.OK
+        }
+
         val rules = preloadRules()
         val projectAnalysisContext = initializeProjectAnalysisContext()
 

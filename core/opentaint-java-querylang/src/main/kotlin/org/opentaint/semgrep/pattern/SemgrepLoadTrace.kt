@@ -10,13 +10,23 @@ import org.opentaint.semgrep.pattern.SemgrepTraceEntry.Step
 @Serializable
 data class SemgrepLoadTrace(
     val fileTraces: MutableList<SemgrepFileLoadTrace> = mutableListOf(),
-) {
+    val entries: MutableList<SemgrepTraceEntry> = mutableListOf(),
+) : SemgrepTraceLogger {
+    override val logMessagePrefix: String
+        get() = "rule selection"
+
+    override fun format(message: SemgrepRuleLoadErrorMessage): String = message.message
+
+    override fun addEntry(entry: SemgrepTraceEntry) {
+        entries += entry
+    }
+
     fun fileTrace(path: String): SemgrepFileLoadTrace =
         SemgrepFileLoadTrace(path).also { fileTraces.add(it) }
 
     fun compressed(): SemgrepLoadTrace {
         val compressedFileTraces = fileTraces.mapTo(mutableListOf()) { it.compressed() }
-        return SemgrepLoadTrace(compressedFileTraces)
+        return copy(fileTraces = compressedFileTraces)
     }
 }
 
@@ -24,6 +34,12 @@ sealed interface SemgrepTraceLogger {
     fun addEntry(entry: SemgrepTraceEntry)
 
     val logMessagePrefix: String
+
+    fun format(message: SemgrepRuleLoadErrorMessage): String = SemgrepLoadIssueMessages.format(
+        category = message.category,
+        severity = message.severity,
+        message = message.message,
+    )
 
     fun info(message: String) {
         addEntry(SemgrepInfoEntry(message))
@@ -35,11 +51,7 @@ sealed interface SemgrepTraceLogger {
         message: SemgrepRuleLoadErrorMessage,
     ) {
         val location = logMessagePrefix
-        val enrichedMessage = SemgrepLoadIssueMessages.format(
-            category = message.category,
-            severity = message.severity,
-            message = message.message,
-        )
+        val enrichedMessage = format(message)
 
         addEntry(SemgrepErrorEntry(step, enrichedMessage, message.category, message.severity))
 
