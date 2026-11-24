@@ -1,6 +1,7 @@
 package org.opentaint.common.sast
 
 import mu.KLogging
+import org.opentaint.common.sast.rules.loadSemgrepRules
 import org.opentaint.common.sast.test.ProjectAnalysisTestResults
 import org.opentaint.common.sast.test.TestProjectAnalyzerBase
 import org.opentaint.common.sast.test.TestSampleInfo
@@ -14,6 +15,10 @@ import org.opentaint.project.CommonProject
 import org.opentaint.project.GoProject
 import org.opentaint.project.JavaProject
 import org.opentaint.project.Project
+import org.opentaint.semgrep.go.pattern.conversion.GoLanguageStrategy
+import org.opentaint.semgrep.pattern.SemgrepRuleLoader
+import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
+import org.opentaint.semgrep.pattern.conversion.LanguageStrategy
 import java.nio.file.Path
 import kotlin.io.path.isDirectory
 
@@ -30,6 +35,14 @@ class CommonProjectAnalyzer(
     }
 
     val allProjects = project.javaProjects + project.goProjects
+
+    private val javaRuleStrategy by lazy { JavaLanguageStrategy() }
+    private val goRuleStrategy by lazy { GoLanguageStrategy() }
+
+    private val loadedRules by lazy {
+        val strategies = allProjects.map { it.ruleStrategy() }.distinct()
+        options.commonOptions().loadSemgrepRules(strategies)
+    }
 
     fun run(): ProjectAnalysisStatus = if (!runInTestMode) {
         runAnalysis()
@@ -101,16 +114,24 @@ class CommonProjectAnalyzer(
     }
 
     private fun javaProjectAnalyzer(project: JavaProject, results: ProjectAnalysisResults) =
-        JirProjectAnalyzer(project, results, options.javaOptions())
+        JirProjectAnalyzer(project, results, options.javaOptions(), project.rules())
 
     private fun goProjectAnalyzer(project: GoProject, results: ProjectAnalysisResults) =
-        GoProjectAnalyzer(project, results, options.goOptions())
+        GoProjectAnalyzer(project, results, options.goOptions(), project.rules())
 
     private fun javaProjectTestAnalyzer(project: JavaProject, results: ProjectAnalysisTestResults) =
-        TestProjectAnalyzer(project, results, options.javaOptions())
+        TestProjectAnalyzer(project, results, options.javaOptions(), project.rules())
 
     private fun goProjectTestAnalyzer(project: GoProject, results: ProjectAnalysisTestResults) =
-        GoTestProjectAnalyzer(project, results, options.goOptions())
+        GoTestProjectAnalyzer(project, results, options.goOptions(), project.rules())
+
+    private fun CommonProject.ruleStrategy(): LanguageStrategy<*, *> = when (this) {
+        is JavaProject -> javaRuleStrategy
+        is GoProject -> goRuleStrategy
+    }
+
+    private fun CommonProject.rules(): SemgrepRuleLoader.RuleLoadResult =
+        loadedRules.forLanguage(ruleStrategy().language)
 
     private fun CommonProject.skipReason(): String? {
         if (this !is GoProject) return null

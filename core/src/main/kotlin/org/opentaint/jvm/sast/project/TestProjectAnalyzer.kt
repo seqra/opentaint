@@ -5,7 +5,6 @@ import com.charleskorn.kaml.decodeFromStream
 import kotlinx.serialization.Serializable
 import mu.KLogging
 import org.opentaint.common.sast.ProjectAnalysisStatus
-import org.opentaint.common.sast.rules.loadSemgrepRules
 import org.opentaint.common.sast.sarif.DebugFactReachabilitySarifGenerator
 import org.opentaint.common.sast.sarif.SarifGenerator
 import org.opentaint.common.sast.test.ProjectAnalysisTestResults
@@ -38,9 +37,9 @@ import org.opentaint.jvm.sast.sarif.JirSarifGenerator
 import org.opentaint.jvm.sast.util.locationChecker
 import org.opentaint.project.JavaProject
 import org.opentaint.semgrep.pattern.RuleMetadata
+import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.SemgrepRuleUtils
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
-import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
 import kotlin.reflect.KClass
@@ -49,13 +48,13 @@ class TestProjectAnalyzer(
     project: JavaProject,
     results: ProjectAnalysisTestResults,
     javaOptions: ProjectAnalysisOptions,
+    private val loadedRules: SemgrepRuleLoader.RuleLoadResult,
 ): TestProjectAnalyzerBase<JavaTestSampleInfo, ProjectAnalysisContext, JavaProject, JIRMethod, JIRInst, SerializedItem, SerializedTaintConfig>(
     project,
     results,
     javaOptions.common.copy(storeSummaries = false)
 ) {
     private val projectAnalysisContexts = initializeProjectModulesAnalysisContexts(project, javaOptions)
-    private val loadedRules = options.loadSemgrepRules(JavaLanguageStrategy())
 
     @Serializable
     data class JavaTestSampleInfo(

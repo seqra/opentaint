@@ -17,9 +17,11 @@ import kotlin.io.path.walk
 
 private val logger = object : KLogging() {}.logger
 
-fun CommonAnalysisOptions.loadSemgrepRules(strategy: LanguageStrategy<*, *>): SemgrepRuleLoader.RuleLoadResult {
+fun CommonAnalysisOptions.loadSemgrepRules(
+    strategies: List<LanguageStrategy<*, *>>,
+): SemgrepRuleLoader.RuleLoadResult {
     val trace = SemgrepLoadTrace()
-    val rules = parseSemgrepRules(strategy, semgrepRuleSet, semgrepSeverity, semgrepRuleId, semgrepRuleIdExclude, trace)
+    val rules = parseSemgrepRules(strategies, semgrepRuleSet, semgrepSeverity, semgrepRuleId, semgrepRuleIdExclude, trace)
     semgrepRuleLoadTrace?.let { writeTrace(it, trace) }
     return rules
 }
@@ -34,14 +36,14 @@ private fun writeTrace(traceFile: Path, trace: SemgrepLoadTrace) {
 }
 
 private fun parseSemgrepRules(
-    strategy: LanguageStrategy<*, *>,
+    strategies: List<LanguageStrategy<*, *>>,
     rulesPath: List<Path>,
     severity: List<Severity>,
     ruleId: List<String>,
     ruleIdExclude: List<String>,
     semgrepTrace: SemgrepLoadTrace,
 ): SemgrepRuleLoader.RuleLoadResult {
-    val loader = SemgrepRuleLoader(listOf(strategy))
+    val loader = SemgrepRuleLoader(strategies)
     val ruleExt = arrayOf("yaml", "yml")
     for (rulesRoot in rulesPath) {
         rulesRoot.walk().filter { it.extension in ruleExt }.forEach { rulePath ->

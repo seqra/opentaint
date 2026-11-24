@@ -24,14 +24,15 @@ import org.opentaint.jvm.sast.sarif.JirSarifGenerator
 import org.opentaint.jvm.sast.se.api.SastSeAnalyzer
 import org.opentaint.jvm.sast.util.locationChecker
 import org.opentaint.project.JavaProject
-import org.opentaint.semgrep.pattern.conversion.JavaLanguageStrategy
+import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 
 class JirProjectAnalyzer(
     project: JavaProject,
     results: ProjectAnalysisResults,
     private val jirOptions: ProjectAnalysisOptions,
+    loadedRules: SemgrepRuleLoader.RuleLoadResult,
 ): ProjectAnalyzer<ProjectAnalysisContext, JavaProject, JIRMethod, JIRInst, SerializedItem, SerializedTaintConfig>(
-    project, results, jirOptions.common
+    project, results, jirOptions.common, loadedRules
 ) {
     override fun analyze(): ProjectAnalysisStatus {
         if (project.modules.isEmpty()) return ProjectAnalysisStatus.OK
@@ -44,7 +45,6 @@ class JirProjectAnalyzer(
     override fun ProjectAnalysisContext.selectProjectEntryPoints() =
         selectProjectEntryPoints(jirOptions)
 
-    override fun ruleStrategy() = JavaLanguageStrategy()
     override fun defaultConfigLoader() = JavaDefaultConfigLoader
     override fun configLoader() = JavaConfigurationLoader()
 

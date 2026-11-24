@@ -19,16 +19,18 @@ import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.client.GoIRClient
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.project.GoProject
-import org.opentaint.semgrep.go.pattern.conversion.GoLanguageStrategy
+import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 
 class GoProjectAnalyzer(
     project: GoProject,
     results: ProjectAnalysisResults,
-    goOptions: GoProjectAnalysisOptions = GoProjectAnalysisOptions(),
+    goOptions: GoProjectAnalysisOptions,
+    loadedRules: SemgrepRuleLoader.RuleLoadResult,
 ) : ProjectAnalyzer<AnalysisCtx, GoProject, GoIRFunction, GoIRInst, GoSerializedItem, GoSerializedTaintConfig>(
     project,
     results,
-    goOptions.common
+    goOptions.common,
+    loadedRules,
 ) {
     private val modelPaths = goOptions.modelPaths
     private val useDefaultModels = goOptions.useDefaultModels
@@ -52,7 +54,6 @@ class GoProjectAnalyzer(
         return filtered
     }
 
-    override fun ruleStrategy() = GoLanguageStrategy()
     override fun defaultConfigLoader() = GoDefaultConfigLoader
     override fun configLoader() = GoConfigurationLoader()
 

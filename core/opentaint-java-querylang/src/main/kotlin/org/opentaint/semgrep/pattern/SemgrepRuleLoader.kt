@@ -111,9 +111,15 @@ class SemgrepRuleLoader(
     }
 
     data class RuleLoadResult(
-        val rulesWithMeta: List<Pair<TaintRuleFromSemgrep<*>, RuleMetadata>>,
+        val rulesByLanguage: Map<String, List<Pair<TaintRuleFromSemgrep<*>, RuleMetadata>>>,
         val disabledRules: Set<String>,
-    )
+    ) {
+        val rulesWithMeta: List<Pair<TaintRuleFromSemgrep<*>, RuleMetadata>>
+            get() = rulesByLanguage.values.flatten()
+
+        fun forLanguage(language: String): RuleLoadResult =
+            copy(rulesByLanguage = rulesByLanguage.filterKeys { it == language })
+    }
 
     fun loadRules(
         severity: List<Severity> = emptyList(),
@@ -135,21 +141,22 @@ class SemgrepRuleLoader(
             .filterIsInstance<NormalRule<Formula>>()
             .forEach { buildNormalRule(it) }
 
-        val loaded = mutableListOf<Pair<TaintRuleFromSemgrep<*>, RuleMetadata>>()
+        val loaded = linkedMapOf<String, MutableList<Pair<TaintRuleFromSemgrep<*>, RuleMetadata>>>()
+        fun Rule<*>.addLoaded(rule: Pair<TaintRuleFromSemgrep<*>, RuleMetadata>?) {
+            rule ?: return
+            loaded.getOrPut(info.language ?: return, ::mutableListOf) += rule
+        }
+
         builtNormalRules.values
             .filterNot { it.skip() }
-            .forEach {
-                loaded += loadNormalRule(it) ?: return@forEach
-            }
+            .forEach { it.addLoaded(loadNormalRule(it)) }
 
         val tagIndex = buildTagIndex()
         val excludedRuleIds = ruleIdExclude.toSet()
         parsedRules.values
             .filterIsInstance<JoinRule<*>>()
             .filterNot { it.skip() }
-            .forEach {
-                loaded += loadJoinRule(it, tagIndex, excludedRuleIds) ?: return@forEach
-            }
+            .forEach { it.addLoaded(loadJoinRule(it, tagIndex, excludedRuleIds)) }
 
         return RuleLoadResult(loaded, disabledRules)
     }

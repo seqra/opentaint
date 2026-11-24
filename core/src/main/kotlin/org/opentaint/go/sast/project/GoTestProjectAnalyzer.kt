@@ -5,7 +5,6 @@ import com.charleskorn.kaml.decodeFromStream
 import kotlinx.serialization.Serializable
 import mu.KLogging
 import org.opentaint.common.sast.ProjectAnalysisStatus
-import org.opentaint.common.sast.rules.loadSemgrepRules
 import org.opentaint.common.sast.test.ProjectAnalysisTestResults
 import org.opentaint.common.sast.test.RuleTest
 import org.opentaint.common.sast.test.RuleTests
@@ -30,8 +29,8 @@ import org.opentaint.ir.go.client.GoIRClient
 import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.ir.util.io.inputStream
 import org.opentaint.project.GoProject
-import org.opentaint.semgrep.go.pattern.conversion.GoLanguageStrategy
 import org.opentaint.semgrep.pattern.RuleMetadata
+import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import kotlin.io.path.exists
 import kotlin.reflect.KClass
@@ -40,12 +39,12 @@ class GoTestProjectAnalyzer(
     project: GoProject,
     results: ProjectAnalysisTestResults,
     providedOptions: GoProjectAnalysisOptions,
+    private val loadedRules: SemgrepRuleLoader.RuleLoadResult,
 ) : TestProjectAnalyzerBase<GoTestSampleInfo, AnalysisCtx, GoProject, GoIRFunction, GoIRInst, GoSerializedItem, GoSerializedTaintConfig>(
     project, results, providedOptions.common.copy(storeSummaries = false),
 ) {
     private val modelPaths = providedOptions.modelPaths
     private val useDefaultModels = providedOptions.useDefaultModels
-    private val loadedRules = options.loadSemgrepRules(GoLanguageStrategy())
 
     @Serializable
     data class GoTestSampleInfo(
