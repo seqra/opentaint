@@ -52,6 +52,7 @@ is not measured yet. Open problems are in §9.
 | 24 Nov | The relative-cap rule (`acC5Exact`, C5B) is removed (acyclic proposal §5.6). |
 | 24 Nov | Keep the provisional results: for `UserService#saveUser` the gate wins over AC (acyclic proposal §7 item 1). |
 | 24 Nov | The four module fixtures that the cleaner rule changes are signed off. |
+| 24 Nov | Robustness rule: the core must prevent fact explosion by itself, whatever the code, the rules or the alias analysis give it. The relative caps `FL(Dc)+1` (C2) and `FL(Dp)+1` (C5) are this mechanism; no rule may relax them on the basis of a property of the code or of an outer input. |
 
 Gate for every rule (design-guide rules 4-6): module suite, jvm suite,
 rule suite (585 cases), OWASP 3 interleaved launches per arm,
@@ -200,8 +201,8 @@ acyclic owners stay open with and without it (acyclic proposal §5.6).
 
 The S rows end at different runs (`FIXED_POINT`), so they are not
 directly comparable with the run-11 rows. The rest: reads at a strict
-prefix of a premise, DEMAND STAR starts, and a raw depth that follows K
-in one acyclic Conductor method. For `UserService#saveUser` on
+prefix of a premise, DEMAND STAR starts, and alias self cycles from
+pass-through models (a bounded analyzer artifact; acyclic proposal §7). For `UserService#saveUser` on
 Stirling-PDF, AC and identical provisional output cannot both hold
 (acyclic proposal §7).
 
@@ -336,8 +337,9 @@ results on Stirling-PDF (acyclic proposal §7).
 1. Gate the combination NT + AO-C5 + LG (+ CA) against native on all
    projects and suites, without the relative-cap rule. This is the
    candidate end state.
-2. AC: DEMAND STAR starts (Stirling-PDF) and the raw depth that follows
-   K in `ExclusiveJoinTaskMapper#getMappedTasks` (Conductor). The
+2. AC: DEMAND STAR starts (Stirling-PDF) and alias self cycles
+   (Conductor `ExclusiveJoinTaskMapper#getMappedTasks`; source fix in the
+   alias call model). The
    `saveUser` rows stay as an accepted exception: the provisional results
    win (acyclic proposal §7).
 3. Make `LoopOutputRestriction` monotone in K. This fixes a native recall
@@ -390,6 +392,7 @@ All branches are local. Data is under
 | LG | `proto/loop-dt-20261121` | `docs/reports/loop-dt-20261121.md` |
 | Acyclic-only stack AO / AO-C5, per-rule gates, fail-safe oracle | `proto/acyclic-only-20261123` | `docs/reports/acyclic-only-20261123.md` |
 | Relative C5 cut rows are passengers; alternatives (A)-(D) | `proto/c5-passenger-20261123` | `docs/reports/c5-passenger-20261123.md` |
+| Alias self cycles in acyclic code; R2, R4 prototypes | `proto/acyclic-growth-20261124` | `docs/reports/acyclic-growth-20261124.md` |
 
 ## 12. Checklist and blind spots
 

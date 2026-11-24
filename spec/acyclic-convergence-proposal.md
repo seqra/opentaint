@@ -43,8 +43,8 @@ Combined (configuration AO-C5 = §5.1-§5.5), against native:
 | Rule suite (585) | 2 / 9 | 1 / 8; reports identical |
 
 Driver times include the residual diagnostic (§6). Requirement AC is not
-met yet. The open makers are the inside read, the DEMAND STAR start and a
-raw depth that follows K (§7).
+met yet. The open makers are the inside read, the DEMAND STAR start and
+alias self cycles that pass-through models make (§7).
 
 ## 1. Requirement
 
@@ -64,8 +64,9 @@ is bounded by the premise depth and the field writes of the cone. When K
 is larger than that bound, no global cut happens. Then every remaining
 DEMAND row comes from a maker that does not read K. Under the assumption,
 every such maker is made by the analyzer, so each one can be removed at
-its source. One measured case contradicts the bound: a raw depth that
-follows K in an acyclic Conductor method (§5.6, §7 item 3).
+its source. The alias analysis can add field writes that the program
+does not have (alias self cycles, §7 item 3). They make the bound larger
+than the K of run-11, but they do not remove it.
 
 **Gate.** Confirmed and provisional results must be identical to native,
 by SARIF identity and code flows, on every project and suite. A change
@@ -82,6 +83,7 @@ November).
 | The C5 rule is removed | `acC5Exact` and C5B are withdrawn; the relative cap stays native (§5.6) |
 | Keep the provisional results | The gate wins over AC. The inside-read rows of `UserService#saveUser` may stay; a rule for the inside read must keep the two Stirling-PDF provisional results (§7 item 1) |
 | The four cleaner fixtures of §5.5 are signed off | Their new confirmed result and three provisional → confirmed changes are accepted |
+| Robustness rule | The core must prevent fact explosion by itself, whatever the code under analysis, the rules or the alias analysis give it. The relative caps are this mechanism: C2 starts at most `FL(Dc)+1` deep and C5 publishes at most `FL(Dp)+1` deep, so a deep fact waits for the demand that asks for it. No rule may relax them on the basis of a property of the code or of an outer input |
 
 ## 2. Notation
 
@@ -233,6 +235,12 @@ analysis, made on first use.
 - **Where the scope is read.** Only the MUST-cover rule (§5.4) reads it,
   as `Acyclic(callee)`. The residual counter also reads it, as a
   diagnostic. With the C5 rule withdrawn (§5.6), no other rule reads it.
+  The scope only limits where MUST-cover removes a reply. A wrong scope
+  cannot add a fact, so the robustness rule (§1) holds.
+- **Robustness check of the five rules.** No rule relaxes a relative
+  cap or the global limit. G6 removes marks; X and RX remove targets and
+  seeds; MUST-cover removes replies; the cleaner rule keeps a leaf
+  unchanged. None of them makes a fact deeper or makes more facts.
 - **Cost.** One walk per analysis, memoized, `O(|M| + |→|)` reads. When the
   residual counter classifies every owner, the walk costs 15.5-15.8 s on
   OWASP (most of it at the run-1 barrier) and 2.2-2.5 s on Stirling-PDF
@@ -256,7 +264,7 @@ OWASP's open demand.
 | Cleaner survivor: an EXACT cleaner inside a MUST region | anchor | DemandTarget witnesses at 151 of 164 OWASP roots; `Thing2` | §5.5 | selected |
 | Read at a strict prefix of a premise ("inside read") | anchor | OWASP `BenchmarkTest01874#doSomething`; Stirling-PDF `saveUser`; Conductor `Optional#map` lambda | — | open (§7 item 1) |
 | DEMAND STAR start: a STAR start with a concrete mark is DEMAND by itself | anchor | Stirling-PDF `AuthController#login` (from a backward MAY row); 10 module fixtures (from an ANY entry) | — | open (§7 item 2) |
-| Raw depth that follows K | deepens with K | Conductor `ExclusiveJoinTaskMapper#getMappedTasks` | — | open, new (§7 item 3) |
+| Alias self cycle: the local alias analysis puts an object and one of its fields in one alias group, and the ALIASES call stage writes the object below itself (up to 6 levels per call) | global cut while K is below the bound | Conductor `ExclusiveJoinTaskMapper#getMappedTasks`; 7 Stirling-PDF owners; 12.6 % of OWASP call plans have a self alias | — | open (§7 item 3) |
 | Relative C5 cap `FL(Dp)+1` | passenger | OWASP helpers; Conductor `Optional#map`; Stirling-PDF `decodeMimeHeader` block 1 | none (§5.6) | no rule |
 | Complete backward-ZERO and ND rows | passenger | 730 backward rows on OWASP | none | they follow the DemandTarget cycle |
 
@@ -634,21 +642,25 @@ rule 10. Without (A) the residual stays an honest test of a maker fix: a
 fix that leaves a maker active at a deeper level shows up as cut rows
 that come back.
 
+The robustness rule (§1) excludes (A) on its own. Its premise "an acyclic
+method has a bounded depth" is a property of the code and of the outer
+inputs. `ExclusiveJoinTaskMapper#getMappedTasks` is acyclic by §3, but
+the alias analysis gives it deep facts (§7 item 3). There the cap
+publishes one more field per round (budget 3 at H5, 4 at H7) while the
+body reaches K. (A) would lift the cap for its NORMAL selections.
+
 **Withdrawal condition of (D).** Look at the cap again if (1) an acyclic
 owner has a cut row whose parents are cut rows only, at the same depth,
 at two consecutive forward barriers (possible only through
 `ap/Reference.kt:253`), or (2) an acyclic owner reaches zero forward rows
 with (A) and not with (D) under the same anchor rules.
 
-**New open maker found here.** On Conductor,
-`ExclusiveJoinTaskMapper#getMappedTasks` is acyclic by §3, but its raw
-output depth equals K in every run:
-`ret.Iterable#Element.TaskModel#inputData.Map#MapValue…` repeats until
-the global cut (depth 4 at `K = 4`, depth 6 at `K = 6`). The cut row
-deepens by one field per round while K grows by two, so it does not end
-while K grows. Neither (A) nor (D) acts on it: it is a cut of a DEMAND
-selection. The statement or model that repeats `Map#MapValue` is not
-traced (§7 item 3).
+**Other maker found here.** On Conductor,
+`ExclusiveJoinTaskMapper#getMappedTasks` is acyclic by §3, but its output
+is cut at K in every run up to run-7:
+`ret.Iterable#Element.TaskModel#inputData.Map#MapValue…` repeats.
+Neither (A) nor (D) acts on it: it is a cut of a DEMAND selection. The
+cause is an alias self cycle with a bound of 9 fields (§7 item 3).
 
 ## 6. Combined result
 
@@ -688,7 +700,7 @@ Open acyclic owners with AO-C5:
 | Stirling-PDF | `UserService#saveUser` (2) | inside read (§7 item 1) |
 | Stirling-PDF | `AuthController#login` (1) and its entry point (2) | DEMAND STAR start from a backward MAY row |
 | Conductor | `Optional#map` lambda of `SubWorkflowTaskMapper` (6) | inside read and its cut passengers |
-| Conductor | `ExclusiveJoinTaskMapper#getMappedTasks` (1) | raw depth that follows K |
+| Conductor | `ExclusiveJoinTaskMapper#getMappedTasks` (1) | alias self cycle (§7 item 3) |
 | Conductor | `DummyPayloadStorage#download`, `ExternalPayloadStorageUtils#downloadPayload`, `ScriptEvaluator#getSource` (5 Target rows); `StartWorkflow#getRequest` block 1 (4) | not traced |
 
 ## 7. What remains
@@ -715,10 +727,63 @@ Open acyclic owners with AO-C5:
    ANY demand over a deeper NORMAL actual (10 module fixtures). The exact
    start that removes it refines deeper than the demand requests, and it
    was rejected (§8). No exact cover is known.
-3. **Raw depth that follows K (new).** Conductor
-   `ExclusiveJoinTaskMapper#getMappedTasks` (§5.6). Trace the statement
-   or the model that repeats `Map#MapValue`. Then decide if the case is
-   inside the assumption of §1.
+3. **Alias self cycles (analyzer artifact).** Evidence: branch
+   `proto/acyclic-growth-20261124`, report
+   `docs/reports/acyclic-growth-20261124.md`.
+   - Cause in `ExclusiveJoinTaskMapper#getMappedTasks` (Conductor). The
+     method makes a new `HashMap` and calls `put` twice; no loop, no
+     recursion, no heap cycle. Two defects of the alias call model put
+     the map and its value `map.MV` in one alias group: (a) it reads the
+     row `javax.script.Bindings#put: arg(1) → this`, which rule storage
+     pushes up to `Map#put` with the condition `this is Bindings`, but
+     without the condition (`JIRLocalAliasAnalysis.kt:75-90`); (b) it
+     reads every copy as a reference assignment and merges both sides
+     (`DSUAliasAnalysis.kt:183-190`). At the next call the ALIASES stage
+     (`JIRCallPlanBuilder.kt:353-370`) writes the callee `this` into
+     `map.MV^1..6` (the alias chain stops at 6 levels). So the premise
+     comes out 9 fields deep, and the output is cut at K while `K < 9`.
+     Native shows the same cuts. The rules involved have no `[any]`, so
+     the case is inside the assumption of §1. The depth is bounded; by
+     inference the cuts end near forward run-15.
+   - Other cases: 12.6 % of OWASP call plans have a self alias (4.9 %
+     Stirling-PDF, 3.5 % Conductor). Every acyclic owner with a global cut
+     after run-4 on the three projects has one: `getMappedTasks` and
+     `DynamicTaskMapper#getDynamicTaskName` (Conductor), and 7
+     Stirling-PDF owners (with a repeated `Optional#Element`,
+     `Map#MapKey`, `Matcher#input` or `Put#MapValue`). All of them end by
+     run-9, except `getMappedTasks`, which is still cut at H7, the last
+     barrier before the Conductor timeout. The module-suite cases are deep chains that the fixtures
+     write themselves (the bound holds there).
+   - Source fix, not prototyped: the alias call model evaluates the row
+     condition at the call site, as the taint call plan does, and it
+     reads only rows that keep the reference (the parsed
+     `taintCopyOnly` marker is not used today; `append` rows are not
+     marked). A narrow form (drop copies into a bare `this` or argument)
+     keeps the reports on OWASP, Stirling-PDF and both suites, but
+     Conductor runs out of memory in run-2 in 2 of 2 launches. Not
+     traced.
+   - Consumer-side prototype `aliasNoSelfEdge` (R4): the ALIASES stage
+     writes no call position below the caller local that it is bound to.
+     Reports identical to AO-C5 on OWASP (3), Stirling-PDF (2), Conductor
+     (2), the rule suite and the jvm suite; time and memory not worse;
+     `getMappedTasks` has no row from H5. It is not exact for a real heap
+     cycle (for example a parent back-pointer: `x == x.parent.child`):
+     there it drops facts that native keeps for 6 levels. Not selected.
+   - Under the robustness rule (§1) no fix of the alias analysis is
+     needed against fact explosion: the relative cap already makes the
+     deep facts wait for demand, and the case costs no measurable time.
+     The source fix and R4 are a precision item of the alias analysis,
+     outside AC.
+   - Open: natural termination does not have the same robustness. The
+     deepening row stops only at the alias chain limit, a constant of the
+     alias analysis. An alias input with an unbounded self cycle (real or
+     not) would deepen the row by one field per round for ever: no
+     explosion, but no `NO_DEMAND_EDGE`, and no `FIXED_POINT` (the row
+     changes, and the body cut reads K). Candidate: treat a self cycle
+     that the alias analysis reports like a program cycle. The cycle fold
+     W (main proposal §6.1) then also acts where the ALIASES stage writes
+     through a self alias, the row becomes stable, and the owner leaves
+     the AC scope. Not prototyped.
 4. **The MUST-cover scope reads a call-cone property** (§5.4). This is
    the weak point that withdrew `acC5Exact`. The scope is needed because
    the unscoped rule doubles Conductor's H7 rows; the local cause of that
