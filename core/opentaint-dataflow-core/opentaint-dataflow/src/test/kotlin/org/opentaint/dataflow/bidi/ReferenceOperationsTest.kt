@@ -115,11 +115,13 @@ class ReferenceOperationsTest {
         assertClean(listOf(kept), null, cleaner(listOf(f), CleanReach.AT_AND_BELOW), must)
         assertClean(listOf(kept, c(listOf(f), Tail.EXACT)), null,
             cleaner(listOf(f), CleanReach.BELOW), must)
-        assertClean(listOf(c(emptyList(), Tail.ANY_TAINT, exclusion = ex(g), demand = true)), null, cleaner(listOf(f), CleanReach.EXACT), must)
+        // R2: an EXACT cleaner does not apply to a MUST leaf; the fact keeps its layer and E.
+        assertClean(listOf(must), null, cleaner(listOf(f), CleanReach.EXACT), must)
         val excluded = c(emptyList(), Tail.ANY_TAINT, exclusion = ex(f))
         for (reach in CleanReach.entries) {
             assertClean(listOf(excluded), null, cleaner(listOf(f), reach), excluded)
-            assertClean(listOf(c(emptyList(), Tail.ANY_TAINT, exclusion = ex(g), demand = true)), null, cleaner(listOf(f, g), reach), must)
+            assertClean(listOf(c(emptyList(), Tail.ANY_TAINT, exclusion = ex(g), demand = reach != CleanReach.EXACT)), null,
+                cleaner(listOf(f, g), reach), must)
         }
     }
 
@@ -129,7 +131,8 @@ class ReferenceOperationsTest {
             cleaner(emptyList(), CleanReach.BELOW), c(emptyList(), Tail.ANY_TAINT, exclusion = ex(g)))
         assertClean(listOf(c(emptyList(), Tail.EXACT, demand = true)), null,
             cleaner(emptyList(), CleanReach.BELOW), c(emptyList(), Tail.ANY))
-        assertClean(listOf(c(emptyList(), Tail.ANY_TAINT, exclusion = ex(g), demand = true)), null,
+        // R2: an EXACT cleaner does not apply to a MUST leaf; the fact keeps its layer and E.
+        assertClean(listOf(c(emptyList(), Tail.ANY_TAINT, exclusion = ex(g))), null,
             cleaner(emptyList(), CleanReach.EXACT), c(emptyList(), Tail.ANY_TAINT, exclusion = ex(g)))
     }
 

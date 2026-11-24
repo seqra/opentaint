@@ -183,6 +183,8 @@ private class TaintClean(private val m: ApManager, private val c: TaintTree, pri
             Pos.DISJOINT -> return marks
             Pos.INSIDE -> Unit
             Pos.PART -> {
+                // An EXACT cleaner does not apply to a MUST leaf: the leaf keeps its layer, marks and E (ap.md §4.7).
+                if (cl.reach == CleanReach.EXACT && tail == Tail.ANY_TAINT) return marks
                 val at = m.path(path.copyOf(d))
                 when {
                     tail == Tail.ANY_TAINT && d == path.size - 1 && cl.reach != CleanReach.EXACT -> {

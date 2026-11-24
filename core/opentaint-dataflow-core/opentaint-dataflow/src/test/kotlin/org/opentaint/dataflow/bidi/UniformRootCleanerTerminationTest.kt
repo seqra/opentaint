@@ -1,6 +1,5 @@
 package org.opentaint.dataflow.bidi
 
-import org.opentaint.dataflow.bidi.fixtures.TERMINATION_BASELINE_LAST_RUN
 import org.opentaint.dataflow.bidi.fixtures.TerminationBaselinePolicy
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
@@ -17,7 +16,9 @@ import kotlin.time.Duration.Companion.seconds
 
 /** Historical production behavior before the selected MUST-preserving
  * cleaner revision. Production is not changed by the specification update.
- * The ceiling is a test budget, not the proof of non-termination. */
+ * The ceiling is a test budget, not the proof of non-termination.
+ * R2 (an EXACT cleaner does not apply to a MUST leaf) keeps x.MUST/T NORMAL
+ * through the EXACT root cleaner: both EXACT-root cases confirm in run 1. */
 class UniformRootCleanerTerminationTest {
     private fun program(f: DriverFixtures, reach: CleanReach? = CleanReach.EXACT,
                         sinkTail: Tail = Tail.ANY, preciseChildSource: Boolean = false): MethodKey {
@@ -48,7 +49,7 @@ class UniformRootCleanerTerminationTest {
         return main
     }
 
-    @Test fun `uniform source exact-root selected cleanup renews the same target through run101`() {
+    @Test fun `uniform source exact-root selected cleanup keeps the must root and confirms the target in run1`() {
         DriverFixtures().use { f ->
             val main = program(f)
             val driver = f.driver(TerminationBaselinePolicy, 20.seconds,
@@ -61,21 +62,20 @@ class UniformRootCleanerTerminationTest {
                     "normalTargets=${actor.targets.count { it.target is Target.NormalTarget }} dataSummaries=$data")
                 assertEquals(0, data, "No local x fact becomes a method DATA summary")
             }
+            // R2: the EXACT root cleaner does not apply to x.MUST/T, so the sink is reached on NORMAL in run 1.
             assertEquals(RunStatus.COMPLETE, report.end.status)
-            assertEquals(TERMINATION_BASELINE_LAST_RUN, report.end.run)
-            assertEquals(EndReason.RUN_LIMIT, report.end.reason)
-            assertEquals((1..TERMINATION_BASELINE_LAST_RUN).toList(), f.results.map { it.runIndex })
+            assertEquals(1, report.end.run)
+            assertEquals(EndReason.NO_DEMAND_EDGE, report.end.reason)
+            assertEquals(listOf(1), f.results.map { it.runIndex })
+            assertEquals(listOf("root-cleaner tree sink"), report.entries.map { it.descriptor.rule.id })
+            assertTrue(report.entries.none { it.provisional })
             assertTrue(f.processed.all { it.delta.premise.isZero },
                 "No method DATA initial, MUST or MAY premise is introduced")
             assertTrue(f.processed.all { row -> f.ops.leaves(row.delta.facts).all { it.fact.path.isEmpty() } },
-                "All processed field chains have length zero; no truncation can cause this cycle")
-            for (result in f.results) {
-                val actor = result.analyzers.single { it.key == main }
-                assertEquals(1, actor.outgoingTargets.size)
-                assertTrue(actor.outgoingTargets.any { it.premise.isZero && it.target == Target.DemandTarget },
-                    "run-${result.runIndex} must recompute the same ZERO -> DemandTarget")
-                assertTrue(actor.targets.none { it.target is Target.NormalTarget })
-            }
+                "All processed field chains have length zero")
+            val actor = f.results.single().analyzers.single { it.key == main }
+            assertTrue(actor.outgoingTargets.none { it.target == Target.DemandTarget }, "No ZERO -> DemandTarget is computed")
+            assertTrue(actor.targets.any { it.premise.isZero && it.target is Target.NormalTarget })
         }
     }
 
@@ -103,9 +103,11 @@ class UniformRootCleanerTerminationTest {
         DriverFixtures().use { f ->
             val report = f.driver(FixedLimits(listOf(1, 1, 2, 3, 4)), run1MarkMode = MarkMode.FULL)
                 .analyze(listOf(program(f, sinkTail = Tail.EXACT)))
-            assertEquals(3, report.end.run)
+            // R2: the EXACT root cleaner does not apply to x.MUST/T, so the exact-root sink is confirmed in run 1.
+            assertEquals(1, report.end.run)
             assertEquals(EndReason.NO_DEMAND_EDGE, report.end.reason)
-            assertTrue(report.entries.isEmpty())
+            assertEquals(listOf("root-cleaner tree sink"), report.entries.map { it.descriptor.rule.id })
+            assertTrue(report.entries.none { it.provisional })
         }
     }
 

@@ -96,7 +96,8 @@ class JIRLoweredCleanerEffectTest : BasicTestUtils() {
         val input = must(exclusion = ex(g))
         val position = at(Argument(0), "f")
         val exact = steps(listOf(selected(position)))
-        check(exact, listOf(input), setOf(must(exclusion = ex(f, g)), must(p(f)).copy(demand = true)))
+        // R2: the EXACT cleaner on the read temporary does not apply to its MUST leaf; x.f.MUST stays NORMAL.
+        check(exact, listOf(input), setOf(must(exclusion = ex(f, g)), must(p(f))))
         val below = steps(listOf(selected(any(position))))
         check(below, listOf(input), setOf(must(exclusion = ex(f, g)), c(path = p(f))))
         val subtree = sourceReset(position)
@@ -111,7 +112,9 @@ class JIRLoweredCleanerEffectTest : BasicTestUtils() {
             val demand = tail == Tail.ANY
             val exclusion = if (demand) ExclusionSet.Empty else ex(g)
             val input = c(path = p(f), tail = tail, exclusion = exclusion, demand = demand)
-            check(steps(listOf(selected(position))), listOf(input), setOf(input.copy(demand = true)))
+            // R2: an EXACT cleaner does not apply to a MUST leaf; the leaf keeps its layer. The MAY row is unchanged.
+            check(steps(listOf(selected(position))), listOf(input),
+                setOf(if (tail == Tail.ANY_TAINT) input else input.copy(demand = true)))
             check(steps(listOf(selected(any(position)))), listOf(input), setOf(c(path = p(f), demand = demand)))
             check(sourceReset(position), listOf(input), emptySet())
             check(steps(listOf(selected(position, mark = "U"))), listOf(input), setOf(input))

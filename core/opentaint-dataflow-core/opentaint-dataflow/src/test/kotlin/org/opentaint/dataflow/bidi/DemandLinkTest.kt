@@ -34,7 +34,7 @@ class DemandLinkTest {
             assertTrue(runThree.analyzers.all { actor -> actor.summaries.all().all { it.second.layer == Layer.NORMAL } })
             val mThree = runThree.analyzers.single { it.key == program.sinkMethod }
             val demandLinks = f.links(3, mThree.key).asSequence().filter { it.linkLayer == Layer.DEMAND }.toList()
-            assertTrue(demandLinks.isNotEmpty(), "The primitive root EXACT cleaner demotes the layer while retaining the must payload")
+            assertTrue(demandLinks.isNotEmpty(), "The AT_AND_BELOW cleaner at h.g demotes the root layer while retaining the must payload")
             assertTrue(demandLinks.any { it.addedFact == coarseLink })
             assertTrue(runThree.demandLayerEdges > 0,
                 "Real DEMAND starts are counted; raw incoming presence is still not stored")
@@ -50,7 +50,7 @@ class DemandLinkTest {
                 .map { it.entry }, coarseDemand)
             assertTrue(driver.frontiers.last().demandEdges.isEmpty())
             assertEquals(program.rule, report.entries.single().descriptor.rule,
-                "The source taints descendants; cleaning only the root must not lose the g.h finding")
+                "The source taints descendants; cleaning only h.g must not lose the g.h finding")
             assertEquals(AnalysisEnd(RunStatus.COMPLETE, 7, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
             assertEquals(listOf(1, 2, 3, 4, 5, 6, 7), driver.frontiers.map { it.run })
             assertTrue(driver.frontiers[2].targetDemand > 0)

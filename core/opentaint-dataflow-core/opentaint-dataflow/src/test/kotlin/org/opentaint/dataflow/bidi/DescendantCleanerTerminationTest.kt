@@ -18,7 +18,8 @@ import kotlin.time.Duration.Companion.seconds
 /** Historical pre-R35/R36 diagnostic on unchanged production. The earlier
  * same-head MUST policy did not cover cleaning x.f from x.MUST.
  * The only call action is a configured cleaner: no unresolved transfer,
- * pass rule, loop, recursion, write or user-provided summary is involved. */
+ * pass rule, loop, recursion, write or user-provided summary is involved.
+ * R2 (an EXACT cleaner does not apply to a MUST leaf) ends the EXACT case in run 1. */
 class DescendantCleanerTerminationTest {
     private enum class Source { UNIFORM, ROOT, CLEANED_POINT, SIBLING }
     private data class Case(val main: MethodKey, val x: AccessPathBase, val field: Int)
@@ -71,7 +72,24 @@ class DescendantCleanerTerminationTest {
             assertTrue(f.processed.filter { it.method == c.main }.all { row -> f.ops.leaves(row.delta.facts).all { it.fact.path.isEmpty() } })
         }
     }
-    @Test fun `descendant exact cleaner repeats Target demand through diagnostic run101`() = diagnostic()
+    @Test fun `descendant exact cleaner keeps the must leaf and confirms in run1`() {
+        DriverFixtures().use { f ->
+            val c = program(f, Source.UNIFORM)
+            val report = f.driver(TerminationBaselinePolicy, 30.seconds,
+                run1MarkMode = MarkMode.FULL).analyze(listOf(c.main))
+            // R2: the EXACT cleaner at x.f does not apply to x.MUST/T, so the observation is reached on NORMAL in run 1.
+            assertEquals(RunStatus.COMPLETE, report.end.status)
+            assertEquals(EndReason.NO_DEMAND_EDGE, report.end.reason)
+            assertEquals(1, report.end.run)
+            assertEquals(listOf("observe remaining T"), report.entries.map { it.descriptor.rule.id })
+            assertTrue(report.entries.none { it.provisional })
+            assertTrue(f.processed.filter { it.method == c.main }.all { it.delta.premise.isZero })
+            assertTrue(f.processed.filter { it.method == c.main }.all { row -> f.ops.leaves(row.delta.facts).all { it.fact.path.isEmpty() } })
+            val actor = f.results.single().analyzers.single { it.key == c.main }
+            assertTrue(actor.outgoingTargets.none { it.target == Target.DemandTarget })
+            assertTrue(actor.targets.any { it.premise.isZero && it.target is Target.NormalTarget })
+        }
+    }
     @Test fun `nested whole subtree cleaner repeats through diagnostic run101`() = diagnostic(CleanReach.AT_AND_BELOW, 2)
     @Test fun `nested below cleaner repeats through diagnostic run101`() = diagnostic(CleanReach.BELOW, 2)
     @Test fun `nested RemoveAll repeats through diagnostic run101`() = diagnostic(CleanReach.AT_AND_BELOW, 2, true)

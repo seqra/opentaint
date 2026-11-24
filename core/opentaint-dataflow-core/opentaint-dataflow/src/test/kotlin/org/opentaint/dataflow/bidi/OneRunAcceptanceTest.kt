@@ -225,26 +225,26 @@ class OneRunAcceptanceTest {
             }
             val kept = Conclusion(PathFact(x, emptyList(), Tail.ANY_TAINT, t), ExclusionSet.of(a), false)
             val exact = Conclusion(PathFact(x, listOf(a), Tail.EXACT, t), ExclusionSet.Empty, false)
-            val demoted = Conclusion(PathFact(x, emptyList(), Tail.ANY_TAINT, t), ExclusionSet.Empty, true)
+            // R2: an EXACT cleaner does not apply to a MUST leaf; x.MUST/T stays NORMAL.
+            val must = Conclusion(PathFact(x, emptyList(), Tail.ANY_TAINT, t), ExclusionSet.Empty, false)
             val expectedFacts = when (reach) {
                 CleanReach.AT_AND_BELOW -> setOf(kept)
                 CleanReach.BELOW -> setOf(kept, exact)
-                CleanReach.EXACT -> setOf(demoted)
+                CleanReach.EXACT -> setOf(must)
             }
             val expectedSinks = when (reach) {
                 CleanReach.AT_AND_BELOW -> mapOf(elsewhere.rule.id to setOf(Layer.NORMAL))
                 CleanReach.BELOW -> mapOf(atField.rule.id to setOf(Layer.NORMAL), elsewhere.rule.id to setOf(Layer.NORMAL))
-                CleanReach.EXACT -> mapOf(atField.rule.id to setOf(Layer.DEMAND),
-                    belowField.rule.id to setOf(Layer.DEMAND), elsewhere.rule.id to setOf(Layer.DEMAND))
+                CleanReach.EXACT -> mapOf(atField.rule.id to setOf(Layer.NORMAL),
+                    belowField.rule.id to setOf(Layer.NORMAL), elsewhere.rule.id to setOf(Layer.NORMAL))
             }
             assertEquals(expectedFacts, raw(actual, key, x), "index=$index reach=$reach")
             assertEquals(expectedSinks, sinkLayers(actual), "index=$index reach=$reach")
             assertTrue(actual.targets.all { it.premise == zero })
-            assertEquals(reach != CleanReach.EXACT, actual.targets.all { it.normal })
+            assertTrue(actual.targets.all { it.normal })
 
             val selectedData = actual.selectedDemand.filter { it.conclusion.fact.base == x }.toSet()
-            assertEquals(if (reach == CleanReach.EXACT) setOf(ObservedEdge(key, zero, demoted)) else emptySet(),
-                selectedData)
+            assertEquals(emptySet(), selectedData)
             assertTrue(actual.requests.isEmpty() && actual.links.isEmpty())
         }
     }

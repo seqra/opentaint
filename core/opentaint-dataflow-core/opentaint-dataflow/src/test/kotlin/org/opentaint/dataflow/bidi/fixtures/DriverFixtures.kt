@@ -178,7 +178,9 @@ class DriverFixtures(threads: Int = 1, markDeclarations: MarkDeclarations = COMM
         return ProgramCase(root, sink.rule, program.inst(callee, 1), source)
     }
 
-    /** DLINK: srcAny; c(x) reads q then r; m cleans its root EXACT before the g.h sink and throws. */
+    /** DLINK: srcAny; c(x) reads q then r; m cleans T at and below h.g of its argument before the g.h sink and throws.
+     *  The cleaner is two accessors below the MUST root, so the root leaf goes to DEMAND (R2 keeps a MUST leaf under
+     *  an EXACT cleaner only). */
     fun demandLink(): DemandLinkCase {
         val root = program.method("dlink root", listOf(listOf(1), listOf(2), listOf(3), emptyList()), 3).key()
         val sourceMethod = program.method("dlink srcAny", listOf(listOf(1), emptyList()), 1).key()
@@ -218,7 +220,7 @@ class DriverFixtures(threads: Int = 1, markDeclarations: MarkDeclarations = COMM
             listOf(MicroEdge.of(keepEdge(temporary)), MicroEdge.of(starEdge(temporary, listOf(r), value, emptyList()))),
             emptyList(), emptyMap()))
         program.call(reader, 3, resolved(sinkMethod, summary(starEdge(value, emptyList(), argument, emptyList()), ZERO_KEEP),
-            summary(ZERO_KEEP), setOf(value), Cleaner(argument, null, CleanReach.EXACT, taint)))
+            summary(ZERO_KEEP), setOf(value), Cleaner(argument, program.ap.path(listOf(h, g)), CleanReach.AT_AND_BELOW, taint)))
         val sink = SinkRule(rule("DLINK sink"), 0, listOf(program.pattern(argument, listOf(g, h), mark = mark)), emptyList())
         program.call(sinkMethod, 1, CallPlan(setOf(argument), listOf(
             CallStage.Edges(BEFORE, BOUND, BIND_IN, summary(keepEdge(argument), ZERO_KEEP)),

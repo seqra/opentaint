@@ -484,10 +484,13 @@ internal fun wholeFlowClean(cl: Cleaner, c: Conclusion): List<Conclusion> {
 
 /** ap.md §4.7 (Lean concPart; with the exclusion AnyTaintEx.partX): a normal `[any-taint]/E` fact at x.p and a cleaner ONE
  *  accessor below it, at x.p.f: `atAndBelow` gives the fact with `E ∪ {f}`, `below` gives it and `(x, p.f, $, T)`, in
- *  the layer of c (A2). An any-tail fact at x.p under a `below` cleaner AT x.p keeps `(x, p, $, T)` in its layer. Any
- *  other `part` result (the `exact` cleaner one accessor below too) goes to the demand layer. A selected
+ *  the layer of c (A2). An any-tail fact at x.p under a `below` cleaner AT x.p keeps `(x, p, $, T)` in its layer. An
+ *  `exact` cleaner does not apply to an `[any-taint]` (MUST) fact: the fact stays unchanged in its layer. Any other
+ *  `part` result (for a non-MUST tail, the `exact` cleaner one accessor below too) goes to the demand layer. A selected
  *  remaining STAR/T becomes ANY/T with Empty E; all other existing survivor shapes stay unchanged. */
 fun concPart(cl: Cleaner, c: Conclusion): List<Conclusion> {
+    // An EXACT cleaner does not apply to a MUST leaf (ap.md §4.7).
+    if (cl.reach == CleanReach.EXACT && c.fact.tail == Tail.ANY_TAINT) return listOf(c)
     val p = cl.path?.toList().orEmpty()
     val q = c.fact.path
     if (c.fact.tail == Tail.ANY_TAINT && p.size == q.size + 1 && p.startsWith(q) && cl.reach != CleanReach.EXACT) {

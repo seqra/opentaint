@@ -96,7 +96,8 @@ class AcyclicTerminationBaselineTest {
         assertEquals(report.end.run, saved.run)
         assertEquals(1, saved.targetDemand)
         assertEquals(1, report.entries.size)
-        assertEquals(case.protect || case.overwriteInput.size == 2, report.entries.single().provisional)
+        // R2: the protecting EXACT root cleaner does not apply to the MUST leaf, so the protected case is confirmed.
+        assertEquals(case.overwriteInput.size == 2, report.entries.single().provisional)
     }
 
     @Test fun rootMayRenewal() = run(Case("root MAY", listOf("f"), listOf("f", "g"), listOf("f"), 2))

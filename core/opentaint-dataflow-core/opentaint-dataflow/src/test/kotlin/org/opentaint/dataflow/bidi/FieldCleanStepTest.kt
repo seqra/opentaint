@@ -210,7 +210,9 @@ class FieldCleanStepTest {
                 val expected = if (selected == u) setOf(input) else when (reach) {
                     CleanReach.AT_AND_BELOW -> emptySet()
                     CleanReach.BELOW -> setOf(fact(path = path, demand = demand))
-                    CleanReach.EXACT -> setOf(fact(path = path, tail = tail, exclusion = exclusion, demand = true))
+                    // R2: an EXACT cleaner does not apply to a MUST leaf; the leaf keeps its layer.
+                    CleanReach.EXACT -> setOf(fact(path = path, tail = tail, exclusion = exclusion,
+                        demand = tail != Tail.ANY_TAINT))
                 }
                 val cleaned = ArrayList<PlanItem>()
                 val got = walk(step, listOf(item(input)), cleaned = cleaned).map { it.c }.toSet()

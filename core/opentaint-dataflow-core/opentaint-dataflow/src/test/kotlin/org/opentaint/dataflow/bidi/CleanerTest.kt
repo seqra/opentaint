@@ -161,7 +161,8 @@ class CleanerTest {
                 assertEquals(setOf(policy(kept, mode)), decoded(check(input, cleaner(p(f, g), CleanReach.AT_AND_BELOW, mark), mode).results))
                 assertEquals(setOf(policy(kept, mode), endpoint), decoded(check(input, cleaner(p(f, g), CleanReach.BELOW, mark), mode).results))
                 val demoted = policy(original.copy(demand = true), mode)
-                assertEquals(setOf(demoted), decoded(check(input, cleaner(p(f, g), CleanReach.EXACT, mark), mode).results))
+                // R2: an EXACT cleaner does not apply to a MUST leaf; the leaf keeps its layer.
+                assertEquals(setOf(policy(original, mode)), decoded(check(input, cleaner(p(f, g), CleanReach.EXACT, mark), mode).results))
                 assertEquals(setOf(demoted), decoded(check(input, cleaner(p(f, g, h), CleanReach.AT_AND_BELOW, mark), mode).results))
                 assertEquals(setOf(demoted), decoded(check(input, cleaner(p(f, g, h), CleanReach.BELOW, mark), mode).results))
             }
@@ -171,12 +172,13 @@ class CleanerTest {
     }
 
     @Test
-    fun `must at below becomes exact while other partial rows demote with Empty E`() {
+    fun `must at below becomes exact while the exact row keeps the must leaf`() {
         val original = value(p(f, g), Tail.ANY_TAINT, exclusion = ex(h))
         val input = pack(listOf(original))
         for (mode in modes) for (mark in listOf(t)) {
             assertEquals(setOf(value(p(f, g), Tail.EXACT)), decoded(check(input, cleaner(p(f, g), CleanReach.BELOW, mark), mode).results))
-            assertEquals(setOf(policy(original.copy(demand = true), mode)), decoded(check(input, cleaner(p(f, g), CleanReach.EXACT, mark), mode).results))
+            // R2: an EXACT cleaner does not apply to a MUST leaf; the leaf keeps its layer.
+            assertEquals(setOf(policy(original, mode)), decoded(check(input, cleaner(p(f, g), CleanReach.EXACT, mark), mode).results))
             assertTrue(check(input, cleaner(p(f, g), CleanReach.AT_AND_BELOW, mark), mode).results.isEmpty())
         }
         val demand = pack(listOf(value(p(f, g), Tail.ANY, demand = true)))
@@ -190,8 +192,29 @@ class CleanerTest {
         val input = pack(listOf(original))
         for (reach in CleanReach.entries) for (mark in if (reach == CleanReach.AT_AND_BELOW) listOf(t, null) else listOf(t)) for (mode in modes) {
             assertEquals(setOf(policy(original, mode)), decoded(check(input, cleaner(p(f, h, g), reach, mark), mode).results))
-            assertEquals(setOf(policy(original.copy(demand = true), mode)),
+            // R2: an EXACT cleaner does not apply to a MUST leaf; the leaf keeps its layer.
+            assertEquals(setOf(policy(original.copy(demand = reach != CleanReach.EXACT), mode)),
                 decoded(check(input, cleaner(p(f, g, h), reach, mark), mode).results))
+        }
+    }
+
+    /** R2 (an EXACT cleaner does not apply to a MUST leaf): for each reach and each any tail, a cleaner at x.f and at x
+     *  on x.<tail>/E (E empty and {g}), on every layer the tail has, in run 1 and in the restricted runs (FULL mode).
+     *  `check` asserts that ops.clean and the reference cleanRes give the same rows; the EXACT rows on a MUST leaf
+     *  give the input leaf on its own layer (after the run-1 output policy). */
+    @Test
+    fun `exact cleaner keeps a must leaf and the runtime equals the reference for every reach and any tail`() {
+        val leaves = buildSet {
+            for (tail in listOf(Tail.ANY_TAINT, Tail.ANY, Tail.STAR)) for (demand in listOf(false, true))
+                for (exclusion in listOf(ExclusionSet.Empty, ex(g)))
+                    add(normalize(PathFact(x, p(), tail, mt), exclusion, demand))
+        }
+        assertEquals(9, leaves.size, "MUST and STAR on both layers with two E, MAY on DEMAND with Empty E")
+        for (leaf in leaves) for (clPath in listOf(p(f), p())) for (reach in CleanReach.entries) for (mode in modes) {
+            val name = "${leaf.fact.tail}/${leaf.exclusion}/demand=${leaf.demand} at $clPath $reach run1=${mode.run1} ${mode.direction}"
+            val out = check(pack(listOf(leaf)), cleaner(clPath, reach), mode, name)
+            if (reach == CleanReach.EXACT && leaf.fact.tail == Tail.ANY_TAINT)
+                assertEquals(setOf(policy(leaf, mode)), decoded(out.results), name)
         }
     }
 
