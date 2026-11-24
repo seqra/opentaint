@@ -83,6 +83,7 @@ conclusion 2); `FIXED_POINT` is the same idea for the whole state.
 | 24 Nov | The EXACT-cleaner rule is approved as semantics (group A). |
 | 24 Nov | Measurements: a single launch per item (design guide rule 6); more only when the numbers do not decide. |
 | 24 Nov | Stop and finalize: rules split into group A (works) and group B (questionable), §0.1. |
+| 24 Nov | Group A lands as plain semantics: no switch such as `MustIgnoresExactCleaner.enabled`, no in-code census; diagnostics stay on the prototype branches. |
 
 Gate for every rule (design-guide rules 4-6): module suite, jvm suite,
 rule suite (585 cases), OWASP, Stirling-PDF and Conductor, a single launch
@@ -366,8 +367,11 @@ results on Stirling-PDF (acyclic proposal §7).
 
 ## 9. Open problems and next steps
 
-1. Group A (G6, the cleaner rule, canonical order) can land behind its
-   flags. Every group-B rule needs the sink-route census before it can
+1. Group A (G6, the cleaner rule, canonical order) lands as plain
+   semantics, with no switch and no in-code diagnostic (decision of 24
+   November; for G6 and the cleaner rule see
+   [acyclic-group-a-implementation.md](acyclic-group-a-implementation.md)).
+   Every group-B rule needs the sink-route census before it can
    move (§0.1). The earlier candidate end state NT + AO-C5 + LG (+ CA) is
    not a candidate any more: X, RX and MUST-cover are in group B.
 2. Build and measure a K-saturation condition: remove the demand of an

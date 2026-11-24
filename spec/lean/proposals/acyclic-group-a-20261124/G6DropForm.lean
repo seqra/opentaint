@@ -210,6 +210,34 @@ theorem monotone_in_K (P : Policy) (t : Nat) (p : Path) {K K' : Nat} (hK : K ≤
     rw [e]; exact List.take_prefix K (p.take K')
   exact kept_exact_keeps_cut P t _ _ hkept hpre hwf
 
+/-! ## D3', D4': no side condition for an admitted fact -/
+
+/-- The path filter admits `p` (code fact C-A2, `JIRFactTypeChecker`): no
+    accessor follows a true primitive value, so no strict prefix of an
+    admitted path is a spine node at a true primitive level. -/
+def Admitted (P : Policy) (p : Path) : Prop :=
+  ∀ q, q <+: p → q ≠ p → TruePrimLeaf P q = false
+
+theorem side_condition_of_admitted (P : Policy) {q p : Path} (hadm : Admitted P p)
+    (hpre : q <+: p) : p = q ∨ TruePrimLeaf P q = false :=
+  if h : q = p then Or.inl h.symm else Or.inr (hadm q hpre h)
+
+/-- D3' (prefix closure for every admitted fact). -/
+theorem kept_exact_keeps_cut_admitted (P : Policy) (t : Nat) (q p : Path)
+    (hadm : Admitted P p) (hkept : removedDrop P t p = false) (hpre : q <+: p) :
+    removedDrop P t q = false :=
+  kept_exact_keeps_cut P t q p hkept hpre (side_condition_of_admitted P hadm hpre)
+
+/-- D4' (monotone in K for every admitted fact). -/
+theorem monotone_in_K_admitted (P : Policy) (t : Nat) (p : Path) {K K' : Nat} (hK : K ≤ K')
+    (hadm : Admitted P (p.take K')) (hkept : removedDrop P t (p.take K') = false) :
+    removedDrop P t (p.take K) = false := by
+  have hpre : p.take K <+: p.take K' := by
+    have e : p.take K = (p.take K').take K := by
+      rw [List.take_take, Nat.min_eq_left hK]
+    rw [e]; exact List.take_prefix K (p.take K')
+  exact kept_exact_keeps_cut_admitted P t _ _ hadm hkept hpre
+
 /-! ## D5: the native filter is not prefix closed (fixture M4) -/
 
 /-- `Integer[]`: level 0 is an array (no policy), level 1 is `Integer` (boxed). -/
@@ -405,6 +433,8 @@ end G6DropForm
 #print axioms G6DropForm.removed_on_region
 #print axioms G6DropForm.kept_exact_keeps_cut
 #print axioms G6DropForm.monotone_in_K
+#print axioms G6DropForm.kept_exact_keeps_cut_admitted
+#print axioms G6DropForm.monotone_in_K_admitted
 #print axioms G6DropForm.m4_native_breaks
 #print axioms G6DropForm.m4_drop_form
 #print axioms G6DropForm.native_not_prefix_closed

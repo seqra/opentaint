@@ -7,7 +7,7 @@ Follow [proof-guide.md](../../../proof-guide.md).
 
 | Module | Claims | Contract |
 | --- | ---: | --- |
-| `G6DropForm.lean` | 15 | R1, the G6 drop form: it extends native; it is native without a boxed level and for primitive-tracking marks; region exactness, prefix closure (ap.md S5) and monotonicity in K; the M4 counterexample for native; the conjunction of two policies; the production accumulation and the reference compute the same predicate |
+| `G6DropForm.lean` | 17 | R1, the G6 drop form: it extends native; it is native without a boxed level and for primitive-tracking marks; region exactness, prefix closure (ap.md S5) and monotonicity in K, with no side condition for a fact that the path filter admits; the M4 counterexample for native; the conjunction of two policies; the production accumulation and the reference compute the same predicate |
 | `MustExactCleaner.lean` | 12 | R2, an EXACT cleaner on a MUST leaf: native demotes the leaf, R2 keeps it; the only change is the layer of one row; equal positions; the tree position equals the reference position; no finite NORMAL form of "the region without the point" (executable witness); the OWASP `Thing2` reduction |
 
 Every claim is constructive. The audited axioms are `propext` and
@@ -27,7 +27,8 @@ fails on an error, a `sorry` or an axiom outside `{propext, Quot.sound}`.
 ## Scope
 
 The models are local to one operation: one mark, one leaf or one path.
-They do not prove whole-analyzer soundness or termination. The
-assumptions A1-A3 of the proposal (§3.4) are code readings. The existing
+They do not prove whole-analyzer soundness or termination. A1 and A3 of
+the proposal (§3.4) are code readings; A2 is the code fact C-A2 that the
+proposal adds to the path filter (`Admitted`). The existing
 `ApSpec` cleaner model (`AnyTaintExDefs.partX`) still describes the
 native cleaner.

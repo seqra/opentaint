@@ -142,6 +142,8 @@ November).
 | Serve every route | A rule must not stop the refinement that serves a second NORMAL route to a sink, also when the report and the code flows do not change (owner cover, first form, rejected). Measured with the sink-route census (§5.7) |
 | Cleaner rule approved | The EXACT-cleaner rule (§5.5) is approved as semantics; it is in group A |
 | Stop and finalize | The rules are split into group A (works) and group B (questionable); see the final classification |
+| Implement, not prototype | Group A lands as plain semantics: no switch, no in-code census or counter; diagnostics stay on the prototype branches ([acyclic-group-a-implementation.md](acyclic-group-a-implementation.md)) |
+| Group A details | No field and no static can follow a true primitive value (the path filter also rejects a class-static accessor there); no separate route list, the whole analyzer is measured after landing; the kept MUST leaf keeps the selected protection |
 
 ## 2. Notation
 
@@ -1273,7 +1275,8 @@ run-2 static views, the field-limit schedule, the report rules.
 
 ## 10. Implementation and gate plan
 
-1. Land the rules behind their flags in this order: §5.1, §5.2, §5.3,
+1. (Superseded for group A by the decision "Implement, not prototype":
+   group A lands with no switch.) Land the rules behind their flags in this order: §5.1, §5.2, §5.3,
    §5.4, §5.5. §5.2 and §5.3 need §5.1. §5.4 needs the scope of §3.
    Before §5.4 lands, fix its cover test (item 3 of the cover in §2) and
    gate it again.

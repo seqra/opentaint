@@ -1,8 +1,14 @@
 # Implementation proposal: group A rules of the acyclic proposal
 
-Status: PROPOSAL, 24 November 2026 (revision 2, after an adversarial
-review against the code). Base: `saloed/bidirectional` at `620cd5659`.
-It follows [impl-proposal-guide.md](impl-proposal-guide.md),
+Status: PROPOSAL, 24 November 2026 (revision 4). Revision 2 followed an
+adversarial review against the code. Revision 3 applies the owner
+decision of 24 November: the rules land as plain semantics, with no
+switch, and the landed code has no census and no counter. Revision 4
+applies the owner answers to the open questions: no accessor after a
+true primitive (§3.3 (e)), no separate route list (§6), keep the
+protection (§2). Base:
+`saloed/bidirectional` at `620cd5659`. It follows
+[impl-proposal-guide.md](impl-proposal-guide.md),
 [proof-guide.md](proof-guide.md) and [design-guide.md](design-guide.md).
 
 Source spec: [acyclic-convergence-proposal.md](acyclic-convergence-proposal.md),
@@ -16,14 +22,18 @@ results apply to this base. Proofs:
 
 ## 0. Summary
 
-Group A has two rules. Both are decided semantics. This proposal lands
-them in production code with their tests, their proofs and a gate.
+Group A has two rules. Both are decided semantics. This proposal
+replaces the native behavior with them in production code, with their
+tests and their proofs.
 
 | Id | Rule | Where it acts | What changes | Proof |
 | --- | --- | --- | --- | --- |
-| R1 | G6 drop form (spec §5.1) | type filter, mark policy (`ap/Filter.kt`) | At and below a boxed spine level, a mark that is not primitive-tracking is removed from the whole value, field leaves included | `G6DropForm.lean`, 15 claims |
+| R1 | G6 drop form (spec §5.1) | type filter: mark policy (`ap/Filter.kt`) and path filter (`JIRFactTypeChecker`) | At and below a boxed spine level, a mark that is not primitive-tracking is removed from the whole value, field leaves included. No accessor (field, element or class-static) follows a true primitive value | `G6DropForm.lean`, 17 claims |
 | R2 | An EXACT cleaner does not apply to a MUST leaf (spec §5.5) | cleaner, PART row (`ap/Clean.kt`), both directions, every run | The MUST leaf stays on its layer; native moves it to DEMAND | `MustExactCleaner.lean`, 12 claims |
-| T1 | Sink-route census and R2 count (gate tools, not rules) | sink witness; R2 hook | Nothing when off. When on, they log the NORMAL leaves that reach each sink, and the R2 applications, per analysis | none (diagnostic) |
+
+The native behavior is deleted. The landed code has no switch, no census
+and no counter. The whole analyzer is measured after the implementation
+lands (§6).
 
 This proposal does not meet requirement AC (spec §1). Group A alone
 leaves acyclic demand (OWASP residual 24 with R2 alone, spec §5.5). It
@@ -45,12 +55,15 @@ modules, packages `org.opentaint.dataflow.bidi` and
 | 21 Nov | An EXACT cleaner does not apply to a MUST fact | R2 |
 | 24 Nov | The four module fixtures that R2 changes are signed off | §4.6 |
 | 24 Nov | R2 is approved as semantics (group A) | R2 |
-| 24 Nov | Serve every route; the sink-route census is the check | T1, §6 |
+| 24 Nov | Serve every route | Not a separate check for group A: G6's only route change is the decided M4 removal, and R2's route changes are intended (§6) |
 | 24 Nov | Single launch per measurement | §6 |
 | 24 Nov | Robustness rule: never relax the relative caps | R1 and R2 make no fact deeper and no new fact (§2) |
+| 24 Nov | No switch such as `MustIgnoresExactCleaner.enabled`, and no in-code census: this is the implementation, not a prototype | §3.3, §4.3, §6 |
+| 24 Nov | No field and no static can follow a true primitive value | §3.3 (e); A2 becomes a code fact |
+| 24 Nov | No separate route list: the whole analyzer is measured after the implementation lands | §6 |
+| 24 Nov | The kept MUST leaf keeps the selected protection | §2 |
 
-Open questions for the owner are in §8 (Q1-Q4). The proposal uses the
-recommended answer of each until the owner decides.
+No question is open (§8).
 
 ## 2. Semantic scope
 
@@ -58,7 +71,14 @@ recommended answer of each until the owner decides.
 boxed spine level of the filtered value. Native removes a mark only from
 the spine leaf of a level. R1 also removes it from every leaf below the
 first boxed level that drops it. R1 only removes marks. It never adds a
-mark, a leaf or a fact. R1 acts wherever a type filter with a mark policy
+mark, a leaf or a fact.
+
+**Changed (R1, path filter).** The path filter rejects a class-static
+accessor below a value of a true primitive type (`int`, `char`, …; not a
+boxed class). Today it rejects a field and an element there, but it
+accepts a class-static accessor (`JIRFactTypeChecker.kt:84`). After the
+change no accessor can follow a true primitive value. This only removes
+facts, and the analyzer makes no such fact today (A2). R1 acts wherever a type filter with a mark policy
 is applied. Reversed statement summaries carry no type filters
 (`interp/StatementSummary.kt:60-69`: `reversed()` passes `emptyMap()`),
 so on statement edges R1 acts in forward runs only.
@@ -81,11 +101,11 @@ NORMAL membership is not removed by a FLOW cover
 (`store/FlowBackedSummaries.kt:148`), is split into its own packet
 (`membershipPackets`, `ap/FlowBackedProtection.kt:13`), and is read by
 the run-1 origin stores and by record replay. The prototype gates ran
-with this behavior. See Q4.
+with this behavior. Decision of 24 November: keep it.
 
 **Not changed in GROUP mark mode.** In GROUP mode `gone()` returns no mark
 for a cleaner with a selected mark (`ap/Clean.kt:162`), so native removes
-nothing there and R2 does not run. R2 acts in FULL mode only.
+nothing there and the R2 check is not reached. R2 acts in FULL mode only.
 
 **Unchanged.**
 
@@ -110,6 +130,12 @@ nothing there and R2 does not run. R2 acts in FULL mode only.
   stays true. `NeutralRelationBatch.certifies`
   (`engine/NeutralRelationBatch.kt:242-243`) reads `markPolicy` only for
   null; R1 keeps null where native has null.
+- The path-filter change is in `JIRFactTypeChecker`, which the IFDS
+  engine also uses (`jvm:ap/ifds/analysis/JIRAnalysisManager.kt:76`,
+  `jvm:ap/ifds/analysis/JIRMethodAnalysisContext.kt:25`). There too a
+  class-static accessor is only the first accessor of the `ClassStatic`
+  base, so the change removes no fact that the IFDS engine makes. The jvm
+  suite covers it.
 - R2 adds no new data type. Its output is the input leaf; the protection
   wrapper then adds the selected membership, as for every result on the
   cleaner base.
@@ -129,11 +155,11 @@ A type filter with a mark policy acts on a TAINT tree with the static type
 mark `t` is primitive-tracking.
 
 ```text
-keeps(t, k)      = ¬prim(k) ∨ pt(t)                 (native, unchanged)
+keeps(t, k)      = ¬prim(k) ∨ pt(t)                 (as today)
 dropsValue(t, k) = boxed(k) ∧ ¬keeps(t, k)
 spine(p)         = number of leading element accessors of the path p
 
-removedNative(t, p) = onSpine(p) ∧ ¬keeps(t, spine(p))
+removedNative(t, p) = onSpine(p) ∧ ¬keeps(t, spine(p))                    (deleted)
 removedDrop(t, p)   = (∃ k ≤ spine(p): dropsValue(t, k)) ∨ removedNative(t, p)
 ```
 
@@ -152,6 +178,7 @@ marks, and on both layers.
 | `ap/Filter.kt` `markPolicyOnElements` | 96-122 | filters the root and the element spine leaves only |
 | `interp/FormsReference.kt` `ReferenceAlgebra.passes` | 52-63 | a path with a non-element accessor passes |
 | `engine/NeutralRelationBatch.kt` `certifies` | 242-243 | reads `markPolicy == null` only; not changed |
+| `jvm:ap/ifds/JIRFactTypeChecker.kt` `AccessorFilter.checkAccessor` | 82-133 | the path filter (`may`); a class-static accessor is accepted for every type (`:84`); a field and an element are rejected below a primitive (`:105`, `:113`) |
 
 No other site reads a mark policy.
 
@@ -163,10 +190,12 @@ finding (Lean `m4_native_breaks`, `native_not_prefix_closed`).
 
 ### 3.3 Code changes
 
-Port `ap/Primitives.kt`, `ap/Filter.kt`, `interp/FormsReference.kt` and
-`jvm:bidi/interp/JIRTypeFilters.kt` from `proto/acyclic-only-20261123`
-(commits `8358d392e`, `4b14e086e`, squashed in `3693de8a1`). Do not port
-the counters (`G6Drops.DropCounters`, `ApManager.g6DropCounters`).
+Take the logic of `ap/Primitives.kt`, `ap/Filter.kt`,
+`interp/FormsReference.kt` and `jvm:bidi/interp/JIRTypeFilters.kt` from
+`proto/acyclic-only-20261123` (commits `8358d392e`, `4b14e086e`, squashed
+in `3693de8a1`). Do not take the switch `G6Drops`, the counters
+(`G6Drops.DropCounters`, `ApManager.g6DropCounters`), the `dropForm`
+parameters or `ApOps.filterG6`.
 
 **(a) The policy knows its boxed levels** (`ap/Primitives.kt`).
 
@@ -198,7 +227,8 @@ private class AndPolicy(val a: MarkPolicy, val b: MarkPolicy) : MarkPolicy {
 ```
 
 A lambda `MarkPolicy { … }` (tests only) keeps the defaults: no boxed
-level, so the native path.
+level. Update the `MarkPolicy` comment (`ap/Primitives.kt:18-22`): G6 is
+no longer a gap.
 
 **(b) The JVM policy** (`jvm:bidi/interp/JIRTypeFilters.kt` `make`).
 
@@ -211,33 +241,36 @@ return TypeFilter(checker.localFilter(t),
         else LevelMarkPolicy(primitive.toBooleanArray(), boxed.toBooleanArray(), ::isPrimitiveTracking))
 ```
 
-`keeps` is the native lambda. Only `boxed` is new.
+`keeps` is today's lambda. Only `boxed` is new.
 
-**(c) The runtime filter** (`ap/Filter.kt`).
+**(c) The runtime filter** (`ap/Filter.kt`). `markPolicyOnElements`
+stays as the path for a fact with no boxed level on its spine: there the
+drop form and the spine-only rule are equal (Lean D1b, D7c). Rename it
+`markPolicyOnSpine`.
 
 ```kotlin
-internal fun filterFacts(m: ApManager, c: Facts, f: TypeFilter, dropForm: Boolean = G6Drops.drop): Facts? {
+internal fun filterFacts(m: ApManager, c: Facts, f: TypeFilter): Facts? {
     ...
     is TaintTree -> {
         var result = m.taintAlg.filterPath(m, c.root, f.may)
         val policy = f.markPolicy
-        if (result != null && policy != null)
-            result = if (dropForm) markPolicyDropForm(m, result, policy) else markPolicyOnElements(m, result, policy)
+        if (result != null && policy != null) result = markPolicy(m, result, policy)
         ...
     }
 }
 
-private fun markPolicyDropForm(m: ApManager, n: TaintNode, policy: MarkPolicy): TaintNode? {
-    val spine = n.elementSpine()                                   // [e]^0, [e]^1, … as in markPolicyOnElements
+/** G6 drop form: a boxed value carries only primitive-tracking marks, on every leaf below the boxed level. */
+private fun markPolicy(m: ApManager, n: TaintNode, policy: MarkPolicy): TaintNode? {
+    val spine = n.elementSpine()                                   // [e]^0, [e]^1, …
     val firstBoxed = spine.indices.firstOrNull { policy.boxedLevel(it) }
-        ?: return markPolicyOnElements(m, n, policy)               // no boxed level on this fact: native
+        ?: return markPolicyOnSpine(m, n, policy)                  // no boxed level on this fact
     val candidates = m.taintAlg.foldAll(spine[firstBoxed], m.cancellation).let { it.exact + it.any }
     // droppedAt[j] = { t ∈ candidates | ∃ k: firstBoxed ≤ k ≤ j, boxedLevel(k), dropsValue(t, k) }
     val droppedAt = accumulate(spine.indices, firstBoxed, candidates, policy)
     // Bottom-up rebuild, from the deepest spine node:
-    //   spine leaf j     := keepPolicyMarks(leaf, policy, j) − droppedAt[j]     (native, then the drop)
+    //   spine leaf j     := keepPolicyMarks(leaf, policy, j) − droppedAt[j]
     //   element child    := the rebuilt node j+1
-    //   field child of j := dropOnValue(child, droppedAt[j])                     (every leaf of the subtree)
+    //   field child of j := dropOnValue(child, droppedAt[j])           (every leaf of the subtree)
     ...
 }
 
@@ -248,80 +281,84 @@ private fun dropOnValue(m: ApManager, n: TaintNode, d: MarkSet): TaintNode? {
 }
 ```
 
-The prototype code of `markPolicyDropForm` and `dropOnValue`
-(`ap/Filter.kt` on the prototype branch) is the reference. Remove the
-counter lines and the `normal` parameter (it fed a counter only).
+The prototype functions `markPolicyDropForm` and `dropOnValue`
+(`ap/Filter.kt` on the prototype branch) are the reference for the
+rebuild. Remove their counter lines and the `normal` parameter (it fed a
+counter only).
 
 **(d) The reference** (`interp/FormsReference.kt` `passes`). After the
 path filter and the `markPolicy` null check:
 
 ```kotlin
 val path = c.fact.path
-if (dropForm) {
-    val spine = path.indexOfFirst { it != ELEMENT_ACCESSOR_IDX }.let { if (it < 0) path.size else it }
-    for (k in 0..spine) if (policy.dropsValue(mark, k)) return false
-}
+val spine = path.indexOfFirst { it != ELEMENT_ACCESSOR_IDX }.let { if (it < 0) path.size else it }
+for (k in 0..spine) if (policy.dropsValue(mark, k)) return false
 if (path.any { it != ELEMENT_ACCESSOR_IDX }) return true
 return policy.keeps(mark, elements = path.size)
 ```
 
-**(e) The switch** (`ap/G6Drops.kt`, new; see Q1 in §8).
+**(e) No accessor after a true primitive**
+(`jvm:ap/ifds/JIRFactTypeChecker.kt`, `AccessorFilter.checkAccessor`,
+`:84`). Split the first branch:
 
 ```kotlin
-object G6Drops {
-    /** G6 drop form (spec/acyclic-group-a-implementation.md §3). Default ON; `=false` gives the native policy. */
-    @JvmField val drop: Boolean = flag("org.opentaint.bidi.g6Drop", "OPENTAINT_BIDI_G6_DROP", default = true)
-}
+is FinalAccessor -> return FilterResult.Accept
+// A value of a true primitive type has no fields, no elements and no statics below it.
+is ClassStaticAccessor -> return if (actualType is JIRPrimitiveType) FilterResult.Reject else FilterResult.Accept
 ```
 
-`flag` is defined in §5.3. `ApOps.filterG6(c, f, dropForm)` (prototype
-`ap/ApOps.kt:157-159`) stays as a test entry point: tests call both forms
-without the switch.
+`actualType` is the type of the current level: the element filter passes
+the element type to the next level (`:116-120`), so `int[] / [].cls` is
+rejected too. A boxed class (`Integer`, `Character`) is not a
+`JIRPrimitiveType`; it keeps its fields (`value`) and the native
+class-static answer.
 
 ### 3.4 Properties (Lean `G6DropForm.lean`)
 
 The model reads a path as a list of accessors (`elem` or a field). It
 models `LevelMarkPolicy`, `AndPolicy`, the production accumulation and
-the reference.
+the reference. It also models the deleted native rule, to show the
+defect that R1 removes.
 
 | Claim | Theorem | Statement |
 | --- | --- | --- |
 | D1a | `drop_extends_native` | R1 removes every mark that native removes |
-| D1b | `native_without_boxed_level` | With no boxed level `k ≤ spine(p)`, R1 is native at `p` |
-| D1c | `tracking_never_removed` | A primitive-tracking mark is never removed, natively or by R1 |
-| D2 | `removed_on_region` | If R1 removes `t` at `q`, it removes `t` at every position below `q`, under A2 |
-| D3 | `kept_exact_keeps_cut` | Prefix closure (ap.md S5), under A2: R1 keeps `t` on `x.p.$` ⇒ R1 keeps `t` on every cut form `x.q.MAY`, `q` a prefix of `p` |
-| D4 | `monotone_in_K` | Under A2, for `K ≤ K'`: R1 keeps `t` at the cut of `K'` ⇒ R1 keeps `t` at the cut of `K`. A larger K only removes marks |
-| D5 | `m4_native_breaks`, `native_not_prefix_closed`, `m4_drop_form` | Native fails D3 on M4; R1 removes `T` at `x.[].value` and at `x.[].MAY`, and keeps it at `x` |
+| D1b | `native_without_boxed_level` | With no boxed level `k ≤ spine(p)`, R1 equals the spine-only rule at `p` |
+| D1c | `tracking_never_removed` | A primitive-tracking mark is never removed |
+| D2 | `removed_on_region` | If R1 removes `t` at `q`, it removes `t` at every position below `q` (side condition: `q` is not a true-primitive spine node with a position below it) |
+| D3 | `kept_exact_keeps_cut`, `kept_exact_keeps_cut_admitted` | Prefix closure (ap.md S5): for every fact `x.p.$` that the path filter admits, R1 keeps `t` on `x.p.$` ⇒ R1 keeps `t` on every cut form `x.q.MAY`, `q` a prefix of `p` |
+| D4 | `monotone_in_K`, `monotone_in_K_admitted` | For every admitted fact and `K ≤ K'`: R1 keeps `t` at the cut of `K'` ⇒ R1 keeps `t` at the cut of `K`. A larger K only removes marks |
+| D5 | `m4_native_breaks`, `native_not_prefix_closed`, `m4_drop_form` | The native rule fails D3 on M4; R1 removes `T` at `x.[].value` and at `x.[].MAY`, and keeps it at `x` |
 | D6 | `conj_keeps`, `conj_dropsValue` | `TypeFilter.and` of two level policies is a level policy (`prim` and `boxed` are joined by OR), so D1-D4 hold for it |
 | D7a | `impl_is_drop_form` | The production accumulation `droppedAt` equals the predicate for every candidate mark |
-| D7b | `impl_non_candidate` | Production never removes a non-candidate mark beyond native |
-| D7c | `drop_form_above_first` | Above the first boxed level, R1 is native whatever the candidates |
-| D7d | `reference_is_drop_form` | `ReferenceAlgebra.passes` with the drop form is the negation of the predicate |
+| D7b | `impl_non_candidate` | Production never removes a non-candidate mark beyond the spine-only rule |
+| D7c | `drop_form_above_first` | Above the first boxed level, R1 equals the spine-only rule whatever the candidates |
+| D7d | `reference_is_drop_form` | `ReferenceAlgebra.passes` is the negation of the predicate |
 
-**Assumptions.** These are code readings. No test checks them directly.
+**Assumptions and code facts.** A1 and A3 are code readings. A2 is a code
+fact after §3.3 (e).
 
 - A1. `candidates` holds every mark of the subtree at `[]^firstBoxed`:
   `foldAll` unions all leaves of a subtree (`ap/TrieOps.kt:287`). Every
   position with `spine(p) ≥ firstBoxed` is in that subtree. With D7a-D7c
   this makes production equal to the predicate on every mark that is
   present.
-- A2. No fact has a position strictly below a true primitive spine level
-  (`int`, `char`, …; primitive and not boxed). D2-D4 need it only for a
-  cut that ends exactly at such a level. The path filter rejects a field
-  and an element below `int` (`jvm-test:JIRTypeFiltersTest`, rows
-  `int / f` and `int[] / [].f`). It accepts a class-static accessor
-  (`int / cls.f`, `int[] / [].cls`). The analyzer makes a class-static
-  accessor only as the first accessor of the `ClassStatic` base: static
-  field access (`jvm:ap/ifds/MethodFlowFunctionUtils.kt:51-58`,
-  `StaticRefAccess`) and static alias roots
-  (`jvm:ap/ifds/alias/JIRIntraProcAliasAnalysis.kt:143-145`). A
-  `ClassStatic` base never has a primitive type. R1 does not change this
-  case; native has it too. See Q2.
+- A2 (code fact C-A2). The path filter admits no position strictly below
+  a true primitive spine level (`int`, `char`, …; primitive and not
+  boxed): it rejects a field and an element there today
+  (`JIRFactTypeChecker.kt:105`, `:113`), and a class-static accessor after
+  §3.3 (e). In the model this is `Admitted`; D3 and D4 hold for every
+  admitted fact with no side condition. Before the change the filter
+  admitted `int / cls.f`, but the analyzer never made such a fact: it
+  makes a class-static accessor only as the first accessor of the
+  `ClassStatic` base (static field access,
+  `jvm:ap/ifds/MethodFlowFunctionUtils.kt:51-58`; static alias roots,
+  `jvm:ap/ifds/alias/JIRIntraProcAliasAnalysis.kt:143-145`).
 - A3. The field limit counts every accessor of the model. Production
   counts fields and elements only (`ap/AccessorTable.kt:58`,
-  `isCounted`); the class-static accessor is not counted and is outside
-  the model by A2.
+  `isCounted`); the class-static accessor is not counted. It occurs only
+  as the first accessor of the `ClassStatic` base, which has no mark
+  policy, so it never meets the mark policy.
 
 **Differences between model and production.** The model has one mark at a
 time; production filters mark sets with the same per-mark decision
@@ -332,21 +369,19 @@ it and does not change it.
 
 ### 3.5 Tests
 
-Every changed test asserts both forms. It selects the expectation with
-`G6Drops.drop`, or calls `ApOps.filterG6` with both values. So every gate
-arm (§6) passes with 0 failed tests.
+The tests assert R1 only. No test calls the deleted rule.
 
 | Test | Change |
 | --- | --- |
-| `test:PrimitiveValuesTest` | Add the prototype test "level policy knows its boxed levels and the conjunction keeps the native decision" |
-| `jvm-test:JIRTypeFiltersTest` | Add "boxed element levels are known to the policy". In "field and class accessors stop the primitive policy…", the three facts below `Integer` (`value`, `value.[]`, `[].value` under `Integer[]`) are dropped with R1 and kept natively |
-| `jvm-test:JIRG6DropPrefixTest` (new, port) | P1-P6 on 29 real JIR types, all paths of length ≤ 3 (no class-static accessor in its alphabet): prefix closure, boxed coherence, primitive-tracking and no-boxed types native, runtime = reference. Native has 1,114 breaks, the drop form 0. Add one multi-leaf case per boxed type for A1: a tree with leaves at `[]^k`, `[]^k.value` and a sibling field, filtered as one fact |
-| `jvm-test:JIRStringChainFiltersTest` (new, port) | The decision rows of the production filters; no type breaks a cut prefix with the drop form |
-| `test:G6DropFormFixtureTest` (new) | Analysis fixtures without the stop-policy code: M4 from `DecidedStopAttackTest.kt:342-410` (`proto/dt-owner-cover-20261124`); D5 (6 variants) and D6 (16 variants, the cut above the boxed level) from `DeepChainFixtureTest.kt`; the String-chain variants from `StringChainFixtureTest.kt` (the 13 breaking variants, the 189 unchanged ones, the callee recall-loss case), both on `proto/g6-drop-xsub-20261120`. Expected: R1 gives `{A}` where native gives `{A, B}` in M4, D5, D6 (`policy=true`) and the 13 String-chain variants; every other variant is the same in both forms (`docs/reports/g6-drop-xsub-20261120.md` §5.1) |
+| `test:PrimitiveValuesTest` | Add the prototype test "level policy knows its boxed levels and the conjunction keeps the native decision" (rename: "…keeps the level decision") |
+| `jvm-test:JIRTypeFiltersTest` | Add "boxed element levels are known to the policy". In "local path checks follow first field array element object and static accessor rows", the rows `int / cls.f` and `int[] / [].cls` become `false`. In "field and class accessors stop the primitive policy…", the three facts below `Integer` (`value`, `value.[]`, `[].value` under `Integer[]`) are now dropped by the mark policy, and `x.cls` under `int` and `x.[].[].cls.f` under `int[][]` are now rejected by the path filter (rename the test: class accessors no longer pass below a primitive) |
+| `jvm-test:JIRG6DropPrefixTest` (new, from the prototype) | On 29 real JIR types and all paths of length ≤ 3, with a class-static accessor added to its alphabet (A2): P1 prefix closure, P2 boxed coherence, P3 a kept cut lies above the level where the exact fact loses the mark, P4 a primitive-tracking mark is never removed, P5 for a type with no boxed level a position below a field keeps every mark, P6 runtime = reference. Drop the native comparison (the native break count is Lean D5 and the prototype report). Add one multi-leaf case per boxed type for A1: a tree with leaves at `[]^k`, `[]^k.value` and a sibling field, filtered as one fact |
+| `jvm-test:JIRStringChainFiltersTest` (new, from the prototype) | The decision rows of the production filters; no type breaks a cut prefix |
+| `test:G6DropFormFixtureTest` (new) | Analysis fixtures, without the stop-policy code: M4 from `DecidedStopAttackTest.kt:342-410` (`proto/dt-owner-cover-20261124`); D5 (6 variants) and D6 (16 variants, the cut above the boxed level) from `DeepChainFixtureTest.kt`; the String-chain variants from `StringChainFixtureTest.kt` (the 13 variants that lose B, the 189 unchanged ones, the callee recall-loss case), both on `proto/g6-drop-xsub-20261120`. Expected: `{A}` in M4, D5, D6 (`policy=true`) and the 13 String-chain variants; every other variant as in `docs/reports/g6-drop-xsub-20261120.md` §5.1 |
 
 The source files of D5, D6 and the String chains also hold DECIDED-stop
 checks, and they set `StopPolicy.PROPERTY`, which is not on
-`620cd5659`. Port the fixture programs and their final-report
+`620cd5659`. Take the fixture programs and their final-report
 assertions only.
 
 ### 3.6 Cost
@@ -355,7 +390,7 @@ Site: once per type-filter application on a TAINT tree whose policy has a
 boxed level on the element spine of the fact. Work: one `foldAll` of the
 subtree at the first boxed level, and per field subtree below it one
 `foldAll`; `mapLeaves` only when a mark must go. Other type-filter
-applications take the native path after one `boxedLevel` scan of the
+applications take the spine-only path after one `boxedLevel` scan of the
 fact spine.
 
 Measured volume, one launch each (`docs/reports/acyclic-only-20261123.md`
@@ -373,11 +408,11 @@ layer `ℓ`, marks `μ`) is at PART for `κ` when `q` is a prefix of `p` and
 the point `β.p` is in `R(λ)` (`q = p`, or `E` admits `p[|q|]`).
 
 ```text
-native, reach = EXACT, PART:  λ loses μ ∩ M on ℓ;  β.q.MUST/E with μ ∩ M is added on D
-R2,     reach = EXACT, PART:  λ is unchanged (layer, marks, E)
+native (deleted), reach = EXACT, PART:  λ loses μ ∩ M on ℓ;  β.q.MUST/E with μ ∩ M is added on D
+R2,               reach = EXACT, PART:  λ is unchanged (layer, marks, E)
 ```
 
-All other rows keep the native result.
+All other rows keep today's result.
 
 Example (OWASP `Thing2#doSomething`). `return new StringBuilder(i).toString()`.
 The propagator `$RES = (Object $*OBJ).toString()` resets the mark at
@@ -407,55 +442,49 @@ Every cleaner on a TAINT tree runs `TaintClean`. The callers are
 `engine/RunMethodCallServices.kt` (lines 240, 276, 298). The leaves on the
 cleaner spine go through `cut`. The leaves below the cleaner path go
 through the `inside` map (`ap/Clean.kt:167-170`), but an EXACT cleaner
-has no `inside` part. So one hook in `cut` covers every EXACT cleaner on
-a TAINT tree.
+has no `inside` part. So one change in `cut` covers every EXACT cleaner
+on a TAINT tree.
 
 ### 4.3 Code changes
 
-Port from `proto/acyclic-only-20261123` (source commit `7813bb6ad` on
-`proto/must-cleaner-20261121`). Do not port the prototype counters
-(`note`, `takeLine`, `BIDI_MUST_IGNORE`); T1 has its own count (§5.2).
+The logic comes from `proto/acyclic-only-20261123` (source commit
+`7813bb6ad` on `proto/must-cleaner-20261121`). Do not take the object
+`MustIgnoresExactCleaner` (switch and counters), `BIDI_MUST_IGNORE` or
+the driver log line.
 
 **(a) Runtime** (`ap/Clean.kt`, in `cut`, first statement of `Pos.PART`).
 
 ```kotlin
 Pos.PART -> {
-    // R2: an EXACT cleaner does not apply to a MUST leaf. The leaf keeps its layer, marks and E.
-    if (MustIgnoresExactCleaner.enabled && cl.reach == CleanReach.EXACT && tail == Tail.ANY_TAINT) {
-        m.r2Count?.add(mode, c.layer)                      // T1 only; null when the census is off
-        return marks
-    }
+    // An EXACT cleaner does not apply to a MUST leaf: the leaf keeps its layer, marks and E (ap.md §4.7).
+    if (cl.reach == CleanReach.EXACT && tail == Tail.ANY_TAINT) return marks
     val at = m.path(path.copyOf(d))
-    ...                                                    // the native branches, unchanged
+    ...                                                    // the other branches, unchanged
 }
 ```
 
 `tail` is the any tail of the tree for the any-marks, and `Tail.EXACT`
 for the `$` marks. A `$` mark never reaches PART under an EXACT cleaner
-(`cleanPosAt`: DISJOINT above `p`, INSIDE at `p`), so the hook acts on
-any-marks only.
+(`cleanPosAt`: DISJOINT above `p`, INSIDE at `p`), so the check acts on
+any-marks only. After this change the `else` branch (`:200`) no longer
+sees a MUST leaf under an EXACT cleaner; it still makes the DEMAND
+survivor for MAY leaves and for MUST leaves under the other reaches.
 
 **(b) Reference** (`ap/Reference.kt`, first statement of `concPart`).
 
 ```kotlin
-if (MustIgnoresExactCleaner.enabled && cl.reach == CleanReach.EXACT && c.fact.tail == Tail.ANY_TAINT) return listOf(c)
+// An EXACT cleaner does not apply to a MUST leaf (ap.md §4.7).
+if (cl.reach == CleanReach.EXACT && c.fact.tail == Tail.ANY_TAINT) return listOf(c)
 ```
 
-**(c) The switch** (`ap/Clean.kt`; see Q1).
-
-```kotlin
-object MustIgnoresExactCleaner {
-    /** R2 (spec/acyclic-group-a-implementation.md §4). Default ON; `=false` gives the native survivor. */
-    @JvmField val enabled: Boolean = flag("org.opentaint.bidi.mustIgnoresExactCleaner",
-        "OPENTAINT_BIDI_MUST_IGNORES_EXACT_CLEANER", default = true)
-}
-```
+Update the `concPart` comment (`ap/Reference.kt:485-489`): "the `exact`
+cleaner one accessor below too" goes to DEMAND only for a non-MUST tail.
 
 ### 4.4 Properties (Lean `MustExactCleaner.lean`)
 
 The model has one base, one selected concrete mark and one leaf. It
 models the reference position (`cleanPos`), the tree position
-(`cleanPosAt`), the native PART rows (`nativePart`: the rows of
+(`cleanPosAt`), the deleted native PART rows (`nativePart`: the rows of
 `concPart`; the rows of `cut` are the same by code reading) and R2
 (`rulePart`).
 
@@ -463,21 +492,21 @@ models the reference position (`cleanPos`), the tree position
 | --- | --- | --- |
 | C1 | `native_exact_must_demotes` | Native PART, EXACT, MUST: the result is the leaf on DEMAND, same path, tail and `E` |
 | C2 | `rule_exact_must_keeps` | R2 gives the input leaf |
-| C3 | `rule_outside_scope` | Outside (EXACT, MUST), R2 is native |
+| C3 | `rule_outside_scope` | Outside (EXACT, MUST), R2 equals the native rows |
 | C4 | `native_is_rule_with_demand_layer` | In scope, native = R2 with the layer set to DEMAND |
 | C5 | `same_positions` | For every leaf, cleaner and position: R2 rows and native rows cover the same positions |
-| C6 | `rule_keeps_layer` | In scope (EXACT, MUST), R2 rows have the layer of the input. Outside the scope R2 is native (C3), and native can demote |
+| C6 | `rule_keeps_layer` | In scope (EXACT, MUST), R2 rows have the layer of the input. Outside the scope R2 equals native (C3), and native can demote |
 | C7 | `demand_input_unchanged` | On a DEMAND input, R2 = native |
 | C8 | `change_only_in_scope` | The whole cleaner changes only at PART, for reach EXACT, a MUST leaf and a NORMAL input |
-| C9 | `tree_form_is_reference` | For a leaf on the cleaner spine, `cleanPosAt` = `cleanPos`. This equates the positions only. With C1-C3 (stated on `nativePart`) it shows that the runtime hook and the reference hook select the same leaves in FULL mode |
-| C10 | `no_finite_form_without_point` | Why native must demote: for a MUST leaf whose region holds the point `p`, every finite set of leaves that misses `p` misses a strict descendant of `p` in the region (executable witness `fresh`). So "the region without `p`" has no finite leaf form, and no K can make the native survivor NORMAL |
+| C9 | `tree_form_is_reference` | For a leaf on the cleaner spine, `cleanPosAt` = `cleanPos`. This equates the positions only. With C1-C3 (stated on `nativePart`) it shows that the runtime change and the reference change select the same leaves in FULL mode |
+| C10 | `no_finite_form_without_point` | Why native had to demote: for a MUST leaf whose region holds the point `p`, every finite set of leaves that misses `p` misses a strict descendant of `p` in the region (executable witness `fresh`). So "the region without `p`" has no finite leaf form, and no K can make the native survivor NORMAL |
 
 **Differences between model and production.**
 
 - The model has one selected mark. Production removes `gone(marks)`
   (`ap/Clean.kt:159-164`) and keeps the other marks of the leaf. R2
   returns `marks` unchanged, so it keeps all of them.
-- GROUP mode: `gone` is empty, so the runtime hook is never reached. The
+- GROUP mode: `gone` is empty, so the R2 check is never reached. The
   reference has no GROUP mode. C9 holds for FULL mode.
 - The model has no protection. Production adds the selected protection
   after the cleaner (§2).
@@ -491,32 +520,29 @@ models the reference position (`cleanPos`), the tree position
 - The existing model `ApSpec/AnyTaintExDefs.lean:291` (`partX`) and
   `ApSpec/Basic.lean:606` (`concPart`) describe the native PART row (and
   drop `E` on it; production keeps `E`). After R2 lands, the ApSpec
-  theorems that use these rows describe the native cleaner. They are not
-  re-proved here (§7).
+  theorems that use these rows describe the deleted cleaner row. They are
+  not re-proved here (§7).
 
 ### 4.5 Tests
 
-Every changed test asserts both forms and selects the expectation with
-`MustIgnoresExactCleaner.enabled`. The list is the prototype gate
+The tests assert R2 only. The list is the prototype gate
 (`acyclic-only/unit-tests/cl-1` and `jvm-cl-1`: 12 module and 2 jvm
 failures); it was not re-run on `620cd5659`.
 
-| Test | Expectation with R2 (native expectation kept for `enabled = false`) |
+| Test | New expectation |
 | --- | --- |
-| `jvm-test:JIRLoweredCleanerEffectTest` "normal must ancestor follows exact below and subtree reach rows after field lowering" | EXACT at `x.f` on `x.MUST/{g}`: `{x.MUST/{f,g} N, x.f.MUST/Empty N}` (native: `x.f.MUST` on D) |
-| `jvm-test:JIRLoweredCleanerEffectTest` "must and may at the named field retain own E until the primitive root reach result" | EXACT on `x.f.MUST/{g}` N: the input (native: the input on D). The MAY row is the same in both forms |
-| `test:CleanerTest` (3 cases), `test:ReferenceOperationsTest` (2 "AP 4_7" cases), `test:FieldCleanStepTest` (1) | The EXACT/MUST PART rows only: the input leaf, same layer. The other rows of each table are the same in both forms |
-| `test:OneRunAcceptanceTest` "all three primitive cleaner reaches at a real call…", index 3, reach EXACT (`:226-247`) | Facts: `{x.MUST/T N}` (native: `x.MUST/T` on D). Sink layers: "at f", "below f" and "at k" all NORMAL (native: all DEMAND). All targets NORMAL. `selectedDemand` empty. This is the approved trade at unit level: the cleaned point `x.f` reaches its sink on NORMAL |
-| `test:DemandLinkTest` "DLINK retains provisional sink guidance and refines its normal report by run7" (`:20-60`) | The test uses the EXACT survivor as its DEMAND maker (`:37`). With R2 it has no DEMAND link, and it ends at run 3 with the same report. Keep the native body under `enabled = false`. Under R2, assert runs `[1, 2, 3]`, the same single report, and no DEMAND link. Add a follow-up DLINK fixture with another DEMAND maker (§9) |
-| `test:UniformRootCleanerTerminationTest` (2 cases), `test:DescendantCleanerTerminationTest` (1), `test:AcyclicTerminationBaselineTest.protectedGlobalCutGrowth` | The signed-off results of §4.6 under R2; the native results under `enabled = false` |
+| `jvm-test:JIRLoweredCleanerEffectTest` "normal must ancestor follows exact below and subtree reach rows after field lowering" | EXACT at `x.f` on `x.MUST/{g}`: `{x.MUST/{f,g} N, x.f.MUST/Empty N}` (was `x.f.MUST` on D) |
+| `jvm-test:JIRLoweredCleanerEffectTest` "must and may at the named field retain own E until the primitive root reach result" | EXACT on `x.f.MUST/{g}` N: the input (was the input on D). The MAY row does not change |
+| `test:CleanerTest` (3 cases), `test:ReferenceOperationsTest` (2 "AP 4_7" cases), `test:FieldCleanStepTest` (1) | The EXACT/MUST PART rows only: the input leaf, same layer. The other rows of each table do not change |
+| `test:OneRunAcceptanceTest` "all three primitive cleaner reaches at a real call…", index 3, reach EXACT (`:226-247`) | Facts: `{x.MUST/T N}` (was `x.MUST/T` on D). Sink layers: "at f", "below f" and "at k" all NORMAL (were all DEMAND). All targets NORMAL. `selectedDemand` empty. This is the approved trade at unit level: the cleaned point `x.f` reaches its sink on NORMAL |
+| `test:DemandLinkTest` "DLINK retains provisional sink guidance and refines its normal report by run7" (`:20-60`) | The test uses the EXACT survivor of a MUST source as its DEMAND maker (`:37`). R2 removes that maker: the analysis ends at run 3 with the same report and no DEMAND link. Rewrite the fixture with a DEMAND maker that R2 does not touch, for example a STAR or MAY source under the same EXACT cleaner (Lean C3: those rows still go to DEMAND), and keep the DLINK assertions. The builder checks that the new fixture still runs 7 runs |
+| `test:UniformRootCleanerTerminationTest` (2 cases), `test:DescendantCleanerTerminationTest` (1), `test:AcyclicTerminationBaselineTest.protectedGlobalCutGrowth` | The signed-off results of §4.6 |
 
 Add one runtime-vs-reference table test: for each reach and each any
 tail, an EXACT cleaner at `x.f` and at `x` on `x.MUST/E` (`E` empty and
 `{g}`), both layers, run 1 and restricted, FULL mode: `ops.clean` and
-`cleanRes` give the same rows, with R2 on and off (`filterG6`-style test
-entry `TaintClean` with an explicit `mustIgnores` argument).
-`ConcreteDesignDifferentialTest` already compares the two on generated
-programs.
+`cleanRes` give the same rows. `ConcreteDesignDifferentialTest` already
+compares the two on generated programs.
 
 ### 4.6 Signed-off result changes
 
@@ -528,14 +554,12 @@ programs.
 | `AcyclicTerminationBaselineTest.protectedGlobalCutGrowth` | 101 / `RUN_LIMIT`; P = {observe} | 101 / `RUN_LIMIT`; C = {observe} |
 
 In the module analyses R2 also makes one analysis end earlier with the
-same report (`DemandLinkTest`). Spec §5.5 says "Module: 4 report changes,
-nothing else"; the 12 changed unit expectations and the earlier end are
-in addition to the report changes.
+same report (`DemandLinkTest`). Spec §5.5 lists both.
 
 ### 4.7 Cost
 
 Site: once per EXACT cleaner application on the any-marks of a MUST leaf
-at PART. The check is three comparisons, and the rule removes work (no
+at PART. The check is two comparisons, and the rule removes work (no
 survivor tree, no DEMAND row). Volume, one launch each: OWASP, R2 alone:
 2,005 forward NORMAL applications, 0 forward DEMAND, 0 backward, 2,662 in
 run 1. Stirling-PDF and Conductor only in the combination launches
@@ -544,198 +568,101 @@ run 1. Stirling-PDF and Conductor only in the combination launches
 combination changes the volume: OWASP forward NORMAL is 824 in `AO-1`
 against 2,005 alone.
 
-## 5. Order of work and common parts
+## 5. Order of work
 
-### 5.1 Commits
+1. Commit 1: R1 code (§3.3, with the path-filter change (e)) and R1 tests
+   (§3.5).
+2. Commit 2: R2 code (§4.3) and R2 tests (§4.5, §4.6).
+3. Pre-merge checks of each commit (§6.1).
+4. After both commits land: the measurement of the whole analyzer
+   (§6.2), then the spec and model updates (§7).
 
-1. T1 and the flag helper (§5.2, §5.3). They change no run.
-2. R1 code (§3.3) and R1 tests (§3.5). Gate R1 alone (§6).
-3. R2 code (§4.3) and R2 tests (§4.5, §4.6). Gate R2 alone and the pair
-   R1 + R2 (§6).
-4. The Lean package (added with this proposal) and the spec updates (§7).
-
-### 5.2 T1: sink-route census and R2 count (diagnostic)
-
-Port `engine/SinkRouteCensus.kt` from `proto/dt-owner-route-20261124`
-(`f2032b5c9`, `29e5997f4`) and its leaf printer `ShapeCensus.pattern`
-from `proto/must-cover-shape-20261124`. Off by default; it never changes
-a run. Two changes against the prototype:
-
-- Keep the state per analysis, in `SharedObjects`, not in a JVM-global
-  object. The prototype set is global and is cleared at each analysis
-  end, so two analyses in one JVM would mix.
-- Add the R2 count: four `LongAdder`s (forward NORMAL, forward DEMAND,
-  backward, run 1) in `ApManager.r2Count`, made only when the census is
-  on. `ApManager` is one per analysis (`SharedObjects.ap`, "analysis
-  owners shared across runs"), and `TaintClean` already holds it.
-
-```kotlin
-// engine/RunMethodLocalServices.kt, witness (:367), after the report id `id` is interned (forward only):
-if (census != null) for (e in edges) if (e.layer == Layer.NORMAL)
-    census.add(id, core.ops.leaves(e.facts))
-// driver/IterationDriver.kt, analyze.end (:48), once per analysis:
-census?.let { log(it.takeLine(analysisId)) }   // BIDI_SINK_ROUTES count=… digest=… r2=FN/FD/B/R1 analysis=…
-```
-
-`IterationDriver` has no `analysisId` at `620cd5659`. Port it from the
-prototype (`driver/IterationDriver.kt:49` on
-`proto/dt-owner-route-20261124`), and log through the driver logger, not
-`AcResidual.emit` (the residual diagnostic is not ported).
-
-A route is `rule@method:statement|leaf`. Only NORMAL leaves are recorded,
-so the text has no layer. The leaf text uses accessor names, mark names,
-tail and `E`. It must not contain an identity hash (an earlier census
-lost a match to `@hex` text). With `-Dacyclic.out=<dir>` the sorted set
-goes to `sink-routes-<analysis>.txt`; the log line has the count, a
-SHA-256 digest and the R2 count.
-
-### 5.3 Flags
-
-```kotlin
-// ap/Flags.kt (new)
-internal fun flag(property: String, env: String, default: Boolean): Boolean =
-    System.getProperty(property)?.toBooleanStrictOrNull()
-        ?: System.getenv(env)?.toBooleanStrictOrNull()
-        ?: default
-```
-
-| Flag | Default | Use |
-| --- | --- | --- |
-| `org.opentaint.bidi.g6Drop` / `OPENTAINT_BIDI_G6_DROP` | `true` | `false` gives the native policy, for the gate and for a regression hunt |
-| `org.opentaint.bidi.mustIgnoresExactCleaner` / `OPENTAINT_BIDI_MUST_IGNORES_EXACT_CLEANER` | `true` | `false` gives the native survivor |
-| `org.opentaint.bidi.sinkRouteCensus` / `OPENTAINT_BIDI_SINK_ROUTE_CENSUS` | `false` | the gate diagnostic |
-
-The flags are read once, at class load. Default ON is the recommended
-answer to Q1 (§8).
-
-### 5.4 Test modes
-
-The module suite and the jvm suite run in two modes: the default (R1 and
-R2 on) and native (both flags `false`, set as system properties of a
-second Gradle test task). Each changed test asserts the expectation of
-its mode (§3.5, §4.5). So the native path keeps its unit coverage while
-the flags exist.
+The Lean package was first committed in `e4ec20fd9`; revision 4 adds the
+two claims for admitted facts (D3', D4').
 
 ## 6. Gate
 
 Design-guide rules 4-6 and the decisions of 24 November. Single launch
-per arm. A second launch only when one number does not decide. Hold the
-lock `/drive-testcomp/opentaint-go-rules/termination-next-20261119/.projects.lock`
-for every project and suite launch.
+per build. A second launch only when one number does not decide. Hold
+the lock
+`/drive-testcomp/opentaint-go-rules/termination-next-20261119/.projects.lock`
+for every suite and project launch.
 
-| Arm | `g6Drop` | `mustIgnoresExactCleaner` |
-| --- | --- | --- |
-| native | false | false |
-| R1 | true | false |
-| R2 | false | true |
-| R1 + R2 (the landed default) | true | true |
-
-Every project arm runs with `sinkRouteCensus=true`. No arm runs the
-residual diagnostic, so the times are not comparable with spec §6 and
-native is measured again here.
-
-**Suites.**
-
-| Suite | Pass condition |
-| --- | --- |
-| Module suite (2,765 tests, 314 analyses) | 0 failed tests in every arm (§5.4). Analysis reports by report descriptor and confirmed/provisional status, against native: R1 changes only the decided G6 fixtures of §3.5 (finding B lost); R2 changes only the four fixtures of §4.6; R1 + R2 the union. End runs may change only in R2 arms |
-| Jvm suite (473 tests, 6 analyses) | 0 failed tests in every arm; 6 of 6 analyses identical |
-| Rule suite (585 analyses) | Reports identical in every arm |
-
-**Projects.** OWASP, Stirling-PDF, Conductor.
+### 6.1 Pre-merge checks
 
 | Check | Pass condition |
 | --- | --- |
-| Results | Confirmed and provisional results and SARIF code flows identical to native |
-| Time | Driver time not worse than native beyond the spread of spec §6 (OWASP 150.2-153.1 s natively there, with the diagnostic). Stirling-PDF: timeout 7,200 s; native can stall in run 11, and then the reference result is the completed native run of spec §6 (32 / 2). Conductor: every arm times out in run 8 (spec §6); compare the published results at the timeout and the time to the H7 barrier |
-| Memory | Largest heap after a GC not worse than native. Weak: peak RSS saturates near the 8 GiB heap, and Conductor is at the heap limit in every arm (spec §6) |
-| Routes, R1 | Route set identical to native in every analysis (R1 removed 0 marks on these projects in `AO-1`) |
-| Routes, R2 and R1 + R2 | In every analysis with R2 count 0: route set identical to native. In every analysis with R2 count > 0: list the route differences in the gate report, per project; the owner signs them off (Q3) |
+| Module suite (2,765 tests) | 0 failed tests after each commit, with the expectations of §3.5 and §4.5 |
+| Jvm suite (473 tests) | 0 failed tests after each commit (it also covers the IFDS use of `JIRFactTypeChecker`) |
+| Rule suite (585 analyses, 786 enabled cases) | The same case outcomes as `620cd5659` after each commit |
+| Lean package | `check.sh` passes |
 
-R1 + R2 was never measured as a pair (spec, "Final classification").
-The R2 route changes were never measured alone (spec §5.5). This gate
-measures both.
+### 6.2 Measurement of the whole analyzer after landing
 
-**Withdrawal.** A rule goes back to `default = false`, and stays in the
-code behind its flag, if one of these holds in its arm:
+The owner measures the whole analyzer after both commits land, against
+`620cd5659`: OWASP, Stirling-PDF and Conductor, results, time and memory.
+There is no separate route list (decision of 24 November): G6's only
+route change is the decided M4 removal, and R2's route changes are the
+approved semantics.
 
-1. a report changes outside the decided G6 fixtures (R1) or §4.6 (R2);
-2. a route differs in an analysis where the rule does not act (R1: any
-   analysis; R2: an analysis with R2 count 0);
-3. the owner rejects a listed R2 route difference;
-4. time or memory get worse beyond the spread.
+| Check | Expected (prototype evidence) |
+| --- | --- |
+| Results | Confirmed and provisional results and SARIF code flows identical to `620cd5659`: the prototype combination `AO-C5` (which contains R1 and R2) was identical on all three projects (spec §6), and R2 alone on OWASP |
+| Time | Not worse. Prototype: OWASP 128.1 s with R2 alone against 150.2-153.1 s (both with the residual diagnostic). Stirling-PDF: `620cd5659` can stall in run 11 (spec §6). Conductor times out in run 8 in every build; compare the published results at the timeout and the time to the H7 barrier |
+| Memory | Largest heap after a GC not worse. Weak: peak RSS saturates near the 8 GiB heap, and Conductor is at the heap limit (spec §6) |
 
-## 7. Spec and model updates after the gate
+**Withdrawal.** Revert a commit if a pre-merge check fails, or if the
+measurement after landing shows a worse time or memory beyond the spread,
+or a result change that the decided semantics do not explain. A change
+that they explain is kept: a finding lost below a boxed level (R1), or a
+report confirmed through an EXACT cleaner on a MUST leaf (R2).
 
-- `ap.md` §4.7 and `interpreter.md` §5.1: state R2 and R1 as the cleaner
-  and mark-policy semantics (today they state the native rows; the
-  `MarkPolicy` comment in `ap/Primitives.kt:18-22` still calls G6 a gap).
+## 7. Spec and model updates after the measurement
+
+- `ap.md` §4.7 and `interpreter.md` §5.1: state R2 and R1 (with the
+  path-filter change) as the cleaner, mark-policy and path-filter
+  semantics. Today they state the native rows.
 - `acyclic-convergence-proposal.md` "Final classification" and §5.5, and
   `natural-termination-proposal.md` §9 item 1: group A landed, with the
-  commit ids and the gate result.
+  commit ids and the measurement.
 - `ApSpec`: add a module that states `partX` with R2 (C1-C4 give the
   relation to the native row). Re-proving the ApSpec closure on the new
   row is a separate task; until then the ApSpec cleaner theorems describe
-  the native cleaner.
+  the deleted row.
 
-## 8. Open questions for the owner
+## 8. Answered questions
 
-**Q1. Flags or plain semantics.** The spec says group A "can land behind
-its flags". Both rules are decided semantics, and every later prototype
-assumes them. Options: (a) flags default ON, native reachable with
-`=false` for gates, two test modes (this proposal); (b) no flags, native
-deleted, one test mode; (c) flags default OFF. Recommended: (a) now, (b)
-after one gate cycle. (a) costs the second test mode of §5.4.
-
-**Q2. True primitive levels (A2).** R1 acts only at boxed levels, as
-decided. At a true primitive level native has the same non-monotone
-shape, but only through a class-static accessor below a primitive value:
-
-```text
-x: int.  Native and R1 drop T at the spine leaf x.MAY (level 0 is int).
-The path filter admits x.cls(C).f below int, and the policy keeps T there.
-So x.MAY/T is dropped while x.cls(C).f.$/T would be kept.
-```
-
-The analyzer never makes this fact (a class-static accessor is only the
-first accessor of the `ClassStatic` base). Recommended: no change; keep
-A2 as a stated assumption. If a test should pin it, add the `int / cls.f`
-row to `JIRG6DropPrefixTest` as a named native exception, outside the P1
-assertion (P1 would fail on it). The alternative is to treat a true
-primitive level like a boxed one in R1; that is a new semantic change.
-
-**Q3. R2 route changes.** The R2 route changes are intended by the
-decision of 24 November, but they were never measured alone, and the
-census cannot tie a route to the cleaner that made it. The gate (§6)
-accepts route differences only in analyses where R2 acts, and lists them
-for sign-off. Recommended: this condition. Alternative: accept every
-route difference in an analysis where R2 acts, with no sign-off.
-
-**Q4. Protection on the kept leaf.** With R2 the kept NORMAL leaf gets the
-selected protection of the cleaned mark (§2), because the wrapper in
-`ApOps.clean` protects every result on the cleaner base. The prototype
-gates ran this way. Recommended: keep it (measured). Alternative: give
-the kept leaf only the protection of the input. Not measured.
+| Question | Owner answer (24 November) | Effect |
+| --- | --- | --- |
+| Flags or plain semantics | Plain semantics; no switch, no in-code census | §3.3, §4.3, §6 |
+| Accessors after a true primitive value: `x.MAY/T` dropped at an `int` level while `x.cls(C).f.$/T` would be kept | No field and no static can follow a true primitive | §3.3 (e); A2 is a code fact; D3', D4' |
+| A separate list of R2 route changes | Not needed; the whole analyzer is measured after landing | §6.2 |
+| Protection on the kept MUST leaf | Keep it | §2 |
 
 ## 9. Checklist and blind spots
 
 ```text
 [x] Failure class and real trace: spec §4 (cleaner survivor: 151 of 164 OWASP roots; G6: fixture M4)
 [x] Ablation on the real case: R2 alone takes the OWASP residual from 711-735 to 24 (spec §5.5)
-[~] Native prototype: one OWASP launch per single-rule arm; Stirling-PDF and Conductor only in AO-1; the pair R1 + R2 not measured (§6 does it)
+[~] Native prototype: one OWASP launch per single-rule arm; Stirling-PDF and Conductor only in AO-1; the pair R1 + R2 alone not measured (§6.2 measures it after landing)
 [x] Execution site and volume: §3.6, §4.7
-[x] Selected semantic scope: §2 (with the protection consequence of R2)
-[x] Proof scope and model differences: §3.4, §4.4 (27 claims; propext and Quot.sound only)
-[x] Withdrawal condition: §6
+[x] Selected semantic scope: §2 (with the protection consequence of R2 and the path-filter change)
+[x] Proof scope and model differences: §3.4, §4.4 (29 claims; propext and Quot.sound only)
+[x] Withdrawal condition: §6.2
 ```
 
 - The Lean models are local. They prove the operation-level properties
-  (prefix closure and monotonicity in K under A2, the layer-only change,
-  equal positions, equal tree and reference positions). They do not
-  prove whole-analyzer soundness or termination with the new rows.
-- A1-A3 are code readings. `JIRG6DropPrefixTest` has no class-static
-  accessor and mostly single-leaf facts; §3.5 adds multi-leaf cases for
-  A1.
+  (prefix closure and monotonicity in K for every admitted fact, the
+  layer-only change, equal positions, equal tree and reference
+  positions). They do not prove whole-analyzer soundness or termination
+  with the new rows.
+- A1 and A3 are code readings. A2 is enforced by §3.3 (e) and tested by
+  `JIRTypeFiltersTest` and `JIRG6DropPrefixTest` (class-static accessor
+  in the alphabet); the model's `Admitted` is the statement of that
+  filter, not a proof about `JIRFactTypeChecker`. §3.5 adds multi-leaf
+  cases for A1.
+- The path-filter change also acts in the IFDS engine; only the jvm suite
+  checks it there.
 - R1 never acts on OWASP or the rule suite, and removed 0 marks on
   Stirling-PDF and Conductor in `AO-1`. Its effect is measured on
   synthetic fixtures only (M4, D5, D6, String chains).
@@ -743,11 +670,12 @@ the kept leaf only the protection of the input. Not measured.
   the `AO-1` / `AO-C5` combinations. Stirling-PDF and Conductor have no
   R2-only launch. R2 never fired in a backward run on the measured
   projects (0 backward applications).
-- The sink-route census has never run on an R2-only arm, and it cannot
-  attribute a route difference to a cleaner (Q3).
-- The protection consequence of R2 (§2, Q4) is measured only as part of
-  the prototype gates; no test isolates it.
-- `DemandLinkTest` loses its DEMAND maker under R2; DLINK coverage under
-  the default needs a new fixture with another DEMAND maker.
+- The pair R1 + R2 without the other prototype rules, and the per-analysis
+  module reports of the landed code, are measured only after landing
+  (§6.2); the pre-merge checks see only test outcomes.
+- The protection consequence of R2 (§2) is measured only as part of the
+  prototype gates; no test isolates it.
+- The DLINK fixture needs a new DEMAND maker (§4.5); the proposed STAR or
+  MAY source is not tried.
 - The failing tests were read from the prototype gate, not re-run on
   `620cd5659`.
