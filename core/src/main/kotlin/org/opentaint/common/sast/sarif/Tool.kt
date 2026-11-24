@@ -11,7 +11,6 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.semgrep.pattern.RuleMetadata
 import org.opentaint.semgrep.pattern.SemgrepRuleUtils
 import org.opentaint.semgrep.pattern.readStrings
-import java.io.File
 
 private fun generateSarifRuleDescription(metadata: RuleMetadata, options: SarifGenerationOptions): ReportingDescriptor {
     val level = when (metadata.severity) {
@@ -58,14 +57,5 @@ fun generateSarifAnalyzerToolDescription(metadatas: List<RuleMetadata>, options:
     )
 }
 
-fun SarifGenerationOptions.formatRuleId(ruleId: String): String {
-    if (!useSemgrepStyleId) return ruleId
-
-    val (rulePath, rawRuleId) = SemgrepRuleUtils.extractRuleSetNameAndId(ruleId)
-        ?: return ruleId
-
-    val idParts = rulePath.split(File.separatorChar)
-        .dropLast(1) + listOf(rawRuleId)
-
-    return idParts.joinToString(separator = ".") { it.trim() }
-}
+fun SarifGenerationOptions.formatRuleId(ruleId: String): String =
+    if (useSemgrepStyleId) SemgrepRuleUtils.getSemgrepStyleRuleId(ruleId) else ruleId
