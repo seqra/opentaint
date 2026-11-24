@@ -37,6 +37,32 @@ State per project, with every report identical to native:
 The two best configurations were measured separately. Their combination
 is not measured yet. Open problems are in §9.
 
+### 0.1 Final classification (24 November)
+
+The work stops here. Gate: confirmed and provisional results and SARIF
+code flows identical to native, and no rule may stop the refinement that
+serves a second NORMAL route to a sink (decision of 24 November; measured
+with the sink-route census, acyclic proposal §5.7). Group A meets the gate
+on all evidence and has no open precondition; group B does not, or is not
+shown to. The acyclic rules are classified in the acyclic proposal
+("Final classification").
+
+| Rule | Group | Reason |
+| --- | --- | --- |
+| G6 drop form (acyclic §5.1) | A | Decided semantic correction; its only route change is the decided M4 removal. |
+| EXACT cleaner on a MUST leaf (acyclic §5.5) | A | Approved as semantics on 24 November; its result changes are intended. |
+| Canonical order (§4.3) | A | It only fixes the order of ties at the barrier; reports identical; about 1.4 s per OWASP analysis. It removes launch-to-launch variation (native itself varies: OWASP run-1 has 68,053 or 68,063 rows). The sink-route census was not run with it. |
+| `FIXED_POINT` stop (§4) | B, closest to A | If its proof holds, no later run can change anything, so it keeps every route. The proof needs a deterministic run, and the run is not confluent (§4.3); 0 false stops measured. Moves to A when the run is confluent (§9 item 6). |
+| W, fold at a program cycle (§6.1) | B | It cuts to a DEMAND MAY tail at loop repeat ports and recursive call edges, so it refines less than native; route census not run; its two-direction form lost a finding. |
+| CA (§6.2) | B | It refines less than the demand requests in cyclic scopes; route census not run; Conductor still has no natural end. |
+| LG (§6.3) | B | A DemandTarget cover like X, inside loop blocks, without a proof; X fails the route requirement on three fixtures; its guard depends on a native defect (`LoopOutputRestriction`). |
+| X, RX, MUST-cover, owner cover (acyclic §5.2-§5.4, §5.7) | B | See the acyclic proposal: route loss (X, RX, owner cover), a proxy scope and later widening (MUST-cover). |
+
+So no measured group-A configuration ends any reference project
+naturally. The open direction is a condition that removes demand only
+where an owner's analysis no longer depends on K (acyclic proposal §5.7,
+conclusion 2); `FIXED_POINT` is the same idea for the whole state.
+
 ## 1. Decisions and gate rules
 
 | Date | Decision |
@@ -53,11 +79,17 @@ is not measured yet. Open problems are in §9.
 | 24 Nov | Keep the provisional results: for `UserService#saveUser` the gate wins over AC (acyclic proposal §7 item 1). |
 | 24 Nov | The four module fixtures that the cleaner rule changes are signed off. |
 | 24 Nov | Robustness rule: the core must prevent fact explosion by itself, whatever the code, the rules or the alias analysis give it. The relative caps `FL(Dc)+1` (C2) and `FL(Dp)+1` (C5) are this mechanism; no rule may relax them on the basis of a property of the code or of an outer input. |
+| 24 Nov | Serve every route: a rule must not stop the refinement that serves a second NORMAL route to a sink, also when reports and code flows do not change. Owner cover's first form is rejected for this (acyclic proposal §5.7). |
+| 24 Nov | The EXACT-cleaner rule is approved as semantics (group A). |
+| 24 Nov | Measurements: a single launch per item (design guide rule 6); more only when the numbers do not decide. |
+| 24 Nov | Stop and finalize: rules split into group A (works) and group B (questionable), §0.1. |
 
 Gate for every rule (design-guide rules 4-6): module suite, jvm suite,
-rule suite (585 cases), OWASP 3 interleaved launches per arm,
-Stirling-PDF 2, Conductor 1; identical reports by SARIF identity and code
-flows; wall time and peak memory not worse.
+rule suite (585 cases), OWASP, Stirling-PDF and Conductor, a single launch
+each (earlier measurements used 3 / 2 / 1 launches); identical reports by
+SARIF identity and code flows; the same NORMAL routes at every sink
+(sink-route census, from 24 November); wall time and peak memory not
+worse.
 
 ## 2. Starting point
 
@@ -334,23 +366,28 @@ results on Stirling-PDF (acyclic proposal §7).
 
 ## 9. Open problems and next steps
 
-1. Gate the combination NT + AO-C5 + LG (+ CA) against native on all
-   projects and suites, without the relative-cap rule. This is the
-   candidate end state.
-2. AC: DEMAND STAR starts (Stirling-PDF) and alias self cycles
+1. Group A (G6, the cleaner rule, canonical order) can land behind its
+   flags. Every group-B rule needs the sink-route census before it can
+   move (§0.1). The earlier candidate end state NT + AO-C5 + LG (+ CA) is
+   not a candidate any more: X, RX and MUST-cover are in group B.
+2. Build and measure a K-saturation condition: remove the demand of an
+   owner only when nothing in its analysis under the premise was bounded
+   by K in the run (acyclic proposal §5.7). It is the per-owner form of
+   `FIXED_POINT` condition 3.
+3. AC: DEMAND STAR starts (Stirling-PDF) and alias self cycles
    (Conductor `ExclusiveJoinTaskMapper#getMappedTasks`; source fix in the
    alias call model). The
    `saveUser` rows stay as an accepted exception: the provisional results
    win (acyclic proposal §7).
-3. Make `LoopOutputRestriction` monotone in K. This fixes a native recall
+4. Make `LoopOutputRestriction` monotone in K. This fixes a native recall
    defect and may make LG's guard unnecessary.
-4. Conductor: `replaceList` backward growth, the cost of late backward
+5. Conductor: `replaceList` backward growth, the cost of late backward
    runs, and the alias-set precision of models that return the receiver.
-5. Make the run confluent (§4.3), so that the `FIXED_POINT` proof holds in
+6. Make the run confluent (§4.3), so that the `FIXED_POINT` proof holds in
    production.
-6. Stirling-PDF stalls in a `decodeMimeHeader` loop block (the bimodal
+7. Stirling-PDF stalls in a `decodeMimeHeader` loop block (the bimodal
    run-9). A work defect of its own.
-7. Delete `HardRunLimitPolicy` and `RUN_LIMIT` when every reference
+8. Delete `HardRunLimitPolicy` and `RUN_LIMIT` when every reference
    project and suite ends with `NO_DEMAND_EDGE` or `FIXED_POINT`. The
    wall-clock timeout and the memory guard stay as resource budgets; a
    timeout publishes no provisional entries.
@@ -395,6 +432,7 @@ All branches are local. Data is under
 | Alias self cycles in acyclic code; R2, R4 prototypes | `proto/acyclic-growth-20261124` | `docs/reports/acyclic-growth-20261124.md` |
 | MUST-cover without the acyclic scope: Conductor width census, cover item 3, MAY-only, AO-C5 without MUST-cover | `proto/must-cover-shape-20261124` | `docs/reports/must-cover-shape-20261124.md` |
 | Owner cover: covered DemandTarget rows dropped at the forward barrier, with lineage; gate of G6 + owner cover and AO-C5 with owner cover | `proto/dt-owner-cover-20261124` | `docs/reports/dt-owner-cover-20261124.md` |
+| Owner cover with the route condition; sink-route census as a gate check (native, G6, G6 + owner cover, AO-C5) | `proto/dt-owner-route-20261124` | `docs/reports/dt-owner-route-20261124.md` |
 
 ## 12. Checklist and blind spots
 

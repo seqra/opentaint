@@ -1,9 +1,9 @@
 # Acyclic convergence for the bidirectional analyzer
 
-Status: PROPOSAL, revision 2, 23 November 2026; decisions of 24 November
-recorded (§1); clarifications of 24 November in §5.2 (report identity),
-§5.3 (the tag, decision at the handoff) and §5.4 (the scope is a proxy);
-new rule §5.7 owner cover (prototype and gate of 24 November, not decided).
+Status: FINAL for this round, 24 November 2026 (revision 2 with the
+additions of 24 November). Final classification: group A (works) and
+group B (questionable), in the section after this header. Decisions of 24
+November in §1; clarifications in §5.2-§5.4; owner cover in §5.7.
 It follows the
 [design guide](design-guide.md). Revision 1 was condensed from
 [natural-termination-proposal.md](natural-termination-proposal.md) §5.
@@ -22,7 +22,55 @@ Changes in revision 2:
 All rules are native prototypes behind flags on the local branch
 `proto/acyclic-only-20261123`. None is merged.
 
+## Final classification (24 November)
+
+The work stops here. Gate for this classification: confirmed and
+provisional results and SARIF code flows identical to native, and, by the
+decision of 24 November, no rule may stop the refinement that serves a
+second NORMAL route to a sink (§5.7, "Route condition"). Group A meets the
+gate on all evidence and has no open precondition. Group B does not, or
+is not shown to. The rules of the natural-termination proposal are
+classified in that proposal (§0.1) with the same gate.
+
+**Group A: works without negative consequences (on all evidence).**
+
+| Rule | Evidence | Note |
+| --- | --- | --- |
+| §5.1 G6 drop form | Prefix closure on 29 JIR types (0 breaks, native 1,114). Alone: module, jvm, rule suite, OWASP identical except the decided removals (M4, D5, D6, boxed String chains). Sink routes: only the decided M4 removal differs from native. Never acts on OWASP; on Stirling-PDF and Conductor it removes 0 marks. | A decided semantic correction (20 November): it makes the mark policy monotone in K. It removes nothing else. |
+| §5.5 EXACT cleaner on a MUST leaf | Alone: rule suite and OWASP identical (OWASP residual 711-735 → 24, the largest single effect); module: the four changed fixtures only (signed off 24 November); jvm: 6 of 6 analyses identical, 2 cleaner-table tests assert the old semantics. | Approved as semantics (24 November): an EXACT cleaner does not split a MUST region. The cleaned point stays tainted inside the region, so the rule can confirm a report that native keeps provisional; this is the intended result, not a negative consequence. Its own route changes are intended by the same decision (not measured alone). |
+
+Not rules, safe to keep because they change no run when off (and only log
+when on): the acyclicity oracle (§3) as a diagnostic, the AC residual
+counter, the width census and MUST-cover drop log
+(`proto/must-cover-shape-20261124`), and the sink-route census
+(`proto/dt-owner-route-20261124`). The sink-route census is the check for
+the route requirement; group B rules must pass it before they can move to
+group A. Decided "no rule": the relative C5 cap stays native (§5.6).
+
+**Group B: questionable.**
+
+| Rule | Why it is in group B | What would move it to group A |
+| --- | --- | --- |
+| §5.2 X | Reports and code flows identical, but it stops serving a second route to a confirmed sink: `DistinctMarkOriginServiceTest`, `UniformCoverageOriginAuditTest`, `RecursiveWrapperTerminationTest` end early and do not serve the second route (§5.7). Its argument covers targets only, and it needs G6. | A route-exact condition (see owner cover) and a clean sink-route census. |
+| §5.3 RX | The argument of X at a relay, so the same route question. The tag splits DemandTarget rows, relays and ND joins per report id (58 module tests compare the untagged object). In run-1 a tag changed NORMAL routes of static fixtures (measured with the owner-cover tag; RX also tags in run-1). | As X, and no tag in run-1. |
+| §5.4 MUST-cover | The acyclic scope is a proxy (§5.4): without it Conductor widens its DEMAND summaries 2.2 times; the cover fix and a MAY-only restriction do not prevent it. Exact only for the NORMAL facts of the run where it acts. The prototype cover test has a defect (§2 item 3). | A form that does not change later demand, or withdrawal. On OWASP it only closes three `doSomething` helpers. |
+| §5.7 owner cover | First form rejected (it stops serving second routes). With the route condition it keeps every fixture route, but OWASP still loses 19 NORMAL routes and the rule has almost no effect. | A K-saturation condition (drop only where nothing in the owner's analysis under the premise was bounded by K), or withdrawal. |
+| AO-C5 (the combination of §5.1-§5.5) | Reports and code flows identical, but it changes 1,552 of OWASP's NORMAL sink routes (1,391 only in native, 161 only in AO-C5). The share of each member is not measured; part of it is the approved cleaner semantics. | X, RX and MUST-cover in group A, or out. |
+
+Consequence for requirement AC: with group A alone, AC is not met. The
+cleaner rule alone takes the OWASP residual from 711-735 to 24 (§5.5); G6
+and the cleaner rule were not measured as a pair; no group-A
+configuration is shown to empty the acyclic residual. Every measured way to close the
+acyclic residual so far removes demand whose refinement still serves
+NORMAL routes. The open direction is a K-saturation condition: demand may
+go only where the owner's analysis no longer depends on K (§5.7,
+conclusion 2), which is the premise of AC.
+
 ## 0. Summary
+
+The verdicts in this section are the report gates of 23 November, before
+the route requirement of 24 November. The final classification above
+supersedes them.
 
 Five rules. Each one removes one maker of acyclic demand at its source.
 
@@ -34,7 +82,7 @@ Five rules. Each one removes one maker of acyclic demand at its source.
 | §5.4 MUST-cover | DEMAND reply at a call to an acyclic callee | a DEMAND reply that a NORMAL MUST reply covers | identical | 705 |
 | §5.5 EXACT cleaner ignored on MUST | cleaner on a MUST leaf | cleaner survivor | identical, except 4 module fixtures (signed off 24 November) | 24 |
 | §5.6 relative C5 cap | — | none: a passenger | — | — |
-| §5.7 owner cover (proposed 24 November) | outgoing DemandTarget row at the forward barrier | DemandTarget renewal at an owner with a NormalTarget whose premise the DemandTarget premise implies | identical (with §5.1); 4 fixtures do not serve a second route to a confirmed sink, 3 of them also with X (§5.7) | 0 (with §5.1 only; analysis ends at run 5) |
+| §5.7 owner cover (proposed 24 November) | outgoing DemandTarget row at the forward barrier | DemandTarget renewal at an owner with a NormalTarget whose premise the DemandTarget premise implies | first form: identical, but loses second routes (rejected); with the route condition: identical, 19 OWASP routes still lost | first form 0; with the route condition 585 (§5.7) |
 
 Combined (configuration AO-C5 = §5.1-§5.5), against native:
 
@@ -88,6 +136,9 @@ November).
 | Keep the provisional results | The gate wins over AC. The inside-read rows of `UserService#saveUser` may stay; a rule for the inside read must keep the two Stirling-PDF provisional results (§7 item 1) |
 | The four cleaner fixtures of §5.5 are signed off | Their new confirmed result and three provisional → confirmed changes are accepted |
 | Robustness rule | The core must prevent fact explosion by itself, whatever the code under analysis, the rules or the alias analysis give it. The relative caps are this mechanism: C2 starts at most `FL(Dc)+1` deep and C5 publishes at most `FL(Dp)+1` deep, so a deep fact waits for the demand that asks for it. No rule may relax them on the basis of a property of the code or of an outer input |
+| Serve every route | A rule must not stop the refinement that serves a second NORMAL route to a sink, also when the report and the code flows do not change (owner cover, first form, rejected). Measured with the sink-route census (§5.7) |
+| Cleaner rule approved | The EXACT-cleaner rule (§5.5) is approved as semantics; it is in group A |
+| Stop and finalize | The rules are split into group A (works) and group B (questionable); see the final classification |
 
 ## 2. Notation
 
@@ -976,6 +1027,72 @@ the OWASP `doSomething` families close without MUST-cover and its acyclic
 scope (which DemandTarget rows did it there is not traced per owner). Open
 decision: accept the loop-route
 behaviour above, and replace X, RX, MUST-cover and the cleaner rule by
+owner cover.
+
+**Route condition (24 November; the form above was rejected).** Decision
+of 24 November: the rule must also keep the demand that serves a second
+route to a confirmed sink. Branch `proto/dt-owner-route-20261124`, report
+`docs/reports/dt-owner-route-20261124.md`. New gate check, the sink-route
+census (`-Dorg.opentaint.bidi.sinkRouteCensus=true`): the set of NORMAL
+leaves that reach each sink in the forward runs, as
+`rule@method:statement|leaf`. Two arms serve the same NORMAL routes when
+their sets are equal.
+
+Definition added to the drop condition. During the run the witness records,
+per `(owner, id, input premise)`, the NORMAL leaves that reach the sink, and
+per DemandTarget row the DEMAND leaves of its arm. A witness row may be
+dropped only when each of its DEMAND leaves would be absorbed by a NORMAL
+leaf of the same input premise at the same sink if it became NORMAL
+(in-layer subsumption, `ap/Reference.kt:586`; a MAY or STAR leaf never). An
+owner with an uncovered route, and each owner it relayed `DemandTarget(id)`
+into, keeps its rows. A first version with region cover (`covers`) still
+lost the second EXACT track of `UniformCoverageOriginAuditTest` under a
+uniform NORMAL MUST. The tag is now made only in restricted runs: in run-1
+it changed NORMAL routes of three static fixtures.
+
+Results (VERIFIED, single launch per item; the projects and the rule suite
+ran at `f2032b5c9`, before the run-1 tag change; the module suite at
+`29e5997f4`, after it):
+
+| | Native | G6 + owner cover with the route condition |
+| --- | --- | --- |
+| Route fixtures (45 analyses) | reference | equal to G6 alone in end, report and routes |
+| Module suite, routes per class (identity hashes removed) | reference | equal to G6 except 2 classes: `StaticCatalogIterationTest` loses `arg(0).MUST/T E{Box#g}` (the analysis ends at run 3, so a tag effect in run 3, not a dropped row); `AcyclicTerminationBaselineTest` gains `var(2).Box#f.Box#f.MUST/T` in a 101-run analysis |
+| Module suite, open | 30 / 79 | 28 / 79 |
+| Rule suite | 2 / 9 open | identical to native in every analysis, including routes |
+| OWASP | `RUN_LIMIT` 11, 150 s, residual 711-735, 6,325 routes | `RUN_LIMIT` 11, 150.3 s, residual 585, reports and code flows identical; 19 routes lost at 5 path-traversal sinks (`BenchmarkTest00452`, `02197`-`02200`) |
+| Stirling-PDF | stall in run-11 | stall in run-11 (timeout at 3,000 s, 32 / 0) |
+| Conductor | timeout run-8, 7 / 0 | identical, routes equal (14), H7 84,410 rows, residual 20 |
+
+The 19 lost OWASP routes are deeper EXACT leaves (for example
+`<this>.File#path.String#bytes.$`) under a NORMAL `<this>.MUST` that the
+arm keeps. Native finds them in later runs, when K grows and C2 starts
+deeper premises. Mechanism (INFERENCE): a DemandTarget row keeps its owner
+analysed in later runs, and every later run at a larger K makes finer
+NORMAL facts for all flows to that sink, not only for the DEMAND route of
+the row. A DEMAND MUST leaf that a NORMAL MUST absorbs at the current K is
+therefore not finished. For comparison, AO-C5 against native on OWASP:
+1,391 routes only in native, 161 only in AO-C5 (reports and code flows
+identical); X already loses the second routes of three fixtures (above).
+
+Conclusions:
+
+1. The gains of the first form came from stopping route refinement. With
+   the route condition the rule keeps 983 of the 1,150 OWASP rows at run-3
+   and has almost no effect anywhere.
+2. Under a leaf-level route gate, removing the last demand of an owner is
+   exact only when the owner's analysis under that premise no longer
+   depends on K: no global cut, no start or C5 output bounded by K in the
+   run (K-saturation). In acyclic code that holds once K is larger than
+   the depth bound, which is the premise of requirement AC. The engine
+   does not track this per owner and premise today; not built.
+3. Under the same gate X, the RX tag, MUST-cover and the cleaner rule also
+   change routes (AO-C5: 1,552 route differences on OWASP).
+
+Open decisions: (a) which routes the gate must keep: every NORMAL leaf at a
+sink (as measured), NORMAL leaves up to region cover at the same sink, or
+code flows only; (b) whether the route census becomes a gate check for
+every rule; (c) whether to build the K-saturation condition or to withdraw
 owner cover.
 
 ## 6. Combined result
