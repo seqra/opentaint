@@ -44,11 +44,14 @@ is not measured yet. Open problems are in §9.
 | 19 Nov | No iteration cutoff and no new numeric limit: they are hacks for a missing termination. |
 | 20 Nov | No stop test that reads the report state. `QUIESCENT` and `DECIDED` are rejected (§8). |
 | 20 Nov | Requirement AC (§5). Assumption: JVM pass rules have no `[any]` in `from` or `to`; `[any]` in source and sink conditions, and conjunctions, are allowed, because they make MAY only in backward runs. AC is measured on forward handoffs. |
-| 20 Nov | G6, the primitive-tracking mark policy, uses the drop form (acyclic proposal §3.2). |
+| 20 Nov | G6, the primitive-tracking mark policy, uses the drop form (acyclic proposal §5.1). |
 | 21 Nov | Callers do not matter for AC: each acyclic method must reach zero rows. |
 | 21 Nov | No refinement deeper than the demand requests (the exact start is rejected). |
-| 21 Nov | An EXACT cleaner does not apply to a MUST fact (acyclic proposal §3.5). |
+| 21 Nov | An EXACT cleaner does not apply to a MUST fact (acyclic proposal §5.5). |
 | 23 Nov | Confirmed AND provisional results must stay identical to native. A change that looks like a precision gain is a failure: there is no trusted ground truth. |
+| 24 Nov | The relative-cap rule (`acC5Exact`, C5B) is removed (acyclic proposal §5.6). |
+| 24 Nov | Keep the provisional results: for `UserService#saveUser` the gate wins over AC (acyclic proposal §7 item 1). |
+| 24 Nov | The four module fixtures that the cleaner rule changes are signed off. |
 
 Gate for every rule (design-guide rules 4-6): module suite, jvm suite,
 rule suite (585 cases), OWASP 3 interleaved launches per arm,
@@ -180,20 +183,27 @@ Cost: at most 0.30 s per barrier for the key hash, 238 ms for the check.
 
 ## 5. Requirement AC: acyclic code converges
 
-Full text: [acyclic-convergence-proposal.md](acyclic-convergence-proposal.md).
-Selected rules: the MUST-cover reply rule, the G6 drop form, DemandTarget
-subsumption X, relay subsumption RX, "an EXACT cleaner does not apply to
-a MUST fact", and no relative C5 cap in acyclic methods.
+Full text: [acyclic-convergence-proposal.md](acyclic-convergence-proposal.md)
+(revision 2: standalone on the native runtime, formal definitions).
+Selected rules: the G6 drop form, DemandTarget subsumption X, relay
+subsumption RX, the MUST-cover reply rule, and "an EXACT cleaner does not
+apply to a MUST fact". Revision 2 withdraws "no relative C5 cap in
+acyclic methods": the cap makes only passenger rows, and the same
+acyclic owners stay open with and without it (acyclic proposal §5.6).
 
 | Forward AC residual | OWASP | Stirling-PDF | Conductor (H7) |
 | --- | --- | --- | --- |
-| Native | 711-753 rows | — | — |
-| S | 6 | 43 | 15 |
-| S + RX | 2 | 19 | 11 |
+| Native (run-11) | 711-735 rows | 49 (when run-11 completes) | 21 |
+| AO-C5: the five rules on the native runtime (run-11) | 6 rows / 1 owner | 5 / 3 | 16 / 6 |
+| S, on the NT stack (includes the withdrawn C5 rule) | 6 | 43 | 15 |
+| S + RX, on the NT stack | 2 | 19 | 11 |
 
-The rest: reads at a strict prefix of a premise, and STAR starts from a
-backward MAY row. For `UserService#saveUser` on Stirling-PDF, AC and
-identical provisional output cannot both hold (acyclic proposal §5).
+The S rows end at different runs (`FIXED_POINT`), so they are not
+directly comparable with the run-11 rows. The rest: reads at a strict
+prefix of a premise, DEMAND STAR starts, and a raw depth that follows K
+in one acyclic Conductor method. For `UserService#saveUser` on
+Stirling-PDF, AC and identical provisional output cannot both hold
+(acyclic proposal §7).
 
 ## 6. Cyclic code
 
@@ -278,15 +288,20 @@ callee DemandTarget in this or the previous forward run.
 | S + RX | S + relay subsumption |
 | S + LG | S + loop-block DemandTarget cover |
 | S + CA | S + anchored MAY specialization |
+| AO-C5 | the five acyclic rules on the native runtime: no canonical order, no `FIXED_POINT`, no W (acyclic proposal §6) |
+
+S includes the relative-cap rule that the acyclic proposal (revision 2)
+withdraws. The S measurements below were taken with it.
 
 | Configuration | OWASP | Stirling-PDF | Conductor | Suites |
 | --- | --- | --- | --- | --- |
 | Native | `RUN_LIMIT` 11; driver 132-134 s | `RUN_LIMIT` 11 or a stall; 32 / 2 when it completes run-11 | timeout in run-8 | — |
 | NT | `FIXED_POINT` 17; driver 124 s | `FIXED_POINT` 33; 590-646 s | timeout | rule suite identical; module changes only the intended G6 removals and two fault fixtures |
-| S | `FIXED_POINT` 11; driver 105 s | `FIXED_POINT` 33 | timeout | 4 module fixture changes from the cleaner rule (need sign-off) |
+| S | `FIXED_POINT` 11; driver 105 s | `FIXED_POINT` 33 | timeout | 4 module fixture changes from the cleaner rule (signed off 24 Nov) |
 | S + RX | rows 99 → 11 | `FIXED_POINT` 15; 71-72 s | timeout | rule suite identical; 49 representation assertions |
 | S + LG | `NO_DEMAND_EDGE` 7; 100-101 s | identical (LG never acts) | identical | 0 report changes |
 | S + CA | identical (CA never acts) | identical | run-8 finishes; no end by run-21 | 0 report changes |
+| AO-C5 | `RUN_LIMIT` 11; driver 110.7-112.8 s against 150.2-153.1 s (both with the residual diagnostic) | `RUN_LIMIT` 11 in 56 s, no run-11 stall; reports equal the completed native run | timeout in run-8; H7 at 600 s against 666 s | rule suite identical; module: only the 4 cleaner fixtures |
 
 All configurations keep the native reports on the three projects and the
 rule suite. The mechanisms do not interact: in NT every end and every
@@ -294,7 +309,7 @@ failure equals one of the single mechanisms.
 
 Failed configurations: S + the inside-read rule and S + unrefinable MAY
 empty OWASP's demand at run-7, but remove the two native provisional
-results on Stirling-PDF (acyclic proposal §5).
+results on Stirling-PDF (acyclic proposal §7).
 
 ## 8. Rejected after test
 
@@ -314,15 +329,17 @@ results on Stirling-PDF (acyclic proposal §5).
 | Demand removal by key identity or report ID (R37 alone, R42) | Loses findings or leaves the Target |
 | Provisional output at a timeout | Makes the wall clock a cutoff with output |
 | Per-run time budget | A limit |
-| Acyclic-code rules rejected after test | See acyclic proposal §6 |
+| Acyclic-code rules rejected after test | See acyclic proposal §8 |
 
 ## 9. Open problems and next steps
 
-1. Gate the combination S + RX + LG (+ CA) against native on all
-   projects and suites. This is the candidate end state.
-2. AC: STAR starts from a backward MAY row (Stirling-PDF), and the
-   `saveUser` conflict between AC and identical provisional output
-   (decision needed; acyclic proposal §5).
+1. Gate the combination NT + AO-C5 + LG (+ CA) against native on all
+   projects and suites, without the relative-cap rule. This is the
+   candidate end state.
+2. AC: DEMAND STAR starts (Stirling-PDF) and the raw depth that follows
+   K in `ExclusiveJoinTaskMapper#getMappedTasks` (Conductor). The
+   `saveUser` rows stay as an accepted exception: the provisional results
+   win (acyclic proposal §7).
 3. Make `LoopOutputRestriction` monotone in K. This fixes a native recall
    defect and may make LG's guard unnecessary.
 4. Conductor: `replaceList` backward growth, the cost of late backward
@@ -341,7 +358,7 @@ results on Stirling-PDF (acyclic proposal §5).
 Changed: the stop decision and a new `EndReason` `FIXED_POINT`, which
 publishes `L∖C` like `RUN_LIMIT`; the barrier tie-break order; W and CA
 in cyclic scopes; LG at loop-block sink witnesses; the acyclic rules
-(acyclic proposal §7).
+(acyclic proposal §9).
 
 Unchanged: the run schedule and field-limit schedule, run-1 and run-2
 static views, the handoff projection and compaction rules, the report
@@ -371,6 +388,8 @@ All branches are local. Data is under
 | RX | `proto/stirling-ac-20261121` | `docs/reports/stirling-ac-20261121.md` |
 | CA | `proto/cyclic-widening-20261121` | `docs/reports/cyclic-widening-20261121.md` |
 | LG | `proto/loop-dt-20261121` | `docs/reports/loop-dt-20261121.md` |
+| Acyclic-only stack AO / AO-C5, per-rule gates, fail-safe oracle | `proto/acyclic-only-20261123` | `docs/reports/acyclic-only-20261123.md` |
+| Relative C5 cut rows are passengers; alternatives (A)-(D) | `proto/c5-passenger-20261123` | `docs/reports/c5-passenger-20261123.md` |
 
 ## 12. Checklist and blind spots
 
@@ -379,7 +398,7 @@ All branches are local. Data is under
 [x] Ablation on the real case: drain diagnostic, per-maker ablations
 [~] Native prototype, 3 launches: per rule on OWASP; Stirling-PDF and Conductor 1-2 launches
 [x] Execution site and volume of each new operation: in each report
-[x] Selected semantic scope: §10, acyclic proposal §7
+[x] Selected semantic scope: §10, acyclic proposal §9
 [~] Proof scope: FIXED_POINT has a model proof for a deterministic run; no other rule has a proof
 [x] Withdrawal condition: withdraw a rule on the first native case with a changed report
 [x] Adversarial review and native counterexamples: §8
