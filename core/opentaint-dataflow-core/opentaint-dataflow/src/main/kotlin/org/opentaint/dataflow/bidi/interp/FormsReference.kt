@@ -58,8 +58,12 @@ class ReferenceAlgebra(
         }
         val mark = (c.fact.mark as? MarkSlot.Concrete)?.mark ?: return true
         val policy = filter.markPolicy ?: return true
-        if (c.fact.path.any { it != ELEMENT_ACCESSOR_IDX }) return true
-        return policy.keeps(mark, elements = c.fact.path.size)
+        val path = c.fact.path
+        // G6 drop form: a position at or below a boxed spine level [e]^k loses the mark on the whole value.
+        val spine = path.indexOfFirst { it != ELEMENT_ACCESSOR_IDX }.let { if (it < 0) path.size else it }
+        for (k in 0..spine) if (policy.dropsValue(mark, k)) return false
+        if (path.any { it != ELEMENT_ACCESSOR_IDX }) return true
+        return policy.keeps(mark, elements = path.size)
     }
 
     private fun isStaticIdentity(premise: Set<Pattern>, c: Conclusion): Boolean {

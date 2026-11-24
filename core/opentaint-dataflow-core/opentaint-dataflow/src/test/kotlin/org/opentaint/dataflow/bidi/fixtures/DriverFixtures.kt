@@ -36,8 +36,8 @@ data class DemandLinkCase(val root: MethodKey, val sourceMethod: MethodKey, val 
                           val mark: TaintMark)
 
 /** Joined engine results are retained here only as explicit test observations. */
-class DriverFixtures(threads: Int = 1) : AutoCloseable {
-    val program = FiniteProgramFixtures(threads = threads)
+class DriverFixtures(threads: Int = 1, markDeclarations: MarkDeclarations = COMMON_FIXTURE_DECLARATIONS) : AutoCloseable {
+    val program = FiniteProgramFixtures(threads = threads, markDeclarations = markDeclarations)
     val shared get() = program.shared
     val manager get() = program.manager
     val ops get() = program.ops

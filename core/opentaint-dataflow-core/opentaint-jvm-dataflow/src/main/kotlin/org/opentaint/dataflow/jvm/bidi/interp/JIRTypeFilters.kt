@@ -4,7 +4,7 @@ import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.bidi.ap.ApManager
-import org.opentaint.dataflow.bidi.ap.MarkPolicy
+import org.opentaint.dataflow.bidi.ap.LevelMarkPolicy
 import org.opentaint.dataflow.bidi.ap.TaintMark
 import org.opentaint.dataflow.bidi.ap.TypeFilter
 import org.opentaint.dataflow.jvm.ap.ifds.JIRFactTypeChecker
@@ -46,12 +46,13 @@ class JIRTypeFilters(private val checker: JIRFactTypeChecker, private val manage
     }
 
     private fun make(t: JIRType): TypeFilter {
-        val primitive = generateSequence(t) { it.ifArrayGetElementType }
-            .map { it.typeName == "java.lang.Character" || it.unboxIfNeeded() is JIRPrimitiveType }.toList()
+        val levels = generateSequence(t) { it.ifArrayGetElementType }.toList()
+        val primitive = levels.map { it.typeName == "java.lang.Character" || it.unboxIfNeeded() is JIRPrimitiveType }
+        // G6 drop form: a boxed level is a class (Integer, Character) with fields; a true primitive level has none.
+        val boxed = levels.mapIndexed { k, type -> primitive[k] && type !is JIRPrimitiveType }
         return TypeFilter(checker.localFilter(t),
-            markPolicy = if (true !in primitive) null else MarkPolicy { mark, level ->
-                !primitive.getOrElse(level) { false } || isPrimitiveTracking(mark)
-            })
+            markPolicy = if (true !in primitive) null
+                else LevelMarkPolicy(primitive.toBooleanArray(), boxed.toBooleanArray(), ::isPrimitiveTracking))
     }
 
     fun isPrimitiveTracking(m: TaintMark): Boolean =

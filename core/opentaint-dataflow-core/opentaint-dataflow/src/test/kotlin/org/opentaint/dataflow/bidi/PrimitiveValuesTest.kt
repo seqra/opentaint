@@ -84,6 +84,24 @@ class PrimitiveValuesTest {
     }
 
     @Test
+    fun `level policy knows its boxed levels and the conjunction keeps the level decision (G6 drop form)`() {
+        val u = m.marks.mark("U")
+        // Level 0: Integer[] (no drop), level 1: Integer (boxed); a second type: int[] (level 1 primitive, not boxed).
+        val boxed = LevelMarkPolicy(booleanArrayOf(false, true), booleanArrayOf(false, true), primitiveTracking = { it == u })
+        val primitive = LevelMarkPolicy(booleanArrayOf(false, true), booleanArrayOf(false, false), primitiveTracking = { it == u })
+        assertTrue(boxed.keeps(t, 0)); assertFalse(boxed.keeps(t, 1)); assertTrue(boxed.keeps(u, 1)); assertTrue(boxed.keeps(t, 2))
+        assertFalse(boxed.boxedLevel(0)); assertTrue(boxed.boxedLevel(1)); assertFalse(boxed.boxedLevel(2))
+        assertTrue(boxed.dropsValue(t, 1)); assertFalse(boxed.dropsValue(u, 1)); assertFalse(boxed.dropsValue(t, 0))
+        assertFalse(primitive.boxedLevel(1)); assertFalse(primitive.dropsValue(t, 1)); assertFalse(primitive.keeps(t, 1))
+        assertFails { LevelMarkPolicy(booleanArrayOf(false), booleanArrayOf(true), primitiveTracking = { false }) }
+        val filter = FactTypeChecker.AlwaysAcceptFilter
+        val both = requireNotNull(TypeFilter(filter, boxed).and(TypeFilter(filter, primitive)).markPolicy)
+        assertFalse(both.keeps(t, 1)); assertTrue(both.keeps(t, 0)); assertTrue(both.boxedLevel(1)); assertTrue(both.dropsValue(t, 1))
+        val plain = MarkPolicy { mark, _ -> mark == u }
+        assertFalse(plain.boxedLevel(0)); assertFalse(plain.dropsValue(t, 0))
+    }
+
+    @Test
     fun `request action values retain the answered and caller premises separately`() {
         val initial = m.initial(literal(AccessPathBase.Argument(0)))
         val request = RequestKind.Mark(t)

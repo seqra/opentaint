@@ -86,7 +86,8 @@ class JIRTypeFiltersTest : BasicTestUtils() {
         data class Row(val type: String, val path: List<Accessor>, val accepts: Boolean)
         val rows = listOf(
             Row("int", emptyList(), true), Row("int", listOf(ElementAccessor), false),
-            Row("int", listOf(sampleField), false), Row("int", listOf(cls, sampleField), true),
+            // No accessor follows a true primitive value, a class-static accessor included (G6 drop form, A2).
+            Row("int", listOf(sampleField), false), Row("int", listOf(cls, sampleField), false),
             Row("java.lang.String", listOf(stringField), true),
             Row("java.lang.String", listOf(sampleField), false),
             Row("java.lang.String", listOf(ElementAccessor), false),
@@ -98,7 +99,7 @@ class JIRTypeFiltersTest : BasicTestUtils() {
             Row("int[]", listOf(ElementAccessor), true),
             Row("int[]", listOf(ElementAccessor, ElementAccessor), false),
             Row("int[]", listOf(ElementAccessor, sampleField), false),
-            Row("int[]", listOf(ElementAccessor, cls), true),
+            Row("int[]", listOf(ElementAccessor, cls), false),
             Row("java.lang.String[][]", listOf(ElementAccessor, ElementAccessor), true),
             Row("java.lang.String[][]", listOf(ElementAccessor, ElementAccessor, ElementAccessor), false),
             Row("java.lang.String[][]", listOf(ElementAccessor, ElementAccessor, stringField), true),
@@ -158,19 +159,46 @@ class JIRTypeFiltersTest : BasicTestUtils() {
         }
     }
 
+    /** G6 drop form: a boxed level (a class that unboxes to a primitive) is known to the policy; a true primitive level
+     *  is not boxed. `keeps` is the same at both. The exact x[e].value under Integer[] loses an ordinary mark: the boxed
+     *  element value carries only primitive-tracking marks, field leaves included. */
     @Test
-    fun `field and class accessors stop the primitive policy while field value types do not propagate into a fact`(): Unit {
+    fun `boxed element levels are known to the policy`(): Unit {
+        for ((leaf, boxed) in listOf("int" to false, "char" to false, "java.lang.Integer" to true,
+            "java.lang.Character" to true, "java.lang.Byte" to true)) for (dimensions in 0..2) {
+            val name = leaf + "[]".repeat(dimensions)
+            val policy = requireNotNull(filter(name).markPolicy)
+            assertFalse(policy.keeps(ordinary, dimensions), name)
+            assertEquals(boxed, policy.boxedLevel(dimensions), name)
+            assertEquals(boxed, policy.dropsValue(ordinary, dimensions), name)
+            assertFalse(policy.dropsValue(tracked, dimensions), name)
+            for (level in 0 until dimensions) assertFalse(policy.boxedLevel(level), "$name level=$level")
+            val may = facts(List(dimensions) { ElementAccessor }, tail = Tail.ANY, layer = Layer.DEMAND)
+            assertNull(ops.filter(may, filter(name)), "$name MAY tail")
+        }
+        assertNull(ops.filter(facts(listOf(ElementAccessor, boxedField)), filter("java.lang.Integer[]")))
+    }
+
+    @Test
+    fun `boxed values lose ordinary marks below their fields and class accessors do not pass below a primitive`(): Unit {
         val integer = filter("java.lang.Integer")
-        val underField = facts(listOf(boxedField))
-        assertSame(underField, ops.filter(underField, integer))
-        val fieldThenElement = facts(listOf(boxedField, ElementAccessor))
-        assertSame(fieldThenElement, ops.filter(fieldThenElement, integer), "A first field accepts the whole suffix")
-        val classFact = facts(listOf(cls))
-        assertSame(classFact, ops.filter(classFact, filter("int")))
-        val afterElements = facts(listOf(ElementAccessor, ElementAccessor, cls, sampleField))
-        assertSame(afterElements, ops.filter(afterElements, filter("int[][]")))
-        val arrayField = facts(listOf(ElementAccessor, boxedField))
-        assertSame(arrayField, ops.filter(arrayField, filter("java.lang.Integer[]")))
+        // G6 drop form: the path filter admits a field below a boxed level (a first field accepts the whole suffix),
+        // and the mark policy drops an ordinary mark on the whole boxed value; a primitive-tracking mark stays.
+        for ((path, boxedFilter) in listOf(listOf(boxedField) to integer, listOf(boxedField, ElementAccessor) to integer,
+            listOf(ElementAccessor, boxedField) to filter("java.lang.Integer[]"))) {
+            val ordinaryFact = facts(path)
+            assertSame(ordinaryFact, ops.filter(ordinaryFact, TypeFilter(boxedFilter.may)), "$path: the path filter admits it")
+            assertNull(ops.filter(ordinaryFact, boxedFilter), "$path: the boxed value drops an ordinary mark")
+            val trackedFact = facts(path, mark = MarkSlot.Concrete(tracked))
+            assertSame(trackedFact, ops.filter(trackedFact, boxedFilter), "$path: a primitive-tracking mark stays")
+        }
+        // No accessor follows a true primitive value: the path filter rejects a class-static accessor there.
+        for ((path, name) in listOf(listOf(cls) to "int", listOf(ElementAccessor, ElementAccessor, cls, sampleField) to "int[][]"))
+            for (mark in listOf(ordinary, tracked)) {
+                val fact = facts(path, mark = MarkSlot.Concrete(mark))
+                assertNull(ops.filter(fact, TypeFilter(filter(name).may)), "$name $path: the path filter rejects it")
+                assertNull(ops.filter(fact, filter(name)), "$name $path")
+            }
         assertNull(ops.filter(facts(listOf(ElementAccessor, ElementAccessor, sampleField)), filter("int[][]")),
             "A path rejection happens before any off-chain mark policy")
     }

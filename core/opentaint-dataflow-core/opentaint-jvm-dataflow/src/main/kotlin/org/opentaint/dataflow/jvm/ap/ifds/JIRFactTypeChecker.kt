@@ -81,7 +81,10 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
 
         private fun checkAccessor(accessor: Accessor): FilterResult {
             when (accessor) {
-                is FinalAccessor, is ClassStaticAccessor -> return FilterResult.Accept
+                is FinalAccessor -> return FilterResult.Accept
+
+                // A value of a true primitive type has no fields, no elements and no statics below it.
+                is ClassStaticAccessor -> return if (actualType is JIRPrimitiveType) FilterResult.Reject else FilterResult.Accept
 
                 is AnyAccessor -> {
                     if (actualType.unboxIfNeeded() is JIRPrimitiveType) {

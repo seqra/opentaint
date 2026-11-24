@@ -14,7 +14,7 @@ internal fun filterFacts(m: ApManager, c: Facts, f: TypeFilter): Facts? {
         is TaintTree -> {
             var result = m.taintAlg.filterPath(m, c.root, f.may)
             val policy = f.markPolicy
-            if (result != null && policy != null) result = markPolicyOnElements(m, result, policy)
+            if (result != null && policy != null) result = markPolicy(m, result, policy)
             result?.let { if (it === c.root) c else m.taintTree(c.base, c.layer, it, c.exclusion, c.anyTail) }
         }
     }
@@ -93,8 +93,73 @@ internal fun <P : TrieLeaf> LeafAlgebra<P>.filterPath(
 
 private class PolicyFrame(val node: TaintNode, val kept: TaintLeaves)
 
-/** Only the root and its uninterrupted element chain have their payload marks filtered. */
-private fun markPolicyOnElements(m: ApManager, n: TaintNode, policy: MarkPolicy): TaintNode? {
+/** G6 drop form (spec/acyclic-convergence-proposal.md §5.1). The root and the element spine are filtered by `keeps`, as
+ *  in [markPolicyOnSpine]. In addition, at a boxed spine level k (`policy.boxedLevel(k)`), a mark with
+ *  `policy.dropsValue(mark, k)` is dropped on the whole value at `[e]^k`: on every leaf of the field subtrees of `[e]^k`
+ *  (for example `[e]^k.value`), of each deeper spine node, and on the deeper spine leaves. So at or below a boxed level
+ *  the decision for a mark does not depend on the path: an exact fact `x.[e]^k.p` loses the mark if and only if each
+ *  cut form `x.[e]^k.q.[any]` (q a prefix of p) loses it (prefix-closed, ap.md S5). Above the first boxed level the
+ *  result is that of [markPolicyOnSpine]. Both layers. Proofs: spec/lean/proposals/acyclic-group-a-20261124. */
+private fun markPolicy(m: ApManager, n: TaintNode, policy: MarkPolicy): TaintNode? {
+    val spine = ArrayList<TaintNode>()
+    var current = n
+    while (true) {
+        m.cancellation.checkpoint()
+        spine += current
+        current = current.child(ELEMENT_ACCESSOR_IDX) ?: break
+    }
+    val firstBoxed = spine.indices.firstOrNull { policy.boxedLevel(it) } ?: return markPolicyOnSpine(m, n, policy)
+    // droppedAt[j]: the marks of the subtree at the first boxed level that a boxed level k, firstBoxed <= k <= j, drops.
+    val candidates = m.taintAlg.foldAll(spine[firstBoxed], m.cancellation).let { it.exact + it.any }
+    val droppedAt = arrayOfNulls<MarkSet>(spine.size)
+    var dropped = MarkSet.EMPTY
+    for (j in spine.indices) {
+        m.cancellation.checkpoint()
+        if (j >= firstBoxed && policy.boxedLevel(j)) {
+            val ids = ArrayList<Int>()
+            for (id in candidates.data) if (TaintMark(id) !in dropped && policy.dropsValue(TaintMark(id), j)) ids += id
+            if (ids.isNotEmpty()) dropped = m.intern(dropped + MarkSet(ids.toIntArray()))
+        }
+        droppedAt[j] = dropped
+    }
+    // Rebuild from the deepest spine node: the spine leaf keeps the `keeps` marks minus droppedAt[j]; the element child
+    // is the rebuilt deeper node; every other child loses droppedAt[j] on all its leaves.
+    var below: TaintNode? = null
+    for (j in spine.indices.reversed()) {
+        m.cancellation.checkpoint()
+        val node = spine[j]
+        val d = droppedAt[j]!!
+        val leaf = m.taintLeaves(withoutMarks(keepPolicyMarks(m, node.leaf.exact, policy, j), d),
+            withoutMarks(keepPolicyMarks(m, node.leaf.any, policy, j), d))
+        val element = below
+        below = m.taintAlg.mapChildren(node, leaf, m.cancellation) { accessor, child ->
+            when {
+                accessor == ELEMENT_ACCESSOR_IDX -> element
+                d.isEmpty -> child
+                else -> dropOnValue(m, child, d)
+            }
+        }
+    }
+    return below
+}
+
+private fun withoutMarks(marks: MarkSet, d: MarkSet): MarkSet =
+    if (d.isEmpty || marks.data.none { TaintMark(it) in d }) marks else marks - d
+
+/** G6 drop form: drop the marks [d] on every leaf of the subtree [n] (a field subtree below a boxed level). */
+private fun dropOnValue(m: ApManager, n: TaintNode, d: MarkSet): TaintNode? {
+    val all = m.taintAlg.foldAll(n, m.cancellation)
+    if (all.exact.data.none { TaintMark(it) in d } && all.any.data.none { TaintMark(it) in d }) return n
+    return m.taintAlg.mapLeaves(n, m.cancellation) { leaf ->
+        val e = withoutMarks(leaf.exact, d)
+        val a = withoutMarks(leaf.any, d)
+        if (e === leaf.exact && a === leaf.any) leaf else m.taintLeaves(e, a)
+    }
+}
+
+/** The policy for a fact with no boxed level on its element spine: only the root and its uninterrupted element chain
+ *  have their payload marks filtered. Here this equals the drop form. */
+private fun markPolicyOnSpine(m: ApManager, n: TaintNode, policy: MarkPolicy): TaintNode? {
     val spine = ArrayList<PolicyFrame>()
     var current = n
     var level = 0
