@@ -33,6 +33,7 @@ sealed interface ProjectResolver {
                 JAVA_17_HOME, JAVA_11_HOME, JAVA_CURRENT_HOME
             )
                 .map { JavaToolchain.ConcreteJavaToolchain(it) }
+                .distinctBy { it.path() }
                 .ifEmpty { listOf(JavaToolchain.DefaultJavaToolchain) }
         }
 
@@ -119,8 +120,8 @@ sealed interface ProjectResolver {
                     }
                 }
                 .directory(workDir.toFile())
-                .redirectOutput(Slf4jStream.of(logger.underlyingLogger as ch.qos.logback.classic.Logger).asDebug())
-                .redirectError(Slf4jStream.of(logger.underlyingLogger as ch.qos.logback.classic.Logger).asDebug())
+                .redirectOutput(Slf4jStream.of(logger.underlyingLogger as ch.qos.logback.classic.Logger).asInfo())
+                .redirectError(Slf4jStream.of(logger.underlyingLogger as ch.qos.logback.classic.Logger).asInfo())
                 .executeNoTimeout().exitValue
     }
 }
