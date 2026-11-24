@@ -127,12 +127,17 @@ class SemgrepRuleLoader(
         ruleIdExclude: List<String> = emptyList(),
         semgrepStyleRuleIdFilter: List<String> = emptyList(),
         semgrepStyleRuleIdExclude: List<String> = emptyList(),
+        useSemgrepStyleRuleId: Boolean = false,
     ): RuleLoadResult {
         registeredRules.values.toList()
             .forEach { parseRule(it, forceLibraryMode = false) }
 
         val ruleIdsBySemgrepStyleId = registeredRules.keys.groupBy(SemgrepRuleUtils::getSemgrepStyleRuleId)
         fun List<String>.toRuleIds() = flatMap { ruleIdsBySemgrepStyleId[it].orEmpty() }
+
+        if (useSemgrepStyleRuleId || semgrepStyleRuleIdFilter.isNotEmpty() || semgrepStyleRuleIdExclude.isNotEmpty()) {
+            reportSemgrepStyleRuleIdCollisions(ruleIdsBySemgrepStyleId)
+        }
 
         val allowedRuleIds = (ruleIdFilter + semgrepStyleRuleIdFilter.toRuleIds()).toSet()
             .takeIf { ruleIdFilter.isNotEmpty() || semgrepStyleRuleIdFilter.isNotEmpty() }
@@ -167,6 +172,17 @@ class SemgrepRuleLoader(
             .forEach { it.addLoaded(loadJoinRule(it, tagIndex, excludedRuleIds)) }
 
         return RuleLoadResult(loaded, disabledRules)
+    }
+
+    private fun reportSemgrepStyleRuleIdCollisions(ruleIdsBySemgrepStyleId: Map<String, List<String>>) {
+        for ((semgrepStyleRuleId, ruleIds) in ruleIdsBySemgrepStyleId) {
+            if (ruleIds.size < 2) continue
+            for (ruleId in ruleIds) {
+                registeredRules.getValue(ruleId).ruleTrace
+                    .stepTrace(Step.LOAD_RULESET)
+                    .error(SemgrepStyleRuleIdCollision(semgrepStyleRuleId, (ruleIds - ruleId).sorted()))
+            }
+        }
     }
 
     private data class RuleInfo(

@@ -47,7 +47,8 @@ private fun CommonAnalysisOptions.parseSemgrepRules(
         }
     }
     val loaded = loader.loadRules(
-        semgrepSeverity, semgrepRuleId, semgrepRuleIdExclude, semgrepStyleRuleId, semgrepStyleRuleIdExclude
+        semgrepSeverity, semgrepRuleId, semgrepRuleIdExclude, semgrepStyleRuleId, semgrepStyleRuleIdExclude,
+        useSemgrepStyleRuleId = sarifGenerationOptions.useSemgrepStyleId,
     )
     logger.info { "Total loaded ${loaded.rulesWithMeta.sumOf { it.first.size }} rules" }
     return loaded

@@ -33,6 +33,7 @@ class SemgrepStyleRuleIdTest {
         ruleIdExclude: List<String> = emptyList(),
         semgrepStyleRuleIdFilter: List<String> = emptyList(),
         semgrepStyleRuleIdExclude: List<String> = emptyList(),
+        useSemgrepStyleRuleId: Boolean = false,
     ): Pair<SemgrepRuleLoader.RuleLoadResult, SemgrepLoadTrace> {
         val loader = SemgrepRuleLoader(listOf(JavaLanguageStrategy()))
         val trace = SemgrepLoadTrace()
@@ -42,6 +43,7 @@ class SemgrepStyleRuleIdTest {
             ruleIdExclude = ruleIdExclude,
             semgrepStyleRuleIdFilter = semgrepStyleRuleIdFilter,
             semgrepStyleRuleIdExclude = semgrepStyleRuleIdExclude,
+            useSemgrepStyleRuleId = useSemgrepStyleRuleId,
         )
         return result to trace
     }
@@ -177,5 +179,35 @@ class SemgrepStyleRuleIdTest {
 
         val (excludedSink, _) = load(joinRuleSets, semgrepStyleRuleIdExclude = listOf("java.security.inline-sink"))
         assertTrue(excludedSink.rulesWithMeta.isEmpty())
+    }
+
+    private fun SemgrepLoadTrace.collisionWarnings(): Map<String, List<String>> =
+        fileTraces.flatMap { file -> file.ruleTraces }.associate { rule ->
+            rule.ruleId to rule.steps.flatMap { it.entries }.filterIsInstance<SemgrepErrorEntry>()
+                .filter { "Semgrep-style rule ID" in it.message }
+                .onEach { assertEquals(SemgrepErrorEntry.Severity.NON_BLOCKING, it.severity) }
+                .map { it.message }
+        }.filterValues { it.isNotEmpty() }
+
+    @Test
+    fun `colliding rules get a warning naming each other when semgrep-style ids are in use`() {
+        val warnings = load(useSemgrepStyleRuleId = true).second.collisionWarnings()
+
+        assertEquals(setOf("java/security/a.yaml:dup", "java/security/b.yaml:dup"), warnings.keys)
+        assertTrue(warnings.getValue("java/security/a.yaml:dup").single().contains("'java/security/b.yaml:dup'"))
+        assertTrue(warnings.getValue("java/security/b.yaml:dup").single().contains("'java/security/a.yaml:dup'"))
+    }
+
+    @Test
+    fun `semgrep-style filters report collisions`() {
+        val expected = setOf("java/security/a.yaml:dup", "java/security/b.yaml:dup")
+        assertEquals(expected, load(semgrepStyleRuleIdFilter = listOf("java.security.keep-me")).second.collisionWarnings().keys)
+        assertEquals(expected, load(semgrepStyleRuleIdExclude = listOf("java.security.keep-me")).second.collisionWarnings().keys)
+    }
+
+    @Test
+    fun `collisions are not reported without semgrep-style ids`() {
+        assertEquals(emptyMap(), load().second.collisionWarnings())
+        assertEquals(emptyMap(), load(ruleIdFilter = listOf("java/security/a.yaml:dup")).second.collisionWarnings())
     }
 }
