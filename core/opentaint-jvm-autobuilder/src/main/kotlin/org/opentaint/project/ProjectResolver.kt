@@ -2,7 +2,7 @@ package org.opentaint.project
 
 import mu.KLogging
 import org.zeroturnaround.exec.ProcessExecutor
-import org.zeroturnaround.exec.stream.slf4j.Slf4jStream
+import org.zeroturnaround.exec.stream.LogOutputStream
 import java.nio.file.FileVisitResult
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
@@ -11,6 +11,9 @@ import kotlin.io.path.visitFileTree
 
 sealed interface ProjectResolver {
     val projectSourceRoot: Path
+
+    /** Why [resolveProject] returned null. */
+    val buildErrors: List<BuildError>
 
     fun resolveProject(): JavaProject?
 
@@ -37,16 +40,22 @@ sealed interface ProjectResolver {
                 .ifEmpty { listOf(JavaToolchain.DefaultJavaToolchain) }
         }
 
-        fun tryJavaToolchains(block: (JavaToolchain) -> Int): JavaToolchain? {
-            val toolchains = availableJavaToolchains.iterator()
-            while (toolchains.hasNext()) {
-                val toolchain = toolchains.next()
-                if (block(toolchain) == 0) return toolchain
+        fun tryJavaToolchains(
+            workDir: Path,
+            args: List<String>,
+            failureCauses: () -> BuildFailureCauses,
+            errors: MutableList<BuildError>,
+        ): JavaToolchain? {
+            for (toolchain in availableJavaToolchains) {
+                val causes = failureCauses()
+                val exitCode = runCommand(workDir, args, toolchain, causes)
+                if (exitCode == 0) return toolchain
+                errors += BuildError(toolchain.path(), causes.causes(exitCode))
             }
             return null
         }
 
-        fun resolveProject(rootDir: Path, resolverWorkDir: Path): JavaProject? {
+        fun resolveProject(rootDir: Path, resolverWorkDir: Path, statuses: MutableList<ProjectStatus>): JavaProject? {
             resolverWorkDir.createDirectories()
 
             val projectResolvers = mutableListOf<ProjectResolver>()
@@ -84,11 +93,20 @@ sealed interface ProjectResolver {
 
             val resolvedProjects = mutableListOf<JavaProject>()
             for (resolver in projectResolvers) {
-                logger.info { "Start project resolution for: ${resolver.projectSourceRoot}" }
+                val root = resolver.projectSourceRoot
+                logger.info { "Start project resolution for: $root" }
                 try {
-                    resolvedProjects += resolver.resolveProject() ?: continue
+                    val project = resolver.resolveProject()
+                    if (project == null) {
+                        statuses += ProjectStatus.Failed(Language.JAVA, root, resolver.buildErrors)
+                        continue
+                    }
+                    resolvedProjects += project
+                    statuses += ProjectStatus.Built(Language.JAVA, root, project.javaToolchain)
                 } catch (ex: Throwable) {
-                    logger.error(ex) { "Project resolution failed for: ${resolver.projectSourceRoot}" }
+                    logger.error(ex) { "Project resolution failed for: $root" }
+                    val error = BuildError(toolchain = null, causes = listOf(ex.toString()))
+                    statuses += ProjectStatus.Failed(Language.JAVA, root, resolver.buildErrors + error)
                 }
             }
 
@@ -108,7 +126,12 @@ sealed interface ProjectResolver {
             }
         }
 
-        internal fun runCommand(workDir: Path, args: List<String>, javaToolchain: JavaToolchain): Int =
+        internal fun runCommand(
+            workDir: Path,
+            args: List<String>,
+            javaToolchain: JavaToolchain,
+            failureCauses: BuildFailureCauses? = null,
+        ): Int =
             ProcessExecutor()
                 .command(args)
                 .apply {
@@ -120,8 +143,14 @@ sealed interface ProjectResolver {
                     }
                 }
                 .directory(workDir.toFile())
-                .redirectOutput(Slf4jStream.of(logger.underlyingLogger as ch.qos.logback.classic.Logger).asInfo())
-                .redirectError(Slf4jStream.of(logger.underlyingLogger as ch.qos.logback.classic.Logger).asInfo())
+                // One stream, so that the failure causes see the lines in the order the tool printed them.
+                .redirectErrorStream(true)
+                .redirectOutput(object : LogOutputStream() {
+                    override fun processLine(line: String) {
+                        logger.info { line }
+                        failureCauses?.accept(line)
+                    }
+                })
                 .executeNoTimeout().exitValue
     }
 }

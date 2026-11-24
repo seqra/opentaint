@@ -36,19 +36,31 @@ class ProjectAutoBuilder : CliWithLogger() {
 
         val resolverWorkDir = buildDir?.toAbsolutePath() ?: createTempDirectory("resolver")
 
+        val statuses = mutableListOf<ProjectStatus>()
         val resolvedProject = when (val b = buildType) {
             is BuildProject -> {
-                ProjectResolver.resolveProject(projectRoot, resolverWorkDir)
+                ProjectResolver.resolveProject(projectRoot, resolverWorkDir, statuses)
             }
 
             is ProjectFromCP -> {
+                statuses += ProjectStatus.Built(Language.JAVA, projectRoot, b.toolchain)
                 ProjectFromCPResolver().resolveProject(projectRoot, resolverWorkDir, b)
             }
         }
 
         val javaProjects = resolvedProject?.let { Project.flattenJavaProject(it) }.orEmpty()
-        val goProjects = GoProjectResolver.resolveProject(projectRoot, resolverWorkDir)
+        val goProjects = GoProjectResolver.resolveProject(projectRoot, resolverWorkDir, statuses)
 
+        writeProject(projectRoot, javaProjects, goProjects)
+
+        val resultDir = when (val b = build) {
+            is SimpleProjectBuild -> b.result.toAbsolutePath().parent
+            is PortableProjectBuild -> b.resultDir
+        }
+        BuildStatus(statuses).write(resultDir)
+    }
+
+    private fun writeProject(projectRoot: Path, javaProjects: List<JavaProject>, goProjects: List<GoProject>) {
         if (javaProjects.isEmpty() && goProjects.isEmpty()) {
             logger.error { "No projects resolved at $projectRoot" }
             return

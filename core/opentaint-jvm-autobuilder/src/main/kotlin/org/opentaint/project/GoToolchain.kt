@@ -10,7 +10,8 @@ import kotlin.io.path.Path
 object GoToolchain {
     private val logger = object : KLogging() {}.logger
 
-    fun resolve(workDir: Path): Path? = try {
+    /** The GOROOT, or why `go env GOROOT` failed. */
+    fun resolve(workDir: Path): Result<Path> = try {
         val goRoot = ProcessExecutor()
             .command("go", "env", "GOROOT")
             .directory(workDir.toFile())
@@ -23,9 +24,10 @@ object GoToolchain {
             .execute()
             .outputUTF8().trim()
         logger.info { "Go toolchain: $goRoot" }
-        Path(goRoot)
+        Result.success(Path(goRoot))
     } catch (ex: Exception) {
-        logger.warn { "No Go toolchain: failed to run `go env GOROOT`: ${(ex.cause ?: ex).message}" }
-        null
+        val failure = IllegalStateException("`go env GOROOT` failed: ${(ex.cause ?: ex).message}", ex)
+        logger.warn { "No Go toolchain: ${failure.message}" }
+        Result.failure(failure)
     }
 }
