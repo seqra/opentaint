@@ -39,6 +39,9 @@ classified in that proposal (§0.1) with the same gate.
 | §5.1 G6 drop form | Prefix closure on 29 JIR types (0 breaks, native 1,114). Alone: module, jvm, rule suite, OWASP identical except the decided removals (M4, D5, D6, boxed String chains). Sink routes: only the decided M4 removal differs from native. Never acts on OWASP; on Stirling-PDF and Conductor it removes 0 marks. | A decided semantic correction (20 November): it makes the mark policy monotone in K. It removes nothing else. |
 | §5.5 EXACT cleaner on a MUST leaf | Alone: rule suite and OWASP identical (OWASP residual 711-735 → 24, the largest single effect); module: the four changed fixtures only (signed off 24 November); jvm: 6 of 6 analyses identical, 2 cleaner-table tests assert the old semantics. | Approved as semantics (24 November): an EXACT cleaner does not split a MUST region. The cleaned point stays tainted inside the region, so the rule can confirm a report that native keeps provisional; this is the intended result, not a negative consequence. Its own route changes are intended by the same decision (not measured alone). |
 
+Implementation proposal for group A:
+[acyclic-group-a-implementation.md](acyclic-group-a-implementation.md).
+
 Not rules, safe to keep because they change no run when off (and only log
 when on): the acyclicity oracle (§3) as a diagnostic, the AC residual
 counter, the width census and MUST-cover drop log
@@ -752,7 +755,9 @@ Native gives the survivor `ret.MUST/T,D`; the rule keeps `ret.MUST/T,N`.
 The same maker makes the DEMAND witness at 151 of the 164 open acyclic
 OWASP `doPost` roots.
 
-**Gate alone.** Module: 4 report changes, nothing else:
+**Gate alone.** Module: 4 report changes, one analysis that ends earlier
+with the same report (`DemandLinkTest`), and 12 unit tests that state the
+native survivor (list: [acyclic-group-a-implementation.md](acyclic-group-a-implementation.md) §4.5). The report changes:
 `UniformRootCleanerTerminationTest` (1 new confirmed result, 1
 provisional → confirmed), `DescendantCleanerTerminationTest` (provisional
 → confirmed), `AcyclicTerminationBaselineTest.protectedGlobalCutGrowth`
