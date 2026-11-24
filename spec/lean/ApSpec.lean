@@ -55,6 +55,7 @@ import ApSpec.PipelineAnyTaintEx
 import ApSpec.PipelineAnyTaintExDriver
 import ApSpec.AnyTaintExKinds
 import ApSpec.AnyTaintExCases2
+import ApSpec.AnyTaintExR2
 import ApSpec.HandoffDefs
 import ApSpec.HandoffRestrict
 import ApSpec.HandoffCoverage

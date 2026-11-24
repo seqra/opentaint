@@ -444,8 +444,8 @@ are not the zero fact (§4.6).
   a demand-layer result. A layer-only change retains its known tail and E; an
   actual information-losing transfer has its own shape rule (THE DEMOTIONS; the other lists of this spec
   refer to this one): the field-limit cut (§4.4); a cleaner `part` row of §4.7 other than the `atAndBelow` and `below`
-  rows one accessor below the fact (so the `exact` cleaner at the path of the fact or one accessor below it, and every
-  cleaner two or more accessors below it); a may target (an `[any]` target of a pass rule, W6); a demand input (a
+  rows one accessor below the fact and the `exact` row (so every `below` or `atAndBelow` cleaner two or more accessors
+  below it; since R2 the `exact` cleaner keeps an `[any-taint]` fact, §4.7); a may target (an `[any]` target of a pass rule, W6); a demand input (a
   demand fact, summary edge or record: another input of a conjunction in the demand layer, §4.6, a demand-layer
   summary edge or record, §4.3, or a demand link, an `[any]` added fact, §4.3); and the must-record demotion
   (§4.3; Lean `AnyTaint.recLayer`, `AnyTaintEx.recLayerX`). An exclusion that meets an `[any-taint]` fact (the keep
@@ -1535,7 +1535,7 @@ The result:
 | `c.mark` | cleaner mark | `inside` | `disjoint` | `part` |
 |---|---|---|---|---|
 | `*` or `*∖X` | every mark | dropped | `c` | `c` in the demand layer, normalised: a `*` tail becomes `[any]` (W2) |
-| `T` (cleaned) | `T` or every mark | dropped | `c` | the part that the cleaner does not surely clean: a fact with an any tail at `x.p` under a `below` cleaner becomes `(x, p, $, T)`, in the layer of `c` (an `[any-taint]` fact keeps the normal layer); a normal `[any-taint]/E` fact at `x.q` under a cleaner ONE ACCESSOR BELOW it, at `x.q.f` (so `p = q ++ [f]`, and `E` admits `f`): `atAndBelow` gives `(x, q, [any-taint], E ∪ {f}, T)`, and `below` gives `(x, q, [any-taint], E ∪ {f}, T)` and `(x, q.f, $, T)`, both in the layer of `c`; any other `c` goes to the demand layer (it has a concrete mark, so it has no `*` tail, W2; an `[any-taint]/E` fact becomes `[any]` with the Empty exclusion, W8: under the `exact` cleaner at `x.q` or at `x.q.f`, which has no shape for "every location but one", and under every cleaner two or more accessors below `x.q`; the cleaner demotions of §2.2) |
+| `T` (cleaned) | `T` or every mark | dropped | `c` | the part that the cleaner does not surely clean: a fact with an any tail at `x.p` under a `below` cleaner becomes `(x, p, $, T)`, in the layer of `c` (an `[any-taint]` fact keeps the normal layer); an `[any-taint]/E` fact under an `exact` cleaner is KEPT UNCHANGED, in the layer of `c`, with its marks and `E` (R2, see below); a normal `[any-taint]/E` fact at `x.q` under a cleaner ONE ACCESSOR BELOW it, at `x.q.f` (so `p = q ++ [f]`, and `E` admits `f`): `atAndBelow` gives `(x, q, [any-taint], E ∪ {f}, T)`, and `below` gives `(x, q, [any-taint], E ∪ {f}, T)` and `(x, q.f, $, T)`, both in the layer of `c`; any other `c` goes to the demand layer (it has a concrete mark, so it has no `*` tail, W2; an `[any-taint]/E` fact becomes `[any]` with the Empty exclusion, W8: under a `below` or `atAndBelow` cleaner two or more accessors below `x.q`; the cleaner demotions of §2.2) |
 | `T'` (not cleaned) | `T` | `c` | `c` | `c` |
 
 Lean: `BaseCleaner.cleanRes` for the F75 selected-mark split. The earlier `cleanRes` and the X operations retain
@@ -1547,6 +1547,17 @@ With the exclusion:
 `below` cleaner is real, `below_new_fact_real`), and the `exact` cleaner must demote
 (`AnyTaintExExact.CexExactCleaner.cex_exact_cleaner`: `[any-taint]/{f}` would miss the real `x.f.g`, a soundness
 loss, and a normal `[any-taint]/{}` would claim the cleaned `x.f`).
+
+R2: AN `exact` CLEANER DOES NOT APPLY TO AN `[any-taint]` FACT (decisions of 21 and 24 Nov 2026,
+`acyclic-convergence-proposal.md` §5.5; landed in commit `5804e44dd`). At `part`, in both directions and in every run,
+the fact stays as it is: the same layer, marks and `E`. The earlier rows above demoted it to the demand layer. That
+demotion has no finite replacement: "the region without the point `x.p`" has no finite leaf form
+(`lean/proposals/acyclic-group-a-20261124/MustExactCleaner.lean`, C10), so no field limit made the demand row normal,
+and the analysis renewed it in every run. The trade is accepted: the cleaned point stays tainted inside the
+`[any-taint]` region (the normal fact claims the cleaned `x.f`, as in `cex_exact_cleaner`), and a report through that
+point can be confirmed. R2 differs from the demoting row only in the layer (Lean C1-C8); positions and marks are the
+same. In GROUP mark mode the selected cleaner removes no mark, so R2 does not act there. The ApSpec theorems on
+`partX` and `concPart` describe the deleted demoting row; they are not re-proved for R2.
 
 So the cleaner SPLITS a `*`-mark fact by the mark. The edge `*∖{T}` propagates every mark except `T`, exactly, in the
 normal layer. The mark `T` goes through the cleaner only on the concrete answer of the request, which the cleaner cleans
@@ -1634,7 +1645,11 @@ condition is necessary in the model: its program breaks W6 and S8).
 
 The interpreter places the filters (`interpreter.md` §5.1 gives the table). The mark policy (a concrete mark on a
 primitive value) is NOT a type filter: it reads the mark, the model has no mark filter, and it can drop a real flow, so
-it is outside S5 (`interpreter.md` G6). The AP has no summary-side filter (`interpreter.md` D13, D14). Without a
+it is outside S5 (`interpreter.md` G6). Since commit `4fed782fa` it uses the G6 drop form: at and below a boxed level
+(a class that unboxes to a primitive) a mark that is not primitive-tracking is removed from the whole value, field
+leaves included. So the policy is prefix-closed and monotone in the field limit
+(`lean/proposals/acyclic-group-a-20261124/G6DropForm.lean`). The JVM `may` admits no accessor below a value of a true
+primitive type (`interpreter.md` §5.1). The AP has no summary-side filter (`interpreter.md` D13, D14). Without a
 filter the analysis only adds facts, so this is sound and costs precision (`interpreter.md` Q3).
 
 The special cases: the backward run applies no type filter (§9.2; §11.2 gives the difference to the model); a type
@@ -1783,8 +1798,8 @@ strong write into the object does not demote it: the exclusion removes only the 
 (`AnyTaintCases.W.keep_normal_confirms_unreal`). A vulnerability that rests only on a may `[any]` (a pass rule with an
 `AnyField` target, `AnyTaintExCases2.PassRule.pass_not_confirmed`) or on another demotion of §2.2 (the list is there;
 for example the field limit cut (`AnyTaintExCases.CUT.cut_reports` is historical zero-limit data outside the current API);
-the `exact` cleaner below the object,
-`AnyTaintExCases.CL.exact_result`) stays a
+before R2 also the `exact` cleaner below the object,
+`AnyTaintExCases.CL.exact_result`; since R2 that report is confirmed, §4.7) stays a
 demand vulnerability, and the output holds it as a DEMAND entry (§8.10).
 
 `Confirmed.confirmed_real_valid` (run 1, under S7, S10 and S13) and `RExact.confirmed_realM_gen_valid` (every forward

@@ -117,7 +117,7 @@ fact (before F69 it was a DEMAND entry; D32).
 | G2 | THE GLOBAL-STATE RULE: at the normal exit, for an `S` item whose premise is the zero fact (a state that the method or its callees set), the part on which a mark literal of an exit sink (plain or conjunctive) holds is dropped from the summary edge. A conjunctive exit sink keeps that part as the stored input of the literal (§5.3). A caller-set `S` fact is evaluated (it can report, D21) but not dropped: it returns to the caller through the callee summary, also the run-1 FLOW summary and its record (§3.3). Also the entry marks on zero-premise `this`/`arg` facts are removed (every leaf with an entry mark, at any depth; D35). | §4.7 steps 3, 4 | premise-dependent removals, not an AP primitive; precision: a caller-set state passes the exit sink of a callee, so a later sink in the caller sees it, and the exit sink of the caller evaluates it again (expected false-positive sources, ap.md §11.1) |
 | G3 | The cleaners run before the callee body. | §4.5 step 5.1 | a sink inside the body of the cleaner method sees the cleaned fact |
 | G4 | The rules come from the method that the call names, not from the resolved override. | §3.6 | a sink or source on an override is missed |
-| G6 | The mark policy and the policy cases of the type filter. | §5.1 | they can drop a real flow (outside ap.md S5) |
+| G6 | The mark policy and the policy cases of the type filter. Since 24 Nov 2026 (commit `4fed782fa`) the mark policy uses the G6 drop form: it is prefix-closed and monotone in the field limit (§5.1). | §5.1 | they can drop a real flow (outside ap.md S5): a mark that is not primitive-tracking on a primitive or boxed value |
 | G7 | The write at an alias is weak (A3, AC2). | §2.5, §3.8 | precision: the old content of the alias path survives (sound if an alias does not hold); an expected false-positive source (ap.md §11.1) |
 | G8 | A constructor call keeps the caller facts that it overwrites. | §3.5 | precision: a weak update of the receiver and the arguments; an expected false-positive source (ap.md §11.1) |
 | G9 | A catch handler reads the facts AFTER each statement of the try range: a statement that throws counts as completed (its kill, its writes and the cleaners of a call apply). The catch statement does not kill its local. As today. | §2.2 (catch), §3.4 | a flow on the state before the throwing statement is lost (`try { s = clean(s); } catch (E e) { sink(s); }`); precision: an old fact on the catch local stays |
@@ -1056,24 +1056,33 @@ fun may(t: JIRType?, p: List<Accessor>): Boolean {
             (a.declaringClass == null || typeMayHaveSubtypeOf(t, a.declaringClass))   // deeper accessors: not checked
         ElementAccessor -> t is JIRRefType && typeMayBeArray(t) &&
             (t.elementTypeOrNull()?.let { may(it, p.drop(1)) } ?: true)
+        is ClassStaticAccessor -> t !is JIRPrimitiveType                                 // no static below a true primitive
         else -> true                                                                     // <C> (ap.md W5: no other accessor)
     }
 }
 
-/** The mark policy (not a may-predicate): it drops a concrete mark directly on a value of a primitive or boxed type,
- *  unless the mark is primitive-tracking. It reads the type at the root (`t`) and below each `[e]` (the element type),
- *  as today (`JIRFactTypeChecker` gives `FilterNext` with the element type at `[e]`). Below a field accessor it reads
- *  no type. Types of ap.md §3.4. */
+/** The mark policy (not a may-predicate), with the G6 drop form (acyclic-convergence-proposal.md §5.1; landed in
+ *  `4fed782fa`). It drops a concrete mark that is not primitive-tracking on a value of a primitive or boxed type. It reads
+ *  the type at the root (`t`) and below each `[e]` (the element type), as `JIRFactTypeChecker` gives `FilterNext` with
+ *  the element type at `[e]`. At and below a BOXED level (a class that unboxes to a primitive: Integer, Character, …)
+ *  the mark is dropped on the whole value, field leaves such as `value` included. Below a field of a non-boxed level it
+ *  reads no type. So the policy is prefix-closed and monotone in the field limit (Lean
+ *  `lean/proposals/acyclic-group-a-20261124/G6DropForm.lean`). Types of ap.md §3.4. */
 fun markPolicyKeeps(t: JIRType?, f: PathFact): Boolean {
     val m = f.mark
-    if (m !is MarkSlot.Concrete) return true
+    if (m !is MarkSlot.Concrete || isPrimitiveTracking(m.mark)) return true
     var type: JIRType = t ?: return true
     for (a in f.path) {
+        if (type.isBoxed()) return false                       // at or below a boxed level: dropped on the whole value
         if (a != ElementAccessor) return true                  // below a field or a class: no type is read
         type = type.elementTypeOrNull() ?: return true         // the element type is not known
     }
-    return type.unboxIfNeeded() !is JIRPrimitiveType || isPrimitiveTracking(m.mark)
+    return type.unboxIfNeeded() !is JIRPrimitiveType && type.typeName != "java.lang.Character"
 }
+
+/** A boxed type: not a true primitive, and it unboxes to a primitive (Character included, as `JIRTypeFilters`). */
+fun JIRType.isBoxed(): Boolean = this !is JIRPrimitiveType &&
+    (unboxIfNeeded() is JIRPrimitiveType || typeName == "java.lang.Character")
 
 /** A PRIMITIVE-TRACKING mark is a mark of a rule with the option `primitive-tracking: true`. Today the rule loader
  *  adds the suffix `%%primitive%%` to the name of each such mark (`PrimitiveTaintExt`). */
@@ -1088,9 +1097,16 @@ Rules:
   does not propagate it (ap.md §4.8). So a `*`, `[any]` or `[any-taint]` fact keeps the locations below its path that
   `t` cannot have: an expected false-positive source (ap.md §11.1). Such a location is not valid (I13), so the
   exactness and the confirmation of an `[any-taint]` edge do not read it.
-* Policy cases are outside ap.md S5 (they can drop a real flow), as today: the mark policy above; `[e]` on a class type
+* Policy cases are outside ap.md S5 (they can drop a real flow): the mark policy above; `[e]` on a class type
   other than `Object` (for example `Cloneable`, `Serializable`). The mark policy is not a
-  type filter: it reads the mark, not only the path, and the model has no mark filter. It is gap G6.
+  type filter: it reads the mark, not only the path, and the model has no mark filter. It is gap G6. With the drop
+  form the policy is prefix-closed: if it keeps a mark on an exact fact `x.p.$`, it keeps it on every cut form
+  `x.q.MAY` with `q` a prefix of `p`, so a larger field limit only removes marks (Lean D3, D4). Before the drop form the
+  policy read the spine leaves only, and `x.[].MAY/T` was dropped at limit 1 while `x.[].value.$/T` was kept at limit
+  2 under `Integer[]` (Lean `m4_native_breaks`).
+* No accessor follows a value of a TRUE primitive type (`int`, `char`, …): `may` rejects a field, an element and a
+  class-static accessor there (`JIRFactTypeChecker`; the class-static case since `4fed782fa`, shared with the IFDS
+  engine). A boxed class keeps its fields.
 * THE APPLICATION POINT OF THE MARK POLICY: at every point of the table below where the analyzer applies a type filter
   to a base with the static type `t`, it also applies `markPolicyKeeps(t, ·)` to the same facts, after the filter (as
   today: the policy is part of `JIRFactTypeChecker`). Go and the backward run apply no mark policy.
