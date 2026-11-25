@@ -68,6 +68,12 @@ the cost is acceptable. A native prototype shows those three.
 11. **Write down what was not measured.** Each report ends with the
     blind spots and the weakly supported verdicts.
 
+12. **Decide which of the proposed rules worth implementing.** Mark rule as WI if 
+    the prototype shows the improvement without negative consequences.
+
+13. **Write proofs.** Write all the required proofs for every WI rule. Follow the [proof-guide.md](proof-guide.md).
+    We must ensure that the proposed rule has no hidded sources of unsoundness. 
+
 ## Checklist for a proposal
 
 ```text
@@ -78,4 +84,6 @@ the cost is acceptable. A native prototype shows those three.
 [ ] Selected semantic scope: changed / unchanged (proof-guide.md)
 [ ] Proof scope, and each difference between model and production
 [ ] Withdrawal condition
+[ ] WI classification
+[ ] Proofs
 ```
