@@ -1,6 +1,10 @@
 # Next iteration: proposals after the group A landing
 
-Status: PROPOSAL, 25 November 2026. Input: the measurement of the group A
+Status: PROPOSAL, 25 November 2026. P1-P3 are measured and classified in
+[spec/next-iteration-p1-p3.md](../../spec/next-iteration-p1-p3.md): P3 is WI;
+P2 (replay once per pair) is withdrawn and replaced by P2' (restriction memo);
+P1 is withdrawn as an OOM fix (the mark repetition does not drive the OOM).
+Input: the measurement of the group A
 build `5804e44dd` ([report](../reports/bidirectional-group-a-landing-20261125.md)).
 Design rules: [design-guide.md](../../spec/design-guide.md). Gate for every
 item: confirmed and provisional results identical to the parent build, all

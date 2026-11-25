@@ -191,3 +191,6 @@ import ApSpec.FlowBackedRelationsCounterexamples
 import ApSpec.Run1CorrelatedConcreteInitials
 import ApSpec.CorrelatedConcreteImplementation
 import ApSpec.DiagonalTypedAdmission
+import ApSpec.FlowGroupIncremental
+import ApSpec.LoopReplayOnce
+import ApSpec.RestrictionMemo
