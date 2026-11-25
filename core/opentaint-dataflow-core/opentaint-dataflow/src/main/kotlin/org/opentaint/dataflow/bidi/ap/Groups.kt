@@ -4,7 +4,13 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.SoftReferenceManager
 
-/** FLOW values for one base, separated by layer and both exclusions. One store writer owns this group. */
+/** FLOW values for one base, separated by layer and both exclusions. One store writer owns this group.
+ *
+ * Invariant F: between two calls, each list of [trees] is a fixpoint. A pass, the MUST merge and the
+ * promotion change nothing in it. The list starts empty, only [addAll] (through [insert] and
+ * [mergeMustOverlap]) writes it, and [addAll] stores a fixpoint or restores the list that it read.
+ * [addAll] needs F for its early return and for its clean rows (spec/next-iteration-p3-p2m-implementation.md §3).
+ * A new writer of [trees] must keep F. */
 class FlowGroup(private val m: ApManager, private val interner: TrieInterner<FlowLeaf>) {
     private val trees = arrayOf(ArrayList<FlowTree>(1), ArrayList<FlowTree>(1))
 
@@ -57,55 +63,80 @@ class FlowGroup(private val m: ApManager, private val interner: TrieInterner<Flo
     fun addAll(t: FlowTree): List<FlowTree> {
         val list = trees[t.layer.ordinal]
         val before = list.toList()
-        insert(t)
-        // Fill one complete immediate MUST branch at a time. Each promotion
-        // strictly reduces a finite exclusion; admitted headers are canonical.
+        try {
+            insert(t)
+            // F: `before` is a fixpoint. When the insert keeps the same row objects, nothing changes.
+            if (sameRows(list, before)) return emptyList()
+            canonicalize(list, before)
+            return list.mapNotNull { row -> newPart(row, before) }
+        } catch (e: Throwable) {
+            // A throw (a cancellation) keeps F: restore the list that this call read.
+            list.clear(); list.addAll(before)
+            throw e
+        }
+    }
+
+    private fun sameRows(a: List<FlowTree>, b: List<FlowTree>): Boolean =
+        a.size == b.size && a.indices.all { a[it] === b[it] }
+
+    /** The loop of passes, MUST merges and promotions. A row that is still an object of [clean]
+     * (the stored fixpoint, then the last pass output) is compact, and no other clean row covers it.
+     * So only the changed rows can cover it. The loop ends after a pass, so a final pass would
+     * change nothing (Lean `final_pass_noop`, `addAllImpl_eq`). */
+    private fun canonicalize(list: MutableList<FlowTree>, clean: List<FlowTree>) {
+        var cleanRows = clean
         while (true) {
+            val dirty = list.filter { row -> cleanRows.none { it === row } }
             val canonical = list.mapNotNull { row ->
-                subtractSubsumed(compactPacket(row),list.filter { it !== row })
+                if (cleanRows.any { it === row }) subtractSubsumed(row, dirty)
+                else subtractSubsumed(compactPacket(row), list.filter { it !== row })
             }
             list.clear(); list.addAll(canonical)
+            cleanRows = canonical
+            // Fill one complete immediate MUST branch at a time. Each promotion
+            // strictly reduces a finite exclusion; admitted headers are canonical.
             if (mergeMustOverlap(list)) continue
-            var promoted: FlowTree? = null
-            outer@ for (parent in list.toList()) {
-                if (parent.tail != Tail.ANY_TAINT) continue
-                val fields = (parent.exclusion as? ExclusionSet.Concrete)?.ids ?: continue
-                m.forEachLeafPosition(parent) { _, path ->
-                    if (promoted != null) return@forEachLeafPosition
-                    for (field in fields) {
-                        val full = list.any { child ->
-                            child.tail == Tail.ANY_TAINT && child.exclusion == ExclusionSet.Empty &&
-                                child.markExclusion.isSubsetOf(parent.markExclusion) &&
-                                child.root.walk(path + field) { _, _ -> m.cancellation.checkpoint() }
-                                    ?.leaf?.isEmpty == false
-                        }
-                        if (!full) continue
-                        val e = ExclusionSet.of(fields.filter { it != field }.toIntArray())
-                        val root = FlowAlgebra.prepend(m,m.path(path.asList()),FlowAlgebra.LEAF_NODE)
-                        val candidate = m.flowTree(parent.base,parent.layer,e,parent.markExclusion,root,parent.tail)
-                        if (subtractSubsumed(candidate,list) != null) { promoted = candidate; break }
+            insert(promotion(list) ?: break)
+        }
+    }
+
+    /** The first header with an ANY_TAINT parent whose excluded field has a full child at a leaf
+     * position of the parent, or null. */
+    private fun promotion(list: List<FlowTree>): FlowTree? {
+        var promoted: FlowTree? = null
+        outer@ for (parent in list.toList()) {
+            if (parent.tail != Tail.ANY_TAINT) continue
+            val fields = (parent.exclusion as? ExclusionSet.Concrete)?.ids ?: continue
+            m.forEachLeafPosition(parent) { _, path ->
+                if (promoted != null) return@forEachLeafPosition
+                for (field in fields) {
+                    val full = list.any { child ->
+                        child.tail == Tail.ANY_TAINT && child.exclusion == ExclusionSet.Empty &&
+                            child.markExclusion.isSubsetOf(parent.markExclusion) &&
+                            child.root.walk(path + field) { _, _ -> m.cancellation.checkpoint() }
+                                ?.leaf?.isEmpty == false
                     }
-                }
-                if (promoted != null) break@outer
-            }
-            if (promoted == null) break
-            insert(promoted!!)
-        }
-        // Prune old descendants too. This makes parent-first and child-first
-        // insertion expose the same current basis.
-        val canonical = list.mapNotNull { row ->
-            subtractSubsumed(compactPacket(row),list.filter { it !== row })
-        }
-        list.clear(); list.addAll(canonical)
-        return canonical.mapNotNull { row ->
-            var root: FlowNode? = row.root
-            for (old in before) {
-                if (old.groupKey == row.groupKey) root = root?.let {
-                    FlowAlgebra.minusNode(it,old.root,m.cancellation)
+                    if (!full) continue
+                    val e = ExclusionSet.of(fields.filter { it != field }.toIntArray())
+                    val root = FlowAlgebra.prepend(m,m.path(path.asList()),FlowAlgebra.LEAF_NODE)
+                    val candidate = m.flowTree(parent.base,parent.layer,e,parent.markExclusion,root,parent.tail)
+                    if (subtractSubsumed(candidate,list) != null) { promoted = candidate; break }
                 }
             }
-            root?.let { row.withRoot(it) }
+            if (promoted != null) break@outer
         }
+        return promoted
+    }
+
+    /** The part of [row] that is not in a row of [before] with the same group key, or null. */
+    private fun newPart(row: FlowTree, before: List<FlowTree>): FlowTree? {
+        var root: FlowNode? = row.root
+        for (old in before) {
+            if (old.groupKey == row.groupKey) root = root?.let {
+                FlowAlgebra.minusNode(it,old.root,m.cancellation)
+            }
+        }
+        return root?.let { row.withRoot(it) }
     }
 
     private fun mergeMustOverlap(list: MutableList<FlowTree>): Boolean {
