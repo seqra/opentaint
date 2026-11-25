@@ -15,10 +15,32 @@ type Config struct {
 }
 
 type JavaProject struct {
-	SourceRoot    string   `yaml:"sourceRoot"`
-	JavaToolchain string   `yaml:"javaToolchain,omitempty"`
-	Modules       []Module `yaml:"modules"`
-	Dependencies  []string `yaml:"dependencies,omitempty"`
+	SourceRoot    string               `yaml:"sourceRoot"`
+	JavaToolchain string               `yaml:"javaToolchain,omitempty"`
+	Modules       []Module             `yaml:"modules"`
+	Dependencies  []ResolvedDependency `yaml:"dependencies,omitempty"`
+}
+
+type ResolvedDependency struct {
+	Path string `yaml:"path"`
+	Purl string `yaml:"purl,omitempty"`
+}
+
+// UnmarshalYAML accepts a legacy bare path string (as a path-only dependency) or the tagged mapping.
+func (d *ResolvedDependency) UnmarshalYAML(unmarshal func(any) error) error {
+	var bareString string
+	if err := unmarshal(&bareString); err == nil {
+		d.Path = bareString
+		return nil
+	}
+
+	type plain ResolvedDependency
+	var p plain
+	if err := unmarshal(&p); err != nil {
+		return err
+	}
+	*d = ResolvedDependency(p)
+	return nil
 }
 
 type GoProject struct {
@@ -32,10 +54,10 @@ type Module struct {
 }
 
 type legacyConfig struct {
-	SourceRoot    string   `yaml:"sourceRoot"`
-	JavaToolchain string   `yaml:"javaToolchain,omitempty"`
-	Modules       []Module `yaml:"modules"`
-	Dependencies  []string `yaml:"dependencies,omitempty"`
+	SourceRoot    string               `yaml:"sourceRoot"`
+	JavaToolchain string               `yaml:"javaToolchain,omitempty"`
+	Modules       []Module             `yaml:"modules"`
+	Dependencies  []ResolvedDependency `yaml:"dependencies,omitempty"`
 }
 
 func LoadConfig(projectModelPath string) (*Config, error) {
@@ -79,7 +101,9 @@ func (c *Config) AllModules() []Module {
 func (c *Config) AllDependencies() []string {
 	var deps []string
 	for _, jp := range c.JavaProjects {
-		deps = append(deps, jp.Dependencies...)
+		for _, d := range jp.Dependencies {
+			deps = append(deps, d.Path)
+		}
 	}
 	return deps
 }
