@@ -137,7 +137,7 @@ fun GoTaintRuleGenerationCtx.emitGoTaintRules(ctx: RuleConversionCtx): List<GoSe
                                 function = fn.nameMatcher,
                                 condition = condition.ruleCondition.condition,
                                 trackFactsReachAnalysisEnd = afterSinkActions.takeIf { it.isNotEmpty() },
-                                id = ctx.sinkRuleId,
+                                id = ctx.meta.ruleId,
                                 meta = ctx.meta.toGoSinkMeta(),
                                 info = null,
                             )

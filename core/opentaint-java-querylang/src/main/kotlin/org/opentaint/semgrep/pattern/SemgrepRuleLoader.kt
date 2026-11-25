@@ -541,7 +541,7 @@ class SemgrepRuleLoader(
             else -> Severity.Note
         }
 
-        val sinkMeta = SinkMetaData(ruleCwe, semgrepRule.message, severity)
+        val sinkMeta = SinkMetaData(ruleCwe, semgrepRule.message, severity, rule.ruleId)
         val metadata = RuleMetadata(rule.ruleId, semgrepRule.id, semgrepRule.message, severity, semgrepRule.metadata)
         val overrides = semgrepRule.overrides(rule.pathInfo.ruleRelativePath)
         val language = strategyFor(semgrepRule)?.language
