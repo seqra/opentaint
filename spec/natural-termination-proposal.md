@@ -367,7 +367,10 @@ results on Stirling-PDF (acyclic proposal §7).
 
 ## 9. Open problems and next steps
 
-1. Group A (G6, the cleaner rule, canonical order) lands as plain
+1. G6 and the cleaner rule LANDED on 25 November (`4fed782fa`, `5804e44dd`;
+   [measurement](../docs/reports/bidirectional-group-a-landing-20261125.md): no result change,
+   OWASP still ends at the run limit, so AC is not met). Canonical order is not landed.
+   Group A (G6, the cleaner rule, canonical order) lands as plain
    semantics, with no switch and no in-code diagnostic (decision of 24
    November; for G6 and the cleaner rule see
    [acyclic-group-a-implementation.md](acyclic-group-a-implementation.md)).

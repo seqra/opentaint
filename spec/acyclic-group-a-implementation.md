@@ -1,6 +1,12 @@
 # Implementation proposal: group A rules of the acyclic proposal
 
-Status: PROPOSAL, 24 November 2026 (revision 4). Revision 2 followed an
+Status: LANDED, 25 November 2026: R1 `4fed782fa`, R2 `5804e44dd`, spec text `27264ff95`.
+Measurement after landing: [bidirectional-group-a-landing-20261125.md](../docs/reports/bidirectional-group-a-landing-20261125.md)
+(no result change against the parent core; all suites pass). Landing notes: three fixtures of §4.6 were renamed
+because their names stated the old behavior; the `DemandLinkTest` DEMAND maker (§4.5) is an AT_AND_BELOW cleaner
+at `h.g` (a MAY source left demand at run 7, a STAR source with a concrete mark ended ABNORMAL).
+
+History: PROPOSAL, 24 November 2026 (revision 4). Revision 2 followed an
 adversarial review against the code. Revision 3 applies the owner
 decision of 24 November: the rules land as plain semantics, with no
 switch, and the landed code has no census and no counter. Revision 4

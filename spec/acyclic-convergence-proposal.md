@@ -41,6 +41,11 @@ classified in that proposal (§0.1) with the same gate.
 
 Implementation proposal for group A:
 [acyclic-group-a-implementation.md](acyclic-group-a-implementation.md).
+LANDED 25 November: R1 (§5.1) `4fed782fa`, R2 (§5.5) `5804e44dd`. Measurement
+([report](../docs/reports/bidirectional-group-a-landing-20261125.md)): confirmed and provisional
+results identical to the parent core on OWASP, Conductor and Stirling-PDF; OWASP engine −20%,
+runs 3-11 −65%; Conductor unchanged (timeout in run 8); the Stirling-PDF loop-block stall is
+order-dependent and remains in 2 of 3 launches; ThingsBoard run-1 OOM is pre-existing.
 
 Not rules, safe to keep because they change no run when off (and only log
 when on): the acyclicity oracle (§3) as a diagnostic, the AC residual
