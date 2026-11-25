@@ -11,13 +11,11 @@ import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.taint.SkippedExternalMethods
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
-import org.opentaint.dataflow.configuration.ConfigurationLoader
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.project.CommonProject
 import org.opentaint.semgrep.pattern.RuleMetadata
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
-import kotlin.io.path.inputStream
 import kotlin.time.Duration.Companion.seconds
 
 abstract class ProjectAnalyzerBase<
@@ -31,6 +29,7 @@ abstract class ProjectAnalyzerBase<
     val project: P,
     val results: Res,
     val options: CommonAnalysisOptions,
+    private val passThroughModels: List<RuleConfig>,
 ) {
     data class AnalysisResult(
         val status: TaintAnalyzer.Status,
@@ -125,21 +124,13 @@ abstract class ProjectAnalyzerBase<
         val customApproximationConfig: List<RuleConfig>,
     )
 
-    abstract fun configLoader(): ConfigurationLoader<RuleConfig>
     abstract fun defaultConfigLoader(): DefaultConfigLoader<RuleConfig>
 
     fun preloadApproximation(rules: List<TaintRuleFromSemgrep<RuleItem>>): PreloadedRules<RuleItem, RuleConfig> {
         val defaultConfig = defaultConfigLoader().loadConfig()
             ?: error("Default config loading failed")
 
-        val configLoader = configLoader()
-        val approximations = options.customApproximationConfig.mapNotNull { cfg ->
-            cfg.inputStream().use { cfgStream ->
-                configLoader.load(cfgStream)
-            }
-        }
-
-        return PreloadedRules(rules, defaultConfig, approximations)
+        return PreloadedRules(rules, defaultConfig, passThroughModels)
     }
 
     companion object {

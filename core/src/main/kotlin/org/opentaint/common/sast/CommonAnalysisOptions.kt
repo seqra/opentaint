@@ -10,6 +10,7 @@ import kotlin.time.Duration
 
 data class CommonAnalysisOptions(
     val customApproximationConfig: List<Path> = emptyList(),
+    val passthroughApproximationLoadReport: Path? = null,
     val semgrepRuleSet: List<Path> = emptyList(),
     val semgrepRuleLoadTrace: Path? = null,
     val semgrepSeverity: List<CommonTaintConfigurationSinkMeta.Severity> = emptyList(),

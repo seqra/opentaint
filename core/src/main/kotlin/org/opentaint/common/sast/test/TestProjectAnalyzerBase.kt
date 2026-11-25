@@ -19,8 +19,9 @@ abstract class TestProjectAnalyzerBase<T : TestSampleInfo,
     project: P,
     results: ProjectAnalysisTestResults,
     options: CommonAnalysisOptions,
+    passThroughModels: List<RuleConfig>,
 ) : ProjectAnalyzerBase<Ctx, P, Method, Stmt, RuleItem, RuleConfig, ProjectAnalysisTestResults>(
-    project, results, options
+    project, results, options, passThroughModels
 ) {
     abstract fun testInfoCls(): KClass<T>
     abstract fun testInfoSerializer(): KSerializer<T>

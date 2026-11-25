@@ -2,12 +2,18 @@ package org.opentaint.dataflow.configuration.jvm.serialized
 
 import com.charleskorn.kaml.YamlNode
 import org.opentaint.dataflow.configuration.ConfigurationLoader
+import org.opentaint.dataflow.configuration.LoadedModels
 
 class JavaConfigurationLoader : ConfigurationLoader<SerializedTaintConfig> {
     override val language: String get() = "java"
 
     override fun load(node: YamlNode): SerializedTaintConfig =
         ConfigurationLoader.yaml.decodeFromYamlNode<SerializedTaintConfig>(node)
+
+    override fun loadModels(node: YamlNode): LoadedModels<SerializedTaintConfig> {
+        val config = load(node)
+        return LoadedModels(config, config.passThrough.orEmpty().size, warnings = emptyList())
+    }
 
     override fun join(config: List<SerializedTaintConfig>) = SerializedTaintConfig(
         language = language,

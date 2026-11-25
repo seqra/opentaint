@@ -1,10 +1,13 @@
 package org.opentaint.common.sast
 
 import mu.KLogging
+import org.opentaint.common.sast.rules.loadPassThroughModels
 import org.opentaint.common.sast.rules.loadSemgrepRules
 import org.opentaint.common.sast.test.ProjectAnalysisTestResults
 import org.opentaint.common.sast.test.TestProjectAnalyzerBase
 import org.opentaint.common.sast.test.TestSampleInfo
+import org.opentaint.dataflow.configuration.go.serialized.GoConfigurationLoader
+import org.opentaint.dataflow.configuration.jvm.serialized.JavaConfigurationLoader
 import org.opentaint.go.sast.project.GoProjectAnalysisOptions
 import org.opentaint.go.sast.project.GoProjectAnalyzer
 import org.opentaint.go.sast.project.GoTestProjectAnalyzer
@@ -42,6 +45,14 @@ class CommonProjectAnalyzer(
     private val loadedRules by lazy {
         val strategies = allProjects.map { it.ruleStrategy() }.distinct()
         options.commonOptions().loadSemgrepRules(strategies)
+    }
+
+    private val javaModelLoader = JavaConfigurationLoader()
+    private val goModelLoader = GoConfigurationLoader()
+
+    private val loadedModels by lazy {
+        val languages = allProjects.map { it.ruleStrategy().language }.toSet()
+        options.commonOptions().loadPassThroughModels(listOf(javaModelLoader, goModelLoader), languages)
     }
 
     fun run(): ProjectAnalysisStatus = if (!runInTestMode) {
@@ -114,16 +125,16 @@ class CommonProjectAnalyzer(
     }
 
     private fun javaProjectAnalyzer(project: JavaProject, results: ProjectAnalysisResults) =
-        JirProjectAnalyzer(project, results, options.javaOptions(), project.rules())
+        JirProjectAnalyzer(project, results, options.javaOptions(), project.rules(), loadedModels.of(javaModelLoader))
 
     private fun goProjectAnalyzer(project: GoProject, results: ProjectAnalysisResults) =
-        GoProjectAnalyzer(project, results, options.goOptions(), project.rules())
+        GoProjectAnalyzer(project, results, options.goOptions(), project.rules(), loadedModels.of(goModelLoader))
 
     private fun javaProjectTestAnalyzer(project: JavaProject, results: ProjectAnalysisTestResults) =
-        TestProjectAnalyzer(project, results, options.javaOptions(), project.rules())
+        TestProjectAnalyzer(project, results, options.javaOptions(), project.rules(), loadedModels.of(javaModelLoader))
 
     private fun goProjectTestAnalyzer(project: GoProject, results: ProjectAnalysisTestResults) =
-        GoTestProjectAnalyzer(project, results, options.goOptions(), project.rules())
+        GoTestProjectAnalyzer(project, results, options.goOptions(), project.rules(), loadedModels.of(goModelLoader))
 
     private fun CommonProject.ruleStrategy(): LanguageStrategy<*, *> = when (this) {
         is JavaProject -> javaRuleStrategy

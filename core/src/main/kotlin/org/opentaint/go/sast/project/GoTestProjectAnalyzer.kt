@@ -14,7 +14,6 @@ import org.opentaint.common.sast.test.TestSampleInfo
 import org.opentaint.common.sast.toProjectStatus
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
-import org.opentaint.dataflow.configuration.go.serialized.GoConfigurationLoader
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedTaintConfig
 import org.opentaint.go.config.GoDefaultConfigLoader
@@ -40,8 +39,9 @@ class GoTestProjectAnalyzer(
     results: ProjectAnalysisTestResults,
     providedOptions: GoProjectAnalysisOptions,
     private val loadedRules: SemgrepRuleLoader.RuleLoadResult,
+    passThroughModels: List<GoSerializedTaintConfig>,
 ) : TestProjectAnalyzerBase<GoTestSampleInfo, AnalysisCtx, GoProject, GoIRFunction, GoIRInst, GoSerializedItem, GoSerializedTaintConfig>(
-    project, results, providedOptions.common.copy(storeSummaries = false),
+    project, results, providedOptions.common.copy(storeSummaries = false), passThroughModels,
 ) {
     private val modelPaths = providedOptions.modelPaths
     private val useDefaultModels = providedOptions.useDefaultModels
@@ -57,7 +57,6 @@ class GoTestProjectAnalyzer(
     override fun testInfoCls(): KClass<GoTestSampleInfo> = GoTestSampleInfo::class
     override fun testInfoSerializer() = GoTestSampleInfo.serializer()
     override fun defaultConfigLoader() = GoDefaultConfigLoader
-    override fun configLoader() = GoConfigurationLoader()
 
     private data class RuleTestSample(
         val ruleId: String,
