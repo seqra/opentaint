@@ -194,3 +194,5 @@ import ApSpec.DiagonalTypedAdmission
 import ApSpec.FlowGroupIncremental
 import ApSpec.LoopReplayOnce
 import ApSpec.RestrictionMemo
+import ApSpec.FlowGroupIncrementalImpl
+import ApSpec.RestrictionMemoImpl
