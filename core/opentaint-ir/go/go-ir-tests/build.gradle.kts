@@ -33,6 +33,10 @@ tasks.withType<Test>().configureEach {
         showExceptions = true
         showCauses = true
         showStackTraces = true
+        // FULL prints exception messages, not only class names. GoIRServerException
+        // carries the go-ssa-server exit code and stderr tail, which is the only way
+        // to tell an OOM-kill (exit=137) from a panic in CI logs.
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
 }
 
@@ -51,6 +55,14 @@ tasks.register<Test>("benchmarkTest") {
 
     // Larger heap for real-world projects (some produce 100k+ functions)
     jvmArgs("-Xmx8g", "-Xms1g")
+
+    // Soft memory limit for the go-ssa-server child process (inherited from the
+    // test JVM). With the default GOGC=100 its heap grows to ~2x the live set:
+    // casdoor peaks at ~11 GiB RSS while only ~4.5 GiB is live, and together with
+    // the test JVM and the Gradle/Kotlin daemons this exceeds the 16 GB CI runner,
+    // so the kernel OOM-kills the server (gRPC "UNAVAILABLE: Network closed").
+    // 8GiB caps casdoor at ~8 GiB RSS for ~20% more build time.
+    environment("GOMEMLIMIT", System.getenv("GOMEMLIMIT") ?: "8GiB")
 }
 
 tasks.register<Test>("roundtripTest") {
