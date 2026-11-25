@@ -6,7 +6,7 @@ Our current goal: implement the modification and repeat major testing on real pr
 Always cleanup memory snapshot/profiles from the previous runs.
 
 # Modification:
-Implement the modification wrt the [acyclic-group-a-implementation.md](spec/acyclic-group-a-implementation.md)
+Implement the modification wrt the [next-iteration-p3-p2m-implementation.md](spec/next-iteration-p3-p2m-implementation.md)
 Commit after implementation.  
 Avoid changes in the analyzer core, that were not proposed and designed.
 If you have an optimization idea or a fix idea, write a proposal. Then we will include it into the next iteration.
