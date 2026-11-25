@@ -132,6 +132,10 @@ internal class LoopOutputRestriction(private val ops: ApOps) {
                      session: LoopRestrictionSession<R>): List<Facts> =
         restrictWithCertificate(run1, grows, appliedValue, session.observe, session::certifiedFirstBudget, session::trial)
 
+    /** The restriction returns [appliedValue] unchanged: run 1, a REACH value, or a summary that does not grow. */
+    fun bypasses(run1: Boolean, grows: Boolean, appliedValue: Facts): Boolean =
+        run1 || appliedValue is Reach || !grows
+
     private fun <R> restrictWithCertificate(run1: Boolean, grows: Boolean, appliedValue: Facts,
                                            observe: (Facts) -> LoopObservation<R>,
                                            firstBudget: ((Facts, LoopObservation<R>) -> Int?)?,
@@ -139,7 +143,7 @@ internal class LoopOutputRestriction(private val ops: ApOps) {
         val ap = ops.manager
         ap.cancellation.checkpoint()
         statistics.offers++
-        if (run1 || appliedValue is Reach || !grows) {
+        if (bypasses(run1, grows, appliedValue)) {
             statistics.bypasses++
             return listOf(appliedValue)
         }
