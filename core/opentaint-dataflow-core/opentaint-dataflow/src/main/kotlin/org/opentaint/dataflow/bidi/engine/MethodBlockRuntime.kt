@@ -32,7 +32,6 @@ internal class MethodBlockRuntime(
     }
     private val application = LocalRelationApplication(ops, mode)
     private val restriction = LoopOutputRestriction(ops)
-    private val restrictions = LoopRestrictionMemo(ap.softRefs)
     private val liveLocals = port.shared.contexts.blockLiveLocals(key)
     private val queryCounts = LoopQueryCounts()
     private val localMatchCounts = if (port.shared.n2Statistics != null) LocalSummaryMatchStatistics() else null
@@ -516,8 +515,16 @@ internal class MethodBlockRuntime(
         if (depth > config.fieldLimit) boundaryLimitCuts++
         ops.limit(value, config.fieldLimit, object : ApOut {
             override fun result(bounded: Facts) {
-                val values = if (!child.isLoop || exit.ordinal < 0) listOf(bounded)
-                    else restrictLoopOutput(parent, child, link, exit, original, bounded, needsGate)
+                val values = if (!child.isLoop || exit.ordinal < 0) listOf(bounded) else
+                    restriction.restrict(config.run1, needsGate, bounded, LoopRestrictionSession(ops, config.admissionPolicy,
+                        { candidate -> observe(parent, child, link, exit, original, candidate) },
+                        probe = { candidate, expected ->
+                            observers.getValue(parent.scope to child.id).probe(candidate, expected)
+                        },
+                        observeCompleted = { candidate, bundle ->
+                            observe(parent, child, link, exit, original, candidate, bundle)
+                        },
+                        precision = { actual -> observers[parent.scope to child.id]?.precisionCursors(actual) }))
                 for (kept in values) {
                     if (LoopPipelineTrace.enabled(config.index, key)) LoopPipelineTrace.record(config.index, key, "local-kept") {
                         catalog(ap); text("parent", link.parent.toString()); text("child", link.child.toString())
@@ -536,25 +543,6 @@ internal class MethodBlockRuntime(
             }
             override fun markRequest(mark: TaintMark) = error("A global local-boundary field limit cannot request a mark")
         })
-    }
-
-    /** The loop-output restriction of [bounded]. A call that does not bypass uses the per-run memo
-     * (P2', [LoopRestrictionMemo]): in one run, the restriction is a function of the memo key. */
-    private fun restrictLoopOutput(parent: Entry, child: MethodBlock, link: LocalLink, exit: PortId,
-                                   original: PremiseKey, bounded: Facts, needsGate: Boolean): List<Facts> {
-        val compute = {
-            restriction.restrict(config.run1, needsGate, bounded, LoopRestrictionSession(ops, config.admissionPolicy,
-                { candidate -> observe(parent, child, link, exit, original, candidate) },
-                probe = { candidate, expected ->
-                    observers.getValue(parent.scope to child.id).probe(candidate, expected)
-                },
-                observeCompleted = { candidate, bundle ->
-                    observe(parent, child, link, exit, original, candidate, bundle)
-                },
-                precision = { actual -> observers[parent.scope to child.id]?.precisionCursors(actual) }))
-        }
-        if (restriction.bypasses(config.run1, needsGate, bounded)) return compute()
-        return restrictions.getOrCompute(LoopRestrictionMemo.Key(parent.scope, child.id, exit, original, bounded), compute)
     }
 
     private fun onTerminal(link: LocalLink, original: PremiseKey, target: Target) {
@@ -976,8 +964,7 @@ internal class MethodBlockRuntime(
             for ((scope, e) in entries) if (scope != BlockScope.ROOT) e.stateOrNull?.let { state -> release { state.freeze() } }
             for (e in entries.values) release { e.links.clear() }
         } finally {
-            entries.clear(); ready.clear(); pending.clear(); observers.clear(); restrictions.clear()
-            preparedExits.clear(); released = true
+            entries.clear(); ready.clear(); pending.clear(); observers.clear(); preparedExits.clear(); released = true
         }
         failure?.let { throw it }
     }

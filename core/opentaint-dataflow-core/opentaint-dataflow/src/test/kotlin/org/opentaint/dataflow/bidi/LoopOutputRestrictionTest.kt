@@ -52,24 +52,6 @@ class LoopOutputRestrictionTest {
     }
 
     @Test
-    fun `bypasses is the bypass test of restrict`() {
-        val growing = fixture.fact(x, listOf(f, g, h), mark = t)
-        val cases = listOf(
-            Triple(true, true, growing),
-            Triple(false, true, Reach.NORMAL),
-            Triple(false, false, growing),
-            Triple(false, true, growing),
-        )
-        for ((run1, grows, value) in cases) {
-            val restriction = LoopOutputRestriction(ops)
-            restriction.restrict(run1, grows, value) { observation() }
-            assertEquals(restriction.statistics.bypasses == 1L, restriction.bypasses(run1, grows, value),
-                "run1=$run1 grows=$grows value=$value")
-        }
-        assertEquals(listOf(true, true, true, false), cases.map { (run1, grows, value) -> gate.bypasses(run1, grows, value) })
-    }
-
-    @Test
     fun `own ZERO summary bypasses the extra gate even with no DATA consumer`() {
         val raw = fixture.fact(x, listOf(f, f, f), mark = t)
         val kept = gate.restrict(false, ap.zero, fixture.pattern(x, listOf(f, f, f), mark = t), raw) {
