@@ -131,7 +131,7 @@ class JIRAnalysisManager(
                 ?: JIRLocalAliasAnalysis(
                     entryPointStatement, graph, callResolver.callResolver,
                     taintConfig,
-                    localVariableReachability, cancellation, this, aliasAnalysisParams
+                    localVariableReachability, cancellation, this, factTypeChecker, aliasAnalysisParams
                 )
         } else {
             null
