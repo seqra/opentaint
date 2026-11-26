@@ -1,5 +1,24 @@
 # Current proof status
 
+## Checked future candidate: backward condition progress, 26 November 2026
+
+The [specification](backward-condition-progress.md) proposes B1 (a unary
+`[any]` literal gives a backward MUST requirement), B2 (backward MUST
+records) and B3 (ND seeds refined by captured forward inputs). It is a spec
+only: no prototype, no measurement, no WI rule. Four constructive modules
+build with the package (`lake build`, 204 jobs); 108 `#print axioms` audits
+show only `propext` and `Quot.sound`:
+[BackCondRules.lean](lean/ApSpec/BackCondRules.lean) (rule level: unary
+literals are MUST, ND and pass-rule `AnyField` reversals are not),
+[BackMustRun.lean](lean/ApSpec/BackMustRun.lean) (`DBX_edgeOK_nz`,
+`recsB_exact`, `backMust_forward`: backward MUST records are end-exact),
+[BackMustView.lean](lean/ApSpec/BackMustView.lean) (the forward view is
+DEMAND; `Cex.cex_drop_forward_demand`: with F77 unchanged a confirmation is
+lost), [BackNDRefine.lean](lean/ApSpec/BackNDRefine.lean) (`refine_sound`,
+`refine_mono`, `iteration_general_refined`). Open: decision D1 (spec §4),
+the hidden changes S-H1, S-H2, S-H6, S-H8, and the ND form of the backward
+contract.
+
 ## Checked future candidate: exact call-stage result merging, 1 November 2026
 
 The [local proof dossier](call-stage-result-merging-analysis-proofs.md) and
