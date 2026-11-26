@@ -27,6 +27,7 @@ data class SinkMetaData(
     val cwe: List<Int>? = null,
     val note: String? = null,
     val severity: CommonTaintConfigurationSinkMeta.Severity? = null,
+    val ruleId: String? = null,
 )
 
 sealed interface SerializedRule: SerializedItem {

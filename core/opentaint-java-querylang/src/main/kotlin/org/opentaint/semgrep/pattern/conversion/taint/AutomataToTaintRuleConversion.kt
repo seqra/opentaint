@@ -142,7 +142,6 @@ private data class EvaluatedEdgeCondition(
 private fun generateEndSink(
     cond: SerializedCondition,
     afterSinkActions: List<SerializedTaintAssignAction>,
-    id: String,
     meta: SinkMetaData,
 ): List<SinkRule> {
     val endActions = afterSinkActions.map { it.copy(pos = it.pos.rewriteAsEndPosition()) }
@@ -153,7 +152,7 @@ private fun generateEndSink(
                 SerializedRule.MethodExitSink(
                     f, signature = null, overrides = false, endCondition,
                     trackFactsReachAnalysisEnd = endActions,
-                    id, meta = meta
+                    meta.ruleId, meta = meta
                 )
             )
         }
@@ -285,7 +284,7 @@ fun JavaTaintRuleGenerationCtx.emitJavaTaintRules(ctx: RuleConversionCtx): List<
                         SerializedRule.MethodEntrySink(
                             function, signature = null, overrides = false, cond,
                             trackFactsReachAnalysisEnd = afterSinkActions,
-                            ctx.ruleId, meta = ctx.meta
+                            ctx.meta.ruleId, meta = ctx.meta
                         )
                     )
 
@@ -293,12 +292,12 @@ fun JavaTaintRuleGenerationCtx.emitJavaTaintRules(ctx: RuleConversionCtx): List<
                         SerializedRule.Sink(
                             function, signature = null, overrides = true, cond,
                             trackFactsReachAnalysisEnd = afterSinkActions,
-                            ctx.ruleId, meta = ctx.meta
+                            ctx.meta.ruleId, meta = ctx.meta
                         )
                     )
 
                     TaintRuleEdge.Kind.MethodExit -> {
-                        generateEndSink(cond, afterSinkActions, ctx.ruleId, ctx.meta)
+                        generateEndSink(cond, afterSinkActions, ctx.meta)
                     }
                 }
             }.map { ruleEdge to it }
