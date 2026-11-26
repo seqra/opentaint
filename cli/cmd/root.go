@@ -207,8 +207,13 @@ func initConfig(cmd *cobra.Command) {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv() // read in environment variables that match
 
-	_ = viper.ReadInConfig()
-	_ = viper.Unmarshal(&globals.Config)
+	// Without --config there is no file to read, and ReadInConfig fails on that alone.
+	if err := viper.ReadInConfig(); err != nil && globals.ConfigFile != "" {
+		out.Fatal(fmt.Sprintf("Failed to read the config file `%s`", globals.ConfigFile), err)
+	}
+	if err := viper.Unmarshal(&globals.Config); err != nil {
+		out.Fatal("Failed to read the config", err)
+	}
 }
 
 func bindScanFlags(cmd *cobra.Command) {
