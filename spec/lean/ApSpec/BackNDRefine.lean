@@ -541,6 +541,182 @@ theorem refine_depth {lits : List PFact} {cap : Cap} (hcc : CapConc cap) {j : Na
 
 #print axioms refine_depth
 
+/-! ## 4c. The capture tree
+
+Three rules of the forward capture (spec §I.3). MEET FIRST: the forward run stores
+`meet(input, literal)`, not the input. LEAVES ONLY: no `$` or `[any-taint]` fact is stored; a meet
+is a LEAF with its exclusion dropped: a `$` meet is a `$` leaf, a field meet an `[any]` leaf. ONE
+TREE: the leaves of a literal are merged; an `[any]` leaf subsumes each leaf at or below its path.
+The next backward run seeds the merged tree of each literal (the literal itself if it has no
+leaf). -/
+
+/-- A leaf of a capture tree: the literal index and the meet pattern (no exclusion). -/
+abbrev Leaf := Nat × PFact
+
+/-- MEET FIRST, LEAVES ONLY: the leaves that the forward run stores. -/
+def capMeets (lits : List PFact) (cap : Cap) : List Leaf :=
+  (meets lits cap).map (fun s => (s.1, s.2.1))
+
+def isAnyB : Kind → Bool
+  | .any => true
+  | _    => false
+
+/-- `s` subsumes `t`: the same leaf, or an `[any]` leaf of the same literal, base and mark at a
+    prefix of the path of `t`. -/
+def subsumesB (s t : Leaf) : Bool :=
+  decide (s = t) ||
+    (decide (s.1 = t.1) && decide (s.2.base = t.2.base) && decide (s.2.mark = t.2.mark) &&
+      isAnyB s.2.kind && (dropPrefix s.2.path t.2.path).isSome)
+
+/-- Insert a leaf into a merged tree. -/
+def insertLeaf (t : Leaf) (L : List Leaf) : List Leaf :=
+  if L.any (fun s => subsumesB s t) then L else t :: L.filter (fun s => !subsumesB t s)
+
+/-- ONE TREE: the merged leaves. -/
+def mergeLeaves (ts : List Leaf) : List Leaf := ts.foldr insertLeaf []
+
+def hasLeaf (ts : List Leaf) (j : Nat) : Bool := ts.any (fun t => t.1 == j)
+
+/-- The seeds of the next backward run: the merged tree of each literal; a literal with no leaf
+    keeps today's seed. -/
+def treeSeeds (lits : List PFact) (ts : List Leaf) : List Leaf :=
+  lits.zipIdx.filterMap (fun x => if hasLeaf ts x.2 then none else some (x.2, x.1)) ++
+    mergeLeaves ts
+
+/-- The leaf `t` serves the location `l` of literal `j`. -/
+def LeafCov (j : Nat) (l : Loc) (t : Leaf) : Prop := t.1 = j ∧ t.2.covers l
+
+theorem isAnyB_iff {k : Kind} : isAnyB k = true ↔ k = .any := by
+  cases k <;> simp [isAnyB]
+
+/-- A subsuming leaf serves every location that the subsumed leaf serves. -/
+theorem subsumes_cov {s t : Leaf} {j : Nat} {l : Loc} (h : subsumesB s t = true)
+    (ht : LeafCov j l t) : LeafCov j l s := by
+  simp only [subsumesB, Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq] at h
+  rcases h with h1 | ⟨⟨⟨⟨hj, hb⟩, hm⟩, hk⟩, hp⟩
+  · subst h1; exact ht
+  · obtain ⟨r, hr⟩ := Option.isSome_iff_exists.mp hp
+    have hpath := CoreAux.dropPrefix_some.mp hr
+    obtain ⟨htj, hlb, ⟨σ, hσ, _⟩, hlm⟩ := ht
+    refine ⟨hj.trans htj, hlb.trans hb.symm, ⟨r ++ σ, ?_, ?_⟩, ?_⟩
+    · rw [hσ, hpath, List.append_assoc]
+    · rw [isAnyB_iff.mp hk]; exact trivial
+    · rw [hm]; exact hlm
+
+#print axioms subsumes_cov
+
+/-- Insertion keeps the served locations exactly: the old ones and those of the new leaf. -/
+theorem insertLeaf_cov {t : Leaf} {L : List Leaf} {j : Nat} {l : Loc} :
+    (∃ s ∈ insertLeaf t L, LeafCov j l s) ↔ LeafCov j l t ∨ ∃ s ∈ L, LeafCov j l s := by
+  unfold insertLeaf
+  split
+  · rename_i h
+    obtain ⟨s0, hs0, hsub⟩ := List.any_eq_true.mp h
+    constructor
+    · exact fun hx => Or.inr hx
+    · rintro (ht | hx)
+      · exact ⟨s0, hs0, subsumes_cov hsub ht⟩
+      · exact hx
+  · constructor
+    · rintro ⟨s, hs, hc⟩
+      rcases List.mem_cons.mp hs with rfl | hs'
+      · exact Or.inl hc
+      · exact Or.inr ⟨s, (List.mem_filter.mp hs').1, hc⟩
+    · rintro (ht | ⟨s, hs, hc⟩)
+      · exact ⟨t, List.mem_cons.mpr (Or.inl rfl), ht⟩
+      · cases hts : subsumesB t s with
+        | true => exact ⟨t, List.mem_cons.mpr (Or.inl rfl), subsumes_cov hts hc⟩
+        | false =>
+          refine ⟨s, List.mem_cons.mpr (Or.inr (List.mem_filter.mpr ⟨hs, ?_⟩)), hc⟩
+          simp [hts]
+
+#print axioms insertLeaf_cov
+
+/-- THEOREM 3c, ONE TREE IS EXACT. The merged tree serves exactly the locations that the leaves
+    serve: merging loses nothing and adds nothing. -/
+theorem mergeLeaves_cov {ts : List Leaf} {j : Nat} {l : Loc} :
+    (∃ s ∈ mergeLeaves ts, LeafCov j l s) ↔ ∃ s ∈ ts, LeafCov j l s := by
+  induction ts with
+  | nil => exact Iff.rfl
+  | cons t ts ih =>
+    show (∃ s ∈ insertLeaf t (mergeLeaves ts), LeafCov j l s) ↔ _
+    rw [insertLeaf_cov, ih]
+    constructor
+    · rintro (h | ⟨s, hs, hc⟩)
+      · exact ⟨t, List.mem_cons.mpr (Or.inl rfl), h⟩
+      · exact ⟨s, List.mem_cons.mpr (Or.inr hs), hc⟩
+    · rintro ⟨s, hs, hc⟩
+      rcases List.mem_cons.mp hs with rfl | hs'
+      · exact Or.inl hc
+      · exact Or.inr ⟨s, hs', hc⟩
+
+#print axioms mergeLeaves_cov
+
+theorem insertLeaf_sub {t s : Leaf} {L : List Leaf} (h : s ∈ insertLeaf t L) : s ∈ t :: L := by
+  unfold insertLeaf at h
+  split at h
+  · exact List.mem_cons.mpr (Or.inr h)
+  · rcases List.mem_cons.mp h with rfl | h'
+    · exact List.mem_cons.mpr (Or.inl rfl)
+    · exact List.mem_cons.mpr (Or.inr (List.mem_filter.mp h').1)
+
+/-- Each leaf of the merged tree is a stored leaf. -/
+theorem mergeLeaves_sub {ts : List Leaf} {s : Leaf} (h : s ∈ mergeLeaves ts) : s ∈ ts := by
+  induction ts with
+  | nil => exact h
+  | cons t ts ih =>
+    have h' : s ∈ insertLeaf t (mergeLeaves ts) := h
+    rcases List.mem_cons.mp (insertLeaf_sub h') with rfl | h''
+    · exact List.mem_cons.mpr (Or.inl rfl)
+    · exact List.mem_cons.mpr (Or.inr (ih h''))
+
+#print axioms mergeLeaves_sub
+
+theorem insertLeaf_length (t : Leaf) (L : List Leaf) : (insertLeaf t L).length ≤ L.length + 1 := by
+  unfold insertLeaf
+  split
+  · exact Nat.le_succ _
+  · exact Nat.succ_le_succ (List.length_filter_le _ _)
+
+/-- The merged tree has at most as many leaves as were stored. -/
+theorem mergeLeaves_length (ts : List Leaf) : (mergeLeaves ts).length ≤ ts.length := by
+  induction ts with
+  | nil => exact Nat.le_refl _
+  | cons t ts ih => exact Nat.le_trans (insertLeaf_length t (mergeLeaves ts)) (Nat.succ_le_succ ih)
+
+#print axioms mergeLeaves_length
+
+/-- THEOREM 4c, SOUNDNESS OF THE TREE. Every real location of literal `j` (covered by the literal
+    and by a captured input) is served by a leaf of the merged tree of `j`. -/
+theorem tree_sound {lits : List PFact} {cap : Cap} {Real : Nat → Loc → Prop}
+    (hcc : CapConc cap) (hfc : ForwardCaptured lits cap Real) {j : Nat} {l : Loc}
+    (hr : Real j l) : ∃ s ∈ mergeLeaves (capMeets lits cap), LeafCov j l s := by
+  obtain ⟨d, hd, hdl, a, aex, hm, hal⟩ := hfc j l hr
+  obtain ⟨t, ht⟩ := hcc _ hm
+  obtain ⟨p, pex, he, hcov, _⟩ := AnyTaintExCov.emitX_contract d a aex l t ht hdl hal
+  refine mergeLeaves_cov.mpr ⟨(j, p), List.mem_map.mpr ⟨(j, p, pex),
+    mem_meets.mpr ⟨j, a, aex, d, p, pex, hm, hd, he, rfl⟩, rfl⟩, rfl, coversX_covers hcov⟩
+
+#print axioms tree_sound
+
+/-- THEOREM 3d, PROGRESS OF THE TREE. Each leaf of the merged tree of `j` is the meet of the
+    literal `lits[j]` with a captured input of `j`: it lies inside both (exclusions forgotten) and
+    its path extends both paths. -/
+theorem tree_deepens {lits : List PFact} {cap : Cap} (hcc : CapConc cap) {j : Nat} {p : PFact}
+    (hm : (j, p) ∈ mergeLeaves (capMeets lits cap)) :
+    ∃ d a aex, lits[j]? = some d ∧ (j, a, aex) ∈ cap ∧ a.path <+: p.path ∧ d.path <+: p.path ∧
+      ∀ l, p.covers l → a.covers l ∧ d.covers l := by
+  obtain ⟨s, hs, hsp⟩ := List.mem_map.mp (mergeLeaves_sub hm)
+  obtain ⟨j', a, aex, d, p', pex, hma, hd, he, rfl⟩ := mem_meets.mp hs
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj hsp
+  obtain ⟨t, ht⟩ := hcc _ hma
+  obtain ⟨h1, h2⟩ := meet_deepens he
+  refine ⟨d, a, aex, hd, hma, h1, h2, fun l hl => ?_⟩
+  obtain ⟨hdl, hal⟩ := emitM_inside_conc (HandoffX.emitX_emitM he) ht hl
+  exact ⟨hal, hdl⟩
+
+#print axioms tree_deepens
+
 /-! ## 5. Theorem 4: soundness -/
 
 theorem forwardCaptured_weak {lits : List PFact} {cap : Cap} {Real : Nat → Loc → Prop}

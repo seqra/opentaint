@@ -17,7 +17,7 @@
 
 * [Notation](#notation): the names that both parts use. No run behaviour.
 * [Part I, forward run](#part-i-forward-run): the sink check, the cut that
-  keeps the finding provisional, and the new capture.
+  keeps the finding provisional, and the new capture tree.
 * [Part II, backward run](#part-ii-backward-run): the seed layer, the
   refined seeds and the progress guarantee.
 * [Gate and checklist](#gate-and-checklist).
@@ -35,9 +35,9 @@
 | Rule | What it does | Where | Status |
 | --- | --- | --- | --- |
 | seed layer | a requirement is NORMAL if and only if its literal is unary and has the `$` tail. An ND `$` literal gives DEMAND. An `[any]` literal gives DEMAND, as today: the backward run has no `[any-taint]` | §II.2 | **CHANGED** (ND `$` only) |
-| capture | the forward run keeps the inputs of all completed combinations of each `[any]` literal, at each DEMAND witness and at each conditional source | §I.3 | **NEW** |
-| refinement | each `[any]` literal of a sink (unary or ND) and of a reversed conditional source is seeded with its meets with the captured inputs, all DEMAND | §II.4 | **CHANGED** (the seed shape) |
-| progress guarantee | a refined seed lies inside the captured input and keeps its path, so the next demand is at least as deep as the forward cut | §II.5 | proved per operation; argued over rounds |
+| capture tree | for each `[any]` literal at a DEMAND witness or a conditional source, the forward run stores one merged field tree: the meet of each input with the literal, as a `$` leaf or an `[any]` leaf. No `$` or `[any-taint]` fact is stored | §I.3 | **NEW** |
+| refinement | each `[any]` literal of a sink (unary or ND) and of a reversed conditional source is seeded with its capture tree, as one DEMAND tree fact | §II.4 | **CHANGED** (the seed shape) |
+| progress guarantee | each leaf lies inside its captured input and keeps its path, so the next demand is at least as deep as the forward cut | §II.5 | proved per operation; argued over rounds |
 
 **History.** Earlier revisions (commits 531e87d3c to fddd06d8d) made the
 seed of a unary `[any]` literal a NORMAL `[any-taint]` requirement and
@@ -134,7 +134,7 @@ The relative caps of C2 and C5 stay (robustness rule, acyclic-convergence
 
 > The forward run checks the sinks and reports provisional findings. A cut
 > at a callee entry makes a fact DEMAND and keeps the finding provisional.
-> The proposal adds the capture of the inputs of `[any]` literals (§I.3).
+> The proposal adds the capture tree of `[any]` literals (§I.3).
 
 ### I.1 Sink check and DEMAND witnesses
 
@@ -169,30 +169,64 @@ use(x):   sink(x)           rule ContainsMarkOnAnyField(x, T): unary
 | 3, K = 3 | `(x.[any](T), zero)` from the seed of run 2 | `x.f.*(T)` DEMAND: C2 cut at depth 1 | `x.f.[any](T)` DEMAND | provisional | **CURRENT** |
 | 5, 7, … | the same | the same | the same | provisional | **CURRENT**: no progress |
 
-### I.3 Capture (NEW)
+### I.3 Capture tree (NEW)
 
-> For the refinement, the forward run keeps the facts that satisfied each
-> `[any]` literal. The next backward run meets the literal with them
-> (§II.4). **NEW**.
+> For the refinement, the forward run keeps the part of each input that the
+> `[any]` literal needs. It meets the input with the literal first, and it
+> stores the meet as a leaf of one field tree per literal. The next
+> backward run seeds that tree (§II.4). **NEW**.
 
 ```text
-captured(literal; method, statement, occurrence) =
-  { input | input satisfied literal in a COMPLETED combination (NORMAL or DEMAND) of the occurrence }
-occurrences      each DEMAND witness (sink literals, K2, K4);
-                 each occurrence of a conditional source with an [any] literal (S3, S5)
-normal form      mark  := the concrete mark that the check matched     (a FLOW input: the mark of the literal)
-(a pattern)      */E   := [any-taint]/E                                (the same locations)
+occurrences   each DEMAND witness (sink literals, K2, K4);
+              each occurrence of a conditional source with an [any] literal (S3, S5)
+inputs        each input that satisfied the literal in a COMPLETED combination (NORMAL or DEMAND) of the occurrence
+
+for each input:
+  normal form   mark := the concrete mark that the check matched     (a FLOW input: the mark of the literal)
+                each field tail ([any-taint]/E, */E, [any]) := [any], E dropped;   $ stays $
+  meet first    leaf := meet(normal form, literal)                   (§II.4 table: below, at, above)
+                the leaf is base.literalPath·σ with the tail $ or [any] and the mark of the literal
+  one tree      tree(literal, occurrence).insert(σ, tail of leaf)
+                an [any] leaf at σ subsumes each leaf at σ·τ (τ = [] included); an equal leaf is kept once
 ```
+
+Rules of the capture tree (user decisions, 26 November):
+
+| Rule | What it does | Why | Status |
+| --- | --- | --- | --- |
+| meet first | store `meet(input, literal)`, not the input | keeps only the part inside the literal | **NEW** |
+| leaves only | no `$` or `[any-taint]` fact is stored: a `$` meet is a `$` leaf, a field meet an `[any]` leaf | the backward run has no `[any-taint]`; a `$` or `[any-taint]` input can be the only real route, so it stays as a leaf (dropping it loses the route: the next forward run gets no demand for it) | **NEW** |
+| one tree | merge the leaves of a literal into one field tree | all leaves of a literal have the base and the mark of the literal and a path below the literal path (`RCore.emitM_base`, `emitM_mark`, `BackND.meet_deepens`); only the field tree differs | **NEW** |
+
+Dropping the exclusion before the meet gives the same leaf as dropping it
+after the meet, for each input that satisfied the literal (an input whose
+exclusion rejects the literal path does not overlap the literal). The Lean
+model drops it after the meet (`BackND.capMeets`).
 
 | Part | Status |
 | --- | --- |
 | completed combinations: `CompletePredicateBinding(proof, layer, leaves, inputs)` (`RulePredicateStore.kt:99-104`), legacy `ConjunctionStore.CompleteBinding` | **CURRENT** |
-| keep the inputs after `freeze()` as a hand-off side table, outside `Seed` equality | **NEW** |
-| capture ALL completed combinations, not only the selected proof (`BackND.Vec.cex_selected_only`) | **NEW** |
-| the normal form (`Vec.cex_abstract_mark`, `Vec.cex_star_capture`) | **NEW** |
-| only `[any]` literals: the refinement of a `$` literal is the literal | **NEW** |
+| the tree: a `TaintTree` (`Conclusions.kt:44`) with `TaintLeaves(exact, any)` at each node (`Trie.kt:19`): `$` leaves and `[any]` leaves of one mark | **CURRENT** representation |
+| keep one tree per (occurrence, literal) after `freeze()` as a hand-off side table, outside `Seed` equality | **NEW** |
+| insert from ALL completed combinations, not only the selected proof (`BackND.Vec.cex_selected_only`) | **NEW** |
+| the normal form: an input with the abstract mark gives no leaf, so the literal keeps its CURRENT seed (`BackCondEx.ex_t6`) | **NEW** |
+| only `[any]` literals: the seed of a `$` literal is the literal | **NEW** |
 
-In PG, forward run 1 captures `x.f.[any](T)` for the literal `x.[any](T)`.
+| Ex | literal | inputs | stored leaves → merged tree | Rule |
+| --- | --- | --- | --- | --- |
+| t1 ✓ | `x.[any](T)` | `x.f.g.$(T)`, `x.h.[any-taint]/{g}(T)` | `x.f.g.$`, `x.h.[any]` | meet first; leaves only (`{g}` dropped) |
+| t2 ✓ | `x.f.[any](T)` | `x.[any](T)` | `x.f.[any]` | meet first: an input above the literal gives the literal path |
+| t3 ✓ | `x.[any](T)` | leaves `x.f.[any]`, `x.f.g.$`, `x.h.$` | `x.f.[any]`, `x.h.$` | one tree: `x.f.[any]` subsumes `x.f.g.$` |
+| t4 ✓ | `x.[any](T)` | leaves `x.g.$`, `x.g.$` | `x.g.$` | one tree: an equal leaf once |
+
+| Claim | Lean (`BackND`) |
+| --- | --- |
+| the merged tree serves exactly the locations of its leaves: merging loses nothing and adds nothing | `mergeLeaves_cov`, `insertLeaf_cov`, `subsumes_cov` |
+| each leaf of the merged tree is a stored meet; at most one leaf per stored meet | `mergeLeaves_sub`, `mergeLeaves_length` |
+| each real route location of the literal is served by a leaf | `tree_sound` |
+
+In PG, forward run 1 stores the tree `{f: [any]}` below `x` for the
+literal `x.[any](T)`.
 
 ## Part II. Backward run
 
@@ -268,21 +302,21 @@ refinement gives the progress instead (§II.5).
 | # | Rule condition | Seed | Status | Input from forward run `n−1` |
 | --- | --- | --- | --- | --- |
 | K1 | `ContainsMark(P, T)`, unary | `P.$(T)` NORMAL | **CURRENT** | DEMAND witness |
-| K2 | `ContainsMarkOnAnyField(P, T)`, unary | `refinedSeeds(literal)` DEMAND | **CHANGED**: CURRENT `P.[any](T)` DEMAND | DEMAND witness and `captured(literal)` |
+| K2 | `ContainsMarkOnAnyField(P, T)`, unary | its capture tree, DEMAND (§II.4) | **CHANGED**: CURRENT `P.[any](T)` DEMAND | DEMAND witness and its capture tree |
 | K3 | `ContainsMark(P, T)`, ND | `P.$(T)` DEMAND | **CHANGED**: CURRENT `P.$(T)` NORMAL | DEMAND witness |
-| K4 | `ContainsMarkOnAnyField(P, T)`, ND | `refinedSeeds(literal)` DEMAND | **CHANGED**: CURRENT `P.[any](T)` DEMAND | DEMAND witness and `captured(literal)` |
+| K4 | `ContainsMarkOnAnyField(P, T)`, ND | its capture tree, DEMAND (§II.4) | **CHANGED**: CURRENT `P.[any](T)` DEMAND | DEMAND witness and its capture tree |
 | K5 | a literal that is unary and ND | as K1 or K2 | as K1 or K2 | as K1 or K2 |
 | K6 | no positive literal; unconditional sink | none: the zero demand covers it | **CURRENT** | DEMAND witness |
-| K7 | end-fact trigger of alternative `A` (row S8 fired) | K1–K4; no capture, so the fallback | as K1–K4 | none |
-| K8 | GROUP-projected sink (`fullSinkSeedsFor`) | K1–K4; no capture, so the fallback | as K1–K4 | DEMAND witness |
+| K7 | end-fact trigger of alternative `A` (row S8 fired) | K1–K4; no capture tree, so the fallback | as K1–K4 | none |
+| K8 | GROUP-projected sink (`fullSinkSeedsFor`) | K1–K4; no capture tree, so the fallback | as K1–K4 | DEMAND witness |
 
 | # | Rule | Backward result | Status | Input from forward run `n−1` |
 | --- | --- | --- | --- | --- |
 | S1 | unconditional source `zero → P.tail(T)` | zero; a source hit when its reversed edge applies (interpreter.md §4.9) | **CURRENT** | none |
 | S2 | conditional source, unary `ContainsMark(Q, T')` | `Q.$(T')` in targetLayer | **CURRENT** | none |
-| S3 | conditional source, unary `ContainsMarkOnAnyField(Q, T')` | `refinedSeeds(literal)` DEMAND | **CHANGED**: CURRENT `Q.[any](T')` DEMAND | `captured(literal)` at the source occurrence |
+| S3 | conditional source, unary `ContainsMarkOnAnyField(Q, T')` | its capture tree, DEMAND (§II.4) | **CHANGED**: CURRENT `Q.[any](T')` DEMAND | the capture tree of the source occurrence |
 | S4 | conditional source, ND `ContainsMark(Q, T')` | `Q.$(T')` DEMAND | **CURRENT** | none |
-| S5 | conditional source, ND `ContainsMarkOnAnyField(Q, T')` | `refinedSeeds(literal)` DEMAND | **CHANGED**: CURRENT `Q.[any](T')` DEMAND | `captured(literal)` at the source occurrence |
+| S5 | conditional source, ND `ContainsMarkOnAnyField(Q, T')` | its capture tree, DEMAND (§II.4) | **CHANGED**: CURRENT `Q.[any](T')` DEMAND | the capture tree of the source occurrence |
 | S6 | pass rule `P → Q` (no `AnyField`) | the reversed result in targetLayer | **CURRENT** | none |
 | S7 | pass rule `P → Q.AnyField` | each result DEMAND | **CURRENT** (outside the assumption of AC: JVM pass rules have no `[any]`) | none |
 | S8 | end-fact action of sink alternative `A` | zero; fires K7 at (method, statement, `A`) once | **CURRENT** | none |
@@ -290,27 +324,30 @@ refinement gives the progress instead (§II.5).
 
 ### II.4 Refinement
 
-> An `[any]` literal is seeded with its meets with the inputs that forward
-> run `n−1` captured, not with the whole literal. Each seed is DEMAND.
-> **CHANGED** (was proposed for ND literals only; now for each `[any]`
-> literal).
+> An `[any]` literal is seeded with the capture tree that forward run `n−1`
+> stored for it (§I.3), not with the whole literal. The seed is one DEMAND
+> tree fact. **CHANGED** (was proposed for ND literals only; now for each
+> `[any]` literal).
 
 ```text
-refinedSeeds(literal) =
-  { meet(input, literal) | input ∈ captured(literal) } minus none     if captured(literal) ≠ ∅
-  { literal }                                                        if captured(literal) = ∅   (fallback = CURRENT seed)
-each seed DEMAND; a field-tail meet is written [any], its exclusion forgotten (W6, I14)
-a $ literal: no refinement (the literal)
+seed(literal, occurrence) =
+  literal.base . literalPath . tree(literal, occurrence) (mark)    one DEMAND tree fact      if the tree has a leaf
+  literal                                                          (fallback = CURRENT seed)  if the tree is empty
+a $ literal: the literal (no tree)
+code: seedFact builds the seed from one pattern (RunMethodLocalServices.kt:437-449, ApOps.kt:169 targetTree);
+      for a tree it emits the stored TaintTree in the DEMAND layer
 ```
 
-| meet(input, literal), `literalPath = literal.path` | Result | Status |
-| --- | --- | --- |
-| input below: `input.path = literalPath·suffix`, `suffix ≠ []` | the input | **CURRENT** operation (ap.md §6.3 emission, concrete row) |
-| input at: `input.path = literalPath` | `literalPath` with the meet of the tails | **CURRENT** operation |
-| input above: `literalPath = input.path·suffix`, and the input tail admits `suffix` | the literal | **CURRENT** operation |
-| other path, other base, the marks differ | none | **CURRENT** operation |
+The meet (**CURRENT** operation: ap.md §6.3 emission, concrete row):
 
-| Ex | literal | captured input | meet | Case |
+| meet(input, literal), `literalPath = literal.path` | Result |
+| --- | --- |
+| input below: `input.path = literalPath·suffix`, `suffix ≠ []` | the input |
+| input at: `input.path = literalPath` | `literalPath` with the meet of the tails (`$` if one is `$`) |
+| input above: `literalPath = input.path·suffix`, and the input tail admits `suffix` | the literal |
+| other path, other base, the marks differ | none |
+
+| Ex | literal | input | meet | Case |
 | --- | --- | --- | --- | --- |
 | m1 ✓ | `ret.[any](T)` | `ret.f.$(T)` | `ret.f.$(T)` | below |
 | m2 ✓ | `ret.[any](T)` | `ret.f.[any](T)` | `ret.f.[any](T)` | below |
@@ -319,31 +356,29 @@ a $ literal: no refinement (the literal)
 
 Literals of c2: literal 0 is `a.$(T)`, literal 1 is `b.[any](U)`.
 
-| Ex | captured | Seeds | Note | Status |
+| Ex | inputs | Seeds | Note | Status |
 | --- | --- | --- | --- | --- |
-| n1 ✓ | 0: `a.$(T)`; 1: `b.f.$(U)`, `b.g.h.$(U)` | `a.$(T)`, `b.f.$(U)`, `b.g.h.$(U)` DEMAND | two field chains replace `b.[any](U)` | **CHANGED** |
-| n2 ✓ | 1: `b.g.[any-taint]/{k}(U)` | `a.$(T)` (fallback), `b.g.[any](U)` DEMAND | the code forgets `{k}`; the model keeps it | **CHANGED** |
-| n3 ✓ | none | `a.$(T)`, `b.[any](U)` DEMAND | the fallback | **CURRENT** except the K3 layer |
-| n4 ✓ | 1: `b.f.*/{}(*)`, not in normal form | `a.$(T)` DEMAND only | literal 1 gets no seed: the normal form is necessary | excluded by the **NEW** normal form |
-| s1 ✓ | S3 literal `arg0.[any](U)`; captured `arg0.h.$(U)` | `arg0.h.$(U)` DEMAND | a reversed source literal | **CHANGED** |
+| t5 ✓ | 1: `b.f.$(U)`, `b.g.h.$(U)` | `a.$(T)`; tree of `b` with leaves `f: $`, `g.h: $` | two field chains replace `b.[any](U)` | **CHANGED** |
+| t6 ✓ | 1: `b.f.*/{}(*)`, not in normal form | `a.$(T)`, `b.[any](U)` | no leaf: literal 1 keeps the CURRENT seed | **CURRENT** except the K3 layer |
+| s1 ✓ | S3 literal `arg0.[any](U)`; input `arg0.h.$(U)` | tree of `arg0` with the leaf `h: $` | a reversed source literal | **CHANGED** |
 
 | Claim | Lean (`BackND`) |
 | --- | --- |
 | `covered(meet(input, literal)) = covered(input) ∩ covered(literal)` for a concrete input | `meetLit_inter` |
-| each seed is inside its literal, also without its exclusion | `refine_inside`, `refine_forget_inside` |
-| real route locations ⊆ `covered(literal) ∩ covered(captured)` ⇒ they are covered by the seeds | `refine_sound`, `refine_sound_strict`, `forwardCaptured_of_combos` |
-| smaller captures with the same literals give smaller seeds | `refine_mono`, `refine_mono_seq` |
-| deterministic; `≤ |captured| + |literals|` seeds; legal seeds (`$` or `[any]`, concrete mark) | `refine_det`, `refine_det_set`, `refine_length`, `refine_legal` |
-| the backward contract and the iteration theorem with refined seeds | `B_general_refined`, `iteration_general_refined` |
-| capture of the selected proof only loses a real location | `Vec.cex_selected_only` |
-| a `*` mark capture gives no seed; a `*/E` capture gives an illegal seed | `Vec.cex_abstract_mark`, `Vec.cex_star_capture` |
-| if a literal loses all its captures, the fallback makes its seed larger | `Vec.cex_mono_fallback` |
+| each real route location of the literal is served by the seed | `tree_sound` (tree), `refine_sound`, `forwardCaptured_of_combos` |
+| the tree serves exactly the union of its meets; each leaf is inside its literal | `mergeLeaves_cov`, `tree_deepens` |
+| the backward contract and the iteration theorem, and monotonicity in the capture: proved for the list of meets with exclusions; the tree serves a superset of it (exclusions dropped), so the contract is argued to carry over | `B_general_refined`, `iteration_general_refined`, `refine_mono`, `refine_mono_seq` |
+| deterministic; legal leaves (`$` or `[any]`, concrete mark); at most one leaf per stored meet | `refine_det`, `refine_legal`, `mergeLeaves_length` |
+| inserting only the selected proof loses a real location | `Vec.cex_selected_only` |
+| if a literal loses all its leaves, the fallback makes its seed larger | `Vec.cex_mono_fallback` |
 
-Soundness needs a capture that covers each real route location of the
+Soundness needs leaves that serve each real route location of the
 literal. The forward run over-approximates the real taint, so each real
 route location at the witness is covered by an input of a completed
 combination (`forwardCaptured_of_combos`). For a unary literal each
-overlapping fact is a completed combination by itself.
+overlapping fact is a completed combination by itself. A `$` or
+`[any-taint]` input can be the only real route, so it stays as a leaf
+(rule "leaves only", §I.3).
 
 Not selected: B3-P (fallback = the previous seed, and each seed met with
 it). It is monotone by construction, but it keeps seed state across runs and
@@ -351,16 +386,16 @@ can remove a demand that the CURRENT behaviour keeps.
 
 ### II.5 Progress guarantee
 
-> The refined seeds follow the forward facts. A seed is never wider than
-> the captured input and never shallower. So a field that a cut added to
+> The seed tree follows the forward facts. Each leaf is never wider than
+> its captured input and never shallower. So a field that a cut added to
 > the forward fact stays in the next demand, and the next start can go one
 > field deeper. Per operation: proved. Over rounds: argued.
 
 | Guarantee | Statement | Lean (`BackND`) |
 | --- | --- | --- |
-| G1 inside | each seed that is not a fallback lies inside the captured input it comes from and inside its literal, also with the exclusions forgotten | `refine_deepens`, `refine_inside` |
-| G2 deeper | the seed path extends the captured path and the literal path: `depth(seed) = max(depth(input), depth(literal))` | `meet_deepens`, `refine_deepens`, `refine_depth` |
-| G3 no constant seed | the seeds are a function of the literal and of the capture of run `n−1`; only the fallback (no capture) is the CURRENT constant seed | `refine_det`, `ex_p0` |
+| G1 inside | each leaf lies inside the captured input it comes from and inside its literal (exclusions forgotten) | `tree_deepens`, `refine_deepens` |
+| G2 deeper | each leaf path extends the captured path and the literal path: `depth(leaf) = max(depth(input), depth(literal))` | `meet_deepens`, `tree_deepens`, `refine_depth` |
+| G3 no constant seed | the tree is a function of the literal and of the inputs of run `n−1`; only the fallback (empty tree) is the CURRENT constant seed | `refine_det`, `ex_p0` |
 
 Round argument (argued, not proved):
 
@@ -368,8 +403,8 @@ Round argument (argued, not proved):
 round           backward run n and forward run n+1
 cut point       a callee entry or exit where forward run n−1 cut the witness input: C2 or C5 at demand depth c,
                 so the input carries a path of depth c+1 below the cut point
-G2              the seed keeps that path
-backward run n  carries the seed back to the cut point: the demand there has depth ≥ c+1
+G2              the leaf keeps that path
+backward run n  carries the leaf back to the cut point: the demand there has depth ≥ c+1
 run n+1         the cap at the cut point is c+2: one field deeper
 bound           acyclic code: the depth of real access paths is bounded (acyclic-convergence §1), and K grows
 ⇒               after a bounded number of rounds no cut remains on the route; the witness input is NORMAL,
@@ -385,21 +420,21 @@ PG with the refinement:
 
 | Run | Seed or demand | Start in `use` | Fact at `sink(x)` | Finding | Ex |
 | --- | --- | --- | --- | --- | --- |
-| 1, K = 1 | — | `x.f.[any](T)` DEMAND: K cut | `x.f.[any](T)` DEMAND; captured | provisional | — |
-| 2 (backward) | seed `x.f.[any](T)` DEMAND, demand edge `(x.f.[any](T), zero)` | — | — | — | p1 ✓ |
+| 1, K = 1 | — | `x.f.[any](T)` DEMAND: K cut | `x.f.[any](T)` DEMAND; tree `{f: [any]}` stored | provisional | — |
+| 2 (backward) | seed `x.f.[any](T)` DEMAND (the tree), demand edge `(x.f.[any](T), zero)` | — | — | — | p1 ✓ |
 | 3, K = 3 | `(x.f.[any](T), zero)`: C2 cap 2 | `x.f.g.$(T)` NORMAL: no cut | `x.f.g.$(T)` NORMAL | CONFIRMED | — |
 | 4 (backward) | no witness: no seed | — | — | — | — |
 
 CURRENT: the seed is `x.[any](T)` in each round (p0 ✓), and the finding
 stays provisional (§I.2).
 
-| Ex | captured input of `x.[any](T)` | Seed | Note |
+| Ex | inputs for `x.[any](T)` | Seed tree below `x` | Note |
 | --- | --- | --- | --- |
-| p0 ✓ | none | `x.[any](T)` | CURRENT seed, and the fallback |
-| p1 ✓ | `x.f.[any](T)` | `x.f.[any](T)` | cut at depth 1: the seed keeps `f` |
-| p2 ✓ | `x.f.g.[any](T)` | `x.f.g.[any](T)` | a deeper actual fact (`x.f.g.h`): one round more |
-| p3 ✓ | `x.f.g.h.$(T)` | `x.f.g.h.$(T)` | a `$` input (DEMAND by another cause): a `$` seed, no `[any]` entry, no C2 cut |
-| p4 ✓ | `x.f.[any](T)`, `x.g.$(T)` | `x.f.[any](T)`, `x.g.$(T)` | two completed combinations: two seeds |
+| p0 ✓ | none | the literal `x.[any](T)` | CURRENT seed, and the fallback |
+| p1 ✓ | `x.f.[any](T)` | `f: [any]` | cut at depth 1: the leaf keeps `f` |
+| p2 ✓ | `x.f.g.[any](T)` | `f.g: [any]` | a deeper actual fact (`x.f.g.h`): one round more |
+| p3 ✓ | `x.f.g.h.$(T)` | `f.g.h: $` | a `$` input (DEMAND by another cause): a `$` leaf, no `[any]` entry, no C2 cut |
+| p4 ✓ | `x.f.[any](T)`, `x.g.$(T)` | `f: [any]`, `g: $` | two completed combinations: one tree, two leaves |
 
 Limits:
 
@@ -420,8 +455,8 @@ Limits:
 | Change | Rows | Status |
 | --- | --- | --- |
 | ND `$` sink seed: NORMAL → DEMAND (user correction, 26 Nov) | K3 | **CHANGED** |
-| `[any]` sink seeds and reversed `[any]` source literals: the literal → its meets with the captured inputs | K2, K4, S3, S5 | **CHANGED** |
-| capture of the inputs of `[any]` literals | §I.3 | **NEW** |
+| `[any]` sink seeds and reversed `[any]` source literals: the literal → its capture tree | K2, K4, S3, S5 | **CHANGED** |
+| capture tree of `[any]` literals (meet first, leaves only, one tree) | §I.3 | **NEW** |
 
 Unchanged (**CURRENT**): the forward run except the capture; the backward
 run has no `[any-taint]` (interpreter.md I14, ap.md S15); W6; unary `$` seeds
@@ -441,7 +476,7 @@ confirmed and provisional results (the gate).
 | --- | --- | --- |
 | S-H1 the refined seeds narrow the forward demand (G1: inside the CURRENT demand). Forward run `n+1` analyses less; a provisional result that only the wider demand made can go away (a result change) | refinement | not proved; measure |
 | S-H2 the callee summaries of an ND `$` seed become DEMAND: selected rows (q2 type) in place of records while the witness is DEMAND | seed layer (K3) | results expected equal, not proved; more rows per backward run; measure |
-| S-H3 the capture keeps the inputs of all completed combinations after `freeze()` | capture | heap cost not measured |
+| S-H3 the capture keeps one merged tree per (occurrence, `[any]` literal) after `freeze()`: at most one leaf per input of a completed combination, fewer after merging | capture tree | heap cost not measured |
 
 ### II.7 Proofs and model notes
 
@@ -451,8 +486,9 @@ confirmed and provisional results (the gate).
 | Claim | Lean |
 | --- | --- |
 | the seed layer (§II.2) | `BackCond.reqs_normal_iff`, `reqs_normal_must`, `reqs_normal_rev_must`, `reqs_nd_demand`, `reqs_may_cover`, `reqs_unary_exact`, `any_seed_exact` |
-| the refinement is sound, inside, monotone in the capture (§II.4) | `BackND.refine_sound`, `refine_inside`, `refine_mono`, `B_general_refined`, `iteration_general_refined` |
-| the progress guarantee G1–G3 (§II.5) | `BackND.meet_deepens`, `refine_deepens`, `refine_depth`, `refine_det` |
+| the capture tree: merging is exact, the tree is sound (§I.3, §II.4) | `BackND.mergeLeaves_cov`, `mergeLeaves_sub`, `mergeLeaves_length`, `tree_sound` |
+| the refinement on the list of meets: sound, inside, monotone, the backward contract (§II.4) | `BackND.refine_sound`, `refine_inside`, `refine_mono`, `B_general_refined`, `iteration_general_refined` |
+| the progress guarantee G1–G3 (§II.5) | `BackND.meet_deepens`, `tree_deepens`, `refine_deepens`, `refine_depth`, `refine_det` |
 | the examples | `BackCondEx` |
 
 * `BackCond` is rule-level: it does not model the propagation of a
@@ -463,6 +499,16 @@ confirmed and provisional results (the gate).
 * `BackND`: the base model has no ND sink; each literal is its own sink.
   The ND form of the backward contract is not proved. `refine_mono` keeps
   the meet exclusions; the code forgets them.
+* The capture tree is a list of leaves in the model (`BackND.Leaf`,
+  `mergeLeaves`); the code holds it as one `TaintTree`. The model merges
+  the leaves of all literals in one list; subsumption needs the same
+  literal index, so this is the same as one tree per literal.
+* The model drops the exclusion after the meet (`capMeets`); the rule
+  drops it before (§I.3). For an input that satisfied the literal the leaf
+  is the same.
+* The backward contract (`B_general_refined`) is proved for the list of
+  meets with exclusions. The tree seed covers a superset of it; the
+  contract for the tree seeding is argued, not proved.
 * The round argument of §II.5 is not proved: the model has no multi-run
   form of C2 and C5.
 * Not modelled: GROUP projection, end-fact triggers, statics.
@@ -484,8 +530,8 @@ worse. Expected effect, to measure: the acyclic owners whose rows come from
 [x] Failure class and real trace        §II.1 (per-run counts not measured)
 [ ] Ablation                            not done (spec only)
 [ ] Native prototype                    not done (spec only)
-[ ] Execution site and measured volume  sites: seeds per witness, capture per completed combination;
-                                        volumes not measured
+[ ] Execution site and measured volume  sites: tree insert per input of a completed combination, one tree
+                                        seed per (witness, literal); volumes not measured
 [x] Semantic scope                      §II.6
 [x] Proof scope, model vs production    §II.7
 [x] Withdrawal condition                this section

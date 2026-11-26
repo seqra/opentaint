@@ -6,10 +6,12 @@ The [specification](backward-condition-progress.md) keeps the backward run
 MAY for `[any]` literals (no backward `[any-taint]`) and makes its seeds
 follow the forward facts. Seed layer: a requirement is NORMAL if and only if
 its literal is unary with the `$` tail (an ND `$` seed becomes DEMAND).
-Capture: the forward run keeps the inputs of all completed combinations of
-each `[any]` literal. Refinement: each `[any]` literal of a sink or of a
-reversed conditional source is seeded with its meets with those inputs.
-Progress guarantee: a seed lies inside its captured input and keeps its
+Capture tree: for each `[any]` literal the forward run stores one merged
+field tree: the meet of each input of a completed combination with the
+literal, as a `$` leaf or an `[any]` leaf (no `$` or `[any-taint]` fact is
+stored). Refinement: each `[any]` literal of a sink or of a reversed
+conditional source is seeded with its tree, as one DEMAND tree fact.
+Progress guarantee: each leaf lies inside its captured input and keeps its
 path, so the next demand is at least as deep as the forward cut (proved per
 operation; argued over rounds). It is a spec only: no prototype, no
 measurement, no WI rule. Three constructive modules build with the package
@@ -17,16 +19,18 @@ measurement, no WI rule. Three constructive modules build with the package
 `Quot.sound`: [BackCondRules.lean](lean/ApSpec/BackCondRules.lean) (rule
 level: `reqs_normal_iff`, `reqs_normal_must`, `reqs_nd_demand`,
 `any_seed_exact`), [BackNDRefine.lean](lean/ApSpec/BackNDRefine.lean)
-(`refine_sound`, `refine_mono`, `iteration_general_refined`, and the
-progress lemmas `meet_deepens`, `refine_deepens`, `refine_depth`),
+(`refine_sound`, `refine_mono`, `iteration_general_refined`; the capture
+tree `mergeLeaves_cov`, `tree_sound`; the progress lemmas `meet_deepens`,
+`refine_deepens`, `tree_deepens`),
 [BackCondExamples.lean](lean/ApSpec/BackCondExamples.lean) (principal
 examples, checked by `decide`). The earlier revisions (backward MUST seeds
 and records, application by implication, two field tails; commits
 531e87d3c to fddd06d8d) were withdrawn by the user, and their modules
 `BackMustRun`, `BackMustView`, `BackRecordViews`, `FieldQuant` were removed.
 Open: the round argument over runs, the ND form of the backward contract,
+the backward contract for the tree seeding (proved for the list of meets),
 and the hidden changes S-H1 (narrower forward demand), S-H2 (ND `$` seed
-rows), S-H3 (capture heap cost).
+rows), S-H3 (capture tree heap cost).
 
 ## Checked future candidate: exact call-stage result merging, 1 November 2026
 
