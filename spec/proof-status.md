@@ -6,8 +6,8 @@ The [specification](backward-condition-progress.md) proposes B1 (the layer of
 a backward requirement is the MUST status of its literal: a unary literal,
 also `[any]`, gives N; an ND literal, also `$`, gives D), B2 (backward MUST
 records) and B3 (ND seeds refined by captured forward inputs). It is a spec
-only: no prototype, no measurement, no WI rule. Five constructive modules
-build with the package (`lake build`, 205 jobs); the `#print axioms` audits
+only: no prototype, no measurement, no WI rule. Six constructive modules
+build with the package (`lake build`, 206 jobs); the `#print axioms` audits
 show only `propext` and `Quot.sound`:
 [BackCondRules.lean](lean/ApSpec/BackCondRules.lean) (rule level: unary
 literals are MUST, ND and pass-rule `AnyField` reversals are not),
@@ -15,9 +15,12 @@ literals are MUST, ND and pass-rule `AnyField` reversals are not),
 `recsB_exact`, `backMust_forward`: backward MUST records are end-exact),
 [BackMustView.lean](lean/ApSpec/BackMustView.lean) (the forward view is
 DEMAND; `Cex.cex_drop_forward_demand`: with F77 unchanged a confirmation is
-lost), [BackNDRefine.lean](lean/ApSpec/BackNDRefine.lean) (`refine_sound`,
+lost), [BackRecordViews.lean](lean/ApSpec/BackRecordViews.lean)
+(`backExactView_forward`: the forward view of a backward `$`-premise record
+with an `[any-taint]` conclusion is exact, record reversal case 4),
+[BackNDRefine.lean](lean/ApSpec/BackNDRefine.lean) (`refine_sound`,
 `refine_mono`, `iteration_general_refined`),
-[BackCondExamples.lean](lean/ApSpec/BackCondExamples.lean) (42 principal
+[BackCondExamples.lean](lean/ApSpec/BackCondExamples.lean) (51 principal
 examples of the spec operations, checked by `decide`). Open: decision D1
 (spec §II.11), the hidden changes S-H1, S-H2, S-H6, S-H8, S-H9, and the ND form of
 the backward contract.

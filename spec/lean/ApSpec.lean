@@ -201,3 +201,4 @@ import ApSpec.BackMustRun
 import ApSpec.BackMustView
 import ApSpec.BackNDRefine
 import ApSpec.BackCondExamples
+import ApSpec.BackRecordViews

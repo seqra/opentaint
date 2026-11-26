@@ -151,6 +151,37 @@ theorem ex_v4 : BackMustView.viewF ⟨1, pf ret [] .any T, Excl.empty, nx (pf ar
     (pf arg0 [h] .exact T) Excl.empty = some (dx (pf ret [] .any T)) := by decide
 theorem ex_v5 : BackMustView.viewF ⟨1, pf ret [] .any T, Excl.empty, nx (pf arg0 [] .any T)⟩
     (pf arg0 [h] .exact U) Excl.empty = none := by decide
+/-- Case 2 with an exclusion on the old conclusion: the view premise keeps it; an excluded first field
+    gives no result. -/
+theorem ex_v6 : viewApp (pf arg0 [] .any T) true Excl.empty (nx (pf ret [g] .any T) (.set [h]))
+    ⟨pf ret [g, h] .exact T, false⟩ =
+    some ((pf ret [g] (.star (.set [h])) T, ⟨pf arg0 [] .any T, true⟩), []) := by decide
+/-- Case 3' (B2): a backward must record with a `$` conclusion. -/
+theorem ex_v7 : BackMustView.viewF ⟨1, pf ret [] .any T, Excl.empty, nx (pf arg0 [] .exact U)⟩
+    (pf arg0 [] .exact U) Excl.empty = some (dx (pf ret [] .any T)) := by decide
+/-- Case 4 (B1, B2): a backward `$`-premise record with an `[any-taint]` conclusion, read forward. -/
+theorem ex_v8 : viewApp (pf ret [] .exact T) false Excl.empty (nx (pf arg0 [] .any U))
+    ⟨pf arg0 [g] .exact U, false⟩ =
+    some ((pf arg0 [] s0 U, ⟨pf ret [] .exact T, false⟩), [⟨pf ret [] .exact T, false⟩]) := by decide
+
+/-! ## §I.9 A demand edge from `forward: arg0.[any-taint]/{g}(U) →must ret.[any](T)` DEMAND:
+    entryDemand `ret.[any](T)`, exitDemand `arg0.[any](U)` (the must premise without its exclusion) -/
+
+def dmEdge : DemandEdge := ⟨pf ret [] .any T, some (pf arg0 [] .any U)⟩
+
+theorem ex_dm1 : emit (pf ret [] .any T) (pf ret [f] .exact T) false Excl.empty =
+    some ((pf ret [f] .exact T, false, Excl.empty), nx (pf ret [f] .exact T)) := by decide
+theorem ex_dm2 : emit (pf ret [] .any T) (pf ret [] .any T) true (.set [h]) =
+    some ((pf ret [] .any T, true, .set [h]), nx (pf ret [] .any T) (.set [h])) := by decide
+theorem ex_dm3 : restrictI (pf ret [f] .exact T) ⟨pf arg0 [g] .exact U, false⟩ dmEdge =
+    some ⟨pf arg0 [g] .exact U, false⟩ := by decide
+theorem ex_dm4 : restrictConcX (nx (pf arg0 [] .any U) (.set [h])) (pf arg0 [] .any U) =
+    some (nx (pf arg0 [] .any U) (.set [h])) := by decide
+theorem ex_dm5 : restrictI (pf ret [f] .exact T) ⟨pf arg0 [g] .exact T, false⟩ dmEdge = none := by
+  decide
+/-- Not proposed: an exit demand that keeps the exclusion, `arg0.*/{g}(U)`, rejects `arg0.g`. -/
+theorem ex_dm6 : restrictI (pf ret [f] .exact T) ⟨pf arg0 [g] .exact U, false⟩
+    ⟨pf ret [] .any T, some (pf arg0 [] (.star (.set [g])) U)⟩ = none := by decide
 
 /-! ## §5 ND refinement: literals `0 = va.$(T)`, `1 = vb.[any](U)` -/
 
@@ -190,3 +221,5 @@ end ApSpec.BackCondEx
 #print axioms ApSpec.BackCondEx.ex_v4
 #print axioms ApSpec.BackCondEx.ex_n4
 #print axioms ApSpec.BackCondEx.ex_t1
+#print axioms ApSpec.BackCondEx.ex_v8
+#print axioms ApSpec.BackCondEx.ex_dm6

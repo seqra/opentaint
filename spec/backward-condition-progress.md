@@ -15,7 +15,8 @@
 
 * [Notation](#notation): the names that both parts use. No behaviour.
 * [Part I, forward run](#part-i-forward-run): the operations as the forward
-  run uses them today, and the two new forward steps.
+  run uses them today, the record reversal of both directions, and the two
+  new forward steps.
 * [Part II, backward run](#part-ii-backward-run): the seed rules, the
   backward use of the operations, the new rules and decision D1.
 * [Gate and checklist](#gate-and-checklist).
@@ -33,14 +34,15 @@
 
 | Rule | What it does | Where | Status |
 | --- | --- | --- | --- |
-| B1 MUST seeds | a requirement from a literal is NORMAL if and only if the literal alone fires the rule (a unary literal): unary `[any]` literals become NORMAL `[any-taint]`, ND `$` literals become DEMAND | §II.2–§II.5 | **CHANGED** |
-| B2 backward MUST records | a NORMAL backward summary with a MUST premise is a record; the forward run reads it as a DEMAND view | §II.6, §I.8 | **CHANGED** (backward R1), **NEW** (forward view) |
+| B1 MUST seeds | a requirement from a literal is NORMAL if and only if the literal alone fires the rule (a unary literal): unary `[any]` literals give `[any-taint]`, ND `$` literals give DEMAND | §II.2–§II.5 | **CHANGED** |
+| B2 backward MUST records | a NORMAL backward summary with an `[any-taint]` premise or leaf is a record; the forward run reads it by §I.8 cases 3 and 4 | §II.6, §I.8 | **CHANGED** (backward R1), **NEW** (forward views) |
 | B3 refined ND seeds | an ND `[any]` literal is seeded with its meets with the inputs that the forward run captured | §I.3, §II.10 | **CHANGED** (ND `[any]` seeds), **NEW** (capture) |
 | D1 hand-off of backward MUST records | does a backward MUST record still give demand to the forward run? | §II.11 | **OPEN** |
 
 **Lean.** [BackCondRules](lean/ApSpec/BackCondRules.lean) (`BackCond`),
 [BackMustRun](lean/ApSpec/BackMustRun.lean) (`BackMust`),
 [BackMustView](lean/ApSpec/BackMustView.lean) (`BackMustView`),
+[BackRecordViews](lean/ApSpec/BackRecordViews.lean) (`BackView`),
 [BackNDRefine](lean/ApSpec/BackNDRefine.lean) (`BackND`),
 [BackCondExamples](lean/ApSpec/BackCondExamples.lean) (`BackCondEx`).
 All constructive (`propext`, `Quot.sound` only).
@@ -52,35 +54,48 @@ model computes the result shown, checked by `decide`.
 
 ## Notation
 
-> Locations, facts, rule conditions, summary edges and demand edges. These
-> are names only; Part I and Part II give the behaviour.
+> Locations, facts, patterns, rule conditions, summary edges and demand
+> edges. These are names only; Part I and Part II give the behaviour.
 
-### N.1 Locations and facts
+### N.1 Locations, facts and patterns
 
 ```text
 location        base.path(mark)                a value: base variable, field path, concrete taint mark
-fact            base.path.tail(markPattern)
-  tail            $                             the location base.path only
-                  */exclusion                   base.path·suffix, every admitted suffix, correlated with the premise suffix
-                  [any]                         base.path·suffix, every admitted suffix, not correlated
-  markPattern     T                             the concrete mark T
-                  *                             abstract: the mark of the premise passes through
-exclusion       a set of fields
-admits(exclusion, suffix)  ⇔  suffix = [] ∨ first(suffix) ∉ exclusion
-layer           NORMAL | DEMAND               join: NORMAL ⊔ NORMAL = NORMAL, otherwise DEMAND
-annotated fact  (fact, exclusion, layer)
+fact            base.path.tail(mark)  in a layer
+pattern         base.path.tail(mark)  with no layer: a literal, a premise, a demand pattern
+  tail            $                  the location base.path only
+                  */E                base.path·suffix for each suffix that E admits; correlated with the premise suffix (FLOW)
+                  [any]              base.path·suffix for each suffix; MAY: covers the locations that can carry the mark
+                  [any-taint]/E      base.path·suffix for each suffix that E admits; MUST: each covered location carries the mark
+  mark            T                  a concrete mark
+                  *                  abstract: the mark of the premise passes through
+E               an exclusion: a set of fields;  admits(E, suffix) ⇔ suffix = [] ∨ first(suffix) ∉ E
+                only the tails */E and [any-taint]/E have one
+layer           NORMAL | DEMAND;   join: NORMAL ⊔ NORMAL = NORMAL, otherwise DEMAND
 
-covered(fact, exclusion) = { base.(path·suffix)(mark) | tail admits suffix ∧ admits(exclusion, suffix) ∧ markPattern admits mark }
-                           $ admits only [];  */E and [any] admit every suffix;  * admits every mark
-inside(fact1, fact2)     ⇔ covered(fact1) ⊆ covered(fact2)            (each with its exclusion)
+W6 (tail and layer of a fact):   [any] ⇒ DEMAND;   [any-taint] ⇒ NORMAL
+  a step that puts an [any-taint] fact in DEMAND writes it as [any] and drops E
 
-x.[any-taint]/E(T)  ≝  (x.[any](T), E, NORMAL)         W6: a NORMAL [any] fact is [any-taint]
-x.[any](T)          ≝  (x.[any](T), ∅, DEMAND)
+covered(fact)        = { base.(path·suffix)(mark2) | tail admits suffix ∧ mark admits mark2 }
+                       $ admits only [];  */E and [any-taint]/E admit what E admits;  [any] admits each suffix;  * admits each mark
+inside(fact1, fact2) ⇔ covered(fact1) ⊆ covered(fact2)
 ```
 
 Placeholders in patterns and rules: `E`, `E1`, `E2` are exclusions; `P`, `Q`
 are rule arguments (bases with paths); `T`, `T'`, `U` are marks; `A` is an
 alternative of a condition.
+
+| Item | Status |
+| --- | --- |
+| four tails: `Tail { EXACT, STAR, ANY, ANY_TAINT }` (`Facts.kt:7`) | **CURRENT** |
+| W6 `[any]` ⇒ DEMAND: `Conclusion` check (`Reference.kt:12`) | **CURRENT** |
+| W6 `[any-taint]` ⇒ NORMAL: a stored any-leaf takes its tail from the layer, NORMAL `ANY_TAINT`, DEMAND `ANY` (`Conclusions.kt:49,78`) | **CURRENT** |
+| a demand pattern has no `[any-taint]` tail (W8 (d), `Demand.kt:41`, `RestrictedInitialPolicy.kt:38`) | **CURRENT** |
+| Lean encoding: one kind `any` and the layer flag: `any` NORMAL is `[any-taint]`, `any` DEMAND is `[any]` (`AnyTaintEx.XFact`, `carriesB`) | model only |
+
+So no fact is NORMAL `[any]`: the `[any-taint]` tail takes that place. The
+Lean model encodes the two tails as one kind and the layer, which is why
+older text defined `[any-taint]` as "a NORMAL `[any]`".
 
 ### N.2 Rule conditions
 
@@ -117,13 +132,13 @@ A literal can be unary and ND (row K5). The classification code is **CURRENT**.
 ### N.3 Summary edges
 
 ```text
-summary  = (direction, method, premise, premiseExclusion, mustPremise, conclusion, conclusionExclusion, layer)
+summary  = (direction, method, premise, conclusion, layer)
   direction           forward | backward
   program(forward)    = P;   program(backward) = reverse(P): entry and exit swapped, CFG edges reversed
-  premise             a fact at the entry of method in program(direction)
+  premise             a pattern at the entry of method in program(direction)
   conclusion          a fact at the exit of method in program(direction)
-  mustPremise         ⇔ the premise is [any-taint]: emitted from a MUST added fact (§I.4)
-written:  direction: premise → conclusion layer     (→must if mustPremise)
+  must premise        ⇔ premise.tail = [any-taint]: emitted from a MUST added fact (§I.4)
+written:  direction: premise → conclusion layer     (→must for a must premise)
 
 flows(direction, method)(entryLocation, exitLocation):
   taint at entryLocation at the entry reaches exitLocation at the exit, in program(direction)
@@ -131,13 +146,13 @@ flows(backward, method)(entryLocation, exitLocation)  ⇔  flows(forward, method
 
 pairs(summary) = { (entryLocation, exitLocation) | entryLocation = premise.base.(premise.path·suffix)(mark) ∈ covered(premise),
                    exitLocation ∈ covered(conclusion) at conclusion.path·suffix2, with
-                   suffix2 = [] for a $ conclusion, = suffix for a */E conclusion, any for an [any] conclusion;
+                   suffix2 = [] for a $ conclusion, = suffix for a */E conclusion, any for an [any] or [any-taint] conclusion;
                    mark carried for a * conclusion, the conclusion mark otherwise }
 
 a NORMAL summary is
-  pair-exact  (mustPremise false):  pairs(summary) ⊆ flows(direction, method)
-  end-exact   (mustPremise true):   ∀ exitLocation ∈ covered(conclusion). ∃ entryLocation ∈ covered(premise).
-                                      flows(direction, method)(entryLocation, exitLocation)
+  pair-exact  (premise not must):  pairs(summary) ⊆ flows(direction, method)
+  end-exact   (must premise):      ∀ exitLocation ∈ covered(conclusion). ∃ entryLocation ∈ covered(premise).
+                                     flows(direction, method)(entryLocation, exitLocation)
 a DEMAND summary covers: every real flow from a covered premise location is in some summary
 record           a NORMAL summary that the persistent record store keeps (rule R1: §I.5 forward, §II.6 backward)
 ```
@@ -146,25 +161,29 @@ record           a NORMAL summary that the persistent record store keeps (rule R
 
 ```text
 demand edge of a method = (entryDemand, exitDemand)          ap.md names: D-c = entryDemand, D-p = exitDemand
-  the previous run hands it off (§I.9); a restricted run analyses the method only for its demand edges
-  entryDemand  a pattern at the entry of the method in program(direction)
-  exitDemand   a pattern at the exit, or none
+  entryDemand  a pattern at the entry of the method in program(direction); from the conclusion of a summary of the previous run
+  exitDemand   a pattern at the exit, or none;                              from the premise of that summary
+  demand patterns have no layer and no [any-taint] tail; a restricted run analyses the method only for its demand edges
+  how the hand-off builds them: §I.9
 ```
 
 ## Part I. Forward run
 
 > The forward run propagates taint from the sources, checks the sinks and
 > builds summaries. The proposal adds two forward steps: the capture of ND
-> inputs (§I.3, B3) and the read view of a backward MUST record (§I.8, B2).
-> All other forward behaviour is **CURRENT** and is the reference for Part II.
+> inputs (§I.3, B3) and the reading of backward MUST records (§I.8 cases 3,
+> 4, B2). All other forward behaviour is **CURRENT** and is the reference for
+> Part II.
 
 ### I.1 Forward facts
 
-> What the two layers mean in the forward run. **CURRENT** (ap.md §4.2, W6).
+> What the tails and layers mean in the forward run. **CURRENT** (ap.md §4.2,
+> W6).
 
 ```text
 NORMAL fact        no access-path operation of its derivation over-approximated
-[any-taint]/E(T)   a NORMAL [any] fact: every covered location carries T
+[any-taint]/E(T)   NORMAL: every covered location carries T
+[any](T)           DEMAND: the covered locations include the tainted ones
 DEMAND fact        some operation over-approximated; the fact covers the real taint
 ```
 
@@ -190,9 +209,9 @@ the next backward run seeds each DEMAND witness (§II.3)
 
 ```text
 captured(literal; method, statement, occurrence) =
-  { (input, inputExclusion) | input satisfied literal in a COMPLETED combination (NORMAL or DEMAND) of the occurrence }
-normal form:   input mark    := the concrete mark that the check matched   (a FLOW input: the mark of the literal)
-               input */E     := input [any] with exclusion E
+  { input | input satisfied literal in a COMPLETED combination (NORMAL or DEMAND) of the occurrence }
+normal form (a pattern):   mark  := the concrete mark that the check matched   (a FLOW input: the mark of the literal)
+                           */E   := [any-taint]/E                              (the same locations)
 ```
 
 | Part | Status |
@@ -210,15 +229,15 @@ normal form:   input mark    := the concrete mark that the check matched   (a FL
 > operation (§II.5).
 
 ```text
-added fact      the annotated fact that enters the callee by a binding b.* → b'.*:  (added, addedExclusion, addedLayer)
-isMust(added)   ⇔  added.tail = [any] ∧ addedLayer = NORMAL           (the added fact is [any-taint])
-emit(entryDemand, added)  =  (premise, premiseExclusion, mustPremise, startFact)  or  none
+added       the fact that enters the callee by a binding b.* → b'.*, with its layer
+MUST added  ⇔  added.tail = [any-taint]
+emit(entryDemand, added)  =  (premise, startFact)  or  none
 ```
 
-| entryDemand mark | added mark | premise | mustPremise | startFact |
+| entryDemand mark | added mark | premise | must premise | startFact |
 | --- | --- | --- | --- | --- |
-| `*` (abstract) | any | FLOW form of entryDemand: tail `$`→`$`, `[any]`→`*/{}`, `*/E`→`*/E`; mark `*` | false | the premise, NORMAL (identity) |
-| `T` (concrete) | `T` | `meet(added, entryDemand)` | `isMust(added) ∧ premise.tail = [any]` | if mustPremise: the premise with premiseExclusion, NORMAL; else by tail: `$` → NORMAL; `[any]`, `*/E` → `[any]` DEMAND |
+| `*` (abstract) | any | FLOW form of entryDemand: tail `$`→`$`, `[any]`→`*/{}`, `*/E`→`*/E`; mark `*` | no | the premise, NORMAL (identity) |
+| `T` (concrete) | `T` | `meet(added, entryDemand)` | ⇔ MUST added ∧ premise tail `[any-taint]` | must premise: the premise, NORMAL; else by tail: `$` → NORMAL; `[any]`, `*/E` → `[any]` DEMAND |
 | `T` (concrete) | other | none | — | — |
 
 ```text
@@ -226,32 +245,36 @@ meet(added, entryDemand),   demandPath = entryDemand.path,   demandTail = entryD
   added below   added.path = demandPath·suffix, suffix ≠ []    added                                         if demandTail admits suffix
   added at      added.path = demandPath                        demandPath with meetTail(added.tail, demandTail)
   added above   demandPath = added.path·suffix, suffix ≠ []    demandPath with meetTail(added.tail, demandTail)
-                                                               if added.tail and addedExclusion admit suffix
+                                                               if added.tail admits suffix
   otherwise none
-premiseExclusion = addedExclusion if the premise path is the added path;  ∅ at a deeper demand path
 ```
 
 | meetTail(added tail, demand tail) | demand `$` | demand `[any]` | demand `*/E2` |
 | --- | --- | --- | --- |
 | `$` | `$` | `$` | `$` |
 | `[any]` | `$` | `[any]` | `*/E2` |
-| `[any-taint]/E1` | `$` | `[any-taint]/E1` | no canonical case |
+| `[any-taint]/E1` | `$` | `[any-taint]/E1` at the added path; `[any-taint]/∅` at a deeper demand path | no canonical case |
 
 Contract: each common location with its mark is covered by the premise, the
 added fact satisfies the premise, and the premise is inside entryDemand
 (`AnyTaintExCov.emitX_contract`).
 
+Code form (**CURRENT**): no summary premise has the `[any]` tail
+(`RunSummaries.kt:58`). The code keys the may `[any]` premise as the
+concrete-mark premise `*/{}(T)` (`RestrictedInitialPolicy.kt:34`), with the
+same DEMAND start fact. ap.md and the Lean model write it as `[any](T)`.
+
 Examples (forward, all **CURRENT**; the must rows e3, e5, e6 are **NEW** in the backward run, §II.5):
 
-| Ex | entryDemand | added fact | premise, mustPremise, premiseExclusion | startFact | Case |
+| Ex | entryDemand | added fact | premise, must premise | startFact | Case |
 | --- | --- | --- | --- | --- | --- |
-| e1 ✓ | `x.[any](T)` | `x.f.$(T)` NORMAL | `x.f.$(T)`, false | `x.f.$(T)` NORMAL | added below |
-| e2 ✓ | `x.f.[any](T)` | `x.[any](T)` DEMAND | `x.f.[any](T)`, false | `x.f.[any](T)` DEMAND | added above |
-| e3 ✓ | `x.f.[any](T)` | `x.[any-taint]/{g}(T)` NORMAL | `x.f.[any-taint](T)`, true, `∅` | `x.f.[any-taint](T)` NORMAL | above: the exclusion is not kept at the deeper path |
-| e4 ✓ | `x.f.[any](T)` | `x.[any-taint]/{f}(T)` NORMAL | none | — | the exclusion rejects `f` |
-| e5 ✓ | `x.[any](T)` | `x.[any-taint]/{g}(T)` NORMAL | `x.[any-taint]/{g}(T)`, true, `{g}` | `x.[any-taint]/{g}(T)` NORMAL | added at |
-| e6 ✓ | `x.$(T)` | `x.[any-taint]/{g}(T)` NORMAL | `x.$(T)`, false | `x.$(T)` NORMAL | `meetTail([any-taint], $) = $` |
-| e7 ✓ | `x.[any](*)` | `x.[any-taint](T)` NORMAL | `x.*/{}(*)`, false (FLOW) | identity, NORMAL | abstract entryDemand (`Abs.emitW`) |
+| e1 ✓ | `x.[any](T)` | `x.f.$(T)` NORMAL | `x.f.$(T)`, no | `x.f.$(T)` NORMAL | added below |
+| e2 ✓ | `x.f.[any](T)` | `x.[any](T)` DEMAND | `x.f.[any](T)`, no | `x.f.[any](T)` DEMAND | added above |
+| e3 ✓ | `x.f.[any](T)` | `x.[any-taint]/{g}(T)` NORMAL | `x.f.[any-taint](T)`, yes | `x.f.[any-taint](T)` NORMAL | above: `{g}` is not kept at the deeper path |
+| e4 ✓ | `x.f.[any](T)` | `x.[any-taint]/{f}(T)` NORMAL | none | — | `{f}` rejects `f` |
+| e5 ✓ | `x.[any](T)` | `x.[any-taint]/{g}(T)` NORMAL | `x.[any-taint]/{g}(T)`, yes | `x.[any-taint]/{g}(T)` NORMAL | added at |
+| e6 ✓ | `x.$(T)` | `x.[any-taint]/{g}(T)` NORMAL | `x.$(T)`, no | `x.$(T)` NORMAL | `meetTail([any-taint], $) = $` |
+| e7 ✓ | `x.[any](*)` | `x.[any-taint](T)` NORMAL | `x.*/{}(*)`, no (FLOW) | identity, NORMAL | abstract entryDemand (`Abs.emitW`) |
 | e8 ✓ | `x.[any](T)` | `x.f.$(U)` NORMAL | none | — | the marks differ |
 
 ### I.5 Forward summaries and records
@@ -280,10 +303,10 @@ record(forward summary)  ⇔  layer = NORMAL ∧ one premise (the zero premise i
 ```text
 restrict(summary, (entryDemand, exitDemand)) =
   none  if exitDemand = none
-        ∨ ¬inside(premise, entryDemand)                          locations and marks; reads premiseExclusion
+        ∨ ¬inside(premise, entryDemand)                          locations and marks
         ∨ ¬marksMeet(conclusion mark, exitDemand mark)           T and U meet ⇔ T = U;  * meets each mark
         ∨ conclusion.base ≠ exitDemand.base
-  else  the summary with conclusion := cutConclusion(conclusion, exitDemand)      premise, mustPremise, layer kept
+  else  the summary with conclusion := cutConclusion(conclusion, exitDemand)      premise and layer kept
 ```
 
 | conclusion against exitDemand (`demandPath = exitDemand.path`) | cutConclusion |
@@ -319,8 +342,8 @@ Examples (all **CURRENT**):
 | r5 ✓ | `arg0.[any](T) → ret.$(T)` NORMAL | `(arg0.f.[any](T), ret.[any](T))` | none | the premise is not inside entryDemand |
 | r6 ✓ | `… → ret.f.$(T)` NORMAL | exitDemand `ret.*/{}(T)` | `ret.f.$(T)` NORMAL | below, `*/{}` admits `f` |
 | r7 ✓ | `… → ret.f.$(T)` NORMAL | exitDemand `ret.$(T)` | none | below, `$` rejects `f` |
-| r8 ✓ | `… → ret.[any-taint]/{h}(T)` NORMAL | exitDemand `ret.f.[any](T)` | `ret.f.[any-taint](T)` NORMAL, exclusion `∅` | above, `[any]` demand |
-| r9 ✓ | `… → ret.[any-taint]/{h}(T)` NORMAL | exitDemand `ret.h.[any](T)` | none | the exclusion rejects `h` |
+| r8 ✓ | `… → ret.[any-taint]/{h}(T)` NORMAL | exitDemand `ret.f.[any](T)` | `ret.f.[any-taint](T)` NORMAL | above, `[any]` demand |
+| r9 ✓ | `… → ret.[any-taint]/{h}(T)` NORMAL | exitDemand `ret.h.[any](T)` | none | `{h}` rejects `h` |
 | r10 ✓ | `… → ret.[any-taint]/{h}(T)` NORMAL | exitDemand `ret.f.$(T)` | `ret.f.$(T)` NORMAL | above, `$` demand |
 | r11 | `… → ret.[any-taint]/{h}(T)` NORMAL | exitDemand `ret.*/{k}(T)` | `ret.[any-taint]/{h,k}(T)` NORMAL | at; the Lean model keeps `/{h}` (wider, `ex_r11_model`) |
 
@@ -335,12 +358,12 @@ r1–r5: `Handoff.restrictI` (gates and cut). r6–r11: `restrictConcX` (cut wit
 > §8.7 R4).
 
 ```text
-inside(premise, added)       ⇔  covered(premise, premiseExclusion) ⊆ covered(added, addedExclusion), marks too   [AnyTaintEx.satX]
-applicable(premise, added)   ⇔  covered(added) ⊆ covered(premise) ∧ (premise.tail = [any] ⇒ added.tail = [any])   [Basic.applicable]
+inside(premise, added)       ⇔  covered(premise) ⊆ covered(added), marks too                      [AnyTaintEx.satX]
+applicable(premise, added)   ⇔  covered(added) ⊆ covered(premise) ∧ (must premise ⇒ added.tail ∈ {[any], [any-taint]})   [Basic.applicable]
 summary of this run (restricted piece):   used if inside(premise, added)
 record (R4, later runs):                  used if inside(premise, added) ∨ applicable(premise, added)
-result layer = addedLayer ⊔ conclusion layer
-MUST rule:  mustPremise ∧ ¬inside(premise, added)  ⇒  result layer := DEMAND, result exclusion := ∅     [AnyTaintEx.recLayerX]
+result layer = added layer ⊔ conclusion layer
+MUST rule:  must premise ∧ ¬inside(premise, added)  ⇒  result layer := DEMAND (an [any-taint] result becomes [any], W6)   [AnyTaintEx.recLayerX]
 ```
 
 An end-exact summary gives each exit location SOME source in the premise.
@@ -359,51 +382,108 @@ Examples (all **CURRENT**):
 | a5 ✓ | `arg0.h.[any-taint](T)` NORMAL | as a4 | no | yes | `ret.g.[any](T)` DEMAND (MUST rule) |
 | a6 ✓ | `arg0.h.$(T)` NORMAL | as a4 | no | no | not used; the run analyses the callee for the added fact |
 
-### I.8 Reading backward records
+### I.8 Record reversal (read views, both directions)
 
-> A forward fact at the forward entry of a method reads the backward records
-> of that method in the opposite orientation (ap.md §8.7 R2, R3). A backward
-> record with `$` or `*` leaves is an exact forward record (**CURRENT**). A
-> backward MUST record exists only with B2; its view gives a DEMAND result
-> (**NEW**).
+> A record of one direction is read by the run of the other direction, end
+> for end (ap.md §8.7 R2–R4). There are four cases. Cases 1 and 2 are
+> forward records that the backward run reads (**CURRENT**). Cases 3 and 4
+> are backward records that the forward run reads; they exist only with B1
+> and B2 (**NEW**). The backward run uses this section for forward records
+> (§II.9).
 
 ```text
-backward record   premise at the backward entry (= forward exit)  →  conclusion at the backward exit (= forward entry)
-forward view      new premise = the old conclusion;  new conclusion = the old premise
+record      direction: premise → conclusion,  NORMAL, one premise
+reader      a fact of the other direction at the conclusion end of the record:
+              a backward requirement at the forward exit reads the forward records of the method;
+              a forward fact at the forward entry reads the backward records of the method
+view        one view for each conclusion leaf; it swaps the two ends:
+              viewPremise    = endPattern(conclusion leaf)
+              viewConclusion = startResult(premise)
 
-  old premise $ or */E, mark reversible      generic leaf reversal (ap.md §9.1): exact forward record
-  old premise x.[any-taint]/E(T), must (B2)  if the added fact meets the old conclusion (locations and marks):
-                                             new conclusion x.[any](T) DEMAND, E forgotten        [BackMustView.viewF]
-result layer = addedLayer ⊔ new conclusion layer
+  endPattern(base.path.$(T))                 = base.path.$(T)
+  endPattern(base.path.[any-taint]/E(T))     = base.path.*/E(T)                a field tail; the mark T stays concrete; E kept
+  startResult(base.path.$(U))                = base.path.$(U)       NORMAL
+  startResult(base.path.[any-taint]/E2(U))   = base.path.[any](U)   DEMAND     E2 forgotten (W6)
+
+guard       both marks concrete; each end $ or [any-taint]; at least one end [any-taint]; a $ end has no exclusion
+            other shapes ($ → $, a canonical * premise → */E): generic leaf reversal (ap.md §9.1), CURRENT
+apply       to a reader fact r: used if inside(viewPremise, r) ∨ applicable(viewPremise, r) (R4)
+            result = viewConclusion;  result layer = r layer ⊔ viewConclusion layer
+            a $ viewConclusion does not take the suffix of r (ret.h.$ gives arg0.$, not arg0.h.$)
 ```
 
-| Backward record | View | Status | Lean |
-| --- | --- | --- | --- |
-| `$`/`*` leaves, may premise | exact forward record | **CURRENT** | `AnyTaintSim.backRec_exact`, `BExact.revRecs_exact` |
-| must premise (B2) | sound, DEMAND only, not exact | **NEW** | `BackMustView.viewF_demand`, `viewF_stays_demand`, `viewF_sound`, `Cex.viewF_not_exact` |
+| Case | Record | Record meaning | View: viewPremise → viewConclusion | View meaning | Status | Lean |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | `forward: arg.$(U) → ret.[any-taint]/E(T)` | pair-exact | `ret.*/E(T) → arg.$(U)` NORMAL | exact converse | **CURRENT** | `CurrentMustReverse.exact_converse` |
+| 2 | `forward: arg.[any-taint]/E2(U) →must ret.[any-taint]/E(T)` | end-exact | `ret.*/E(T) → arg.[any](U)` DEMAND | sound, not exact | **CURRENT** | `CurrentMustReverse.must_any_converse_covers`, `must_application_demand`; `AnyTaintExact.CexRev.cex_rev` |
+| 2' | `forward: arg.[any-taint]/E2(U) →must ret.f.$(T)` | end-exact | `ret.f.$(T) → arg.[any](U)` DEMAND | sound, not exact | **CURRENT** | `CurrentMustReverse.must_exact_converse_covers` |
+| 3 | `backward: ret.[any-taint]/E2(T) →must arg.[any-taint]/E(U)` | end-exact on `reverse(P)` | `arg.*/E(U) → ret.[any](T)` DEMAND | sound, not exact | **NEW** (B2) | `BackMustView.viewF_demand`, `viewF_stays_demand`, `viewF_sound`, `Cex.viewF_not_exact` |
+| 3' | `backward: ret.[any-taint]/E2(T) →must arg.$(U)` | end-exact on `reverse(P)` | `arg.$(U) → ret.[any](T)` DEMAND | sound, not exact | **NEW** (B2) | `BackMustView.viewF_sound` |
+| 4 | `backward: ret.$(T) → arg.[any-taint]/E(U)` (row S3 with B1) | pair-exact on `reverse(P)` | `arg.*/E(U) → ret.$(T)` NORMAL | exact converse | **NEW** (B1, B2) | `BackView.backExactView_forward` |
 
-| Ex | backward record | added fact (forward) | Result | Status |
-| --- | --- | --- | --- | --- |
-| v4 ✓ | `backward: ret.[any-taint](T) →must arg0.[any-taint](T)` NORMAL | `arg0.h.$(T)` NORMAL | `ret.[any](T)` DEMAND | **NEW** (B2) |
-| v5 ✓ | as v4 | `arg0.h.$(U)` NORMAL | none (the marks do not meet) | **NEW** (B2) |
+Why the view meanings differ:
 
-### I.9 Hand-off selection
+* A pair-exact record (cases 1, 4) relates each covered location of one end
+  to each covered location of the other end by a real flow. The view relates
+  the same pairs in the other order, so it is exact and stays NORMAL. Case 4
+  composes `exact_converse` with `BackMust.backPair_forward`.
+* An end-exact record (cases 2, 3) gives each conclusion location SOME source
+  in the premise, not a known one. So the view result is the whole premise
+  as `[any]`, DEMAND (`cex_rev`, `viewF_not_exact`).
+
+The guard and the two conversions are the CURRENT rule for forward records
+(ap.md §8.7 R3, `CurrentMustReverse.readView`). Applying the same rule to
+backward records is **NEW**: today the code reads backward records only by
+generic leaf reversal, because a backward record has no `[any-taint]` end
+(`RecordStore.kt:274-277`). Model note: `BackMustView.viewF` tests overlap
+instead of R4; overlap accepts more readers, and the view is sound for each.
+
+Examples:
+
+| Ex | Case | record | reader | Result | Status |
+| --- | --- | --- | --- | --- | --- |
+| v1 ✓ | 1 | `forward: arg0.$(T) → ret.[any-taint](T)` | backward `ret.h.$(T)` NORMAL | `arg0.$(T)` NORMAL (exact) | **CURRENT** |
+| v2 ✓ | 2 | `forward: arg0.[any-taint](T) →must ret.g.[any-taint](T)` | backward `ret.g.h.$(T)` NORMAL | `arg0.[any](T)` DEMAND | **CURRENT** |
+| v6 ✓ | 2 | `forward: arg0.[any-taint](T) →must ret.g.[any-taint]/{h}(T)` | backward `ret.g.h.$(T)` NORMAL | none: the view premise `ret.g.*/{h}(T)` excludes `h` | **CURRENT** |
+| v3 ✓ | 2' | `forward: arg0.[any-taint](T) →must ret.f.$(T)` | backward `ret.f.$(T)` NORMAL | `arg0.[any](T)` DEMAND | **CURRENT** |
+| v4 ✓ | 3 | `backward: ret.[any-taint](T) →must arg0.[any-taint](T)` | forward `arg0.h.$(T)` NORMAL | `ret.[any](T)` DEMAND | **NEW** (B2) |
+| v5 ✓ | 3 | as v4 | forward `arg0.h.$(U)` NORMAL | none: the marks do not meet | **NEW** (B2) |
+| v7 ✓ | 3' | `backward: ret.[any-taint](T) →must arg0.$(U)` | forward `arg0.$(U)` NORMAL | `ret.[any](T)` DEMAND | **NEW** (B2) |
+| v8 ✓ | 4 | `backward: ret.$(T) → arg0.[any-taint](U)` | forward `arg0.g.$(U)` NORMAL | `ret.$(T)` NORMAL (exact) | **NEW** (B1, B2) |
+
+### I.9 Hand-off: selection and demand edges
 
 > At the end of a run, the selected summaries give the demand edges of the
-> next run; the other summaries are records and give no demand (F77).
-> **CURRENT** (ap.md §8.5, `HandOff.kt:221-237`).
+> next run; the other summaries are records and give no demand (F77). A
+> demand edge is a pair of patterns with no layer: the MUST or MAY status of
+> the summary does not go to the next run. **CURRENT** (ap.md §8.5,
+> `HandOff.kt`, `HandoffCompactor.kt:111-124`, `StaticGuidance.kt:50-57`).
 
 ```text
 selected(summary)  ⇔  layer = DEMAND ∨ |premises| ≥ 2 ∨ (direction = backward ∧ premise = zero)
-selected      ⇒  each restricted piece  premise → conclusion2  gives the next run the demand edge
-                 (entryDemand = conclusion2, exitDemand = premise);  [any-taint]/E tails become [any], exclusions dropped
-not selected  ⇒  the summary is a record (R1): no demand; the next run reads the record (§I.8, §II.9)
+selected      ⇒  for each restricted piece premise → conclusion, each conclusion leaf and each premise member:
+                   demand edge of the method in the next run
+                   (entryDemand = pattern(conclusion leaf), exitDemand = pattern(premise member))
+                 pattern:  [any-taint]/E → [any] (E dropped);  $, */E, [any] kept;  mark kept
+not selected  ⇒  the summary is a record (R1): no demand edge; the next run reads the record (§I.8)
 ```
 
-| Ex | summary | selected | Next run (backward) | Status |
+| Summary end | Its demand pattern | Selected summaries that have it | Status |
+| --- | --- | --- | --- |
+| conclusion `$`, `*/E` | the same | each selected kind | **CURRENT** |
+| conclusion `[any]` (MAY) | entryDemand `[any]` | DEMAND summaries | **CURRENT** |
+| conclusion `[any-taint]/E` (MUST) | entryDemand `[any]`, `E` dropped | NORMAL multi-premise summaries; backward zero-premise summaries (q3, with B1); backward must summaries (H2) | **CURRENT** rule; the backward rows are **NEW** with B1, B2 |
+| premise `$`, `*/E` | exitDemand the same | each selected kind | **CURRENT** |
+| premise `[any-taint]/E` (must) | exitDemand `[any]`, `E` dropped | DEMAND must summaries, for example `arg0.[any-taint] →must ret.[any]`; H2 | **CURRENT** |
+
+So entryDemand MAY with exitDemand from a MUST premise is a normal case:
+§II.7 gives the intersection rules for it.
+
+| Ex | summary | selected | Demand edge for the next run (backward) | Status |
 | --- | --- | --- | --- | --- |
-| q1 | `forward: arg0.$(T) → ret.f.$(T)` NORMAL | no | reads the record (v1 type, §II.9) | **CURRENT** |
-| q2 | `forward: arg0.[any](T) → ret.[any](T)` DEMAND | yes | callee demand edge `(ret.[any](T), arg0.[any](T))` | **CURRENT** |
+| q1 | `forward: arg0.$(T) → ret.f.$(T)` NORMAL | no | none; the next run reads the record (case 1 type) | **CURRENT** |
+| q2 | `forward: arg0.[any](T) → ret.[any](T)` DEMAND | yes | `(ret.[any](T), arg0.[any](T))` | **CURRENT** |
+| q5 | `forward: arg0.[any-taint]/{g}(U) →must ret.[any](T)` DEMAND | yes | `(ret.[any](T), arg0.[any](U))`: `{g}` dropped | **CURRENT** |
 
 ### I.10 Proofs and model notes (forward)
 
@@ -416,12 +496,14 @@ not selected  ⇒  the summary is a record (R1): no demand; the next run reads t
 | emission contract | `AnyTaintExCov.emitX_contract`, `Abs.emitW_contract` |
 | restriction keeps exactly the demanded pairs | `HandoffRestrict.restrictI_contract`, `restrictI_sub`, `restrictI_inter`; `CurrentDemand.restrictCertificate` |
 | the MUST rule is necessary | `AnyTaintExact.CexApp.cex_app` |
-| the forward view of a backward MUST record (B2) | `BackMustView` (§I.8) |
+| record reversal, cases 1–4 | §I.8 table |
 | the examples | `BackCondEx` |
 
 * `restrictConcX` keeps `[any-taint]/E` at the same path for a `*/E2`
   demand and gives `[any-taint]/∅` above it; ap.md gives `/(E ∪ E2)` and
   `/E2`. The model is wider and sound (r11).
+* The Lean hand-off (`Handoff.demOfN`) uses patterns with no layer and no
+  exclusion, so a must premise is an `[any]` exitDemand there too.
 * `BackMustView`: one record, one leaf; no store lookup, statics, cleaners
   or type filters.
 
@@ -461,25 +543,25 @@ literals and ND seeds.
 > **CHANGED**.
 
 ```text
-requirement (fact, exclusion, layer) at a node of reverse(P):
-  NORMAL (MUST)   ∀ location ∈ covered(fact, exclusion): taint at location at the node ⇒ the seeded sink fires
+requirement  a fact at a node of reverse(P):
+  NORMAL (MUST)   ∀ location ∈ covered(requirement): taint at location at the node ⇒ the seeded sink fires
   DEMAND (MAY)    the DEMAND requirements cover each location of a real route to the sink
 
 layer of the requirement from a literal:
   CURRENT   NORMAL ⇔ literal.tail = $          seedFact (RunMethodLocalServices.kt:437-449) seeds NORMAL; W6 makes [any] DEMAND
   B1        NORMAL ⇔ literal is unary          [BackCond.reqs_normal_must, reqs_nd_demand]
+            a unary [any] literal gives the [any-taint] tail (W6)
 ```
 
-| Literal | CURRENT layer | B1 layer | Status |
+| Literal | CURRENT requirement | B1 requirement | Status |
 | --- | --- | --- | --- |
-| unary `$` | NORMAL | NORMAL | **CURRENT** |
-| unary `[any]` | DEMAND (`[any]`) | NORMAL (`[any-taint]`) | **CHANGED** |
-| ND `$` | NORMAL (not MUST: breaks the meaning) | DEMAND | **CHANGED** |
-| ND `[any]` | DEMAND | DEMAND, refined (B3) | **CHANGED** (B3) |
+| unary `P.$(T)` | `P.$(T)` NORMAL | `P.$(T)` NORMAL | **CURRENT** |
+| unary `P.[any](T)` | `P.[any](T)` DEMAND | `P.[any-taint](T)` NORMAL | **CHANGED** |
+| ND `P.$(T)` | `P.$(T)` NORMAL (not MUST: breaks the meaning) | `P.$(T)` DEMAND | **CHANGED** |
+| ND `P.[any](T)` | `P.[any](T)` DEMAND | refined seeds, DEMAND (B3) | **CHANGED** (B3) |
 
 With B1, a CURRENT ND `$` seed would make false MUST facts. Example: the
-reversed source rule S3 turns `P.$(T)` NORMAL into `Q.[any-taint](T')`
-NORMAL.
+reversed source rule S3 turns `P.$(T)` NORMAL into `Q.[any-taint](T')`.
 
 ### II.3 Sink seeds
 
@@ -492,7 +574,7 @@ NORMAL.
 | K2 | `ContainsMarkOnAnyField(P, T)`, unary | `P.[any-taint](T)` NORMAL, exclusion `∅` | **CHANGED**: CURRENT `P.[any](T)` DEMAND | DEMAND witness |
 | K3 | `ContainsMark(P, T)`, ND | `P.$(T)` DEMAND | **CHANGED**: CURRENT `P.$(T)` NORMAL | DEMAND witness (refinement is the identity) |
 | K4 | `ContainsMarkOnAnyField(P, T)`, ND | `refinedSeeds(literal)` DEMAND (§II.10) | **CHANGED**: CURRENT `P.[any](T)` DEMAND | DEMAND witness and `captured(literal)` (§I.3) |
-| K5 | a literal that is unary and ND | as K1 or K2 | **CHANGED** with K2 | DEMAND witness |
+| K5 | a literal that is unary and ND | as K1 or K2 | as K1 or K2 | DEMAND witness |
 | K6 | no positive literal; unconditional sink | none: the zero demand covers it | **CURRENT** | DEMAND witness |
 | K7 | end-fact trigger of alternative `A` (row S8 fired) | K1–K4 with no capture | as K1–K4 | none |
 | K8 | GROUP-projected sink (`fullSinkSeedsFor`) | K1–K4 with no capture | as K1–K4 | DEMAND witness |
@@ -507,7 +589,7 @@ NORMAL.
 | --- | --- | --- | --- | --- |
 | S1 | unconditional source `zero → P.tail(T)`, tail `$` or `[any-taint]` | zero (zero demand); a source hit | **CURRENT** | none (run `n+1` fires the source only if hit) |
 | S2 | conditional source, unary `ContainsMark(Q, T')` | `Q.$(T')` in targetLayer | **CURRENT** | none |
-| S3 | conditional source, unary `ContainsMarkOnAnyField(Q, T')` | `Q.[any-taint](T')` in targetLayer | **CHANGED**: CURRENT `Q.[any](T')` DEMAND | none |
+| S3 | conditional source, unary `ContainsMarkOnAnyField(Q, T')` | `Q.[any-taint](T')` NORMAL if targetLayer is NORMAL; `Q.[any](T')` DEMAND otherwise | **CHANGED**: CURRENT `Q.[any](T')` DEMAND | none |
 | S4 | conditional source, ND `ContainsMark(Q, T')` | `Q.$(T')` DEMAND | **CURRENT** | none (refinement is the identity) |
 | S5 | conditional source, ND `ContainsMarkOnAnyField(Q, T')` | `refinedSeeds(literal)` DEMAND (§II.10) | **CHANGED**: CURRENT `Q.[any](T')` DEMAND | `captured(literal)` at the source occurrence |
 | S6 | pass rule `P → Q` (no `AnyField`) | the reversed result in targetLayer | **CURRENT** | none |
@@ -531,52 +613,86 @@ requirement has no exclusion (`BackMust.transferXB`). Program:
 ### II.5 Calls into callees
 
 > A requirement enters a callee as the added fact of the emission (§I.4,
-> ap.md §9.2). Today no backward added fact is MUST (W8 (d)), so the must
-> rows of §I.4 do not occur; with B1 they do.
+> ap.md §9.2). Today no backward added fact has the `[any-taint]` tail (W8
+> (d)), so the must rows of §I.4 do not occur; with B1 they do.
 
-entryDemand: from the demand edge that forward run `n−1` handed off for the callee.
+entryDemand: from the demand edge that forward run `n−1` handed off for the callee (§I.9).
 
-| # | requirement | entryDemand | premise, mustPremise | startFact | callee summary | Status |
+| # | requirement | entryDemand | premise, must premise | startFact | callee summary | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| C1 | `x.[any-taint]/E(T)` NORMAL | concrete `x.[any](T)` | `x.[any-taint]/E(T)`, true (e5) | NORMAL | end-exact; a record (B2); hand-off: D1 | **NEW**: CURRENT requirement `x.[any](T)` DEMAND → C4 |
-| C2 | `x.[any-taint]/E(T)` NORMAL | concrete `x.$(T)` | `x.$(T)`, false (e6) | NORMAL | pair-exact record; caller results NORMAL | **CHANGED**: CURRENT same summary, caller results DEMAND |
-| C3 | `x.[any-taint]/E(T)` NORMAL | abstract `x.[any](*)` | `x.*/{}(*)`, false (e7) | identity, NORMAL | pair-exact FLOW record; caller results NORMAL | **CHANGED**: CURRENT caller results DEMAND |
-| C4 | `x.[any](T)` DEMAND | concrete `x.[any](T)` | `x.[any](T)`, false (e2 type) | DEMAND | DEMAND, selected | **CURRENT** |
-| C5 | `x.$(T)` NORMAL | concrete | `x.$(T)`, false (e1 type) | NORMAL | pair-exact record | **CURRENT** |
+| C1 | `x.[any-taint]/E(T)` NORMAL | concrete `x.[any](T)` | `x.[any-taint]/E(T)`, yes (e5) | NORMAL | end-exact; a record (B2); hand-off: D1 | **NEW**: CURRENT requirement `x.[any](T)` DEMAND → C4 |
+| C2 | `x.[any-taint]/E(T)` NORMAL | concrete `x.$(T)` | `x.$(T)`, no (e6) | NORMAL | pair-exact record; caller results NORMAL | **CHANGED**: CURRENT same summary, caller results DEMAND |
+| C3 | `x.[any-taint]/E(T)` NORMAL | abstract `x.[any](*)` | `x.*/{}(*)`, no (e7) | identity, NORMAL | pair-exact FLOW record; caller results NORMAL | **CHANGED**: CURRENT caller results DEMAND |
+| C4 | `x.[any](T)` DEMAND | concrete `x.[any](T)` | may `[any]` premise (e2 type) | DEMAND | DEMAND, selected | **CURRENT** |
+| C5 | `x.$(T)` NORMAL | concrete | `x.$(T)`, no (e1 type) | NORMAL | pair-exact record | **CURRENT** |
 
 The results return to the caller by §II.8 (backward summaries and records)
 and §II.9 (forward records).
 
 ### II.6 Backward summaries and records (B2)
 
-> Which backward summaries the record store keeps. B2 adds the MUST
-> records. **CHANGED** (ap.md §8.7 R1, `RecordStore.kt:274-277`).
+> Which backward summaries the record store keeps. B2 adds the summaries
+> with an `[any-taint]` premise or leaf. **CHANGED** (ap.md §8.7 R1,
+> `RecordStore.kt:274-277`).
 
 ```text
 record(backward summary):
-  CURRENT   layer = NORMAL ∧ one premise ∧ premise ≠ zero ∧ ¬mustPremise ∧ no [any-taint] leaf
+  CURRENT   layer = NORMAL ∧ one premise ∧ premise ≠ zero ∧ premise.tail ≠ [any-taint] ∧ no [any-taint] leaf
   B2        layer = NORMAL ∧ one premise ∧ premise ≠ zero
 ```
 
 A backward MUST record is end-exact on `reverse(P)` and not pair-exact
-(`BackMust.recsB_must_end`, `CexMustPair.cex_must_pair`). A zero-premise
-backward summary is never a record: a seed relates `zero` to each seed
-location, which is not a flow.
+(`BackMust.recsB_must_end`, `CexMustPair.cex_must_pair`). A backward record
+whose premise is not must is pair-exact, also with `[any-taint]` leaves
+(`BackMust.recsB_pair`). A zero-premise backward summary is never a record:
+a seed relates `zero` to each seed location, which is not a flow.
 
 | Ex | method | summary | Meaning | Record | Status |
 | --- | --- | --- | --- | --- | --- |
-| m4 | identity `M(arg0)` | `backward: arg0.[any-taint](T) →must arg0.[any-taint](T)` NORMAL | end-exact (the source of `arg0.f` is `arg0.f`); `(arg0.f, arg0.g)` is a pair and no flow: not pair-exact | B2: yes | **NEW**: CURRENT no |
+| m4 | identity `M(arg0)` | `backward: arg0.[any-taint](T) →must arg0.[any-taint](T)` NORMAL | end-exact (the source of `arg0.f` is `arg0.f`); `(arg0.f, arg0.g)` is a pair and no flow: not pair-exact | B2: yes (§I.8 case 3) | **NEW**: CURRENT no |
+| m6 | `ret = source(T) if ContainsMarkOnAnyField(arg0, U)` | `backward: ret.$(T) → arg0.[any-taint](U)` NORMAL | pair-exact: each `arg0.suffix(U)` flows to `ret(T)` | B2: yes (§I.8 case 4) | **NEW**: CURRENT the leaf is `[any]` DEMAND, no record |
 | m5 | `sink(arg0)` in `M` | `backward: zero → arg0.[any-taint](T)` NORMAL | a seed path, not a flow | no | **CURRENT** rule (the `[any-taint]` seed is B1) |
 
 ### II.7 Restriction in the backward run
 
-> The backward run cuts its summaries by the operation of §I.6. **CURRENT**
-> for may summaries. The `[any-taint]` rows of §I.6 now apply to backward
-> summaries: **NEW** (B1, B2).
+> The backward run cuts its summaries by the demand edges of §I.9 with the
+> operation of §I.6. A demand edge has no layer, so it does not decide MUST
+> or MAY: the backward facts do (B1). **CURRENT** for may summaries; the
+> `[any-taint]` rows are **NEW** (B1, B2).
 
 | Ex | summary | demand edge | restrict | Status |
 | --- | --- | --- | --- | --- |
 | r12 ✓ | `backward: ret.[any-taint](T) →must arg0.[any-taint](T)` NORMAL | `(ret.[any](T), arg0.h.$(T))` | `arg0.h.$(T)` NORMAL | **NEW** (B1, B2) |
+
+**Case: entryDemand from a MAY conclusion, exitDemand from a MUST premise.**
+Forward run `n−1` has the DEMAND summary q5:
+
+```text
+forward:  arg0.[any-taint]/{g}(U) →must ret.[any](T)   DEMAND      selected (§I.9)
+demand edge in backward run n:   entryDemand = ret.[any](T)     from the MAY conclusion
+                                 exitDemand  = arg0.[any](U)    from the MUST premise; {g} dropped
+```
+
+| Ex | Side | backward fact | Result | Rule | Status |
+| --- | --- | --- | --- | --- | --- |
+| dm1 ✓ | entry: emission (§I.4) | requirement `ret.f.$(T)` NORMAL | premise `ret.f.$(T)`, start NORMAL | added below `[any]` | **CURRENT** |
+| — | entry | requirement `ret.[any](T)` DEMAND | may `[any]` premise, start DEMAND | e2 type | **CURRENT** |
+| dm2 ✓ | entry | requirement `ret.[any-taint]/{h}(T)` NORMAL | must premise `ret.[any-taint]/{h}(T)`, start NORMAL | added at `[any]`, MUST added fact | **NEW** (B1) |
+| dm3 ✓ | exit: restriction (§I.6) | conclusion `arg0.g.$(U)` NORMAL | `arg0.g.$(U)` NORMAL | below `[any]`: kept, although the forward premise excluded `g` | **CURRENT** |
+| dm4 ✓ | exit | conclusion `arg0.[any-taint]/{h}(U)` NORMAL | `arg0.[any-taint]/{h}(U)` NORMAL | at, `[any]` demand keeps `{h}` | **NEW** (B1) |
+| dm5 ✓ | exit | conclusion `arg0.g.$(T)` NORMAL | none | the marks do not meet | **CURRENT** |
+| dm6 ✓ | exit, with exitDemand `arg0.*/{g}(U)` | conclusion `arg0.g.$(U)` NORMAL | none | the exclusion kept | not proposed |
+
+* The MAY entryDemand does not make a MUST requirement MAY (dm2), and the MUST
+  exitDemand does not make a backward conclusion MUST (dm3). Only the
+  backward facts and the rules of §I.7 decide the layer.
+* The hand-off drops `{g}`, so the cut keeps more pairs than the exact
+  intersection (dm3). This is sound. Keeping the exclusion (dm6) is narrower;
+  it is not proposed: it can remove demand, a result change outside B1–B3.
+* The opposite case, entryDemand from a MUST conclusion: a backward
+  zero-premise summary `zero → arg0.[any-taint](T)` (q3) gives forward run
+  `n+1` the entryDemand `arg0.[any](T)`. A forward MUST added fact
+  `arg0.[any-taint](T)` then gets a must premise (e5). **CURRENT** rule.
 
 ### II.8 Applying backward summaries and records
 
@@ -594,29 +710,9 @@ that source can be outside `ret.f`.
 
 ### II.9 Reading forward records
 
-> A requirement at the forward exit of a method reads the forward records of
-> that method in the opposite orientation (ap.md §8.7 R3). **CURRENT**.
-
-```text
-special must view: guard  both marks concrete; each tail $ or [any-taint]; at least one [any-taint]; a $ side has exclusion ∅
-  new premise from the old conclusion:   x.p.$(T) kept;            x.p.[any-taint]/E(T)  →  x.p.*/E(T)
-  new conclusion from the old premise:   P.$(U) kept, NORMAL;      P.[any-taint]/E2(U)   →  P.[any](U) DEMAND, E2 forgotten
-other shapes: generic leaf reversal (ap.md §9.1)
-result layer = requirement layer ⊔ new conclusion layer
-```
-
-| Forward record | View | Lean |
-| --- | --- | --- |
-| `$` premise | exact converse, NORMAL | `CurrentMustReverse.exact_converse` |
-| must premise | sound, DEMAND only, not exact | `CurrentMustReverse.must_application_demand`, `AnyTaintExact.CexRev.cex_rev` |
-
-Examples (all **CURRENT**):
-
-| Ex | forward record | view | requirement | Result |
-| --- | --- | --- | --- | --- |
-| v1 ✓ | `forward: arg0.$(T) → ret.[any-taint](T)` NORMAL | `ret.*/{}(T) → arg0.$(T)` NORMAL | `ret.h.$(T)` NORMAL | `arg0.$(T)` NORMAL (exact) |
-| v2 ✓ | `forward: arg0.[any-taint](T) →must ret.g.[any-taint](T)` NORMAL | `ret.g.*/{}(T) → arg0.[any](T)` DEMAND | `ret.g.h.$(T)` NORMAL | `arg0.[any](T)` DEMAND |
-| v3 ✓ | `forward: arg0.[any-taint](T) →must ret.f.$(T)` NORMAL | `ret.f.$(T) → arg0.[any](T)` DEMAND | `ret.f.$(T)` NORMAL | `arg0.[any](T)` DEMAND |
+> A requirement at the forward exit of a method reads the forward records
+> of that method: §I.8 cases 1, 2 and 2' (examples v1, v2, v3, v6).
+> **CURRENT**.
 
 ### II.10 ND refinement (B3)
 
@@ -625,10 +721,11 @@ Examples (all **CURRENT**):
 
 ```text
 refinedSeeds(literal) =
-  { meet(input, literal) | (input, inputExclusion) ∈ captured(literal) } minus none     if captured(literal) ≠ ∅
-  { literal }                                                                          if captured(literal) = ∅   (fallback)
+  { meet(input, literal) | input ∈ captured(literal) } minus none     if captured(literal) ≠ ∅
+  { literal }                                                        if captured(literal) = ∅   (fallback)
 meet: the concrete row of §I.4
-layer: DEMAND;  the meet exclusion is forgotten;  a $ literal: meet(input, literal) = literal (no change)
+each seed DEMAND (W6: an [any] or [any-taint] meet becomes [any], its exclusion forgotten)
+a $ literal: meet(input, literal) = literal (no change)
 ```
 
 | Claim | Lean (`BackND`) |
@@ -648,7 +745,7 @@ Literals of c2: literal 0 is `a.$(T)`, literal 1 is `b.[any](U)`.
 | Ex | captured | Seeds | Note | Status |
 | --- | --- | --- | --- | --- |
 | n1 ✓ | 0: `a.$(T)`; 1: `b.f.$(U)`, `b.g.h.$(U)` | `a.$(T)`, `b.f.$(U)`, `b.g.h.$(U)` DEMAND | two field chains replace `b.[any](U)` | **NEW** |
-| n2 ✓ | 1: `b.g.[any]/{k}(U)` | `a.$(T)` (fallback), `b.g.[any](U)` DEMAND | the code forgets `{k}`; the model keeps it | **NEW** |
+| n2 ✓ | 1: `b.g.[any-taint]/{k}(U)` | `a.$(T)` (fallback), `b.g.[any](U)` DEMAND | the code forgets `{k}`; the model keeps it | **NEW** |
 | n3 ✓ | none | `a.$(T)`, `b.[any](U)` DEMAND | the fallback | **CURRENT** except the K3 layer |
 | n4 ✓ | 1: `b.f.*/{}(*)`, not in normal form | `a.$(T)` DEMAND only | literal 1 gets no seed: the normal form is necessary | excluded by the **NEW** normal form |
 
@@ -666,7 +763,7 @@ can remove a demand that the CURRENT behaviour keeps (S-H6).
 ```text
 CURRENT   backward NORMAL non-zero singleton summaries: records, not selected; zero-premise summaries: selected
 B2 + F77  selected(backward: premise →must conclusion NORMAL) = false
-          ⇒ run n+1 does not analyse the callee again; it reads only the view of §I.8, which is DEMAND
+          ⇒ run n+1 does not analyse the callee again; it reads only the view of §I.8 case 3, which is DEMAND
 ```
 
 Counterexample `BackMustView.Cex.cex_drop_forward_demand`:
@@ -681,8 +778,8 @@ forward run 3, field limit 3, H1 (view only):          ret.[any](T) DEMAND     �
 ```
 
 Only a backward MUST record has this defect. A forward must record goes to
-the backward run, which confirms nothing; a `$`-premise record has an exact
-view.
+the backward run, which confirms nothing; a record with a `$` premise has an
+exact view (cases 1, 4).
 
 | Option | selected(backward must summary) | Results | Demand rows removed | Status |
 | --- | --- | --- | --- | --- |
@@ -698,8 +795,8 @@ H1. A case ⇒ withdraw H1; the owners of §II.1 then need H3.
 
 | Ex | summary | selected | Run `n+1` (forward) | Status |
 | --- | --- | --- | --- | --- |
-| q3 | `backward: zero → arg0.[any-taint](T)` NORMAL | yes | demand from the zero row | **CURRENT** rule |
-| q4 | `backward: ret.[any-taint](T) →must arg0.[any-taint](T)` NORMAL | F77: no | H1: no callee demand, only v4; H2: callee demand edge `(arg0.[any](T), ret.[any](T))` | **OPEN** |
+| q3 | `backward: zero → arg0.[any-taint](T)` NORMAL | yes | demand edge `(arg0.[any](T), zero)` | **CURRENT** rule |
+| q4 | `backward: ret.[any-taint](T) →must arg0.[any-taint](T)` NORMAL | F77: no | H1: no callee demand, only v4; H2: demand edge `(arg0.[any](T), ret.[any](T))` | **OPEN** |
 
 ### II.12 Semantic scope
 
@@ -708,21 +805,21 @@ H1. A case ⇒ withdraw H1; the owners of §II.1 then need H3.
 
 | Change | Rows | Status |
 | --- | --- | --- |
-| unary `[any]` sink seed: DEMAND → NORMAL MUST | K2 | **CHANGED** |
+| unary `[any]` sink seed: `[any]` DEMAND → `[any-taint]` NORMAL | K2 | **CHANGED** |
 | ND `$` sink seed: NORMAL → DEMAND (user correction, 26 Nov) | K3 | **CHANGED** |
-| reversed unary `[any]` source literal: DEMAND → targetLayer MUST | S3 | **CHANGED** |
+| reversed unary `[any]` source literal: `[any]` DEMAND → `[any-taint]` in targetLayer | S3 | **CHANGED** |
 | caller results through C2/C3 records: DEMAND → NORMAL | C2, C3 | **CHANGED** |
 | backward MUST added fact, must premise, NORMAL start | C1 | **NEW** |
-| backward MUST records: R1, R4, forward view | C1, §II.6, §II.8, §I.8 | **NEW** |
+| backward records with an `[any-taint]` premise or leaf; R4 and the MUST rule; forward views | §II.6, §II.8, §I.8 cases 3, 4 | **NEW** |
 | ND `[any]` seeds and reversed ND `[any]` literals refined; capture | K4, S5, §II.10, §I.3 | **NEW** |
 | hand-off of a backward MUST record | §II.11 | **OPEN** |
 
-Unchanged (**CURRENT**): the forward run except §I.3 and §I.8 (transfer,
-sink check, layers, records, views of forward records, confirmation,
-traces); S4, S5 layer, S7; unary `$` seeds (K1); zero rows; source hits;
-C4, C5; the operations of §I.4, §I.6, §I.7; field limits and FL+1 caps;
-hand-off normalization; W8 (d) for demand patterns (`Demand.kt:41`,
-`DemandStore.kt:449`); confirmed and provisional results (the gate).
+Unchanged (**CURRENT**): the forward run except §I.3 and §I.8 cases 3, 4
+(transfer, sink check, layers, records, views of forward records,
+confirmation, traces); the four tails and W6; S4, S5 layer, S7; unary `$`
+seeds (K1); zero rows; source hits; C4, C5; the operations of §I.4, §I.6,
+§I.7; the demand patterns of §I.9; field limits and FL+1 caps; confirmed
+and provisional results (the gate).
 
 | Documented invariant | Change |
 | --- | --- |
@@ -731,6 +828,7 @@ hand-off normalization; W8 (d) for demand patterns (`Demand.kt:41`,
 | ap.md §6.5 ("the backward run has no `[any-taint]` premise") | C1 |
 | ap.md §9.2 ("an `[any]` seed is demand-layer") | a seed is NORMAL ⇔ its literal is unary (K1–K4) |
 | ap.md §8.7 R1, `RecordStore.kt:274-277` | §II.6 |
+| ap.md §8.7 R3 (the special view is for forward records) | also backward records: §I.8 cases 3, 4 |
 | ap.md §9.1 backward W6 | applies only to the MAY class and to `[any]` results not made by B1 |
 | ap.md §8.5 F77 | H1: none; H1g, H2: one condition |
 | Lean iteration theorems (`Backward.B_general`, `W6.iteration_general6`, `Handoff*`) | not proved again with B2 records; `Handoff.CrossK .any = False`, so `Handoff.demOfN` hands a must record off (= H2) |
@@ -739,12 +837,12 @@ hand-off normalization; W8 (d) for demand patterns (`Demand.kt:41`,
 | --- | --- | --- |
 | S-H1 strong-update exclusion: a backward `[any-taint]/E` gets an exclusion, `[any]` DEMAND does not (t1, t2); the forward demand can get narrower | B1 | base model: same facts (`W6.D6_same_shape`, `summaryDemand_iff`); refined model: not proved; shadow-compare the normalized pieces |
 | S-H2 EXACT cleaner on a MUST leaf (`Clean.kt:187-192`) now runs backward | B1 | not modelled |
-| S-H3 a must premise and an `[any]` premise at one path are separate keys | B1 | cost only |
+| S-H3 a must premise and a may `[any]` premise at one path are separate keys | B1 | cost only |
 | S-H4 MUST is relative to `positive(condition)` | B1 | the forward run uses it too |
 | S-H5 B1 under-approximates MUST (`nd_overlap_suff`) | B1 | sound |
 | S-H6 refined seeds narrow the forward demand | B3 | not proved; measure |
-| S-H7 new record shape `(backward, [any-taint] premise)` | B2 | no dedup change for the existing shapes |
-| S-H8 traces through a backward must view | B2 with H1 | check in the prototype |
+| S-H7 new record shapes `(backward, [any-taint] premise or leaf)` | B2 | no dedup change for the existing shapes |
+| S-H8 traces through a backward record view (cases 3, 4) | B2 | case 4 is exact; case 3 only with H1; check in the prototype |
 | S-H9 the callee summaries of an ND `$` seed become DEMAND: no backward `$` record, selected rows (q2 type) instead of the exact view; forward run `n+1` analyses those callees under a `$` demand | B1 (K3) | results expected equal, not proved; more rows per backward run while the witness is DEMAND; measure |
 
 ### II.13 Proofs and model notes (backward)
@@ -758,15 +856,17 @@ hand-off normalization; W8 (d) for demand patterns (`Demand.kt:41`,
 | K2 seed is NORMAL; bound: MUST added fact; must premise with NORMAL start; CURRENT: DEMAND start | `must_seed_normal`, `bindX_star_any`, `must_seed_bound`, `must_premise_normal`, `demand_seed_contrast`, `demand_premise_start` |
 | each NORMAL backward summary with a non-zero premise is pair-exact (may) or end-exact (must) on `reverse(P)` | `DBX_edgeOK_nz`, `edge_exactBX_gen`, `no_zero_summaryX` |
 | backward records are exact, also over a run sequence | `recsB_exact`, `recsB_must_end`, `recsB_pair`, `recsB_next`, `recsBSeq_ok` |
-| in `P`: each location of the conclusion flows forward to some location of the premise | `backMust_forward`, `backPair_forward`, `backMust_forward_valid`, `backMust_forward_seq` |
+| in `P`: each location of the conclusion flows forward to some location of the premise (must), each pair is a forward flow (may) | `backMust_forward`, `backPair_forward`, `backMust_forward_valid`, `backMust_forward_seq` |
+| §I.8 case 4: the forward view is exact | `BackView.backExactView_forward` |
 | S3 is MUST for each target kind; S4, S7 are not MUST, sound MAY | `BackCond.rev_unary_source_must`, `rev_nd_source_not_must`, `rev_pass_any_not_must`, `rev_pass_may_sound` |
 | the seed layer is the MUST status (B1, K3 included) | `BackCond.reqs_normal_must`, `reqs_nd_demand` |
 | D1 counterexample and H1g guard | `BackMustView.Cex.cex_drop_forward_demand`, `guard_keeps_normal` |
 
-Hypotheses of `DBX_edgeOK_nz`: those of `DRX_edgeOK` on `reverse(P)`, plus
-`NoZeroIn` (= `NoZeroBack P`, I11 (c); necessary: `BExact.CexZeroBack`) and
-`SeedsConcB` (necessary: `BExact.CexSeed`); record hypotheses only off the
-zero base, discharged by `recsBSeq_ok`.
+Hypotheses of `DBX_edgeOK_nz` and `backExactView_forward`: those of
+`DRX_edgeOK` on `reverse(P)`, plus `NoZeroIn` (= `NoZeroBack P`, I11 (c);
+necessary: `BExact.CexZeroBack`) and `SeedsConcB` (necessary:
+`BExact.CexSeed`); record hypotheses only off the zero base, discharged by
+`recsBSeq_ok`.
 
 * The run-level model gives the forward `AnyField` target the meaning "each
   location", so its reversal is exact there and the theorems hold for each
