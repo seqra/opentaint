@@ -1,17 +1,19 @@
 /-
-  ApSpec.BackCondRules — the rule-level reference semantics of rule B1: the layer of a backward
-  SEED and of a REVERSED SOURCE LITERAL (spec interpreter.md §4.1, §4.2, §4.9 RULE ROLES;
-  ap.md §9.2).
+  ApSpec.BackCondRules — the rule-level reference semantics of the SEED LAYER rule: the layer of a
+  backward SEED and of a REVERSED SOURCE LITERAL (spec backward-condition-progress.md §II.2;
+  interpreter.md §4.1, §4.2, §4.9 RULE ROLES; ap.md §9.2).
 
   A backward fact is a REQUIREMENT: taint at a covered location reaches a sink. A requirement in
   the normal layer is a MUST: EVERY covered location is sufficient by itself. A requirement in the
   demand layer is a MAY: it covers every location that can take part, but a covered location need
-  not be sufficient. Rule B1: the seed of a sink literal, and the reversal of a conditional source
-  literal, of an alternative with exactly ONE positive literal is a MUST, also with the `[any]`
-  tail (`ContainsMarkOnAnyField`). The literals of an alternative with two or more positive
-  literals (a conjunctive sink, an ND source) and the reversal of a pass rule with an `AnyField`
-  target stay MAY. This module justifies the MUST case and shows by executable counterexamples
-  that the MAY cases cannot be MUST.
+  not be sufficient. The seed layer rule (26 November, after the user withdrew the backward
+  `[any-taint]`): a literal gives a NORMAL requirement if and only if it is a whole alternative
+  (unary) AND has the `$` tail. A unary `[any]` literal (`ContainsMarkOnAnyField`) is MUST as a set
+  (`any_seed_exact`), but the backward run has no `[any-taint]`, so W6 makes it DEMAND. The
+  literals of an alternative with two or more positive literals (a conjunctive sink, an ND source;
+  also a `$` literal) and the reversal of a pass rule with an `AnyField` target are MAY. This
+  module justifies the MUST case and shows by executable counterexamples that the MAY cases cannot
+  be MUST.
 
   The model.
     * `covB p l`: the Boolean coverage test, `covB_iff : covB p l = true ↔ p.covers l` for EVERY
@@ -54,15 +56,16 @@
     * `rev_pass_any_not_must_gen`, `rev_pass_any_not_must` (7): the reversal of a pass rule with
       an `AnyField` target is not MUST, also its `$` result; `rev_pass_may_sound`: it is a sound
       MAY cover.
-    * The AP form (8): `reqs_normal_must`, `reqs_normal_rev_must` (every NORMAL B1 requirement is
-      MUST, for the seed and for the reversed source), `reqs_may_cover` (all B1 requirements
-      together are a sound MAY cover), `reqs_unary_exact` (all-unary condition: the normal seeds
-      cover EXACTLY the sufficient set), `reqs_nd_demand`, `any_seed_exact` (the seed of
-      `ContainsMarkOnAnyField(P,T)` is `P.[any](T)` in the normal layer and covers exactly the
+    * The AP form (8): `reqs_normal_must`, `reqs_normal_rev_must` (every NORMAL requirement is
+      MUST, for the seed and for the reversed source), `reqs_may_cover` (all requirements
+      together are a sound MAY cover), `reqs_normal_iff` (NORMAL if and only if unary with the
+      `$` tail), `reqs_unary_exact` (all-unary condition: the requirements of both layers cover
+      EXACTLY the sufficient set), `reqs_nd_demand`, `any_seed_exact` (the seed of
+      `ContainsMarkOnAnyField(P,T)` is `P.[any](T)` in the DEMAND layer and covers exactly the
       sufficient locations).
     * Precision note: `nd_overlap_suff`: B1 is a sound under-approximation of MUST, not the exact
       MUST set: a two-literal alternative can have a sufficient location (both literals cover it);
-      B1 seeds it as MAY.
+      the rule seeds it as MAY.
     * `empty_alt_suff`, `suff_covered`: an alternative with no positive literal makes every
       location sufficient (TRUE: no seed, the zero demand covers it); otherwise a sufficient
       location is covered by a literal.
@@ -80,11 +83,11 @@
       monotone Boolean function; `Cond` is its DNF. "An alternative with one positive literal" is
       a DNF cube of size one: a leaf with an AND-free path to the root gives one. The converse
       needs absorption (`(A ∨ B) ∧ (A ∨ C)` has the cube `[A, A]`), which production does not
-      do; B1 then gives MAY, which is sound (MAY is always sound, `reqs_may_cover`; see the
+      do; the rule then gives MAY, which is sound (MAY is always sound, `reqs_may_cover`; see the
       precision note). The model does not model the DAG walk that finds the leaves.
     * Negated literals: production projects residual negated mark literals to true before it
       evaluates the condition, as the forward run does. `Cond` is the condition AFTER this
-      projection (`proj`, `firesS_proj`). B1's MUST is relative to the projected condition, the
+      projection (`proj`, `firesS_proj`). The MUST claim is relative to the projected condition, the
       condition that the forward run reports with. Against the signed condition, a single positive
       literal next to a negated one is NOT sufficient (`signed_not_must`): the MUST claim does not
       hold for the unprojected semantics, which is also not monotone.
@@ -566,24 +569,33 @@ theorem rev_pass_any_not_must :
     rev_pass_any_not_must_gen (by decide) (by decide), by decide⟩
 #print axioms rev_pass_any_not_must
 
-/-! ## 8. The AP form of the B1 requirements -/
+/-! ## 8. The AP form of the seed layer rule -/
 
-/-- The B1 requirements of the positive literals of one alternative (the sink seeds, and the
-    reversed literals of a source): one literal gives its pattern in the NORMAL layer (MUST); two
-    or more give one DEMAND-layer pattern per literal (MAY); none gives none. -/
+/-- The tail is `$`. -/
+def exactB (p : PFact) : Bool :=
+  match p.kind with
+  | .exact => true
+  | _      => false
+
+/-- The requirements of the positive literals of one alternative (the sink seeds, and the reversed
+    literals of a source): one literal with the `$` tail gives its pattern in the NORMAL layer
+    (MUST); one `[any]` literal gives its pattern in the DEMAND layer (W6: the backward run has no
+    `[any-taint]`); two or more give one DEMAND-layer pattern per literal (MAY); none gives none. -/
 def litReqs : List PFact → List AFact
   | []             => []
-  | [p]            => [⟨p, false⟩]
+  | [p]            => [⟨p, !exactB p⟩]
   | p :: q :: rest => (p :: q :: rest).map (fun r => ⟨r, true⟩)
 
-/-- The B1 requirements of a condition. -/
+/-- The requirements of a condition. -/
 def reqs (c : Cond) : List AFact := c.flatMap litReqs
 
 theorem litReqs_normal {alt : List PFact} {s : AFact} (hs : s ∈ litReqs alt)
-    (hd : s.demand = false) : alt = [s.fact] := by
+    (hd : s.demand = false) : alt = [s.fact] ∧ exactB s.fact = true := by
   match alt, hs with
   | [p], hs =>
-    rw [List.mem_singleton.mp hs]
+    rw [List.mem_singleton.mp hs] at hd ⊢
+    simp only [Bool.not_eq_false'] at hd
+    exact ⟨rfl, hd⟩
   | p :: q :: rest, hs =>
     obtain ⟨r, _, rfl⟩ := List.mem_map.mp hs
     exact Bool.noConfusion hd
@@ -592,11 +604,11 @@ theorem mem_litReqs {alt : List PFact} {p : PFact} (hp : p ∈ alt) :
     ∃ s ∈ litReqs alt, s.fact = p := by
   match alt, hp with
   | [r], hp =>
-    exact ⟨⟨r, false⟩, List.mem_singleton.mpr rfl, (List.mem_singleton.mp hp).symm⟩
+    exact ⟨⟨r, !exactB r⟩, List.mem_singleton.mpr rfl, (List.mem_singleton.mp hp).symm⟩
   | r :: r' :: rest, hp =>
     exact ⟨⟨p, true⟩, List.mem_map.mpr ⟨p, hp, rfl⟩, rfl⟩
 
-/-- A two-or-more literal alternative gives only demand-layer requirements. -/
+/-- A two-or-more literal alternative gives only demand-layer requirements (also `$` literals). -/
 theorem reqs_nd_demand {alt : List PFact} (h : 2 ≤ alt.length) :
     ∀ s ∈ litReqs alt, s.demand = true := by
   match alt, h with
@@ -606,26 +618,40 @@ theorem reqs_nd_demand {alt : List PFact} (h : 2 ≤ alt.length) :
     rfl
 #print axioms reqs_nd_demand
 
-/-- (8) Every NORMAL B1 seed is a MUST: each location it covers is sufficient. -/
+/-- (8) A literal has a NORMAL requirement if and only if it is a whole alternative (unary) and has
+    the `$` tail. (A literal that is unary and ND, K5, also has DEMAND requirements.) -/
+theorem reqs_normal_iff {c : Cond} {p : PFact} :
+    (⟨p, false⟩ : AFact) ∈ reqs c ↔ [p] ∈ c ∧ exactB p = true := by
+  constructor
+  · intro hs
+    obtain ⟨alt, halt, hs'⟩ := List.mem_flatMap.mp hs
+    obtain ⟨h1, h2⟩ := litReqs_normal hs' rfl
+    exact ⟨h1 ▸ halt, h2⟩
+  · intro ⟨h1, he⟩
+    refine List.mem_flatMap.mpr ⟨[p], h1, ?_⟩
+    simp only [litReqs, he, Bool.not_true, List.mem_singleton]
+#print axioms reqs_normal_iff
+
+/-- (8) Every NORMAL seed is a MUST: each location it covers is sufficient. -/
 theorem reqs_normal_must {c : Cond} {s : AFact} {l : Loc} (hs : s ∈ reqs c)
     (hd : s.demand = false) (hl : s.fact.covers l) : Suff c l := by
   obtain ⟨alt, halt, hs'⟩ := List.mem_flatMap.mp hs
-  have := litReqs_normal hs' hd
+  have := (litReqs_normal hs' hd).1
   subst this
   exact unary_seed_must halt hl
 #print axioms reqs_normal_must
 
-/-- (8) Every NORMAL B1 reversed source literal is a MUST. -/
+/-- (8) Every NORMAL reversed source literal is a MUST. -/
 theorem reqs_normal_rev_must {c : Cond} {s : AFact} {q t : Loc} {targets : List Loc}
     {D : State → Prop} (hs : s ∈ reqs c) (hd : s.demand = false) (hq : s.fact.covers q)
     (ht : t ∈ targets) (hD : ReqSuff D t) : ReqSuff (D ∘ post c targets) q := by
   obtain ⟨alt, halt, hs'⟩ := List.mem_flatMap.mp hs
-  have := litReqs_normal hs' hd
+  have := (litReqs_normal hs' hd).1
   subst this
   exact rev_unary_source_must halt hq ht hD
 #print axioms reqs_normal_rev_must
 
-/-- (8) All B1 requirements together (both layers) are a sound MAY cover. -/
+/-- (8) All requirements together (both layers) are a sound MAY cover. -/
 theorem reqs_may_cover {c : Cond} {st : State} {l : Loc}
     (hf : fires c st = true) (hl : l ∈ st) (hmin : fires c (st.erase l) = false) :
     ∃ s ∈ reqs c, s.fact.covers l := by
@@ -634,22 +660,18 @@ theorem reqs_may_cover {c : Cond} {st : State} {l : Loc}
   exact ⟨s, List.mem_flatMap.mpr ⟨alt, halt, hs⟩, hc⟩
 #print axioms reqs_may_cover
 
-/-- (8) An all-unary condition: every B1 requirement is normal, and together they cover EXACTLY
-    the sufficient locations. -/
+/-- (8) An all-unary condition: the requirements of both layers cover EXACTLY the sufficient
+    locations (the `[any]` ones in the DEMAND layer). -/
 theorem reqs_unary_exact {lits : List PFact} {l : Loc} :
-    (∀ s ∈ reqs (lits.map (fun p => [p])), s.demand = false) ∧
-    ((∃ s ∈ reqs (lits.map (fun p => [p])), s.fact.covers l) ↔
-      Suff (lits.map (fun p => [p])) l) := by
-  refine ⟨fun s hs => ?_, ⟨fun ⟨s, hs, hc⟩ => ?_, fun h => ?_⟩⟩
-  · obtain ⟨alt, halt, hs'⟩ := List.mem_flatMap.mp hs
-    obtain ⟨p, _, rfl⟩ := List.mem_map.mp halt
-    rw [List.mem_singleton.mp hs']
+    (∃ s ∈ reqs (lits.map (fun p => [p])), s.fact.covers l) ↔
+      Suff (lits.map (fun p => [p])) l := by
+  refine ⟨fun ⟨s, hs, hc⟩ => ?_, fun h => ?_⟩
   · obtain ⟨alt, halt, hs'⟩ := List.mem_flatMap.mp hs
     obtain ⟨p, hp, rfl⟩ := List.mem_map.mp halt
     rw [List.mem_singleton.mp hs'] at hc
     exact unary_seed_must (List.mem_map.mpr ⟨p, hp, rfl⟩) hc
   · obtain ⟨p, hp, hc⟩ := (unary_cond_exact rfl).mp h
-    refine ⟨⟨p, false⟩, List.mem_flatMap.mpr ⟨[p], List.mem_map.mpr ⟨p, hp, rfl⟩, ?_⟩, hc⟩
+    refine ⟨⟨p, !exactB p⟩, List.mem_flatMap.mpr ⟨[p], List.mem_map.mpr ⟨p, hp, rfl⟩, ?_⟩, hc⟩
     exact List.mem_singleton.mpr rfl
 #print axioms reqs_unary_exact
 
@@ -663,11 +685,11 @@ theorem anyLit_covers_iff {b : Base} {π : List Acc} {T : Mark} {l : Loc} :
 #print axioms anyLit_covers_iff
 
 /-- (8) The seed of a single `ContainsMarkOnAnyField(P, T)` literal is `P.[any] (T)` in the
-    NORMAL layer, and it covers EXACTLY the sufficient locations: every location at or below `P`
-    with the mark `T`. The same holds for it as one unary alternative among others (`c` any
-    condition with `[anyLit b π T] ∈ c`: `unary_seed_must`). -/
+    DEMAND layer (W6), although it covers EXACTLY the sufficient locations: every location at or
+    below `P` with the mark `T`. The backward run gives up this MUST for the refined MAY seeds
+    (spec §II.5). -/
 theorem any_seed_exact (b : Base) (π : List Acc) (T : Mark) :
-    reqs [[anyLit b π T]] = [⟨anyLit b π T, false⟩] ∧
+    reqs [[anyLit b π T]] = [⟨anyLit b π T, true⟩] ∧
     ∀ l, ((anyLit b π T).covers l ↔ Suff [[anyLit b π T]] l) ∧
       (Suff [[anyLit b π T]] l ↔ l.base = b ∧ (∃ σ, l.path = π ++ σ) ∧ l.mark = T) := by
   refine ⟨rfl, fun l => ?_⟩

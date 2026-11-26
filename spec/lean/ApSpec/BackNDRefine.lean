@@ -494,6 +494,53 @@ theorem refine_forget_inside {lits : List PFact} {cap : Cap} (hcc : CapConc cap)
 
 #print axioms refine_forget_inside
 
+/-! ## 4b. Theorem 3b: progress (the seed follows the forward facts) -/
+
+/-- The meet path extends the path of the captured input and the path of the literal: it is the
+    longer of the two. -/
+theorem meet_deepens {d a p : PFact} {aex pex : Excl} (h : meetLit d a aex = some (p, pex)) :
+    a.path <+: p.path ∧ d.path <+: p.path := by
+  obtain ⟨_, _, ⟨hq, h1⟩ | ⟨x, r, hq, _, h2⟩ | ⟨r, _, hq, _, _, h3⟩⟩ :=
+    RCore.emitM_cases (HandoffX.emitX_emitM h)
+  · rw [h1]; exact ⟨List.prefix_refl _, by rw [hq]; exact List.prefix_refl _⟩
+  · rw [h2]; exact ⟨List.prefix_refl _, ⟨x :: r, hq.symm⟩⟩
+  · rw [h3]; exact ⟨⟨r, hq.symm⟩, List.prefix_refl _⟩
+
+#print axioms meet_deepens
+
+/-- THEOREM 3b, PROGRESS. A refined seed that is not a fallback comes from a captured input `a`
+    of its literal `d`. It lies inside `a` and inside `d`, also with the exclusions forgotten (the
+    backward `[any]` has none), and its path extends the paths of both. So the seed is never
+    shallower than the forward fact that the run before captured: a field that the forward run
+    added below the demand stays in the next demand. A fallback seed is the literal. -/
+theorem refine_deepens {lits : List PFact} {cap : Cap} (hcc : CapConc cap) {j : Nat} {p : PFact}
+    {pex : Excl} (hm : (j, p, pex) ∈ refine lits cap) :
+    ∃ d, lits[j]? = some d ∧
+      ((hasCap cap j = false ∧ p = d) ∨
+       (∃ a aex, (j, a, aex) ∈ cap ∧ a.path <+: p.path ∧ d.path <+: p.path ∧
+          ∀ l, p.covers l → a.covers l ∧ d.covers l)) := by
+  rcases mem_refine3.mp hm with ⟨hd, hc, _⟩ | ⟨a, aex, d, hma, hd, hme⟩
+  · exact ⟨p, hd, Or.inl ⟨hc, rfl⟩⟩
+  · obtain ⟨t, ht⟩ := hcc _ hma
+    obtain ⟨h1, h2⟩ := meet_deepens hme
+    refine ⟨d, hd, Or.inr ⟨a, aex, hma, h1, h2, fun l hl => ?_⟩⟩
+    obtain ⟨hdl, hal⟩ := emitM_inside_conc (HandoffX.emitX_emitM hme) ht hl
+    exact ⟨hal, hdl⟩
+
+#print axioms refine_deepens
+
+/-- The depth form of THEOREM 3b: a seed from a captured input is at least as deep as that input
+    and as its literal. -/
+theorem refine_depth {lits : List PFact} {cap : Cap} (hcc : CapConc cap) {j : Nat} {p : PFact}
+    {pex : Excl} (hm : (j, p, pex) ∈ refine lits cap) (hc : hasCap cap j = true) :
+    ∃ d a aex, lits[j]? = some d ∧ (j, a, aex) ∈ cap ∧
+      a.path.length ≤ p.path.length ∧ d.path.length ≤ p.path.length := by
+  obtain ⟨d, hd, ⟨hc', _⟩ | ⟨a, aex, hma, h1, h2, _⟩⟩ := refine_deepens hcc hm
+  · rw [hc] at hc'; cases hc'
+  · exact ⟨d, a, aex, hd, hma, h1.length_le, h2.length_le⟩
+
+#print axioms refine_depth
+
 /-! ## 5. Theorem 4: soundness -/
 
 theorem forwardCaptured_weak {lits : List PFact} {cap : Cap} {Real : Nat → Loc → Prop}

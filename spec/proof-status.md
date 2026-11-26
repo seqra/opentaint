@@ -2,39 +2,31 @@
 
 ## Checked future candidate: backward condition progress, 26 November 2026
 
-The [specification](backward-condition-progress.md) proposes B1 (the layer of
-a backward requirement is the MUST status of its literal: a unary literal,
-also `[any]`, gives N; an ND literal, also `$`, gives D), B2 (backward MUST
-records), B3 (ND seeds refined by captured forward inputs) and B4 (summary
-application by implication, with rule F: the code tail `ANY_TAINT` is split
-into `ALL_FIELDS` (`[all-fields]`) and `ANY_FIELD` (`[any-field]`), each fact
-carries its tail, and a must record read by the other run gives a NORMAL
-result of the foreign tail). It is a
-spec only: no prototype, no measurement, no WI rule. Seven constructive
-modules build with the package (`lake build`, 207 jobs); the `#print axioms`
-audits show only `propext` and `Quot.sound`:
-[FieldQuant.lean](lean/ApSpec/FieldQuant.lean) (no axiom: the implication
-table between `$`, `[all-fields]` and `[any-field]` ends, the nine edge
-shapes, B4 soundness and exactness for both runs, the counterexamples
-that keep the foreign kinds from acting like `[any-taint]`, and
-`Cex.case2_needs_all_fields`, `case3_needs_any_field`,
-`same_bits_two_meanings`: one tail read by the run direction is unsound),
-[BackCondRules.lean](lean/ApSpec/BackCondRules.lean) (rule level: unary
-literals are MUST, ND and pass-rule `AnyField` reversals are not),
-[BackMustRun.lean](lean/ApSpec/BackMustRun.lean) (`DBX_edgeOK_nz`,
-`recsB_exact`, `backMust_forward`: backward MUST records are end-exact),
-[BackMustView.lean](lean/ApSpec/BackMustView.lean) (the native-kind view is
-DEMAND; `Cex.cex_drop_forward_demand`: with F77 unchanged a confirmation is
-lost), [BackRecordViews.lean](lean/ApSpec/BackRecordViews.lean) (the NORMAL
-records of both runs are valid edges of `FieldQuant`; record reversal cases
-2, 3 with B4; `backExactView_forward` for case 4),
-[BackNDRefine.lean](lean/ApSpec/BackNDRefine.lean) (`refine_sound`,
-`refine_mono`, `iteration_general_refined`),
-[BackCondExamples.lean](lean/ApSpec/BackCondExamples.lean) (51 principal
-examples of the spec operations, checked by `decide`). Open: decisions D1
-(spec §II.11) and D2 (transfer of the foreign kinds, §I.9), the hidden
-changes S-H1, S-H2, S-H6, S-H8, S-H9, S-H10, S-H11, S-H12, the ND form of the
-backward contract, and B4 over a whole run (proved per edge only).
+The [specification](backward-condition-progress.md) keeps the backward run
+MAY for `[any]` literals (no backward `[any-taint]`) and makes its seeds
+follow the forward facts. Seed layer: a requirement is NORMAL if and only if
+its literal is unary with the `$` tail (an ND `$` seed becomes DEMAND).
+Capture: the forward run keeps the inputs of all completed combinations of
+each `[any]` literal. Refinement: each `[any]` literal of a sink or of a
+reversed conditional source is seeded with its meets with those inputs.
+Progress guarantee: a seed lies inside its captured input and keeps its
+path, so the next demand is at least as deep as the forward cut (proved per
+operation; argued over rounds). It is a spec only: no prototype, no
+measurement, no WI rule. Three constructive modules build with the package
+(`lake build`, 203 jobs); the `#print axioms` audits show only `propext` and
+`Quot.sound`: [BackCondRules.lean](lean/ApSpec/BackCondRules.lean) (rule
+level: `reqs_normal_iff`, `reqs_normal_must`, `reqs_nd_demand`,
+`any_seed_exact`), [BackNDRefine.lean](lean/ApSpec/BackNDRefine.lean)
+(`refine_sound`, `refine_mono`, `iteration_general_refined`, and the
+progress lemmas `meet_deepens`, `refine_deepens`, `refine_depth`),
+[BackCondExamples.lean](lean/ApSpec/BackCondExamples.lean) (principal
+examples, checked by `decide`). The earlier revisions (backward MUST seeds
+and records, application by implication, two field tails; commits
+531e87d3c to fddd06d8d) were withdrawn by the user, and their modules
+`BackMustRun`, `BackMustView`, `BackRecordViews`, `FieldQuant` were removed.
+Open: the round argument over runs, the ND form of the backward contract,
+and the hidden changes S-H1 (narrower forward demand), S-H2 (ND `$` seed
+rows), S-H3 (capture heap cost).
 
 ## Checked future candidate: exact call-stage result merging, 1 November 2026
 
