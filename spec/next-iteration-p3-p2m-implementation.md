@@ -1,6 +1,14 @@
 # Implementation proposal: P3 and P2' of the next iteration
 
-Status: PROPOSAL, 25 November 2026. Base: `saloed/bidirectional` at
+Status: IMPLEMENTED, 25 November 2026. P3 is landed (`0919c7500`). P2' was
+landed (`ad7b06320`) and reverted (`c89881544`) by the memory clause of
+§6.3: the landing measurement kept all results, but the memo added
+0.8-1.4 GB to the heap after GC of the long loop runs (Conductor runs 6-8,
+Stirling-PDF stall runs) and 70% to the GC pause time of Conductor
+([landing report](../docs/reports/bidirectional-p3-p2m-landing-20261125.md)).
+The next proposal (N4 of
+[bidirectional-next-iteration-20261126.md](../docs/design/bidirectional-next-iteration-20261126.md))
+bounds the memo footprint. Proposal date: 25 November 2026. Base: `saloed/bidirectional` at
 `29c78d5c3`. Its core is identical to `c5702ba4f` and to the measured
 group A core `5804e44dd`, so the prototype gates of the spec apply to
 this base. This proposal follows

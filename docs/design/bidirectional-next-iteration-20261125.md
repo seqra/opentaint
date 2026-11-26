@@ -1,6 +1,9 @@
 # Next iteration: proposals after the group A landing
 
-Status: PROPOSAL, 25 November 2026. P1-P3 are measured and classified in
+Status: P3 LANDED (`0919c7500`); P2' LANDED AND REVERTED (`c89881544`,
+memory gate); next proposals in
+[bidirectional-next-iteration-20261126.md](bidirectional-next-iteration-20261126.md).
+Proposal date: 25 November 2026. P1-P3 are measured and classified in
 [spec/next-iteration-p1-p3.md](../../spec/next-iteration-p1-p3.md): P3 is WI;
 P2 (replay once per pair) is withdrawn and replaced by P2' (restriction memo);
 P1 is withdrawn as an OOM fix (the mark repetition does not drive the OOM).

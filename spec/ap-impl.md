@@ -1102,6 +1102,32 @@ class StoreInterners(refs: SoftReferenceManager, cancellation: Cancellation) {
 }
 ```
 
+**The landed `FlowGroup.addAll` (P3, `0919c7500`).** The sketch above shows one `add`. The code has `addAll`: one
+insert (T1/T2/T2'/T4 as above), then a loop of passes, MUST merges (`mergeMustOverlap`) and promotions until a pass
+changes nothing, then the delta against the rows that the call read. A pass replaces each row by its compact form
+minus the covers of the other rows. Invariant F: between two calls, each list is a fixpoint of the pass, the MUST
+merge and the promotion. Only `addAll` writes the lists, and they start empty. `addAll` uses F:
+
+```text
+addAll(t):
+  before = copy(list)
+  insert(t)
+  if list has the same row objects as before: return []        // F: nothing more changes
+  clean = before
+  loop:                                                         // a clean row needs only the changed rows
+    list = [ r in clean ? r − covers(changed rows) : compact(r) − covers(other rows) for r in list ]
+    clean = list
+    if mergeMustOverlap(list): continue
+    p = promotion(list); if p == null: break
+    insert(p)
+  return [ r − (rows of before with the group key of r) for r in list ]   // no final pass
+on a throw: list = before; rethrow
+```
+
+The stored rows, their order and the delta are those of the native loop (spec/next-iteration-p3-p2m-implementation.md
+§3; Lean `ApSpec.FlowGroupInc` in `FlowGroupIncremental.lean`, `ApSpec.FlowGroupImpl` in
+`FlowGroupIncrementalImpl.lean`).
+
 Subtraction can remove the last any leaf. The TAINT factory then gives the remainder Empty E, so destination lookup
 uses `rest.exclusion`. Looking up the input E can append a second Empty-E tree. For example, a stored
 `x.[any-taint](T1)` subsumes the any leaf of incoming `{x.[any-taint]/{f}(T1), x.g.$(T2)}`. Merge the remaining

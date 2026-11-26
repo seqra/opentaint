@@ -1,6 +1,14 @@
 # Next iteration: P1, P2 and P3
 
-Status: PROPOSAL, 25 November 2026. This spec follows
+Status: P3 LANDED (`0919c7500`); P2' LANDED (`ad7b06320`) AND REVERTED
+(`c89881544`), 25 November 2026. The implementation followed
+[next-iteration-p3-p2m-implementation.md](next-iteration-p3-p2m-implementation.md).
+The landing measurement
+([report](../docs/reports/bidirectional-p3-p2m-landing-20261125.md)) kept
+all results for both rules. P2' failed the memory gate: about 0.9 KB of
+live heap per memo entry, +0.8-1.4 GB of heap after GC in the long loop
+runs, GC pauses +70% on Conductor.
+Spec date: 25 November 2026. This spec follows
 [design-guide.md](design-guide.md) and [proof-guide.md](proof-guide.md).
 Source: proposals P1-P3 of
 [bidirectional-next-iteration-20261125.md](../docs/design/bidirectional-next-iteration-20261125.md),
@@ -48,6 +56,14 @@ The proposals P1-P3 assumed three causes. The measurements confirm one
 (P3). They refute two (P2: no repeated pairs; P1: the mark repetition
 does not drive the OOM). They find one new exact rule (P2'), and one
 real trigger without a rule yet (P2'').
+
+Landing, 25 November 2026: P3 is landed (`0919c7500`). P2' was landed
+(`ad7b06320`) and reverted (`c89881544`). Both kept all results. P2' made
+Conductor run 4 -51% and run 6 -19%, but its memo held about 0.9 KB of
+live heap per entry: +0.8-1.4 GB of heap after GC in Conductor runs 6-8
+and in the Stirling-PDF stall runs, and GC pauses of 34.5 s against
+20.3 s on Conductor. The prototypes did not show this, because they had
+no class histogram and no GC comparison per run.
 
 ## 1. Method and gate
 
