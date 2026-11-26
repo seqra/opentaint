@@ -136,7 +136,7 @@ var pruneGroups = []struct {
 	title string
 	kinds []string
 }{
-	{"Analyzer and autobuilder", []string{utils.StaleKindAnalyzer, utils.StaleKindAutobuilder}},
+	{"Analyzer, autobuilder, and Go server", []string{utils.StaleKindAnalyzer, utils.StaleKindAutobuilder, utils.StaleKindGoServer}},
 	{"Built-in ruleset", []string{utils.StaleKindRules}},
 	{"JDK and JRE", []string{utils.StaleKindJDK, utils.StaleKindJRE}},
 	{"Cached project models", []string{utils.StaleKindModel}},
@@ -217,7 +217,7 @@ func init() {
 	pruneCmd.Flags().BoolVar(&pruneDryRun, "dry-run", false, "Show what would be deleted without deleting")
 	pruneCmd.Flags().BoolVar(&pruneYes, "yes", false, "Skip the confirmation prompt")
 	pruneCmd.Flags().BoolVar(&pruneAll, "all", false, "Prune all categories")
-	pruneCmd.Flags().BoolVar(&pruneArtifacts, "artifacts", false, "Prune old analyzer and autobuilder versions")
+	pruneCmd.Flags().BoolVar(&pruneArtifacts, "artifacts", false, "Prune old analyzer, autobuilder, and Go server versions")
 	pruneCmd.Flags().BoolVar(&pruneRules, "rules", false, "Prune old built-in ruleset versions")
 	pruneCmd.Flags().BoolVar(&pruneJDK, "jdk", false, "Prune old JDK and JRE versions")
 	pruneCmd.Flags().BoolVar(&pruneModels, "models", false, "Prune cached project models")

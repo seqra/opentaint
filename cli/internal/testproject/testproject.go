@@ -9,9 +9,22 @@ import (
 	"github.com/seqra/opentaint/internal/utils"
 )
 
-// Exists reports whether dir already holds a test project.
-func Exists(dir string) bool {
-	info, err := os.Stat(filepath.Join(dir, buildFileName))
+// Language returns the language of the test project in dir, java or go, or "" when dir holds
+// no test project.
+func Language(dir string) string {
+	switch {
+	case isFile(filepath.Join(dir, buildFileName)):
+		return "java"
+	case isFile(filepath.Join(dir, goModuleFileName)):
+		return "go"
+	}
+	return ""
+}
+
+const goModuleFileName = "go.mod"
+
+func isFile(path string) bool {
+	info, err := os.Stat(path)
 	return err == nil && !info.IsDir()
 }
 

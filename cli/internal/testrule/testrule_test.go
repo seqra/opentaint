@@ -28,3 +28,20 @@ func TestScaffoldWritesAnEmptyRuleTest(t *testing.T) {
 		t.Errorf("rule-test.yaml must hold an empty tests list, got:\n%s", data)
 	}
 }
+
+func TestScaffoldGoWritesMarkers(t *testing.T) {
+	dir := t.TempDir()
+	if err := ScaffoldGo(dir); err != nil {
+		t.Fatalf("ScaffoldGo: %v", err)
+	}
+	for _, path := range []string{
+		filepath.Join("taint", "taint.go"),
+		filepath.Join(MarkersDir, filepath.FromSlash(genericGoSourceRule)),
+		filepath.Join(MarkersDir, filepath.FromSlash(genericGoSinkRule)),
+		"rule-test.yaml",
+	} {
+		if _, err := os.Stat(filepath.Join(dir, path)); err != nil {
+			t.Errorf("missing %s: %v", path, err)
+		}
+	}
+}

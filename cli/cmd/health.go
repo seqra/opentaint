@@ -16,6 +16,7 @@ var (
 	healthAutobuilder bool
 	healthAnalyzer    bool
 	healthRules       bool
+	healthGoServer    bool
 	healthRuntime     bool
 )
 
@@ -41,6 +42,7 @@ func init() {
 	healthCmd.Flags().BoolVar(&healthAutobuilder, "autobuilder", false, "Print only the autobuilder JAR path")
 	healthCmd.Flags().BoolVar(&healthAnalyzer, "analyzer", false, "Print only the analyzer JAR path")
 	healthCmd.Flags().BoolVar(&healthRules, "rules", false, "Print only the built-in ruleset path")
+	healthCmd.Flags().BoolVar(&healthGoServer, "go-server", false, "Print only the Go server path")
 	healthCmd.Flags().BoolVar(&healthRuntime, "runtime", false, "Print only the Java runtime path")
 }
 
@@ -55,11 +57,14 @@ func runHealth() {
 	if healthRules {
 		requested = append(requested, "rules")
 	}
+	if healthGoServer {
+		requested = append(requested, "goserver")
+	}
 	if healthRuntime {
 		requested = append(requested, "runtime")
 	}
 	if len(requested) == 0 {
-		requested = []string{"autobuilder", "analyzer", "rules", "runtime"}
+		requested = []string{"autobuilder", "analyzer", "rules", "goserver", "runtime"}
 	}
 
 	components := make([]healthComponent, 0, len(requested))
@@ -120,8 +125,8 @@ func componentItems(c healthComponent, markMissing bool) []any {
 
 func resolveHealthComponent(key string) healthComponent {
 	switch key {
-	case "autobuilder", "analyzer":
-		return resolveJarComponent(key)
+	case "autobuilder", "analyzer", "goserver":
+		return resolveArtifactComponent(key)
 	case "rules":
 		return resolveRulesComponent()
 	case "runtime":
@@ -131,11 +136,13 @@ func resolveHealthComponent(key string) healthComponent {
 	}
 }
 
-func resolveJarComponent(kind string) healthComponent {
+// resolveArtifactComponent resolves a downloadable artifact (a JAR or the
+// go-ssa-server binary) through the standard tiers and the dev override.
+func resolveArtifactComponent(kind string) healthComponent {
 	def := globals.ArtifactByKind(kind)
 	path, err := utils.ResolveJarPath(def)
 	version := utils.ArtifactVersion(def)
-	return healthComponent{def.Name, version, path, err == nil && utils.PathExists(path)}
+	return healthComponent{def.Label(), version, path, err == nil && utils.PathExists(path)}
 }
 
 func resolveRulesComponent() healthComponent {

@@ -13,13 +13,6 @@ import (
 )
 
 func TestModelProjectSuggestions(t *testing.T) {
-	initStep := func(path string) output.Suggestion {
-		return output.Suggestion{
-			Description: "To create a model project, run:",
-			Command:     "opentaint model init " + path + " --dependency <group:artifact:version>",
-		}
-	}
-
 	tests := []struct {
 		name string
 		err  error
@@ -28,12 +21,18 @@ func TestModelProjectSuggestions(t *testing.T) {
 		{
 			name: "no models",
 			err:  &models.ProjectNeededError{Path: ".opentaint/dataflow", Reason: models.NoModels},
-			want: []output.Suggestion{initStep(".opentaint/dataflow")},
+			want: []output.Suggestion{{
+				Description: "To create a model project, run:",
+				Command:     "opentaint model init .opentaint/dataflow --language <language> --dependency <library>",
+			}},
 		},
 		{
 			name: "plain classes",
 			err:  &models.ProjectNeededError{Path: "models/classes", Reason: models.PlainClasses},
-			want: []output.Suggestion{initStep("<model-project>")},
+			want: []output.Suggestion{{
+				Description: "To create a model project, run:",
+				Command:     "opentaint model init <model-project> --language java --dependency <group:artifact:version>",
+			}},
 		},
 		{
 			name: "other error",

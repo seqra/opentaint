@@ -40,6 +40,9 @@ type JavaRunner interface {
 	WithImageType(imageType AdoptiumImageType) JavaRunner
 	WithSkipVerify(skipVerify bool) JavaRunner
 	WithDebugOutput(writer DebugLineWriter) JavaRunner
+	// WithExtraEnv adds environment variables to every Java command, with any resolution
+	// strategy. They override the inherited ones, and a later call wins for the same key.
+	WithExtraEnv(env map[string]string) JavaRunner
 	GetJavaResolutions() []JavaResolution
 	// EnsureJava resolves and downloads Java if needed, returning the path.
 	// Call this before wrapping ExecuteJavaCommand in a spinner to avoid
@@ -59,6 +62,7 @@ type javaRunner struct {
 	skipVerify        bool
 	resolvedJavaPath  string
 	debugOutput       DebugLineWriter
+	extraEnv          map[string]string
 }
 
 type JavaResolution func() (string, ResolutionStrategy, error)
@@ -205,6 +209,18 @@ func (j *javaRunner) executeWithJava(javaPath string, strategy ResolutionStrateg
 		output.LogDebug("Using clean environment for managed Java version strategy")
 	}
 
+	// The System strategy leaves cmd.Env nil to inherit the environment, so start from
+	// os.Environ(). os/exec takes the last value of a key, so the extra values win.
+	if len(j.extraEnv) > 0 {
+		if cmd.Env == nil {
+			cmd.Env = os.Environ()
+		}
+		for key, value := range j.extraEnv {
+			cmd.Env = append(cmd.Env, key+"="+value)
+			output.LogDebugf("Injecting %s into command environment", key)
+		}
+	}
+
 	output.LogDebugf("Executing Java command: %s %v (full: %s)", javaPath, args, strings.Join(cmdArgs, " "))
 
 	// Create pipes for stdout and stderr
@@ -289,6 +305,19 @@ func (j *javaRunner) WithSkipVerify(skipVerify bool) JavaRunner {
 
 func (j *javaRunner) WithDebugOutput(writer DebugLineWriter) JavaRunner {
 	j.debugOutput = writer
+	return j
+}
+
+func (j *javaRunner) WithExtraEnv(env map[string]string) JavaRunner {
+	if len(env) == 0 {
+		return j
+	}
+	if j.extraEnv == nil {
+		j.extraEnv = make(map[string]string, len(env))
+	}
+	for key, value := range env {
+		j.extraEnv[key] = value
+	}
 	return j
 }
 
