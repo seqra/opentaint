@@ -1,8 +1,6 @@
 package server
 
-// Temporary diagnostics for the flaky casdoor benchmark: measures heap usage
-// after each BuildProgram phase. Run with:
-//   GOIR_MEM_DIR=/path/to/project GOIR_MEM_OUT=/path/to/out go test -run TestMemPhases -v -timeout 30m
+// Usage: GOIR_MEM_DIR=/path/to/project go test -run TestMemPhases -v
 
 import (
 	"fmt"
@@ -46,11 +44,7 @@ func liveAfterGC(t *testing.T, out, phase string, start time.Time) {
 	}
 }
 
-// buildSSAProjectOnly mirrors buildSSAWithPackageErrorsAndEnv but, instead of
-// prog.Build() for every package in the import graph, builds SSA bodies only
-// for the project's own packages (the only bodies emitted in PROJECT mode).
-// Dependency functions referenced from project code are still created (and
-// built on demand by the SSA builder when needed for generic instantiation).
+// buildSSAProjectOnly is buildSSA that builds SSA bodies only for project packages.
 func buildSSAProjectOnly(req *pb.BuildProgramRequest) (*ssa.Program, []*ssa.Package, map[string]*packages.Package, error) {
 	cfg := &packages.Config{
 		Mode: packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes |
@@ -110,7 +104,6 @@ func TestMemPhases(t *testing.T) {
 		_ = os.MkdirAll(out, 0o755)
 	}
 
-	// Sample peak heap in the background.
 	var peakHeap, peakSys uint64
 	stop := make(chan struct{})
 	go func() {
