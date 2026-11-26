@@ -18,6 +18,7 @@ import org.opentaint.jvm.sast.project.ProjectAnalysisOptions
 import org.opentaint.jvm.sast.util.directory
 import org.opentaint.util.newFile
 import java.nio.file.Path
+import kotlin.io.path.exists
 import kotlin.io.path.extension
 import kotlin.io.path.walk
 import kotlin.time.Duration.Companion.seconds
@@ -37,6 +38,9 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
     )
         .path()
         .multiple()
+
+    private val passthroughApproximationLoadReport: Path? by option(help = "Output file for the passThrough approximation load report")
+        .newFile()
 
     private val semgrepRuleSet: List<Path> by option(help = "Semgrep YAML rule file or directory containing YAML rules")
         .path()
@@ -110,6 +114,7 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
 
     private val commonOptions get() = CommonAnalysisOptions(
         customApproximationConfig = passthroughApproximations.flatMap { collectYamlConfigs(it) },
+        passthroughApproximationLoadReport = passthroughApproximationLoadReport,
         semgrepRuleSet = semgrepRuleSet,
         semgrepRuleLoadTrace = semgrepRuleLoadTrace,
         semgrepSeverity = semgrepRuleSeverity,
@@ -147,10 +152,14 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         useDefaultModels = !disableDefaultGoModels,
     )
 
-    private fun collectYamlConfigs(path: Path): List<Path> = path.walk()
-        .filter { it.extension in arrayOf("yaml", "yml") }
-        .sortedBy { it.toString() }
-        .toList()
+    private fun collectYamlConfigs(path: Path): List<Path> {
+        // the model loader reports a missing path
+        if (!path.exists()) return listOf(path)
+        return path.walk()
+            .filter { it.extension in arrayOf("yaml", "yml") }
+            .sortedBy { it.toString() }
+            .toList()
+    }
 
     companion object {
         @JvmStatic

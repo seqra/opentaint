@@ -7,10 +7,20 @@ import com.charleskorn.kaml.YamlNode
 import com.charleskorn.kaml.parseToYamlNode
 import java.io.InputStream
 
+class LoadedModels<Rules>(
+    val config: Rules,
+    val count: Int,
+    val warnings: List<String>,
+)
+
 interface ConfigurationLoader<Rules> {
     val language: String
 
     fun load(node: YamlNode): Rules
+
+    /** [LoadedModels.count] counts the loaded passThrough entries, not the rules produced from them. */
+    fun loadModels(node: YamlNode): LoadedModels<Rules>
+
     fun join(config: List<Rules>): Rules
 
     fun load(stream: InputStream): Rules? {

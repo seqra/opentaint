@@ -1,15 +1,11 @@
 package org.opentaint.common.sast.rules
 
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import mu.KLogging
 import org.opentaint.common.sast.CommonAnalysisOptions
 import org.opentaint.semgrep.pattern.SemgrepLoadTrace
 import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.conversion.LanguageStrategy
-import java.nio.file.Path
 import kotlin.io.path.extension
-import kotlin.io.path.outputStream
 import kotlin.io.path.readText
 import kotlin.io.path.relativeTo
 import kotlin.io.path.walk
@@ -21,17 +17,8 @@ fun CommonAnalysisOptions.loadSemgrepRules(
 ): SemgrepRuleLoader.RuleLoadResult {
     val trace = SemgrepLoadTrace()
     val rules = parseSemgrepRules(strategies, trace)
-    semgrepRuleLoadTrace?.let { writeTrace(it, trace) }
+    semgrepRuleLoadTrace?.let { writeJson(it, SemgrepLoadTrace.serializer(), trace.compressed(), "semgrep load trace") }
     return rules
-}
-
-private fun writeTrace(traceFile: Path, trace: SemgrepLoadTrace) {
-    val compressed = trace.compressed()
-    runCatching {
-        val pretty = Json { prettyPrint = true }
-        traceFile.outputStream().bufferedWriter().use { it.write(pretty.encodeToString(compressed)) }
-        logger.info { "Wrote semgrep load trace to $traceFile" }
-    }.onFailure { logger.error(it) { "Failed to write semgrep load trace to $traceFile: ${it.message}" } }
 }
 
 private fun CommonAnalysisOptions.parseSemgrepRules(

@@ -20,7 +20,6 @@ import org.opentaint.common.sast.toProjectStatus
 import org.opentaint.config.JavaDefaultConfigLoader
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
-import org.opentaint.dataflow.configuration.jvm.serialized.JavaConfigurationLoader
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 import org.opentaint.ir.api.jvm.JIRMethod
@@ -49,10 +48,12 @@ class TestProjectAnalyzer(
     results: ProjectAnalysisTestResults,
     javaOptions: ProjectAnalysisOptions,
     private val loadedRules: SemgrepRuleLoader.RuleLoadResult,
+    passThroughModels: List<SerializedTaintConfig>,
 ): TestProjectAnalyzerBase<JavaTestSampleInfo, ProjectAnalysisContext, JavaProject, JIRMethod, JIRInst, SerializedItem, SerializedTaintConfig>(
     project,
     results,
-    javaOptions.common.copy(storeSummaries = false)
+    javaOptions.common.copy(storeSummaries = false),
+    passThroughModels,
 ) {
     private val projectAnalysisContexts = initializeProjectModulesAnalysisContexts(project, javaOptions)
 
@@ -68,7 +69,6 @@ class TestProjectAnalyzer(
     override fun testInfoCls(): KClass<JavaTestSampleInfo> = JavaTestSampleInfo::class
     override fun testInfoSerializer() = JavaTestSampleInfo.serializer()
     override fun defaultConfigLoader() = JavaDefaultConfigLoader
-    override fun configLoader() = JavaConfigurationLoader()
 
     private var status: ProjectAnalysisStatus = ProjectAnalysisStatus.OK
 

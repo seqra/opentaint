@@ -5,6 +5,7 @@ import com.charleskorn.kaml.YamlMap
 import com.charleskorn.kaml.YamlNode
 import com.charleskorn.kaml.YamlScalar
 import org.opentaint.dataflow.configuration.ConfigurationLoader
+import org.opentaint.dataflow.configuration.LoadedModels
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
@@ -12,9 +13,12 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
 class GoConfigurationLoader : ConfigurationLoader<GoSerializedTaintConfig> {
     override val language: String get() = "go"
 
-    override fun load(node: YamlNode): GoSerializedTaintConfig {
-        val passThrough = parsePassRules(node)
-        return GoSerializedTaintConfig(passThrough = passThrough)
+    override fun load(node: YamlNode): GoSerializedTaintConfig = loadModels(node).config
+
+    override fun loadModels(node: YamlNode): LoadedModels<GoSerializedTaintConfig> {
+        val warnings = mutableListOf<String>()
+        val entries = parsePassRules(node) { warnings += it }
+        return LoadedModels(GoSerializedTaintConfig(passThrough = entries.flatten()), entries.size, warnings)
     }
 
     override fun join(config: List<GoSerializedTaintConfig>) = GoSerializedTaintConfig(
@@ -26,25 +30,36 @@ class GoConfigurationLoader : ConfigurationLoader<GoSerializedTaintConfig> {
         cleaner = config.flatMap { it.cleaner },
     )
 
-    private fun parsePassRules(node: YamlNode): List<GoSerializedRule.PassThrough> {
+    private fun parsePassRules(
+        node: YamlNode,
+        warn: (String) -> Unit,
+    ): List<List<GoSerializedRule.PassThrough>> {
         val passNode = (node as? YamlMap)?.field("passThrough") as? YamlList ?: return emptyList()
-        return passNode.items.flatMap { it.toPassThroughRules() }
+        return passNode.items.mapIndexedNotNull { i, item ->
+            item.toPassThroughRules { reason -> warn("passThrough[$i] dropped: $reason") }
+        }
     }
 
-    private fun YamlNode.toPassThroughRules(): List<GoSerializedRule.PassThrough> {
-        val map = this as? YamlMap ?: return emptyList()
-        val function = (map.field("function") as? YamlMap)?.toGoFunction() ?: return emptyList()
+    private fun YamlNode.toPassThroughRules(dropped: (String) -> Unit): List<GoSerializedRule.PassThrough>? {
+        fun drop(reason: String): Nothing? {
+            dropped(reason)
+            return null
+        }
 
-        val copyList = map.field("copy") as? YamlList ?: return emptyList()
+        val map = this as? YamlMap ?: return drop("not a map")
+        val functionMap = map.field("function") as? YamlMap ?: return drop("no function")
+        val function = functionMap.toGoFunction(::drop) ?: return null
+
+        val copyList = map.field("copy") as? YamlList ?: return drop("no copy")
         val actions = copyList.items.mapNotNull { it.toPassAction() }
-        if (actions.isEmpty()) return emptyList()
+        if (actions.isEmpty()) return drop("no copy with a valid from and to")
 
         // For receiver methods the engine's qualified name is `($recvType).$method`,
         // where `$recvType` is the call-site displayName — includes a leading `*`
         // for pointer receivers and omits it for value receivers. Emit both forms
         // so the rule fires regardless of how the call site spells the receiver.
         val pkgNames = if (function.receiver) {
-            val typeName = function.type ?: return emptyList()
+            val typeName = function.type ?: return drop("no function.type for a receiver method")
             listOf(
                 "(${function.`package`}.${typeName})",
                 "(*${function.`package`}.${typeName})",
@@ -74,9 +89,9 @@ class GoConfigurationLoader : ConfigurationLoader<GoSerializedTaintConfig> {
     private fun YamlMap.field(name: String): YamlNode? =
         entries.entries.firstOrNull { it.key.content == name }?.value
 
-    private fun YamlMap.toGoFunction(): GoConfigFunction? {
-        val pkg = (field("package") as? YamlScalar)?.content ?: return null
-        val name = (field("name") as? YamlScalar)?.content ?: return null
+    private fun YamlMap.toGoFunction(drop: (String) -> Nothing?): GoConfigFunction? {
+        val pkg = (field("package") as? YamlScalar)?.content ?: return drop("no function.package")
+        val name = (field("name") as? YamlScalar)?.content ?: return drop("no function.name")
         val type = (field("type") as? YamlScalar)?.content
         val receiver = (field("receiver") as? YamlScalar)?.toBoolean() ?: false
         return GoConfigFunction(pkg, type, name, receiver)

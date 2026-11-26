@@ -10,7 +10,6 @@ import org.opentaint.config.JavaDefaultConfigLoader
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
-import org.opentaint.dataflow.configuration.jvm.serialized.JavaConfigurationLoader
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 import org.opentaint.ir.api.jvm.JIRMethod
@@ -31,8 +30,9 @@ class JirProjectAnalyzer(
     results: ProjectAnalysisResults,
     private val jirOptions: ProjectAnalysisOptions,
     loadedRules: SemgrepRuleLoader.RuleLoadResult,
+    passThroughModels: List<SerializedTaintConfig>,
 ): ProjectAnalyzer<ProjectAnalysisContext, JavaProject, JIRMethod, JIRInst, SerializedItem, SerializedTaintConfig>(
-    project, results, jirOptions.common, loadedRules
+    project, results, jirOptions.common, loadedRules, passThroughModels
 ) {
     override fun analyze(): ProjectAnalysisStatus {
         if (project.modules.isEmpty()) return ProjectAnalysisStatus.OK
@@ -46,7 +46,6 @@ class JirProjectAnalyzer(
         selectProjectEntryPoints(jirOptions)
 
     override fun defaultConfigLoader() = JavaDefaultConfigLoader
-    override fun configLoader() = JavaConfigurationLoader()
 
     override fun ProjectAnalysisContext.createAnalyzer(
         externalMethodTracker: ExternalMethodTracker?,

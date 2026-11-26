@@ -21,8 +21,9 @@ abstract class ProjectAnalyzer<
     results: ProjectAnalysisResults,
     options: CommonAnalysisOptions,
     private val loadedRules: SemgrepRuleLoader.RuleLoadResult,
+    passThroughModels: List<RuleConfig>,
 ) : ProjectAnalyzerBase<Ctx, P, Method, Stmt, RuleItem, RuleConfig, ProjectAnalysisResults>(
-    project, results, options
+    project, results, options, passThroughModels
 ) {
     private val ruleMetadatas = mutableListOf<RuleMetadata>()
 

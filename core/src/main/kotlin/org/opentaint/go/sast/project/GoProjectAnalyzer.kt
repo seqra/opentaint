@@ -7,7 +7,6 @@ import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
-import org.opentaint.dataflow.configuration.go.serialized.GoConfigurationLoader
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedItem
 import org.opentaint.dataflow.configuration.go.serialized.GoSerializedTaintConfig
 import org.opentaint.go.config.GoDefaultConfigLoader
@@ -26,11 +25,13 @@ class GoProjectAnalyzer(
     results: ProjectAnalysisResults,
     goOptions: GoProjectAnalysisOptions,
     loadedRules: SemgrepRuleLoader.RuleLoadResult,
+    passThroughModels: List<GoSerializedTaintConfig>,
 ) : ProjectAnalyzer<AnalysisCtx, GoProject, GoIRFunction, GoIRInst, GoSerializedItem, GoSerializedTaintConfig>(
     project,
     results,
     goOptions.common,
     loadedRules,
+    passThroughModels,
 ) {
     private val modelPaths = goOptions.modelPaths
     private val useDefaultModels = goOptions.useDefaultModels
@@ -55,7 +56,6 @@ class GoProjectAnalyzer(
     }
 
     override fun defaultConfigLoader() = GoDefaultConfigLoader
-    override fun configLoader() = GoConfigurationLoader()
 
     override fun AnalysisCtx.createAnalyzer(
         externalMethodTracker: ExternalMethodTracker?,
