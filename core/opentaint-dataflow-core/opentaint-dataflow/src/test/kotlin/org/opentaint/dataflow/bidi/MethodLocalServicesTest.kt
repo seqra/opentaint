@@ -142,6 +142,8 @@ class MethodLocalServicesTest {
             val requirement = f.pattern()
             val sink = sink(listOf(requirement))
             val seeds = SeedIndex.of(listOf(Seed.Sink(sink.rule, f.key, f.inst(1), requirement)))
+            // R1 reads the unary flag of a legacy seed from the sink alternatives at the site (K1).
+            f.exitRules(1, ExitRules(RuleStatement(StatementSummary.EMPTY, StatementSummary.EMPTY, listOf(sink)), false, emptySet()))
             val (actor, service) = core(f, 2, seeds)
             val emitted = ArrayList<Facts>()
             f.cancellation.cancel()

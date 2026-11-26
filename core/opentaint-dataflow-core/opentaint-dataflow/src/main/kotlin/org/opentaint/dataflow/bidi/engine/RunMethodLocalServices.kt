@@ -410,16 +410,14 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
         val core = activeCore()
         for (seed in core.config.seeds.at(core.key, node)) {
             core.ap.cancellation.checkpoint()
-            if (seed is Seed.Sink) seedFact(core, seed.requirement, emit)
-            if (seed is Seed.PredicateSink) {
-                fun visit(sinks: List<SinkRule>) {
-                    val sink = sinks.singleOrNull { it.occurrenceId == seed.occurrence }
-                        ?: error("A predicate seed must resolve to its frozen rule occurrence")
-                    for (requirement in sink.seedPatterns()) seedFact(core, requirement, emit)
-                }
-                val call = core.context.callAt(node)
-                if (call != null) core.forms.withCall(core.key, node, call) { visit(it.sinks) }
-                else core.forms.withStartRules(core.key, node) { visit(it.sinks) }
+            if (seed is Seed.Sink) sinksAt(core, node) { sinks ->
+                seedFact(core, seed.requirement, legacyUnary(sinks, seed.rule, seed.requirement), emit)
+            }
+            if (seed is Seed.PredicateSink) sinksAt(core, node) { sinks ->
+                val sink = sinks.singleOrNull { it.occurrenceId == seed.occurrence }
+                    ?: error("A predicate seed must resolve to its frozen rule occurrence")
+                val predicate = checkNotNull(sink.predicate)
+                for (requirement in sink.seedPatterns()) seedFact(core, requirement, predicateUnary(predicate, requirement), emit)
             }
         }
     }
@@ -430,14 +428,35 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
         for (literal in sink.seedPatterns()) {
             core.ap.cancellation.checkpoint()
             core.countTriggerSeed()
-            seedFact(core, literal, emit)
+            val predicate = sink.predicate
+            var unary = false
+            if (predicate != null) unary = predicateUnary(predicate, literal)
+            else sinksAt(core, node) { unary = legacyUnary(it, sink.rule, literal) }
+            seedFact(core, literal, unary, emit)
         }
     }
 
-    private fun seedFact(core: BlockRunState, requirement: Pattern, emit: (Facts) -> Unit) {
+    /** The sink alternatives at a node of the backward run (the frozen forms). */
+    private fun sinksAt(core: BlockRunState, node: CommonInst, use: (List<SinkRule>) -> Unit) {
+        val call = core.context.callAt(node)
+        if (call != null) core.forms.withCall(core.key, node, call) { use(it.sinks) }
+        else core.forms.withStartRules(core.key, node) { use(it.sinks) }
+    }
+
+    /** Lean BackCondImpl.legacyUnary: an alternative of the rule has the literal alone (patterns are never empty). */
+    private fun legacyUnary(sinks: List<SinkRule>, rule: RuleId, literal: Pattern): Boolean =
+        sinks.any { it.predicate == null && it.rule == rule && it.patterns.all { p -> p == literal } }
+
+    /** Lean Form.single: the predicate flag. A literal that is not a leaf is not unary. */
+    private fun predicateUnary(predicate: RulePredicate, literal: Pattern): Boolean =
+        predicate.leaves.indexOf(literal).let { it >= 0 && predicate.isUnary(it) }
+
+    /** Spec backward-condition-progress §II.2: a requirement is NORMAL only if its literal is unary and has the `$` tail. */
+    private fun seedFact(core: BlockRunState, requirement: Pattern, unary: Boolean, emit: (Facts) -> Unit) {
         if (!RuntimeDataDomain.base(requirement.fact.base)) return
         core.ap.cancellation.checkpoint()
-        core.cut(Cut.SEED, core.ap.zero, core.ops.targetTree(requirement.fact, Layer.NORMAL)) { _, facts ->
+        val normal = unary && requirement.fact.tail == Tail.EXACT
+        core.cut(Cut.SEED, core.ap.zero, core.ops.targetTree(requirement.fact, if (normal) Layer.NORMAL else Layer.DEMAND)) { _, facts ->
             if (core.config.index == 2) {
                 // A seed starts at its check, before any caller-input query gate.
                 // Validate the bounded value; a deeper named field is lawful before this cut.

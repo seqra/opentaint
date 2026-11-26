@@ -8,6 +8,7 @@ import org.opentaint.dataflow.bidi.driver.Seed
 import org.opentaint.dataflow.bidi.driver.SeedIndex
 import org.opentaint.dataflow.bidi.engine.*
 import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
+import org.opentaint.dataflow.bidi.interp.*
 import org.opentaint.dataflow.bidi.store.CallerRef
 import org.opentaint.dataflow.bidi.store.DemandStore
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
@@ -57,6 +58,9 @@ class FieldLimitScheduleAdmissionTest {
             val requirement = f.pattern(STATIC, path + f.field("nested"), Tail.EXACT)
             val demand = DemandStore.Builder(f.manager).build()
             val seed = Seed.Sink(sink, f.key, f.inst(2), requirement)
+            // R1 reads the unary flag of a legacy seed from the sink alternatives at the site (K1).
+            f.exitRules(2, ExitRules(RuleStatement(StatementSummary.EMPTY, StatementSummary.EMPTY,
+                listOf(SinkRule(sink, 0, listOf(requirement), emptyList()))), false, emptySet()))
             val actor = f.core(config(f, schedule, demand, SeedIndex.of(listOf(seed))),
                 localFactory = MethodLocalServicesFactory(::RunMethodLocalServices))
             val emitted = ArrayList<Facts>()

@@ -95,25 +95,43 @@ private fun rawGroup(c: Conclusion): GroupKey {
 
 /** Decode physical full-condition handles only at the requested full method/site, without seed indexes. */
 internal fun rawSinkSeedRequirements(program: FiniteProgramFixtures, inputs: ProgramRunInputs,
-                                     method: MethodKey, node: CommonInst): List<Pattern> = buildList {
+                                     method: MethodKey, node: CommonInst): List<Pattern> =
+    rawSinkSeedLiterals(program, inputs, method, node).map { it.first }
+
+/** The full sink alternatives at a site of the forward forms. */
+internal fun rawSinksAt(program: FiniteProgramFixtures, method: MethodKey, node: CommonInst): List<SinkRule> {
+    val forms = program.forms(method)
+    return program.callExpression(method, node.location.index)?.let {
+        forms.call(Direction.FORWARD, node, it).sinks
+    } ?: if (node == method.statement) forms.entryRules(Direction.FORWARD).sinks
+    else forms.exitRules(Direction.FORWARD, node).rules.sinks
+}
+
+/**
+ * Spec backward-condition-progress §II.2 (R1): the unary flag of a sink literal. A predicate literal reads the DNF
+ * flag; a legacy literal is unary when an alternative of the same rule at the site has the literal alone.
+ */
+internal fun rawLiteralUnary(sinks: List<SinkRule>, sink: SinkRule, literal: Pattern): Boolean =
+    sink.predicate?.let { p -> p.leaves.indexOf(literal).let { it >= 0 && p.isUnary(it) } }
+        ?: sinks.any { it.predicate == null && it.rule == sink.rule && it.patterns.all { p -> p == literal } }
+
+/** The decoded sink seed literals with their unary flag (R1). */
+internal fun rawSinkSeedLiterals(program: FiniteProgramFixtures, inputs: ProgramRunInputs,
+                                 method: MethodKey, node: CommonInst): List<Pair<Pattern, Boolean>> = buildList {
     for (seed in inputs.seeds) {
         program.cancellation.checkpoint()
         if (seed.method != method || seed.statement != node) continue
         when (seed) {
             is org.opentaint.dataflow.bidi.driver.Seed.Source -> Unit
-            is org.opentaint.dataflow.bidi.driver.Seed.Sink -> add(seed.requirement)
+            is org.opentaint.dataflow.bidi.driver.Seed.Sink -> add(seed.requirement to rawSinksAt(program, method, node).any {
+                it.predicate == null && it.rule == seed.rule && it.patterns.all { p -> p == seed.requirement } })
             is org.opentaint.dataflow.bidi.driver.Seed.PredicateSink -> {
-                val forms = program.forms(method)
-                val sinks = program.callExpression(method, node.location.index)?.let {
-                    forms.call(Direction.FORWARD, node, it).sinks
-                } ?: if (node == method.statement) forms.entryRules(Direction.FORWARD).sinks
-                else forms.exitRules(Direction.FORWARD, node).rules.sinks
-                val sink = sinks.singleOrNull { it.occurrenceId == seed.occurrence }
+                val sink = rawSinksAt(program, method, node).singleOrNull { it.occurrenceId == seed.occurrence }
                     ?: error("Unresolved raw predicate seed at $method/$node: ${seed.occurrence}")
                 val predicate = checkNotNull(sink.predicate)
-                for (literal in predicate.leaves) {
+                for ((ordinal, literal) in predicate.leaves.withIndex()) {
                     program.cancellation.checkpoint()
-                    add(literal)
+                    add(literal to predicate.isUnary(ordinal))
                 }
             }
         }

@@ -765,13 +765,16 @@ class NaiveClosure(
     }
 
 
+    // R1 (backward-condition-progress §II.2): NORMAL only for a unary literal with the `$` tail.
     private fun seedFacts(method: MethodKey, node: CommonInst): List<Pair<Set<Pattern>, Conclusion>> =
-        rawSinkSeedRequirements(program, inputs, method, node)
-            .map { zero to limit(normalize(it.fact, ExclusionSet.Empty, false), config.fieldLimit) }
+        rawSinkSeedLiterals(program, inputs, method, node).map { (literal, unary) ->
+            zero to limit(normalize(literal.fact, ExclusionSet.Empty, !unary), config.fieldLimit)
+        }
 
     private fun triggerSeeds(method: MethodKey, node: CommonInst, sink: SinkRule): List<Pair<Set<Pattern>, Conclusion>> =
         if (!triggered.add(Triple(method, node, sink.joinKey))) emptyList() else sink.seedPatterns().map {
-            zero to limit(normalize(it.fact, ExclusionSet.Empty, false), config.fieldLimit)
+            val unary = rawLiteralUnary(rawSinksAt(program, method, node), sink, it)
+            zero to limit(normalize(it.fact, ExclusionSet.Empty, !unary), config.fieldLimit)
         }
 
     private fun resultPremises(premises: List<Set<Pattern>>): List<Set<Pattern>> {

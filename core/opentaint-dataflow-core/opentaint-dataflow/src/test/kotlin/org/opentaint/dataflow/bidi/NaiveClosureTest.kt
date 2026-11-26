@@ -659,11 +659,15 @@ class NaiveClosureTest {
                 val record = Record(callee, Direction.FORWARD, initial,
                     f.fact(returned, tail = outputTail, mark = u,
                         exclusion = if (outputTail == Tail.ANY_TAINT) ExclusionSet.of(b) else ExclusionSet.Empty))
+                val sinkRule = rule("view input")
+                // R1 reads the unary flag of a legacy seed from the sink alternatives at the site (K1).
+                f.exit(caller, 2, ExitRules(RuleStatement(StatementSummary.EMPTY, StatementSummary.EMPTY,
+                    listOf(SinkRule(sinkRule, 0, listOf(f.pattern(y, mark = u)), emptyList()))), false, emptySet()))
                 val config = f.config(index = 2, roots = listOf(caller), records = listOf(callee to record),
                     demand = listOf(caller to DemandPattern(ZERO_PATTERN, f.pattern(x, listOf(a), Tail.ANY, t)),
                         caller to DemandPattern(ZERO_PATTERN, ZERO_PATTERN),
                         callee to DemandPattern(ZERO_PATTERN, ZERO_PATTERN)),
-                    seeds = listOf(Seed.Sink(rule("view input"), caller, main.inst(2), f.pattern(y, mark = u))))
+                    seeds = listOf(Seed.Sink(sinkRule, caller, main.inst(2), f.pattern(y, mark = u))))
                 val actual = check(f, config, listOf(a, b), listOf(t.mark, u.mark), sameUnit)
                 val demand = inputTail == Tail.ANY_TAINT
                 val result = ObservedEdge(caller, zero, Conclusion(PathFact(x, listOf(a),
