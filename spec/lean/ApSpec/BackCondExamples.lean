@@ -116,8 +116,10 @@ theorem ex_t4 : BackND.mergeLeaves [(0, pf x [g] .exact T), (0, pf x [g] .exact 
 theorem ex_t5 : BackND.treeSeeds lits (BackND.capMeets lits
       [(1, pf vb [f] .exact U, Excl.empty), (1, pf vb [g, h] .exact U, Excl.empty)]) =
     [(0, pf va [] .exact T), (1, pf vb [f] .exact U), (1, pf vb [g, h] .exact U)] := by decide
-/-- An input with the abstract mark gives no leaf (no meet), so literal 1 keeps its seed: the
-    normal form (the matched concrete mark) is needed for progress, not for soundness. -/
+/-- An input with the abstract mark gives no meet in the rule model, so literal 1 keeps its seed.
+    Ignoring such an input is unsound when another input of the literal gives a leaf
+    (`BackCondImpl.Vec.cex_mixed_raw`); the code stores the literal for it
+    (`BackCondImpl.Vec.flow_literal`, `mixed_code`). -/
 theorem ex_t6 : BackND.treeSeeds lits (BackND.capMeets lits [(1, pf vb [f] s0 .star, Excl.empty)]) =
     [(0, pf va [] .exact T), (1, pf vb [] .any U)] := by decide
 

@@ -199,3 +199,4 @@ import ApSpec.RestrictionMemoImpl
 import ApSpec.BackCondRules
 import ApSpec.BackNDRefine
 import ApSpec.BackCondExamples
+import ApSpec.BackCondImpl

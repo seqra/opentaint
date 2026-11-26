@@ -48,7 +48,9 @@ Their Lean modules (`BackMustRun`, `BackMustView`, `BackRecordViews`,
 
 **Lean.** [BackCondRules](lean/ApSpec/BackCondRules.lean) (`BackCond`),
 [BackNDRefine](lean/ApSpec/BackNDRefine.lean) (`BackND`),
-[BackCondExamples](lean/ApSpec/BackCondExamples.lean) (`BackCondEx`).
+[BackCondExamples](lean/ApSpec/BackCondExamples.lean) (`BackCondEx`),
+[BackCondImpl](lean/ApSpec/BackCondImpl.lean) (`BackCondImpl`, the
+implementation level).
 All constructive (`propext`, `Quot.sound` only).
 
 **Examples.** Bases `x ret arg0 a b`, fields `f g h k`, marks `T U`. An
@@ -182,7 +184,7 @@ occurrences   each DEMAND witness (sink literals, K2, K4);
 inputs        each input that satisfied the literal in a COMPLETED combination (NORMAL or DEMAND) of the occurrence
 
 for each input:
-  normal form   mark := the concrete mark that the check matched     (a FLOW input: the mark of the literal)
+  normal form   mark := the concrete mark that the check matched     (an abstract-mark input: the literal itself, below)
                 each field tail ([any-taint]/E, */E, [any]) := [any], E dropped;   $ stays $
   meet first    leaf := meet(normal form, literal)                   (§II.4 table: below, at, above)
                 the leaf is base.literalPath·σ with the tail $ or [any] and the mark of the literal
@@ -209,7 +211,7 @@ model drops it after the meet (`BackND.capMeets`).
 | the tree: a `TaintTree` (`Conclusions.kt:44`) with `TaintLeaves(exact, any)` at each node (`Trie.kt:19`): `$` leaves and `[any]` leaves of one mark | **CURRENT** representation |
 | keep one tree per (occurrence, literal) after `freeze()` as a hand-off side table, outside `Seed` equality | **NEW** |
 | insert from ALL completed combinations, not only the selected proof (`BackND.Vec.cex_selected_only`) | **NEW** |
-| the normal form: an input with the abstract mark gives no leaf, so the literal keeps its CURRENT seed (`BackCondEx.ex_t6`) | **NEW** |
+| the normal form: an input with the abstract mark stores the literal itself, so the tree is the literal (the CURRENT seed; `BackCondImpl.Vec.flow_literal`). Ignoring such an input is unsound when another input gives a leaf (`BackCondImpl.Vec.cex_mixed_raw`). No production site: a FLOW fact never satisfies a literal (implementation proposal F4, Q1) | **NEW** |
 | only `[any]` literals: the seed of a `$` literal is the literal | **NEW** |
 
 | Ex | literal | inputs | stored leaves → merged tree | Rule |
@@ -359,7 +361,7 @@ Literals of c2: literal 0 is `a.$(T)`, literal 1 is `b.[any](U)`.
 | Ex | inputs | Seeds | Note | Status |
 | --- | --- | --- | --- | --- |
 | t5 ✓ | 1: `b.f.$(U)`, `b.g.h.$(U)` | `a.$(T)`; tree of `b` with leaves `f: $`, `g.h: $` | two field chains replace `b.[any](U)` | **CHANGED** |
-| t6 ✓ | 1: `b.f.*/{}(*)`, not in normal form | `a.$(T)`, `b.[any](U)` | no leaf: literal 1 keeps the CURRENT seed | **CURRENT** except the K3 layer |
+| t6 ✓ | 1: `b.f.*/{}(*)`, abstract mark | `a.$(T)`, `b.[any](U)` | the input stores the literal (`BackCondImpl.Vec.flow_literal`): literal 1 keeps the CURRENT seed | **CURRENT** except the K3 layer |
 | s1 ✓ | S3 literal `arg0.[any](U)`; input `arg0.h.$(U)` | tree of `arg0` with the leaf `h: $` | a reversed source literal | **CHANGED** |
 
 | Claim | Lean (`BackND`) |
@@ -367,7 +369,7 @@ Literals of c2: literal 0 is `a.$(T)`, literal 1 is `b.[any](U)`.
 | `covered(meet(input, literal)) = covered(input) ∩ covered(literal)` for a concrete input | `meetLit_inter` |
 | each real route location of the literal is served by the seed | `tree_sound` (tree), `refine_sound`, `forwardCaptured_of_combos` |
 | the tree serves exactly the union of its meets; each leaf is inside its literal | `mergeLeaves_cov`, `tree_deepens` |
-| the backward contract and the iteration theorem, and monotonicity in the capture: proved for the list of meets with exclusions; the tree serves a superset of it (exclusions dropped), so the contract is argued to carry over | `B_general_refined`, `iteration_general_refined`, `refine_mono`, `refine_mono_seq` |
+| the backward contract and the iteration theorem, and monotonicity in the capture: proved for the list of meets with exclusions, and for the code seeds (the merged tree without exclusions, in arrival order, with the fallback) | `B_general_refined`, `iteration_general_refined`, `refine_mono`, `refine_mono_seq`; `BackCondImpl.B_general_code`, `iteration_general_code` |
 | deterministic; legal leaves (`$` or `[any]`, concrete mark); at most one leaf per stored meet | `refine_det`, `refine_legal`, `mergeLeaves_length` |
 | inserting only the selected proof loses a real location | `Vec.cex_selected_only` |
 | if a literal loses all its leaves, the fallback makes its seed larger | `Vec.cex_mono_fallback` |
@@ -443,6 +445,10 @@ Limits:
   the forward run is sound, so no real route uses that literal there; if the
   fallback demand later makes facts that satisfy the literal, the next
   forward run captures them and the refinement takes over.
+* The implementation keeps the CURRENT seed for a source literal with a
+  GROUP mark in run 1, a literal with a non-empty exclusion, and the legacy
+  statement conjunctions (`ConjunctiveEdge`, test-only): implementation
+  proposal C7, C8.
 * Other makers stay: the inside read (acyclic-convergence §7 item 1), alias
   self cycles (§7 item 3), S7, and the `[any]` result of a forward must
   record that the backward run reads (ap.md §8.7 R3, **CURRENT**).
@@ -490,6 +496,7 @@ confirmed and provisional results (the gate).
 | the refinement on the list of meets: sound, inside, monotone, the backward contract (§II.4) | `BackND.refine_sound`, `refine_inside`, `refine_mono`, `B_general_refined`, `iteration_general_refined` |
 | the progress guarantee G1–G3 (§II.5) | `BackND.meet_deepens`, `tree_deepens`, `refine_deepens`, `refine_depth`, `refine_det` |
 | the examples | `BackCondEx` |
+| the implementation: the code layer is the rule layer, `isUnary` is the DNF reading, the normal form, the arrival order, the code seeds (sound, inside, legal, G1, G2) and the contract | `BackCondImpl` ([implementation proposal](backward-condition-progress-implementation.md) §4.4, §5.4) |
 
 * `BackCond` is rule-level: it does not model the propagation of a
   requirement through later reversed edges, the field limit, the cleaners,
@@ -507,8 +514,9 @@ confirmed and provisional results (the gate).
   drops it before (§I.3). For an input that satisfied the literal the leaf
   is the same.
 * The backward contract (`B_general_refined`) is proved for the list of
-  meets with exclusions. The tree seed covers a superset of it; the
-  contract for the tree seeding is argued, not proved.
+  meets with exclusions. The code seeds (the merged tree without
+  exclusions, in arrival order, with the fallback) satisfy it too:
+  `BackCondImpl.seedsCover_code`, `B_general_code`, `iteration_general_code`.
 * The round argument of §II.5 is not proved: the model has no multi-run
   form of C2 and C5.
 * Not modelled: GROUP projection, end-fact triggers, statics.

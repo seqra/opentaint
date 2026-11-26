@@ -14,22 +14,29 @@ conditional source is seeded with its tree, as one DEMAND tree fact.
 Progress guarantee: each leaf lies inside its captured input and keeps its
 path, so the next demand is at least as deep as the forward cut (proved per
 operation; argued over rounds). It is a spec only: no prototype, no
-measurement, no WI rule. Three constructive modules build with the package
-(`lake build`, 203 jobs); the `#print axioms` audits show only `propext` and
-`Quot.sound`: [BackCondRules.lean](lean/ApSpec/BackCondRules.lean) (rule
+measurement, no WI rule. Four constructive modules build with the package
+(`lake build`, 204 jobs; `audit.lean`: 46,460 declarations, 0 unexpected
+axioms); only `propext` and `Quot.sound` occur: [BackCondRules.lean](lean/ApSpec/BackCondRules.lean) (rule
 level: `reqs_normal_iff`, `reqs_normal_must`, `reqs_nd_demand`,
 `any_seed_exact`), [BackNDRefine.lean](lean/ApSpec/BackNDRefine.lean)
 (`refine_sound`, `refine_mono`, `iteration_general_refined`; the capture
 tree `mergeLeaves_cov`, `tree_sound`; the progress lemmas `meet_deepens`,
 `refine_deepens`, `tree_deepens`),
 [BackCondExamples.lean](lean/ApSpec/BackCondExamples.lean) (principal
-examples, checked by `decide`). The earlier revisions (backward MUST seeds
+examples, checked by `decide`), and
+[BackCondImpl.lean](lean/ApSpec/BackCondImpl.lean) (the implementation level
+of the [implementation proposal](backward-condition-progress-implementation.md):
+`code_normal_iff`, `code_normal_must`, `Form.single_iff` for the seed layer;
+`nfOne_cov`, `mergeL_mergeLeaves_cov`, `codeSeeds_sound`, `codeSeeds_inside`,
+`codeSeeds_deepens` and `B_general_code`, `iteration_general_code` for the
+capture tree and the refined seeds; the counterexample `Vec.cex_mixed_raw`
+for an ignored abstract-mark input). The earlier revisions (backward MUST seeds
 and records, application by implication, two field tails; commits
 531e87d3c to fddd06d8d) were withdrawn by the user, and their modules
 `BackMustRun`, `BackMustView`, `BackRecordViews`, `FieldQuant` were removed.
 Open: the round argument over runs, the ND form of the backward contract,
-the backward contract for the tree seeding (proved for the list of meets),
-and the hidden changes S-H1 (narrower forward demand), S-H2 (ND `$` seed
+the trie form of the capture tree (tested, not proved), and the hidden
+changes S-H1 (narrower forward demand), S-H2 (ND `$` seed
 rows), S-H3 (capture tree heap cost).
 
 ## Checked future candidate: exact call-stage result merging, 1 November 2026
