@@ -53,9 +53,6 @@ tasks.register<Test>("benchmarkTest") {
 
     // Larger heap for real-world projects (some produce 100k+ functions)
     jvmArgs("-Xmx8g", "-Xms1g")
-
-    // Keep go-ssa-server under the 16 GB CI runner limit (casdoor peaks at ~11 GiB without it)
-    environment("GOMEMLIMIT", System.getenv("GOMEMLIMIT") ?: "8GiB")
 }
 
 tasks.register<Test>("roundtripTest") {

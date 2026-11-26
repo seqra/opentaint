@@ -31,6 +31,10 @@ class GoSsaServerProcess(
         val pb = ProcessBuilder(serverBinaryPath, "-port=0")
             .redirectInput(ProcessBuilder.Redirect.PIPE)
             .redirectErrorStream(false)
+        // Soft limit for the Go heap (otherwise it grows to ~2x the live set): the JVM's max heap
+        Runtime.getRuntime().maxMemory().takeIf { it != Long.MAX_VALUE }?.let {
+            pb.environment().putIfAbsent("GOMEMLIMIT", it.toString())
+        }
 
         val proc = pb.start()
         process = proc
