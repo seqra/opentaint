@@ -17,11 +17,13 @@ import (
 )
 
 type JavaAutobuilderConfig struct {
-	outputDir    string
-	sourceRoot   string
-	dependencies []string
-	packages     []string
-	classpaths   []string
+	outputDir string
+	// userOutputDir is the output directory as the user wrote it, for the next steps.
+	userOutputDir string
+	sourceRoot    string
+	dependencies  []string
+	packages      []string
+	classpaths    []string
 }
 
 type JavaAutobuilderBuilder struct {
@@ -38,6 +40,7 @@ func (b *JavaAutobuilderBuilder) WithOutputDir(dir string) *JavaAutobuilderBuild
 	cleanDir := filepath.Clean(dir)
 	absDir := log.AbsPathOrExit(cleanDir, "output directory")
 	b.config.outputDir = absDir
+	b.config.userOutputDir = dir
 	return b
 }
 
@@ -45,7 +48,7 @@ func (b *JavaAutobuilderBuilder) WithSourceRoot(root string) *JavaAutobuilderBui
 	cleanRoot := filepath.Clean(root)
 	absRoot := log.AbsPathOrExit(cleanRoot, "source root")
 	if _, err := os.Stat(absRoot); os.IsNotExist(err) {
-		out.Fatalf("Source root directory does not exist: %s", absRoot)
+		out.Fatalf("Source root `%s` does not exist", root)
 	}
 	b.config.sourceRoot = absRoot
 	return b
@@ -56,10 +59,10 @@ func (b *JavaAutobuilderBuilder) WithDependencies(deps []string) *JavaAutobuilde
 	for i, dep := range deps {
 		absDep, err := filepath.Abs(dep)
 		if err != nil {
-			out.Fatalf("Failed to resolve absolute path for dependency '%s': %s", dep, err)
+			out.Fatal(fmt.Sprintf("Failed to resolve the dependency path `%s`", dep), err)
 		}
 		if _, err := os.Stat(absDep); os.IsNotExist(err) {
-			out.Fatalf("Dependency file does not exist: %s", absDep)
+			out.Fatalf("Dependency `%s` does not exist", dep)
 		}
 		absDeps[i] = absDep
 	}
@@ -77,10 +80,10 @@ func (b *JavaAutobuilderBuilder) WithClasspath(classpath []string) *JavaAutobuil
 	for i, cp := range classpath {
 		absCP, err := filepath.Abs(cp)
 		if err != nil {
-			out.Fatalf("Failed to resolve absolute path for classpath entry '%s': %s", cp, err)
+			out.Fatal(fmt.Sprintf("Failed to resolve the classpath entry `%s`", cp), err)
 		}
 		if _, err := os.Stat(absCP); os.IsNotExist(err) {
-			out.Fatalf("Classpath entry does not exist: %s", absCP)
+			out.Fatalf("Classpath entry `%s` does not exist", cp)
 		}
 		absClasspath[i] = absCP
 	}
@@ -105,7 +108,7 @@ func (c *JavaAutobuilderConfig) validate() error {
 		return fmt.Errorf("output directory is required")
 	}
 	if _, err := os.Stat(c.outputDir); err == nil {
-		return fmt.Errorf("output directory already exists: %s. Please provide a non-existent path", c.outputDir)
+		return fmt.Errorf("output directory `%s` already exists", c.outputDir)
 	}
 	if c.sourceRoot == "" {
 		return fmt.Errorf("source root is required")
@@ -163,29 +166,28 @@ func (c *JavaAutobuilderConfig) runAutobuilder() error {
 
 	cmdErr, err := javaRunner.ExecuteJavaCommand(autobuilderCommand, commandSucceeded)
 	if err != nil {
-		return fmt.Errorf("native autobuilder execution failed: %w", err)
+		return err
 	}
 	if cmdErr != nil {
-		return fmt.Errorf("native autobuilder execution failed: %w", cmdErr)
+		return noProjectModel(cmdErr)
 	}
 
 	config, err := validation.ValidateProjectModelOutput(c.outputDir)
 	if err != nil {
-		return fmt.Errorf("output validation failed after project generation: %w", err)
+		return invalidProjectModel(err)
 	}
 
 	return c.printProjectSummary(config)
 }
 
 func (c *JavaAutobuilderConfig) printProjectSummary(config *project.Config) error {
-	projectYamlPath := filepath.Join(c.outputDir, "project.yaml")
-
-	c.logProjectSummary(projectYamlPath, config)
-	suggest("To scan project run", utils.BuildScanCommandFromCompile(c.outputDir, c.outputDir))
+	c.logProjectSummary(config)
+	// The scan writes its report to its default place, <project model>/sources/opentaint.sarif.
+	suggest("To scan the generated model, run:", utils.NewScanCommand("").WithProjectModel(c.userOutputDir).Build())
 	return nil
 }
 
-func (c *JavaAutobuilderConfig) logProjectSummary(projectYamlPath string, config *project.Config) {
+func (c *JavaAutobuilderConfig) logProjectSummary(config *project.Config) {
 	modules := config.AllModules()
 	dependencies := config.AllDependencies()
 	totalPackages := 0
@@ -197,12 +199,11 @@ func (c *JavaAutobuilderConfig) logProjectSummary(projectYamlPath string, config
 
 	out.Blank()
 	out.Section("Project Summary").
-		Field("Generated project.yaml at", projectYamlPath).
-		Line().
-		Field("Total modules", len(modules)).
-		Field("Total classes", totalClasses).
-		Field("Total packages", totalPackages).
-		Field("Total dependencies", len(dependencies)).
+		Field("Project model", c.outputDir).
+		Field("Modules", len(modules)).
+		Field("Classes", totalClasses).
+		Field("Packages", totalPackages).
+		Field("Dependencies", len(dependencies)).
 		Render()
 }
 
@@ -218,16 +219,11 @@ var (
 
 var projectCmd = &cobra.Command{
 	Use:   "project",
-	Short: "Create a project model directory containing a project.yaml configuration from precompiled JARs or classes",
-	Long: `Create a project model directory containing a project.yaml configuration from precompiled JARs or classes.
-
-This command generates a project model, automatically detecting dependencies and project structure.
-Additional packages have to be specified to enhance the generated configuration.
-
-Examples:
-  # Classpath analysis
-  opentaint project --output ./project-model --source-root /path/to/source \
-    --classpath /path/to/app.jar --package com.example`,
+	Short: "Create a project model from precompiled JARs or classes",
+	Long:  "Create a project model from precompiled JARs or classes.",
+	Example: `  # Create a project model from an application JAR and a library JAR
+  opentaint project --source-root ./src --classpath ./app.jar \
+    --package com.example --dependency ./lib/guava.jar -o .opentaint/project`,
 	Run: func(cmd *cobra.Command, args []string) {
 		config := NewJavaAutobuilder().
 			WithOutputDir(OutputDir).
@@ -267,14 +263,18 @@ Examples:
 		}
 		sb.Render()
 
+		if err := config.validate(); err != nil {
+			out.Blank()
+			out.FatalErr(err)
+		}
 		if DryRunProject {
-			failOnInvalidInputs(config.validate)
-			runDryRun("Project generation")
+			out.Blank()
+			runDryRun("project-model generation", "create the project model")
 			return
 		}
 
 		if err := config.Execute(); err != nil {
-			out.Fatalf("Failed to generate project configuration: %s", err)
+			fail("Failed to write the project model", err)
 		}
 	},
 }
@@ -282,15 +282,15 @@ Examples:
 func init() {
 	rootCmd.AddCommand(projectCmd)
 
-	projectCmd.Flags().StringVarP(&OutputDir, "output", "o", "", "Output directory for project.yaml")
+	projectCmd.Flags().StringVarP(&OutputDir, "output", "o", "", "Path to the new project model, which must not exist (required)")
 	_ = projectCmd.MarkFlagRequired("output")
-	projectCmd.Flags().StringVar(&SourceRoot, "source-root", "", "Source root directory")
+	projectCmd.Flags().StringVar(&SourceRoot, "source-root", "", "Project source directory (required)")
 	_ = projectCmd.MarkFlagRequired("source-root")
-	projectCmd.Flags().StringArrayVar(&Dependencies, "dependency", []string{}, "Project dependencies (JAR files)")
-	projectCmd.Flags().StringArrayVar(&Packages, "package", []string{}, "Project packages")
+	projectCmd.Flags().StringArrayVar(&Dependencies, "dependency", []string{}, "Library JAR the project depends on (repeatable)")
+	projectCmd.Flags().StringArrayVar(&Packages, "package", []string{}, "Package of the project's own code (repeatable, required)")
 	_ = projectCmd.MarkFlagRequired("package")
-	projectCmd.Flags().StringArrayVar(&Classpaths, "classpath", []string{}, "Classpath entries (classes or JAR files)")
+	projectCmd.Flags().StringArrayVar(&Classpaths, "classpath", []string{}, "Class directory or JAR of the project (repeatable, required)")
 	_ = projectCmd.MarkFlagRequired("classpath")
-	projectCmd.Flags().BoolVar(&DryRunProject, "dry-run", false, "Validate inputs and show what would run without generating project model")
-	projectCmd.Flags().StringVar(&ProjectLogFile, "log-file", "", "Path to the log file (default: <cache-dir>/logs/<timestamp>.log)")
+	projectCmd.Flags().BoolVar(&DryRunProject, "dry-run", false, "Validate inputs and show what would run without generating the project model")
+	projectCmd.Flags().StringVar(&ProjectLogFile, "log-file", "", logFileUsage)
 }

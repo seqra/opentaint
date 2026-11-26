@@ -2,6 +2,7 @@ package output
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -64,6 +65,12 @@ func (sb *SectionBuilder) FieldNode(key string, value any) *SectionBuilder {
 	root := th.FieldKey.Render(key)
 	leaf := th.FieldValue.Render(fmt.Sprint(value))
 	sb.items = append(sb.items, sb.printer.GroupItem(root, leaf))
+	return sb
+}
+
+// FieldGroup adds a key with items under it.
+func (sb *SectionBuilder) FieldGroup(key string, items ...any) *SectionBuilder {
+	sb.items = append(sb.items, sb.printer.GroupItem(sb.printer.theme.FieldKey.Render(key), items...))
 	return sb
 }
 
@@ -197,10 +204,21 @@ func indentTreeBlock(s string) string {
 		if lines[i] == "" {
 			continue
 		}
-		lines[i] = "  " + lines[i]
+		// The tree pads the lines of a multi-line item to one width, and the padding would
+		// wrap a narrow terminal.
+		lines[i] = "  " + trimTrailingSpaces(lines[i])
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+// trailingSpaces matches the spaces at the end of a line, before the color codes that may close
+// it.
+var trailingSpaces = regexp.MustCompile(`[ ]+((?:\x1b\[[0-9;]*m)*)$`)
+
+// trimTrailingSpaces removes the spaces at the end of a line and keeps the color codes after them.
+func trimTrailingSpaces(line string) string {
+	return trailingSpaces.ReplaceAllString(line, "$1")
 }
 
 // ── Header rendering ─────────────────────────────────────────────────

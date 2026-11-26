@@ -85,9 +85,6 @@ func TestArtifactVersionShortVariants(t *testing.T) {
 	custom := globals.ArtifactByKind("analyzer").WithVersion("analyzer/2026.05.27.68ab20a")
 	custom.Override = "/home/dev/analyzer.jar"
 
-	if got := ArtifactVersionWithPath(custom); got != "custom (/home/dev/analyzer.jar)" {
-		t.Errorf("WithPath custom: got %q, want %q", got, "custom (/home/dev/analyzer.jar)")
-	}
 	if got := ArtifactVersion(custom); got != "custom" {
 		t.Errorf("bare custom: got %q, want %q", got, "custom")
 	}

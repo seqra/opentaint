@@ -26,6 +26,15 @@ func (a ArtifactDef) Kind() string {
 	return strings.ToLower(a.Name)
 }
 
+// Label is the name of the artifact in the output. Name is not used there because Kind and the
+// cache paths derive from it.
+func (a ArtifactDef) Label() string {
+	if a.Kind() == "rules" {
+		return "Built-in ruleset"
+	}
+	return a.Name
+}
+
 // IsBindVersion reports whether the configured version matches the compile-time bind version.
 func (a ArtifactDef) IsBindVersion() bool {
 	return a.Version == a.BindVersion

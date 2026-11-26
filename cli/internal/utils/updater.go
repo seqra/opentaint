@@ -35,20 +35,22 @@ func DetectInstallMethod() (InstallMethod, string) {
 	return classifyExePath(exe), exe
 }
 
-func npmUpdateHint(latestVersion string) string {
-	return fmt.Sprintf("A new version is available: v%s. Run \"npm install -g @seqra/opentaint@latest\" to update.", latestVersion)
-}
-
+// UpdateHint returns the one-line notice about a newer release, with the update command of the
+// install method.
 func UpdateHint(latestVersion string) string {
 	method, _ := DetectInstallMethod()
+	return updateHint(latestVersion, method)
+}
+
+func updateHint(latestVersion string, method InstallMethod) string {
+	command := "opentaint update"
 	switch method {
 	case InstallMethodHomebrew:
-		return fmt.Sprintf("A new version is available: v%s. Run \"brew upgrade --cask opentaint\" to update.", latestVersion)
+		command = "brew upgrade --cask opentaint"
 	case InstallMethodNpm:
-		return npmUpdateHint(latestVersion)
-	default:
-		return fmt.Sprintf("A new version is available: v%s. Run \"opentaint update\" to update.", latestVersion)
+		command = "npm install -g @seqra/opentaint@latest"
 	}
+	return fmt.Sprintf("A new version is available: v%s. To update, run `%s`", latestVersion, command)
 }
 
 func classifyExePath(exePath string) InstallMethod {

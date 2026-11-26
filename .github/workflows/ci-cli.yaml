@@ -176,11 +176,11 @@ jobs:
             exit 1
           fi
 
-          # Default SARIF should be inside project-model/sources/
-          SARIF_PATH="${CACHE_DIR}project-model/sources/opentaint.sarif"
+          # Default SARIF should be inside the project, in .opentaint/results/
+          SARIF_PATH="project-root/.opentaint/results/report.sarif"
           if [ ! -f "$SARIF_PATH" ]; then
             echo "Expected default SARIF at $SARIF_PATH"
-            find "$CACHE_DIR" -name "*.sarif" || true
+            find project-root/.opentaint "$CACHE_DIR" -name "*.sarif" || true
             exit 1
           fi
 

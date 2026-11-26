@@ -2,11 +2,20 @@ package testproject
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/seqra/opentaint/internal/utils"
 )
+
+// Exists reports whether dir already holds a test project.
+func Exists(dir string) bool {
+	info, err := os.Stat(filepath.Join(dir, buildFileName))
+	return err == nil && !info.IsDir()
+}
+
+const buildFileName = "build.gradle.kts"
 
 func Bootstrap(outputDir, projectName string, dependencies []string) error {
 	return BootstrapWithLocalJars(outputDir, projectName, dependencies, nil)
@@ -15,7 +24,7 @@ func Bootstrap(outputDir, projectName string, dependencies []string) error {
 // BootstrapWithLocalJars adds project-relative jars to the compile-only classpath.
 func BootstrapWithLocalJars(outputDir, projectName string, dependencies, localJars []string) error {
 	return utils.WriteFiles(map[string][]byte{
-		filepath.Join(outputDir, "build.gradle.kts"):    buildGradle(dependencies, localJars),
+		filepath.Join(outputDir, buildFileName):         buildGradle(dependencies, localJars),
 		filepath.Join(outputDir, "settings.gradle.kts"): settingsGradle(projectName),
 	})
 }

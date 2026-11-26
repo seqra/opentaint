@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/seqra/opentaint/internal/output"
 	"github.com/seqra/opentaint/internal/testmodel"
 	"github.com/seqra/opentaint/internal/testproject"
 	"github.com/seqra/opentaint/internal/testrule"
@@ -16,25 +17,16 @@ var initRuleSinksOnly bool
 var initRuleSourcesOnly bool
 
 var testRuleInitCmd = &cobra.Command{
-	Use:   "init <output-dir>",
-	Short: "Create rule test projects with source and sink harnesses",
-	Long: `Create one or two Gradle test projects under <output-dir>. The sinks
-project tests sink rules against a generic Taint source; the sources project
-tests source rules against a generic Taint sink. Use --sinks-only or
---sources-only when only one project is needed.
-
-Each project includes:
-  - build.gradle.kts with compile-only dependencies, settings.gradle.kts
-  - src/main/java/test/ with Taint.java (the generic source()/sink()) for test sample sources
-  - test-rules/java/lib/test/generic-{source,sink}.yaml marker rules for test-only joins
-
-Positive and negative samples are specified via rule-test.yaml.
-
-Use --dependency to add compile-only Maven dependencies for the samples.`,
+	Use:   "init <test-project>",
+	Short: "Create test projects for sink and source rules",
+	Long:  "Create test projects for sink and source rules.\n\nArguments:\n  <test-project>  Directory of the new sinks and sources test projects",
+	Example: `  # Create only the sinks project, with a library that the samples call
+  opentaint test rule init .opentaint/test-projects/my-rule --sinks-only \
+    --dependency org.springframework:spring-jdbc:5.3.39`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if initRuleSinksOnly && initRuleSourcesOnly {
-			out.Fatalf("--sinks-only and --sources-only are mutually exclusive")
+			out.Fatalf("Cannot use --sinks-only with --sources-only")
 		}
 		kinds := []string{"sinks", "sources"}
 		if initRuleSinksOnly {
@@ -43,58 +35,109 @@ Use --dependency to add compile-only Maven dependencies for the samples.`,
 			kinds = []string{"sources"}
 		}
 		for _, kind := range kinds {
-			dir := filepath.Join(args[0], kind)
+			dir := joinUserPath(args[0], kind)
+			existing := testproject.Exists(dir)
 			if err := testproject.Bootstrap(dir, "opentaint-rule-test-"+kind, initRuleProjectDeps); err != nil {
-				out.Fatalf("Failed to bootstrap test project: %s", err)
+				out.Fatal("Failed to create the test project", err)
 			}
 			if err := testrule.Scaffold(dir); err != nil {
-				out.Fatalf("Failed to scaffold rule test project: %s", err)
+				out.Fatal("Failed to create the test samples", err)
 			}
-			fmt.Printf("Rule test project (%s) initialized at %s\n", kind, dir)
+			printInitResult(existing, "the "+kind+" test project", dir)
 		}
+
+		compile := output.Suggestion{
+			Description: "To run the tests after you add the samples, first run:",
+			Command:     testCompileCommand(args[0], kinds[0]),
+		}
+		if len(kinds) > 1 {
+			compile = output.Suggestion{
+				Description: "To run the sinks or sources tests after you add the samples, first run:",
+				Command:     testCompileCommand(args[0], "<side>"),
+			}
+		}
+		suggestions := []output.Suggestion{
+			{Description: "To learn more about the test projects, see:", Command: usageDocsURL + "#rule-tests"},
+			compile,
+		}
+		out.Suggestions(suggestions...)
 	},
 }
 
 var testModelInitCmd = &cobra.Command{
-	Use:   "init <output-dir>",
+	Use:   "init <test-project>",
 	Short: "Create a dataflow model test project",
-	Long: `Create a minimal Gradle project for testing OpenTaint dataflow models.
-
-The project includes:
-  - build.gradle.kts with compile-only dependencies
-  - settings.gradle.kts
-  - model-rule.yaml, the fixed source-to-sink rule the samples are checked against
-  - src/main/java/test/ with Taint.java (the fixed source() and sink()) for test sample sources
-
-Positive and negative samples are specified via rule-test.yaml.
-
-The model under test is supplied separately at test time with
---dataflow-models.
-
-Use --dependency to add compile-only Maven dependencies for the samples.`,
+	Long:  "Create a dataflow model test project.\n\nArguments:\n  <test-project>  Directory of the new test project for dataflow models",
+	Example: `  # Create a test project with samples that call Jackson
+  opentaint test model init .opentaint/test-projects/my-model \
+    --dependency com.fasterxml.jackson.core:jackson-databind:2.17.2`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := testproject.Bootstrap(args[0], "model-test-project", initModelProjectDeps); err != nil {
-			out.Fatalf("Failed to bootstrap test project: %s", err)
+		dir := args[0]
+		existing := testproject.Exists(dir)
+		if err := testproject.Bootstrap(dir, "model-test-project", initModelProjectDeps); err != nil {
+			out.Fatal("Failed to create the test project", err)
 		}
-		if err := testmodel.Scaffold(args[0]); err != nil {
-			out.Fatalf("Failed to scaffold model test project: %s", err)
+		if err := testmodel.Scaffold(dir); err != nil {
+			out.Fatal("Failed to create the test samples", err)
 		}
-		fmt.Printf("Model test project initialized at %s\n", args[0])
+		printInitResult(existing, "the model test project", dir)
+		out.Suggestions(
+			output.Suggestion{Description: "To learn more about the test projects, see:", Command: usageDocsURL + "#model-tests"},
+			output.Suggestion{Description: "To run the tests after you add the samples, first run:", Command: testCompileCommand(dir, "")},
+		)
 	},
+}
+
+// testCompileCommand returns the command that compiles a test project that init created in
+// outputDir, or in its side directory when side is not empty. The side can be a placeholder.
+// A test project in <root>/test-projects/<name> compiles to <root>/test-compiled/<name>, where
+// the skills keep it. A test project elsewhere compiles to the default of compile.
+func testCompileCommand(outputDir, side string) string {
+	project := shellQuote(joinUserPath(outputDir))
+	var compiled string
+	clean := filepath.Clean(outputDir)
+	if filepath.Base(filepath.Dir(clean)) == "test-projects" {
+		compiled = shellQuote(joinUserPath(outputDir, "..", "..", "test-compiled", filepath.Base(clean)))
+	}
+	if side != "" {
+		// The side is joined after quoting, so that a placeholder stays as it is.
+		project += string(filepath.Separator) + side
+		if compiled != "" {
+			compiled += string(filepath.Separator) + side
+		}
+	}
+	command := "opentaint compile " + project
+	if compiled != "" {
+		command += " -o " + compiled
+	}
+	return command
+}
+
+// printInitResult prints what init did with the project at dir. For an existing project, it warns
+// that init replaced the build file: the dependencies that it had and that --dependency does not
+// repeat are gone. Init keeps the files of the user, such as the models, the samples, and rule-test.yaml.
+func printInitResult(existing bool, project, dir string) {
+	if existing {
+		out.WarnDetails(fmt.Sprintf("Replaced the build file of `%s`", dir),
+			"the new build file has only the libraries from --dependency")
+		out.Successf("Updated %s at `%s`", project, dir)
+		return
+	}
+	out.Successf("Created %s at `%s`", project, dir)
 }
 
 func init() {
 	testRuleCmd.AddCommand(testRuleInitCmd)
 	testRuleInitCmd.Flags().StringArrayVar(&initRuleProjectDeps, "dependency", nil,
-		"Compile-only Maven dependency coordinates for generated samples (repeatable)")
+		"Library that the samples call, as group:artifact:version (repeatable)")
 	testRuleInitCmd.Flags().BoolVar(&initRuleSinksOnly, "sinks-only", false,
-		"Create only the sinks test project")
+		"Create only the sinks project")
 	testRuleInitCmd.Flags().BoolVar(&initRuleSourcesOnly, "sources-only", false,
-		"Create only the sources test project")
+		"Create only the sources project")
 
 	testModelCmd.AddCommand(testModelInitCmd)
 	testModelInitCmd.Flags().StringArrayVar(&initModelProjectDeps, "dependency", nil,
-		"Compile-only Maven dependency coordinates for generated samples (repeatable)")
-	testApproximationCmd.AddCommand(deprecatedCommand(testModelInitCmd, "init", "opentaint test model init"))
+		"Library that the samples call, as group:artifact:version (repeatable)")
+	testApproximationCmd.AddCommand(deprecatedCommand(testModelInitCmd, "opentaint test approximation init", "opentaint test model init"))
 }

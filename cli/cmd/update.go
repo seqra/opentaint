@@ -18,34 +18,28 @@ var (
 )
 
 var updateCmd = &cobra.Command{
-	Use:   "update [version]",
+	Use:   "update [<version>]",
 	Short: "Update opentaint to the latest version",
-	Long: `Update opentaint to the latest version (or a specific version).
-
-This command detects how opentaint was installed and provides appropriate
-instructions for package manager installations. For binary installations,
-it performs an in-place update.
-
-Only upgrades are supported — downgrading to an older version is refused.`,
-	Args: cobra.MaximumNArgs(1),
+	Long:  "Update opentaint to the latest version or to <version>.\n\nArguments:\n  [<version>]  Release to update to, such as 1.2.3 (default: the latest release)",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// Check installation method first
 		method, exePath := utils.DetectInstallMethod()
 
 		switch method {
 		case utils.InstallMethodHomebrew:
-			out.Print("opentaint was installed via Homebrew.")
-			out.Print("Run: brew upgrade --cask opentaint")
+			out.Print("opentaint was installed via Homebrew")
+			suggest("To update, run:", "brew upgrade --cask opentaint")
 			return
 		case utils.InstallMethodNpm:
-			out.Print("opentaint was installed via npm.")
-			out.Print("Run: npm install -g @seqra/opentaint@latest")
+			out.Print("opentaint was installed via npm")
+			suggest("To update, run:", "npm install -g @seqra/opentaint@latest")
 			return
 		}
 
 		currentVersion := version.GetVersion()
 		if currentVersion == "dev" || currentVersion == "" {
-			out.Warn("Cannot determine current version. Update is not supported for development builds.")
+			out.Warn("Cannot update a development build")
 			return
 		}
 
@@ -62,31 +56,35 @@ Only upgrades are supported — downgrading to an older version is refused.`,
 				targetTag = "v" + targetVersion
 			}
 		} else {
-			out.Print("Checking for updates...")
-			targetVersion, targetTag, err = utils.GetLatestRelease(globals.Config.Owner, globals.Config.Repo, globals.Config.Github.Token)
+			err = out.RunWithSpinner("Checking for updates", func() error {
+				var checkErr error
+				targetVersion, targetTag, checkErr = utils.GetLatestRelease(globals.Config.Owner, globals.Config.Repo, globals.Config.Github.Token)
+				return checkErr
+			})
 			if err != nil {
-				out.Fatalf("Failed to check for updates: %s", err)
+				out.Fatal("Failed to check for updates", err)
 			}
+			out.Blank()
 		}
 
 		// Compare versions
 		cmp, err := version.CompareVersions(currentVersion, targetVersion)
 		if err != nil {
-			out.Warnf("Could not compare versions: %s", err)
-			out.Printf("Current: %s, Latest: %s", currentVersion, targetVersion)
+			out.Warnf("Cannot compare version %s with %s", currentVersion, targetVersion)
+			out.Printf("Current version %s, latest version %s", currentVersion, targetVersion)
 			if !updateYes {
-				out.Print("Use --yes to proceed anyway.")
+				suggest("To proceed anyway, run:", withFlag(rerunWithoutDryRun(), "--yes"))
 				return
 			}
 		}
 
 		if cmp == 0 {
-			out.Printf("opentaint is already up to date (v%s).", currentVersion)
+			out.Printf("opentaint is already up to date (v%s)", currentVersion)
 			return
 		}
 
 		if cmp > 0 {
-			out.Warnf("Target version v%s is older than current version v%s. Downgrading is not supported.", targetVersion, currentVersion)
+			out.Warnf("Version v%s is older than the installed v%s. Downgrades are not supported.", targetVersion, currentVersion)
 			return
 		}
 
@@ -94,9 +92,8 @@ Only upgrades are supported — downgrading to an older version is refused.`,
 			out.Section("Update Available").
 				Field("Current version", fmt.Sprintf("v%s", currentVersion)).
 				Field("Latest version", fmt.Sprintf("v%s", targetVersion)).
-				Line().
-				Text("Run 'opentaint update' to update.").
 				Render()
+			suggest("To update, run:", "opentaint update")
 			return
 		}
 
@@ -106,7 +103,7 @@ Only upgrades are supported — downgrading to an older version is refused.`,
 
 		if !updateYes {
 			if !out.Confirm("Proceed with update?", false) {
-				out.Print("Update cancelled.")
+				out.Print("Update cancelled")
 				return
 			}
 		}
@@ -114,25 +111,26 @@ Only upgrades are supported — downgrading to an older version is refused.`,
 		// Download the release archive
 		tmpDir, err := os.MkdirTemp("", "opentaint-update-*")
 		if err != nil {
-			out.Fatalf("Failed to create temp directory: %s", err)
+			out.Fatal("Failed to create a temporary directory", err)
 		}
 		defer func() { _ = os.RemoveAll(tmpDir) }()
 
-		out.Print("Downloading...")
+		// The download shows its own progress bar.
 		archivePath, err := utils.DownloadReleaseArchive(globals.Config.Owner, globals.Config.Repo, targetTag, globals.Config.Github.Token, tmpDir, globals.Config.SkipVerify, out)
 		if err != nil {
-			out.Fatalf("Failed to download release: %s", err)
+			out.Fatal("Failed to download the release", err)
 		}
 
 		// Perform self-update
 		installDir := filepath.Dir(exePath)
-		out.Print("Installing...")
-		if err := utils.SelfUpdate(archivePath, installDir); err != nil {
-			out.Fatalf("Failed to update: %s", err)
+		if err := out.RunWithSpinner("Installing v"+targetVersion, func() error {
+			return utils.SelfUpdate(archivePath, installDir)
+		}); err != nil {
+			out.Fatal("Failed to install the update", err)
 		}
 
-		out.Successf("Successfully updated to v%s", targetVersion)
-		suggest("To clean up old artifacts run", "opentaint prune")
+		out.Successf("Updated to v%s", targetVersion)
+		suggest("To clean up old artifacts, run:", "opentaint prune")
 	},
 }
 
@@ -140,5 +138,5 @@ func init() {
 	rootCmd.AddCommand(updateCmd)
 
 	updateCmd.Flags().BoolVar(&updateCheck, "check", false, "Check for updates without downloading")
-	updateCmd.Flags().BoolVar(&updateYes, "yes", false, "Skip confirmation prompt")
+	updateCmd.Flags().BoolVar(&updateYes, "yes", false, "Skip the confirmation prompt")
 }

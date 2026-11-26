@@ -46,22 +46,28 @@ func canonicalProjectPath(projectPath string) (string, error) {
 	return absPath, nil
 }
 
-// GetProjectCachePath returns ~/.opentaint/cache/<slug-hash>/ for a project path,
-// creating the directory if needed. The project path is canonicalized (resolved
-// through symlinks and made absolute) before hashing.
-func GetProjectCachePath(projectPath string) (string, error) {
+// ProjectCachePath returns ~/.opentaint/cache/<slug-hash>/ for a project path without creating it.
+// The project path is canonicalized (resolved through symlinks and made absolute) before hashing.
+func ProjectCachePath(projectPath string) (string, error) {
 	absPath, err := canonicalProjectPath(projectPath)
 	if err != nil {
 		return "", err
 	}
 
-	modelsDir, err := GetModelCacheDir()
+	modelsDir, err := GetModelCacheDirPath()
 	if err != nil {
 		return "", err
 	}
+	return filepath.Join(modelsDir, ProjectPathSlugHash(absPath)), nil
+}
 
-	slugHash := ProjectPathSlugHash(absPath)
-	cachePath := filepath.Join(modelsDir, slugHash)
+// GetProjectCachePath returns ~/.opentaint/cache/<slug-hash>/ for a project path, creating it if
+// needed.
+func GetProjectCachePath(projectPath string) (string, error) {
+	cachePath, err := ProjectCachePath(projectPath)
+	if err != nil {
+		return "", err
+	}
 	if err := os.MkdirAll(cachePath, 0o755); err != nil {
 		return "", fmt.Errorf("failed to create project cache directory: %w", err)
 	}
@@ -99,9 +105,21 @@ func GetProjectLogPath(projectPath string) (string, error) {
 	return filepath.Join(logsDir, ProjectPathSlugHash(absPath)), nil
 }
 
-// DefaultSarifReportPath returns the default SARIF report location for a given
-// project model path: <projectModelPath>/sources/opentaint.sarif
-func DefaultSarifReportPath(projectModelPath string) string {
+// DefaultProjectModelPath returns the default output of `opentaint compile` for a project:
+// <projectRoot>/.opentaint/project
+func DefaultProjectModelPath(projectRoot string) string {
+	return filepath.Join(projectRoot, ".opentaint", "project")
+}
+
+// DefaultSarifReportPath returns the default SARIF report location of a scan of the sources
+// in projectRoot: <projectRoot>/.opentaint/results/report.sarif
+func DefaultSarifReportPath(projectRoot string) string {
+	return filepath.Join(projectRoot, ".opentaint", "results", "report.sarif")
+}
+
+// ProjectModelSarifReportPath returns the default SARIF report location of a scan of a project
+// model: <projectModelPath>/sources/opentaint.sarif
+func ProjectModelSarifReportPath(projectModelPath string) string {
 	return filepath.Join(projectModelPath, "sources", "opentaint.sarif")
 }
 

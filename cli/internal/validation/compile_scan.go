@@ -7,24 +7,28 @@ import (
 	"github.com/seqra/opentaint/internal/utils"
 )
 
-func ValidateCompileInputs(absProjectRoot, absOutputProjectModelPath string) error {
-	if err := requireDirExists(absProjectRoot, "project directory"); err != nil {
+// ValidateCompileInputs checks the inputs of a compile. The errors name the paths as they are
+// given, so pass them as the user wrote them where there is a choice.
+func ValidateCompileInputs(projectRoot, outputProjectModelPath string) error {
+	if err := requireDirExists(projectRoot, "project directory"); err != nil {
 		return err
 	}
 
-	if err := requirePathNotExists(absOutputProjectModelPath, "output directory"); err != nil {
+	if err := requirePathNotExists(outputProjectModelPath, "output directory"); err != nil {
 		return err
 	}
 
 	if !utils.IsSupportedArch() {
-		return fmt.Errorf("unsupported architecture found: %s! only arm64 and amd64 are supported", utils.GetArch())
+		return fmt.Errorf("unsupported architecture `%s`, OpenTaint runs on amd64 and arm64", utils.GetArch())
 	}
 
 	return nil
 }
 
-func ValidateScanInputs(absUserProjectRoot, absProjectModelPath, absSarifReportPath string, nonBuiltinRulesetPaths, severities []string, maxMemoryValue string, requiresProjectModel bool) (string, error) {
-	if err := requireDirExists(absUserProjectRoot, "project path"); err != nil {
+// ValidateScanInputs checks the inputs of a scan. The errors name the paths as they are given, so
+// pass them as the user wrote them where there is a choice.
+func ValidateScanInputs(userProjectRoot, absProjectModelPath, absSarifReportPath string, rulesetPaths, severities []string, maxMemoryValue string, requiresProjectModel bool) (string, error) {
+	if err := requireDirExists(userProjectRoot, "project path"); err != nil {
 		return "", err
 	}
 
@@ -35,8 +39,8 @@ func ValidateScanInputs(absUserProjectRoot, absProjectModelPath, absSarifReportP
 		}
 	}
 
-	for _, ruleSetPath := range nonBuiltinRulesetPaths {
-		if err := requirePathExists(ruleSetPath, "ruleset path"); err != nil {
+	for _, ruleSetPath := range rulesetPaths {
+		if err := requirePathExists(ruleSetPath, "ruleset"); err != nil {
 			return "", err
 		}
 	}
@@ -45,7 +49,7 @@ func ValidateScanInputs(absUserProjectRoot, absProjectModelPath, absSarifReportP
 		switch severity {
 		case "error", "warning", "note":
 		default:
-			return "", fmt.Errorf(`each "severity" flag should be one of note, warning, or error`)
+			return "", fmt.Errorf("invalid --severity value `%s`, use note, warning, or error", severity)
 		}
 	}
 
@@ -55,7 +59,7 @@ func ValidateScanInputs(absUserProjectRoot, absProjectModelPath, absSarifReportP
 
 	parsedMaxMemory, err := utils.ParseMemoryValue(maxMemoryValue)
 	if err != nil {
-		return "", fmt.Errorf("invalid max-memory value: %w", err)
+		return "", fmt.Errorf("invalid --max-memory value `%s`: %w", maxMemoryValue, err)
 	}
 
 	return parsedMaxMemory, nil

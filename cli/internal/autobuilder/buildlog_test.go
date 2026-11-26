@@ -32,6 +32,20 @@ func TestCompilerDiagnostics(t *testing.T) {
 			want: "  /tmp/batch/src/main/java/Model.java:4: error: package org.nosuchlib does not exist\n  1 error",
 		},
 		{
+			name: "gradle repeats the compiler output",
+			log: `14:55:56.305 |D| ProjectResolver - /tmp/batch/Model.java:8: error: incompatible types
+14:55:56.305 |D| ProjectResolver - 1 error
+14:55:56.305 |D| ProjectResolver - * What went wrong:
+14:55:56.306 |D| ProjectResolver - > Compilation failed; see the compiler output below.
+14:55:56.306 |D| ProjectResolver -   /tmp/batch/Model.java:8: error: incompatible types
+14:55:56.306 |D| ProjectResolver -   1 error
+14:55:56.314 |D| ProjectResolver - Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Compilation failed; see the compiler output below.
+14:55:56.315 |D| ProjectResolver - /tmp/batch/Model.java:8: error: incompatible types
+14:55:56.315 |D| ProjectResolver - 1 error
+`,
+			want: "  /tmp/batch/Model.java:8: error: incompatible types\n  1 error",
+		},
+		{
 			name: "kotlinc diagnostics",
 			log:  "12:00:00.000 |D| ProjectResolver - e: file:///tmp/batch/Model.kt:7:1 unresolved reference\n",
 			want: "  e: file:///tmp/batch/Model.kt:7:1 unresolved reference",
@@ -85,5 +99,42 @@ func TestCompilerDiagnostics(t *testing.T) {
 func TestCompilerDiagnosticsMissingLog(t *testing.T) {
 	if got := CompilerDiagnostics(filepath.Join(t.TempDir(), "absent.log")); got != "" {
 		t.Errorf("CompilerDiagnostics() = %q, want \"\" for an unreadable log", got)
+	}
+}
+
+func TestBuildFailure(t *testing.T) {
+	tests := []struct {
+		name string
+		log  string
+		want string
+	}{
+		{
+			name: "dependency that can not be resolved",
+			log: `15:15:15.944 |D| ProjectResolver - > Task :compileJava FAILED
+15:15:15.944 |D| ProjectResolver - FAILURE: Build failed with an exception.
+15:15:15.944 |D| ProjectResolver - * What went wrong:
+15:15:15.944 |D| ProjectResolver - Execution failed for task ':compileJava'.
+15:15:15.944 |D| ProjectResolver - > Could not resolve all files for configuration ':compileClasspath'.
+15:15:15.945 |D| ProjectResolver -    > Could not find com.example:does-not-exist:1.0.
+15:15:15.945 |D| ProjectResolver - * Try:
+15:15:15.945 |D| ProjectResolver - > Run with --info or --debug option to get more log output.
+`,
+			want: "  Execution failed for task ':compileJava'.\n" +
+				"  > Could not resolve all files for configuration ':compileClasspath'.\n" +
+				"     > Could not find com.example:does-not-exist:1.0.",
+		},
+		{
+			name: "no failure summary",
+			log:  "20:22:13.630 |I| ProjectResolver - BUILD SUCCESSFUL in 4s\n",
+			want: "",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := BuildFailure(writeLog(t, test.log)); got != test.want {
+				t.Errorf("BuildFailure() =\n%q\nwant\n%q", got, test.want)
+			}
+		})
 	}
 }
