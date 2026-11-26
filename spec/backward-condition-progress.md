@@ -6,11 +6,17 @@ decision): no ablation, no prototype, no measurement, no WI rule.
 Lean: [BackCondRules](lean/ApSpec/BackCondRules.lean) (`BackCond`),
 [BackMustRun](lean/ApSpec/BackMustRun.lean) (`BackMust`),
 [BackMustView](lean/ApSpec/BackMustView.lean) (`BackMustView`),
-[BackNDRefine](lean/ApSpec/BackNDRefine.lean) (`BackND`). All constructive
-(`propext`, `Quot.sound` only).
+[BackNDRefine](lean/ApSpec/BackNDRefine.lean) (`BackND`),
+[BackCondExamples](lean/ApSpec/BackCondExamples.lean) (`BackCondEx`). All
+constructive (`propext`, `Quot.sound` only).
 
-Rules: **B1** a unary literal gives a backward MUST requirement, also for
-`[any]`. **B2** backward MUST records. **B3** ND seeds refined by captured
+Examples: bases `x y z ret arg0 a b`, fields `f g h k`, marks `T U`. An
+example id `e1` with a ✓ is the theorem `BackCondEx.ex_e1`: the executable
+model computes the result shown, checked by `decide`.
+
+Rules: **B1** the layer of a backward requirement from a literal is its MUST
+status: a unary literal gives N (MUST), also for `[any]`; an ND literal gives
+D (MAY), also for `$`. **B2** backward MUST records. **B3** ND seeds refined by captured
 forward inputs. **D1** (§6) is open and needs a user decision.
 
 ## 1. Problem
@@ -65,11 +71,18 @@ ND_c(p)       ⇔ ∃ A ∈ c↓. p ∈ A ∧ |A| ≥ 2   prod: isMulti(leaf); l
 | every location of a minimal firing state is in `⋃ cov(p)` (MAY cover) | `seed_may_cover`, `core_spec` |
 | MUST is relative to `c↓`, not to the signed condition | `firesS_proj`, `signed_not_must` |
 
+| Ex | `c` | `S` | `fires_c(S)` | Consequence |
+| --- | --- | --- | --- | --- |
+| c1 ✓ | `ContainsMarkOnAnyField(ret,T)` (unary) | `{ret.f(T)}` | yes | `ret.f ∈ Suff`: seed `ret.[any-taint](T)` N |
+| c2 ✓ | `a.$(T) ∧ b.[any](U)` (ND) | `{b.f(U)}` | no | `b.f ∉ Suff`: both seeds are MAY, D (K3, K4) |
+| c3 ✓ | as c2 | `{a(T), b.f(U)}` | yes | `b.f` is on a route: MAY must cover it |
+
 A backward requirement `r = (φ, E, ℓ)` at node `n`:
 
 ```text
 ℓ = N:  ∀ l ∈ cov(φ,E). taint at l at n ⇒ the seeded sink fires        MUST
 ℓ = D:  the D facts cover every location of a real route to the sink    MAY
+B1:     ℓ(req(p)) = N ⇔ unary_c(p)                                       [reqs_normal_must, reqs_nd_demand]
 ```
 
 ### 2.3 Summary edge
@@ -91,6 +104,14 @@ record(e) ⇔ ℓ = N ∧ |prem(e)| = 1 ∧ (d = F ∨ j ≠ zero)              
 A must record is END-EXACT and not PAIR-EXACT (`BackMust.CexMustPair.cex_must_pair`).
 A zero-premise backward edge is never a record: with B1 the N zero-premise
 `[any-taint]` seed edge is not a flow (same cex).
+
+| Ex | `M` | `e` | Meaning | `record(e)` |
+| --- | --- | --- | --- | --- |
+| m1 | `ret.f = arg0` | `F: arg0.$(T) → ret.f.$(T)` N | `den = {(arg0(T), ret.f(T))} ⊆ Fl`: PAIR-EXACT | yes |
+| m2 | `ret.f = arg0` | `F: arg0.*/{}(*) → ret.f.*/{}(*)` N (FLOW) | `den = {(arg0.σ(t), ret.f.σ(t))}`: PAIR-EXACT | yes |
+| m3 | identity `M(arg0)` | `B: arg0.[any-taint](T) →must arg0.[any-taint](T)` N | `l0 = l1`: END-EXACT; `(arg0.f, arg0.g) ∈ den` is no flow: not PAIR-EXACT (`cex_must_pair`) | today no; **B2 yes** |
+| m4 | `sink(arg0)` in `M` | `B: zero → arg0.[any-taint](T)` N | seed path, not a flow | no |
+
 
 ## 3. Operations (d = F and d = B use the same rules)
 
@@ -122,6 +143,17 @@ meet(a.κ, t)           t = $    t = [any]          t = */E2
 
 C2: every common location with its mark is covered by `j`, `a` satisfies `j`,
 `j ⊆ D-c` (`AnyTaintExCov.emitX_contract`).
+
+| Ex | `D-c` | added `a` | premise `j`, `m`, `Ej` | start | Row |
+| --- | --- | --- | --- | --- | --- |
+| e1 ✓ | `x.[any](T)` | `x.f.$(T)` N | `x.f.$(T)`, may | `x.f.$(T)` N | below |
+| e2 ✓ | `x.f.[any](T)` | `x.[any](T)` D | `x.f.[any](T)`, may | `x.f.[any](T)` D | above (today's backward call, C4) |
+| e3 ✓ | `x.f.[any](T)` | `x.[any-taint]/{g}(T)` N | `x.f.[any-taint](T)`, must, `∅` | `x.f.[any-taint](T)` N | above: `E1` not kept at the deeper path (C1) |
+| e4 ✓ | `x.f.[any](T)` | `x.[any-taint]/{f}(T)` N | none | — | `Ea` rejects `f` |
+| e5 ✓ | `x.[any](T)` | `x.[any-taint]/{g}(T)` N | `x.[any-taint]/{g}(T)`, must | `x.[any-taint]/{g}(T)` N | at (C1) |
+| e6 ✓ | `x.$(T)` | `x.[any-taint]/{g}(T)` N | `x.$(T)`, may | `x.$(T)` N | meet `[any-taint] × $ = $` (C2) |
+| e7 ✓ | `x.[any](*)` | `x.[any-taint](T)` N | `x.*/{}(*)`, may (FLOW) | identity N | abstract (C3), `Abs.emitW` |
+| e8 ✓ | `x.[any](T)` | `x.f.$(U)` N | none | — | mark |
 
 ### 3.2 Summary edge ∩ demand edge (ap.md §6.4, restricted runs)
 
@@ -158,6 +190,23 @@ the result; the result adds no pair (`HandoffRestrict.restrictI_contract`,
 `*/E2` loses `E2`; a `*` conclusion stays whole; an abstract mark stays
 pass-through. With B1 the `[any-taint]` rows apply in d = B too.
 
+| Ex | `e` (premise → conclusion) | `δ = (D-c, D-p)` | `restrict(e, δ)` | Row |
+| --- | --- | --- | --- | --- |
+| r1 ✓ | `arg0.$(T) → ret.f.g.$(T)` N | `(arg0.[any](T), ret.[any](T))` | `ret.f.g.$(T)` N | below, kept |
+| r2 ✓ | `arg0.$(T) → ret.[any](T)` D | `(arg0.[any](T), ret.f.$(T))` | `ret.f.$(T)` D | above `[any]`, `$` demand |
+| r3 ✓ | `arg0.$(T) → ret.f.$(T)` N | `(arg0.[any](T), ⊥)` | ⊥ | no `D-p` |
+| r4 ✓ | `arg0.$(T) → ret.$(U)` N | `(arg0.$(T), ret.$(T))` | ⊥ | mark |
+| r5 ✓ | `arg0.[any](T) → ret.$(T)` N | `(arg0.f.[any](T), ret.[any](T))` | ⊥ | premise not inside `D-c` |
+| r6 ✓ | `… → ret.f.$(T)` N | `D-p = ret.*/{}(T)` | `ret.f.$(T)` N | below, `*` admits `f` |
+| r7 ✓ | `… → ret.f.$(T)` N | `D-p = ret.$(T)` | ⊥ | below, `$` rejects `f` |
+| r8 ✓ | `… → ret.[any-taint]/{h}(T)` N | `D-p = ret.f.[any](T)` | `ret.f.[any-taint](T)` N, `E = ∅` | above, `[any]` demand |
+| r9 ✓ | `… → ret.[any-taint]/{h}(T)` N | `D-p = ret.h.[any](T)` | ⊥ | `E` rejects `h` |
+| r10 ✓ | `… → ret.[any-taint]/{h}(T)` N | `D-p = ret.f.$(T)` | `ret.f.$(T)` N | above, `$` demand |
+| r11 | `… → ret.[any-taint]/{h}(T)` N | `D-p = ret.*/{k}(T)` | `ret.[any-taint]/{h,k}(T)` N | at `p`; the model keeps `/{h}` (wider, `ex_r11_model`) |
+| r12 ✓ | `B: ret.[any-taint](T) →must arg0.[any-taint](T)` N | `(ret.[any](T), arg0.h.$(T))` | `arg0.h.$(T)` N | B1/B2: above, `$` demand |
+
+r1–r5, r12: `Handoff.restrictI` (gates and cut); r6–r11: `restrictConcX` (cut with exclusion).
+
 ### 3.3 Application in the own direction (MUST rules)
 
 ```text
@@ -174,6 +223,20 @@ END-EXACT names only SOME `l0 ∈ cov(j)`; only `inside` makes every `l0`
 carry the mark (`AnyTaintExact.CexApp.cex_app`). The rule is the same for
 d = F (today) and d = B (B2). Soundness and exactness of the N results:
 `AnyTaintExExact.DRX_edgeOK` (F), `BackMust.DBX_edgeOK_nz` (B).
+
+| Ex | `a` | `e` | inside | applicable | `a ∘ e` |
+| --- | --- | --- | --- | --- | --- |
+| a1 ✓ | `arg0.$(T)` N | `F: arg0.$(T) → ret.f.$(T)` N | yes | yes | `ret.f.$(T)` N |
+| a2 ✓ | `arg0.h.$(T)` N | `F: arg0.*/{}(*) → ret.f.*/{}(*)` N | no | yes | `ret.f.h.$(T)` N (record only) |
+| a3 ✓ | `arg0.$(T)` D | as a1 | yes | yes | `ret.f.$(T)` D (`ℓa ∨ ℓg`) |
+| a4 ✓ | `arg0.[any-taint](T)` N | `F: arg0.[any-taint](T) →must ret.g.[any-taint](T)` N | yes | yes | `ret.g.[any-taint](T)` N |
+| a5 ✓ | `arg0.h.[any-taint](T)` N | as a4 | no | yes | `ret.g.[any](T)` D (MUST rule) |
+| a6 ✓ | `arg0.h.$(T)` N | as a4 | no | no | `e` not used; `M` is analysed for `a` |
+| a7 ✓ | `ret.[any-taint](T)` N | `B: ret.[any-taint](T) →must arg0.[any-taint](T)` N (B2) | yes | yes | `arg0.[any-taint](T)` N |
+| a8 ✓ | `ret.f.[any-taint](T)` N | as a7 | no | yes | `arg0.[any](T)` D (MUST rule) |
+
+a5, a8: END-EXACT gives each `ret.g.σ` (`arg0.σ`) SOME source in `cov(j)`; that
+source can be outside `cov(a)`.
 
 ### 3.4 Read view in the opposite direction (R3, MUST rules)
 
@@ -194,6 +257,14 @@ view(e), e a normal record read in direction d̄:
 | `m = must`, d = F (today) | sound, D only, not exact | `CurrentMustReverse.must_application_demand`, `AnyTaintExact.CexRev.cex_rev` |
 | `m = must`, d = B (**B2**) | sound, D only, not exact | `BackMustView.viewF_demand`, `viewF_stays_demand`, `viewF_sound`, `Cex.viewF_not_exact` |
 
+| Ex | record `e` | `view(e)` | input `a` | `a ∘ view(e)` |
+| --- | --- | --- | --- | --- |
+| v1 ✓ | `F: arg0.$(T) → ret.[any-taint](T)` N | `ret.*/{}(T) → arg0.$(T)` N | `B: ret.h.$(T)` N | `arg0.$(T)` N (exact) |
+| v2 ✓ | `F: arg0.[any-taint](T) →must ret.g.[any-taint](T)` N | `ret.g.*/{}(T) → arg0.[any](T)` D | `B: ret.g.h.$(T)` N | `arg0.[any](T)` D |
+| v3 ✓ | `F: arg0.[any-taint](T) →must ret.f.$(T)` N | `ret.f.$(T) → arg0.[any](T)` D | `B: ret.f.$(T)` N | `arg0.[any](T)` D |
+| v4 ✓ | `B: ret.[any-taint](T) →must arg0.[any-taint](T)` N (B2) | meet `arg0.[any-taint](T)` → `ret.[any](T)` D | `F: arg0.h.$(T)` N | `ret.[any](T)` D |
+| v5 ✓ | as v4 | as v4 | `F: arg0.h.$(U)` N | none (mark) |
+
 ### 3.5 Hand-off selection (F77, ap.md §8.5)
 
 ```text
@@ -205,6 +276,13 @@ sel(e)  ⇒ each piece restrict(e, δ) = ⟨j → g'⟩ gives the next-run deman
 
 With B2, a backward must summary has `¬sel(e)`. See D1 (§6).
 
+| Ex | `e` | `sel(e)` | Run `n+1` |
+| --- | --- | --- | --- |
+| q1 | `F: arg0.$(T) → ret.f.$(T)` N | no | record: R4 forward, view v1-type backward |
+| q2 | `F: arg0.[any](T) → ret.[any](T)` D | yes | backward callee demand `(ret.[any](T), arg0.[any](T))` |
+| q3 | `B: zero → arg0.[any-taint](T)` N | yes | forward demand from the zero row |
+| q4 | `B: ret.[any-taint](T) →must arg0.[any-taint](T)` N (B2) | F77: no (D1) | H1: no callee demand, only v4; H2: forward callee demand `(arg0.[any](T), ret.[any](T))` |
+
 ## 4. Rule table
 
 Run `n` is backward; run `n−1` is the forward run before it. **Bold** = new.
@@ -215,7 +293,7 @@ Run `n` is backward; run `n−1` is the forward run before it. **Bold** = new.
 | --- | --- | --- | --- | --- |
 | K1 | `ContainsMark(P,T)`, unary | `P.$(T)` N | same | DEMAND witness `W` of the sink at `(M, s, occ)` |
 | K2 | `ContainsMarkOnAnyField(P,T)`, unary | **`P.[any-taint](T)` N, `E = ∅`** | `P.[any](T)` D | `W` |
-| K3 | `ContainsMark(P,T)` in an ND alternative | `P.$(T)` N (zero premise, never a record) | same | `W` (refinement is the identity) |
+| K3 | `ContainsMark(P,T)` in an ND alternative | **`P.$(T)` D** | `P.$(T)` N | `W` (refinement is the identity) |
 | K4 | `ContainsMarkOnAnyField(P,T)` in an ND alternative | **`refine_j(Cap)` D (§5)** | `P.[any](T)` D | `W` and `Cap_j(M, s, occ)` |
 | K5 | literal unary and ND | K1 / K2 only | — | `W` |
 | K6 | no positive literal; unconditional (zero pattern) | none (zero demand covers it) | same | `W` |
@@ -236,7 +314,9 @@ Run `n` is backward; run `n−1` is the forward run before it. **Bold** = new.
 | S8 | end-fact action of sink alternative `A` | zero fact; fire K7 at `(M, s, A)` once | same | none (also if `A` is CONFIRMED) |
 | S9 | cleaner, type filter | as today | same | none |
 
-MAY class = S4, S5, S7: every result D, also a `$` result (DES-3, D18).
+MAY class = K3, K4, S4, S5, S7: every result D, also a `$` result (DES-3, D18).
+K3 today is N: an N requirement that is not MUST. With B1 it would make wrong
+MUST facts, for example through S3 (`P.$(T)` N → `Q.[any-taint](T')` N).
 
 ### 4.3 Calls: requirement `c` binds into a callee by `b.* → b'.*`
 
@@ -280,6 +360,15 @@ held past `freeze()` as a hand-off side table, outside `Seed` equality.
 | `*` mark capture: no seed at all; `*/E` capture: illegal seed | `Vec.cex_abstract_mark`, `Vec.cex_star_capture` |
 | `dom Cap` shrinks ⇒ the fallback grows the seed | `Vec.cex_mono_fallback` |
 
+Literals `0 = a.$(T)`, `1 = b.[any](U)` (ND, c2):
+
+| Ex | `Cap` | Seeds | Note |
+| --- | --- | --- | --- |
+| n1 ✓ | `0: a.$(T)`; `1: b.f.$(U)`, `b.g.h.$(U)` | `a.$(T)`, `b.f.$(U)`, `b.g.h.$(U)` D | two chains replace `b.[any](U)` |
+| n2 ✓ | `1: b.g.[any]/{k}(U)` | `a.$(T)` (fallback), `b.g.[any](U)` D | production forgets `{k}`; the model keeps it |
+| n3 ✓ | `∅` | `a.$(T)`, `b.[any](U)` D | fallback = today, except K3 |
+| n4 ✓ | `1: b.f.*/{}(*)`, not in normal form | `a.$(T)` D only | literal 1 has no seed: the normal form is necessary |
+
 Not selected: B3-P (fallback = the previous seed, and every seed met with
 it): monotone by construction, keeps seed state across runs, can remove a
 demand that today keeps (S-H6).
@@ -316,6 +405,7 @@ A case ⇒ withdraw H1; the §1 owners need H3.
 | Changed (selected by the user, 26 Nov) | Rows |
 | --- | --- |
 | unary `[any]` sink seed: D → N MUST | K2 |
+| ND `$` sink seed: N → D MAY (user, 26 Nov) | K3 |
 | reversed unary `[any]` source literal: D → `ℓr` MUST | S3 |
 | backward MUST added fact, must-premise, N start | C1, §3.1 |
 | backward MUST records: R1, R4, R3 view | C1, §2.3, §3.3, §3.4 |
@@ -324,7 +414,7 @@ A case ⇒ withdraw H1; the §1 owners need H3.
 
 Unchanged: the forward run (transfer, sink check, layers, records, views
 of forward records, confirmation, traces); the MAY class (S4, S5, S7);
-`$` seeds; zero rows; source hits; C1–C5; §3.1–§3.2 tables; field limits
+unary `$` seeds (K1); zero rows; source hits; C1–C5; §3.1–§3.2 tables; field limits
 and FL+1 caps; hand-off normalization; W8 (d) for demand patterns
 (`Demand.kt:41`, `DemandStore.kt:449`); confirmed and provisional results
 (the gate).
@@ -334,6 +424,7 @@ and FL+1 caps; hand-off normalization; W8 (d) for demand patterns
 | interpreter.md I11 (f), I14 ("the backward run has no `[any-taint]`"), §4.9 | K2, S3, K4, S5; "no micro edge has the premise tail `[any-taint]`" stays |
 | `MicroEdge.kt:23-25` A1 | a reversed micro edge may have a must target (S3), never a must premise |
 | ap.md §6.5 ("the backward run has no `[any-taint]` premise") | C1 |
+| ap.md §9.2 ("an `[any]` seed is demand-layer") | a seed is N ⇔ its literal is unary (K1–K4) |
 | ap.md §8.7 R1, `RecordStore.kt:274-277` | §2.3 |
 | ap.md §9.1 backward W6 | only the MAY class and non-B1 `[any]` results |
 | ap.md §8.5 F77 | H1: none; H1g/H2: one condition |
@@ -341,7 +432,7 @@ and FL+1 caps; hand-off normalization; W8 (d) for demand patterns
 
 | Hidden-change candidate | Status |
 | --- | --- |
-| S-H1: a backward `[any-taint]/E` gets an exclusion at a strong update; `[any]` D does not. `x.f = z; …; x.f = y; sink(x)`: MUST gives no requirement on `z`, D gives one. The forward demand can get narrower. | base model: same facts (`W6.D6_same_shape`, `summaryDemand_iff`); refined model: not proved; shadow-compare the normalized pieces |
+| S-H1: a backward `[any-taint]/E` gets an exclusion at a strong update; `[any]` D does not (t1, t2). The forward demand can get narrower. | base model: same facts (`W6.D6_same_shape`, `summaryDemand_iff`); refined model: not proved; shadow-compare the normalized pieces |
 | S-H2: the EXACT-cleaner rule for a MUST leaf (`Clean.kt:187-192`) now runs backward | not modelled |
 | S-H3: a must and an `[any]` premise at one path are separate keys | cost only |
 | S-H4: MUST is relative to `c↓` | the forward run uses `c↓` too |
@@ -349,6 +440,14 @@ and FL+1 caps; hand-off normalization; W8 (d) for demand patterns
 | S-H6: B3 narrows the forward demand | not proved; measure |
 | S-H7: new record shape `(B, [any-taint] premise)` | no dedup change for existing shapes |
 | S-H8 (H1 only): traces through a backward must view | check in the prototype |
+| S-H9 (K3): the callee summaries of an ND `$` seed become D: no backward `$` record, selected rows (q2 type) instead of the exact forward view (v1 type). The next forward run analyses those callees under a `$` demand. | results expected equal, not proved; more rows per backward run while the witness is DEMAND; measure |
+
+S-H1 on `x.f = z; …; x.f = y; sink(x)`, backward transfer (`BackMust.transferXB`):
+
+| Ex | At `sink(x)` | After reversed `x.f = y` | After reversed `x.f = z` |
+| --- | --- | --- | --- |
+| t1 ✓ | `x.[any-taint](T)` N (B1) | `y.[any-taint](T)`, `x.[any-taint]/{f}(T)` N | `y.[any-taint](T)`, `x.[any-taint]/{f}(T)` N: no requirement on `z` |
+| t2 ✓ | `x.[any](T)` D (today) | `y.[any](T)`, `x.[any](T)` D | `y.[any](T)`, `z.[any](T)`, `x.[any](T)` D |
 
 ## 8. Proof map: run level and views
 
@@ -374,8 +473,10 @@ Model vs production:
   for every MAY class. The rule level proves the MAY class (S4, S5, S7)
   is not MUST. Link (argued): an N backward fact never crosses a MAY-class
   edge.
-* The must flag of a seed is an input of `BackMust`; `BackCond` decides it
-  on `c↓` (DNF). Production has an NNF DAG.
+* The must flag of a seed is an input of `BackMust`, and the seed layer is
+  `!must` (rule `DBX.seed`); `BackCond.reqs` decides it on `c↓` (DNF): unary
+  N, ND D for every tail (`reqs_nd_demand`). So the model has K3 = D.
+  Production has an NNF DAG.
 * `BackMustView`: one record, one leaf; no store lookup, statics, cleaners,
   type filters; `guard_keeps_normal` only for canonical FLOW records.
 * `BackND`: the base model has no ND sink; each literal is its own sink.

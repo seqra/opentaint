@@ -2,11 +2,12 @@
 
 ## Checked future candidate: backward condition progress, 26 November 2026
 
-The [specification](backward-condition-progress.md) proposes B1 (a unary
-`[any]` literal gives a backward MUST requirement), B2 (backward MUST
+The [specification](backward-condition-progress.md) proposes B1 (the layer of
+a backward requirement is the MUST status of its literal: a unary literal,
+also `[any]`, gives N; an ND literal, also `$`, gives D), B2 (backward MUST
 records) and B3 (ND seeds refined by captured forward inputs). It is a spec
-only: no prototype, no measurement, no WI rule. Four constructive modules
-build with the package (`lake build`, 204 jobs); 108 `#print axioms` audits
+only: no prototype, no measurement, no WI rule. Five constructive modules
+build with the package (`lake build`, 205 jobs); the `#print axioms` audits
 show only `propext` and `Quot.sound`:
 [BackCondRules.lean](lean/ApSpec/BackCondRules.lean) (rule level: unary
 literals are MUST, ND and pass-rule `AnyField` reversals are not),
@@ -15,9 +16,11 @@ literals are MUST, ND and pass-rule `AnyField` reversals are not),
 [BackMustView.lean](lean/ApSpec/BackMustView.lean) (the forward view is
 DEMAND; `Cex.cex_drop_forward_demand`: with F77 unchanged a confirmation is
 lost), [BackNDRefine.lean](lean/ApSpec/BackNDRefine.lean) (`refine_sound`,
-`refine_mono`, `iteration_general_refined`). Open: decision D1 (spec §4),
-the hidden changes S-H1, S-H2, S-H6, S-H8, and the ND form of the backward
-contract.
+`refine_mono`, `iteration_general_refined`),
+[BackCondExamples.lean](lean/ApSpec/BackCondExamples.lean) (42 principal
+examples of the spec operations, checked by `decide`). Open: decision D1
+(spec §6), the hidden changes S-H1, S-H2, S-H6, S-H8, S-H9, and the ND form of
+the backward contract.
 
 ## Checked future candidate: exact call-stage result merging, 1 November 2026
 
