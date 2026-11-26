@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -118,22 +117,39 @@ func TestEnsureGoServerAvailable_BinaryOverrideNotExecutable(t *testing.T) {
 	}
 }
 
-// The project model decides whether the analyzer needs go-ssa-server, whatever is on disk.
-func TestGoServerEnvWithoutGoProjects(t *testing.T) {
+// fakeGoRoot returns a directory that passes for the Go toolchain of a project model.
+func fakeGoRoot(t *testing.T) string {
+	t.Helper()
+	goRoot := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(goRoot, "bin"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(goRoot, "bin", "go"), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return goRoot
+}
+
+// The project model decides whether the analyzer needs go-ssa-server, whatever is on disk: a
+// model without Go projects, or with only Go projects that the analyzer skips, needs none.
+func TestGoServerEnvWithoutGoProjectsToAnalyze(t *testing.T) {
 	orig := globals.Config.GoServer.Binary
 	t.Cleanup(func() { globals.Config.GoServer.Binary = orig })
 	globals.Config.GoServer.Binary = filepath.Join(t.TempDir(), "does-not-exist")
 
-	config := &project.Config{JavaProjects: []project.JavaProject{{SourceRoot: "java_0/sources"}}}
-	if env := goServerEnv(config); env != nil {
-		t.Errorf("goServerEnv() = %v, want none for a model without Go projects", env)
+	java := []project.JavaProject{{SourceRoot: "java_0/sources"}}
+	for name, config := range map[string]*project.Config{
+		"no Go projects":       {JavaProjects: java},
+		"no Go toolchain":      {JavaProjects: java, GoProjects: []project.GoProject{{ProjectDir: "go_0"}}},
+		"missing Go toolchain": {GoProjects: []project.GoProject{{ProjectDir: "go_0", GoToolchain: "/does/not/exist"}}},
+	} {
+		if env := goServerEnv(config, t.TempDir()); env != nil {
+			t.Errorf("%s: goServerEnv() = %v, want none", name, env)
+		}
 	}
 }
 
 func TestGoServerEnvPointsAtTheGoServer(t *testing.T) {
-	if _, err := exec.LookPath("go"); err != nil {
-		t.Skip("no Go toolchain")
-	}
 	orig := globals.Config.GoServer.Binary
 	t.Cleanup(func() { globals.Config.GoServer.Binary = orig })
 	bin := filepath.Join(t.TempDir(), "go-ssa-server")
@@ -142,9 +158,24 @@ func TestGoServerEnvPointsAtTheGoServer(t *testing.T) {
 	}
 	globals.Config.GoServer.Binary = bin
 
-	config := &project.Config{GoProjects: []project.GoProject{{ProjectDir: "go_0"}}}
-	if got := goServerEnv(config)["GOIR_SERVER_BINARY"]; got != bin {
+	config := &project.Config{GoProjects: []project.GoProject{{ProjectDir: "go_0", GoToolchain: fakeGoRoot(t)}}}
+	if got := goServerEnv(config, t.TempDir())["GOIR_SERVER_BINARY"]; got != bin {
 		t.Errorf("GOIR_SERVER_BINARY = %q, want %q", got, bin)
+	}
+}
+
+func TestRebuildModelCommand(t *testing.T) {
+	origArgs := os.Args
+	t.Cleanup(func() { os.Args = origArgs })
+	os.Args = []string{"opentaint", "scan", "my project", "--dry-run"}
+
+	cached := rebuildModelCommand(ScanConfig{}, scanPlan{projectCachePath: "/cache/p"})
+	if want := "opentaint scan 'my project' --recompile"; cached != want {
+		t.Errorf("cached model: %q, want %q", cached, want)
+	}
+	given := rebuildModelCommand(ScanConfig{ProjectModelPath: "./model"}, scanPlan{})
+	if want := "opentaint compile <source-path> --output ./model"; given != want {
+		t.Errorf("given model: %q, want %q", given, want)
 	}
 }
 
