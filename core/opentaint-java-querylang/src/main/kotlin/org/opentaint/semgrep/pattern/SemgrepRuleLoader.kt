@@ -111,23 +111,38 @@ class SemgrepRuleLoader(
     }
 
     data class RuleLoadResult(
-        val rulesWithMeta: List<Pair<TaintRuleFromSemgrep<*>, RuleMetadata>>,
+        val rulesByLanguage: Map<String, List<Pair<TaintRuleFromSemgrep<*>, RuleMetadata>>>,
         val disabledRules: Set<String>,
-    )
+        val noRuleSelected: Boolean,
+    ) {
+        val rulesWithMeta: List<Pair<TaintRuleFromSemgrep<*>, RuleMetadata>>
+            get() = rulesByLanguage.values.flatten()
+
+        fun forLanguage(language: String): RuleLoadResult =
+            copy(rulesByLanguage = rulesByLanguage.filterKeys { it == language })
+    }
 
     fun loadRules(
         severity: List<Severity> = emptyList(),
         ruleIdFilter: List<String> = emptyList(),
         ruleIdExclude: List<String> = emptyList(),
+        semgrepStyleRuleIdFilter: List<String> = emptyList(),
+        semgrepStyleRuleIdExclude: List<String> = emptyList(),
+        useSemgrepStyleRuleId: Boolean = false,
+        trace: SemgrepLoadTrace = SemgrepLoadTrace(),
     ): RuleLoadResult {
+        val ruleIdFilters = RuleIdFilters(ruleIdFilter, ruleIdExclude, semgrepStyleRuleIdFilter, semgrepStyleRuleIdExclude)
+
         fun Rule<*>.skip(): Boolean =
             info.isDisabled || info.isLibraryRule
                 || !ruleSeverityAllow(this, severity)
-                || !ruleIdAllow(this, ruleIdFilter)
-                || ruleIdExcluded(this, ruleIdExclude)
+                || !ruleIdFilters.allows(info.ruleId)
+                || ruleIdFilters.excludes(info.ruleId)
 
         registeredRules.values.toList()
             .forEach { parseRule(it, forceLibraryMode = false) }
+
+        reportRuleIdIssues(ruleIdFilters, useSemgrepStyleRuleId, trace)
 
         resolveRuleOverrides()
 
@@ -135,23 +150,72 @@ class SemgrepRuleLoader(
             .filterIsInstance<NormalRule<Formula>>()
             .forEach { buildNormalRule(it) }
 
-        val loaded = mutableListOf<Pair<TaintRuleFromSemgrep<*>, RuleMetadata>>()
+        val loaded = linkedMapOf<String, MutableList<Pair<TaintRuleFromSemgrep<*>, RuleMetadata>>>()
+        fun Rule<*>.addLoaded(rule: Pair<TaintRuleFromSemgrep<*>, RuleMetadata>?) {
+            rule ?: return
+            loaded.getOrPut(info.language ?: return, ::mutableListOf) += rule
+        }
+
         builtNormalRules.values
             .filterNot { it.skip() }
-            .forEach {
-                loaded += loadNormalRule(it) ?: return@forEach
-            }
+            .forEach { it.addLoaded(loadNormalRule(it)) }
 
         val tagIndex = buildTagIndex()
-        val excludedRuleIds = ruleIdExclude.toSet()
+        val excludedRuleIds = registeredRules.keys.filterTo(hashSetOf(), ruleIdFilters::excludes)
         parsedRules.values
             .filterIsInstance<JoinRule<*>>()
             .filterNot { it.skip() }
-            .forEach {
-                loaded += loadJoinRule(it, tagIndex, excludedRuleIds) ?: return@forEach
-            }
+            .forEach { it.addLoaded(loadJoinRule(it, tagIndex, excludedRuleIds)) }
 
-        return RuleLoadResult(loaded, disabledRules)
+        val noRuleSelected = ruleIdFilters.isNotEmpty() && loaded.isEmpty()
+        if (noRuleSelected) {
+            trace.error(Step.LOAD_RULESET, NoRuleSelected())
+        }
+
+        return RuleLoadResult(loaded, disabledRules, noRuleSelected)
+    }
+
+    private class RuleIdFilters(
+        val include: List<String>,
+        val exclude: List<String>,
+        val semgrepStyleInclude: List<String>,
+        val semgrepStyleExclude: List<String>,
+    ) {
+        val usesSemgrepStyleRuleId: Boolean
+            get() = semgrepStyleInclude.isNotEmpty() || semgrepStyleExclude.isNotEmpty()
+
+        fun isNotEmpty(): Boolean =
+            include.isNotEmpty() || exclude.isNotEmpty() || usesSemgrepStyleRuleId
+
+        fun allows(ruleId: String): Boolean =
+            (include.isEmpty() && semgrepStyleInclude.isEmpty())
+                || ruleId in include
+                || SemgrepRuleUtils.getSemgrepStyleRuleId(ruleId) in semgrepStyleInclude
+
+        fun excludes(ruleId: String): Boolean =
+            ruleId in exclude || SemgrepRuleUtils.getSemgrepStyleRuleId(ruleId) in semgrepStyleExclude
+    }
+
+    private fun reportRuleIdIssues(filters: RuleIdFilters, useSemgrepStyleRuleId: Boolean, trace: SemgrepLoadTrace) {
+        val ruleIdsBySemgrepStyleId = registeredRules.keys.groupBy(SemgrepRuleUtils::getSemgrepStyleRuleId)
+        if (useSemgrepStyleRuleId || filters.usesSemgrepStyleRuleId) {
+            reportSemgrepStyleRuleIdCollisions(ruleIdsBySemgrepStyleId)
+        }
+
+        val unknownRuleIds = (filters.include + filters.exclude).filterNot { it in registeredRules } +
+            (filters.semgrepStyleInclude + filters.semgrepStyleExclude).filterNot { it in ruleIdsBySemgrepStyleId }
+        unknownRuleIds.forEach { trace.error(Step.LOAD_RULESET, UnknownRuleIdFilter(it)) }
+    }
+
+    private fun reportSemgrepStyleRuleIdCollisions(ruleIdsBySemgrepStyleId: Map<String, List<String>>) {
+        for ((semgrepStyleRuleId, ruleIds) in ruleIdsBySemgrepStyleId) {
+            if (ruleIds.size < 2) continue
+            for (ruleId in ruleIds) {
+                registeredRules.getValue(ruleId).ruleTrace
+                    .stepTrace(Step.LOAD_RULESET)
+                    .error(SemgrepStyleRuleIdCollision(semgrepStyleRuleId, (ruleIds - ruleId).sorted()))
+            }
+        }
     }
 
     private data class RuleInfo(
@@ -602,12 +666,6 @@ class SemgrepRuleLoader(
 
     private fun ruleSeverityAllow(rule: Rule<*>, severity: List<Severity>): Boolean =
         severity.isEmpty() || severity.contains(rule.info.metadata.severity)
-
-    private fun ruleIdAllow(rule: Rule<*>, ruleIdFilter: List<String>): Boolean =
-        ruleIdFilter.isEmpty() || rule.info.ruleId in ruleIdFilter
-
-    private fun ruleIdExcluded(rule: Rule<*>, ruleIdExclude: List<String>): Boolean =
-        rule.info.ruleId in ruleIdExclude
 
     private fun Rule<*>.modeModifier(): String? {
         if (!info.primitiveTracking) return null

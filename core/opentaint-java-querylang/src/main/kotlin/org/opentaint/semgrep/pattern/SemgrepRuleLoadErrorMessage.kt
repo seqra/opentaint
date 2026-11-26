@@ -29,6 +29,18 @@ class AmbiguousOverride(currentRuleId: String, previousRuleId: String) : RuleIss
     override val message: String = "Ambiguous override: both '$currentRuleId' and '$previousRuleId' declare an override of the same rule; only the first will be applied"
 }
 
+class SemgrepStyleRuleIdCollision(semgrepStyleRuleId: String, otherRuleIds: List<String>) : RuleIssueNonBlockingMessage() {
+    override val message: String = "Semgrep-style rule ID '$semgrepStyleRuleId' is shared with ${otherRuleIds.joinToString { "'$it'" }}; this ID selects and reports all of these rules together"
+}
+
+class UnknownRuleIdFilter(ruleId: String) : RuleIssueNonBlockingMessage() {
+    override val message: String = "Rule ID '$ruleId' given to a rule filter matches no rule"
+}
+
+class NoRuleSelected : RuleIssueBlockingMessage() {
+    override val message: String = "The rule filters leave no rule to run; the analysis is skipped"
+}
+
 class RuleOverridesNothing(targetRuleId: String) : RuleIssueBlockingMessage() {
     override val message: String = "Rule overrides nothing: target rule '$targetRuleId' was not found or not parsed"
 }

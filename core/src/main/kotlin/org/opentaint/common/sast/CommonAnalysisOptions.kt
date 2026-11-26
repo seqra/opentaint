@@ -15,6 +15,8 @@ data class CommonAnalysisOptions(
     val semgrepSeverity: List<CommonTaintConfigurationSinkMeta.Severity> = emptyList(),
     val semgrepRuleId: List<String> = emptyList(),
     val semgrepRuleIdExclude: List<String> = emptyList(),
+    val semgrepStyleRuleId: List<String> = emptyList(),
+    val semgrepStyleRuleIdExclude: List<String> = emptyList(),
     val trackExternalMethods: Boolean = false,
     val ifdsAnalysisTimeout: Duration = Duration.ZERO,
     val ifdsApMode: ApMode = ApMode.Tree,

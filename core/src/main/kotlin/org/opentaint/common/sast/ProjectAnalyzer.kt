@@ -1,14 +1,14 @@
 package org.opentaint.common.sast
 
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
-import org.opentaint.common.sast.rules.loadSemgrepRules
+import org.opentaint.common.sast.sarif.toolRunReport
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.project.CommonProject
 import org.opentaint.semgrep.pattern.RuleMetadata
+import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
-import org.opentaint.semgrep.pattern.conversion.LanguageStrategy
 
 abstract class ProjectAnalyzer<
         Ctx : AutoCloseable,
@@ -20,6 +20,7 @@ abstract class ProjectAnalyzer<
     project: P,
     results: ProjectAnalysisResults,
     options: CommonAnalysisOptions,
+    private val loadedRules: SemgrepRuleLoader.RuleLoadResult,
 ) : ProjectAnalyzerBase<Ctx, P, Method, Stmt, RuleItem, RuleConfig, ProjectAnalysisResults>(
     project, results, options
 ) {
@@ -28,6 +29,12 @@ abstract class ProjectAnalyzer<
     abstract fun initializeProjectAnalysisContext(): Ctx
 
     open fun analyze(): ProjectAnalysisStatus {
+        if (loadedRules.noRuleSelected) {
+            results.analysisSarifReport += project to
+                options.sarifGenerationOptions.toolRunReport(project.sourceRoot(), emptyList(), emptySequence())
+            return ProjectAnalysisStatus.OK
+        }
+
         val rules = preloadRules()
         val projectAnalysisContext = initializeProjectAnalysisContext()
 
@@ -39,10 +46,7 @@ abstract class ProjectAnalyzer<
 
     abstract fun Ctx.selectProjectEntryPoints(): List<Method>
 
-    abstract fun ruleStrategy(): LanguageStrategy<*, RuleItem>
-
     private fun preloadRules(): PreloadedRules<RuleItem, RuleConfig> {
-        val loadedRules = options.loadSemgrepRules(ruleStrategy())
         ruleMetadatas += loadedRules.rulesWithMeta.map { it.second }
 
         val rules = loadedRules.rulesWithMeta.map {
