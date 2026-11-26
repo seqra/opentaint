@@ -248,6 +248,56 @@ theorem all_req_not_sub :
   have h1 := h (· = 2) (fun _ hl => hl) 1 (Or.inl rfl)
   exact absurd h1 (by decide)
 
+/-! ### One code tail is not enough (spec §N.7, rule F)
+
+With one field tail, the reading of a fact comes from the run direction. These cases show that the
+kind must be part of the fact: the same tail bits on the same location sets mean different things. -/
+
+/-- Locations `1`, `2` at the forward entry, `3`, `4` at the forward exit. -/
+def Y12 (l : Nat) : Prop := l = 1 ∨ l = 2
+def Y1 (l : Nat) : Prop := l = 1
+def X3 (l : Nat) : Prop := l = 3
+def X34 (l : Nat) : Prop := l = 3 ∨ l = 4
+/-- One flow, `1 → 3`. -/
+def F13 (a r : Nat) : Prop := a = 1 ∧ r = 3
+
+/-- §I.8 case 2 in the backward run: the forward must record `[all-fields] Y12 → [all-fields] X3` is
+    valid, and with the reader `$ 3` the result `[all-fields] Y12` is sound. Read with the backward
+    native kind, `[any-field] Y12`, it is false: taint at `2` alone does not reach `3`. -/
+theorem case2_needs_all_fields :
+    Valid F13 (.allFields Y12) (.allFields X3) ∧
+    Req (fun σ => post F13 σ 3) (.allFields Y12) ∧
+    ¬ Req (fun σ => post F13 σ 3) (.anyField Y12) := by
+  refine ⟨?_, ?_, ?_⟩
+  · exact (valid_all_all F13 Y12 X3).mpr fun r hr => ⟨1, Or.inl rfl, rfl, hr⟩
+  · intro σ hy; exact ⟨1, hy 1 (Or.inl rfl), rfl, rfl⟩
+  · intro h
+    obtain ⟨a, ha, ha1, _⟩ := h (· = 2) ⟨2, Or.inr rfl, rfl⟩
+    subst ha1; exact absurd ha (by decide)
+
+/-- §I.8 case 3 in the forward run: the backward must record `[any-field] Y1 → [any-field] X34`
+    (forward orientation) is valid, and with the claim `$ 1` the result `[any-field] X34` holds. Read
+    with the forward native kind, `[all-fields] X34`, it is false: `4` is not tainted. -/
+theorem case3_needs_any_field :
+    Valid F13 (.anyField Y1) (.anyField X34) ∧
+    holds (post F13 (· = 1)) (.anyField X34) ∧
+    ¬ holds (post F13 (· = 1)) (.allFields X34) := by
+  refine ⟨?_, ⟨3, Or.inl rfl, 1, rfl, rfl, rfl⟩, ?_⟩
+  · exact (valid_any_any F13 Y1 X34).mpr fun a ha => ⟨3, Or.inl rfl, ha, rfl⟩
+  · intro h
+    obtain ⟨_, _, _, h4⟩ := h 4 (Or.inr rfl)
+    exact absurd h4 (by decide)
+
+/-- Two summaries of ONE direction with the same tail bits and the same ends have different
+    meanings: under D2 a backward summary can start from a foreign `[all-fields]` requirement, so the
+    direction cannot give the kind. `F13` validates `[all-fields] Y12 → [all-fields] X3` and not
+    `[any-field] Y12 → [any-field] X3`. -/
+theorem same_bits_two_meanings :
+    Valid F13 (.allFields Y12) (.allFields X3) ∧ ¬ Valid F13 (.anyField Y12) (.anyField X3) := by
+  refine ⟨case2_needs_all_fields.1, fun h => ?_⟩
+  obtain ⟨_, _, ha, _⟩ := (valid_any_any F13 Y12 X3).mp h 2 (Or.inr rfl)
+  exact absurd ha (by decide)
+
 end Cex
 
 end ApSpec.FieldQuant
@@ -259,3 +309,6 @@ end ApSpec.FieldQuant
 #print axioms ApSpec.FieldQuant.fwd_apply_exact
 #print axioms ApSpec.FieldQuant.Cex.any_not_sub
 #print axioms ApSpec.FieldQuant.Cex.all_req_not_sub
+#print axioms ApSpec.FieldQuant.Cex.case2_needs_all_fields
+#print axioms ApSpec.FieldQuant.Cex.case3_needs_any_field
+#print axioms ApSpec.FieldQuant.Cex.same_bits_two_meanings

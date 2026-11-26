@@ -6,16 +6,19 @@ The [specification](backward-condition-progress.md) proposes B1 (the layer of
 a backward requirement is the MUST status of its literal: a unary literal,
 also `[any]`, gives N; an ND literal, also `$`, gives D), B2 (backward MUST
 records), B3 (ND seeds refined by captured forward inputs) and B4 (summary
-application by implication: the CURRENT `[any-taint]` tail is `[all-fields]`
-in the forward run and `[any-field]` in the backward run, and a must record
-read by the other run gives a NORMAL result of the foreign kind). It is a
+application by implication, with rule F: the code tail `ANY_TAINT` is split
+into `ALL_FIELDS` (`[all-fields]`) and `ANY_FIELD` (`[any-field]`), each fact
+carries its tail, and a must record read by the other run gives a NORMAL
+result of the foreign tail). It is a
 spec only: no prototype, no measurement, no WI rule. Seven constructive
 modules build with the package (`lake build`, 207 jobs); the `#print axioms`
 audits show only `propext` and `Quot.sound`:
 [FieldQuant.lean](lean/ApSpec/FieldQuant.lean) (no axiom: the implication
 table between `$`, `[all-fields]` and `[any-field]` ends, the nine edge
-shapes, B4 soundness and exactness for both runs, and the counterexamples
-that keep the foreign kinds from acting like `[any-taint]`),
+shapes, B4 soundness and exactness for both runs, the counterexamples
+that keep the foreign kinds from acting like `[any-taint]`, and
+`Cex.case2_needs_all_fields`, `case3_needs_any_field`,
+`same_bits_two_meanings`: one tail read by the run direction is unsound),
 [BackCondRules.lean](lean/ApSpec/BackCondRules.lean) (rule level: unary
 literals are MUST, ND and pass-rule `AnyField` reversals are not),
 [BackMustRun.lean](lean/ApSpec/BackMustRun.lean) (`DBX_edgeOK_nz`,
@@ -30,7 +33,7 @@ records of both runs are valid edges of `FieldQuant`; record reversal cases
 [BackCondExamples.lean](lean/ApSpec/BackCondExamples.lean) (51 principal
 examples of the spec operations, checked by `decide`). Open: decisions D1
 (spec §II.11) and D2 (transfer of the foreign kinds, §I.9), the hidden
-changes S-H1, S-H2, S-H6, S-H8, S-H9, S-H10, S-H11, the ND form of the
+changes S-H1, S-H2, S-H6, S-H8, S-H9, S-H10, S-H11, S-H12, the ND form of the
 backward contract, and B4 over a whole run (proved per edge only).
 
 ## Checked future candidate: exact call-stage result merging, 1 November 2026

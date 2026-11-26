@@ -35,7 +35,7 @@
 
 | Rule | What it does | Where | Status |
 | --- | --- | --- | --- |
-| F field kinds | the CURRENT `[any-taint]` tail has two names: `[all-fields]` in the forward run (every covered location carries the mark) and `[any-field]` in the backward run (taint at any covered location fires the sink). Both act like `[any-taint]` in transfer, emission and restriction | §N.1 | **CURRENT** (names only) |
+| F two field tails | the code tail `ANY_TAINT` is replaced by two tails, `ALL_FIELDS` (`[all-fields]`: every covered location) and `ANY_FIELD` (`[any-field]`: one covered location). Each fact, premise, conclusion tree and record end carries its tail; the run direction no longer gives the reading. In its native run (forward `[all-fields]`, backward `[any-field]`) each tail acts like `ANY_TAINT` today | §N.1, §N.7 | **CHANGED** (code representation) |
 | B1 MUST seeds | a requirement from a literal is NORMAL if and only if the literal alone fires the rule (a unary literal): unary `[any]` literals give `[any-field]`, ND `$` literals give DEMAND | §II.2–§II.5 | **CHANGED** |
 | B2 backward MUST records | a NORMAL backward summary with a field premise or a field leaf is a record | §II.6 | **CHANGED** |
 | B3 refined ND seeds | an ND `[any]` literal is seeded with its meets with the inputs that the forward run captured | §I.3, §II.10 | **CHANGED** (ND `[any]` seeds), **NEW** (capture) |
@@ -67,9 +67,9 @@ the CURRENT column; the B4 column follows from the cited theorems.
 ### N.1 Locations, ends and facts
 
 > A pattern covers a set of locations. Its tail tells how it reads the set:
-> one location, all of them, or one of them. The two field tails are the
-> CURRENT `[any-taint]` tail, read by the forward run and by the backward
-> run.
+> one location, all of them, or one of them. The two field tails replace the
+> CURRENT `[any-taint]` tail (rule F, §N.7): each run has its native field
+> tail, and each run can hold the other tail too.
 
 ```text
 location        base.path(mark)                 a value: base variable, field path, concrete taint mark
@@ -105,11 +105,10 @@ alternative of a condition; `S`, `X`, `Y`, `R` are location sets.
 
 | Item | Status |
 | --- | --- |
-| the tails `Tail { EXACT, STAR, ANY, ANY_TAINT }` (`Facts.kt:7`); `ANY_TAINT` is the native field tail of the run | **CURRENT** (`[all-fields]`, `[any-field]` are names) |
-| a record keeps its direction, so the other run knows how to read its `ANY_TAINT` ends | **CURRENT** |
-| a foreign kind in a run: a new code tail or flag | **NEW** (B4, D2) |
+| the tails `Tail { EXACT, STAR, ANY, ANY_TAINT }` (`Facts.kt:7`); one field tail, read by the run direction | **CURRENT** |
+| the tails `Tail { EXACT, STAR, ANY, ALL_FIELDS, ANY_FIELD }`; each pattern carries its field tail | **CHANGED** (F, §N.7) |
 | W6 `[any]` ⇒ DEMAND: `Conclusion` check (`Reference.kt:12`) | **CURRENT** |
-| W6 field tail ⇒ NORMAL: a stored any-leaf takes its tail from the layer, NORMAL `ANY_TAINT`, DEMAND `ANY` (`Conclusions.kt:49,78`) | **CURRENT** |
+| W6 field tail ⇒ NORMAL: a stored any-leaf takes its tail from the layer, NORMAL `ANY_TAINT`, DEMAND `ANY` (`Conclusions.kt:49,78`) | **CHANGED** (F): NORMAL takes the field tail of the tree, DEMAND `ANY` |
 | a demand pattern has no field tail (W8 (d), `Demand.kt:41`, `RestrictedInitialPolicy.kt:38`) | **CURRENT** |
 | Lean: the run model encodes the native field tail as kind `any` with the NORMAL flag (`AnyTaintEx.XFact`, `carriesB`); `FieldQuant.End` gives the quantifier reading | model only |
 
@@ -119,6 +118,15 @@ sufficient". Transfer, emission and restriction narrow the set (an exclusion
 grows, a demand cuts a deeper path), and a universal statement survives
 narrowing (`FieldQuant.all_sub`, `all_kill`, `req_any_sub`). The kinds differ
 when an edge carries the statement to the other end of a method (§N.5, §I.7).
+
+Why two code tails, not two names for one tail: B4 puts an `[all-fields]` fact
+in the backward run (§I.8 case 2) and an `[any-field]` fact in the forward run
+(case 3). With one tail, the run reads such a fact as its native kind, and the
+result is false (`FieldQuant.Cex.case2_needs_all_fields`,
+`case3_needs_any_field`). Under D2 a backward summary can also start from a
+foreign `[all-fields]` requirement, so two summaries of one direction with the
+same tail bits can mean different things (`Cex.same_bits_two_meanings`): a
+record of the other direction cannot be read by its direction either.
 
 ### N.2 Rule conditions
 
@@ -249,6 +257,47 @@ the backward forms of s2, s4, s5 only from a foreign fact (D2). The CURRENT
 words: pair-exact is s1, s2, s7; end-exact is s4, s5 (forward) and s3, s9
 (backward, "end-exact on `reverse(P)`").
 
+### N.7 Tail kinds in the code (rule F)
+
+> Rule F replaces the code tail `ANY_TAINT` by two tails. Each pattern, each
+> conclusion tree and each record end carries its tail. Step F0 alone keeps
+> every result: each `ANY_TAINT` becomes the native tail of its run. B4 and D2
+> then use the second tail in each run. **CHANGED** (representation).
+
+```text
+CURRENT   enum class Tail { STAR, ANY, ANY_TAINT, EXACT }                          Facts.kt:7
+F         enum class Tail { STAR, ANY, ALL_FIELDS, ANY_FIELD, EXACT }
+          Tail.isAny    ⇔ ANY, ALL_FIELDS, ANY_FIELD          (CURRENT: ANY, ANY_TAINT; Facts.kt:9)
+          Tail.isField  ⇔ ALL_FIELDS, ANY_FIELD               (replaces the CURRENT tests "tail == ANY_TAINT")
+          nativeField(direction) = ALL_FIELDS for FORWARD, ANY_FIELD for BACKWARD
+step F0   each site that makes ANY_TAINT makes nativeField(direction); each test of ANY_TAINT tests isField
+          or one tail, as the table says; no foreign tail is made. Gate: identical results, identical group counts
+```
+
+| Site | CURRENT | F | Status |
+| --- | --- | --- | --- |
+| `Facts.kt:7, 9` | one field tail; `isAny` | two tails; `isAny`, `isField` | **CHANGED** |
+| `Conclusions.kt:44-66` `TaintTree.anyTail` | one any-leaf tail per tree, from the layer: NORMAL `ANY_TAINT`, DEMAND `ANY` | NORMAL: the field tail of the tree (default `nativeField(direction)`); a foreign tree names its tail; one tree, one tail | **CHANGED** |
+| `Conclusions.kt:69-90` `GroupKey.tail` | TAINT NORMAL ⇒ `ANY_TAINT` | TAINT NORMAL ⇒ the tree tail: a base can have two NORMAL taint groups (native and foreign) | **CHANGED** (S-H12) |
+| equality and hashing: `TaintTree.equals`/`hashCode` (`Conclusions.kt:62-65`), `GroupKey` | include `anyTail`, `tail` | the same fields; the two tails are different keys; with F0 only, the keys map one to one | **CURRENT** code, new values |
+| `Reference.kt:12-13` W6 and A2, `Premise.kt:34`, `EdgeApplication.kt:28-33` | exclusion only on `STAR` or `ANY_TAINT` | `STAR` or `isField` | **CHANGED** (mechanical) |
+| `EdgeApplication.kt:46-57, 76, 120, 137, 155, 173-180` transfer of field leaves (`must = c.anyTail == ANY_TAINT`; the exclusion grows at a strong update) | one rule | native tail: the CURRENT rule; foreign tail: D2 (§I.9, §II.12) | **CHANGED** |
+| `Summary.kt:16-47, 106-135, 185` summary application (`jOwn`, the MUST rule) | must premise: inside, or DEMAND | the B4 tables by tail (§I.7) | **CHANGED** |
+| `Summary.kt:37` W8 (c): a must premise only in a restricted forward run | forward only | also backward (C1); a foreign premise under D2 | **CHANGED** |
+| `Groups.kt:103-164` normalization of must parents and children | one tail | per tail; `ALL_FIELDS` and `ANY_FIELD` trees never merge | **CHANGED** |
+| `RestrictedInitialPolicy.kt:33-61, 98-100, 147-149` emission meet | `ANY_TAINT` rows | native tail: the CURRENT rows; foreign tail: the D2 rows | **CHANGED** |
+| `Demand.kt:13-25, 41`, `DemandStore.kt:448, 483` W8 (d): no field tail in a demand pattern | `ANY_TAINT` | both field tails | **CHANGED** (mechanical) |
+| `StaticGuidance.kt:51`, `HandoffCompactor.kt:111-124` guidance pattern | `ANY_TAINT` → `ANY` | both field tails → `ANY` | **CHANGED** (mechanical) |
+| `RecordStore.kt:271-277` R1 | backward: no `ANY_TAINT` end | B2; a record end keeps its tail | **CHANGED** (B2) |
+| `MicroEdge.kt:22-23` I14, A1 | no `ANY_TAINT` premise; a reversed edge has no `ANY_TAINT` end | no field premise; a reversed edge target can be `ANY_FIELD` (S3) | **CHANGED** (B1) |
+| `Clean.kt:10, 187-192` cleaners on field leaves | `ANY_TAINT` | native tail: the CURRENT rule; foreign tail: a cleaner in the set gives DEMAND (D2) | **CHANGED** |
+| `ApManager`, `ApOut`, `LiteralInitialImage`, `FlowBackedProtection`, `Primitives`, `CallerInputValues`, `LocalRelationApplication`, `RunMethodCallServices`, `Run1StaticService`, `Run1PointResume`, `MethodBlockRuntime`, `BlockRunState` | `ANY_TAINT` | `nativeField(direction)` | **CHANGED** (mechanical, F0) |
+
+Size: 140 references to `ANY_TAINT` in 26 files under `bidi/`. Lean: the run
+model (`AnyTaintEx`, `DRX`, `DBX`) encodes a field tail as kind `any` with the
+NORMAL flag, which is the native tail; it has no foreign tail.
+`FieldQuant.End` has both.
+
 ## Part I. Forward run
 
 > The forward run propagates taint from the sources, checks the sinks and
@@ -259,7 +308,7 @@ words: pair-exact is s1, s2, s7; end-exact is s4, s5 (forward) and s3, s9
 
 ### I.1 Forward facts
 
-> What the tails and layers mean in the forward run. **CURRENT** (ap.md §4.2,
+> What the tails and layers mean in the forward run. **CURRENT** (ap.md §1, §2.3,
 > W6) except the foreign kind.
 
 ```text
@@ -528,7 +577,8 @@ run: §II.8 (a7, a8).
 > are **NEW**.
 
 ```text
-record ends      read by the record direction: a forward ANY_TAINT end is [all-fields], a backward one [any-field]
+record ends      carry their tail (rule F): a native forward end is ALL_FIELDS, a native backward end ANY_FIELD;
+                 under D2 a record can also have a foreign end. The direction of the record does not give the tail
 reader           a fact of the other direction at the record conclusion end:
                    a backward requirement at the forward exit reads the forward records of the method;
                    a forward fact at the forward entry reads the backward records of the method
@@ -609,6 +659,7 @@ Forward steps under option D2-a:
 | emission: added above, or a `$` or `*/E2` entryDemand | a narrower premise, NORMAL (e3, e6) | DEMAND start (`Cex.any_not_sub`) |
 | restriction: exitDemand `[any]` at the same path or above | kept | kept |
 | restriction: a deeper or `$` exitDemand (r8, r10) | narrower, NORMAL | DEMAND |
+| a cleaner that cleans a location in the set | CURRENT cleaner rule (`Clean.kt:187-192`) | `x.p.[any]` DEMAND |
 | sink check (§I.2) | `$` and `[any]` literals | only `[any]` literals that cover the set |
 | reader in §I.7 | column `[all-fields]` | column `[any-field]` |
 | hand-off pattern (§I.10) | `[any]`, `E` dropped | the same |
@@ -619,10 +670,11 @@ Forward steps under option D2-a:
 | D2-b | NORMAL only at the node where B4 makes them (sink check, source hit, the next application); each transfer step makes them DEMAND | smaller change; a sink at the next statement keeps the result, a longer route loses it | **OPEN** |
 | D2-c | like `[any-taint]` in each step (the literal reading of "act like `[any-taint]` everywhere") | unsound: `Cex.any_not_kill` (strong update), `Cex.any_not_sub` (emission, restriction), `Cex.all_req_not_sub` (backward) | rejected |
 
+Each option needs rule F (§N.7): the foreign fact must carry its own tail.
 Unselected major changes that B4 with D2-a or D2-b brings (§II.13): a forward
-NORMAL fact that claims "some location" (a new forward invariant and a new
-code tail), new transfer rows, a sink check that confirms with it (S-H10),
-and NORMAL backward requirements in place of DEMAND ones (S-H11).
+NORMAL fact that claims "some location" (a new forward invariant), new
+transfer rows, a sink check that confirms with it (S-H10), and NORMAL
+backward requirements in place of DEMAND ones (S-H11).
 
 ### I.10 Hand-off: selection and demand edges
 
@@ -670,7 +722,8 @@ a normal case: §II.7 gives the intersection rules for it.
 | B4 is sound in both runs, and exact | `FieldQuant.fwd_apply`, `bwd_apply`, `bwd_apply_mono`, `fwd_apply_exact`, `bwd_apply_exact` |
 | the NORMAL records of both runs are valid edges | `BackView.fwd_pair_valid`, `fwd_must_valid`, `bwd_pair_valid`, `bwd_must_valid` |
 | §I.8 cases 2, 3 with B4 | `BackView.fwdMust_backward_normal`, `backMust_forward_normal` |
-| native kinds survive narrowing, foreign kinds do not | `FieldQuant.all_sub`, `all_kill`, `req_any_sub`; `FieldQuant.Cex.*` |
+| native kinds survive narrowing, foreign kinds do not | `FieldQuant.all_sub`, `all_kill`, `req_any_sub`; `FieldQuant.Cex.any_not_sub`, `any_not_kill`, `all_req_not_sub` |
+| one code tail read by the run direction is unsound with B4 (rule F) | `FieldQuant.Cex.case2_needs_all_fields`, `case3_needs_any_field`, `same_bits_two_meanings` |
 | NORMAL forward summaries are pair-exact or end-exact | `AnyTaintExExact.DRX_edgeOK` |
 | emission contract | `AnyTaintExCov.emitX_contract`, `Abs.emitW_contract` |
 | restriction keeps exactly the demanded pairs | `HandoffRestrict.restrictI_contract`, `restrictI_sub`, `restrictI_inter`; `CurrentDemand.restrictCertificate` |
@@ -1006,6 +1059,7 @@ Backward steps under option D2-a (walked backward):
 | a statement that writes no location of the set | kept | kept |
 | a write that replaces the whole set from one source (`x.p = y.q`; `x.f = y` for a set at `x.f.q`; `x = y.f`) | the source path with `[any-field]/E` | the source path with `[all-fields]/E` |
 | a store into part of the set, `x.p.f = y` with `E` admitting `f` (t1) | `y.[any-field]`, `x.p.[any-field]/(E ∪ {f})` | `y.[any]`, `x.p.[any]` DEMAND: the condition is a conjunction of two facts (`Cex.all_req_not_sub`) |
+| a cleaner that cleans a location in the set | CURRENT cleaner rule | `x.p.[any]` DEMAND |
 | emission: added at or added below, `[any]` entryDemand | the premise is the fact (dm2) | the premise is the fact; start NORMAL |
 | emission: added above, `$` or `*/E2` entryDemand; restriction at a deeper or `$` exitDemand | narrower, NORMAL | DEMAND |
 | source hit by a source fact `s` | `impl(s, requirement)`: `s` overlaps the set | `impl(s, requirement)`: only an `[all-fields]` source that covers the set |
@@ -1023,7 +1077,7 @@ foreign kinds.
 
 | Change | Rows | Status |
 | --- | --- | --- |
-| `[any-taint]` named `[all-fields]` (forward) and `[any-field]` (backward) | §N.1 | **CURRENT** (names only) |
+| code tail `ANY_TAINT` replaced by `ALL_FIELDS` and `ANY_FIELD`; each pattern, tree and record end carries its tail (step F0 keeps all results) | §N.1, §N.7 | **CHANGED** (F) |
 | unary `[any]` sink seed: `[any]` DEMAND → `[any-field]` NORMAL | K2 | **CHANGED** |
 | ND `$` sink seed: NORMAL → DEMAND (user correction, 26 Nov) | K3 | **CHANGED** |
 | reversed unary `[any]` source literal: `[any]` DEMAND → `[any-field]` in targetLayer | S3 | **CHANGED** |
@@ -1037,7 +1091,8 @@ foreign kinds.
 
 Unchanged (**CURRENT**): the forward run except §I.2 (foreign row), §I.3,
 §I.8 and §I.9 (transfer, sink check for native facts, layers, records, case
-1, confirmation, traces); the native field tails and W6; S4, S5 layer, S7;
+1, confirmation, traces); the behaviour of the native field tails (F0) and
+W6; S4, S5 layer, S7;
 unary `$` seeds (K1); zero rows; source hits of native requirements; C4, C5;
 the operations of §I.4, §I.6 for the native kinds; the use rule of §I.7; the
 results of §I.7 for the edges that the CURRENT code applies, except §I.8
@@ -1046,9 +1101,10 @@ confirmed and provisional results (the gate).
 
 | Documented invariant | Change |
 | --- | --- |
-| interpreter.md I11 (f), I14 ("the backward run has no `[any-taint]`"), §4.9 | K2, S3; "no micro edge has a premise with a field tail" stays |
+| ap.md §1 (terms: tail kinds `$`, `*`, `[any]`, `[any-taint]`), §2.1 | `[any-taint]` is two tails, `[all-fields]` and `[any-field]` (F) |
+| interpreter.md I11 (f), I14, §4.9; ap.md S15 ("the backward run has no `[any-taint]`") | K2, S3; "no micro edge has a premise with a field tail" stays |
 | `MicroEdge.kt:23-25` A1 | a reversed micro edge can have a field target (S3), never a field premise |
-| ap.md §4.2 (a NORMAL `[any-taint]` fact: every covered location carries the mark) | also a foreign forward fact "some covered location" (§I.9) |
+| ap.md §1 (`[any-taint]/E`: every admitted descendant carries the mark) | also a foreign forward fact "some covered location" (§I.9) |
 | ap.md §6.5 ("the backward run has no `[any-taint]` premise") | C1 |
 | ap.md §9.2 ("an `[any]` seed is demand-layer") | a seed is NORMAL ⇔ its literal is unary (K1–K4) |
 | ap.md §8.7 R1, `RecordStore.kt:274-277` | §II.6 |
@@ -1071,6 +1127,7 @@ confirmed and provisional results (the gate).
 | S-H9 the callee summaries of an ND `$` seed become DEMAND: no backward `$` record, selected rows (q2 type) instead of the exact view; forward run `n+1` analyses those callees under a `$` demand | B1 (K3) | results expected equal, not proved; more rows per backward run while the witness is DEMAND; measure |
 | S-H10 a foreign forward `[any-field]` fact confirms a `ContainsMarkOnAnyField` sink that is provisional today: a result change | B4, D2 | not measured; the gate fails on each such case |
 | S-H11 a NORMAL backward `[all-fields]` requirement (cases 2, 2') replaces a DEMAND `[any]` one: caller summaries can become records and leave the hand-off (F77), so forward run `n+1` gets less demand and can lose a confirmation (the D1 class) | B4 | not proved; shadow-compare the hand-off rows |
+| S-H12 two NORMAL taint groups per base (native and foreign tail); no subsumption between them (`[all-fields] S` implies `[any-field] S`, not used); more groups and records | F, B4 | F0 alone: none (one-to-one keys); with B4: count the groups per run |
 
 ### II.14 Proofs and model notes (backward)
 
@@ -1088,6 +1145,7 @@ confirmed and provisional results (the gate).
 | §I.8 case 4: the forward result is exact | `BackView.backExactView_forward` |
 | §I.8 cases 2, 3 with B4 | `BackView.fwdMust_backward_normal`, `backMust_forward_normal` |
 | foreign kinds and narrowing | `FieldQuant.Cex.any_not_sub`, `any_not_kill`, `all_req_not_sub` |
+| rule F: the tail must be in the fact, not in the run direction | `FieldQuant.Cex.case2_needs_all_fields`, `case3_needs_any_field`, `same_bits_two_meanings` |
 | S3 is MUST for each target kind; S4, S7 are not MUST, sound MAY | `BackCond.rev_unary_source_must`, `rev_nd_source_not_must`, `rev_pass_any_not_must`, `rev_pass_may_sound` |
 | the seed layer is the MUST status (B1, K3 included) | `BackCond.reqs_normal_must`, `reqs_nd_demand` |
 | D1 counterexample and H1g guard | `BackMustView.Cex.cex_drop_forward_demand`, `guard_keeps_normal` |
@@ -1124,7 +1182,8 @@ ThingsBoard) and the module, jvm and rule suites: identical confirmed and
 provisional results; wall time and peak memory not worse. Withdraw a rule
 that fails. H1: withdraw also on one shadow case (§II.11). B3: withdraw also
 if the capture makes peak memory worse. B4: withdraw also on one S-H10 or
-S-H11 case.
+S-H11 case. F: step F0 alone must also keep the group and record counts per
+run; B4 and D2 need F.
 
 ```text
 [x] Failure class and real trace        §II.1 (per-run counts not measured)
@@ -1142,5 +1201,5 @@ S-H11 case.
 
 Blind spots: nothing ran natively; with H2, B1 and B2 remove no forward
 row; the H1 risk is a reduction, not a measured case; the D2 rows are proved
-at the location-set level only; S-H1, S-H2, S-H6, S-H8, S-H9, S-H10, S-H11
+at the location-set level only; S-H1, S-H2, S-H6, S-H8, S-H9, S-H10, S-H11, S-H12
 and the capture heap cost are not measured.
