@@ -5,25 +5,33 @@
 The [specification](backward-condition-progress.md) proposes B1 (the layer of
 a backward requirement is the MUST status of its literal: a unary literal,
 also `[any]`, gives N; an ND literal, also `$`, gives D), B2 (backward MUST
-records) and B3 (ND seeds refined by captured forward inputs). It is a spec
-only: no prototype, no measurement, no WI rule. Six constructive modules
-build with the package (`lake build`, 206 jobs); the `#print axioms` audits
-show only `propext` and `Quot.sound`:
+records), B3 (ND seeds refined by captured forward inputs) and B4 (summary
+application by implication: the CURRENT `[any-taint]` tail is `[all-fields]`
+in the forward run and `[any-field]` in the backward run, and a must record
+read by the other run gives a NORMAL result of the foreign kind). It is a
+spec only: no prototype, no measurement, no WI rule. Seven constructive
+modules build with the package (`lake build`, 207 jobs); the `#print axioms`
+audits show only `propext` and `Quot.sound`:
+[FieldQuant.lean](lean/ApSpec/FieldQuant.lean) (no axiom: the implication
+table between `$`, `[all-fields]` and `[any-field]` ends, the nine edge
+shapes, B4 soundness and exactness for both runs, and the counterexamples
+that keep the foreign kinds from acting like `[any-taint]`),
 [BackCondRules.lean](lean/ApSpec/BackCondRules.lean) (rule level: unary
 literals are MUST, ND and pass-rule `AnyField` reversals are not),
 [BackMustRun.lean](lean/ApSpec/BackMustRun.lean) (`DBX_edgeOK_nz`,
 `recsB_exact`, `backMust_forward`: backward MUST records are end-exact),
-[BackMustView.lean](lean/ApSpec/BackMustView.lean) (the forward view is
+[BackMustView.lean](lean/ApSpec/BackMustView.lean) (the native-kind view is
 DEMAND; `Cex.cex_drop_forward_demand`: with F77 unchanged a confirmation is
-lost), [BackRecordViews.lean](lean/ApSpec/BackRecordViews.lean)
-(`backExactView_forward`: the forward view of a backward `$`-premise record
-with an `[any-taint]` conclusion is exact, record reversal case 4),
+lost), [BackRecordViews.lean](lean/ApSpec/BackRecordViews.lean) (the NORMAL
+records of both runs are valid edges of `FieldQuant`; record reversal cases
+2, 3 with B4; `backExactView_forward` for case 4),
 [BackNDRefine.lean](lean/ApSpec/BackNDRefine.lean) (`refine_sound`,
 `refine_mono`, `iteration_general_refined`),
 [BackCondExamples.lean](lean/ApSpec/BackCondExamples.lean) (51 principal
-examples of the spec operations, checked by `decide`). Open: decision D1
-(spec §II.11), the hidden changes S-H1, S-H2, S-H6, S-H8, S-H9, and the ND form of
-the backward contract.
+examples of the spec operations, checked by `decide`). Open: decisions D1
+(spec §II.11) and D2 (transfer of the foreign kinds, §I.9), the hidden
+changes S-H1, S-H2, S-H6, S-H8, S-H9, S-H10, S-H11, the ND form of the
+backward contract, and B4 over a whole run (proved per edge only).
 
 ## Checked future candidate: exact call-stage result merging, 1 November 2026
 
