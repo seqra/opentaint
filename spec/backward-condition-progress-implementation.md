@@ -1,7 +1,11 @@
 # Implementation proposal: backward condition progress (refined MAY seeds)
 
-Status: PROPOSED, 26 November 2026. Base: `saloed/bidirectional` at
-`64b8ce57a`. This proposal follows
+Status: LANDED, 26 November 2026: R1 in `4af723e80`, R2 in `ba69bbb72`.
+Measured in
+[bidirectional-backcond-landing-20261126.md](../docs/reports/bidirectional-backcond-landing-20261126.md):
+no result changed, no time or memory change in a paired control, and the
+expected effect (§8.2, "Effect (R2)") is not shown. Base of the proposal:
+`saloed/bidirectional` at `64b8ce57a`. This proposal follows
 [impl-proposal-guide.md](impl-proposal-guide.md) and
 [proof-guide.md](proof-guide.md).
 
@@ -738,6 +742,16 @@ on the order of work.
 | Effect (R2) | The demand rows of Stirling-PDF `AuthController#login` and its entry point (spec §II.1): they reach zero in some run (requirement AC). Record the forward hand-off rows per run |
 | S-H2 (R1) | The DEMAND callee rows per backward run, R1 against the base |
 | S-H3 (R2) | A class histogram (`jcmd <pid> GC.class_histogram -all`) at the end of a forward run of Conductor: the `CaptureKey` count and the trie bytes |
+
+Measured (report §3, §4.2, §6): results identical; time, peak RSS and
+heap after GC the same as the base in a paired control; the
+`AuthController#login` rows do not reach zero (the run frontiers are the
+same as the base in each run); S-H2: Conductor hand-off rows differ by
+0.0-1.8%, as two base launches do; S-H3: measured in OWASP, not in
+Conductor (the Conductor runs ended before the histogram), 10,630
+`CaptureKey` objects (0.34 MB) 10 s into run 2. The arms R1 and R1+R2 were
+measured as one launch set of R1+R2 and a paired control against the
+base; R1 alone was measured on PG only.
 
 ### 8.3 Withdrawal
 

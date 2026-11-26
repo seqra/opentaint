@@ -3093,8 +3093,12 @@ zero on each path to a seed.
 
 Seed the DEMAND witnesses of the latest complete forward report. At each witness
 method key/statement, fire all alternatives of that sink rule where zero reaches
-it. Each literal gives its concrete sink pattern, cut by this backward limit. An
-`[any]` seed is demand-layer. An unconditional sink adds no requirement because
+it. Each literal gives its concrete sink pattern, cut by this backward limit. The
+`$` literal of a unary condition gives a NORMAL seed; the `$` literal of a condition
+that is not unary gives a DEMAND seed. An `[any]` literal gives its refined seeds:
+the leaves of its capture tree from the previous forward run, or the literal if no
+tree exists (backward-condition-progress.md §II.2, §II.4; landed `4af723e80`,
+`ba69bbb72`). An `[any]` seed is demand-layer. An unconditional sink adds no requirement because
 zero already exists. At a sink call, seed after its reversed cleaners.
 
 End facts need one extra trigger. When a reversed end-fact action of alternative

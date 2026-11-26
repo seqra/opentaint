@@ -3,6 +3,13 @@
 26 November 2026, branch `saloed/bidirectional`. **Spec and proofs only**
 (user decision): no ablation, no prototype, no measurement, no WI rule.
 
+**Landed** (26 November 2026): R1, the seed layer (§II.2), in `4af723e80`;
+R2, the capture tree and the refined seeds (§I.3, §II.4), in `ba69bbb72`.
+Implementation: [backward-condition-progress-implementation.md](backward-condition-progress-implementation.md).
+Measurement: [bidirectional-backcond-landing-20261126.md](../docs/reports/bidirectional-backcond-landing-20261126.md).
+No confirmed or provisional result changed on the four projects. The
+example PG of §I.2 does not need R2 in the code (see the note in §I.2).
+
 ## Overview
 
 > The backward run seeds requirements from the rule conditions of
@@ -170,6 +177,14 @@ use(x):   sink(x)           rule ContainsMarkOnAnyField(x, T): unary
 | 1, K = 1 | none (run 1) | `x.f.[any](T)` DEMAND: K cut | `x.f.[any](T)` DEMAND | provisional | **CURRENT** |
 | 3, K = 3 | `(x.[any](T), zero)` from the seed of run 2 | `x.f.*(T)` DEMAND: C2 cut at depth 1 | `x.f.[any](T)` DEMAND | provisional | **CURRENT** |
 | 5, 7, … | the same | the same | the same | provisional | **CURRENT**: no progress |
+
+**Measured in the code (26 November 2026, landing report §6.2).** The table
+above does not hold for PG. Run 1 starts `use` with the abstract `x.*`
+(depth 0). Under the demand `x.[any](T)`, the later forward starts follow
+the field-limit schedule, not a cut at depth 1: run 3 starts at `x.f.*`,
+run 5 at `x.f.g.*`. So CURRENT (R1 without R2) confirms the finding of PG
+at run 2d+1, the same run as R1 + R2 (`RefinedSeedIterationTest`). A
+program where the C2 cut binds is not known yet (next iteration, B1).
 
 ### I.3 Capture tree (NEW)
 
@@ -549,3 +564,23 @@ worse. Expected effect, to measure: the acyclic owners whose rows come from
 
 Blind spots: nothing ran natively; the round argument is not proved;
 S-H1, S-H2, S-H3 are not measured.
+
+**Gate result (26 November 2026, `4af723e80` R1, `ba69bbb72` R2).** Report:
+[bidirectional-backcond-landing-20261126.md](../docs/reports/bidirectional-backcond-landing-20261126.md).
+
+- Suites: module 2,807 tests, jvm 474 tests, 0 failures; rule suite in
+  bidirectional mode OK 786, FP 0, FN 0, disabled 22.
+- Results: identical confirmed and provisional results on OWASP,
+  Conductor, Stirling-PDF (three launches); ThingsBoard has no report in
+  both builds (run-1 OOM, pre-existing).
+- Time and memory: a paired control on the same machine state gives the
+  same engine time, heap after GC and GC time for OWASP and Conductor
+  (report §4.2). R2 is at most 0.66% of the samples of a run.
+- Expected effect: not shown. The demand rows of Stirling-PDF
+  `AuthController#login` do not reach zero; from run 3 on the hand-off
+  rows per method key are those of the parent. On PG, CURRENT already
+  converges (§I.2 note).
+- S-H1: no result went away. S-H2: the hand-off rows of Conductor
+  differ by 0.0-1.8%, the same as two parent launches. S-H3: 10,630
+  `CaptureKey` objects (0.34 MB) 10 s into OWASP run 2.
+- The rules stay: no withdrawal condition occurred.
