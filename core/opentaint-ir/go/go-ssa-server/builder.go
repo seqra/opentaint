@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/ssa"
@@ -95,7 +97,6 @@ func buildSSAWithPackageErrorsAndEnv(
 		mode |= ssa.SanityCheckFunctions
 	}
 	prog, _ := ssautil.AllPackages(loaded, mode)
-	prog.Build()
 
 	all := make([]*ssa.Package, 0, len(prog.AllPackages()))
 	for _, p := range prog.AllPackages() {
@@ -106,6 +107,38 @@ func buildSSAWithPackageErrorsAndEnv(
 	sort.Slice(all, func(i, j int) bool { return all[i].Pkg.Path() < all[j].Pkg.Path() })
 
 	return prog, all, info, nil
+}
+
+// buildBodies builds SSA function bodies. In PROJECT mode only project packages
+// are built: other bodies are never serialized, and the ones project code needs
+// (generic instances, wrappers) are built on demand by the SSA builder.
+func buildBodies(
+	prog *ssa.Program,
+	pkgs []*ssa.Package,
+	info map[string]*packages.Package,
+	mode pb.LoadMode,
+	projectModulePaths map[string]bool,
+	onlyListedProjectModules bool,
+) {
+	if mode == pb.LoadMode_LOAD_MODE_FULL {
+		prog.Build()
+		return
+	}
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, runtime.GOMAXPROCS(0))
+	for _, p := range pkgs {
+		isStdlib, isDep := classifyPackage(info[p.Pkg.Path()], projectModulePaths, onlyListedProjectModules)
+		if isStdlib || isDep {
+			continue
+		}
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(p *ssa.Package) {
+			defer func() { <-sem; wg.Done() }()
+			p.Build()
+		}(p)
+	}
+	wg.Wait()
 }
 
 func classifyPackage(

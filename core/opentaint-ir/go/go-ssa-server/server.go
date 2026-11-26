@@ -82,6 +82,7 @@ func (s *goSSAServer) BuildProgram(req *pb.BuildProgramRequest, stream pb.GoSSAS
 		projectModulePaths[m] = true
 	}
 
+	buildBodies(prog, pkgs, info, req.Mode, projectModulePaths, false)
 	ser := newSerializerForBuild(prog, pkgs, info, req.Mode, projectModulePaths)
 
 	program, serErrs := ser.serializeProgram()
@@ -124,9 +125,9 @@ func (s *goSSAServer) BuildProgram(req *pb.BuildProgramRequest, stream pb.GoSSAS
 				Fatal:   true,
 			}}})
 		}
-		modelSerializer := newSerializerForModelBuild(
-			modelProg, modelPkgs, modelInfo, modelModulePaths(modelDir, modelInfo),
-		)
+		modelModules := modelModulePaths(modelDir, modelInfo)
+		buildBodies(modelProg, modelPkgs, modelInfo, pb.LoadMode_LOAD_MODE_PROJECT, modelModules, true)
+		modelSerializer := newSerializerForModelBuild(modelProg, modelPkgs, modelInfo, modelModules)
 		modelProgram, modelSerializeErrors := modelSerializer.serializeProgram()
 		for _, modelSerializeErr := range modelSerializeErrors {
 			if err := stream.Send(&pb.BuildProgramResponse{Payload: &pb.BuildProgramResponse_Error{Error: modelSerializeErr}}); err != nil {
