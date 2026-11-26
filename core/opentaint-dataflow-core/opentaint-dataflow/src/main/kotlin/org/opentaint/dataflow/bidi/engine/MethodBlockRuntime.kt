@@ -232,6 +232,7 @@ internal class MethodBlockRuntime(
         }
         override val bodyWork get() = root.sharedBodyWork
         override val sourceHits get() = root.sourceHits
+        override val captures get() = root.captures
         override val sinkSeeds get() = root.sinkSeeds
         override val reachedSinkReportIds get() = root.reachedSinkReportIds
         override val demand get() = e.demand

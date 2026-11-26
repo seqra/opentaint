@@ -256,6 +256,44 @@ class HandOffTest {
         }
     }
 
+    /** R2 (spec/backward-condition-progress-implementation.md §5.4): sink trees cross only with a seed of the same
+     * (method, statement, rule, literal); source trees all cross; equal keys of two analyzers merge into one tree. */
+    @Test fun `forward handoff prunes unseeded sink trees keeps source trees and merges equal keys`(): Unit {
+        HandOffFixtures(index = 3).use { f ->
+            val a = f.key("A")
+            val b = f.key("B")
+            val absent = f.key("no witness")
+            val demandRule = rule("demand")
+            val otherRule = rule("other")
+            val u = MarkSlot.Concrete(f.mark("U"))
+            val q = f.pattern(y, tail = Tail.ANY, mark = u)
+            f.finite.exitRules(2, ExitRules(rules(listOf(SinkRule(demandRule, 0, listOf(q), emptyList()),
+                SinkRule(otherRule, 0, listOf(q), emptyList()))), false, emptySet()))
+            witness(f, a, demandRule, 2)
+            val fieldG = f.field("g")
+            val fieldH = f.field("h")
+            val seeded = CaptureKey(a, f.inst(2), demandRule, q)
+            val unseededRule = CaptureKey(a, f.inst(2), otherRule, q)
+            val unseededMethod = CaptureKey(absent, f.inst(2), demandRule, q)
+            val source = CaptureKey(absent, f.inst(2), "source occurrence", q)
+            val first = checkNotNull(f.core(a).captures)
+            val second = checkNotNull(f.core(b).captures)
+            first.addSink(seeded, f.fact(y, listOf(fieldG), mark = u))
+            second.addSink(seeded, f.fact(y, listOf(fieldH), mark = u))
+            first.addSink(unseededRule, f.fact(y, listOf(fieldG), mark = u))
+            second.addSink(unseededMethod, f.fact(y, listOf(fieldG), mark = u))
+            second.addSource(source, f.fact(y, listOf(fieldH), mark = u))
+            val handOff = HandOff.of(f.config, f.result(), f.shared)
+            fun leaves(tree: TaintNode?): Set<List<Int>> = buildSet {
+                f.manager.taintAlg.forEachLeaf(checkNotNull(tree), EMPTY_PATH) { sigma, _ -> add(sigma.toList()) }
+            }
+            assertEquals(setOf(listOf(fieldG), listOf(fieldH)), leaves(handOff.seeds.sinkTree(a, f.inst(2), demandRule, q)))
+            assertNull(handOff.seeds.sinkTree(a, f.inst(2), otherRule, q), "another rule at the seeded site")
+            assertNull(handOff.seeds.sinkTree(absent, f.inst(2), demandRule, q), "a site without a seed")
+            assertEquals(setOf(listOf(fieldH)), leaves(handOff.seeds.sourceTree(absent, f.inst(2), "source occurrence", q)))
+        }
+    }
+
     @Test fun `predicate handoff keeps the full positive OR scope only within witnessed contexts`(): Unit {
         HandOffFixtures().use { f ->
             val witnessed = f.key("witnessed")

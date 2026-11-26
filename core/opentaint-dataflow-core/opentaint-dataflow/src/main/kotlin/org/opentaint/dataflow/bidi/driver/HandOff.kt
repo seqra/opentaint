@@ -83,7 +83,8 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
             logger.info { "BIDI_HANDOFF_COMPACTION run=${config.index} origins=${origins.size} kept=${selection.kept.size} " +
                 "projected=${origins.sumOf { it.rows.size }} retainedProjected=${selection.kept.sumOf { it.rows.size }} " +
                 "certificates=${selection.certificates.size} rows=${counts.values.sum()} time=${start.elapsedNow()} residualMay=false" }
-            val seeds = if (config.direction == Direction.FORWARD) SeedIndex.of(result.analyzers.flatMap { it.sinkSeeds })
+            val seeds = if (config.direction == Direction.FORWARD) SeedIndex.of(result.analyzers.flatMap { it.sinkSeeds },
+                result.analyzers.mapNotNull { it.captures }, shared.ap)
                 else sourceSeeds(result,shared)
             return demand.build() to seeds
         }
@@ -164,7 +165,7 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
                 logger.info { "BIDI_STATIC_CLOSURE_FREEZE run=1 source=LOCAL_FROZEN_INPUT freezeTime=${completionStart.elapsedNow()} seedTime=$seedCaptureTime projectionTime=$projectionTime indexTime=${indexStart.elapsedNow()} ${frozen.statistics()}" }
             }
             val seeds = result.analyzers.flatMap { it.sinkSeeds }
-            return demand.build() to SeedIndex.of(seeds)
+            return demand.build() to SeedIndex.of(seeds, result.analyzers.mapNotNull { it.captures }, shared.ap)
         }
 
         private fun projectTargets(result: RunResult<RunMethodAnalyzer>, shared: SharedObjects,

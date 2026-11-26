@@ -13,6 +13,7 @@ internal interface BlockRuntimeBinding {
     val points: PointDirectory<CommonInst>
     val bodyWork: BodyWorkStatistics?
     val sourceHits: SourceHitStore?
+    val captures: CaptureTreeStore?
     val sinkSeeds: LinkedHashSet<org.opentaint.dataflow.bidi.driver.Seed>
     val reachedSinkReportIds: LinkedHashSet<ReportId>
     val demand: ScopeDemandView?

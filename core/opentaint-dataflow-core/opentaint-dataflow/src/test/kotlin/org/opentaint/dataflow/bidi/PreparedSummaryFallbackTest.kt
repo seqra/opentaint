@@ -77,6 +77,7 @@ class PreparedSummaryFallbackTest {
         }
         override val bodyWork: BodyWorkStatistics? = null
         override val sourceHits: SourceHitStore? = null
+        override val captures: CaptureTreeStore? = null
         override val sinkSeeds = LinkedHashSet<org.opentaint.dataflow.bidi.driver.Seed>()
         override val reachedSinkReportIds = LinkedHashSet<ReportId>()
         override fun keepLocalConclusion(exit: PortId,value: Facts)=keep()

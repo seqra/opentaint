@@ -57,6 +57,8 @@ open class BlockRunState internal constructor(
     internal val portSummaries = PortSummaryStores(ap, flowBacked = true)
     private var localPublications = LinkedHashMap<PortId, MutableList<Publication>>()
     val sourceHits: SourceHitStore? = if (binding != null) binding.sourceHits else if (forward) null else SourceHitStore()
+    /** Forward-run capture trees of the `[any]` literals (spec backward-condition-progress §I.3). */
+    val captures: CaptureTreeStore? = if (binding != null) binding.captures else if (forward) CaptureTreeStore(ap) else null
     val staticGuidanceSeeds = StaticGuidanceSeedStore(ap, ops, port.shared.staticGuidanceInterner)
     private val staticWriteCandidates = if (mode.run1)
         KilledStaticWriteStore(key, ap, ops, port.shared.staticWriteKeyInterner) else null

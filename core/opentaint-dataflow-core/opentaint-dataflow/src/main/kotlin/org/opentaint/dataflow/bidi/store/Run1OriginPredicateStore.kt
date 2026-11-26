@@ -116,12 +116,21 @@ internal class Run1OriginPredicateStore(private val manager: ApManager, private 
         fun emitLayeredOrigins(action: Any, emit: (InitialAp, Layer) -> Unit) =
             emitProtectedOrigins(action, null) { initial, layer, _ -> emit(initial, layer) }
         abstract fun emitProtectedOrigins(action: Any, assigned: TaintMark?, emit: (InitialAp, Layer, Boolean) -> Unit)
+        /** The inputs of each leaf of this cube (capture tree, spec backward-condition-progress §I.3). */
+        abstract fun forEachInput(visit: (Int, ConjunctionStore.Input) -> Unit)
     }
 
     private class ReadyResult(proof: ProofKey, leaves: List<Int>, layer: Layer,
+                              private val domains: PersistentMap<Int, Domain>,
                               private val emitAction: (Any, TaintMark?, (InitialAp, Layer, Boolean) -> Unit) -> Unit) : ReadyCube(proof, leaves, layer) {
         override fun emitProtectedOrigins(action: Any, assigned: TaintMark?, emit: (InitialAp, Layer, Boolean) -> Unit) =
             emitAction(action, assigned, emit)
+        override fun forEachInput(visit: (Int, ConjunctionStore.Input) -> Unit) {
+            for (leaf in leaves) {
+                val domain = domains[leaf] ?: continue
+                for (choice in domain.choices.values) visit(leaf, choice.input)
+            }
+        }
     }
 
     /** Facts enter one canonical leaf. Only supported proof/header shapes are combined at AND. */
@@ -361,7 +370,7 @@ internal class Run1OriginPredicateStore(private val manager: ApManager, private 
         val layer = if (key.headers.values.any { it.layer == Layer.DEMAND }) Layer.DEMAND else Layer.NORMAL
         statistics?.rootOutcome(growth = state.emitted.containsKey(key))
         val triggering = key.leaves.mapNotNull { (predicate.leaves[it].fact.mark as? MarkSlot.Concrete)?.mark }
-        return ReadyResult(key.proof, key.leaves, layer) answer@{ action, assigned, emit ->
+        return ReadyResult(key.proof, key.leaves, layer, support.domains) answer@{ action, assigned, emit ->
             val admitted = state.emitted.getOrPut(key) { HashMap() }.getOrPut(action) { EmittedOrigins() }
             if (admitted.shape === support.shape && admitted.version == support.version) return@answer
             val hasProtection = assigned != null && (support.domains.values.any { it.hasProtection } || assigned in triggering)

@@ -167,6 +167,11 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
         if (source.actions.isEmpty()) return
         val predicate = source.predicate
         fun transfer(pattern: Pattern, multi: Boolean) {
+            // R2 (spec backward-condition-progress §II.4, S3 and S5): the capture tree of a reversed [any] literal.
+            val tree = if (source.backward && pattern.fact.tail == Tail.ANY)
+                core.config.seeds.sourceTree(core.key, node, source.id, pattern) else null
+            // R2 (§I.3): a fired unary [any] edge captures the checked input once per call (S-H5).
+            var captured = source.backward || core.captures == null || pattern.fact.tail != Tail.ANY
             for (action in source.actions) {
                 core.ap.cancellation.checkpoint()
                 val edge = source.transfer(pattern, action, multi)
@@ -175,7 +180,13 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
                 core.ops.applyEdge(facts, premise, edge.edge, statementEdge, core.mode,
                     core.collectAfterRun1Policy(at) { _, result ->
                         core.sourceHits?.add(core.key, node, edge.forward, action.id)
-                        sink(premise, result, action.id)
+                        if (!captured) {
+                            captured = true
+                            val checked = core.ops.checkMark(facts, pattern, core.mode, core.unchangedStaticInitial(premise))
+                            core.captures?.addSource(CaptureKey(core.key, node, source.id, pattern),
+                                (checked as? MarkCheck.Holds)?.facts)                     // no Holds: nothing stored (A7)
+                        }
+                        sink(premise, if (tree == null) result else refineReversed(core, result, pattern, tree), action.id)
                     }, may = edge.may, ruleAssignment = true)
             }
         }
@@ -198,6 +209,11 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
                     val input = ConjunctionStore.Input(premise, checked.facts.layer, checked.facts)
                     core.normalRuleContributors.keep(rule, at.site, leaf, input)
                     originPredicatesAt(rule, at).add(source.id, node, selected, leaf, input) { cube ->
+                        if (allowSingle || cube.leaves.size >= 2) core.captures?.let { store ->
+                            cube.forEachInput { index, cubeInput ->
+                                store.addSource(CaptureKey(core.key, node, source.id, selected.leaves[index]), cubeInput.facts)
+                            }
+                        }
                         if (allowSingle || cube.leaves.size >= 2) for (action in source.actions) {
                             core.ap.cancellation.checkpoint()
                             if (!RuntimeDataDomain.base(action.target.base)) continue
@@ -217,6 +233,11 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
                     ConjunctionStore.Input(premise, checked.facts.layer, checked.facts),
                     add = { index, input, emit -> predicatesAt(rule, at).add(source.id, node, selected, index, input, emit) }) { combination ->
                     // GROUP folding can leave one accepted leaf in an original MULTI transfer.
+                    if (allowSingle || combination.leaves.size >= 2) core.captures?.let { store ->
+                        combination.inputs.forEachIndexed { k, input ->
+                            store.addSource(CaptureKey(core.key, node, source.id, selected.leaves[combination.leaves[k]]), input.facts)
+                        }
+                    }
                     if (allowSingle || combination.leaves.size >= 2) for (action in source.actions) {
                         core.ap.cancellation.checkpoint()
                         if (!RuntimeDataDomain.base(action.target.base)) continue
@@ -303,6 +324,10 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
                                 add = { leaf, input, emit -> predicatesAt(rule, at).addBinding(
                                     checkNotNull(sink.occurrenceId), node, predicate, leaf, input, emit) },
                                 cache = predicate.isMulti(index)) { combination ->
+                                core.captures?.let { store -> combination.inputs.forEachIndexed { k, input ->
+                                    store.addSink(CaptureKey(core.key, node, checkNotNull(sink.occurrenceId),
+                                        predicate.leaves[combination.leaves[k]]), input.facts)
+                                } }
                                 val edges = combination.inputs.map {
                                     SinkEdge(it.premise, it.layer, checkNotNull(it.facts))
                                 }
@@ -322,6 +347,7 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
                     is MarkCheck.Holds -> {
                         parts += checked.facts
                         if (!sink.conjunctive) {
+                            core.captures?.addSink(CaptureKey(core.key, node, sink.rule, literal), checked.facts)
                             witness(core, sink, node, listOf(SinkEdge(premise, checked.facts.layer, checked.facts)))
                             fired += sink to checked.facts.layer
                         } else {
@@ -333,6 +359,9 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
                                         sink.patterns.size, leaf, input)) emit(combination)
                                 }) { combination ->
                                 core.ap.cancellation.checkpoint()
+                                core.captures?.let { store -> combination.inputs.forEachIndexed { k, input ->
+                                    store.addSink(CaptureKey(core.key, node, sink.rule, sink.patterns[k]), input.facts)
+                                } }
                                 val edges = combination.inputs.map { input ->
                                     core.ap.cancellation.checkpoint()
                                     SinkEdge(input.premise, input.layer, checkNotNull(input.facts))
@@ -408,16 +437,19 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
 
     override fun fireSinkSeeds(node: CommonInst, emit: (Facts) -> Unit) {
         val core = activeCore()
-        for (seed in core.config.seeds.at(core.key, node)) {
+        val seeds = core.config.seeds
+        for (seed in seeds.at(core.key, node)) {
             core.ap.cancellation.checkpoint()
             if (seed is Seed.Sink) sinksAt(core, node) { sinks ->
-                seedFact(core, seed.requirement, legacyUnary(sinks, seed.rule, seed.requirement), emit)
+                seedFact(core, seed.requirement, legacyUnary(sinks, seed.rule, seed.requirement),
+                    seeds.sinkTree(core.key, node, seed.rule, seed.requirement), emit)
             }
             if (seed is Seed.PredicateSink) sinksAt(core, node) { sinks ->
                 val sink = sinks.singleOrNull { it.occurrenceId == seed.occurrence }
                     ?: error("A predicate seed must resolve to its frozen rule occurrence")
                 val predicate = checkNotNull(sink.predicate)
-                for (requirement in sink.seedPatterns()) seedFact(core, requirement, predicateUnary(predicate, requirement), emit)
+                for (requirement in sink.seedPatterns()) seedFact(core, requirement, predicateUnary(predicate, requirement),
+                    seeds.sinkTree(core.key, node, seed.occurrence, requirement), emit)
             }
         }
     }
@@ -432,7 +464,7 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
             var unary = false
             if (predicate != null) unary = predicateUnary(predicate, literal)
             else sinksAt(core, node) { unary = legacyUnary(it, sink.rule, literal) }
-            seedFact(core, literal, unary, emit)
+            seedFact(core, literal, unary, tree = null, emit)
         }
     }
 
@@ -452,11 +484,13 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
         predicate.leaves.indexOf(literal).let { it >= 0 && predicate.isUnary(it) }
 
     /** Spec backward-condition-progress §II.2: a requirement is NORMAL only if its literal is unary and has the `$` tail. */
-    private fun seedFact(core: BlockRunState, requirement: Pattern, unary: Boolean, emit: (Facts) -> Unit) {
+    private fun seedFact(core: BlockRunState, requirement: Pattern, unary: Boolean, tree: TaintNode?,
+                         emit: (Facts) -> Unit) {
         if (!RuntimeDataDomain.base(requirement.fact.base)) return
         core.ap.cancellation.checkpoint()
         val normal = unary && requirement.fact.tail == Tail.EXACT
-        core.cut(Cut.SEED, core.ap.zero, core.ops.targetTree(requirement.fact, if (normal) Layer.NORMAL else Layer.DEMAND)) { _, facts ->
+        val literal = core.ops.targetTree(requirement.fact, if (normal) Layer.NORMAL else Layer.DEMAND)
+        core.cut(Cut.SEED, core.ap.zero, refinedSeed(core, literal, requirement, tree)) { _, facts ->
             if (core.config.index == 2) {
                 // A seed starts at its check, before any caller-input query gate.
                 // Validate the bounded value; a deeper named field is lawful before this cut.
@@ -465,6 +499,20 @@ class RunMethodLocalServices(core: BlockRunState) : MethodLocalServices {
             emit(facts)
             core.ap.cancellation.checkpoint()
         }
+    }
+
+    /** R2 for K2 and K4 (spec backward-condition-progress §II.4): the tree seed of an [any] literal; the literal otherwise. */
+    private fun refinedSeed(core: BlockRunState, literal: Facts, requirement: Pattern, tree: TaintNode?): Facts =
+        if (tree != null && requirement.fact.tail == Tail.ANY && literal is TaintTree)
+            core.ap.treeSeed(literal, requirement.fact.path, tree) else literal
+
+    /** R2 for S3 and S5: replace the reversed [any] literal by its tree seed. Any other result stays (C9). */
+    private fun refineReversed(core: BlockRunState, result: Facts, literal: Pattern, tree: TaintNode): Facts {
+        if (result !is TaintTree || literal.fact.tail != Tail.ANY) return result
+        val plain = result.withoutProtection()
+        if (plain != core.ops.targetTree(literal.fact, Layer.DEMAND, core.mode)) return result      // A3 guard
+        val seed = core.ap.treeSeed(plain, literal.fact.path, tree)
+        return if (result.nonSubsumable != null) seed.withProtection(seed.root, core.ap.cancellation) else seed
     }
 
     override fun freeze() {

@@ -5,6 +5,11 @@ import org.opentaint.dataflow.bidi.ap.RuntimeDataDomain
 import org.opentaint.dataflow.bidi.ap.MethodKey
 import org.opentaint.dataflow.bidi.ap.PathEdge
 import org.opentaint.dataflow.bidi.ap.Pattern
+import org.opentaint.dataflow.bidi.ap.ApManager
+import org.opentaint.dataflow.bidi.ap.CaptureKey
+import org.opentaint.dataflow.bidi.ap.TaintNode
+import org.opentaint.dataflow.bidi.ap.mergeCapture
+import org.opentaint.dataflow.bidi.store.CaptureTreeStore
 import org.opentaint.dataflow.bidi.store.RuleId
 import org.opentaint.dataflow.bidi.interp.RuleOccurrenceId
 import org.opentaint.dataflow.bidi.interp.ActionId
@@ -56,8 +61,13 @@ sealed interface Seed {
     }
 }
 
-/** Seed entries keep order and multiplicity; source admission compares the complete forward edge. */
-class SeedIndex(byPlace: Map<Pair<MethodKey, CommonInst>, List<Seed>>) {
+/**
+ * Seed entries keep order and multiplicity; source admission compares the complete forward edge. The capture trees
+ * of the previous forward run (spec backward-condition-progress §I.3) are side maps outside the seed equality.
+ */
+class SeedIndex(byPlace: Map<Pair<MethodKey, CommonInst>, List<Seed>>,
+                sinkTrees: Map<CaptureKey, TaintNode> = emptyMap(),
+                sourceTrees: Map<CaptureKey, TaintNode> = emptyMap()) {
     private val byPlace: Map<Pair<MethodKey, CommonInst>, List<Seed>> = Collections.unmodifiableMap(
         LinkedHashMap<Pair<MethodKey, CommonInst>, List<Seed>>().apply {
             for ((place, seeds) in byPlace) {
@@ -73,7 +83,14 @@ class SeedIndex(byPlace: Map<Pair<MethodKey, CommonInst>, List<Seed>>) {
         this.byPlace.values.asSequence().flatten().filterIsInstance<Seed.Source>()
             .toSet()
 
+    private val sinkTrees: Map<CaptureKey, TaintNode> = Collections.unmodifiableMap(HashMap(sinkTrees))
+    private val sourceTrees: Map<CaptureKey, TaintNode> = Collections.unmodifiableMap(HashMap(sourceTrees))
+
     fun at(method: MethodKey, statement: CommonInst): List<Seed> = byPlace[method to statement].orEmpty()
+    fun sinkTree(method: MethodKey, statement: CommonInst, rule: Any, literal: Pattern): TaintNode? =
+        if (sinkTrees.isEmpty()) null else sinkTrees[CaptureKey(method, statement, rule, literal)]
+    fun sourceTree(method: MethodKey, statement: CommonInst, rule: Any, literal: Pattern): TaintNode? =
+        if (sourceTrees.isEmpty()) null else sourceTrees[CaptureKey(method, statement, rule, literal)]
     fun allowsSource(method: MethodKey, statement: CommonInst, forward: PathEdge, action: ActionId? = null): Boolean =
         RuntimeDataDomain.producer(forward) && Seed.Source(method, statement, forward, action) in sources
     val size: Int get() = byPlace.values.sumOf { it.size }
@@ -85,5 +102,21 @@ class SeedIndex(byPlace: Map<Pair<MethodKey, CommonInst>, List<Seed>>) {
     companion object {
         val EMPTY = SeedIndex(emptyMap())
         fun of(seeds: List<Seed>): SeedIndex = SeedIndex(seeds.groupBy { it.method to it.statement })
+
+        /** Forward -> backward: the seeds and the capture trees of all analyzers (C2, C3). */
+        fun of(seeds: List<Seed>, captures: List<CaptureTreeStore>, ap: ApManager): SeedIndex {
+            val byPlace = seeds.groupBy { it.method to it.statement }
+            fun seeded(k: CaptureKey) = byPlace[k.method to k.statement].orEmpty().any { s ->
+                (s is Seed.PredicateSink && s.occurrence == k.rule) ||
+                    (s is Seed.Sink && s.rule == k.rule && s.requirement == k.literal) }
+            val sinks = HashMap<CaptureKey, TaintNode>()
+            val sources = HashMap<CaptureKey, TaintNode>()
+            for (store in captures) {
+                ap.cancellation.checkpoint()
+                for ((k, t) in store.sinkTrees()) if (seeded(k)) sinks.merge(k, t) { a, b -> ap.mergeCapture(a, b, k.literal) }
+                for ((k, t) in store.sourceTrees()) sources.merge(k, t) { a, b -> ap.mergeCapture(a, b, k.literal) }
+            }
+            return SeedIndex(byPlace, sinks, sources)
+        }
     }
 }
