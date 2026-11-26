@@ -18,13 +18,12 @@ does and proves that it keeps the rule-level results.
    rule at the statement (`Form.single_eq_legacy`). `code_normal_iff`: with duplicate-free
    alternatives the code layer is the rule layer `BackCond.reqs_normal_iff` (K1, K3, K5);
    `code_normal_must`: a NORMAL code seed is MUST for every condition.
-2. NORMAL FORM. A captured input with a concrete mark `t` is stored with the literal mark `T` (the
-   check matched it, `t = T`) and with the field tail `*/e` read as `[any]` with the exclusion `e`
-   (`nfFact`, `nfEx`). An input with the abstract mark (`*`, `*∖x`: a FLOW fact) has no production
-   site (a conditional literal never holds on a FLOW fact, proposal §3 code fact F4); if one
-   arrives, the code stores the literal itself (`nfOne`). `nfOne_cov`: the stored form covers each
-   location with the literal mark that the input covers. `ncap_wf`: with legal literals the
-   stored form is a legal capture (concrete mark, tail `$`/`[any]`).
+2. NORMAL FORM. Only an input with a concrete mark is stored. Its mark is the literal mark `T`
+   (the check matched it), and its field tail `*/e` is read as `[any]` with the exclusion `e`
+   (`nfOne`, `nfFact`, `nfEx`). An input with the abstract mark (a FLOW fact) is never stored: a
+   FLOW fact never satisfies a literal (proposal §3, F4), so it is never the input of a completed
+   combination (`CapConc`). `nfOne_cov`: the stored form covers each location with the literal mark
+   that the input covers. `ncap_wf`: the stored form is a legal capture.
 3. ONE TREE IN ARRIVAL ORDER. The code inserts the leaves one at a time (`List.foldl`), the rule
    model merges them with `List.foldr`. `mergeL_cov`: the code tree serves exactly the stored
    leaves, so it serves the same locations as `BackND.mergeLeaves` (`mergeL_mergeLeaves_cov`).
@@ -34,9 +33,8 @@ does and proves that it keeps the rule-level results.
    `codeSeeds_deepens` (G1 and G2 for each leaf, against the input in normal form).
 5. THE BACKWARD CONTRACT WITH THE CODE SEEDS (the open item of spec §II.7, now proved):
    `seedsCover_code`, `B_general_code`, `iteration_general_code`.
-6. VECTORS (`Vec`): the `*/E` start of a C2 cut, the spine exclusion, a FLOW input (the literal),
-   the mixed capture that is unsound if a FLOW input is IGNORED (`cex_mixed_raw`), and the seed
-   layer rows K1, K3, K5.
+6. VECTORS (`Vec`): the `*/E` start of a C2 cut, the spine exclusion, an abstract-mark input
+   and an input with another mark (not stored), and the seed layer rows K1, K3, K5.
 
 All results are constructive (`propext`, `Quot.sound` only; see the `#print axioms` lines).
 -/
@@ -258,21 +256,21 @@ def nfEx : Kind → Excl → Excl
 /-- The input `a` in normal form for the literal mark `T`. -/
 def nfFact (a : PFact) (T : Mark) : PFact := ⟨a.base, a.path, nfKind a.kind, .conc T⟩
 
-/-- The stored form of one input `a` (exclusion `aex`) of the literal `d` with the mark `T`: a
-    concrete mark must be `T` (the check matched it); an abstract mark (a FLOW input) that admits `T`
-    gives the literal itself. -/
-def nfOne (d : PFact) (T : Mark) (a : PFact) (aex : Excl) : Option (PFact × Excl) :=
+/-- The stored form of one input `a` (exclusion `aex`) for the literal mark `T`. Only an input with
+    a concrete mark is stored, and its mark is `T` (the check matched it). An input with the abstract
+    mark (a FLOW fact) is never stored: a FLOW fact never satisfies a literal (F4). -/
+def nfOne (T : Mark) (a : PFact) (aex : Excl) : Option (PFact × Excl) :=
   match a.mark with
-  | .conc t    => if Nat.beq t T then some (nfFact a T, nfEx a.kind aex) else none
-  | .star      => some (d, Excl.empty)
-  | .starEx x  => if BackCond.markAdmB (.starEx x) T then some (d, Excl.empty) else none
+  | .conc t   => if Nat.beq t T then some (nfFact a T, nfEx a.kind aex) else none
+  | .star     => none
+  | .starEx _ => none
 
 /-- The code capture of one input `(j, a, aex)`. -/
 def nfIn (lits : List PFact) (x : Nat × PFact × Excl) : Option (Nat × PFact × Excl) :=
   match lits[x.1]? with
   | some d =>
     match d.mark with
-    | .conc T => (nfOne d T x.2.1 x.2.2).map (fun q => (x.1, q.1, q.2))
+    | .conc T => (nfOne T x.2.1 x.2.2).map (fun q => (x.1, q.1, q.2))
     | _ => none
   | none => none
 
@@ -309,38 +307,36 @@ theorem nf_cov {a : PFact} {aex : Excl} {T : Mark} {l : Loc} (hl : l.mark = T)
 
 #print axioms nf_cov
 
-/-- The stored form covers each location with the literal mark that the input covers. -/
-theorem nfOne_cov {d a : PFact} {aex : Excl} {T : Mark} {l : Loc} (hl : l.mark = T)
-    (hdl : d.covers l) (hal : coversX a aex l) :
-    ∃ q qex, nfOne d T a aex = some (q, qex) ∧ coversX q qex l := by
+/-- The stored form of a concrete input covers each location with the literal mark that the input
+    covers. -/
+theorem nfOne_cov {a : PFact} {aex : Excl} {T : Mark} {l : Loc} (hl : l.mark = T)
+    (hc : ∃ t, a.mark = .conc t) (hal : coversX a aex l) :
+    ∃ q qex, nfOne T a aex = some (q, qex) ∧ coversX q qex l := by
+  obtain ⟨t, hm⟩ := hc
   have ham := hal.2.2
+  rw [hm] at ham
+  have htT : t = T := ham.symm.trans hl
+  subst htT
+  refine ⟨nfFact a t, nfEx a.kind aex, ?_, (nf_cov hl (by rw [hm]; rfl)).mp hal⟩
   unfold nfOne
-  cases hm : a.mark with
-  | conc t =>
-    rw [hm] at ham
-    have htT : t = T := ham.symm.trans hl
-    subst htT
-    refine ⟨nfFact a t, nfEx a.kind aex, ?_, ?_⟩
-    · simp only [Nat.beq_refl]
-      rfl
-    · exact (nf_cov hl (by rw [hm]; rfl)).mp hal
-  | star =>
-    exact ⟨d, Excl.empty, rfl, covers_coversX hdl⟩
-  | starEx x =>
-    rw [hm, hl] at ham
-    refine ⟨d, Excl.empty, ?_, covers_coversX hdl⟩
-    show (if BackCond.markAdmB (.starEx x) T then some (d, Excl.empty) else none) = some (d, Excl.empty)
-    rw [BackCond.markAdmB_iff.mpr ham]
-    rfl
+  rw [hm]
+  simp only [Nat.beq_refl]
+  rfl
 
 #print axioms nfOne_cov
 
-/-- The stored form has the literal mark, and the tail `$`/`[any]` when the literal has it; it is
-    the input in normal form (concrete mark) or the literal (abstract mark). -/
-theorem nfOne_shape {d a q : PFact} {aex qex : Excl} {T : Mark} (hdm : d.mark = .conc T)
-    (h : nfOne d T a aex = some (q, qex)) :
-    q.mark = .conc T ∧ ((d.kind = .exact ∨ d.kind = .any) → (q.kind = .exact ∨ q.kind = .any)) ∧
-      ((∃ t, a.mark = .conc t) → q = nfFact a T) ∧ ((∀ t, a.mark ≠ .conc t) → q = d) := by
+/-- The normal form has the tail `$` or `[any]`. -/
+theorem nfFact_kind (a : PFact) (T : Mark) :
+    (nfFact a T).kind = .exact ∨ (nfFact a T).kind = .any := by
+  show nfKind a.kind = .exact ∨ nfKind a.kind = .any
+  cases a.kind with
+  | star _ => exact Or.inr rfl
+  | any => exact Or.inr rfl
+  | exact => exact Or.inl rfl
+
+/-- A stored form comes from a concrete input with the literal mark, in normal form. -/
+theorem nfOne_shape {a q : PFact} {aex qex : Excl} {T : Mark} (h : nfOne T a aex = some (q, qex)) :
+    q = nfFact a T ∧ qex = nfEx a.kind aex ∧ a.mark = .conc T := by
   unfold nfOne at h
   cases hm : a.mark with
   | conc t =>
@@ -353,34 +349,21 @@ theorem nfOne_shape {d a q : PFact} {aex qex : Excl} {T : Mark} (hdm : d.mark = 
     | true =>
       rw [if_pos hb] at h
       cases h
-      refine ⟨rfl, fun _ => ?_, fun _ => rfl, fun hn => (hn t rfl).elim⟩
-      show nfKind a.kind = .exact ∨ nfKind a.kind = .any
-      cases a.kind with
-      | star _ => exact Or.inr rfl
-      | any => exact Or.inr rfl
-      | exact => exact Or.inl rfl
+      exact ⟨rfl, rfl, by rw [Nat.eq_of_beq_eq_true hb]⟩
   | star =>
     rw [hm] at h
     dsimp only at h
     cases h
-    exact ⟨hdm, id, (fun h' => by obtain ⟨t, ht⟩ := h'; cases ht), fun _ => rfl⟩
   | starEx x =>
     rw [hm] at h
     dsimp only at h
-    cases hb : BackCond.markAdmB (.starEx x) T with
-    | false =>
-      rw [if_neg (by rw [hb]; decide)] at h
-      cases h
-    | true =>
-      rw [if_pos hb] at h
-      cases h
-      exact ⟨hdm, id, (fun h' => by obtain ⟨t, ht⟩ := h'; cases ht), fun _ => rfl⟩
+    cases h
 
 #print axioms nfOne_shape
 
 theorem nfIn_some {lits : List PFact} {x y : Nat × PFact × Excl} :
     nfIn lits x = some y ↔ ∃ d T q qex, lits[x.1]? = some d ∧ d.mark = .conc T ∧
-      nfOne d T x.2.1 x.2.2 = some (q, qex) ∧ y = (x.1, q, qex) := by
+      nfOne T x.2.1 x.2.2 = some (q, qex) ∧ y = (x.1, q, qex) := by
   unfold nfIn
   constructor
   · intro h
@@ -395,7 +378,7 @@ theorem nfIn_some {lits : List PFact} {x y : Nat × PFact × Excl} :
       | conc T =>
         rw [hm] at h
         dsimp only at h
-        cases ho : nfOne d T x.2.1 x.2.2 with
+        cases ho : nfOne T x.2.1 x.2.2 with
         | none => rw [ho] at h; cases h
         | some q =>
           rw [ho] at h
@@ -413,7 +396,7 @@ theorem nfIn_some {lits : List PFact} {x y : Nat × PFact × Excl} :
 
 theorem mem_ncap {lits : List PFact} {cap : Cap} {j : Nat} {q : PFact} {qex : Excl} :
     (j, q, qex) ∈ ncap lits cap ↔ ∃ a aex d T, (j, a, aex) ∈ cap ∧ lits[j]? = some d ∧
-      d.mark = .conc T ∧ nfOne d T a aex = some (q, qex) := by
+      d.mark = .conc T ∧ nfOne T a aex = some (q, qex) := by
   unfold ncap
   rw [List.mem_filterMap]
   constructor
@@ -426,14 +409,13 @@ theorem mem_ncap {lits : List PFact} {cap : Cap} {j : Nat} {q : PFact} {qex : Ex
 
 #print axioms mem_ncap
 
-/-- With legal literals the stored form is a legal capture: a concrete mark and the tail `$` or
-    `[any]`. -/
-theorem ncap_wf {lits : List PFact} (hl : LitsWF lits) (cap : Cap) : CapWF (ncap lits cap) := by
+/-- The stored form is a legal capture: a concrete mark and the tail `$` or `[any]`. -/
+theorem ncap_wf (lits : List PFact) (cap : Cap) : CapWF (ncap lits cap) := by
   intro e he
   obtain ⟨j, q, qex⟩ := e
-  obtain ⟨_, _, d, T, _, hd, hdm, ho⟩ := mem_ncap.mp he
-  obtain ⟨hqm, hqk, _, _⟩ := nfOne_shape hdm ho
-  exact ⟨⟨T, hqm⟩, hqk (hl d (List.mem_of_getElem? hd)).1⟩
+  obtain ⟨a, _, _, T, _, _, _, ho⟩ := mem_ncap.mp he
+  obtain ⟨rfl, _, _⟩ := nfOne_shape ho
+  exact ⟨⟨T, rfl⟩, nfFact_kind a T⟩
 
 #print axioms ncap_wf
 
@@ -613,9 +595,10 @@ theorem mem_codeSeeds {lits : List PFact} {cap : Cap} {j : Nat} {p : PFact}
   · exact Or.inr h2
 
 /-- THE CODE SEEDS ARE SOUND: each real route location of literal `j` is served by a seed of `j`
-    (a leaf of the code tree, or the literal when the tree is empty). -/
+    (a leaf of the code tree, or the literal when the tree is empty). The capture is concrete
+    (`CapConc`): a FLOW fact never satisfies a literal (F4). -/
 theorem codeSeeds_sound {lits : List PFact} {cap : Cap} {Real : Nat → Loc → Prop}
-    (h : CodeCaptured lits cap Real) {j : Nat} {l : Loc} (hr : Real j l) :
+    (hc : CapConc cap) (h : CodeCaptured lits cap Real) {j : Nat} {l : Loc} (hr : Real j l) :
     ∃ s ∈ codeSeeds lits cap, LeafCov j l s := by
   obtain ⟨d, hd, hdl, hcap⟩ := h j l hr
   cases hl : hasLeaf (codeLeaves lits cap) j with
@@ -632,10 +615,10 @@ theorem codeSeeds_sound {lits : List PFact} {cap : Cap} {Real : Nat → Loc → 
       have h' := hdl.2.2
       rw [hdm] at h'
       exact h'
-    obtain ⟨q, qex, ho, hqc⟩ := nfOne_cov hlT hdl hal
+    obtain ⟨q, qex, ho, hqc⟩ := nfOne_cov hlT (hc _ ha) hal
     have hn : (j, q, qex) ∈ ncap lits cap := mem_ncap.mpr ⟨a, aex, d, T, ha, hd, hdm, ho⟩
-    obtain ⟨hqm, _, _, _⟩ := nfOne_shape hdm ho
-    obtain ⟨p, pex, he, hpc, _⟩ := AnyTaintExCov.emitX_contract d q qex l T hqm hdl hqc
+    obtain ⟨rfl, _, _⟩ := nfOne_shape ho
+    obtain ⟨p, pex, he, hpc, _⟩ := AnyTaintExCov.emitX_contract d (nfFact a T) qex l T rfl hdl hqc
     have hleaf : (j, p) ∈ codeLeaves lits cap := mem_codeLeaves.mpr ⟨_, _, d, pex, hn, hd, he⟩
     obtain ⟨s, hs, hsc⟩ := mergeL_cov.mpr ⟨(j, p), hleaf, rfl, coversX_covers hpc⟩
     exact ⟨s, List.mem_append.mpr (Or.inr hs), hsc⟩
@@ -646,7 +629,7 @@ theorem codeSeeds_sound {lits : List PFact} {cap : Cap} {Real : Nat → Loc → 
 theorem codeTree_meet {lits : List PFact} {cap : Cap} {j : Nat} {p : PFact}
     (hm : (j, p) ∈ mergeL (codeLeaves lits cap)) :
     ∃ a aex d T q qex pex, (j, a, aex) ∈ cap ∧ lits[j]? = some d ∧ d.mark = .conc T ∧
-      nfOne d T a aex = some (q, qex) ∧ meetLit d q qex = some (p, pex) := by
+      nfOne T a aex = some (q, qex) ∧ meetLit d q qex = some (p, pex) := by
   obtain ⟨q, qex, d, pex, hq, hd, he⟩ := mem_codeLeaves.mp (mergeL_sub hm)
   obtain ⟨a, aex, d', T, ha, hd', hdm, ho⟩ := mem_ncap.mp hq
   rw [hd] at hd'
@@ -660,8 +643,8 @@ theorem codeSeeds_inside {lits : List PFact} {cap : Cap} {j : Nat} {p : PFact}
   rcases mem_codeSeeds h with hd | hm
   · exact ⟨p, hd, fun _ hl => hl⟩
   · obtain ⟨a, aex, d, T, q, qex, pex, _, hd, hdm, ho, he⟩ := codeTree_meet hm
-    obtain ⟨hqm, _, _, _⟩ := nfOne_shape hdm ho
-    exact ⟨d, hd, fun l hl => (emitM_inside_conc (HandoffX.emitX_emitM he) hqm hl).1⟩
+    obtain ⟨rfl, _, _⟩ := nfOne_shape ho
+    exact ⟨d, hd, fun l hl => (emitM_inside_conc (HandoffX.emitX_emitM he) rfl hl).1⟩
 
 #print axioms codeSeeds_inside
 
@@ -677,27 +660,24 @@ theorem codeSeeds_legal {lits : List PFact} {cap : Cap} (hlw : LitsWF lits) {j :
   · obtain ⟨q, qex, d', pex, hq, hd', he⟩ := mem_codeLeaves.mp (mergeL_sub hm)
     have hr : (j, p, pex) ∈ refine lits (ncap lits cap) :=
       List.mem_append.mpr (Or.inr (mem_meets.mpr ⟨j, q, qex, d', p, pex, hq, hd', he, rfl⟩))
-    exact refine_legal (ncap_wf hlw cap) hd hdk hdm hr
+    exact refine_legal (ncap_wf lits cap) hd hdk hdm hr
 
 #print axioms codeSeeds_legal
 
-/-- G1 AND G2 FOR THE CODE TREE. Each leaf lies inside its literal `d` and its path extends the
-    literal path. If it comes from an input `a` with a concrete mark (every production input,
-    proposal §3 F3, F4), it also lies inside `a` in normal form (the literal mark, the exclusions
-    forgotten) and its path extends the path of `a`. -/
+/-- G1 AND G2 FOR THE CODE TREE. Each leaf comes from a captured input `a` of its literal `d`
+    (both with the mark `T`). It lies inside `d` and inside `a` in normal form (the exclusions
+    forgotten), and its path extends the path of `a` and the path of `d`. -/
 theorem codeSeeds_deepens {lits : List PFact} {cap : Cap} {j : Nat} {p : PFact}
     (hm : (j, p) ∈ mergeL (codeLeaves lits cap)) :
-    ∃ d a aex T, lits[j]? = some d ∧ d.mark = .conc T ∧ (j, a, aex) ∈ cap ∧
-      d.path <+: p.path ∧ (∀ l, p.covers l → d.covers l) ∧
-      ((∃ t, a.mark = .conc t) → a.path <+: p.path ∧ ∀ l, p.covers l → (nfFact a T).covers l) := by
+    ∃ d a aex T, lits[j]? = some d ∧ d.mark = .conc T ∧ (j, a, aex) ∈ cap ∧ a.mark = .conc T ∧
+      a.path <+: p.path ∧ d.path <+: p.path ∧
+      ∀ l, p.covers l → (nfFact a T).covers l ∧ d.covers l := by
   obtain ⟨a, aex, d, T, q, qex, pex, ha, hd, hdm, ho, he⟩ := codeTree_meet hm
-  obtain ⟨hqm, _, hconc, _⟩ := nfOne_shape hdm ho
+  obtain ⟨rfl, rfl, haT⟩ := nfOne_shape ho
   obtain ⟨h1, h2⟩ := meet_deepens he
-  refine ⟨d, a, aex, T, hd, hdm, ha, h2,
-    fun l hl => (emitM_inside_conc (HandoffX.emitX_emitM he) hqm hl).1, fun hc => ?_⟩
-  have hq := hconc hc
-  subst hq
-  exact ⟨h1, fun l hl => (emitM_inside_conc (HandoffX.emitX_emitM he) hqm hl).2⟩
+  refine ⟨d, a, aex, T, hd, hdm, ha, haT, h1, h2, fun l hl => ?_⟩
+  obtain ⟨hdl, hal⟩ := emitM_inside_conc (HandoffX.emitX_emitM he) rfl hl
+  exact ⟨hal, hdl⟩
 
 #print axioms codeSeeds_deepens
 
@@ -721,7 +701,7 @@ def codeSeedsAt (M : MethodId) (n : Node) (lits : List PFact) (cap : Cap) :
 def CodeSeeding (W : MethodId → Node → Loc → Prop) (Rk : Obj → Prop)
     (sinks seeds : List (MethodId × Node × PFact)) : Prop :=
   ∀ M n s b, Rk (.vuln M n s b) → (M, n, s) ∈ sinks →
-    ∃ (lits : List PFact) (cap : Cap) (j : Nat), lits[j]? = some s ∧ LitsWF lits ∧
+    ∃ (lits : List PFact) (cap : Cap) (j : Nat), lits[j]? = some s ∧ LitsWF lits ∧ CapConc cap ∧
       CodeCaptured lits cap (fun j' l => j' = j ∧ s.covers l ∧ W M n l) ∧
       ∀ x, x ∈ codeSeedsAt M n lits cap → x ∈ seeds
 
@@ -730,8 +710,8 @@ theorem seedsCover_code {W : MethodId → Node → Loc → Prop} {Rk : Obj → P
     {sinks seeds : List (MethodId × Node × PFact)}
     (h : CodeSeeding W Rk sinks seeds) : SeedsCover W Rk sinks seeds := by
   intro M n s T b l hv hs hT hsc hWl
-  obtain ⟨lits, cap, j, hj, hlw, hfc, hsub⟩ := h M n s b hv hs
-  obtain ⟨⟨j', p⟩, hm, hj', hpl⟩ := codeSeeds_sound hfc (j := j) (l := l) ⟨rfl, hsc, hWl⟩
+  obtain ⟨lits, cap, j, hj, hlw, hcc, hfc, hsub⟩ := h M n s b hv hs
+  obtain ⟨⟨j', p⟩, hm, hj', hpl⟩ := codeSeeds_sound hcc hfc (j := j) (l := l) ⟨rfl, hsc, hWl⟩
   have hjj : j' = j := hj'
   subst hjj
   have hin : (M, n, p) ∈ codeSeedsAt M n lits cap := List.mem_map.mpr ⟨(j', p), hm, rfl⟩
@@ -793,45 +773,14 @@ open ApSpec.BackCondEx
 /-- The literal `vb.[any](U)`. -/
 def litB : PFact := pf vb [] .any U
 
-/-- A FLOW input `vb.f.*(*)` (no production site): the code stores the literal. -/
-theorem flow_literal : codeSeeds [litB] [(0, pf vb [f] s0 .star, Excl.empty)] = [(0, litB)] := by
+/-- An input with the abstract mark (a FLOW fact) is never stored: no leaf, so the literal keeps its
+    CURRENT seed. The code never meets such an input: a FLOW fact never satisfies a literal. -/
+theorem flow_none : codeSeeds [litB] [(0, pf vb [f] s0 .star, Excl.empty)] = [(0, litB)] := by
   decide
 
-/-- A MIXED capture: a concrete input `vb.f.$(U)` and a FLOW input `vb.g.*(*)`. -/
-def mixed : Cap := [(0, pf vb [f] .exact U, Excl.empty), (0, pf vb [g] s0 .star, Excl.empty)]
-
-/-- The location `vb.g (U)` is a real route location: the literal and the FLOW input cover it. -/
-def locG : Loc := ⟨vb, [g], tU⟩
-
-theorem mixed_real : litB.covers locG ∧ coversX (pf vb [g] s0 .star) Excl.empty locG :=
-  ⟨⟨rfl, ⟨[g], rfl, trivial⟩, rfl⟩, ⟨rfl, ⟨[], rfl, rfl, rfl⟩, trivial⟩⟩
-
-/-- If the FLOW input is IGNORED (no meet, `BackND.capMeets`), the tree has the concrete leaf only.
-    It is not empty, so there is no fallback. -/
-theorem mixed_raw : BackND.treeSeeds [litB] (BackND.capMeets [litB] mixed) = [(0, pf vb [f] .exact U)] := by
+/-- An input with another concrete mark is not stored (the check did not match it). -/
+theorem mark_other : codeSeeds [litB] [(0, pf vb [f] .exact T, Excl.empty)] = [(0, litB)] := by
   decide
-
-/-- COUNTEREXAMPLE: an ignored FLOW input loses the real location `vb.g (U)`. So a FLOW input must
-    not be dropped; the code stores the literal for it. -/
-theorem cex_mixed_raw : ¬ ∃ s ∈ BackND.treeSeeds [litB] (BackND.capMeets [litB] mixed), LeafCov 0 locG s := by
-  rw [mixed_raw]
-  rintro ⟨s, hs, _, hc⟩
-  rw [List.mem_singleton] at hs
-  subst hs
-  have : BackCond.covB (pf vb [f] .exact U) locG = false := by decide
-  rw [BackCond.covB_iff.mpr hc] at this
-  cases this
-
-#print axioms cex_mixed_raw
-
-/-- The code stores the literal for the FLOW input; it subsumes the concrete leaf. -/
-theorem mixed_code : codeSeeds [litB] mixed = [(0, litB)] := by decide
-
-theorem mixed_code_covers : ∃ s ∈ codeSeeds [litB] mixed, LeafCov 0 locG s := by
-  rw [mixed_code]
-  exact ⟨(0, litB), List.mem_cons.mpr (Or.inl rfl), rfl, mixed_real.1⟩
-
-#print axioms mixed_code_covers
 
 /-- A C2 cut start `x.f.*(T)` (a STAR tail with a concrete mark): the leaf `x.f.[any](T)`. -/
 theorem star_start : codeSeeds [pf x [] .any T] [(0, pf x [f] s0 T, Excl.empty)] =
@@ -843,10 +792,6 @@ theorem star_start : codeSeeds [pf x [] .any T] [(0, pf x [f] s0 T, Excl.empty)]
 theorem spine_excl : codeSeeds [pf x [f] .any T]
     [(0, pf x [f, g] .exact T, Excl.empty), (0, pf x [] .any T, .set [f])] =
     [(0, pf x [f, g] .exact T)] := by decide
-
-/-- A FLOW input whose mark excludes the literal mark (`*∖{U}`) gives no leaf: the fallback. -/
-theorem flow_excluded : codeSeeds [litB] [(0, pf vb [f] s0 (.starEx [tU]), Excl.empty)] =
-    [(0, litB)] := by decide
 
 /-- Seed layer rows: K1 (unary `$`: NORMAL), K3 (ND `$`: DEMAND), K5 (unary and ND: NORMAL),
     an `[any]` literal (DEMAND). -/

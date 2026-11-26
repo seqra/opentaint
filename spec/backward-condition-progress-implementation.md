@@ -19,7 +19,7 @@ Status: PROPOSED, 26 November 2026. Base: `saloed/bidirectional` at
   | `BackCondRules.lean` (`BackCond`) | seed layer rule (spec §II.2) | existing |
   | `BackNDRefine.lean` (`BackND`) | capture tree and refinement rule (spec §I.3, §II.4, §II.5) | existing |
   | `BackCondExamples.lean` (`BackCondEx`) | spec examples | existing |
-  | `BackCondImpl.lean` (`BackCondImpl`) | implementation of both rules (§4.4, §5.4 here) | 53, new |
+  | `BackCondImpl.lean` (`BackCondImpl`) | implementation of both rules (§4.4, §5.4 here) | 49, new |
 
   Check: `cd spec/lean && lake build && lake env lean audit.lean`. Only
   `propext` and `Quot.sound` occur.
@@ -56,12 +56,12 @@ model has no multi-run form of C2 and C5.
 | 26 Nov | `$` leaves stay in the tree | `insertCaptureLeaf` keeps `$` leaves (§5.3 (a)) |
 | 24 Nov | No switch and no in-code census | §4.3, §5.3: no flag, no counter, no new log field |
 | 24 Nov | Never relax the FL+1 caps | A refined seed goes through the CURRENT `Cut.SEED` (§5.3 (g)). No cap changes |
-| 24 Nov | Serve every route | Captures come from ALL completed combinations (§5.3 (d)). An unknown input stores the whole literal (C1, C11) |
+| 26 Nov | A literal cannot be satisfied by a FLOW fact, so no non-`TaintTree` fact is stored (user answer to Q1 of the first revision) | §5.1, §5.3 (a), (b), (d); Lean `nfOne`, `CapConc` |
+| 24 Nov | Serve every route | Captures come from ALL completed combinations (§5.3 (d)) |
 | 24 Nov | Any change of confirmed or provisional results fails the gate | §8 |
 
-The proposal makes eleven calls of its own (§10). It has one question for
-the owner (§6, Q1). Q1 does not block the work: production never reaches
-the case.
+The proposal makes nine calls of its own (§10). The one question of the
+first revision is answered (§6).
 
 ## 2. Semantic scope
 
@@ -304,7 +304,7 @@ FORWARD RUN (each run)
   occurrences: sink predicates, legacy sinks, conditional sources (unary transfer and multi combination)
 
 meet + normal form of a checked input i (F3), relative to the literal path:
-  i is not a TaintTree                                  → the literal itself: [any] at σ = []          (C1; no production site, F4)
+  only a TaintTree input is stored: a FLOW fact never satisfies a literal (F4)
   an [any] leaf of i on the spine, exclusion admits     → the literal itself: [any] at σ = []          (meet: input above)
   the subtree of i at the literal path, each leaf at σ  → [any] at σ if the leaf has an any mark,
                                                           else $ at σ                                    (meet: input at or below)
@@ -368,23 +368,21 @@ internal fun ApManager.captureLeaf(tree: TaintNode?, sigma: IntArray, any: Boole
 }
 
 /** Meet first, then the normal form (spec §I.3): insert the leaves of one checked input. */
-internal fun ApManager.captureInput(tree: TaintNode?, input: Facts?, literal: Pattern): TaintNode {
-    val whole = { captureLeaf(tree, EMPTY_PATH, any = true, literal) }               // the literal itself
-    if (input !is TaintTree) return whole()                                          // C1
+internal fun ApManager.captureInput(tree: TaintNode?, input: TaintTree, literal: Pattern): TaintNode? {
+    var result = tree
     var n: TaintNode? = input.root
     for (accessor in literal.fact.path) {
         cancellation.checkpoint()
-        val node = n ?: return whole()                                               // C11: no overlap
-        if (node.leaf.hasAny && input.exclusion.admits(accessor)) return whole()     // meet: input above
+        val node = n ?: return result                                                // no overlap: no leaf
+        if (node.leaf.hasAny && input.exclusion.admits(accessor))
+            return captureLeaf(result, EMPTY_PATH, any = true, literal)              // meet: input above → the literal
         n = node.child(accessor)
     }
-    val tip = n ?: return whole()                                                    // C11: no overlap
-    var result = tree
-    var leaves = 0
+    val tip = n ?: return result                                                     // no overlap: no leaf
     taintAlg.forEachLeaf(tip, EMPTY_PATH, cancellation) { sigma, leaf ->              // meet: input at or below
-        if (!leaf.isEmpty) { leaves++; result = captureLeaf(result, sigma, leaf.hasAny, literal) }
+        if (!leaf.isEmpty) result = captureLeaf(result, sigma, leaf.hasAny, literal)
     }
-    return if (leaves == 0) whole() else checkNotNull(result)                       // C11: no leaf
+    return result
 }
 
 /** The refined seed (spec §II.4): the literal fact with the tree below the literal path (C10). */
@@ -407,9 +405,8 @@ internal fun ApManager.mergeCapture(a: TaintNode, b: TaintNode, literal: Pattern
 }
 ```
 
-A completed combination always has an overlap, so the C11 branches have
-no expected input. They store the literal, so an unexpected input can
-never lose a route.
+The checked piece is the overlap with the literal (F3), so the two "no
+overlap" returns are not reached. They add no leaf.
 
 (b) New `store/CaptureTreeStore.kt`, in the form of `SourceHitStore`.
 
@@ -423,9 +420,9 @@ class CaptureTreeStore(private val ap: ApManager) {
     fun addSource(key: CaptureKey, input: Facts?) = add(sources, key, input)
 
     private fun add(trees: HashMap<CaptureKey, TaintNode>, key: CaptureKey, input: Facts?) {
-        if (!captured(key.literal)) return
+        if (input !is TaintTree || !captured(key.literal)) return         // a FLOW fact never satisfies a literal (F4)
         val old = trees[key]
-        val new = ap.captureInput(old, input, key.literal)
+        val new = ap.captureInput(old, input, key.literal) ?: return
         if (new !== old) trees[key] = new
     }
 
@@ -491,7 +488,7 @@ fun transfer(pattern: Pattern, multi: Boolean) {
                     captured = true
                     val checked = core.ops.checkMark(facts, pattern, core.mode, core.unchangedStaticInitial(premise))
                     core.captures?.addSource(CaptureKey(core.key, node, source.id, pattern),
-                        (checked as? MarkCheck.Holds)?.facts)                     // C11: no Holds → the literal
+                        (checked as? MarkCheck.Holds)?.facts)                     // no Holds: nothing stored (A7)
                 }
                 sink(premise, if (tree == null) result else refineReversed(core, result, pattern, tree), action.id)
             }, may = edge.may, ruleAssignment = true)
@@ -595,17 +592,17 @@ the CURRENT seed (C8, F6). K7 and K8 keep the CURRENT seed (spec
 | Claim | Theorem |
 | --- | --- |
 | The normal form is exact on the literal mark: `*/e` read as `[any]` with `e` | `nf_tail`, `nf_cov` |
-| The stored form (`nfOne`) covers each input location with the literal mark. A concrete input is stored in normal form; an abstract-mark input stores the literal | `nfOne_cov`, `nfOne_shape` |
+| The stored form (`nfOne`) of a concrete input covers each of its locations with the literal mark. An input with the abstract mark is not stored | `nfOne_cov`, `nfOne_shape`, `nfFact_kind` |
 | The stored form is a legal capture (concrete mark, `$` or `[any]`) | `ncap_wf`, `mem_ncap`, `nfIn_some` |
 | The code tree in arrival order (`foldl`) serves exactly its stored leaves, the same as the rule tree (`foldr`) | `mergeL_cov`, `mergeL_mergeLeaves_cov` |
 | Each code leaf is a stored leaf; at most one code leaf per stored leaf | `mergeL_sub`, `mergeL_length` |
-| The code seeds serve each real route location (soundness) | `codeSeeds_sound` |
+| The code seeds serve each real route location (soundness). The capture is concrete (`CapConc`): F4 | `codeSeeds_sound` |
 | Each code seed lies inside its literal | `codeSeeds_inside` |
 | The code seeds are legal backward seeds | `codeSeeds_legal` |
-| G1 and G2 for each code leaf, against the literal and, for a concrete input, against the input in normal form | `codeSeeds_deepens`, `codeTree_meet` |
+| G1 and G2 for each code leaf, against the literal and against its input in normal form | `codeSeeds_deepens`, `codeTree_meet` |
 | The task form (all completed combinations) gives the code form; more inputs keep it | `codeCaptured_of_forward`, `forwardCaptured_mono` |
 | THE BACKWARD CONTRACT AND THE ITERATION THEOREM WITH THE CODE SEEDS | `seedsCover_code`, `B_general_code`, `iteration_general_code` |
-| Vectors: C2 cut start, spine exclusion, FLOW input, excluded FLOW mark, mixed capture | `Vec.star_start`, `spine_excl`, `flow_literal`, `flow_excluded`, `mixed_code`, `mixed_code_covers`, `cex_mixed_raw` |
+| Vectors: C2 cut start, spine exclusion, an abstract-mark input and an input with another mark (not stored) | `Vec.star_start`, `spine_excl`, `flow_none`, `mark_other` |
 
 `B_general_code` closes the open item of spec §II.7 ("the contract for
 the tree seeding is argued, not proved"). It holds for the merged tree
@@ -619,7 +616,7 @@ without exclusions, in arrival order, with the fallback.
 | `mergeL`: a list of leaves, `insertLeaf` in arrival order | `insertCaptureLeaf` on a trie below the literal path | Case table in §5.3 (a). Equivalence is tested (§5.7 (2)), not proved |
 | `meetLit` on `PFact` with the input exclusion | A walk of the checked piece (F3): spine `[any]` with the exclusion check, then the tip subtree | The three cases of the spec meet table: above, at, below. The checked piece has only matched marks (F3) |
 | The exclusions are dropped after the meet (`capMeets`) | The tree has no exclusion | Equal |
-| `nfOne` of an abstract mark: the literal | `captureInput` of a non-`TaintTree` input: the literal | Equal. No production site (F4) |
+| `nfOne` of an abstract mark: not stored; `codeSeeds_sound` assumes a concrete capture (`CapConc`) | The store drops a non-`TaintTree` input | Equal. F4 gives `CapConc` |
 | `codeSeeds`: the tree, or the literal if the tree is empty | `seedFact` with `refinedSeed`; no tree → the literal | Equal |
 | The leaf mark is the literal mark | `treeSeed` re-marks with the marks of the literal fact of the backward run | Equal on one literal (C10) |
 | Not modelled | `Cut.SEED`, the run-2 static validation, the protection of S3/S5 results, GROUP mode | CURRENT behaviour, applied to the new seed |
@@ -634,13 +631,15 @@ without exclusions, in arrival order, with the fallback.
 | A4 | The checked piece of `Holds` is inside the overlap with the literal and has only matched marks (F3) | Code reading. Test §5.7 (1) |
 | A5 | The stores of one analyzer root have no concurrent writers, as `sinkSeeds` and `sourceHits` | Same owner (F10) |
 | A6 | `predicate.leaves` has one entry per pattern (canonical leaves), so `indexOf` finds the leaf | `RulePredicate.Builder.intern` (`interp/RulePredicate.kt:104-113`) |
+| A7 | If the edge of a unary `[any]` source literal fires on a `TaintTree`, `checkMark` holds on it | Both match the same pattern on the same facts. Test §5.7 (4) |
 
 ### 5.7 Tests
 
 1. New `test:ap/CaptureTreeTest.kt`, the meet and the insert:
    - spec rows m1-m4 and t1-t4, the Lean vectors `star_start`,
-     `spine_excl`, `flow_literal`, `mixed_code`;
-   - an input with no overlap, a non-`TaintTree` input: the literal.
+     `spine_excl`, `mark_other`;
+   - a `FlowTree` or `Reach` input to the store: nothing is stored
+     (`flow_none`).
 2. In the same file, a property test of the trie against a reference.
    The reference is a Kotlin copy of Lean `insertLeaf` on a list of
    `(σ, kind)`. Random leaves: three fields, depth 3 or less, both kinds,
@@ -659,7 +658,9 @@ without exclusions, in arrival order, with the fallback.
    - S3 (unary `arg0.[any](U)`, input `arg0.h.$(U)`): the backward run
      emits the tree seed `arg0.h.$(U)` DEMAND at the reversed source;
    - S5 (multi): the same through a restricted `Combination`;
-   - run 1 with a multi source: the cube inputs give the tree.
+   - run 1 with a multi source: the cube inputs give the tree;
+   - A7: each fired unary `[any]` source edge on a `TaintTree` stores a
+     leaf.
 5. The A3 guard: in the S3 case, assert that `refineReversed` returns the
    tree seed. If the reversed result is not the literal fact, this test
    fails.
@@ -682,32 +683,20 @@ without exclusions, in arrival order, with the fallback.
 None of these volumes is measured. The gate (§8) measures time and peak
 memory per rule.
 
-## 6. Question for the owner
+## 6. Answered question
 
-**Q1. The normal form of an input with an abstract mark (FLOW).** The
-spec gives two readings.
+**Q1 (first revision): how to store an input with the abstract mark
+(FLOW).** The spec said "a FLOW input: the mark of the literal" (§I.3,
+line 185) and "an input with the abstract mark gives no leaf" (line 212,
+t6). The first revision stored the literal for such an input.
 
-- §I.3 line 185: "a FLOW input: the mark of the literal". The input
-  `b.f.*/{}(*)` becomes the leaf `b.f.[any](U)`.
-- §I.3 line 212 and t6: "an input with the abstract mark gives no leaf,
-  so the literal keeps its CURRENT seed".
-
-The second reading is unsound when another input gives a leaf.
-
-```text
-literal   b.[any](U)
-inputs    b.f.$(U)       (concrete)
-          b.g.*(*)       (FLOW; covers the real location b.g (U))
-line 212  tree {f: $}: not empty, so no fallback; b.g (U) has no seed     Lean Vec.cex_mixed_raw
-line 185  tree {f: $, g: [any]}: sound
-proposal  the FLOW input stores the literal: tree = b.[any](U) (CURRENT)  Lean Vec.mixed_code, mixed_code_covers
-```
-
-The proposal stores the literal (C1). It is sound, it gives the result
-of t6 for one FLOW input, and it has the least code. Production has no
-such input (F4), so the choice changes no result. Please confirm C1, or
-select the line-185 normal form. The proposal updates the spec rows of
-lines 185 and 212 and the t6 note to C1 (§9).
+Answer (user, 26 November): a literal cannot be satisfied by a FLOW fact,
+so the capture stores no non-`TaintTree` fact. This is code fact F4. A
+FLOW fact is never an input of a completed combination, so the capture is
+concrete (`CapConc`), and "no leaf" is sound: `codeSeeds_sound` takes
+`CapConc` as its hypothesis. The counterexample of the first revision put
+a FLOW input in a completed combination; that cannot occur. The spec rows
+of lines 185 and 212 and t6 now say this (§9).
 
 ## 7. Order of work
 
@@ -764,16 +753,15 @@ Revert a rule commit when one of these occurs:
 
 Now (commit 0):
 
-- `backward-condition-progress.md` §I.3, line 185: "(a FLOW input: the
-  literal itself)"; line 212 and t6: an abstract-mark input stores the
-  literal; ignoring it is unsound (`BackCondImpl.Vec.cex_mixed_raw`). See
-  Q1.
+- `backward-condition-progress.md` §I.3, line 185 and line 212, and t6:
+  the capture stores only `TaintTree` inputs; a FLOW fact never satisfies
+  a literal (F4, Q1).
 - `backward-condition-progress.md` §II.4 and §II.7: the contract for the
   tree seeding is proved for the code seeds (`BackCondImpl.B_general_code`).
 - `backward-condition-progress.md` §II.5 Limits: add C7 and C8 (GROUP
   anchors and legacy statement conjunctions keep the CURRENT seed).
-- `BackCondExamples.ex_t6`: the doc comment says the normal form is not
-  needed for soundness. Correct it with `cex_mixed_raw`.
+- `BackCondExamples.ex_t6`: the doc comment says that an abstract-mark
+  input gives no leaf; add that the code never meets one (F4).
 - `proof-status.md`: add `BackCondImpl`.
 
 After the measurement: the spec header and the "Gate and checklist" with
@@ -783,10 +771,11 @@ the commit ids and the measured effect; ap.md §9.2 and interpreter.md
 ## 10. Calls made in this proposal
 
 These are implementation choices. The owner can change each of them.
+C1 and C11 of the first revision stored the literal for a FLOW or an
+unmatched input. The user decision of 26 November (§1) withdraws them.
 
 | # | Call | Reason | Alternative |
 | --- | --- | --- | --- |
-| C1 | An input that is not a `TaintTree` stores the literal | Sound, least code, no production site (F4). See Q1 | The line-185 normal form: more precise, dead code today |
 | C2 | Capture at all completed combinations during the run; prune sink trees at the hand-off to the seeded `(method, statement, rule, literal)` | The run does not know yet which witness becomes DEMAND. The spec takes inputs from NORMAL and DEMAND combinations | Capture only at DEMAND witnesses: loses inputs of NORMAL combinations at the same occurrence |
 | C3 | Keep all source trees at the hand-off | The backward run reads them at each arrival at the reversed source; no seed names them | Prune to the sources that the backward run reaches: not known at the hand-off |
 | C4 | A predicate literal that is not a leaf is not unary (DEMAND) | MAY-sound; F1 makes the case empty in production | `check` and fail |
@@ -796,7 +785,6 @@ These are implementation choices. The owner can change each of them.
 | C8 | The legacy statement conjunctions (`ConjunctiveEdge`) keep the CURRENT seed | Test-only (F6) | Capture them as S5 |
 | C9 | A reversed source result is replaced only if it equals the literal fact | Keeps CURRENT for any other shape (A3) | Replace unconditionally |
 | C10 | The tree holds the literal mark; the seed takes the marks of the literal fact of the backward run | The forward run can use GROUP mode; the backward run uses its own mark atoms | Store FULL atoms and trust them |
-| C11 | A capture that finds no overlap, no leaf or no `Holds` stores the literal | A completed combination always overlaps; this keeps every route if that fails | Store nothing: can lose a route when another input gives a leaf |
 
 ## 11. Checklist and blind spots
 
@@ -806,9 +794,9 @@ These are implementation choices. The owner can change each of them.
 [ ] Native prototype                      not done
 [x] Execution site and volume             sites §5.8; volumes not measured
 [x] Selected semantic scope               §2 (K3 layer; K2, K4, S3, S5 shape; capture state; S-H1 to S-H6)
-[x] Proof scope and model differences     §4.4, §5.4, §5.5 (53 theorems; propext and Quot.sound only)
+[x] Proof scope and model differences     §4.4, §5.4, §5.5 (49 theorems; propext and Quot.sound only)
 [x] Withdrawal condition                  §8.3
-[x] Gaps                                  Q1 (§6), not blocking
+[x] Gaps                                  Q1 answered (§6)
 ```
 
 - **Nothing ran.** No prototype and no measurement exist. S-H1, S-H2 and
@@ -817,6 +805,8 @@ These are implementation choices. The owner can change each of them.
   (`mergeL`). §5.7 (2) compares the trie with a list reference.
 - **The round argument (spec §II.5) is not proved.** `iteration_general_code`
   proves soundness over rounds, not progress.
+- **A7 is a code reading.** If a unary `[any]` source edge fires where
+  `checkMark` does not hold, that input gives no leaf. §5.7 (4) checks it.
 - **A3 is guarded, not proved.** If the guard never passes, S3 and S5
   keep the CURRENT seed. §5.7 (5) detects this.
 - **The capture walk depends on F3.** If `checkMark` ever keeps an

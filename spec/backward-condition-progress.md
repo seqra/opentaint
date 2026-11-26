@@ -184,7 +184,7 @@ occurrences   each DEMAND witness (sink literals, K2, K4);
 inputs        each input that satisfied the literal in a COMPLETED combination (NORMAL or DEMAND) of the occurrence
 
 for each input:
-  normal form   mark := the concrete mark that the check matched     (an abstract-mark input: the literal itself, below)
+  normal form   mark := the concrete mark that the check matched     (only TaintTree inputs: a FLOW fact never satisfies a literal)
                 each field tail ([any-taint]/E, */E, [any]) := [any], E dropped;   $ stays $
   meet first    leaf := meet(normal form, literal)                   (§II.4 table: below, at, above)
                 the leaf is base.literalPath·σ with the tail $ or [any] and the mark of the literal
@@ -211,7 +211,7 @@ model drops it after the meet (`BackND.capMeets`).
 | the tree: a `TaintTree` (`Conclusions.kt:44`) with `TaintLeaves(exact, any)` at each node (`Trie.kt:19`): `$` leaves and `[any]` leaves of one mark | **CURRENT** representation |
 | keep one tree per (occurrence, literal) after `freeze()` as a hand-off side table, outside `Seed` equality | **NEW** |
 | insert from ALL completed combinations, not only the selected proof (`BackND.Vec.cex_selected_only`) | **NEW** |
-| the normal form: an input with the abstract mark stores the literal itself, so the tree is the literal (the CURRENT seed; `BackCondImpl.Vec.flow_literal`). Ignoring such an input is unsound when another input gives a leaf (`BackCondImpl.Vec.cex_mixed_raw`). No production site: a FLOW fact never satisfies a literal (implementation proposal F4, Q1) | **NEW** |
+| the normal form: only a `TaintTree` input is stored. A FLOW fact never satisfies a literal (implementation proposal F4), so it is never the input of a completed combination; an abstract-mark input gives no leaf (`BackCondEx.ex_t6`, `BackCondImpl.Vec.flow_none`), and the capture is concrete (`BackND.CapConc`, a hypothesis of `BackCondImpl.codeSeeds_sound`) | **NEW** |
 | only `[any]` literals: the seed of a `$` literal is the literal | **NEW** |
 
 | Ex | literal | inputs | stored leaves → merged tree | Rule |
@@ -361,7 +361,7 @@ Literals of c2: literal 0 is `a.$(T)`, literal 1 is `b.[any](U)`.
 | Ex | inputs | Seeds | Note | Status |
 | --- | --- | --- | --- | --- |
 | t5 ✓ | 1: `b.f.$(U)`, `b.g.h.$(U)` | `a.$(T)`; tree of `b` with leaves `f: $`, `g.h: $` | two field chains replace `b.[any](U)` | **CHANGED** |
-| t6 ✓ | 1: `b.f.*/{}(*)`, abstract mark | `a.$(T)`, `b.[any](U)` | the input stores the literal (`BackCondImpl.Vec.flow_literal`): literal 1 keeps the CURRENT seed | **CURRENT** except the K3 layer |
+| t6 ✓ | 1: `b.f.*/{}(*)`, abstract mark | `a.$(T)`, `b.[any](U)` | not stored (the code never meets it: a FLOW fact never satisfies a literal); literal 1 keeps the CURRENT seed | **CURRENT** except the K3 layer |
 | s1 ✓ | S3 literal `arg0.[any](U)`; input `arg0.h.$(U)` | tree of `arg0` with the leaf `h: $` | a reversed source literal | **CHANGED** |
 
 | Claim | Lean (`BackND`) |
