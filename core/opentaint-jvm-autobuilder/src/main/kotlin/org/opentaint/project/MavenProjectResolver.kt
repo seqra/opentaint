@@ -24,6 +24,7 @@ class MavenProjectResolver(
     private val resolverDir: Path,
     override val projectSourceRoot: Path
 ) : ProjectResolver {
+    override val buildErrors = mutableListOf<BuildError>()
     private val resolvedProjectDependencies = mutableListOf<Path>()
     private val resolvedModules = mutableListOf<ProjectModuleClasses>()
 
@@ -47,6 +48,7 @@ class MavenProjectResolver(
     override fun resolveProject(): JavaProject? {
         if (!executableFound) {
             logger.error { "Could not find Maven executable!" }
+            buildErrors += BuildError(toolchain = null, causes = listOf("Could not find Maven executable"))
             return null
         }
 
@@ -74,7 +76,7 @@ class MavenProjectResolver(
     private fun buildProject(): Boolean {
         val args = listOf(projectMavenExecutable) + listOf("clean", "package") + mavenCommandFlags
 
-        javaToolchain = tryJavaToolchains { ProjectResolver.runCommand(projectSourceRoot, args, it) } ?: return false
+        javaToolchain = tryJavaToolchains(projectSourceRoot, args, ::MavenFailureCauses, buildErrors) ?: return false
 
         projectSourceRoot.visitFileTree {
             onPreVisitDirectory { directory, _ ->

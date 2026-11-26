@@ -12,7 +12,7 @@ sealed interface JavaToolchain {
     }
 
     data class ConcreteJavaToolchain(val javaHome: String) : JavaToolchain {
-        override fun path(): Path = Path(javaHome).toRealPath()
+        override fun path(): Path = Path(javaHome).let { if (it.exists()) it.toRealPath() else it }
     }
 
     companion object {

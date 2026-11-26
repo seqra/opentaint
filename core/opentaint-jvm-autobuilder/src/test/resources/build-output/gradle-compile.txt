@@ -1,0 +1,33 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.4.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :clean
+> Task :compileJava FAILED
+/home/u/app/src/main/java/app/App.java:13: error: illegal start of expression
+class Broken { int x = ; }
+                       ^
+1 error
+FAILURE: Build failed with an exception.
+* What went wrong:
+Execution failed for task ':compileJava'.
+> Compilation failed; see the compiler output below.
+  /home/u/app/src/main/java/app/App.java:13: error: illegal start of expression
+  class Broken { int x = ; }
+                         ^
+  1 error
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+* Exception is:
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compileJava'.
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:135)
+	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:288)
+Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Compilation failed; see the compiler output below.
+/home/u/app/src/main/java/app/App.java:13: error: illegal start of expression
+class Broken { int x = ; }
+                       ^
+1 error
+	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:89)
+	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:50)
+	... 33 more
+BUILD FAILED in 11s
+2 actionable tasks: 2 executed

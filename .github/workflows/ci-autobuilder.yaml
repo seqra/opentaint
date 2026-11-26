@@ -50,6 +50,9 @@ jobs:
       - name: Build autobuilder jar
         run: ./gradlew opentaint-jvm-autobuilder:projectAutoBuilderJar
 
+      - name: Test autobuilder
+        run: ./gradlew opentaint-jvm-autobuilder:test
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:

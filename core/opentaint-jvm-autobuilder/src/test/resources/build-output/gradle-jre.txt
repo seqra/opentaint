@@ -1,0 +1,29 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.4.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+FAILURE: Build failed with an exception.
+* What went wrong:
+Could not determine the dependencies of task ':compileJava'.
+> Could not resolve all dependencies for configuration ':compileClasspath'.
+   > Failed to calculate the value of task ':compileJava' property 'javaCompiler'.
+      > Toolchain installation '/home/u/.opentaint/install/jre' does not provide the required capabilities: [JAVA_COMPILER]
+* Try:
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+* Exception is:
+org.gradle.api.internal.tasks.TaskDependencyResolveException: Could not determine the dependencies of task ':compileJava'.
+	at org.gradle.api.internal.tasks.CachingTaskDependencyResolveContext.getDependencies(CachingTaskDependencyResolveContext.java:70)
+	at org.gradle.execution.plan.TaskDependencyResolver.resolveDependenciesFor(TaskDependencyResolver.java:49)
+Caused by: org.gradle.api.internal.artifacts.ivyservice.TypedResolveException: Could not resolve all dependencies for configuration ':compileClasspath'.
+	at org.gradle.api.internal.artifacts.ResolveExceptionMapper.mapFailure(ResolveExceptionMapper.java:73)
+	at org.gradle.api.internal.artifacts.configurations.DefaultConfiguration.lambda$resolveGraphForBuildDependenciesIfRequired$8(DefaultConfiguration.java:825)
+	... 152 more
+Caused by: org.gradle.api.internal.provider.AbstractProperty$PropertyQueryException: Failed to calculate the value of task ':compileJava' property 'javaCompiler'.
+	at org.gradle.api.internal.provider.AbstractProperty.finalizeNow(AbstractProperty.java:315)
+	at org.gradle.api.internal.provider.AbstractProperty.lambda$beforeRead$0(AbstractProperty.java:307)
+	... 165 more
+Caused by: org.gradle.api.GradleException: Toolchain installation '/home/u/.opentaint/install/jre' does not provide the required capabilities: [JAVA_COMPILER]
+	at org.gradle.jvm.toolchain.internal.JavaToolchainQueryService.asToolchainOrThrow(JavaToolchainQueryService.java:249)
+	at org.gradle.jvm.toolchain.internal.JavaToolchainQueryService.query(JavaToolchainQueryService.java:192)
+	... 157 more
+BUILD FAILED in 11s

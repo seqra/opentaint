@@ -24,6 +24,7 @@ class GradleProjectResolver(
     private val resolverDir: Path,
     override val projectSourceRoot: Path
 ) : ProjectResolver {
+    override val buildErrors = mutableListOf<BuildError>()
     private val resolvedModules = mutableListOf<ProjectModuleClasses>()
     private val resolvedProjectDependencies = mutableListOf<Path>()
 
@@ -62,7 +63,7 @@ class GradleProjectResolver(
             resolveGradleClassesCmdArgs(classesResolverInitScript, classesReportDir) +
             listOf("clean", RESOLVE_CLASSES_TASK)
 
-        javaToolchain = tryJavaToolchains { ProjectResolver.runCommand(projectSourceRoot, args, it) } ?: return false
+        javaToolchain = tryJavaToolchains(projectSourceRoot, args, ::GradleFailureCauses, buildErrors) ?: return false
 
         registerModulesFromReports(classesReportDir)
 
