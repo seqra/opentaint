@@ -19,7 +19,7 @@ lost), [BackNDRefine.lean](lean/ApSpec/BackNDRefine.lean) (`refine_sound`,
 `refine_mono`, `iteration_general_refined`),
 [BackCondExamples.lean](lean/ApSpec/BackCondExamples.lean) (42 principal
 examples of the spec operations, checked by `decide`). Open: decision D1
-(spec §6), the hidden changes S-H1, S-H2, S-H6, S-H8, S-H9, and the ND form of
+(spec §II.11), the hidden changes S-H1, S-H2, S-H6, S-H8, S-H9, and the ND form of
 the backward contract.
 
 ## Checked future candidate: exact call-stage result merging, 1 November 2026
