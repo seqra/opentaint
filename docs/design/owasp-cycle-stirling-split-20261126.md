@@ -6,13 +6,14 @@ exposes on Conductor) and **H1** (Stirling-PDF). All three are native
 prototypes behind flags on proto branches. Verdict (§11): **H1 is WI.
 The landing set M1 + F1 + H1 is WI with a price** (decision D1, §14):
 OWASP ends with NO_DEMAND_EDGE in run 7 with equal results, routes and
-time; Stirling-PDF has the fast form in every launch (5 of 5); and in
+time; Stirling-PDF has the fast form in every launch (9 of 9 to run 11); and in
 3,000 s Conductor ends run 8 in 2 of 3 launches, where native ends it in
 0 of 2. Every result stays. The price: Conductor backward run 6 is +24%
-to +47% slower (the cause is traced for M1 + F1 in §6.8; with H1 it is
-INFERENCE), Conductor run 8 goes above the 90% memory threshold once in
+to +47% slower (root cause traced with and without H1 in §6.8: the
+shallow backward answers of FLOW MUST records), Conductor run 8 goes above the 90% memory threshold once in
 each launch, and the fast form of Stirling-PDF takes up to 8% more wall
-time. **M1 alone and M1 + F1 without H1 are not WI** (M1 alone runs out
+time in 8 of 20 launches (a run-5 sub-form; root cause in §6.10: the
+replay order of two saved records of one getter). **M1 alone and M1 + F1 without H1 are not WI** (M1 alone runs out
 of memory in Conductor run 6; M1 + F1 without H1 has run 6 +55% to +62%
 and ran out of memory in run 8 in its one 3,000 s launch).
 Design rules: [design-guide.md](../../spec/design-guide.md),
@@ -33,8 +34,9 @@ tested directly.
 | --- | --- | --- | --- | --- | --- |
 | A | OWASP reaches the hard run limit (run 11, or run 21 with a higher limit). The reports are final at run 3. | C2 cuts a MUST actual that fits the relative cap to a STAR start. A STAR start with a concrete mark is DEMAND. Its DEMAND witness at the sink makes the same DEMAND rows in each backward run: an exact period-2 cycle from hand-off 7 (§2). | **M1**: in a forward restricted run, a NORMAL MUST actual that fits the cap below a concrete ANY entry starts as itself (NORMAL must-premise), the start row of ap.md §6.5 (§3). | OWASP: NO_DEMAND_EDGE in run 7 in every M1 launch, results equal, every route served. M1 alone: Conductor OOM in run 6. | **Not WI alone** |
 | A1 | Cost of M1 on Conductor: H4 +125%, OOM in run 6 | M1 lets NORMAL MUST facts into blocks and callees. CURRENT C2 starts them as FLOW MUST premises at abstract entries, and the C5 companion clause takes a FLOW STAR member but not a FLOW MUST member. So a FLOW MUST premise keeps only depth-1 pieces, and the loop of `ParametersUtils#replace` makes a loop-carried relation over its iterator aliases that the backward run crosses two fields deep (§6.5). | **F1**: the C5 companion clause also takes a FLOW MUST member whose concrete instance is a legal start (the instance law, §3.8). | M1 + F1: no OOM to run 7, results equal, H4 +6% to +11% instead of +125% (§6.6, §6.7). F1 alone: no change. | with M1 and H1 |
-| A2 | The rest of the M1 + F1 cost on Conductor: backward run 6 +55% to +62% (+24% to +47% with H1) | A must-premise has end-exact edges (ap.md §6.5), so a backward read of its record answers at the premise path. With M1 a getter gets a FLOW MUST premise next to its FLOW STAR premise, and its shallow answer covers the deep one. The task mapper entries stay one field shallower than native and admit more DEMAND actuals, which reach the loop of `replace` (§6.8; traced without H1, INFERENCE with H1). | No rule. The precise form (FLOW STAR, ablations A5 and A5c) costs more than the depth it saves (§6.8). | In 3,000 s the landing set ends run 8 in 2 of 3 launches and native in 0 of 2 (§6.9). M1 + F1 without H1 ran out of memory in run 8 in its one launch. | the price of D1 |
+| A2 | The rest of the M1 + F1 cost on Conductor: backward run 6 +55% to +62% (+24% to +47% with H1) | A must-premise has end-exact edges (ap.md §6.5), so a backward read of its record answers at the premise path. With M1 a getter gets a FLOW MUST premise next to its FLOW STAR premise, and its shallow answer covers the deep one. The task mapper entries stay one field shallower than native and admit more DEMAND actuals, which reach the loop of `replace` (§6.8, traced with and without H1). | No rule. The precise form (FLOW STAR, ablations A5 and A5c) costs more than the depth it saves (§6.8). | In 3,000 s the landing set ends run 8 in 2 of 3 launches and native in 0 of 2 (§6.9). M1 + F1 without H1 ran out of memory in run 8 in its one launch. | the price of D1 |
 | B | Stirling-PDF has fast launches (run 7 in 2-3 s) and slow launches (run 7 in 18-123 s, run 9 can time out). | The root summary store keeps an exact demand row next to a MAY row that covers it, if the exact value arrives first in run 6. The hand-off projects both rows. The exact row gives an EXACT NORMAL start that a loop wraps up to the field limit (§4). | **H1**: the hand-off normalizes each TAINT lane of a store with the removal half of the store's own TaintGroup law (§5). | Results equal on all projects, Stirling-PDF route census equal, suites pass; fewer rows; the fast form in every H1 launch. | **WI** |
+| B1 | The landing-set fast form of Stirling-PDF has a costly sub-form: runs 6 to 11 take 6 to 7 s more in 8 of 20 launches. | Two saved records of a getter answer one call, and the result of one covers the result of the other. A statement sends only the fresh part of a fact, so the covered result goes on if its record replays first. With M1 + F1 it gives `safeMimeDecode` and `decodeMimeHeader` an extra deeper MUST start (§6.10). | No rule in the landing set. Candidate **H2**: one replay of saved records is one batch, normalized per TAINT lane before it resumes the caller (§6.10; not prototyped). | Ablation of the replay order: the cheap sub-form in 3 of 3 launches (`mustLast`), the costly sub-form in 3 of 3 (`mustFirst`). | part of the price of D1; H2 is D4 |
 
 The landing set is **M1 + F1 + H1**. No rule relaxes a cap, stops on
 reports, cuts work by a number or switches a rule off in a scope. The
@@ -886,7 +888,7 @@ launch of the same form):
   the 3 launches. The load in runs 6 to 11 was about the same in these 3
   launches (12.4 to 13.3). The hand-offs H3 to H8 have 0.6% to 9% fewer
   rows than native fast, and H9 to H11 are within 3%. H1 alone has wall 154 s (`gate5/Stirling-PDF-hs-1`).
-  The cause of the 2 slower launches is not traced (§10). Against the
+  The cause of the 2 slower launches is a run-5 sub-form (§6.10). Against the
   native slow form (1,112 s, 1 of 3 native launches) the landing set
   saves about 950 s.
 - The 2 provisional entries of the fast form are the native fast-form
@@ -939,9 +941,8 @@ owner traces of `getTaskInputV2` (`*-r5-gti`, queue 27) and of
 `UserDefinedTaskMapper` with its callees (`*-r5-udt`, `*-r5-udt3`,
 `mpf1-r5-udt4`, queues 28, 32 and 34), and the hand-off dumps
 (`conductor-m1/native-r5b`, `f1/conductor-mpf1-r5`). T is the
-path-traversal mark. Every trace is of M1 + F1 without H1. The landing
-set M1 + F1 + H1 has no trace; that the same chain makes its run-6 cost
-is INFERENCE (§10).
+path-traversal mark. Steps 1 to 9 are traced on M1 + F1 without H1;
+"The chain with H1" below repeats the key steps on the landing set.
 
 1. **The time is in `ParametersUtils#replace`.** Run-6 owner time: 261 s
    to 411 s (context `arg(0) == HashMap`) and 122 s to 250 s (context
@@ -1047,6 +1048,39 @@ reads. The run-4 exits stay at the depth of the MUST start, the run-5
 entries stay one field shallower than native, and a shallower entry
 admits more DEMAND actuals. Native deepens because its premises at the
 same sites are STAR.
+
+**The chain with H1 (the landing set)** (gate queues 39 and 40, build
+`c9e4fdeeb`, the landing-set flags: `h1share/conductor-mpf1hs-r5` with
+hand-off dumps, `-r7-ot` with owner time and the `replace` owner trace as
+in `f1prof/conductor-*-r7-ot`, `-r5-gti` with the owner trace of
+`getTaskInput` and `getTaskInputV2`). VERIFIED:
+
+| Step | native | landing set | M1 + F1 |
+| --- | ---: | ---: | ---: |
+| Covered TAINT edges that H1 removes at H4 / H5 (`BIDI_PROTO_SUBSUME`) | H1 alone: 170 / 140-143 | 337-338 / 533-537 | - |
+| Mapper entry at H4 (step 4) | `workflowTask.inputParameters.MAY/T` | `workflowTask.MAY/T` | `workflowTask.MAY/T` |
+| `getTaskInputV2` T starts, run 5 (step 3) | 26 MUST | 26 MUST N, 26 STAR D, 2 MUST D | as the landing set |
+| `getTaskInputV2` root T edges at the run-5 hand-off (kept by compaction) | 4 (4) | 8 (5) | 10 (6) |
+| `getTaskInputV2` H5 rows with a STAR DEMAND premise | 0 | 6 | 30 |
+| `replace` H5 root rows, context `[{}]` / `HashMap` (step 2) | 8 / 132 | 33 / 45 | 82 / 164 |
+| `replace` run-6 starts, root / block, context `[{}]` | 809 / 89,739 | 1,276 / 136,478 | 1,452 / 163,877 |
+| `replace` run-6 EXACT T DEMAND starts | 4,281 | 5,116 | 10,801 |
+| `replace` run-6 owner time, both contexts (step 1) | 383 s | 567 s | 661 s |
+
+(Run-6 mean load: 8.5, 8.1 and 7.5.) Steps 1, 3 and 4 are the same with
+H1; step 2 has a smaller volume. H1 removes covered TAINT edges at each
+hand-off, and M1 + F1 makes 2 to 5 times as many of them as H1 alone (H4
+337 against 170, H5 537 against 140, H7 553 to 756 against 155). With H1
+the run-5 store of `getTaskInputV2` keeps one STAR DEMAND edge instead
+of two, and `replace` gets 33 root DEMAND rows in the context `[{}]`
+instead of 82. This removes about one third of the extra `replace` work
+of M1 + F1 in run 6 (+184 s instead of +278 s over native). The rest is
+the depth cost of steps 4 to 9, which H1 does not change. Which H4
+removal removes which run-5 edge is not traced: the effect goes through
+the run-5 summaries of the callees (INFERENCE for the link per edge; the
+counts are VERIFIED). That the same removals keep M1 + F1 + H1 below the
+memory limit in run 8 (H1 removes 462 to 865 edges at each of H6 to H9)
+is INFERENCE.
 
 **Intervention test: ablation A5c** (gate queue 35, `a5c/conductor-mpf1a5c-r7`,
 build `c9e4fdeeb` on `proto/mpf1-diag-20261127`, flag
@@ -1185,6 +1219,170 @@ VERIFIED (`f1long/`, `gate-queue33.log`, `gate-queue36.log`,
   times to the end of run 7 is 702 s to 816 s against 728 s and 757 s
   here (655 s and 659 s in the quiet native launches of §6.7). Runs 4 and
   7 are faster, runs 3, 5 and 6 slower.
+
+### 6.10 Root cause of the Stirling-PDF fast-form time (gate queues 39 to 45)
+
+The landing set gives the fast form in every Stirling-PDF launch (9 of 9
+launches to run 11). But the fast form has two sub-forms, and one of them
+takes 6 to 7 s more in runs 6 to 11. This section gives the cause, an
+intervention test and a candidate rule. VERIFIED, except where marked.
+
+**The two sub-forms.** The launches with a quiet run-1 control (23.3 s
+to 24.9 s) that run to run 11:
+
+| Launches | Sub-form | H5 | H6 | Runs 6 to 11 | `decodeMimeHeader`, runs 6 to 11 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| native fast 1, 2 | - | 1,196 to 1,204 | 1,297 | 39.5 s, 39.7 s | not measured |
+| landing set d2, d4, mpf1hs-4 | cheap | 1,099 to 1,111 | 1,204 | 39.7 s to 40.4 s | 36.5 s, 37.4 s (d4, d2) |
+| landing set d1, d3, mpf1hs-2, mpf1hs-5 | costly | 1,119 to 1,130 | 1,208 | 46.0 s to 47.2 s | 43.4 s (d1, d3) |
+
+- The cheap sub-form takes the native fast time. The costly sub-form
+  takes 6.0 to 6.9 s more in `EmlProcessingUtils#decodeMimeHeader`, and
+  this is the full difference in runs 6 to 11 (owner time,
+  `BIDI_OWNER_TIME`). Per run the owner takes 0.7 to 1.2 s more (d1 against d2).
+- Run 5 is the first run that differs. H3 and H4 are equal in d1 and d2
+  (hand-off dumps, 1,560 and 4,826 rows). H5 of d1 has 37 rows more and 1
+  row less than d2: `decodeMimeHeader` +19 (FLOW block rows with the
+  premises `arg(0).String#bytes.*/FLOW` and `var(21).String#bytes.*/FLOW`,
+  and xss rows with `String#bytes.MAY` premises),
+  `processEmailHtmlBody` +14, `EmlParser#safeMimeDecode` +4.
+- 8 of 20 landing-set launches have the costly sub-form: 5 of the 9 that
+  run to run 11, and 3 of the 11 traced launches that stop after run 5 or
+  run 7 (`t1` to `t5`, `a1` to `a4`, `r1`, `r2`).
+
+**The chain** (owner traces of run 5 with the events C2, OFFER, START,
+PUB and the reply events REPLY_SAVED, REPLY_VIEW, REPLY_CURRENT):
+
+1. **Program shape.** `EmlProcessingUtils#appendAttachmentsSection` has a
+   loop over the attachments. The loop body calls
+   `escapeHtml(EmlParser.safeMimeDecode(attachment.getFilename()))`, and
+   `safeMimeDecode` calls `decodeMimeHeader`. In run 5 the loop blocks
+   B2@24 and B2@74 have the NORMAL premise
+   `var(14).…EmailAttachment#filename.MUST/xss` (M1 lets NORMAL MUST
+   facts into blocks and callees, §6.5).
+2. **Two saved records answer one call.** At the call
+   `attachment.getFilename()`, the replay of the saved forward records of
+   `getFilename` gives the caller two results for the actual
+   `<this>.filename.MUST/xss`:
+   - R_s: `<this>.filename.*/FLOW -> {ret.*/FLOW}` gives `{ret.MUST/xss},N`.
+   - R_d, a FLOW MUST record:
+     `<this>.filename.MUST/FLOW -> {ret.[].MUST | ret.Matcher#group.MUST | ret.Matcher#input.MUST | ret.String#bytes.MUST}/FLOW`
+     (in r2 also `ret.Matcher#pattern.MUST`) gives the same leaves with
+     the xss mark.
+
+   The result of R_s covers each leaf of the result of R_d: an
+   `[any-taint]` fact subsumes the `[any-taint]` facts strictly below its
+   path that its exclusion admits (ap.md §8.1, `subsumes` in
+   `ap/Reference.kt`). So the result of R_d is redundant.
+3. **A statement keeps the first arrival.** A statement sends only the
+   fresh part of a new fact to its successors
+   (`BlockRunState.admitOutputs`, `edges.addAll`). It never withdraws a
+   fact that it sent before. If the result of R_s arrives first, the
+   result of R_d is not fresh and stops. If the result of R_d arrives
+   first, it goes on to the successors, and the later result of R_s does
+   not take it back from them. VERIFIED (code).
+4. **The replay order.** R_s and R_d are at the same node
+   `<this>.filename` of the entry trie of `getFilename`. A trie node keeps
+   its records in insertion order (`store/PathTrie.kt`, `LinkedHashSet`),
+   and `replayPersistedSummaries` resumes the caller once per record in
+   that order. In r1 (cheap) the order is R_s, R_d at both call sites; in
+   r2 (costly) it is R_d, R_s at both call sites. The insertion order is
+   the order in which an earlier forward run persists its summaries. The
+   source of that order is not isolated (as in §4.2). The record contents
+   also differ between launches (4 or 5 leaves in R_d), so an earlier run
+   is order-dependent too.
+5. **The extra start.** With R_d first, the call `safeMimeDecode(...)`
+   gets a second actual `{arg(0).String#bytes.MUST/xss},N` (3 of 3
+   costly traced launches; 0 of 8 cheap ones). M1 starts it as itself,
+   because it fits the cap below the concrete ANY entry (§3.1). F1 gives
+   it the FLOW companion `arg(0).String#bytes.*/FLOW` (§3.8).
+   `safeMimeDecode` gives the same actual to `decodeMimeHeader`, so
+   `decodeMimeHeader` gets the root start `arg(0).String#bytes.MUST/xss`
+   and its block starts. In run 5 the traced owners have 13,979 events
+   in t5 (costly) that t1 (cheap) does not have (25,822 against 12,074
+   events in all).
+6. **The cost.** The extra starts give the extra H5 rows (+19
+   `decodeMimeHeader`, +4 `safeMimeDecode`) and 4 more H6 rows. Each
+   later run analyzes `decodeMimeHeader` again from these rows: +6.0 to
+   +6.9 s in runs 6 to 11.
+7. **A second site without a cost.** The same replay order decides the
+   call `processEmailHtmlBody(content.getHtmlBody(), …)` in
+   `generateEnhancedEmailHtml`. With the deep record first, the callee
+   gets `{arg(0).CharSequence#content.MUST/xss | arg(0).String#bytes.MUST/xss},N`,
+   and H5 has 12 more rows (the launches with H5 = 1,111 against 1,099). Runs 6 and 7
+   take the same time (run 6: 8.06 s and 8.17 s in t1 and t2, 8.20 s and
+   8.24 s in t3 and t4).
+
+Native has no sub-form at this site: without M1 the loop block has no
+NORMAL MUST premise, so the chain does not start. INFERENCE (native is
+not traced at this site; the native fast launches take 39.5 s and 39.7 s
+in runs 6 to 11).
+
+**Intervention test: ablation of the replay order** (gate queue 45, flag
+`ablateReplayOrder` on `proto/mpf1-diag-20261127`, `6613d7e5b`). The flag
+sorts the entry records of one added leaf before the replay: `mustLast`
+replays the records with an ANY_TAINT premise last, `mustFirst` first.
+The sort is stable, so the store order stays inside each group. Landing
+set, launches to run 7, interleaved, load 12.4 to 18.1:
+
+| Arm | Launches | Deep offer to `safeMimeDecode` / `processEmailHtmlBody` | H5 | H6 | H7 | Run 6 | Run 7 |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| `mustLast` | 3 | 0 / 0 in 3 of 3 | 1,099 | 1,204 | 839 | 6.6 s to 6.7 s | 1.4 s |
+| `mustFirst` | 3 | 2 / 1 in 3 of 3 | 1,130 to 1,131 | 1,208 | 870 to 871 | 7.8 s to 8.0 s | 2.1 s to 2.3 s |
+
+The replay order alone decides the sub-form: `mustLast` gives the cheap
+sub-form and `mustFirst` the costly sub-form in 3 of 3 launches each.
+VERIFIED.
+
+**Is the cheap sub-form valid? Is it an optimization?** The result of
+R_d is redundant at the return site, because the result of R_s covers
+it. The cheap sub-form is the analyzer's own output in the launches where
+R_s replays first. The results and the route census are equal in both
+sub-forms (§6.7: mpf1hs launches 1 and 2 are costly, launch 3 is cheap;
+126 routes equal). So the costly sub-form is a gap in the normal form of
+one replay: a covered value survives because it arrives first. This is
+the class of §4, in a forward run and at a call return instead of a
+summary store. The optimization is to give the cheap sub-form in every
+launch.
+
+**Candidate rule H2: one replay is one batch (proposal; not prototyped).**
+
+- CURRENT: the replay of the saved records for one offer resumes the
+  caller once per record and view, in the store order. A covered result
+  that arrives before its cover goes on.
+- NEW: the replay collects the results of all its records and views for
+  one offer. It groups them by TAINT lane (premise, base, layer,
+  protection class, as H1 in §5.1) and runs the removal half of the
+  TaintGroup law (`subsumeTaintLane`) on each lane in a launch-independent
+  order. Then it resumes the caller with the rest. FLOW and REACH results
+  pass unchanged.
+- Execution site: `replayPersistedSummaries`, once per original offer in
+  a restricted run, only for lanes with two or more results. Volume: not
+  measured; the prototype must count the lanes and the removed results.
+- Expected effect: the cheap sub-form in every Stirling-PDF launch, so
+  -6 to -7 s in runs 6 to 11 in 40% of the launches. On Conductor H2
+  acts on the same kind of FLOW MUST records as §6.8; the effect there is
+  not known.
+- Trivial alternative 1: a fixed record order (`mustLast`). It works here
+  only because the cover has a STAR premise and the covered record has an
+  ANY_TAINT premise. A cover can have any premise tail, so this is an
+  order rule, not a normal form. Rejected as a rule; it stays an ablation.
+- Trivial alternative 2: withdraw a sent fact when its cover arrives.
+  The engine has no withdrawal, and the worklist is monotone. Rejected.
+- Trivial alternative 3: M1 does not start a MUST actual that a start of
+  the same callee covers. This is order-dependent too, because the
+  covering start can arrive later. Rejected.
+- Limit: H2 normalizes one replay only. Current-run replies
+  (REPLY_CURRENT) arrive one at a time and are not in a batch. The
+  Stirling-PDF case uses saved records only (r1, r2).
+- Reviewer attack (self): H2 removes a result that a later statement
+  would use with a deeper path. It cannot lose a route, because the
+  cover is at the same statement, in the same lane, and gives every
+  leaf of the removed result (the TaintGroup law that H1 uses, §7.2 and §8). The cheap launches already have this outcome with equal results.
+- Status: candidate for the next iteration (D4). The design guide needs
+  the prototype behind a flag, the gate of each rule alone (results,
+  time, memory on all reference projects and the rule suite) and the
+  Lean step before H2 can be WI.
 
 ## 7. Semantic scope (proof-guide.md)
 
@@ -1352,9 +1550,10 @@ again in the code. Verdicts: **CONFIRMED** (true in the code),
 | R14 | F1 can change results (more admitted conclusions) and can add work (a new piece when no existing piece covers it). | **PLAUSIBLE** | Measured: §6.7 (results, routes, rows, time). Withdrawal conditions 1 and 4 of F1. |
 | R15 | The test oracle (`SelectedDemandReference.stores`) mirrors only the STAR clause, and no test sets the F1 flag. | **CONFIRMED** | Landing: add the F1 row to the oracle and a table test with the Lean vectors of `FlowMustCompanion`. The suites with the flag on are in §6.7. |
 | R16 | M1 drops the FLOW STAR companion below the entry, and F1 restores nothing where no abstract row exists: a route can still be lost with M1 + F1. | **PLAUSIBLE** | Route census with M1 + F1 (§6.7). F1 only adds pieces (`f1_keeps`), so a loss can come only from M1, whose census is §3.4. |
-| R17 | (Found by the 3,000 s gate.) The Conductor gain of the landing set comes from H1, not from M1 + F1. | **CONFIRMED in part** | M1 + F1 without H1 runs out of memory in run 8 (§6.9), and H1 alone ends in run 8 like native at 1,080 s (§11.1; no 3,000 s launch of H1 alone). So the gain needs all three rules, and the share of each rule is not measured. M1 + F1 lands only with H1 (D1). |
+| R17 | (Found by the 3,000 s gate.) The Conductor gain of the landing set comes from H1, not from M1 + F1. | **CONFIRMED in part** | M1 + F1 without H1 runs out of memory in run 8 (§6.9), and H1 alone ends in run 8 like native at 1,080 s (§11.1; no 3,000 s launch of H1 alone). So the gain needs all three rules. H1's share in run 6 is measured (§6.8, "The chain with H1"): M1 + F1 makes 2 to 5 times as many covered TAINT edges as H1 alone, and H1 removes them, which removes one third of the extra `replace` time. M1 + F1 lands only with H1 (D1). |
 | R18 | (Found by the 3,000 s gate.) A gate in equal time measures progress, not the time to a common state, and the landing set is slower before run 8. | **CONFIRMED** | Run 6 is +24% to +47% and the sum of the engine times to the end of run 7 is 702 s to 816 s against 728 s and 757 s (§6.9). The first common state after run 7 is the end of run 8: the landing set reaches it in 30 to 32 minutes of run 8 (2 of 3 launches); native does not reach it in 37 minutes (native 1, normal load) or 36 minutes (native 2, a 6-minute load spike). This is the price of D1. |
 | R19 | (Found by the 3,000 s gate.) The landing set runs Conductor run 8 near the heap limit; another launch can run out of memory, as M1 + F1 without H1 did. | **PLAUSIBLE** | 3 of 3 landing-set launches end without OOM, but each goes above the 90% threshold of the memory manager once in run 8 and continues only because the manager clears about 6,500 soft references (§6.9). M1 + F1 without H1 had 493 soft references left at that point and stopped. Native does not go above 90% in 37 minutes of run 8. The cost source in run 8 is not traced (§10). |
+| R20 | (Found by the Stirling-PDF traces.) The landing set is not order-independent: in 8 of 20 launches a covered MUST result reaches `safeMimeDecode` first and gives the costly sub-form. | **CONFIRMED** (§6.10) | The order is the replay order of saved records (CURRENT); M1 + F1 turn the covered result into a new start. Results and routes are equal in both sub-forms, and the ablation shows that the order alone decides the sub-form. Candidate H2 removes the order (D4). |
 | - | F1 acts in a backward run or on the run-2 rows; F1 exceeds `FL(Dc)+1` or K; F1 changes C2, the target rows or the control rows; the prepared and the native C5 paths disagree (both call `canStoreInitial`) | **REFUTED** (code) | - |
 | - | M1 exceeds the cap; M1 at a STATIC anchor; M1 makes a NORMAL start from a DEMAND actual (a DEMAND actual gives a DEMAND start, `AdmittedInitial`); M1 in a backward run; `canEmitInitial` and `emit` disagree; M1 claims a mark the actual lacks; the H1 coverage relation is wrong for exclusions, STAR, MUST, protection; a row removed by a later-reduced row is not covered; H1 changes stores, records or targets | **REFUTED** (code) | - |
 
@@ -1390,23 +1589,24 @@ again in the code. Verdicts: **CONFIRMED** (true in the code),
 - **A5c: one launch.** Its run 4 (3m 41s against 1m 26s to 1m 41s) and
   its H4 (+35% to +41%) are far outside the spread of the M1 + F1
   launches, so one launch is enough to reject it.
-- **H1 share.** Run 6 of M1 + F1 is 9m 56s to 11m 17s without H1 and 7m
-  56s to 9m 26s with H1, and without H1 M1 + F1 runs out of memory in run
-  8 (§6.7, §6.9). Why H1 makes this difference is not traced, and H1
-  alone has no 3,000 s launch (R17).
-- **The §6.8 chain is traced without H1.** Every owner trace and
-  hand-off dump of §6.8 is of M1 + F1 without H1. That the landing set
-  pays its run-6 price by the same chain is INFERENCE.
+- **H1 share, per edge.** §6.8 ("The chain with H1") measures what H1
+  removes and its effect on `getTaskInputV2` and `replace` in counts. Which
+  H4 removal removes which run-5 edge is not traced, and that the same
+  removals keep the landing set below the memory limit in run 8 is
+  INFERENCE. H1 alone has no 3,000 s launch (R17).
 - **Run 8 is not traced.** The landing-set run 8 (30 to 32 minutes, one
   pass above the 90% memory threshold) has no owner time or heap census.
   Its cost source is not known (R19).
 - **Long launches and load.** Conductor with 3,000 s: 2 native, 3 landing
   set, 1 M1 + F1; M1 + F1 without H1 has one launch only. Native 2 and
   landing set 3 had load spikes in run 8 (§6.9).
-- **Stirling-PDF fast-form time.** 2 of the 3 quiet landing-set launches
-  take 6 to 7 s more in runs 6 to 11 at the same load and about the same
-  rows; the third takes the native time. The cause is not traced, and
-  native fast has 2 launches only (§6.7).
+- **Stirling-PDF fast-form time.** Traced (§6.10). Open: the source of
+  the record order (the persist order of an earlier forward run, as in
+  §4.2), the volume of H2, and the effect of H2 on Conductor.
+- **`decodeMimeHeader` in the fast form.** In the cheap sub-form it takes
+  36.5 to 37.4 s of the 39.7 to 40.4 s of runs 6 to 11 (§6.10). It is
+  the largest cost that stays in the Stirling-PDF fast form. It is not
+  analyzed.
 - **H1 route census.** Done for Stirling-PDF (§6.3: 126 equal routes). Not
   done for OWASP and Conductor; their results are equal.
 - **H1 in module suites.** The suites do not log the hand-off lines, so
@@ -1427,7 +1627,7 @@ again in the code. Verdicts: **CONFIRMED** (true in the code),
 | H1 | Stirling-PDF: the fast form in every H1 launch, including the 3 launches where run 6 made the extra row (§5.2); a slow native launch takes 7x the wall time and loses 2 provisional entries at the timeout (§6.3). Fewer hand-off rows: Conductor H4 to H7 -2% to -9%, Stirling-PDF H7 860 against 876-885, OWASP 13 fewer at H4 (§6.2, §6.3). After H4, OWASP follows one of its order-dependent native forms (H5/H6 = 53/109, 79/165 or 108/242 in native launches); H1 launch 1 had 108/228. | None measured: results equal on all projects, Stirling-PDF SARIF byte-identical and route census equal, suites pass. R1 (an EXACT NORMAL start can go) is the CURRENT store law; it is the same start set as a native fast launch. | **WI.** The spec question of R1 is a user decision (§14, D2). 3 launches per project: §5.2, §6.3, §11.1. |
 | M1 alone | OWASP: NO_DEMAND_EDGE in run 7 instead of the run limit, results equal, every route served (§3.4, §6.4). | Conductor: +125% H4 rows, +131% H5 rows, OOM in run 6 in 2 of 2 launches (§6.4). | **Not WI.** |
 | F1 alone | None needed: F1 is the cost rule of M1. | None measured: OWASP and Stirling-PDF results and routes equal, Conductor rows within 0.3% to 3.5% (§6.6, §6.7), suites pass. | Lands only with M1. |
-| M1 + F1 + H1 (the landing set) | OWASP: NO_DEMAND_EDGE in run 7 in every M1 + F1 launch with or without H1 (4 of 4), results, SARIF flows and routes equal; time equal (runs 2 to 7: 37.3 s against 37.4 s native; wall 215 s against 215 s at a quiet control, §6.7). Stirling-PDF: the fast form in 5 of 5 launches (native: 2 of 3), results and SARIF flows equal to native fast, routes equal (§6.7); against the native slow form it saves about 950 s. Conductor: results and SARIF flows equal in every launch, no OOM (3 of 3 with 3,000 s); it ends run 8 in 2 of 3 launches (29m 43s and 32m 15s) and stops in run 10, where native does not end run 8 in 0 of 2 (§6.9); H6 -19% to -21%, H7 -40% to -42%. | Conductor: backward run 6 +24% to +47% (+24% to +32% for the pairs with the nearest load); H3 +17% to +18%, H4 +3% to +6%, H5 +25% to +29%, so withdrawal condition 4 of M1 (§3.7) holds for H3 to H5 and not for H6, H7 or the number of runs; run 8 goes above the 90% memory threshold once in each launch and continues after the memory manager clears about 6,500 soft references (native: not above 90% in 37 minutes of run 8); peak RSS 9.40 to 9.59 GB against 9.48 to 9.54 GB. Stirling-PDF fast form: sum of engine times 89 s to 99 s against 89 s, wall 158 to 167 s against 154 to 155 s (+2% to +8%, 3 quiet launches; cause not traced). OWASP peak RSS 9.31 to 9.36 GB against 9.27 GB. 2 cycle fixtures change from provisional to confirmed (§6.1, D3). The cause of the Conductor run-6 price is traced for M1 + F1 (§6.8), and no start-form rule removes it without a larger cost; for the landing set it is INFERENCE. | **WI with a price.** The improvement is measured on every project, and the price is measured. The design guide asks for no negative consequence, so the user decides whether the price is acceptable (§14, D1). |
+| M1 + F1 + H1 (the landing set) | OWASP: NO_DEMAND_EDGE in run 7 in every M1 + F1 launch with or without H1 (4 of 4), results, SARIF flows and routes equal; time equal (runs 2 to 7: 37.3 s against 37.4 s native; wall 215 s against 215 s at a quiet control, §6.7). Stirling-PDF: the fast form in 9 of 9 launches to run 11 (native: 2 of 3), results and SARIF flows equal to native fast, routes equal (§6.7); against the native slow form it saves about 950 s. Conductor: results and SARIF flows equal in every launch, no OOM (3 of 3 with 3,000 s); it ends run 8 in 2 of 3 launches (29m 43s and 32m 15s) and stops in run 10, where native does not end run 8 in 0 of 2 (§6.9); H6 -19% to -21%, H7 -40% to -42%. | Conductor: backward run 6 +24% to +47% (+24% to +32% for the pairs with the nearest load); H3 +17% to +18%, H4 +3% to +6%, H5 +25% to +29%, so withdrawal condition 4 of M1 (§3.7) holds for H3 to H5 and not for H6, H7 or the number of runs; run 8 goes above the 90% memory threshold once in each launch and continues after the memory manager clears about 6,500 soft references (native: not above 90% in 37 minutes of run 8); peak RSS 9.40 to 9.59 GB against 9.48 to 9.54 GB. Stirling-PDF fast form: sum of engine times 89 s to 99 s against 89 s, wall 158 to 167 s against 154 to 155 s (+2% to +8%, 3 quiet launches); the cause is a run-5 sub-form in 8 of 20 launches (§6.10). OWASP peak RSS 9.31 to 9.36 GB against 9.27 GB. 2 cycle fixtures change from provisional to confirmed (§6.1, D3). The cause of the Conductor run-6 price is traced for M1 + F1 (§6.8), and no start-form rule removes it without a larger cost; the landing set has the same chain with a smaller volume (§6.8, "The chain with H1"). | **WI with a price.** The improvement is measured on every project, and the price is measured. The design guide asks for no negative consequence, so the user decides whether the price is acceptable (§14, D1). |
 | M1 + F1 without H1 | As the landing set on OWASP. | Conductor run 6 +55% to +62% and the sum of the engine times to the end of run 7 +27% to +30% (2 quiet launches, §6.7); in its one 3,000 s launch it runs out of memory in run 8 (§6.9). Withdrawal condition 4 of F1 (§3.8) holds. | **Not WI.** The landing set is better on Conductor run 6, the hand-off rows H3 to H7, peak RSS and Stirling-PDF (fast form); M1 + F1 lands only with H1. |
 
 ### 11.1 H1 replicates on OWASP and Conductor
@@ -1470,7 +1670,9 @@ is CURRENT + H1). Rows are `BIDI_HANDOFF_COMPACTION rows=`. VERIFIED
 [x] WI classification                                                 §11
 [x] Proofs (H1; M1 v5: MustStartFit §6; F1: FlowMustCompanion)       §8
 [x] Root cause of the measured Conductor costs (M1 loop, M1+F1 depth) §6.5, §6.8
-[ ] Root cause of the Stirling-PDF fast-form time (up to +8% wall)     §6.7, §10
+[x] Root cause of the Stirling-PDF fast-form time (up to +8% wall)     §6.10
+[x] Intervention test of the sub-form cause (replay order ablation)  §6.10
+[ ] H2 prototype, gate and proof (candidate for the next iteration)  §6.10, D4
 [x] Intervention test of the depth cause (A5c, rejected)              §6.8
 [x] Conductor gate in equal time (3,000 s: 2 native, 3 landing set)  §6.9
 [x] Quiet-control launches of the landing set (OWASP 1, Stirling 2)   §6.7
@@ -1502,8 +1704,21 @@ is CURRENT + H1). Rows are `BIDI_HANDOFF_COMPACTION rows=`. VERIFIED
   (owner-time and block-counter comparison), `ownerprof.py` (jstack owner
   shares), `longcmp.py` and `longtable.py` (per-run and cumulative times
   of long launches), `gcruns.py` (heap after GC per run).
+- Landing-set traces and the Stirling-PDF sub-forms (gate queues 39 to
+  45, build `c9e4fdeeb`, ablation build `6613d7e5b`): `h1share/`
+  (Conductor run-5 hand-off dumps `conductor-mpf1hs-r5`, owner time and
+  the `replace` trace `conductor-mpf1hs-r7-ot`, owner traces
+  `conductor-mpf1hs-r5-gti`), `stirling-ls/` (hand-off dumps and owner
+  time `Stirling-PDF-mpf1hs-d1` to `-d4`; run-5 owner traces `-t1` to
+  `-t5`, `-a1` to `-a4`, `-r1` and `-r2`; ablation `-mustLast-1` to `-3`
+  and `-mustFirst-1` to `-3`). Logs `gate-queue39.log` to
+  `gate-queue45.log`. Scripts: `dumpdiff.py` (rows only in one of two
+  hand-off dumps, per owner), `otdiff.py` (owner-trace events only in
+  one of two launches, per run), `gticmp.py` (run-5 offers and starts
+  of `getTaskInputV2`).
 - Thread dumps and class histograms (`run6-sample-*.txt`,
-  `stall-run6-jstack-*.txt`, `stall-run6-histo.txt`) were removed after
+  `stall-run6-jstack-*.txt`, `stall-run6-histo.txt`,
+  `m1trace/v5-r7/run6-histo-*.txt`) were removed after
   the analysis, as the campaign rule asks. Their findings are in §6.2,
   §6.5 step 7 and §6.7.
 - Branches: `proto/cycle-trace-20261126` (diagnostics, M1 v3 at
@@ -1515,7 +1730,8 @@ is CURRENT + H1). Rows are `BIDI_HANDOFF_COMPACTION rows=`. VERIFIED
   A6 up to `73e07fdb2`, F1 `8c70ee97e`), `proto/mpf1-diag-20261127`
   (F1 build plus diagnostics: thread owner names, per-owner run time,
   owner-trace kind filter, `ce3d36380`; ablation A5c, flag
-  `concreteMustFlowStar`, `c9e4fdeeb`).
+  `concreteMustFlowStar`, `c9e4fdeeb`; replay-order ablation, flag
+  `ablateReplayOrder`, `6613d7e5b`).
 
 ## 14. Decisions for the user
 
@@ -1529,15 +1745,19 @@ fast, and in 3,000 s Conductor ends run 8 in 2 of 3 launches (native: 0
 of 2). The decision is about its measured price:
 
 - Conductor backward run 6 is +24% to +47% slower. The cause is traced
-  for M1 + F1 (§6.8: the shallow backward answers of FLOW MUST records);
-  with H1 it is INFERENCE. No start-form rule removes it without a
+  with and without H1 (§6.8: the shallow backward answers of FLOW MUST
+  records keep the task-mapper entries one field shallower, and more
+  DEMAND reaches `replace`). No start-form rule removes it without a
   larger cost (A5, A5c).
 - Conductor run 8 goes above the 90% memory threshold once in each of 3
   launches and continues after the memory manager clears about 6,500
   soft references; no OOM. Native does not go above 90% in run 8.
 - The Stirling-PDF fast form takes up to 8% more wall time (158 to 167 s
   against 154 to 155 s, 3 quiet launches). The native slow form, which
-  the landing set removes, takes 1,112 s.
+  the landing set removes, takes 1,112 s. The cause is a run-5 sub-form
+  in 8 of 20 launches (§6.10): a covered MUST result of a saved getter
+  record replays first, and M1 + F1 give `decodeMimeHeader` an extra
+  start (+6 to +7 s in runs 6 to 11). Candidate H2 removes it (D4).
 
 The alternative is to keep CURRENT for OWASP: the reports are final at
 run 3, and the cost of the cycle is the end status (run limit), not time
@@ -1567,3 +1787,13 @@ provisional to confirmed with M1 (§6.1). The hand check says that both
 flows exist. This is a result change in a test fixture, not in a
 reference project; it needs your acceptance under the rule that no
 result may change without a decision.
+
+**D4. H2, the replay normal form (next iteration).** The costly
+Stirling-PDF sub-form comes from the replay order of saved records, a
+CURRENT order; M1 + F1 turn the covered result into an extra start
+(§6.10). H2 makes one replay one
+batch and normalizes it with the TaintGroup law of H1. The ablation
+shows that the cheap sub-form follows when the cover replays first.
+Decide: prototype H2 (flag, gate of H2 alone on all reference projects
+and the rule suite, Lean step for the batch law), or accept the
+sub-form as part of the D1 price.
