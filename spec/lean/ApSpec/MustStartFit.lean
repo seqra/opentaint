@@ -2,8 +2,9 @@
   ApSpec.MustStartFit — rule M1 of docs/design/owasp-cycle-stirling-split-20261126.md:
   "C2 starts a MUST actual that fits the relative cap as itself".
 
-  STATUS: M1 is not WI (design document §11: it fails the gate on Conductor). This file records the
-  v4 form. It has no layer: the v5 guard (a NORMAL actual only) is not modelled (difference D10).
+  STATUS: M1 alone is not WI (design document §11: it fails the gate on Conductor). M1 v5 together
+  with rule F1 (`ApSpec.FlowMustCompanion`) is the OWASP fix (design §3.8, §11). Sections 1-5 model
+  the v4 form; section 6 adds the v5 layer guard (a NORMAL actual only) on top of it.
 
   Production C2 (`ap/RestrictedInitialPolicy.kt`, `emit`, ANY entry, actual strictly below the
   entry) cuts the actual at its first counted accessor below the entry (the relative cap
@@ -217,7 +218,29 @@ theorem new_depth (cnt : Acc → Bool) (d a : PFact) (r : List Acc) (am : Bool)
   simp only [m1RowB, Bool.and_eq_true] at hrow
   rw [hpath, fl_append, fits_fl cnt r hrow.2]
 
-/-! ## 6. Vectors (checked by `decide`) -/
+/-! ## 6. v5: the layer guard -/
+
+/-- The M1 condition of v5: the v4 condition and a NORMAL actual (`actualLayer == NORMAL`). -/
+def m1RowV5 (cnt : Acc → Bool) (d : PFact) (r : List Acc) (am : Bool) (a : PFact) (normal : Bool) : Bool :=
+  normal && m1RowB cnt d r am a
+
+/-- NEW production C2 of v5. -/
+def c2NewV5 (cnt : Acc → Bool) (d a : PFact) (r : List Acc) (am : Bool) (aex : Excl) (normal : Bool) :
+    Option (PFact × Bool × Excl) :=
+  if m1RowV5 cnt d r am a normal then some (a, true, normJ a aex) else c2Cur cnt d a r
+
+/-- v5 on a NORMAL actual is v4: every theorem of sections 2 to 5 holds for it. -/
+theorem v5_normal_eq_v4 (cnt : Acc → Bool) (d a : PFact) (r : List Acc) (am : Bool) (aex : Excl) :
+    c2NewV5 cnt d a r am aex true = c2New cnt d a r am aex := by
+  simp [c2NewV5, c2New, m1RowV5]
+
+/-- v5 on a DEMAND actual is CURRENT (row M1.2b of the design): a DEMAND actual gets a DEMAND start
+    in both forms. -/
+theorem v5_demand_eq_cur (cnt : Acc → Bool) (d a : PFact) (r : List Acc) (am : Bool) (aex : Excl) :
+    c2NewV5 cnt d a r am aex false = c2Cur cnt d a r := by
+  simp [c2NewV5, m1RowV5]
+
+/-! ## 7. Vectors (checked by `decide`) -/
 
 namespace Vec
 /-- Every accessor below 100 counts; 100 and above do not (an element accessor, say). -/
@@ -248,6 +271,10 @@ example : c2New cnt dS ⟨27, [5], .any, .star⟩ [5] true Excl.empty =
 /-- An uncounted accessor after the counted one: no fit, unchanged. -/
 example : c2New cnt d ⟨27, [5, 100], .any, .conc 1⟩ [5, 100] true Excl.empty =
     some (⟨27, [5], .star Excl.empty, .conc 1⟩, false, Excl.empty) := by decide
+/-- v5: a DEMAND MUST actual that fits the cap keeps the CURRENT STAR start. -/
+example : c2NewV5 cnt d a [5] true Excl.empty false =
+    some (⟨27, [5], .star Excl.empty, .conc 1⟩, false, Excl.empty) := by decide
+example : c2NewV5 cnt d a [5] true Excl.empty true = some (a, true, Excl.empty) := by decide
 end Vec
 
 end ApSpec.MustStartFit
@@ -261,3 +288,5 @@ end ApSpec.MustStartFit
 #print axioms ApSpec.MustStartFit.new_start_is_actual
 #print axioms ApSpec.MustStartFit.new_start_covers_iff
 #print axioms ApSpec.MustStartFit.new_depth
+#print axioms ApSpec.MustStartFit.v5_normal_eq_v4
+#print axioms ApSpec.MustStartFit.v5_demand_eq_cur
