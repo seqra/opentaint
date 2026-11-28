@@ -2145,7 +2145,7 @@ is CURRENT + H1). Rows are `BIDI_HANDOFF_COMPACTION rows=`. VERIFIED
   `gate-queue5.log` to `gate-queue16.log`; scripts in `scripts/`.
 - H1 replicates: `h1rep/`, `gate-queue17.log`.
 - F1 and M1 + F1: `f1/` (gate launches, suites, route census
-  `*.routes`), `f1prof/` (run-6 jstack samples `*-r7`, owner time
+  `*.routes`), `f1prof/` (launches `*-r7` of the run-6 jstack samples, owner time
   `*-r7-ot`, owner traces `*-r5-gti`, `*-r5-udt*`, ablation
   `mpf1a1a3-r7`), `f1long/` (3,000 s launches), `a5c/` (ablation A5c).
   Logs `gate-queue18.log` to `gate-queue38.log` (queue 38: the
@@ -2191,7 +2191,7 @@ is CURRENT + H1). Rows are `BIDI_HANDOFF_COMPACTION rows=`. VERIFIED
   `313e70630`, queue 56). Logs `gate-queue52.log` to `gate-queue56.log`.
 - Thread dumps and class histograms (`run6-sample-*.txt`,
   `stall-run6-jstack-*.txt`, `stall-run6-histo.txt`,
-  `m1trace/v5-r7/run6-histo-*.txt`) were removed after
+  `m1trace/v5-r7/run6-histo-*.txt`, `f1prof/conductor-*-r7/run6-histo-*.txt`) were removed after
   the analysis, as the campaign rule asks. Their findings are in §6.2,
   §6.5 step 7 and §6.7.
 - Branches: `proto/cycle-trace-20261126` (diagnostics, M1 v3 at
