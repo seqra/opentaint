@@ -202,4 +202,5 @@ import ApSpec.BackCondExamples
 import ApSpec.BackCondImpl
 import ApSpec.MustStartFit
 import ApSpec.HandoffLaneSubsume
+import ApSpec.ReplayBatch
 import ApSpec.FlowMustCompanion

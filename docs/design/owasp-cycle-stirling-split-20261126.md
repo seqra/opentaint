@@ -1,10 +1,12 @@
-# OWASP non-termination and Stirling-PDF fast/slow split: root causes and three rules
+# OWASP non-termination and Stirling-PDF fast/slow split: root causes and four rules
 
-Status: PROPOSAL, 27 November 2026. Three rules in two landing units:
-**M1 + F1** (OWASP: M1 stops the cycle, F1 removes the cost that M1
-exposes on Conductor) and **H1** (Stirling-PDF). All three are native
-prototypes behind flags on proto branches. Verdict (§11): **H1 is WI.
-The landing set M1 + F1 + H1 is WI with a price** (decision D1, §14):
+Status: PROPOSAL, 27 November 2026 (gate of H2 and §6.11 added 28 November). Four rules: the landing set
+**M1 + F1 + H1** (OWASP: M1 stops the cycle, F1 removes the cost that M1
+exposes on Conductor; Stirling-PDF: H1 removes the slow form) and **H2**
+on top of it (Stirling-PDF: H2 removes the costly sub-form of the fast
+form). All four are native prototypes behind flags on proto branches.
+Verdict (§11): **H1 is WI. The landing set M1 + F1 + H1 is WI with a
+price** (decision D1, §14), **and H2 on top of it is WI** (decision D4):
 OWASP ends with NO_DEMAND_EDGE in run 7 with equal results, routes and
 time; Stirling-PDF has the fast form in every launch (9 of 9 to run 11); and in
 3,000 s Conductor ends run 8 in 2 of 3 launches, where native ends it in
@@ -13,9 +15,17 @@ to +47% slower (root cause traced with and without H1 in §6.8: the
 shallow backward answers of FLOW MUST records), Conductor run 8 goes above the 90% memory threshold once in
 each launch, and the fast form of Stirling-PDF takes up to 8% more wall
 time in 8 of 20 launches (a run-5 sub-form; root cause in §6.10: the
-replay order of two saved records of one getter). **M1 alone and M1 + F1 without H1 are not WI** (M1 alone runs out
+replay order of two saved records of one getter, which is the slot order
+of their identity hashes). H2 removes this part of the price: with H2
+the cheap sub-form comes in 5 of 5 launches, at the native fast time, and
+Conductor is not worse. The native fast/slow choice of Stirling-PDF has
+the same kind of source: the identity-hash order of the premise groups of
+the summary stores, which an intervention test isolates (§6.11).
+**M1 alone, M1 + F1 without H1 and H2 alone are not WI** (M1 alone runs out
 of memory in Conductor run 6; M1 + F1 without H1 has run 6 +55% to +62%
-and ran out of memory in run 8 in its one 3,000 s launch).
+and ran out of memory in run 8 in its one 3,000 s launch; H2 alone keeps
+the native slow form of Stirling-PDF, and the gate cannot exclude a
+higher rate of it).
 Design rules: [design-guide.md](../../spec/design-guide.md),
 [proof-guide.md](../../spec/proof-guide.md).
 
@@ -35,10 +45,10 @@ tested directly.
 | A | OWASP reaches the hard run limit (run 11, or run 21 with a higher limit). The reports are final at run 3. | C2 cuts a MUST actual that fits the relative cap to a STAR start. A STAR start with a concrete mark is DEMAND. Its DEMAND witness at the sink makes the same DEMAND rows in each backward run: an exact period-2 cycle from hand-off 7 (§2). | **M1**: in a forward restricted run, a NORMAL MUST actual that fits the cap below a concrete ANY entry starts as itself (NORMAL must-premise), the start row of ap.md §6.5 (§3). | OWASP: NO_DEMAND_EDGE in run 7 in every M1 launch, results equal, every route served. M1 alone: Conductor OOM in run 6. | **Not WI alone** |
 | A1 | Cost of M1 on Conductor: H4 +125%, OOM in run 6 | M1 lets NORMAL MUST facts into blocks and callees. CURRENT C2 starts them as FLOW MUST premises at abstract entries, and the C5 companion clause takes a FLOW STAR member but not a FLOW MUST member. So a FLOW MUST premise keeps only depth-1 pieces, and the loop of `ParametersUtils#replace` makes a loop-carried relation over its iterator aliases that the backward run crosses two fields deep (§6.5). | **F1**: the C5 companion clause also takes a FLOW MUST member whose concrete instance is a legal start (the instance law, §3.8). | M1 + F1: no OOM to run 7, results equal, H4 +6% to +11% instead of +125% (§6.6, §6.7). F1 alone: no change. | with M1 and H1 |
 | A2 | The rest of the M1 + F1 cost on Conductor: backward run 6 +55% to +62% (+24% to +47% with H1) | A must-premise has end-exact edges (ap.md §6.5), so a backward read of its record answers at the premise path. With M1 a getter gets a FLOW MUST premise next to its FLOW STAR premise, and its shallow answer covers the deep one. The task mapper entries stay one field shallower than native and admit more DEMAND actuals, which reach the loop of `replace` (§6.8, traced with and without H1). | No rule. The precise form (FLOW STAR, ablations A5 and A5c) costs more than the depth it saves (§6.8). | In 3,000 s the landing set ends run 8 in 2 of 3 launches and native in 0 of 2 (§6.9). M1 + F1 without H1 ran out of memory in run 8 in its one launch. | the price of D1 |
-| B | Stirling-PDF has fast launches (run 7 in 2-3 s) and slow launches (run 7 in 18-123 s, run 9 can time out). | The root summary store keeps an exact demand row next to a MAY row that covers it, if the exact value arrives first in run 6. The hand-off projects both rows. The exact row gives an EXACT NORMAL start that a loop wraps up to the field limit (§4). | **H1**: the hand-off normalizes each TAINT lane of a store with the removal half of the store's own TaintGroup law (§5). | Results equal on all projects, Stirling-PDF route census equal, suites pass; fewer rows; the fast form in every H1 launch. | **WI** |
-| B1 | The landing-set fast form of Stirling-PDF has a costly sub-form: runs 6 to 11 take 6 to 7 s more in 8 of 20 launches. | Two saved records of a getter answer one call, and the result of one covers the result of the other. A statement sends only the fresh part of a fact, so the covered result goes on if its record replays first. With M1 + F1 it gives `safeMimeDecode` and `decodeMimeHeader` an extra deeper MUST start (§6.10). | No rule in the landing set. Candidate **H2**: one replay of saved records is one batch, normalized per TAINT lane before it resumes the caller (§6.10; not prototyped). | Ablation of the replay order: the cheap sub-form in 3 of 3 launches (`mustLast`), the costly sub-form in 3 of 3 (`mustFirst`). | part of the price of D1; H2 is D4 |
+| B | Stirling-PDF has fast launches (run 7 in 2-3 s) and slow launches (run 7 in 18-123 s, run 9 can time out). | The root summary store keeps an exact demand row next to a MAY row that covers it, if the exact value arrives first in run 6. The hand-off projects both rows. The exact row gives an EXACT NORMAL start that a loop wraps up to the field limit (§4). Which value arrives first is the identity-hash slot order of the premise groups of the summary stores (`IdentityHashMap`), so it is random per launch (§6.11). | **H1**: the hand-off normalizes each TAINT lane of a store with the removal half of the store's own TaintGroup law (§5). | Results equal on all projects, Stirling-PDF route census equal, suites pass; fewer rows; the fast form in every H1 launch. | **WI** |
+| B1 | The landing-set fast form of Stirling-PDF has a costly sub-form: runs 6 to 11 take 6 to 7 s more in 8 of 20 launches. | Two saved records of a getter answer one call, and the result of one covers the result of the other. A statement sends only the fresh part of a fact, so the covered result goes on if its record replays first. The replay order is the slot order of the identity hashes of the two premise keys in an `IdentityHashMap` (`FlowBackedSummaries.groups`), so it is random per launch. With M1 + F1 the covered result gives `safeMimeDecode` and `decodeMimeHeader` an extra deeper MUST start (§6.10). | **H2**: one replay of saved records is one batch; its TAINT and FLOW results arrive at one scratch statement store in a launch-independent general-first order before the caller resumes (§6.10). | Ablation of the replay order: the order alone decides the sub-form (3 of 3 each way). H2: the cheap sub-form in 5 of 5 launches to run 11 and in 7 of 7 to run 7, also under the forced costly order; results, SARIF and routes equal; suites equal; Conductor not worse (3 launches). | **WI** with the landing set (D4) |
 
-The landing set is **M1 + F1 + H1**. No rule relaxes a cap, stops on
+The landing set is **M1 + F1 + H1**, and H2 goes on top of it (D4). No rule relaxes a cap, stops on
 reports, cuts work by a number or switches a rule off in a scope. The
 open decisions for the user are in §14.
 
@@ -434,9 +444,16 @@ summary that the rule needs.
   COMPL trace).
 - The order is an arrival order inside run 6. It is fixed per launch:
   one worker thread gives both outcomes, and one launch makes the same
-  choice again in runs 8 and 10. Its per-launch source (identity hash
-  order or ids set before run 1) is not isolated. VERIFIED / INFERENCE
-  as marked in the report §3.3.
+  choice again in runs 8 and 10 (report §3.3). VERIFIED.
+- Its source (§6.11): the exact and the MAY values reach the root block
+  from the return block through the saved block records of that block,
+  which are applied in the order of the scoped record index. The index is
+  rebuilt in the iteration order of the premise groups of the summary
+  stores (`IdentityHashMap`s), an identity-hash slot order that changes
+  from launch to launch. With the groups in insertion order (ablation),
+  5 of 5 launches have the same rows from H3 on and the same form (2 of 2
+  with one worker thread, the same from H2 on); 10 native launches have
+  4 different H5 values and both forms. VERIFIED.
 - Control: for the EXACT premise `ret.$` both values go to the scalar
   groups, and the law removes the exact row in every launch. VERIFIED.
 
@@ -1220,12 +1237,13 @@ VERIFIED (`f1long/`, `gate-queue33.log`, `gate-queue36.log`,
   here (655 s and 659 s in the quiet native launches of §6.7). Runs 4 and
   7 are faster, runs 3, 5 and 6 slower.
 
-### 6.10 Root cause of the Stirling-PDF fast-form time (gate queues 39 to 45)
+### 6.10 Root cause of the Stirling-PDF fast-form time, and rule H2 (gate queues 39 to 51)
 
 The landing set gives the fast form in every Stirling-PDF launch (9 of 9
 launches to run 11). But the fast form has two sub-forms, and one of them
-takes 6 to 7 s more in runs 6 to 11. This section gives the cause, an
-intervention test and a candidate rule. VERIFIED, except where marked.
+takes 6 to 7 s more in runs 6 to 11. This section gives the cause and
+its source (an identity-hash order), an intervention test, and rule H2
+with its prototype, gate and proof. VERIFIED, except where marked.
 
 **The two sub-forms.** The launches with a quiet run-1 control (23.3 s
 to 24.9 s) that run to run 11:
@@ -1281,16 +1299,57 @@ PUB and the reply events REPLY_SAVED, REPLY_VIEW, REPLY_CURRENT):
    result of R_d is not fresh and stops. If the result of R_d arrives
    first, it goes on to the successors, and the later result of R_s does
    not take it back from them. VERIFIED (code).
-4. **The replay order.** R_s and R_d are at the same node
+4. **The replay order and its source.** R_s and R_d are at the same node
    `<this>.filename` of the entry trie of `getFilename`. A trie node keeps
    its records in insertion order (`store/PathTrie.kt`, `LinkedHashSet`),
-   and `replayPersistedSummaries` resumes the caller once per record in
-   that order. In r1 (cheap) the order is R_s, R_d at both call sites; in
-   r2 (costly) it is R_d, R_s at both call sites. The insertion order is
-   the order in which an earlier forward run persists its summaries. The
-   source of that order is not isolated (as in §4.2). The record contents
-   also differ between launches (4 or 5 leaves in R_d), so an earlier run
-   is order-dependent too.
+   and `replayPersistedSummaries` (`engine/PersistedSummaryReplay.kt`)
+   resumes the caller once per record in that order. In r1 (cheap) the
+   order is R_s, R_d at both call sites; in r2 (costly) it is R_d, R_s.
+   The insertion order comes from one map:
+   - After each persist, `rebuildIndexes` (`store/RecordStore.kt`) clears
+     the entry trie and adds the records again in the iteration order of
+     `rows.all()` of the method's `FlowBackedSummaries`
+     (`store/FlowBackedSummaries.kt`). `all()` iterates `groups`, an
+     `IdentityHashMap<PremiseKey, ConclusionGroup>`. VERIFIED (code).
+   - An `IdentityHashMap` iterates in the slot order of its table. The
+     slot of a key is `((h << 1) - (h << 8)) & (length - 1)`, with
+     `h = System.identityHashCode(key)`, and a taken slot moves the key
+     to the next free slot. VERIFIED (JDK code).
+   - The identity hash of an object is set when it is first asked for.
+     HotSpot takes it from a thread-local random generator, so it
+     changes from launch to launch. INFERENCE for the generator (JVM
+     code, not traced); VERIFIED that it changes: 4 launches, 8 different
+     hashes (table below).
+
+   Gate queue 46 (`stirling-ls/Stirling-PDF-mpf1hs-o1` to `-o4`, landing
+   set to run 5 with the owner trace `RECORD_INDEX` and `OFFER`;
+   `RECORD_INDEX` prints, at each persist, the identity hash of each
+   premise key of `getFilename`; the table of `groups` has length 128 for
+   its 26 keys):
+
+   | Launch | First record | Identity hash R_d / R_s | Slot R_d / R_s | Deep offers to `safeMimeDecode` | H5 |
+   | --- | --- | --- | --- | ---: | ---: |
+   | o1 | R_d | 1,451,076,014 / 1,939,962,545 | 92 / 98 | 2 | 1,118 |
+   | o2 | R_s | 796,843,623 / 198,143,504 | 78 / 32 | 0 | 1,111 |
+   | o3 | R_d | 1,820,991,509 / 1,563,724,062 | 42 / 60 | 2 | 1,119 |
+   | o4 | R_s | 585,968,416 / 135,671,829 | 64 / 42 | 0 | 1,111 |
+
+   The lower slot replays first in 4 of 4 launches, and the order gives
+   the sub-form in 4 of 4. The order of all 26 keys follows the slots
+   (with the moves of taken slots), and it is the same at persists 3, 4
+   and 5 of one launch. VERIFIED. So the costly sub-form comes when the
+   identity hash of the MUST premise key falls in a lower slot than that
+   of the STAR premise key: a launch-random choice with no program cause.
+   (o2 and o4 have H5 = 1,111 and not 1,099: in them the deep record of
+   `getHtmlBody` has the lower slot, step 7.)
+
+   Two consequences. The owner trace allocates objects on the analyzer
+   threads, which moves the identity hashes, so a traced launch can give
+   another sub-form than the same launch without the trace (INFERENCE:
+   the H2 v1 launches s1 and s2 with the trace had H5 = 1,115, and d1 and
+   d2 without it had 1,103). And a fixed record order (`mustLast`, below)
+   is not the same as removing the dependence: any other pair of records
+   whose results cover each other can have either slot order.
 5. **The extra start.** With R_d first, the call `safeMimeDecode(...)`
    gets a second actual `{arg(0).String#bytes.MUST/xss},N` (3 of 3
    costly traced launches; 0 of 8 cheap ones). M1 starts it as itself,
@@ -1343,46 +1402,386 @@ sub-forms (§6.7: mpf1hs launches 1 and 2 are costly, launch 3 is cheap;
 one replay: a covered value survives because it arrives first. This is
 the class of §4, in a forward run and at a call return instead of a
 summary store. The optimization is to give the cheap sub-form in every
-launch.
+launch: rule H2.
 
-**Candidate rule H2: one replay is one batch (proposal; not prototyped).**
+**Rule H2: one replay of saved records is one batch.** Native prototype
+on `proto/mpf1-diag-20261127`, flag `protoReplayBatch`. The gated form
+is v3 (`01add0221`).
 
 - CURRENT: the replay of the saved records for one offer resumes the
-  caller once per record and view, in the store order. A covered result
-  that arrives before its cover goes on.
+  caller once per record and view, in the trie order (step 4). A
+  statement sends only the fresh part of a fact and never takes back a
+  sent fact. So a covered result that arrives before its cover goes on.
 - NEW: the replay collects the results of all its records and views for
-  one offer. It groups them by TAINT lane (premise, base, layer,
-  protection class, as H1 in §5.1) and runs the removal half of the
-  TaintGroup law (`subsumeTaintLane`) on each lane in a launch-independent
-  order. Then it resumes the caller with the rest. FLOW and REACH results
-  pass unchanged.
-- Execution site: `replayPersistedSummaries`, once per original offer in
-  a restricted run, only for lanes with two or more results. Volume: not
-  measured; the prototype must count the lanes and the removed results.
-- Expected effect: the cheap sub-form in every Stirling-PDF launch, so
-  -6 to -7 s in runs 6 to 11 in 40% of the launches. On Conductor H2
-  acts on the same kind of FLOW MUST records as §6.8; the effect there is
-  not known.
-- Trivial alternative 1: a fixed record order (`mustLast`). It works here
-  only because the cover has a STAR premise and the covered record has an
-  ANY_TAINT premise. A cover can have any premise tail, so this is an
-  order rule, not a normal form. Rejected as a rule; it stays an ablation.
-- Trivial alternative 2: withdraw a sent fact when its cover arrives.
-  The engine has no withdrawal, and the worklist is monotone. Rejected.
-- Trivial alternative 3: M1 does not start a MUST actual that a start of
-  the same callee covers. This is order-dependent too, because the
-  covering start can arrive later. Rejected.
-- Limit: H2 normalizes one replay only. Current-run replies
-  (REPLY_CURRENT) arrive one at a time and are not in a batch. The
-  Stirling-PDF case uses saved records only (r1, r2).
-- Reviewer attack (self): H2 removes a result that a later statement
-  would use with a deeper path. It cannot lose a route, because the
-  cover is at the same statement, in the same lane, and gives every
-  leaf of the removed result (the TaintGroup law that H1 uses, §7.2 and §8). The cheap launches already have this outcome with equal results.
-- Status: candidate for the next iteration (D4). The design guide needs
-  the prototype behind a flag, the gate of each rule alone (results,
-  time, memory on all reference projects and the rule suite) and the
-  Lean step before H2 can be WI.
+  one offer and then resumes the caller once (`flushReplayBatch`).
+  Before that, it groups the TAINT and FLOW results by lane: the caller
+  premise and the identity candidate, the keys with which
+  `resumeCallees` writes a result. The plain results and the results
+  with a pending demotion are two separate groups. The results of a lane
+  arrive, in one launch-independent order, at one scratch statement
+  store (`ConclusionGroup`, the store law of a statement in a restricted
+  run). A result with no fresh part in that store goes. The order is
+  general first: the shallowest leaf, then the wider tail (ANY,
+  ANY_TAINT, STAR, EXACT), then more leaves, then the canonical key of
+  the result (`replayOrderKey`). REACH results pass unchanged. H2 never
+  cuts or merges a result.
+- What it is: NEW is CURRENT with one fixed arrival order for the
+  results of one replay. It removes only a result that the statement
+  store of the call also finds not fresh when its cover arrives first.
+  So it is the cheap sub-form, made independent of the identity hashes.
+
+**Prototype history.** Each form was measured; the lesson of each form
+is the reason for the next one.
+
+| Form | Commit | Law | Result |
+| --- | --- | --- | --- |
+| v1 | `21be721ae` | TAINT lanes only, with the lane law of H1 (`subsumeTaintLane`); FLOW results pass | Not enough. The deep TAINT offer to `safeMimeDecode` goes (0 in 4 of 4 launches), but the deep FLOW offer `arg(0).String#bytes.MUST/FLOW` stays, and M1 + F1 start it: H5 = 1,103 (d1, d2) and 1,115 (s1, s2, with the owner trace) against 1,099. The covered result has a FLOW half, and the statement store keeps both kinds. |
+| v2 | `4d5a4d2c3` | `ConclusionGroup` per lane for TAINT and FLOW; a result goes when a store with all other current results of its lane has no fresh part for it | The cheap sub-form in 5 of 5 launches, also when the store order is forced to the costly one (queue 48). But the cost is quadratic in the lane size: OWASP run 3 spends 1,485 ms in the law (43,148 results in 3,872 lanes), and runs 2 to 7 spend 1.6 s to 1.9 s. |
+| v3 | `01add0221` | one scratch `ConclusionGroup` per lane; the results arrive in the general-first order | The same removals as v2 where both forms ran on the same input (Stirling-PDF run 3: 12,451 against 12,453 removed results), and linear cost: 0.2 s in all runs of OWASP, 0.65 s in all runs of Stirling-PDF. |
+
+**Execution site and volume.** `flushReplayBatch`
+(`engine/RunMethodCallServices.kt`) runs once per original offer in a
+restricted run, after `replayPersistedSummaries`. The law runs only on
+lanes with two or more results. Sums over all runs (v3, landing set +
+H2, except where marked):
+
+| Project | Launch | Batches | Lanes with 2 or more results | Results in these lanes | Removed results | Time in the law |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Stirling-PDF | lsh2-2 | 237,468 | 30,960 | 84,417 | 42,507 | 649 ms |
+| Stirling-PDF | lsh2-1 (v2) | 237,434 | 30,880 | 84,278 | 42,514 | 1,976 ms |
+| OWASP | h2v3-1 (H2 alone) | 27,368 | 7,635 | 57,545 | 9,070 | 202 ms |
+| OWASP | lsh2-1 (v2) | 26,264 | 7,240 | 54,205 | 6,603 | 1,627 ms |
+| Conductor | lsh2-1, runs 1 to 7 | 1,323,100 | 411,918 | 2,015,787 | 1,078,235 | 8.2 s (run 6: 4.0 s) |
+
+Run 3 of Stirling-PDF has the most work: 12,473 lanes and 12,451
+removed results in 0.28 s to 0.35 s (3 launches). Conductor has the
+largest volume: in run 6, 528,735 removed results in 207,238 lanes in
+4.0 s of a run of 8m 31s (0.8%); in runs 1 to 7, 8.2 s of 732 s (1.1%). Per run, H2 removes
+2,759 to 4,871 results in runs 4 to 11. These are results that CURRENT
+sends to a statement that then keeps only their fresh parts, or that
+CURRENT stops at the statement when their cover arrives first.
+
+**Intervention test: H2 against the forced costly order** (gate queue 48
+for v2, queue 50 for v3; landing set + H2 to run 7; the flag
+`ablateReplayOrder` sorts the store order before the replay, and the
+owner trace counts the deep offers of run 5):
+
+| Form | Store order | Launches | Deep offers to `safeMimeDecode` (xss / FLOW) / `processEmailHtmlBody` | H5 | H6 | H7 | Run 6 |
+| --- | --- | ---: | --- | ---: | ---: | ---: | ---: |
+| landing set (queue 45) | `mustFirst` | 3 | 2 / - / 1 in 3 of 3 | 1,130 to 1,131 | 1,208 | 870 to 871 | 7.8 s to 8.0 s |
+| landing set (queue 45) | `mustLast` | 3 | 0 / - / 0 in 3 of 3 | 1,099 | 1,204 | 839 | 6.6 s to 6.7 s |
+| H2 v2 | `mustFirst` | 2 | 0 / 0 / 0 | 1,099 | 1,204 | 839 | 6.6 s, 6.7 s |
+| H2 v2 | natural | 2 | 0 / 0 / 0 | 1,099 | 1,204 | 839 | 6.6 s, 6.8 s |
+| H2 v2 | `mustLast` | 1 | 0 / 0 / 0 | 1,099 | 1,204 | 839 | 6.7 s |
+| H2 v3 | `mustFirst` | 2 | 0 / 0 / 0 | 1,099 | 1,204 | 839 | 6.8 s, 6.7 s |
+
+With H2, the store order has no effect: the forced costly order gives
+the cheap sub-form in every launch. VERIFIED.
+
+**Lean model** (`spec/lean/ApSpec/ReplayBatch.lean`, constructive: only
+`propext` and `Quot.sound`). A coordinate is covered by another one
+through a reflexive and transitive relation `cov`. A replay is a list of
+rows (one per record, in the store order). The statement keeps the
+coordinates that it has sent and sends a new one only when no sent one
+covers it (`sent`, `after`; the CURRENT store law). The theorems hold for
+every normal form that keeps only coordinates of the replay and covers
+each of them (section `Normal`), so for v3 (`keepF`, `normalizeF`,
+theorems `h2_*`) and for v2 (`normalizeW`):
+
+1. H2 is CURRENT with the normal form first: the batch sends exactly what
+   CURRENT sends when the normal form arrives before all results of the
+   replay (`batch_eq_cover_first`, `h2_eq_cover_first`).
+2. No new result (`batch_sub`, `h2_sub`).
+3. No lost coverage in any store order: after the replay, the sent
+   coordinates of H2 and of CURRENT cover each other
+   (`batch_equiv_current`, `h2_equiv_current`).
+4. Order independence up to coverage: two replays with the same results
+   in any order end with sent coordinates that cover each other
+   (`batch_perm_equiv`, `h2_perm_equiv`).
+5. v2 needs one pass (`normalizeW_fixpoint`).
+6. Vectors (`decide`): the `getFilename` lane. CURRENT sends the 4 deep
+   results when R_d replays first and only the cover when R_s replays
+   first. v3 with the general-first order and v2 send only the cover in
+   both store orders. v3 without the order is CURRENT again, so the
+   order is part of the rule. The `getHtmlBody` lane and a result that
+   the cover does not cover (it stays).
+
+The model differences are D15 to D18 in §8.
+
+**Trivial alternatives.**
+
+1. A fixed store order (`mustLast`). It gives the cheap sub-form here
+   only because the cover has a STAR premise and the covered record has
+   an ANY_TAINT premise. A cover can have any premise tail. Rejected as a
+   rule; it stays an ablation.
+2. A deterministic map for `groups` (a `LinkedHashMap`). Then the trie
+   order is the insertion order of the premise keys, which is the order
+   in which the forward run of the method first writes each premise.
+   That order comes from the worklist of a multi-threaded run, so the
+   dependence moves but stays; and the cover can still be inserted after
+   the covered record. It also changes a store that every run uses.
+   Not chosen. It can be a later cleanup next to H2, not a fix.
+3. Withdraw a sent fact when its cover arrives. The engine has no
+   withdrawal; the worklist is monotone. Rejected.
+4. M1 does not start a MUST actual that a start of the same callee
+   covers. This is order-dependent too: the covering start can arrive
+   later. Rejected.
+5. v2, the order-free form. The same removals, but quadratic in the lane
+   size (OWASP: 1.6 s to 1.9 s in the law against 0.2 s). Rejected for
+   v3.
+
+**Reviewer attack (self).**
+
+- H2 removes a result that a later statement would use with a deeper
+  path. It cannot lose a route: the cover is at the same statement, in
+  the same lane, and covers the removed result (theorem 3). The route
+  census agrees: equal routes on Stirling-PDF and OWASP with the
+  landing set, and on OWASP with H2 alone (§11 rows).
+- The general-first order is a choice, not a normal form: with union
+  coverage, another order can keep another subset. True, and theorem 4
+  bounds it: every order keeps a set that covers the same results. The
+  order is launch-independent, so one launch and the next keep the same
+  subset (up to D17).
+- H2 changes which actual M1 and F1 start. Yes: that is the purpose. The
+  start set equals the CURRENT start set of a launch in which the cover
+  replays first (theorem 1), so it is a CURRENT form, not a new one.
+- H2 normalizes one replay only. Current-run replies (`REPLY_CURRENT`)
+  arrive one at a time and are not in a batch, so an order between a
+  saved and a current result stays. The Stirling-PDF case uses saved
+  records only (r1, r2). OWASP keeps order-dependent cycle forms with H2
+  alone (below), so other order sources exist; H2 does not claim them.
+- H2 alone on OWASP (no landing set). OWASP H5 has 108, 108 and 79 rows
+  in 3 launches with H2 alone; native has 53, 53, 79 and 82 in this
+  campaign (and 108 in older launches, §11). The OWASP cycle is a union
+  of order-dependent groups of test cases: a fixed core (6 test cases,
+  46 rows), the groups {01117, 01985} and {01446, 01474}, which each
+  join in some launches, and 01988 with 7 or 12 rows. Every one of the 108 H5 rows of the H2 launch
+  `h2diag/OWASP-h2v3-d` is a row of a native launch (`OWASP-native-d`
+  or `OWASP-native-t`). VERIFIED. So H2 alone moves OWASP between its
+  native forms and adds no cycle row. With the landing set the cycle is
+  gone with and without H2 (H5 = 18, H6 = 31, H7 = 0).
+
+**Gate of H2** (gate queues 49 and 50; no owner trace; the reference of
+the arm lsh2 = landing set + H2 is the landing set `f1/*-mpf1hs-*`, the
+reference of the arm h2 = H2 alone is native `gate/*-native-1`). Queue 49
+ran its first four launches with v2 (`4d5a4d2c3`); every later launch
+of queues 49 and 50 ran v3 (`01add0221`), marked v2 or v3 below.
+
+Stirling-PDF, landing set + H2, to run 11 (quiet run-1 control 23.3 s to
+24.2 s in every launch):
+
+| Launch | Form | Wall | Peak RSS | H5 | Runs 6 to 11 | All runs | Results | SARIF against the landing set | Routes |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- | --- |
+| lsh2-1 | v2 | 158 s | 9.48 GB | 1,099 | 40.1 s | 89.2 s | 32 / 2 | byte-identical | 126 = 126 |
+| lsh2-2 | v3 | 158 s | 9.37 GB | 1,099 | 40.6 s | 90.5 s | 32 / 2 | byte-identical | 126 = 126 |
+| lsh2-3 | v3 | 155 s | 9.47 GB | 1,099 | 39.5 s | 88.1 s | 32 / 2 | byte-identical | 126 = 126 |
+| lsh2-4 | v3 | 155 s | 9.54 GB | 1,099 | 40.4 s | 89.5 s | 32 / 2 | byte-identical | 126 = 126 |
+| lsh2-5 | v3 | 156 s | 9.44 GB | 1,099 | 41.1 s | 89.6 s | 32 / 2 | byte-identical | 126 = 126 |
+| landing set, cheap (mpf1hs-4, d2, d4) | - | 154 s to 159 s | 9.36 to 9.52 GB | 1,099 to 1,111 | 39.7 s to 40.4 s | 88.2 s to 89.8 s | 32 / 2 | - | 126 |
+| landing set, costly (mpf1hs-2, -5) | - | 166 s, 167 s | 9.38, 9.54 GB | 1,119, 1,130 | 46.0 s, 47.2 s | 96.3 s, 99.5 s | 32 / 2 | - | 126 |
+| native fast (§6.10 table) | - | 154 s, 155 s | | 1,196 to 1,204 | 39.5 s, 39.7 s | | 32 / 0 | | |
+
+(d2 and d4 wrote hand-off dumps; their wall times include the dumps.)
+H2 gives the cheap sub-form in 5 of 5 launches to run 11 (and in 7 of 7
+launches of v2 and v3 to run 7, intervention test above). Its wall time is the
+native fast time (155 s to 158 s against 154 s and 155 s), so the up to
+8% price of the Stirling-PDF fast form in D1 goes.
+
+Stirling-PDF, H2 alone, to run 11: 3 launches (h2-1 v2, h2-2 and h2-3
+v3). All 3 have the native slow form: TIMEOUT in run 9 or 11 at 1,111 s
+to 1,112 s, run 7 11.5 s to 93 s, H6 = 1,298 to 1,300 (the +1 and +3
+forms of §4.3). Results 32 / 0, SARIF byte-identical to native-1 (also a
+slow launch), routes 126 = 126. Peak RSS 9.42 to 9.69 GB against 9.54
+and 9.64 GB in the native slow launches. The rate of the slow form (gate
+queues 53 and 54, `h2rate/`, H2 alone and native interleaved, to run 7):
+
+| Arm | Launches | Fast | H5 | H6 | H7 | Run 7 of the slow launches |
+| --- | --- | ---: | --- | --- | --- | --- |
+| H2 alone (v3) | 5 + 1 traced | 0 | 1,196 in 6 of 6 | 1,298 in 6 of 6 | 943 or 945 | 11.6 s to 25.1 s (traced: 39.1 s) |
+| native | 5 + 1 traced | 1 (native-4: run 7 1.4 s, H6 = 1,297) | 1,204 to 1,223 | 1,297 to 1,304 | 939 to 973 | 11.8 s to 1m 54s (traced: 20.5 s) |
+
+With the launches to run 11, H2 alone is fast in 0 of 9 launches and
+native in 3 of 10 (Fisher's exact test: p = 0.21). So the gate does not
+show a change of the rate, and it does not exclude one. The traces show
+why H2 alone keeps the slow form: the decision of §4.2 is at a block
+boundary (saved block records), where H2 does not act (§6.11).
+
+OWASP:
+
+| Launch | Form | End | Results | SARIF flows | Routes | Wall | Peak RSS | Runs 2 to 7 (or to 11) | H5 / H6 / H7 |
+| --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | --- |
+| lsh2-1 | v2 | NO_DEMAND_EDGE, run 7 | 2,633 / 0 | equal to the landing set | 5,330 = 5,330 | 216 s | 9.34 GB | 39.4 s (run 3: 11.5 s, the v2 law) | 18 / 31 / 0 |
+| lsh2v3-1 | v3 | NO_DEMAND_EDGE, run 7 | 2,633 / 0 | equal to the landing set | 5,330 = 5,330 | 210 s | 9.29 GB | 37.2 s | 18 / 31 / 0 |
+| landing set mpf1hs-2 (quiet) | - | NO_DEMAND_EDGE, run 7 | 2,633 / 0 | - | 5,330 | 215 s | 9.31 GB | 37.3 s | 18 / 31 / 0 |
+| h2-1 | v2 | RUN_LIMIT, run 11 | 2,633 / 0 | equal to native | 5,386 ⊇ 5,356 | 217 s | 9.28 GB | 40.6 s (run 3: 11.7 s, the v2 law) | 108 / 228 / 157 |
+| h2v3-1 | v3 | RUN_LIMIT, run 11 | 2,633 / 0 | equal to native | 5,356 = 5,356 | 216 s | 9.22 GB | 38.3 s | 79 / 165 / 103 |
+| native-1 | - | RUN_LIMIT, run 11 | 2,633 / 0 | - | 5,356 | 215 s | 9.27 GB | 37.7 s | 53 / 109 / 63 |
+
+H2 alone keeps OWASP in its native order-dependent cycle forms (the
+reviewer attack above): 4 launches with H2 alone have H5 = 108, 108, 79
+and 82, native launches have 53, 53, 79 and 82. The traced pair
+`h2diag/OWASP-native-t` and `OWASP-h2v3-t` (same trace, so the same
+perturbation) has identical hand-off rows in runs 3, 4 and 5. In h2-1
+(v2), the later forward runs serve 30 more sink leaves than native in
+the cycle form 108 (routes of runs 7 to 11); no native leaf is lost.
+
+Conductor (1,080 s, v3; the landing-set references are the 3,000 s
+launches `f1long/conductor-mpf1hs-*-long`, whose runs 1 to 7 are the
+same work; quiet run-1 control in lsh2-1, h2-1, native-1 and
+mpf1hs-long):
+
+| Launch | End | Results | SARIF | H4 | H5 | H6 | H7 | Run 4 | Run 6 | Runs 1 to 7 | Heap after GC, run 6 / run 7 | Peak RSS |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | ---: |
+| lsh2-1 | TIMEOUT in run 8 | 7 / 0 | byte-identical to the landing set | 31,231 | 31,901 | 124,291 | 53,385 | 1m 18s | 8m 31s | 732 s | 6.02 / 5.50 GB | 9.65 GB |
+| lsh2-r7-2 (to run 7, with dumps) | RUN_LIMIT, run 7 | 7 / 0 | byte-identical to lsh2-1 | 31,235 | 31,829 | 122,531 | 50,883 | 1m 18s | 8m 20s | 720 s | 6.05 / 5.21 GB | 9.44 GB |
+| lsh2-r7-3 (to run 7, with dumps) | RUN_LIMIT, run 7 | 7 / 0 | byte-identical to lsh2-1 | 31,155 | 31,474 | 118,321 | 50,318 | 1m 16s | 8m 00s | 692 s | 5.99 / 5.48 GB | 9.36 GB |
+| landing set (4 launches: 3 long, `h2gate/conductor-ls-r7-d` to run 7) | TIMEOUT in run 8 or 10 (3,000 s); RUN_LIMIT, run 7 | 7 / 0 | - | 30,938 to 31,605 | 31,411 to 32,373 | 118,234 to 121,035 | 50,344 to 51,843 | 1m 18s to 1m 35s | 7m 56s to 9m 26s | 699 s to 816 s | 5.84 to 6.13 / 5.18 to 5.49 GB | 9.31 to 9.59 GB |
+| h2-1 | TIMEOUT in run 8 | 7 / 0 | byte-identical to native | 29,955 | 25,158 | 149,979 | 85,583 | 1m 53s | 6m 21s | 646 s | 5.96 / 5.22 GB | 9.47 GB |
+| native (native-1 and 2 long launches) | TIMEOUT in run 8 | 7 / 0 | - | 29,909 to 29,921 | 25,063 to 25,236 | 149,480 to 149,950 | 85,043 to 86,521 | 1m 57s to 2m 14s | 6m 24s to 7m 26s | 655 s to 757 s (the long launches had a higher run-1 control) | 5.93 / 5.49 GB (native-1) | 9.48 to 9.73 GB |
+
+- Landing set + H2 against the landing set: results and SARIF equal.
+  The rows are in the landing-set spread: lsh2-1 had H6 and H7 3% to 6%
+  above the first 3 landing-set launches, but the replicates have
+  122,531 and 118,321 (H6) and 50,883 and 50,318 (H7), and a fourth
+  landing-set launch has 119,642 and 51,843, so the 7 launches overlap.
+  Run 6 is 8m 00s to 8m 31s against 7m 56s to 9m 26s, runs 1 to 7 692 s
+  to 732 s against 699 s to 816 s, heap after GC in run 6 5.99 to
+  6.05 GB against 5.84 to 6.13 GB. Not worse. H2 removes 1.08 million
+  results in runs 1 to 7 and spends 8.2 s in the law (1.1%).
+- H2 alone against native: results and SARIF equal, rows in the native
+  spread, run 4 1m 53s and run 6 6m 21s against 1m 57s and 6m 24s
+  (native-1, the same load), heap after GC equal. Not worse.
+- Run 8 is not compared: in 1,080 s each arm stops in run 8.
+
+Suites:
+
+| Suite | landing set + H2 | landing set (reference) | H2 alone | native (reference) |
+| --- | --- | --- | --- | --- |
+| dataflow module (2,807 tests) | 10 failed | the same 10 | 0 failed | 0 failed |
+| cycle fixtures (38 tests) | 7 failed, report entries equal | the same 7 | 0 failed, report entries equal | 0 failed |
+| jvm module (474 tests) | 0 failed | 0 failed | 0 failed | 0 failed |
+| rule suite (bidirectional) | pass: OK 786, FP 0, FN 0, disabled 22 (the same lists); H2 removed 8 results in 26 lanes | pass (the same) | pass: OK 786, FP 0, FN 0, disabled 22 (the same lists) | pass |
+
+**WI classification of H2** (§11). On top of the landing set, H2
+removes the costly sub-form in every launch and has no measured cost:
+results, SARIF and routes are equal on all three projects, the suites
+are equal, the OWASP and Conductor times are in the landing-set range,
+and the law takes 0.2 s on OWASP, 0.65 s on Stirling-PDF and 1.1% of
+runs 1 to 7 on Conductor. **H2 is WI on top of the landing set** (D4).
+H2 alone changes no result and no measured cost on OWASP and Conductor.
+On Stirling-PDF it keeps the native slow form, whose decision is outside
+H2 (§6.11), and the gate cannot exclude a higher rate of the slow form
+(0 of 9 fast against 3 of 10). H2 alone also has no target: without M1 a
+covered result does not become a start. So **H2 is not WI alone**; it
+lands only with the landing set, where H1 removes the slow form in every
+order (§5).
+
+### 6.11 Source of the §4.2 order (gate queues 53 to 56)
+
+§4.2 gives the decision point of the Stirling-PDF fast/slow split: the
+first protected value for `ret.*/xss` that reaches the root of
+`decodeMimeHeader` in run 6. This section isolates what sets that order
+in each launch. All launches are native unless marked, on `wt-diag`
+(`01add0221` and later diagnostic commits), to run 7 or run 11, with a
+quiet run-1 control (23.1 s to 24.6 s).
+
+**The forms in native launches.** 10 native launches have 4 different
+H5 values and both forms:
+
+| Launches | H5 | H6 | H7 | Run 7 | Form |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `gate5` native-1, `h2rate` native-4 | 1,204 | 1,297 | 939 | 1.4 s | fast |
+| `gate5` native-2 | 1,196 | 1,297 | 930 | 1.4 s | fast |
+| `gate5` native-3 | 1,196 | 1,298 | 943 | 11.5 s | slow (+1) |
+| `h2rate` native-2, native-3 | 1,204 | 1,298 | 952, 954 | 11.8 s, 25.3 s | slow (+1) |
+| `h2rate` native-t (traced) | 1,215 | 1,302 | 960 | 20.5 s | slow |
+| `gate` native-1, `h2rate` native-5 | 1,223 | 1,302 | 959, 969 | 26.7 s, 13.5 s | slow |
+| `h2rate` native-1 | 1,223 | 1,304 | 973 | 1m 54s | slow |
+
+H3 and H4 are equal in all 10 (1,571 or 1,573 and 4,821). So runs 3 and
+4 can already differ (H3), and runs 5 and 6 differ in most pairs.
+
+**The path of the decision** (owner traces `h2rate/Stirling-PDF-native-t`
+and `-h2-t`, events PUB and COMPL of run 6). The protected values for
+`ret.*/xss` reach the root block B0 from the return block B3 (entry
+port -2, exit 93) in one completion sequence: in native-t
+`var(21).CharSequence#content.$`, then `var(21).String#bytes.$`, then
+`var(21).MAY`; in h2-t `var(21).String#bytes.$`, then
+`var(21).CharSequence#content.$`, then `var(21).MAY`. The root then
+publishes the first exact value (`{arg(0).CharSequence#content.$},D,P` and
+`{arg(0).String#bytes.$},D,P`), which is the extra row of §4.1. VERIFIED.
+These completions come from the saved block records of B3:
+`MethodBlockRuntime.replaySaved` applies them at the block boundary
+before the current summaries of B3, in the order that
+`selectSavedRecords` reads from the scoped record index (`gate=true`
+marks a reversed view of a forward record, `applySavedView`). VERIFIED
+(code; the COMPL lines come only from `onApplied`, which only these two
+calls reach).
+
+**Where the order comes from.** The scoped record index is rebuilt like
+the entry index of §6.10 step 4: `RecordStore.rebuildIndexes` adds each
+record in the iteration order of the `FlowBackedSummaries` that keeps the
+records of one method, scope and exit. That store iterates its premise
+groups, an `IdentityHashMap`, in identity-hash slot order. The summary
+store of a run (`RunSummaries.groups`, also an `IdentityHashMap`) gives
+the persisted records in the same kind of order. VERIFIED (code).
+
+**Intervention test** (gate queue 56, ablation `ablateGroupOrder=insertion`
+on `proto/mpf1-diag-20261127`, `313e70630`). The ablation keeps the
+premise groups of `FlowBackedSummaries` and `RunSummaries` in a
+`LinkedHashMap`. A premise key has identity equality, so the members are
+the same; only the iteration order changes, from identity-hash slot order
+to insertion order.
+
+| Arm | Launches | H3 | H4 | H5 | H6 | H7 | Run 7 | Form |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| insertion order | 5 (`grouporder/Stirling-PDF-ins-1` to `-5`) | 1,571 | 4,821 | 1,223 | 1,302 | 969 | 13.2 s to 13.3 s | slow, 5 of 5 |
+| insertion order, one worker thread (`diagThreads=1`) | 2 (`-ins1t-1`, `-2`) | 1,571 | 4,584 | 1,265 | 1,302 | 969 | 14.0 s, 14.4 s | slow, 2 of 2 |
+| native (table above) | 10 | 1,571 or 1,573 | 4,821 | 1,196 to 1,223 (4 values) | 1,297 to 1,304 | 930 to 973 | 1.4 s to 1m 54s | fast in 3 of 10 |
+
+With insertion order, the 5 launches have equal rows from H3 to H7 and
+the same run-7 time within 0.2 s; native has 4 H5 values and both forms.
+The rows of the run-2 hand-off still differ by up to 22 rows (265,835 to
+265,857), so runs 1 and 2 have another order source, but it does not
+reach H3. That source is the worker schedule: with insertion order and
+one worker thread, the 2 launches are equal from H2 on (H2 = 265,859 in
+both). One thread gives another insertion order than ten threads, so its
+H4 and H5 differ, and it reaches the same H6 and H7. The insertion-order
+form is the form of the native launch
+`h2rate` native-5 (the same H5, H6 and H7; run 7 13.5 s), so the
+ablation selects one native form and makes no new one. So the per-launch
+choice of §4.2, and the run-5 forms before it, come from the
+identity-hash order of the premise groups. VERIFIED (intervention, 5 of
+5 against 10 native launches; 2 of 2 with one worker thread).
+
+**A sort of the selected block records is not enough.** Before the
+intervention test, a sort of the selected block records by the premise
+tail (`ablateBlockRecordOrder=anyFirst`, `8c54b0b98`) was tried: the
+launch stayed slow (`{arg(0).$},D,P` first, run 7 2m 46s; VERIFIED, 1
+launch, `blockorder/`). The likely reason: a backward block record
+carries the value in its conclusion, and a forward record in its
+premise, so the premise tail does not order the values (INFERENCE, code
+reading). The intervention on the store order does not depend on this
+detail.
+
+**Consequence for the design.** The fast/slow choice of §4.2 is a
+launch-random identity-hash order with no program cause, as the
+sub-form of §6.10. H1 makes the outcome the same in every order (§5), so
+the design does not depend on the order. A fixed store order is not a
+fix: with insertion order, the launches take one fixed native form, here
+a slow one.
+
+**H2 alone and the §4.2 decision.** H2 alone acts at the replay of saved
+call records, not at the block boundary. The traced H2-alone launch has
+the same decision path as native (above). Its rate of the slow form:
+0 of 9 H2-alone launches are fast (`h2gate` h2-1 to h2-3 to run 11,
+`h2rate` h2-1 to h2-5 and h2-t to run 7), against 3 of 10 native
+launches (Fisher's exact test: p = 0.21, two-sided). So the gate does
+not show a change of the rate, and it does not exclude one. H2 alone has
+H5 = 1,196 in 9 of 9 launches, against four values in native: it removes
+an order dependence of runs 1 to 5 (the f5 split of the Stirling report
+§3.4 is at `safeMimeDecode`, a saved-call-record replay site). INFERENCE
+for the f5 link.
 
 ## 7. Semantic scope (proof-guide.md)
 
@@ -1505,6 +1904,17 @@ Lean modules (constructive: only `propext` and `Quot.sound`, see the
   `normalize_covers`, `step_removes_covered`, and 4 `decide` vectors (the
   Stirling-PDF lane in both arrival orders, the +3 form, a row that is
   not covered).
+- `spec/lean/ApSpec/ReplayBatch.lean` (H2, §6.10): the CURRENT statement
+  law (`sent`, `after`, `sent_append`, `after_covers`); the landed form v3
+  (`keepF_sub`, `keepF_covers`, `normalizeF_sub`, `normalizeF_covers`) and
+  the order-free form v2 (`normalizeW_sub`, `normalizeW_covers`,
+  `normalizeW_fixpoint`); for every normal form with these two
+  properties `batch_eq_cover_first`, `batch_sub`, `batch_equiv_current`
+  and `batch_perm_equiv`, instantiated for v3 as `h2_eq_cover_first`,
+  `h2_sub`, `h2_equiv_current`, `h2_perm_equiv` and for v2 as
+  `h2w_eq_cover_first`; and 10 `decide` vectors (the `getFilename` lane
+  under CURRENT, v3 and v2 in both store orders, v3 without the order,
+  the `getHtmlBody` lane, a result that the cover does not cover).
 
 Differences between the models and production:
 
@@ -1524,6 +1934,10 @@ Differences between the models and production:
 | D12 | F1: no mark groups, no `insideDemand` | `boundMark`, `isGroup` (a group entry mark is rejected for both tails), `insideDemand` (prefix and exclusion test) | The same checks run for both tails; with empty exclusions `insideDemand` is the prefix test of `canEmit`. |
 | D13 | F1: the model is the acceptance test | production also restricts each accepted pair (`restrictConclusionOnly`), limits it to the exit depth and merges it into the store | The cost effect (a depth-0 piece covers depth-1 pieces) is measured (§6.5, §6.7), not proved. |
 | D14 | F1: forward only | `legalInitial` rejects ANY_TAINT in a backward run | So neither the primary nor the F1 clause accepts a MUST member backward (reviewer attack 2, refuted). |
+| D15 | H2: a coordinate is covered by one coordinate; `cov` is reflexive and transitive | `ConclusionGroup.addAll` subtracts the stored trees from the new tree (TAINT and FLOW, with tails, exclusions, marks and layers) | The theorems hold for any such `cov`. That the store law is such a coverage is the store law itself (as D6 for H1). |
+| D16 | H2: the statement compares the facts at the stage input | the statement store compares them after the call stages (cleaner, write of the return value) | Not claimed: that these stages are monotone in coverage. The same assumption is in the store law of every statement. |
+| D17 | H2: exact order independence needs a sort key that is a function of the result set | `replayOrderKey` is a canonical string of the result (kind, tail, exclusion, layer, base, sorted leaves) | Two different results with the same key keep their store order. Not seen; a blind spot. |
+| D18 | H2: one replay is one list of rows | production also keeps the results with a pending demotion apart and normalizes them in their own group | Each group satisfies the model. |
 
 ## 9. Reviewer attack
 
@@ -1553,7 +1967,13 @@ again in the code. Verdicts: **CONFIRMED** (true in the code),
 | R17 | (Found by the 3,000 s gate.) The Conductor gain of the landing set comes from H1, not from M1 + F1. | **CONFIRMED in part** | M1 + F1 without H1 runs out of memory in run 8 (§6.9), and H1 alone ends in run 8 like native at 1,080 s (§11.1; no 3,000 s launch of H1 alone). So the gain needs all three rules. H1's share in run 6 is measured (§6.8, "The chain with H1"): M1 + F1 makes 2 to 5 times as many covered TAINT edges as H1 alone, and H1 removes them, which removes one third of the extra `replace` time. M1 + F1 lands only with H1 (D1). |
 | R18 | (Found by the 3,000 s gate.) A gate in equal time measures progress, not the time to a common state, and the landing set is slower before run 8. | **CONFIRMED** | Run 6 is +24% to +47% and the sum of the engine times to the end of run 7 is 702 s to 816 s against 728 s and 757 s (§6.9). The first common state after run 7 is the end of run 8: the landing set reaches it in 30 to 32 minutes of run 8 (2 of 3 launches); native does not reach it in 37 minutes (native 1, normal load) or 36 minutes (native 2, a 6-minute load spike). This is the price of D1. |
 | R19 | (Found by the 3,000 s gate.) The landing set runs Conductor run 8 near the heap limit; another launch can run out of memory, as M1 + F1 without H1 did. | **PLAUSIBLE** | 3 of 3 landing-set launches end without OOM, but each goes above the 90% threshold of the memory manager once in run 8 and continues only because the manager clears about 6,500 soft references (§6.9). M1 + F1 without H1 had 493 soft references left at that point and stopped. Native does not go above 90% in 37 minutes of run 8. The cost source in run 8 is not traced (§10). |
-| R20 | (Found by the Stirling-PDF traces.) The landing set is not order-independent: in 8 of 20 launches a covered MUST result reaches `safeMimeDecode` first and gives the costly sub-form. | **CONFIRMED** (§6.10) | The order is the replay order of saved records (CURRENT); M1 + F1 turn the covered result into a new start. Results and routes are equal in both sub-forms, and the ablation shows that the order alone decides the sub-form. Candidate H2 removes the order (D4). |
+| R20 | (Found by the Stirling-PDF traces.) The landing set is not order-independent: in 8 of 20 launches a covered MUST result reaches `safeMimeDecode` first and gives the costly sub-form. | **CONFIRMED** (§6.10) | The order is the replay order of saved records (CURRENT), and its source is the slot order of the identity hashes of two premise keys in `FlowBackedSummaries.groups` (4 of 4 launches predicted). M1 + F1 turn the covered result into a new start. Results and routes are equal in both sub-forms, and the ablation shows that the order alone decides the sub-form. H2 removes the order: the cheap sub-form in 5 of 5 launches to run 11 and in 7 of 7 to run 7, also under the forced costly order (§6.10). |
+| R21 | (H2.) The general-first order is a choice, not a normal form: with union coverage, another order keeps another subset of results. | **CONFIRMED** (code) | Theorem 4 of `ReplayBatch` bounds it: every order keeps a set that covers the same results, and CURRENT keeps such a set too (theorem 3). The order is launch-independent, so H2 keeps the same subset in every launch, except for ties of the canonical key (D17). |
+| R22 | (Found by the H2 gate.) H2 alone changes the OWASP cycle: H2 alone had H5/H6/H7 = 108/228/157 where native had 53/109/63. | **REFUTED** | The OWASP cycle forms are launch-random in both arms: H2 alone 108, 108, 79, 82; native 53, 53, 79, 82. Every H5 row of the H2 launch with 108 rows is a row of a native launch, and the traced pair (same trace) has identical rows in H3 to H5 (§6.10, gate of H2). With the landing set, H5/H6/H7 = 18/31/0 with and without H2. |
+| R23 | (Found by the H2 prototype.) H2 on TAINT lanes only (v1) is not enough: the deep FLOW result of the same record stays, and M1 + F1 start it. | **CONFIRMED** (v1 launches) | v2 and v3 normalize TAINT and FLOW with the statement-store law (`ConclusionGroup`), which holds both kinds. |
+| R24 | (H2.) H2 hides an order in current-run replies: `REPLY_CURRENT` results are not batched. | **CONFIRMED** (code) | Limit of H2. The Stirling-PDF case uses saved records only. Other order sources exist (OWASP keeps its random cycle forms with H2 alone); H2 does not claim them. |
+| R25 | (Found by the H2 gate.) H2 alone makes the Stirling-PDF slow form certain: 9 of 9 H2-alone launches are slow. | **PLAUSIBLE** | Native is slow in 7 of 10 launches; the difference is not significant (p = 0.21). The decision of §4.2 is at a block boundary (saved block records, §6.11), outside H2, but H2 alone fixes the run-5 forms (H5 = 1,196 in 9 of 9), and an upstream form can change the rate. H2 is not WI alone (§11); with the landing set H1 removes the slow form in every order. |
+| R26 | (§6.11.) A fixed store order (insertion order) is a simpler fix than H1 and H2. | **REFUTED** | The insertion order gives one fixed native form, here the slow one (5 of 5, run 7 13.2 s). An order is not a normal form: the outcome follows the order, as in §6.10 step 4. H1 and H2 make the outcome the same in every order. |
 | - | F1 acts in a backward run or on the run-2 rows; F1 exceeds `FL(Dc)+1` or K; F1 changes C2, the target rows or the control rows; the prepared and the native C5 paths disagree (both call `canStoreInitial`) | **REFUTED** (code) | - |
 | - | M1 exceeds the cap; M1 at a STATIC anchor; M1 makes a NORMAL start from a DEMAND actual (a DEMAND actual gives a DEMAND start, `AdmittedInitial`); M1 in a backward run; `canEmitInitial` and `emit` disagree; M1 claims a mark the actual lacks; the H1 coverage relation is wrong for exclusions, STAR, MUST, protection; a row removed by a later-reduced row is not covered; H1 changes stores, records or targets | **REFUTED** (code) | - |
 
@@ -1600,9 +2020,20 @@ again in the code. Verdicts: **CONFIRMED** (true in the code),
 - **Long launches and load.** Conductor with 3,000 s: 2 native, 3 landing
   set, 1 M1 + F1; M1 + F1 without H1 has one launch only. Native 2 and
   landing set 3 had load spikes in run 8 (§6.9).
-- **Stirling-PDF fast-form time.** Traced (§6.10). Open: the source of
-  the record order (the persist order of an earlier forward run, as in
-  §4.2), the volume of H2, and the effect of H2 on Conductor.
+- **Stirling-PDF fast-form time.** Traced and isolated (§6.10): the slot
+  order of the identity hashes of two premise keys in
+  `FlowBackedSummaries.groups` decides the replay order. H2 removes the
+  dependence; its volume and gate are in §6.10. That HotSpot takes the
+  identity hash from a thread-local random generator is JVM code, not
+  traced here; that the hashes change from launch to launch is measured.
+- **H2 limits.** Current-run replies are not batched (R24). Ties of the
+  canonical key (D17) are not seen in the traces, but no counter
+  checks for them. OWASP keeps its launch-random cycle forms with H2 alone
+  (R22), so other order sources exist; H2 does not claim them.
+- **Queue 49 build mix.** Each launch rebuilds the tree, and the H2 v3
+  change went into the tree while queue 49 ran. So launches 1 to 4 of
+  queue 49 ran v2 and all later launches ran v3. Every row of §6.10
+  names its form.
 - **`decodeMimeHeader` in the fast form.** In the cheap sub-form it takes
   36.5 to 37.4 s of the 39.7 to 40.4 s of runs 6 to 11 (§6.10). It is
   the largest cost that stays in the Stirling-PDF fast form. It is not
@@ -1612,7 +2043,19 @@ again in the code. Verdicts: **CONFIRMED** (true in the code),
 - **H1 in module suites.** The suites do not log the hand-off lines, so
   that the test JVMs used the H1 flag is INFERENCE (the M1 flag reached
   them by the same mechanism and changed the results).
-- **Source of the Stirling order.** Not isolated (§4.2).
+- **Source of the §4.2 order.** Isolated (§6.11): the identity-hash
+  order of the premise groups, by an intervention (insertion order: 5 of
+  5 launches with the same rows from H3 on). That HotSpot takes the
+  identity hash from a thread-local random generator is JVM code, not
+  traced. Under insertion order the run-2 hand-off still differs by up to
+  22 rows; that source is the worker schedule (with one worker thread 2 of
+  2 launches are equal from H2 on), and it does not reach H3. H1 makes
+  the outcome of §4.2 the same in every order (§5), so the design does not
+  depend on it.
+- **H2 alone and the slow form.** The gate cannot exclude that H2 alone
+  raises the rate of the Stirling-PDF slow form (0 of 9 fast against 3 of
+  10, p = 0.21). H2 is proposed only with the landing set, where H1
+  removes the slow form.
 - **Machine load.** The machine is shared, and from 10:25 on 27 November
   other jobs kept the load at 14 to 24 on 20 cores. A time claim uses
   only launches whose run-1 engine time (the load control) is the quiet
@@ -1627,8 +2070,10 @@ again in the code. Verdicts: **CONFIRMED** (true in the code),
 | H1 | Stirling-PDF: the fast form in every H1 launch, including the 3 launches where run 6 made the extra row (§5.2); a slow native launch takes 7x the wall time and loses 2 provisional entries at the timeout (§6.3). Fewer hand-off rows: Conductor H4 to H7 -2% to -9%, Stirling-PDF H7 860 against 876-885, OWASP 13 fewer at H4 (§6.2, §6.3). After H4, OWASP follows one of its order-dependent native forms (H5/H6 = 53/109, 79/165 or 108/242 in native launches); H1 launch 1 had 108/228. | None measured: results equal on all projects, Stirling-PDF SARIF byte-identical and route census equal, suites pass. R1 (an EXACT NORMAL start can go) is the CURRENT store law; it is the same start set as a native fast launch. | **WI.** The spec question of R1 is a user decision (§14, D2). 3 launches per project: §5.2, §6.3, §11.1. |
 | M1 alone | OWASP: NO_DEMAND_EDGE in run 7 instead of the run limit, results equal, every route served (§3.4, §6.4). | Conductor: +125% H4 rows, +131% H5 rows, OOM in run 6 in 2 of 2 launches (§6.4). | **Not WI.** |
 | F1 alone | None needed: F1 is the cost rule of M1. | None measured: OWASP and Stirling-PDF results and routes equal, Conductor rows within 0.3% to 3.5% (§6.6, §6.7), suites pass. | Lands only with M1. |
-| M1 + F1 + H1 (the landing set) | OWASP: NO_DEMAND_EDGE in run 7 in every M1 + F1 launch with or without H1 (4 of 4), results, SARIF flows and routes equal; time equal (runs 2 to 7: 37.3 s against 37.4 s native; wall 215 s against 215 s at a quiet control, §6.7). Stirling-PDF: the fast form in 9 of 9 launches to run 11 (native: 2 of 3), results and SARIF flows equal to native fast, routes equal (§6.7); against the native slow form it saves about 950 s. Conductor: results and SARIF flows equal in every launch, no OOM (3 of 3 with 3,000 s); it ends run 8 in 2 of 3 launches (29m 43s and 32m 15s) and stops in run 10, where native does not end run 8 in 0 of 2 (§6.9); H6 -19% to -21%, H7 -40% to -42%. | Conductor: backward run 6 +24% to +47% (+24% to +32% for the pairs with the nearest load); H3 +17% to +18%, H4 +3% to +6%, H5 +25% to +29%, so withdrawal condition 4 of M1 (§3.7) holds for H3 to H5 and not for H6, H7 or the number of runs; run 8 goes above the 90% memory threshold once in each launch and continues after the memory manager clears about 6,500 soft references (native: not above 90% in 37 minutes of run 8); peak RSS 9.40 to 9.59 GB against 9.48 to 9.54 GB. Stirling-PDF fast form: sum of engine times 89 s to 99 s against 89 s, wall 158 to 167 s against 154 to 155 s (+2% to +8%, 3 quiet launches); the cause is a run-5 sub-form in 8 of 20 launches (§6.10). OWASP peak RSS 9.31 to 9.36 GB against 9.27 GB. 2 cycle fixtures change from provisional to confirmed (§6.1, D3). The cause of the Conductor run-6 price is traced for M1 + F1 (§6.8), and no start-form rule removes it without a larger cost; the landing set has the same chain with a smaller volume (§6.8, "The chain with H1"). | **WI with a price.** The improvement is measured on every project, and the price is measured. The design guide asks for no negative consequence, so the user decides whether the price is acceptable (§14, D1). |
+| M1 + F1 + H1 (the landing set) | OWASP: NO_DEMAND_EDGE in run 7 in every M1 + F1 launch with or without H1 (4 of 4), results, SARIF flows and routes equal; time equal (runs 2 to 7: 37.3 s against 37.4 s native; wall 215 s against 215 s at a quiet control, §6.7). Stirling-PDF: the fast form in 9 of 9 launches to run 11 (native: 2 of 3), results and SARIF flows equal to native fast, routes equal (§6.7); against the native slow form it saves about 950 s. Conductor: results and SARIF flows equal in every launch, no OOM (3 of 3 with 3,000 s); it ends run 8 in 2 of 3 launches (29m 43s and 32m 15s) and stops in run 10, where native does not end run 8 in 0 of 2 (§6.9); H6 -19% to -21%, H7 -40% to -42%. | Conductor: backward run 6 +24% to +47% (+24% to +32% for the pairs with the nearest load); H3 +17% to +18%, H4 +3% to +6%, H5 +25% to +29%, so withdrawal condition 4 of M1 (§3.7) holds for H3 to H5 and not for H6, H7 or the number of runs; run 8 goes above the 90% memory threshold once in each launch and continues after the memory manager clears about 6,500 soft references (native: not above 90% in 37 minutes of run 8); peak RSS 9.40 to 9.59 GB against 9.48 to 9.54 GB. Stirling-PDF fast form: sum of engine times 89 s to 99 s against 89 s, wall 158 to 167 s against 154 to 155 s (+2% to +8%, 3 quiet launches); the cause is a run-5 sub-form in 8 of 20 launches (§6.10); H2 removes it (row H2 below). OWASP peak RSS 9.31 to 9.36 GB against 9.27 GB. 2 cycle fixtures change from provisional to confirmed (§6.1, D3). The cause of the Conductor run-6 price is traced for M1 + F1 (§6.8), and no start-form rule removes it without a larger cost; the landing set has the same chain with a smaller volume (§6.8, "The chain with H1"). | **WI with a price.** The improvement is measured on every project, and the price is measured. The design guide asks for no negative consequence, so the user decides whether the price is acceptable (§14, D1). |
 | M1 + F1 without H1 | As the landing set on OWASP. | Conductor run 6 +55% to +62% and the sum of the engine times to the end of run 7 +27% to +30% (2 quiet launches, §6.7); in its one 3,000 s launch it runs out of memory in run 8 (§6.9). Withdrawal condition 4 of F1 (§3.8) holds. | **Not WI.** The landing set is better on Conductor run 6, the hand-off rows H3 to H7, peak RSS and Stirling-PDF (fast form); M1 + F1 lands only with H1. |
+| H2 alone | None needed: H2 is the normal form of one replay. Without M1 a covered result does not become a new start, so H2 alone has no cost to remove. | None measured: results, SARIF flows and routes equal to native on OWASP (2 launches; v3: routes 5,356 = 5,356) and Stirling-PDF (2 launches: SARIF byte-identical, routes 126 = 126); OWASP runs 2 to 11 38.3 s against 37.7 s (v3), peak RSS 9.22 GB against 9.27 GB; suites as native. OWASP stays in its launch-random native cycle forms (R22). Conductor: results, rows, run times and heap after GC equal to native (1 launch, §6.10). Stirling-PDF: the native slow form in 9 of 9 H2-alone launches (native: 7 of 10, Fisher p = 0.21); the decision of §4.2 is at a block boundary, where H2 does not act (traced, §6.11), so the gate cannot exclude a higher slow rate. H2 alone gives H5 = 1,196 in 9 of 9 launches (native: 4 values). | **Not WI alone**: a higher slow rate on Stirling-PDF is not excluded. Lands only on top of the landing set. |
+| M1 + F1 + H1 + H2 | Stirling-PDF: the cheap sub-form in 5 of 5 launches to run 11 and in 7 of 7 to run 7, also under the forced costly order; wall 155 s to 158 s (native fast: 154 s and 155 s; landing set: 154 s to 167 s); runs 6 to 11 39.5 s to 41.1 s against 46.0 s to 47.2 s in the costly sub-form. The OWASP gain of the landing set stays (NO_DEMAND_EDGE in run 7, 2 of 2; runs 2 to 7 37.2 s with v3 against 37.3 s). | None measured on Stirling-PDF and OWASP: results, SARIF and routes equal to the landing set, peak RSS 9.29 to 9.54 GB in the landing-set range; suites equal to the landing set (dataflow 10, fixtures 7 with equal report entries, jvm 0, rule suite 786 OK). The v2 law cost 1.6 s on OWASP; v3 0.2 s. Conductor: results and SARIF equal, rows in the landing-set spread, run 6 8m 00s to 8m 31s against 7m 56s to 9m 26s, runs 1 to 7 692 s to 732 s against 699 s to 816 s (3 launches against 4); the law takes 1.1% of runs 1 to 7. | **WI** on top of the landing set (§14, D4). It removes the Stirling-PDF part of the D1 price. |
 
 ### 11.1 H1 replicates on OWASP and Conductor
 
@@ -1672,10 +2117,16 @@ is CURRENT + H1). Rows are `BIDI_HANDOFF_COMPACTION rows=`. VERIFIED
 [x] Root cause of the measured Conductor costs (M1 loop, M1+F1 depth) §6.5, §6.8
 [x] Root cause of the Stirling-PDF fast-form time (up to +8% wall)     §6.10
 [x] Intervention test of the sub-form cause (replay order ablation)  §6.10
-[ ] H2 prototype, gate and proof (candidate for the next iteration)  §6.10, D4
+[x] Source of the Stirling-PDF sub-form order (identity-hash slots)  §6.10 step 4
+[x] H2 prototype (v1 to v3), intervention test under the forced order §6.10
+[x] H2 execution site and measured volume                            §6.10
+[x] H2 gate: alone and with the landing set, all projects and suites §6.10, §11
+[x] H2 proof (ReplayBatch) and model differences D15 to D18          §8
 [x] Intervention test of the depth cause (A5c, rejected)              §6.8
 [x] Conductor gate in equal time (3,000 s: 2 native, 3 landing set)  §6.9
 [x] Quiet-control launches of the landing set (OWASP 1, Stirling 2)   §6.7
+[x] Source of the §4.2 order (premise-group order, intervention 5/5)  §4.2, §6.11
+[x] H2 alone: slow-form rate and the decision path (traced)          §6.10, §6.11
 ```
 
 ## 13. Evidence paths
@@ -1716,6 +2167,28 @@ is CURRENT + H1). Rows are `BIDI_HANDOFF_COMPACTION rows=`. VERIFIED
   hand-off dumps, per owner), `otdiff.py` (owner-trace events only in
   one of two launches, per run), `gticmp.py` (run-5 offers and starts
   of `getTaskInputV2`).
+- Order source and H2 (gate queues 46 to 51; builds: the `RECORD_INDEX`
+  trace and H2 v1 `21be721ae`, v2 `4d5a4d2c3`, v3 `01add0221`; flag
+  `protoReplayBatch`):
+  `stirling-ls/Stirling-PDF-mpf1hs-o1` to `-o4` (identity hashes of the
+  premise keys, queue 46), `h2/Stirling-PDF-mpf1hsh2-s1`, `-s2`, `-d1`,
+  `-d2` (v1, queues 46 and 47), `h2/Stirling-PDF-mpf1hsh2v2-*` (v2
+  intervention, queue 48), `h2/Stirling-PDF-mpf1hsh2v3-mustFirst-1`, `-2`
+  (v3 intervention, queue 50), `h2gate/` (the gate: `*-lsh2-*`,
+  `*-h2-*`, `*-h2v3-*`, `*-lsh2v3-*`, route census `*.routes`, suites
+  `fixtures-*`, `unit-*`, `rule-*`), `h2diag/` (OWASP native and H2 v3
+  with hand-off dumps, `*-d` to run 7 and `*-t` to run 5 with the owner
+  trace of `BenchmarkTest01117`). Logs `gate-queue46.log` to
+  `gate-queue51.log`. Lean: `spec/lean/ApSpec/ReplayBatch.lean`.
+- Conductor replicates and the §4.2 order (gate queues 52 to 56):
+  `h2gate/conductor-lsh2-r7-2`, `-3` and `h2gate/conductor-ls-r7-d`
+  (landing set with and without H2 to run 7, hand-off dumps from run 5,
+  queue 52); `h2rate/Stirling-PDF-h2-1` to `-5`, `-native-1` to `-5`
+  (queue 53) and `-h2-t`, `-native-t` (owner trace of `decodeMimeHeader`
+  in runs 5 and 6, queue 54); `blockorder/Stirling-PDF-anyFirst-1`
+  (block-record sort, `8c54b0b98`, queue 55, stopped after this launch);
+  `grouporder/Stirling-PDF-ins-*` (premise groups in insertion order,
+  `313e70630`, queue 56). Logs `gate-queue52.log` to `gate-queue56.log`.
 - Thread dumps and class histograms (`run6-sample-*.txt`,
   `stall-run6-jstack-*.txt`, `stall-run6-histo.txt`,
   `m1trace/v5-r7/run6-histo-*.txt`) were removed after
@@ -1731,7 +2204,9 @@ is CURRENT + H1). Rows are `BIDI_HANDOFF_COMPACTION rows=`. VERIFIED
   (F1 build plus diagnostics: thread owner names, per-owner run time,
   owner-trace kind filter, `ce3d36380`; ablation A5c, flag
   `concreteMustFlowStar`, `c9e4fdeeb`; replay-order ablation, flag
-  `ablateReplayOrder`, `6613d7e5b`).
+  `ablateReplayOrder`, `6613d7e5b`; `RECORD_INDEX` trace and H2 v1
+  `21be721ae`, H2 v2 `4d5a4d2c3`, H2 v3 `01add0221`, flag
+  `protoReplayBatch`).
 
 ## 14. Decisions for the user
 
@@ -1757,7 +2232,8 @@ of 2). The decision is about its measured price:
   the landing set removes, takes 1,112 s. The cause is a run-5 sub-form
   in 8 of 20 launches (§6.10): a covered MUST result of a saved getter
   record replays first, and M1 + F1 give `decodeMimeHeader` an extra
-  start (+6 to +7 s in runs 6 to 11). Candidate H2 removes it (D4).
+  start (+6 to +7 s in runs 6 to 11). H2 removes it (D4): with H2 the
+  wall time is 155 s to 158 s in 5 of 5 launches.
 
 The alternative is to keep CURRENT for OWASP: the reports are final at
 run 3, and the cost of the cycle is the end status (run limit), not time
@@ -1788,12 +2264,34 @@ flows exist. This is a result change in a test fixture, not in a
 reference project; it needs your acceptance under the rule that no
 result may change without a decision.
 
-**D4. H2, the replay normal form (next iteration).** The costly
-Stirling-PDF sub-form comes from the replay order of saved records, a
-CURRENT order; M1 + F1 turn the covered result into an extra start
-(§6.10). H2 makes one replay one
-batch and normalizes it with the TaintGroup law of H1. The ablation
-shows that the cheap sub-form follows when the cover replays first.
-Decide: prototype H2 (flag, gate of H2 alone on all reference projects
-and the rule suite, Lean step for the batch law), or accept the
-sub-form as part of the D1 price.
+**D4. Land H2 on top of the landing set (recommended).** H2 (§6.10)
+makes the TAINT and FLOW results of one replay of saved records arrive
+at the statement in one launch-independent order. The costly
+Stirling-PDF sub-form came from a launch-random order: the identity
+hashes of two premise keys of one getter. With H2 the cheap sub-form
+comes in 5 of 5 launches to run 11 and in 7 of 7 to run 7, also under
+the forced costly order, and Stirling-PDF takes the native fast time.
+H2 is CURRENT with one fixed arrival order (`ReplayBatch` theorem 1), so
+it adds no new form, keeps every route (theorem 3, route census) and
+changes no result on any project. Gate: §6.10 and §11. On Conductor
+it is not worse (3 launches: rows in the landing-set spread, run 6 and
+runs 1 to 7 in the landing-set range).
+H2 alone is not WI: on Stirling-PDF it keeps the native slow form, and
+the gate cannot exclude a higher rate of it (§6.11). So H2 lands only
+together with the landing set or after it.
+
+Landing work if D4 is accepted (no flags, no counters in landed code):
+
+1. `flushReplayBatch` with the v3 law (one scratch `ConclusionGroup` per
+   lane, the general-first order) in `RunMethodCallServices`, without
+   the flag, the counters and the owner-trace line.
+2. A table test with the `ReplayBatch` vectors (the `getFilename` lane
+   in both store orders, the `getHtmlBody` lane, a result that is not
+   covered).
+3. ap.md: the replay of saved records for one offer is one batch; it
+   resumes the caller with the statement-store normal form of the
+   batch, computed in the general-first order.
+
+The alternative is to keep CURRENT and accept the sub-form as part of
+the D1 price (up to 8% of the Stirling-PDF wall time in about 40% of the
+launches).
